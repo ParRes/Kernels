@@ -1,0 +1,26 @@
+CFLAGS=$(OPTFLAGS) $(PROG_ENV)
+INCLUDEPATHSPLUS=$(INCLUDEPATHS) -I../../include
+COMMON=../../common
+ 
+usage:
+	@echo "Usage: type \"make $(PROGRAM)\" to build executable"
+	@echo "            \"make clean\" to remove objects and executables"
+ 
+$(PROGRAM):$(OBJS) 
+	$(CLINKER) -o $(PROGRAM) $(LIBPATHS)  $(CFLAGS) $(OBJS) $(EXTOBJS) $(LIBS)
+ 
+wtime.o:$(COMMON)/wtime.c
+	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
+ 
+MPI_bail_out.o:$(COMMON)/MPI_bail_out.c
+	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
+ 
+OPENMP_bail_out.o:$(COMMON)/OPENMP_bail_out.c
+	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
+ 
+.c.o:
+	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
+ 
+clean:
+	@ rm -f $(OBJS)  $(PROGRAM)
+

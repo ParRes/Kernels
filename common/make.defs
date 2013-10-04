@@ -1,0 +1,2 @@
+MPICC=mpiicc
+CC=icc 
