@@ -240,7 +240,7 @@ int main(int argc, char **argv){
 
   matrix_space = nent*sizeof(double);
   if (matrix_space/sizeof(double) != nent) {
-    printf("ERROR: Process %d cannot represent space for matrix: %ul\n", 
+    printf("ERROR: Process %d cannot represent space for matrix: %ld\n", 
            my_ID, matrix_space);
     error = 1;
   } 
@@ -256,7 +256,7 @@ int main(int argc, char **argv){
 
   vector_space = (size2 + nrows)*sizeof(double);
   if (vector_space/sizeof(double) != (size2+nrows)) {
-    printf("ERROR: Process %d Cannot represent space for vectors: %ul\n", 
+    printf("ERROR: Process %d Cannot represent space for vectors: %ld\n", 
            my_ID, vector_space);
     error = 1; 
   } 
@@ -273,7 +273,7 @@ int main(int argc, char **argv){
 
   index_space = nent*sizeof(s64Int);
   if (index_space/sizeof(s64Int) != nent) {
-    printf("ERROR: Process %d cannot represent space for column indices: %ul\n", 
+    printf("ERROR: Process %d cannot represent space for column indices: %ld\n", 
            my_ID, index_space);
     error = 1;
   } 
@@ -314,7 +314,7 @@ int main(int argc, char **argv){
   /* fill dense matrix to test                                                    */
   matrix_space = size2*size2/Num_procs*sizeof(double);
   if (matrix_space/sizeof(double) != size2*size2/Num_procs) {
-    printf("ERROR: Cannot represent space for matrix: %ul\n", matrix_space);
+    printf("ERROR: Cannot represent space for matrix: %ld\n", matrix_space);
     exit(EXIT_FAILURE);
   } 
   dense = (double *) malloc(matrix_space);
@@ -355,8 +355,9 @@ int main(int argc, char **argv){
     /* do the actual matrix multiplication                                        */
     for (row=0; row<nrows; row++) {
       first = stencil_size*row; last = first+stencil_size-1;
+      temp = 0.0;
       #pragma simd reduction(+:temp) 
-      for (temp=0.0,col=first; col<=last; col++) {
+      for (col=first; col<=last; col++) {
         temp += matrix[col]*vector[colIndex[col]];
       }
       result[row] += temp;
