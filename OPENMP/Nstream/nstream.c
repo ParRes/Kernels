@@ -253,7 +253,7 @@ int main(int argc, char **argv)
     }
  
     #pragma omp for
-	#pragma omp simd
+    #pragma omp simd
     for (j=0; j<length; j++) a[j] = b[j]+scalar*c[j];
  
     #pragma omp master
@@ -265,7 +265,7 @@ int main(int argc, char **argv)
     }
     /* insert a dependency between iterations to avoid dead-code elimination */
     #pragma omp for 
-	#pragma omp simd
+    #pragma omp simd
     for (j=0; j<length; j++) b[j] = a[j];
   }
   }  /* end of OpenMP parallel region */
