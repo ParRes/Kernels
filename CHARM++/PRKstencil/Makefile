@@ -1,6 +1,7 @@
+CHARMTOP=/home/rfvander/charm-6.6.0_10_13_2014/mpi-linux-x86_64-ifort-smp-mpicxx
 OPTS=-Ofast -DRADIUS=2 -DSTAR -g
-CHARMC=../../../bin/charmc $(OPTS)
-CHARMCci=../../../bin/charmc $(OPTS) -E
+CHARMC=$(CHARMTOP)/bin/charmc $(OPTS)
+CHARMCci=$(CHARMTOP)/bin/charmc $(OPTS) -E
 
 OBJS = stencil.o
 
