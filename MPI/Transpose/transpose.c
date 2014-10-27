@@ -101,17 +101,13 @@ int main(int argc, char ** argv)
          diff;          /* pointwise error */
   double epsilon = 1.e-8; /* error tolerance */
   double col_val;
-  double trans_time,    /* timing parameters                               */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*24.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough         */
-   
+  double local_trans_time,    /* timing parameters                         */
+         trans_time,
+         avgtime;
   double test_results (int , int , int , double*);
   void   trans_isnd_ircv (double*, double*, int, int, double*, int, int);
   void   trans_sendrcv   (double*, double*, int, int, double*, int, int);
   void   fill_mat(int , int , int , double*);
-  void   fill_garbage(int , int , int , double*);
   void   output_timings (char *, int , int , double , double, double, 
                          int, int , int);
   void   analyze_results (int, double, int, double *, double*, double*, 
@@ -233,45 +229,41 @@ int main(int argc, char ** argv)
   for (i=0;i<Col_block_size; i++) trans[i] = -1.0;
 
   errsq = 0.0;
-  for (iter = 0; iter<iterations; iter++){
+  MPI_Barrier(MPI_COMM_WORLD);
+  local_trans_time = wtime();
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    trans_time = wtime();
+  for (iter = 0; iter<iterations; iter++){
 
     trans_comm(buff, trans, Block_order, tile_size,
                work, my_ID, Num_procs);
 
-    trans_time = wtime() - trans_time;
-
 #ifdef VERBOSE
     printf("\n Node %d has finished with transpose \n",my_ID);
 #endif
-    if (iter>0 || iterations==1) { /* skip the first iteration */
-      avgtime = avgtime + trans_time;
-      mintime = MIN(mintime, trans_time);
-      maxtime = MAX(maxtime, trans_time);
-    }
-    
-    for (i=0;i<order; i++) {
-      col_val = COL_SHIFT * i; 	
-      for (j=0;j<Block_order;j++) {
-        diff = trans[i*Block_order+j] -
-               (col_val  + ROW_SHIFT * (my_ID*Block_order + j));
-        errsq += diff*diff;
-      }
-    }
-
   }  /* end of iter loop  */
+
+  local_trans_time = wtime() - local_trans_time;
+  MPI_Reduce(&local_trans_time, &trans_time, 1, MPI_DOUBLE, MPI_MAX, root,
+             MPI_COMM_WORLD);
+
+  for (i=0;i<order; i++) {
+    col_val = COL_SHIFT * i; 	
+    for (j=0;j<Block_order;j++) {
+      diff = trans[i*Block_order+j] -
+             (col_val  + ROW_SHIFT * (my_ID*Block_order + j));
+      errsq += diff*diff;
+    }
+  }
 
   MPI_Reduce(&errsq, &errsq_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
 
   if (my_ID == root) {
     if (errsq_tot < epsilon) {
       printf("Solution validates\n");
-      avgtime = avgtime/(double)(MAX(iterations-1,1));
-      printf("Rate (MB/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-             1.0E-06 * bytes/mintime, avgtime, mintime);
-      printf(", Max time (s): %lf\n", maxtime);
+      avgtime = trans_time/(double)iterations;
+
+      printf("Rate (MB/s): %lf, Avg time (s): %lf\n",
+             1.0E-06 * bytes/avgtime, avgtime);
 #ifdef VERBOSE
       printf("Squared errors: %f \n", errsq);
 #endif

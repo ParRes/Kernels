@@ -74,11 +74,9 @@ int main(int argc, char ** argv)
   int    my_ID;         /* Process ID (i.e. MPI rank)                            */
   int    root;
   int    m, n;          /* grid dimensions                                       */
-  double pipeline_time, /* timing parameters                                     */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*8760.0*3600.0; /* set the minimum time to a large 
-                           value; one leap year should be enough                 */
+  double local_pipeline_time, /* timing parameters                               */
+         pipeline_time,
+         avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;    /* verification value at top right corner of grid        */
   int    i, j, iter, ID;/* dummies                                               */
@@ -108,7 +106,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root){
     if (argc != 4){
-      printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>", 
+      printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>\n", 
              *argv);
       error = 1;
       goto ENDOFTESTS;
@@ -204,13 +202,10 @@ int main(int argc, char ** argv)
   else          start[my_ID] = 0;
   end[my_ID] = segment_size-1;
 
+  MPI_Barrier(MPI_COMM_WORLD);
+  local_pipeline_time = wtime();
+
   for (iter=0; iter<iterations; iter++) {
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    if (my_ID == root) {
-      pipeline_time = wtime();
-    }
 
     for (j=1; j<n; j++) {
 
@@ -232,15 +227,6 @@ int main(int argc, char ** argv)
       }
     }
 
-    if (my_ID == root) {
-      pipeline_time = wtime() - pipeline_time;
-      if (iter>0 || iterations==1) { /* skip the first iteration                   */
-        avgtime = avgtime + pipeline_time;
-        mintime = MIN(mintime, pipeline_time);
-        maxtime = MAX(maxtime, pipeline_time);
-      }
-    }
-
     /* copy top right corner value to bottom left corner to create dependency      */
     if (Num_procs >1) {
       if (my_ID==root) {
@@ -255,6 +241,14 @@ int main(int argc, char ** argv)
 
   }
 
+  local_pipeline_time = wtime() - local_pipeline_time;
+  MPI_Reduce(&local_pipeline_time, &pipeline_time, 1, MPI_DOUBLE, MPI_MAX, root,
+             MPI_COMM_WORLD);
+
+  /*******************************************************************************
+  ** Analyze and output results.
+  ********************************************************************************/
+ 
   /* verify correctness, using top right value                                     */
   corner_val = (double) (iterations*(m+n-2));
   if (my_ID == root) {
@@ -267,17 +261,16 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
+    avgtime = pipeline_time/iterations;
 #ifdef VERBOSE   
     printf("Solution validates; verification value = %lf\n", corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",
-           ((float)((n-1)*(Num_procs-1)))/(mintime));
+           ((float)((n-1)*(Num_procs-1)))/(avgtime));
 #else
     printf("Solution validates\n");
 #endif
-    avgtime = avgtime/(double)(MAX(iterations-1,1));
-    printf("Rate (MFlops/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-           1.0E-06 * 2 * ((double)((m-1)*(n-1)))/mintime, avgtime, mintime);
-    printf(", Max time (s): %lf\n", maxtime);
+    printf("Rate (MFlops/s): %lf, Avg time (s): %lf\n",
+           1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
  
   MPI_Finalize();

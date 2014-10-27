@@ -44,100 +44,113 @@ public:
     CProxy_Stencil array;
 
     Main(CkArgMsg* m) {
-        if (m->argc != 4) {
-          CkPrintf("%s <maxiterations> <grid_size> <overdecomposition factor>\n", m->argv[0]);
-          CkAbort("Abort");
-        }
 
-        // store the main proxy
-        mainProxy = thisProxy;
+      int num_chares, min_size;
 
-        maxiterations = atoi(m->argv[1]);
-        if (maxiterations < 1) {
-          CkAbort("ERROR: maxiterations must be positive");
-        }
-        n = atoi(m->argv[2]);
-        if (n < CkNumPes()) 
-          CkAbort("ERROR: Grid size must be larger than  #PEs");
+      if (m->argc != 4) {
+        CkPrintf("%s <maxiterations> <grid_size> <overdecomposition factor>\n", m->argv[0]);
+        CkAbort("Abort");
+      }
 
-        overdecomposition = atoi(m->argv[3]);
-        if (n < overdecomposition)
-          CkAbort("ERROR: Grid size must be larger than overdecomposition");
+      // store the main proxy
+      mainProxy = thisProxy;
 
-        if (RADIUS < 0) {
-          CkAbort("ERROR: Stencil radius %d should be non-negative\n");
-        }
+      maxiterations = atoi(m->argv[1]);
+      if (maxiterations < 1) {
+        CkAbort("ERROR: maxiterations must be positive");
+      }
+
+      n = atoi(m->argv[2]);
+      if (n < CkNumPes()) 
+        CkAbort("ERROR: Grid size must be larger than  #PEs");
+
+      overdecomposition = atoi(m->argv[3]);
+      if (n < overdecomposition)
+        CkAbort("ERROR: Grid size must be larger than overdecomposition");
+
+      if (RADIUS < 0) {
+        CkAbort("ERROR: Stencil radius %d should be non-negative\n");
+      }
   
-        if (2*RADIUS +1 > n) {
-          CkAbort("ERROR: Stencil diameter exceeds grid size\n");
+      if (2*RADIUS +1 > n) {
+        CkAbort("ERROR: Stencil diameter exceeds grid size\n");
+      }
+
+      // compute decomposition that has smallest surface/volume ratio
+      num_chares = CkNumPes()*overdecomposition;
+      for (num_chare_cols= (int) (sqrt(num_chares+1)); num_chare_cols>0; num_chare_cols--) {
+        if (!(num_chares%num_chare_cols)) {
+          num_chare_rows = num_chares/num_chare_cols;
+          break;
         }
+      }
+      min_size = (n+num_chare_cols-1)/num_chare_cols;
+      if (min_size<RADIUS) 
+        CkAbort("Some tiles smaller than radius of difference stencil\n");
 
-        int min_size = n/MAX(CkNumPes(),overdecomposition);
-        if (min_size<RADIUS) 
-          CkAbort("Some tiles smaller than radius of difference stencil\n");
+      //      num_chare_rows = CkNumPes();
+      //      num_chare_cols = overdecomposition;
 
-        num_chare_rows = CkNumPes();
-        num_chare_cols = overdecomposition;
-
-        // print info
-        CkPrintf("Charm++ stencil execution on 2D grid\n");
-        CkPrintf("Number of processes  = %d\n", CkNumPes());
-        CkPrintf("Overdecomposition    = %d\n", overdecomposition);
-        CkPrintf("Grid size            = %d\n", n);
-        CkPrintf("Radius of stencil    = %d\n", RADIUS);
+      // print info
+      CkPrintf("Charm++ stencil execution on 2D grid\n");
+      CkPrintf("Number of processes     = %d\n", CkNumPes());
+      CkPrintf("Overdecomposition       = %d\n", overdecomposition);
+      CkPrintf("Grid size               = %d\n", n);
+      CkPrintf("Radius of stencil       = %d\n", RADIUS);
+      CkPrintf("Chares in x/y-direction = %d/%d\n", num_chare_cols, num_chare_rows);
 #ifdef STAR
-        CkPrintf("Type of stencil      = star\n");
+      CkPrintf("Type of stencil         = star\n");
 #else
-        CkPrintf("Type of stencil      = compact\n");
-        CkAbort("ERROR: Compact stencil not (yet) supported\n");
+      CkPrintf("Type of stencil         = compact\n");
+      CkAbort("ERROR: Compact stencil not (yet) supported\n");
 #endif
-        CkPrintf("Number of iterations = %d\n", maxiterations);
+      CkPrintf("Number of iterations    = %d\n", maxiterations);
 
-        // Create new array of worker chares
-        array = CProxy_Stencil::ckNew(num_chare_cols, num_chare_rows);
+      // Create new array of worker chares
+      array = CProxy_Stencil::ckNew(num_chare_cols, num_chare_rows);
 
-        /* fill the stencil weights to reflect a discrete divergence operator         */
-        for (int j=-RADIUS; j<=RADIUS; j++) for (int i=-RADIUS; i<=RADIUS; i++)
+      /* fill the stencil weights to reflect a discrete divergence operator         */
+      for (int j=-RADIUS; j<=RADIUS; j++) for (int i=-RADIUS; i<=RADIUS; i++)
 					      WEIGHT(i,j) = 0.0;
-        #ifdef STAR
-          for (int i=1; i<=RADIUS; i++) {
-            WEIGHT(0, i) = WEIGHT( i,0) =  (1.0/(2.0*i*RADIUS));
-            WEIGHT(0,-i) = WEIGHT(-i,0) = -(1.0/(2.0*i*RADIUS));
+      #ifdef STAR
+        for (int i=1; i<=RADIUS; i++) {
+          WEIGHT(0, i) = WEIGHT( i,0) =  (1.0/(2.0*i*RADIUS));
+          WEIGHT(0,-i) = WEIGHT(-i,0) = -(1.0/(2.0*i*RADIUS));
+        }
+      #else
+        stencil_size = (2*RADIUS+1)*(2*RADIUS+1);
+        for (int j=1; j<=RADIUS; j++) {
+          for (int i=-j+1; i<j; i++) {
+            WEIGHT(i,j)  =  (1.0/(4.0*j*(2.0*j-1)*RADIUS));
+            WEIGHT(i,-j) = -(1.0/(4.0*j*(2.0*j-1)*RADIUS));
+            WEIGHT(j,i)  =  (1.0/(4.0*j*(2.0*j-1)*RADIUS));
+            WEIGHT(-j,i) = -(1.0/(4.0*j*(2.0*j-1)*RADIUS));      
           }
-        #else
-          stencil_size = (2*RADIUS+1)*(2*RADIUS+1);
-          for (int j=1; j<=RADIUS; j++) {
-            for (int i=-j+1; i<j; i++) {
-              WEIGHT(i,j)  =  (1.0/(4.0*j*(2.0*j-1)*RADIUS));
-              WEIGHT(i,-j) = -(1.0/(4.0*j*(2.0*j-1)*RADIUS));
-              WEIGHT(j,i)  =  (1.0/(4.0*j*(2.0*j-1)*RADIUS));
-              WEIGHT(-j,i) = -(1.0/(4.0*j*(2.0*j-1)*RADIUS));      
-            }
-            WEIGHT(j,j)    =  (1.0/(4.0*j*RADIUS));
-            WEIGHT(-j,-j)  = -(1.0/(4.0*j*RADIUS));
-          }
-        #endif  
+          WEIGHT(j,j)    =  (1.0/(4.0*j*RADIUS));
+          WEIGHT(-j,-j)  = -(1.0/(4.0*j*RADIUS));
+        }
+      #endif  
 
-        //Start the computation
-	array.run();
+      //Start the computation
+      array.run();
     }
 
-    // Each worker reports back to here when it completes an iteration
+    // One worker reports back to here when it completes the workload
     void report(double result) {
-      double totalTime, flops;
-      double reference_norm = (COEFX+COEFY)*(maxiterations+1);
-      result /= (n-2.0*RADIUS)*(n-2.0*RADIUS);
+      double totalTime, flops, diff;
+      double ref_norm = (COEFX+COEFY)*(maxiterations+1);
+      result   /= (n-2.0*RADIUS)*(n-2.0*RADIUS);
       totalTime = endTime - startTime;
-      flops = (double) (2*(4*RADIUS+1)+1) * (n-2*RADIUS)*(n-2*RADIUS)*maxiterations;
-      CkPrintf("Solution norm: %lf\n", result);
-      if (ABS(result-reference_norm) < EPSILON) {
-        CkPrintf("Solution validates; reference norm: %lf\n", reference_norm);
+      flops     = (double) (2*(4*RADIUS+1)+1) * (n-2*RADIUS)*(double)(n-2*RADIUS)*maxiterations;
+      diff      = ABS(result-ref_norm);
+      if (diff < EPSILON) {
+        CkPrintf("Solution validates; ");
         CkPrintf("Flops: %e\n", flops/totalTime);
       }
       else {
-        CkPrintf("Solution does not validate; reference norm: %lf\n", reference_norm);
-        CkPrintf("ABS(result-reference_norm) = %lf\n", ABS(result-reference_norm));
+        CkPrintf("Solution does not validate\n");
       }
+      CkPrintf("Reference norm: %lf, norm: %lf, |diff|: %e\n", ref_norm, result, diff);
       CkExit();
     }
 
@@ -159,8 +172,8 @@ public:
     int i,j, iloc, jloc, leftover;
       
     /* compute amount of space required for input and solution arrays             */
-    width = n/overdecomposition;
-    leftover = n%overdecomposition;
+    width = n/num_chare_cols;
+    leftover = n%num_chare_cols;
     if (thisIndex.x < leftover) {
       istart = (width+1) * thisIndex.x; 
       iend = istart + width;
@@ -171,8 +184,8 @@ public:
     }
     width = iend - istart + 1;
 
-    height = n/CkNumPes();
-    leftover = n%CkNumPes();
+    height = n/num_chare_rows;
+    leftover = n%num_chare_rows;
     if (thisIndex.y < leftover) {
       jstart = (height+1) * thisIndex.y; 
       jend = jstart + height;

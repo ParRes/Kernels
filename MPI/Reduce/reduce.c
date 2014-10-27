@@ -73,11 +73,9 @@ int main(int argc, char ** argv)
   int i, iter;          /* dummies                                           */
   int vector_length;    /* length of the vectors to be aggregated            */
   double * RESTRICT vector; /* vector to be reduced                          */
-  double reduce_time,   /* timing parameters                                 */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*8760.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough           */
+  double local_reduce_time, /* timing parameters                             */
+         reduce_time,
+         avgtime;
   double epsilon=1.e-8; /* error tolerance                                   */
   double element_value; /* verification value                                */
   int    error = 0;     /* error flag                                        */
@@ -136,6 +134,9 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
 
+  MPI_Barrier(MPI_COMM_WORLD);
+  local_reduce_time = wtime();
+
   for (iter=0; iter<iterations; iter++) { 
 
     /* initialize the arrays                                                    */
@@ -143,9 +144,6 @@ int main(int argc, char ** argv)
       vector[i] = (double)(my_ID+1);
       vector[vector_length+i] = (double)(my_ID+1);
     }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    reduce_time = wtime();
 
     /* first do the "local" part                                                */
     for (i=0; i<vector_length; i++) {
@@ -156,15 +154,12 @@ int main(int argc, char ** argv)
     MPI_Reduce(vector+vector_length, vector, vector_length, MPI_DOUBLE, MPI_SUM, 
                root, MPI_COMM_WORLD);
 
-    if (my_ID == root) {
-      if (iter>0 || iterations==1) { /* skip the first iteration */
-        reduce_time = wtime() - reduce_time;
-        avgtime = avgtime + reduce_time;
-        mintime = MIN(mintime, reduce_time);
-        maxtime = MAX(maxtime, reduce_time);
-      }
-    }
   }
+
+  local_reduce_time = wtime() - local_reduce_time;
+  MPI_Reduce(&local_reduce_time, &reduce_time, 1, MPI_DOUBLE, MPI_MAX, root,
+             MPI_COMM_WORLD);
+  
 
   /* verify correctness */
   if (my_ID == root) {
@@ -191,10 +186,9 @@ int main(int argc, char ** argv)
 #ifdef VERBOSE
     printf("Element verification value: %lf\n", element_value);
 #endif
-    avgtime = avgtime/(double)(MAX(iterations-1,1));
-    printf("Rate (MFlops/s): %lf,  Avg time (s): %lf,  Min time (s): %lf",
-           1.0E-06 * (2.0*Num_procs-1.0)*vector_length/mintime, avgtime, mintime);
-    printf(", Max time (s): %lf\n", maxtime);
+    avgtime = reduce_time/(double)iterations;
+    printf("Rate (MFlops/s): %lf,  Avg time (s): %lf\n",
+           1.0E-06 * (2.0*Num_procs-1.0)*vector_length/ avgtime, avgtime);
   }
 
   MPI_Finalize();
