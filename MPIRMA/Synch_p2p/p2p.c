@@ -68,7 +68,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_mpi.h>
 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
-#define NBR_INDEX(i,j) (i+1+(j)*(nbr_segment_size+1))
+#define NBR_INDEX(i,j) (i+(j)*(nbr_segment_size+1))
 
 int main(int argc, char ** argv)
 {
@@ -209,20 +209,25 @@ int main(int argc, char ** argv)
 
   /* Set up origin and target process groups for PSCW */
   MPI_Comm_group(MPI_COMM_WORLD, &world_group);
-  if (my_ID < Num_procs-1) {
-    /* Target group consists of rank my_ID+1, right neighbor */
+  /* Target group consists of rank my_ID+1, right neighbor */
+  if (my_ID < Num_procs-1)
     target_ranks[0] = my_ID+1;
-    MPI_Group_incl(world_group, 1, target_ranks, &target_group);
-  }
-  if (my_ID > 0) {
-    /* Origin group consists of rank my_ID-1, left neighbor */
+  else
+    target_ranks[0] = 0;
+  MPI_Group_incl(world_group, 1, target_ranks, &target_group);
+
+  /* Origin group consists of rank my_ID-1, left neighbor */
+  if (my_ID > 0)
     origin_ranks[0] = my_ID-1;
-    MPI_Group_incl(world_group, 1, origin_ranks, &origin_group);
-  }
+  else
+    origin_ranks[0] = Num_procs-1;
+  MPI_Group_incl(world_group, 1, origin_ranks, &origin_group);
 
   /* Set neighbor segment size */
   if (my_ID != Num_procs-1)
     nbr_segment_size = end[my_ID+1] - start[my_ID+1] + 1;
+  else
+    nbr_segment_size = end[0] - start[0] + 1;
 
   MPI_Barrier(MPI_COMM_WORLD);
   local_pipeline_time = wtime();
@@ -248,19 +253,23 @@ int main(int argc, char ** argv)
         /* Access epoch at origin */	
         MPI_Win_start(target_group, 0, rmawin);
         MPI_Put(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE, my_ID+1,
-		NBR_INDEX(-1,j), 1, MPI_DOUBLE, rmawin);
+		NBR_INDEX(0,j), 1, MPI_DOUBLE, rmawin);
         MPI_Win_complete(rmawin);	
       }
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+
     /* copy top right corner value to bottom left corner to create dependency      */
     if (Num_procs >1) {
       if (my_ID==root) {
         corner_val = -ARRAY(end[my_ID],n-1);
-        MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
+        MPI_Win_start(target_group, 0, rmawin);
+        MPI_Put(&corner_val, 1, MPI_DOUBLE, 0,
+	 	NBR_INDEX(1,0), 1, MPI_DOUBLE, rmawin);
+	MPI_Win_complete(rmawin);
       }
       if (my_ID==0) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
+        MPI_Win_post(origin_group, 0, rmawin);
+        MPI_Win_wait(rmawin);
       }
     }
     else ARRAY(0,0)= -ARRAY(end[my_ID],n-1);
