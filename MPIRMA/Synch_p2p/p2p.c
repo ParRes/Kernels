@@ -68,6 +68,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_mpi.h>
 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
+#define NBR_INDEX(i,j) (i+1+(j)*(nbr_segment_size+1))
 
 int main(int argc, char ** argv)
 {
@@ -88,6 +89,10 @@ int main(int argc, char ** argv)
   double *vector;       /* array holding grid values                             */
   int    total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
+  MPI_Win rmawin;       /* RMA window object */
+  MPI_Group world_group, origin_group, target_group;
+  int origin_ranks[1], target_ranks[1];
+  int nbr_segment_size;
 
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -172,7 +177,7 @@ int main(int argc, char ** argv)
 
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  vector = (double *) malloc(total_length*sizeof(double));
+  MPI_Win_allocate(total_length*sizeof(double), sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void *) &vector, &rmawin);
   if (my_ID == root) {
     if (total_length/(segment_size+1) != n) {
       printf("Grid of %d by %d points too large\n", m, n);
@@ -202,6 +207,23 @@ int main(int argc, char ** argv)
   else          start[my_ID] = 0;
   end[my_ID] = segment_size-1;
 
+  /* Set up origin and target process groups for PSCW */
+  MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+  if (my_ID < Num_procs-1) {
+    /* Target group consists of rank my_ID+1, right neighbor */
+    target_ranks[0] = my_ID+1;
+    MPI_Group_incl(world_group, 1, target_ranks, &target_group);
+  }
+  if (my_ID > 0) {
+    /* Origin group consists of rank my_ID-1, left neighbor */
+    origin_ranks[0] = my_ID-1;
+    MPI_Group_incl(world_group, 1, origin_ranks, &origin_group);
+  }
+
+  /* Set neighbor segment size */
+  if (my_ID != Num_procs-1)
+    nbr_segment_size = end[my_ID+1] - start[my_ID+1] + 1;
+
   MPI_Barrier(MPI_COMM_WORLD);
   local_pipeline_time = wtime();
 
@@ -212,8 +234,9 @@ int main(int argc, char ** argv)
       /* if I am not at the left boundary, I need to wait for my left neighbor to
          send data                                                                */
       if (my_ID > 0) {
-        MPI_Recv(&(ARRAY(start[my_ID]-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
-                                  MPI_COMM_WORLD, &status);
+        /*  Exposure epoch at target*/
+        MPI_Win_post(origin_group, 0, rmawin);
+        MPI_Win_wait(rmawin);
       }
 
       for (i=start[my_ID]; i<= end[my_ID]; i++) {
@@ -222,11 +245,14 @@ int main(int argc, char ** argv)
 
       /* if I am not on the right boundary, send data to my right neighbor        */  
       if (my_ID != Num_procs-1) {
-        MPI_Send(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE, my_ID+1,
-                                         j, MPI_COMM_WORLD);
+        /* Access epoch at origin */	
+        MPI_Win_start(target_group, 0, rmawin);
+        MPI_Put(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE, my_ID+1,
+		NBR_INDEX(-1,j), 1, MPI_DOUBLE, rmawin);
+        MPI_Win_complete(rmawin);	
       }
     }
-
+    MPI_Barrier(MPI_COMM_WORLD);
     /* copy top right corner value to bottom left corner to create dependency      */
     if (Num_procs >1) {
       if (my_ID==root) {
