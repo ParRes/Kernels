@@ -68,6 +68,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_mpi.h>
 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
+#define NBR_INDEX(i,j) (i+(j)*(nbr_segment_size+1))
 
 int main(int argc, char ** argv)
 {
@@ -88,6 +89,16 @@ int main(int argc, char ** argv)
   double *vector;       /* array holding grid values                             */
   int    total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
+  MPI_Win rmawin;       /* RMA window object */
+  MPI_Group shm_group, origin_group, target_group;
+  int origin_ranks[1], target_ranks[1];
+  MPI_Aint nbr_segment_size;
+  MPI_Win shmwin;       /* Shared Memory window object */
+  MPI_Comm shm_comm;     /* Shared Memory Communicator */
+  int shm_procs;    /* # of processes in shared domain */
+  int shm_ID;        /* MPI rank */
+  int target_disp;
+  double *target_ptr;
 
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -99,6 +110,11 @@ int main(int argc, char ** argv)
 /* we set root equal to the highest processor rank, because this is also
    the process that reports on the verification value                      */
   root = Num_procs-1;
+
+  /* Setup for Shared memory regions */
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &shm_comm);
+  MPI_Comm_rank(shm_comm, &shm_ID);
+  MPI_Comm_size(shm_comm, &shm_procs);
 
 /*********************************************************************
 ** process, test and broadcast input parameter
@@ -172,7 +188,7 @@ int main(int argc, char ** argv)
 
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  vector = (double *) malloc(total_length*sizeof(double));
+  MPI_Win_allocate_shared(total_length*sizeof(double), sizeof(double), MPI_INFO_NULL, shm_comm, (void *) &vector, &shmwin);
   if (my_ID == root) {
     if (total_length/(segment_size+1) != n) {
       printf("Grid of %d by %d points too large\n", m, n);
@@ -202,6 +218,26 @@ int main(int argc, char ** argv)
   else          start[my_ID] = 0;
   end[my_ID] = segment_size-1;
 
+  /* Set up origin and target process groups for PSCW */
+  MPI_Comm_group(shm_comm, &shm_group);
+  /* Target group consists of rank my_ID+1, right neighbor */
+  if (shm_ID < shm_procs-1) {
+    target_ranks[0] = shm_ID+1;
+    MPI_Group_incl(shm_group, 1, target_ranks, &target_group);
+    MPI_Win_shared_query(shmwin, shm_ID+1, &nbr_segment_size, &target_disp, &target_ptr);
+    nbr_segment_size = end[my_ID+1] - start[my_ID+1] + 1;
+  } else {
+    target_ranks[0] = MPI_PROC_NULL;
+  }
+
+  /* Origin group consists of rank my_ID-1, left neighbor */
+  if (shm_ID > 0) {
+    origin_ranks[0] = shm_ID-1;
+    MPI_Group_incl(shm_group, 1, origin_ranks, &origin_group);
+  } else {
+    origin_ranks[0] = MPI_PROC_NULL;
+  }
+
   MPI_Barrier(MPI_COMM_WORLD);
   local_pipeline_time = wtime();
 
@@ -212,8 +248,14 @@ int main(int argc, char ** argv)
       /* if I am not at the left boundary, I need to wait for my left neighbor to
          send data                                                                */
       if (my_ID > 0) {
-        MPI_Recv(&(ARRAY(start[my_ID]-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
-                                  MPI_COMM_WORLD, &status);
+	if (shm_ID > 0) {
+	  /*  Exposure epoch at target*/
+	  MPI_Win_post(origin_group, 0, shmwin);
+	  MPI_Win_wait(shmwin);
+	} else {
+	  MPI_Recv(&(ARRAY(start[my_ID]-1,j)), 1, MPI_DOUBLE, 
+		   my_ID-1, j, MPI_COMM_WORLD, &status);
+	}
       }
 
       for (i=start[my_ID]; i<= end[my_ID]; i++) {
@@ -222,8 +264,15 @@ int main(int argc, char ** argv)
 
       /* if I am not on the right boundary, send data to my right neighbor        */  
       if (my_ID != Num_procs-1) {
-        MPI_Send(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE, my_ID+1,
-                                         j, MPI_COMM_WORLD);
+	if (shm_ID != shm_procs-1) {
+	  /* Access epoch at origin */
+	  MPI_Win_start(target_group, 0, shmwin);
+	  target_ptr[NBR_INDEX(0,j)] = ARRAY(end[my_ID],j);
+	  MPI_Win_complete(shmwin);	
+	} else {
+	  MPI_Send(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE,
+		   my_ID+1, j, MPI_COMM_WORLD);
+	}
       }
     }
 
