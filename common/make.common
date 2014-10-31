@@ -22,5 +22,5 @@ OPENMP_bail_out.o:$(COMMON)/OPENMP_bail_out.c
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
  
 clean:
-	@ rm -f $(OBJS)  $(PROGRAM)
+	@ rm -f $(OBJS)  $(PROGRAM) *.optrpt
 

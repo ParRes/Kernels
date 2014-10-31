@@ -54,15 +54,67 @@ FUNCTIONS CALLED:
          Other than MPI or standard C functions, the following 
          functions are used in this program:
 
-          wtime()           portable wall-timer interface.
-          trans_comm()   Do the transpose with MPI_Sendrecv()
-          bail_out()        Determines global error and exits if nonzero.
+          wtime()           Portable wall-timer interface.
+          transpose()       Transpose a local matrix Block
+          bail_out()        Determine global error and exit if nonzero.
 
 HISTORY: Written by Tim Mattson, April 1999.  
          Updated by Rob Van der Wijngaart, December 2005.
          Updated by Rob Van der Wijngaart, October 2006.
+         Updated by Rob Van der Wijngaart, November 2014::
+         - made variable names more consistent 
+         - introduced pointers to individual blocks inside matrix
+           column blocks
+         - put timing around entire iterative loop of transposes
   
 *******************************************************************/
+
+/******************************************************************
+                     Layout nomenclature                         
+                     -------------------
+
+o Each rank owns one block of columns (Colblock) of the overall
+  matrix to be transposed, as well as of the transposed matrix.
+o Colblock is stored contiguously in the memory of the rank
+o Colblock is composed of #ranks Blocks. The Block is the unit
+  of data that gets communicated between ranks. Block i of rank
+  j is locally tranposed and then sent to rank i, where it is
+  stored in Block j of the transposed matrix.
+o When tiling is applied to reduce TLB misses, each block gets 
+  accessed by tiles. 
+o When a Block is prepared for communication by carrying out the
+  local transpose, the result of the local transpose is stored
+  in a buffer called Work on the sending side. At the receiving
+  side it is stored in the right location without going through
+  an intermediate buffer
+o The original and transposed matrix data structures are 
+  distinguishde by the prefixes Orig_ and Trans_
+
+ -----------------------------------------------------------------
+|Name:      |           |           |                             |
+| Colblock  |           |           |                             |
+|Start addr:|           |           |                             |
+| Colblock_p|           |           |                             |
+|           |           |           |                             |
+|        -------------------------------                          |
+|           |Name:      |           |                             |
+|           |  Block    |           |                             |
+|           |Start addr:|           |                             |
+|           | Block_p   |           |                             |
+|           |           |           |                             |
+|        -------------------------------                          |
+|           |Tile|      |           |                             |
+|           |    |      |           |   Overall Matrix            |
+|           |----       |           |                             |
+|           |           |           |                             |
+|           |           |           |                             |
+|        -------------------------------                          |
+|           |           |           |                             |
+|           |           |           |                             |
+|           |           |           |                             |
+|           |           |           |                             |
+|           |           |           |                             |
+ -----------------------------------------------------------------*/
 
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
@@ -71,47 +123,46 @@ HISTORY: Written by Tim Mattson, April 1999.
 #define  COL_SHIFT  1000.00
 /* Constant to shift row index */
 #define  ROW_SHIFT  0.001  
+#define A(i,j) A[(i)+Block_cols*(j)]
+#define B(i,j) B[(i)+Block_cols*(j)]
+#define Orig_Colblock(i,j)  Orig_Colblock_p[(i)*Block_order+j]
+#define Trans_Colblock(i,j) Trans_Colblock_p[(i)*Block_order+j]
 
-void trans_comm(double *buff,  double *trans, int Block_order,
-                int tile_size, double *work,  int my_ID, int Num_procs);
 void transpose(double *A, double *B, int tile_size, int sub_rows, int sub_cols);
-
 
 int main(int argc, char ** argv)
 {
-  int Block_order;      /* order of a local matrix block */
-  int Num_procs;        /* Number of processors */
-  int order;            /* Order of overall matrix */
-  int Col_block_size;   /* size of local col blck */
-  double bytes;         /* combined size of matrices                       */
-  int block_size;       /* size of a single block */
-  int tile_size=32;     /* default tile size for tiling of local transpose */
-  int my_ID;            /* Process ID (i.e. MPI rank) */
-  int root=0;           /* rank of root process */
-  int iterations;       /* number of times to do the transpose */
-  int i, j, iter;
-  int error;            /* error flag */
-
-  double *buff;           /* buffer to hold local matrix block */
-  double *trans;          /* buffer to hold transposed data */
-  double *work;           /* workspace for the tranpose funtion */
-
-  double errsq,         /* squared error */
-         errsq_tot,     /* aggregate squared error */
-         diff;          /* pointwise error */
-  double epsilon = 1.e-8; /* error tolerance */
-  double col_val;
-  double local_trans_time,    /* timing parameters                         */
+  int Block_order;         /* order of Colblock and Block           */
+  int Block_size;          /* size of a single block                */
+  int Colblock_size;       /* size of local column block            */
+  int Tile_order=32;       /* default Tile order                    */
+  int Tile_size;           /* Tile size                             */
+  int Num_procs;           /* number of ranks                       */
+  int order;               /* order of overall matrix               */
+  int send_to, recv_from;  /* ranks with which to communicate       */
+  MPI_Status status;       
+#ifndef SYNCHRONOUS
+  MPI_Request send_req;
+  MPI_Request recv_req;
+#endif
+  long bytes;              /* combined size of matrices             */
+  int my_ID;               /* Process ID (i.e. MPI rank)            */
+  int root=0;              /* rank of root process                  */
+  int iterations;          /* number of times to do the transpose   */
+  int i, j, iter, phase;   /* dummies                               */
+  int error;               /* error flag                            */
+  double *Orig_Colblock_p; /* original local matrix column block    */
+  double *Trans_Colblock_p;/* local transposed matrix column block  */
+  double **Orig_Block_p;   /* buffer holding local matrix block     */
+  double **Trans_Block_p;  /* buffer to hold transposed data        */
+  double *Work_p;          /* workspace for the transpose function  */
+  double errsq,            /* squared error                         */
+         errsq_tot,        /* aggregate squared error               */
+         diff;             /* pointwise error                       */
+  double epsilon = 1.e-8;  /* error tolerance                       */
+  double local_trans_time, /* timing parameters                     */
          trans_time,
          avgtime;
-  double test_results (int , int , int , double*);
-  void   trans_isnd_ircv (double*, double*, int, int, double*, int, int);
-  void   trans_sendrcv   (double*, double*, int, int, double*, int, int);
-  void   fill_mat(int , int , int , double*);
-  void   output_timings (char *, int , int , double , double, double, 
-                         int, int , int);
-  void   analyze_results (int, double, int, double *, double*, double*, 
-                         int*, int*, int*);
 
 /*********************************************************************
 ** Initialize the MPI environment
@@ -128,37 +179,32 @@ int main(int argc, char ** argv)
     if (argc != 3 && argc != 4){
       printf("Usage: %s <# iterations> <matrix order> [Tile size]\n",
                                                                *argv);
-      error = 1;
-      goto ENDOFTESTS;
+      error = 1; goto ENDOFTESTS;
     }
 
     iterations  = atoi(*++argv);
     if(iterations < 1){
       printf("ERROR: iterations must be >= 1 : %d \n",iterations);
-      error = 1;
-      goto ENDOFTESTS;
+      error = 1; goto ENDOFTESTS;
     }
 
     order = atoi(*++argv);
     if (order < Num_procs) {
       printf("ERROR: matrix order %d should at least # procs %d\n", 
              order, Num_procs);
-      error = 1;
-      goto ENDOFTESTS;
+      error = 1; goto ENDOFTESTS;
     }
     if (order%Num_procs) {
       printf("ERROR: matrix order %d should be divisible by # procs %d\n",
              order, Num_procs);
-      error = 1;
-      goto ENDOFTESTS;
+      error = 1; goto ENDOFTESTS;
     }
 
-    if (argc == 4) tile_size = atoi(*++argv);
+    if (argc == 4) Tile_order = atoi(*++argv);
     /* a non-positive tile size means no tiling of the local transpose */
-    if (tile_size <=0 || tile_size >= order/Num_procs) {
-        tile_size = order/Num_procs;
+    if (Tile_order <=0 || Tile_order >= order/Num_procs) {
+        Tile_order = order/Num_procs;
      }
-    
     ENDOFTESTS:;
   }
   bail_out(error);
@@ -167,8 +213,8 @@ int main(int argc, char ** argv)
     printf("MPI Matrix transpose: B = A^T\n");
     printf("Number of processes  = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
-    if (tile_size < order/Num_procs) 
-          printf("Tile size            = %d\n", tile_size);
+    if (Tile_order < order/Num_procs) 
+          printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
 #ifndef SYNCHRONOUS
     printf("Non-");
@@ -177,56 +223,75 @@ int main(int argc, char ** argv)
     printf("Number of iterations = %d\n", iterations);
   }
 
-  /*  Broadcast benchmark data to all processes */
+  /*  Broadcast input data to all processes */
   MPI_Bcast (&order,      1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast (&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast (&tile_size,  1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast (&Tile_order, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-  bytes = 2.0 * sizeof(double) * order * order;
+  bytes = 2 * sizeof(double) * order * order;
 
 /*********************************************************************
-** Key Matrix parameters: The matrix is broken up into column blocks
-** that are mapped one to a node.  Each column block is made of 
-** Num_procs smaller blocks of order block_order.
-**
-**   order   - order of the global matrix
-**   Col_block_size - numb of elements in a local column block.
-**   block_size     - numb of elements in a working block.
+** The matrix is broken up into column blocks that are mapped one to a 
+** rank.  Each column block is made up of Num_procs smaller square 
+** blocks of order block_order.
 *********************************************************************/
+
   Block_order    = order/Num_procs;
-  Col_block_size = order * Block_order;
-  block_size     = Block_order  * Block_order;
+  int jstart     = Block_order * my_ID;
+  int jend       = jstart + Block_order -1;
+  Colblock_size  = order * Block_order;
+  Block_size     = Block_order * Block_order;
 
 /*********************************************************************
 ** Create the column block of the test matrix, the row block of the 
 ** transposed matrix, and workspace (workspace only if #procs>1)
 *********************************************************************/
-  buff   = (double *)malloc(2*Col_block_size*sizeof(double));
-  if (buff == NULL){
-    printf(" Error allocating space for buff on node %d\n",my_ID);
+  Orig_Colblock_p = (double *)malloc(Colblock_size*sizeof(double));
+  if (Orig_Colblock_p == NULL){
+    printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
 
-  trans  = buff + Col_block_size;
+  Trans_Colblock_p = (double *)malloc(Colblock_size*sizeof(double));
+  if (Trans_Colblock_p == NULL){
+    printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
+    error = 1;
+  }
+  bail_out(error);
 
   if (Num_procs>1) {
-    work   = (double *)malloc(block_size*sizeof(double));
-    if (work == NULL){
+    Work_p   = (double *)malloc(Block_size*sizeof(double));
+    if (Work_p == NULL){
       printf(" Error allocating space for work on node %d\n",my_ID);
       error = 1;
     }
     bail_out(error);
   }
   
-  /* Fill the original column matrix in buff.                       */
+  /* Fill the original column matrix in Orig_Colblock.                    */
   for (i=0;i<order; i++) for (j=0;j<Block_order;j++) {
-    col_val = COL_SHIFT * (my_ID*Block_order + j);
-    buff[i*Block_order+j] = col_val + ROW_SHIFT * i;
+    Orig_Colblock(i,j) = COL_SHIFT*(my_ID*Block_order+j) + ROW_SHIFT*i;
   }
 
   /*  Set the transpose matrix to a known garbage value.            */
-  for (i=0;i<Col_block_size; i++) trans[i] = -1.0;
+  for (i=0;i<Colblock_size; i++) Trans_Colblock_p[i] = -1.0;
+
+/*********************************************************************
+ ** create entry points to the Blocks within Colblocks
+ ********************************************************************/
+
+  Orig_Block_p  = (double **) malloc(2*sizeof(double *)*Num_procs);
+  if (Orig_Block_p == NULL) {
+    printf(" Error allocating space for block pointers on node %d\n", my_ID);
+    error = 1;
+  }
+  bail_out(error);
+  Trans_Block_p = Orig_Block_p + Num_procs;
+  for (i=0; i<Num_procs; i++) {
+    Orig_Block_p[i]  = Orig_Colblock_p  + i*Block_size;
+    Trans_Block_p[i] = Trans_Colblock_p + i*Block_size;
+  }
 
   errsq = 0.0;
   MPI_Barrier(MPI_COMM_WORLD);
@@ -234,23 +299,42 @@ int main(int argc, char ** argv)
 
   for (iter = 0; iter<iterations; iter++){
 
-    trans_comm(buff, trans, Block_order, tile_size,
-               work, my_ID, Num_procs);
+    transpose(Orig_Block_p[my_ID], Trans_Block_p[my_ID], Tile_order, 
+              Block_order, Block_order);
 
-#ifdef VERBOSE
-    printf("\n Node %d has finished with transpose \n",my_ID);
+    for (phase=1; phase<Num_procs; phase++){
+      recv_from = (my_ID + phase            )%Num_procs;
+      send_to   = (my_ID - phase + Num_procs)%Num_procs;
+
+#ifndef SYNCHRONOUS
+      MPI_Irecv(Trans_Block_p[recv_from], Block_size, MPI_DOUBLE, 
+                recv_from, phase, MPI_COMM_WORLD, &recv_req);  
 #endif
-  }  /* end of iter loop  */
+
+      transpose(Orig_Block_p[send_to], Work_p, Tile_order, 
+                Block_order, Block_order);
+	 
+#ifndef SYNCHRONOUS  
+      MPI_Isend(Work_p, Block_size, MPI_DOUBLE, send_to,
+                phase, MPI_COMM_WORLD, &send_req);
+      MPI_Wait(&recv_req, &status);
+      MPI_Wait(&send_req, &status);
+#else
+      MPI_Sendrecv(Work_p, Block_size, MPI_DOUBLE, send_to, phase,
+                   Trans_Block_p[recv_from], Block_size, MPI_DOUBLE, 
+	           recv_from, phase, MPI_COMM_WORLD, &status);
+#endif
+
+    }  /* end of phase loop  */
+  } /* end of iterations */
 
   local_trans_time = wtime() - local_trans_time;
   MPI_Reduce(&local_trans_time, &trans_time, 1, MPI_DOUBLE, MPI_MAX, root,
              MPI_COMM_WORLD);
 
   for (i=0;i<order; i++) {
-    col_val = COL_SHIFT * i; 	
-    for (j=0;j<Block_order;j++) {
-      diff = trans[i*Block_order+j] -
-             (col_val  + ROW_SHIFT * (my_ID*Block_order + j));
+    for (j=jstart;j<=jend;j++) {
+      diff = Trans_Colblock(i,j-jstart) - (COL_SHIFT*i + ROW_SHIFT*j);
       errsq += diff*diff;
     }
   }
@@ -261,16 +345,13 @@ int main(int argc, char ** argv)
     if (errsq_tot < epsilon) {
       printf("Solution validates\n");
       avgtime = trans_time/(double)iterations;
-
-      printf("Rate (MB/s): %lf, Avg time (s): %lf\n",
-             1.0E-06 * bytes/avgtime, avgtime);
+      printf("Rate (MB/s): %lf, Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
 #ifdef VERBOSE
       printf("Squared errors: %f \n", errsq);
 #endif
     }
     else {
-      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n",
-             errsq, epsilon);
+      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", errsq, epsilon);
       error = 1;
     }
   }
@@ -282,125 +363,36 @@ int main(int argc, char ** argv)
 
 }  /* end of main */
 
-
 /*******************************************************************
-
-NAME:    trans_comm
-
-PURPOSE: This function uses MPI SND's and RCV's to transpose 
-         of a column-bock distributed matrix in either synchronous
-         or asynchronous mode
-  
-/*******************************************************************
-** Define macros to compute processor source and destinations
-*******************************************************************/
-#define TO(ID,   PHASE, NPROC)  ((ID + PHASE        ) % NPROC)
-#define FROM(ID, PHASE, NPROC)  ((ID + NPROC - PHASE) % NPROC)
-
-void trans_comm(double *buff,  double *trans, int Block_order,
-                int tile_size, double *work,  int my_ID, int Num_procs)
-{
-  int iphase;
-  int block_size;
-  int send_to, recv_from;
-  double *bblock;    /* pointer to current location in buff */
-  double *tblock;    /* pointer to current location in trans */
-  MPI_Status status;
-#ifndef SYNCHRONOUS
-  MPI_Request send_req, recv_req;
-#endif
- 
-  block_size = Block_order * Block_order;
-
-/*******************************************************************
-**  Do the tranpose in Num_procs phases.  
-**
-**  In the first phase, do the diagonal block.  Then move out 
-**  from the diagonal copying the local matrix into a communication 
-**  buffer (while doing the local transpose) and send to processor 
-**  (diag+phase)%Num_procs.
-*******************************************************************/
-  bblock = buff  + my_ID*block_size;
-  tblock = trans + my_ID*block_size;
-
-  transpose(bblock, tblock, tile_size, Block_order, Block_order);
-
-  for (iphase=1; iphase<Num_procs; iphase++){
-
-    recv_from = FROM(my_ID, iphase, Num_procs);
-    tblock  = trans + recv_from * block_size;
-    send_to = TO(my_ID, iphase, Num_procs);
-    bblock  = buff + send_to * block_size;
-
-#ifndef SYNCHRONOUS
-    MPI_Irecv (tblock, block_size, MPI_DOUBLE, recv_from,
-              iphase, MPI_COMM_WORLD, &recv_req);  
-#endif
-
-    transpose(bblock, work, tile_size, Block_order, Block_order);
-	 
-#ifdef VERBOSE
-    printf("\n transposed block for phase %d on node %d is \n",
-               iphase,my_ID);
-#endif
-
-#ifndef SYNCHRONOUS  
-    MPI_Isend(work, block_size, MPI_DOUBLE, send_to,
-              iphase, MPI_COMM_WORLD, &send_req);
-    MPI_Wait(&recv_req,  &status);
-    MPI_Wait(&send_req, &status);
-#else
-    MPI_Sendrecv(work,   block_size, MPI_DOUBLE, send_to,   iphase,
-		 tblock, block_size, MPI_DOUBLE, recv_from, iphase, 
-		 MPI_COMM_WORLD, &status);
-#endif
-
-#ifdef VERBOSE
-   printf("\n phase %d on node %d, recv_from = %d and send_to = %d\n",
-                             iphase, my_ID, recv_from, send_to);
-#endif
-
-
-   }
-}
-
-/*******************************************************************
-** Copy the transpose of an array slice inside matrix A into 
-** the an array slice inside matrix B.
+** Transpose a local matrix Block and store the result in another
+** Block. Apply tiling as needed
 **
 **  Parameters:
 **
-**       A, B                base address of the slices
-**       sub_rows, sub_cols  Numb of rows/cols in the slice.
+**    A, B                   - base address of the Blocks
+**    Block_rows, Block_cols - Number of rows/cols in the Block
+**    Tile_order             - Number of rows/cols in matrix Tile
 ** 
 *******************************************************************/
 
 void transpose(
-  double *A, double *B,         /* input and output matrix        */
-  int tile_size,                /* local tile size                */
-  int sub_rows, int sub_cols)   /* size of slice to  transpose    */
+  double *A, double *B,           /* input and output Blocks      */
+  int Tile_order,                 /* tile order                   */
+  int Block_rows, int Block_cols) /* size of tile to transpose    */
 {
   int    i, j, it, jt;
 
-  /*  Transpose the  matrix.  */
-
   /* tile only if the tile size is smaller than the matrix block  */
-  if (tile_size < sub_cols) {
-    for (i=0; i<sub_cols; i+=tile_size) { 
-      for (j=0; j<sub_rows; j+=tile_size) { 
-        for (it=i; it<MIN(sub_cols,i+tile_size); it++){ 
-          for (jt=j; jt<MIN(sub_rows,j+tile_size);jt++){ 
-            B[it+sub_cols*jt] = A[jt+sub_rows*it]; 
-          } 
-        } 
-      } 
-    } 
+  if (Tile_order < Block_cols) {
+    for (i=0; i<Block_cols; i+=Tile_order) 
+      for (j=0; j<Block_rows; j+=Tile_order) 
+        for (it=i; it<MIN(Block_cols,i+Tile_order); it++)
+          for (jt=j; jt<MIN(Block_rows,j+Tile_order);jt++)
+            B(it,jt) = A(jt,it); 
   }
   else {
-    for (i=0;i<sub_cols; i++) {
-      for (j=0;j<sub_rows;j++) {
-        B[i+sub_cols*j] = A[j+i*sub_rows];
-      }
-    }	
+    for (i=0;i<Block_cols; i++) 
+      for (j=0;j<Block_rows;j++)
+        B(i,j) = A(j,i);
   }
 }

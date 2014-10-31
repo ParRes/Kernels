@@ -81,7 +81,7 @@ int main(int argc, char ** argv)
   double corner_val;    /* verification value at top right corner of grid        */
   int    i, j, iter, ID;/* dummies                                               */
   int    iterations;    /* number of times to run the pipeline algorithm         */
-  int    *start, *end;  /* starts and ends of grid slices                        */
+  int    start, end;    /* start and end of grid slice owned by calling rank     */
   int    segment_size;
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of processors                                  */
@@ -153,25 +153,24 @@ int main(int argc, char ** argv)
   MPI_Bcast(&n, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-  start = (int *) malloc(2*Num_procs*sizeof(int));
-  if (!start) {
-    printf("ERROR: Could not allocate space for array of slice boundaries\n");
-    exit(EXIT_FAILURE);
+  int leftover;
+  segment_size = m/Num_procs;
+  leftover     = m%Num_procs;
+  if (my_ID < leftover) {
+    start = (segment_size+1)* my_ID;
+    end   = start + segment_size;
   }
-  end = start + Num_procs;
-  start[0] = 0;
-  for (ID=0; ID<Num_procs; ID++) {
-    segment_size = m/Num_procs;
-    if (ID < (m%Num_procs)) segment_size++;
-    if (ID>0) start[ID] = end[ID-1]+1;
-    end[ID] = start[ID]+segment_size-1;
+  else {
+    start = (segment_size+1) * leftover + segment_size * (my_ID-leftover);
+    end   = start + segment_size -1;
   }
+  segment_size = end-start+1;
 
   /* now set segment_size to the value needed by the calling process            */
-  segment_size = end[my_ID] - start[my_ID] + 1;
+  segment_size = end - start + 1;
 
   /* total_length takes into account one ghost cell on left side of segment     */
-  total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
+  total_length = ((end-start+1)+1)*n;
   vector = (double *) malloc(total_length*sizeof(double));
   if (my_ID == root) {
     if (total_length/(segment_size+1) != n) {
@@ -190,17 +189,17 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   /* clear the array                                                             */
-  for (j=0; j<n; j++) for (i=start[my_ID]-1; i<=end[my_ID]; i++) {
-    ARRAY(i-start[my_ID],j) = 0.0;
+  for (j=0; j<n; j++) for (i=start-1; i<=end; i++) {
+    ARRAY(i-start,j) = 0.0;
   }
   /* set boundary values (bottom and left side of grid                           */
   if (my_ID==0) for (j=0; j<n; j++) ARRAY(0,j) = (double) j;
-  for (i=start[my_ID]-1; i<=end[my_ID]; i++) ARRAY(i-start[my_ID],0) = (double) i;
+  for (i=start-1; i<=end; i++)      ARRAY(i-start,0) = (double) i;
 
   /* redefine start and end for calling process to reflect local indices          */
-  if (my_ID==0) start[my_ID] = 1; 
-  else          start[my_ID] = 0;
-  end[my_ID] = segment_size-1;
+  if (my_ID==0) start = 1; 
+  else          start = 0;
+  end = segment_size-1;
 
   MPI_Barrier(MPI_COMM_WORLD);
   local_pipeline_time = wtime();
@@ -212,17 +211,17 @@ int main(int argc, char ** argv)
       /* if I am not at the left boundary, I need to wait for my left neighbor to
          send data                                                                */
       if (my_ID > 0) {
-        MPI_Recv(&(ARRAY(start[my_ID]-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
+        MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
                                   MPI_COMM_WORLD, &status);
       }
 
-      for (i=start[my_ID]; i<= end[my_ID]; i++) {
+      for (i=start; i<= end; i++) {
         ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
       }
 
       /* if I am not on the right boundary, send data to my right neighbor        */  
-      if (my_ID != Num_procs-1) {
-        MPI_Send(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE, my_ID+1,
+      if (my_ID < Num_procs-1) {
+        MPI_Send(&(ARRAY(end,j)), 1, MPI_DOUBLE, my_ID+1,
                                          j, MPI_COMM_WORLD);
       }
     }
@@ -230,14 +229,14 @@ int main(int argc, char ** argv)
     /* copy top right corner value to bottom left corner to create dependency      */
     if (Num_procs >1) {
       if (my_ID==root) {
-        corner_val = -ARRAY(end[my_ID],n-1);
+        corner_val = -ARRAY(end,n-1);
         MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
       }
       if (my_ID==0) {
         MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
       }
     }
-    else ARRAY(0,0)= -ARRAY(end[my_ID],n-1);
+    else ARRAY(0,0)= -ARRAY(end,n-1);
 
   }
 
@@ -252,9 +251,9 @@ int main(int argc, char ** argv)
   /* verify correctness, using top right value                                     */
   corner_val = (double) (iterations*(m+n-2));
   if (my_ID == root) {
-    if (abs(ARRAY(end[my_ID],n-1)-corner_val)/corner_val >= epsilon) {
+    if (abs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
-             ARRAY(end[my_ID],n-1), corner_val);
+             ARRAY(end,n-1), corner_val);
       error = 1;
     }
   }
