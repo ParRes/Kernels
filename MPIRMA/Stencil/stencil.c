@@ -140,8 +140,8 @@ int main(int argc, char ** argv) {
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8];
   MPI_Status  status[8];
-  MPI_Win rmawin_x;       /* RMA window object x-direction */
-  MPI_Win rmawin_y;       /* RMA window object y-direction */
+  MPI_Win rma_winx;       /* RMA window object x-direction */
+  MPI_Win rma_winy;       /* RMA window object y-direction */
 
   /*******************************************************************************
   ** Initialize the MPI environment
@@ -333,7 +333,7 @@ int main(int argc, char ** argv) {
   }
  
   /* allocate communication buffers for halo values                            */
-  MPI_Win_allocate(4*sizeof(DTYPE)*RADIUS*width, sizeof(DTYPE), MPI_INFO_NULL, MPI_COMM_WORLD, (void *) &top_buf_out, &rmawin_y);
+  MPI_Win_allocate(4*sizeof(DTYPE)*RADIUS*width, sizeof(DTYPE), MPI_INFO_NULL, MPI_COMM_WORLD, (void *) &top_buf_out, &rma_winy);
   if (!top_buf_out) {
     printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
     error = 1;
@@ -343,7 +343,7 @@ int main(int argc, char ** argv) {
   bottom_buf_out = top_buf_out + 2*RADIUS*width;
   bottom_buf_in  = top_buf_out + 3*RADIUS*width;
  
-  MPI_Win_allocate(4*sizeof(DTYPE)*RADIUS*height, sizeof(DTYPE), MPI_INFO_NULL, MPI_COMM_WORLD, (void *) &right_buf_out, &rmawin_x);
+  MPI_Win_allocate(4*sizeof(DTYPE)*RADIUS*height, sizeof(DTYPE), MPI_INFO_NULL, MPI_COMM_WORLD, (void *) &right_buf_out, &rma_winx);
   if (!right_buf_out) {
     printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
     error = 1;
@@ -359,22 +359,22 @@ int main(int argc, char ** argv) {
   for (iter = 0; iter<iterations; iter++){
  
     /* need to fetch ghost point data from neighbors in y-direction                 */
-    MPI_Win_fence(0, rmawin_y);
+    MPI_Win_fence(0, rma_winy);
     if (my_IDy < Num_procsy-1) {
       for (kk=0,j=jend-RADIUS; j<=jend-1; j++) for (i=istart; i<=iend; i++) {
           top_buf_out[kk++]= IN(i,j);
       }
       MPI_Put(top_buf_out, RADIUS*width, MPI_DTYPE, top_nbr,
-	      3*RADIUS*width, RADIUS*width, MPI_DTYPE, rmawin_y);
+	      3*RADIUS*width, RADIUS*width, MPI_DTYPE, rma_winy);
     }
     if (my_IDy > 0) {
       for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
           bottom_buf_out[kk++]= IN(i,j);
       }
       MPI_Put(bottom_buf_out, RADIUS*width, MPI_DTYPE, bottom_nbr,
-	      RADIUS*width, RADIUS*width, MPI_DTYPE, rmawin_y);
+	      RADIUS*width, RADIUS*width, MPI_DTYPE, rma_winy);
     }
-    MPI_Win_fence(0, rmawin_y);
+    MPI_Win_fence(0, rma_winy);
     if (my_IDy < Num_procsy-1) {
       for (kk=0,j=jend; j<=jend+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
           IN(i,j) = top_buf_in[kk++];
@@ -387,22 +387,22 @@ int main(int argc, char ** argv) {
     }
  
     /* need to fetch ghost point data from neighbors in x-direction                 */
-    MPI_Win_fence(0, rmawin_x);
+    MPI_Win_fence(0, rma_winx);
     if (my_IDx < Num_procsx-1) {
       for (kk=0,j=jstart; j<=jend; j++) for (i=iend-RADIUS; i<=iend-1; i++) {
           right_buf_out[kk++]= IN(i,j);
       }
       MPI_Put(right_buf_out, RADIUS*height, MPI_DTYPE, right_nbr,
-	      3*RADIUS*height, RADIUS*height, MPI_DTYPE, rmawin_x);
+	      3*RADIUS*height, RADIUS*height, MPI_DTYPE, rma_winx);
     }
     if (my_IDx > 0) {
       for (kk=0,j=jstart; j<=jend; j++) for (i=istart; i<=istart+RADIUS-1; i++) {
           left_buf_out[kk++]= IN(i,j);
       }
       MPI_Put(left_buf_out, RADIUS*height, MPI_DTYPE, left_nbr,
-	      RADIUS*height, RADIUS*height, MPI_DTYPE, rmawin_x);
+	      RADIUS*height, RADIUS*height, MPI_DTYPE, rma_winx);
     }
-    MPI_Win_fence(0, rmawin_x);
+    MPI_Win_fence(0, rma_winx);
     if (my_IDx < Num_procsx-1) {
       for (kk=0,j=jstart; j<=jend; j++) for (i=iend; i<=iend+RADIUS-1; i++) {
           IN(i,j) = right_buf_in[kk++];
@@ -494,8 +494,8 @@ int main(int argc, char ** argv) {
            1.0E-06 * flops/avgtime, avgtime);
   }
  
-  MPI_Win_free(&rmawin_x);
-  MPI_Win_free(&rmawin_y);
+  MPI_Win_free(&rma_winx);
+  MPI_Win_free(&rma_winy);
 
   MPI_Finalize();
   exit(EXIT_SUCCESS);

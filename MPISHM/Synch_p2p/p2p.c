@@ -93,7 +93,7 @@ int main(int argc, char ** argv)
   MPI_Group shm_group, origin_group, target_group;
   int origin_ranks[1], target_ranks[1];
   MPI_Aint nbr_segment_size;
-  MPI_Win shmwin;       /* Shared Memory window object */
+  MPI_Win shm_win;       /* Shared Memory window object */
   MPI_Comm shm_comm;     /* Shared Memory Communicator */
   int shm_procs;    /* # of processes in shared domain */
   int shm_ID;        /* MPI rank */
@@ -188,7 +188,7 @@ int main(int argc, char ** argv)
 
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  MPI_Win_allocate_shared(total_length*sizeof(double), sizeof(double), MPI_INFO_NULL, shm_comm, (void *) &vector, &shmwin);
+  MPI_Win_allocate_shared(total_length*sizeof(double), sizeof(double), MPI_INFO_NULL, shm_comm, (void *) &vector, &shm_win);
   if (my_ID == root) {
     if (total_length/(segment_size+1) != n) {
       printf("Grid of %d by %d points too large\n", m, n);
@@ -224,7 +224,7 @@ int main(int argc, char ** argv)
   if (shm_ID < shm_procs-1) {
     target_ranks[0] = shm_ID+1;
     MPI_Group_incl(shm_group, 1, target_ranks, &target_group);
-    MPI_Win_shared_query(shmwin, shm_ID+1, &nbr_segment_size, &target_disp, &target_ptr);
+    MPI_Win_shared_query(shm_win, shm_ID+1, &nbr_segment_size, &target_disp, &target_ptr);
     nbr_segment_size = end[my_ID+1] - start[my_ID+1] + 1;
   } else {
     target_ranks[0] = MPI_PROC_NULL;
@@ -250,8 +250,8 @@ int main(int argc, char ** argv)
       if (my_ID > 0) {
 	if (shm_ID > 0) {
 	  /*  Exposure epoch at target*/
-	  MPI_Win_post(origin_group, 0, shmwin);
-	  MPI_Win_wait(shmwin);
+	  MPI_Win_post(origin_group, 0, shm_win);
+	  MPI_Win_wait(shm_win);
 	} else {
 	  MPI_Recv(&(ARRAY(start[my_ID]-1,j)), 1, MPI_DOUBLE, 
 		   my_ID-1, j, MPI_COMM_WORLD, &status);
@@ -266,9 +266,9 @@ int main(int argc, char ** argv)
       if (my_ID != Num_procs-1) {
 	if (shm_ID != shm_procs-1) {
 	  /* Access epoch at origin */
-	  MPI_Win_start(target_group, 0, shmwin);
+	  MPI_Win_start(target_group, 0, shm_win);
 	  target_ptr[NBR_INDEX(0,j)] = ARRAY(end[my_ID],j);
-	  MPI_Win_complete(shmwin);	
+	  MPI_Win_complete(shm_win);	
 	} else {
 	  MPI_Send(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE,
 		   my_ID+1, j, MPI_COMM_WORLD);
@@ -322,6 +322,8 @@ int main(int argc, char ** argv)
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
  
+  MPI_Win_free(&shm_win);
+
   MPI_Finalize();
   exit(EXIT_SUCCESS);
 

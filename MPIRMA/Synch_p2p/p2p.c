@@ -89,7 +89,7 @@ int main(int argc, char ** argv)
   double *vector;       /* array holding grid values                             */
   int    total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
-  MPI_Win rmawin;       /* RMA window object */
+  MPI_Win rma_win;       /* RMA window object */
   MPI_Group world_group, origin_group, target_group;
   int origin_ranks[1], target_ranks[1];
   int nbr_segment_size;
@@ -177,7 +177,7 @@ int main(int argc, char ** argv)
 
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  MPI_Win_allocate(total_length*sizeof(double), sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void *) &vector, &rmawin);
+  MPI_Win_allocate(total_length*sizeof(double), sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void *) &vector, &rma_win);
   if (my_ID == root) {
     if (total_length/(segment_size+1) != n) {
       printf("Grid of %d by %d points too large\n", m, n);
@@ -240,8 +240,8 @@ int main(int argc, char ** argv)
          send data                                                                */
       if (my_ID > 0) {
         /*  Exposure epoch at target*/
-        MPI_Win_post(origin_group, 0, rmawin);
-        MPI_Win_wait(rmawin);
+        MPI_Win_post(origin_group, 0, rma_win);
+        MPI_Win_wait(rma_win);
       }
 
       for (i=start[my_ID]; i<= end[my_ID]; i++) {
@@ -251,10 +251,10 @@ int main(int argc, char ** argv)
       /* if I am not on the right boundary, send data to my right neighbor        */  
       if (my_ID != Num_procs-1) {
         /* Access epoch at origin */	
-        MPI_Win_start(target_group, 0, rmawin);
+        MPI_Win_start(target_group, 0, rma_win);
         MPI_Put(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE, my_ID+1,
-		NBR_INDEX(0,j), 1, MPI_DOUBLE, rmawin);
-        MPI_Win_complete(rmawin);	
+		NBR_INDEX(0,j), 1, MPI_DOUBLE, rma_win);
+        MPI_Win_complete(rma_win);	
       }
     }
 
@@ -262,14 +262,14 @@ int main(int argc, char ** argv)
     if (Num_procs >1) {
       if (my_ID==root) {
         corner_val = -ARRAY(end[my_ID],n-1);
-        MPI_Win_start(target_group, 0, rmawin);
+        MPI_Win_start(target_group, 0, rma_win);
         MPI_Put(&corner_val, 1, MPI_DOUBLE, 0,
-	 	NBR_INDEX(1,0), 1, MPI_DOUBLE, rmawin);
-	MPI_Win_complete(rmawin);
+	 	NBR_INDEX(1,0), 1, MPI_DOUBLE, rma_win);
+	MPI_Win_complete(rma_win);
       }
       if (my_ID==0) {
-        MPI_Win_post(origin_group, 0, rmawin);
-        MPI_Win_wait(rmawin);
+        MPI_Win_post(origin_group, 0, rma_win);
+        MPI_Win_wait(rma_win);
       }
     }
     else ARRAY(0,0)= -ARRAY(end[my_ID],n-1);
@@ -308,6 +308,8 @@ int main(int argc, char ** argv)
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
  
+  MPI_Win_free(&rma_win);
+
   MPI_Finalize();
   exit(EXIT_SUCCESS);
 
