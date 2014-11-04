@@ -294,11 +294,15 @@ int main(int argc, char ** argv)
   }
 
   errsq = 0.0;
-  MPI_Barrier(MPI_COMM_WORLD);
-  local_trans_time = wtime();
+  for (iter = 0; iter<=iterations; iter++){
 
-  for (iter = 0; iter<iterations; iter++){
+    /* start timer after a warmup iterations                                        */
+    if (iter == 1) { 
+      MPI_Barrier(MPI_COMM_WORLD);
+      local_trans_time = wtime();
+    }
 
+    /* do the local transpose                                                       */
     transpose(Orig_Block_p[my_ID], Trans_Block_p[my_ID], Tile_order, 
               Block_order, Block_order);
 

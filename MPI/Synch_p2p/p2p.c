@@ -192,7 +192,7 @@ int main(int argc, char ** argv)
   for (j=0; j<n; j++) for (i=start-1; i<=end; i++) {
     ARRAY(i-start,j) = 0.0;
   }
-  /* set boundary values (bottom and left side of grid                           */
+  /* set boundary values (bottom and left side of grid                            */
   if (my_ID==0) for (j=0; j<n; j++) ARRAY(0,j) = (double) j;
   for (i=start-1; i<=end; i++)      ARRAY(i-start,0) = (double) i;
 
@@ -201,11 +201,16 @@ int main(int argc, char ** argv)
   else          start = 0;
   end = segment_size-1;
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  local_pipeline_time = wtime();
 
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
 
+    /* start timer after a warmup iterations                                      */
+    if (iter == 1) { 
+      MPI_Barrier(MPI_COMM_WORLD);
+      local_pipeline_time = wtime();
+    }
+
+    /* execute pipeline algorithm for grid lines 1 through n-1 (skip bottom line) */
     for (j=1; j<n; j++) {
 
       /* if I am not at the left boundary, I need to wait for my left neighbor to
@@ -249,7 +254,7 @@ int main(int argc, char ** argv)
   ********************************************************************************/
  
   /* verify correctness, using top right value                                     */
-  corner_val = (double) (iterations*(m+n-2));
+  corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == root) {
     if (abs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
