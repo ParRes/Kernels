@@ -350,11 +350,10 @@ int main(int argc, char ** argv) {
   right_buf_in   = right_buf_out +   RADIUS*height;
   left_buf_out   = right_buf_out + 2*RADIUS*height;
   left_buf_in    = right_buf_out + 3*RADIUS*height;
- 
- 
+
   for (iter = 0; iter<=iterations; iter++){
- 
-    /* start timer after a warmup iterations                                        */
+
+    /* start timer after a warmup iterations */
     if (iter == 1) { 
       MPI_Barrier(MPI_COMM_WORLD);
       local_stencil_time = wtime();
@@ -452,7 +451,7 @@ int main(int argc, char ** argv) {
       }
     }
  
-    /* add constant to solution to force refresh of neighbor data, if any       */
+    /* add constant to solution to force refresh of neighbor data, if any */
     for (j=jstart; j<jend; j++) for (i=istart; i<iend; i++) IN(i,j)+= 1.0;
  
   }
