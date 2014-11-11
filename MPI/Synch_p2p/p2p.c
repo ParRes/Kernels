@@ -192,7 +192,7 @@ int main(int argc, char ** argv)
   for (j=0; j<n; j++) for (i=start-1; i<=end; i++) {
     ARRAY(i-start,j) = 0.0;
   }
-  /* set boundary values (bottom and left side of grid                            */
+  /* set boundary values (bottom and left side of grid */
   if (my_ID==0) for (j=0; j<n; j++) ARRAY(0,j) = (double) j;
   for (i=start-1; i<=end; i++)      ARRAY(i-start,0) = (double) i;
 
@@ -201,10 +201,9 @@ int main(int argc, char ** argv)
   else          start = 0;
   end = segment_size-1;
 
-
   for (iter=0; iter<=iterations; iter++) {
 
-    /* start timer after a warmup iterations                                      */
+    /* start timer after a warmup iterations */
     if (iter == 1) { 
       MPI_Barrier(MPI_COMM_WORLD);
       local_pipeline_time = wtime();
