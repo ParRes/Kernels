@@ -370,12 +370,15 @@ int main(int argc, char ** argv) {
   right_buf_in   = right_buf_out +   RADIUS*height;
   left_buf_out   = right_buf_out + 2*RADIUS*height;
   left_buf_in    = right_buf_out + 3*RADIUS*height;
- 
-  MPI_Barrier(MPI_COMM_WORLD);
-  local_stencil_time = wtime();
- 
-  for (iter = 0; iter<iterations; iter++){
- 
+
+  for (iter = 0; iter<=iterations; iter++){
+
+    /* start timer after a warmup iterations */
+    if (iter == 1) { 
+      MPI_Barrier(MPI_COMM_WORLD);
+      local_stencil_time = wtime();
+    }
+
     /* need to fetch ghost point data from neighbors in y-direction                 */
     MPI_Win_fence(0, shm_winy);
     if (my_IDy < Num_procsy-1) {
@@ -532,7 +535,7 @@ int main(int argc, char ** argv) {
       }
     }
  
-    /* add constant to solution to force refresh of neighbor data, if any         */
+    /* add constant to solution to force refresh of neighbor data, if any */
     for (j=jstart; j<jend; j++) for (i=istart; i<iend; i++) IN(i,j)+= 1.0;
  
   }
@@ -559,7 +562,7 @@ int main(int argc, char ** argv) {
   if (my_ID == root) {
     norm /= f_active_points;
     if (RADIUS > 0) {
-      reference_norm = (DTYPE) iterations * (COEFX + COEFY);
+      reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
     }
     else {
       reference_norm = (DTYPE) 0.0;
