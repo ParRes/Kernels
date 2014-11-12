@@ -228,6 +228,7 @@ int main(int argc, char ** argv) {
   left_nbr   = my_ID-1;
   top_nbr    = my_ID+Num_procsx;
   bottom_nbr = my_ID-Num_procsx;
+
   shm_right_nbr  = shm_ID+1;
   shm_left_nbr   = shm_ID-1;
   shm_top_nbr    = shm_ID+Num_procsx;
@@ -382,8 +383,7 @@ int main(int argc, char ** argv) {
     /* need to fetch ghost point data from neighbors in y-direction                 */
     MPI_Win_fence(0, shm_winy);
     if (my_IDy < Num_procsy-1) {
-      if (shm_top_nbr < shm_procs-1) {
-	printf("test ok");
+      if (shm_top_nbr <= shm_procs-1) {
 	for (kk=0,j=jend-RADIUS; j<=jend-1; j++) for (i=istart; i<=iend; i++) {
 	    top_buf_out[kk++]= IN(i,j);
 	  }
@@ -400,8 +400,7 @@ int main(int argc, char ** argv) {
       }
     }
     if (my_IDy > 0) {
-      if (shm_bottom_nbr > 0) {
-	printf("test ok");
+      if (shm_bottom_nbr >= 0) {
 	for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
 	    bottom_buf_out[kk++]= IN(i,j);
 	  }
@@ -419,7 +418,7 @@ int main(int argc, char ** argv) {
     }
     MPI_Win_fence(0, shm_winy);
     if (my_IDy < Num_procsy-1) {
-      if (shm_top_nbr < shm_procs-1) {
+      if (shm_top_nbr <= shm_procs-1) {
 	for (kk=0,j=jend; j<=jend+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
 	    IN(i,j) = top_buf_in[kk++];
 	  }
@@ -432,7 +431,7 @@ int main(int argc, char ** argv) {
       }
     }
     if (my_IDy > 0) {
-      if (shm_bottom_nbr > 0) {
+      if (shm_bottom_nbr >= 0) {
 	for (kk=0,j=jstart-RADIUS; j<=jstart-1; j++) for (i=istart; i<=iend; i++) {
 	    IN(i,j) = bottom_buf_in[kk++];
 	  }     
@@ -448,8 +447,7 @@ int main(int argc, char ** argv) {
     /* need to fetch ghost point data from neighbors in x-direction                 */
     MPI_Win_fence(0, shm_winx);
     if (my_IDx < Num_procsx-1) {
-      if (shm_right_nbr < shm_procs-1) {
-	printf("test ok");
+      if (shm_right_nbr <= shm_procs-1) {
 	for (kk=0,j=jstart; j<=jend; j++) for (i=iend-RADIUS; i<=iend-1; i++) {
 	    right_buf_out[kk++]= IN(i,j);
 	  }
@@ -466,8 +464,7 @@ int main(int argc, char ** argv) {
       }
     }
     if (my_IDx > 0) {
-      if (shm_left_nbr > 0) {
-	printf("test ok");
+      if (shm_left_nbr >= 0) {
 	for (kk=0,j=jstart; j<=jend; j++) for (i=istart; i<=istart+RADIUS-1; i++) {
 	    left_buf_out[kk++]= IN(i,j);
 	  }
@@ -485,11 +482,11 @@ int main(int argc, char ** argv) {
     }
     MPI_Win_fence(0, shm_winx);
     if (my_IDx < Num_procsx-1) {
-      if (shm_right_nbr < shm_procs-1) {
+      if (shm_right_nbr <= shm_procs-1) {
 	for (kk=0,j=jstart; j<=jend; j++) for (i=iend; i<=iend+RADIUS-1; i++) {
 	    IN(i,j) = right_buf_in[kk++];
 	  }
-      } else { 
+      } else {
 	MPI_Wait(&(request[0+4]), &(status[0+4]));
 	MPI_Wait(&(request[1+4]), &(status[1+4]));
 	for (kk=0,j=jstart; j<=jend; j++) for (i=iend; i<=iend+RADIUS-1; i++) {
@@ -498,7 +495,7 @@ int main(int argc, char ** argv) {
       }
     }
     if (my_IDx > 0) {
-      if (shm_left_nbr > 0){
+      if (shm_left_nbr >= 0){
 	for (kk=0,j=jstart; j<=jend; j++) for (i=istart-RADIUS; i<=istart-1; i++) {
 	    IN(i,j) = left_buf_in[kk++];
 	  }      
