@@ -494,7 +494,7 @@ int main(int argc, char ** argv) {
        plus one flop for the update of the input of the array        */
     flops = (DTYPE) (2*stencil_size+1) * f_active_points;
     avgtime = stencil_time/iterations;
-    printf("Rate (MFlops/s): "FSTR",  Avg time (s): %lf\n",
+    printf("Rate (MFlops/s): "FSTR"  Avg time (s): %lf\n",
            1.0E-06 * flops/avgtime, avgtime);
   }
  

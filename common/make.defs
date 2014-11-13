@@ -1,2 +1,2 @@
-MPICC=mpiicc
-CC=icc 
+MPICC=mpiicc -fno-alias -Ofast
+CC=icc -fno-alias -Ofast

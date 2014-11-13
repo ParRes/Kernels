@@ -1,5 +1,5 @@
-CHARMTOP=/home/rfvander/charm-6.6.0_10_13_2014/mpi-linux-x86_64-ifort-smp-mpicxx
-OPTS=-Ofast -g
+CHARMTOP=/home/rfvander/charm/mpi-linux-x86_64-ifort-smp-mpicxx
+OPTS=-Ofast -fno-alias -g
 CHARMC=$(CHARMTOP)/bin/charmc $(OPTS)
 CHARMCci=$(CHARMTOP)/bin/charmc $(OPTS) -E
 
