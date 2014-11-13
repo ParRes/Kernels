@@ -91,7 +91,7 @@ public:
       diff = ABS(result-corner_val);
       if (diff < EPSILON) {
         CkPrintf("Solution validates; ");
-        CkPrintf("Flops: %e\n", flops/totalTime);
+        CkPrintf("MFlops: %lf Avg time (s) %lf\n", flops/totalTime/1.e6, totalTime/maxiterations);
       }
       else {
         CkPrintf("Solution does not validate\n");

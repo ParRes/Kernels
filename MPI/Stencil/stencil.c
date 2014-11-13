@@ -119,6 +119,7 @@ int main(int argc, char ** argv) {
   DTYPE *left_buf_in;     /*       "         "                                   */
   int    root = 0;
   int    n, width, height;/* linear global and local grid dimension              */
+  long   nsquare;         /* total number of grid points                         */
   int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
   int    istart, iend;    /* bounds of grid tile assigned to calling process     */
   int    jstart, jend;    /* bounds of grid tile assigned to calling process     */
@@ -134,8 +135,8 @@ int main(int argc, char ** argv) {
   int    stencil_size;    /* number of points in stencil                         */
   DTYPE  * RESTRICT in;   /* input grid values                                   */
   DTYPE  * RESTRICT out;  /* output grid values                                  */
-  int    total_length_in; /* total required length to store input array          */
-  int    total_length_out;/* total required length to store output array         */
+  long   total_length_in; /* total required length to store input array          */
+  long   total_length_out;/* total required length to store output array         */
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8];
@@ -173,11 +174,12 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;  
     }
  
-    n  = atoi(*++argv);
-    if (n < Num_procs){
-      printf("ERROR: grid dimension must be at least # processes: %d\n", n);
-      error = 1;
-      goto ENDOFTESTS;
+    n       = atoi(*++argv); 
+    nsquare = n * n;
+    if (n*n < Num_procs){ 
+      printf("ERROR: grid size must be at least # processes: %ld\n", nsquare); 
+      error = 1; 
+      goto ENDOFTESTS; 
     }
  
     if (RADIUS < 0) {
@@ -358,7 +360,7 @@ int main(int argc, char ** argv) {
       MPI_Barrier(MPI_COMM_WORLD);
       local_stencil_time = wtime();
     }
-
+ 
     /* need to fetch ghost point data from neighbors in y-direction                 */
     if (my_IDy < Num_procsy-1) {
       MPI_Irecv(top_buf_in, RADIUS*width, MPI_DTYPE, top_nbr, 101,
@@ -503,7 +505,7 @@ int main(int argc, char ** argv) {
        plus one flop for the update of the input of the array        */
     flops = (DTYPE) (2*stencil_size+1) * f_active_points;
     avgtime = stencil_time/iterations;
-    printf("Rate (MFlops/s): "FSTR",  Avg time (s): %lf\n",
+    printf("Rate (MFlops/s): "FSTR"  Avg time (s): %lf\n",
            1.0E-06 * flops/avgtime, avgtime);
   }
  

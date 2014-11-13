@@ -349,7 +349,7 @@ int main(int argc, char ** argv)
     if (errsq_tot < epsilon) {
       printf("Solution validates\n");
       avgtime = trans_time/(double)iterations;
-      printf("Rate (MB/s): %lf, Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
+      printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
 #ifdef VERBOSE
       printf("Squared errors: %f \n", errsq);
 #endif

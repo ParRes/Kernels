@@ -97,7 +97,7 @@ public:
       if (result < epsilon) {
         CkPrintf("Solution validates\n");
         avgtime = (endTime-startTime)/(double)maxiterations;
-        CkPrintf("Rate (MB/s): %lf, Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
+        CkPrintf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
       }
       else                  
 	CkPrintf("Solutions does not validate; diff = %e, threshold = %e\n",
