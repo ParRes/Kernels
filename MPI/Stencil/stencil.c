@@ -176,8 +176,9 @@ int main(int argc, char ** argv) {
  
     n       = atoi(*++argv); 
     nsquare = n * n;
-    if (n*n < Num_procs){ 
-      printf("ERROR: grid size must be at least # processes: %ld\n", nsquare); 
+    if (nsquare < Num_procs){ 
+      printf("ERROR: grid size %d must be at least # processes: %ld\n", 
+	     nsquare, Num_procs); 
       error = 1; 
       goto ENDOFTESTS; 
     }

@@ -46,6 +46,7 @@ public:
     Main(CkArgMsg* m) {
 
       int num_chares, min_size;
+      long nsquare;         
 
       if (m->argc != 4) {
         CkPrintf("%s <maxiterations> <grid_size> <overdecomposition factor>\n", m->argv[0]);
@@ -62,8 +63,10 @@ public:
       }
 
       n = atoi(m->argv[2]);
-      if (n < CkNumPes()) {
-        CkPrintf("ERROR: Grid size %d must be larger than  #PEs %d", n, CkNumPes());
+      nsquare = n * n;
+      if (nsquare < CkNumPes()) {
+        CkPrintf("ERROR: Grid size %ld must be larger than  #PEs %d", 
+                 nsquare, CkNumPes());
         CkExit();
       }
 
