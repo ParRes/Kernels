@@ -40,7 +40,7 @@ public:
     Main(CkArgMsg* cmdlinearg) {
         if (cmdlinearg->argc != 5) {
           CkPrintf("%s <#iterations> <grid_size x> <grid_size y><overdecomposition factor>\n",
-          cmdlinearg->argv[0]); CkAbort("Abort");
+          cmdlinearg->argv[0]); CkExit();
         }
 
         // store the main proxy
@@ -48,23 +48,33 @@ public:
 
         maxiterations = atoi(cmdlinearg->argv[1]);
         if (maxiterations < 1) {
-          CkAbort("ERROR: #iterations must be positive");
+          CkPrintf("ERROR: #iterations must be positive: %d", maxiterations);
+          CkExit();
         }
         m = atoi(cmdlinearg->argv[2]);
-        if (m < CkNumPes()) 
-          CkAbort("ERROR: Horizontal grid size smaller than #PEs\n");
+        if (m < CkNumPes()) {
+          CkPrintf("ERROR: Horizontal grid size %d smaller than #PEs %d\n", m, CkNumPes());
+          CkExit();
+        }
 
         n = atoi(cmdlinearg->argv[3]);
-        if (n < 1) 
-          CkAbort("ERROR: Vertical grid size must be positive\n");
+        if (n < 1) {
+          CkPrintf("ERROR: Vertical grid size must be positive: %d\n", n);
+          CkExit();
+        }
 
         overdecomposition = atoi(cmdlinearg->argv[4]);
-        if (overdecomposition<1)
-          CkAbort("ERROR: Overdecomposition factor must be positive\n");
+        if (overdecomposition<1) {
+          CkPrintf("ERROR: Overdecomposition factor must be positive: %d\n", overdecomposition);
+          CkExit();
+        }
 
         int min_size = m/(CkNumPes()*overdecomposition);
-        if (!min_size) 
-          CkAbort("ERROR: Horizontal grid size smaller than #PEs*overdecomposition factor\n");
+        if (!min_size) {
+          CkPrintf("ERROR: Horizontal grid size %d smaller than #PEs*overdecomposition factor %d\n",
+		   m, CkNumPes()*overdecomposition);
+          CkExit();
+        }
 
         num_chares = CkNumPes()*overdecomposition;
 
@@ -77,6 +87,11 @@ public:
 
         // Create new array of worker chares
         array = CProxy_P2p::ckNew(num_chares);
+        // need to figure out how to trap errors in creating chare arrays
+	//        if (!array) {
+	//          CkPrintf("ERROR: Could not allocate space for chare array\n");
+	//          CkExit();
+	//        }
 
         //Start the computation
 	array.run();
@@ -132,6 +147,10 @@ public:
 
     // allocate two dimensional array
     vector = new double[n*(width+1)];
+    if (!vector) {
+      CkPrintf("ERROR: Char %d could not allocate array of size %d\n", thisIndex, n*(width+1));
+      CkExit();
+    }
 
     // initialize
     if (thisIndex == 0) for (j=0; j<n; j++) ARRAY(0,j) = (double) j;

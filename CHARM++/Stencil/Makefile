@@ -14,7 +14,7 @@ stencil.decl.h: stencil.ci
 	$(CHARMCci)  stencil.ci
 
 clean:
-	rm -f *.decl.h *.def.h conv-host *.o stencil charmrun *~
+	rm -f *.decl.h *.def.h conv-host *.o stencil charmrun *~ *optrpt
 
 stencil.o: stencil.C stencil.decl.h
 	$(CHARMC) -c stencil.C

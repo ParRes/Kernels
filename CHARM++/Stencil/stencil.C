@@ -49,7 +49,7 @@ public:
 
       if (m->argc != 4) {
         CkPrintf("%s <maxiterations> <grid_size> <overdecomposition factor>\n", m->argv[0]);
-        CkAbort("Abort");
+        CkExit();
       }
 
       // store the main proxy
@@ -57,23 +57,31 @@ public:
 
       maxiterations = atoi(m->argv[1]);
       if (maxiterations < 1) {
-        CkAbort("ERROR: maxiterations must be positive");
+        CkPrintf("ERROR: maxiterations must be positive: %d", maxiterations);
+        CkExit();
       }
 
       n = atoi(m->argv[2]);
-      if (n < CkNumPes()) 
-        CkAbort("ERROR: Grid size must be larger than  #PEs");
+      if (n < CkNumPes()) {
+        CkPrintf("ERROR: Grid size %d must be larger than  #PEs %d", n, CkNumPes());
+        CkExit();
+      }
 
       overdecomposition = atoi(m->argv[3]);
-      if (n < overdecomposition)
-        CkAbort("ERROR: Grid size must be larger than overdecomposition");
+      if (n < overdecomposition) {
+        CkPrintf("ERROR: Grid size %d must be larger than overdecomposition %d",
+                 n, overdecomposition);
+	CkExit();
+      }
 
       if (RADIUS < 0) {
-        CkAbort("ERROR: Stencil radius %d should be non-negative\n");
+        CkPrintf("ERROR: Stencil radius %d should be non-negative\n", RADIUS);
+        CkExit();
       }
   
       if (2*RADIUS +1 > n) {
-        CkAbort("ERROR: Stencil diameter exceeds grid size\n");
+        CkPrintf("ERROR: Stencil diameter %d exceeds grid size %d\n", 2*RADIUS +1 , n);
+        CkExit();
       }
 
       // compute decomposition that has smallest surface/volume ratio
@@ -85,11 +93,10 @@ public:
         }
       }
       min_size = (n+num_chare_cols-1)/num_chare_cols;
-      if (min_size<RADIUS) 
-        CkAbort("Some tiles smaller than radius of difference stencil\n");
-
-      //      num_chare_rows = CkNumPes();
-      //      num_chare_cols = overdecomposition;
+      if (min_size<RADIUS) {
+        CkPrintf("ERROR: Some tiles smaller than radius of difference stencil\n");
+        CkExit();
+      }
 
       // print info
       CkPrintf("Charm++ stencil execution on 2D grid\n");
@@ -102,7 +109,8 @@ public:
       CkPrintf("Type of stencil         = star\n");
 #else
       CkPrintf("Type of stencil         = compact\n");
-      CkAbort("ERROR: Compact stencil not (yet) supported\n");
+      CkPrintf("ERROR: Compact stencil not (yet) supported\n");
+      CkExit();
 #endif
       CkPrintf("Number of iterations    = %d\n", maxiterations);
 
@@ -199,6 +207,10 @@ public:
     // allocate two dimensional array
     temperature = new double[(height+2*RADIUS)*(width+2*RADIUS)];
     new_temperature = new double[height*width];
+    if (!temperature || ! new_temperature) {
+      CkPrintf("ERROR: Could not allocate temperature arrays\n");
+      CkExit();
+    }
     max_messages_due = 4;
     if (thisIndex.x == 0               ) {max_messages_due--; }
     if (thisIndex.y == 0               ) {max_messages_due--; }
@@ -231,6 +243,10 @@ public:
         // Send my left edge
         if (thisIndex.x > 0) {
           ghostMsg *msg = new (height*RADIUS) ghostMsg(LEFT, height);
+          if (!msg) {
+            CkPrintf("Could not allocate space for message\n");
+            CkExit();
+          }
           CkSetRefNum(msg, iterations);
           for(int j=0, k=0;j<height;++j) for (int i=0; i<RADIUS; i++)
 					    msg->edge[k++]    = temp(i,j);
@@ -240,6 +256,10 @@ public:
 	// Send my right edge
         if (thisIndex.x < num_chare_cols-1) {
           ghostMsg *msg = new (height*RADIUS) ghostMsg(RIGHT, height);
+          if (!msg) {
+            CkPrintf("Could not allocate space for message\n");
+            CkExit();
+          }
           CkSetRefNum(msg, iterations);
           for(int j=0, k=0;j<height;++j) for (int i=0; i<RADIUS; i++)
 					    msg->edge[k++]   = temp(width-RADIUS+i,j);
@@ -249,8 +269,11 @@ public:
 	// Send my bottom edge
         if (thisIndex.y > 0) {
           ghostMsg *msg = new (width*RADIUS) ghostMsg(BOTTOM, width);
+          if (!msg) {
+            CkPrintf("Could not allocate space for message\n");
+            CkExit();
+          }
           CkSetRefNum(msg, iterations);
-          double *edge = new double[width*RADIUS];
           for (int j=0, k=0; j<RADIUS; j++) for(int i=0;i<width;i++)
 					 msg->edge[k++]   = temp(i,j);
           thisProxy(thisIndex.x, thisIndex.y-1).receiveGhosts(msg);
@@ -259,8 +282,11 @@ public:
 	// Send my top edge
         if (thisIndex.y < num_chare_rows-1) {
           ghostMsg *msg = new (width*RADIUS) ghostMsg(TOP, width);
+          if (!msg) {
+            CkPrintf("Could not allocate space for message\n");
+            CkExit();
+          }
           CkSetRefNum(msg, iterations);
-          double *edge = new double[width*RADIUS];
           for (int j=0, k=0; j<RADIUS; j++) for(int i=0;i<width;i++)
 					 msg->edge[k++]  = temp(i,height-RADIUS+j);
           thisProxy(thisIndex.x, thisIndex.y+1).receiveGhosts(msg);
@@ -293,7 +319,8 @@ public:
 	  temp(i,-RADIUS+j) = msg->edge[k++];
         break;
 
-      default: CkAbort("ERROR: invalid direction\n");
+      default: CkPrintf("ERROR: invalid direction\n");
+	CkExit();
       }
       delete msg;
   }

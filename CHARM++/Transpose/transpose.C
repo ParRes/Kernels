@@ -42,7 +42,7 @@ public:
     Main(CkArgMsg* cmdlinearg) {
         if (cmdlinearg->argc != 5) {
           CkPrintf("%s <#iterations> <matrix order> <tile order><overdecomposition factor>\n",
-          cmdlinearg->argv[0]); CkAbort("Abort");
+          cmdlinearg->argv[0]); CkExit();
         }
 
         // store the main proxy
@@ -50,25 +50,39 @@ public:
 
         maxiterations = atoi(cmdlinearg->argv[1]);
         if (maxiterations < 1) {
-          CkAbort("ERROR: #iterations must be positive");
+          CkPrintf("ERROR: #iterations must be positive: %d\n", maxiterations);
+          CkExit();
         }
         order = atoi(cmdlinearg->argv[2]);
-        if (order < CkNumPes()) 
-          CkAbort("ERROR: Horizontal grid size smaller than #PEs\n");
+        if (order < CkNumPes()) {
+          CkPrintf("ERROR: Matrix order %d smaller than #PEs %d\n", order, CkNumPes());
+          CkExit();
+        }
 
         Tile_order = atoi(cmdlinearg->argv[3]);
-        if (Tile_order < 1) 
-          CkAbort("ERROR: Matrix order size must be positive\n");
+        if (Tile_order < 1) {
+          CkPrintf("ERROR: Tile order must be positive: %d \n", Tile_order);
+          CkExit();
+        }
 
         overdecomposition = atoi(cmdlinearg->argv[4]);
-        if (overdecomposition<1)
-          CkAbort("ERROR: Overdecomposition factor must be positive\n");
+        if (overdecomposition<1) {
+          CkPrintf("ERROR: Overdecomposition factor must be positive: %d\n", overdecomposition);
+          CkExit();
+        }
 
         num_chares = CkNumPes()*overdecomposition;
-        if (!(order/num_chares))
-          CkAbort("ERROR: Matrix order smaller than #PEs*overdecomposition factor\n");
-        if (order%num_chares)
-          CkAbort("ERROR: Matrix order must be multiple of #PEs*overdecomposition factor\n");
+        if (!(order/num_chares)) {
+          CkPrintf("ERROR: Matrix order %d smaller than #PEs*overdecomposition factor %d\n",
+                   order, num_chares);
+          CkExit();
+        }
+        if (order%num_chares) {
+          CkPrintf("ERROR: Matrix order %d must be multiple of #PEs*overdecomposition factor $d\n",
+                   order, num_chares);
+          CkExit();
+        }
+
         Block_order = order/num_chares;
         Colblock_size = order * Block_order;
         Block_size  = Block_order * Block_order;
@@ -125,9 +139,10 @@ public:
     Orig_Colblock_p  = new double[Colblock_size];
     Trans_Colblock_p = new double[Colblock_size];
     Work_p           = new double[Block_size];
-    if (! Orig_Colblock_p || !Trans_Colblock_p || !Work_p) {
-      CkAbort("Could not allocate memory for matrix blocks\n");
-  }
+    if (! Orig_Colblock_p || !Trans_Colblock_p || !Work_p) { 
+      CkPrintf("Could not allocate memory for matrix blocks\n");
+      CkExit();
+    }
 
     /* Fill the original column matrix in Orig_Colblock.                */
     for (i=0;i<order; i++) for (j=0;j<Block_order;j++) {
@@ -142,9 +157,15 @@ public:
      ********************************************************************/
 
     Orig_Block_p =  new double*[num_chares];
-    if (!Orig_Block_p) CkAbort("Error allocating space for block pointers\n");
+    if (!Orig_Block_p) {
+      CkPrintf("ERROR: Cannot allocate space for block pointers\n");
+      CkExit();
+    }
     Trans_Block_p =  new double*[num_chares];
-    if (!Trans_Block_p) CkAbort("Error allocating space for block pointers\n");
+    if (!Trans_Block_p) {
+      CkPrintf("ERROR: Cannot allocate space for block pointers\n");
+      CkExit();
+    }
     for (i=0; i<num_chares; i++) {
       Orig_Block_p[i]  = Orig_Colblock_p  + i*Block_size;
       Trans_Block_p[i] = Trans_Colblock_p + i*Block_size;
@@ -192,6 +213,10 @@ public:
   void sendBlock(int destination) {
 
     blockMsg *msg = new (Block_size) blockMsg(thisIndex);
+    if (!msg) {
+      CkPrintf("Could not allocate space for message\n");
+      CkExit();
+    }
     CkSetRefNum(msg, phase+iterations*num_chares);
     memcpy(msg->blockData, Work_p, Block_size*sizeof(double));
     thisProxy(destination).receiveBlock(msg);
