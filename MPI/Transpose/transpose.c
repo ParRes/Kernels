@@ -269,7 +269,7 @@ int main(int argc, char ** argv)
   
   /* Fill the original column matrix                                                */
   istart = 0;  
-  for (i=0;i<order; i++) for (j=0;j<Block_order;j++) {
+  for (j=0;j<Block_order;j++) for (i=0;i<order; i++)  {
     A(i,j) = COL_SHIFT*(j+colstart) + ROW_SHIFT*i;
   }
 
@@ -351,8 +351,8 @@ int main(int argc, char ** argv)
 
   errsq = 0.0;
   istart = 0;
-  for (i=0;i<order; i++) {
-    for (j=0;j<Block_order;j++) {
+  for (j=0;j<Block_order;j++) {
+    for (i=0;i<order; i++) {
       double ref =  COL_SHIFT*(double)i + ROW_SHIFT*(double)(j+colstart);
       diff = ABS(B(i,j) - ref);
       errsq += diff;
