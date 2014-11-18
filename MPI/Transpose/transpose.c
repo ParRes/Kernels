@@ -118,8 +118,8 @@ o The original and transposed matrices are called A and B
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
 
-#define A(i,j)        A_p[(i)+order*(j)]
-#define B(i,j)        B_p[(i)+order*(j)]
+#define A(i,j)        A_p[(i+istart)+order*(j)]
+#define B(i,j)        B_p[(i+istart)+order*(j)]
 #define Work_in(i,j)  Work_in_p[i+Block_order*(j)]
 #define Work_out(i,j) Work_out_p[i+Block_order*(j)]
 
@@ -270,7 +270,7 @@ int main(int argc, char ** argv)
   /* Fill the original column matrix                                                */
   istart = 0;  
   for (i=0;i<order; i++) for (j=0;j<Block_order;j++) {
-    A(i+istart,j) = COL_SHIFT*(j+colstart) + ROW_SHIFT*i;
+    A(i,j) = COL_SHIFT*(j+colstart) + ROW_SHIFT*i;
   }
 
   /*  Set the transpose matrix to a known garbage value.                            */
@@ -289,7 +289,7 @@ int main(int argc, char ** argv)
     if (!tiling) {
       for (i=0; i<Block_order; i++) 
         for (j=0; j<Block_order; j++) {
-          B(j+istart,i) = A(i+istart,j);
+          B(j,i) = A(i,j);
 	}
     }
     else {
@@ -297,7 +297,7 @@ int main(int argc, char ** argv)
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
-              B(jt+istart,it) = A(it+istart,jt); 
+              B(jt,it) = A(it,jt); 
     }
 
     for (phase=1; phase<Num_procs; phase++){
@@ -313,7 +313,7 @@ int main(int argc, char ** argv)
       if (!tiling) {
         for (i=0; i<Block_order; i++) 
           for (j=0; j<Block_order; j++){
-	    Work_out(j,i) = A(i+istart,j);
+	    Work_out(j,i) = A(i,j);
 	  }
       }
       else {
@@ -321,7 +321,7 @@ int main(int argc, char ** argv)
           for (j=0; j<Block_order; j+=Tile_order) 
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-                Work_out(it,jt) = A(jt+istart,it); 
+                Work_out(it,jt) = A(jt,it); 
 	      }
       }
 
@@ -340,7 +340,7 @@ int main(int argc, char ** argv)
       /* scatter received block to transposed matrix; no need to tile */
       for (j=0; j<Block_order; j++)
         for (i=0; i<Block_order; i++) 
-          B(i+istart,j) = Work_in(i,j);
+          B(i,j) = Work_in(i,j);
 
     }  /* end of phase loop  */
   } /* end of iterations */
@@ -350,6 +350,7 @@ int main(int argc, char ** argv)
              MPI_COMM_WORLD);
 
   errsq = 0.0;
+  istart = 0;
   for (i=0;i<order; i++) {
     for (j=0;j<Block_order;j++) {
       double ref =  COL_SHIFT*(double)i + ROW_SHIFT*(double)(j+colstart);
