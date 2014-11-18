@@ -384,6 +384,7 @@ int main(int argc, char ** argv) {
   if (shm_bottom_nbr >= 0)
     MPI_Win_shared_query(shm_winy, shm_bottom_nbr, &bottom_segment_size, &bottom_disp, &bottom_ptr);
  
+  MPI_Pcontrol(1, "iter");
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iterations */
@@ -393,6 +394,7 @@ int main(int argc, char ** argv) {
     }
 
     /* need to fetch ghost point data from neighbors in y-direction                 */
+    MPI_Pcontrol(1, "ydir");
     MPI_Win_fence(0, shm_winy);
     if (my_IDy < Num_procsy-1) {
       if (shm_top_nbr <= shm_procs-1) {
@@ -453,8 +455,10 @@ int main(int argc, char ** argv) {
 	  }
       }
     }
- 
+    MPI_Pcontrol(-1, "ydir");
+
     /* need to fetch ghost point data from neighbors in x-direction                 */
+    MPI_Pcontrol(1, "xdir");
     MPI_Win_fence(0, shm_winx);
     if (my_IDx < Num_procsx-1) {
       if (shm_right_nbr <= shm_procs-1) {
@@ -515,7 +519,8 @@ int main(int argc, char ** argv) {
 	  }      
       }
     }
- 
+    MPI_Pcontrol(-1, "xdir");
+
     /* Apply the stencil operator */
     for (j=MAX(jstart,RADIUS); j<MIN(n-RADIUS,jend); j++) {
       for (i=MAX(istart,RADIUS); i<MIN(n-RADIUS,iend); i++) {
@@ -544,6 +549,7 @@ int main(int argc, char ** argv) {
     for (j=jstart; j<jend; j++) for (i=istart; i<iend; i++) IN(i,j)+= 1.0;
  
   }
+  MPI_Pcontrol(-1, "iter");
  
   local_stencil_time = wtime() - local_stencil_time;
   MPI_Reduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, root,
