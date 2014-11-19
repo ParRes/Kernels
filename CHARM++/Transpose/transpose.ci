@@ -6,6 +6,7 @@ mainmodule transpose {
   readonly int         maxiterations;
   readonly int         Block_order;
   readonly int         Tile_order;
+  readonly int         tiling;
   readonly int         Colblock_size;
   readonly int         Block_size;
   readonly double      startTime;
@@ -24,8 +25,9 @@ mainmodule transpose {
   array [1D] Transpose {
     entry Transpose(void);
     entry void receiveBlock(blockMsg *msg);
-    entry void local_transpose(int blockIndex);
-    entry void sendBlock(int destination);
+    entry void diagonal_transpose();
+    entry void nondiagonal_transpose(int send_to);
+    entry void sendBlock(int send_to);
     entry void processBlock(blockMsg *msg);
     entry [reductiontarget] void global_error(double result);
     entry [reductiontarget] void barrier_stop(void);
@@ -43,15 +45,15 @@ mainmodule transpose {
           }
         }
         serial "transpose diagonal block" {
-            local_transpose(thisIndex);
+            diagonal_transpose();
         }
                            
         for (phase=1; phase<num_chares; phase++) {
           
           serial "transpose block before sending" {
-            recv_from = (thisIndex + phase             )%num_chares;
+//            recv_from = (thisIndex + phase             )%num_chares;
             send_to   = (thisIndex - phase + num_chares)%num_chares;
-              local_transpose(send_to);
+            nondiagonal_transpose(send_to);
             sendBlock(send_to);
           }
           when receiveBlock[phase+iterations*num_chares](blockMsg *msg)

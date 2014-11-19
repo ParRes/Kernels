@@ -1,14 +1,11 @@
 #include "transpose.decl.h"
 #define MIN(i,j)      ((i)<(j) ? (i) : (j))
-// Constant to shift column index 
-#define  COL_SHIFT  1.00
-// Constant to shift row index 
-#define  ROW_SHIFT  0.1  
-#define A(i,j)              A[(i)+Block_order*(j)]
-#define B(i,j)              B[(i)+Block_order*(j)]
-#define Work(i,j)           Work_p[(i)+Block_order*(j)]
-#define Orig_Colblock(i,j)  Orig_Colblock_p[(i)*Block_order+j]
-#define Trans_Colblock(i,j) Trans_Colblock_p[(i)*Block_order+j]
+#define ABS(i)        ((i)>0.0 ? (i) : (-(i)))
+#define A(i,j)        A_p[(i+istart)+order*(j)]
+#define B(i,j)        B_p[(i+istart)+order*(j)]
+#define Work_in(i,j)  Work_in_p[i+Block_order*(j)]
+#define Work_out(i,j) Work_out_p[i+Block_order*(j)]
+
 
 // See README for documentation
 
@@ -19,6 +16,7 @@
 /*readonly*/ int maxiterations;
 /*readonly*/ int Block_order;
 /*readonly*/ int Tile_order;
+/*readonly*/ int tiling;
 /*readonly*/ int Colblock_size;
 /*readonly*/ int Block_size;
 /*readonly*/ double startTime;
@@ -87,6 +85,7 @@ public:
         Colblock_size = order * Block_order;
         Block_size  = Block_order * Block_order;
 
+        tiling = (Tile_order > 0) && (Tile_order < order);
         bytes = 2 * sizeof(double) * order * order;
 
         // print info
@@ -125,51 +124,35 @@ class Transpose: public CBase_Transpose {
   Transpose_SDAG_CODE
 
 public:
-  int iterations, phase;
+  int iterations, phase, colstart;
   double result, local_error;
   int send_to, recv_from;
-  double *Orig_Colblock_p, *Trans_Colblock_p, *Work_p;
-  double **Orig_Block_p, **Trans_Block_p;
+  double *A_p, *B_p, *Work_in_p, *Work_out_p;
 
   // Constructor, initialize values
   Transpose() {
-    int i, j;
       
     // allocate two dimensional array
-    Orig_Colblock_p  = new double[Colblock_size];
-    Trans_Colblock_p = new double[Colblock_size];
-    Work_p           = new double[Block_size];
-    if (! Orig_Colblock_p || !Trans_Colblock_p || !Work_p) { 
+    A_p        = new double[Colblock_size];
+    B_p        = new double[Colblock_size];
+    Work_in_p  = new double[Block_size];
+    Work_out_p = new double[Block_size];
+    if (! A_p || !B_p || !Work_in_p || !Work_out_p) { 
       CkPrintf("Could not allocate memory for matrix blocks\n");
       CkExit();
     }
 
-    /* Fill the original column matrix in Orig_Colblock.                */
-    for (i=0;i<order; i++) for (j=0;j<Block_order;j++) {
-	Orig_Colblock(i,j) = COL_SHIFT*(thisIndex*Block_order+(j+1)) + ROW_SHIFT*(i+1);
+    /* set value of starting column for this chare                      */
+    colstart = thisIndex*Block_order;
+
+    /* Fill the original column matrix in A.                            */
+    int istart = 0;  
+    for (int i=0;i<order; i++) for (int j=0;j<Block_order;j++) {
+      A(i,j) = (double) (order*(j+colstart) + i);
     }
 
     /*  Set the transpose matrix to a known garbage value.              */
-    for (i=0;i<Colblock_size; i++) Trans_Colblock_p[i] = -1.0;
-
-    /*********************************************************************
-     ** create entry points to the Blocks within Colblocks
-     ********************************************************************/
-
-    Orig_Block_p =  new double*[num_chares];
-    if (!Orig_Block_p) {
-      CkPrintf("ERROR: Cannot allocate space for block pointers\n");
-      CkExit();
-    }
-    Trans_Block_p =  new double*[num_chares];
-    if (!Trans_Block_p) {
-      CkPrintf("ERROR: Cannot allocate space for block pointers\n");
-      CkExit();
-    }
-    for (i=0; i<num_chares; i++) {
-      Orig_Block_p[i]  = Orig_Colblock_p  + i*Block_size;
-      Trans_Block_p[i] = Trans_Colblock_p + i*Block_size;
-    }
+    for (int i=0;i<Colblock_size; i++) B_p[i] = -1.0;
   }
 
   // a necessary function, which we ignore now. If we were to use load balancing 
@@ -177,40 +160,52 @@ public:
   Transpose(CkMigrateMessage* m) {}
 
   ~Transpose() { 
-    delete [] Orig_Block_p;
-    delete [] Trans_Block_p;
-    delete [] Orig_Colblock_p;
-    delete [] Trans_Colblock_p;
-    delete [] Work_p;
+    delete [] A_p;
+    delete [] B_p;
+    delete [] Work_in_p;
+    delete [] Work_out_p;
   }
 
   // Perform one matrix block worth of work
-  // The first step is to do the local transpose of the block
-  void local_transpose(int blockIndex) {
-    int i, j, it, jt;
-    double *A, *B;
-    A = Orig_Block_p[blockIndex];
-    if (blockIndex==thisIndex) B = Trans_Block_p[thisIndex];
-    else                       B = Work_p;
-    // tile only if the tile order is smaller than the matrix block  
-    if (Tile_order < Block_order) {
-      for (i=0; i<Block_order; i+=Tile_order) 
-        for (j=0; j<Block_order; j+=Tile_order) 
-          for (it=i; it<MIN(Block_order,i+Tile_order); it++)
-            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
-              B(it,jt) = A(jt,it); 
+  void diagonal_transpose() {
+
+    int istart = colstart; 
+    if (!tiling) {
+      for (int i=0; i<Block_order; i++) 
+        for (int j=0; j<Block_order; j++) {
+          B(j,i) = A(i,j);
+	}
     }
     else {
-      for (i=0;i<Block_order; i++) 
-        for (j=0;j<Block_order;j++) {
-          B(i,j) = A(j,i);
-	}
-         
+      for (int i=0; i<Block_order; i+=Tile_order) 
+        for (int j=0; j<Block_order; j+=Tile_order) 
+          for (int it=i; it<MIN(Block_order,i+Tile_order); it++)
+            for (int jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
+              B(jt,it) = A(it,jt); 
     }
   }
 
+  void nondiagonal_transpose(int send_to) {
+
+      int istart = send_to*Block_order; 
+      if (!tiling) {
+        for (int i=0; i<Block_order; i++) 
+          for (int j=0; j<Block_order; j++){
+	    Work_out(j,i) = A(i,j);
+	  }
+      }
+      else {
+        for (int i=0; i<Block_order; i+=Tile_order) 
+          for (int j=0; j<Block_order; j+=Tile_order) 
+            for (int it=i; it<MIN(Block_order,i+Tile_order); it++)
+              for (int jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+                Work_out(it,jt) = A(jt,it); 
+	      }
+      }
+  }
+
   // The next step is to send the block to the proper destination
-  void sendBlock(int destination) {
+  void sendBlock(int send_to) {
 
     blockMsg *msg = new (Block_size) blockMsg(thisIndex);
     if (!msg) {
@@ -218,26 +213,29 @@ public:
       CkExit();
     }
     CkSetRefNum(msg, phase+iterations*num_chares);
-    memcpy(msg->blockData, Work_p, Block_size*sizeof(double));
-    thisProxy(destination).receiveBlock(msg);
+    memcpy(msg->blockData, Work_out_p, Block_size*sizeof(double));
+    thisProxy(send_to).receiveBlock(msg);
   }
 
   // The final step is to receive the transposed block and store it in the proper place    
   void processBlock(blockMsg *msg) {
 
-    memcpy(Trans_Block_p[msg->blockID],msg->blockData,Block_size*sizeof(double));
+    memcpy(Work_in_p,msg->blockData,Block_size*sizeof(double));
+    int istart = msg->blockID*Block_order; 
+    /* scatter received block to transposed matrix; no need to tile */
+    for (int j=0; j<Block_order; j++)
+      for (int i=0; i<Block_order; i++) 
+        B(i,j) = Work_in(i,j);
+  
     delete msg;
   }
 
   void compute_local_error() {
 
-    double diff;
     local_error = 0.0;
-    for (int i=0;i<order; i++) {
-      for (int j=0;j<Block_order;j++) {
-        diff = Trans_Colblock(i,j)-(COL_SHIFT*((i+1)) + ROW_SHIFT*(thisIndex*Block_order+j+1));
-        local_error += diff*diff;
-      }
+    int istart = 0;
+    for (int j=0;j<Block_order;j++) for (int i=0;i<order; i++) {
+        local_error += ABS(B(i,j) - (double)(order*i + j+colstart));
     }
   }
 

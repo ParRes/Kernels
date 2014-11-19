@@ -63,9 +63,14 @@ HISTORY: Written by Tim Mattson, April 1999.
          Updated by Rob Van der Wijngaart, October 2006.
          Updated by Rob Van der Wijngaart, November 2014::
          - made variable names more consistent 
-         - introduced pointers to individual blocks inside matrix
-           column blocks
          - put timing around entire iterative loop of transposes
+         - fixed incorrect matrix block access; no separate function
+           for local transpose of matrix block
+         - reordered initialization and verification loops to
+           produce unit stride
+         - changed initialization values, such that the input matrix
+           elements are: A(i,j) = i+order*j
+         
   
 *******************************************************************/
 
@@ -146,16 +151,13 @@ int main(int argc, char ** argv)
   int iter;                /* index of iteration                    */
   int phase;               /* phase inside staged communication     */
   int colstart;            /* starting column for owning rank       */
-  double COL_SHIFT;        /* Constant to shift column index        */
-  double ROW_SHIFT;        /* Constant to shift row index           */
   int error;               /* error flag                            */
   double *A_p;             /* original matrix column block          */
   double *B_p;             /* transposed matrix column block        */
   double *Work_in_p;       /* workspace for the transpose function  */
   double *Work_out_p;      /* workspace for the transpose function  */
-  double errsq,            /* squared error                         */
-         errsq_tot,        /* aggregate squared error               */
-         diff;             /* pointwise error                       */
+  double abserr,           /* absolute error                        */
+         abserr_tot;       /* aggregate absolute error              */
   double epsilon = 1.e-8;  /* error tolerance                       */
   double local_trans_time, /* timing parameters                     */
          trans_time,
@@ -225,8 +227,6 @@ int main(int argc, char ** argv)
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);
   bytes = 2 * sizeof(double) * order * order;
-  COL_SHIFT = (double)order;
-  ROW_SHIFT = 1.0;
 
 /*********************************************************************
 ** The matrix is broken up into column blocks that are mapped one to a 
@@ -270,7 +270,7 @@ int main(int argc, char ** argv)
   /* Fill the original column matrix                                                */
   istart = 0;  
   for (j=0;j<Block_order;j++) for (i=0;i<order; i++)  {
-    A(i,j) = COL_SHIFT*(j+colstart) + ROW_SHIFT*i;
+      A(i,j) = (double) (order*(j+colstart) + i);
   }
 
   /*  Set the transpose matrix to a known garbage value.                            */
@@ -349,29 +349,25 @@ int main(int argc, char ** argv)
   MPI_Reduce(&local_trans_time, &trans_time, 1, MPI_DOUBLE, MPI_MAX, root,
              MPI_COMM_WORLD);
 
-  errsq = 0.0;
+  abserr = 0.0;
   istart = 0;
-  for (j=0;j<Block_order;j++) {
-    for (i=0;i<order; i++) {
-      double ref =  COL_SHIFT*(double)i + ROW_SHIFT*(double)(j+colstart);
-      diff = ABS(B(i,j) - ref);
-      errsq += diff;
-    }
+  for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
+      abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
   }
 
-  MPI_Reduce(&errsq, &errsq_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
+  MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
 
   if (my_ID == root) {
-    if (errsq_tot < epsilon) {
+    if (abserr_tot < epsilon) {
       printf("Solution validates\n");
       avgtime = trans_time/(double)iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
 #ifdef VERBOSE
-      printf("Summed errors: %f \n", errsq);
+      printf("Summed errors: %f \n", abserr);
 #endif
     }
     else {
-      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", errsq, epsilon);
+      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr, epsilon);
       error = 1;
     }
   }
