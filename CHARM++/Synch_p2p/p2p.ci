@@ -24,6 +24,7 @@ mainmodule p2p {
   array [1D] P2p {
     entry P2p(void);
     entry void pass_baton(void);
+    entry void sendCorner(void);
     entry void receiveGhost(ghostMsg *msg);
     entry void receiveCorner(cornerMsg *msg);
     entry void processGhost(ghostMsg *msg);
