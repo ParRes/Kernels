@@ -147,7 +147,7 @@ public:
 
     /* Fill the original column matrix in A.                            */
     int istart = 0;  
-    for (int i=0;i<order; i++) for (int j=0;j<Block_order;j++) {
+    for (int j=0;j<Block_order;j++) for (int i=0;i<order; i++) {
       A(i,j) = (double) (order*(j+colstart) + i);
     }
 

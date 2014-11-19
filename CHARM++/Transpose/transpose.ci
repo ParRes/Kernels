@@ -51,7 +51,6 @@ mainmodule transpose {
         for (phase=1; phase<num_chares; phase++) {
           
           serial "transpose block before sending" {
-//            recv_from = (thisIndex + phase             )%num_chares;
             send_to   = (thisIndex - phase + num_chares)%num_chares;
             nondiagonal_transpose(send_to);
             sendBlock(send_to);
