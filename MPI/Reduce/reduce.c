@@ -73,6 +73,8 @@ int main(int argc, char ** argv)
   int i, iter;          /* dummies                                           */
   int vector_length;    /* length of the vectors to be aggregated            */
   double * RESTRICT vector; /* vector to be reduced                          */
+  double * RESTRICT vector2;/* vector to be reduced                          */
+  double * RESTRICT ones; /* constant vector                                 */
   double local_reduce_time, /* timing parameters                             */
          reduce_time,
          avgtime;
@@ -127,34 +129,43 @@ int main(int argc, char ** argv)
   /* Broadcast benchmark data to all processes */
   MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&vector_length, 1, MPI_INT, root, MPI_COMM_WORLD);
-  vector= (double *) malloc(2*vector_length*sizeof(double)); 
+  vector= (double *) malloc(3*vector_length*sizeof(double)); 
   if (vector==NULL) {
     printf("ERROR: Could not allocate space for vector in process %d\n", my_ID);
     error = 1;
   }
   bail_out(error);
+  vector2 = vector + vector_length;
+  ones     = vector + 2*vector_length;
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  local_reduce_time = wtime();
+  /* initialize the arrays                                                    */
+  for (i=0; i<vector_length; i++) {
+    vector[i]  = (double)1;
+    ones[i]    = (double)1;
+  }
 
-  for (iter=0; iter<iterations; iter++) { 
+  for (iter=0; iter<=iterations; iter++) { 
 
-    /* initialize the arrays                                                    */
-    for (i=0; i<vector_length; i++) {
-      vector[i] = (double)(my_ID+1);
-      vector[vector_length+i] = (double)(my_ID+1);
+    /* start timer after a warmup iteration */
+    if (iter == 1) { 
+      MPI_Barrier(MPI_COMM_WORLD);
+      local_reduce_time = wtime();
     }
 
     /* first do the "local" part                                                */
     for (i=0; i<vector_length; i++) {
-      vector[vector_length+i] += vector[i];
+      vector[i] += ones[i];
     }
 
     /* now do the "non-local" part                                              */
-    MPI_Reduce(vector+vector_length, vector, vector_length, MPI_DOUBLE, MPI_SUM, 
-               root, MPI_COMM_WORLD);
+    if (my_ID == root)
+      MPI_Reduce(MPI_IN_PLACE, vector, vector_length, MPI_DOUBLE, MPI_SUM, 
+                 root, MPI_COMM_WORLD);
+    else
+      MPI_Reduce(vector, NULL, vector_length, MPI_DOUBLE, MPI_SUM, 
+                 root, MPI_COMM_WORLD);
 
-  }
+  } /* end of iterations */
 
   local_reduce_time = wtime() - local_reduce_time;
   MPI_Reduce(&local_reduce_time, &reduce_time, 1, MPI_DOUBLE, MPI_MAX, root,
@@ -163,9 +174,9 @@ int main(int argc, char ** argv)
 
   /* verify correctness */
   if (my_ID == root) {
-    element_value = Num_procs*(Num_procs+1.0);
-
-    for (i=0; i<vector_length; i++) {
+    element_value = iterations+2.0+
+      (iterations*iterations+5.0*iterations+2.0)*(Num_procs-1.0)/2;
+    for (i=0; i<vector_length*0; i++) {
       if (ABS(vector[i] - element_value) >= epsilon) {
         error = 1;
 #ifdef VERBOSE
@@ -187,7 +198,7 @@ int main(int argc, char ** argv)
     printf("Element verification value: %lf\n", element_value);
 #endif
     avgtime = reduce_time/(double)iterations;
-    printf("Rate (MFlops/s): %lf,  Avg time (s): %lf\n",
+    printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
            1.0E-06 * (2.0*Num_procs-1.0)*vector_length/ avgtime, avgtime);
   }
 
