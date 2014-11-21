@@ -114,11 +114,9 @@ int main(int argc, char **argv){
                     row_offset;
   s64Int            nent;       /* number of nonzero entries                      */
   double            sparsity;   /* fraction of non-zeroes in matrix               */
-  double            sparse_time,/* timing parameters                              */
-                    avgtime = 0.0, 
-                    maxtime = 0.0, 
-                    mintime = 366.0*24.0*3600.0; /* set the minimum time to 
-                             a large value; one leap year should be enough        */
+  double            local_sparse_time,/* timing parameters                        */
+                    sparse_time, 
+                    avgtime;
   double * RESTRICT matrix;     /* sparse matrix entries                          */
   double * RESTRICT vector;     /* vector multiplying the sparse matrix           */
   double * RESTRICT result;     /* computed matrix-vector product                 */
@@ -339,10 +337,13 @@ int main(int argc, char **argv){
   /* initialize the input and result vectors                                      */
   for (row=0; row<nrows; row++) result[row] = vector[row] = 0.0;
 
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    sparse_time = wtime();
+    /* start timer after a warmup iterations */
+    if (iter == 1) { 
+      MPI_Barrier(MPI_COMM_WORLD);
+      local_sparse_time = wtime();
+    }
 
     /* fill vector                                                                */
     row_offset = nrows*my_ID;
@@ -361,14 +362,12 @@ int main(int argc, char **argv){
       }
       result[row] += temp;
     }
+  } /* end of iterations                                                          */
 
-    sparse_time = wtime() - sparse_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration                    */
-      avgtime = avgtime + sparse_time;
-      mintime = MIN(mintime, sparse_time);
-      maxtime = MAX(maxtime, sparse_time);
-    }
-  }
+  local_sparse_time = wtime() - local_sparse_time;
+  MPI_Reduce(&local_sparse_time, &sparse_time, 1, MPI_DOUBLE, MPI_MAX, root,
+             MPI_COMM_WORLD);
+
 
 #if defined(TESTDENSE) && defined(VERBOSE)
   /* print matrix, vector, rhs, plus computed solution                            */
@@ -382,7 +381,7 @@ int main(int argc, char **argv){
 
   /* verification test                                                            */
   reference_sum = 0.5 * (double) size2 * (double) stencil_size * 
-                   (double) iterations * (double) (iterations + 1);
+    (double) (iterations+1) * (double) (iterations + 2);
 
   vector_sum = 0.0;
   for (row=0; row<nrows; row++) vector_sum += result[row];
@@ -402,10 +401,9 @@ int main(int argc, char **argv){
              reference_sum, check_sum);
 #endif
     }
-    avgtime = avgtime/(double)(MAX(iterations-1,1));
-    printf("Rate (MFlops/s): %lf,  Avg time (s): %lf,  Min time (s): %lf",
-           1.0E-06 * (2.0*nent*Num_procs)/mintime, avgtime, mintime);
-    printf(", Max time (s): %lf\n", maxtime);
+    avgtime = sparse_time/iterations;
+    printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
+           1.0E-06 * (2.0*nent*Num_procs)/avgtime, avgtime);
   }
 
   bail_out(error);

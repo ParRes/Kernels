@@ -55,7 +55,6 @@ FUNCTIONS CALLED:
          functions are used in this program:
 
           wtime()           Portable wall-timer interface.
-          transpose()       Transpose a local matrix Block
           bail_out()        Determine global error and exit if nonzero.
 
 HISTORY: Written by Tim Mattson, April 1999.  
@@ -278,7 +277,7 @@ int main(int argc, char ** argv)
 
   for (iter = 0; iter<=iterations; iter++){
 
-    /* start timer after a warmup iterations                                        */
+    /* start timer after a warmup iteration                                        */
     if (iter == 1) { 
       MPI_Barrier(MPI_COMM_WORLD);
       local_trans_time = wtime();

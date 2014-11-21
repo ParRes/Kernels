@@ -108,11 +108,10 @@ int main(int argc, char *argv[])
       iter, iterations;
   double *a, *b, *c,    /* arrays that hold local a, b, c          */
       *work1, *work2,   /* work arrays to pass to dpmmmult         */
-      dgemm_time,       /* timing parameters                       */
-      avgtime = 0.0,
-      maxtime = 0.0,
-      mintime = 366.0*24.0*3600.0, /* set the minimum time to a 
-                       large value; one leap year should be enough */
+      local_dgemm_time, /* timing parameters                       */
+      dgemm_time,
+      avgtime; 
+  double
       forder, nflops,   /* float matrix order + total flops        */
       checksum,         /* array checksum for verification test    */
       checksum_local=0.0,
@@ -281,25 +280,25 @@ int main(int argc, char *argv[])
     C(ii,jj) = 0.0;
   }
 
-  /* start timing                                                  */
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
 
-    MPI_Barrier( MPI_COMM_WORLD );
-    dgemm_time = wtime();
+    /* start timer after a warmup iterations */
+    if (iter == 1) { 
+      MPI_Barrier(MPI_COMM_WORLD);
+      local_dgemm_time = wtime();
+    }
 
     /* actual matrix-vector multiply                               */
     dgemm(order, nb, inner_block_flag, a, lda, b, lda, c, lda, 
           mm, nn, comm_row, comm_col, work1, work2 );  
 
-    dgemm_time = wtime() - dgemm_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration */
-      avgtime = avgtime + dgemm_time;
-      mintime = MIN(mintime, dgemm_time);
-      maxtime = MAX(maxtime, dgemm_time);
-    }
-  }
+  } /* end of iterations                                           */
 
-  /* verification test                                                            */
+  local_dgemm_time = wtime() - local_dgemm_time;
+  MPI_Reduce(&local_dgemm_time, &dgemm_time, 1, MPI_DOUBLE, MPI_MAX, root,
+             MPI_COMM_WORLD);
+
+  /* verification test                                             */
   for (jj=0, j=myfcol; j<=mylcol; j++, jj++) 
   for (ii=0, i=myfrow; i<=mylrow; i++, ii++)
     checksum_local += C(ii,jj);
@@ -309,7 +308,7 @@ int main(int argc, char *argv[])
  
   forder = (double) order;
   ref_checksum = (0.25*forder*forder*forder*(forder-1.0)*(forder-1.0));
-  ref_checksum *= iterations;
+  ref_checksum *= (iterations+1);
 
   if (my_ID == root) { 
     if (ABS((checksum - ref_checksum)/ref_checksum) > epsilon) {
@@ -330,10 +329,9 @@ int main(int argc, char *argv[])
   /* report elapsed time                                           */
   nflops = 2.0*forder*forder*forder;
   if ( my_ID == root ) {
-      avgtime = avgtime/(double)(MAX(iterations-1,1));
-      printf("Rate (MFlops/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-             1.0E-06 * nflops/mintime, avgtime, mintime);
-      printf(", Max time (s): %lf\n", maxtime);
+      avgtime = dgemm_time/iterations;
+      printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
+             1.0E-06 * nflops/avgtime, avgtime);
   }
 
   MPI_Finalize();

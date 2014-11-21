@@ -41,7 +41,7 @@ PURPOSE: This program tests the efficiency with which a square matrix
 USAGE:   Program inputs are the matrix order, the number of times to 
          repeat the operation, and the communication mode
 
-         transpose <matrix size> <# iterations> <comm. mode> [tile size]
+         transpose <#threads> <matrix size> <# iterations> <comm. mode> [tile size]
 
          An optional parameter specifies the tile size used to divide the 
          individual matrix blocks for improved cache and TLB performance. 
@@ -55,7 +55,6 @@ FUNCTIONS CALLED:
          functions are used in this program:
 
           wtime()           Portable wall-timer interface.
-          transpose()       Transpose a local matrix Block
           bail_out()        Determine global error and exit if nonzero.
 
 HISTORY: Written by Tim Mattson, April 1999.  
@@ -218,7 +217,7 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
-    printf("MPI Matrix transpose: B = A^T\n");
+    printf("MPI+OpenMP Matrix transpose: B = A^T\n");
     printf("Number of processes  = %d\n", Num_procs);
     printf("Number of threads    = %d\n", omp_get_max_threads());
     printf("Matrix order         = %d\n", order);

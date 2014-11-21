@@ -109,6 +109,11 @@ REVISION:  Modified by Rob Van der Wijngaart, March 2006, to handle MPI.
 REVISION:  Modified by Rob Van der Wijngaart, May 2006, to introduce
            dependence between successive triad operations. This is
            necessary to avoid dead code elimination
+REVISION:  Modified by Rob Van der Wijngaart, November 2014, replaced
+           timing of individual loop iterations with timing of overall
+           loop; also replaced separate loop establishing dependence
+           between iterations (must now be included in timing) with
+           accumulation: a[] += b[] + scalar*c[]
 **********************************************************************/
  
 #include <par-res-kern_general.h>
@@ -149,11 +154,9 @@ int main(int argc, char **argv)
            offset;        /* offset between vectors a and b, and b and c */
   double   bytes;         /* memory IO size                              */
   size_t   space;         /* memory used for a single vector             */
-  double   nstream_time,  /* timing parameters                           */
-           avgtime = 0.0, 
-           maxtime = 0.0, 
-           mintime = 366.0*8760.0*3600.0; /* set the minimum time to a 
-                             large value; one leap year should be enough */
+  double   local_nstream_time,/* timing parameters                       */
+           nstream_time, 
+           avgtime;
   int      Num_procs,     /* process parameters                          */
            my_ID,         /* rank of calling process                     */
            root=0;        /* ID of master process                        */
@@ -245,41 +248,34 @@ int main(int argc, char **argv)
  
   scalar = SCALAR;
  
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
  
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (my_ID == root) {
-      nstream_time = wtime();
+    /* start timer after a warmup iterations */
+    if (iter == 1) { 
+      MPI_Barrier(MPI_COMM_WORLD);
+      local_nstream_time = wtime();
     }
 
     #pragma vector always
-    for (j=0; j<length; j++) a[j] = b[j]+scalar*c[j];
- 
-    if (my_ID == root) {
-      if (iter>0 || iterations==1) { /* skip the first iteration */
-        nstream_time = wtime() - nstream_time;
-        avgtime = avgtime + nstream_time;
-        mintime = MIN(mintime, nstream_time);
-        maxtime = MAX(maxtime, nstream_time);
-      }
-    }
+    for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
 
-    /* insert a dependency between iterations to avoid dead-code elimination */
-    #pragma vector always
-    for (j=0; j<length; j++) b[j] = a[j];
-  }
+  } /* end iterations */
  
   /*********************************************************************
   ** Analyze and output results.
   *********************************************************************/
 
+  local_nstream_time = wtime() - local_nstream_time;
+  MPI_Reduce(&local_nstream_time, &nstream_time, 1, MPI_DOUBLE, MPI_MAX, root,
+             MPI_COMM_WORLD);
+  
+
   if (my_ID == root) {
     if (checkTRIADresults(iterations, length)) {
-      avgtime = avgtime/(double)(MAX(iterations-1,1));
-      printf("Rate (MB/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-             1.0E-06 * bytes/mintime, avgtime, mintime);
-      printf(", Max time (s): %lf\n", maxtime);
-     }
+      avgtime = nstream_time/iterations;
+      printf("Rate (MB/s): %lf Avg time (s): %lf\n",
+             1.0E-06 * bytes/avgtime, avgtime);
+    }
     else error = 1;
   }
   bail_out(error);
@@ -300,10 +296,7 @@ int checkTRIADresults (int iterations, long int length) {
  
   /* now execute timing loop */
   scalar = SCALAR;
-  for (iter=0; iter<iterations; iter++) {
-    aj = bj+scalar*cj;
-    bj = aj;
-  }
+  for (iter=0; iter<=iterations; iter++) aj += bj+scalar*cj;
  
   aj = aj * (double) (length);
  

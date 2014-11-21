@@ -462,7 +462,8 @@ int main(int argc, char ** argv) {
     /* add constant to solution to force refresh of neighbor data, if any */
     for (j=jstart; j<jend; j++) for (i=istart; i<iend; i++) IN(i,j)+= 1.0;
  
-  }
+  } /* end of iterations                                                   */
+
   MPI_Pcontrol(-1, "iter");
  
   local_stencil_time = wtime() - local_stencil_time;

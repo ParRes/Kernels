@@ -1,0 +1,6 @@
+include ../../common/make.defs
+CCOMPILER=$(CHARMC)
+CITRANSLATOR=$(CHARMC) -E
+CLINKER=$(CCOMPILER) -language charm++
+COMOBJS=
+PROG_ENV=-DCHARM++

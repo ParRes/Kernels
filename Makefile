@@ -48,13 +48,14 @@ default:
 	@echo "       \"make allmpi\"     (re-)builds all MPI targets"
 	@echo "       \"make allmpirma\"  (re-)builds all MPI-3 RMA targets"
 	@echo "       \"make allmpishm\"  (re-)builds all MPI-3 shared memory segments targets"
+	@echo "       \"make allcharm++\" (re-)builds all Charm++ targets"
 	@echo "       \"make allserial\"  (re-)builds all serial targets"
 	@echo "       optionally, specify \"matrix_rank=<n> number_of_functions=<m>\""
 	@echo "       optionally, specify \"default_opt_flags=<list of optimization flags>\""
 	@echo "       \"make clean\"      removes all objects and executables"
 	@echo "       \"make veryclean\"  removes some generated source files as well"
 
-all: allmpi allmpirma allmpishm allopenmp allserial
+all: allmpi allmpirma allmpishm allopenmp allserial allcharm++
 
 allmpi: 
 	cd MPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -70,13 +71,17 @@ allmpi:
                                                       "MATRIX_RANK         = $(matrix_rank)"        \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
+allmpiopenmp: 
+	cd MPIOPENMP/Transpose;     $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPIOPENMP/Stencil;       $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+
 allmpirma: 
-	cd MPIRMA/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPIRMA/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPIRMA/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPIRMA/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allmpishm: 
-	cd MPISHM/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPISHM/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPISHM/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPISHM/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allopenmp: 
 	cd OPENMP/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -93,6 +98,12 @@ allopenmp:
 	cd OPENMP/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"  \
                                                       "MATRIX_RANK         = $(matrix_rank)"        \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+
+allcharm++: 
+	cd CHARM++/Synch_p2p;       $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd CHARM++/Stencil;         $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd CHARM++/Transpose;       $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+
 
 allserial: 
 	cd SERIAL/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -122,6 +133,11 @@ clean:
 	cd MPIRMA/Synch_p2p;        $(MAKE) clean
 	cd MPISHM/Stencil;          $(MAKE) clean
 	cd MPISHM/Synch_p2p;        $(MAKE) clean
+	cd CHARM++/Stencil;         $(MAKE) clean
+	cd CHARM++/Synch_p2p;       $(MAKE) clean
+	cd CHARM++/Transpose;       $(MAKE) clean
+	cd MPIOPENMP/Stencil;       $(MAKE) clean
+	cd MPIOPENMP/Transpose;     $(MAKE) clean
 	cd OPENMP/DGEMM;            $(MAKE) clean
 	cd OPENMP/Nstream;          $(MAKE) clean
 	cd OPENMP/Reduce;           $(MAKE) clean
@@ -146,7 +162,5 @@ clean:
 
 veryclean: clean
 	cd MPI/Branch;       $(MAKE) veryclean
-	cd MPIRMA/Branch;    $(MAKE) veryclean
-	cd MPISHM/Branch;    $(MAKE) veryclean
 	cd OPENMP/Branch;    $(MAKE) veryclean
 	cd SERIAL/Branch;    $(MAKE) veryclean

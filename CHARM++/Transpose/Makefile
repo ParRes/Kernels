@@ -1,20 +1,42 @@
-CHARMTOP=/home/rfvander/charm/mpi-linux-x86_64-ifort-smp-mpicxx
-OPTS=-Ofast -fno-alias -g
-CHARMC=$(CHARMTOP)/bin/charmc $(OPTS)
-CHARMCci=$(CHARMTOP)/bin/charmc $(OPTS) -E
+include ../../common/CHARM++.defs
+##### User configurable options #####
 
-OBJS = transpose.o
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+#description: change above into something that is a decent optimization on you system
 
-all: transpose
+#uncomment any of the following flags (and change values) to change defaults
 
-transpose: $(OBJS)
-	$(CHARMC) -language charm++ -o transpose $(OBJS)
+RESTRICTFLAG = -DRESTRICT_KEYWORD
+#description: the "restrict" keyword can be used on IA platforms to disambiguate  
+#             data accessed through pointers
 
-transpose.decl.h: transpose.ci
-	$(CHARMCci)  transpose.ci
+RADIUSFLAG  = -DRADIUS=2
+#description: default radius of filter to be applied is 2
 
-clean:
-	rm -f *.decl.h *.def.h conv-host *.o transpose charmrun *~
+DOUBLEFLAG = -DDOUBLE
+#description: default data type is single precision
 
-transpose.o: transpose.C transpose.decl.h
-	$(CHARMC) -c transpose.C
+STARFLAG   = -DSTAR
+#description: default stencil is compact (dense, square)
+
+#DEBUGFLAG   = -DVERBOSE
+#description: default diagnostic style is silent
+
+USERFLAGS    = -strict-ansi -vec-report3
+#description: parameter to specify optional flags
+
+#set the following variables for custom libraries and/or other objects
+EXTOBJS      = 
+LIBS         =
+LIBPATHS     = 
+INCLUDEPATHS = 
+
+### End User configurable options ###
+
+TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) \
+               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)
+PROGRAM     = transpose
+OBJS        = $(PROGRAM).o $(COMOBJS)
+
+include ../../common/make.common
+

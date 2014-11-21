@@ -92,10 +92,7 @@ main(int argc, char **argv){
   int     iter, i,ii,j,jj,k,kk,ig,jg,kg; /* dummies                               */
   int     iterations;           /* number of times the multiplication is done     */
   double  dgemm_time,           /* timing parameters                              */
-          avgtime = 0.0, 
-          maxtime = 0.0, 
-          mintime = 366.0*24.0*3600.0; /* set the minimum time to a large value;
-                                            one leap year should be enough        */
+          avgtime;
   double  checksum = 0.0,       /* checksum of result                             */
           ref_checksum;
   double  epsilon = 1.e-8;      /* error tolerance                                */
@@ -201,64 +198,64 @@ main(int argc, char **argv){
   }
   bail_out(num_error); 
 
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
 
-  #pragma omp barrier  
+    if (iter==1) {
+      #pragma omp barrier
+      #pragma omp master
+      {
+        dgemm_time = wtime();
+      }
+    }
+
+
+    if (block > 0) {
+  
+      #pragma omp for 
+      for(jj = 0; jj < order; jj+=block){
+        for(kk = 0; kk < order; kk+=block) {
+  
+          for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
+          for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++) 
+            BB_arr(j,k) =  B_arr(kg,jg);
+  
+          for(ii = 0; ii < order; ii+=block){
+  
+            for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++)
+            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
+              AA_arr(i,k) = A_arr(ig,kg);
+  
+            for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
+            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
+              CC_arr(i,j) = 0.0;
+         
+            for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++)
+            for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
+            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
+              CC_arr(i,j) += AA_arr(i,k)*BB_arr(j,k);
+  
+            for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
+            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
+              C_arr(ig,jg) += CC_arr(i,j);
+  
+          }
+        }  
+      }
+    }
+    else {
+      #pragma omp for 
+      for (jg=0; jg<order; jg++) 
+      for (kg=0; kg<order; kg++) 
+      for (ig=0; ig<order; ig++) 
+        C_arr(ig,jg) += A_arr(ig,kg)*B_arr(kg,jg);
+    }
+
+  } /* end of iterations                                                          */
+
+  #pragma omp barrier
   #pragma omp master
   {
-  dgemm_time = wtime();
-  }
-
-  if (block > 0) {
-
-    #pragma omp for 
-    for(jj = 0; jj < order; jj+=block){
-      for(kk = 0; kk < order; kk+=block) {
-
-        for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-        for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++) 
-          BB_arr(j,k) =  B_arr(kg,jg);
-
-        for(ii = 0; ii < order; ii+=block){
-
-          for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++)
-          for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-            AA_arr(i,k) = A_arr(ig,kg);
-
-          for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-          for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-            CC_arr(i,j) = 0.0;
-       
-          for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++)
-          for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-          for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-            CC_arr(i,j) += AA_arr(i,k)*BB_arr(j,k);
-
-          for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-          for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-            C_arr(ig,jg) += CC_arr(i,j);
-
-        }
-      }  
-    }
-  }
-  else {
-    #pragma omp for 
-    for (jg=0; jg<order; jg++) 
-    for (kg=0; kg<order; kg++) 
-    for (ig=0; ig<order; ig++) 
-      C_arr(ig,jg) += A_arr(ig,kg)*B_arr(kg,jg);
-  }
-
-    #pragma omp master
-    {
-    dgemm_time = wtime()-dgemm_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration                    */
-      avgtime = avgtime + dgemm_time;
-      mintime = MIN(mintime, dgemm_time);
-      maxtime = MAX(maxtime, dgemm_time);
-    }
-    }
+    dgemm_time = wtime() - dgemm_time;
   }
 
   } /* end of parallel region                                                     */
@@ -270,28 +267,22 @@ main(int argc, char **argv){
   printf("Using Math Kernel Library\n");
   printf("Number of iterations  = %d\n", iterations);
 
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
 
-    dgemm_time = wtime();
+    if (iter==1) dgemm_time = wtime();
 
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, order, order, 
                 order, 1.0, &(A_arr(0,0)), order, &(B_arr(0,0)), order, 
                 1.0, &(C_arr(0,0)), order);
-
-    dgemm_time = wtime()-dgemm_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration                    */
-      avgtime = avgtime + dgemm_time;
-      mintime = MIN(mintime, dgemm_time);
-      maxtime = MAX(maxtime, dgemm_time);
-    }
   }
+  dgemm_time = wtime()-dgemm_time;
 #endif
 
   for(checksum=0.0,j = 0; j < order; j++) for(i = 0; i < order; i++)
     checksum += C_arr(i,j);
 
   /* verification test                                                            */
-  ref_checksum *= iterations;
+  ref_checksum *= (iterations+1);
 
   if (ABS((checksum - ref_checksum)/ref_checksum) > epsilon) {
     printf("ERROR: Checksum = %lf, Reference checksum = %lf\n",
@@ -307,10 +298,9 @@ main(int argc, char **argv){
   }
 
   double nflops = 2.0*forder*forder*forder;
-  avgtime = avgtime/(double)(MAX(iterations-1,1));
-  printf("Rate (MFlops/s): %lf,  Avg time (s): %lf,  Min time (s): %lf",
-         1.0E-06 *nflops/mintime, avgtime, mintime);
-  printf(", Max time (s): %lf\n", maxtime);
+  avgtime = dgemm_time/iterations;
+  printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
+         1.0E-06 *nflops/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 

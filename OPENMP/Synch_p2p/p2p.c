@@ -86,10 +86,7 @@ int main(int argc, char ** argv) {
   int    *start, *end;    /* starts and ends of grid slices                      */
   int    segment_size;
   double pipeline_time,   /* timing parameters                                   */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*24.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough               */
+         avgtime; 
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;      /* verification value at top right corner of grid      */
   int    nthread_input,   /* thread parameters                                   */
@@ -197,18 +194,22 @@ int main(int argc, char ** argv) {
   if (my_ID==0) for (j=0; j<n; j++) ARRAY(start[my_ID],j) = (double) j;
   for (i=start[my_ID]; i<=end[my_ID]; i++) ARRAY(i,0) = (double) i;
 
-  for (iter = 0; iter<iterations; iter++){
+  for (iter = 0; iter<=iterations; iter++){
+
+    /* start timer after a warmup iteration                                        */
+    if (iter == 1) { 
+      #pragma omp barrier
+      #pragma omp master
+      {
+        pipeline_time = wtime();
+      }
+    }
 
     /* set flags to zero to indicate no data is available yet                    */
     flag[my_ID] = 0;
     /* we need a barrier after setting the flags, to make sure each is
        visible to all threads, and to synchronize before the timer starts        */
     #pragma omp barrier
-
-    #pragma omp master
-    {   
-    pipeline_time = wtime();
-    }
 
     for (j=1; j<n; j++) {
 
@@ -235,16 +236,6 @@ int main(int argc, char ** argv) {
       }
     }
 
-    #pragma omp master
-    {
-    pipeline_time = wtime() - pipeline_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration                   */
-      avgtime = avgtime + pipeline_time;
-      mintime = MIN(mintime, pipeline_time);
-      maxtime = MAX(maxtime, pipeline_time);
-    }
-    }
-
     /* copy top right corner value to bottom left corner to create dependency; we
        need a barrier to make sure the latest value is used. This also guarantees
        that the flags for the next iteration (if any) are not getting clobbered  */
@@ -253,6 +244,12 @@ int main(int argc, char ** argv) {
     {
     ARRAY(0,0) = -ARRAY(m-1,n-1);
     }
+  } /* end of iterations */
+
+  #pragma omp barrier
+  #pragma omp master
+  {
+    pipeline_time = wtime() - pipeline_time;
   }
 
   } /* end of OPENMP parallel region                                             */
@@ -262,7 +259,7 @@ int main(int argc, char ** argv) {
   ********************************************************************************/
 
   /* verify correctness, using top right value;                                  */
-  corner_val = (double)(iterations*(n+m-2));
+  corner_val = (double)((iterations+1)*(n+m-2));
   if (abs(ARRAY(m-1,n-1)-corner_val)/corner_val > epsilon) {
     printf("ERROR: checksum %lf does not match verification value %lf\n",
            ARRAY(m-1,n-1), corner_val);
@@ -276,10 +273,9 @@ int main(int argc, char ** argv) {
 #else
   printf("Solution validates\n");
 #endif
-  avgtime = avgtime/(double)(MAX(iterations-1,1));
-  printf("Rate (MFlops/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-         1.0E-06 * 2 * ((double)((m-1)*(n-1)))/mintime, avgtime, mintime);
-  printf(", Max time (s): %lf\n", maxtime);
+  avgtime = pipeline_time/iterations;
+  printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
+         1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 }

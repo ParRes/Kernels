@@ -97,10 +97,7 @@ int main(int argc, char ** argv) {
   DTYPE  flops;           /* floating point ops per iteration                    */
   int    iterations;      /* number of times to run the algorithm                */
   double stencil_time,    /* timing parameters                                   */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*24.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough               */
+         avgtime;
   int    stencil_size;    /* number of points in stencil                         */
   int    tile_size;       /* grid block factor                                   */
   int    nthread_input,   /* thread parameters                                   */
@@ -249,12 +246,15 @@ int main(int argc, char ** argv) {
   for (j=RADIUS; j<n-RADIUS; j++) for (i=RADIUS; i<n-RADIUS; i++) 
     OUT(i,j) = (DTYPE)0.0;
 
-  for (iter = 0; iter<iterations; iter++){
+  for (iter = 0; iter<=iterations; iter++){
 
-    #pragma omp barrier
-    #pragma omp master
-    {   
-    stencil_time = wtime();
+    /* start timer after a warmup iteration                                        */
+    if (iter == 1) { 
+      #pragma omp barrier
+      #pragma omp master
+      {   
+        stencil_time = wtime();
+      }
     }
 
     /* Apply the stencil operator; only use tiling if the tile size is smaller
@@ -297,18 +297,15 @@ int main(int argc, char ** argv) {
       }
     }
 
-    #pragma omp master
-    {
-    stencil_time = wtime() - stencil_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration                   */
-      avgtime = avgtime + stencil_time;
-      mintime = MIN(mintime, stencil_time);
-      maxtime = MAX(maxtime, stencil_time);
-    }
-    }
-    /* add constant to solution to force refresh of neighbor data, if any         */
+    /* add constant to solution to force refresh of neighbor data, if any       */
     #pragma omp for
     for (j=0; j<n; j++) for (i=0; i<n; i++) IN(i,j)+= 1.0;
+  } /* end of iterations                                                        */
+
+  #pragma omp barrier
+  #pragma omp master
+  {
+    stencil_time = wtime() - stencil_time;
   }
 
   /* compute L1 norm in parallel                                                */
@@ -325,7 +322,7 @@ int main(int argc, char ** argv) {
   ********************************************************************************/
 
 /* verify correctness                                                            */
-  reference_norm = (DTYPE) iterations * (COEFX + COEFY);
+  reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
   if (ABS(norm-reference_norm) > EPSILON) {
     printf("ERROR: L1 norm = "FSTR", Reference L1 norm = "FSTR"\n",
            norm, reference_norm);
@@ -339,11 +336,10 @@ int main(int argc, char ** argv) {
 #endif
   }
 
-  flops = (DTYPE) (2*stencil_size-1) * f_active_points;
-  avgtime = avgtime/(double)(MAX(iterations-1,1));
-  printf("Rate (MFlops/s): "FSTR",  Avg time (s): %lf,  Min time (s): %lf",
-         1.0E-06 * flops/mintime, avgtime, mintime);
-  printf(", Max time (s): %lf\n", maxtime);
+  flops = (DTYPE) (2*stencil_size+1) * f_active_points;
+  avgtime = stencil_time/iterations;
+  printf("Rate (MFlops/s): "FSTR"  Avg time (s): %lf\n",
+         1.0E-06 * flops/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 }

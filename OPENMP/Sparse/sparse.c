@@ -101,10 +101,7 @@ int main(int argc, char **argv){
   s64Int            nent;       /* number of nonzero entries                      */
   double            sparsity;   /* fraction of non-zeroes in matrix               */
   double            sparse_time,/* timing parameters                              */
-                    avgtime = 0.0, 
-                    maxtime = 0.0, 
-                    mintime = 366.0*24.0*3600.0; /* set the minimum time to 
-                             a large value; one leap year should be enough        */
+                    avgtime;
   double * RESTRICT matrix;     /* sparse matrix entries                          */
   double * RESTRICT vector;     /* vector multiplying the sparse matrix           */
   double * RESTRICT result;     /* computed matrix-vector product                 */
@@ -265,12 +262,15 @@ int main(int argc, char **argv){
       matrix[elm] = 1.0/(double)(colIndex[elm]+1);
   }
 
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
 
-    #pragma omp barrier
-    #pragma omp master
-    {   
-    sparse_time = wtime();
+    /* start timer after a warmup iteration                                        */
+    if (iter == 1) { 
+      #pragma omp barrier
+      #pragma omp master
+      {   
+        sparse_time = wtime();
+      }
     }
 
     /* fill vector                                                                */
@@ -287,24 +287,19 @@ int main(int argc, char **argv){
       }
       result[row] += temp;
     }
+  } /* end of iterations                                                          */
 
-    #pragma omp master
-    {
+  #pragma omp barrier
+  #pragma omp master
+  {
     sparse_time = wtime() - sparse_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration                    */
-      avgtime = avgtime + sparse_time;
-      mintime = MIN(mintime, sparse_time);
-      maxtime = MAX(maxtime, sparse_time);
-    }
-    }
-
   }
 
   } /* end of parallel region                                                     */
 
   /* verification test                                                            */
-  reference_sum = 0.5 * (double) nent * (double) iterations * 
-                        (double) (iterations +1);
+  reference_sum = 0.5 * (double) nent * (double) (iterations+1) * 
+                        (double) (iterations +2);
 
   vector_sum = 0.0;
   for (row=0; row<size2; row++) vector_sum += result[row];
@@ -321,10 +316,9 @@ int main(int argc, char **argv){
 #endif
   }
 
-  avgtime = avgtime/(double)(MAX(iterations-1,1));
-  printf("Rate (MFlops/s): %lf,  Avg time (s): %lf,  Min time (s): %lf",
-         1.0E-06 * (2.0*nent)/mintime, avgtime, mintime);
-  printf(", Max time (s): %lf\n", maxtime);
+  avgtime = sparse_time/iterations;
+  printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
+         1.0E-06 * (2.0*nent)/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 }

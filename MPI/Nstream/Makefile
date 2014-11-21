@@ -11,7 +11,7 @@ RESTRICTFLAG = -DRESTRICT_KEYWORD
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers (requires -restrict compiler flag)
 
-LENGTHFLAG   = -DMAXLENGTH=40000000
+LENGTHFLAG   = -DMAXLENGTH=80000000
 #description: default vector length is 2000000
 
 ALLOCFLAG    = -DSTATIC_ALLOCATION

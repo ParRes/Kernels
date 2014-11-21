@@ -1,20 +1,32 @@
-CHARMTOP=/home/rfvander/charm/mpi-linux-x86_64-ifort-smp-mpicxx
-OPTS=-Ofast -fno-alias -g
-CHARMC=$(CHARMTOP)/bin/charmc $(OPTS)
-CHARMCci=$(CHARMTOP)/bin/charmc $(OPTS) -E
+include ../../common/CHARM++.defs
+##### User configurable options #####
 
-OBJS = p2p.o
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+#description: change above into something that is a decent optimization on you system
 
-all: p2p
+#uncomment any of the following flags (and change values) to change defaults
 
-p2p: $(OBJS)
-	$(CHARMC) -language charm++ -o p2p $(OBJS)
+RESTRICTFLAG = -DRESTRICT_KEYWORD
+#description: the "restrict" keyword can be used on IA platforms to disambiguate  
+#             data accessed through pointers
 
-p2p.decl.h: p2p.ci
-	$(CHARMCci)  p2p.ci
+#DEBUGFLAG   = -DVERBOSE
+#description: default diagnostic style is silent
 
-clean:
-	rm -f *.decl.h *.def.h conv-host *.o p2p charmrun *~
+USERFLAGS    = -strict-ansi -vec-report3
+#description: parameter to specify optional flags
 
-p2p.o: p2p.C p2p.decl.h
-	$(CHARMC) -c p2p.C
+#set the following variables for custom libraries and/or other objects
+EXTOBJS      = 
+LIBS         =
+LIBPATHS     = 
+INCLUDEPATHS = 
+
+### End User configurable options ###
+
+TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) 
+PROGRAM     = p2p
+OBJS        = $(PROGRAM).o $(COMOBJS)
+
+include ../../common/make.common
+

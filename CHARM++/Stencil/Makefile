@@ -1,20 +1,42 @@
-CHARMTOP=/home/rfvander/charm/mpi-linux-x86_64-ifort-smp-mpicxx
-OPTS=-Ofast -fno-alias -DRADIUS=2 -DSTAR -g -vec_report
-CHARMC=$(CHARMTOP)/bin/charmc $(OPTS)
-CHARMCci=$(CHARMTOP)/bin/charmc $(OPTS) -E
+include ../../common/CHARM++.defs
+##### User configurable options #####
 
-OBJS = stencil.o
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+#description: change above into something that is a decent optimization on you system
 
-all: stencil
+#uncomment any of the following flags (and change values) to change defaults
 
-stencil: $(OBJS)
-	$(CHARMC) -language charm++ -o stencil $(OBJS)
+RESTRICTFLAG = -DRESTRICT_KEYWORD
+#description: the "restrict" keyword can be used on IA platforms to disambiguate  
+#             data accessed through pointers
 
-stencil.decl.h: stencil.ci
-	$(CHARMCci)  stencil.ci
+RADIUSFLAG  = -DRADIUS=2
+#description: default radius of filter to be applied is 2
 
-clean:
-	rm -f *.decl.h *.def.h conv-host *.o stencil charmrun *~ *optrpt
+DOUBLEFLAG = -DDOUBLE
+#description: default data type is single precision
 
-stencil.o: stencil.C stencil.decl.h
-	$(CHARMC) -c stencil.C
+STARFLAG   = -DSTAR
+#description: default stencil is compact (dense, square)
+
+#DEBUGFLAG   = -DVERBOSE
+#description: default diagnostic style is silent
+
+USERFLAGS    = -strict-ansi -vec-report3
+#description: parameter to specify optional flags
+
+#set the following variables for custom libraries and/or other objects
+EXTOBJS      = 
+LIBS         =
+LIBPATHS     = 
+INCLUDEPATHS = 
+
+### End User configurable options ###
+
+TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) \
+               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)
+PROGRAM     = stencil
+OBJS        = $(PROGRAM).o $(COMOBJS)
+
+include ../../common/make.common
+

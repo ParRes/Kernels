@@ -1,2 +1,4 @@
-MPICC=mpiicc -fno-alias -Ofast
-CC=icc -fno-alias -Ofast
+MPICC=mpiicc
+CC=icc 
+CHARMTOP=/home/rfvander/charm/mpi-linux-x86_64-ifort-smp-mpicxx
+CHARMC=$(CHARMTOP)/bin/charmc

@@ -63,28 +63,39 @@ the value of MPICC. The compilers should already be in your path. That
 is, if you define "CC=icc," then typing "which icc" should show a
 valid path where the compiler is installed.
 
-The suite of kernels currently has parallel implementations in OpenMP,
-and MPI. There is also a serial reference implementation
+The suite of kernels currently has parallel implementations in OpenMP
+and MPI. There is also a serial reference implementation. The suite is 
+currently being extended to include Charm++, MPI+OpenMP, as well as two
+new variations of MPI: 
+1. MPI with one-sided communications (MPIRMA) 
+2. MPI with direct use of shared memory inside SMPs (MPISHM)
+These extensions are not yet complete.
 
 Global make
 -----------
 
-Type "make all" in the root directory to build all kernels.
-Type "make allopenmp" in the root directory to build all OpenMP kernels.
-Type "make allmpi" in the root directory to build all MPI kernels.
-Type "make allserial" in the root directory to build all serial kernels.
+To build all available kernels of a certain version, type in the root
+directory:
+"make all"           - builds all kernels.
+"make allopenmp"     - builds all OpenMP kernels.
+"make allmpi"        - builds all MPI kernels.
+"make allserial"     - builds all serial kernels.
+"make allmpiopenmp " - builds all hybrid MPI+OpenMP kernels
+"make allmpirma"     - builds all MPI kernels with one-sided communications
+"make allmpishm"     - builds all kernels with MPI3 shared memory
+"make allcharm++"    - builds all Charm++ kernels
 
 The global make process uses a single set of optimization flags for all
 kernels. For more control, the user should consider individual makes
 (see below), carefully choosing the right parameters in each Makefile.
 If a a single set of optimization flags different from the default is
 desired, the command line can be adjusted:
-"make all/allopenmp/allmpi/allserial default_opt_flags=<list of optimization flags>" 
+"make all<version> default_opt_flags=<list of optimization flags>" 
 
 The global make process uses some defaults for the Branch kernel
 (see Makefile in that directory). These can be overridden by adjusting
 the command line: 
-"make all/allopenmp/allmpi/allserial matrix_rank=<n> number_of_functions=<m>"
+"make all<version> matrix_rank=<n> number_of_functions=<m>"
 Note that no new values for "matrix_rank" or "number_of_functions" will
 be used unless a "make veryclean" has been issued.
 

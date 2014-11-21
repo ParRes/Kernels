@@ -102,10 +102,7 @@ int main(int argc, char ** argv)
   int    vector_length;   /* length of vectors to be aggregated            */
   int    total_length;    /* bytes needed to store reduction vectors       */
   double reduce_time,     /* timing parameters                             */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*24.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough           */
+         avgtime;
   double epsilon=1.e-8;   /* error tolerance                                 */
   int    group_size,      /* size of aggregating half of thread pool         */
          old_size,        /* group size in previous binary tree iteration    */
@@ -211,12 +208,21 @@ int main(int argc, char ** argv)
   }
   bail_out(num_error);
 
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
+
+    /* start timer after a warmup iteration                                        */
+    if (iter == 1) { 
+      #pragma omp barrier
+      #pragma omp master
+      {
+        reduce_time = wtime();
+      }
+    }
 
     /* in case of the long-optimal algorithm we need a barrier before the
        reinitialization to make sure that we don't overwrite parts of the
        vector before other threads are done with those parts                 */
-    if ((iter > 0) && (intalgorithm == LONG_OPTIMAL)) {
+    if (intalgorithm == LONG_OPTIMAL) {
       #pragma omp barrier
     }
 
@@ -231,15 +237,12 @@ int main(int argc, char ** argv)
          zeroing some that are still in use in a previous iteration          */
       #pragma omp barrier
       flag[my_ID] = 0;
-    }
 
-    /* we also need a barrier after setting the flags, to make each is
-       visible to all threads, and to synchronize before the timer starts    */
-    #pragma omp barrier
-    #pragma omp master
-    {   
-      reduce_time = wtime();
-    }
+      /* we also need a barrier after setting the flags, to make each is
+         visible to all threads, and to synchronize before the timer starts  */
+      #pragma omp barrier
+    }    
+
     /* do actual reduction                                                   */
 
     /* first do the "local" part, which is the same for all algorithms       */
@@ -355,20 +358,14 @@ int main(int argc, char ** argv)
 
     } /* end of algorithm switch statement                                   */
 
-    #pragma omp master
-    {
-    reduce_time = wtime() - reduce_time;
-#ifdef VERBOSE
-    printf("\nFinished with reduction, using %lf seconds \n", reduce_time);
-#endif
-    if (iter>0 || iterations==1) { /* skip the first iteration               */
-      avgtime = avgtime + reduce_time;
-      mintime = MIN(mintime, reduce_time);
-      maxtime = MAX(maxtime, reduce_time);
-    }
-    }
-
   } /* end of iter loop                                                      */
+
+  #pragma omp barrier
+  #pragma omp master
+  {
+    reduce_time = wtime() - reduce_time;
+  }
+
 
   } /* end of OpenMP parallel region                                         */
 
@@ -387,10 +384,9 @@ int main(int argc, char ** argv)
 #ifdef VERBOSE
   printf("Element verification value: %lf\n", element_value);
 #endif
-  avgtime = avgtime/(double)(MAX(iterations-1,1));
-  printf("Rate (MFlops/s): %lf,  Avg time (s): %lf,  Min time (s): %lf",
-         1.0E-06 * (2.0*nthread-1.0)*vector_length/mintime, avgtime, mintime);
-  printf(", Max time (s): %lf\n", maxtime);
+  avgtime = reduce_time/iterations;
+  printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
+         1.0E-06 * (2.0*nthread-1.0)*vector_length/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 }

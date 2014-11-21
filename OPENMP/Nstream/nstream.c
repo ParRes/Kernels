@@ -145,10 +145,7 @@ int main(int argc, char **argv)
   double   bytes;         /* memory IO size                              */
   size_t   space;         /* memory used for a single vector             */
   double   nstream_time,  /* timing parameters                           */
-           avgtime = 0.0, 
-           maxtime = 0.0, 
-           mintime = 366.0*24.0*3600.0; /* set the minimum time to a 
-                             large value; one leap year should be enough */
+           avgtime;
   int      nthread_input; /* thread parameters                           */
   int      nthread; 
   int      num_error=0;     /* flag that signals that requested and 
@@ -244,30 +241,28 @@ int main(int argc, char **argv)
  
   scalar = SCALAR;
  
-  for (k=0; k<iterations; k++) {
+  for (k=0; k<=iterations; k++) {
  
-    #pragma omp barrier
-    #pragma omp master
-    {
-    nstream_time = wtime();
+    if (k==1) {
+      #pragma omp barrier
+      #pragma omp master
+      {
+        nstream_time = wtime();
+      }
     }
  
     #pragma omp for
     #pragma vector always
-    for (j=0; j<length; j++) a[j] = b[j]+scalar*c[j];
+    for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
  
-    #pragma omp master
-    if (k>0 || iterations==1) { /* skip the first iteration */
-      nstream_time = wtime() - nstream_time;
-      avgtime = avgtime + nstream_time;
-      mintime = MIN(mintime, nstream_time);
-      maxtime = MAX(maxtime, nstream_time);
-    }
-    /* insert a dependency between iterations to avoid dead-code elimination */
-    #pragma omp for 
-    #pragma vector always
-    for (j=0; j<length; j++) b[j] = a[j];
+  } /* end of iterations                                              */
+
+  #pragma omp barrier
+  #pragma omp master
+  {
+    nstream_time = wtime() - nstream_time;
   }
+
   }  /* end of OpenMP parallel region */
  
   /*********************************************************************
@@ -276,10 +271,9 @@ int main(int argc, char **argv)
  
   bytes   = 3.0 * sizeof(double) * length;
   if (checkTRIADresults(iterations, length)) {
-    avgtime = avgtime/(double)(MAX(iterations-1,1));
-    printf("Rate (MB/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-           1.0E-06 * bytes/mintime, avgtime, mintime);
-    printf(", Max time (s): %lf\n", maxtime);
+    avgtime = nstream_time/iterations;
+    printf("Rate (MB/s): %lf Avg time (s): %lf\n",
+           1.0E-06 * bytes/avgtime, avgtime);
    }
   else exit(EXIT_FAILURE);
  
@@ -299,9 +293,8 @@ int checkTRIADresults (int iterations, long int length) {
  
   /* now execute timing loop */
   scalar = SCALAR;
-  for (k=0; k<iterations; k++) {
-    aj = bj+scalar*cj;
-    bj = aj;
+  for (k=0; k<=iterations; k++) {
+    aj += bj+scalar*cj;
   }
  
   aj = aj * (double) (length);
