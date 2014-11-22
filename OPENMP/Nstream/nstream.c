@@ -137,7 +137,7 @@ static int checkTRIADresults(int, long int);
  
 int main(int argc, char **argv) 
 {
-  long int j, k;          /* dummies                                     */
+  long     j, iter;       /* dummies                                     */
   double   scalar;        /* constant used in Triad operation            */
   int      iterations;    /* number of times vector loop gets repeated   */
   long int length,        /* total vector length                         */
@@ -207,7 +207,7 @@ int main(int argc, char **argv)
   b = a + length + offset;
   c = b + length + offset;
  
-  #pragma omp parallel private(j,k) 
+  #pragma omp parallel private(j,iter) 
   {
   #pragma omp master
   {
@@ -241,9 +241,9 @@ int main(int argc, char **argv)
  
   scalar = SCALAR;
  
-  for (k=0; k<=iterations; k++) {
+  for (iter=0; iter<=iterations; iter++) {
  
-    if (k==1) {
+    if (iter==1) {
       #pragma omp barrier
       #pragma omp master
       {
@@ -284,7 +284,7 @@ int main(int argc, char **argv)
 int checkTRIADresults (int iterations, long int length) {
   double aj, bj, cj, scalar, asum;
   double epsilon = 1.e-8;
-  long int j,k;
+  int j,iter;
  
   /* reproduce initialization */
   aj = 0.0;
@@ -293,7 +293,7 @@ int checkTRIADresults (int iterations, long int length) {
  
   /* now execute timing loop */
   scalar = SCALAR;
-  for (k=0; k<=iterations; k++) {
+  for (iter=0; iter<=iterations; iter++) {
     aj += bj+scalar*cj;
   }
  

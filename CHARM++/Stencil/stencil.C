@@ -1,4 +1,6 @@
 #include "stencil.decl.h"
+#include <par-res-kern_general.h>
+
 #define EPSILON       1.e-8
 #define COEFX         1.0
 #define COEFY         1.0
@@ -7,15 +9,10 @@
 #define TNINDEX(i,j)  (i+width*(j))
 #define temp_new(i,j) new_temperature[TNINDEX(i,j)]
 #define WEIGHT(i,j)   weight[i+RADIUS+(j+RADIUS)*(2*RADIUS+1)]
-#define MAX(i,j)      ((i)>(j) ? (i) : (j))
-#define MIN(i,j)      ((i)<(j) ? (i) : (j))
-#define ABS(x)        ((x)<0.0 ? (-1.0*(x)) : (x))
 #define LEFT          1111 
 #define RIGHT         2222
 #define BOTTOM        3333
 #define TOP           4444
-
-// See README for documentation
 
 /*readonly*/ CProxy_Main mainProxy;
 /*readonly*/ int n; // array size

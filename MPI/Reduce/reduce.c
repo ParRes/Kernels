@@ -57,6 +57,10 @@ FUNCTIONS CALLED:
          bail_out();
 
 HISTORY: Written by Rob Van der Wijngaart, March 2006.
+         Modified by Rob Van der Wijngaart, November 2014
+         - added dependence between successive reductions
+         - improved timing
+         - changed initialization values
   
 *******************************************************************/
 
@@ -71,10 +75,9 @@ int main(int argc, char ** argv)
   int root=0;
   int iterations;       /* number of times the reduction is carried out      */
   int i, iter;          /* dummies                                           */
-  int vector_length;    /* length of the vectors to be aggregated            */
+  long vector_length;   /* length of the vectors to be aggregated            */
   double * RESTRICT vector; /* vector to be reduced                          */
-  double * RESTRICT vector2;/* vector to be reduced                          */
-  double * RESTRICT ones; /* constant vector                                 */
+  double * RESTRICT ones;   /* constant vector                               */
   double local_reduce_time, /* timing parameters                             */
          reduce_time,
          avgtime;
@@ -107,7 +110,7 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     }
 
-    vector_length = atoi(*++argv);
+    vector_length = atol(*++argv);
     if (vector_length < 1) {
       printf("ERROR: Vector length should be positive: %d\n", vector_length);
       error = 1;
@@ -128,15 +131,15 @@ int main(int argc, char ** argv)
 
   /* Broadcast benchmark data to all processes */
   MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&vector_length, 1, MPI_INT, root, MPI_COMM_WORLD);
-  vector= (double *) malloc(3*vector_length*sizeof(double)); 
+  MPI_Bcast(&vector_length, 1, MPI_LONG, root, MPI_COMM_WORLD);
+  vector= (double *) malloc(2*vector_length*sizeof(double)); 
   if (vector==NULL) {
-    printf("ERROR: Could not allocate space for vector in process %d\n", my_ID);
+    printf("ERROR: Could not allocate space %ld for vector in process %d\n", 
+           2*vector_length*sizeof(double),my_ID);
     error = 1;
   }
   bail_out(error);
-  vector2 = vector + vector_length;
-  ones     = vector + 2*vector_length;
+  ones = vector + vector_length;
 
   /* initialize the arrays                                                    */
   for (i=0; i<vector_length; i++) {
@@ -175,8 +178,8 @@ int main(int argc, char ** argv)
   /* verify correctness */
   if (my_ID == root) {
     element_value = iterations+2.0+
-      (iterations*iterations+5.0*iterations+2.0)*(Num_procs-1.0)/2;
-    for (i=0; i<vector_length*0; i++) {
+      (iterations*iterations+5.0*iterations+4.0)*(Num_procs-1.0)/2;
+    for (i=0; i<vector_length; i++) {
       if (ABS(vector[i] - element_value) >= epsilon) {
         error = 1;
 #ifdef VERBOSE

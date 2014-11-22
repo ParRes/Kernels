@@ -100,10 +100,7 @@ int main(int argc, char **argv){
   s64Int            nent;       /* number of nonzero entries                      */
   double            sparsity;   /* fraction of non-zeroes in matrix               */
   double            sparse_time,/* timing parameters                              */
-                    avgtime = 0.0, 
-                    maxtime = 0.0, 
-                    mintime = 366.0*24.0*3600.0; /* set the minimum time to 
-                             a large value; one leap year should be enough        */
+                    avgtime; 
   double * RESTRICT matrix;     /* sparse matrix entries                          */
   double * RESTRICT vector;     /* vector multiplying the sparse matrix           */
   double * RESTRICT result;     /* computed matrix-vector product                 */
@@ -196,7 +193,7 @@ int main(int argc, char **argv){
     exit(EXIT_FAILURE);
   } 
 
-  printf("OpenMP Sparse matrix-vector multiplication\n");
+  printf("Serial Sparse matrix-vector multiplication\n");
   printf("Matrix order          = "FSTR64U"\n", size2);
   printf("Stencil diameter      = %16d\n", 2*radius+1);
   printf("Sparsity              = %16.10lf\n", sparsity);
@@ -223,16 +220,16 @@ int main(int argc, char **argv){
       colIndex[elm+3] = REVERSE(LIN(i,(j+r)%size),lsize2);
       colIndex[elm+4] = REVERSE(LIN(i,(j-r+size)%size),lsize2);
     }
-    // sort colIndex to make sure the compressed row accesses
-    // vector elements in increasing order
+    /* sort colIndex to make sure the compressed row accesses
+       vector elements in increasing order                                        */
     qsort(&(colIndex[row*stencil_size]), stencil_size, sizeof(s64Int), compare);
     for (elm=row*stencil_size; elm<(row+1)*stencil_size; elm++)
       matrix[elm] = 1.0/(double)(colIndex[elm]+1);
   }
 
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
 
-    sparse_time = wtime();
+    if (iter==1) sparse_time = wtime();
 
     /* fill vector                                                                */
     for (row=0; row<size2; row++) vector[row] += (double) (row+1);
@@ -246,18 +243,13 @@ int main(int argc, char **argv){
       }
       result[row] += temp;
     }
+  } /* end of iterations                                                          */
 
-    sparse_time = wtime() - sparse_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration                    */
-      avgtime = avgtime + sparse_time;
-      mintime = MIN(mintime, sparse_time);
-      maxtime = MAX(maxtime, sparse_time);
-    }
-  }
+  sparse_time = wtime()-sparse_time;
 
   /* verification test                                                            */
-  reference_sum = 0.5 * (double) nent * (double) iterations * 
-                        (double) (iterations +1);
+  reference_sum = 0.5 * (double) nent * (double) (iterations+1) * 
+                        (double) (iterations +2);
 
   vector_sum = 0.0;
   for (row=0; row<size2; row++) vector_sum += result[row];
@@ -274,10 +266,9 @@ int main(int argc, char **argv){
 #endif
   }
 
-  avgtime = avgtime/(double)(MAX(iterations-1,1));
-  printf("Rate (MFlops/s): %lf,  Avg time (s): %lf,  Min time (s): %lf",
-         1.0E-06 * (2.0*nent)/mintime, avgtime, mintime);
-  printf(", Max time (s): %lf\n", maxtime);
+  avgtime = sparse_time/iterations;
+  printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
+         1.0E-06 * (2.0*nent)/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 }

@@ -255,8 +255,8 @@ int main(int argc, char **argv){
       colIndex[elm+3] = REVERSE(LIN(i,(j+r)%size),lsize2);
       colIndex[elm+4] = REVERSE(LIN(i,(j-r+size)%size),lsize2);
     }
-    // sort colIndex to make sure the compressed row accesses
-    // vector elements in increasing order
+    /* sort colIndex to make sure the compressed row accesses
+       vector elements in increasing order                                         */
     qsort(&(colIndex[row*stencil_size]), stencil_size, sizeof(s64Int), compare);
     for (elm=row*stencil_size; elm<(row+1)*stencil_size; elm++)
       matrix[elm] = 1.0/(double)(colIndex[elm]+1);

@@ -11,7 +11,7 @@ RESTRICTFLAG = -DRESTRICT_KEYWORD
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers
 
-DEBUGFLAG    = -DVERBOSE
+#DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
 SCRAMBLEFLAG = -DSCRAMBLE

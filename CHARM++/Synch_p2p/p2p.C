@@ -1,11 +1,8 @@
 #include "p2p.decl.h"
+#include <par-res-kern_general.h>
+
 #define EPSILON       1.e-8
 #define ARRAY(i,j) vector[i+1+(j)*(width+1)]
-#define MAX(i,j)      ((i)>(j) ? (i) : (j))
-#define MIN(i,j)      ((i)<(j) ? (i) : (j))
-#define ABS(x)        ((x)<0.0 ? (-1.0*(x)) : (x))
-
-// See README for documentation
 
 /*readonly*/ CProxy_Main mainProxy;
 /*readonly*/ int n; // array size

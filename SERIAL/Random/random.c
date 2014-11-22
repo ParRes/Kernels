@@ -337,7 +337,7 @@ int main(int argc, char **argv) {
   }
   else {
     printf("Solution validates, number of errors: %ld\n",(long) error);
-    printf("Rate (GUPs/s): %lf, time (s) = %lf\n", 
+    printf("Rate (GUPs/s): %lf time (s) = %lf\n", 
            1.e-9*nupdate/random_time,random_time);
   }
 

@@ -269,7 +269,6 @@ int main(int argc, char **argv)
   MPI_Reduce(&local_nstream_time, &nstream_time, 1, MPI_DOUBLE, MPI_MAX, root,
              MPI_COMM_WORLD);
   
-
   if (my_ID == root) {
     if (checkTRIADresults(iterations, length)) {
       avgtime = nstream_time/iterations;

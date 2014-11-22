@@ -141,7 +141,7 @@ static int checkTRIADresults(int, long int);
  
 int main(int argc, char **argv) 
 {
-  long int j, k;          /* dummies                                     */
+  int      j, iter;       /* dummies                                     */
   double   scalar;        /* constant used in Triad operation            */
   int      iterations;    /* number of times vector loop gets repeated   */
   long int length,        /* total vector length                         */
@@ -149,10 +149,7 @@ int main(int argc, char **argv)
   double   bytes;         /* memory IO size                              */
   size_t   space;         /* memory used for a single vector             */
   double   nstream_time,  /* timing parameters                           */
-           avgtime = 0.0, 
-           maxtime = 0.0, 
-           mintime = 366.0*24.0*3600.0; /* set the minimum time to a 
-                             large value; one leap year should be enough */
+           avgtime;
  
 /**********************************************************************************
 * process and test input parameters    
@@ -178,7 +175,7 @@ int main(int argc, char **argv)
   }
 
   if (offset < 0) {
-    printf("ERROR: Incvalid array offset: %ld\n", offset);
+    printf("ERROR: Invalid array offset: %ld\n", offset);
     exit(EXIT_FAILURE);
   }
 
@@ -219,45 +216,37 @@ int main(int argc, char **argv)
  
   scalar = SCALAR;
  
-  for (k=0; k<iterations; k++) {
+  for (iter=0; iter<=iterations; iter++) {
  
-    nstream_time = wtime();
+    /* start timer after a warmup iterations */
+    if (iter == 1) nstream_time = wtime();
  
     #pragma vector always
-    for (j=0; j<length; j++) a[j] = b[j]+scalar*c[j];
+    for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
  
-    if (k>0 || iterations==1) { /* skip the first iteration */
-      nstream_time = wtime() - nstream_time;
-      avgtime = avgtime + nstream_time;
-      mintime = MIN(mintime, nstream_time);
-      maxtime = MAX(maxtime, nstream_time);
-    }
-    /* insert a dependency between iterations to avoid dead-code elimination */
-    #pragma vector always
-    for (j=0; j<length; j++) b[j] = a[j];
   }
  
   /*********************************************************************
   ** Analyze and output results.
   *********************************************************************/
  
+  nstream_time = wtime() - nstream_time;
+  
   bytes   = 3.0 * sizeof(double) * length;
   if (checkTRIADresults(iterations, length)) {
-    avgtime = avgtime/(double)(MAX(iterations-1,1));
-    printf("Rate (MB/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-           1.0E-06 * bytes/mintime, avgtime, mintime);
-    printf(", Max time (s): %lf\n", maxtime);
+    avgtime = nstream_time/(double)iterations;
+    printf("Rate (MB/s): %lf Avg time (s): %lf\n",
+           1.0E-06 * bytes/avgtime, avgtime);
    }
   else exit(EXIT_FAILURE);
  
   return 0;
 }
  
- 
 int checkTRIADresults (int iterations, long int length) {
   double aj, bj, cj, scalar, asum;
   double epsilon = 1.e-8;
-  long int j,k;
+  long j, iter;
  
   /* reproduce initialization */
   aj = 0.0;
@@ -266,10 +255,7 @@ int checkTRIADresults (int iterations, long int length) {
  
   /* now execute timing loop */
   scalar = SCALAR;
-  for (k=0; k<iterations; k++) {
-    aj = bj+scalar*cj;
-    bj = aj;
-  }
+  for (iter=0; iter<=iterations; iter++) aj += bj+scalar*cj;
  
   aj = aj * (double) (length);
  

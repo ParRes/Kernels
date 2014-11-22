@@ -59,12 +59,6 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 
 #include <par-res-kern_general.h>
 
-/* We need to be able to flush the contents of an array, so we must declare it
-   statically. That means the total array size must be known at compile time     */
-#ifndef MEMWORDS
-#define MEMWORDS  1000000
-#endif
-
 /* define shorthand for indexing a multi-dimensional array                       */
 #define ARRAY(i,j) vector[i+(j)*(m)]
 
@@ -74,17 +68,14 @@ int main(int argc, char ** argv) {
   int    i, j, iter;      /* dummies                                             */
   int    iterations;      /* number of times to run the pipeline algorithm       */
   double pipeline_time,   /* timing parameters                                   */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*24.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough               */
+         avgtime; 
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;      /* verification value at top right corner of grid      */
   static                  /* use "static to put the thing on the heap            */
-  double vector[MEMWORDS];/* array holding grid values; we would like to 
+  double *RESTRICT vector;/* array holding grid values; we would like to 
                              allocate it dynamically, but need to be able to 
                              flush the thing                                     */
-  int    total_length;    /* total required length to store grid values          */
+  long   total_length;    /* total required length to store grid values          */
 
   /*******************************************************************************
   ** process and test input parameters    
@@ -110,11 +101,10 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  /*  make sure we stay within the memory allocated for vector                   */
-  total_length = m*n;
-  if (total_length/n != m || total_length > MEMWORDS) {
-    printf("Grid of %d by %d points too large; ", m, n);
-    printf("increase MEMWORDS in Makefile or  reduce grid size\n");
+  total_length = sizeof(double)*m*n;
+  vector = (double *) malloc(total_length);
+  if (!vector) {
+    printf("ERROR: Could not allocate space for array: %ld\n", total_length);
     exit(EXIT_FAILURE);
   }
 
@@ -128,19 +118,13 @@ int main(int argc, char ** argv) {
   for (j=0; j<n; j++) ARRAY(0,j) = (double) j;
   for (i=0; i<m; i++) ARRAY(i,0) = (double) i;
 
-  for (iter = 0; iter<iterations; iter++){
+  for (iter = 0; iter<=iterations; iter++){
 
-    pipeline_time = wtime();
+    /* start timer after a warmup iterations */
+    if (iter == 1) pipeline_time = wtime();
 
     for (j=1; j<n; j++) for (i=1; i<m; i++) {
         ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
-    }
-
-    pipeline_time = wtime() - pipeline_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration                   */
-      avgtime = avgtime + pipeline_time;
-      mintime = MIN(mintime, pipeline_time);
-      maxtime = MAX(maxtime, pipeline_time);
     }
 
     /* copy top right corner value to bottom left corner to create dependency; we
@@ -149,13 +133,14 @@ int main(int argc, char ** argv) {
     ARRAY(0,0) = -ARRAY(m-1,n-1);
   }
 
+  pipeline_time = wtime() - pipeline_time;
 
   /*******************************************************************************
   ** Analyze and output results.
   ********************************************************************************/
 
   /* verify correctness, using top right value;                                  */
-  corner_val = (double)(iterations*(n+m-2));
+  corner_val = (double)((iterations+1)*(n+m-2));
   if (abs(ARRAY(m-1,n-1)-corner_val)/corner_val > epsilon) {
     printf("ERROR: checksum %lf does not match verification value %lf\n",
            ARRAY(m-1,n-1), corner_val);
@@ -167,10 +152,9 @@ int main(int argc, char ** argv) {
 #else
   printf("Solution validates\n");
 #endif
-  avgtime = avgtime/(double)(MAX(iterations-1,1));
-  printf("Rate (MFlops/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-         1.0E-06 * 2 * ((double)((m-1)*(n-1)))/mintime, avgtime, mintime);
-  printf(", Max time (s): %lf\n", maxtime);
+  avgtime = pipeline_time/iterations;
+  printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
+         1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 }

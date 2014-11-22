@@ -125,7 +125,9 @@ editing the individual Makefile and rerunning  the code.
 Example build and run
 ---------------------
 make all default_opt_flags="-xP -restrict" matrix_rank=7 number_of_functions=200
-./Run/smallOPENMP
-./Run/smallMPI
+./Run/smallopenmp
+./Run/smallmpi
 ./Run/smallserial
+./Run/smallcharm++
+./Run/smallmpiopenmp
 

@@ -43,19 +43,20 @@ ifndef default_opt_flags
 endif
 
 default:
-	@echo "Usage: \"make all\"        (re-)builds all targets"
-	@echo "       \"make allopenmp\"  (re-)builds all OpenMP targets"
-	@echo "       \"make allmpi\"     (re-)builds all MPI targets"
-	@echo "       \"make allmpirma\"  (re-)builds all MPI-3 RMA targets"
-	@echo "       \"make allmpishm\"  (re-)builds all MPI-3 shared memory segments targets"
-	@echo "       \"make allcharm++\" (re-)builds all Charm++ targets"
-	@echo "       \"make allserial\"  (re-)builds all serial targets"
-	@echo "       optionally, specify \"matrix_rank=<n> number_of_functions=<m>\""
-	@echo "       optionally, specify \"default_opt_flags=<list of optimization flags>\""
-	@echo "       \"make clean\"      removes all objects and executables"
-	@echo "       \"make veryclean\"  removes some generated source files as well"
+	@echo "Usage: \"make all\"          (re-)builds all targets"
+	@echo "       \"make allserial\"    (re-)builds all serial targets"
+	@echo "       \"make allopenmp\"    (re-)builds all OpenMP targets"
+	@echo "       \"make allmpi\"       (re-)builds all MPI targets"
+	@echo "       \"make allmpiopenmp\" (re-)builds all OpenMP targets"
+	@echo "       \"make allmpirma\"    (re-)builds all MPI-3 RMA targets"
+	@echo "       \"make allmpishm\"    (re-)builds all MPI-3 shared memory segments targets"
+	@echo "       \"make allcharm++\"   (re-)builds all Charm++ targets"
+	@echo "       optionally, specify   \"matrix_rank=<n> number_of_functions=<m>\""
+	@echo "       optionally, specify   \"default_opt_flags=<list of optimization flags>\""
+	@echo "       \"make clean\"        removes all objects and executables"
+	@echo "       \"make veryclean\"    removes some generated source files as well"
 
-all: allmpi allmpirma allmpishm allopenmp allserial allcharm++
+all: allserial allopenmp allmpi allmpiopenmp allmpirma allmpishm allcharm++ 
 
 allmpi: 
 	cd MPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"

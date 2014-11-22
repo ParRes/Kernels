@@ -327,9 +327,9 @@ int main(int argc, char ** argv)
 
   if (total == total_ref) {
     printf("Solution validates\n");
-    printf("Rate (Mops/s) with branches:    %lf, time (s): %lf\n", 
+    printf("Rate (Mops/s) with branches:    %lf time (s): %lf\n", 
            ops/(branch_time*1.e6), branch_time);
-    printf("Rate (Mops/s) without branches: %lf, time (s): %lf\n", 
+    printf("Rate (Mops/s) without branches: %lf time (s): %lf\n", 
            ops/(no_branch_time*1.e6), no_branch_time);
 #ifdef VERBOSE
     printf("Array sum = %d, reference value = %d\n", total, total_ref);

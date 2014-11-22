@@ -1,13 +1,10 @@
 #include "transpose.decl.h"
-#define MIN(i,j)      ((i)<(j) ? (i) : (j))
-#define ABS(i)        ((i)>0.0 ? (i) : (-(i)))
+#include <par-res-kern_general.h>
+
 #define A(i,j)        A_p[(i+istart)+order*(j)]
 #define B(i,j)        B_p[(i+istart)+order*(j)]
 #define Work_in(i,j)  Work_in_p[i+Block_order*(j)]
 #define Work_out(i,j) Work_out_p[i+Block_order*(j)]
-
-
-// See README for documentation
 
 /*readonly*/ CProxy_Main mainProxy;
 /*readonly*/ int order; // array size
