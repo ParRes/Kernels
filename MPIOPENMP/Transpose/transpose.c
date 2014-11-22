@@ -190,8 +190,6 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS; 
     }
 
-    omp_set_num_threads(nthread_input);
-
     iterations  = atoi(*++argv);
     if(iterations < 1){
       printf("ERROR: iterations must be >= 1 : %d \n",iterations);
@@ -215,6 +213,13 @@ int main(int argc, char ** argv)
     ENDOFTESTS:;
   }
   bail_out(error);
+  /*  Broadcast input data to all processes */
+  MPI_Bcast(&order,         1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&Tile_order,    1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&nthread_input, 1, MPI_INT, root, MPI_COMM_WORLD);
+
+  omp_set_num_threads(nthread_input);
 
   if (my_ID == root) {
     printf("MPI+OpenMP Matrix transpose: B = A^T\n");
@@ -230,11 +235,6 @@ int main(int argc, char ** argv)
     printf("Blocking messages\n");
     printf("Number of iterations = %d\n", iterations);
   }
-  
-  /*  Broadcast input data to all processes */
-  MPI_Bcast (&order,      1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast (&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast (&Tile_order, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);

@@ -163,7 +163,7 @@ int main(int argc, char ** argv) {
 #endif
     
     if (argc != 4){
-      printf("Usage: %s <#threads><# iterations> <array dimension> \n", 
+      printf("Usage: %s <#threads><#iterations> <array dimension> \n", 
              *argv);
       error = 1;
       goto ENDOFTESTS;
@@ -176,8 +176,6 @@ int main(int argc, char ** argv) {
       error = 1; 
       goto ENDOFTESTS; 
     }
-
-    omp_set_num_threads(nthread_input);
 
     iterations  = atoi(*++argv); 
     if (iterations < 1){
@@ -227,9 +225,16 @@ int main(int argc, char ** argv) {
   left_nbr   = my_ID-1;
   top_nbr    = my_ID+Num_procsx;
   bottom_nbr = my_ID-Num_procsx;
+
  
+  MPI_Bcast(&n,             1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&nthread_input, 1, MPI_INT, root, MPI_COMM_WORLD);
+
+  omp_set_num_threads(nthread_input);
+  
   if (my_ID == root) {
-    printf("MPI stencil execution on 2D grid\n");
+    printf("MPI+OPENMP stencil execution on 2D grid\n");
     printf("Number of processes    = %d\n", Num_procs);
     printf("Number of threads      = %d\n", omp_get_max_threads());
     printf("Grid size              = %d\n", n);
@@ -247,10 +252,7 @@ int main(int argc, char ** argv) {
 #endif
     printf("Number of iterations   = %d\n", iterations);
   }
- 
-  MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
- 
+
   /* compute amount of space required for input and solution arrays             */
   
   width = n/Num_procsx;

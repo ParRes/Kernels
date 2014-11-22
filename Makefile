@@ -73,6 +73,7 @@ allmpi:
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
 allmpiopenmp: 
+	cd MPIOPENMP/Nstream;       $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd MPIOPENMP/Transpose;     $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd MPIOPENMP/Stencil;       $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
@@ -137,6 +138,7 @@ clean:
 	cd CHARM++/Stencil;         $(MAKE) clean
 	cd CHARM++/Synch_p2p;       $(MAKE) clean
 	cd CHARM++/Transpose;       $(MAKE) clean
+	cd MPIOPENMP/Nstream;       $(MAKE) clean
 	cd MPIOPENMP/Stencil;       $(MAKE) clean
 	cd MPIOPENMP/Transpose;     $(MAKE) clean
 	cd OPENMP/DGEMM;            $(MAKE) clean

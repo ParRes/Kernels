@@ -1,28 +1,26 @@
 include ../../common/MPIOPENMP.defs
+
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -restrict
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults
 
 RESTRICTFLAG = -DRESTRICT_KEYWORD
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers
+#             data accessed through pointers (requires -restrict compiler flag)
 
-RADIUSFLAG  = -DRADIUS=2
-#description: default radius of filter to be applied is 2
+LENGTHFLAG   = -DMAXLENGTH=80000000
+#description: default vector length is 2000000
 
-DOUBLEFLAG = -DDOUBLE
-#description: default data type is single precision
+ALLOCFLAG    = -DSTATIC_ALLOCATION
+#description: default memory allocation is dynamic (using malloc)
 
-STARFLAG   = -DSTAR
-#description: default stencil is compact (dense, square)
-
-#DEBUGFLAG   = -DVERBOSE
+#DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS    = -strict-ansi -vec-report3
+USERFLAGS     = -strict-ansi -vec-report3
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
@@ -33,9 +31,9 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) \
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)
-PROGRAM     = stencil
-OBJS        = $(PROGRAM).o $(COMOBJS)
+TUNEFLAGS    = $(LENGTHFLAG) $(ALLOCFLAG) $(DEBUGFLAG) $(USERFLAGS) $(RESTRICTFLAG)
+PROGRAM      = nstream
+OBJS         = $(PROGRAM).o $(COMOBJS)
 
 include ../../common/make.common
+
