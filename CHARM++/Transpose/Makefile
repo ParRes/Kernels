@@ -27,7 +27,7 @@ USERFLAGS    = -strict-ansi -vec-report3
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         =
+LIBS         = -mt_mpi
 LIBPATHS     = 
 INCLUDEPATHS = 
 

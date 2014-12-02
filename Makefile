@@ -76,6 +76,7 @@ allmpiopenmp:
 	cd MPIOPENMP/Nstream;       $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd MPIOPENMP/Transpose;     $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd MPIOPENMP/Stencil;       $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPIOPENMP/Synch_p2p;     $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allmpirma: 
 	cd MPIRMA/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -141,6 +142,7 @@ clean:
 	cd MPIOPENMP/Nstream;       $(MAKE) clean
 	cd MPIOPENMP/Stencil;       $(MAKE) clean
 	cd MPIOPENMP/Transpose;     $(MAKE) clean
+	cd MPIOPENMP/Synch_p2p;     $(MAKE) clean
 	cd OPENMP/DGEMM;            $(MAKE) clean
 	cd OPENMP/Nstream;          $(MAKE) clean
 	cd OPENMP/Reduce;           $(MAKE) clean
