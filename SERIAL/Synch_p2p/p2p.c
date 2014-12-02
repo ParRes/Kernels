@@ -120,7 +120,7 @@ int main(int argc, char ** argv) {
 
   for (iter = 0; iter<=iterations; iter++){
 
-    /* start timer after a warmup iterations */
+    /* start timer after a warmup iteration */
     if (iter == 1) pipeline_time = wtime();
 
     for (j=1; j<n; j++) for (i=1; i<m; i++) {

@@ -42,7 +42,7 @@ PURPOSE: This program tests the efficiency with which point-to-point
 USAGE:   The program takes as input the dimensions of the grid, and the
          number of times we loop over the grid
 
-               <progname> <# iterations> <m> <n>
+               p2p <#threads> <# iterations> <m> <n>
   
          The output consists of diagnostics to make sure the 
          algorithm worked, and of timing statistics.
@@ -65,14 +65,21 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 **********************************************************************************/
 
 #include <par-res-kern_general.h>
-#include <par-res-kern_mpi.h>
+#include <par-res-kern_mpiomp.h>
+
+/* We need to be able to flush the contents of an array, so we must declare it
+   statically. That means the total array size must be known at compile time     */
+#ifndef MEMWORDS
+#define MEMWORDS  100000000L
+#endif
 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
-#define NBR_INDEX(i,j) (i+(j)*(nbr_segment_size+1))
+double vector[MEMWORDS]; /* array holding grid values                             */
 
 int main(int argc, char ** argv)
 {
   int    my_ID;         /* Process ID (i.e. MPI rank)                            */
+  int    TID;           /* thread ID                                             */
   int    root;
   int    m, n;          /* grid dimensions                                       */
   double local_pipeline_time, /* timing parameters                               */
@@ -82,23 +89,28 @@ int main(int argc, char ** argv)
   double corner_val;    /* verification value at top right corner of grid        */
   int    i, j, iter, ID;/* dummies                                               */
   int    iterations;    /* number of times to run the pipeline algorithm         */
-  int    *start, *end;  /* starts and ends of grid slices                        */
+  int    start, end;    /* start and end of grid slice owned by calling rank     */
   int    segment_size;
+  int    flag[MAX_THREADS]; /* vector used for pairwise synchronizations         */
+  int    *tstart, *tend;/* starts and ends of grid slices for respective threads */
+  int    *tsegment_size;
+  int    nthread;       /* number of threads                                     */
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of processors                                  */
-  double *vector;       /* array holding grid values                             */
-  int    total_length;  /* total required length to store grid values            */
+  long   total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
-  MPI_Win rma_win;       /* RMA window object */
-  MPI_Group world_group, origin_group, target_group;
-  int origin_ranks[1], target_ranks[1];
-  int nbr_segment_size;
+  int    provided;
 
 /*********************************************************************************
 ** Initialize the MPI environment
 **********************************************************************************/
-  MPI_Init(&argc,&argv);
+  MPI_Init_thread(&argc,&argv, MPI_THREAD_MULTIPLE, &provided);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
+  if (provided != MPI_THREAD_MULTIPLE) {
+    if (my_ID==0) printf("Error: need MPI_THREAD_MULTIPLE but gets %d\n", provided);
+    MPI_Finalize();
+    exit(0);
+  }
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
 /* we set root equal to the highest processor rank, because this is also
@@ -110,11 +122,19 @@ int main(int argc, char ** argv)
 *********************************************************************/
 
   if (my_ID == root){
-    if (argc != 4){
-      printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>\n", 
+    if (argc != 5){
+      printf("Usage: %s <#threads> <#iterations> <1st array dimension> <2nd array dimension>\n", 
              *argv);
       error = 1;
       goto ENDOFTESTS;
+    }
+
+    /* Take number of threads to request from command line */
+    nthread = atoi(*++argv); 
+    if ((nthread < 1) || (nthread > MAX_THREADS)) {
+      printf("ERROR: Invalid number of threads: %d\n", nthread);
+      error = 1; 
+      goto ENDOFTESTS; 
     }
 
     iterations = atoi(*++argv);
@@ -143,44 +163,45 @@ int main(int argc, char ** argv)
   }
   bail_out(error); 
 
+  /* Broadcast benchmark data to all processes */
+  MPI_Bcast(&m,          1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&nthread,    1, MPI_INT, root, MPI_COMM_WORLD);
+
+  omp_set_num_threads(nthread);
+
   if (my_ID == root) {
-    printf("MPI pipeline execution on 2D grid\n");
+    printf("MPI+OpenMP pipeline execution on 2D grid\n");
     printf("Number of processes            = %i\n",Num_procs);
+    printf("Number of threads              = %d\n", omp_get_max_threads());
     printf("Grid sizes                     = %d, %d\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
-#ifdef VERBOSE
-    printf("Synchronizations/iteration     = %d\n", (Num_procs-1)*(n-1));
-#endif
   }
-  
-  /* Broadcast benchmark data to all processes */
-  MPI_Bcast(&m, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&n, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-  start = (int *) malloc(2*Num_procs*sizeof(int));
-  if (!start) {
-    printf("ERROR: Could not allocate space for array of slice boundaries\n");
-    exit(EXIT_FAILURE);
+  int leftover;
+  segment_size = m/Num_procs;
+  leftover     = m%Num_procs;
+  if (my_ID < leftover) {
+    start = (segment_size+1)* my_ID;
+    end   = start + segment_size;
   }
-  end = start + Num_procs;
-  start[0] = 0;
-  for (ID=0; ID<Num_procs; ID++) {
-    segment_size = m/Num_procs;
-    if (ID < (m%Num_procs)) segment_size++;
-    if (ID>0) start[ID] = end[ID-1]+1;
-    end[ID] = start[ID]+segment_size-1;
+  else {
+    start = (segment_size+1) * leftover + segment_size * (my_ID-leftover);
+    end   = start + segment_size -1;
   }
 
   /* now set segment_size to the value needed by the calling process            */
-  segment_size = end[my_ID] - start[my_ID] + 1;
+  segment_size = end-start+1;
+  //  printf("start, end, segment_size = %d, %d, %d\n", start, end, segment_size);
 
   /* total_length takes into account one ghost cell on left side of segment     */
-  total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  MPI_Win_allocate(total_length*sizeof(double), sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void *) &vector, &rma_win);
+  total_length = ((end-start+1)+1)*n;
   if (my_ID == root) {
-    if (total_length/(segment_size+1) != n) {
-      printf("Grid of %d by %d points too large\n", m, n);
+    /*  make sure we stay within the memory allocated for vector                   */
+    if (total_length > MEMWORDS) {
+      printf("Grid of %d by %d points too large; ", m, n);
+      printf("increase MEMWORDS in Makefile or  reduce grid size\n");
       error = 1;
     }
   }
@@ -194,91 +215,144 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
 
-  /* clear the array                                                             */
-  for (j=0; j<n; j++) for (i=start[my_ID]-1; i<=end[my_ID]; i++) {
-    ARRAY(i-start[my_ID],j) = 0.0;
+  /* now divide the rank's grid slice among the threads                          */
+  tstart = (int *) malloc(3*nthread*sizeof(int));
+  if (!tstart) {
+    printf("ERROR: Could not allocate space for array of slice boundaries\n");
+    exit(EXIT_FAILURE);
   }
-  /* set boundary values (bottom and left side of grid */
-  if (my_ID==0) for (j=0; j<n; j++) ARRAY(0,j) = (double) j;
-  for (i=start[my_ID]-1; i<=end[my_ID]; i++) ARRAY(i-start[my_ID],0) = (double) i;
+  tend = tstart + nthread;
+  tsegment_size = tend + nthread;
 
-  /* redefine start and end for calling process to reflect local indices          */
-  if (my_ID==0) start[my_ID] = 1; 
-  else          start[my_ID] = 0;
-  end[my_ID] = segment_size-1;
+  tstart[0] = start;
+  for (TID=0; TID<nthread; TID++) {
+    tsegment_size[TID] = segment_size/nthread;
+    if (TID < (segment_size%nthread)) tsegment_size[TID]++;
+    if (TID>0) tstart[TID] = tend[TID-1]+1;
+    tend[TID] = tstart[TID]+tsegment_size[TID]-1;
+  }
 
-  /* Set up origin and target process groups for PSCW */
-  MPI_Comm_group(MPI_COMM_WORLD, &world_group);
-  /* Target group consists of rank my_ID+1, right neighbor */
-  if (my_ID < Num_procs-1)
-    target_ranks[0] = my_ID+1;
-  else
-    target_ranks[0] = 0;
-  MPI_Group_incl(world_group, 1, target_ranks, &target_group);
+#pragma omp parallel private(i, j, iter)
+  {
+  int TID = omp_get_thread_num();
 
-  /* Origin group consists of rank my_ID-1, left neighbor */
-  if (my_ID > 0)
-    origin_ranks[0] = my_ID-1;
-  else
-    origin_ranks[0] = Num_procs-1;
-  MPI_Group_incl(world_group, 1, origin_ranks, &origin_group);
+  /* clear the array                                                             */
+  for (j=0; j<n; j++) 
+  for (i=tstart[TID]-1; i<=tend[TID]; i++) {
+    ARRAY(i-start,j) = 0.0;
+  }
+  /* set boundary values (bottom and left side of grid                           */
+  if (my_ID==0 && TID==0) for (j=0; j<n; j++) ARRAY(tstart[TID]-start,j) = (double) j;
+  for (i=tstart[TID]-1; i<=tend[TID]; i++) {
+    ARRAY(i-start,0) = (double) i;
+    //    printf("A(%d,%d) = %lf\n", i-start, 0, ARRAY(i-start,0));
+  }
+  #pragma omp barrier
+  //  #pragma omp master
+  //  {
+  //    for (j=0; j<n; j++) {
+  //      printf("\n");
+  //      for (i=0; i<m; i++) printf("A(%d,%d) = %2.0lf ", i-start, j, ARRAY(i-start,j));
+  //    }
+  //    printf("\n");
+  //  }
 
-  /* Set neighbor segment size */
-  if (my_ID != Num_procs-1)
-    nbr_segment_size = end[my_ID+1] - start[my_ID+1] + 1;
-  else
-    nbr_segment_size = end[0] - start[0] + 1;
-
+  if (TID==0) {
+    /* redefine start and end for calling process to reflect local indices        */
+    if (my_ID==0) start = 1; 
+    else          start = 0;
+    end = segment_size-1;
+  
+    tstart[0] = start;
+    tend[0] = tsegment_size[0]-1;
+    //      printf("Rank = %d, start(%d) = %d, end(%d) = %d\n", 
+    //      my_ID, 0, tstart[0], 0, tend[0]);
+    for (ID=1; ID<nthread; ID++) {
+      tstart[ID] = tend[ID-1]+1;
+      tend[ID]   = tstart[ID]+tsegment_size[ID]-1;
+      //      printf("Rank = %d, start(%d) = %d, end(%d) = %d\n", 
+      //      my_ID, ID, tstart[ID], ID, tend[ID]);
+      //      printf("Rank = %d, start, end = %d, %d\n", my_ID, start, end);
+    }
+  }
+  /* need to make sure all threads see the up to date values of (t)start/end      */
+  #pragma omp barrier  
   for (iter=0; iter<=iterations; iter++) {
 
     /* start timer after a warmup iteration */
     if (iter == 1) { 
-      MPI_Barrier(MPI_COMM_WORLD);
-      local_pipeline_time = wtime();
+      #pragma omp barrier
+      if (TID==0) {
+        MPI_Barrier(MPI_COMM_WORLD);
+        local_pipeline_time = wtime();
+      }
     }
+
+    /* set flags to zero to indicate no data is available yet                     */
+    flag[TID] = 0;
+    /* we need a barrier after setting the flags, to make sure each is
+       visible to all threads                                                     */
+    #pragma omp barrier
 
     /* execute pipeline algorithm for grid lines 1 through n-1 (skip bottom line) */
     for (j=1; j<n; j++) {
 
       /* if I am not at the left boundary, I need to wait for my left neighbor to
          send data                                                                */
-      if (my_ID > 0) {
-        /*  Exposure epoch at target*/
-        MPI_Win_post(origin_group, 0, rma_win);
-        MPI_Win_wait(rma_win);
+      if (TID==0){
+        if (my_ID > 0) {
+          MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
+                   MPI_COMM_WORLD, &status);
+        }
       }
 
-      for (i=start[my_ID]; i<= end[my_ID]; i++) {
+      if (TID > 0) {
+        while (flag[TID-1] == 0) {
+          #pragma omp flush(flag)
+        }
+        flag[TID-1] = 0;
+        #pragma omp flush(flag,vector)
+      }
+
+      for (i=tstart[TID]; i<= tend[TID]; i++) {
         ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
       }
 
+      /* if not on right boundary, wait until right neighbor has received my data */
+      if (TID < nthread-1) {
+        while (flag[TID] == 1) {
+          #pragma omp flush(flag)
+        }
+        flag[TID] = 1;
+        #pragma omp flush(flag,vector)
+      }
+
       /* if I am not on the right boundary, send data to my right neighbor        */  
-      if (my_ID != Num_procs-1) {
-        /* Access epoch at origin */	
-        MPI_Win_start(target_group, 0, rma_win);
-        MPI_Put(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE, my_ID+1,
-		NBR_INDEX(0,j), 1, MPI_DOUBLE, rma_win);
-        MPI_Win_complete(rma_win);	
+      if (TID==nthread-1) {
+        if (my_ID < Num_procs-1) {
+          MPI_Send(&(ARRAY(end,j)), 1, MPI_DOUBLE, my_ID+1, j, MPI_COMM_WORLD);
+        }
       }
+
     }
 
-    /* copy top right corner value to bottom left corner to create dependency      */
+    /* copy top right corner value to bottom left corner to create dependency; we
+       need a barrier to make sure the latest value is used. This also guarantees
+       that the flags for the next iteration (if any) are not getting clobbered  */
+    #pragma omp barrier
     if (Num_procs >1) {
-      if (my_ID==root) {
-        corner_val = -ARRAY(end[my_ID],n-1);
-        MPI_Win_start(target_group, 0, rma_win);
-        MPI_Put(&corner_val, 1, MPI_DOUBLE, 0,
-	 	NBR_INDEX(1,0), 1, MPI_DOUBLE, rma_win);
-	MPI_Win_complete(rma_win);
+      if (TID==nthread-1 && my_ID==root) {
+        corner_val = -ARRAY(end,n-1);
+        MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
       }
-      if (my_ID==0) {
-        MPI_Win_post(origin_group, 0, rma_win);
-        MPI_Win_wait(rma_win);
+      if (TID==0  && my_ID==0) {
+        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
       }
     }
-    else ARRAY(0,0)= -ARRAY(end[my_ID],n-1);
+    else if (TID==0) ARRAY(0,0)= -ARRAY(end,n-1);
 
-  }
+  } /* end of iterations */
+  } /* end of parallel sectopn */
 
   local_pipeline_time = wtime() - local_pipeline_time;
   MPI_Reduce(&local_pipeline_time, &pipeline_time, 1, MPI_DOUBLE, MPI_MAX, root,
@@ -291,9 +365,9 @@ int main(int argc, char ** argv)
   /* verify correctness, using top right value                                     */
   corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == root) {
-    if (abs(ARRAY(end[my_ID],n-1)-corner_val)/corner_val >= epsilon) {
+    if (abs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
-             ARRAY(end[my_ID],n-1), corner_val);
+             ARRAY(end,n-1), corner_val);
       error = 1;
     }
   }
@@ -308,12 +382,10 @@ int main(int argc, char ** argv)
 #else
     printf("Solution validates\n");
 #endif
-    printf("Rate (MFlops/s): %lf, Avg time (s): %lf\n",
+    printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
  
-  MPI_Win_free(&rma_win);
-
   MPI_Finalize();
   exit(EXIT_SUCCESS);
 

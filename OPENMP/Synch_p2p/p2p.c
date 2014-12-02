@@ -70,7 +70,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 /* We need to be able to flush the contents of an array, so we must declare it
    statically. That means the total array size must be known at compile time     */
 #ifndef MEMWORDS
-#define MEMWORDS  1000000
+#define MEMWORDS  100000000L
 #endif
 
 /* define shorthand for indexing a multi-dimensional array                       */
@@ -78,7 +78,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 int main(int argc, char ** argv) {
 
-  int    my_ID;           /* Thread ID                                           */
+  int    TID;             /* Thread ID                                           */
   int    m, n;            /* grid dimensions                                     */
   int    i, j, iter, ID;  /* dummies                                             */
   int    iterations;      /* number of times to run the pipeline algorithm       */
@@ -161,7 +161,7 @@ int main(int argc, char ** argv) {
     end[ID] = start[ID]+segment_size-1;
   }
 
-  #pragma omp parallel private(i, j, my_ID, iter) 
+  #pragma omp parallel private(i, j, TID, iter) 
   {
 
   #pragma omp master
@@ -186,13 +186,13 @@ int main(int argc, char ** argv) {
   }
   bail_out(num_error);
 
-  my_ID = omp_get_thread_num();
+  TID = omp_get_thread_num();
 
   /* clear the array, assuming first-touch memory placement                      */
-  for (j=0; j<n; j++) for (i=start[my_ID]; i<=end[my_ID]; i++) ARRAY(i,j) = 0.0;
+  for (j=0; j<n; j++) for (i=start[TID]; i<=end[TID]; i++) ARRAY(i,j) = 0.0;
   /* set boundary values (bottom and left side of grid                           */
-  if (my_ID==0) for (j=0; j<n; j++) ARRAY(start[my_ID],j) = (double) j;
-  for (i=start[my_ID]; i<=end[my_ID]; i++) ARRAY(i,0) = (double) i;
+  if (TID==0) for (j=0; j<n; j++) ARRAY(start[TID],j) = (double) j;
+  for (i=start[TID]; i<=end[TID]; i++) ARRAY(i,0) = (double) i;
 
   for (iter = 0; iter<=iterations; iter++){
 
@@ -206,7 +206,7 @@ int main(int argc, char ** argv) {
     }
 
     /* set flags to zero to indicate no data is available yet                    */
-    flag[my_ID] = 0;
+    flag[TID] = 0;
     /* we need a barrier after setting the flags, to make sure each is
        visible to all threads, and to synchronize before the timer starts        */
     #pragma omp barrier
@@ -214,24 +214,24 @@ int main(int argc, char ** argv) {
     for (j=1; j<n; j++) {
 
       /* if not on left boundary,  wait for left neighbor to produce data         */
-      if (my_ID > 0) {
-       while (flag[my_ID-1] == 0) {
+      if (TID > 0) {
+       while (flag[TID-1] == 0) {
            #pragma omp flush(flag)
         }
-        flag[my_ID-1] = 0;
+        flag[TID-1] = 0;
         #pragma omp flush(flag,vector)
       }
 
-      for (i=MAX(start[my_ID],1); i<= end[my_ID]; i++) {
+      for (i=MAX(start[TID],1); i<= end[TID]; i++) {
         ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
       }
 
       /* if not on right boundary, wait until right neighbor has received my data */
-      if (my_ID < nthread-1) {
-        while (flag[my_ID] == 1) {
+      if (TID < nthread-1) {
+        while (flag[TID] == 1) {
           #pragma omp flush(flag)
         }
-        flag[my_ID] = 1;
+        flag[TID] = 1;
         #pragma omp flush(flag,vector)
       }
     }
