@@ -193,7 +193,6 @@ int main(int argc, char ** argv)
 
   /* now set segment_size to the value needed by the calling process            */
   segment_size = end-start+1;
-  //  printf("start, end, segment_size = %d, %d, %d\n", start, end, segment_size);
 
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end-start+1)+1)*n;
@@ -245,17 +244,9 @@ int main(int argc, char ** argv)
   if (my_ID==0 && TID==0) for (j=0; j<n; j++) ARRAY(tstart[TID]-start,j) = (double) j;
   for (i=tstart[TID]-1; i<=tend[TID]; i++) {
     ARRAY(i-start,0) = (double) i;
-    //    printf("A(%d,%d) = %lf\n", i-start, 0, ARRAY(i-start,0));
   }
+
   #pragma omp barrier
-  //  #pragma omp master
-  //  {
-  //    for (j=0; j<n; j++) {
-  //      printf("\n");
-  //      for (i=0; i<m; i++) printf("A(%d,%d) = %2.0lf ", i-start, j, ARRAY(i-start,j));
-  //    }
-  //    printf("\n");
-  //  }
 
   if (TID==0) {
     /* redefine start and end for calling process to reflect local indices        */
@@ -263,20 +254,18 @@ int main(int argc, char ** argv)
     else          start = 0;
     end = segment_size-1;
   
+    /* redefine tstart and tend for calling thread to reflect local indices       */
     tstart[0] = start;
     tend[0] = tsegment_size[0]-1;
-    //      printf("Rank = %d, start(%d) = %d, end(%d) = %d\n", 
-    //      my_ID, 0, tstart[0], 0, tend[0]);
     for (ID=1; ID<nthread; ID++) {
       tstart[ID] = tend[ID-1]+1;
       tend[ID]   = tstart[ID]+tsegment_size[ID]-1;
-      //      printf("Rank = %d, start(%d) = %d, end(%d) = %d\n", 
-      //      my_ID, ID, tstart[ID], ID, tend[ID]);
-      //      printf("Rank = %d, start, end = %d, %d\n", my_ID, start, end);
     }
   }
+
   /* need to make sure all threads see the up to date values of (t)start/end      */
   #pragma omp barrier  
+
   for (iter=0; iter<=iterations; iter++) {
 
     /* start timer after a warmup iteration */
@@ -336,9 +325,9 @@ int main(int argc, char ** argv)
 
     }
 
-    /* copy top right corner value to bottom left corner to create dependency; we
-       need a barrier to make sure the latest value is used. This also guarantees
-       that the flags for the next iteration (if any) are not getting clobbered  */
+    /* copy top right corner value to bottom left corner to create dependency. We
+       need a barrier to guarantee that the flags for the next iteration (if any) 
+       are not reinitialized while they are still in use in this iteration        */
     #pragma omp barrier
     if (Num_procs >1) {
       if (TID==nthread-1 && my_ID==root) {
