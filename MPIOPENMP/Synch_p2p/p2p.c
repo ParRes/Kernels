@@ -73,6 +73,9 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #define MEMWORDS  100000000L
 #endif
 
+/* define shorthand for flag with cache line padding                             */ 
+#define LINEWORDS  16 
+#define flag(i)    flag[(i)*LINEWORDS] 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
 double vector[MEMWORDS]; /* array holding grid values                             */
 
@@ -91,7 +94,7 @@ int main(int argc, char ** argv)
   int    iterations;    /* number of times to run the pipeline algorithm         */
   int    start, end;    /* start and end of grid slice owned by calling rank     */
   int    segment_size;
-  int    flag[MAX_THREADS]; /* vector used for pairwise synchronizations         */
+  int    flag[MAX_THREADS*LINEWORDS]; /* used for pairwise synchronizations      */
   int    *tstart, *tend;/* starts and ends of grid slices for respective threads */
   int    *tsegment_size;
   int    nthread;       /* number of threads                                     */
@@ -278,7 +281,7 @@ int main(int argc, char ** argv)
     }
 
     /* set flags to zero to indicate no data is available yet                     */
-    flag[TID] = 0;
+    flag(TID) = 0;
     /* we need a barrier after setting the flags, to make sure each is
        visible to all threads                                                     */
     #pragma omp barrier
@@ -296,10 +299,10 @@ int main(int argc, char ** argv)
       }
 
       if (TID > 0) {
-        while (flag[TID-1] == 0) {
+        while (flag(TID-1) == 0) {
           #pragma omp flush(flag)
         }
-        flag[TID-1] = 0;
+	  flag(TID-1) = 0;
         #pragma omp flush(flag,vector)
       }
 
@@ -309,10 +312,10 @@ int main(int argc, char ** argv)
 
       /* if not on right boundary, wait until right neighbor has received my data */
       if (TID < nthread-1) {
-        while (flag[TID] == 1) {
+        while (flag(TID) == 1) {
           #pragma omp flush(flag)
         }
-        flag[TID] = 1;
+	  flag(TID) = 1;
         #pragma omp flush(flag,vector)
       }
 

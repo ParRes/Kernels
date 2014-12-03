@@ -75,14 +75,16 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 /* define shorthand for indexing a multi-dimensional array                       */
 #define ARRAY(i,j) vector[i+(j)*(m)]
-
+/* define shorthand for flag with cache line padding                             */
+#define LINEWORDS  16
+#define flag(i)    flag[(i)*LINEWORDS]
 int main(int argc, char ** argv) {
 
   int    TID;             /* Thread ID                                           */
   int    m, n;            /* grid dimensions                                     */
   int    i, j, iter, ID;  /* dummies                                             */
   int    iterations;      /* number of times to run the pipeline algorithm       */
-  int    flag[MAX_THREADS]; /* vector used for pairwise synchronizations         */
+  int    flag[MAX_THREADS*LINEWORDS]; /* used for pairwise synchronizations      */
   int    *start, *end;    /* starts and ends of grid slices                      */
   int    segment_size;
   double pipeline_time,   /* timing parameters                                   */
@@ -206,7 +208,7 @@ int main(int argc, char ** argv) {
     }
 
     /* set flags to zero to indicate no data is available yet                    */
-    flag[TID] = 0;
+    flag(TID) = 0;
     /* we need a barrier after setting the flags, to make sure each is
        visible to all threads, and to synchronize before the timer starts        */
     #pragma omp barrier
@@ -215,10 +217,10 @@ int main(int argc, char ** argv) {
 
       /* if not on left boundary,  wait for left neighbor to produce data         */
       if (TID > 0) {
-       while (flag[TID-1] == 0) {
+	while (flag(TID-1) == 0) {
            #pragma omp flush(flag)
         }
-        flag[TID-1] = 0;
+	  flag(TID-1) = 0;
         #pragma omp flush(flag,vector)
       }
 
@@ -228,10 +230,10 @@ int main(int argc, char ** argv) {
 
       /* if not on right boundary, wait until right neighbor has received my data */
       if (TID < nthread-1) {
-        while (flag[TID] == 1) {
+        while (flag(TID) == 1) {
           #pragma omp flush(flag)
         }
-        flag[TID] = 1;
+	  flag(TID) = 1;
         #pragma omp flush(flag,vector)
       }
     }
