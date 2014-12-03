@@ -100,6 +100,7 @@ int main(int argc, char ** argv)
   int    nthread;       /* number of threads                                     */
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of processors                                  */
+  char  *name;          /* MPI threading mode suffix name                        */
   long   total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
   int    provided;
@@ -109,8 +110,16 @@ int main(int argc, char ** argv)
 **********************************************************************************/
   MPI_Init_thread(&argc,&argv, MPI_THREAD_MULTIPLE, &provided);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
-  if (provided != MPI_THREAD_MULTIPLE) {
-    if (my_ID==0) printf("Error: need MPI_THREAD_MULTIPLE but gets %d\n", provided);
+  switch (provided) {
+    case  MPI_THREAD_SERIALIZED: error=1; name="SERIALIZED"; break;
+    case  MPI_THREAD_FUNNELED:   error=1; name="FUNNELED";   break;
+    case  MPI_THREAD_SINGLE:     error=1; name="SINGLE";     break;
+    case  MPI_THREAD_MULTIPLE:   error=0;                    break;
+    default:                     error=1; name="UNKNOWN";    break;
+  }
+  if (error) {
+    if (my_ID==0) printf("ERROR: need MPI_THREAD_MULTIPLE but gets MPI_THREAD_%s\n",
+                         name);
     MPI_Finalize();
     exit(0);
   }
