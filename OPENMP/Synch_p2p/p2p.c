@@ -78,6 +78,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 /* define shorthand for flag with cache line padding                             */
 #define LINEWORDS  16
 #define flag(i)    flag[(i)*LINEWORDS]
+
 int main(int argc, char ** argv) {
 
   int    TID;             /* Thread ID                                           */
