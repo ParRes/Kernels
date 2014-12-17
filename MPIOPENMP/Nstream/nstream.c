@@ -334,7 +334,7 @@ int checkTRIADresults (int iterations, long int length) {
     return (0);
   }
   else {
-    printf ("Solution Validates\n");
+    printf ("Solution validates\n");
     return (1);
   }
 }
