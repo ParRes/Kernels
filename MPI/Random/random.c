@@ -30,22 +30,22 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 /*************************************************************
-Copyright © 2013 The University of Tennessee. All rights reserved.
+Copyright (c)  2013 The University of Tennessee. All rights reserved.
 Redistribution and use in source and binary forms, with or 
 without modification, are permitted provided that the following
-conditions are met: 
+conditions are met:
 
-· Redistributions of source code must retain the 
+- Redistributions of source code must retain the 
   above copyright notice, this list of conditions and 
-  the following disclaimer. 
+  the following disclaimer.
 
-· Redistributions in binary form must reproduce the 
+- Redistributions in binary form must reproduce the 
   above copyright notice, this list of conditions and 
   the following disclaimer listed in this license in the 
   documentation and/or other materials provided with the 
-  distribution. 
+  distribution.
 
-· Neither the name of the copyright holders nor the names 
+- Neither the name of the copyright holders nor the names 
   of its contributors may be used to endorse or promote 
   products derived from this software without specific 
   prior written permission.
@@ -181,10 +181,7 @@ int main(int argc, char **argv) {
   int               *recvdispls; /* successive dispalcemetns in receive buffer     */
   u64Int * RESTRICT Table;       /* (pseudo-)randomly accessed array               */
   double            random_time, /* timing parameters                              */
-                    avgtime = 0.0, 
-                    maxtime = 0.0, 
-                    mintime = 366.0*8760.0*3600.0; /* set the minimum time to a 
-                                       large value; one leap year should be enough */
+                    avgtime = 0.0;
   int               Num_procs,   /* process parameters                             */
                     my_ID,       /* rank of calling process                        */
                     root=0;      /* ID of master process                           */

@@ -272,7 +272,7 @@ int main(int argc, char ** argv) {
 #ifdef VERBOSE   
   printf("Solution validates; verification value = %lf\n", corner_val);
   printf("Point-to-point synchronizations/s: %lf\n",
-         ((float)((n-1)*(nthread-1)))/(mintime));
+         ((float)((n-1)*(nthread-1)))/(avgtime));
 #else
   printf("Solution validates\n");
 #endif

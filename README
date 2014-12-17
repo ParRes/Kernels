@@ -52,6 +52,10 @@ labelling include:
 
 Other comparable, clear, and reasonable labelling is acceptable.
 
+**********************
+* BUILD INSTRUCTIONS *
+**********************
+
 To build the codes the user needs to make certain changes by editing text
 files. Assuming the source tree is untarred in directory HOME, the
 following file needs to be edited:
@@ -62,6 +66,8 @@ or compile script. If MPI is not going to be used, the user can ignore
 the value of MPICC. The compilers should already be in your path. That
 is, if you define "CC=icc," then typing "which icc" should show a
 valid path where the compiler is installed.
+If you also want to use Charm++, that runtime needs to be installed,
+and you need to specify in this file where it is located.
 
 The suite of kernels currently has parallel implementations in OpenMP
 and MPI. There is also a serial reference implementation. The suite is 
@@ -130,4 +136,8 @@ make all default_opt_flags="-xP -restrict" matrix_rank=7 number_of_functions=200
 ./Run/smallserial
 ./Run/smallcharm++
 ./Run/smallmpiopenmp
+
+To exercise all kernels, type
+./Run/smallall
+
 
