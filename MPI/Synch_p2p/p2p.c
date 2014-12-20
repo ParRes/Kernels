@@ -79,13 +79,16 @@ int main(int argc, char ** argv)
          avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;    /* verification value at top right corner of grid        */
-  int    i, j, iter, ID;/* dummies                                               */
+  int    i, j, jj, iter, ID;/* dummies                                           */
   int    iterations;    /* number of times to run the pipeline algorithm         */
   int    start, end;    /* start and end of grid slice owned by calling rank     */
   int    segment_size;
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of processors                                  */
+  int    grp;           /* grid line aggregation factor                          */
+  int    jjsize;        /* actual line group size                                */
   double *vector;       /* array holding grid values                             */
+  double *inbuf, *outbuf; /* communication buffers used when aggregating         */
   int    total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
 
@@ -105,8 +108,8 @@ int main(int argc, char ** argv)
 *********************************************************************/
 
   if (my_ID == root){
-    if (argc != 4){
-      printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>\n", 
+    if (argc != 4 && argc != 5){
+      printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension> [group factor]\n", 
              *argv);
       error = 1;
       goto ENDOFTESTS;
@@ -134,6 +137,13 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     }
 
+    if (argc==5) {
+      grp = atoi(*++argv);
+      if (grp < 1) grp = 1;
+      else if (grp >= n) grp = n-1;
+    }
+    else grp = 1;
+
     ENDOFTESTS:;
   }
   bail_out(error); 
@@ -143,14 +153,19 @@ int main(int argc, char ** argv)
     printf("Number of processes            = %i\n",Num_procs);
     printf("Grid sizes                     = %d, %d\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
+    if (grp > 1)
+    printf("Group factor                   = %d (cheating!)\n", grp);
+    else
+    printf("Group factor                   = %d\n", grp);
 #ifdef VERBOSE
     printf("Synchronizations/iteration     = %d\n", (Num_procs-1)*(n-1));
 #endif
   }
   
   /* Broadcast benchmark data to all processes */
-  MPI_Bcast(&m, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&n, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&m,          1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&grp,        1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   int leftover;
@@ -178,7 +193,7 @@ int main(int argc, char ** argv)
     }
   }
   bail_out(error);
- 
+
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %d by %d points", 
            segment_size, n);
@@ -187,6 +202,18 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
 
+  
+  /* reserve space for in and out buffers                                        */
+  inbuf = (double *) malloc(2*sizeof(double)*(grp));
+  if (inbuf == NULL) {
+    printf("Could not allocate space for %d words of communication buffers", 
+            2*grp);
+    printf(" on process %d\n", my_ID);
+    error = 1;
+  }
+  bail_out(error);
+  outbuf = inbuf + grp;
+   
   /* clear the array                                                             */
   for (j=0; j<n; j++) for (i=start-1; i<=end; i++) {
     ARRAY(i-start,j) = 0.0;
@@ -209,7 +236,7 @@ int main(int argc, char ** argv)
     }
 
     /* execute pipeline algorithm for grid lines 1 through n-1 (skip bottom line) */
-    for (j=1; j<n; j++) {
+    if (grp==1) for (j=1; j<n; j++) { /* special case for no grouping             */
 
       /* if I am not at the left boundary, I need to wait for my left neighbor to
          send data                                                                */
@@ -224,12 +251,36 @@ int main(int argc, char ** argv)
 
       /* if I am not on the right boundary, send data to my right neighbor        */  
       if (my_ID < Num_procs-1) {
-        MPI_Send(&(ARRAY(end,j)), 1, MPI_DOUBLE, my_ID+1,
-                                         j, MPI_COMM_WORLD);
+        MPI_Send(&(ARRAY(end,j)), 1, MPI_DOUBLE, my_ID+1, j, MPI_COMM_WORLD);
       }
     }
+    else for (j=1; j<n; j+=grp) { /* apply grouping                               */
 
-    /* copy top right corner value to bottom left corner to create dependency      */
+      jjsize = MIN(grp, n-j);
+      /* if I am not at the left boundary, I need to wait for my left neighbor to
+         send data                                                                */
+      if (my_ID > 0) {
+        MPI_Recv(inbuf, jjsize, MPI_DOUBLE, my_ID-1, j, MPI_COMM_WORLD, &status);
+        for (jj=0; jj<jjsize; jj++) {
+          ARRAY(start-1,jj+j) = inbuf[jj];
+	}
+      }
+
+      for (jj=0; jj<jjsize; jj++) for (i=start; i<= end; i++) {
+        ARRAY(i,jj+j) = ARRAY(i-1,jj+j) + ARRAY(i,jj+j-1) - ARRAY(i-1,jj+j-1);
+      }
+
+      /* if I am not on the right boundary, send data to my right neighbor        */  
+      if (my_ID < Num_procs-1) {
+        for (jj=0; jj<jjsize; jj++) {
+          outbuf[jj] = ARRAY(end,jj+j);
+        }
+        MPI_Send(outbuf, jjsize, MPI_DOUBLE, my_ID+1, j, MPI_COMM_WORLD);
+      }
+
+    }
+
+    /* copy top right corner value to bottom left corner to create dependency     */
     if (Num_procs >1) {
       if (my_ID==root) {
         corner_val = -ARRAY(end,n-1);
