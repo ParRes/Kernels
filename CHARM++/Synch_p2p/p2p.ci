@@ -1,12 +1,14 @@
 mainmodule p2p {
   readonly CProxy_Main mainProxy;
   readonly int n;
-  readonly int num_chares;
+  readonly int m;
   readonly int overdecomposition;
+  readonly int maxiterations;
+  readonly int grp;
+
+  readonly int num_chares;
   readonly double startTime;
   readonly double endTime;
-
-  readonly int maxiterations;
 
   message ghostMsg {
     double gp[];
@@ -44,7 +46,7 @@ mainmodule p2p {
             if (thisIndex == 0) startTime = CkWallTimer();
           }
         }
-        for (j=1; j<n; j++) {
+        for (j=1; j<n; j+=grp) {
           if (thisIndex > 0) {
             when receiveGhost[j+iterations*(n-1)](ghostMsg *msg)
               serial "processGhost" {

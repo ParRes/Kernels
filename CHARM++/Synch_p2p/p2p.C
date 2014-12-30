@@ -1,7 +1,7 @@
 #include "p2p.decl.h"
 #include <par-res-kern_general.h>
 
-#define EPSILON       1.e-8
+#define EPSILON    1.e-8
 #define ARRAY(i,j) vector[i+1+(j)*(width+1)]
 
 /*readonly*/ CProxy_Main mainProxy;
@@ -9,6 +9,7 @@
 /*readonly*/ int m; // array size
 /*readonly*/ int overdecomposition; 
 /*readonly*/ int maxiterations;
+/*readonly*/ int grp;
 
 // specify the number of worker chares in each dimension
 /*readonly*/ int num_chares;
@@ -35,9 +36,11 @@ public:
     CProxy_P2p array;
 
     Main(CkArgMsg* cmdlinearg) {
-        if (cmdlinearg->argc != 5) {
-          CkPrintf("%s <#iterations> <grid_size x> <grid_size y><overdecomposition factor>\n",
-          cmdlinearg->argv[0]); CkExit();
+        if (cmdlinearg->argc != 5 && cmdlinearg->argc != 6 ) {
+          CkPrintf("%s <#iterations> <grid_size x> <grid_size y> <overdecomposition factor> ",
+          cmdlinearg->argv[0]);
+          CkPrintf("[group factor]\n");
+          CkExit();
         }
 
         // store the main proxy
@@ -66,6 +69,14 @@ public:
           CkExit();
         }
 
+        if (cmdlinearg->argc==6) {
+          grp = atoi(cmdlinearg->argv[5]);
+          if (grp < 1) grp = 1;
+          else if (grp >= n) grp = n-1;
+        }
+        else grp = 1;
+
+
         int min_size = m/(CkNumPes()*overdecomposition);
         if (!min_size) {
           CkPrintf("ERROR: Horizontal grid size %d smaller than #PEs*overdecomposition factor %d\n",
@@ -81,6 +92,8 @@ public:
         CkPrintf("Overdecomposition    = %d\n", overdecomposition);
         CkPrintf("Grid sizes           = %d,%d\n", m, n);
         CkPrintf("Number of iterations = %d\n", maxiterations);
+        if (grp > 1)
+        CkPrintf("Group factor         = %d (cheating!)\n", grp);
 
         // Create new array of worker chares
         array = CProxy_P2p::ckNew(num_chares);
@@ -99,6 +112,8 @@ public:
       double totalTime, flops, diff;
       double corner_val = (double) ((maxiterations+1)*(m+n-2));
       totalTime = endTime - startTime;
+      // flip sign of time if grouping is applied (cheating)                       
+      if (grp>1) totalTime *= -1.0;
       flops = (double) (2*(n-1)) * (double) (m-1)*maxiterations;
       diff = ABS(result-corner_val);
       if (diff < EPSILON) {
@@ -130,8 +145,8 @@ public:
     int i, iloc, leftover;
       
     /* compute amount of space required for input and solution arrays             */
-    width = m/overdecomposition;
-    leftover = m%overdecomposition;
+    width = m/num_chares;
+    leftover = m%num_chares;
     if (thisIndex < leftover) {
       istart = (width+1) * thisIndex; 
       iend = istart + width;
@@ -163,35 +178,44 @@ public:
       delete [] vector;
     }
 
-    // Perform one grid line worth of work
+    // Perform one or more grid lines worth of work
     // The first step is to receive data from a left neighbor, if any
     void processGhost(ghostMsg *msg) {
+      int jj, jjsize;
 
-      ARRAY(-1,j) = msg->gp[0];
+      jjsize = MIN(grp, n-j);
+      for (jj=0; jj<jjsize; jj++) ARRAY(-1,j+jj) = msg->gp[jj];
       delete msg;
     }
 
     // do the actual work
     void compute() {
-      int iloc;
-      for (int i=istart+offset,iloc=offset; i<=iend; i++,iloc++) {
-        ARRAY(iloc,j) = ARRAY(iloc-1,j) + ARRAY(iloc,j-1) - ARRAY(iloc-1,j-1);
-      }
+      int iloc, jj, jjsize;
+      jjsize = MIN(grp, n-j);
+
+      for (jj=j; jj<j+jjsize; jj++) 
+      for (int i=istart+offset,iloc=offset; i<=iend; i++,iloc++) 
+        ARRAY(iloc,jj) = ARRAY(iloc-1,jj) + ARRAY(iloc,jj-1) - ARRAY(iloc-1,jj-1);
     }
 
     // The final step is to send the local state to the neighbors
     void pass_baton(void) {
+      int jj, jjsize;
 
       // Send my right edge
       if (thisIndex < num_chares-1) {
-          ghostMsg *msg = new (1) ghostMsg();
-          CkSetRefNum(msg, j+iterations*(n-1));
-          msg->gp[0]   = ARRAY(iend-istart,j);
-          thisProxy(thisIndex+1).receiveGhost(msg);
+	jjsize = MIN(grp, n-j);
+        ghostMsg *msg = new (jjsize) ghostMsg();
+        CkSetRefNum(msg, j+iterations*(n-1));
+        for (jj=0; jj<jjsize; jj++) {
+          msg->gp[jj] = ARRAY(iend-istart,j+jj);
+	  //          CkPrintf("Chare %d, send_msg->[%d]=%lf\n", thisIndex, jj, msg->gp[jj]);
+        }
+        thisProxy(thisIndex+1).receiveGhost(msg);
       }
     }
 
-    // Receive top rigth grid value and plop in 0,0 position
+    // Receive top right grid value and plop in 0,0 position
     void processCorner(cornerMsg *msg) {
 
       ARRAY(0,0) = msg->gp[0];

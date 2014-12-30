@@ -83,7 +83,7 @@ int main(int argc, char ** argv) {
 
   int    TID;             /* Thread ID                                           */
   int    m, n;            /* grid dimensions                                     */
-  int    i, j, iter, ID;  /* dummies                                             */
+  int    i, j, jj, iter, ID; /* dummies                                          */
   int    iterations;      /* number of times to run the pipeline algorithm       */
   int    flag[MAX_THREADS*LINEWORDS]; /* used for pairwise synchronizations      */
   int    *start, *end;    /* starts and ends of grid slices                      */
@@ -94,6 +94,8 @@ int main(int argc, char ** argv) {
   double corner_val;      /* verification value at top right corner of grid      */
   int    nthread_input,   /* thread parameters                                   */
          nthread; 
+  int    grp;             /* grid line aggregation factor                        */
+  int    jjsize;          /* actual line group size                              */
   static                  /* use "static to put the thing on the heap            */
   double vector[MEMWORDS];/* array holding grid values; we would like to 
                              allocate it dynamically, but need to be able to 
@@ -106,9 +108,9 @@ int main(int argc, char ** argv) {
   ** process and test input parameters    
   ********************************************************************************/
 
-  if (argc != 5){
+  if (argc != 5 && argc != 6){
     printf("Usage: %s <# threads> <# iterations> <first array dimension> ", *argv);
-    printf("<second array dimension>\n");
+    printf("<second array dimension> [group factor]\n");
     return(EXIT_FAILURE);
   }
 
@@ -135,6 +137,13 @@ int main(int argc, char ** argv) {
     printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
     exit(EXIT_FAILURE);
   }
+
+  if (argc==6) {
+    grp = atoi(*++argv);
+    if (grp < 1) grp = 1;
+    else if (grp >= n) grp = n-1;
+  }
+  else grp = 1;
 
   /*  make sure we stay within the memory allocated for vector                   */
   total_length = m*n;
@@ -164,7 +173,7 @@ int main(int argc, char ** argv) {
     end[ID] = start[ID]+segment_size-1;
   }
 
-  #pragma omp parallel private(i, j, TID, iter) 
+#pragma omp parallel private(i, j, jj, jjsize, TID, iter) 
   {
 
   #pragma omp master
@@ -181,10 +190,9 @@ int main(int argc, char ** argv) {
   else {
     printf("Number of threads         = %d\n",nthread_input);
     printf("Grid sizes                = %d, %d\n", m, n);
-#ifdef VERBOSE
-    printf("Number of pairwise synchs = %d\n", (nthread-1)*(n-1));
-#endif
     printf("Number of iterations      = %d\n", iterations);
+    if (grp > 1)
+    printf("Group factor              = %d (cheating!)\n", grp);
   }
   }
   bail_out(num_error);
@@ -208,15 +216,17 @@ int main(int argc, char ** argv) {
       }
     }
 
-    /* set flags to zero to indicate no data is available yet                    */
+    /* set flags to zero to indicate no data is available yet                      */
     flag(TID) = 0;
     /* we need a barrier after setting the flags, to make sure each is
-       visible to all threads, and to synchronize before the timer starts        */
+       visible to all threads, and to synchronize before the timer starts          */
     #pragma omp barrier
 
-    for (j=1; j<n; j++) {
+    for (j=1; j<n; j+=grp) { /* apply grouping                                     */
 
-      /* if not on left boundary,  wait for left neighbor to produce data         */
+      jjsize = MIN(grp, n-j);
+
+      /* if not on left boundary,  wait for left neighbor to produce data          */
       if (TID > 0) {
 	while (flag(TID-1) == 0) {
            #pragma omp flush(flag)
@@ -225,11 +235,12 @@ int main(int argc, char ** argv) {
         #pragma omp flush(flag,vector)
       }
 
+      for (jj=j; jj<j+jjsize; jj++)
       for (i=MAX(start[TID],1); i<= end[TID]; i++) {
-        ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
+        ARRAY(i,jj) = ARRAY(i-1,jj) + ARRAY(i,jj-1) - ARRAY(i-1,jj-1);
       }
 
-      /* if not on right boundary, wait until right neighbor has received my data */
+      /* if not on right boundary, wait until right neighbor has received my data  */
       if (TID < nthread-1) {
         while (flag(TID) == 1) {
           #pragma omp flush(flag)
@@ -277,6 +288,8 @@ int main(int argc, char ** argv) {
   printf("Solution validates\n");
 #endif
   avgtime = pipeline_time/iterations;
+  /* flip the sign of the execution time to indicate cheating                    */
+  if (grp>1) avgtime *= -1.0;
   printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
          1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
 

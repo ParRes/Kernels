@@ -155,11 +155,6 @@ int main(int argc, char ** argv)
     printf("Number of iterations           = %d\n", iterations);
     if (grp > 1)
     printf("Group factor                   = %d (cheating!)\n", grp);
-    else
-    printf("Group factor                   = %d\n", grp);
-#ifdef VERBOSE
-    printf("Synchronizations/iteration     = %d\n", (Num_procs-1)*(n-1));
-#endif
   }
   
   /* Broadcast benchmark data to all processes */
@@ -315,6 +310,8 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     avgtime = pipeline_time/iterations;
+    /* flip the sign of the execution time to indicate cheating                    */
+    if (grp>1) avgtime *= -1.0;
 #ifdef VERBOSE   
     printf("Solution validates; verification value = %lf\n", corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",
