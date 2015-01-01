@@ -68,13 +68,11 @@ public:
 
         num_chares = CkNumPes()*overdecomposition;
         if (!(order/num_chares)) {
-          CkPrintf("ERROR: Matrix order %d smaller than #PEs*overdecomposition factor %d\n",
-                   order, num_chares);
+          CkPrintf("ERROR: Matrix order %d smaller than #chares %d\n", order, num_chares);
           CkExit();
         }
         if (order%num_chares) {
-          CkPrintf("ERROR: Matrix order %d must be multiple of #PEs*overdecomposition factor $d\n",
-                   order, num_chares);
+          CkPrintf("ERROR: Matrix order %d not multiple of #chares $d\n", order, num_chares);
           CkExit();
         }
 

@@ -76,15 +76,13 @@ public:
         }
         else grp = 1;
 
+        num_chares = CkNumPes()*overdecomposition;
 
-        int min_size = m/(CkNumPes()*overdecomposition);
-        if (!min_size) {
-          CkPrintf("ERROR: Horizontal grid size %d smaller than #PEs*overdecomposition factor %d\n",
-		   m, CkNumPes()*overdecomposition);
+        if ((m-1)< num_chares) {
+          CkPrintf("ERROR: Interior horizontal grid size %d smaller than #chares %d\n",
+		   m-1, num_chares);
           CkExit();
         }
-
-        num_chares = CkNumPes()*overdecomposition;
 
         // print info
         CkPrintf("Charm++ pipeline execution on 2D grid\n");
