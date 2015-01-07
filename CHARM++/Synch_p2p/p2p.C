@@ -95,11 +95,6 @@ public:
 
         // Create new array of worker chares
         array = CProxy_P2p::ckNew(num_chares);
-        // need to figure out how to trap errors in creating chare arrays
-	//        if (!array) {
-	//          CkPrintf("ERROR: Could not allocate space for chare array\n");
-	//          CkExit();
-	//        }
 
         //Start the computation
 	array.run();
