@@ -229,6 +229,8 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
 
+  printf("Rank = %d, jlow=%d, jup=%d\n", my_ID, jlow, jup);
+
   if (nloc < RADIUS) {
     printf("ERROR: Process %d has work strip smaller then stencil radius\n",
 	   my_ID);

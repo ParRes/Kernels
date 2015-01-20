@@ -52,7 +52,7 @@ default:
 	@echo "       \"make clean\"      removes all objects and executables"
 	@echo "       \"make veryclean\"  removes some generated source files as well"
 
-all: allmpi allopenmp allserial
+all: allmpi allopenmp allserial 
 
 allmpi: 
 	cd MPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"

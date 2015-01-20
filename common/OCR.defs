@@ -1,9 +1,0 @@
-include ../../common/make.defs
-#OCR_ROOT=/home/${USER}/xstack/ocr/install/x86-pthread-x86
-OCR_ROOT=/home/rfvander/xstack/ocr/runtime/ocr-x86/ocr-install
-CFLAGS=-DOCR_DEBUG -DOCR_DEBUG_LVL=DEBUG_LVL_INFO -I${OCR_ROOT}/include
-CCOMPILER=$(CC)
-CLINKER=$(CCOMPILER)
-#COMOBJS=MPI_bail_out.o wtime.o
-COMOBJS=wtime.o
-PROG_ENV=-DOCR

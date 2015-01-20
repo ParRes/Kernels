@@ -255,6 +255,11 @@ int main(int argc, char ** argv)
 
   }
 
+  for (j=0; j<n; j++) {
+    for (i=0; i<=end[my_ID]; i++) printf("%lf ", ARRAY(i,j));
+    printf("\n");
+  }
+
   /* verify correctness, using top right value                                     */
   corner_val = (double) (iterations*(m+n-2));
   if (my_ID == root) {
