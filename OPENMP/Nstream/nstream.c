@@ -232,8 +232,7 @@ int main(int argc, char **argv)
   }
   bail_out(num_error); 
 
-  #pragma omp for
-  #pragma vector always
+  #pragma omp for simd
   for (j=0; j<length; j++) {
     a[j] = 0.0;
     b[j] = 2.0;
@@ -252,8 +251,8 @@ int main(int argc, char **argv)
     nstream_time = wtime();
     }
  
-    #pragma omp for
-    #pragma vector always
+    #pragma omp for simd
+
     for (j=0; j<length; j++) a[j] = b[j]+scalar*c[j];
  
     #pragma omp master
@@ -264,8 +263,7 @@ int main(int argc, char **argv)
       maxtime = MAX(maxtime, nstream_time);
     }
     /* insert a dependency between iterations to avoid dead-code elimination */
-    #pragma omp for 
-    #pragma vector always
+    #pragma omp for simd
     for (j=0; j<length; j++) b[j] = a[j];
   }
   }  /* end of OpenMP parallel region */
