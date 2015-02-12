@@ -41,7 +41,7 @@ PURPOSE: This program tests the efficiency with which a square matrix
 USAGE:   Program inputs are the matrix order, the number of times to 
          repeat the operation, and the communication mode
 
-         transpose <matrix size> <# iterations> <comm. mode> [tile size]
+         transpose <# iterations> <matrix order> [tile size]
 
          An optional parameter specifies the tile size used to divide the 
          individual matrix blocks for improved cache and TLB performance. 
