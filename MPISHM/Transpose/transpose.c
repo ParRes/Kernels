@@ -75,23 +75,22 @@ HISTORY: Written by Tim Mattson, April 1999.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
 
-#define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
-#define NBR_INDEX(i,j) (i+(j)*(nbr_segment_size+1))
+#define A(i,j)        A_p[(i+istart)+order*(j)]
+#define B(i,j)        B_p[(i+istart)+order*(j)]
+#define Work_in(i,j)  Work_in_p[i+Block_order*(j)]
+#define Work_out(i,j) Work_out_p[i+Block_order*(j)]
 
 int main(int argc, char ** argv)
 {
   int    my_ID;         /* Process ID (i.e. MPI rank)                            */
   int    root;
   int    m, n;          /* grid dimensions                                       */
-  double local_pipeline_time, /* timing parameters                               */
-         pipeline_time,
+  double local_transpose_time, /* timing parameters                               */
+         transpose_time,
          avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
-  double corner_val;    /* verification value at top right corner of grid        */
   int    i, j, iter, ID;/* dummies                                               */
   int    iterations;    /* number of times to run the pipeline algorithm         */
-  int    *start, *end;  /* starts and ends of grid slices                        */
-  int    segment_size;
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of processors                                  */
   double *vector;       /* array holding grid values                             */
@@ -101,11 +100,31 @@ int main(int argc, char ** argv)
   MPI_Group shm_group, origin_group, target_group;
   int origin_ranks[1], target_ranks[1];
   MPI_Aint nbr_segment_size;
-  MPI_Win shm_win;       /* Shared Memory window object                          */
+  MPI_Win shm_win_A;    /* Shared Memory window object                           */
+  MPI_Win shm_win_B;    /* Shared Memory window object                           */
+  MPI_Win shm_win_Work_in; /* Shared Memory window object                        */
+  MPI_Win shm_win_Work_out; /* Shared Memory window object                       */
   MPI_Comm shm_comm_prep;/* Shared Memory prep Communicator                      */
   MPI_Comm shm_comm;     /* Shared Memory Communicator                           */
   int shm_procs;        /* # of processes in shared domain                       */
   int shm_ID;           /* MPI rank within coherence domain                      */
+  double *A_p;          /* original matrix column block                          */
+  double *B_p;          /* transposed matrix column block                        */
+  double *Work_in_p;    /* workspace for the transpose function                  */
+  double *Work_out_p;   /* workspace for the transpose function                  */
+  int group_size;
+  int order;
+  int Tile_order;
+  int tiling;
+  size_t bytes;
+  int Num_groups;
+  int group_ID;
+  int Block_order;
+  size_t Colblock_size;
+  size_t  Block_size;
+  int size_mul;
+  size_t colstart;
+  int istart;
   int target_disp;
   double *target_ptr;
 
@@ -130,14 +149,15 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     }
 
-    group_size = atoi(*argv);
+    group_size = atoi(*++argv);
     if (group_size < 1) {
       printf("ERROR: # ranks per coherence domain must be >= 1 : %d \n",group_size);
       error = 1;
       goto ENDOFTESTS;
     } 
     if (Num_procs%group_size) {
-      printf("ERROR: toal # ranks not divisible by ranks per coherence domain%d \n");
+      printf("ERROR: toal # %d ranks not divisible by ranks per coherence domain %d\n",
+	     Num_procs, group_size);
       error = 1;
       goto ENDOFTESTS;
     } 
@@ -182,9 +202,9 @@ int main(int argc, char ** argv)
     if ((Tile_order > 0) && (Tile_order < order))
           printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
-    //#ifndef SYNCHRONOUS
+#ifndef SYNCHRONOUS
     printf("Non-");
-    //#endif
+#endif
     printf("Blocking messages\n");
     printf("Number of iterations = %d\n", iterations);
   }
@@ -225,16 +245,19 @@ int main(int argc, char ** argv)
 
   /* only the root of each SHM domain specifies window of nonzero size */
   size_mul = (shm_ID==0);  
-  MPI_Win_allocate_shared(Colblock_size*sizeof(double)*size_mul, sizeof(double)
-                          MPI_INFO_NULL, shm_comm, (void *) &A_p, &shm_win);
+  MPI_Aint size= Colblock_size*sizeof(double)*size_mul; int disp_unit;
+  MPI_Win_allocate_shared(size, sizeof(double), MPI_INFO_NULL, 
+                          shm_comm, (void *) &A_p, &shm_win_A);
+  MPI_Win_shared_query(shm_win_A, MPI_PROC_NULL, &size, &disp_unit, (void *)&A_p);
   if (A_p == NULL){
     printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
 
-  MPI_Win_allocate_shared(Colblock_size*sizeof(double)*size_mul, sizeof(double)
-                          MPI_INFO_NULL, shm_comm, (void *) &B_p, &shm_win);
+  MPI_Win_allocate_shared(Colblock_size*sizeof(double)*size_mul, sizeof(double),
+                          MPI_INFO_NULL, shm_comm, (void *) &B_p, &shm_win_B);
+  MPI_Win_shared_query(shm_win_B, MPI_PROC_NULL, &size, &disp_unit, (void *)&B_p);
   if (B_p == NULL){
     printf(" Error allocating space for transposed matrix by group %d\n",group_ID);
     error = 1;
@@ -243,64 +266,70 @@ int main(int argc, char ** argv)
 
   if (Num_procs>1) {
 
-    MPI_Win_allocate_shared(Block_size*sizeof(double)*size_mul, sizeof(double)
-                            MPI_INFO_NULL, shm_comm, (void *) &Work_in_p, &shm_win);
+    size = Block_size*sizeof(double)*size_mul;
+    MPI_Win_allocate_shared(size, sizeof(double),MPI_INFO_NULL, shm_comm, 
+                           (void *) &Work_in_p, &shm_win_Work_in);
+    MPI_Win_shared_query(shm_win_Work_in, MPI_PROC_NULL, &size, &disp_unit, 
+                         (void *)&Work_in_p);
     if (Work_in_p == NULL){
       printf(" Error allocating space for in block by group %d\n",group_ID);
       error = 1;
     }
     bail_out(error);
 
-    MPI_Win_allocate_shared(Block_size*sizeof(double)*size_mul, sizeof(double)
-                            MPI_INFO_NULL, shm_comm, (void *) &Work_out_p, &shm_win);
+    MPI_Win_allocate_shared(size, sizeof(double), MPI_INFO_NULL, 
+                            shm_comm, (void *) &Work_out_p, &shm_win_Work_out);
+    MPI_Win_shared_query(shm_win_Work_out, MPI_PROC_NULL, &size, &disp_unit, 
+                         (void *)&Work_out_p);
     if (Work_out_p == NULL){
       printf(" Error allocating space for out block by group %d\n",group_ID);
       error = 1;
     }
     bail_out(error);
   }
-  
 
-  /* clear the array                                                             */
-  for (j=0; j<n; j++) for (i=start[my_ID]-1; i<=end[my_ID]; i++) {
-    ARRAY(i-start[my_ID],j) = 0.0;
-  }
-  /* set boundary values (bottom and left side of grid                           */
-  if (my_ID==0) for (j=0; j<n; j++) ARRAY(0,j) = (double) j;
-  for (i=start[my_ID]-1; i<=end[my_ID]; i++) ARRAY(i-start[my_ID],0) = (double) i;
-
-  /* redefine start and end for calling process to reflect local indices          */
-  if (my_ID==0) start[my_ID] = 1; 
-  else          start[my_ID] = 0;
-  end[my_ID] = segment_size-1;
-
-  /* Set up origin and target process groups for PSCW */
-  MPI_Comm_group(shm_comm, &shm_group);
-  /* Target group consists of rank my_ID+1, right neighbor */
-  if (shm_ID < shm_procs-1) {
-    target_ranks[0] = shm_ID+1;
-    MPI_Group_incl(shm_group, 1, target_ranks, &target_group);
-    MPI_Win_shared_query(shm_win, shm_ID+1, &nbr_segment_size, &target_disp, &target_ptr);
-    nbr_segment_size = end[my_ID+1] - start[my_ID+1] + 1;
-  } else {
-    target_ranks[0] = MPI_PROC_NULL;
+  /* Fill the original column matrix                                             */
+  istart = 0;  
+  /* simplest way of filling A and B; need to improve                            */
+  for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) {
+    A(i,j) = (double) (order*(j+colstart) + i);
+    B(i,j) = -1.0;
   }
 
-  /* Origin group consists of rank my_ID-1, left neighbor */
-  if (shm_ID > 0) {
-    origin_ranks[0] = shm_ID-1;
-    MPI_Group_incl(shm_group, 1, origin_ranks, &origin_group);
-  } else {
-    origin_ranks[0] = MPI_PROC_NULL;
-  }
+#if 0  
 
   for (iter=0; iter<=iterations; iter++) {
 
     /* start timer after a warmup iteration */
     if (iter == 1) { 
       MPI_Barrier(MPI_COMM_WORLD);
-      local_pipeline_time = wtime();
+      local_transpose_time = wtime();
     }
+
+    /* do the local transpose                                                       */
+    istart = colstart; 
+    if (!tiling) {
+      for (i=shm_ID; i<Block_order; i+=group_size) 
+        for (j=0; j<Block_order; j++) {
+          B(j,i) = A(i,j);
+	}
+    }
+    else {
+      for (i=shm_ID*Tile_order; i<Block_order; i+=Tile_order*group_size) 
+        for (j=0; j<Block_order; j+=Tile_order) 
+          for (it=i; it<MIN(Block_order,i+Tile_order); it++)
+            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
+              B(jt,it) = A(it,jt); 
+    }
+
+    for (phase=1; phase<Num_procs; phase++){
+      recv_from = (my_ID + phase            )%Num_procs;
+      send_to   = (my_ID - phase + Num_procs)%Num_procs;
+
+#ifndef SYNCHRONOUS
+      MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
+                recv_from, phase, MPI_COMM_WORLD, &recv_req);  
+#endif
 
     /* execute pipeline algorithm for grid lines 1 through n-1 (skip bottom line) */
     for (j=1; j<n; j++) {
@@ -381,8 +410,12 @@ int main(int argc, char ** argv)
     printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
- 
-  MPI_Win_free(&shm_win);
+
+#endif 
+  MPI_Win_free(&shm_win_A);
+  MPI_Win_free(&shm_win_B);
+  MPI_Win_free(&shm_win_Work_in);
+  MPI_Win_free(&shm_win_Work_out);
 
   MPI_Finalize();
   exit(EXIT_SUCCESS);

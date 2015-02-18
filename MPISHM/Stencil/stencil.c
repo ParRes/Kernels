@@ -243,11 +243,7 @@ int main(int argc, char ** argv) {
     printf("Grid size              = %d\n", n);
     printf("Radius of stencil      = %d\n", RADIUS);
     printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
-#ifdef STAR
     printf("Type of stencil        = star\n");
-#else
-    printf("Type of stencil        = compact\n");
-#endif
 #ifdef DOUBLE
     printf("Data type              = double precision\n");
 #else
@@ -326,25 +322,11 @@ int main(int argc, char ** argv) {
   /* fill the stencil weights to reflect a discrete divergence operator         */
   for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++)
     WEIGHT(ii,jj) = (DTYPE) 0.0;
-#ifdef STAR
   stencil_size = 4*RADIUS+1;
   for (ii=1; ii<=RADIUS; ii++) {
     WEIGHT(0, ii) = WEIGHT( ii,0) =  (DTYPE) (1.0/(2.0*ii*RADIUS));
     WEIGHT(0,-ii) = WEIGHT(-ii,0) = -(DTYPE) (1.0/(2.0*ii*RADIUS));
   }
-#else
-  stencil_size = (2*RADIUS+1)*(2*RADIUS+1);
-  for (jj=1; jj<=RADIUS; jj++) {
-    for (ii=-jj+1; ii<jj; ii++) {
-      WEIGHT(ii,jj)  =  (DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
-      WEIGHT(ii,-jj) = -(DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
-      WEIGHT(jj,ii)  =  (DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
-      WEIGHT(-jj,ii) = -(DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));      
-    }
-    WEIGHT(jj,jj)    =  (DTYPE) (1.0/(4.0*jj*RADIUS));
-    WEIGHT(-jj,-jj)  = -(DTYPE) (1.0/(4.0*jj*RADIUS));
-  }
-#endif  
  
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
@@ -524,7 +506,6 @@ int main(int argc, char ** argv) {
     /* Apply the stencil operator */
     for (j=MAX(jstart,RADIUS); j<MIN(n-RADIUS,jend); j++) {
       for (i=MAX(istart,RADIUS); i<MIN(n-RADIUS,iend); i++) {
-#ifdef STAR
         for (jj=-RADIUS; jj<=RADIUS; jj++) {
           OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
         }
@@ -535,13 +516,6 @@ int main(int argc, char ** argv) {
           OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
  
         }
-#else
-        /* would like to be able to unroll this loop, but compiler will ignore  */
-        for (jj=-RADIUS; jj<=RADIUS; jj++) 
-        for (ii=-RADIUS; ii<=RADIUS; ii++) {
-          OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
-        }
-#endif
       }
     }
  

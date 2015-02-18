@@ -282,13 +282,13 @@ int main(int argc, char ** argv)
   /* Fill the original column matrix                                                */
   istart = 0;  
   #pragma omp parallel for private (i)
-  for (j=0;j<Block_order;j++) for (i=0;i<order; i++)  {
+  for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
     A(i,j) = (double) (order*(j+colstart) + i);
   }
 
   /*  Set the transpose matrix to a known garbage value.                            */
   #pragma omp parallel for private (i)
-  for (j=0;j<Block_order;j++) for (i=0;i<order; i++)  {
+  for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
     B(i,j) = -1.0;
   }
   for (iter = 0; iter<=iterations; iter++){
