@@ -290,7 +290,6 @@ int main(int argc, char ** argv)
   /* simplest way of filling A and B; need to improve                            */
   for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) {
     A(i,j) = (double) (order*(j+colstart) + i);
-    //    printf("I am %d, A(%d,%d) = %lf\n", my_ID, i, j, A(i,j));
     B(i,j) = -1.0;
   }
   /* NEED A STORE FENCE HERE                                                     */
