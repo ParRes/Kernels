@@ -83,8 +83,7 @@ HISTORY: Written by Tim Mattson, April 1999.
 int main(int argc, char ** argv)
 {
   int    my_ID;         /* Process ID (i.e. MPI rank)                            */
-  int    root;
-  int    m, n;          /* grid dimensions                                       */
+  int    root = 0;      /* root rank of a communicator                           */
   double local_trans_time, /* timing parameters                                  */
          trans_time,
          avgtime;
@@ -322,12 +321,12 @@ int main(int argc, char ** argv)
     }
 
     for (phase=1; phase<Num_groups; phase++){
-      recv_from = ((group_ID + phase            )%Num_groups);
+      recv_from = ((group_ID + phase             )%Num_groups);
       send_to   = ((group_ID - phase + Num_groups)%Num_groups);
 
 #ifndef SYNCHRONOUS
+      MPI_Barrier(shm_comm);
       if (shm_ID==0) {
-	//	printf("Irecv by %d from %d\n", my_ID, recv_from);
          MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
                    recv_from*group_size, phase, MPI_COMM_WORLD, &recv_req);  
       }
@@ -352,10 +351,7 @@ int main(int argc, char ** argv)
       /* NEED A LOAD/STORE FENCE HERE                                            */
       MPI_Barrier(shm_comm);
       if (shm_ID==0) {
-        for (i=0; i<Block_order; i++) for (j=0; j<Block_order; j++) 
-					//	printf("I am %d, phase=%d, Wk(%d,%d) = %lf\n", my_ID, phase, i, j, Work_out(i,j));
 #ifndef SYNCHRONOUS  
-					//        printf("Isend by %d to %d\n", my_ID, send_to);
         MPI_Isend(Work_out_p, Block_size, MPI_DOUBLE, send_to*group_size,
                   phase, MPI_COMM_WORLD, &send_req);
         MPI_Wait(&recv_req, &status);
@@ -400,7 +396,7 @@ int main(int argc, char ** argv)
 #endif
     }
     else {
-      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr, epsilon);
+      printf("ERROR: Aggregate squared error %e exceeds threshold %e\n", abserr_tot, epsilon);
       error = 1;
     }
   }
