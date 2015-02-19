@@ -85,21 +85,17 @@ int main(int argc, char ** argv)
   int    my_ID;         /* Process ID (i.e. MPI rank)                            */
   int    root;
   int    m, n;          /* grid dimensions                                       */
-  double local_transpose_time, /* timing parameters                               */
-         transpose_time,
+  double local_trans_time, /* timing parameters                                  */
+         trans_time,
          avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
-  int    i, j, iter, ID;/* dummies                                               */
+  int    i, j, it, jt, iter, ID;/* dummies                                       */
+  int    phase;         /* phase in the staged communication                     */
+  int    send_to, recv_from; /* communicating ranks                              */
   int    iterations;    /* number of times to run the pipeline algorithm         */
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of processors                                  */
-  double *vector;       /* array holding grid values                             */
-  int    total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
-  MPI_Win rmawin;       /* RMA window object */
-  MPI_Group shm_group, origin_group, target_group;
-  int origin_ranks[1], target_ranks[1];
-  MPI_Aint nbr_segment_size;
   MPI_Win shm_win_A;    /* Shared Memory window object                           */
   MPI_Win shm_win_B;    /* Shared Memory window object                           */
   MPI_Win shm_win_Work_in; /* Shared Memory window object                        */
@@ -114,7 +110,7 @@ int main(int argc, char ** argv)
   double *Work_out_p;   /* workspace for the transpose function                  */
   int group_size;
   int order;
-  int Tile_order;
+  int Tile_order=32;
   int tiling;
   size_t bytes;
   int Num_groups;
@@ -127,6 +123,8 @@ int main(int argc, char ** argv)
   int istart;
   int target_disp;
   double *target_ptr;
+  MPI_Request send_req, recv_req;
+  double abserr, abserr_tot;
 
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -233,7 +231,7 @@ int main(int argc, char ** argv)
   Num_groups     = Num_procs/group_size;
   Block_order    = order/Num_groups;
 
-  group_ID       = ID/group_size;
+  group_ID       = my_ID/group_size;
   colstart       = Block_order * group_ID;
   Colblock_size  = order * Block_order;
   Block_size     = Block_order * Block_order;
@@ -293,20 +291,21 @@ int main(int argc, char ** argv)
   /* simplest way of filling A and B; need to improve                            */
   for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) {
     A(i,j) = (double) (order*(j+colstart) + i);
+    //    printf("I am %d, A(%d,%d) = %lf\n", my_ID, i, j, A(i,j));
     B(i,j) = -1.0;
   }
-
-#if 0  
+  /* NEED A STORE FENCE HERE                                                     */
+  MPI_Barrier(shm_comm);
 
   for (iter=0; iter<=iterations; iter++) {
 
     /* start timer after a warmup iteration */
     if (iter == 1) { 
       MPI_Barrier(MPI_COMM_WORLD);
-      local_transpose_time = wtime();
+      local_trans_time = wtime();
     }
 
-    /* do the local transpose                                                       */
+    /* do the local transpose                                                    */
     istart = colstart; 
     if (!tiling) {
       for (i=shm_ID; i<Block_order; i+=group_size) 
@@ -322,100 +321,91 @@ int main(int argc, char ** argv)
               B(jt,it) = A(it,jt); 
     }
 
-    for (phase=1; phase<Num_procs; phase++){
-      recv_from = (my_ID + phase            )%Num_procs;
-      send_to   = (my_ID - phase + Num_procs)%Num_procs;
+    for (phase=1; phase<Num_groups; phase++){
+      recv_from = ((group_ID + phase            )%Num_groups);
+      send_to   = ((group_ID - phase + Num_groups)%Num_groups);
 
 #ifndef SYNCHRONOUS
-      MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
-                recv_from, phase, MPI_COMM_WORLD, &recv_req);  
+      if (shm_ID==0) {
+	//	printf("Irecv by %d from %d\n", my_ID, recv_from);
+         MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
+                   recv_from*group_size, phase, MPI_COMM_WORLD, &recv_req);  
+      }
 #endif
 
-    /* execute pipeline algorithm for grid lines 1 through n-1 (skip bottom line) */
-    for (j=1; j<n; j++) {
-
-      /* if I am not at the left boundary, I need to wait for my left neighbor to
-         send data                                                                */
-      if (my_ID > 0) {
-	if (shm_ID > 0) {
-	  /*  Exposure epoch at target*/
-	  MPI_Win_post(origin_group, 0, shm_win);
-	  MPI_Win_wait(shm_win);
-	} else {
-	  MPI_Recv(&(ARRAY(start[my_ID]-1,j)), 1, MPI_DOUBLE, 
-		   my_ID-1, j, MPI_COMM_WORLD, &status);
-	}
+      istart = send_to*Block_order; 
+      if (!tiling) {
+        for (i=shm_ID; i<Block_order; i+=group_size) 
+          for (j=0; j<Block_order; j++){
+	    Work_out(j,i) = A(i,j);
+	  }
+      }
+      else {
+        for (i=shm_ID*Tile_order; i<Block_order; i+=Tile_order*group_size) 
+          for (j=0; j<Block_order; j+=Tile_order) 
+            for (it=i; it<MIN(Block_order,i+Tile_order); it++)
+              for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+                Work_out(it,jt) = A(jt,it); 
+	      }
       }
 
-      for (i=start[my_ID]; i<= end[my_ID]; i++) {
-        ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
+      /* NEED A LOAD/STORE FENCE HERE                                            */
+      MPI_Barrier(shm_comm);
+      if (shm_ID==0) {
+        for (i=0; i<Block_order; i++) for (j=0; j<Block_order; j++) 
+					//	printf("I am %d, phase=%d, Wk(%d,%d) = %lf\n", my_ID, phase, i, j, Work_out(i,j));
+#ifndef SYNCHRONOUS  
+					//        printf("Isend by %d to %d\n", my_ID, send_to);
+        MPI_Isend(Work_out_p, Block_size, MPI_DOUBLE, send_to*group_size,
+                  phase, MPI_COMM_WORLD, &send_req);
+        MPI_Wait(&recv_req, &status);
+        MPI_Wait(&send_req, &status);
+#else
+        MPI_Sendrecv(Work_out_p, Block_size, MPI_DOUBLE, send_to*group_size, 
+                     phase, Work_in_p, Block_size, MPI_DOUBLE, 
+  	             recv_from, phase, MPI_COMM_WORLD, &status);
+#endif
       }
+      /* NEED A LOAD FENCE HERE                                                  */ 
+      MPI_Barrier(shm_comm);
 
-      /* if I am not on the right boundary, send data to my right neighbor        */  
-      if (my_ID != Num_procs-1) {
-	if (shm_ID != shm_procs-1) {
-	  /* Access epoch at origin */
-	  MPI_Win_start(target_group, 0, shm_win);
-	  target_ptr[NBR_INDEX(0,j)] = ARRAY(end[my_ID],j);
-	  MPI_Win_complete(shm_win);	
-	} else {
-	  MPI_Send(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE,
-		   my_ID+1, j, MPI_COMM_WORLD);
-	}
-      }
-    }
+      istart = recv_from*Block_order; 
+      /* scatter received block to transposed matrix; no need to tile */
+      for (j=shm_ID; j<Block_order; j+=group_size)
+        for (i=0; i<Block_order; i++) 
+          B(i,j) = Work_in(i,j);
 
-    /* copy top right corner value to bottom left corner to create dependency      */
-    if (Num_procs >1) {
-      if (my_ID==root) {
-        corner_val = -ARRAY(end[my_ID],n-1);
-        MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
-      }
-      if (my_ID==0) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
-      }
-    }
-    else ARRAY(0,0)= -ARRAY(end[my_ID],n-1);
+    }  /* end of phase loop  */
+  } /* end of iterations */
 
-  }
-
-  local_pipeline_time = wtime() - local_pipeline_time;
-  MPI_Reduce(&local_pipeline_time, &pipeline_time, 1, MPI_DOUBLE, MPI_MAX, root,
+  local_trans_time = wtime() - local_trans_time;
+  MPI_Reduce(&local_trans_time, &trans_time, 1, MPI_DOUBLE, MPI_MAX, root,
              MPI_COMM_WORLD);
 
-  /*******************************************************************************
-  ** Analyze and output results.
-  ********************************************************************************/
- 
-  /* verify correctness, using top right value                                     */
-  corner_val = (double) ((iterations+1)*(m+n-2));
+  abserr = 0.0;
+  istart = 0;
+  for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) {
+      abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
+  }
+
+  MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
+
   if (my_ID == root) {
-    if (abs(ARRAY(end[my_ID],n-1)-corner_val)/corner_val >= epsilon) {
-      printf("ERROR: checksum %lf does not match verification value %lf\n",
-             ARRAY(end[my_ID],n-1), corner_val);
+    if (abserr_tot < epsilon) {
+      printf("Solution validates\n");
+      avgtime = trans_time/(double)iterations;
+      printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
+#ifdef VERBOSE
+      printf("Summed errors: %f \n", abserr);
+#endif
+    }
+    else {
+      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr, epsilon);
       error = 1;
     }
   }
+
   bail_out(error);
-
-  if (my_ID == root) {
-    avgtime = pipeline_time/iterations;
-#ifdef VERBOSE   
-    printf("Solution validates; verification value = %lf\n", corner_val);
-    printf("Point-to-point synchronizations/s: %lf\n",
-           ((float)((n-1)*(Num_procs-1)))/(avgtime));
-#else
-    printf("Solution validates\n");
-#endif
-    printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
-           1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
-  }
-
-#endif 
-  MPI_Win_free(&shm_win_A);
-  MPI_Win_free(&shm_win_B);
-  MPI_Win_free(&shm_win_Work_in);
-  MPI_Win_free(&shm_win_Work_out);
 
   MPI_Finalize();
   exit(EXIT_SUCCESS);

@@ -16,7 +16,7 @@ DOUBLEFLAG = -DDOUBLE
 STARFLAG   = -DSTAR
 #description: default stencil is compact (dense, square)
 
-#DEBUGFLAG   = -DVERBOSE
+DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
 USERFLAGS    = -strict-ansi -vec-report3
