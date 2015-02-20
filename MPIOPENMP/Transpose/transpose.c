@@ -290,7 +290,6 @@ int main(int argc, char ** argv)
         for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) 
           for (it=i; it<MIN(order,i+Tile_order); it++) {
             A(it,jt) = (double) (order*(jt+colstart) + it);
-            //printf("I am gID %d, sID %d, A(%d,%d)=%lf\n", my_ID, omp_get_thread_num(), it, jt, A(it,jt));
             B(it,jt) = -1.0;
           }
   }
