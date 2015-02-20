@@ -355,7 +355,7 @@ int main(int argc, char ** argv)
           for (j=0; j<Block_order; j+=Tile_order) 
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-                Work_out(it,jt) = A(jt,it); 
+                Work_out(jt,it) = A(it,jt); 
 	      }
       }
 
