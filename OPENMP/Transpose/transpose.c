@@ -34,8 +34,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 NAME:    transpose
 
-PURPOSE: This OpenMP program measures the time for the transpose of a 
-         column-major stored matrix into a row-major stored matrix.
+PURPOSE: This program tests the efficiency with which a square matrix
+         can be transposed and stored in another matrix. The matrices
+         are distributed identically.
   
 USAGE:   Program input is three command line arguments that give the
          matrix order, the number of times to repeat the operation 
@@ -74,8 +75,9 @@ static double test_results (int , double*);
 int main(int argc, char ** argv) {
 
   int    order;         /* order of a the matrix                           */
-  int    tile_size=32;  /* default tile size for tiling of local transpose */
+  int    Tile_order=32; /* default tile size for tiling of local transpose */
   int    iterations;    /* number of times to do the transpose             */
+  int    tiling;        /* boolean: true if tiling is used                 */
   int    i, j, it, jt, iter;  /* dummies                                   */
   double bytes;         /* combined size of matrices                       */
   double * RESTRICT A;  /* buffer to hold original matrix                  */
@@ -121,9 +123,10 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  if (argc == 5) tile_size = atoi(*++argv);
+  if (argc == 5) Tile_order = atoi(*++argv);
   /* a non-positive tile size means no tiling of the local transpose */
-  if (tile_size <=0) tile_size = order;
+  tiling = (Tile_order > 0) && (Tile_order < order);
+  if (!tiling) Tile_order = order;
 
   /*********************************************************************
   ** Allocate space for the input and transpose matrix
@@ -159,8 +162,10 @@ int main(int argc, char ** argv) {
   else {
     printf("Number of threads     = %i;\n",nthread_input);
     printf("Matrix order          = %d\n", order);
-    if (tile_size < order) printf("Tile size             = %d\n", tile_size);
-    else                   printf("Untiled\n");
+    if (tiling) 
+    printf("Tile size             = %d\n", Tile_order);
+    else                   
+    printf("Untiled\n");
     printf("Number of iterations  = %d\n", iterations);
   }
   }
@@ -168,12 +173,23 @@ int main(int argc, char ** argv) {
 
   /*  Fill the original matrix, set transpose to known garbage value. */
 
-  #pragma omp for private (i)
-  for (j=0;j<order;j++) {
-    for (i=0;i<order; i++) {
-      A(i,j) = (double) (order*j + i);
-      B(i,j) = -1.0;
-    }
+  if (tiling) {
+    #pragma omp for private (i, it, jt)
+    for (j=0; j<order; j+=Tile_order) 
+      for (i=0; i<order; i+=Tile_order) 
+        for (jt=j; jt<MIN(order,j+Tile_order);jt++)
+          for (it=i; it<MIN(order,i+Tile_order); it++){
+            A(it,jt) = (double) (order*jt + it);
+            B(it,jt) = -1.0;
+          }
+  }
+  else {
+    #pragma omp for private (i)
+    for (j=0;j<order;j++) 
+      for (i=0;i<order; i++) {
+        A(i,j) = (double) (order*j + i);
+        B(i,j) = -1.0;
+      }
   }
 
   for (iter = 0; iter<=iterations; iter++){
@@ -187,23 +203,22 @@ int main(int argc, char ** argv) {
       }
     }
 
-    /* Transpose the  matrix; only use tiling if the tile size is smaller 
-       than the matrix */
-    if (tile_size < order) {
-      #pragma omp for private (i, it, jt)
-      for (j=0; j<order; j+=tile_size) 
-        for (i=0; i<order; i+=tile_size) 
-          for (it=i; it<MIN(order,i+tile_size); it++)
-            for (jt=j; jt<MIN(order,j+tile_size);jt++){ 
-                B(jt,it) = A(it,jt);
-            } 
-    }
-    else {
-      #pragma omp for private (i)
-      for (j=0;j<order;j++) 
-        for (i=0;i<order; i++) {
+    /* Transpose the  matrix                                                       */
+    if (!tiling) {
+      #pragma omp for private (j)
+      for (i=0;i<order; i++) 
+        for (j=0;j<order;j++) { 
           B(j,i) = A(i,j);
         }
+    }
+    else {
+      #pragma omp for private (j,it,jt)
+      for (i=0; i<order; i+=Tile_order) 
+        for (j=0; j<order; j+=Tile_order) 
+          for (it=i; it<MIN(order,i+Tile_order); it++) 
+            for (jt=j; jt<MIN(order,j+Tile_order);jt++) {
+              B(jt,it) = A(it,jt);
+            } 
     }	
 
   }  /* end of iter loop  */

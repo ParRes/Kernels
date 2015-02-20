@@ -268,12 +268,11 @@ int main(int argc, char ** argv)
   
   /* Fill the original column matrix                                                */
   istart = 0;  
-  for (j=0;j<Block_order;j++) for (i=0;i<order; i++)  {
+  for (j=0;j<Block_order;j++) 
+    for (i=0;i<order; i++)  {
       A(i,j) = (double) (order*(j+colstart) + i);
+      B(i,j) = -1.0;
   }
-
-  /*  Set the transpose matrix to a known garbage value.                            */
-  for (i=0;i<Colblock_size; i++) B_p[i] = -1.0;
 
   for (iter = 0; iter<=iterations; iter++){
 
@@ -283,7 +282,7 @@ int main(int argc, char ** argv)
       local_trans_time = wtime();
     }
 
-    /* do the local transpose                                                       */
+    /* do the local transpose                                                     */
     istart = colstart; 
     if (!tiling) {
       for (i=0; i<Block_order; i++) 
@@ -320,7 +319,7 @@ int main(int argc, char ** argv)
           for (j=0; j<Block_order; j+=Tile_order) 
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-                Work_out(it,jt) = A(jt,it); 
+                Work_out(jt,it) = A(it,jt); 
 	      }
       }
 

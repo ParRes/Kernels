@@ -287,10 +287,22 @@ int main(int argc, char ** argv)
 
   /* Fill the original column matrix                                             */
   istart = 0;  
-  /* simplest way of filling A and B; need to improve                            */
-  for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) {
-    A(i,j) = (double) (order*(j+colstart) + i);
-    B(i,j) = -1.0;
+  int chunk_size = Block_order/group_size;
+  if (tiling) {
+    for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j+=Tile_order) 
+      for (i=0;i<order; i+=Tile_order) 
+        for (jt=j; jt<MIN((shm_ID+1)*chunk_size,j+Tile_order); jt++)
+          for (it=i; it<MIN(order,i+Tile_order); it++) {
+            A(it,jt) = (double) (order*(jt+colstart) + it);
+            B(it,jt) = -1.0;
+          }
+  }
+  else {
+    for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j++) 
+      for (i=0;i<order; i++) {
+        A(i,j) = (double) (order*(j+colstart) + i);
+        B(i,j) = -1.0;
+      }
   }
   /* NEED A STORE FENCE HERE                                                     */
   MPI_Barrier(shm_comm);
@@ -306,13 +318,13 @@ int main(int argc, char ** argv)
     /* do the local transpose                                                    */
     istart = colstart; 
     if (!tiling) {
-      for (i=shm_ID; i<Block_order; i+=group_size) 
-        for (j=0; j<Block_order; j++) {
-          B(j,i) = A(i,j);
+      for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i++) {
+        for (j=0; j<Block_order; j++) 
+              B(j,i) = A(i,j);
 	}
     }
     else {
-      for (i=shm_ID*Tile_order; i<Block_order; i+=Tile_order*group_size) 
+      for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order) 
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
@@ -320,6 +332,7 @@ int main(int argc, char ** argv)
     }
 
     for (phase=1; phase<Num_groups; phase++){
+      printf("%d shouldn't be in phase %d\n", my_ID, phase);
       recv_from = ((group_ID + phase             )%Num_groups);
       send_to   = ((group_ID - phase + Num_groups)%Num_groups);
 

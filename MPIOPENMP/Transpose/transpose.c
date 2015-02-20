@@ -221,12 +221,15 @@ int main(int argc, char ** argv)
 
   omp_set_num_threads(nthread_input);
 
+  /* a non-positive tile size means no tiling of the local transpose */
+  tiling = (Tile_order > 0) && (Tile_order < order);
+
   if (my_ID == root) {
     printf("MPI+OpenMP Matrix transpose: B = A^T\n");
     printf("Number of processes  = %d\n", Num_procs);
     printf("Number of threads    = %d\n", omp_get_max_threads());
     printf("Matrix order         = %d\n", order);
-    if ((Tile_order > 0) && (Tile_order < order))
+    if (tiling)
           printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
 #ifndef SYNCHRONOUS
@@ -236,9 +239,7 @@ int main(int argc, char ** argv)
     printf("Number of iterations = %d\n", iterations);
   }
 
-  /* a non-positive tile size means no tiling of the local transpose */
-  tiling = (Tile_order > 0) && (Tile_order < order);
-  bytes = 2 * sizeof(double) * order * order;
+  bytes = 2.0 * sizeof(double) * order * order;
 
 /*********************************************************************
 ** The matrix is broken up into column blocks that are mapped one to a 
@@ -281,16 +282,27 @@ int main(int argc, char ** argv)
   
   /* Fill the original column matrix                                                */
   istart = 0;  
-  #pragma omp parallel for private (i)
-  for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
-    A(i,j) = (double) (order*(j+colstart) + i);
+
+  if (tiling) {
+    #pragma omp parallel for private (i,it,jt)
+    for (j=0; j<Block_order; j+=Tile_order) 
+      for (i=0; i<order; i+=Tile_order) 
+        for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) 
+          for (it=i; it<MIN(order,i+Tile_order); it++) {
+            A(it,jt) = (double) (order*(jt+colstart) + it);
+            //printf("I am gID %d, sID %d, A(%d,%d)=%lf\n", my_ID, omp_get_thread_num(), it, jt, A(it,jt));
+            B(it,jt) = -1.0;
+          }
+  }
+  else {
+    #pragma omp parallel for private (i)
+    for (j=0;j<Block_order;j++) 
+      for (i=0;i<order; i++) {
+        A(i,j) = (double) (order*(j+colstart) + i);
+        B(i,j) = -1.0;
+    }
   }
 
-  /*  Set the transpose matrix to a known garbage value.                            */
-  #pragma omp parallel for private (i)
-  for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
-    B(i,j) = -1.0;
-  }
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration                                        */
@@ -313,8 +325,9 @@ int main(int argc, char ** argv)
       for (i=0; i<Block_order; i+=Tile_order) 
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
-            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
+            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
               B(jt,it) = A(it,jt); 
+	    }
     }
 
     for (phase=1; phase<Num_procs; phase++){
@@ -340,7 +353,7 @@ int main(int argc, char ** argv)
           for (j=0; j<Block_order; j+=Tile_order) 
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-                Work_out(it,jt) = A(jt,it); 
+                Work_out(jt,it) = A(it,jt); 
 	      }
       }
 
@@ -359,8 +372,9 @@ int main(int argc, char ** argv)
       /* scatter received block to transposed matrix; no need to tile */
       #pragma omp parallel for private (i)
       for (j=0; j<Block_order; j++)
-        for (i=0; i<Block_order; i++) 
+        for (i=0; i<Block_order; i++) {
           B(i,j) = Work_in(i,j);
+        }
 
     }  /* end of phase loop  */
   } /* end of iterations */
@@ -388,7 +402,7 @@ int main(int argc, char ** argv)
 #endif
     }
     else {
-      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr, epsilon);
+      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr_tot, epsilon);
       error = 1;
     }
   }
