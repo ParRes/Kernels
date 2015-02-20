@@ -82,18 +82,40 @@ HISTORY: Written by Tim Mattson, April 1999.
 
 int main(int argc, char ** argv)
 {
-  int    my_ID;         /* Process ID (i.e. MPI rank)                            */
-  int    root = 0;      /* root rank of a communicator                           */
+  int Block_order;
+  size_t Block_size;
+  size_t Colblock_size;
+  int Tile_order=32;
+  int tiling;
+  int Num_procs;     /* Number of processors                                  */
+  int order;
+  int send_to, recv_from; /* communicating ranks                              */
+
+
+
+
+
+  size_t bytes;
+  int my_ID;         /* Process ID (i.e. MPI rank)                            */
+  int root=0;      /* root rank of a communicator                           */
+  int iterations;    /* number of times to run the pipeline algorithm         */
+  int i, j, it, jt, ID;/* dummies                                       */
+  int iter;                /* index of iteration                    */
+  int phase;         /* phase in the staged communication                     */
+  size_t colstart;
+
+
+  int error=0;       /* error flag                                            */
+  double *A_p;          /* original matrix column block                          */
+  double *B_p;          /* transposed matrix column block                        */
+  double *Work_in_p;    /* workspace for the transpose function                  */
+  double *Work_out_p;   /* workspace for the transpose function                  */
+  double abserr, 
+         abserr_tot;
+  double epsilon = 1.e-8; /* error tolerance                                     */
   double local_trans_time, /* timing parameters                                  */
          trans_time,
          avgtime;
-  double epsilon = 1.e-8; /* error tolerance                                     */
-  int    i, j, it, jt, iter, ID;/* dummies                                       */
-  int    phase;         /* phase in the staged communication                     */
-  int    send_to, recv_from; /* communicating ranks                              */
-  int    iterations;    /* number of times to run the pipeline algorithm         */
-  int    error=0;       /* error flag                                            */
-  int    Num_procs;     /* Number of processors                                  */
   MPI_Status status;    /* completion status of message                          */
   MPI_Win shm_win_A;    /* Shared Memory window object                           */
   MPI_Win shm_win_B;    /* Shared Memory window object                           */
@@ -103,27 +125,14 @@ int main(int argc, char ** argv)
   MPI_Comm shm_comm;     /* Shared Memory Communicator                           */
   int shm_procs;        /* # of processes in shared domain                       */
   int shm_ID;           /* MPI rank within coherence domain                      */
-  double *A_p;          /* original matrix column block                          */
-  double *B_p;          /* transposed matrix column block                        */
-  double *Work_in_p;    /* workspace for the transpose function                  */
-  double *Work_out_p;   /* workspace for the transpose function                  */
   int group_size;
-  int order;
-  int Tile_order=32;
-  int tiling;
-  size_t bytes;
   int Num_groups;
   int group_ID;
-  int Block_order;
-  size_t Colblock_size;
-  size_t  Block_size;
   int size_mul;
-  size_t colstart;
   int istart;
   int target_disp;
   double *target_ptr;
   MPI_Request send_req, recv_req;
-  double abserr, abserr_tot;
 
 /*********************************************************************************
 ** Initialize the MPI environment
