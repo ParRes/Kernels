@@ -282,21 +282,16 @@ int main(int argc, char ** argv)
   
   /* Fill the original column matrix                                                */
   istart = 0;  
-  int chunk_size = Block_order/omp_get_max_threads();
 
   if (tiling) {
-    #pragma omp parallel private (i,it,jt)
-    {
-    int shm_ID = omp_get_thread_num();
-    for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j+=Tile_order) 
-      //    for (j=0; j<Block_order; j+=Tile_order) 
+    #pragma omp parallel for private (i,it,jt)
+    for (j=0; j<Block_order; j+=Tile_order) 
       for (i=0; i<order; i+=Tile_order) 
         for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) 
           for (it=i; it<MIN(order,i+Tile_order); it++) {
             A(it,jt) = (double) (order*(jt+colstart) + it);
             B(it,jt) = -1.0;
           }
-    }
   }
   else {
     #pragma omp parallel for private (i)
@@ -325,16 +320,13 @@ int main(int argc, char ** argv)
 	}
     }
     else {
-      #pragma omp parallel private (j,it,jt)
-      {
-      int shm_ID = omp_get_thread_num();
-      for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order)
+      #pragma omp parallel for private (j,it,jt)
+      for (i=0; i<Block_order; i+=Tile_order) 
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
               B(jt,it) = A(it,jt); 
 	    }
-      }
     }
 
     for (phase=1; phase<Num_procs; phase++){
