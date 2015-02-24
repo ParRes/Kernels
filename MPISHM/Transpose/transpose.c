@@ -44,7 +44,7 @@ USAGE:   Program inputs are the matrix order, the number of times to
          transpose <#ranks per coherence domain><# iterations><matrix size> [tile size]
 
          An optional parameter specifies the tile size used to divide the 
-         individual matrix blocks for improved cache and TLB performance. 
+         individual matrix into blocks for improved cache and TLB performance. 
   
          The output consists of diagnostics to make sure the 
          transpose worked and timing statistics.
@@ -261,7 +261,7 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
 
-  if (Num_procs>1) {
+  if (Num_groups>1) {
 
     size = Block_size*sizeof(double)*size_mul;
     MPI_Win_allocate_shared(size, sizeof(double),MPI_INFO_NULL, shm_comm, 
@@ -289,13 +289,14 @@ int main(int argc, char ** argv)
   istart = 0;  
   int chunk_size = Block_order/group_size;
   if (tiling) {
-    for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j+=Tile_order) 
+      for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j+=Tile_order) {
       for (i=0;i<order; i+=Tile_order) 
         for (jt=j; jt<MIN((shm_ID+1)*chunk_size,j+Tile_order); jt++)
           for (it=i; it<MIN(order,i+Tile_order); it++) {
             A(it,jt) = (double) (order*(jt+colstart) + it);
             B(it,jt) = -1.0;
           }
+    }
   }
   else {
     for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j++) 
@@ -324,11 +325,14 @@ int main(int argc, char ** argv)
 	}
     }
     else {
-      for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order) 
+      for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order) {
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
-            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
+            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+	      //              printf("shm_ID= %04d it=%05d jt=%05d\n", shm_ID, it, jt);
               B(jt,it) = A(it,jt); 
+	    }
+      }
     }
 
     for (phase=1; phase<Num_groups; phase++){

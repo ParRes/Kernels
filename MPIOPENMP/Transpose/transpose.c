@@ -38,13 +38,13 @@ PURPOSE: This program tests the efficiency with which a square matrix
          can be transposed and stored in another matrix. The matrices
          are distributed identically.
   
-USAGE:   Program inputs are the matrix order, the number of times to 
-         repeat the operation, and the communication mode
+USAGE:   Program inputs are the number of threads, the number of times
+         to repeat the operation, and the matrix order
 
-         transpose <#threads> <matrix size> <# iterations> <comm. mode> [tile size]
+         transpose <#threads> <# iterations> <matrix size> <comm. mode> [tile size]
 
          An optional parameter specifies the tile size used to divide the 
-         individual matrix blocks for improved cache and TLB performance. 
+         individual matrix into blocks for improved cache and TLB performance. 
   
          The output consists of diagnostics to make sure the 
          transpose worked and timing statistics.
@@ -285,18 +285,19 @@ int main(int argc, char ** argv)
   int chunk_size = Block_order/omp_get_max_threads();
 
   if (tiling) {
-    #pragma omp parallel private (i,it,jt)
+    #pragma omp parallel private (i,j, it,jt)
     {
     int shm_ID = omp_get_thread_num();
-    for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j+=Tile_order) 
-      //    for (j=0; j<Block_order; j+=Tile_order) 
+    for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j+=Tile_order) {
       for (i=0; i<order; i+=Tile_order) 
         for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) 
           for (it=i; it<MIN(order,i+Tile_order); it++) {
             A(it,jt) = (double) (order*(jt+colstart) + it);
             B(it,jt) = -1.0;
           }
-    }
+     }
+  }
+
   }
   else {
     #pragma omp parallel for private (i)
@@ -325,15 +326,17 @@ int main(int argc, char ** argv)
 	}
     }
     else {
-      #pragma omp parallel private (j,it,jt)
+      #pragma omp parallel private (i, j,it,jt)
       {
       int shm_ID = omp_get_thread_num();
-      for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order)
+      for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order) {
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+      //            printf("shm_ID= %04d it=%05d jt=%05d\n", shm_ID, it, jt);
               B(jt,it) = A(it,jt); 
 	    }
+      }
       }
     }
 
