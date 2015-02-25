@@ -242,24 +242,29 @@ int main(int argc, char ** argv)
 
   /* only the root of each SHM domain specifies window of nonzero size */
   size_mul = (shm_ID==0);  
-  MPI_Aint size= Colblock_size*sizeof(double)*size_mul; int disp_unit;
-  MPI_Win_allocate_shared(size, sizeof(double), MPI_INFO_NULL, 
-                          shm_comm, (void *) &A_p, &shm_win_A);
+  int offset = 32;
+  MPI_Aint size= (Colblock_size+offset)*sizeof(double)*size_mul; int disp_unit;
+  MPI_Win_allocate_shared(size, sizeof(double), MPI_INFO_NULL, shm_comm, 
+                          (void *) &A_p, &shm_win_A);
   MPI_Win_shared_query(shm_win_A, MPI_PROC_NULL, &size, &disp_unit, (void *)&A_p);
   if (A_p == NULL){
     printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
+  A_p += offset;
 
-  MPI_Win_allocate_shared(Colblock_size*sizeof(double)*size_mul, sizeof(double),
-                          MPI_INFO_NULL, shm_comm, (void *) &B_p, &shm_win_B);
+  MPI_Win_allocate_shared(size, sizeof(double), MPI_INFO_NULL, shm_comm, 
+                          (void *) &B_p, &shm_win_B);
   MPI_Win_shared_query(shm_win_B, MPI_PROC_NULL, &size, &disp_unit, (void *)&B_p);
   if (B_p == NULL){
     printf(" Error allocating space for transposed matrix by group %d\n",group_ID);
     error = 1;
   }
   bail_out(error);
+  B_p += offset;
+
+  printf("Myid = %d, A = %p, B = %p\n", my_ID, A_p, B_p);
 
   if (Num_groups>1) {
 

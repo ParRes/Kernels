@@ -256,27 +256,19 @@ int main(int argc, char ** argv)
 ** Create the column block of the test matrix, the row block of the 
 ** transposed matrix, and workspace (workspace only if #procs>1)
 *********************************************************************/
-  MPI_Win shm_win_A;    /* Shared Memory window object                           */
-  MPI_Win shm_win_B;    /* Shared Memory window object                           */
-  MPI_Win_allocate_shared(Colblock_size*sizeof(double), sizeof(double), MPI_INFO_NULL, 
-                          MPI_COMM_WORLD, (void *) &A_p, &shm_win_A);
-  //  A_p = (double *)malloc(Colblock_size*sizeof(double));
+  A_p = (double *)malloc(Colblock_size*sizeof(double));
   if (A_p == NULL){
     printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
 
-  MPI_Win_allocate_shared(Colblock_size*sizeof(double), sizeof(double), MPI_INFO_NULL, 
-                          MPI_COMM_WORLD, (void *) &B_p, &shm_win_B);
-  //  B_p = (double *)malloc(Colblock_size*sizeof(double));
+  B_p = (double *)malloc(Colblock_size*sizeof(double));
   if (B_p == NULL){
     printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
-
-  printf("Myid = %d, A = %p, B = %p\n", my_ID, A_p, B_p);
 
   if (Num_procs>1) {
     Work_in_p   = (double *)malloc(2*Block_size*sizeof(double));
