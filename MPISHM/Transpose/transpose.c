@@ -121,6 +121,7 @@ int main(int argc, char ** argv)
   MPI_Win shm_win_B;    /* Shared Memory window object                           */
   MPI_Win shm_win_Work_in; /* Shared Memory window object                        */
   MPI_Win shm_win_Work_out; /* Shared Memory window object                       */
+  MPI_Info rma_winfo;     /* info for window */
   MPI_Comm shm_comm_prep;/* Shared Memory prep Communicator                      */
   MPI_Comm shm_comm;     /* Shared Memory Communicator                           */
   int shm_procs;        /* # of processes in shared domain                       */
@@ -249,11 +250,17 @@ int main(int argc, char ** argv)
 ** transposed matrix, and workspace (workspace only if #procs>1)
 *********************************************************************/
 
+  /* RMA win info */
+  MPI_Info_create(&rma_winfo);
+  /* This key indicates that passive target RMA will not be used.
+   * It is the one info key that MPICH actually uses for optimization. */
+  MPI_Info_set(rma_winfo, "no_locks", "true");
+
   /* only the root of each SHM domain specifies window of nonzero size */
   size_mul = (shm_ID==0);  
   int offset = 32;
   MPI_Aint size= (Colblock_size+offset)*sizeof(double)*size_mul; int disp_unit;
-  MPI_Win_allocate_shared(size, sizeof(double), MPI_INFO_NULL, shm_comm, 
+  MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, shm_comm, 
                           (void *) &A_p, &shm_win_A);
   MPI_Win_shared_query(shm_win_A, MPI_PROC_NULL, &size, &disp_unit, (void *)&A_p);
   if (A_p == NULL){
@@ -263,7 +270,7 @@ int main(int argc, char ** argv)
   bail_out(error);
   A_p += offset;
 
-  MPI_Win_allocate_shared(size, sizeof(double), MPI_INFO_NULL, shm_comm, 
+  MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, shm_comm, 
                           (void *) &B_p, &shm_win_B);
   MPI_Win_shared_query(shm_win_B, MPI_PROC_NULL, &size, &disp_unit, (void *)&B_p);
   if (B_p == NULL){
@@ -278,7 +285,7 @@ int main(int argc, char ** argv)
   if (Num_groups>1) {
 
     size = Block_size*sizeof(double)*size_mul;
-    MPI_Win_allocate_shared(size, sizeof(double),MPI_INFO_NULL, shm_comm, 
+    MPI_Win_allocate_shared(size, sizeof(double),rma_winfo, shm_comm, 
                            (void *) &Work_in_p, &shm_win_Work_in);
     MPI_Win_shared_query(shm_win_Work_in, MPI_PROC_NULL, &size, &disp_unit, 
                          (void *)&Work_in_p);
@@ -288,7 +295,7 @@ int main(int argc, char ** argv)
     }
     bail_out(error);
 
-    MPI_Win_allocate_shared(size, sizeof(double), MPI_INFO_NULL, 
+    MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, 
                             shm_comm, (void *) &Work_out_p, &shm_win_Work_out);
     MPI_Win_shared_query(shm_win_Work_out, MPI_PROC_NULL, &size, &disp_unit, 
                          (void *)&Work_out_p);
@@ -343,7 +350,7 @@ int main(int argc, char ** argv)
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-	      //              printf("shm_ID= %04d it=%05d jt=%05d\n", shm_ID, it, jt);
+	      /*              printf("shm_ID= %04d it=%05d jt=%05d\n", shm_ID, it, jt); */
               B(jt,it) = A(it,jt); 
 	    }
       }
@@ -409,7 +416,7 @@ int main(int argc, char ** argv)
 
   abserr = 0.0;
   istart = 0;
-  //  for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) {
+  /*  for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) { */
   for (j=shm_ID*chunk_size; j<(shm_ID+1)*chunk_size; j++)
     for (i=0;i<order; i++) { 
       abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
@@ -439,6 +446,7 @@ int main(int argc, char ** argv)
   MPI_Win_free(&shm_win_Work_in);
   MPI_Win_free(&shm_win_Work_out);
 
+  MPI_Info_free(&rma_winfo);
 
   MPI_Finalize();
   exit(EXIT_SUCCESS);
