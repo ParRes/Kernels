@@ -142,6 +142,7 @@ int main(int argc, char ** argv) {
   MPI_Status  status[8];
   MPI_Win rma_winx;       /* RMA window object x-direction */
   MPI_Win rma_winy;       /* RMA window object y-direction */
+  MPI_Info rma_winfo;     /* info for window */
 
   /*******************************************************************************
   ** Initialize the MPI environment
@@ -315,6 +316,12 @@ int main(int argc, char ** argv) {
     OUT(i,j) = (DTYPE)0.0;
   }
  
+  /* RMA win info */
+  MPI_Info_create(&rma_winfo);
+  /* This key indicates that passive target RMA will not be used.
+   * It is the one info key that MPICH actually uses for optimization. */
+  MPI_Info_set(rma_winfo, "no_locks", "true");
+
   /* allocate communication buffers for halo values                            */
   MPI_Win_allocate(4*sizeof(DTYPE)*RADIUS*width, sizeof(DTYPE), MPI_INFO_NULL, MPI_COMM_WORLD, (void *) &top_buf_out, &rma_winy);
   if (!top_buf_out) {
@@ -480,6 +487,8 @@ int main(int argc, char ** argv) {
  
   MPI_Win_free(&rma_winx);
   MPI_Win_free(&rma_winy);
+
+  MPI_Info_free(&rma_winfo);
 
   MPI_Finalize();
   exit(EXIT_SUCCESS);
