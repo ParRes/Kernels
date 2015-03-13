@@ -184,7 +184,7 @@ int main(int argc, char ** argv)
 
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  MPI_Win_allocate(total_length*sizeof(double), sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void *) &vector, &rma_win);
+  MPI_Win_allocate(total_length*sizeof(double), sizeof(double), rma_winfo, MPI_COMM_WORLD, (void *) &vector, &rma_win);
   if (my_ID == root) {
     if (total_length/(segment_size+1) != n) {
       printf("Grid of %d by %d points too large\n", m, n);
