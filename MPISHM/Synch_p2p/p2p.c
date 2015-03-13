@@ -93,6 +93,7 @@ int main(int argc, char ** argv)
   int origin_ranks[1], target_ranks[1];
   MPI_Aint nbr_segment_size;
   MPI_Win shm_win;       /* Shared Memory window object */
+  MPI_Info rma_winfo;     /* info for window */
   MPI_Comm shm_comm;     /* Shared Memory Communicator */
   int shm_procs;    /* # of processes in shared domain */
   int shm_ID;        /* MPI rank */
@@ -185,9 +186,15 @@ int main(int argc, char ** argv)
   /* now set segment_size to the value needed by the calling process            */
   segment_size = end[my_ID] - start[my_ID] + 1;
 
+  /* RMA win info */
+  MPI_Info_create(&rma_winfo);
+  /* This key indicates that passive target RMA will not be used.
+   * It is the one info key that MPICH actually uses for optimization. */
+  MPI_Info_set(rma_winfo, "no_locks", "true");
+
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  MPI_Win_allocate_shared(total_length*sizeof(double), sizeof(double), MPI_INFO_NULL, shm_comm, (void *) &vector, &shm_win);
+  MPI_Win_allocate_shared(total_length*sizeof(double), sizeof(double), rma_winfo, shm_comm, (void *) &vector, &shm_win);
   if (my_ID == root) {
     if (total_length/(segment_size+1) != n) {
       printf("Grid of %d by %d points too large\n", m, n);
@@ -326,6 +333,7 @@ int main(int argc, char ** argv)
   }
  
   MPI_Win_free(&shm_win);
+  MPI_Info_free(&rma_winfo);
 
   MPI_Finalize();
   exit(EXIT_SUCCESS);
