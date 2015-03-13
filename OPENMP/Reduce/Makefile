@@ -1,7 +1,7 @@
 include ../../common/OPENMP.defs
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -restrict -mcmodel=large
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -restrict
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults
