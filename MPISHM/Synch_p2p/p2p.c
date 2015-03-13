@@ -89,7 +89,6 @@ int main(int argc, char ** argv)
   double *vector;       /* array holding grid values                             */
   int    total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
-  MPI_Win rmawin;       /* RMA window object */
   MPI_Group shm_group, origin_group, target_group;
   int origin_ranks[1], target_ranks[1];
   MPI_Aint nbr_segment_size;
@@ -254,7 +253,7 @@ int main(int argc, char ** argv)
       if (my_ID > 0) {
 	if (shm_ID > 0) {
 	  /*  Exposure epoch at target*/
-	  MPI_Win_post(origin_group, 0, shm_win);
+	  MPI_Win_post(origin_group, MPI_MODE_NOPUT, shm_win);
 	  MPI_Win_wait(shm_win);
 	} else {
 	  MPI_Recv(&(ARRAY(start[my_ID]-1,j)), 1, MPI_DOUBLE, 
