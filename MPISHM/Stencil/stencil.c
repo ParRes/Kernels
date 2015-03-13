@@ -142,6 +142,7 @@ int main(int argc, char ** argv) {
   MPI_Status  status[8];
   MPI_Win shm_winx;       /* RMA window object x-direction */
   MPI_Win shm_winy;       /* RMA window object y-direction */
+  MPI_Info rma_winfo;     /* info for window */
   MPI_Comm shm_comm;      /* Shared Memory Communicator */
   int shm_procs;          /* # of processes in shared domain */
   int shm_ID;             /* MPI rank in shared memory domain */
@@ -336,6 +337,12 @@ int main(int argc, char ** argv) {
     OUT(i,j) = (DTYPE)0.0;
   }
  
+  /* RMA win info */
+  MPI_Info_create(&rma_winfo);
+  /* This key indicates that passive target RMA will not be used.
+   * It is the one info key that MPICH actually uses for optimization. */
+  MPI_Info_set(rma_winfo, "no_locks", "true");
+
   /* allocate communication buffers for halo values                            */
   MPI_Win_allocate_shared(4*sizeof(DTYPE)*RADIUS*width, sizeof(DTYPE), MPI_INFO_NULL, shm_comm, (void *) &top_buf_out, &shm_winy);
   if (!top_buf_out) {
@@ -377,7 +384,7 @@ int main(int argc, char ** argv) {
 
     /* need to fetch ghost point data from neighbors in y-direction                 */
     MPI_Pcontrol(1, "ydir");
-    MPI_Win_fence(0, shm_winy);
+    MPI_Win_fence(MPI_MODE_NOPUT, shm_winy);
     if (my_IDy < Num_procsy-1) {
       if (shm_top_nbr <= shm_procs-1) {
 	for (kk=0,j=jend-RADIUS; j<=jend-1; j++) for (i=istart; i<=iend; i++) {
@@ -410,7 +417,7 @@ int main(int argc, char ** argv) {
 		  MPI_COMM_WORLD, &(request[2]));
       }
     }
-    MPI_Win_fence(0, shm_winy);
+    MPI_Win_fence(MPI_MODE_NOPUT, shm_winy);
     if (my_IDy < Num_procsy-1) {
       if (shm_top_nbr <= shm_procs-1) {
 	for (kk=0,j=jend; j<=jend+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
@@ -441,7 +448,7 @@ int main(int argc, char ** argv) {
 
     /* need to fetch ghost point data from neighbors in x-direction                 */
     MPI_Pcontrol(1, "xdir");
-    MPI_Win_fence(0, shm_winx);
+    MPI_Win_fence(MPI_MODE_NOPUT, shm_winx);
     if (my_IDx < Num_procsx-1) {
       if (shm_right_nbr <= shm_procs-1) {
 	for (kk=0,j=jstart; j<=jend; j++) for (i=iend-RADIUS; i<=iend-1; i++) {
@@ -474,7 +481,7 @@ int main(int argc, char ** argv) {
 		  MPI_COMM_WORLD, &(request[2+4]));
       }
     }
-    MPI_Win_fence(0, shm_winx);
+    MPI_Win_fence(MPI_MODE_NOPUT, shm_winx);
     if (my_IDx < Num_procsx-1) {
       if (shm_right_nbr <= shm_procs-1) {
 	for (kk=0,j=jstart; j<=jend; j++) for (i=iend; i<=iend+RADIUS-1; i++) {
@@ -567,6 +574,11 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
  
+  MPI_Win_free(&shm_winx);
+  MPI_Win_free(&shm_winy);
+
+  MPI_Info_free(&rma_winfo);
+
   if (my_ID == root) {
     /* flops/stencil: 2 flops (fma) for each point in the stencil, 
        plus one flop for the update of the input of the array        */
