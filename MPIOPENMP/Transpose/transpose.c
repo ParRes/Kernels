@@ -260,7 +260,7 @@ int main(int argc, char ** argv)
   MPI_Win shm_win_B;    /* Shared Memory window object                           */
   MPI_Win_allocate_shared(Colblock_size*sizeof(double), sizeof(double), MPI_INFO_NULL, 
                           MPI_COMM_WORLD, (void *) &A_p, &shm_win_A);
-  //  A_p = (double *)malloc(Colblock_size*sizeof(double));
+  /*  A_p = (double *)malloc(Colblock_size*sizeof(double)); */
   if (A_p == NULL){
     printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
@@ -269,7 +269,7 @@ int main(int argc, char ** argv)
 
   MPI_Win_allocate_shared(Colblock_size*sizeof(double), sizeof(double), MPI_INFO_NULL, 
                           MPI_COMM_WORLD, (void *) &B_p, &shm_win_B);
-  //  B_p = (double *)malloc(Colblock_size*sizeof(double));
+  /*  B_p = (double *)malloc(Colblock_size*sizeof(double)); */
   if (B_p == NULL){
     printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
     error = 1;
@@ -341,7 +341,7 @@ int main(int argc, char ** argv)
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-      //            printf("shm_ID= %04d it=%05d jt=%05d\n", shm_ID, it, jt);
+      /*            printf("shm_ID= %04d it=%05d jt=%05d\n", shm_ID, it, jt); */
               B(jt,it) = A(it,jt); 
 	    }
       }
