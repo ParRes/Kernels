@@ -23,7 +23,7 @@ OFFSETFLAG   = -DBOFFSET=0
 #NTHREADFLAG  = -DMAXTHREADS=256
 #description: default thread limit is 32
 
-USERFLAGS     =  -vec-report3 
+USERFLAGS     =    
 #description: parameter to specify optional flags
 
 EXTOBJS      = 

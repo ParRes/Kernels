@@ -20,7 +20,7 @@ LENGTHFLAG   = -DMAXLENGTH=1000000000
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS     = -strict-ansi -vec-report3
+USERFLAGS     = -strict-ansi  
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects

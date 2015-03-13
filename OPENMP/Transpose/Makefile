@@ -17,7 +17,7 @@ RESTRICTFLAG = -DRESTRICT_KEYWORD
 #NTHREADFLAG = -DMAXTHREADS=256
 #description: default thread limit is 32
 
-USERFLAGS    = -strict-ansi -vec-report3 -restrict
+USERFLAGS    = -strict-ansi   -restrict
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects

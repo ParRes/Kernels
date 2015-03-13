@@ -17,7 +17,7 @@ RESTRICTFLAG = -DRESTRICT_KEYWORD
 SCRAMBLEFLAG = -DSCRAMBLE
 #description: if flag is set, grid indices are scrambled to produce irregular stride
 
-USERFLAGS     =  -vec-report3 -strict-ansi 
+USERFLAGS     =    -strict-ansi 
 #description: parameter to specify optional flags
 
 EXTOBJS      = 

@@ -20,7 +20,7 @@ RESTRICTFLAG = -DRESTRICT_KEYWORD
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS     = -strict-ansi -vec-report3 -restrict
+USERFLAGS     = -strict-ansi   -restrict
 #description: parameter to specify optional flags
 
 EXTOBJS      = 

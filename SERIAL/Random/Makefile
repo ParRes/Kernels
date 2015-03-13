@@ -23,7 +23,7 @@ ERRORPERCENTFLAG = -DERRORPERCENT=1
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS     = -strict-ansi -vec-report3
+USERFLAGS     = -strict-ansi  
 #description: parameter to specify optional flags
 
 EXTOBJS      = 

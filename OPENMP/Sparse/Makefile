@@ -20,7 +20,7 @@ SCRAMBLEFLAG = -DSCRAMBLE
 #NTHREADFLAG  = -DMAXTHREADS=256
 #description: default thread limit is 32
 
-USERFLAGS     =  -vec-report3 -strict-ansi 
+USERFLAGS     =    -strict-ansi 
 #description: parameter to specify optional flags
 
 EXTOBJS      = 

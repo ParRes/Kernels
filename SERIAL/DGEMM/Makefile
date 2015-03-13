@@ -20,7 +20,7 @@ OFFSETFLAG   = -DBOFFSET=0
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS     =  -vec-report3 
+USERFLAGS     =    
 #description: parameter to specify optional flags
 
 EXTOBJS      = 

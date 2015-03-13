@@ -25,7 +25,7 @@ STARFLAG   = -DSTAR
 #NTHREADFLAG = -DMAXTHREADS=256
 #description: default thread limit is 32
 
-USERFLAGS    = -strict-ansi -vec-report3
+USERFLAGS    = -strict-ansi  
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
