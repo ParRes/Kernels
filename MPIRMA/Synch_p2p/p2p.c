@@ -251,7 +251,7 @@ int main(int argc, char ** argv)
          send data                                                                */
       if (my_ID > 0) {
         /*  Exposure epoch at target*/
-        MPI_Win_post(origin_group, 0, rma_win);
+        MPI_Win_post(origin_group, MPI_MODE_NOSTORE, rma_win);
         MPI_Win_wait(rma_win);
       }
 
@@ -279,7 +279,7 @@ int main(int argc, char ** argv)
         MPI_Win_complete(rma_win);
       }
       if (my_ID==0) {
-        MPI_Win_post(origin_group, 0, rma_win);
+        MPI_Win_post(origin_group, MPI_MODE_NOSTORE, rma_win);
         MPI_Win_wait(rma_win);
       }
     }
