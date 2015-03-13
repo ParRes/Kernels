@@ -443,8 +443,10 @@ int main(int argc, char ** argv)
 
   MPI_Win_free(&shm_win_A);
   MPI_Win_free(&shm_win_B);
-  MPI_Win_free(&shm_win_Work_in);
-  MPI_Win_free(&shm_win_Work_out);
+  if (Num_groups>1) {
+      MPI_Win_free(&shm_win_Work_in);
+      MPI_Win_free(&shm_win_Work_out);
+  }
 
   MPI_Info_free(&rma_winfo);
 
