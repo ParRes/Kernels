@@ -70,6 +70,66 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
  
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
+
+/**********************************************************************************
+ Strategy for hierarchical decomposition of grid.
+ Give a total number of Num_procs ranks and coherence domains of group_size ranks. 
+ The grid is divided into Num_procs/group_size contiguous groups of group_size 
+ tiles each (a "block"). 
+ Each tile is assigned to a rank. Ranks within a block are contiguous within 
+ MPI_COMM_WORLD, so that contiguous groups of ranks span a single coherence 
+ domain.
+ Given Num_procs ranks, factor Num_procs into two integers Num_procsx and 
+ Num_procsy that are as close together as possible. That is the division of tiles 
+ within the grid. The tiles are now assigned to groups that lie within the same 
+ coherence domain. Let group_size be factored into two integers group_sizex and 
+ group_sizey. The number of groups Num_groups equals Num_procs/group_size. 
+ Nomenclature:
+ group: sequence number of block within the grid (ordered lexicographically)
+ Num_groupsx: number of blocks in the x-direction
+ Num_groupsy: number of blocks in the y-direction
+ groupx: x-coordinate of block
+ groupy: y-coordinate of block
+ my_local_ID: sequence number of tile within block (ordered lexicographically)
+ my_local_IDx: x-coordinate of tile within block
+ my_local_IDy: y-coordinate of tile within block
+ my_global_IDx: x-coordinate of tile within overall grid
+ my_global_IDy: y-coordinate of tile within overall grid
+ 
+ Example: Num_procs=24, group_size=4
+ Num_groups = 6, Num_procsx=4, Num_procsy=6, group_sizex=2, group_sizey=2, 
+ Num_groupsx=2, Num_groupsy=3
+ Ranks (double lines indicate block boundaries):
+
+ ------------------------------------
+ |        |        ||        |       |
+ |   18   |   19   ||   22   |   23  |
+ |        |        ||        |       |
+ ------------------------------------ 
+ |        |        ||        |       |
+ |   16   |   17   ||   20   |   21  |
+ |        |        ||        |       |
+ ------------------------------------ 
+ ------------------------------------ 
+ |        |        ||        |       |
+ |   10   |   11   ||   14   |   15  |
+ |        |        ||        |       |
+ ------------------------------------ 
+ |        |        ||        |       |
+ |   8    |   9    ||   12   |   13  |
+ |        |        ||        |       |
+ ------------------------------------ 
+ ------------------------------------ 
+ |        |        ||        |       |
+ |   2    |   3    ||   6    |   7   |
+ |        |        ||        |       |
+ ------------------------------------ 
+ |        |        ||        |       |
+ |   0    |   1    ||   4    |   5   |
+ |        |        ||        |       |
+ ------------------------------------ 
+ 
+*********************************************************************************/
  
 #ifndef RADIUS
   #define RADIUS 2
@@ -81,14 +141,14 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
   #define EPSILON   1.e-8
   #define COEFX     1.0
   #define COEFY     1.0
-  #define FSTR      "%lf"
+  #define FSTR      "%15.10lf"
 #else
   #define DTYPE     float
   #define MPI_DTYPE MPI_FLOAT
   #define EPSILON   0.0001f
   #define COEFX     1.0f
   #define COEFY     1.0f
-  #define FSTR      "%f"
+  #define FSTR      "%15.10f"
 #endif
  
 /* define shorthand for indexing multi-dimensional arrays with offsets           */
@@ -102,9 +162,21 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 int main(int argc, char ** argv) {
  
   int    Num_procs;       /* number of processes                                 */
-  int    Num_procsx, Num_procsy; /* number of ranks in each coord direction      */
+  int    Num_procsx, 
+         Num_procsy;      /* number of ranks in each coord direction             */
+  int    Num_groupsx, 
+         Num_groupsy;     /* number of blocks in each coord direction            */
+  int    my_group;        /* sequence number of shared memory block              */
+  int    my_group_IDx,
+         my_group_IDy;    /* coordinates of block within block grid              */
+  int    group_size;      /* number of ranks in shared memory group              */
+  int    group_sizex,
+         group_sizey;     /* number of ranks in block in each coord direction    */
   int    my_ID;           /* MPI rank                                            */
-  int    my_IDx, my_IDy;  /* coordinates of rank in process grid                 */
+  int    my_global_IDx, 
+         my_global_IDy;   /* coordinates of rank in overall process grid         */
+  int    my_local_IDx, 
+         my_local_IDy;    /* coordinates of rank within shared memory block      */
   int    right_nbr;       /* global rank of right neighboring tile               */
   int    left_nbr;        /* global rank of left neighboring tile                */
   int    top_nbr;         /* global rank of top neighboring tile                 */
@@ -118,13 +190,19 @@ int main(int argc, char ** argv) {
   DTYPE *left_buf_out;    /*       "         "                                   */
   DTYPE *left_buf_in;     /*       "         "                                   */
   int    root = 0;
-  int    n, width, height;/* linear global and local grid dimension              */
+  int    n, width, height;/* linear global and block grid dimension              */
+  int    width_rank, 
+         height_rank;     /* linear local dimension                              */
   int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
-  int    istart, iend;    /* bounds of grid tile assigned to calling process     */
-  int    jstart, jend;    /* bounds of grid tile assigned to calling process     */
+  int    istart_rank, 
+         iend_rank;       /* bounds of grid tile assigned to calling process     */
+  int    jstart_rank, 
+         jend_rank;       /* bounds of grid tile assigned to calling process     */
+  int    istart, iend;    /* bounds of grid block containing tile                */
+  int    jstart, jend;    /* bounds of grid block containing tile                */
   DTYPE  norm,            /* L1 norm of solution                                 */
          local_norm,      /* contribution of calling process to L1 norm          */
-         reference_norm;
+         reference_norm;  /* value to be matched by computed norm                */
   DTYPE  f_active_points; /* interior of grid with respect to stencil            */
   DTYPE  flops;           /* floating point ops per iteration                    */
   int    iterations;      /* number of times to run the algorithm                */
@@ -138,21 +216,18 @@ int main(int argc, char ** argv) {
   int    total_length_out;/* total required length to store output array         */
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
-  MPI_Request request[8];
-  MPI_Status  status[8];
-  MPI_Win shm_winx;       /* RMA window object x-direction */
-  MPI_Win shm_winy;       /* RMA window object y-direction */
-  MPI_Info rma_winfo;     /* info for window */
-  MPI_Comm shm_comm;      /* Shared Memory Communicator */
-  int shm_procs;          /* # of processes in shared domain */
-  int shm_ID;             /* MPI rank in shared memory domain */
-  int shm_right_nbr;      /* local rank of right neighboring tile */
-  int shm_left_nbr;       /* local rank of left neighboring tile */
-  int shm_top_nbr;        /* local rank of top neighboring tile */
-  int shm_bottom_nbr;     /* local rank of bottom neighboring tile */
-  MPI_Aint top_segment_size, bottom_segment_size, right_segment_size, left_segment_size;
-  int top_disp, bottom_disp, right_disp, left_disp;
-  double *top_ptr, *bottom_ptr, *right_ptr, *left_ptr;
+  MPI_Request request[8]; /* requests for sends & receives in 4 coord directions */
+  MPI_Status  status[8];  /* corresponding statuses                              */
+  MPI_Win shm_win_in;     /* shared memory window object for IN array            */
+  MPI_Win shm_win_out;    /* shared memory window object for OUT array           */
+  MPI_Comm shm_comm_prep; /* preparatory shared memory communicator              */
+  MPI_Comm shm_comm;      /* Shared Memory Communicator                          */
+  int shm_procs;          /* # of processes in shared domain                     */
+  int shm_ID;             /* MPI rank in shared memory domain                    */
+  MPI_Aint size_in;       /* size of the IN array in shared memory window        */
+  MPI_Aint size_out;      /* size of the OUT array in shared memory window       */
+  int size_mul;           /* one for shm_comm root, zero for the other ranks     */
+  int disp_unit;          /* ignored                                             */
  
   /*******************************************************************************
   ** Initialize the MPI environment
@@ -161,11 +236,6 @@ int main(int argc, char ** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
  
-  /* Setup for Shared memory regions */
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &shm_comm);
-  MPI_Comm_rank(shm_comm, &shm_ID);
-  MPI_Comm_size(shm_comm, &shm_procs);
-
   /*******************************************************************************
   ** process, test, and broadcast input parameters    
   ********************************************************************************/
@@ -177,16 +247,29 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;
 #endif
     
-    if (argc != 3){
-      printf("Usage: %s <# iterations> <array dimension> \n", 
+    if (argc != 4){
+      printf("Usage: %s  <#ranks per coherence domain><# iterations> <array dimension> \n", 
              *argv);
       error = 1;
       goto ENDOFTESTS;
     }
  
+    group_size = atoi(*++argv);
+    if (group_size < 1) {
+      printf("ERROR: # ranks per coherence domain must be >= 1 : %d \n",group_size);
+      error = 1;
+      goto ENDOFTESTS;
+    } 
+    if (Num_procs%group_size) {
+      printf("ERROR: toal # %d ranks not divisible by ranks per coherence domain %d\n",
+	     Num_procs, group_size);
+      error = 1;
+      goto ENDOFTESTS;
+    } 
+
     iterations  = atoi(*++argv); 
-    if (iterations < 1){
-      printf("ERROR: iterations must be >= 1 : %d \n",iterations);
+    if (iterations < 0){
+      printf("ERROR: iterations must be >= 0 : %d \n",iterations);
       error = 1;
       goto ENDOFTESTS;  
     }
@@ -214,58 +297,99 @@ int main(int argc, char ** argv) {
     ENDOFTESTS:;  
   }
   bail_out(error);
+
+  MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&group_size, 1, MPI_INT, root, MPI_COMM_WORLD);
  
   /* determine best way to create a 2D grid of ranks (closest to square, for 
-     best surface/volume ratio); we do this brute force for now
+     best surface/volume ratio); we do this brute force for now. The 
+     decomposition needs to be such that shared memory groups can evenly
+     tessellate the process grid
   */
   for (Num_procsx=(int) (sqrt(Num_procs+1)); Num_procsx>0; Num_procsx--) {
     if (!(Num_procs%Num_procsx)) {
       Num_procsy = Num_procs/Num_procsx;
-      break;
+      for (group_sizex=(int)(sqrt(group_size+1)); group_sizex>0; group_sizex--) {
+        if (!(group_size%group_sizex) && !(Num_procsx%group_sizex)) {
+          group_sizey=group_size/group_sizex;
+          break;
+        }
+      }
+      if (!(Num_procsy%group_sizey)) break;
     }
   }      
-  my_IDx = my_ID%Num_procsx;
-  my_IDy = my_ID/Num_procsx;
-  /* compute neighbors; don't worry about dropping off the edges of the grid */
-  right_nbr  = my_ID+1;
-  left_nbr   = my_ID-1;
-  top_nbr    = my_ID+Num_procsx;
-  bottom_nbr = my_ID-Num_procsx;
 
-  /* compute shared memory neighbors */
-  shm_right_nbr  = shm_ID+1;
-  shm_left_nbr   = shm_ID-1;
-  shm_top_nbr    = shm_ID+Num_procsx;
-  shm_bottom_nbr = shm_ID-Num_procsx;
 
   if (my_ID == root) {
-    printf("MPI stencil execution on 2D grid\n");
-    printf("Number of processes    = %d\n", Num_procs);
-    printf("Grid size              = %d\n", n);
-    printf("Radius of stencil      = %d\n", RADIUS);
-    printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
-    printf("Type of stencil        = star\n");
+    printf("MPI+SHM stencil execution on 2D grid\n");
+    printf("Number of processes             = %d\n", Num_procs);
+    printf("Grid size                       = %d\n", n);
+    printf("Radius of stencil               = %d\n", RADIUS);
+    printf("Tiles in x/y-direction          = %d/%d\n", Num_procsx, Num_procsy);
+    printf("Tiles per shared memory domain  = %d\n", group_size);
+    printf("Tiles in x/y-direction in group = %d/%d\n", group_sizex,  group_sizey);
+    printf("Type of stencil                 = star\n");
 #ifdef DOUBLE
-    printf("Data type              = double precision\n");
+    printf("Data type                       = double precision\n");
 #else
-    printf("Data type              = single precision\n");
+    printf("Data type                       = single precision\n");
 #endif
-    printf("Number of iterations   = %d\n", iterations);
+    printf("Number of iterations            = %d\n", iterations);
   }
- 
-  MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
- 
-  /* compute amount of space required for input and solution arrays             */
+
+  /* Setup for Shared memory regions */
+
+  /* first divide WORLD in groups of size group_size */
+  MPI_Comm_split(MPI_COMM_WORLD, my_ID/group_size, my_ID%group_size, &shm_comm_prep);
+  /* derive from that a SHM communicator */
+  MPI_Comm_split_type(shm_comm_prep, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &shm_comm);
+  MPI_Comm_rank(shm_comm, &shm_ID);
+  MPI_Comm_size(shm_comm, &shm_procs);
+  /* do sanity check, making sure groups did not shrink in second comm split */
+  if (shm_procs != group_size) MPI_Abort(MPI_COMM_WORLD, 666);
   
-  width = n/Num_procsx;
-  leftover = n%Num_procsx;
-  if (my_IDx<leftover) {
-    istart = (width+1) * my_IDx; 
+  Num_groupsx = Num_procsx/group_sizex;
+  Num_groupsy = Num_procsy/group_sizey;
+
+  my_group = my_ID/group_size;
+  my_group_IDx = my_group%Num_groupsx;
+  my_group_IDy = my_group/Num_groupsx;
+  my_local_IDx = my_ID%group_sizex;
+  my_local_IDy = (my_ID%group_size)/group_sizex;
+  my_global_IDx = my_group_IDx*group_sizex+my_local_IDx;
+  my_global_IDy = my_group_IDy*group_sizey+my_local_IDy;
+
+  /* set all neighboring ranks to -1 (no communication with other coherence domain) */
+  left_nbr = right_nbr = top_nbr = bottom_nbr = -1;
+
+  if (my_local_IDx == group_sizex-1 && my_group_IDx != (Num_groupsx-1)) {
+    right_nbr = (my_group+1)*group_size+shm_ID-group_sizex+1;
+  }
+
+  if (my_local_IDx == 0 && my_group_IDx != 0) {
+    left_nbr = (my_group-1)*group_size+shm_ID+group_sizex-1;
+  }
+
+  if (my_local_IDy == group_sizey-1 && my_group_IDy != (Num_groupsy-1)) {
+    top_nbr = (my_group+Num_groupsx)*group_size + my_local_IDx;
+  }
+
+  if (my_local_IDy == 0 && my_group_IDy != 0) {
+    bottom_nbr = (my_group-Num_groupsx)*group_size + group_sizex*(group_sizey-1)+my_local_IDx;
+  }
+
+  /* compute amount of space required for input and solution arrays for the block,
+     and also compute index sets                                                  */
+  
+  width = n/Num_groupsx;
+  leftover = n%Num_groupsx;
+  if (my_group_IDx<leftover) {
+    istart = (width+1) * my_group_IDx; 
     iend = istart + width + 1;
   }
   else {
-    istart = (width+1) * leftover + width * (my_IDx-leftover);
+    istart = (width+1) * leftover + width * (my_group_IDx-leftover);
     iend = istart + width;
   }
   
@@ -276,14 +400,14 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
  
-  height = n/Num_procsy;
-  leftover = n%Num_procsy;
-  if (my_IDy<leftover) {
-    jstart = (height+1) * my_IDy; 
+  height = n/Num_groupsy;
+  leftover = n%Num_groupsy;
+  if (my_group_IDy<leftover) {
+    jstart = (height+1) * my_group_IDy; 
     jend = jstart + height + 1;
   }
   else {
-    jstart = (height+1) * leftover + height * (my_IDy-leftover);
+    jstart = (height+1) * leftover + height * (my_group_IDy-leftover);
     jend = jstart + height;
   }
   
@@ -310,17 +434,79 @@ int main(int argc, char ** argv) {
   bail_out(error);
  
   total_length_out = width*height*sizeof(DTYPE);
- 
-  in  = (DTYPE *) malloc(total_length_in);
-  out = (DTYPE *) malloc(total_length_out);
-  if (!in || !out) {
-    printf("ERROR: process %d could not allocate space for input/output array\n",
-            my_ID);
+
+  /* only the root of each SHM domain specifies window of nonzero size */
+  size_mul = (shm_ID==0);  
+  size_in= total_length_in*size_mul; 
+  MPI_Win_allocate_shared(size_in, sizeof(double), MPI_INFO_NULL, shm_comm, 
+                          (void *) &in, &shm_win_in);
+  MPI_Win_shared_query(shm_win_in, MPI_PROC_NULL, &size_in, &disp_unit, (void *)&in);
+  if (in == NULL){
+    printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
+
+  size_out= total_length_out*size_mul;
+  MPI_Win_allocate_shared(size_out, sizeof(double), MPI_INFO_NULL, shm_comm, 
+                          (void *) &out, &shm_win_out);
+  MPI_Win_shared_query(shm_win_out, MPI_PROC_NULL, &size_out, &disp_unit, (void *)&out);
+  if (out == NULL){
+    printf(" Error allocating space for transposed matrix by group %d\n", my_group);
+    error = 1;
+  }
+  bail_out(error);
+
+  /* determine index set assigned to each rank                         */
+
+  width_rank = n/Num_procsx;
+  leftover = n%Num_procsx;
+  if (my_global_IDx<leftover) {
+    istart_rank = (width_rank+1) * my_global_IDx; 
+    iend_rank = istart_rank + width_rank + 1;
+  }
+  else {
+    istart_rank = (width_rank+1) * leftover + width_rank * (my_global_IDx-leftover);
+    iend_rank = istart_rank + width_rank;
+  }
+
+  width_rank = iend_rank - istart_rank + 1;   
+
+  height_rank = n/Num_procsy;
+  leftover = n%Num_procsy;
+  if (my_global_IDy<leftover) {
+    jstart_rank = (height_rank+1) * my_global_IDy; 
+    jend_rank = jstart_rank + height_rank + 1;
+  }
+  else {
+    jstart_rank = (height_rank+1) * leftover + height_rank * (my_global_IDy-leftover);
+    jend_rank = jstart_rank + height_rank;
+  }
+  
+  height_rank = jend_rank - jstart_rank + 1;
+
+  /* allocate communication buffers for halo values                            */
+  top_buf_out = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*width_rank);
+  if (!top_buf_out) {
+    printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
+    error = 1;
+  }
+  bail_out(error);
+  top_buf_in     = top_buf_out +   RADIUS*width_rank;
+  bottom_buf_out = top_buf_out + 2*RADIUS*width_rank;
+  bottom_buf_in  = top_buf_out + 3*RADIUS*width_rank;
  
-  /* fill the stencil weights to reflect a discrete divergence operator         */
+  right_buf_out = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*height_rank);
+  if (!right_buf_out) { 
+    printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
+    error = 1;
+  }
+  bail_out(error);
+  right_buf_in   = right_buf_out +   RADIUS*height_rank;
+  left_buf_out   = right_buf_out + 2*RADIUS*height_rank;
+  left_buf_in    = right_buf_out + 3*RADIUS*height_rank;
+
+    /* fill the stencil weights to reflect a discrete divergence operator         */
   for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++)
     WEIGHT(ii,jj) = (DTYPE) 0.0;
   stencil_size = 4*RADIUS+1;
@@ -332,48 +518,13 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
   /* intialize the input and output arrays                                     */
-  for (j=jstart; j<jend; j++) for (i=istart; i<iend; i++) {
+  for (j=jstart_rank; j<jend_rank; j++) for (i=istart_rank; i<iend_rank; i++) {
     IN(i,j)  = COEFX*i+COEFY*j;
     OUT(i,j) = (DTYPE)0.0;
   }
- 
-  /* RMA win info */
-  MPI_Info_create(&rma_winfo);
-  /* This key indicates that passive target RMA will not be used.
-   * It is the one info key that MPICH actually uses for optimization. */
-  MPI_Info_set(rma_winfo, "no_locks", "true");
 
-  /* allocate communication buffers for halo values                            */
-  MPI_Win_allocate_shared(4*sizeof(DTYPE)*RADIUS*width, sizeof(DTYPE), rma_winfo, shm_comm, (void *) &top_buf_out, &shm_winy);
-  if (!top_buf_out) {
-    printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
-    error = 1;
-  }
-  bail_out(error);
-  top_buf_in     = top_buf_out +   RADIUS*width;
-  bottom_buf_out = top_buf_out + 2*RADIUS*width;
-  bottom_buf_in  = top_buf_out + 3*RADIUS*width;
- 
-  MPI_Win_allocate_shared(4*sizeof(DTYPE)*RADIUS*height, sizeof(DTYPE), rma_winfo, shm_comm, (void *) &right_buf_out, &shm_winx);
-  if (!right_buf_out) {
-    printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
-    error = 1;
-  }
-  bail_out(error);
-  right_buf_in   = right_buf_out +   RADIUS*height;
-  left_buf_out   = right_buf_out + 2*RADIUS*height;
-  left_buf_in    = right_buf_out + 3*RADIUS*height;
+  MPI_Barrier(shm_comm); 
 
-  if (shm_right_nbr <= shm_procs-1)
-    MPI_Win_shared_query(shm_winx, shm_right_nbr, &right_segment_size, &right_disp, &right_ptr);
-  if (shm_left_nbr >= 0)
-    MPI_Win_shared_query(shm_winx, shm_left_nbr, &left_segment_size, &left_disp, &left_ptr);
-  if (shm_top_nbr <= shm_procs-1)
-    MPI_Win_shared_query(shm_winy, shm_top_nbr, &top_segment_size, &top_disp, &top_ptr);
-  if (shm_bottom_nbr >= 0)
-    MPI_Win_shared_query(shm_winy, shm_bottom_nbr, &bottom_segment_size, &bottom_disp, &bottom_ptr);
- 
-  MPI_Pcontrol(1, "iter");
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration */
@@ -383,136 +534,92 @@ int main(int argc, char ** argv) {
     }
 
     /* need to fetch ghost point data from neighbors in y-direction                 */
-    MPI_Pcontrol(1, "ydir");
-    MPI_Win_fence(MPI_MODE_NOPUT, shm_winy);
-    if (my_IDy < Num_procsy-1) {
-      if (shm_top_nbr <= shm_procs-1) {
-	for (kk=0,j=jend-RADIUS; j<=jend-1; j++) for (i=istart; i<=iend; i++) {
-	    top_ptr[3*RADIUS*width+kk] = IN(i,j);
-	    kk++;
-	  }
-      } else {
-	MPI_Irecv(top_buf_in, RADIUS*width, MPI_DTYPE, top_nbr, 101,
-		  MPI_COMM_WORLD, &(request[1]));
-	for (kk=0,j=jend-RADIUS; j<=jend-1; j++) for (i=istart; i<=iend; i++) {
-	    top_buf_out[kk++]= IN(i,j);
-	  }
-	MPI_Isend(top_buf_out, RADIUS*width,MPI_DTYPE, top_nbr, 99, 
-		  MPI_COMM_WORLD, &(request[0]));
+    if (top_nbr != -1) {
+      MPI_Irecv(top_buf_in, RADIUS*width_rank, MPI_DTYPE, top_nbr, 101,
+                MPI_COMM_WORLD, &(request[1]));
+      for (kk=0,j=jend_rank-RADIUS; j<=jend_rank-1; j++) 
+      for (i=istart_rank; i<=iend_rank; i++) {
+        top_buf_out[kk++]= IN(i,j);
+      }
+      MPI_Isend(top_buf_out, RADIUS*width_rank,MPI_DTYPE, top_nbr, 99, 
+                MPI_COMM_WORLD, &(request[0]));
+    }
+
+    if (bottom_nbr != -1) {
+      MPI_Irecv(bottom_buf_in,RADIUS*width_rank, MPI_DTYPE, bottom_nbr, 99, 
+                MPI_COMM_WORLD, &(request[3]));
+      for (kk=0,j=jstart_rank; j<=jstart_rank+RADIUS-1; j++) 
+      for (i=istart_rank; i<=iend_rank; i++) {
+        bottom_buf_out[kk++]= IN(i,j);
+      }
+      MPI_Isend(bottom_buf_out, RADIUS*width_rank,MPI_DTYPE, bottom_nbr, 101,
+ 	  MPI_COMM_WORLD, &(request[2]));
+      }
+
+    if (top_nbr != -1) {
+      MPI_Wait(&(request[0]), &(status[0]));
+      MPI_Wait(&(request[1]), &(status[1]));
+      for (kk=0,j=jend_rank; j<=jend_rank+RADIUS-1; j++) 
+      for (i=istart_rank; i<=iend_rank; i++) {
+        IN(i,j) = top_buf_in[kk++];
       }
     }
-    if (my_IDy > 0) {
-      if (shm_bottom_nbr >= 0) {
-	for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
-	    bottom_ptr[RADIUS*width+kk] = IN(i,j);
-	    kk++;
-	  }
-      } else {
-	MPI_Irecv(bottom_buf_in,RADIUS*width, MPI_DTYPE, bottom_nbr, 99, 
-		  MPI_COMM_WORLD, &(request[3]));
-	for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
-	    bottom_buf_out[kk++]= IN(i,j);
-	  }
-	MPI_Isend(bottom_buf_out, RADIUS*width,MPI_DTYPE, bottom_nbr, 101,
-		  MPI_COMM_WORLD, &(request[2]));
+
+    if (bottom_nbr != -1) {    
+      MPI_Wait(&(request[2]), &(status[2]));
+      MPI_Wait(&(request[3]), &(status[3]));
+      for (kk=0,j=jstart_rank-RADIUS; j<=jstart_rank-1; j++) 
+      for (i=istart_rank; i<=iend_rank; i++) {
+        IN(i,j) = bottom_buf_in[kk++];
       }
     }
-    MPI_Win_fence(MPI_MODE_NOPUT, shm_winy);
-    if (my_IDy < Num_procsy-1) {
-      if (shm_top_nbr <= shm_procs-1) {
-	for (kk=0,j=jend; j<=jend+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
-	    IN(i,j) = top_buf_in[kk++];
-	  }
-      } else {      
-	MPI_Wait(&(request[0]), &(status[0]));
-	MPI_Wait(&(request[1]), &(status[1]));
-	for (kk=0,j=jend; j<=jend+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
-	    IN(i,j) = top_buf_in[kk++];
-	  }
-      }
-    }
-    if (my_IDy > 0) {
-      if (shm_bottom_nbr >= 0) {
-	for (kk=0,j=jstart-RADIUS; j<=jstart-1; j++) for (i=istart; i<=iend; i++) {
-	    IN(i,j) = bottom_buf_in[kk++];
-	  }     
-      } else {
-	MPI_Wait(&(request[2]), &(status[2]));
-	MPI_Wait(&(request[3]), &(status[3]));
-	for (kk=0,j=jstart-RADIUS; j<=jstart-1; j++) for (i=istart; i<=iend; i++) {
-	    IN(i,j) = bottom_buf_in[kk++];
-	  }
-      }
-    }
-    MPI_Pcontrol(-1, "ydir");
 
     /* need to fetch ghost point data from neighbors in x-direction                 */
-    MPI_Pcontrol(1, "xdir");
-    MPI_Win_fence(MPI_MODE_NOPUT, shm_winx);
-    if (my_IDx < Num_procsx-1) {
-      if (shm_right_nbr <= shm_procs-1) {
-	for (kk=0,j=jstart; j<=jend; j++) for (i=iend-RADIUS; i<=iend-1; i++) {
-	    right_ptr[3*RADIUS*height+kk] = IN(i,j);
-	    kk++;
-	  }
-      } else {      
-	MPI_Irecv(right_buf_in, RADIUS*height, MPI_DTYPE, right_nbr, 1010,
-		  MPI_COMM_WORLD, &(request[1+4]));
-	for (kk=0,j=jstart; j<=jend; j++) for (i=iend-RADIUS; i<=iend-1; i++) {
-	    right_buf_out[kk++]= IN(i,j);
-	  }
-	MPI_Isend(right_buf_out, RADIUS*height, MPI_DTYPE, right_nbr, 990, 
-		  MPI_COMM_WORLD, &(request[0+4]));
+    if (right_nbr != -1) {
+      MPI_Irecv(right_buf_in, RADIUS*height_rank, MPI_DTYPE, right_nbr, 1010,
+                MPI_COMM_WORLD, &(request[1+4]));
+      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (i=iend_rank-RADIUS; i<=iend_rank-1; i++) {
+        right_buf_out[kk++]= IN(i,j);
+      }
+      MPI_Isend(right_buf_out, RADIUS*height_rank, MPI_DTYPE, right_nbr, 990, 
+                MPI_COMM_WORLD, &(request[0+4]));
+    }
+
+    if (left_nbr != -1) {
+      MPI_Irecv(left_buf_in, RADIUS*height_rank, MPI_DTYPE, left_nbr, 990, 
+                MPI_COMM_WORLD, &(request[3+4]));
+      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (i=istart_rank; i<=istart_rank+RADIUS-1; i++) {
+        left_buf_out[kk++]= IN(i,j);
+      }
+      MPI_Isend(left_buf_out, RADIUS*height_rank, MPI_DTYPE, left_nbr, 1010,
+                MPI_COMM_WORLD, &(request[2+4]));
+    }
+
+    if (right_nbr != -1) {
+      MPI_Wait(&(request[0+4]), &(status[0+4]));
+      MPI_Wait(&(request[1+4]), &(status[1+4]));
+      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (i=iend_rank; i<=iend_rank+RADIUS-1; i++) {
+        IN(i,j) = right_buf_in[kk++];
       }
     }
-    if (my_IDx > 0) {
-      if (shm_left_nbr >= 0) {
-	for (kk=0,j=jstart; j<=jend; j++) for (i=istart; i<=istart+RADIUS-1; i++) {
-	    left_ptr[RADIUS*height+kk] = IN(i,j);
-	    kk++;
-	  }
-      } else {
-	MPI_Irecv(left_buf_in, RADIUS*height, MPI_DTYPE, left_nbr, 990, 
-		  MPI_COMM_WORLD, &(request[3+4]));
-	for (kk=0,j=jstart; j<=jend; j++) for (i=istart; i<=istart+RADIUS-1; i++) {
-	    left_buf_out[kk++]= IN(i,j);
-	  }
-	MPI_Isend(left_buf_out, RADIUS*height, MPI_DTYPE, left_nbr, 1010,
-		  MPI_COMM_WORLD, &(request[2+4]));
+
+    if (left_nbr != -1) {
+      MPI_Wait(&(request[2+4]), &(status[2+4]));
+      MPI_Wait(&(request[3+4]), &(status[3+4]));
+      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (i=istart_rank-RADIUS; i<=istart_rank-1; i++) {
+        IN(i,j) = left_buf_in[kk++];
       }
     }
-    MPI_Win_fence(MPI_MODE_NOPUT, shm_winx);
-    if (my_IDx < Num_procsx-1) {
-      if (shm_right_nbr <= shm_procs-1) {
-	for (kk=0,j=jstart; j<=jend; j++) for (i=iend; i<=iend+RADIUS-1; i++) {
-	    IN(i,j) = right_buf_in[kk++];
-	  }
-      } else {
-	MPI_Wait(&(request[0+4]), &(status[0+4]));
-	MPI_Wait(&(request[1+4]), &(status[1+4]));
-	for (kk=0,j=jstart; j<=jend; j++) for (i=iend; i<=iend+RADIUS-1; i++) {
-	    IN(i,j) = right_buf_in[kk++];
-	  }      
-      }
-    }
-    if (my_IDx > 0) {
-      if (shm_left_nbr >= 0){
-	for (kk=0,j=jstart; j<=jend; j++) for (i=istart-RADIUS; i<=istart-1; i++) {
-	    IN(i,j) = left_buf_in[kk++];
-	  }      
-      } else {
-	MPI_Wait(&(request[2+4]), &(status[2+4]));
-	MPI_Wait(&(request[3+4]), &(status[3+4]));
-	for (kk=0,j=jstart; j<=jend; j++) for (i=istart-RADIUS; i<=istart-1; i++) {
-	    IN(i,j) = left_buf_in[kk++];
-	  }      
-      }
-    }
-    MPI_Pcontrol(-1, "xdir");
+
+    MPI_Barrier(shm_comm);
 
     /* Apply the stencil operator */
-    for (j=MAX(jstart,RADIUS); j<MIN(n-RADIUS,jend); j++) {
-      for (i=MAX(istart,RADIUS); i<MIN(n-RADIUS,iend); i++) {
+    for (j=MAX(jstart_rank,RADIUS); j<MIN(n-RADIUS,jend_rank); j++) {
+      for (i=MAX(istart_rank,RADIUS); i<MIN(n-RADIUS,iend_rank); i++) {
         for (jj=-RADIUS; jj<=RADIUS; jj++) {
           OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
         }
@@ -526,11 +633,15 @@ int main(int argc, char ** argv) {
       }
     }
  
+    MPI_Barrier(shm_comm);
+
     /* add constant to solution to force refresh of neighbor data, if any */
-    for (j=jstart; j<jend; j++) for (i=istart; i<iend; i++) IN(i,j)+= 1.0;
+    for (j=jstart_rank; j<jend_rank; j++) 
+    for (i=istart_rank; i<iend_rank; i++) IN(i,j)+= 1.0;
+
+    MPI_Barrier(shm_comm);
  
-  }
-  MPI_Pcontrol(-1, "iter");
+  } /* end of iterations                                                   */
  
   local_stencil_time = wtime() - local_stencil_time;
   MPI_Reduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, root,
@@ -538,8 +649,8 @@ int main(int argc, char ** argv) {
   
   /* compute L1 norm in parallel                                                */
   local_norm = (DTYPE) 0.0;
-  for (j=MAX(jstart,RADIUS); j<MIN(n-RADIUS,jend); j++) {
-    for (i=MAX(istart,RADIUS); i<MIN(n-RADIUS,iend); i++) {
+  for (j=MAX(jstart_rank,RADIUS); j<MIN(n-RADIUS,jend_rank); j++) {
+    for (i=MAX(istart_rank,RADIUS); i<MIN(n-RADIUS,iend_rank); i++) {
       local_norm += (DTYPE)ABS(OUT(i,j));
     }
   }
@@ -574,11 +685,6 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
  
-  MPI_Win_free(&shm_winx);
-  MPI_Win_free(&shm_winy);
-
-  MPI_Info_free(&rma_winfo);
-
   if (my_ID == root) {
     /* flops/stencil: 2 flops (fma) for each point in the stencil, 
        plus one flop for the update of the input of the array        */

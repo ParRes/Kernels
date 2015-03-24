@@ -120,9 +120,9 @@ int main(int argc, char ** argv)
   if (error) {
     if (my_ID==0) printf("ERROR: need MPI_THREAD_MULTIPLE but gets MPI_THREAD_%s\n",
                          name);
-    MPI_Finalize();
-    exit(0);
   }
+  bail_out(error);
+
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
 /* we set root equal to the highest processor rank, because this is also

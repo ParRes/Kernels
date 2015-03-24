@@ -280,8 +280,6 @@ int main(int argc, char ** argv)
   bail_out(error);
   B_p += offset;
 
-  printf("Myid = %d, A = %p, B = %p\n", my_ID, A_p, B_p);
-
   if (Num_groups>1) {
 
     size = Block_size*sizeof(double)*size_mul;

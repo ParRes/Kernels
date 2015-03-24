@@ -155,7 +155,7 @@ int main(int argc, char ** argv)
   bail_out(error); 
 
   if (my_ID == root) {
-    printf("MPI pipeline execution on 2D grid\n");
+    printf("MPI+SHM pipeline execution on 2D grid\n");
     printf("Number of processes            = %i\n",Num_procs);
     printf("Grid sizes                     = %d, %d\n", m, n);
     printf("Number of iterations           = %d\n", iterations);

@@ -38,13 +38,13 @@ PURPOSE: This program tests the efficiency with which a square matrix
          can be transposed and stored in another matrix. The matrices
          are distributed identically.
   
-USAGE:   Program inputs are the number of threads, the number of times
-         to repeat the operation, and the matrix order
+USAGE:   Program inputs are the matrix order, the number of times to 
+         repeat the operation, and the communication mode
 
-         transpose <#threads> <# iterations> <matrix size> <comm. mode> [tile size]
+         transpose <#threads> <# iterations> <matrix size> [tile size]
 
          An optional parameter specifies the tile size used to divide the 
-         individual matrix into blocks for improved cache and TLB performance. 
+         individual matrix blocks for improved cache and TLB performance. 
   
          The output consists of diagnostics to make sure the 
          transpose worked and timing statistics.
@@ -256,27 +256,19 @@ int main(int argc, char ** argv)
 ** Create the column block of the test matrix, the row block of the 
 ** transposed matrix, and workspace (workspace only if #procs>1)
 *********************************************************************/
-  MPI_Win shm_win_A;    /* Shared Memory window object                           */
-  MPI_Win shm_win_B;    /* Shared Memory window object                           */
-  MPI_Win_allocate_shared(Colblock_size*sizeof(double), sizeof(double), MPI_INFO_NULL, 
-                          MPI_COMM_WORLD, (void *) &A_p, &shm_win_A);
-  /*  A_p = (double *)malloc(Colblock_size*sizeof(double)); */
+  A_p = (double *)malloc(Colblock_size*sizeof(double));
   if (A_p == NULL){
     printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
 
-  MPI_Win_allocate_shared(Colblock_size*sizeof(double), sizeof(double), MPI_INFO_NULL, 
-                          MPI_COMM_WORLD, (void *) &B_p, &shm_win_B);
-  /*  B_p = (double *)malloc(Colblock_size*sizeof(double)); */
+  B_p = (double *)malloc(Colblock_size*sizeof(double));
   if (B_p == NULL){
     printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
-
-  printf("Myid = %d, A = %p, B = %p\n", my_ID, A_p, B_p);
 
   if (Num_procs>1) {
     Work_in_p   = (double *)malloc(2*Block_size*sizeof(double));
@@ -290,22 +282,16 @@ int main(int argc, char ** argv)
   
   /* Fill the original column matrix                                                */
   istart = 0;  
-  int chunk_size = Block_order/omp_get_max_threads();
 
   if (tiling) {
-    #pragma omp parallel private (i,j, it,jt)
-    {
-    int shm_ID = omp_get_thread_num();
-    for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j+=Tile_order) {
+    #pragma omp parallel for private (i,it,jt)
+    for (j=0; j<Block_order; j+=Tile_order) 
       for (i=0; i<order; i+=Tile_order) 
         for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) 
           for (it=i; it<MIN(order,i+Tile_order); it++) {
             A(it,jt) = (double) (order*(jt+colstart) + it);
             B(it,jt) = -1.0;
           }
-     }
-  }
-
   }
   else {
     #pragma omp parallel for private (i)
@@ -334,18 +320,13 @@ int main(int argc, char ** argv)
 	}
     }
     else {
-      #pragma omp parallel private (i, j,it,jt)
-      {
-      int shm_ID = omp_get_thread_num();
-      for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order) {
+      #pragma omp parallel for private (j,it,jt)
+      for (i=0; i<Block_order; i+=Tile_order) 
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-      /*            printf("shm_ID= %04d it=%05d jt=%05d\n", shm_ID, it, jt); */
               B(jt,it) = A(it,jt); 
 	    }
-      }
-      }
     }
 
     for (phase=1; phase<Num_procs; phase++){

@@ -96,7 +96,7 @@ FUNCTIONS CALLED:
 NOTES:     Bandwidth is determined as the number of words read, plus the 
            number of words written, times the size of the words, divided 
            by the execution time. For a vector length of N, the total 
-           number of words read and written is 3*N*sizeof(double).
+           number of words read and written is 4*N*sizeof(double).
  
 HISTORY:   This code is loosely based on the Stream benchmark by John
            McCalpin, but does not follow all the Stream rules. Hence,
@@ -241,7 +241,7 @@ int main(int argc, char **argv)
   b = a + length + offset;
   c = b + length + offset;
 
-  bytes   = 3.0 * sizeof(double) * length * Num_procs;
+  bytes   = 4.0 * sizeof(double) * length * Num_procs;
  
   if (my_ID == root) {
     printf("Number of processes  = %d\n", Num_procs);

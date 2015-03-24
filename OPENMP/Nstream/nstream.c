@@ -92,7 +92,7 @@ FUNCTIONS CALLED:
 NOTES:     Bandwidth is determined as the number of words read, plus the 
            number of words written, times the size of the words, divided 
            by the execution time. For a vector length of N, the total 
-           number of words read and written is 3*N*sizeof(double).
+           number of words read and written is 4*N*sizeof(double).
  
 HISTORY:   This code is loosely based on the Stream benchmark by John
            McCalpin, but does not follow all the Stream rules. Hence,
@@ -269,7 +269,7 @@ int main(int argc, char **argv)
   ** Analyze and output results.
   *********************************************************************/
  
-  bytes   = 3.0 * sizeof(double) * length;
+  bytes   = 4.0 * sizeof(double) * length;
   if (checkTRIADresults(iterations, length)) {
     avgtime = nstream_time/iterations;
     printf("Rate (MB/s): %lf Avg time (s): %lf\n",

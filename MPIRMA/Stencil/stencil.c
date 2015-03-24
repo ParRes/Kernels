@@ -218,7 +218,7 @@ int main(int argc, char ** argv) {
   bottom_nbr = my_ID-Num_procsx;
  
   if (my_ID == root) {
-    printf("MPI stencil execution on 2D grid\n");
+    printf("MPIRMA stencil execution on 2D grid\n");
     printf("Number of processes    = %d\n", Num_procs);
     printf("Grid size              = %d\n", n);
     printf("Radius of stencil      = %d\n", RADIUS);
