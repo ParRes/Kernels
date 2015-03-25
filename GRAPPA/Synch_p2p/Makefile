@@ -6,7 +6,7 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -O3
 
 #uncomment any of the following flags (and change values) to change defaults
 
-RESTRICTFLAG = -DRESTRICT_KEYWORD
+#RESTRICTFLAG = -DRESTRICT_KEYWORD
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers
 
