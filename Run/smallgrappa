@@ -1,0 +1,9 @@
+NUMPROCS=4
+NUMITERS=10
+SEPLINE="==============================================================="
+MPIRUN=mpiexec.hydra
+
+$MPIRUN -np $NUMPROCS GRAPPA/Synch_p2p/p2p          $NUMITERS 1000 100;   echo $SEPLINE
+
+
+

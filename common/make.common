@@ -32,8 +32,13 @@ OPENMP_bail_out.o:$(COMMON)/OPENMP_bail_out.c
 .c.o:
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
  
+.cpp.o:
+	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
+ 
 .C.o: $(CHARMDEP)
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
  
 clean:
-	@ rm -f $(OBJS)  $(PROGRAM) *.optrpt *~ charmrun $(PROGRAM).decl.h $(PROGRAM).def.h
+	@ rm -f $(OBJS)  $(PROGRAM) *.optrpt *~ charmrun \
+	$(PROGRAM).decl.h $(PROGRAM).def.h \
+	routing.dot  stats.json

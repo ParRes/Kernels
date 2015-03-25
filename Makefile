@@ -51,12 +51,13 @@ default:
 	@echo "       \"make allmpirma\"    (re-)builds all MPI-3 RMA targets"
 	@echo "       \"make allmpishm\"    (re-)builds all MPI-3 shared memory segments targets"
 	@echo "       \"make allcharm++\"   (re-)builds all Charm++ targets"
+	@echo "       \"make allgrappa\"    (re-)builds all Grappa targets"
 	@echo "       optionally, specify   \"matrix_rank=<n> number_of_functions=<m>\""
 	@echo "       optionally, specify   \"default_opt_flags=<list of optimization flags>\""
 	@echo "       \"make clean\"        removes all objects and executables"
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
-all: allserial allopenmp allmpi allmpiopenmp allmpirma allmpishm allcharm++ 
+all: allserial allopenmp allmpi allmpiopenmp allmpirma allmpishm allcharm++ allgrappa
 
 allmpi: 
 	cd MPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -108,6 +109,8 @@ allcharm++:
 	cd CHARM++/Stencil;         $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd CHARM++/Transpose;       $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
+allgrappa: 
+	cd GRAPPA/Synch_p2p;       $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allserial: 
 	cd SERIAL/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -141,6 +144,7 @@ clean:
 	cd CHARM++/Stencil;         $(MAKE) clean
 	cd CHARM++/Synch_p2p;       $(MAKE) clean
 	cd CHARM++/Transpose;       $(MAKE) clean
+	cd GRAPPA/Synch_p2p;       $(MAKE) clean
 	cd MPIOPENMP/Nstream;       $(MAKE) clean
 	cd MPIOPENMP/Stencil;       $(MAKE) clean
 	cd MPIOPENMP/Transpose;     $(MAKE) clean

@@ -1,4 +1,6 @@
-MPICC:=mpiicc
-CC:=icc 
+MPICC=mpiicc
+CC=icc 
+CXX=mpigxx
 CHARMTOP=/home/rfvander/charm/mpi-linux-x86_64-ifort-smp-mpicxx
 CHARMC=$(CHARMTOP)/bin/charmc
+GRAPPATOP=/home/rfvander/grappa
