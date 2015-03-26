@@ -97,8 +97,9 @@ int main(int argc, char ** argv)
   MPI_Comm shm_comm;     /* Shared Memory Communicator */
   int shm_procs;    /* # of processes in shared domain */
   int shm_ID;        /* MPI rank */
-  int target_disp;
-  double *target_ptr;
+  int source_disp;
+  double *source_ptr;
+  int p2pbuf;
 
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -193,9 +194,13 @@ int main(int argc, char ** argv)
   MPI_Info_set(rma_winfo, "no_locks", "true");
 
   /* total_length takes into account one ghost cell on left side of segment     */
-  total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
+  if (shm_ID == 0)
+    total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
+  else
+    total_length = (end[my_ID]-start[my_ID]+1)*n;
+
   MPI_Win_allocate_shared(total_length*sizeof(double), sizeof(double), rma_winfo, shm_comm, (void *) &vector, &shm_win);
-  if (my_ID == root) {
+  if (my_ID == 0) {
     if (total_length/(segment_size+1) != n) {
       printf("Grid of %d by %d points too large\n", m, n);
       error = 1;
@@ -224,24 +229,10 @@ int main(int argc, char ** argv)
   else          start[my_ID] = 0;
   end[my_ID] = segment_size-1;
 
-  /* Set up origin and target process groups for PSCW */
-  MPI_Comm_group(shm_comm, &shm_group);
-  /* Target group consists of rank my_ID+1, right neighbor */
-  if (shm_ID < shm_procs-1) {
-    target_ranks[0] = shm_ID+1;
-    MPI_Group_incl(shm_group, 1, target_ranks, &target_group);
-    MPI_Win_shared_query(shm_win, shm_ID+1, &nbr_segment_size, &target_disp, &target_ptr);
-    nbr_segment_size = end[my_ID+1] - start[my_ID+1] + 1;
-  } else {
-    target_ranks[0] = MPI_PROC_NULL;
-  }
-
-  /* Origin group consists of rank my_ID-1, left neighbor */
+  /* Get left neighbor base address */
   if (shm_ID > 0) {
-    origin_ranks[0] = shm_ID-1;
-    MPI_Group_incl(shm_group, 1, origin_ranks, &origin_group);
-  } else {
-    origin_ranks[0] = MPI_PROC_NULL;
+    MPI_Win_shared_query(shm_win, shm_ID-1, &nbr_segment_size, &source_disp, &source_ptr);
+    nbr_segment_size = end[my_ID-1] - start[my_ID-1] + 1;
   }
 
   for (iter=0; iter<=iterations; iter++) {
@@ -259,26 +250,28 @@ int main(int argc, char ** argv)
          send data                                                                */
       if (my_ID > 0) {
 	if (shm_ID > 0) {
-	  /*  Exposure epoch at target*/
-	  MPI_Win_post(origin_group, MPI_MODE_NOPUT, shm_win);
-	  MPI_Win_wait(shm_win);
+	  MPI_Recv(&p2pbuf, 0, MPI_INT, shm_ID-1, 1, shm_comm, &status);
 	} else {
 	  MPI_Recv(&(ARRAY(start[my_ID]-1,j)), 1, MPI_DOUBLE, 
 		   my_ID-1, j, MPI_COMM_WORLD, &status);
 	}
       }
 
-      for (i=start[my_ID]; i<= end[my_ID]; i++) {
-        ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
+      i = start[my_ID];
+
+      if (shm_ID != 0) {
+	ARRAY(i,j) = source_ptr[NBR_INDEX(end[my_ID],j)] + ARRAY(i,j-1) - source_ptr[NBR_INDEX(end[my_ID],j-1)];
+	i++;
+      }
+
+      for (; i<= end[my_ID]; i++) {
+	ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
       }
 
       /* if I am not on the right boundary, send data to my right neighbor        */  
       if (my_ID != Num_procs-1) {
 	if (shm_ID != shm_procs-1) {
-	  /* Access epoch at origin */
-	  MPI_Win_start(target_group, 0, shm_win);
-	  target_ptr[NBR_INDEX(0,j)] = ARRAY(end[my_ID],j);
-	  MPI_Win_complete(shm_win);	
+	  MPI_Send(&p2pbuf, 0, MPI_INT, shm_ID+1, 1, shm_comm);
 	} else {
 	  MPI_Send(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE,
 		   my_ID+1, j, MPI_COMM_WORLD);
@@ -332,7 +325,7 @@ int main(int argc, char ** argv)
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
  
-  MPI_Win_free(&shm_win);
+  /* MPI_Win_free(&shm_win); */
   MPI_Info_free(&rma_winfo);
 
   MPI_Finalize();
