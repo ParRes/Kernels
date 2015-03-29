@@ -1,32 +1,32 @@
 /*
 Copyright (c) 2013, Intel Corporation
 
-Redistribution and use in source and binary forms, with or without 
-modification, are permitted provided that the following conditions 
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
 are met:
 
-* Redistributions of source code must retain the above copyright 
+* Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
-* Redistributions in binary form must reproduce the above 
-      copyright notice, this list of conditions and the following 
-      disclaimer in the documentation and/or other materials provided 
+* Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
       with the distribution.
-* Neither the name of Intel Corporation nor the names of its 
-      contributors may be used to endorse or promote products 
-      derived from this software without specific prior written 
+* Neither the name of Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products
+      derived from this software without specific prior written
       permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
-FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
-ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
@@ -35,21 +35,21 @@ POSSIBILITY OF SUCH DAMAGE.
 NAME:    Pipeline
 
 PURPOSE: This program tests the efficiency with which point-to-point
-         synchronization can be carried out. It does so by executing 
+         synchronization can be carried out. It does so by executing
          a pipelined algorithm on an m*n grid. The first array dimension
          is distributed among the processes (stripwise decomposition).
-  
+
 USAGE:   The program takes as input the dimensions of the grid, and the
          number of times we loop over the grid
 
                <progname> <# iterations> <m> <n>
-  
-         The output consists of diagnostics to make sure the 
+
+         The output consists of diagnostics to make sure the
          algorithm worked, and of timing statistics.
 
 FUNCTIONS CALLED:
 
-         Other than MPI or standard C functions, the following 
+         Other than MPI or standard C functions, the following
          functions are used in this program:
 
          wtime()
@@ -57,18 +57,18 @@ FUNCTIONS CALLED:
 
 HISTORY: - Written by Rob Van der Wijngaart, March 2006.
          - modified by Rob Van der Wijngaart, August 2006:
-            * changed boundary conditions and stencil computation to avoid 
+            * changed boundary conditions and stencil computation to avoid
               overflow
             * introduced multiple iterations over grid and dependency between
               iterations
-  
+
 **********************************************************************************/
 
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
 
-#define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
-#define NBR_INDEX(i,j) (i+(j)*(nbr_segment_size+1))
+#define ARRAY(i,j) vector[i+1+(j)*(width)]
+#define NBR_INDEX(i,j) (i+(j)*(nbr_width+1))
 
 int main(int argc, char ** argv)
 {
@@ -100,6 +100,7 @@ int main(int argc, char ** argv)
   int source_disp;
   double *source_ptr;
   int p2pbuf;
+  int width, nbr_width;
 
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -123,7 +124,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root){
     if (argc != 4){
-      printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>\n", 
+      printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>\n",
              *argv);
       error = 1;
       goto ENDOFTESTS;
@@ -134,7 +135,7 @@ int main(int argc, char ** argv)
       printf("ERROR: iterations must be >= 1 : %d \n",iterations);
       error = 1;
       goto ENDOFTESTS;
-    } 
+    }
 
     m = atoi(*++argv);
     n = atoi(*++argv);
@@ -145,7 +146,7 @@ int main(int argc, char ** argv)
     }
 
     if (m<Num_procs) {
-      printf("ERROR: First grid dimension %d smaller than number of processes %d\n", 
+      printf("ERROR: First grid dimension %d smaller than number of processes %d\n",
              m, Num_procs);
       error = 1;
       goto ENDOFTESTS;
@@ -153,7 +154,7 @@ int main(int argc, char ** argv)
 
     ENDOFTESTS:;
   }
-  bail_out(error); 
+  bail_out(error);
 
   if (my_ID == root) {
     printf("MPI+SHM pipeline execution on 2D grid\n");
@@ -164,7 +165,7 @@ int main(int argc, char ** argv)
     printf("Synchronizations/iteration     = %d\n", (Num_procs-1)*(n-1));
 #endif
   }
-  
+
   /* Broadcast benchmark data to all processes */
   MPI_Bcast(&m, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&n, 1, MPI_INT, root, MPI_COMM_WORLD);
@@ -194,10 +195,13 @@ int main(int argc, char ** argv)
   MPI_Info_set(rma_winfo, "no_locks", "true");
 
   /* total_length takes into account one ghost cell on left side of segment     */
-  if (shm_ID == 0)
+  if (shm_ID == 0) {
     total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  else
+    width = segment_size+1;
+  } else {
     total_length = (end[my_ID]-start[my_ID]+1)*n;
+    width = segment_size;
+  }
 
   MPI_Win_allocate_shared(total_length*sizeof(double), sizeof(double), rma_winfo, shm_comm, (void *) &vector, &shm_win);
   if (my_ID == 0) {
@@ -207,14 +211,21 @@ int main(int argc, char ** argv)
     }
   }
   bail_out(error);
- 
+
   if (vector == NULL) {
-    printf("Could not allocate space for grid slice of %d by %d points", 
+    printf("Could not allocate space for grid slice of %d by %d points",
            segment_size, n);
     printf(" on process %d\n", my_ID);
     error = 1;
   }
   bail_out(error);
+
+  /* Get left neighbor base address */
+  if (shm_ID > 0) {
+    MPI_Win_shared_query(shm_win, shm_ID-1, &nbr_segment_size, &source_disp, &source_ptr);
+    nbr_segment_size = end[my_ID-1] - start[my_ID-1] + 1;
+    nbr_width = nbr_segment_size;
+  }
 
   /* clear the array                                                             */
   for (j=0; j<n; j++) for (i=start[my_ID]-1; i<=end[my_ID]; i++) {
@@ -225,20 +236,14 @@ int main(int argc, char ** argv)
   for (i=start[my_ID]-1; i<=end[my_ID]; i++) ARRAY(i-start[my_ID],0) = (double) i;
 
   /* redefine start and end for calling process to reflect local indices          */
-  if (my_ID==0) start[my_ID] = 1; 
+  if (my_ID==0) start[my_ID] = 1;
   else          start[my_ID] = 0;
   end[my_ID] = segment_size-1;
-
-  /* Get left neighbor base address */
-  if (shm_ID > 0) {
-    MPI_Win_shared_query(shm_win, shm_ID-1, &nbr_segment_size, &source_disp, &source_ptr);
-    nbr_segment_size = end[my_ID-1] - start[my_ID-1] + 1;
-  }
 
   for (iter=0; iter<=iterations; iter++) {
 
     /* start timer after a warmup iteration */
-    if (iter == 1) { 
+    if (iter == 1) {
       MPI_Barrier(MPI_COMM_WORLD);
       local_pipeline_time = wtime();
     }
@@ -252,7 +257,7 @@ int main(int argc, char ** argv)
 	if (shm_ID > 0) {
 	  MPI_Recv(&p2pbuf, 0, MPI_INT, shm_ID-1, 1, shm_comm, &status);
 	} else {
-	  MPI_Recv(&(ARRAY(start[my_ID]-1,j)), 1, MPI_DOUBLE, 
+	  MPI_Recv(&(ARRAY(start[my_ID]-1,j)), 1, MPI_DOUBLE,
 		   my_ID-1, j, MPI_COMM_WORLD, &status);
 	}
       }
@@ -268,7 +273,7 @@ int main(int argc, char ** argv)
 	ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
       }
 
-      /* if I am not on the right boundary, send data to my right neighbor        */  
+      /* if I am not on the right boundary, send data to my right neighbor        */
       if (my_ID != Num_procs-1) {
 	if (shm_ID != shm_procs-1) {
 	  MPI_Send(&p2pbuf, 0, MPI_INT, shm_ID+1, 1, shm_comm);
@@ -300,7 +305,7 @@ int main(int argc, char ** argv)
   /*******************************************************************************
   ** Analyze and output results.
   ********************************************************************************/
- 
+
   /* verify correctness, using top right value                                     */
   corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == root) {
@@ -314,7 +319,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     avgtime = pipeline_time/iterations;
-#ifdef VERBOSE   
+#ifdef VERBOSE
     printf("Solution validates; verification value = %lf\n", corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",
            ((float)((n-1)*(Num_procs-1)))/(avgtime));
@@ -324,7 +329,7 @@ int main(int argc, char ** argv)
     printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
- 
+
   /* MPI_Win_free(&shm_win); */
   MPI_Info_free(&rma_winfo);
 
@@ -332,4 +337,3 @@ int main(int argc, char ** argv)
   exit(EXIT_SUCCESS);
 
 }  /* end of main */
-
