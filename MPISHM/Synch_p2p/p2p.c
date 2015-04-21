@@ -87,7 +87,11 @@ int main(int argc, char ** argv)
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of processors                                  */
   double *vector;       /* array holding grid values                             */
+<<<<<<< HEAD
   long   total_length;  /* total required length to store grid values            */
+=======
+  int    total_length;  /* total required length to store grid values            */
+>>>>>>> 2af1a64ef09d748ee7ae8d7415319662cd8739fe
   MPI_Status status;    /* completion status of message                          */
   MPI_Group shm_group, origin_group, target_group;
   int origin_ranks[1], target_ranks[1];
@@ -203,8 +207,20 @@ int main(int argc, char ** argv)
     width = segment_size;
   }
 
+<<<<<<< HEAD
   MPI_Win_allocate_shared(total_length*sizeof(double), sizeof(double), 
                           rma_winfo, shm_comm, (void *) &vector, &shm_win);
+=======
+  MPI_Win_allocate_shared(total_length*sizeof(double), sizeof(double), rma_winfo, shm_comm, (void *) &vector, &shm_win);
+  if (my_ID == 0) {
+    if (total_length/(segment_size+1) != n) {
+      printf("Grid of %d by %d points too large\n", m, n);
+      error = 1;
+    }
+  }
+  bail_out(error);
+
+>>>>>>> 2af1a64ef09d748ee7ae8d7415319662cd8739fe
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %d by %d points",
            segment_size, n);
