@@ -56,7 +56,7 @@ int main( int argc, char * argv[] ) {
  
   Grappa::init( &argc, &argv );
  
-  if( argc != 4 ) {
+  if( argc != 4 && argc !=5 ) {
     if( Grappa::mycore() == root ) 
       std::cout <<"Usage: " << argv[0] << 
                 " <#iterations> <1st array dimension> <2nd array dimension>" << std::endl;
@@ -94,7 +94,8 @@ int main( int argc, char * argv[] ) {
     std::cout<<"Number of iterations           = "<<iterations<<std::endl;
     
     Grappa::on_all_cores( [m,n,Num_procs] {
-      int my_ID = mycore(), leftover;
+
+      int my_ID = Grappa::mycore(), leftover;
       long total_length;
  
       lefts = new Grappa::FullEmpty<double>[n];
@@ -213,8 +214,8 @@ int main( int argc, char * argv[] ) {
  
  
     Grappa::on_all_cores ( [timer] {
-    Grappa::barrier();      
-    timer->total = Grappa::walltime() - timer->start;
+      Grappa::barrier();      
+      timer->total = Grappa::walltime() - timer->start;
     });
  
     // verify result
@@ -227,14 +228,11 @@ int main( int argc, char * argv[] ) {
     else {
       iter_time = Grappa::reduce<double,collective_max<double>>( &timer->total );
       avgtime = iter_time/iterations;
-      std::cout << "Rate (MFlops/s): " << 1.0E-06*2*((double)(m-1)*(n-1))/avgtime<<std::endl;
+      std::cout << "Solution validates"<<std::endl;
+      std::cout << "Rate (MFlops/s): " << 1.0E-06*2*((double)(m-1)*(n-1))/avgtime<<
+	"  Avg time (s): "<<avgtime<<std::endl;
     }
  
-    on_all_cores( [] {
-        if (lefts) delete [] lefts;
-        if (local) delete [] local;
-      } );
-      
   });
   Grappa::finalize();
   return 0;

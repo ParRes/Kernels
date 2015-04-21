@@ -85,7 +85,7 @@ int main(int argc, char ** argv)
   char   *basestring; /* initial string to be copied to private strings          */
   char   *iterstring; /* private copy of string                                  */
   char   *catstring;  /* concatenated, scrambled string                          */
-  int    length,      /* total length of scramble string                         */
+  long   length,      /* total length of scramble string                         */
          proc_length; /* length of string per process                            */
   int    basesum;     /* checksum of base string                                 */
   MPI_Datatype mpi_word; /* chunk of scramble string to be communicated          */
@@ -118,9 +118,9 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     }
 
-    length      = atoi(*++argv);
+    length      = atol(*++argv);
     if (length <Num_procs || length%Num_procs !=0) {
-      printf("ERROR: length of string %d must be multiple of # processes: %d\n", 
+      printf("ERROR: length of string %d must be multiple of # processes: %ld\n", 
              length, Num_procs);
       error = 1;
       goto ENDOFTESTS;
@@ -131,15 +131,15 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
-    printf("MPI Global Synchronization\n");
+    printf("MPI global synchronization\n");
     printf("Number of processes    = %d\n", Num_procs);
     printf("Number of iterations   = %d\n", iterations);
-    printf("Scramble string length = %d\n", length);
+    printf("Scramble string length = %ld\n", length);
   }
 
   /* Broadcast benchmark data to all processes */
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&length,     1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&length,     1, MPI_LONG, root, MPI_COMM_WORLD);
   proc_length = length/Num_procs;
 
   basestring = malloc((proc_length+1)*sizeof(char));

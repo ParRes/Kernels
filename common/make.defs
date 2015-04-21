@@ -1,6 +1,11 @@
 MPICC=mpiicc
 CC=icc 
+#CC=gcc
 CXX=mpigxx
+DEFAULT_OPT_FLAGS=-O3
+OPENMPFLAG=openmp
+#OPENMPFLAG=fopenmp
+
 CHARMTOP=/home/rfvander/charm/mpi-linux-x86_64-ifort-smp-mpicxx
 CHARMC=$(CHARMTOP)/bin/charmc
-GRAPPATOP=/home/rfvander/grappa
+GRAPPATOP=/tmp/rfvander/grappa_agg

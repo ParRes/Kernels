@@ -134,8 +134,8 @@ int main(int argc, char ** argv) {
   int    stencil_size;    /* number of points in stencil                         */
   DTYPE  * RESTRICT in;   /* input grid values                                   */
   DTYPE  * RESTRICT out;  /* output grid values                                  */
-  int    total_length_in; /* total required length to store input array          */
-  int    total_length_out;/* total required length to store output array         */
+  long   total_length_in; /* total required length to store input array          */
+  long   total_length_out;/* total required length to store output array         */
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8];
@@ -281,13 +281,6 @@ int main(int argc, char ** argv) {
   bail_out(error);
  
   total_length_in = (width+2*RADIUS)*(height+2*RADIUS)*sizeof(DTYPE);
-  if (total_length_in/(height+2*RADIUS) != (width+2*RADIUS)*sizeof(DTYPE)) {
-    printf("ERROR: Space for %d x %d input array cannot be represented\n", 
-           width+2*RADIUS, height+2*RADIUS);
-    error = 1;
-  }
-  bail_out(error);
- 
   total_length_out = width*height*sizeof(DTYPE);
  
   in  = (DTYPE *) malloc(total_length_in);

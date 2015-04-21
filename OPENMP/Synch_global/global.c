@@ -89,8 +89,8 @@ int main(int argc, char ** argv)
   char   *basestring;   /* initial string to be copied to private strings   */
   char   *iterstring;   /* private copy of string                           */
   char   *catstring;    /* concatenated, scrambled string                   */
-  int    length;        /* length of scramble string                        */
-  int    thread_length; /* string length per thread                         */
+  long   length;        /* length of scramble string                        */
+  long   thread_length; /* string length per thread                         */
   int    basesum;       /* checksum of base string                          */
   double stopngo_time;  /* timing parameter                                 */
   int    nthread_input, /* thread parameters                                */
@@ -123,7 +123,7 @@ int main(int argc, char ** argv)
      exit(EXIT_FAILURE);
   }
 
-  length = atoi(*++argv);
+  length = atol(*++argv);
   if (length <nthread_input || length%nthread_input !=0) {
     printf("ERROR: length of string %d must be multiple of # threads: %d\n", 
            length, nthread_input);
@@ -180,8 +180,8 @@ int main(int argc, char ** argv)
     printf("number of spawned threads %d\n", nthread);
   } 
   else {
-    printf("Number of threads              = %i;\n",nthread_input);
-    printf("Length of scramble string      = %d\n", length);
+    printf("Number of threads              = %d;\n",nthread_input);
+    printf("Length of scramble string      = %ld\n", length);
     printf("Number of iterations           = %d\n", iterations);
     printf("Number of synchronizations     = %d\n", 2*iterations);
   }

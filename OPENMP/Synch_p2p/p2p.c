@@ -67,12 +67,6 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_omp.h>
 
-/* We need to be able to flush the contents of an array, so we must declare it
-   statically. That means the total array size must be known at compile time     */
-#ifndef MEMWORDS
-#define MEMWORDS  100000000L
-#endif
-
 /* define shorthand for indexing a multi-dimensional array                       */
 #define ARRAY(i,j) vector[i+(j)*(m)]
 /* define shorthand for flag with cache line padding                             */
@@ -96,11 +90,8 @@ int main(int argc, char ** argv) {
          nthread; 
   int    grp;             /* grid line aggregation factor                        */
   int    jjsize;          /* actual line group size                              */
-  static                  /* use "static to put the thing on the heap            */
-  double vector[MEMWORDS];/* array holding grid values; we would like to 
-                             allocate it dynamically, but need to be able to 
-                             flush the thing                                     */
-  int    total_length;    /* total required length to store grid values          */
+  double RESTRICT *vector;/* array holding grid values                           */
+  long   total_length;    /* total required length to store grid values          */
   int    num_error=0;     /* flag that signals that requested and obtained
                              numbers of threads are the same                     */
 
@@ -146,10 +137,11 @@ int main(int argc, char ** argv) {
   else grp = 1;
 
   /*  make sure we stay within the memory allocated for vector                   */
-  total_length = m*n;
-  if (total_length/n != m || total_length > MEMWORDS) {
-    printf("Grid of %d by %d points too large; ", m, n);
-    printf("increase MEMWORDS in Makefile or  reduce grid size\n");
+  total_length = sizeof(double)*m*n;
+
+  vector = (double *) malloc(total_length);
+  if (!vector) {
+    printf("ERROR: Could not allocate space for vector: %ld\n", total_length);
     exit(EXIT_FAILURE);
   }
 
@@ -229,10 +221,10 @@ int main(int argc, char ** argv) {
       /* if not on left boundary,  wait for left neighbor to produce data          */
       if (TID > 0) {
 	while (flag(TID-1) == 0) {
-           #pragma omp flush(flag)
+           #pragma omp flush
         }
 	  flag(TID-1) = 0;
-        #pragma omp flush(flag,vector)
+        #pragma omp flush
       }
 
       for (jj=j; jj<j+jjsize; jj++)
@@ -243,10 +235,10 @@ int main(int argc, char ** argv) {
       /* if not on right boundary, wait until right neighbor has received my data  */
       if (TID < nthread-1) {
         while (flag(TID) == 1) {
-          #pragma omp flush(flag)
+          #pragma omp flush
         }
 	  flag(TID) = 1;
-        #pragma omp flush(flag,vector)
+        #pragma omp flush
       }
     }
 

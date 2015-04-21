@@ -348,7 +348,6 @@ int main(int argc, char ** argv)
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-	      /*              printf("shm_ID= %04d it=%05d jt=%05d\n", shm_ID, it, jt); */
               B(jt,it) = A(it,jt); 
 	    }
       }

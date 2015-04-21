@@ -71,10 +71,7 @@ int main(int argc, char ** argv) {
          avgtime; 
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;      /* verification value at top right corner of grid      */
-  static                  /* use "static to put the thing on the heap            */
-  double *RESTRICT vector;/* array holding grid values; we would like to 
-                             allocate it dynamically, but need to be able to 
-                             flush the thing                                     */
+  double *RESTRICT vector;/* array holding grid values                           */
   long   total_length;    /* total required length to store grid values          */
 
   /*******************************************************************************
@@ -112,7 +109,7 @@ int main(int argc, char ** argv) {
   printf("Grid sizes                = %d, %d\n", m, n);
   printf("Number of iterations      = %d\n", iterations);
 
-  /* clear the array, assuming first-touch memory placement                      */
+  /* clear the array                                                             */
   for (j=0; j<n; j++) for (i=0; i<m; i++) ARRAY(i,j) = 0.0;
   /* set boundary values (bottom and left side of grid                           */
   for (j=0; j<n; j++) ARRAY(0,j) = (double) j;

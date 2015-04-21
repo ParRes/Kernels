@@ -123,7 +123,7 @@ int main(int argc, char ** argv)
 
 
   if (my_ID == root) {
-    printf("MPI Vector Reduction\n");
+    printf("MPI vector reduction\n");
     printf("Number of processes  = %d\n", Num_procs);
     printf("Vector length        = %d\n", vector_length);
     printf("Number of iterations = %d\n", iterations);     

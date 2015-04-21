@@ -1,12 +1,12 @@
 include ../../common/MPI.defs
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -restrict -O3
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults
 
-RESTRICTFLAG = -DRESTRICT_KEYWORD
+#RESTRICTFLAG = -DRESTRICT_KEYWORD
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers
 
@@ -19,7 +19,7 @@ STARFLAG   = -DSTAR
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS    = -strict-ansi  
+USERFLAGS    =
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects

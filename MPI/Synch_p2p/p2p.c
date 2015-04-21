@@ -89,7 +89,7 @@ int main(int argc, char ** argv)
   int    jjsize;        /* actual line group size                                */
   double *vector;       /* array holding grid values                             */
   double *inbuf, *outbuf; /* communication buffers used when aggregating         */
-  int    total_length;  /* total required length to store grid values            */
+  long   total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
 
 /*********************************************************************************
@@ -181,14 +181,6 @@ int main(int argc, char ** argv)
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end-start+1)+1)*n;
   vector = (double *) malloc(total_length*sizeof(double));
-  if (my_ID == root) {
-    if (total_length/(segment_size+1) != n) {
-      printf("Grid of %d by %d points too large\n", m, n);
-      error = 1;
-    }
-  }
-  bail_out(error);
-
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %d by %d points", 
            segment_size, n);
@@ -196,7 +188,6 @@ int main(int argc, char ** argv)
     error = 1;
   }
   bail_out(error);
-
   
   /* reserve space for in and out buffers                                        */
   inbuf = (double *) malloc(2*sizeof(double)*(grp));

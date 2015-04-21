@@ -9,10 +9,10 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
-NTHREADFLAG = -DMAXTHREADS=80
-#description: default thread limit is 32
+#NTHREADFLAG = -DMAXTHREADS=n
+#description: default thread limit is 256
 
-USERFLAGS    = -strict-ansi  
+USERFLAGS    = 
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects

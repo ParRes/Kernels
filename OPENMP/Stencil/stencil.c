@@ -99,12 +99,11 @@ int main(int argc, char ** argv) {
   double stencil_time,    /* timing parameters                                   */
          avgtime;
   int    stencil_size;    /* number of points in stencil                         */
-  int    tile_size;       /* grid block factor                                   */
   int    nthread_input,   /* thread parameters                                   */
          nthread; 
   DTYPE  * RESTRICT in;   /* input grid values                                   */
   DTYPE  * RESTRICT out;  /* output grid values                                  */
-  int    total_length;    /* total required length to store grid values          */
+  long   total_length;    /* total required length to store grid values          */
   int    num_error=0;     /* flag that signals that requested and obtained
                              numbers of threads are the same                     */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
@@ -113,8 +112,8 @@ int main(int argc, char ** argv) {
   ** process and test input parameters    
   ********************************************************************************/
 
-  if (argc != 4 && argc != 5){
-    printf("Usage: %s <# threads> <# iterations> <array dimension> <tile size>\n", 
+  if (argc != 4){
+    printf("Usage: %s <# threads> <# iterations> <array dimension>\n", 
            *argv);
     return(EXIT_FAILURE);
   }
@@ -154,19 +153,6 @@ int main(int argc, char ** argv) {
 
   /*  make sure the vector space can be represented                             */
   total_length = n*n*sizeof(DTYPE);
-  if (total_length/n != n*sizeof(DTYPE)) {
-    printf("ERROR: Space for %d x %d grid cannot be represented; ", n, n);
-    exit(EXIT_FAILURE);
-  }
-
-  if (argc == 5) {
-    tile_size = atoi(*++argv);
-    if (tile_size < 1) {
-      printf("ERROR: tile size must be positive : %d\n", tile_size);
-      exit(EXIT_FAILURE);
-    }
-  }
-  else tile_size = n;
 
   in  = (DTYPE *) malloc(total_length);
   out = (DTYPE *) malloc(total_length);
@@ -219,10 +205,6 @@ int main(int argc, char ** argv) {
     printf("Number of threads    = %d\n",nthread_input);
     printf("Grid size            = %d\n", n);
     printf("Radius of stencil    = %d\n", RADIUS);
-    if (tile_size <n-2*RADIUS) 
-      printf("Tile size            = %d\n", tile_size);
-    else
-      printf("Grid not tiled\n");
 #ifdef STAR
     printf("Type of stencil      = star\n");
 #else
@@ -257,43 +239,18 @@ int main(int argc, char ** argv) {
       }
     }
 
-    /* Apply the stencil operator; only use tiling if the tile size is smaller
-       than the iterior part of the grid                                       */
-    if (tile_size < n-2*RADIUS) {
-      #pragma omp for
-      for (j=RADIUS; j<n-RADIUS; j+=tile_size) {
-        for (i=RADIUS; i<n-RADIUS; i+=tile_size) {
-          for (jt=j; jt<MIN(n-RADIUS,j+tile_size); jt++) {
-            for (it=i; it<MIN(n-RADIUS,i+tile_size); it++) {
+    #pragma omp for
+    for (j=RADIUS; j<n-RADIUS; j++) {
+      for (i=RADIUS; i<n-RADIUS; i++) {
 #ifdef STAR
-              for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(it,jt) += WEIGHT(0,jj)*IN(it,jt+jj);
-              for (ii=-RADIUS; ii<0; ii++)       OUT(it,jt) += WEIGHT(ii,0)*IN(it+ii,jt);
-              for (ii=1; ii<=RADIUS; ii++)       OUT(it,jt) += WEIGHT(ii,0)*IN(it+ii,jt);
+        for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+        for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+        for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
 #else
-              /* would like to be able to unroll this loop, but compiler will ignore  */
-              for (jj=-RADIUS; jj<=RADIUS; jj++) 
-              for (ii=-RADIUS; ii<=RADIUS; ii++)  
-                OUT(it,jt) += WEIGHT(ii,jj)*IN(it+ii,jt+jj);
+        /* would like to be able to unroll this loop, but compiler will ignore  */
+        for (jj=-RADIUS; jj<=RADIUS; jj++) 
+        for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
 #endif
-            }
-          }
-        }
-      }
-    }
-    else {
-      #pragma omp for
-      for (j=RADIUS; j<n-RADIUS; j++) {
-        for (i=RADIUS; i<n-RADIUS; i++) {
-#ifdef STAR
-          for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-          for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-          for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-#else
-          /* would like to be able to unroll this loop, but compiler will ignore  */
-          for (jj=-RADIUS; jj<=RADIUS; jj++) 
-          for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
-#endif
-        }
       }
     }
 

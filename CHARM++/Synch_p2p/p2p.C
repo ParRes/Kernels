@@ -110,8 +110,8 @@ public:
       flops = (double) (2*(n-1)) * (double) (m-1)*maxiterations;
       diff = ABS(result-corner_val);
       if (diff < EPSILON) {
-        CkPrintf("Solution validates; ");
-        CkPrintf("MFlops: %lf Avg time (s) %lf\n", flops/totalTime/1.e6, totalTime/maxiterations);
+        CkPrintf("Solution validates\n");
+        CkPrintf("Rate (MFlops): %lf Avg time (s) %lf\n", flops/totalTime/1.e6, totalTime/maxiterations);
       }
       else {
         CkPrintf("Solution does not validate\n");

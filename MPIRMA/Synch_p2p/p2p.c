@@ -87,7 +87,7 @@ int main(int argc, char ** argv)
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of processors                                  */
   double *vector;       /* array holding grid values                             */
-  int    total_length;  /* total required length to store grid values            */
+  long   total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
   MPI_Win rma_win;       /* RMA window object */
   MPI_Info rma_winfo;   /* info for window */
@@ -184,15 +184,9 @@ int main(int argc, char ** argv)
 
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  MPI_Win_allocate(total_length*sizeof(double), sizeof(double), rma_winfo, MPI_COMM_WORLD, (void *) &vector, &rma_win);
-  if (my_ID == root) {
-    if (total_length/(segment_size+1) != n) {
-      printf("Grid of %d by %d points too large\n", m, n);
-      error = 1;
-    }
-  }
-  bail_out(error);
- 
+
+  MPI_Win_allocate(total_length*sizeof(double), sizeof(double), rma_winfo, 
+                   MPI_COMM_WORLD, (void *) &vector, &rma_win);
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %d by %d points", 
            segment_size, n);

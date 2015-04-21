@@ -212,8 +212,8 @@ int main(int argc, char ** argv) {
   int    stencil_size;    /* number of points in stencil                         */
   DTYPE  * RESTRICT in;   /* input grid values                                   */
   DTYPE  * RESTRICT out;  /* output grid values                                  */
-  int    total_length_in; /* total required length to store input array          */
-  int    total_length_out;/* total required length to store output array         */
+  long   total_length_in; /* total required length to store input array          */
+  long   total_length_out;/* total required length to store output array         */
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8]; /* requests for sends & receives in 4 coord directions */
@@ -261,7 +261,7 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;
     } 
     if (Num_procs%group_size) {
-      printf("ERROR: toal # %d ranks not divisible by ranks per coherence domain %d\n",
+      printf("ERROR: total # %d ranks not divisible by ranks per coherence domain %d\n",
 	     Num_procs, group_size);
       error = 1;
       goto ENDOFTESTS;
@@ -386,11 +386,11 @@ int main(int argc, char ** argv) {
   leftover = n%Num_groupsx;
   if (my_group_IDx<leftover) {
     istart = (width+1) * my_group_IDx; 
-    iend = istart + width + 1;
+    iend = istart + width;
   }
   else {
     istart = (width+1) * leftover + width * (my_group_IDx-leftover);
-    iend = istart + width;
+    iend = istart + width - 1;
   }
   
   width = iend - istart + 1;
@@ -404,11 +404,11 @@ int main(int argc, char ** argv) {
   leftover = n%Num_groupsy;
   if (my_group_IDy<leftover) {
     jstart = (height+1) * my_group_IDy; 
-    jend = jstart + height + 1;
+    jend = jstart + height;
   }
   else {
     jstart = (height+1) * leftover + height * (my_group_IDy-leftover);
-    jend = jstart + height;
+    jend = jstart + height - 1;
   }
   
   height = jend - jstart + 1;
@@ -426,13 +426,6 @@ int main(int argc, char ** argv) {
   bail_out(error);
  
   total_length_in = (width+2*RADIUS)*(height+2*RADIUS)*sizeof(DTYPE);
-  if (total_length_in/(height+2*RADIUS) != (width+2*RADIUS)*sizeof(DTYPE)) {
-    printf("ERROR: Space for %d x %d input array cannot be represented\n", 
-           width+2*RADIUS, height+2*RADIUS);
-    error = 1;
-  }
-  bail_out(error);
- 
   total_length_out = width*height*sizeof(DTYPE);
 
   /* only the root of each SHM domain specifies window of nonzero size */
@@ -463,11 +456,11 @@ int main(int argc, char ** argv) {
   leftover = n%Num_procsx;
   if (my_global_IDx<leftover) {
     istart_rank = (width_rank+1) * my_global_IDx; 
-    iend_rank = istart_rank + width_rank + 1;
+    iend_rank = istart_rank + width_rank;
   }
   else {
     istart_rank = (width_rank+1) * leftover + width_rank * (my_global_IDx-leftover);
-    iend_rank = istart_rank + width_rank;
+    iend_rank = istart_rank + width_rank - 1;
   }
 
   width_rank = iend_rank - istart_rank + 1;   
@@ -476,11 +469,11 @@ int main(int argc, char ** argv) {
   leftover = n%Num_procsy;
   if (my_global_IDy<leftover) {
     jstart_rank = (height_rank+1) * my_global_IDy; 
-    jend_rank = jstart_rank + height_rank + 1;
+    jend_rank = jstart_rank + height_rank;
   }
   else {
     jstart_rank = (height_rank+1) * leftover + height_rank * (my_global_IDy-leftover);
-    jend_rank = jstart_rank + height_rank;
+    jend_rank = jstart_rank + height_rank - 1;
   }
   
   height_rank = jend_rank - jstart_rank + 1;
@@ -518,7 +511,7 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
   /* intialize the input and output arrays                                     */
-  for (j=jstart_rank; j<jend_rank; j++) for (i=istart_rank; i<iend_rank; i++) {
+  for (j=jstart_rank; j<=jend_rank; j++) for (i=istart_rank; i<=iend_rank; i++) {
     IN(i,j)  = COEFX*i+COEFY*j;
     OUT(i,j) = (DTYPE)0.0;
   }
@@ -537,7 +530,7 @@ int main(int argc, char ** argv) {
     if (top_nbr != -1) {
       MPI_Irecv(top_buf_in, RADIUS*width_rank, MPI_DTYPE, top_nbr, 101,
                 MPI_COMM_WORLD, &(request[1]));
-      for (kk=0,j=jend_rank-RADIUS; j<=jend_rank-1; j++) 
+      for (kk=0,j=jend_rank-RADIUS+1; j<=jend_rank; j++) 
       for (i=istart_rank; i<=iend_rank; i++) {
         top_buf_out[kk++]= IN(i,j);
       }
@@ -559,7 +552,7 @@ int main(int argc, char ** argv) {
     if (top_nbr != -1) {
       MPI_Wait(&(request[0]), &(status[0]));
       MPI_Wait(&(request[1]), &(status[1]));
-      for (kk=0,j=jend_rank; j<=jend_rank+RADIUS-1; j++) 
+      for (kk=0,j=jend_rank+1; j<=jend_rank+RADIUS; j++) 
       for (i=istart_rank; i<=iend_rank; i++) {
         IN(i,j) = top_buf_in[kk++];
       }
@@ -579,7 +572,7 @@ int main(int argc, char ** argv) {
       MPI_Irecv(right_buf_in, RADIUS*height_rank, MPI_DTYPE, right_nbr, 1010,
                 MPI_COMM_WORLD, &(request[1+4]));
       for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
-      for (i=iend_rank-RADIUS; i<=iend_rank-1; i++) {
+      for (i=iend_rank-RADIUS+1; i<=iend_rank; i++) {
         right_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(right_buf_out, RADIUS*height_rank, MPI_DTYPE, right_nbr, 990, 
@@ -601,7 +594,7 @@ int main(int argc, char ** argv) {
       MPI_Wait(&(request[0+4]), &(status[0+4]));
       MPI_Wait(&(request[1+4]), &(status[1+4]));
       for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
-      for (i=iend_rank; i<=iend_rank+RADIUS-1; i++) {
+      for (i=iend_rank+1; i<=iend_rank+RADIUS; i++) {
         IN(i,j) = right_buf_in[kk++];
       }
     }
@@ -615,11 +608,9 @@ int main(int argc, char ** argv) {
       }
     }
 
-    MPI_Barrier(shm_comm);
-
     /* Apply the stencil operator */
-    for (j=MAX(jstart_rank,RADIUS); j<MIN(n-RADIUS,jend_rank); j++) {
-      for (i=MAX(istart_rank,RADIUS); i<MIN(n-RADIUS,iend_rank); i++) {
+    for (j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
+      for (i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
         for (jj=-RADIUS; jj<=RADIUS; jj++) {
           OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
         }
@@ -633,13 +624,13 @@ int main(int argc, char ** argv) {
       }
     }
  
-    MPI_Barrier(shm_comm);
+    MPI_Barrier(shm_comm); // needed to avoid writing IN while other ranks are reading it
 
     /* add constant to solution to force refresh of neighbor data, if any */
-    for (j=jstart_rank; j<jend_rank; j++) 
-    for (i=istart_rank; i<iend_rank; i++) IN(i,j)+= 1.0;
+    for (j=jstart_rank; j<=jend_rank; j++) 
+    for (i=istart_rank; i<=iend_rank; i++) IN(i,j)+= 1.0;
 
-    MPI_Barrier(shm_comm);
+    MPI_Barrier(shm_comm); // needed to avoid reading IN while other ranks are writing it
  
   } /* end of iterations                                                   */
  
@@ -649,8 +640,8 @@ int main(int argc, char ** argv) {
   
   /* compute L1 norm in parallel                                                */
   local_norm = (DTYPE) 0.0;
-  for (j=MAX(jstart_rank,RADIUS); j<MIN(n-RADIUS,jend_rank); j++) {
-    for (i=MAX(istart_rank,RADIUS); i<MIN(n-RADIUS,iend_rank); i++) {
+  for (j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
+    for (i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
       local_norm += (DTYPE)ABS(OUT(i,j));
     }
   }

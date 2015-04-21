@@ -240,11 +240,11 @@ int main(int argc, char ** argv) {
   leftover = n%Num_procsx;
   if (my_IDx<leftover) {
     istart = (width+1) * my_IDx; 
-    iend = istart + width + 1;
+    iend = istart + width;
   }
   else {
     istart = (width+1) * leftover + width * (my_IDx-leftover);
-    iend = istart + width;
+    iend = istart + width - 1;
   }
   
   width = iend - istart + 1;
@@ -253,16 +253,16 @@ int main(int argc, char ** argv) {
     error = 1;
   }
   bail_out(error);
- 
+
   height = n/Num_procsy;
   leftover = n%Num_procsy;
   if (my_IDy<leftover) {
     jstart = (height+1) * my_IDy; 
-    jend = jstart + height + 1;
+    jend = jstart + height;
   }
   else {
     jstart = (height+1) * leftover + height * (my_IDy-leftover);
-    jend = jstart + height;
+    jend = jstart + height - 1;
   }
   
   height = jend - jstart + 1;
@@ -271,7 +271,7 @@ int main(int argc, char ** argv) {
     error = 1;
   }
   bail_out(error);
- 
+
   if (width < RADIUS || height < RADIUS) {
     printf("ERROR: Process %d has work tile smaller then stencil radius\n",
            my_ID);
@@ -311,7 +311,7 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
   /* intialize the input and output arrays                                     */
-  for (j=jstart; j<jend; j++) for (i=istart; i<iend; i++) {
+  for (j=jstart; j<=jend; j++) for (i=istart; i<=iend; i++) {
     IN(i,j)  = COEFX*i+COEFY*j;
     OUT(i,j) = (DTYPE)0.0;
   }
@@ -349,7 +349,7 @@ int main(int argc, char ** argv) {
     if (my_IDy < Num_procsy-1) {
       MPI_Irecv(top_buf_in, RADIUS*width, MPI_DTYPE, top_nbr, 101,
                 MPI_COMM_WORLD, &(request[1]));
-      for (kk=0,j=jend-RADIUS; j<=jend-1; j++) for (i=istart; i<=iend; i++) {
+      for (kk=0,j=jend-RADIUS+1; j<=jend; j++) for (i=istart; i<=iend; i++) {
           top_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(top_buf_out, RADIUS*width,MPI_DTYPE, top_nbr, 99, 
@@ -367,7 +367,7 @@ int main(int argc, char ** argv) {
     if (my_IDy < Num_procsy-1) {
       MPI_Wait(&(request[0]), &(status[0]));
       MPI_Wait(&(request[1]), &(status[1]));
-      for (kk=0,j=jend; j<=jend+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
+      for (kk=0,j=jend+1; j<=jend+RADIUS; j++) for (i=istart; i<=iend; i++) {
           IN(i,j) = top_buf_in[kk++];
       }      
     }
@@ -383,7 +383,7 @@ int main(int argc, char ** argv) {
     if (my_IDx < Num_procsx-1) {
       MPI_Irecv(right_buf_in, RADIUS*height, MPI_DTYPE, right_nbr, 1010,
                 MPI_COMM_WORLD, &(request[1+4]));
-      for (kk=0,j=jstart; j<=jend; j++) for (i=iend-RADIUS; i<=iend-1; i++) {
+      for (kk=0,j=jstart; j<=jend; j++) for (i=iend-RADIUS+1; i<=iend; i++) {
           right_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(right_buf_out, RADIUS*height, MPI_DTYPE, right_nbr, 990, 
@@ -401,7 +401,7 @@ int main(int argc, char ** argv) {
     if (my_IDx < Num_procsx-1) {
       MPI_Wait(&(request[0+4]), &(status[0+4]));
       MPI_Wait(&(request[1+4]), &(status[1+4]));
-      for (kk=0,j=jstart; j<=jend; j++) for (i=iend; i<=iend+RADIUS-1; i++) {
+      for (kk=0,j=jstart; j<=jend; j++) for (i=iend+1; i<=iend+RADIUS; i++) {
           IN(i,j) = right_buf_in[kk++];
       }      
     }
@@ -414,8 +414,8 @@ int main(int argc, char ** argv) {
     }
 
     /* Apply the stencil operator */
-    for (j=MAX(jstart,RADIUS); j<MIN(n-RADIUS,jend); j++) {
-      for (i=MAX(istart,RADIUS); i<MIN(n-RADIUS,iend); i++) {
+    for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
+      for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
         for (jj=-RADIUS; jj<=RADIUS; jj++) {
           OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
         }
@@ -430,7 +430,7 @@ int main(int argc, char ** argv) {
     }
  
     /* add constant to solution to force refresh of neighbor data, if any */
-    for (j=jstart; j<jend; j++) for (i=istart; i<iend; i++) IN(i,j)+= 1.0;
+    for (j=jstart; j<=jend; j++) for (i=istart; i<=iend; i++) IN(i,j)+= 1.0;
  
   } /* end of iterations                                                   */
 
@@ -440,8 +440,8 @@ int main(int argc, char ** argv) {
   
   /* compute L1 norm in parallel                                                */
   local_norm = (DTYPE) 0.0;
-  for (j=MAX(jstart,RADIUS); j<MIN(n-RADIUS,jend); j++) {
-    for (i=MAX(istart,RADIUS); i<MIN(n-RADIUS,iend); i++) {
+  for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
+    for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
       local_norm += (DTYPE)ABS(OUT(i,j));
     }
   }

@@ -1,7 +1,7 @@
 include ../../common/GRAPPA.defs
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -O3
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults
@@ -28,7 +28,7 @@ INCLUDEPATHS = -I$(GRAPPATOP)/build/Make+Release/third-party/include \
 ### End User configurable options ###
 
 # this is used by the C++ implicit compile rule
-CXXFLAGS= -DENABLE_RDMA_AGGREGATOR  -std=c++11 -Winline -Wno-inline -mno-red-zone -g -DNDEBUG  
+CXXFLAGS= -DENABLE_RDMA_AGGREGATOR -DENABLE_NT_MESSAGE -std=c++11 -Winline -Wno-inline -mno-red-zone -g -DNDEBUG  
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) $(CXXFLAGS)
 PROGRAM     = p2p

@@ -10,7 +10,7 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS     = -strict-ansi  
+USERFLAGS     = 
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects

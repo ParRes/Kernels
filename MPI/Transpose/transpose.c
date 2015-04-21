@@ -205,7 +205,7 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
-    printf("MPI Matrix transpose: B = A^T\n");
+    printf("MPI matrix transpose: B = A^T\n");
     printf("Number of processes  = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
     if ((Tile_order > 0) && (Tile_order < order))

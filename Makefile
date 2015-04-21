@@ -39,7 +39,7 @@ ifndef matrix_rank
 endif
 
 ifndef default_opt_flags
-  default_opt_flags=-O3 -restrict
+  default_opt_flags=-O3
 endif
 
 default:
@@ -58,6 +58,8 @@ default:
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
 all: allserial allopenmp allmpi allmpiopenmp allmpirma allmpishm allcharm++ allgrappa
+alldarwin: allserial allopenmp allmpi allmpiopenmp allmpirma allmpishm 
+allfreaks: allcharm++ allgrappa
 
 allmpi: 
 	cd MPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"

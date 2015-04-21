@@ -2,12 +2,12 @@ include ../../common/OPENMP.defs
 
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -restrict 
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults
 
-RESTRICTFLAG = -DRESTRICT_KEYWORD
+#RESTRICTFLAG = -DRESTRICT_KEYWORD
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers
 
@@ -17,10 +17,10 @@ RESTRICTFLAG = -DRESTRICT_KEYWORD
 SCRAMBLEFLAG = -DSCRAMBLE
 #description: if flag is set, grid indices are scrambled to produce irregular stride
 
-#NTHREADFLAG  = -DMAXTHREADS=256
-#description: default thread limit is 32
+#NTHREADFLAG  = -DMAXTHREADS=n
+#description: default thread limit is 256
 
-USERFLAGS     =    -strict-ansi 
+USERFLAGS     = 
 #description: parameter to specify optional flags
 
 EXTOBJS      = 

@@ -225,7 +225,7 @@ int main(int argc, char ** argv)
   tiling = (Tile_order > 0) && (Tile_order < order);
 
   if (my_ID == root) {
-    printf("MPI+OpenMP Matrix transpose: B = A^T\n");
+    printf("MPI+OpenMP matrix transpose: B = A^T\n");
     printf("Number of processes  = %d\n", Num_procs);
     printf("Number of threads    = %d\n", omp_get_max_threads());
     printf("Matrix order         = %d\n", order);

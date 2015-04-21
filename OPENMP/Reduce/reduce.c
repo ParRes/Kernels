@@ -80,13 +80,6 @@ HISTORY: Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_omp.h>
 
-/* MEGAMEMWORDS is the total number of words needed by all threads. 
-   Note that we cannot use dynamic memory allocation for either "vector" 
-   or "flag," because such memory locations cannot be flushed to memory    */
-#ifndef MEGAMEMWORDS
-  #define MEGAMEMWORDS  1024L
-#endif
-
 #define LINEAR            11
 #define BINARY_BARRIER    12
 #define BINARY_P2P        13
@@ -121,11 +114,7 @@ int main(int argc, char ** argv)
   int    my_donor, my_segment;
   int    nthread_input,   /* thread parameters                               */
          nthread;   
-  static double           /* use static so it goes on the heap, not stack    */
-  RESTRICT vector[MEGAMEMWORDS*1024*1024];
-                          /* we would like to allocate "vector" dynamically, 
-                             but need to be able to flush the thing in some 
-                             versions of the reduction algorithm -> static   */
+  double RESTRICT *vector;/* vector pair to be reduced                       */
   int    num_error=0;     /* flag that signals that requested and obtained
                              numbers of threads are the same                 */
 
@@ -161,12 +150,11 @@ int main(int argc, char ** argv)
     printf("ERROR: vector length must be >= 1 : %d \n",vector_length);
     exit(EXIT_FAILURE);
   }
-  /*  make sure we stay within the memory allocated for vector               */
-  total_length = 2*nthread_input*vector_length;
-  if (total_length/(2*nthread_input) != vector_length || 
-    total_length > MEGAMEMWORDS*1024*1024) {
-    printf("Vector length of %d too large; ", vector_length);
-    printf("increase MEMWORDS in Makefile or reduce vector length\n");
+
+  total_length = 2*nthread_input*sizeof(double)*vector_length;
+  vector = (double *) malloc(total_length);
+  if (!vector) {
+    printf("Could not allocate space for vectors\n");
     exit(EXIT_FAILURE);
   }
 
@@ -312,23 +300,20 @@ int main(int argc, char ** argv)
            updated its vector in the previous round before it is being read  */
         if (my_ID < group_size && my_ID+group_size<old_size) {
           while (flag(my_ID+group_size) == 0) {
-            #pragma omp flush (flag)
+            #pragma omp flush
           }
-          /* make sure I read the latest version of vector from memory; 
-             include flag in the flush list to make sure the flush takes 
-             place after flag has been read and changed (by another thread)  */
-          #pragma omp flush (flag,vector)
+          /* make sure I read the latest version of vector from memory       */
+          #pragma omp flush 
           for (i=0; i<vector_length; i++) {
             VEC0(my_ID,i) += VEC0(my_ID+group_size,i);
           }
         }
         else {
           if (my_ID < old_size) {
-            /* I am a producer of data in this iteration; include vector in
-               the flush list, to make sure my updated version can be seen 
-               by all threads                                                */
+            /* I am a producer of data in this iteration; make sure my 
+               updated version can be seen by all threads                    */
             flag(my_ID) = 1;
-            #pragma omp flush (flag,vector)
+            #pragma omp flush
           }
         }
       }
