@@ -20,7 +20,7 @@ USERFLAGS     =
 #description: parameter to specify optional flags
 
 EXTOBJS      = 
-LIBS         =
+LIBS         = -lm
 LIBPATHS     = 
 INCLUDEPATHS = 
 

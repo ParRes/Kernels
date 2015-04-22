@@ -2,4 +2,4 @@ include ../../common/make.defs
 CCOMPILER=$(MPICC)
 CLINKER=$(CCOMPILER)
 COMOBJS=MPI_bail_out.o wtime.o
-PROG_ENV=-DMPI -openmp
+PROG_ENV=-DMPI $(OPENMPFLAG)
