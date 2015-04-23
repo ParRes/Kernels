@@ -2,4 +2,4 @@ include ../../common/make.defs
 CCOMPILER =$(CC)
 CLINKER   = $(CCOMPILER)
 COMOBJS   = wtime.o OPENMP_bail_out.o
-PROG_ENV = -fopenmp
+PROG_ENV = $(OPENMPFLAG)

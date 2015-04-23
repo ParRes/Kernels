@@ -162,8 +162,12 @@ int main(int argc, char ** argv) {
   else {
     printf("Number of threads     = %i;\n",nthread_input);
     printf("Matrix order          = %d\n", order);
-    if (tiling) 
-    printf("Tile size             = %d\n", Tile_order);
+    if (tiling) {
+      printf("Tile size             = %d\n", Tile_order);
+#ifdef COLLAPSE
+      printf("Using loop collapse\n");
+    }
+#endif
     else                   
     printf("Untiled\n");
     printf("Number of iterations  = %d\n", iterations);
@@ -174,7 +178,11 @@ int main(int argc, char ** argv) {
   /*  Fill the original matrix, set transpose to known garbage value. */
 
   if (tiling) {
-    #pragma omp for private (i, it, jt)
+#ifdef COLLAPSE
+    #pragma omp parallel for private (i,it,jt) collapse(2)
+#else
+    #pragma omp parallel for private (i,it,jt)
+#endif
     for (j=0; j<order; j+=Tile_order) 
       for (i=0; i<order; i+=Tile_order) 
         for (jt=j; jt<MIN(order,j+Tile_order);jt++)
@@ -212,7 +220,11 @@ int main(int argc, char ** argv) {
         }
     }
     else {
-      #pragma omp for private (j,it,jt)
+#ifdef COLLAPSE
+      #pragma omp parallel for private (j,it,jt) collapse(2)
+#else
+      #pragma omp parallel for private (j,it,jt)
+#endif
       for (i=0; i<order; i+=Tile_order) 
         for (j=0; j<order; j+=Tile_order) 
           for (it=i; it<MIN(order,i+Tile_order); it++) 

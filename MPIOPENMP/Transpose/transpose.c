@@ -229,8 +229,12 @@ int main(int argc, char ** argv)
     printf("Number of processes  = %d\n", Num_procs);
     printf("Number of threads    = %d\n", omp_get_max_threads());
     printf("Matrix order         = %d\n", order);
-    if (tiling)
-          printf("Tile size            = %d\n", Tile_order);
+    if (tiling) {
+      printf("Tile size            = %d\n", Tile_order);
+#ifdef COLLAPSE
+       printf("Using loop collapse\n");
+    }
+#endif
     else  printf("Untiled\n");
 #ifndef SYNCHRONOUS
     printf("Non-");

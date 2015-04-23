@@ -14,6 +14,9 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
+COLLAPSEFLAG = -DCOLLAPSE
+#description: collapse outer two loops in case of tiling to increase concurrency
+
 #NTHREADFLAG = -DMAXTHREADS=n
 #description: default thread limit is 256
 
@@ -28,7 +31,7 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS    = $(DEBUGFLAG) $(NTHREADFLAG) $(USERFLAGS) $(RESTRICTFLAG)
+TUNEFLAGS    = $(DEBUGFLAG) $(NTHREADFLAG) $(USERFLAGS) $(RESTRICTFLAG) $(COLLAPSEFLAG)
 PROGRAM      = transpose
 OBJS         = $(PROGRAM).o $(COMOBJS)
 
