@@ -10,6 +10,9 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #BLOCKFLAG    = -DSYNCHRONOUS
 #description: turn on synchronous (blocking) communications
 
+COLLAPSEFLAG = -DCOLLAPSE
+#description: collapse outer 2 loops in case of tiling to increase concurrency
+
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
@@ -24,7 +27,7 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS   = $(BLOCKFLAG) $(DEBUGFLAG) $(USERFLAGS) 
+TUNEFLAGS   = $(BLOCKFLAG) $(DEBUGFLAG) $(USERFLAGS) $(COLLAPSEFLAG)
 PROGRAM     = transpose
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

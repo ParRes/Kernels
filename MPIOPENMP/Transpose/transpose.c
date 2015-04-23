@@ -284,7 +284,11 @@ int main(int argc, char ** argv)
   istart = 0;  
 
   if (tiling) {
+#ifdef COLLAPSE
+    #pragma omp parallel for private (i,it,jt) collapse(2)
+#else
     #pragma omp parallel for private (i,it,jt)
+#endif
     for (j=0; j<Block_order; j+=Tile_order) 
       for (i=0; i<order; i+=Tile_order) 
         for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) 
@@ -320,7 +324,11 @@ int main(int argc, char ** argv)
 	}
     }
     else {
+#ifdef COLLAPSE
+      #pragma omp parallel for private (j,it,jt) collapse(2)
+#else
       #pragma omp parallel for private (j,it,jt)
+#endif
       for (i=0; i<Block_order; i+=Tile_order) 
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
@@ -347,7 +355,11 @@ int main(int argc, char ** argv)
 	  }
       }
       else {
+#ifdef COLLAPSE
+        #pragma omp parallel for private (j,it,jt) collapse(2)
+#else
         #pragma omp parallel for private (j,it,jt)
+#endif
         for (i=0; i<Block_order; i+=Tile_order) 
           for (j=0; j<Block_order; j+=Tile_order) 
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
