@@ -85,13 +85,6 @@ using namespace Grappa;
 
 #define FOCUS 1
  
-// temporary hack to deal with global-visible local array allocation problem
-namespace Grappa {
-template< typename T >
-inline T* locale_new_array(size_t n = 1) {
-  return new (locale_alloc<T>(n)) T[n];
-}
-}
 // temporary hack to allocate symmetric data with lower overhead
 #define symmetric static
  
@@ -192,7 +185,7 @@ int main(int argc, char * argv[]) {
         my_IDy = my_ID/Num_procsx; }
       );
  
-    std::cout<<"MPI stencil execution on 2D grid"<<std::endl;
+    std::cout<<"Grappa stencil execution on 2D grid"<<std::endl;
     std::cout<<"Number of processes    = "<<Num_procs<<std::endl;
     std::cout<<"Grid size              = "<<n<<std::endl;
     std::cout<<"Radius of stencil      = "<<RADIUS<<std::endl;
@@ -411,7 +404,7 @@ int main(int argc, char * argv[]) {
     });
     // verify result
     double reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
-    double actual_norm = Grappa::reduce<DTYPE,collective_add<DTYPE>>(&local_norm );
+    double actual_norm = Grappa::reduce<DTYPE,collective_sum<DTYPE>>(&local_norm );
     double f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
     actual_norm /= f_active_points;
     if (ABS(reference_norm-actual_norm) >= EPSILON) {

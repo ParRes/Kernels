@@ -10,7 +10,7 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -O3
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers
 
-RADIUSFLAG  = -DRADIUS=1
+RADIUSFLAG  = -DRADIUS=2
 #description: default radius of filter to be applied is 2
 
 DOUBLEFLAG = -DDOUBLE
