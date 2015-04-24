@@ -47,7 +47,7 @@ default:
 	@echo "       \"make allserial\"    (re-)builds all serial targets"
 	@echo "       \"make allopenmp\"    (re-)builds all OpenMP targets"
 	@echo "       \"make allmpi\"       (re-)builds all MPI targets"
-	@echo "       \"make allmpiopenmp\" (re-)builds all OpenMP targets"
+	@echo "       \"make allmpiopenmp\" (re-)builds all MPI + OpenMP targets"
 	@echo "       \"make allmpirma\"    (re-)builds all MPI-3 RMA targets"
 	@echo "       \"make allmpishm\"    (re-)builds all MPI-3 shared memory segments targets"
 	@echo "       \"make alldarwin\"    (re-)builds all of the above targets"

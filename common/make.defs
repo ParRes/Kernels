@@ -1,11 +1,29 @@
-MPICC=mpiicc
-CC=icc 
-#CC=gcc
-CXX=mpigxx
-DEFAULT_OPT_FLAGS=-O3
-OPENMPFLAG=-openmp
-#OPENMPFLAG=-fopenmp
+#name of MPI C compiler, e.g. mpicc, mpiicc
+MPICC=
 
-CHARMTOP=/home/rfvander/charm/mpi-linux-x86_64-ifort-smp-mpicxx
-CHARMC=$(CHARMTOP)/bin/charmc
-GRAPPATOP=/tmp/rfvander/grappa_agg
+#name of C compiler, e.g. icc, xlc, gcc
+CC=
+
+#name of compile line flag enabling OpenMP, e.g. -openmp, -fopenmp
+OPENMPFLAG=
+
+#default compiler optimization flags
+DEFAULT_OPT_FLAGS=
+
+############################   OPTIONAL #########################
+
+#name of C++ compiler (to be used in MPI context for Grappa), e.g. mpigxx, mpiicpc
+CXX=
+
+#location where Charm++ is installed, e.g. $(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
+CHARMTOP=
+
+#location where Grappa is installed, e.g. $(HOME)/grappa
+GRAPPATOP=
+
+############# remove lines below after editing this file ########
+MPICC="ERROR -- No MPICC variable defined in file common/make.defs"
+CC="ERROR -- No CC variable defined in file common/make.defs"
+CXX="ERROR -- No CXX variable defined in file common/make.defs"
+CHARMTOP="ERROR -- No CHARMTOP variable defined in file common/make.defs"
+############# remove lines above after editing this file ########
