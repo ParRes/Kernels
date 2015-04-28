@@ -1,36 +1,36 @@
 #name of MPI C compiler, e.g. mpicc, mpiicc
-MPICC=mpiicc
+MPICC=
 
 #name of C compiler, e.g. icc, xlc, gcc
-CC=icc
+CC=
 
 #name of compile line flag enabling OpenMP, e.g. -openmp, -fopenmp
-OPENMPFLAG=-openmp
+OPENMPFLAG=
 
 #default compiler optimization flags
-DEFAULT_OPT_FLAGS=-O3
+DEFAULT_OPT_FLAGS=
 
 ############################   OPTIONAL #########################
 
 #name of C++ compiler (to be used in MPI context for Grappa), e.g. mpigxx, mpiicpc
-CXX=mpigxx
+CXX=
 
 #location where SHMEM is installed, e.g. $(HOME)/oshmpi-install
-SHMEMTOP=$(HOME)/oshmpi-install
+SHMEMTOP=
 
 #name of C compiler (to be used in MPI context of OpenSHMEM), e.g. $(MPICC)
-SHMEMCC=$(MPICC) -I$(SHMEMTOP)/include
+SHMEMCC=
 
 #location where Charm++ is installed, e.g. $(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
-CHARMTOP=$(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
+CHARMTOP=
 
 #location where Grappa is installed, e.g. $(HOME)/grappa
-GRAPPATOP=/tmp/rfvander/grappa_agg
+GRAPPATOP=
 
 ############# remove lines below after editing this file ########
-#MPICC="ERROR -- No MPICC variable defined in file common/make.defs"
-#CC="ERROR -- No CC variable defined in file common/make.defs"
-#CXX="ERROR -- No CXX variable defined in file common/make.defs"
-#SHMEMCC="ERROR -- No SHMEMCC variable defined in file common/make.defs"
-#CHARMTOP="ERROR -- No CHARMTOP variable defined in file common/make.defs"
+MPICC="ERROR -- No MPICC variable defined in file common/make.defs"
+CC="ERROR -- No CC variable defined in file common/make.defs"
+CXX="ERROR -- No CXX variable defined in file common/make.defs"
+SHMEMCC="ERROR -- No SHMEMCC variable defined in file common/make.defs"
+CHARMTOP="ERROR -- No CHARMTOP variable defined in file common/make.defs"
 ############# remove lines above after editing this file ########
