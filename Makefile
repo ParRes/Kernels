@@ -49,6 +49,7 @@ default:
 	@echo "       \"make allmpi\"       (re-)builds all MPI targets"
 	@echo "       \"make allmpiopenmp\" (re-)builds all MPI + OpenMP targets"
 	@echo "       \"make allmpirma\"    (re-)builds all MPI-3 RMA targets"
+	@echo "       \"make allshmem\"     (re-)builds all SHMEM targets"
 	@echo "       \"make allmpishm\"    (re-)builds all MPI-3 shared memory segments targets"
 	@echo "       \"make alldarwin\"    (re-)builds all of the above targets"
 	@echo "       \"make allcharm++\"   (re-)builds all Charm++ targets"
@@ -59,8 +60,8 @@ default:
 	@echo "       \"make clean\"        removes all objects and executables"
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
-all: allserial allopenmp allmpi allmpiopenmp allmpirma allmpishm allcharm++ allgrappa
-alldarwin: allserial allopenmp allmpi allmpiopenmp allmpirma allmpishm 
+all: allserial allopenmp allmpi allmpiopenmp allmpirma allshmem allmpishm allcharm++ allgrappa
+alldarwin: allserial allopenmp allmpi allmpiopenmp allmpirma allshmem allmpishm 
 allfreaks: allcharm++ allgrappa
 
 allmpi: 
@@ -86,6 +87,9 @@ allmpiopenmp:
 allmpirma: 
 	cd MPIRMA/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd MPIRMA/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+
+allshmem: 
+	cd SHMEM/Synch_p2p;         $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allmpishm: 
 	cd MPISHM/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -144,6 +148,7 @@ clean:
 	cd MPIRMA/Stencil;          $(MAKE) clean
 	cd MPIRMA/Synch_p2p;        $(MAKE) clean
 	cd MPISHM/Stencil;          $(MAKE) clean
+	cd SHMEM/Synch_p2p;         $(MAKE) clean
 	cd MPISHM/Synch_p2p;        $(MAKE) clean
 	cd MPISHM/Transpose;        $(MAKE) clean
 	cd CHARM++/Stencil;         $(MAKE) clean
@@ -176,6 +181,7 @@ clean:
 	cd SERIAL/Sparse;           $(MAKE) clean
 	cd SERIAL/Synch_p2p;        $(MAKE) clean
 	cd SERIAL/Branch;           $(MAKE) clean
+	rm -f stats.json
 
 veryclean: clean
 	cd MPI/Branch;       $(MAKE) veryclean

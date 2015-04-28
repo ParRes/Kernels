@@ -3,4 +3,5 @@
 ./Run/smallopenmp 
 ./Run/smallmpiopenmp 
 ./Run/smallmpirma 
-./Run/smallmpishm 
+./Run/smallshmem
+./Run/smallmpishm

@@ -30,62 +30,41 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
-/****************************************************************
+/*******************************************************************
 
-Name:      wtime
+NAME:      bail_out
 
-Purpose:   returns wall clock time with a fixed reference point.
+PURPOSE:   Exit gracefully when an SHMEM process has encountered an error
+  
+Arguments: error code, work space  
 
-Arguments: None
+Returns:   nothing, but the program terminates with a nonzero exit status
 
-Returns:   The wall clock time in seconds as a double is returned. 
+Notes:     This function must be called by all participating processes
 
-Notes:     This function uses two structures defined in the UNIX
-           system call, gettimeofday(2). The structure, "timeval" 
-           is defined in the include file <sys/time.h> as:
+HISTORY: - Written by Gabriele Jost, March 2015.
+  
+**********************************************************************************/
 
-                 struct timeval {
-                     long tv_sec;
-                     long tv_usec;
-                 }
+#include <par-res-kern_general.h>
+#include <shmem.h>
 
-           where timeval.tv_sec is the seconds and timeval.tv_usec
-           is the microseconds.  
- 
-History:   Written by Tim Mattson, Dec 1, 1988
-           Modified by Rob van der Wijngaart, May 2006, to change
-           default clock to the Unix system clock.
+#define shmem_finalize()
 
-****************************************************************/
+void bail_out (int error, long *pSync) {
+   long global_error;
+   long local_error;
+   long pWrk [_SHMEM_BCAST_SYNC_SIZE];
 
-#include <stdlib.h>
-#if defined(_OPENMP)
-  #include <omp.h>
-#elif defined(MPI)
-  #include "mpi.h"
-#else
-  #include <sys/time.h>
-  #define  USEC_TO_SEC   1.0e-6    /* to convert microsecs to secs */
-#endif
-
-
-double wtime() {
-  double time_seconds;
-
-#if defined(_OPENMP)
-  time_seconds = omp_get_wtime();
-
-#elif defined(MPI)
-  time_seconds = MPI_Wtime();
-
-#else
-  struct timeval  time_data; /* seconds since 0 GMT */
-   
-  gettimeofday(&time_data,NULL);
-   
-  time_seconds  = (double) time_data.tv_sec;
-  time_seconds += (double) time_data.tv_usec * USEC_TO_SEC;
-#endif
-
-  return time_seconds;
+   int i;
+   local_error = error;
+   shmem_barrier_all ();
+   shmem_long_max_to_all (&global_error, &local_error, 1, 0, 0, _num_pes (), pWrk, pSync); 
+   if (global_error > 0) {
+     printf ("SHMEMBAIL_OUT: Error on %d is %d \n", shmem_my_pe(), global_error); 
+     shmem_finalize ();
+     exit (1);
+  }
+  return;
 }
+

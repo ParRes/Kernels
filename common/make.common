@@ -26,6 +26,9 @@ wtime.o:$(COMMON)/wtime.c
 MPI_bail_out.o:$(COMMON)/MPI_bail_out.c
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
  
+SHMEM_bail_out.o:$(COMMON)/SHMEM_bail_out.c
+	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
+ 
 OPENMP_bail_out.o:$(COMMON)/OPENMP_bail_out.c
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
  
@@ -39,6 +42,4 @@ OPENMP_bail_out.o:$(COMMON)/OPENMP_bail_out.c
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
  
 clean:
-	@ rm -f $(OBJS)  $(PROGRAM) *.optrpt *~ charmrun \
-	$(PROGRAM).decl.h $(PROGRAM).def.h \
-	routing.dot  stats.json
+	@ rm -f $(OBJS)  $(PROGRAM) *.optrpt *~ charmrun $(PROGRAM).decl.h $(PROGRAM).def.h
