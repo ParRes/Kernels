@@ -42,4 +42,4 @@ OPENMP_bail_out.o:$(COMMON)/OPENMP_bail_out.c
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
  
 clean:
-	@ rm -f $(OBJS)  $(PROGRAM) *.optrpt *~ charmrun $(PROGRAM).decl.h $(PROGRAM).def.h
+	rm -f $(OBJS)  $(PROGRAM) *.optrpt *~ charmrun $(PROGRAM).decl.h $(PROGRAM).def.h

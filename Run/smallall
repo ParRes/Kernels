@@ -1,9 +1,2 @@
-./Run/smallserial 
-./Run/smallmpi 
-./Run/smallopenmp 
-./Run/smallmpiopenmp 
-./Run/smallmpirma 
-./Run/smallshmem
-./Run/smallmpishm 
-./Run/smallcharm++ 
-./Run/smallgrappa
+./Run/smalldarwin
+./Run/smallfreaks

@@ -11,12 +11,6 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers (requires -restrict compiler flag)
 
-#LENGTHFLAG   = -DMAXLENGTH=80000000
-#description: default vector length is 2000000
-
-#ALLOCFLAG    = -DSTATIC_ALLOCATION
-#description: default memory allocation is dynamic (using malloc)
-
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
@@ -31,7 +25,7 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS    = $(LENGTHFLAG) $(ALLOCFLAG) $(DEBUGFLAG) $(USERFLAGS) $(RESTRICTFLAG)
+TUNEFLAGS    = $(DEBUGFLAG) $(USERFLAGS) $(RESTRICTFLAG)
 PROGRAM      = nstream
 OBJS         = $(PROGRAM).o $(COMOBJS)
 

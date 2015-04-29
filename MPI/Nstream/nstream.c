@@ -119,30 +119,9 @@ REVISION:  Modified by Rob Van der Wijngaart, November 2014, replaced
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
  
-#define DEFAULTMAXLENGTH 2000000
-#ifdef MAXLENGTH
-  #if MAXLENGTH > 0
-    #define N   MAXLENGTH
-  #else
-    #define N   DEFAULTMAXLENGTH
-  #endif
-#else
-  #define N   DEFAULTMAXLENGTH
-#endif
- 
-#ifdef STATIC_ALLOCATION
-  /* use static to make sure it goes on the heap, not the stack          */
-  static double a[N];
-#else
-  static double * RESTRICT a;
-#endif
-
-static double * RESTRICT b;
-static double * RESTRICT c;
- 
 #define SCALAR  3.0
  
-static int checkTRIADresults(int, long int);
+static int checkTRIADresults(int, long int, double *);
  
 int main(int argc, char **argv) 
 {
@@ -161,6 +140,9 @@ int main(int argc, char **argv)
            my_ID,         /* rank of calling process                     */
            root=0;        /* ID of master process                        */
   int      error=0;       /* error flag for individual process           */
+  double * RESTRICT a;    /* main vector                                 */
+  double * RESTRICT b;    /* main vector                                 */
+  double * RESTRICT c;    /* main vector                                 */
  
 /**********************************************************************************
 * process and test input parameters    
@@ -199,14 +181,7 @@ int main(int argc, char **argv)
       error = 1;
       goto ENDOFTESTS;
     }
-#ifdef STATIC_ALLOCATION 
-    if ((3*length + 2*offset) > N) {
-      printf("ERROR: vector length/offset %ld/%ld too ", total_length, offset);
-      printf("large; increase MAXLENGTH in Makefile or decrease vector length\n");
-      error = 1;
-      goto ENDOFTESTS;
-    }
-#endif
+
     ENDOFTESTS:;
   }
   bail_out(error);
@@ -216,7 +191,6 @@ int main(int argc, char **argv)
   MPI_Bcast(&offset,1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations,1, MPI_INT, root, MPI_COMM_WORLD);
 
-#ifndef STATIC_ALLOCATION
   space = (3*length + 2*offset)*sizeof(double);
   a = (double *) malloc(space);
   if (!a && my_ID == root) {
@@ -224,7 +198,7 @@ int main(int argc, char **argv)
     error = 1;
   }
   bail_out(error);
-#endif
+
   b = a + length + offset;
   c = b + length + offset;
 
@@ -270,7 +244,7 @@ int main(int argc, char **argv)
              MPI_COMM_WORLD);
   
   if (my_ID == root) {
-    if (checkTRIADresults(iterations, length)) {
+    if (checkTRIADresults(iterations, length, a)) {
       avgtime = nstream_time/iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",
              1.0E-06 * bytes/avgtime, avgtime);
@@ -282,7 +256,7 @@ int main(int argc, char **argv)
 }
  
  
-int checkTRIADresults (int iterations, long int length) {
+int checkTRIADresults (int iterations, long int length, double *a) {
   double aj, bj, cj, scalar, asum;
   double epsilon = 1.e-8;
   long int j;

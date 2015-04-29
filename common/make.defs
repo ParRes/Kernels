@@ -1,36 +1,44 @@
-#name of MPI C compiler, e.g. mpicc, mpiicc
-MPICC=
+#name of MPI C compiler, e.g. mpiicc, mpicc
+MPICC=mpiicc
 
 #name of C compiler, e.g. icc, xlc, gcc
-CC=
+CC=icc
 
 #name of compile line flag enabling OpenMP, e.g. -openmp, -fopenmp
-OPENMPFLAG=
+OPENMPFLAG=-openmp
 
 #default compiler optimization flags
-DEFAULT_OPT_FLAGS=
+DEFAULT_OPT_FLAGS=-O3
 
 ############################   OPTIONAL #########################
 
 #name of C++ compiler (to be used in MPI context for Grappa), e.g. mpigxx, mpiicpc
-CXX=
+CXX= mpigxx
+
+#name of MPI C compiler (to be used in Fine-Grain MPI context), e.g. mpicc
+FGMPICC=mpicc
 
 #location where SHMEM is installed, e.g. $(HOME)/oshmpi-install
-SHMEMTOP=
+SHMEMTOP=$(HOME)/oshmpi-install
 
 #name of C compiler (to be used in MPI context of OpenSHMEM), e.g. $(MPICC)
-SHMEMCC=
+SHMEMCC=$(MPICC)
 
 #location where Charm++ is installed, e.g. $(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
-CHARMTOP=
+CHARMTOP=$(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
 
 #location where Grappa is installed, e.g. $(HOME)/grappa
-GRAPPATOP=
+#GRAPPATOP=$(HOME)/grappa
+GRAPPATOP=/tmp/rfvander/grappa_agg
+
+#location where Fine-Grain MPI is installed, e.g. $(HOME)/fgmpi-install
+FGMPITOP=$(HOME)/fgmpi-install
 
 ############# remove lines below after editing this file ########
-MPICC="ERROR -- No MPICC variable defined in file common/make.defs"
-CC="ERROR -- No CC variable defined in file common/make.defs"
-CXX="ERROR -- No CXX variable defined in file common/make.defs"
-SHMEMCC="ERROR -- No SHMEMCC variable defined in file common/make.defs"
-CHARMTOP="ERROR -- No CHARMTOP variable defined in file common/make.defs"
+#MPICC="ERROR -- No MPICC variable defined in file common/make.defs"
+#CC="ERROR -- No CC variable defined in file common/make.defs"
+#CXX="ERROR -- No CXX variable defined in file common/make.defs"
+#SHMEMCC="ERROR -- No SHMEMCC variable defined in file common/make.defs"
+#CHARMTOP="ERROR -- No CHARMTOP variable defined in file common/make.defs"
+#FGMPITOP="ERROR -- No FGMPITOP variable defined in file common/make.defs"
 ############# remove lines above after editing this file ########
