@@ -101,10 +101,10 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
  
 int main(int argc, char ** argv) {
  
-  int    Num_procs;       /* number of processes                                 */
+  int    Num_procs;       /* number of ranks                                     */
   int    Num_procsx, Num_procsy; /* number of ranks in each coord direction      */
   int    my_ID;           /* MPI rank                                            */
-  int    my_IDx, my_IDy;  /* coordinates of rank in process grid                 */
+  int    my_IDx, my_IDy;  /* coordinates of rank in rank grid                    */
   int    right_nbr;       /* global rank of right neighboring tile               */
   int    left_nbr;        /* global rank of left neighboring tile                */
   int    top_nbr;         /* global rank of top neighboring tile                 */
@@ -121,10 +121,10 @@ int main(int argc, char ** argv) {
   int    n, width, height;/* linear global and local grid dimension              */
   long   nsquare;         /* total number of grid points                         */
   int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
-  int    istart, iend;    /* bounds of grid tile assigned to calling process     */
-  int    jstart, jend;    /* bounds of grid tile assigned to calling process     */
+  int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
+  int    jstart, jend;    /* bounds of grid tile assigned to calling rank        */
   DTYPE  norm,            /* L1 norm of solution                                 */
-         local_norm,      /* contribution of calling process to L1 norm          */
+         local_norm,      /* contribution of calling rank to L1 norm             */
          reference_norm;
   DTYPE  f_active_points; /* interior of grid with respect to stencil            */
   DTYPE  flops;           /* floating point ops per iteration                    */
@@ -141,6 +141,7 @@ int main(int argc, char ** argv) {
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8];
   MPI_Status  status[8];
+  int     procsize;       /* number of ranks per OS process                      */
  
   /*******************************************************************************
   ** Initialize the MPI environment
@@ -177,7 +178,7 @@ int main(int argc, char ** argv) {
     n       = atoi(*++argv); 
     nsquare = n * n;
     if (nsquare < Num_procs){ 
-      printf("ERROR: grid size %d must be at least # processes: %ld\n", 
+      printf("ERROR: grid size %d must be at least # ranks: %ld\n", 
 	     nsquare, Num_procs); 
       error = 1; 
       goto ENDOFTESTS; 
@@ -217,18 +218,20 @@ int main(int argc, char ** argv) {
   bottom_nbr = my_ID-Num_procsx;
  
   if (my_ID == root) {
+    MPIX_Get_collocated_size(&procsize);
     printf("FG_MPI stencil execution on 2D grid\n");
-    printf("Number of processes    = %d\n", Num_procs);
-    printf("Grid size              = %d\n", n);
-    printf("Radius of stencil      = %d\n", RADIUS);
-    printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
-    printf("Type of stencil        = star\n");
+    printf("Number of ranks          = %d\n", Num_procs);
+    printf("Number of ranks/process  = %d\n", procsize);
+    printf("Grid size                = %d\n", n);
+    printf("Radius of stencil        = %d\n", RADIUS);
+    printf("Tiles in x/y-direction   = %d/%d\n", Num_procsx, Num_procsy);
+    printf("Type of stencil          = star\n");
 #ifdef DOUBLE
-    printf("Data type              = double precision\n");
+    printf("Data type                = double precision\n");
 #else
-    printf("Data type              = single precision\n");
+    printf("Data type                = single precision\n");
 #endif
-    printf("Number of iterations   = %d\n", iterations);
+    printf("Number of iterations     = %d\n", iterations);
   }
  
   MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
@@ -249,7 +252,7 @@ int main(int argc, char ** argv) {
   
   width = iend - istart + 1;
   if (width == 0) {
-    printf("ERROR: Process %d has no work to do\n", my_ID);
+    printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
   bail_out(error);
@@ -267,13 +270,13 @@ int main(int argc, char ** argv) {
   
   height = jend - jstart + 1;
   if (height == 0) {
-    printf("ERROR: Process %d has no work to do\n", my_ID);
+    printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
   bail_out(error);
 
   if (width < RADIUS || height < RADIUS) {
-    printf("ERROR: Process %d has work tile smaller then stencil radius\n",
+    printf("ERROR: rank %d has work tile smaller then stencil radius\n",
            my_ID);
     error = 1;
   }
@@ -292,7 +295,7 @@ int main(int argc, char ** argv) {
   in  = (DTYPE *) malloc(total_length_in);
   out = (DTYPE *) malloc(total_length_out);
   if (!in || !out) {
-    printf("ERROR: process %d could not allocate space for input/output array\n",
+    printf("ERROR: rank %d could not allocate space for input/output array\n",
             my_ID);
     error = 1;
   }

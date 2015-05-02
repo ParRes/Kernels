@@ -223,7 +223,7 @@ int main(int argc, char ** argv) {
 	while (flag(TID-1) == 0) {
            #pragma omp flush
         }
-	  flag(TID-1) = 0;
+        flag(TID-1) = 0;
         #pragma omp flush
       }
 
@@ -237,7 +237,7 @@ int main(int argc, char ** argv) {
         while (flag(TID) == 1) {
           #pragma omp flush
         }
-	  flag(TID) = 1;
+        flag(TID) = 1;
         #pragma omp flush
       }
     }

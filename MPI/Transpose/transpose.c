@@ -143,8 +143,8 @@ int main(int argc, char ** argv)
   MPI_Request recv_req;
 #endif
   long bytes;              /* combined size of matrices             */
-  int my_ID;               /* Process ID (i.e. MPI rank)            */
-  int root=0;              /* rank of root process                  */
+  int my_ID;               /* rank                                  */
+  int root=0;              /* rank of root                          */
   int iterations;          /* number of times to do the transpose   */
   int i, j, it, jt, istart;/* dummies                               */
   int iter;                /* index of iteration                    */
@@ -206,8 +206,9 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("MPI matrix transpose: B = A^T\n");
-    printf("Number of processes  = %d\n", Num_procs);
+    printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
+    printf("Number of iterations = %d\n", iterations);
     if ((Tile_order > 0) && (Tile_order < order))
           printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
@@ -215,10 +216,9 @@ int main(int argc, char ** argv)
     printf("Non-");
 #endif
     printf("Blocking messages\n");
-    printf("Number of iterations = %d\n", iterations);
   }
   
-  /*  Broadcast input data to all processes */
+  /*  Broadcast input data to all ranks */
   MPI_Bcast (&order,      1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast (&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast (&Tile_order, 1, MPI_INT, root, MPI_COMM_WORLD);

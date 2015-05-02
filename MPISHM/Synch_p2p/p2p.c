@@ -37,7 +37,7 @@ NAME:    Pipeline
 PURPOSE: This program tests the efficiency with which point-to-point
          synchronization can be carried out. It does so by executing
          a pipelined algorithm on an m*n grid. The first array dimension
-         is distributed among the processes (stripwise decomposition).
+         is distributed among the ranks (stripwise decomposition).
 
 USAGE:   The program takes as input the dimensions of the grid, and the
          number of times we loop over the grid
@@ -72,7 +72,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 int main(int argc, char ** argv)
 {
-  int    my_ID;         /* Process ID (i.e. MPI rank)                            */
+  int    my_ID;         /* rank                                                  */
   int    root;
   int    m, n;          /* grid dimensions                                       */
   double local_pipeline_time, /* timing parameters                               */
@@ -85,7 +85,7 @@ int main(int argc, char ** argv)
   int    *start, *end;  /* starts and ends of grid slices                        */
   int    segment_size;
   int    error=0;       /* error flag                                            */
-  int    Num_procs;     /* Number of processors                                  */
+  int    Num_procs;     /* Number of ranks                                       */
   double *vector;       /* array holding grid values                             */
   long   total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
@@ -95,7 +95,7 @@ int main(int argc, char ** argv)
   MPI_Win shm_win;      /* Shared Memory window object                           */
   MPI_Info rma_winfo;   /* info for window                                       */
   MPI_Comm shm_comm;    /* Shared Memory Communicator                            */
-  int shm_procs;        /* # of processes in shared domain                       */
+  int shm_procs;        /* # of ranks in shared domain                           */
   int shm_ID;           /* MPI rank                                              */
   int source_disp;
   double *source_ptr;
@@ -109,8 +109,8 @@ int main(int argc, char ** argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
-/* we set root equal to the highest processor rank, because this is also
-   the process that reports on the verification value                      */
+/* we set root equal to highest rank, because this is also the rank that reports 
+   on the verification value                                                     */
   root = Num_procs-1;
 
   /* Setup for Shared memory regions */
@@ -146,7 +146,7 @@ int main(int argc, char ** argv)
     }
 
     if (m<Num_procs) {
-      printf("ERROR: First grid dimension %d smaller than number of processes %d\n",
+      printf("ERROR: First grid dimension %d smaller than number of ranks %d\n",
              m, Num_procs);
       error = 1;
       goto ENDOFTESTS;
@@ -158,7 +158,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("MPI+SHM pipeline execution on 2D grid\n");
-    printf("Number of processes            = %i\n",Num_procs);
+    printf("Number of ranks                = %i\n",Num_procs);
     printf("Grid sizes                     = %d, %d\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
 #ifdef VERBOSE
@@ -166,7 +166,7 @@ int main(int argc, char ** argv)
 #endif
   }
 
-  /* Broadcast benchmark data to all processes */
+  /* Broadcast benchmark data to all ranks */
   MPI_Bcast(&m, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&n, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
@@ -185,7 +185,7 @@ int main(int argc, char ** argv)
     end[ID] = start[ID]+segment_size-1;
   }
 
-  /* now set segment_size to the value needed by the calling process            */
+  /* now set segment_size to the value needed by the calling rank               */
   segment_size = end[my_ID] - start[my_ID] + 1;
 
   /* RMA win info */
@@ -208,7 +208,7 @@ int main(int argc, char ** argv)
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %d by %d points",
            segment_size, n);
-    printf(" on process %d\n", my_ID);
+    printf(" on rank %d\n", my_ID);
     error = 1;
   }
   bail_out(error);
@@ -228,7 +228,7 @@ int main(int argc, char ** argv)
   if (my_ID==0) for (j=0; j<n; j++) ARRAY(0,j) = (double) j;
   for (i=start[my_ID]-1; i<=end[my_ID]; i++) ARRAY(i-start[my_ID],0) = (double) i;
 
-  /* redefine start and end for calling process to reflect local indices          */
+  /* redefine start and end for calling rank to reflect local indices            */
   if (my_ID==0) start[my_ID] = 1;
   else          start[my_ID] = 0;
   end[my_ID] = segment_size-1;

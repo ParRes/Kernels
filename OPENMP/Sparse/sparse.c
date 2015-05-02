@@ -227,12 +227,12 @@ int main(int argc, char **argv){
     printf("Matrix order          = "FSTR64U"\n", size2);
     printf("Stencil diameter      = %16d\n", 2*radius+1);
     printf("Sparsity              = %16.10lf\n", sparsity);
+    printf("Number of iterations  = %16d\n", iterations);
 #ifdef SCRAMBLE
     printf("Using scrambled indexing\n");
 #else
     printf("Using canonical indexing\n");
 #endif
-    printf("Number of iterations  = %16d\n", iterations);
   }
   }
   bail_out(num_error);

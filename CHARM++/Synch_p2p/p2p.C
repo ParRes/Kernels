@@ -86,12 +86,12 @@ public:
 
         // print info
         CkPrintf("Charm++ pipeline execution on 2D grid\n");
-        CkPrintf("Number of processes  = %d\n", CkNumPes());
-        CkPrintf("Overdecomposition    = %d\n", overdecomposition);
-        CkPrintf("Grid sizes           = %d,%d\n", m, n);
-        CkPrintf("Number of iterations = %d\n", maxiterations);
+        CkPrintf("Number of Charm++ PEs = %d\n", CkNumPes());
+        CkPrintf("Overdecomposition     = %d\n", overdecomposition);
+        CkPrintf("Grid sizes            = %d,%d\n", m, n);
+        CkPrintf("Number of iterations  = %d\n", maxiterations);
         if (grp > 1)
-        CkPrintf("Group factor         = %d (cheating!)\n", grp);
+        CkPrintf("Group factor          = %d (cheating!)\n", grp);
 
         // Create new array of worker chares
         array = CProxy_P2p::ckNew(num_chares);

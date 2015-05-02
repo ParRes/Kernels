@@ -110,10 +110,10 @@ int main(int argc, char * argv[]) {
   //    n, width, height = linear global and local grid dimension              
   //    nsquare          = total number of grid points                        
   //    i, j, ii, jj, kk, it, jt, iter, leftover  = dummies                  
-  //    istart, iend     = bounds of grid tile assigned to calling process    
-  //    jstart, jend     = bounds of grid tile assigned to calling process    
+  //    istart, iend     = bounds of grid tile assigned to calling core    
+  //    jstart, jend     = bounds of grid tile assigned to calling core    
   //    norm             = L1 norm of solution                                
-  //    local_norm       = contribution of calling process to L1 norm         
+  //    local_norm       = contribution of calling core to L1 norm         
   //    reference_norm
   //    f_active_points  = interior of grid with respect to stencil           
   //    flops            = floating point ops per iteration                   
@@ -155,7 +155,7 @@ int main(int argc, char * argv[]) {
   long nsquare = n * n;
   if (nsquare < Grappa::cores()){
     if (my_ID == root)
-      std::cout<<"ERROR: grid size "<<nsquare<<" must be at least # processes "<<
+      std::cout<<"ERROR: grid size "<<nsquare<<" must be at least # cores "<<
         Grappa::cores()<<std::endl;
     exit(1);
   }
@@ -186,7 +186,7 @@ int main(int argc, char * argv[]) {
       );
  
     std::cout<<"Grappa stencil execution on 2D grid"<<std::endl;
-    std::cout<<"Number of processes    = "<<Num_procs<<std::endl;
+    std::cout<<"Number of cores        = "<<Num_procs<<std::endl;
     std::cout<<"Grid size              = "<<n<<std::endl;
     std::cout<<"Radius of stencil      = "<<RADIUS<<std::endl;
     std::cout<<"Tiles in x/y-direction = "<<Num_procsx<<"/"<<Num_procsy<<std::endl;
@@ -232,7 +232,7 @@ int main(int argc, char * argv[]) {
  
       width = iend - istart + 1;
       if (width == 0) {
-        std::cout<<"ERROR: Process "<<my_ID<<" has no work to do"<<std::endl;
+        std::cout<<"ERROR: core "<<my_ID<<" has no work to do"<<std::endl;
         exit(1);
       }
       height = n/Num_procsy;
@@ -248,11 +248,11 @@ int main(int argc, char * argv[]) {
  
       height = jend - jstart + 1;
       if (height == 0) {
-        printf("ERROR: Process %d has no work to do\n", my_ID);
+        printf("ERROR: core %d has no work to do\n", my_ID);
         exit(1);
       }
       if (width < RADIUS || height < RADIUS) {
-        std::cout<<"ERROR: Process "<<my_ID<<" has no work to do"<<std::endl;
+        std::cout<<"ERROR: core "<<my_ID<<" has no work to do"<<std::endl;
         exit(1);
       }
       long total_length_in = (width+2*RADIUS)*(height+2*RADIUS);
@@ -265,7 +265,7 @@ int main(int argc, char * argv[]) {
       in  = Grappa::locale_new_array<DTYPE>(total_length_in);
       out = Grappa::locale_new_array<DTYPE>(total_length_out);
       if (!in || !out) {
-        std::cout<<"ERROR: process "<<my_ID<<
+        std::cout<<"ERROR: core "<<my_ID<<
           " could not allocate space for input/output array"<<std::endl;
         exit(1);
       }

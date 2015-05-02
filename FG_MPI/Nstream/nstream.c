@@ -125,7 +125,7 @@ int main(int argc, char **argv)
   long int j, iter;       /* dummies                                     */
   double   scalar;        /* constant used in Triad operation            */
   int      iterations;    /* number of times vector loop gets repeated   */
-  long int length,        /* vector length per processor                 */
+  long int length,        /* vector length per rank                      */
            total_length,  /* total vector length                         */
            offset;        /* offset between vectors a and b, and b and c */
   double   bytes;         /* memory IO size                              */
@@ -133,24 +133,24 @@ int main(int argc, char **argv)
   double   local_nstream_time,/* timing parameters                       */
            nstream_time, 
            avgtime;
-  int      Num_procs,     /* process parameters                          */
-           my_ID,         /* rank of calling process                     */
-           root=0;        /* ID of master process                        */
-  int      error=0;       /* error flag for individual process           */
+  int      Num_procs,     /* number of ranks                             */
+           my_ID,         /* ID of calling rank                          */
+           root=0;        /* ID of master rank                           */
+  int      error=0;       /* error flag for individual rank              */
   double * RESTRICT a;    /* main vector                                 */
   double * RESTRICT b;    /* main vector                                 */
   double * RESTRICT c;    /* main vector                                 */
+  int      procsize;      /* number of ranks per OS process              */
  
-/**********************************************************************************
+/*************************************************************************
 * process and test input parameters    
-***********************************************************************************/
+**************************************************************************/
  
   MPI_Init(&argc,&argv);
   MPI_Comm_size(MPI_COMM_WORLD,&Num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD,&my_ID);
 
   if (my_ID == root) {
-    printf("FG_MPI stream triad: A = B + scalar*C\n");
     if (argc != 4){
       printf("Usage:  %s <# iterations> <vector length> <offset>\n", *argv);
       error = 1;
@@ -202,10 +202,13 @@ int main(int argc, char **argv)
   bytes   = 4.0 * sizeof(double) * length * Num_procs;
  
   if (my_ID == root) {
-    printf("Number of processes  = %d\n", Num_procs);
-    printf("Vector length        = %ld\n", total_length);
-    printf("Offset               = %ld\n", offset);
-    printf("Number of iterations = %d\n", iterations);
+    MPIX_Get_collocated_size(&procsize);
+    printf("FG_MPI stream triad: A = B + scalar*C\n");
+    printf("Number of ranks         = %d\n", Num_procs);
+    printf("Number of ranks/process = %d\n", procsize);
+    printf("Vector length           = %ld\n", total_length);
+    printf("Offset                  = %ld\n", offset);
+    printf("Number of iterations    = %d\n", iterations);
   }
 
   #pragma vector always

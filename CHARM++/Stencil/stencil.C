@@ -100,7 +100,7 @@ public:
 
       // print info
       CkPrintf("Charm++ stencil execution on 2D grid\n");
-      CkPrintf("Number of processes     = %d\n", CkNumPes());
+      CkPrintf("Number of Charm++ PEs   = %d\n", CkNumPes());
       CkPrintf("Overdecomposition       = %d\n", overdecomposition);
       CkPrintf("Grid size               = %d\n", n);
       CkPrintf("Radius of stencil       = %d\n", RADIUS);

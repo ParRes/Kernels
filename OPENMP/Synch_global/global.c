@@ -183,7 +183,6 @@ int main(int argc, char ** argv)
     printf("Number of threads              = %d;\n",nthread_input);
     printf("Length of scramble string      = %ld\n", length);
     printf("Number of iterations           = %d\n", iterations);
-    printf("Number of synchronizations     = %d\n", 2*iterations);
   }
   }
   bail_out(num_error);

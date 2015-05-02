@@ -92,8 +92,8 @@ static int compare(const void *el1, const void *el2);
 
 int main(int argc, char **argv){
 
-  int               Num_procs;  /* Number of processors                           */
-  int               my_ID;      /* Process ID (i.e. MPI rank)                     */
+  int               Num_procs;  /* Number of ranks                                */
+  int               my_ID;      /* rank                                           */
   int               root=0;
   int               iter, r;    /* dummies                                        */
   int               lsize;      /* logarithmic linear size of grid                */
@@ -134,6 +134,7 @@ int main(int argc, char **argv){
   size_t            vector_space, /* variables used to hold malloc sizes          */
                     matrix_space,
                     index_space;
+  int               procsize;   /* number of ranks per OS process                 */
 
 /*********************************************************************
 ** Initialize the MPI environment
@@ -147,7 +148,6 @@ int main(int argc, char **argv){
 *********************************************************************/
 
   if (my_ID == root){
-    printf("FG_MPI sparse matrix-vector multiplication\n");
     if (argc != 4){
       printf("Usage: %s <# iterations> <2log grid size> <stencil radius>\n",*argv);
       error = 1;
@@ -205,22 +205,25 @@ int main(int argc, char **argv){
     /* sparsity follows from number of non-zeroes per row                           */
     sparsity = (double)(4*radius+1)/(double)size2;
 
-    printf("Number of processors  = %16d\n",Num_procs);
-    printf("Matrix order          = "FSTR64U"\n", size2);
-    printf("Stencil diameter      = %16d\n", 2*radius+1);
-    printf("Sparsity              = %16.10lf\n", sparsity);
+    MPIX_Get_collocated_size(&procsize);
+    printf("FG_MPI Sparse matrix-vector multiplication\n");
+    printf("Number of ranks          = "FSTR64U"\n", Num_procs);
+    printf("Number of ranks/process  = "FSTR64U"\n", procsize);
+    printf("Matrix order             = "FSTR64U"\n", size2);
+    printf("Stencil diameter         = %16d\n", 2*radius+1);
+    printf("Sparsity                 = %16.10lf\n", sparsity);
+    printf("Number of iterations     = %16d\n", iterations);
 #ifdef SCRAMBLE
     printf("Using scrambled indexing\n");
 #else
     printf("Using canonical indexing\n");
 #endif
-    printf("Number of iterations  = %16d\n", iterations);
 
     ENDOFTESTS:;
   }
   bail_out(error);
 
-  /* Broadcast benchmark data to all processes */
+  /* Broadcast benchmark data to all ranks */
   MPI_Bcast(&lsize,      1, MPI_INT,           root, MPI_COMM_WORLD);
   MPI_Bcast(&lsize2,     1, MPI_INT,           root, MPI_COMM_WORLD);
   MPI_Bcast(&size,       1, MPI_LONG_LONG_INT, root, MPI_COMM_WORLD);
@@ -230,15 +233,15 @@ int main(int argc, char **argv){
 
   /* compute total size of star stencil in 2D                                     */
   stencil_size = 4*radius+1;
-  /* compute number of rows owned by each process                                 */
+  /* compute number of rows owned by each rank                                    */
   nrows = size2/Num_procs;
 
-  /* compute total number of non-zeroes for this process                          */
+  /* compute total number of non-zeroes for this rank                             */
   nent = nrows*stencil_size;
 
   matrix_space = nent*sizeof(double);
   if (matrix_space/sizeof(double) != nent) {
-    printf("ERROR: Process %d cannot represent space for matrix: %ul\n", 
+    printf("ERROR: rank %d cannot represent space for matrix: %ul\n", 
            my_ID, matrix_space);
     error = 1;
   } 
@@ -246,7 +249,7 @@ int main(int argc, char **argv){
 
   matrix = (double *) malloc(matrix_space);
   if (!matrix) {
-    printf("ERROR: Process %d could not allocate space for sparse matrix: "FSTR64U"\n", 
+    printf("ERROR: rank %d could not allocate space for sparse matrix: "FSTR64U"\n", 
            my_ID, matrix_space);
     error = 1;
   } 
@@ -254,7 +257,7 @@ int main(int argc, char **argv){
 
   vector_space = (size2 + nrows)*sizeof(double);
   if (vector_space/sizeof(double) != (size2+nrows)) {
-    printf("ERROR: Process %d Cannot represent space for vectors: %ul\n", 
+    printf("ERROR: rank %d Cannot represent space for vectors: %ul\n", 
            my_ID, vector_space);
     error = 1; 
   } 
@@ -262,7 +265,7 @@ int main(int argc, char **argv){
 
   vector = (double *) malloc(vector_space);
   if (!vector) {
-    printf("ERROR: Process %d could not allocate space for vectors: %d\n", 
+    printf("ERROR: rank %d could not allocate space for vectors: %d\n", 
            my_ID, (int)(2*nrows));
     error = 1;
   }
@@ -271,7 +274,7 @@ int main(int argc, char **argv){
 
   index_space = nent*sizeof(s64Int);
   if (index_space/sizeof(s64Int) != nent) {
-    printf("ERROR: Process %d cannot represent space for column indices: %ul\n", 
+    printf("ERROR: rank %d cannot represent space for column indices: %ul\n", 
            my_ID, index_space);
     error = 1;
   } 
@@ -279,7 +282,7 @@ int main(int argc, char **argv){
 
   colIndex = (s64Int *) malloc(index_space);
   if (!colIndex) {
-    printf("ERROR: Process %d Could not allocate space for column indices: "FSTR64U"\n",
+    printf("ERROR: rank %d Could not allocate space for column indices: "FSTR64U"\n",
            my_ID, nent*sizeof(s64Int));
     error = 1;
   } 
@@ -349,7 +352,7 @@ int main(int argc, char **argv){
     row_offset = nrows*my_ID;
     for (row=row_offset; row<nrows+row_offset; row++) vector[row] += (double) (row+1);
 
-    /* replicate vector on all processors                                         */
+    /* replicate vector on all rankors                                         */
     MPI_Allgather(MPI_IN_PLACE, nrows, MPI_DOUBLE, vector, nrows, MPI_DOUBLE,
                   MPI_COMM_WORLD);
 

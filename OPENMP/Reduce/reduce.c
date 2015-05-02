@@ -193,7 +193,7 @@ int main(int argc, char ** argv)
     printf("number of spawned threads %d\n", nthread);
   } 
   else {
-    printf("Number of threads              = %d;\n",nthread_input);
+    printf("Number of threads              = %d\n",nthread_input);
     printf("Vector length                  = %d\n", vector_length);
     printf("Reduction algorithm            = %s\n", algorithm);
     printf("Number of iterations           = %d\n", iterations);

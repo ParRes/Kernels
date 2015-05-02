@@ -162,6 +162,7 @@ int main(int argc, char ** argv) {
   else {
     printf("Number of threads     = %i;\n",nthread_input);
     printf("Matrix order          = %d\n", order);
+    printf("Number of iterations  = %d\n", iterations);
     if (tiling) {
       printf("Tile size             = %d\n", Tile_order);
 #ifdef COLLAPSE
@@ -170,7 +171,6 @@ int main(int argc, char ** argv) {
 #endif
     else                   
     printf("Untiled\n");
-    printf("Number of iterations  = %d\n", iterations);
   }
   }
   bail_out(num_error);

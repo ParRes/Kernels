@@ -37,7 +37,7 @@ NAME:    Pipeline
 PURPOSE: This program tests the efficiency with which point-to-point
          synchronization can be carried out. It does so by executing 
          a pipelined algorithm on an m*n grid. The first array dimension
-         is distributed among the processes (stripwise decomposition).
+         is distributed among the ranks (stripwise decomposition).
   
 USAGE:   The program takes as input the dimensions of the grid, and the
          number of times we loop over the grid
@@ -71,7 +71,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 int main(int argc, char ** argv)
 {
-  int    my_ID;         /* Process ID (i.e. MPI rank)                            */
+  int    my_ID;         /* rank                                                  */
   int    root;
   int    m, n;          /* grid dimensions                                       */
   double local_pipeline_time, /* timing parameters                               */
@@ -84,7 +84,7 @@ int main(int argc, char ** argv)
   int    start, end;    /* start and end of grid slice owned by calling rank     */
   int    segment_size;
   int    error=0;       /* error flag                                            */
-  int    Num_procs;     /* Number of processors                                  */
+  int    Num_procs;     /* Number of ranks                                       */
   int    grp;           /* grid line aggregation factor                          */
   int    jjsize;        /* actual line group size                                */
   double *vector;       /* array holding grid values                             */
@@ -99,8 +99,8 @@ int main(int argc, char ** argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
-/* we set root equal to the highest processor rank, because this is also
-   the process that reports on the verification value                      */
+/* we set root equal to the highest rank, because this is also
+   the rank that reports on the verification value                               */
   root = Num_procs-1;
 
 /*********************************************************************
@@ -131,7 +131,7 @@ int main(int argc, char ** argv)
     }
 
     if (m<Num_procs) {
-      printf("ERROR: First grid dimension %d smaller than number of processes %d\n", 
+      printf("ERROR: First grid dimension %d smaller than number of ranke %d\n", 
              m, Num_procs);
       error = 1;
       goto ENDOFTESTS;
@@ -150,14 +150,14 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("MPI pipeline execution on 2D grid\n");
-    printf("Number of processes            = %i\n",Num_procs);
+    printf("Number of ranks                = %d\n",Num_procs);
     printf("Grid sizes                     = %d, %d\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
     if (grp > 1)
     printf("Group factor                   = %d (cheating!)\n", grp);
   }
   
-  /* Broadcast benchmark data to all processes */
+  /* Broadcast benchmark data to all rankes */
   MPI_Bcast(&m,          1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&grp,        1, MPI_INT, root, MPI_COMM_WORLD);
@@ -175,7 +175,7 @@ int main(int argc, char ** argv)
     end   = start + segment_size -1;
   }
 
-  /* now set segment_size to the value needed by the calling process            */
+  /* now set segment_size to the value needed by the calling rank               */
   segment_size = end - start + 1;
 
   /* total_length takes into account one ghost cell on left side of segment     */
@@ -184,7 +184,7 @@ int main(int argc, char ** argv)
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %d by %d points", 
            segment_size, n);
-    printf(" on process %d\n", my_ID);
+    printf(" on rank %d\n", my_ID);
     error = 1;
   }
   bail_out(error);
@@ -194,7 +194,7 @@ int main(int argc, char ** argv)
   if (inbuf == NULL) {
     printf("Could not allocate space for %d words of communication buffers", 
             2*grp);
-    printf(" on process %d\n", my_ID);
+    printf(" on rank %d\n", my_ID);
     error = 1;
   }
   bail_out(error);
@@ -208,7 +208,7 @@ int main(int argc, char ** argv)
   if (my_ID==0) for (j=0; j<n; j++) ARRAY(0,j) = (double) j;
   for (i=start-1; i<=end; i++)      ARRAY(i-start,0) = (double) i;
 
-  /* redefine start and end for calling process to reflect local indices          */
+  /* redefine start and end for calling rank to reflect local indices            */
   if (my_ID==0) start = 1; 
   else          start = 0;
   end = segment_size-1;

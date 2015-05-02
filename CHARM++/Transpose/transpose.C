@@ -36,7 +36,7 @@ public:
 
     Main(CkArgMsg* cmdlinearg) {
         if (cmdlinearg->argc != 5) {
-          CkPrintf("%s <#iterations> <matrix order> <tile order><overdecomposition factor>\n",
+          CkPrintf("%s <#iterations> <matrix order> <tile size><overdecomposition factor>\n",
           cmdlinearg->argv[0]); CkExit();
         }
 
@@ -56,7 +56,7 @@ public:
 
         Tile_order = atoi(cmdlinearg->argv[3]);
         if (Tile_order < 1) {
-          CkPrintf("ERROR: Tile order must be positive: %d \n", Tile_order);
+          CkPrintf("ERROR: Tile size must be positive: %d \n", Tile_order);
           CkExit();
         }
 
@@ -85,11 +85,11 @@ public:
 
         // print info
         CkPrintf("Charm++ transpose execution\n");
-        CkPrintf("Number of processes  = %d\n", CkNumPes());
-        CkPrintf("Overdecomposition    = %d\n", overdecomposition);
-        CkPrintf("Matrix order         = %d\n", order);
-        CkPrintf("Tile order           = %d\n", Tile_order);
-        CkPrintf("Number of iterations = %d\n", maxiterations);
+        CkPrintf("Number of Charm++ PEs = %d\n", CkNumPes());
+        CkPrintf("Overdecomposition     = %d\n", overdecomposition);
+        CkPrintf("Matrix order          = %d\n", order);
+        CkPrintf("Tile size             = %d\n", Tile_order);
+        CkPrintf("Number of iterations  = %d\n", maxiterations);
 
         // Create new array of worker chares
         array = CProxy_Transpose::ckNew(num_chares);

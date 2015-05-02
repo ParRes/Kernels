@@ -161,7 +161,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
  
 int main(int argc, char ** argv) {
  
-  int    Num_procs;       /* number of processes                                 */
+  int    Num_procs;       /* number of ranks                                     */
   int    Num_procsx, 
          Num_procsy;      /* number of ranks in each coord direction             */
   int    Num_groupsx, 
@@ -174,7 +174,7 @@ int main(int argc, char ** argv) {
          group_sizey;     /* number of ranks in block in each coord direction    */
   int    my_ID;           /* MPI rank                                            */
   int    my_global_IDx, 
-         my_global_IDy;   /* coordinates of rank in overall process grid         */
+         my_global_IDy;   /* coordinates of rank in overall rank grid            */
   int    my_local_IDx, 
          my_local_IDy;    /* coordinates of rank within shared memory block      */
   int    right_nbr;       /* global rank of right neighboring tile               */
@@ -195,13 +195,13 @@ int main(int argc, char ** argv) {
          height_rank;     /* linear local dimension                              */
   int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
   int    istart_rank, 
-         iend_rank;       /* bounds of grid tile assigned to calling process     */
+         iend_rank;       /* bounds of grid tile assigned to calling rank        */
   int    jstart_rank, 
-         jend_rank;       /* bounds of grid tile assigned to calling process     */
+         jend_rank;       /* bounds of grid tile assigned to calling rank        */
   int    istart, iend;    /* bounds of grid block containing tile                */
   int    jstart, jend;    /* bounds of grid block containing tile                */
   DTYPE  norm,            /* L1 norm of solution                                 */
-         local_norm,      /* contribution of calling process to L1 norm          */
+         local_norm,      /* contribution of calling rank to L1 norm             */
          reference_norm;  /* value to be matched by computed norm                */
   DTYPE  f_active_points; /* interior of grid with respect to stencil            */
   DTYPE  flops;           /* floating point ops per iteration                    */
@@ -222,7 +222,7 @@ int main(int argc, char ** argv) {
   MPI_Win shm_win_out;    /* shared memory window object for OUT array           */
   MPI_Comm shm_comm_prep; /* preparatory shared memory communicator              */
   MPI_Comm shm_comm;      /* Shared Memory Communicator                          */
-  int shm_procs;          /* # of processes in shared domain                     */
+  int shm_procs;          /* # of rankes in shared domain                        */
   int shm_ID;             /* MPI rank in shared memory domain                    */
   MPI_Aint size_in;       /* size of the IN array in shared memory window        */
   MPI_Aint size_out;      /* size of the OUT array in shared memory window       */
@@ -277,7 +277,7 @@ int main(int argc, char ** argv) {
     n  = atoi(*++argv);
     long nsquare = n * n;
     if (nsquare < Num_procs){ 
-      printf("ERROR: grid size must be at least # processes: %ld\n", nsquare);
+      printf("ERROR: grid size must be at least # ranks: %ld\n", nsquare);
       error = 1;
       goto ENDOFTESTS;
     }
@@ -305,7 +305,7 @@ int main(int argc, char ** argv) {
   /* determine best way to create a 2D grid of ranks (closest to square, for 
      best surface/volume ratio); we do this brute force for now. The 
      decomposition needs to be such that shared memory groups can evenly
-     tessellate the process grid
+     tessellate the rank grid
   */
   for (Num_procsx=(int) (sqrt(Num_procs+1)); Num_procsx>0; Num_procsx--) {
     if (!(Num_procs%Num_procsx)) {
@@ -323,7 +323,7 @@ int main(int argc, char ** argv) {
 
   if (my_ID == root) {
     printf("MPI+SHM stencil execution on 2D grid\n");
-    printf("Number of processes             = %d\n", Num_procs);
+    printf("Number of ranks                 = %d\n", Num_procs);
     printf("Grid size                       = %d\n", n);
     printf("Radius of stencil               = %d\n", RADIUS);
     printf("Tiles in x/y-direction          = %d/%d\n", Num_procsx, Num_procsy);
@@ -395,7 +395,7 @@ int main(int argc, char ** argv) {
   
   width = iend - istart + 1;
   if (width == 0) {
-    printf("ERROR: Process %d has no work to do\n", my_ID);
+    printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
   bail_out(error);
@@ -413,13 +413,13 @@ int main(int argc, char ** argv) {
   
   height = jend - jstart + 1;
   if (height == 0) {
-    printf("ERROR: Process %d has no work to do\n", my_ID);
+    printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
   bail_out(error);
  
   if (width < RADIUS || height < RADIUS) {
-    printf("ERROR: Process %d has work tile smaller then stencil radius\n",
+    printf("ERROR: rank %d has work tile smaller then stencil radius\n",
            my_ID);
     error = 1;
   }

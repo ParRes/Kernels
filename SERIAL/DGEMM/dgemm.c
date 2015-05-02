@@ -128,7 +128,7 @@ main(int argc, char **argv){
     C_arr(i,j) = 0.0;
   }
 
-  printf("Serial Dense matrix-matrix multiplication\n");
+  printf("Serial Dense matrix-matrix multiplication: C = A x B\n");
 
 #ifndef MKL
   if (argc == 4) {

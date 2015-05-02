@@ -149,7 +149,7 @@ int main(int argc, char **argv)
   long    j, iter;       /* dummies                                     */
   double  scalar;        /* constant used in Triad operation            */
   int     iterations;    /* number of times vector loop gets repeated   */
-  long    length,        /* vector length per processor                 */
+  long    length,        /* vector length per rank                      */
           total_length,  /* total vector length                         */
           offset;        /* offset between vectors a and b, and b and c */
   double  bytes;         /* memory IO size                              */
@@ -159,10 +159,10 @@ int main(int argc, char **argv)
           avgtime;
   int     nthread_input,   /* thread parameters                         */
           nthread; 
-  int     Num_procs,     /* process parameters                          */
-          my_ID,         /* rank of calling process                     */
-          root=0;        /* ID of master process                        */
-  int     error=0;       /* error flag for individual process           */
+  int     Num_procs,     /* number of ranks                             */
+          my_ID,         /* rank of calling rank                        */
+          root=0;        /* ID of master rank                           */
+  int     error=0;       /* error flag for individual rank              */
  
 /**********************************************************************************
 * process and test input parameters    
@@ -244,7 +244,7 @@ int main(int argc, char **argv)
   bytes   = 4.0 * sizeof(double) * length * Num_procs;
  
   if (my_ID == root) {
-    printf("Number of processes  = %d\n", Num_procs);
+    printf("Number of ranks      = %d\n", Num_procs);
     printf("Number of threads    = %d\n", omp_get_max_threads());
     printf("Vector length        = %ld\n", total_length);
     printf("Offset               = %ld\n", offset);

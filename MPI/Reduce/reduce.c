@@ -35,10 +35,10 @@ POSSIBILITY OF SUCH DAMAGE.
 NAME:    Reduce
 
 PURPOSE: This program tests the efficiency with which a collection of 
-         vectors that are distributed among the processes can be added in
-         elementwise fashion. The number of vectors per process is two, 
+         vectors that are distributed among the ranks can be added in
+         elementwise fashion. The number of vectors per rank is two, 
          so that a reduction will take place even if the code runs on
-         just a single process.
+         just a single rank.
   
 USAGE:   The program takes as input the length of the vectors, plus the
          number of times the reduction is repeated.
@@ -70,8 +70,8 @@ HISTORY: Written by Rob Van der Wijngaart, March 2006.
 
 int main(int argc, char ** argv)
 {
-  int Num_procs;        /* Number of processors                              */
-  int my_ID;            /* Process ID (i.e. MPI rank)                        */
+  int Num_procs;        /* Number of ranks                                   */
+  int my_ID;            /* Rank                                              */
   int root=0;
   int iterations;       /* number of times the reduction is carried out      */
   int i, iter;          /* dummies                                           */
@@ -112,7 +112,7 @@ int main(int argc, char ** argv)
 
     vector_length = atol(*++argv);
     if (vector_length < 1) {
-      printf("ERROR: Vector length should be positive: %d\n", vector_length);
+      printf("ERROR: Vector length should be positive: %ld\n", vector_length);
       error = 1;
       goto ENDOFTESTS;
     }
@@ -124,17 +124,17 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("MPI vector reduction\n");
-    printf("Number of processes  = %d\n", Num_procs);
-    printf("Vector length        = %d\n", vector_length);
+    printf("Number of ranks      = %d\n", Num_procs);
+    printf("Vector length        = %ld\n", vector_length);
     printf("Number of iterations = %d\n", iterations);     
   }
 
-  /* Broadcast benchmark data to all processes */
+  /* Broadcast benchmark data to all ranks */
   MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&vector_length, 1, MPI_LONG, root, MPI_COMM_WORLD);
   vector= (double *) malloc(2*vector_length*sizeof(double)); 
   if (vector==NULL) {
-    printf("ERROR: Could not allocate space %ld for vector in process %d\n", 
+    printf("ERROR: Could not allocate space %ld for vector in rank %d\n", 
            2*vector_length*sizeof(double),my_ID);
     error = 1;
   }

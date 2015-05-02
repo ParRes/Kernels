@@ -279,7 +279,7 @@ int main(int argc, char **argv) {
 
   error = 0;
 
-  printf("Serial Random Access test\n");
+  printf("Serial Random Access\n");
   printf("Table size (shared)    = "FSTR64U"\n", tablesize);
   printf("Update ratio           = "FSTR64U"\n", (u64Int) update_ratio);
   printf("Number of updates      = "FSTR64U"\n", nupdate);

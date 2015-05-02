@@ -132,9 +132,9 @@ extern int fill_vec(int *vector, int vector_length, int iterations, int branch,
 
 int main(int argc, char ** argv)
 {
-  int        my_ID;           /* Process ID (i.e. MPI rank)                      */
-  int        root=0;          /* rank of root process                            */
-  int        Num_procs;       /* Number of processors                            */
+  int        my_ID;           /* rank                                            */
+  int        root=0;          /* ID of root rank                                 */
+  int        Num_procs;       /* Number of ranks                                 */
   int        vector_length;   /* length of loop containing the branch            */
   int        nfunc;           /* number of functions used in INS_HEAVY option    */
   int        rank;            /* matrix rank used in INS_HEAVY option            */
@@ -150,7 +150,7 @@ int main(int argc, char ** argv)
              total_ref;       /* computed and stored verification values         */
   int        btype;
   int        * RESTRICT vector, * RESTRICT index;
-  int        factor = -1;
+  int        procsize;        /* number of ranks per OS process                  */
 
 /*********************************************************************
 ** Initialize the MPI environment
@@ -201,8 +201,10 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
+    MPIX_Get_collocated_size(&procsize);
     printf("FG_MPI Branching Bonanza\n");
-    printf("Number of processes        = %d\n", Num_procs);
+    printf("Number of ranks            = %d\n", Num_procs);
+    printf("Number of ranks/process    = %d\n", procsize);
     printf("Vector length              = %d\n", vector_length);
     printf("Number of iterations       = %d\n", iterations);
     printf("Branching type             = %s\n", branch_type);
@@ -215,7 +217,7 @@ int main(int argc, char ** argv)
 
   vector = malloc(vector_length*2*sizeof(int));
   if (!vector) {
-    printf("ERROR: Process %d failed to allocate space for vector\n", my_ID);
+    printf("ERROR: rank %d failed to allocate space for vector\n", my_ID);
     error = 1;
   }
   bail_out(error);
