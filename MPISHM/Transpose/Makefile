@@ -6,15 +6,8 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 
 #uncomment any of the following flags (and change values) to change defaults
 
-#RESTRICTFLAG = -DRESTRICT_KEYWORD
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers
-
-DOUBLEFLAG = -DDOUBLE
-#description: default data type is single precision
-
-STARFLAG   = -DSTAR
-#description: default stencil is compact (dense, square)
+#BLOCKFLAG    = -DSYNCHRONOUS
+#description: turn on synchronous (blocking) communications
 
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
@@ -30,8 +23,7 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) \
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)
+TUNEFLAGS    = $(BLOCKFLAG) $(DEBUGFLAG)  $(USERFLAGS)
 PROGRAM     = transpose
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

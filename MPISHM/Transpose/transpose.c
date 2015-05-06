@@ -348,7 +348,6 @@ int main(int argc, char ** argv)
       send_to   = ((group_ID - phase + Num_groups)%Num_groups);
 
 #ifndef SYNCHRONOUS
-      MPI_Barrier(shm_comm);
       if (shm_ID==0) {
          MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
                    recv_from*group_size, phase, MPI_COMM_WORLD, &recv_req);  
@@ -382,7 +381,7 @@ int main(int argc, char ** argv)
 #else
         MPI_Sendrecv(Work_out_p, Block_size, MPI_DOUBLE, send_to*group_size, 
                      phase, Work_in_p, Block_size, MPI_DOUBLE, 
-  	             recv_from, phase, MPI_COMM_WORLD, &status);
+  	             recv_from*group_size, phase, MPI_COMM_WORLD, &status);
 #endif
       }
       /* NEED A LOAD FENCE HERE                                                  */ 
