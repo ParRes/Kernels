@@ -205,6 +205,7 @@ int main(int argc, char ** argv) {
 
   /* set flags to zero to indicate no data is available yet                      */
   for (j=1; j<n; j++) flag(TID,j) = 0;
+  flag(TID,0) = 1;
   /* we need a barrier after setting the flags, to make sure each is
      visible to all threads, and to synchronize before the iterations start      */
   #pragma omp barrier
@@ -232,6 +233,13 @@ int main(int argc, char ** argv) {
         flag(TID-1,j) = 0;
         #pragma omp flush
       }
+      else { /* first thread waits for corner value to be copied                   */
+        while (flag(0,0) == 0) {
+          #pragma omp flush
+        }
+        flag(0,0) = 0;
+        #pragma omp flush
+      }
 
       for (jj=j; jj<j+jjsize; jj++)
       for (i=MAX(start[TID],1); i<= end[TID]; i++) {
@@ -246,15 +254,15 @@ int main(int argc, char ** argv) {
         flag(TID,j) = 1;
         #pragma omp flush
       }
-    }
-
-    /* copy top right corner value to bottom left corner to create dependency; we
-       need a barrier to make sure the latest value is used. This also guarantees
-       that the flags for the next iteration (if any) are not getting clobbered  */
-    #pragma omp barrier
-    #pragma omp master
-    {
-    ARRAY(0,0) = -ARRAY(m-1,n-1);
+      else { /* if on right boundary, copy top right corner value to bottom left
+                corner to create dependency and signal completion                */
+        while (flag(0,0) == 1) {
+          #pragma omp flush
+        }
+        ARRAY(0,0) = -ARRAY(m-1,n-1);
+        flag(0,0) = 1;
+        #pragma omp flush
+      }
     }
   } /* end of iterations */
 
