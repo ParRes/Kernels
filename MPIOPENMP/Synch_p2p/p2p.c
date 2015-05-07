@@ -70,7 +70,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
  
 /* define shorthand for flag with cache line padding                             */ 
 #define LINEWORDS  16 
-#define flag(i)    flag[(i)*LINEWORDS] 
+#define flag(TID,j)    flag[((TID)+(j)*nthread)*LINEWORDS] 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
 double *vector; /* array holding grid values                                     */
  
@@ -89,7 +89,7 @@ int main(int argc, char ** argv)
   int    iterations;    /* number of times to run the pipeline algorithm         */
   int    start, end;    /* start and end of grid slice owned by calling rank     */
   int    segment_size;
-  int    flag[MAX_THREADS*LINEWORDS]; /* used for pairwise synchronizations      */
+  int    *flag;         /* used for pairwise synchronizations                    */
   int    *tstart, *tend;/* starts and ends of grid slices for respective threads */
   int    *tsegment_size;
   int    nthread;       /* number of threads                                     */
@@ -229,6 +229,12 @@ int main(int argc, char ** argv)
     tend[TID] = tstart[TID]+tsegment_size[TID]-1;
   }
  
+  flag = (int *) malloc(sizeof(int)*nthread*LINEWORDS*n);
+  if (!flag) {
+    printf("ERROR: COuld not allocate space for synchronization flags\n");
+    exit(EXIT_FAILURE);
+  }  
+ 
 #pragma omp parallel private(i, j, iter)
   {
   int TID = omp_get_thread_num();
@@ -260,9 +266,13 @@ int main(int argc, char ** argv)
       tend[ID]   = tstart[ID]+tsegment_size[ID]-1;
     }
   }
- 
-  /* need to make sure all threads see the up to date values of (t)start/end      */
-  #pragma omp barrier  
+
+  /* set flags to zero to indicate no data is available yet                       */
+  for (j=1; j<n; j++)
+  flag(TID,j) = 0;
+  /* we need a barrier after setting the flags, to make sure each is visible to 
+     all threads                                                                  */
+  #pragma omp barrier
  
   for (iter=0; iter<=iterations; iter++) {
  
@@ -275,12 +285,6 @@ int main(int argc, char ** argv)
       }
     }
  
-    /* set flags to zero to indicate no data is available yet                     */
-    flag(TID) = 0;
-    /* we need a barrier after setting the flags, to make sure each is
-       visible to all threads                                                     */
-    #pragma omp barrier
- 
     /* execute pipeline algorithm for grid lines 1 through n-1 (skip bottom line) */
     for (j=1; j<n; j++) {
  
@@ -291,13 +295,20 @@ int main(int argc, char ** argv)
           MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
                    MPI_COMM_WORLD, &status);
         }
-      }
- 
-      if (TID > 0) {
-        while (flag(TID-1) == 0) {
+        /* if only 1 rank, then "left" thread waits for corner value to be copied */
+        else if (Num_procs==1) { 
+          while (flag(0,0) == 0) {
+            #pragma omp flush
+          }
+          flag(0,0) = 0;
           #pragma omp flush
         }
-          flag(TID-1) = 0;
+      } 
+      else {
+        while (flag(TID-1,j) == 0) {
+          #pragma omp flush
+        }
+	flag(TID-1,j) = 0;
         #pragma omp flush
       }
  
@@ -307,26 +318,20 @@ int main(int argc, char ** argv)
  
       /* if not on right boundary, wait until right neighbor has received my data */
       if (TID < nthread-1) {
-        while (flag(TID) == 1) {
+        while (flag(TID,j) == 1) {
           #pragma omp flush
         }
-          flag(TID) = 1;
+	flag(TID,j) = 1;
         #pragma omp flush
       }
- 
-      /* if I am not on the right boundary, send data to my right neighbor        */  
-      if (TID==nthread-1) {
+      else { /* if not on the right boundary, send data to my right neighbor      */  
         if (my_ID < Num_procs-1) {
           MPI_Send(&(ARRAY(end,j)), 1, MPI_DOUBLE, my_ID+1, j, MPI_COMM_WORLD);
         }
       }
- 
     }
  
-    /* copy top right corner value to bottom left corner to create dependency. We
-       need a barrier to guarantee that the flags for the next iteration (if any) 
-       are not reinitialized while they are still in use in this iteration        */
-    #pragma omp barrier
+    /* copy top right corner value to bottom left corner to create dependency     */
     if (Num_procs >1) {
       if (TID==nthread-1 && my_ID==root) {
         corner_val = -ARRAY(end,n-1);
@@ -336,10 +341,20 @@ int main(int argc, char ** argv)
         MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
       }
     }
-    else if (TID==0) ARRAY(0,0)= -ARRAY(end,n-1);
+    else {
+      if (TID==nthread-1) { /* if on right boundary, copy top right corner value 
+                to bottom left corner to create dependency and signal completion  */
+        while (flag(0,0) == 1) {
+          #pragma omp flush
+        }
+        ARRAY(0,0) = -ARRAY(m-1,n-1);
+        flag(0,0) = 1;
+        #pragma omp flush
+      }
+    }
  
   } /* end of iterations */
-  } /* end of parallel sectopn */
+  } /* end of parallel section */
  
   local_pipeline_time = wtime() - local_pipeline_time;
   MPI_Reduce(&local_pipeline_time, &pipeline_time, 1, MPI_DOUBLE, MPI_MAX, root,
