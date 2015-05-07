@@ -79,7 +79,7 @@ int main(int argc, char ** argv) {
   int    m, n;            /* grid dimensions                                     */
   int    i, j, jj, iter, ID; /* dummies                                          */
   int    iterations;      /* number of times to run the pipeline algorithm       */
-  int    flag[MAX_THREADS*LINEWORDS]; /* used for pairwise synchronizations      */
+  int    *flag;           /* used for pairwise synchronizations                  */
   int    *start, *end;    /* starts and ends of grid slices                      */
   int    segment_size;
   double pipeline_time,   /* timing parameters                                   */
@@ -163,6 +163,12 @@ int main(int argc, char ** argv) {
     if (ID < (m%nthread_input)) segment_size++;
     if (ID>0) start[ID] = end[ID-1]+1;
     end[ID] = start[ID]+segment_size-1;
+  }
+
+  flag = (int *) malloc(sizeof(int)*nthread_input*LINEWORDS);
+  if (!flag) {
+    printf("ERROR: COuld not allocate space for synchronization flags\n");
+    exit(EXIT_FAILURE);
   }
 
 #pragma omp parallel private(i, j, jj, jjsize, TID, iter) 
