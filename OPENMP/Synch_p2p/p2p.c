@@ -71,7 +71,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #define ARRAY(i,j) vector[i+(j)*(m)]
 /* define shorthand for flag with cache line padding                             */
 #define LINEWORDS  16
-#define flag(i)    flag[(i)*LINEWORDS]
+#define flag(TID,j)    flag[((TID)+(j)*nthread)*LINEWORDS]
 
 int main(int argc, char ** argv) {
 
@@ -165,7 +165,7 @@ int main(int argc, char ** argv) {
     end[ID] = start[ID]+segment_size-1;
   }
 
-  flag = (int *) malloc(sizeof(int)*nthread_input*LINEWORDS);
+  flag = (int *) malloc(sizeof(int)*nthread_input*LINEWORDS*n);
   if (!flag) {
     printf("ERROR: COuld not allocate space for synchronization flags\n");
     exit(EXIT_FAILURE);
@@ -203,6 +203,12 @@ int main(int argc, char ** argv) {
   if (TID==0) for (j=0; j<n; j++) ARRAY(start[TID],j) = (double) j;
   for (i=start[TID]; i<=end[TID]; i++) ARRAY(i,0) = (double) i;
 
+  /* set flags to zero to indicate no data is available yet                      */
+  for (j=1; j<n; j++) flag(TID,j) = 0;
+  /* we need a barrier after setting the flags, to make sure each is
+     visible to all threads, and to synchronize before the iterations start      */
+  #pragma omp barrier
+
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration                                        */
@@ -214,22 +220,16 @@ int main(int argc, char ** argv) {
       }
     }
 
-    /* set flags to zero to indicate no data is available yet                      */
-    flag(TID) = 0;
-    /* we need a barrier after setting the flags, to make sure each is
-       visible to all threads, and to synchronize before the timer starts          */
-    #pragma omp barrier
-
     for (j=1; j<n; j+=grp) { /* apply grouping                                     */
 
       jjsize = MIN(grp, n-j);
 
       /* if not on left boundary,  wait for left neighbor to produce data          */
       if (TID > 0) {
-	while (flag(TID-1) == 0) {
+	while (flag(TID-1,j) == 0) {
            #pragma omp flush
         }
-        flag(TID-1) = 0;
+        flag(TID-1,j) = 0;
         #pragma omp flush
       }
 
@@ -240,10 +240,10 @@ int main(int argc, char ** argv) {
 
       /* if not on right boundary, wait until right neighbor has received my data  */
       if (TID < nthread-1) {
-        while (flag(TID) == 1) {
+        while (flag(TID,j) == 1) {
           #pragma omp flush
         }
-        flag(TID) = 1;
+        flag(TID,j) = 1;
         #pragma omp flush
       }
     }
