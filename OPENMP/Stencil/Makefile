@@ -16,6 +16,9 @@ RADIUSFLAG  = -DRADIUS=2
 DOUBLEFLAG = -DDOUBLE
 #description: default data type is single precision
 
+PARALLELFORFLAG = -DPARALLELFOR
+#description: default is a single parallel region for all iterations
+
 STARFLAG   = -DSTAR
 #description: default stencil is compact (dense, square)
 
@@ -37,7 +40,7 @@ INCLUDEPATHS =
 ### End User configurable options ###
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(NTHREADFLAG) $(USERFLAGS) \
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)    
+               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG) $(PARALLELFORFLAG)
 PROGRAM     = stencil
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

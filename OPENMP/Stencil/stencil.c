@@ -205,6 +205,7 @@ int main(int argc, char ** argv) {
     printf("Number of threads    = %d\n",nthread_input);
     printf("Grid size            = %d\n", n);
     printf("Radius of stencil    = %d\n", RADIUS);
+    printf("Number of iterations = %d\n", iterations);
 #ifdef STAR
     printf("Type of stencil      = star\n");
 #else
@@ -215,16 +216,32 @@ int main(int argc, char ** argv) {
 #else
     printf("Data type            = single precision\n");
 #endif
-    printf("Number of iterations = %d\n", iterations);
+#ifndef PARALLELFOR
+    printf("Parallel regions     = fused (omp for)\n");
+#else
+    printf("Parallel regions     = split (omp parallel for)\n");
+#endif
   }
   }
   bail_out(num_error);
 
+#ifdef PARALLELFOR
+} 
+#endif
+
   /* intialize the input and output arrays                                     */
+#ifdef PARALLELFOR
+  #pragma omp parallel for private(i)
+#else
   #pragma omp for
+#endif
   for (j=0; j<n; j++) for (i=0; i<n; i++) 
     IN(i,j) = COEFX*i+COEFY*j;
+#ifdef PARALLELFOR
+  #pragma omp parallel for private(i)
+#else
   #pragma omp for
+#endif
   for (j=RADIUS; j<n-RADIUS; j++) for (i=RADIUS; i<n-RADIUS; i++) 
     OUT(i,j) = (DTYPE)0.0;
 
@@ -232,14 +249,20 @@ int main(int argc, char ** argv) {
 
     /* start timer after a warmup iteration                                        */
     if (iter == 1) { 
+#ifndef PARALLELFOR
       #pragma omp barrier
       #pragma omp master
+#endif
       {   
         stencil_time = wtime();
       }
     }
 
+#ifdef PARALLELFOR
+    #pragma omp parallel for private(i, ii, jj)
+#else
     #pragma omp for
+#endif
     for (j=RADIUS; j<n-RADIUS; j++) {
       for (i=RADIUS; i<n-RADIUS; i++) {
 #ifdef STAR
@@ -255,22 +278,34 @@ int main(int argc, char ** argv) {
     }
 
     /* add constant to solution to force refresh of neighbor data, if any       */
+#ifdef PARALLELFOR
+    #pragma omp parallel for private(i)
+#else
     #pragma omp for
+#endif
     for (j=0; j<n; j++) for (i=0; i<n; i++) IN(i,j)+= 1.0;
   } /* end of iterations                                                        */
 
+#ifndef PARALLELFOR
   #pragma omp barrier
   #pragma omp master
+#endif
   {
     stencil_time = wtime() - stencil_time;
   }
 
   /* compute L1 norm in parallel                                                */
+#ifdef PARALLELFOR
+  #pragma omp parallel for reduction(+:norm), private (i)
+#else
   #pragma omp for reduction(+:norm)
+#endif
   for (j=RADIUS; j<n-RADIUS; j++) for (i=RADIUS; i<n-RADIUS; i++) {
     norm += (DTYPE)ABS(OUT(i,j));
   }
+#ifndef PARALLELFOR
   } /* end of OPENMP parallel region                                             */
+#endif
 
   norm /= f_active_points;
 
