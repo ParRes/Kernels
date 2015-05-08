@@ -231,7 +231,7 @@ int main(int argc, char ** argv)
  
   flag = (int *) malloc(sizeof(int)*nthread*LINEWORDS*n);
   if (!flag) {
-    printf("ERROR: COuld not allocate space for synchronization flags\n");
+    printf("ERROR: Could not allocate space for synchronization flags\n");
     exit(EXIT_FAILURE);
   }  
  
@@ -268,11 +268,11 @@ int main(int argc, char ** argv)
   }
 
   /* set flags to zero to indicate no data is available yet                       */
-  for (j=1; j<n; j++)
-  flag(TID,j) = 0;
+  for (j=1; j<n; j++) flag(TID,j) = 0;
+  flag(TID,0) = 1;
   /* we need a barrier after setting the flags, to make sure each is visible to 
      all threads                                                                  */
-  #pragma omp barrier
+  #pragma omp barrier  
  
   for (iter=0; iter<=iterations; iter++) {
  
@@ -284,7 +284,15 @@ int main(int argc, char ** argv)
         local_pipeline_time = wtime();
       }
     }
- 
+
+    if ((Num_procs==1) && (TID==0)) { /* first thread waits for corner value       */
+      while (flag(0,0) == 0) {
+        #pragma omp flush
+      }
+      flag(0,0) = 0;
+      #pragma omp flush
+    }
+
     /* execute pipeline algorithm for grid lines 1 through n-1 (skip bottom line) */
     for (j=1; j<n; j++) {
  
@@ -295,15 +303,7 @@ int main(int argc, char ** argv)
           MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
                    MPI_COMM_WORLD, &status);
         }
-        /* if only 1 rank, then "left" thread waits for corner value to be copied */
-        else if (Num_procs==1) { 
-          while (flag(0,0) == 0) {
-            #pragma omp flush
-          }
-          flag(0,0) = 0;
-          #pragma omp flush
-        }
-      } 
+      }
       else {
         while (flag(TID-1,j) == 0) {
           #pragma omp flush
@@ -332,7 +332,7 @@ int main(int argc, char ** argv)
     }
  
     /* copy top right corner value to bottom left corner to create dependency     */
-    if (Num_procs >1) {
+    if (Num_procs>1) {
       if (TID==nthread-1 && my_ID==root) {
         corner_val = -ARRAY(end,n-1);
         MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
@@ -344,10 +344,10 @@ int main(int argc, char ** argv)
     else {
       if (TID==nthread-1) { /* if on right boundary, copy top right corner value 
                 to bottom left corner to create dependency and signal completion  */
+        ARRAY(0,0) = -ARRAY(m-1,n-1);
         while (flag(0,0) == 1) {
           #pragma omp flush
         }
-        ARRAY(0,0) = -ARRAY(m-1,n-1);
         flag(0,0) = 1;
         #pragma omp flush
       }

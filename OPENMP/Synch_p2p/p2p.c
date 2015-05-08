@@ -212,7 +212,7 @@ int main(int argc, char ** argv) {
 
   for (iter = 0; iter<=iterations; iter++){
 
-    /* start timer after a warmup iteration                                        */
+    /* start timer after a warmup iteration                                      */
     if (iter == 1) { 
       #pragma omp barrier
       #pragma omp master
@@ -221,23 +221,24 @@ int main(int argc, char ** argv) {
       }
     }
 
-    for (j=1; j<n; j+=grp) { /* apply grouping                                     */
+    if (TID==0) { /* first thread waits for corner value to be copied            */
+      while (flag(0,0) == 0) {
+        #pragma omp flush
+      }
+      flag(0,0) = 0;
+      #pragma omp flush
+    }
+
+    for (j=1; j<n; j+=grp) { /* apply grouping                                   */
 
       jjsize = MIN(grp, n-j);
 
-      /* if not on left boundary,  wait for left neighbor to produce data          */
+      /* if not on left boundary,  wait for left neighbor to produce data        */
       if (TID > 0) {
 	while (flag(TID-1,j) == 0) {
            #pragma omp flush
         }
         flag(TID-1,j) = 0;
-        #pragma omp flush
-      }
-      else { /* first thread waits for corner value to be copied                   */
-        while (flag(0,0) == 0) {
-          #pragma omp flush
-        }
-        flag(0,0) = 0;
         #pragma omp flush
       }
 
@@ -254,16 +255,18 @@ int main(int argc, char ** argv) {
         flag(TID,j) = 1;
         #pragma omp flush
       }
-      else { /* if on right boundary, copy top right corner value to bottom left
-                corner to create dependency and signal completion                */
+    }
+
+    if (TID==nthread-1) { /* if on right boundary, copy top right corner value 
+                to bottom left corner to create dependency and signal completion   */
+        ARRAY(0,0) = -ARRAY(m-1,n-1);
         while (flag(0,0) == 1) {
           #pragma omp flush
         }
-        ARRAY(0,0) = -ARRAY(m-1,n-1);
         flag(0,0) = 1;
         #pragma omp flush
-      }
     }
+
   } /* end of iterations */
 
   #pragma omp barrier
