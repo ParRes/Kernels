@@ -73,88 +73,87 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 int main(int argc, char ** argv)
 {
-  int    my_ID;         /* rank                                                  */
-  int    root;
-  int    m, n;          /* grid dimensions                                       */
-  double pipeline_time, /* timing parameters                                     */
+  int    my_ID;           /* MPI rank                                            */
+  int    root;            /* ID of master rank                                   */
+  int    m, n;            /* grid dimensions                                     */
+  double pipeline_time,   /* timing parameters                                   */
          local_pipeline_time, avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
-  double corner_val;    /* verification value at top right corner of grid        */
-  int    i, j, iter, ID;/* dummies                                               */
-  int    iterations;    /* number of times to run the pipeline algorithm         */
-  int    *start, *end;  /* starts and ends of grid slices                        */
-  int    segment_size;
-  int    error=0;       /* error flag                                            */
-  int    Num_procs;     /* Number of ranks                                       */
-  double *vector;       /* array holding grid values                             */
-  long   total_length;  /* total required length to store grid values            */
-  int    *flag;
-  double *dst;
-  double *src;
-  long   pSync[_SHMEM_BCAST_SYNC_SIZE];
-  double pWrk [_SHMEM_BCAST_SYNC_SIZE];
+  double corner_val;      /* verification value at top right corner of grid      */
+  int    i, j, iter, ID;  /* dummies                                             */
+  int    iterations;      /* number of times to run the pipeline algorithm       */
+  int    *start, *end;    /* starts and ends of grid slices                      */
+  int    segment_size;    /* x-dimension of grid slice owned by calling rank     */
+  int    error=0;         /* error flag                                          */
+  int    Num_procs;       /* Number of ranks                                     */
+  double *vector;         /* array holding grid values                           */
+  long   total_length;    /* total required length to store grid values          */
+  int    *flag_snd;       /* synchronization flags                               */
+  double *dst;            /* target address of communication                     */
+  double *src;            /* source address of communication                     */
+  long   pSync[_SHMEM_BCAST_SYNC_SIZE]; /* work space for SHMEM collectives      */
+  double pWrk [_SHMEM_BCAST_SYNC_SIZE]; /* work space for SHMEM collectives      */
   
 /*********************************************************************
 ** process, test and broadcast input parameter
 *********************************************************************/
-    if (argc != 4){
-      printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>", 
-             *argv);
-      error = 1;
-      goto ENDOFTESTS;
-    }
+  if (argc != 4){
+    printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>", 
+           *argv);
+    error = 1;
+    goto ENDOFTESTS;
+  }
 
-    iterations = atoi(*++argv);
-    if (iterations < 1){
-      printf("ERROR: iterations must be >= 1 : %d \n",iterations);
-      error = 1;
-      goto ENDOFTESTS;
-    } 
+  iterations = atoi(*++argv);
+  if (iterations < 1){
+    printf("ERROR: iterations must be >= 1 : %d \n",iterations);
+    error = 1;
+    goto ENDOFTESTS;
+  } 
 
-    m = atoi(*++argv);
-    n = atoi(*++argv);
-    if (m < 1 || n < 1){
-      printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
-      error = 1;
-      goto ENDOFTESTS;
-    }
+  m = atoi(*++argv);
+  n = atoi(*++argv);
+  if (m < 1 || n < 1){
+    printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
+    error = 1;
+    goto ENDOFTESTS;
+  }
 
 // initialize sync variables for error checks
-    for (i = 0; i < SHMEM_BCAST_SYNC_SIZE; i += 1) {
-        pSync[i] = _SHMEM_SYNC_VALUE;
-    }
+  for (i = 0; i < SHMEM_BCAST_SYNC_SIZE; i += 1) {
+    pSync[i] = _SHMEM_SYNC_VALUE;
+  }
+
 /*********************************************************************************
 ** Initialize the SHMEM environment
 **********************************************************************************/
   start_pes (0);
   my_ID =  shmem_my_pe();
   Num_procs =  shmem_n_pes();
+/* we set root equal to the highest rank, because this is also the rank that 
+   reports on the verification value                                            */
+  root = Num_procs-1;
 
-  if (m<Num_procs) {
-      printf("ERROR on PE %d : First grid dimension %d smaller than number of ranks %d\n", 
-             my_ID, m, Num_procs);
-      error = 1;
+  if (m<=Num_procs) {
+    if (my_ID == root)
+      printf("ERROR: First grid dimension %d must be >= #ranks %d\n", m, Num_procs);
+    error = 1;
   }
   ENDOFTESTS:;
   bail_out (error, pSync);
 
-  root = Num_procs-1;
-
   if (my_ID == root) {
     printf("SHMEM pipeline execution on 2D grid\n");
-    printf("Number of ranks                = %d\n",Num_procs);
-    printf("Grid sizes                     = %d, %d\n", m, n);
-    printf("Number of iterations           = %d\n", iterations);
+    printf("Number of ranks            = %d\n",Num_procs);
+    printf("Grid sizes                 = %d, %d\n", m, n);
+    printf("Number of iterations       = %d\n", iterations);
   }
 
-/* we set root equal to highest rank, because this is also the rank that 
-   reports on the verification value                                            */
-
-  flag = (int *) shmalloc (sizeof(int) * n);
+  flag_snd = (int *) shmalloc (sizeof(int) * n);
   dst = (double *) shmalloc (sizeof(double) * (n));
   src = (double *) shmalloc (sizeof(double) * (n));
-  if (!flag || !dst || !src) {
-    printf("ERROR: could not allocate flags or communication buffers on rank %d\n",
+  if (!flag_snd || !dst || !src) {
+    printf("ERROR: could not allocate flags or communication buffers on rank %d\n", 
            my_ID);
     error = 1;
   }
@@ -203,55 +202,49 @@ int main(int argc, char ** argv)
   else          start[my_ID] = 0;
   end[my_ID] = segment_size-1;
 
-  for (iter=0; iter<iterations; iter++) {
+  /* initialize synchronization flags                                            */
+  for (j=0; j<n; j++) flag_snd[j] = 0;
+
+  for (iter=0; iter<=iterations; iter++) {
 
     if (iter == 1) {
-       shmem_barrier_all ();
-       local_pipeline_time = wtime();
+      shmem_barrier_all ();
+      local_pipeline_time = wtime();
     }
-
-    for (j=0; j<n; j++) {
-        flag[j] = 0;
-    }
-    shmem_barrier_all();
 
     for (j=1; j<n; j++) {
 
-      /* if I am not at the left boundary, I need to wait for my left neighbor to
-         send data                                                                */
+      /* if I am not at the left boundary, wait for left neighbor to send data   */
       if (my_ID > 0) {
-        
-       shmem_int_wait_until (&flag [j], SHMEM_CMP_NE, 0);
-       ARRAY(start[my_ID]-1,j) = dst[j];
- 
+        shmem_int_wait_until (&flag_snd [j], SHMEM_CMP_NE, iter%2);
+        ARRAY(start[my_ID]-1,j) = dst[j];
       }
 
       for (i=start[my_ID]; i<= end[my_ID]; i++) {
         ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
       }
  
-      /* if I am not on the right boundary, send data to my right neighbor        */  
+      /* if I am not on the right boundary, send data to my right neighbor       */
       if (my_ID != Num_procs-1) {
         src[j] = ARRAY (end[my_ID],j);
-        shmem_putmem(&dst[j], &src[j], sizeof(double) * 1, my_ID+1);
+        shmem_putmem(&dst[j], &src[j], sizeof(double), my_ID+1);
         shmem_fence();
-        shmem_int_add(&flag[j], 1, my_ID+1);
+        shmem_int_swap (&flag_snd [j], !(iter%2), my_ID+1);
       }
     }
 
      corner_val = 0.;
-     flag[0] = 0;
     /* copy top right corner value to bottom left corner to create dependency      */
     if (Num_procs >1) {
       if (my_ID==root) {
         corner_val = -ARRAY(end[my_ID],n-1);
         src [0] = corner_val;
-        shmem_putmem(&dst[0], &src[0], sizeof(double) * 1, 0);
+        shmem_putmem(&dst[0], &src[0], sizeof(double), 0);
         shmem_fence();
-        shmem_int_add(&flag[0], 1, 0);
+        shmem_int_swap(&flag_snd[0], !(iter%2), 0);
       }
       if (my_ID==0) {
-        shmem_int_wait_until (&flag[0], SHMEM_CMP_NE, 0);
+        shmem_int_wait_until (&flag_snd[0], SHMEM_CMP_NE, iter%2);
         ARRAY(0,0) = dst[0];
       }
     }
@@ -259,11 +252,11 @@ int main(int argc, char ** argv)
   }
 
   local_pipeline_time = wtime() - local_pipeline_time;
-  shmem_double_max_to_all(&pipeline_time, &local_pipeline_time, 1, 0, 0, _num_pes (), 
+  shmem_double_max_to_all(&pipeline_time, &local_pipeline_time, 1, 0, 0, Num_procs, 
                           pWrk, pSync);
 
   /* verify correctness, using top right value                                     */
-  corner_val = (double) (iterations*(m+n-2));
+  corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == root) {
     if (abs(ARRAY(end[my_ID],n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",

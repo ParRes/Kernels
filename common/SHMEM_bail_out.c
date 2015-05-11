@@ -61,7 +61,6 @@ void bail_out (int error, long *pSync) {
    shmem_barrier_all ();
    shmem_long_max_to_all (&global_error, &local_error, 1, 0, 0, _num_pes (), pWrk, pSync); 
    if (global_error > 0) {
-     printf ("SHMEMBAIL_OUT: Error on %d is %d \n", shmem_my_pe(), global_error); 
      shmem_finalize ();
      exit (1);
   }

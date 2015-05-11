@@ -71,8 +71,8 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 int main(int argc, char ** argv)
 {
-  int    my_ID;         /* rank                                                  */
-  int    root;
+  int    my_ID;         /* MPI rank                                              */
+  int    root;          /* ID of root rank                                       */
   int    m, n;          /* grid dimensions                                       */
   double local_pipeline_time, /* timing parameters                               */
          pipeline_time,
@@ -82,7 +82,7 @@ int main(int argc, char ** argv)
   int    i, j, jj, iter, ID;/* dummies                                           */
   int    iterations;    /* number of times to run the pipeline algorithm         */
   int    start, end;    /* start and end of grid slice owned by calling rank     */
-  int    segment_size;
+  int    segment_size;  /* size of x-dimension of grid owned by calling rank     */
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of ranks                                       */
   int    grp;           /* grid line aggregation factor                          */
@@ -130,8 +130,8 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     }
 
-    if (m<Num_procs) {
-      printf("ERROR: First grid dimension %d smaller than number of ranke %d\n", 
+    if (m<=Num_procs) {
+      printf("ERROR: First grid dimension %d must be >= number of ranks %d\n", 
              m, Num_procs);
       error = 1;
       goto ENDOFTESTS;
