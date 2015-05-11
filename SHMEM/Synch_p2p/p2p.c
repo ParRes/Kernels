@@ -94,36 +94,6 @@ int main(int argc, char ** argv)
   long   pSync[_SHMEM_BCAST_SYNC_SIZE]; /* work space for SHMEM collectives      */
   double pWrk [_SHMEM_BCAST_SYNC_SIZE]; /* work space for SHMEM collectives      */
   
-/*********************************************************************
-** process, test and broadcast input parameter
-*********************************************************************/
-  if (argc != 4){
-    printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>", 
-           *argv);
-    error = 1;
-    goto ENDOFTESTS;
-  }
-
-  iterations = atoi(*++argv);
-  if (iterations < 1){
-    printf("ERROR: iterations must be >= 1 : %d \n",iterations);
-    error = 1;
-    goto ENDOFTESTS;
-  } 
-
-  m = atoi(*++argv);
-  n = atoi(*++argv);
-  if (m < 1 || n < 1){
-    printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
-    error = 1;
-    goto ENDOFTESTS;
-  }
-
-// initialize sync variables for error checks
-  for (i = 0; i < SHMEM_BCAST_SYNC_SIZE; i += 1) {
-    pSync[i] = _SHMEM_SYNC_VALUE;
-  }
-
 /*********************************************************************************
 ** Initialize the SHMEM environment
 **********************************************************************************/
@@ -133,6 +103,39 @@ int main(int argc, char ** argv)
 /* we set root equal to the highest rank, because this is also the rank that 
    reports on the verification value                                            */
   root = Num_procs-1;
+
+/*********************************************************************
+** process, test and broadcast input parameter
+*********************************************************************/
+  if (argc != 4){
+    if (my_ID == root)
+      printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>\n", 
+           *argv);
+    error = 1;
+    goto ENDOFTESTS;
+  }
+
+  iterations = atoi(*++argv);
+  if (iterations < 1){
+    if (my_ID==root)
+      printf("ERROR: iterations must be >= 1 : %d \n",iterations);
+    error = 1;
+    goto ENDOFTESTS;
+  } 
+
+  m = atoi(*++argv);
+  n = atoi(*++argv);
+  if (m < 1 || n < 1){
+    if (my_ID == root)
+      printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
+    error = 1;
+    goto ENDOFTESTS;
+  }
+
+// initialize sync variables for error checks
+  for (i = 0; i < SHMEM_BCAST_SYNC_SIZE; i += 1) {
+    pSync[i] = _SHMEM_SYNC_VALUE;
+  }
 
   if (m<=Num_procs) {
     if (my_ID == root)
@@ -275,7 +278,6 @@ int main(int argc, char ** argv)
 #else
     printf("Solution validates\n");
 #endif
-    avgtime = avgtime/(double)(MAX(iterations-1,1));
     printf("Rate (MFlops/s): %lf, Avg time (s): %lf\n",
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
