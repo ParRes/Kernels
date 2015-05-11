@@ -94,6 +94,7 @@ int main(int argc, char ** argv) {
   long   total_length;    /* total required length to store grid values          */
   int    num_error=0;     /* flag that signals that requested and obtained
                              numbers of threads are the same                     */
+  int    true, false;     /* toggled booleans used for synchronization           */
 
   /*******************************************************************************
   ** process and test input parameters    
@@ -171,7 +172,7 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-#pragma omp parallel private(i, j, jj, jjsize, TID, iter) 
+#pragma omp parallel private(i, j, jj, jjsize, TID, iter, true, false) 
   {
 
   #pragma omp master
@@ -204,13 +205,17 @@ int main(int argc, char ** argv) {
   for (i=start[TID]; i<=end[TID]; i++) ARRAY(i,0) = (double) i;
 
   /* set flags to zero to indicate no data is available yet                      */
-  for (j=1; j<n; j++) flag(TID,j) = 0;
-  flag(TID,0) = 1;
+  false = 0;
+  for (j=0; j<n; j++) flag(TID,j) = false;
+
   /* we need a barrier after setting the flags, to make sure each is
      visible to all threads, and to synchronize before the iterations start      */
   #pragma omp barrier
 
   for (iter = 0; iter<=iterations; iter++){
+
+    /* true and false toggle each iteration                                      */
+    true = (iter+1)%2; false = !true;
 
     /* start timer after a warmup iteration                                      */
     if (iter == 1) { 
@@ -222,11 +227,9 @@ int main(int argc, char ** argv) {
     }
 
     if (TID==0) { /* first thread waits for corner value to be copied            */
-      while (flag(0,0) == 0) {
+      while (flag(0,0) == true) {
         #pragma omp flush
       }
-      flag(0,0) = 0;
-      #pragma omp flush
     }
 
     for (j=1; j<n; j+=grp) { /* apply grouping                                   */
@@ -235,11 +238,9 @@ int main(int argc, char ** argv) {
 
       /* if not on left boundary,  wait for left neighbor to produce data        */
       if (TID > 0) {
-	while (flag(TID-1,j) == 0) {
+	while (flag(TID-1,j) == false) {
            #pragma omp flush
         }
-        flag(TID-1,j) = 0;
-        #pragma omp flush
       }
 
       for (jj=j; jj<j+jjsize; jj++)
@@ -247,12 +248,9 @@ int main(int argc, char ** argv) {
         ARRAY(i,jj) = ARRAY(i-1,jj) + ARRAY(i,jj-1) - ARRAY(i-1,jj-1);
       }
 
-      /* if not on right boundary, wait until right neighbor has received my data  */
+      /* if not on right boundary, signal right neighbor it has new data         */
       if (TID < nthread-1) {
-        while (flag(TID,j) == 1) {
-          #pragma omp flush
-        }
-        flag(TID,j) = 1;
+        flag(TID,j) = true;
         #pragma omp flush
       }
     }
@@ -260,10 +258,7 @@ int main(int argc, char ** argv) {
     if (TID==nthread-1) { /* if on right boundary, copy top right corner value 
                 to bottom left corner to create dependency and signal completion   */
         ARRAY(0,0) = -ARRAY(m-1,n-1);
-        while (flag(0,0) == 1) {
-          #pragma omp flush
-        }
-        flag(0,0) = 1;
+        flag(0,0) = true;
         #pragma omp flush
     }
 
