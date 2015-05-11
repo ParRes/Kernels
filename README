@@ -66,10 +66,8 @@ or compile script. If MPI is not going to be used, the user can ignore
 the value of MPICC. The compilers should already be in your path. That
 is, if you define "CC=icc," then typing "which icc" should show a
 valid path where the compiler is installed.
-If you also want to use Charm++ or Grappa, these runtime needs to be 
-installed, and you need to specify in this file where they are located. 
-Note that if Charm++ or Grappa are built on top of MPI, MPI does need
-to be installed, even if it is not called directly.
+Special instructions for building and running codes using Charm++, Grappa, 
+or Fine-Grain MPI are in README.special
 
 The suite of kernels currently has parallel implementations in OpenMP
 MPI, and Fine-Grain MPI. There is also a serial reference implementation. 
