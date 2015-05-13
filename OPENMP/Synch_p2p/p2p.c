@@ -137,9 +137,7 @@ int main(int argc, char ** argv) {
   }
   else grp = 1;
 
-  /*  make sure we stay within the memory allocated for vector                   */
   total_length = sizeof(double)*m*n;
-
   vector = (double *) malloc(total_length);
   if (!vector) {
     printf("ERROR: Could not allocate space for vector: %ld\n", total_length);
@@ -192,6 +190,11 @@ int main(int argc, char ** argv) {
     printf("Number of iterations      = %d\n", iterations);
     if (grp > 1)
     printf("Group factor              = %d (cheating!)\n", grp);
+#ifdef SYNCHRONOUS
+    printf("Handshake between neighbor threads\n");
+#else
+    printf("No handshake between neighbor threads\n");
+#endif
   }
   }
   bail_out(num_error);
@@ -205,7 +208,7 @@ int main(int argc, char ** argv) {
   for (i=start[TID]; i<=end[TID]; i++) ARRAY(i,0) = (double) i;
 
   /* set flags to zero to indicate no data is available yet                      */
-  false = 0;
+  true = 1; false = !true;
   for (j=0; j<n; j++) flag(TID,j) = false;
 
   /* we need a barrier after setting the flags, to make sure each is
@@ -214,8 +217,10 @@ int main(int argc, char ** argv) {
 
   for (iter = 0; iter<=iterations; iter++){
 
+#ifndef SYNCHRONOUS
     /* true and false toggle each iteration                                      */
     true = (iter+1)%2; false = !true;
+#endif
 
     /* start timer after a warmup iteration                                      */
     if (iter == 1) { 
@@ -230,6 +235,10 @@ int main(int argc, char ** argv) {
       while (flag(0,0) == true) {
         #pragma omp flush
       }
+#ifdef SYNCHRONOUS
+      flag(0,0)= true;
+      #pragma omp flush
+#endif      
     }
 
     for (j=1; j<n; j+=grp) { /* apply grouping                                   */
@@ -241,6 +250,10 @@ int main(int argc, char ** argv) {
 	while (flag(TID-1,j) == false) {
            #pragma omp flush
         }
+#ifdef SYNCHRONOUS
+        flag(TID-1,j)= false;
+        #pragma omp flush
+#endif      
       }
 
       for (jj=j; jj<j+jjsize; jj++)
@@ -250,6 +263,11 @@ int main(int argc, char ** argv) {
 
       /* if not on right boundary, signal right neighbor it has new data         */
       if (TID < nthread-1) {
+#ifdef SYNCHRONOUS 
+        while (flag(TID,j) == true) {
+          #pragma omp flush
+        }
+#endif 
         flag(TID,j) = true;
         #pragma omp flush
       }
@@ -258,7 +276,15 @@ int main(int argc, char ** argv) {
     if (TID==nthread-1) { /* if on right boundary, copy top right corner value 
                 to bottom left corner to create dependency and signal completion   */
         ARRAY(0,0) = -ARRAY(m-1,n-1);
+#ifdef SYNCHRONOUS
+        while (flag(0,0) == false) {
+          #pragma omp flush
+        }
+        flag(0,0) = false;
+#else
+        #pragma omp flush
         flag(0,0) = true;
+#endif
         #pragma omp flush
     }
 
