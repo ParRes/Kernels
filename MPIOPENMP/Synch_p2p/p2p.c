@@ -98,7 +98,8 @@ int main(int argc, char ** argv)
   char  *name;          /* MPI threading mode suffix name                        */
   long   total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
-  int    provided;
+  int    provided;      /* MPI level of thread support                           */
+  int    true, false;   /* toggled booleans used for synchronization             */
  
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -184,6 +185,11 @@ int main(int argc, char ** argv)
     printf("Number of threads              = %d\n", omp_get_max_threads());
     printf("Grid sizes                     = %d, %d\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
+#ifdef SYNCHRONOUS
+    printf("Handshake between neighbor threads\n");
+#else
+    printf("No handshake between neighbor threads\n");
+#endif
   }
  
   int leftover;
@@ -235,7 +241,7 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }  
  
-#pragma omp parallel private(i, j, iter)
+#pragma omp parallel private(i, j, iter, true, false)
   {
   int TID = omp_get_thread_num();
  
@@ -268,14 +274,20 @@ int main(int argc, char ** argv)
   }
 
   /* set flags to zero to indicate no data is available yet                       */
-  for (j=1; j<n; j++) flag(TID,j) = 0;
-  flag(TID,0) = 1;
-  /* we need a barrier after setting the flags, to make sure each is visible to 
-     all threads                                                                  */
+  true = 1; false = !true;
+  for (j=0; j<n; j++) flag(TID,j) = 0;
+
+  /* need barrier after setting flags, to make sure each is visible to all threads 
+     and to synchronize before iterations start                                   */
   #pragma omp barrier  
  
   for (iter=0; iter<=iterations; iter++) {
  
+#ifndef SYNCHRONOUS
+    /* true and false toggle each iteration                                      */
+    true = (iter+1)%2; false = !true;
+#endif
+
     /* start timer after a warmup iteration */
     if (iter == 1) { 
       #pragma omp barrier
@@ -286,11 +298,13 @@ int main(int argc, char ** argv)
     }
 
     if ((Num_procs==1) && (TID==0)) { /* first thread waits for corner value       */
-      while (flag(0,0) == 0) {
+      while (flag(0,0) == true) {
         #pragma omp flush
       }
-      flag(0,0) = 0;
+#ifdef SYNCHRONOUS
+      flag(0,0)= true;
       #pragma omp flush
+#endif      
     }
 
     /* execute pipeline algorithm for grid lines 1 through n-1 (skip bottom line) */
@@ -305,23 +319,27 @@ int main(int argc, char ** argv)
         }
       }
       else {
-        while (flag(TID-1,j) == 0) {
-          #pragma omp flush
+	while (flag(TID-1,j) == false) {
+           #pragma omp flush
         }
-	flag(TID-1,j) = 0;
+#ifdef SYNCHRONOUS
+        flag(TID-1,j)= false;
         #pragma omp flush
+#endif      
       }
  
       for (i=tstart[TID]; i<= tend[TID]; i++) {
         ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
       }
  
-      /* if not on right boundary, wait until right neighbor has received my data */
+      /* if not on right boundary, signal right neighbor it has new data */
       if (TID < nthread-1) {
-        while (flag(TID,j) == 1) {
+#ifdef SYNCHRONOUS 
+        while (flag(TID,j) == true) {
           #pragma omp flush
         }
-	flag(TID,j) = 1;
+#endif 
+        flag(TID,j) = true;
         #pragma omp flush
       }
       else { /* if not on the right boundary, send data to my right neighbor      */  
@@ -345,10 +363,15 @@ int main(int argc, char ** argv)
       if (TID==nthread-1) { /* if on right boundary, copy top right corner value 
                 to bottom left corner to create dependency and signal completion  */
         ARRAY(0,0) = -ARRAY(m-1,n-1);
-        while (flag(0,0) == 1) {
+#ifdef SYNCHRONOUS
+        while (flag(0,0) == false) {
           #pragma omp flush
         }
-        flag(0,0) = 1;
+        flag(0,0) = false;
+#else
+        #pragma omp flush
+        flag(0,0) = true;
+#endif
         #pragma omp flush
       }
     }
