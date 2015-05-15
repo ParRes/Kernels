@@ -56,19 +56,19 @@ These extensions are not yet complete.
 To build all available kernels of a certain version, type in the root
 directory:
 
-Command              | Effect
-------------------------------------------------
-`make all`           | builds all kernels.
-`make allopenmp`     | builds all OpenMP kernels.
-`make allmpi`        | builds all MPI kernels.
-`make allfgmpi`      | builds all Fine-Grain MPI kernels
-`make allserial`     | builds all serial kernels.
-`make allmpiopenmp`  | builds all hybrid MPI+OpenMP kernels
-`make allmpirma`     | builds all MPI kernels with one-sided communications
-`make allshmem`      | builds all OpenSHMEM kernels
-`make allmpishm`     | builds all kernels with MPI3 shared memory
-`make allcharm++`    | builds all Charm++ kernels
-`make allgrappa`     | builds all Charm++ kernels
+| Command              | Effect |  
+|------------------------------------------------|  
+| `make all`           | builds all kernels. |  
+| `make allopenmp`     | builds all OpenMP kernels. |  
+| `make allmpi`        | builds all MPI kernels. |  
+| `make allfgmpi`      | builds all Fine-Grain MPI kernels. |  
+| `make allserial`     | builds all serial kernels. |  
+| `make allmpiopenmp`  | builds all hybrid MPI+OpenMP kernels. |  
+| `make allmpirma`     | builds all MPI kernels with one-sided communications. |  
+| `make allshmem`      | builds all OpenSHMEM kernels. |  
+| `make allmpishm`     | builds all kernels with MPI3 shared memory. |  
+| `make allcharm++`    | builds all Charm++ kernels. |  
+| `make allgrappa`     | builds all Charm++ kernels. |  
 
 The global make process uses a single set of optimization flags for all
 kernels. For more control, the user should consider individual makes
