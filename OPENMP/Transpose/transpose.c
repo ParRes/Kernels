@@ -167,10 +167,10 @@ int main(int argc, char ** argv) {
       printf("Tile size             = %d\n", Tile_order);
 #ifdef COLLAPSE
       printf("Using loop collapse\n");
-    }
 #endif
+    }
     else                   
-    printf("Untiled\n");
+      printf("Untiled\n");
   }
   }
   bail_out(num_error);

@@ -14,7 +14,7 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
-COLLAPSEFLAG = -DCOLLAPSE
+#COLLAPSEFLAG = -DCOLLAPSE
 #description: collapse outer two loops in case of tiling to increase concurrency
 
 #NTHREADFLAG = -DMAXTHREADS=n
