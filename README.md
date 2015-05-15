@@ -57,7 +57,7 @@ To build all available kernels of a certain version, type in the root
 directory:
 
 | Command              | Effect |  
-|------------------------------------------------|  
+|----------------------|-------------------------|  
 | `make all`           | builds all kernels. |  
 | `make allopenmp`     | builds all OpenMP kernels. |  
 | `make allmpi`        | builds all MPI kernels. |  
