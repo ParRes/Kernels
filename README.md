@@ -42,13 +42,18 @@ valid path where the compiler is installed.
 Special instructions for building and running codes using Charm++, Grappa, 
 or Fine-Grain MPI are in `README.special`.
 
-The suite of kernels currently has parallel implementations in OpenMP
-MPI, and Fine-Grain MPI. There is also a serial reference implementation. 
-The suite is currently being extended to include Charm++, MPI+OpenMP, and
-Grappa, as well as three new variations of MPI: 
-1. MPI with one-sided communications (MPIRMA) 
-2. MPI with direct use of shared memory inside coherency domains (MPISHM)
-3. OpenSHMEM
+The suite of kernels currently has parallel implementations in 
+[OpenMP](http://openmp.org/), 
+[MPI](http://www.mpi-forum.org/), and 
+[Fine-Grain MPI](http://www.cs.ubc.ca/~humaira/fgmpi.html). 
+There is also a serial reference implementation. 
+The suite is currently being extended to include 
+[Charm++](http://charm.cs.illinois.edu/research/charm),
+MPI+OpenMP, and
+[Grappa](http://grappa.io/), as well as three new variations of MPI: 
+  1. MPI with one-sided communications (MPIRMA) 
+  2. MPI with direct use of shared memory inside coherency domains (MPISHM)
+  3. [OpenSHMEM](http://openshmem.org/)
 These extensions are not yet complete.
 
 ## Global make
@@ -92,7 +97,7 @@ that determine the behavior of the kernel that need to be known at
 compile time. These are explained succinctly in the Makefile itself. Edit 
 the Makefile to activate certain parameters, and/or to set their values.
 
-Typing "make" without parameters in each leaf directory will prompt
+Typing `make` without parameters in each leaf directory will prompt
 the user for the correct parameter syntax. Once the code has been
 built, typing the name of the executable without any parameters will 
 prompt the user for the correct parameter syntax.
