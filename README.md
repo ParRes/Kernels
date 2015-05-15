@@ -1,3 +1,5 @@
+# License
+
 See LICENSE for licensing information.
 
 # Overview
