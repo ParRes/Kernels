@@ -1,11 +1,11 @@
 #name of MPI C compiler, e.g. mpiicc, mpicc
-MPICC=
+MPICC=mpiicc
 
 #name of C compiler, e.g. icc, xlc, gcc
-CC=
+CC=icc
 
 #name of compile line flag enabling OpenMP, e.g. -openmp, -fopenmp
-OPENMPFLAG=
+OPENMPFLAG=-openmp
 
 #default compiler optimization flags
 DEFAULT_OPT_FLAGS=-O3
@@ -34,10 +34,10 @@ GRAPPATOP=
 FGMPITOP=
 
 ############# remove lines below after editing this file ########
-MPICC="ERROR -- No MPICC variable defined in file common/make.defs"
-CC="ERROR -- No CC variable defined in file common/make.defs"
-CXX="ERROR -- No CXX variable defined in file common/make.defs"
-SHMEMCC="ERROR -- No SHMEMCC variable defined in file common/make.defs"
-CHARMTOP="ERROR -- No CHARMTOP variable defined in file common/make.defs"
-FGMPITOP="ERROR -- No FGMPITOP variable defined in file common/make.defs"
+#MPICC="ERROR -- No MPICC variable defined in file common/make.defs"
+#CC="ERROR -- No CC variable defined in file common/make.defs"
+#CXX="ERROR -- No CXX variable defined in file common/make.defs"
+#SHMEMCC="ERROR -- No SHMEMCC variable defined in file common/make.defs"
+#CHARMTOP="ERROR -- No CHARMTOP variable defined in file common/make.defs"
+#FGMPITOP="ERROR -- No FGMPITOP variable defined in file common/make.defs"
 ############# remove lines above after editing this file ########
