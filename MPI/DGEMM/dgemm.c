@@ -89,9 +89,9 @@ void dgemm(int, int, int, double *, int, double *, int, double *, int,
 int main(int argc, char *argv[])
 {
   int my_ID, myrow, mycol, /* my index and row and column index    */
-      root=0,           /* rank of root process                    */
-      Num_procs,        /* number of processes                     */
-      nprow, npcol,     /* row, column dimensions of process grid  */
+      root=0,           /* ID of root rank                         */
+      Num_procs,        /* number of ranks                         */
+      nprow, npcol,     /* row, column dimensions of rank grid     */
       order,            /* matrix order                            */
       mynrows, myfrow,  /* my number of rows and index of first row*/
       mylrow,           /* and last row                            */
@@ -108,11 +108,10 @@ int main(int argc, char *argv[])
       iter, iterations;
   double *a, *b, *c,    /* arrays that hold local a, b, c          */
       *work1, *work2,   /* work arrays to pass to dpmmmult         */
-      dgemm_time,       /* timing parameters                       */
-      avgtime = 0.0,
-      maxtime = 0.0,
-      mintime = 366.0*24.0*3600.0, /* set the minimum time to a 
-                       large value; one leap year should be enough */
+      local_dgemm_time, /* timing parameters                       */
+      dgemm_time,
+      avgtime; 
+  double
       forder, nflops,   /* float matrix order + total flops        */
       checksum,         /* array checksum for verification test    */
       checksum_local=0.0,
@@ -120,7 +119,7 @@ int main(int argc, char *argv[])
   MPI_Group world_group, 
       temp_group;
   MPI_Comm comm_row,    /* communicators for row and column ranks  */
-      comm_col;         /* of process grid                         */
+      comm_col;         /* of rank grid                            */
 
   /* initialize                                                    */
   MPI_Init(&argc,&argv);
@@ -168,7 +167,7 @@ int main(int argc, char *argv[])
   MPI_Bcast(&nb, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&inner_block_flag, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-  /* compute process grid to most closely match a square; to do so,
+  /* compute rank grid to most closely match a square; to do so,
      compute largest divisor of Num_procs, using hare-brained method. 
      The small term epsilon is used to guard against roundoff errors 
      in case Num_procs is a perfect square                         */
@@ -177,16 +176,16 @@ int main(int argc, char *argv[])
   npcol = Num_procs/nprow;
 
   if (my_ID == root) {
-    printf("MPI DGEMM: C = A x B\n");
-    printf("Number of processes  = %d\n", Num_procs);
-    printf("Process grid: %d rows x %d columns\n", nprow, npcol); 
+    printf("MPI Dense matrix-matrix multiplication: C = A x B\n");
+    printf("Number of ranks      = %d\n", Num_procs);
+    printf("Rank grid            = %d rows x %d columns\n", nprow, npcol); 
     printf("Matrix order         = %d\n", order);
     printf("Outer block size     = %d\n", nb);
+    printf("Number of iterations = %d\n", iterations);
     if (inner_block_flag)
       printf("Using local dgemm blocking\n");
     else
       printf("No local dgemm blocking\n");
-    printf("Number of iterations = %d\n", iterations);
   }
 
   /* set up row and column communicators                           */
@@ -204,7 +203,7 @@ int main(int argc, char *argv[])
   /* 1. extract group of ranks that make up WORLD                  */
   MPI_Comm_group( MPI_COMM_WORLD, &world_group );
 
-  /* 2. create list of all ranks in same row of process grid       */
+  /* 2. create list of all ranks in same row of rank grid          */
   ranks[0] = my_ID/npcol * npcol;
   for (i=1; i<npcol; i++) ranks[i] = ranks[i-1] + 1;
 
@@ -212,7 +211,7 @@ int main(int argc, char *argv[])
   MPI_Group_incl( world_group, npcol, ranks, &temp_group );
   MPI_Comm_create( MPI_COMM_WORLD, temp_group, &comm_row );
 
-  /* 3. create list of all ranks in same column of process grid    */
+  /* 3. create list of all ranks in same column of rank grid       */
   ranks[0] = my_ID%npcol;
   for (i=1; i<nprow; i++) ranks[i] = ranks[i-1] + npcol;
 
@@ -258,7 +257,7 @@ int main(int argc, char *argv[])
   bail_out(error);
 
   /* collect array that holds mynrows from all nodes in my row
-     of the process grid (array of all m_i)                        */
+     of the rank grid (array of all m_i)                           */
   MPI_Allgather( &mynrows, 1, MPI_INT, mm, 1, MPI_INT, comm_col );
 
   /* myfrow = first row on my node                                 */
@@ -266,7 +265,7 @@ int main(int argc, char *argv[])
   mylrow = myfrow+mynrows-1;
 
   /* collect array that holds myncols from all nodes in my column 
-     of the process grid (array of all n_j)                        */
+     of the rank grid (array of all n_j)                           */
   MPI_Allgather( &myncols, 1, MPI_INT, nn, 1, MPI_INT, comm_row );
   /* myfcol = first col on my node                                 */
   for (myfcol=1,i=0; i<mycol; i++) myfcol += nn[i];
@@ -281,25 +280,25 @@ int main(int argc, char *argv[])
     C(ii,jj) = 0.0;
   }
 
-  /* start timing                                                  */
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
 
-    MPI_Barrier( MPI_COMM_WORLD );
-    dgemm_time = wtime();
+    /* start timer after a warmup iteration */
+    if (iter == 1) { 
+      MPI_Barrier(MPI_COMM_WORLD);
+      local_dgemm_time = wtime();
+    }
 
     /* actual matrix-vector multiply                               */
     dgemm(order, nb, inner_block_flag, a, lda, b, lda, c, lda, 
           mm, nn, comm_row, comm_col, work1, work2 );  
 
-    dgemm_time = wtime() - dgemm_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration */
-      avgtime = avgtime + dgemm_time;
-      mintime = MIN(mintime, dgemm_time);
-      maxtime = MAX(maxtime, dgemm_time);
-    }
-  }
+  } /* end of iterations                                           */
 
-  /* verification test                                                            */
+  local_dgemm_time = wtime() - local_dgemm_time;
+  MPI_Reduce(&local_dgemm_time, &dgemm_time, 1, MPI_DOUBLE, MPI_MAX, root,
+             MPI_COMM_WORLD);
+
+  /* verification test                                             */
   for (jj=0, j=myfcol; j<=mylcol; j++, jj++) 
   for (ii=0, i=myfrow; i<=mylrow; i++, ii++)
     checksum_local += C(ii,jj);
@@ -309,7 +308,7 @@ int main(int argc, char *argv[])
  
   forder = (double) order;
   ref_checksum = (0.25*forder*forder*forder*(forder-1.0)*(forder-1.0));
-  ref_checksum *= iterations;
+  ref_checksum *= (iterations+1);
 
   if (my_ID == root) { 
     if (ABS((checksum - ref_checksum)/ref_checksum) > epsilon) {
@@ -330,10 +329,9 @@ int main(int argc, char *argv[])
   /* report elapsed time                                           */
   nflops = 2.0*forder*forder*forder;
   if ( my_ID == root ) {
-      avgtime = avgtime/(double)(MAX(iterations-1,1));
-      printf("Rate (MFlops/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-             1.0E-06 * nflops/mintime, avgtime, mintime);
-      printf(", Max time (s): %lf\n", maxtime);
+      avgtime = dgemm_time/iterations;
+      printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
+             1.0E-06 * nflops/avgtime, avgtime);
   }
 
   MPI_Finalize();
@@ -367,15 +365,15 @@ MPI_Comm comm_row,      /* Communicator for this row of nodes      */
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
 
   /* This routine does a rank "updt" update of the matrix block
-     owned by the calling process. This requires updt whole columns
+     owned by the calling rank. This requires updt whole columns
      of A and updt whole rows of B. The value of updt is determined
      as the minimum of 1. the maximum number of remaining columns 
      of A and 2. the maximum number of remaining rows of B, 
      respectively, that can be gathered from the current row and column 
-     of the process grid, with an overall maximum of the block factor nb.
+     of the rank grid, with an overall maximum of the block factor nb.
      We keep track of how many matrix columns and rows of the current 
-     process grid row and column have been visited through the
-     indices ii and jj. When a certain process grid row or column 
+     rank grid row and column have been visited through the
+     indices ii and jj. When a certain rank grid row or column 
      has been exhausted, we move to the next row or column (increment
      currow or curcol) and reset ii or jj to zero                  */
 
@@ -424,7 +422,7 @@ void dgemm_local(int M, int N, int K, double *a, int lda, double *b,
   else {
     aa = (double *) malloc(3*(nb+BOFFSET)*nb*sizeof(double));
     /* if this allocation fails, we make an ungraceful exit; we do not
-       want to test whether any other processes failed, because that
+       want to test whether any other ranks failed, because that
        requires an expensive barrier                               */
     if (!aa) MPI_Abort(MPI_COMM_WORLD,666);
     bb = aa + (nb+BOFFSET)*nb;

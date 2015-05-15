@@ -34,8 +34,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 NAME:    transpose
 
-PURPOSE: This OpenMP program measures the time for the transpose of a 
-         column-major stored matrix into a row-major stored matrix.
+PURPOSE: This program tests the efficiency with which a square matrix
+         can be transposed and stored in another matrix. The matrices
+         are distributed identically.
   
 USAGE:   Program input is three command line arguments that give the
          matrix order, the number of times to repeat the operation 
@@ -67,29 +68,24 @@ HISTORY: Written by Tim Mattson, April 1999.
 #include <par-res-kern_general.h>
 #include <par-res-kern_omp.h>
 
-/* Constant to shift column index */
-#define COL_SHIFT 1000.00   
-/* Constant to shift row index */
-#define ROW_SHIFT  0.001    
-
+#define A(i,j)    A[i+order*(j)]
+#define B(i,j)    B[i+order*(j)]
 static double test_results (int , double*);
 
 int main(int argc, char ** argv) {
 
   int    order;         /* order of a the matrix                           */
-  int    tile_size=32;  /* default tile size for tiling of local transpose */
+  int    Tile_order=32; /* default tile size for tiling of local transpose */
   int    iterations;    /* number of times to do the transpose             */
+  int    tiling;        /* boolean: true if tiling is used                 */
   int    i, j, it, jt, iter;  /* dummies                                   */
   double bytes;         /* combined size of matrices                       */
   double * RESTRICT A;  /* buffer to hold original matrix                  */
   double * RESTRICT B;  /* buffer to hold transposed matrix                */
-  double errsq;         /* squared error                                   */
+  double abserr;        /* absolute error                                  */
   double epsilon=1.e-8; /* error tolerance                                 */
-  double trans_time,    /* timing parameters                               */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*24.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough         */
+  double transpose_time,/* timing parameters                               */
+         avgtime;
   int    nthread_input, 
          nthread;
   int    num_error=0;     /* flag that signals that requested and 
@@ -127,9 +123,10 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  if (argc == 5) tile_size = atoi(*++argv);
+  if (argc == 5) Tile_order = atoi(*++argv);
   /* a non-positive tile size means no tiling of the local transpose */
-  if (tile_size <=0) tile_size = order;
+  tiling = (Tile_order > 0) && (Tile_order < order);
+  if (!tiling) Tile_order = order;
 
   /*********************************************************************
   ** Allocate space for the input and transpose matrix
@@ -165,92 +162,106 @@ int main(int argc, char ** argv) {
   else {
     printf("Number of threads     = %i;\n",nthread_input);
     printf("Matrix order          = %d\n", order);
-    if (tile_size < order) printf("Tile size             = %d\n", tile_size);
-    else                   printf("Untiled\n");
     printf("Number of iterations  = %d\n", iterations);
+    if (tiling) {
+      printf("Tile size             = %d\n", Tile_order);
+#ifdef COLLAPSE
+      printf("Using loop collapse\n");
+    }
+#endif
+    else                   
+    printf("Untiled\n");
   }
   }
   bail_out(num_error);
 
   /*  Fill the original matrix, set transpose to known garbage value. */
 
-  #pragma omp for private (j)
-  for (i=0;i<order; i++) {
-    for (j=0;j<order;j++) {
-      *(A+i*order+j) = COL_SHIFT * j + ROW_SHIFT * i;
-      *(B+i*order+j) = -1.0;
-    }
+  if (tiling) {
+#ifdef COLLAPSE
+    #pragma omp parallel for private (i,it,jt) collapse(2)
+#else
+    #pragma omp parallel for private (i,it,jt)
+#endif
+    for (j=0; j<order; j+=Tile_order) 
+      for (i=0; i<order; i+=Tile_order) 
+        for (jt=j; jt<MIN(order,j+Tile_order);jt++)
+          for (it=i; it<MIN(order,i+Tile_order); it++){
+            A(it,jt) = (double) (order*jt + it);
+            B(it,jt) = -1.0;
+          }
+  }
+  else {
+    #pragma omp for private (i)
+    for (j=0;j<order;j++) 
+      for (i=0;i<order; i++) {
+        A(i,j) = (double) (order*j + i);
+        B(i,j) = -1.0;
+      }
   }
 
-  errsq = 0.0;
-  for (iter = 0; iter<iterations; iter++){
+  for (iter = 0; iter<=iterations; iter++){
 
-    #pragma omp barrier
-    #pragma omp master
-    {
-    trans_time = wtime();
+    /* start timer after a warmup iteration                                        */
+    if (iter == 1) { 
+      #pragma omp barrier
+      #pragma omp master
+      {
+        transpose_time = wtime();
+      }
     }
 
-    /* Transpose the  matrix; only use tiling if the tile size is smaller 
-       than the matrix */
-    if (tile_size < order) {
-      #pragma omp for private (j, it, jt)
-      for (i=0; i<order; i+=tile_size) { 
-        for (j=0; j<order; j+=tile_size) { 
-          for (it=i; it<MIN(order,i+tile_size); it++){ 
-            for (jt=j; jt<MIN(order,j+tile_size);jt++){ 
-              B[it+order*jt] = A[jt+order*it]; 
-            } 
-          } 
-        } 
-      } 
+    /* Transpose the  matrix                                                       */
+    if (!tiling) {
+      #pragma omp for private (j)
+      for (i=0;i<order; i++) 
+        for (j=0;j<order;j++) { 
+          B(j,i) = A(i,j);
+        }
     }
     else {
-      #pragma omp for private (j)
-      for (i=0;i<order; i++) {
-        for (j=0;j<order;j++) {
-          B[i+order*j] = A[j+order*i];
-        }
-      }
-    }	
-
-    #pragma omp master
-    {
-    trans_time = wtime() - trans_time;
-#ifdef VERBOSE
-    printf("\nFinished with transpose, using %lf seconds \n", trans_time);
+#ifdef COLLAPSE
+      #pragma omp parallel for private (j,it,jt) collapse(2)
+#else
+      #pragma omp parallel for private (j,it,jt)
 #endif
-    if (iter>0 || iterations==1) { /* skip the first iteration */
-      avgtime = avgtime + trans_time;
-      mintime = MIN(mintime, trans_time);
-      maxtime = MAX(maxtime, trans_time);
-    }
-    }
-
-    errsq +=  test_results (order, B);
+      for (i=0; i<order; i+=Tile_order) 
+        for (j=0; j<order; j+=Tile_order) 
+          for (it=i; it<MIN(order,i+Tile_order); it++) 
+            for (jt=j; jt<MIN(order,j+Tile_order);jt++) {
+              B(jt,it) = A(it,jt);
+            } 
+    }	
 
   }  /* end of iter loop  */
 
+  #pragma omp barrier
+  #pragma omp master
+  {
+    transpose_time = wtime() - transpose_time;
+  }
+
   } /* end of OpenMP parallel region */
+
+  abserr =  test_results (order, B);
 
   /*********************************************************************
   ** Analyze and output results.
   *********************************************************************/
 
-  if (errsq < epsilon) {
+  if (abserr < epsilon) {
     printf("Solution validates\n");
-    avgtime = avgtime/(double)(MAX(iterations-1,1));
-    printf("Rate (MB/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-           1.0E-06 * bytes/mintime, avgtime, mintime);
-    printf(", Max time (s): %lf\n", maxtime);
+    avgtime = transpose_time/iterations;
+    printf("Rate (MB/s): %lf Avg time (s): %lf\n",
+           1.0E-06 * bytes/avgtime, avgtime);
 #ifdef VERBOSE
-    printf("Squared errors: %f \n", errsq);
+    printf("Squared errors: %f \n", abserr);
 #endif
     exit(EXIT_SUCCESS);
   }
   else {
     printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n",
-           errsq, epsilon);
+           abserr, epsilon);
     exit(EXIT_FAILURE);
   }
 
@@ -260,25 +271,23 @@ int main(int argc, char ** argv) {
 
 /* function that computes the error committed during the transposition */
 
-double test_results (int order, double *trans) {
+double test_results (int order, double *B) {
 
-  double diff, errsq=0.0;
+  double abserr=0.0;
   int i,j;
 
-  #pragma omp parallel for private(j,diff) reduction(+:errsq)
-  for (i=0;i<order; i++) {
-    for (j=0;j<order;j++) {
-      diff = *(trans+i*order+j) -
-             (COL_SHIFT*i  + ROW_SHIFT * j);
-      errsq += diff*diff;
+  #pragma omp parallel for private(i) reduction(+:abserr)
+  for (j=0;j<order;j++) {
+    for (i=0;i<order; i++) {
+      abserr += ABS(B(i,j) - (i*order + j));
     }
   }
 
 #ifdef VERBOSE
   #pragma omp master 
   {
-  printf(" Squared sum of differences: %f\n",errsq);
+  printf(" Squared sum of differences: %f\n",abserr);
   }
 #endif   
-  return errsq;
+  return abserr;
 }

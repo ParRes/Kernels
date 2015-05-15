@@ -58,31 +58,17 @@ HISTORY: Written by Rob Van der Wijngaart, February 2009.
 
 #include <par-res-kern_general.h>
 
-/* MEMWORDS is the total number of words needed. */
-#ifndef MEMWORDS
-  #define MEMWORDS  10000000
-#endif
-
-#define VEC0(i)        vector[i]
-#define VEC1(i)        vector[vector_length+i]
-
 int main(int argc, char ** argv)
 {
-  int    vector_length;   /* length of vectors to be aggregated            */
-  int    total_length;    /* bytes needed to store reduction vectors       */
-  double reduce_time,     /* timing parameters                             */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*24.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough           */
-  double epsilon=1.e-8;   /* error tolerance                                 */
-  int    i, iter;         /* dummies                                         */
-  double element_value;   /* reference element value for final vector        */
-  int    iterations;      /* number of times the reduction is carried out    */
-  static double           /* use static so it goes on the heap, not stack    */
-  RESTRICT vector[MEMWORDS];/* we would like to allocate "vector" dynamically, 
-                             but need to be able to flush the thing in some 
-                             versions of the reduction algorithm -> static   */
+  long   vector_length;    /* length of vectors to be aggregated             */
+  double reduce_time,      /* timing parameters                              */
+         avgtime;
+  double epsilon=1.e-8;    /* error tolerance                                */
+  int    i, iter;          /* dummies                                        */
+  double element_value;    /* reference element value for final vector       */
+  int    iterations;       /* number of times the reduction is carried out   */
+  double * RESTRICT vector;/* vector to be reduced                           */
+  double * RESTRICT ones;  /* vector to be reduced                           */
 
 /*****************************************************************************
 ** process and test input parameters    
@@ -95,62 +81,58 @@ int main(int argc, char ** argv)
 
   iterations = atoi(*++argv);
   if (iterations < 1){
-    printf("ERROR: Iterations must be positive : %d \n", iterations);
+    printf("ERROR: Iterations must be positive : %d\n", iterations);
     exit(EXIT_FAILURE);
   }
 
-  vector_length  = atoi(*++argv);
+  vector_length  = atol(*++argv);
   if (vector_length < 1){
-    printf("ERROR: vector length must be >= 1 : %d \n",vector_length);
-    exit(EXIT_FAILURE);
-  }
-  /*  make sure we stay within the memory allocated for vector               */
-  total_length = 2*vector_length;
-  if (total_length/2 != vector_length || total_length > MEMWORDS) {
-    printf("Vector length of %d too large; ", vector_length);
-    printf("increase MEMWORDS in Makefile or reduce vector length\n");
+    printf("ERROR: vector length must be >= 1 : %ld\n",vector_length);
     exit(EXIT_FAILURE);
   }
 
   printf("Serial Vector Reduction\n");
-  printf("Vector length                  = %d\n", vector_length);
+  printf("Vector length                  = %ld\n", vector_length);
   printf("Number of iterations           = %d\n", iterations);
 
-  for (iter=0; iter<iterations; iter++) {
+  vector= (double *) malloc(2*vector_length*sizeof(double)); 
+  if (vector==NULL) {
+    printf("ERROR: Could not allocate space for vector: %ld\n",
+           2*vector_length*sizeof(double));
+    exit(EXIT_FAILURE);
+  }
 
-    /* initialize the arrays, assuming first-touch memory placement          */
-    for (i=0; i<vector_length; i++) {
-      VEC0(i) = (double)(1);
-      VEC1(i) = (double)(2);
+  ones = vector + vector_length;
+
+  /* initialize the arrays                                                    */
+  for (i=0; i<vector_length; i++) {
+    vector[i]  = (double)1;
+    ones[i]    = (double)1;
+  }
+
+  for (iter=0; iter<=iterations; iter++) {
+
+    /* start timer after a warmup iteration */
+    if (iter == 1) { 
+      reduce_time = wtime();
     }
-   
-    reduce_time = wtime();
-    /* do actual reduction                                                   */
 
-    /* first do the "local" part, which is the same for all algorithms       */
+    /* do the reduction                                                      */
     for (i=0; i<vector_length; i++) {
-      VEC0(i) += VEC1(i);
-    }
-
-    reduce_time = wtime() - reduce_time;
-#ifdef VERBOSE
-    printf("\nFinished with reduction, using %lf seconds \n", reduce_time);
-#endif
-    if (iter>0 || iterations==1) { /* skip the first iteration               */
-      avgtime = avgtime + reduce_time;
-      mintime = MIN(mintime, reduce_time);
-      maxtime = MAX(maxtime, reduce_time);
+      vector[i] += ones[i];
     }
 
   } /* end of iter loop                                                      */
 
+    reduce_time = wtime() - reduce_time;
+
   /* verify correctness */
-  element_value = (2.0+1.0);
+  element_value = (double)(iterations + 2.0);
 
   for (i=0; i<vector_length; i++) {
-    if (ABS(VEC0(i) - element_value) >= epsilon) {
+    if (ABS(vector[i] - element_value) >= epsilon) {
        printf("First error at i=%d; value: %lf; reference value: %lf\n",
-              i, VEC0(i), element_value);
+              i, vector[i], element_value);
        exit(EXIT_FAILURE);
     }
   }
@@ -159,10 +141,9 @@ int main(int argc, char ** argv)
 #ifdef VERBOSE
   printf("Element verification value: %lf\n", element_value);
 #endif
-  avgtime = avgtime/(double)(MAX(iterations-1,1));
-  printf("Rate (MFlops/s): %lf,  Avg time (s): %lf,  Min time (s): %lf",
-         1.0E-06 * (2.0-1.0)*vector_length/mintime, avgtime, mintime);
-  printf(", Max time (s): %lf\n", maxtime);
+  avgtime = reduce_time/(double)iterations;
+  printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
+         1.0E-06 * (2.0-1.0)*vector_length/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 }

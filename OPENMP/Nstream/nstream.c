@@ -92,7 +92,7 @@ FUNCTIONS CALLED:
 NOTES:     Bandwidth is determined as the number of words read, plus the 
            number of words written, times the size of the words, divided 
            by the execution time. For a vector length of N, the total 
-           number of words read and written is 3*N*sizeof(double).
+           number of words read and written is 4*N*sizeof(double).
  
 HISTORY:   This code is loosely based on the Stream benchmark by John
            McCalpin, but does not follow all the Stream rules. Hence,
@@ -137,7 +137,7 @@ static int checkTRIADresults(int, long int);
  
 int main(int argc, char **argv) 
 {
-  long int j, k;          /* dummies                                     */
+  long     j, iter;       /* dummies                                     */
   double   scalar;        /* constant used in Triad operation            */
   int      iterations;    /* number of times vector loop gets repeated   */
   long int length,        /* total vector length                         */
@@ -145,10 +145,7 @@ int main(int argc, char **argv)
   double   bytes;         /* memory IO size                              */
   size_t   space;         /* memory used for a single vector             */
   double   nstream_time,  /* timing parameters                           */
-           avgtime = 0.0, 
-           maxtime = 0.0, 
-           mintime = 366.0*24.0*3600.0; /* set the minimum time to a 
-                             large value; one leap year should be enough */
+           avgtime;
   int      nthread_input; /* thread parameters                           */
   int      nthread; 
   int      num_error=0;     /* flag that signals that requested and 
@@ -210,7 +207,7 @@ int main(int argc, char **argv)
   b = a + length + offset;
   c = b + length + offset;
  
-  #pragma omp parallel private(j,k) 
+  #pragma omp parallel private(j,iter) 
   {
   #pragma omp master
   {
@@ -244,42 +241,39 @@ int main(int argc, char **argv)
  
   scalar = SCALAR;
  
-  for (k=0; k<iterations; k++) {
+  for (iter=0; iter<=iterations; iter++) {
  
-    #pragma omp barrier
-    #pragma omp master
-    {
-    nstream_time = wtime();
+    if (iter==1) {
+      #pragma omp barrier
+      #pragma omp master
+      {
+        nstream_time = wtime();
+      }
     }
  
     #pragma omp for
     #pragma vector always
-    for (j=0; j<length; j++) a[j] = b[j]+scalar*c[j];
+    for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
  
-    #pragma omp master
-    if (k>0 || iterations==1) { /* skip the first iteration */
-      nstream_time = wtime() - nstream_time;
-      avgtime = avgtime + nstream_time;
-      mintime = MIN(mintime, nstream_time);
-      maxtime = MAX(maxtime, nstream_time);
-    }
-    /* insert a dependency between iterations to avoid dead-code elimination */
-    #pragma omp for 
-    #pragma vector always
-    for (j=0; j<length; j++) b[j] = a[j];
+  } /* end of iterations                                              */
+
+  #pragma omp barrier
+  #pragma omp master
+  {
+    nstream_time = wtime() - nstream_time;
   }
+
   }  /* end of OpenMP parallel region */
  
   /*********************************************************************
   ** Analyze and output results.
   *********************************************************************/
  
-  bytes   = 3.0 * sizeof(double) * length;
+  bytes   = 4.0 * sizeof(double) * length;
   if (checkTRIADresults(iterations, length)) {
-    avgtime = avgtime/(double)(MAX(iterations-1,1));
-    printf("Rate (MB/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-           1.0E-06 * bytes/mintime, avgtime, mintime);
-    printf(", Max time (s): %lf\n", maxtime);
+    avgtime = nstream_time/iterations;
+    printf("Rate (MB/s): %lf Avg time (s): %lf\n",
+           1.0E-06 * bytes/avgtime, avgtime);
    }
   else exit(EXIT_FAILURE);
  
@@ -290,7 +284,7 @@ int main(int argc, char **argv)
 int checkTRIADresults (int iterations, long int length) {
   double aj, bj, cj, scalar, asum;
   double epsilon = 1.e-8;
-  long int j,k;
+  int j,iter;
  
   /* reproduce initialization */
   aj = 0.0;
@@ -299,9 +293,8 @@ int checkTRIADresults (int iterations, long int length) {
  
   /* now execute timing loop */
   scalar = SCALAR;
-  for (k=0; k<iterations; k++) {
-    aj = bj+scalar*cj;
-    bj = aj;
+  for (iter=0; iter<=iterations; iter++) {
+    aj += bj+scalar*cj;
   }
  
   aj = aj * (double) (length);
@@ -324,7 +317,7 @@ int checkTRIADresults (int iterations, long int length) {
     return (0);
   }
   else {
-    printf ("Solution Validates\n");
+    printf ("Solution validates\n");
     return (1);
   }
 }

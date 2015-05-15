@@ -7,19 +7,19 @@ OPTFLAGS     = $(DEFAULT_OPT_FLAGS)
 
 #uncomment any of the following flags (and change values) to change defaults
 
-OFFSETFLAG   = -DBOFFSET=0
+#OFFSETFLAG   = -DBOFFSET=0
 #description: set this flag to some value to override default first array 
 #             dimension padding (12) of tiles used inside dgemm
 
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS     = -strict-ansi -vec-report3
+USERFLAGS     = 
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         =
+LIBS         = -lm
 LIBPATHS     = 
 INCLUDEPATHS = 
 

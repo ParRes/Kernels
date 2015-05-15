@@ -207,7 +207,7 @@ int main(int argc, char ** argv)
 #ifndef LOCK
     printf("Not ");
 #endif
-    printf("using (uncontended) locks\n");
+    printf("Using (uncontended) locks\n");
   }
   }
   bail_out(num_error);

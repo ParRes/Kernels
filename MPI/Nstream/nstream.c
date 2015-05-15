@@ -96,7 +96,7 @@ FUNCTIONS CALLED:
 NOTES:     Bandwidth is determined as the number of words read, plus the 
            number of words written, times the size of the words, divided 
            by the execution time. For a vector length of N, the total 
-           number of words read and written is 3*N*sizeof(double).
+           number of words read and written is 4*N*sizeof(double).
  
 HISTORY:   This code is loosely based on the Stream benchmark by John
            McCalpin, but does not follow all the Stream rules. Hence,
@@ -109,55 +109,40 @@ REVISION:  Modified by Rob Van der Wijngaart, March 2006, to handle MPI.
 REVISION:  Modified by Rob Van der Wijngaart, May 2006, to introduce
            dependence between successive triad operations. This is
            necessary to avoid dead code elimination
+REVISION:  Modified by Rob Van der Wijngaart, November 2014, replaced
+           timing of individual loop iterations with timing of overall
+           loop; also replaced separate loop establishing dependence
+           between iterations (must now be included in timing) with
+           accumulation: a[] += b[] + scalar*c[]
 **********************************************************************/
  
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
  
-#define DEFAULTMAXLENGTH 2000000
-#ifdef MAXLENGTH
-  #if MAXLENGTH > 0
-    #define N   MAXLENGTH
-  #else
-    #define N   DEFAULTMAXLENGTH
-  #endif
-#else
-  #define N   DEFAULTMAXLENGTH
-#endif
- 
-#ifdef STATIC_ALLOCATION
-  /* use static to make sure it goes on the heap, not the stack          */
-  static double a[N];
-#else
-  static double * RESTRICT a;
-#endif
-
-static double * RESTRICT b;
-static double * RESTRICT c;
- 
 #define SCALAR  3.0
  
-static int checkTRIADresults(int, long int);
+static int checkTRIADresults(int, long int, double *);
  
 int main(int argc, char **argv) 
 {
   long int j, iter;       /* dummies                                     */
   double   scalar;        /* constant used in Triad operation            */
   int      iterations;    /* number of times vector loop gets repeated   */
-  long int length,        /* vector length per processor                 */
+  long int length,        /* vector length per rank                      */
            total_length,  /* total vector length                         */
            offset;        /* offset between vectors a and b, and b and c */
   double   bytes;         /* memory IO size                              */
   size_t   space;         /* memory used for a single vector             */
-  double   nstream_time,  /* timing parameters                           */
-           avgtime = 0.0, 
-           maxtime = 0.0, 
-           mintime = 366.0*8760.0*3600.0; /* set the minimum time to a 
-                             large value; one leap year should be enough */
-  int      Num_procs,     /* process parameters                          */
-           my_ID,         /* rank of calling process                     */
-           root=0;        /* ID of master process                        */
-  int      error=0;       /* error flag for individual process           */
+  double   local_nstream_time,/* timing parameters                       */
+           nstream_time, 
+           avgtime;
+  int      Num_procs,     /* number of ranks                             */
+           my_ID,         /* rank                                        */
+           root=0;        /* ID of master rank                           */
+  int      error=0;       /* error flag for individual rank              */
+  double * RESTRICT a;    /* main vector                                 */
+  double * RESTRICT b;    /* main vector                                 */
+  double * RESTRICT c;    /* main vector                                 */
  
 /**********************************************************************************
 * process and test input parameters    
@@ -168,7 +153,6 @@ int main(int argc, char **argv)
   MPI_Comm_rank(MPI_COMM_WORLD,&my_ID);
 
   if (my_ID == root) {
-    printf("MPI stream triad: A = B + scalar*C\n");
     if (argc != 4){
       printf("Usage:  %s <# iterations> <vector length> <offset>\n", *argv);
       error = 1;
@@ -196,14 +180,7 @@ int main(int argc, char **argv)
       error = 1;
       goto ENDOFTESTS;
     }
-#ifdef STATIC_ALLOCATION 
-    if ((3*length + 2*offset) > N) {
-      printf("ERROR: vector length/offset %ld/%ld too ", total_length, offset);
-      printf("large; increase MAXLENGTH in Makefile or decrease vector length\n");
-      error = 1;
-      goto ENDOFTESTS;
-    }
-#endif
+
     ENDOFTESTS:;
   }
   bail_out(error);
@@ -213,7 +190,6 @@ int main(int argc, char **argv)
   MPI_Bcast(&offset,1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations,1, MPI_INT, root, MPI_COMM_WORLD);
 
-#ifndef STATIC_ALLOCATION
   space = (3*length + 2*offset)*sizeof(double);
   a = (double *) malloc(space);
   if (!a && my_ID == root) {
@@ -221,14 +197,15 @@ int main(int argc, char **argv)
     error = 1;
   }
   bail_out(error);
-#endif
+
   b = a + length + offset;
   c = b + length + offset;
 
-  bytes   = 3.0 * sizeof(double) * length * Num_procs;
+  bytes   = 4.0 * sizeof(double) * length * Num_procs;
  
   if (my_ID == root) {
-    printf("Number of processes  = %d\n", Num_procs);
+    printf("MPI stream triad: A = B + scalar*C\n");
+    printf("Number of ranks      = %d\n", Num_procs);
     printf("Vector length        = %ld\n", total_length);
     printf("Offset               = %ld\n", offset);
     printf("Number of iterations = %d\n", iterations);
@@ -245,41 +222,33 @@ int main(int argc, char **argv)
  
   scalar = SCALAR;
  
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
  
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (my_ID == root) {
-      nstream_time = wtime();
+    /* start timer after a warmup iteration */
+    if (iter == 1) { 
+      MPI_Barrier(MPI_COMM_WORLD);
+      local_nstream_time = wtime();
     }
 
     #pragma vector always
-    for (j=0; j<length; j++) a[j] = b[j]+scalar*c[j];
- 
-    if (my_ID == root) {
-      if (iter>0 || iterations==1) { /* skip the first iteration */
-        nstream_time = wtime() - nstream_time;
-        avgtime = avgtime + nstream_time;
-        mintime = MIN(mintime, nstream_time);
-        maxtime = MAX(maxtime, nstream_time);
-      }
-    }
+    for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
 
-    /* insert a dependency between iterations to avoid dead-code elimination */
-    #pragma vector always
-    for (j=0; j<length; j++) b[j] = a[j];
-  }
+  } /* end iterations */
  
   /*********************************************************************
   ** Analyze and output results.
   *********************************************************************/
 
+  local_nstream_time = wtime() - local_nstream_time;
+  MPI_Reduce(&local_nstream_time, &nstream_time, 1, MPI_DOUBLE, MPI_MAX, root,
+             MPI_COMM_WORLD);
+  
   if (my_ID == root) {
-    if (checkTRIADresults(iterations, length)) {
-      avgtime = avgtime/(double)(MAX(iterations-1,1));
-      printf("Rate (MB/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-             1.0E-06 * bytes/mintime, avgtime, mintime);
-      printf(", Max time (s): %lf\n", maxtime);
-     }
+    if (checkTRIADresults(iterations, length, a)) {
+      avgtime = nstream_time/iterations;
+      printf("Rate (MB/s): %lf Avg time (s): %lf\n",
+             1.0E-06 * bytes/avgtime, avgtime);
+    }
     else error = 1;
   }
   bail_out(error);
@@ -287,7 +256,7 @@ int main(int argc, char **argv)
 }
  
  
-int checkTRIADresults (int iterations, long int length) {
+int checkTRIADresults (int iterations, long int length, double *a) {
   double aj, bj, cj, scalar, asum;
   double epsilon = 1.e-8;
   long int j;
@@ -300,10 +269,7 @@ int checkTRIADresults (int iterations, long int length) {
  
   /* now execute timing loop */
   scalar = SCALAR;
-  for (iter=0; iter<iterations; iter++) {
-    aj = bj+scalar*cj;
-    bj = aj;
-  }
+  for (iter=0; iter<=iterations; iter++) aj += bj+scalar*cj;
  
   aj = aj * (double) (length);
  
@@ -325,7 +291,7 @@ int checkTRIADresults (int iterations, long int length) {
     return (0);
   }
   else {
-    printf ("Solution Validates\n");
+    printf ("Solution validates\n");
     return (1);
   }
 }

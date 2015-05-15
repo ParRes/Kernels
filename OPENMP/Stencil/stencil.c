@@ -97,17 +97,13 @@ int main(int argc, char ** argv) {
   DTYPE  flops;           /* floating point ops per iteration                    */
   int    iterations;      /* number of times to run the algorithm                */
   double stencil_time,    /* timing parameters                                   */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*24.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough               */
+         avgtime;
   int    stencil_size;    /* number of points in stencil                         */
-  int    tile_size;       /* grid block factor                                   */
   int    nthread_input,   /* thread parameters                                   */
          nthread; 
   DTYPE  * RESTRICT in;   /* input grid values                                   */
   DTYPE  * RESTRICT out;  /* output grid values                                  */
-  int    total_length;    /* total required length to store grid values          */
+  long   total_length;    /* total required length to store grid values          */
   int    num_error=0;     /* flag that signals that requested and obtained
                              numbers of threads are the same                     */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
@@ -116,8 +112,8 @@ int main(int argc, char ** argv) {
   ** process and test input parameters    
   ********************************************************************************/
 
-  if (argc != 4 && argc != 5){
-    printf("Usage: %s <# threads> <# iterations> <array dimension> <tile size>\n", 
+  if (argc != 4){
+    printf("Usage: %s <# threads> <# iterations> <array dimension>\n", 
            *argv);
     return(EXIT_FAILURE);
   }
@@ -157,19 +153,6 @@ int main(int argc, char ** argv) {
 
   /*  make sure the vector space can be represented                             */
   total_length = n*n*sizeof(DTYPE);
-  if (total_length/n != n*sizeof(DTYPE)) {
-    printf("ERROR: Space for %d x %d grid cannot be represented; ", n, n);
-    exit(EXIT_FAILURE);
-  }
-
-  if (argc == 5) {
-    tile_size = atoi(*++argv);
-    if (tile_size < 1) {
-      printf("ERROR: tile size must be positive : %d\n", tile_size);
-      exit(EXIT_FAILURE);
-    }
-  }
-  else tile_size = n;
 
   in  = (DTYPE *) malloc(total_length);
   out = (DTYPE *) malloc(total_length);
@@ -222,10 +205,7 @@ int main(int argc, char ** argv) {
     printf("Number of threads    = %d\n",nthread_input);
     printf("Grid size            = %d\n", n);
     printf("Radius of stencil    = %d\n", RADIUS);
-    if (tile_size <n-2*RADIUS) 
-      printf("Tile size            = %d\n", tile_size);
-    else
-      printf("Grid not tiled\n");
+    printf("Number of iterations = %d\n", iterations);
 #ifdef STAR
     printf("Type of stencil      = star\n");
 #else
@@ -236,87 +216,96 @@ int main(int argc, char ** argv) {
 #else
     printf("Data type            = single precision\n");
 #endif
-    printf("Number of iterations = %d\n", iterations);
+#ifndef PARALLELFOR
+    printf("Parallel regions     = fused (omp for)\n");
+#else
+    printf("Parallel regions     = split (omp parallel for)\n");
+#endif
   }
   }
   bail_out(num_error);
 
+#ifdef PARALLELFOR
+} 
+#endif
+
   /* intialize the input and output arrays                                     */
+#ifdef PARALLELFOR
+  #pragma omp parallel for private(i)
+#else
   #pragma omp for
+#endif
   for (j=0; j<n; j++) for (i=0; i<n; i++) 
     IN(i,j) = COEFX*i+COEFY*j;
+#ifdef PARALLELFOR
+  #pragma omp parallel for private(i)
+#else
   #pragma omp for
+#endif
   for (j=RADIUS; j<n-RADIUS; j++) for (i=RADIUS; i<n-RADIUS; i++) 
     OUT(i,j) = (DTYPE)0.0;
 
-  for (iter = 0; iter<iterations; iter++){
+  for (iter = 0; iter<=iterations; iter++){
 
-    #pragma omp barrier
-    #pragma omp master
-    {   
-    stencil_time = wtime();
-    }
-
-    /* Apply the stencil operator; only use tiling if the tile size is smaller
-       than the iterior part of the grid                                       */
-    if (tile_size < n-2*RADIUS) {
-      #pragma omp for
-      for (j=RADIUS; j<n-RADIUS; j+=tile_size) {
-        for (i=RADIUS; i<n-RADIUS; i+=tile_size) {
-          for (jt=j; jt<MIN(n-RADIUS,j+tile_size); jt++) {
-            for (it=i; it<MIN(n-RADIUS,i+tile_size); it++) {
-#ifdef STAR
-              for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(it,jt) += WEIGHT(0,jj)*IN(it,jt+jj);
-              for (ii=-RADIUS; ii<0; ii++)       OUT(it,jt) += WEIGHT(ii,0)*IN(it+ii,jt);
-              for (ii=1; ii<=RADIUS; ii++)       OUT(it,jt) += WEIGHT(ii,0)*IN(it+ii,jt);
-#else
-              /* would like to be able to unroll this loop, but compiler will ignore  */
-              for (jj=-RADIUS; jj<=RADIUS; jj++) 
-              for (ii=-RADIUS; ii<=RADIUS; ii++)  
-                OUT(it,jt) += WEIGHT(ii,jj)*IN(it+ii,jt+jj);
+    /* start timer after a warmup iteration                                        */
+    if (iter == 1) { 
+#ifndef PARALLELFOR
+      #pragma omp barrier
+      #pragma omp master
 #endif
-            }
-          }
-        }
-      }
-    }
-    else {
-      #pragma omp for
-      for (j=RADIUS; j<n-RADIUS; j++) {
-        for (i=RADIUS; i<n-RADIUS; i++) {
-#ifdef STAR
-          for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-          for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-          for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-#else
-          /* would like to be able to unroll this loop, but compiler will ignore  */
-          for (jj=-RADIUS; jj<=RADIUS; jj++) 
-          for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
-#endif
-        }
+      {   
+        stencil_time = wtime();
       }
     }
 
-    #pragma omp master
-    {
-    stencil_time = wtime() - stencil_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration                   */
-      avgtime = avgtime + stencil_time;
-      mintime = MIN(mintime, stencil_time);
-      maxtime = MAX(maxtime, stencil_time);
-    }
-    }
-    /* add constant to solution to force refresh of neighbor data, if any         */
+#ifdef PARALLELFOR
+    #pragma omp parallel for private(i, ii, jj)
+#else
     #pragma omp for
+#endif
+    for (j=RADIUS; j<n-RADIUS; j++) {
+      for (i=RADIUS; i<n-RADIUS; i++) {
+#ifdef STAR
+        for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+        for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+        for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+#else
+        /* would like to be able to unroll this loop, but compiler will ignore  */
+        for (jj=-RADIUS; jj<=RADIUS; jj++) 
+        for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
+#endif
+      }
+    }
+
+    /* add constant to solution to force refresh of neighbor data, if any       */
+#ifdef PARALLELFOR
+    #pragma omp parallel for private(i)
+#else
+    #pragma omp for
+#endif
     for (j=0; j<n; j++) for (i=0; i<n; i++) IN(i,j)+= 1.0;
+  } /* end of iterations                                                        */
+
+#ifndef PARALLELFOR
+  #pragma omp barrier
+  #pragma omp master
+#endif
+  {
+    stencil_time = wtime() - stencil_time;
   }
 
   /* compute L1 norm in parallel                                                */
+#ifdef PARALLELFOR
+  #pragma omp parallel for reduction(+:norm), private (i)
+#else
   #pragma omp for reduction(+:norm)
+#endif
   for (j=RADIUS; j<n-RADIUS; j++) for (i=RADIUS; i<n-RADIUS; i++) {
     norm += (DTYPE)ABS(OUT(i,j));
   }
+#ifndef PARALLELFOR
   } /* end of OPENMP parallel region                                             */
+#endif
 
   norm /= f_active_points;
 
@@ -325,7 +314,7 @@ int main(int argc, char ** argv) {
   ********************************************************************************/
 
 /* verify correctness                                                            */
-  reference_norm = (DTYPE) iterations * (COEFX + COEFY);
+  reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
   if (ABS(norm-reference_norm) > EPSILON) {
     printf("ERROR: L1 norm = "FSTR", Reference L1 norm = "FSTR"\n",
            norm, reference_norm);
@@ -339,11 +328,10 @@ int main(int argc, char ** argv) {
 #endif
   }
 
-  flops = (DTYPE) (2*stencil_size-1) * f_active_points;
-  avgtime = avgtime/(double)(MAX(iterations-1,1));
-  printf("Rate (MFlops/s): "FSTR",  Avg time (s): %lf,  Min time (s): %lf",
-         1.0E-06 * flops/mintime, avgtime, mintime);
-  printf(", Max time (s): %lf\n", maxtime);
+  flops = (DTYPE) (2*stencil_size+1) * f_active_points;
+  avgtime = stencil_time/iterations;
+  printf("Rate (MFlops/s): "FSTR"  Avg time (s): %lf\n",
+         1.0E-06 * flops/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 }

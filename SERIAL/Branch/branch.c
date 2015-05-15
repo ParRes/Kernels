@@ -131,7 +131,7 @@ extern int fill_vec(int *vector, int vector_length, int iterations, int branch,
 
 int main(int argc, char ** argv)
 {
-  int      vector_length;   /* length of vector loop containing the branch       */
+  long     vector_length;   /* length of vector loop containing the branch       */
   int      nfunc;           /* number of functions used in INS_HEAVY option      */
   int      rank;            /* matrix rank used in INS_HEAVY option              */
   double   branch_time,     /* timing parameters                                 */
@@ -164,7 +164,7 @@ int main(int argc, char ** argv)
      exit(EXIT_FAILURE);
   }
 
-  vector_length  = atoi(*++argv);
+  vector_length  = atol(*++argv);
   if (vector_length < 1){
      printf("ERROR: loop length must be >= 1 : %d \n",vector_length);
      exit(EXIT_FAILURE);
@@ -182,7 +182,7 @@ int main(int argc, char ** argv)
   }
 
   printf("Serial Branching Bonanza\n");
-  printf("Vector length              = %d\n", vector_length);
+  printf("Vector length              = %ld\n", vector_length);
   printf("Number of iterations       = %d\n", iterations);
   printf("Branching type             = %s\n", branch_type);
 
@@ -327,9 +327,9 @@ int main(int argc, char ** argv)
 
   if (total == total_ref) {
     printf("Solution validates\n");
-    printf("Rate (Mops/s) with branches:    %lf, time (s): %lf\n", 
+    printf("Rate (Mops/s) with branches:    %lf time (s): %lf\n", 
            ops/(branch_time*1.e6), branch_time);
-    printf("Rate (Mops/s) without branches: %lf, time (s): %lf\n", 
+    printf("Rate (Mops/s) without branches: %lf time (s): %lf\n", 
            ops/(no_branch_time*1.e6), no_branch_time);
 #ifdef VERBOSE
     printf("Array sum = %d, reference value = %d\n", total, total_ref);

@@ -13,16 +13,16 @@ LOCKFLAG    = -DLOCK
 #LONG64FLAG = -DLONG_IS_64BITS
 #description: can use "long" for 64 bit integers instead of "long long"
 
-CACHEFLAG    = -DLINE_LENGTH=64
+#CACHEFLAG    = -DLINE_LENGTH=L
 #description: default cache line size is 64 bytes
 
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-#NTHREADFLAG  = -DMAXTHREADS=256
-#description: default thread limit is 32
+#NTHREADFLAG  = -DMAXTHREADS=n
+#description: default thread limit is 256
 
-USERFLAGS     = -strict-ansi -vec-report3
+USERFLAGS     = 
 #description: parameter to specify optional flags
 
 EXTOBJS      = 

@@ -55,17 +55,14 @@ FUNCTIONS CALLED:
          functions are used in this program:
 
          wtime()          portable wall-timer interface.
-         test_results()   Verify that the transpose worked
 
 HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 *******************************************************************/
 
 #include <par-res-kern_general.h>
 
-/* Constant to shift column index */
-#define COL_SHIFT 1000.00   
-/* Constant to shift row index */
-#define ROW_SHIFT  0.001    
+#define A(i,j)        A_p[(i)+order*(j)]
+#define B(i,j)        B_p[(i)+order*(j)]
 
 static double test_results (int , double*);
 
@@ -76,15 +73,12 @@ int main(int argc, char ** argv) {
   int    iterations;    /* number of times to do the transpose             */
   int    i, j, it, jt, iter;  /* dummies                                   */
   double bytes;         /* combined size of matrices                       */
-  double * RESTRICT A;  /* buffer to hold original matrix                  */
-  double * RESTRICT B;  /* buffer to hold transposed matrix                */
-  double errsq;         /* squared error                                   */
+  double * RESTRICT A_p;/* buffer to hold original matrix                  */
+  double * RESTRICT B_p;/* buffer to hold transposed matrix                */
+  double abserr;        /* squared error                                   */
   double epsilon=1.e-8; /* error tolerance                                 */
   double trans_time,    /* timing parameters                               */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*24.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough         */
+         avgtime; 
 
   /*********************************************************************
   ** read and test input parameters
@@ -116,13 +110,13 @@ int main(int argc, char ** argv) {
   ** Allocate space for the input and transpose matrix
   *********************************************************************/
 
-  A   = (double *)malloc(order*order*sizeof(double));
-  if (A == NULL){
+  A_p   = (double *)malloc(order*order*sizeof(double));
+  if (A_p == NULL){
     printf(" Error allocating space for input matrix\n");
     exit(EXIT_FAILURE);
   }
-  B  = (double *)malloc(order*order*sizeof(double));
-  if (B == NULL){
+  B_p  = (double *)malloc(order*order*sizeof(double));
+  if (B_p == NULL){
     printf(" Error allocating space for transposed matrix\n");
     exit(EXIT_FAILURE);
   }
@@ -137,50 +131,37 @@ int main(int argc, char ** argv) {
 
   /*  Fill the original matrix, set transpose to known garbage value. */
 
-  for (i=0;i<order; i++) {
-    for (j=0;j<order;j++) {
-      *(A+i*order+j) = COL_SHIFT * j + ROW_SHIFT * i;
-      *(B+i*order+j) = -1.0;
-    }
+  /* Fill the original column matrix                                                */
+  for (j=0;j<order;j++) for (i=0;i<order; i++)  {
+    A(i,j) = (double) (order*(j) + i);
   }
 
-  errsq = 0.0;
-  for (iter = 0; iter<iterations; iter++){
+  /*  Set the transpose matrix to a known garbage value.                            */
+  for (j=0;j<order;j++) for (i=0;i<order; i++)  {
+    B(i,j) = -1.0;
+  }
 
-    trans_time = wtime();
+  for (iter = 0; iter<=iterations; iter++){
+
+    /* start timer after a warmup iteration                                        */
+    if (iter==1) trans_time = wtime();
 
     /* Transpose the  matrix; only use tiling if the tile size is smaller 
        than the matrix */
     if (tile_size < order) {
-      for (i=0; i<order; i+=tile_size) { 
-        for (j=0; j<order; j+=tile_size) { 
-          for (it=i; it<MIN(order,i+tile_size); it++){ 
+      for (i=0; i<order; i+=tile_size) 
+        for (j=0; j<order; j+=tile_size) 
+          for (it=i; it<MIN(order,i+tile_size); it++)
             for (jt=j; jt<MIN(order,j+tile_size);jt++){ 
-              B[it+order*jt] = A[jt+order*it]; 
+              B(jt,it) = A(it,jt); 
             } 
-          } 
-        } 
-      } 
     }
     else {
-      for (i=0;i<order; i++) {
+      for (i=0;i<order; i++) 
         for (j=0;j<order;j++) {
-          B[i+order*j] = A[j+order*i];
+          B(j,i) = A(i,j);
         }
-      }
     }	
-
-    trans_time = wtime() - trans_time;
-#ifdef VERBOSE
-    printf("\nFinished with transpose, using %lf seconds \n", trans_time);
-#endif
-    if (iter>0 || iterations==1) { /* skip the first iteration */
-      avgtime = avgtime + trans_time;
-      mintime = MIN(mintime, trans_time);
-      maxtime = MAX(maxtime, trans_time);
-    }
-
-    errsq +=  test_results (order, B);
 
   }  /* end of iter loop  */
 
@@ -188,44 +169,33 @@ int main(int argc, char ** argv) {
   ** Analyze and output results.
   *********************************************************************/
 
-  if (errsq < epsilon) {
-    printf("Solution validates\n");
-    avgtime = avgtime/(double)(MAX(iterations-1,1));
-    printf("Rate (MB/s): %lf, Avg time (s): %lf, Min time (s): %lf",
-           1.0E-06 * bytes/mintime, avgtime, mintime);
-    printf(", Max time (s): %lf\n", maxtime);
+  trans_time = wtime() - trans_time;
+
+  abserr = 0.0;
+  for (j=0;j<order;j++) for (i=0;i<order; i++) {
+    abserr += ABS(B(i,j) - (double)(order*i + j));
+  }
+
 #ifdef VERBOSE
-    printf("Squared errors: %f \n", errsq);
+  printf("Sum of absolute differences: %f\n",abserr);
+#endif   
+
+  if (abserr < epsilon) {
+    printf("Solution validates\n");
+    avgtime = trans_time/iterations;
+    printf("Rate (MB/s): %lf Avg time (s): %lf\n",
+           1.0E-06 * bytes/avgtime, avgtime);
+#ifdef VERBOSE
+    printf("Squared errors: %f \n", abserr);
 #endif
     exit(EXIT_SUCCESS);
   }
   else {
     printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n",
-           errsq, epsilon);
+           abserr, epsilon);
     exit(EXIT_FAILURE);
   }
 
 }  /* end of main */
 
 
-
-/* function that computes the error committed during the transposition */
-
-double test_results (int order, double *trans) {
-
-  double diff, errsq=0.0;
-  int i,j;
-
-  for (i=0;i<order; i++) {
-    for (j=0;j<order;j++) {
-      diff = *(trans+i*order+j) -
-             (COL_SHIFT*i  + ROW_SHIFT * j);
-      errsq += diff*diff;
-    }
-  }
-
-#ifdef VERBOSE
-  printf(" Squared sum of differences: %f\n",errsq);
-#endif   
-  return errsq;
-}

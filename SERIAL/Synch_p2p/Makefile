@@ -6,13 +6,10 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 
 #uncomment any of the following flags (and change values) to change defaults
 
-MEMORY_FLAG = -DMEMWORDS=50000000
-#description: maximum array size in words; default is 1000000
-
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS    = -strict-ansi -vec-report3
+USERFLAGS    = 
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects

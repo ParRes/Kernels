@@ -85,10 +85,7 @@ main(int argc, char **argv){
   int     iter, i,ii,j,jj,k,kk,ig,jg,kg; /* dummies                               */
   int     iterations;           /* number of times the multiplication is done     */
   double  dgemm_time,           /* timing parameters                              */
-          avgtime = 0.0, 
-          maxtime = 0.0, 
-          mintime = 366.0*24.0*3600.0; /* set the minimum time to a large value;
-                                            one leap year should be enough        */
+          avgtime; 
   double  checksum = 0.0,       /* checksum of result                             */
           ref_checksum;
   double  epsilon = 1.e-8;      /* error tolerance                                */
@@ -126,17 +123,15 @@ main(int argc, char **argv){
     exit(EXIT_FAILURE);
   }
 
-  ref_checksum = (0.25*forder*forder*forder*(forder-1.0)*(forder-1.0));
-
   for(j = 0; j < order; j++) for(i = 0; i < order; i++) {
     A_arr(i,j) = B_arr(i,j) = (double) j; 
     C_arr(i,j) = 0.0;
   }
 
-  printf("Serial Dense matrix-matrix multiplication\n");
+  printf("Serial Dense matrix-matrix multiplication: C = A x B\n");
 
 #ifndef MKL
-  if (argc == 5) {
+  if (argc == 4) {
          block = atoi(*++argv);
   } else block = DEFAULTBLOCK;
 
@@ -162,81 +157,72 @@ main(int argc, char **argv){
 
   for (iter=0; iter<iterations; iter++) {
 
-  dgemm_time = wtime();
+    /* start timer after a warmup iteration */
+    if (iter == 1)  dgemm_time = wtime();
 
-  if (block > 0) {
+    if (block > 0) {
 
-    for(jj = 0; jj < order; jj+=block){
-      for(kk = 0; kk < order; kk+=block) {
-
-        for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-        for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++) 
-          BB_arr(j,k) =  B_arr(kg,jg);
-
-        for(ii = 0; ii < order; ii+=block){
-
-          for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++)
-          for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-            AA_arr(i,k) = A_arr(ig,kg);
-
+      for(jj = 0; jj < order; jj+=block){
+        for(kk = 0; kk < order; kk+=block) {
+  
           for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-          for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-            CC_arr(i,j) = 0.0;
-       
-          for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++)
-          for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-          for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-            CC_arr(i,j) += AA_arr(i,k)*BB_arr(j,k);
-
-          for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-          for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-            C_arr(ig,jg) += CC_arr(i,j);
-
-        }
-      }  
+          for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++) 
+            BB_arr(j,k) =  B_arr(kg,jg);
+  
+          for(ii = 0; ii < order; ii+=block){
+  
+            for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++)
+            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
+              AA_arr(i,k) = A_arr(ig,kg);
+  
+            for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
+            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
+              CC_arr(i,j) = 0.0;
+         
+            for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++)
+            for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
+            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
+              CC_arr(i,j) += AA_arr(i,k)*BB_arr(j,k);
+  
+            for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
+            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
+              C_arr(ig,jg) += CC_arr(i,j);
+  
+          }
+        }  
+      }
     }
-  }
-  else {
-    for (jg=0; jg<order; jg++) 
-    for (kg=0; kg<order; kg++) 
-    for (ig=0; ig<order; ig++) 
-      C_arr(ig,jg) += A_arr(ig,kg)*B_arr(kg,jg);
-  }
-
-  dgemm_time = wtime()-dgemm_time;
-  if (iter>0 || iterations==1) { /* skip the first iteration                    */
-    avgtime = avgtime + dgemm_time;
-    mintime = MIN(mintime, dgemm_time);
-    maxtime = MAX(maxtime, dgemm_time);
-  }
-}
+    else {
+      for (jg=0; jg<order; jg++) 
+      for (kg=0; kg<order; kg++) 
+      for (ig=0; ig<order; ig++) 
+        C_arr(ig,jg) += A_arr(ig,kg)*B_arr(kg,jg);
+    }
+  } /* end of iterations                                                          */
 #else
 
   printf("Matrix size           = %dx%d\n", order, order);
   printf("Using Math Kernel Library\n");
   printf("Number of iterations  = %d\n", iterations);
 
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
 
-    dgemm_time = wtime();
+    /* start timer after a warmup iteration */
+    if (iter == 1)  dgemm_time = wtime();
 
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, order, order, 
                 order, 1.0, &(A_arr(0,0)), order, &(B_arr(0,0)), order, 
                 1.0, &(C_arr(0,0)), order);
-
-    dgemm_time = wtime()-dgemm_time;
-    if (iter>0 || iterations==1) { /* skip the first iteration                    */
-      avgtime = avgtime + dgemm_time;
-      mintime = MIN(mintime, dgemm_time);
-      maxtime = MAX(maxtime, dgemm_time);
-    }
-  }
+  } /* end of iterations                                                          */
 #endif
+
+  dgemm_time = wtime() - dgemm_time;
 
   for(checksum=0.0,j = 0; j < order; j++) for(i = 0; i < order; i++)
     checksum += C_arr(i,j);
 
   /* verification test                                                            */
+  ref_checksum = (0.25*forder*forder*forder*(forder-1.0)*(forder-1.0));
   ref_checksum *= iterations;
 
   if (ABS((checksum - ref_checksum)/ref_checksum) > epsilon) {
@@ -253,10 +239,9 @@ main(int argc, char **argv){
   }
 
   double nflops = 2.0*forder*forder*forder;
-  avgtime = avgtime/(double)(MAX(iterations-1,1));
-  printf("Rate (MFlops/s): %lf,  Avg time (s): %lf,  Min time (s): %lf",
-         1.0E-06 *nflops/mintime, avgtime, mintime);
-  printf(", Max time (s): %lf\n", maxtime);
+  avgtime = dgemm_time/iterations;
+  printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
+         1.0E-06 *nflops/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 

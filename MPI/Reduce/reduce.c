@@ -35,10 +35,10 @@ POSSIBILITY OF SUCH DAMAGE.
 NAME:    Reduce
 
 PURPOSE: This program tests the efficiency with which a collection of 
-         vectors that are distributed among the processes can be added in
-         elementwise fashion. The number of vectors per process is two, 
+         vectors that are distributed among the ranks can be added in
+         elementwise fashion. The number of vectors per rank is two, 
          so that a reduction will take place even if the code runs on
-         just a single process.
+         just a single rank.
   
 USAGE:   The program takes as input the length of the vectors, plus the
          number of times the reduction is repeated.
@@ -57,6 +57,10 @@ FUNCTIONS CALLED:
          bail_out();
 
 HISTORY: Written by Rob Van der Wijngaart, March 2006.
+         Modified by Rob Van der Wijngaart, November 2014
+         - added dependence between successive reductions
+         - improved timing
+         - changed initialization values
   
 *******************************************************************/
 
@@ -66,18 +70,17 @@ HISTORY: Written by Rob Van der Wijngaart, March 2006.
 
 int main(int argc, char ** argv)
 {
-  int Num_procs;        /* Number of processors                              */
-  int my_ID;            /* Process ID (i.e. MPI rank)                        */
+  int Num_procs;        /* Number of ranks                                   */
+  int my_ID;            /* Rank                                              */
   int root=0;
   int iterations;       /* number of times the reduction is carried out      */
   int i, iter;          /* dummies                                           */
-  int vector_length;    /* length of the vectors to be aggregated            */
+  long vector_length;   /* length of the vectors to be aggregated            */
   double * RESTRICT vector; /* vector to be reduced                          */
-  double reduce_time,   /* timing parameters                                 */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*8760.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough           */
+  double * RESTRICT ones;   /* constant vector                               */
+  double local_reduce_time, /* timing parameters                             */
+         reduce_time,
+         avgtime;
   double epsilon=1.e-8; /* error tolerance                                   */
   double element_value; /* verification value                                */
   int    error = 0;     /* error flag                                        */
@@ -107,9 +110,9 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     }
 
-    vector_length = atoi(*++argv);
+    vector_length = atol(*++argv);
     if (vector_length < 1) {
-      printf("ERROR: Vector length should be positive: %d\n", vector_length);
+      printf("ERROR: Vector length should be positive: %ld\n", vector_length);
       error = 1;
       goto ENDOFTESTS;
     }
@@ -120,56 +123,62 @@ int main(int argc, char ** argv)
 
 
   if (my_ID == root) {
-    printf("MPI Vector Reduction\n");
-    printf("Number of processes  = %d\n", Num_procs);
-    printf("Vector length        = %d\n", vector_length);
+    printf("MPI vector reduction\n");
+    printf("Number of ranks      = %d\n", Num_procs);
+    printf("Vector length        = %ld\n", vector_length);
     printf("Number of iterations = %d\n", iterations);     
   }
 
-  /* Broadcast benchmark data to all processes */
+  /* Broadcast benchmark data to all ranks */
   MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&vector_length, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&vector_length, 1, MPI_LONG, root, MPI_COMM_WORLD);
   vector= (double *) malloc(2*vector_length*sizeof(double)); 
   if (vector==NULL) {
-    printf("ERROR: Could not allocate space for vector in process %d\n", my_ID);
+    printf("ERROR: Could not allocate space %ld for vector in rank %d\n", 
+           2*vector_length*sizeof(double),my_ID);
     error = 1;
   }
   bail_out(error);
+  ones = vector + vector_length;
 
-  for (iter=0; iter<iterations; iter++) { 
+  /* initialize the arrays                                                    */
+  for (i=0; i<vector_length; i++) {
+    vector[i]  = (double)1;
+    ones[i]    = (double)1;
+  }
 
-    /* initialize the arrays                                                    */
-    for (i=0; i<vector_length; i++) {
-      vector[i] = (double)(my_ID+1);
-      vector[vector_length+i] = (double)(my_ID+1);
+  for (iter=0; iter<=iterations; iter++) { 
+
+    /* start timer after a warmup iteration */
+    if (iter == 1) { 
+      MPI_Barrier(MPI_COMM_WORLD);
+      local_reduce_time = wtime();
     }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    reduce_time = wtime();
 
     /* first do the "local" part                                                */
     for (i=0; i<vector_length; i++) {
-      vector[vector_length+i] += vector[i];
+      vector[i] += ones[i];
     }
 
     /* now do the "non-local" part                                              */
-    MPI_Reduce(vector+vector_length, vector, vector_length, MPI_DOUBLE, MPI_SUM, 
-               root, MPI_COMM_WORLD);
+    if (my_ID == root)
+      MPI_Reduce(MPI_IN_PLACE, vector, vector_length, MPI_DOUBLE, MPI_SUM, 
+                 root, MPI_COMM_WORLD);
+    else
+      MPI_Reduce(vector, NULL, vector_length, MPI_DOUBLE, MPI_SUM, 
+                 root, MPI_COMM_WORLD);
 
-    if (my_ID == root) {
-      if (iter>0 || iterations==1) { /* skip the first iteration */
-        reduce_time = wtime() - reduce_time;
-        avgtime = avgtime + reduce_time;
-        mintime = MIN(mintime, reduce_time);
-        maxtime = MAX(maxtime, reduce_time);
-      }
-    }
-  }
+  } /* end of iterations */
+
+  local_reduce_time = wtime() - local_reduce_time;
+  MPI_Reduce(&local_reduce_time, &reduce_time, 1, MPI_DOUBLE, MPI_MAX, root,
+             MPI_COMM_WORLD);
+  
 
   /* verify correctness */
   if (my_ID == root) {
-    element_value = Num_procs*(Num_procs+1.0);
-
+    element_value = iterations+2.0+
+      (iterations*iterations+5.0*iterations+4.0)*(Num_procs-1.0)/2;
     for (i=0; i<vector_length; i++) {
       if (ABS(vector[i] - element_value) >= epsilon) {
         error = 1;
@@ -191,10 +200,9 @@ int main(int argc, char ** argv)
 #ifdef VERBOSE
     printf("Element verification value: %lf\n", element_value);
 #endif
-    avgtime = avgtime/(double)(MAX(iterations-1,1));
-    printf("Rate (MFlops/s): %lf,  Avg time (s): %lf,  Min time (s): %lf",
-           1.0E-06 * (2.0*Num_procs-1.0)*vector_length/mintime, avgtime, mintime);
-    printf(", Max time (s): %lf\n", maxtime);
+    avgtime = reduce_time/(double)iterations;
+    printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
+           1.0E-06 * (2.0*Num_procs-1.0)*vector_length/ avgtime, avgtime);
   }
 
   MPI_Finalize();

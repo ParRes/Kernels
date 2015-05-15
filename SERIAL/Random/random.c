@@ -31,22 +31,22 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*************************************************************
-Copyright © 2013 The University of Tennessee. All rights reserved.
+Copyright (c)  2013 The University of Tennessee. All rights reserved.
 Redistribution and use in source and binary forms, with or 
 without modification, are permitted provided that the following
-conditions are met: 
+conditions are met:
 
-· Redistributions of source code must retain the 
+- Redistributions of source code must retain the 
   above copyright notice, this list of conditions and 
-  the following disclaimer. 
+  the following disclaimer.
 
-· Redistributions in binary form must reproduce the 
+- Redistributions in binary form must reproduce the 
   above copyright notice, this list of conditions and 
   the following disclaimer listed in this license in the 
   documentation and/or other materials provided with the 
-  distribution. 
+  distribution.
 
-· Neither the name of the copyright holders nor the names 
+- Neither the name of the copyright holders nor the names 
   of its contributors may be used to endorse or promote 
   products derived from this software without specific 
   prior written permission.
@@ -279,7 +279,7 @@ int main(int argc, char **argv) {
 
   error = 0;
 
-  printf("Serial Random Access test\n");
+  printf("Serial Random Access\n");
   printf("Table size (shared)    = "FSTR64U"\n", tablesize);
   printf("Update ratio           = "FSTR64U"\n", (u64Int) update_ratio);
   printf("Number of updates      = "FSTR64U"\n", nupdate);
@@ -337,7 +337,7 @@ int main(int argc, char **argv) {
   }
   else {
     printf("Solution validates, number of errors: %ld\n",(long) error);
-    printf("Rate (GUPs/s): %lf, time (s) = %lf\n", 
+    printf("Rate (GUPs/s): %lf time (s) = %lf\n", 
            1.e-9*nupdate/random_time,random_time);
   }
 

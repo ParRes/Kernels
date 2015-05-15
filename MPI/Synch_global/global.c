@@ -76,7 +76,7 @@ int chartoi(char c) {
 
 int main(int argc, char ** argv)
 {
-  int    my_ID;       /* Process ID (i.e. MPI rank)                              */
+  int    my_ID;       /* rank                                                    */
   int    root=0;
   int    iterations;  /* number of times to rehash strings                       */
   int    i, iter;     /* dummies                                                 */
@@ -85,12 +85,12 @@ int main(int argc, char ** argv)
   char   *basestring; /* initial string to be copied to private strings          */
   char   *iterstring; /* private copy of string                                  */
   char   *catstring;  /* concatenated, scrambled string                          */
-  int    length,      /* total length of scramble string                         */
-         proc_length; /* length of string per process                            */
+  long   length,      /* total length of scramble string                         */
+         proc_length; /* length of string per rank                               */
   int    basesum;     /* checksum of base string                                 */
   MPI_Datatype mpi_word; /* chunk of scramble string to be communicated          */
   double stopngo_time;/* timing parameter                                        */
-  int    Num_procs;   /* Number of processors                                    */
+  int    Num_procs;   /* Number of ranks                                         */
   int    error = 0;   /* error flag                                              */
 
 /*********************************************************************************
@@ -118,9 +118,9 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     }
 
-    length      = atoi(*++argv);
+    length      = atol(*++argv);
     if (length <Num_procs || length%Num_procs !=0) {
-      printf("ERROR: length of string %d must be multiple of # processes: %d\n", 
+      printf("ERROR: length of string %d must be multiple of # ranks: %ld\n", 
              length, Num_procs);
       error = 1;
       goto ENDOFTESTS;
@@ -131,15 +131,15 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
-    printf("MPI Global Synchronization\n");
-    printf("Number of processes    = %d\n", Num_procs);
+    printf("MPI global synchronization\n");
+    printf("Number of ranks        = %d\n", Num_procs);
+    printf("Scramble string length = %ld\n", length);
     printf("Number of iterations   = %d\n", iterations);
-    printf("Scramble string length = %d\n", length);
   }
 
-  /* Broadcast benchmark data to all processes */
+  /* Broadcast benchmark data to all ranks */
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&length,     1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&length,     1, MPI_LONG, root, MPI_COMM_WORLD);
   proc_length = length/Num_procs;
 
   basestring = malloc((proc_length+1)*sizeof(char));
@@ -167,7 +167,7 @@ int main(int argc, char ** argv)
 
   iterstring= (char *) malloc((proc_length+1)*sizeof(char)); 
   if (iterstring==NULL) {
-    printf("ERROR: Could not allocate space for strings in process %d\n", my_ID);
+    printf("ERROR: Could not allocate space for strings in rank %d\n", my_ID);
     error = 1;
   }
   bail_out(error);
@@ -176,7 +176,7 @@ int main(int argc, char ** argv)
 
   catstring=(char *) malloc((length+1)*sizeof(char));
   if (catstring==NULL) {
-    printf("ERROR: Could not allocate space for strings in process %d\n", my_ID);
+    printf("ERROR: Could not allocate space for strings in rank %d\n", my_ID);
     error = 1;
   }
 

@@ -80,13 +80,6 @@ HISTORY: Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_omp.h>
 
-/* MEMWORDS is the total number of words needed by all threads. 
-   Note that we cannot use dynamic memory allocation for either "vector" 
-   or "flag," because such memory locations cannot be flushed to memory    */
-#ifndef MEMWORDS
-  #define MEMWORDS  10000000
-#endif
-
 #define LINEAR            11
 #define BINARY_BARRIER    12
 #define BINARY_P2P        13
@@ -95,17 +88,17 @@ HISTORY: Written by Rob Van der Wijngaart, March 2006.
 #define LOCAL             16
 #define VEC0(id,i)        vector[(id        )*(vector_length)+i]
 #define VEC1(id,i)        vector[(id+nthread)*(vector_length)+i]
+/* define shorthand for flag with cache line padding                             */
+#define LINEWORDS         16
+#define flag(i)           flag[(i)*LINEWORDS]
 
 int main(int argc, char ** argv)
 {
-  int    my_ID;           /* Thread ID                                     */
-  int    vector_length;   /* length of vectors to be aggregated            */
-  int    total_length;    /* bytes needed to store reduction vectors       */
-  double reduce_time,     /* timing parameters                             */
-         avgtime = 0.0, 
-         maxtime = 0.0, 
-         mintime = 366.0*24.0*3600.0; /* set the minimum time to a large 
-                             value; one leap year should be enough           */
+  int    my_ID;           /* Thread ID                                       */
+  long   vector_length;   /* length of vectors to be aggregated              */
+  long   total_length;    /* bytes needed to store reduction vectors         */
+  double reduce_time,     /* timing parameters                               */
+         avgtime;
   double epsilon=1.e-8;   /* error tolerance                                 */
   int    group_size,      /* size of aggregating half of thread pool         */
          old_size,        /* group size in previous binary tree iteration    */
@@ -114,17 +107,14 @@ int main(int argc, char ** argv)
   char   *algorithm;      /* reduction algorithm selector                    */
   int    intalgorithm;    /* integer encoding of algorithm selector          */
   int    iterations;      /* number of times the reduction is carried out    */
-  int    flag[MAX_THREADS]; /* vector used for pairwise synchronizations     */
+  int    flag[MAX_THREADS*LINEWORDS]; /* used for pairwise synchronizations  */
   int    start[MAX_THREADS],
          end[MAX_THREADS];/* segments of vectors for bucket algorithm        */
-  int    segment_size;
+  long   segment_size;
   int    my_donor, my_segment;
   int    nthread_input,   /* thread parameters                               */
          nthread;   
-  static double           /* use static so it goes on the heap, not stack    */
-  RESTRICT vector[MEMWORDS];/* we would like to allocate "vector" dynamically, 
-                             but need to be able to flush the thing in some 
-                             versions of the reduction algorithm -> static   */
+  double RESTRICT *vector;/* vector pair to be reduced                       */
   int    num_error=0;     /* flag that signals that requested and obtained
                              numbers of threads are the same                 */
 
@@ -155,16 +145,16 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
 
-  vector_length  = atoi(*++argv);
+  vector_length  = atol(*++argv);
   if (vector_length < 1){
     printf("ERROR: vector length must be >= 1 : %d \n",vector_length);
     exit(EXIT_FAILURE);
   }
-  /*  make sure we stay within the memory allocated for vector               */
-  total_length = 2*nthread_input*vector_length;
-  if (total_length/(2*nthread_input) != vector_length || total_length > MEMWORDS) {
-    printf("Vector length of %d too large; ", vector_length);
-    printf("increase MEMWORDS in Makefile or reduce vector length\n");
+
+  total_length = 2*nthread_input*sizeof(double)*vector_length;
+  vector = (double *) malloc(total_length);
+  if (!vector) {
+    printf("Could not allocate space for vectors\n");
     exit(EXIT_FAILURE);
   }
 
@@ -203,7 +193,7 @@ int main(int argc, char ** argv)
     printf("number of spawned threads %d\n", nthread);
   } 
   else {
-    printf("Number of threads              = %d;\n",nthread_input);
+    printf("Number of threads              = %d\n",nthread_input);
     printf("Vector length                  = %d\n", vector_length);
     printf("Reduction algorithm            = %s\n", algorithm);
     printf("Number of iterations           = %d\n", iterations);
@@ -211,12 +201,21 @@ int main(int argc, char ** argv)
   }
   bail_out(num_error);
 
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
+
+    /* start timer after a warmup iteration                                        */
+    if (iter == 1) { 
+      #pragma omp barrier
+      #pragma omp master
+      {
+        reduce_time = wtime();
+      }
+    }
 
     /* in case of the long-optimal algorithm we need a barrier before the
        reinitialization to make sure that we don't overwrite parts of the
        vector before other threads are done with those parts                 */
-    if ((iter > 0) && (intalgorithm == LONG_OPTIMAL)) {
+    if (intalgorithm == LONG_OPTIMAL) {
       #pragma omp barrier
     }
 
@@ -230,16 +229,13 @@ int main(int argc, char ** argv)
       /* we need a barrier before setting all flags to zero, to avoid 
          zeroing some that are still in use in a previous iteration          */
       #pragma omp barrier
-      flag[my_ID] = 0;
-    }
+      flag(my_ID) = 0;
 
-    /* we also need a barrier after setting the flags, to make each is
-       visible to all threads, and to synchronize before the timer starts    */
-    #pragma omp barrier
-    #pragma omp master
-    {   
-      reduce_time = wtime();
-    }
+      /* we also need a barrier after setting the flags, to make each is
+         visible to all threads, and to synchronize before the timer starts  */
+      #pragma omp barrier
+    }    
+
     /* do actual reduction                                                   */
 
     /* first do the "local" part, which is the same for all algorithms       */
@@ -303,24 +299,21 @@ int main(int argc, char ** argv)
            aggregate a new subresult, to make sure the donor of the pair has 
            updated its vector in the previous round before it is being read  */
         if (my_ID < group_size && my_ID+group_size<old_size) {
-          while (flag[my_ID+group_size] == 0) {
-            #pragma omp flush (flag)
+          while (flag(my_ID+group_size) == 0) {
+            #pragma omp flush
           }
-          /* make sure I read the latest version of vector from memory; 
-             include flag in the flush list to make sure the flush takes 
-             place after flag has been read and changed (by another thread)  */
-          #pragma omp flush (flag,vector)
+          /* make sure I read the latest version of vector from memory       */
+          #pragma omp flush 
           for (i=0; i<vector_length; i++) {
             VEC0(my_ID,i) += VEC0(my_ID+group_size,i);
           }
         }
         else {
           if (my_ID < old_size) {
-            /* I am a producer of data in this iteration; include vector in
-               the flush list, to make sure my updated version can be seen 
-               by all threads                                                */
-            flag[my_ID] = 1;
-            #pragma omp flush (flag,vector)
+            /* I am a producer of data in this iteration; make sure my 
+               updated version can be seen by all threads                    */
+            flag(my_ID) = 1;
+            #pragma omp flush
           }
         }
       }
@@ -355,20 +348,14 @@ int main(int argc, char ** argv)
 
     } /* end of algorithm switch statement                                   */
 
-    #pragma omp master
-    {
-    reduce_time = wtime() - reduce_time;
-#ifdef VERBOSE
-    printf("\nFinished with reduction, using %lf seconds \n", reduce_time);
-#endif
-    if (iter>0 || iterations==1) { /* skip the first iteration               */
-      avgtime = avgtime + reduce_time;
-      mintime = MIN(mintime, reduce_time);
-      maxtime = MAX(maxtime, reduce_time);
-    }
-    }
-
   } /* end of iter loop                                                      */
+
+  #pragma omp barrier
+  #pragma omp master
+  {
+    reduce_time = wtime() - reduce_time;
+  }
+
 
   } /* end of OpenMP parallel region                                         */
 
@@ -387,10 +374,9 @@ int main(int argc, char ** argv)
 #ifdef VERBOSE
   printf("Element verification value: %lf\n", element_value);
 #endif
-  avgtime = avgtime/(double)(MAX(iterations-1,1));
-  printf("Rate (MFlops/s): %lf,  Avg time (s): %lf,  Min time (s): %lf",
-         1.0E-06 * (2.0*nthread-1.0)*vector_length/mintime, avgtime, mintime);
-  printf(", Max time (s): %lf\n", maxtime);
+  avgtime = reduce_time/iterations;
+  printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
+         1.0E-06 * (2.0*nthread-1.0)*vector_length/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 }
