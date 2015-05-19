@@ -9,6 +9,9 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
+#SYNCHFLAG  = -DSYNCHRONOUS
+#description: default handshake between threads is off
+
 #NTHREADFLAG = -DMAXTHREADS=n
 #description: default thread limit is 256
 
@@ -23,7 +26,7 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS   = $(DEBUGFLAG) $(NTHREADFLAG) $(USERFLAGS) $(MEMORY_FLAG)
+TUNEFLAGS   = $(DEBUGFLAG) $(NTHREADFLAG) $(USERFLAGS) $(SYNCHFLAG)
 PROGRAM     = p2p
 # objects below are the default, used by "clean," if invoked
 OBJS        = $(PROGRAM).o $(COMOBJS)

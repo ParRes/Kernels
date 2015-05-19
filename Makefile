@@ -214,3 +214,4 @@ veryclean: clean
 	cd OPENMP/Branch;    $(MAKE) veryclean
 	cd SERIAL/Branch;    $(MAKE) veryclean
 	cd Run;              $(MAKE) -f  Makefile_FG_MPI veryclean
+	cd common; rm -f make.defs

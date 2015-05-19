@@ -1,19 +1,19 @@
 #name of MPI C compiler, e.g. mpiicc, mpicc
-MPICC:=mpiicc
+MPICC=
 
 #name of C compiler, e.g. icc, xlc, gcc
-CC:=icc
+CC=
 
-#name of compile line flag enabling OpenMP, e.g. -openmp, -fopenmp, -qopenmp
-OPENMPFLAG:=-qopenmp
+#name of compile line flag enabling OpenMP, e.g. -qopenmp, -openmp, -fopenmp
+OPENMPFLAG=
 
 #default compiler optimization flags
-DEFAULT_OPT_FLAGS:=-O2
+DEFAULT_OPT_FLAGS=-O3
 
 ############################   OPTIONAL #########################
 
 #name of C++ compiler (to be used in MPI context for Grappa), e.g. mpigxx, mpiicpc
-CXX:=icpc
+CXX=
 
 #name of MPI C compiler (to be used in Fine-Grain MPI context), e.g. mpicc
 FGMPICC=
@@ -32,12 +32,3 @@ GRAPPATOP=
 
 #location where Fine-Grain MPI is installed, e.g. $(HOME)/fgmpi-install
 FGMPITOP=
-
-############# remove lines below after editing this file ########
-MPICC="ERROR -- No MPICC variable defined in file common/make.defs"
-CC="ERROR -- No CC variable defined in file common/make.defs"
-CXX="ERROR -- No CXX variable defined in file common/make.defs"
-SHMEMCC="ERROR -- No SHMEMCC variable defined in file common/make.defs"
-CHARMTOP="ERROR -- No CHARMTOP variable defined in file common/make.defs"
-FGMPITOP="ERROR -- No FGMPITOP variable defined in file common/make.defs"
-############# remove lines above after editing this file ########
