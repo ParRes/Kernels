@@ -33,29 +33,30 @@ Other comparable, clear, and reasonable labelling is acceptable.
 
 To build the codes the user needs to make certain changes by editing text
 files. Assuming the source tree is untarred in directory HOME, the
-following file needs to be edited:
+following file needs to be copied to `HOME/common/make.defs` and edited.
 
-`HOME/common/make.defs` -- This file specifies the names of the C
+`HOME/common/make.defs.in` -- This file specifies the names of the C
 compiler (CC), and of the MPI (Message Passing Interface) compiler MPICC
 or compile script. If MPI is not going to be used, the user can ignore
 the value of MPICC. The compilers should already be in your path. That
 is, if you define `CC=icc`, then typing `which icc` should show a
-valid path where the compiler is installed.
+valid path where that compiler is installed.
 Special instructions for building and running codes using Charm++, Grappa, 
-or Fine-Grain MPI are in `README.special`.
+OpenSHMEM, or Fine-Grain MPI are in `README.special`.
 
-The suite of kernels currently has parallel implementations in 
+The suite of kernels currently has complete parallel implementations in 
 [OpenMP](http://openmp.org/), 
 [MPI](http://www.mpi-forum.org/), and 
 [Fine-Grain MPI](http://www.cs.ubc.ca/~humaira/fgmpi.html). 
-There is also a serial reference implementation. 
+There is also a SERIAL reference implementation. 
 The suite is currently being extended to include 
 [Charm++](http://charm.cs.illinois.edu/research/charm),
-MPI+OpenMP, and
-[Grappa](http://grappa.io/), as well as three new variations of MPI: 
+MPI+OpenMP, 
+[OpenSHMEM](http://openshmem.org/), and
+[Grappa](http://grappa.io/), 
+as well as two new variations of MPI: 
   1. MPI with one-sided communications (MPIRMA) 
   2. MPI with direct use of shared memory inside coherency domains (MPISHM)
-  3. [OpenSHMEM](http://openshmem.org/)
 These extensions are not yet complete.
 
 ## Global make
