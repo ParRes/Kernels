@@ -1,19 +1,19 @@
 #name of MPI C compiler, e.g. mpiicc, mpicc
-MPICC=
+MPICC:=mpiicc
 
 #name of C compiler, e.g. icc, xlc, gcc
-CC=
+CC:=icc
 
-#name of compile line flag enabling OpenMP, e.g. -openmp, -fopenmp
-OPENMPFLAG=
+#name of compile line flag enabling OpenMP, e.g. -openmp, -fopenmp, -qopenmp
+OPENMPFLAG:=-qopenmp
 
 #default compiler optimization flags
-DEFAULT_OPT_FLAGS=
+DEFAULT_OPT_FLAGS:=-O2
 
 ############################   OPTIONAL #########################
 
 #name of C++ compiler (to be used in MPI context for Grappa), e.g. mpigxx, mpiicpc
-CXX=
+CXX:=icpc
 
 #name of MPI C compiler (to be used in Fine-Grain MPI context), e.g. mpicc
 FGMPICC=
