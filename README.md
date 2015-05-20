@@ -1,6 +1,6 @@
 # License
 
-See LICENSE for licensing information.
+See COPYING for licensing information.
 
 # Overview
 
