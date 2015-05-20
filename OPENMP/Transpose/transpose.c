@@ -179,9 +179,9 @@ int main(int argc, char ** argv) {
 
   if (tiling) {
 #ifdef COLLAPSE
-    #pragma omp parallel for private (i,it,jt) collapse(2)
+    #pragma omp for private (i,it,jt) collapse(2)
 #else
-    #pragma omp parallel for private (i,it,jt)
+    #pragma omp for private (i,it,jt)
 #endif
     for (j=0; j<order; j+=Tile_order) 
       for (i=0; i<order; i+=Tile_order) 
@@ -221,9 +221,9 @@ int main(int argc, char ** argv) {
     }
     else {
 #ifdef COLLAPSE
-      #pragma omp parallel for private (j,it,jt) collapse(2)
+      #pragma omp for private (j,it,jt) collapse(2)
 #else
-      #pragma omp parallel for private (j,it,jt)
+      #pragma omp for private (j,it,jt)
 #endif
       for (i=0; i<order; i+=Tile_order) 
         for (j=0; j<order; j+=Tile_order) 
