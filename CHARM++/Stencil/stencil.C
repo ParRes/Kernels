@@ -330,7 +330,6 @@ public:
       for (int j=MAX(jstart,RADIUS); j<=MIN(n-1-RADIUS,jend); j++) {
         for (int i=MAX(istart,RADIUS); i<=MIN(n-1-RADIUS,iend); i++) {
 
-          double start =  temp_new(i-istart,j-jstart);
           for (int jj=-RADIUS; jj<=RADIUS; jj++) {
             temp_new(i-istart,j-jstart) += WEIGHT(0,jj)*temp(i-istart,j-jstart+jj);
 	  }
