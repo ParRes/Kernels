@@ -139,7 +139,7 @@ int main(int argc, char ** argv)
 
   if (m<=Num_procs) {
     if (my_ID == root)
-      printf("ERROR: First grid dimension %d must be >= #ranks %d\n", m, Num_procs);
+      printf("ERROR: First grid dimension %d must be > #ranks %d\n", m, Num_procs);
     error = 1;
   }
   ENDOFTESTS:;
