@@ -168,6 +168,11 @@ int main(int argc, char ** argv)
   else {
     printf("Number of threads              = %d\n",nthread_input);
     printf("Number of counter pair updates = %d\n", iterations);
+#ifdef DEPENDENT
+    printf("Dependent atomic counter pair update\n");
+#else
+    printf("Independent atomic counter updates\n");
+#endif
   }
   }
   bail_out(num_error);
@@ -181,9 +186,14 @@ int main(int argc, char ** argv)
   /* start with iteration nthread to take into account pre-loop iter  */
   for (iter=0; iter<iterations; iter++) { 
     omp_set_lock(&counter_lock);
+#ifdef DEPENDENT
     double tmp1 = COUNTER1;
     COUNTER1 = cosa*tmp1 - sina*COUNTER2;
     COUNTER2 = sina*tmp1 + cosa*COUNTER2;
+#else
+    COUNTER1++;
+    COUNTER2++;
+#endif
     omp_unset_lock(&counter_lock);
   }
  
@@ -193,8 +203,13 @@ int main(int argc, char ** argv)
   }
   } /* end of OpenMP parallel region */
  
+#ifdef DEPENDENT
   refcounter1 = cos(iterations);
   refcounter2 = sin(iterations);
+#else
+  refcounter1 = (double)(iterations+1);
+  refcounter2 = (double) iterations;
+#endif
   if ((ABS(COUNTER1-refcounter1)>epsilon) || 
       (ABS(COUNTER2-refcounter2)>epsilon)) {
      printf("ERROR: Incorrect or inconsistent counter values %13.10lf %13.10lf; ",
@@ -203,7 +218,7 @@ int main(int argc, char ** argv)
   }
   else {
 #ifdef VERBOSE
-    printf("Solution validates; Correct counter values %13.10 %13.10lf\n", 
+    printf("Solution validates; Correct counter values %13.10lf %13.10lf\n", 
            COUNTER1, COUNTER2);
 #else
     printf("Solution validates\n");
