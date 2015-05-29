@@ -255,8 +255,8 @@ int main(int argc, char ** argv)
 #else 
     printf("Solution validates\n");
 #endif
-    printf("Rate (CPUPs/s): %d, time (s): %lf\n", 
-           (int)(iterations/refcount_time), refcount_time);
+    printf("Rate (MCPUPs/s): %lf, time (s): %lf\n", 
+           iterations/refcount_time*1.e-6, refcount_time);
   }
   exit(EXIT_SUCCESS);
 }
