@@ -76,8 +76,8 @@ int main(int argc, char ** argv)
   int    my_ID;           /* MPI rank                                            */
   int    root;            /* ID of master rank                                   */
   int    m, n;            /* grid dimensions                                     */
-  double pipeline_time,   /* timing parameters                                   */
-         local_pipeline_time, avgtime;
+  double *pipeline_time,   /* timing parameters                                   */
+         *local_pipeline_time, avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;      /* verification value at top right corner of grid      */
   int    i, j, iter, ID;  /* dummies                                             */
@@ -101,7 +101,7 @@ int main(int argc, char ** argv)
   my_ID =  shmem_my_pe();
   Num_procs =  shmem_n_pes();
 /* we set root equal to the highest rank, because this is also the rank that 
-   reports on the verification value                                            */
+   reports on the verification value                                             */
   root = Num_procs-1;
 
 /*********************************************************************
@@ -132,14 +132,14 @@ int main(int argc, char ** argv)
     goto ENDOFTESTS;
   }
 
-// initialize sync variables for error checks
+/* initialize sync variables for error checks                                    */
   for (i = 0; i < SHMEM_BCAST_SYNC_SIZE; i += 1) {
     pSync[i] = _SHMEM_SYNC_VALUE;
   }
 
   if (m<=Num_procs) {
     if (my_ID == root)
-      printf("ERROR: First grid dimension %d must be >= #ranks %d\n", m, Num_procs);
+      printf("ERROR: First grid dimension %d must be > #ranks %d\n", m, Num_procs);
     error = 1;
   }
   ENDOFTESTS:;
@@ -155,7 +155,9 @@ int main(int argc, char ** argv)
   flag_snd = (int *) shmalloc (sizeof(int) * n);
   dst = (double *) shmalloc (sizeof(double) * (n));
   src = (double *) shmalloc (sizeof(double) * (n));
-  if (!flag_snd || !dst || !src) {
+  local_pipeline_time = (double *) shmalloc (sizeof(double));
+  pipeline_time = (double *) shmalloc (sizeof(double));
+  if (!flag_snd || !dst || !src || !local_pipeline_time || !pipeline_time) {
     printf("ERROR: could not allocate flags or communication buffers on rank %d\n", 
            my_ID);
     error = 1;
@@ -212,7 +214,7 @@ int main(int argc, char ** argv)
 
     if (iter == 1) {
       shmem_barrier_all ();
-      local_pipeline_time = wtime();
+      local_pipeline_time [0] = wtime();
     }
 
     for (j=1; j<n; j++) {
@@ -254,8 +256,8 @@ int main(int argc, char ** argv)
     else ARRAY(0,0)= -ARRAY(end[my_ID],n-1);
   }
 
-  local_pipeline_time = wtime() - local_pipeline_time;
-  shmem_double_max_to_all(&pipeline_time, &local_pipeline_time, 1, 0, 0, Num_procs, 
+  local_pipeline_time [0] = wtime() - local_pipeline_time [0];
+  shmem_double_max_to_all(pipeline_time, local_pipeline_time, 1, 0, 0, Num_procs,
                           pWrk, pSync);
 
   /* verify correctness, using top right value                                     */
@@ -270,7 +272,7 @@ int main(int argc, char ** argv)
   bail_out(error, pSync);
 
   if (my_ID == root) {
-    avgtime = pipeline_time/iterations;
+    avgtime = pipeline_time [0]/iterations;
 #ifdef VERBOSE   
     printf("Solution validates; verification value = %lf\n", corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",

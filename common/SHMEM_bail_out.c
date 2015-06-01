@@ -52,15 +52,20 @@ HISTORY: - Written by Gabriele Jost, March 2015.
 #define shmem_finalize()
 
 void bail_out (int error, long *pSync) {
-   long global_error;
-   long local_error;
+   long *global_error;
+   long *local_error;
    long pWrk [_SHMEM_BCAST_SYNC_SIZE];
 
    int i;
-   local_error = error;
-   shmem_barrier_all ();
-   shmem_long_max_to_all (&global_error, &local_error, 1, 0, 0, _num_pes (), pWrk, pSync); 
-   if (global_error > 0) {
+   global_error = shmalloc(sizeof(long));
+   local_error = shmalloc(sizeof(long));
+   if (!global_error || !local_error) {
+     printf("SHMEM_bail_out could not allocate error space on symmetric heap\n");
+     exit(2);
+   }
+   local_error [0] = error;
+   shmem_long_max_to_all (global_error, local_error, 1, 0, 0, _num_pes (), pWrk, pSync);
+   if (global_error[0] > 0) {
      shmem_finalize ();
      exit (1);
   }
