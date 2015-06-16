@@ -28,7 +28,7 @@ SHMEMCC=
 CHARMTOP=
 
 #location where Grappa is installed, e.g. $(HOME)/grappa
-GRAPPATOP=
+GRAPPATOP=$(GRAPPA_PREFIX)
 
 #location where Fine-Grain MPI is installed, e.g. $(HOME)/fgmpi-install
 FGMPITOP=

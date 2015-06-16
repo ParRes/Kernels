@@ -92,7 +92,7 @@ directory:
 "make allshmem"      - builds all OpenSHMEM kernels
 "make allmpishm"     - builds all kernels with MPI3 shared memory
 "make allcharm++"    - builds all Charm++ kernels
-"make allgrappa"     - builds all Charm++ kernels
+"make allgrappa"     - builds all Grappa kernels
 
 The global make process uses a single set of optimization flags for all
 kernels. For more control, the user should consider individual makes
