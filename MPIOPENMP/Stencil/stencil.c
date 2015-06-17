@@ -429,7 +429,7 @@ int main(int argc, char ** argv) {
     }
 
     /* Apply the stencil operator */
-    #pragma omp parallel for private (i)
+    #pragma omp parallel for  private (i, j, ii, jj) 
     for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
       for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
         for (jj=-RADIUS; jj<=RADIUS; jj++) {

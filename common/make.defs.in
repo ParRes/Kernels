@@ -27,8 +27,8 @@ SHMEMCC=
 #location where Charm++ is installed, e.g. $(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
 CHARMTOP=
 
-#location where Grappa is installed, e.g. $(HOME)/grappa
-GRAPPATOP=
+#location where Grappa is installed; should not have to change this
+GRAPPATOP=$(GRAPPA_PREFIX)
 
 #location where Fine-Grain MPI is installed, e.g. $(HOME)/fgmpi-install
 FGMPITOP=
