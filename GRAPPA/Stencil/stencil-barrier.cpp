@@ -57,6 +57,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
  
 *********************************************************************************/
 #include <par-res-kern_general.h>
+#include <par-res-kern_mpi.h>
 #include <Grappa.hpp>
 #include <FullEmpty.hpp>
 using namespace Grappa;
@@ -82,6 +83,8 @@ using namespace Grappa;
 #endif
 #define root 0
 
+#define FOCUS 1
+ 
 // temporary hack to allocate symmetric data with lower overhead
 #define symmetric static
  
@@ -148,8 +151,8 @@ int main(int argc, char * argv[]) {
       std::cout<<"ERROR: iterations must be >= 1 :"<<iterations<<std::endl;
     exit(1);
   }
-  int n           = atoi(argv[2]);
-  int64_t nsquare = (int64_t) n * n;
+  int n       = atoi(argv[2]);
+  long nsquare = n * n;
   if (nsquare < Grappa::cores()){
     if (my_ID == root)
       std::cout<<"ERROR: grid size "<<nsquare<<" must be at least # cores "<<
@@ -182,7 +185,6 @@ int main(int argc, char * argv[]) {
         my_IDy = my_ID/Num_procsx; }
       );
  
-    std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
     std::cout<<"Grappa stencil execution on 2D grid"<<std::endl;
     std::cout<<"Number of cores        = "<<Num_procs<<std::endl;
     std::cout<<"Grid size              = "<<n<<std::endl;
@@ -198,23 +200,18 @@ int main(int argc, char * argv[]) {
 
     symmetric double start;
     symmetric double total;
-    symmetric long istart;
-    symmetric long iend;
-    symmetric long jstart;
-    symmetric long jend;
-    symmetric long width;
-    symmetric long height;
+    symmetric int istart;
+    symmetric int iend;
+    symmetric int jstart;
+    symmetric int jend;
+    symmetric int width;
+    symmetric int height;
  
     symmetric FullEmpty<DTYPE> * left_halo;
     symmetric FullEmpty<DTYPE> * right_halo;
     symmetric FullEmpty<DTYPE> * top_halo;
     symmetric FullEmpty<DTYPE> * bottom_halo;
  
-    symmetric FullEmpty<bool> * CTS_top;
-    symmetric FullEmpty<bool> * CTS_bottom;
-    symmetric FullEmpty<bool> * CTS_right;
-    symmetric FullEmpty<bool> * CTS_left;
-
     symmetric DTYPE * in;
     symmetric DTYPE * out;
  
@@ -259,8 +256,12 @@ int main(int argc, char * argv[]) {
         exit(1);
       }
       long total_length_in = (width+2*RADIUS)*(height+2*RADIUS);
+      if (total_length_in/(height+2*RADIUS) != (width+2*RADIUS)) {
+        std::cout<<"ERROR: Space for "<<width+2*RADIUS<<" x "<<height+2*RADIUS<<
+          " input array cannot be represented"<<std::endl;
+        exit(1);
+      }
       long total_length_out = width*height;
-
       in  = Grappa::locale_new_array<DTYPE>(total_length_in);
       out = Grappa::locale_new_array<DTYPE>(total_length_out);
       if (!in || !out) {
@@ -298,126 +299,97 @@ int main(int argc, char * argv[]) {
         right_halo[i].reset();
         left_halo[i].reset();
       }
-
-      // create cts bits for each local halo
-      CTS_top     = new FullEmpty<bool>();
-      CTS_bottom  = new FullEmpty<bool>();
-      CTS_right   = new FullEmpty<bool>();
-      CTS_left    = new FullEmpty<bool>();
-      writeXF( CTS_top, true);
-      writeXF( CTS_bottom, true);
-      writeXF( CTS_right, true);
-      writeXF( CTS_left, true);
     } );
   
-    Grappa::finish( [n,Num_procsx,Num_procsy, iterations] {
-    Grappa::on_all_cores( [n,Num_procsx,Num_procsy, iterations] {
-	
-	// compute neighbors; don't worry about dropping off the edges of the grid
-	int right_nbr  = my_ID+1;
-	int left_nbr   = my_ID-1;
-	int top_nbr    = my_ID+Num_procsx;
-	int bottom_nbr = my_ID-Num_procsx;
-
+    Grappa::finish( [n,Num_procsx,Num_procsy,iterations] {
+    Grappa::on_all_cores( [n,Num_procsx,Num_procsy,iterations] {
 	for (int iter = 0; iter<=iterations; iter++){
-	  int i, j, ii, jj, kk;
+	  Grappa::on_all_cores( [iter,n] {
+	      if (iter==1) start = Grappa::walltime();
+	    } );
+       
+      // execute kernel
+      
+          int i, j, ii, jj, kk;
 
-	  if (iter == 1) start = Grappa::walltime();
-	  
-	// execute kernel
-	  
-	  // plop ghost point values in neighbors' halos
-	  if (my_IDy < Num_procsy-1 && readFE( CTS_top))	    
-	    
-	      for (kk=0,j=jend-RADIUS+1; j<=jend; j++)
-	      for (i=istart; i<=iend; i++,kk++) {
-		auto val = IN(i,j);
-		Grappa::delegate::call<async>( top_nbr, [=] () {
-		    writeXF( &bottom_halo[kk], val);
-		  } );
-	      }
-
-	  if (my_IDy > 0 && readFE( CTS_bottom))
-	    for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++)
-	      for (i=istart; i<=iend; i++,kk++) {
-		auto val = IN(i,j);
-		Grappa::delegate::call<async>( bottom_nbr, [=] () {
-		    writeXF( &top_halo[kk], val);
-		  } );
-	      }
-	  if (my_IDx < Num_procsx-1 && readFE( CTS_right))
-	    for (kk=0,j=jstart; j<=jend; j++)
-	      for (i=iend-RADIUS+1; i<=iend; i++,kk++) {
-		auto val = IN(i,j);
-		Grappa::delegate::call<async>( right_nbr, [=] () {
-		    writeXF( &left_halo[kk], val);
-		  } );
-	      }
-	  if (my_IDx > 0 && readFE( CTS_left))
-	    for (kk=0,j=jstart; j<=jend; j++)
-	      for (i=istart; i<=istart+RADIUS-1; i++,kk++) {
-		auto val = IN(i,j);
-		Grappa::delegate::call<async>( left_nbr, [=] () {
-		    writeXF( &right_halo[kk], val);
-		  } );
-	      }
-	  //Now put the halos into the regular array tile
-	  if (my_IDy < Num_procsy-1) {
-	    for (kk=0,j=jend+1; j<=jend+RADIUS; j++)
-	      for (i=istart; i<=iend; i++,kk++) {
-		IN(i,j) = readFE( &top_halo[kk]);
-	      }
-	    Grappa::delegate::call<async>( top_nbr, [=] () {
-		writeXF( CTS_bottom, true);
-	      } );
-	  }
-	  if (my_IDy > 0) {
-	    for (kk=0,j=jstart-RADIUS; j<=jstart-1; j++)
-	      for (i=istart; i<=iend; i++,kk++) {
-		IN(i,j) = readFE( &bottom_halo[kk]);
-	      }
-	    Grappa::delegate::call<async>( bottom_nbr, [=] () {
-		writeXF( CTS_top, true);
-	      } );
-	  }
-	  if (my_IDx < Num_procsx-1) {
+          // compute neighbors; don't worry about dropping off the edges of the grid
+          int right_nbr  = my_ID+1;
+          int left_nbr   = my_ID-1;
+          int top_nbr    = my_ID+Num_procsx;
+          int bottom_nbr = my_ID-Num_procsx;
+          // plop ghost point values in neighbors' halos
+          if (my_IDy < Num_procsy-1)
+            for (kk=0,j=jend-RADIUS+1; j<=jend; j++)
+            for (i=istart; i<=iend; i++,kk++) {
+              auto val = IN(i,j);
+              Grappa::delegate::call<async>( top_nbr, [=] () {
+                writeXF( &bottom_halo[kk], val);
+              } );
+            }
+          if (my_IDy > 0)
+            for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++)
+            for (i=istart; i<=iend; i++,kk++) {
+              auto val = IN(i,j);
+              Grappa::delegate::call<async>( bottom_nbr, [=] () {
+                writeXF( &top_halo[kk], val);
+              } );
+            }
+          if (my_IDx < Num_procsx-1)
             for (kk=0,j=jstart; j<=jend; j++)
-	      for (i=iend+1; i<=iend+RADIUS; i++,kk++)
-		IN(i,j) = readFE( &right_halo[kk]);
-	    Grappa::delegate::call<async>( right_nbr, [=] () {
-		writeXF( CTS_left, true);
-	      } );
-	  }
-	  if (my_IDx > 0) {
-	    for (kk=0,j=jstart; j<=jend; j++) 
-	      for (i=istart-RADIUS; i<=istart-1; i++,kk++)
-		IN(i,j) = readFE( &left_halo[kk]);
-	    Grappa::delegate::call<async>( left_nbr, [=] () {
-		writeXF( CTS_right, true);
-	      } );
-	  }
-	  
-	  // Apply the stencil operator
-	  for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
-	    for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
-	      for (jj=-RADIUS; jj<=RADIUS; jj++) {
-		OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+              for (i=iend-RADIUS+1; i<=iend; i++,kk++) {
+              auto val = IN(i,j);
+              Grappa::delegate::call<async>( right_nbr, [=] () {
+                writeXF( &left_halo[kk], val);
+                } );
               }
-	      for (ii=-RADIUS; ii<0; ii++) {
-		OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-	      }
-	      for (ii=1; ii<=RADIUS; ii++) {
-		OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-	      }
-	    }
-	  }
-	  // add constant to solution to force refresh of neighbor data, if any
-	  for (j=jstart; j<=jend; j++) for (i=istart; i<=iend; i++) IN(i,j)+= 1.0;
-	  
-	} // end of iterations                                                   */
+          if (my_IDx > 0)
+            for (kk=0,j=jstart; j<=jend; j++)
+              for (i=istart; i<=istart+RADIUS-1; i++,kk++) {
+              auto val = IN(i,j);
+              Grappa::delegate::call<async>( left_nbr, [=] () {
+                writeXF( &right_halo[kk], val);
+                } );
+              }
+          //Now put the halos into the regular array tile
+          if (my_IDy < Num_procsy-1)
+            for (kk=0,j=jend+1; j<=jend+RADIUS; j++)
+            for (i=istart; i<=iend; i++,kk++) {
+              IN(i,j) = readFE( &top_halo[kk]);
+            }
+          if (my_IDy > 0)
+            for (kk=0,j=jstart-RADIUS; j<=jstart-1; j++)
+            for (i=istart; i<=iend; i++,kk++) {
+              IN(i,j) = readFE( &bottom_halo[kk]);
+            }
+          if (my_IDx < Num_procsx-1)
+            for (kk=0,j=jstart; j<=jend; j++)
+            for (i=iend+1; i<=iend+RADIUS; i++,kk++)
+              IN(i,j) = readFE( &right_halo[kk]);
+          if (my_IDx > 0)
+            for (kk=0,j=jstart; j<=jend; j++) for (i=istart-RADIUS; i<=istart-1; i++,kk++)
+              IN(i,j) = readFE( &left_halo[kk]);
+ 
+          // Apply the stencil operator
+          for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
+            for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
+              for (jj=-RADIUS; jj<=RADIUS; jj++) {
+                OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+              }
+              for (ii=-RADIUS; ii<0; ii++) {
+                OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+              }
+              for (ii=1; ii<=RADIUS; ii++) {
+                OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+              }
+            }
+          }
+          // add constant to solution to force refresh of neighbor data, if any
+          for (j=jstart; j<=jend; j++) for (i=istart; i<=iend; i++) IN(i,j)+= 1.0;
+	  Grappa::barrier();
+	
+	} // end of iterations
       } );
       } );       
-    
  
     symmetric DTYPE local_norm;
     
@@ -447,14 +419,13 @@ int main(int argc, char * argv[]) {
       // plus one flop for the update of the input of the array       
       int stencil_size = 4*RADIUS+1;
       double flops = (DTYPE) (2*stencil_size+1) * f_active_points;
-      double avgtime = iter_time/(double)iterations;
+      double avgtime = iter_time/iterations;
       std::cout << "Solution validates"<<std::endl;
       std::cout << "Rate (MFlops/s): " << 1.0E-06*flops/avgtime<<
         "  Avg time (s): "<<avgtime<<std::endl;
     }
   });
 
-  // skipping finalize, which creates spurious errors
-  //  Grappa::finalize();
+  Grappa::finalize();
   return 0;
 }

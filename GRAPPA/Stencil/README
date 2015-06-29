@@ -1,0 +1,7 @@
+We have included two versions here:
+
+- stencil.cpp uses only point-to-point synchronization in the timed region.
+   Build with "make stencil".
+
+- stencil-barrier.cpp uses an explicit barrier within each iteration of the timed region.
+   Build with "make PROGRAM=stencil-barrier stencil-barrier".

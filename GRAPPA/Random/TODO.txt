@@ -1,0 +1,3 @@
+- command line args
+- graceful failures
+- implement variable settings

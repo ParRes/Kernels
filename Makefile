@@ -156,6 +156,7 @@ allgrappa:
 	cd GRAPPA/Synch_p2p;       $(MAKE) p2p        "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd GRAPPA/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd GRAPPA/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd GRAPPA/Random;          $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allserial:
 	cd SERIAL/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -209,6 +210,7 @@ clean:
 	cd GRAPPA/Synch_p2p;        $(MAKE) clean
 	cd GRAPPA/Stencil;          $(MAKE) clean
 	cd GRAPPA/Transpose;        $(MAKE) clean
+	cd GRAPPA/Random;           $(MAKE) clean
 	cd MPIOPENMP/Nstream;       $(MAKE) clean
 	cd MPIOPENMP/Stencil;       $(MAKE) clean
 	cd MPIOPENMP/Transpose;     $(MAKE) clean

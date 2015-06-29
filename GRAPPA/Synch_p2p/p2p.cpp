@@ -36,6 +36,10 @@
 #include <FullEmpty.hpp>
  
 using namespace Grappa;
+
+DECLARE_double( poll_factor );
+DECLARE_int64( aggregator_target_size );
+
  
 #define ARRAY(i,j) (local[(i+1)+((j)*(segment_size+1))])
 #define root 0
