@@ -27,17 +27,13 @@ USERFLAGS    =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         = -Wl,-Bstatic  -lGrappa -lglog -lgflags -Wl,-Bdynamic -lpthread -lboost_system-mt 
-LIBPATHS     = -L$(GRAPPATOP)/build/Make+Release/system \
-               -L$(GRAPPATOP)/build/Make+Release/third-party/lib 
-INCLUDEPATHS = -I$(GRAPPATOP)/build/Make+Release/third-party/include \
-               -I$(GRAPPATOP)/system \
-               -I$(GRAPPATOP)/system/tasks
+LIBS         = $(GRAPPA_LDLIBS) 
+LIBPATHS     = $(GRAPPA_LDFLAGS)
 
 ### End User configurable options ###
 
 # this is used by the C++ implicit compile rule
-CXXFLAGS= -DENABLE_RDMA_AGGREGATOR  -std=c++11 -Winline -Wno-inline -mno-red-zone -g -DNDEBUG  
+CXXFLAGS= $(GRAPPA_CXXFLAGS)  
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG) $(RADIUSFLAG)  $(USERFLAGS) $(CXXFLAGS)
 PROGRAM     = stencil
