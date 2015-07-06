@@ -133,13 +133,9 @@ HISTORY: Written by Rob Van der Wijngaart, June 2006.
 
 
 uint64_t PRK_rand(uint64_t n);
-static bool poweroftwo(uint64_t);
+static int32_t poweroftwo(int32_t);
 
 using namespace Grappa;
-
-// define command-line flags (third-party 'gflags' library)
-DEFINE_int64( sizeA, 1 << 30, "Size of array that GUPS increments" );
-DEFINE_int64( sizeB, 1 << 20, "Number of iterations" );
 
 // define custom statistics which are logged by the runtime
 // (here we're not using these features, just printing them ourselves)
@@ -147,43 +143,153 @@ GRAPPA_DEFINE_METRIC( SimpleMetric<double>, gups_runtime, 0.0 );
 GRAPPA_DEFINE_METRIC( SimpleMetric<double>, gups_throughput, 0.0 );
 
 int main(int argc, char * argv[]) {
+  /*
+    my_ID                = Grappa root core
+    Num_procs            = number of cores
+    update_ratio         = multiplier of tablesize for # updates
+    tablesize            = aggregate table size
+    log2tablesize        = log2 of aggregate table size
+    log2nproc            = log2 of number of procs
+    log2update_ratio     = log2 of update ratio
+    tablespace           = bytes required for table  
+    i,oldsize            = dummies
+   */
+
   init( &argc, &argv );
   
-  int my_ID = Grappa::mycore();
+  int32_t my_ID = Grappa::mycore();
+  int32_t Num_procs = Grappa::cores();
+  
 
-  run([]{
+  if (argc != 4) {
+    if (my_ID == root)
+      std::cout << "Usage: " << argv[0] 
+		<< "<log2 tablesize> <#update ratio> <vector length>" 
+		<< std::endl;
+    exit(1);
+  }
 
-    // create target array that we'll be updating
-    auto A = global_alloc<int64_t>(FLAGS_sizeA);
-    Grappa::memset( A, 0, FLAGS_sizeA );
-    
-    // create array of random indexes into A
-    auto B = global_alloc<int64_t>(FLAGS_sizeB);
-    forall( B, FLAGS_sizeB, [=](int64_t& b) {
-        //b =  random() % FLAGS_sizeA;
-	b = PRK_rand(SEQSEED + (uint64_t)(&b)) % FLAGS_sizeA;
+  // number of procs must be a power of two
+  int32_t log2nproc = poweroftwo(Num_procs);
+  if (log2nproc < 0) {
+    if (my_ID == root)
+      std::cout << "ERROR: Invalid number of procs: " << Num_procs 
+		<< ", must be a power of 2" << std::endl;
+    exit(1);
+  }
+
+  int64_t log2tablesize = atoi(argv[1]);
+  if (log2tablesize < 1) {
+    if (my_ID == root)
+      std::cout << "ERROR: Log2 tablesize is " << log2tablesize 
+		<< "; must be >= 1" << std::endl;
+    exit(1);
+  }
+
+  // update ratio must be a power of two
+  int32_t update_ratio = atoi(argv[2]);
+  int32_t log2update_ratio = poweroftwo(update_ratio);
+  if (log2update_ratio < 0) {
+    if (my_ID == root)
+      std::cout << "ERROR: Invalid update ratio: " << update_ratio
+		<< ", must be a power of 2" << std::endl;
+    exit(1);
+  }
+
+  int32_t nstarts = atoi(argv[3]);
+  // vector length must be positive
+  if (nstarts < 1) {
+    if (my_ID == root)
+      std::cout << "ERROR: vector length " << nstarts
+		<< ", must be positive" << std::endl;
+    exit(1);
+  }
+
+  // additional divisibility tests
+  if (nstarts % Num_procs) {
+    std::cout << "ERROR: vector length " << nstarts << " must be divisible by "
+	      << "# threads " << Num_procs << std::endl;
+    exit(1);
+  }
+  if (update_ratio % nstarts) {
+    std::cout << "ERROR: update ratio " << update_ratio << " must be divisible by "
+	      << "vector length " << Num_procs << std::endl;
+    exit(1);
+  }
+
+  // compute table size carefully to make sure it can be represented
+  int64_t tablesize = 1;
+  int64_t oldsize;
+  for (int i = 0; i < log2tablesize; i++) {
+    oldsize = tablesize;
+    tablesize <<= 1;
+    if (tablesize/2 != oldsize) {
+      std::cout << "Requested table size too large; reduce log2 tablesize = "
+		<< log2tablesize << std::endl;
+      exit(1);
+    }
+  }
+
+  // even though the table size can be represented, computing the space
+  // requred for the table may lead to overflow
+  int64_t tablespace = (size_t) tablesize*sizeof(uint64_t);
+  if ((tablespace/sizeof(uint64_t)) != tablesize || tablespace <= 0) {
+    std::cout << "Cannot represent space for table on this system; "
+	      << "reduce log2 tablesize" << std::endl;
+    exit(1);
+  }
+
+  // compute number of updates carefully to make sure it can be represented
+  uint64_t nupdate = update_ratio * tablesize;
+  if (nupdate/tablesize != update_ratio) {
+    std::cout << "Requested number of updates too large; reduce log2 tablesize "
+	      << "or update ratio" << std::endl;
+    exit(1);
+  }
+
+  Grappa::run([]{
+
+      std::cout << "Grappa Random Access test" << std::endl;
+      std::cout << "Number of threads = " << Num_procs << std::endl;
+      std::cout << "Table size (shared) = " << tablesize << std::endl;
+      std::cout << "Update ratio = " << update_ratio << std::endl;
+      std::cout << "Number of updates = " << std::endl;
+      std::cout << "Vector length = " << std::endl;
+      std::cout << "Percent errors allowed = " << ERRORPERCENT << std::endl;
+
+
+      // create target array that we'll be updating
+      int64_t ranspace = nstarts*sizeof(uint64_t);
+      auto Table = global_alloc<int64_t>(tablespace);
+      GRAPPA::memset(Table, 0, ransize);
+      
+      // create array of random indexes into 
+      auto ran = global_alloc<int64_t>(ranspace);
+      forall( ran, nstarts, [=](int64_t& b) {
+	  // initialize table to hold value of index at index
+	});
+
+      // PRK_rand(SEQSEED + (uint64_t)(&b)) % FLAGS_sizeA;      
+      double start = walltime();
+      
+      Metrics::start_tracing();
+      
+      forall(B, FLAGS_sizeB, [=](int64_t& b){
+	  delegate::increment<async>( A + b, 1);
+	});
+      
+      gups_runtime = walltime() - start;
+      
+      Metrics::stop_tracing();
+      
+      gups_throughput = FLAGS_sizeB / gups_runtime;
+      
+      LOG(INFO) << gups_throughput.value() << " UPS in " << gups_runtime.value() << " seconds";
+      
+      global_free(B);
+      global_free(A);
+      
     });
-
-    double start = walltime();
-    
-    Metrics::start_tracing();
-    
-    forall(B, FLAGS_sizeB, [=](int64_t& b){
-      delegate::increment<async>( A + b, 1);
-    });
-
-    gups_runtime = walltime() - start;
-    
-    Metrics::stop_tracing();
-    
-    gups_throughput = FLAGS_sizeB / gups_runtime;
-
-    LOG(INFO) << gups_throughput.value() << " UPS in " << gups_runtime.value() << " seconds";
-    
-    global_free(B);
-    global_free(A);
-    
-  });
   finalize();
 }
 
@@ -225,9 +331,10 @@ uint64_t PRK_rand(uint64_t n) {
   return ran; 
 }
 
-bool poweroftwo(uint64_t n) {
-  int log2n = 0;
+int32_t poweroftwo(int32_t n) {
+  int32_t log2n = 0;
 
   while ((1 << log2n) < n) log2n++;
-  return 1 << log2n == n;
+  if (1 << log2n != n) return -1;
+  else return log2n;
 }
