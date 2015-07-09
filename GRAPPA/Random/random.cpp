@@ -139,8 +139,7 @@ using namespace Grappa;
 
 // define custom statistics which are logged by the runtime
 // (here we're not using these features, just printing them ourselves)
-GRAPPA_DEFINE_METRIC( SimpleMetric<double>, gups_runtime, 0.0 );
-GRAPPA_DEFINE_METRIC( SimpleMetric<double>, gups_throughput, 0.0 );
+GRAPPA_DEFINE_METRIC( SimpleMetric<double>, random_time, 0.0 );
 
 int main(int argc, char * argv[]) {
   /*
@@ -253,41 +252,42 @@ int main(int argc, char * argv[]) {
       std::cout << "Number of threads = " << Num_procs << std::endl;
       std::cout << "Table size (shared) = " << tablesize << std::endl;
       std::cout << "Update ratio = " << update_ratio << std::endl;
-      std::cout << "Number of updates = " << std::endl;
-      std::cout << "Vector length = " << std::endl;
-      std::cout << "Percent errors allowed = " << ERRORPERCENT << std::endl;
+      std::cout << "Number of updates = " << nupdate << std::endl;
+      std::cout << "Vector length = " << nstarts << std::endl;
 
 
       // create target array that we'll be updating
-      int64_t ranspace = nstarts*sizeof(uint64_t);
       auto Table = global_alloc<int64_t>(tablespace);
-      GRAPPA::memset(Table, 0, ransize);
+      GRAPPA::memset(Table, 0, tablespace);
       
-      // create array of random indexes into 
+      // create array of random indexes
+      int64_t ranspace = nstarts*sizeof(uint64_t);
       auto ran = global_alloc<int64_t>(ranspace);
-      forall( ran, nstarts, [=](int64_t& b) {
-	  // initialize table to hold value of index at index
+      forall( ran, nstarts, [=](int64_t& n) {
+	  n = PRK_rand(SEQSEED+(nupdate/nstarts)*(&n-*ran));
 	});
-
-      // PRK_rand(SEQSEED + (uint64_t)(&b)) % FLAGS_sizeA;      
-      double start = walltime();
       
+      double start = walltime();
       Metrics::start_tracing();
       
-      forall(B, FLAGS_sizeB, [=](int64_t& b){
-	  delegate::increment<async>( A + b, 1);
-	});
+      // random access rounds
+      for (int j = 0; j < nupdate/nstarts; j++) {
+	forall(ran, nstarts, [=](int64_t& n) {
+	    n = (n << 1) ^ (n < 0? POLY : 0);
+	    index = n & (tablesize-1);
+	    delegate::increment<async>( Table[index], 1);
+	  });
+      }
       
-      gups_runtime = walltime() - start;
+      random_time = walltime() - start;
       
       Metrics::stop_tracing();
       
-      gups_throughput = FLAGS_sizeB / gups_runtime;
+      LOG(INFO) << "Rate (GUPs/s): " << 1.e-9*nupdate/random_time.value()
+		<< ", time (s) = " << random_time.value() << " seconds";
       
-      LOG(INFO) << gups_throughput.value() << " UPS in " << gups_runtime.value() << " seconds";
-      
-      global_free(B);
-      global_free(A);
+      global_free(Table);
+      global_free(ran);
       
     });
   finalize();
