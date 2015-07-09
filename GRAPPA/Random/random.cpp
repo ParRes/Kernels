@@ -129,10 +129,11 @@ HISTORY: Written by Rob Van der Wijngaart, June 2006.
   /* sequence number in stream of random numbers to be used as initial value       */
   #define SEQSEED            834568137686317453LL
 #endif
+#define ERRORPERCENT 0
 #define root 0 
 
 
-uint64_t PRK_rand(uint64_t n);
+uint64_t PRK_starts(uint64_t n);
 static int32_t poweroftwo(int32_t);
 
 using namespace Grappa;
@@ -246,7 +247,7 @@ int main(int argc, char * argv[]) {
     exit(1);
   }
 
-  Grappa::run([]{
+  Grappa::run([=]{
 
       std::cout << "Grappa Random Access test" << std::endl;
       std::cout << "Number of threads = " << Num_procs << std::endl;
@@ -254,31 +255,40 @@ int main(int argc, char * argv[]) {
       std::cout << "Update ratio = " << update_ratio << std::endl;
       std::cout << "Number of updates = " << nupdate << std::endl;
       std::cout << "Vector length = " << nstarts << std::endl;
-
+      std::cout << "Percent errors allowed = " << ERRORPERCENT << std::endl;
 
       // create target array that we'll be updating
       auto Table = global_alloc<int64_t>(tablespace);
-      GRAPPA::memset(Table, 0, tablespace);
+      forall( Table, tablespace, [=] (int64_t index, int64_t& n) {
+	n = index;
+	});
+
       
-      // create array of random indexes
+      // create array of random indices
       int64_t ranspace = nstarts*sizeof(uint64_t);
       auto ran = global_alloc<int64_t>(ranspace);
-      forall( ran, nstarts, [=](int64_t& n) {
-	  n = PRK_rand(SEQSEED+(nupdate/nstarts)*(&n-*ran));
-	});
       
       double start = walltime();
       Metrics::start_tracing();
       
-      // random access rounds
-      for (int j = 0; j < nupdate/nstarts; j++) {
+      // do two identical rounds of Random Access to make sure we recover
+      // the initial condition
+      for (int round = 0; round < 2; round++) {
+	forall( ran, nstarts, [=](int64_t index, int64_t& s) {
+	    s = PRK_starts(SEQSEED+(nupdate/nstarts)*index);
+	  });
+	
+	
 	forall(ran, nstarts, [=](int64_t& n) {
-	    n = (n << 1) ^ (n < 0? POLY : 0);
-	    index = n & (tablesize-1);
-	    delegate::increment<async>( Table[index], 1);
+	    // because we do two rounds, we divide nupdates in two
+	    for (int j = 0; j < nupdate/(nstarts*2); j++) {
+	      n = (n << 1) ^ (n < 0? POLY : 0);
+	      int64_t rand = n & (tablesize-1);
+	      delegate::call<async> (Table[rand], [=] (int64_t & t){ t ^= rand;});
+	    }
 	  });
       }
-      
+
       random_time = walltime() - start;
       
       Metrics::stop_tracing();
@@ -294,8 +304,8 @@ int main(int argc, char * argv[]) {
 }
 
 
-// Random number gen
-uint64_t PRK_rand(uint64_t n) {
+// Utility routine to start random number generator at nth step
+uint64_t PRK_starts(uint64_t n) {
 
   int i, j;
   uint64_t m2[64];
