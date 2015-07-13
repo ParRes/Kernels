@@ -54,15 +54,14 @@ USAGE:   The program takes as input the number of threads involved, the 2log
          elements that fall inside its chunk. Hence, this version is safe, and
          there is no false sharing. It is also non-scalable.
 
-         <progname>  <# threads> <log2 tablesize> <#update ratio> <vector length>
+         <progname>  <log2 tablesize> <#update ratio> <vector length>
 
 FUNCTIONS CALLED:
 
-         Other than OpenMP or standard C functions, the following 
+         Other than GRAPPA or standard C functions, the following 
          functions are used in this program:
 
          wtime()
-         bail_out()
          PRK_starts()
          poweroftwo()
 
@@ -136,6 +135,13 @@ HISTORY: Written by Rob Van der Wijngaart, June 2006.
 uint64_t PRK_starts(uint64_t n);
 static int32_t poweroftwo(int32_t);
 
+struct error {
+  int64_t count;
+  void init(int64_t count) {
+    this->count = count;
+  }
+} GRAPPA_BLOCK_ALIGNED;
+
 using namespace Grappa;
 
 // define custom statistics which are logged by the runtime
@@ -147,12 +153,17 @@ int main(int argc, char * argv[]) {
     my_ID                = Grappa root core
     Num_procs            = number of cores
     update_ratio         = multiplier of tablesize for # updates
+    nstarts              = vector length
+    nupdate              = number of updates per thread
     tablesize            = aggregate table size
     log2tablesize        = log2 of aggregate table size
     log2nproc            = log2 of number of procs
     log2update_ratio     = log2 of update ratio
     tablespace           = bytes required for table  
     i,oldsize            = dummies
+    ran                  = vector of random numbers
+    index                = index into the table
+    e                    = error counting struct
    */
 
   init( &argc, &argv );
@@ -163,8 +174,8 @@ int main(int argc, char * argv[]) {
 
   if (argc != 4) {
     if (my_ID == root)
-      std::cout << "Usage: " << argv[0] 
-		<< "<log2 tablesize> <#update ratio> <vector length>" 
+      std::cout << "Usage: " << argv[0]
+		<< "\n<log2 tablesize> <#update ratio> <vector length>" 
 		<< std::endl;
     exit(1);
   }
@@ -207,13 +218,15 @@ int main(int argc, char * argv[]) {
 
   // additional divisibility tests
   if (nstarts % Num_procs) {
-    std::cout << "ERROR: vector length " << nstarts << " must be divisible by "
-	      << "# threads " << Num_procs << std::endl;
+    if (my_ID == root)
+      std::cout << "ERROR: vector length " << nstarts << " must be divisible by "
+		<< "# threads " << Num_procs << std::endl;
     exit(1);
   }
   if (update_ratio % nstarts) {
-    std::cout << "ERROR: update ratio " << update_ratio << " must be divisible by "
-	      << "vector length " << Num_procs << std::endl;
+    if (my_ID == root)
+      std::cout << "ERROR: update ratio " << update_ratio << " must be divisible by "
+		<< "vector length " << Num_procs << std::endl;
     exit(1);
   }
 
@@ -278,13 +291,13 @@ int main(int argc, char * argv[]) {
 	    s = PRK_starts(SEQSEED+(nupdate/nstarts)*index);
 	  });
 	
-	
 	forall(ran, nstarts, [=](int64_t& n) {
 	    // because we do two rounds, we divide nupdates in two
 	    for (int j = 0; j < nupdate/(nstarts*2); j++) {
 	      n = (n << 1) ^ (n < 0? POLY : 0);
 	      int64_t rand = n & (tablesize-1);
-	      delegate::call<async> (Table[rand], [=] (int64_t & t){ t ^= rand;});
+	      std::cout << rand << std::endl;
+	      delegate::call<async> (Table+rand, [=] (int64_t & t){ t ^= rand;});
 	    }
 	  });
       }
@@ -293,9 +306,24 @@ int main(int argc, char * argv[]) {
       
       Metrics::stop_tracing();
       
-      LOG(INFO) << "Rate (GUPs/s): " << 1.e-9*nupdate/random_time.value()
-		<< ", time (s) = " << random_time.value() << " seconds";
-      
+      // verification test
+      GlobalAddress<error> e = symmetric_global_alloc<error>();
+      on_all_cores([e] {e->init(0);});
+      forall (Table, tablesize, [=] (int64_t index, int64_t& s) {
+	  if (index != s) on_all_cores([e]{e->count++;});
+	    });
+
+      if (e->count && (ERRORPERCENT == 0)) {
+	if(my_ID == root)
+	  std::cout << "ERROR: number of incorrect table elements = "
+		    << e->count << std::endl;
+	exit(1);
+      } else {
+	std::cout << "Solution validates, number of errors: " << e->count << std::endl;
+	std::cout << "Rate (GUPs/s): " << 1.e-9*nupdate/random_time.value()
+		  << ", time (s) = " << random_time.value() << " seconds" << std::endl;
+      }
+
       global_free(Table);
       global_free(ran);
       
