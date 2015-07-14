@@ -111,7 +111,6 @@ HISTORY: Written by Rob Van der Wijngaart, June 2006.
 ************************************************************************************/
 
 #include <par-res-kern_general.h>
-#include <par-res-kern_omp.h>
 #include <Grappa.hpp>
 #include <cstdint>
 
@@ -296,7 +295,6 @@ int main(int argc, char * argv[]) {
 	    for (int j = 0; j < nupdate/(nstarts*2); j++) {
 	      n = (n << 1) ^ (n < 0? POLY : 0);
 	      int64_t rand = n & (tablesize-1);
-	      std::cout << rand << std::endl;
 	      delegate::call<async> (Table+rand, [=] (int64_t & t){ t ^= rand;});
 	    }
 	  });

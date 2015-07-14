@@ -1,6 +1,0 @@
-/sampa/share/gcc-4.8.2/rtf/bin/g++ -O3 -O3 -DGRAPPA    -DENABLE_RDMA_AGGREGATOR  -std=c++11 -Winline -Wno-inline -mno-red-zone  -O3 -g -DNDEBUG -I/sampa/share/grappa/installed/include -I/sampa/share/grappa/installed/include/Grappa -I/sampa/share/grappa/installed/include/Grappa/tasks -I/sampa/share/gcc-4.7.2/src/boost_1_51_0 -I/sampa/share/openmpi-1.8-gcc-4.8.2/include  -I../../include -c random.cpp
-random.cpp: In lambda function:
-random.cpp:287:36: error: no match for ‘operator[]’ (operand types are ‘const GlobalAddress<long int>’ and ‘int64_t {aka long int}’)
-        delegate::call<async> (Table[rand], [=] (int64_t & t){ t ^= rand;});
-                                    ^
-make: *** [random.o] Error 1
