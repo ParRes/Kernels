@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015, Intel Corporation
+Copyright (c) 2013, Intel Corporation
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
@@ -32,22 +32,23 @@ POSSIBILITY OF SUCH DAMAGE.
 
 /*******************************************************************
 
-NAME:    transpose
+NAME:    Stencil
 
-PURPOSE: This program tests the efficiency with which a square matrix
-         can be transposed and stored in another matrix. The matrices
-         are distributed identically.
+PURPOSE: This program tests the efficiency with which a space-invariant,
+         linear, symmetric filter (stencil) can be applied to a square
+         grid or image.
 
-USAGE:   Program inputs are the matrix order, the number of times to
-         repeat the operation, and the communication mode
+USAGE:   The program takes as input the linear dimension of the grid,
+         and the number of iterations on the grid
 
-         transpose <# iterations> <matrix order> [tile size]
+         <progname> <# iterations> <grid size> <x_divisions>
 
-         An optional parameter specifies the tile size used to divide the
-         individual matrix blocks for improved cache and TLB performance.
+         x_divisions=0 does automated 2D grid decomposition based on
+         number of threads used. Otherwise, user can choose a different
+         partitioning using this command-line parameter.
 
          The output consists of diagnostics to make sure the
-         transpose worked and timing statistics.
+         algorithm worked, and of timing statistics.
 
 HISTORY: Written by Abdullah Kayi, June 2015
 
