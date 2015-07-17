@@ -13,18 +13,18 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS     = 
+USERFLAGS     =
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
-EXTOBJS      = 
+EXTOBJS      =
 LIBS         =
-LIBPATHS     = 
-INCLUDEPATHS = 
+LIBPATHS     =
+INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS   = $(BLOCKFLAG) $(DEBUGFLAG) $(USERFLAGS) 
+TUNEFLAGS   = $(BLOCKFLAG) $(DEBUGFLAG) $(USERFLAGS)
 PROGRAM     = transpose
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
