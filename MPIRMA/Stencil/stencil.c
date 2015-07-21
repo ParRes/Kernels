@@ -177,7 +177,7 @@ int main(int argc, char ** argv) {
     }
  
     n  = atoi(*++argv);
-    long nsquare = n * n;
+    long nsquare = (long) n * (long) n;
     if (nsquare < Num_procs){ 
       printf("ERROR: grid size must be at least # ranks: %ld\n", nsquare);
       error = 1;
@@ -280,8 +280,8 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
  
-  total_length_in = (width+2*RADIUS)*(height+2*RADIUS)*sizeof(DTYPE);
-  total_length_out = width*height*sizeof(DTYPE);
+  total_length_in  = (long) (width+2*RADIUS)* (long) (height+2*RADIUS)*sizeof(DTYPE);
+  total_length_out = (long) width* (long) height*sizeof(DTYPE);
  
   in  = (DTYPE *) malloc(total_length_in);
   out = (DTYPE *) malloc(total_length_out);
