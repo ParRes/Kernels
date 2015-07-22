@@ -222,13 +222,7 @@ int main(int argc, char * argv[]) {
 		<< "# threads " << Num_procs << std::endl;
     exit(1);
   }
-  if (update_ratio % nstarts) {
-    if (my_ID == root)
-      std::cout << "ERROR: update ratio " << update_ratio << " must be divisible by "
-		<< "vector length " << Num_procs << std::endl;
-    exit(1);
-  }
-
+  
   // compute table size carefully to make sure it can be represented
   int64_t tablesize = 1;
   int64_t oldsize;
