@@ -15,6 +15,12 @@ DEFAULT_OPT_FLAGS=-O3
 #name of C++ compiler (to be used in MPI context for Grappa), e.g. mpigxx, mpiicpc
 CXX=mpigxx
 
+#name of UPC compiler, e.g. cc, upcc, gupc
+UPCC=
+
+#name of compile line flag enabling UPC if necessary, e.g. -h upc
+UPCFLAG=
+
 #name of MPI C compiler (to be used in Fine-Grain MPI context), e.g. mpicc
 FGMPICC=mpicc
 
@@ -27,8 +33,8 @@ SHMEMCC=$(MPICC)
 #location where Charm++ is installed, e.g. $(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
 CHARMTOP=$(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
 
-#location where Grappa is installed, e.g. $(HOME)/grappa
-GRAPPATOP=~/grappa
+#location where Grappa is installed; should not have to change this
+GRAPPATOP=$(GRAPPA_PREFIX)
 
 #location where Fine-Grain MPI is installed, e.g. $(HOME)/fgmpi-install
 FGMPITOP=$(HOME)/fgmpi-install
