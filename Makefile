@@ -63,7 +63,7 @@ default:
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
 all: alldarwin allfreaks
-alldarwin: allserial allopenmp allmpi allfgmpi allmpiopenmp allmpirma allshmem allmpishm
+alldarwin: allserial allopenmp allmpi allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc
 allfreaks: allcharm++ allgrappa
 
 allmpi:
