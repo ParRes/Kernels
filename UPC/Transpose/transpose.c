@@ -182,22 +182,35 @@ int main(int argc, char ** argv) {
   if(!tiling)
     tile_size = N;
 
-  if(MYTHREAD == 0)
-    printf("UPC Transpose: THREADS=%d, num_iterations=%d, order=%d, tile_size=%d\n",
-      THREADS, num_iterations, N, tile_size);
+  int sizex = N / THREADS;
+  if(N % THREADS != 0) {
+    if(MYTHREAD == 0)
+      printf("N %% THREADS != 0\n");
+    upc_global_exit(EXIT_FAILURE);
+  }
+
+  if(sizex % tile_size != 0 && tiling) {
+    if(MYTHREAD == 0)
+      printf("sizex %% tile_size != 0\n");
+    upc_global_exit(EXIT_FAILURE);
+  }
+  int sizey = N;
+
+  if(MYTHREAD == 0) {
+    printf("UPC matrix transpose: B = A^T\n");
+    printf("Number of threads    = %d\n", THREADS);
+    printf("Matrix order         = %d\n", N);
+    printf("Number of iterations = %d\n", num_iterations);
+    if (tiling)
+          printf("Tile size            = %d\n", tile_size);
+    else  printf("Untiled\n");
+  }
 
   /*********************************************************************
   ** Allocate memory for input and output matrices
   *********************************************************************/
 
   total_bytes = 2.0 * sizeof(double) * N * N;
-
-  int sizex = N / THREADS;
-  if(N % THREADS != 0)
-      die("N %% THREADS != 0");
-  if(sizex % tile_size != 0 && tiling)
-      die("sizex %% tile_size != 0");
-  int sizey = N;
 
   int myoffsetx = MYTHREAD * sizex;
   int myoffsety = 0;
@@ -226,15 +239,6 @@ int main(int argc, char ** argv) {
     }
   }
   upc_barrier;
-
-  for(int y=myoffsety; y<myoffsety + sizey; y++){
-    for(int x=myoffsetx; x<myoffsetx + sizex; x++){
-      if(in_array_private[y][x] !=(double) (x+N*y))
-        die("x=%d y=%d in_array=%f != %f", x, y, in_array[y][x], (x+N*y));
-      if(out_array_private[y][x] != -1.0)
-        die("out_array_private error");
-    }
-  }
 
   /*********************************************************************
   ** Transpose
@@ -302,11 +306,10 @@ int main(int argc, char ** argv) {
   }
 
   if(MYTHREAD == 0){
+    printf("Solution validates\n");
     double transfer_size = 2 * N * N * sizeof(double);
     avgtime = (end_time - start_time) / num_iterations;
     double rate = transfer_size / avgtime / 1024 / 1024;
-    message("Avg Time: %f", avgtime);
-    message("Rate: %f MB/s", rate);
-    message("SOLUTION VALIDATES");
+    printf("Rate (MB/s): %lf Avg time (s): %lf\n",rate, avgtime);
   }
 }
