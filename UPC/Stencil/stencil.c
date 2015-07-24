@@ -41,9 +41,9 @@ PURPOSE: This program tests the efficiency with which a space-invariant,
 USAGE:   The program takes as input the linear dimension of the grid,
          and the number of iterations on the grid
 
-         <progname> <# iterations> <grid size> <x_divisions>
+         <progname> <# iterations> <grid size> <x_tiles>
 
-         x_divisions=0 does automated 2D grid decomposition based on
+         x_tiles=0 does automated 2D grid decomposition based on
          number of threads used. Otherwise, user can choose a different
          partitioning using this command-line parameter.
 
@@ -213,9 +213,9 @@ int main(int argc, char ** argv) {
     fflush(stdout);
   }
 
-  if (argc != 4)
+  if (argc != 4 && argc != 3)
     if(MYTHREAD == 0)
-      die("Usage: %s <# iterations> <array dimension> <x_divisions>\n", *argv);
+      die("Usage: %s <# iterations> <array dimension> [x_tiles]\n", *argv);
 
   iterations  = atoi(*++argv);
   if (iterations < 1)
@@ -228,14 +228,18 @@ int main(int argc, char ** argv) {
     if(MYTHREAD == 0)
       die("grid dimension must be positive: %d", n);
 
-  x_divs  = atoi(*++argv);
+  if (argc == 4) 
+    x_divs  = atoi(*++argv);
+  else 
+    x_divs = 0;
+
   if(x_divs < 0)
     if(MYTHREAD == 0)
-      die("Number of division in the horizontal axis should be positive (got: %d)", x_divs);
+      die("Number of tiles in the x-direction should be positive (got: %d)", x_divs);
 
   if(x_divs > THREADS)
     if(MYTHREAD == 0)
-      die("Number of division in the horizontal axis should be < THREADS (got: %d)", x_divs);
+      die("Number of tiles in the x-direction should be < THREADS (got: %d)", x_divs);
 
   /* x_divs=0 refers to automated calculation of division on each coordinates like MPI code */
   if(x_divs == 0){
@@ -338,15 +342,16 @@ int main(int argc, char ** argv) {
   }
 
   if(MYTHREAD == 0){
-    printf("Number of threads    = %d\n", THREADS);
-    printf("Grid size            = %d\n", n);
-    printf("Radius of stencil    = %d\n", RADIUS);
+    printf("Number of threads      = %d\n", THREADS);
+    printf("Grid size              = %d\n", n);
+    printf("Radius of stencil      = %d\n", RADIUS);
+    printf("Tiles in x/y-direction = %d/%d\n", x_divs, y_divs);
 #ifdef DOUBLE
-    printf("Data type            = double precision\n");
+    printf("Data type              = double precision\n");
 #else
-    printf("Data type            = single precision\n");
+    printf("Data type              = single precision\n");
 #endif
-    printf("Number of iterations = %d\n", iterations);
+    printf("Number of iterations   = %d\n", iterations);
   }
 
   upc_barrier;
