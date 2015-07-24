@@ -96,9 +96,9 @@ allfgmpi:
 
 allmpiopenmp: 
 	cd MPIOPENMP/Nstream;       $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPIOPENMP/Transpose;     $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPIOPENMP/Stencil;       $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd MPIOPENMP/Synch_p2p;     $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPIOPENMP/Stencil;       $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPIOPENMP/Transpose;     $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allmpirma: 
 	cd MPIRMA/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -106,6 +106,8 @@ allmpirma:
 
 allshmem: 
 	cd SHMEM/Synch_p2p;         $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd SHMEM/Stencil;           $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd SHMEM/Transpose;         $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allmpishm: 
 	cd MPISHM/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -176,6 +178,8 @@ clean:
 	cd MPISHM/Stencil;          $(MAKE) clean
 	cd MPISHM/Synch_p2p;        $(MAKE) clean
 	cd MPISHM/Transpose;        $(MAKE) clean
+	cd SHMEM/Transpose;         $(MAKE) clean
+	cd SHMEM/Stencil;           $(MAKE) clean
 	cd SHMEM/Synch_p2p;         $(MAKE) clean
 	cd CHARM++/Stencil;         $(MAKE) clean
 	cd CHARM++/Synch_p2p;       $(MAKE) clean
