@@ -113,6 +113,8 @@ HISTORY: Written by Rob Van der Wijngaart, June 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
 #include <Grappa.hpp>
+#include <Communicator.hpp>
+#include <CommunicatorImpl.hpp>
 #include <cstdint>
 
 /* Define constants                                                                */
@@ -265,8 +267,9 @@ int main(int argc, char * argv[]) {
 
   Grappa::run([=]{
 
-      GlobalAddress<int64_t> Table;
       static int my_ID;
+      static int64_t * Table;
+      static int64_t * ran;
       static uint64_t ** ranSendBucket;
       static uint64_t ** ranRecvBucket;
       static int32_t * sizeSendBucket;
@@ -282,64 +285,149 @@ int main(int argc, char * argv[]) {
       std::cout << "Vector (LOOKAHEAD) length = " << nstarts << std::endl;
       std::cout << "Percent errors allowed = " << ERRORPERCENT << std::endl;
       
-      // create target array that we'll be updating
-      Table = Grappa::global_alloc<int64_t>(tablespace);
-      if (!Table) {
-	std::cout << "ERROR: proc " << Grappa::mycore() << " could not allocate "
-		  << tablespace << " bytes for table" << std::endl;
-	exit(1);
-      }
-      // initialize target array
-      forall (Table, tablesize, [=] (int64_t index, int64_t& t) {
-	  t = index;
+
+      Grappa::on_all_cores([=] {
+	  my_ID = Grappa::mycore();
+
+	  // create array of random indices
+	  ran = new int64_t[nstarts];
+	  if (!ran) {
+	    std::cout << "ERROR: proc " << Grappa::mycore() << " could not allocate "
+		      << nstarts*sizeof(int64_t) << " bytes for random numbers" << std::endl;
+	    exit(1);
+	  }
+	        
+	  // create target array that we'll be updating
+	  Table = new int64_t[tablesize];
+	  if (!Table) {
+	   std::cout << "ERROR: proc " << Grappa::mycore() << " could not allocate "
+	  	      << tablespace << " bytes for table" << std::endl;
+	  exit(1);
+	  }
+	  
+	  /* allocate send and receive buckets */
+	  ranSendBucket = new uint64_t *[Num_procs+1];
+	  if (!ranSendBucket) {
+	    std::cout << "ERROR: proc " << my_ID
+		      << " Could not allocate bucket pointers" << std::endl;
+	    exit(1);
+	  }
+	  ranRecvBucket = ranSendBucket + Num_procs;
+	    
+	  ranSendBucket[0] = new uint64_t[2*Num_procs*nstarts];
+	  if (!ranSendBucket[0]) {
+	    std::cout << "ERROR: rank " << my_ID
+		      << " could not allocate bucket space" << std::endl;
+	    exit(1);
+	  }
+
+	  for (int proc = 1; proc < Num_procs; proc++)
+	    ranSendBucket[proc] = ranSendBucket[0] + proc*nstarts;
+	  /* we only need one (large) receive bucket */
+	  ranRecvBucket[0] = ranSendBucket[0] + Num_procs*nstarts;
+
+	  /* allocate send and receive bucket sizes plus buffer offsets */
+	  sizeSendBucket = new int32_t[4*Num_procs];
+	  if (!sizeSendBucket) {
+	    std::cout << "ERROR: rank " << my_ID
+		      << " could not allocate bucket sizes" << std::endl;
+	    exit(1);
+	  }
+
+	  sizeRecvBucket = sizeSendBucket + Num_procs;
+	  senddispls     = sizeRecvBucket + Num_procs;
+	  recvdispls     = senddispls     + Num_procs;
+
+	  /* send displacements are regular, they can be calculated in advance */
+	  for (int proc = 0; proc < Num_procs; proc++) senddispls[proc] = nstarts*proc;
+	  /* only the first receive displacement is always the same            */
+	  recvdispls[0] = 0;
+
+	  /* initialize the table */
+	  for (int i = 0; i < loctablesize; i++) Table[i] = i + loctablesize*my_ID;
 	});
 
-          
       double random_time = Grappa::walltime();
-      
-      Grappa::finish( [=] {
-      Grappa::on_all_cores( [=] {
-	  int dest, round, i, proc, j;
-	  int64_t rand_index;
-	  int64_t * ran = new int64_t[nstarts];
+
+      /* the danger zone */
+      Grappa::finish ([=] {
+      Grappa::on_all_cores([=] {
+	  int32_t dest, round, i, proc, j, sizeRecvTotal;
+	  int64_t global_index, index;
+
 	  /* do two identical rounds of Random Access to ensure we recover initial table */
 	  for (round = 0; round < 2; round++) {
 	    /* compute seeds for independent streams, using jump-ahead feature           */
 	    for ( j = 0; j < nstarts; j++) {
 	      ran[j] = PRK_starts(SEQSEED+(nupdate/nstarts)*j);
 	    }
-	    
+
 	    /* because we do two rounds, we divide nupdate in two                        */
 	    for (i = 0; i < nupdate/(nstarts*2); i++) {
 	      
-	  /* reset actual send bucket sizes                                          */
-	  // for (proc = 0; proc < Num_procs; proc++) sizeSendBucket[proc] = 0;
-	      
-	      forall (ran, nstarts, [=](int64_t& ran_j) {
-		/* compute new random number                                             */
-		ran_j = (ran_j << 1) ^ (ran_j < 0? POLY : 0);
-		rand_index = ran_j & (tablesize-1);
-		
-		delegate::call<async>(Table+rand_index, [=] (int64_t& t) { t ^= rand_index;}); 
+	      /* reset actual send bucket sizes                                          */
+	      for (proc = 0; proc < Num_procs; proc++) sizeSendBucket[proc] = 0;
+
+	      for (j = 0; j < nstarts; j++) {
+
+	      	/* compute new random number                                             */
+	      	ran[j] = (ran[j] << 1) ^ (ran[j] < 0? POLY : 0);
+
+	      	/* determine destination rank (high order bits of global table index)    */
+	      	global_index = ran[j] & (tablesize-1);
+	      	dest = global_index >> (log2tablesize-log2nproc);
+
+	      	/* place new random number in first availabele element of the appropriate
+	      	   send bucket and increment that bucket size                            */
+	      	ranSendBucket[dest][sizeSendBucket[dest]++] = ran[j];
+	      }
+
+	      /* let all other ranks know how many indices to expect                     */
+	      global_communicator.with_request_do_blocking( [] (MPI_Request * request) {
+		  MPI_CHECK( MPI_Ialltoall(sizeSendBucket, 1, MPI_INTEGER,
+					   sizeRecvBucket, 1, MPI_INTEGER,
+					   global_communicator.grappa_comm, request) );
 		});
+
+	      /* compute receive buffer offsets so that received data is contiguous      */
+	      for (proc = 1; proc < Num_procs; proc++)
+		recvdispls[proc] = recvdispls[proc-1]+sizeRecvBucket[proc-1];
+	    
+	      /* scatter the send bucket contents                                        */
+	      global_communicator.with_request_do_blocking ( [] (MPI_Request * request) {
+		  MPI_CHECK( MPI_Ialltoallv(ranSendBucket[0], sizeSendBucket,
+					    senddispls, MPI_LONG_LONG_INT,
+					    ranRecvBucket[0], sizeRecvBucket,
+					    recvdispls, MPI_LONG_LONG_INT,
+					    global_communicator.grappa_comm, request) );
+		});
+
+	      /* do the actual table updates. Because the receive buckets are contiguous,
+		 we can view them as a single large bucket.                             */
+	      sizeRecvTotal = recvdispls[Num_procs-1]+sizeRecvBucket[Num_procs-1];
 	      
+	      for (j = 0; j < sizeRecvTotal; j++) {
+		index = ranRecvBucket[0][j] & (loctablesize-1);
+		Table[index] ^= ranRecvBucket[0][j];
+	      }
 	    }
 	  }
 	});
 	});
-  
 
       random_time = Grappa::walltime() - random_time;
-      
-      
+
       // verification test
       GlobalAddress<error> e = symmetric_global_alloc<error>();
-      on_all_cores([e] {e->init(0);});
       
-      forall (Table, tablesize, [=] (int64_t index, int64_t& s) {
-	  if (index != s) on_all_cores([e]{e->count++;});
+      Grappa::on_all_cores([=] {
+	  e->init(0);
+	  for (int i = 0; i < loctablesize; i++) {
+	    if (Table[i] != (uint64_t) (i + loctablesize*my_ID))
+	      Grappa::on_all_cores([=] { e->count++;});
+	  }
 	});
-      
+
       if (e->count && (ERRORPERCENT == 0)) {
 	if(Grappa::mycore() == root)
 	  std::cout << "ERROR: number of incorrect table elements = "
@@ -347,7 +435,7 @@ int main(int argc, char * argv[]) {
 	exit(1);
       } else {
 	std::cout << "Solution validates, number of errors: " << e->count << std::endl;
-	std::cout << "Rate (GUPs/s): " << 1.e-9*nupdate/random_time
+	std::cout << "Rate (GUPs/s): " << 1.0E-09 * (nupdate/random_time)
 		  << ", time (s) = " << random_time << " seconds" << std::endl;
       }
     });
