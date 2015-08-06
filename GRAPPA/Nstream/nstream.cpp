@@ -82,21 +82,13 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  // int64_t offset = atol(argv[3]);
-  // if (offset < 0) {
-  //   if (my_ID == root)
-  //     std::cout << "ERROR: Invalid array offset: " << offset << std::endl;
-  //   exit(1);
-  // }
-
   Grappa::run([=] {
 
-      // int64_t space = (3*length + 2*offset)*sizeof(double);
-      auto a = global_alloc<double>(length*sizeof(double));
+      GlobalAddress<double> a = global_alloc<double>(length*sizeof(double));
       double * abase = a.pointer();
-      auto b = global_alloc<double>(length*sizeof(double));
+      GlobalAddress<double> b = global_alloc<double>(length*sizeof(double));
       double * bbase = b.pointer();
-      auto c = global_alloc<double>(length*sizeof(double));
+      GlobalAddress<double> c = global_alloc<double>(length*sizeof(double));
       double * cbase = c.pointer();
       if (!a || !b || !c) {
 	std::cout << "ERROR: Could not allocate " << 3*length
@@ -121,13 +113,13 @@ int main(int argc, char *argv[]) {
 
       // a[j] = b[j] + scalar*c[j];
       for (int iter = 0; iter < iterations; iter++) {
-	// forall(c, length, [=](int64_t i, double& ci) {
-	//     delegate::call<async>(b+i, [=] (double& bi) {
-	// 	delegate::call<async>(a+i, [=] (double& ai) {
-	// 	    ai += bi + SCALAR*ci;
-	// 	  });
-	//       });
-	//   });
+	 // forall(c, length, [=](int64_t i, double& ci) {
+	 //    delegate::call<async>(b+i, [=] (double& bi) {
+	 // 	delegate::call<async>(a+i, [=] (double& ai) {
+	 // 	    ai += bi + SCALAR*ci;
+	 // 	  });
+	 //      });
+	 //  });
 	// forall(a, length, [=](int64_t i, double& aref) {
 	//     GlobalAddress<double> bi = b + i;
 	//     double * bip = bi.pointer();
@@ -142,7 +134,7 @@ int main(int argc, char *argv[]) {
 	    aref += bbase[&aref-abase] + SCALAR * cbase[&aref-abase];
 	  });
       }   // end iterations
-    nstream_time = Grappa::walltime() - nstream_time;
+      nstream_time = Grappa::walltime() - nstream_time;
 
       /*********************************************************************
        ** Analyze and output results.
