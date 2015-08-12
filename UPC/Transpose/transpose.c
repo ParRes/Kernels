@@ -183,20 +183,29 @@ int main(int argc, char ** argv) {
   if(!tiling)
     tile_size = N;
 
-  if(MYTHREAD == 0)
-    printf("UPC Transpose: THREADS=%d, num_iterations=%d, order=%d, tile_size=%d\n",
-      THREADS, num_iterations, N, tile_size);
+  int sizex = N / THREADS;
+  if(N % THREADS != 0) {
+    if(MYTHREAD == 0)
+      printf("N %% THREADS != 0\n");
+    upc_global_exit(EXIT_FAILURE);
+  }
+  int sizey = N;
+
+  if(MYTHREAD == 0) {
+    printf("UPC matrix transpose: B = A^T\n");
+    printf("Number of threads    = %d\n", THREADS);
+    printf("Matrix order         = %d\n", N);
+    printf("Number of iterations = %d\n", num_iterations);
+    if (tiling)
+          printf("Tile size            = %d\n", tile_size);
+    else  printf("Untiled\n");
+  }
 
   /*********************************************************************
   ** Allocate memory for input and output matrices
   *********************************************************************/
 
   total_bytes = 2.0 * sizeof(double) * N * N;
-
-  int sizex = N / THREADS;
-  if(N % THREADS != 0)
-      die("N %% THREADS != 0");
-  int sizey = N;
 
   int myoffsetx = MYTHREAD * sizex;
   int myoffsety = 0;
