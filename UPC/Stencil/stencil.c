@@ -228,9 +228,9 @@ int main(int argc, char ** argv) {
     if(MYTHREAD == 0)
       die("grid dimension must be positive: %d", n);
 
-  if (argc == 4) 
+  if (argc == 4)
     x_divs  = atoi(*++argv);
-  else 
+  else
     x_divs = 0;
 
   if(x_divs < 0)
