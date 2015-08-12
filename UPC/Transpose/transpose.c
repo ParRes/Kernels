@@ -102,6 +102,7 @@ typedef shared [] local_shared_block *local_shared_block_ptrs;
 
 shared [1] local_shared_block_ptrs in_arrays[THREADS];
 shared [1] local_shared_block_ptrs out_arrays[THREADS];
+shared [1] local_shared_block_ptrs buf_arrays[THREADS];
 
 local_shared_block_ptrs shared_2d_array_alloc(int sizex, int sizey, int offsetx, int offsety){
   size_t alloc_size = (size_t)sizex * sizey * sizeof(double);
@@ -182,35 +183,20 @@ int main(int argc, char ** argv) {
   if(!tiling)
     tile_size = N;
 
-  int sizex = N / THREADS;
-  if(N % THREADS != 0) {
-    if(MYTHREAD == 0)
-      printf("N %% THREADS != 0\n");
-    upc_global_exit(EXIT_FAILURE);
-  }
-
-  if(sizex % tile_size != 0 && tiling) {
-    if(MYTHREAD == 0)
-      printf("sizex %% tile_size != 0\n");
-    upc_global_exit(EXIT_FAILURE);
-  }
-  int sizey = N;
-
-  if(MYTHREAD == 0) {
-    printf("UPC matrix transpose: B = A^T\n");
-    printf("Number of threads    = %d\n", THREADS);
-    printf("Matrix order         = %d\n", N);
-    printf("Number of iterations = %d\n", num_iterations);
-    if (tiling)
-          printf("Tile size            = %d\n", tile_size);
-    else  printf("Untiled\n");
-  }
+  if(MYTHREAD == 0)
+    printf("UPC Transpose: THREADS=%d, num_iterations=%d, order=%d, tile_size=%d\n",
+      THREADS, num_iterations, N, tile_size);
 
   /*********************************************************************
   ** Allocate memory for input and output matrices
   *********************************************************************/
 
   total_bytes = 2.0 * sizeof(double) * N * N;
+
+  int sizex = N / THREADS;
+  if(N % THREADS != 0)
+      die("N %% THREADS != 0");
+  int sizey = N;
 
   int myoffsetx = MYTHREAD * sizex;
   int myoffsety = 0;
@@ -220,12 +206,15 @@ int main(int argc, char ** argv) {
   debug("Allocating arrays (%d, %d), offset (%d, %d)", sizex, sizey, myoffsetx, myoffsety);
   local_shared_block_ptrs in_array  = shared_2d_array_alloc(sizex, sizey, myoffsetx, myoffsety);
   local_shared_block_ptrs out_array = shared_2d_array_alloc(sizex, sizey, myoffsetx, myoffsety);
+  local_shared_block_ptrs buf_array = shared_2d_array_alloc(sizex, sizey, myoffsetx, myoffsety);
 
   in_arrays[MYTHREAD] = in_array;
   out_arrays[MYTHREAD] = out_array;
+  buf_arrays[MYTHREAD] = buf_array;
 
   double **in_array_private = shared_2d_array_to_private(in_array, sizex, sizey, myoffsetx, myoffsety);
   double **out_array_private = shared_2d_array_to_private(out_array, sizex, sizey, myoffsetx, myoffsety);
+  double **buf_array_private = shared_2d_array_to_private(buf_array, sizex, sizey, myoffsetx, myoffsety);
 
   upc_barrier;
 
@@ -239,6 +228,15 @@ int main(int argc, char ** argv) {
     }
   }
   upc_barrier;
+
+  for(int y=myoffsety; y<myoffsety + sizey; y++){
+    for(int x=myoffsetx; x<myoffsetx + sizex; x++){
+      if(in_array_private[y][x] !=(double) (x+N*y))
+        die("x=%d y=%d in_array=%f != %f", x, y, in_array[y][x], (x+N*y));
+      if(out_array_private[y][x] != -1.0)
+        die("out_array_private error");
+    }
+  }
 
   /*********************************************************************
   ** Transpose
@@ -259,28 +257,25 @@ int main(int argc, char ** argv) {
       int remote_blk_id = MYTHREAD;
       int remote_thread = local_blk_id;
 
-      upc_memget(&out_array_private[local_blk_id * sizex][myoffsetx],
+      upc_memget(&buf_array_private[local_blk_id * sizex][myoffsetx],
                   &in_arrays[remote_thread][remote_blk_id * sizex][remote_thread * sizex], transfer_size);
 
 #define OUT_ARRAY(x,y) out_array_private[local_blk_id * sizex + x][myoffsetx + y]
+#define BUF_ARRAY(x,y) buf_array_private[local_blk_id * sizex + x][myoffsetx + y]
 
       if(!tiling){
         for(int x=0; x<sizex; x++){
-          for(int y=0; y<x; y++){
-            double a = OUT_ARRAY(x,y);
-            OUT_ARRAY(x,y) = OUT_ARRAY(y,x);
-            OUT_ARRAY(y,x) = a;
+          for(int y=0; y<sizex; y++){
+            OUT_ARRAY(x,y) = BUF_ARRAY(y,x);
           }
         }
       }
       else{
-        for(int bx=0; bx<sizex; bx+=tile_size){
-          for(int x=bx; x<bx+tile_size; x++){
-            for(int by=0; by<(x+tile_size-1); by+=tile_size){
-              for(int y=by; y<MIN(x, by+tile_size); y++){
-                double a = OUT_ARRAY(x,y);
-                OUT_ARRAY(x,y) = OUT_ARRAY(y,x);
-                OUT_ARRAY(y,x) = a;
+        for(int x=0; x<sizex; x+=tile_size){
+          for(int y=0; y<sizex; y+=tile_size){
+            for(int bx=x; bx<MIN(sizex, x+tile_size); bx++){
+              for(int by=y; by<MIN(sizex, y+tile_size); by++){
+                OUT_ARRAY(bx,by) = BUF_ARRAY(by,bx);
               }
             }
           }
