@@ -212,8 +212,8 @@ int main(int argc, char * argv[]) {
     symmetric FullEmpty<DTYPE> * top_halo;
     symmetric FullEmpty<DTYPE> * bottom_halo;
  
-    symmetric DTYPE * in;
-    symmetric DTYPE * out;
+    symmetric DTYPE * RESTRICT in;
+    symmetric DTYPE * RESTRICT out;
  
     symmetric DTYPE weight[2*RADIUS+1][2*RADIUS+1];
  

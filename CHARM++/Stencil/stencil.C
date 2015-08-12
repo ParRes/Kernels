@@ -5,9 +5,9 @@
 #define COEFX         1.0
 #define COEFY         1.0
 #define TINDEX(i,j)   (i+RADIUS+(width+2*RADIUS)*(j+RADIUS))
-#define temp(i,j)     temperature[TINDEX(i,j)]
+#define IN(i,j)       in[TINDEX(i,j)]
 #define TNINDEX(i,j)  (i+width*(j))
-#define temp_new(i,j) new_temperature[TNINDEX(i,j)]
+#define OUT(i,j)      out[TNINDEX(i,j)]
 #define WEIGHT(i,j)   weight[i+RADIUS+(j+RADIUS)*(2*RADIUS+1)]
 #define LEFT          1111 
 #define RIGHT         2222
@@ -173,7 +173,8 @@ public:
 
   double local_norm;
   int    istart, iend, jstart, jend, height, width; // global grid indices of tile
-  double *temperature, *new_temperature;
+  double * RESTRICT in;
+  double * RESTRICT out;
 
   // Constructor, initialize values
   Stencil() {
@@ -205,10 +206,10 @@ public:
     height = jend - jstart + 1;
 
     // allocate two dimensional array
-    temperature = new double[(height+2*RADIUS)*(width+2*RADIUS)];
-    new_temperature = new double[height*width];
-    if (!temperature || ! new_temperature) {
-      CkPrintf("ERROR: Could not allocate temperature arrays\n");
+    in = new double[(height+2*RADIUS)*(width+2*RADIUS)];
+    out = new double[height*width];
+    if (!in || ! out) {
+      CkPrintf("ERROR: Could not allocate in/out  arrays\n");
       CkExit();
     }
     max_messages_due = 4;
@@ -220,8 +221,8 @@ public:
 
     for(j=jstart,jloc=0;j<=jend;j++,jloc++){
       for(i=istart,iloc=0;i<=iend;i++,iloc++){
-        temp(iloc,jloc) = COEFX*i+COEFY*j;
-        temp_new(iloc,jloc) = 0.0;
+        IN(iloc,jloc) = COEFX*i+COEFY*j;
+        OUT(iloc,jloc) = 0.0;
       }
     }
   }
@@ -231,8 +232,8 @@ public:
     Stencil(CkMigrateMessage* m) {}
 
     ~Stencil() { 
-      delete [] temperature; 
-      delete [] new_temperature; 
+      delete [] in; 
+      delete [] out; 
     }
 
     // Perform one iteration of work
@@ -249,7 +250,7 @@ public:
           }
           CkSetRefNum(msg, iterations);
           for(int j=0, k=0;j<height;++j) for (int i=0; i<RADIUS; i++)
-					    msg->edge[k++]    = temp(i,j);
+					    msg->edge[k++]    = IN(i,j);
           thisProxy(thisIndex.x-1, thisIndex.y).receiveGhosts(msg);
         }
 
@@ -262,7 +263,7 @@ public:
           }
           CkSetRefNum(msg, iterations);
           for(int j=0, k=0;j<height;++j) for (int i=0; i<RADIUS; i++)
-					    msg->edge[k++]   = temp(width-RADIUS+i,j);
+					    msg->edge[k++]   = IN(width-RADIUS+i,j);
           thisProxy(thisIndex.x+1, thisIndex.y).receiveGhosts(msg);
         }
 
@@ -275,7 +276,7 @@ public:
           }
           CkSetRefNum(msg, iterations);
           for (int j=0, k=0; j<RADIUS; j++) for(int i=0;i<width;i++)
-					 msg->edge[k++]   = temp(i,j);
+					 msg->edge[k++]   = IN(i,j);
           thisProxy(thisIndex.x, thisIndex.y-1).receiveGhosts(msg);
         }
 
@@ -288,7 +289,7 @@ public:
           }
           CkSetRefNum(msg, iterations);
           for (int j=0, k=0; j<RADIUS; j++) for(int i=0;i<width;i++)
-					 msg->edge[k++]  = temp(i,height-RADIUS+j);
+					 msg->edge[k++]  = IN(i,height-RADIUS+j);
           thisProxy(thisIndex.x, thisIndex.y+1).receiveGhosts(msg);
         }
     }
@@ -300,23 +301,23 @@ public:
       switch(msg->dir) {
       case LEFT:
         for(int j=0;j<size;++j) for (int i=0; i<RADIUS; i++)
-	  temp(width+i,j) = msg->edge[k++];
+	  IN(width+i,j) = msg->edge[k++];
         break;
 
       case RIGHT:
         for(int j=0;j<size;++j) for (int i=0; i<RADIUS; i++)
-	  temp(-RADIUS+i,j) = msg->edge[k++];
+	  IN(-RADIUS+i,j) = msg->edge[k++];
         break;
 
       case BOTTOM:
         for (int j=0; j<RADIUS; j++) for(int i=0;i<size;++i){
-	  temp(i,height+j) = msg->edge[k++];
+	  IN(i,height+j) = msg->edge[k++];
         }
         break;
 
       case TOP:
         for (int j=0; j<RADIUS; j++) for(int i=0;i<size;++i)
-	  temp(i,-RADIUS+j) = msg->edge[k++];
+	  IN(i,-RADIUS+j) = msg->edge[k++];
         break;
 
       default: CkPrintf("ERROR: invalid direction\n");
@@ -331,13 +332,13 @@ public:
         for (int i=MAX(istart,RADIUS); i<=MIN(n-1-RADIUS,iend); i++) {
 
           for (int jj=-RADIUS; jj<=RADIUS; jj++) {
-            temp_new(i-istart,j-jstart) += WEIGHT(0,jj)*temp(i-istart,j-jstart+jj);
+            OUT(i-istart,j-jstart) += WEIGHT(0,jj)*IN(i-istart,j-jstart+jj);
 	  }
           for (int ii=-RADIUS; ii<0; ii++) {
-            temp_new(i-istart,j-jstart) += WEIGHT(ii,0)*temp(i-istart+ii,j-jstart);
+            OUT(i-istart,j-jstart) += WEIGHT(ii,0)*IN(i-istart+ii,j-jstart);
 	  }
           for (int ii=1; ii<=RADIUS; ii++) {
-            temp_new(i-istart,j-jstart) += WEIGHT(ii,0)*temp(i-istart+ii,j-jstart);
+            OUT(i-istart,j-jstart) += WEIGHT(ii,0)*IN(i-istart+ii,j-jstart);
 	  }
         }
       }
@@ -348,7 +349,7 @@ public:
       local_norm = 0.0;
       for (int j=MAX(jstart,RADIUS); j<=MIN(n-1-RADIUS,jend); j++) {
         for (int i=MAX(istart,RADIUS); i<=MIN(n-1-RADIUS,iend); i++) {
-           local_norm += temp_new(i-istart,j-jstart);
+           local_norm += OUT(i-istart,j-jstart);
          }
        }
     }

@@ -6,3 +6,4 @@
 ./Run/smallmpirma 
 ./Run/smallshmem
 ./Run/smallmpishm
+./Run/smallupc
