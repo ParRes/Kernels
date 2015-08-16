@@ -177,6 +177,7 @@ int main(int argc, char ** argv) {
   {
   nthread = omp_get_num_threads();
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP pipeline execution on 2D grid\n");
   if (nthread != nthread_input) {
     num_error = 1;

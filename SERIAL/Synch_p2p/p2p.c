@@ -105,6 +105,7 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial pipeline execution on 2D grid\n");
   printf("Grid sizes                = %d, %d\n", m, n);
   printf("Number of iterations      = %d\n", iterations);

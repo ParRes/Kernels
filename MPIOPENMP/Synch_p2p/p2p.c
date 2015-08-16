@@ -180,6 +180,7 @@ int main(int argc, char ** argv)
   omp_set_num_threads(nthread);
  
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI+OpenMP pipeline execution on 2D grid\n");
     printf("Number of ranks                = %i\n",Num_procs);
     printf("Number of threads              = %d\n", omp_get_max_threads());

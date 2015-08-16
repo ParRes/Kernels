@@ -31,13 +31,13 @@
 // POSSIBILITY OF SUCH DAMAGE.
 ///////////////////////////////////////////////////////////////////////
  
+#include <par-res-kern_general.h>
 #include <Grappa.hpp>
 #include <FullEmpty.hpp>
  
 using namespace Grappa;
  
 #define ARRAY(i,j) (local[(i+1)+((j)*(segment_size+1))])
-#define ABS(x) ((x)>0 ? (x) : (-(x)))
 #define root 0
  
 double *local;
@@ -88,6 +88,7 @@ int main( int argc, char * argv[] ) {
       std::cout <<"ERROR: First grid dimension "<<m<<" smaller than #cores+1 "<<std::endl;
       exit(1);
     }
+    std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
     std::cout<<"Grappa pipeline execution on 2D grid"<<std::endl;
     std::cout<<"Number of processes            = "<<Num_procs<<std::endl;
     std::cout<<"Grid sizes                     = "<<m<<"x"<<n<<std::endl;

@@ -209,6 +209,7 @@ int main(int argc, char ** argv) {
   ** process and test input parameters
   ********************************************************************************/
   if(MYTHREAD == 0){
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("UPC stencil execution on 2D grid\n");
     fflush(stdout);
   }

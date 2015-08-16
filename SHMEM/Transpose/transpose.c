@@ -57,18 +57,7 @@ FUNCTIONS CALLED:
           wtime()           Portable wall-timer interface.
           bail_out()        Determine global error and exit if nonzero.
 
-HISTORY: Written by Tim Mattson, April 1999.  
-         Updated by Rob Van der Wijngaart, December 2005.
-         Updated by Rob Van der Wijngaart, October 2006.
-         Updated by Rob Van der Wijngaart, November 2014::
-         - made variable names more consistent 
-         - put timing around entire iterative loop of transposes
-         - fixed incorrect matrix block access; no separate function
-           for local transpose of matrix block
-         - reordered initialization and verification loops to
-           produce unit stride
-         - changed initialization values, such that the input matrix
-           elements are: A(i,j) = i+order*j
+HISTORY: Written by Tom St. John, July 2015.  
          
   
 *******************************************************************/
@@ -124,7 +113,7 @@ o The original and transposed matrices are called A and B
 
 #define A(i,j)        A_p[(i+istart)+order*(j)]
 #define B(i,j)        B_p[(i+istart)+order*(j)]
-#define Work_in(i,j)  Work_in_p[i+Block_order*(j)]
+#define Work_in(phase, i,j)  Work_in_p[phase-1][i+Block_order*(j)]
 #define Work_out(i,j) Work_out_p[i+Block_order*(j)]
 
 double local_trans_time, trans_time;
@@ -134,9 +123,9 @@ double pWrk[_SHMEM_BCAST_SYNC_SIZE];
 
 int main(int argc, char ** argv)
 {
-  int Block_order;         /* number of columns owned by rank       */
-  int Block_size;          /* size of a single block                */
-  int Colblock_size;       /* size of column block                  */
+  int64_t Block_order;     /* number of columns owned by rank       */
+  int64_t Block_size;      /* size of a single block                */
+  int64_t Colblock_size;   /* size of column block                  */
   int Tile_order=32;       /* default Tile order                    */
   int tiling;              /* boolean: true if tiling is used       */
   int Num_procs;           /* number of ranks                       */
@@ -153,10 +142,11 @@ int main(int argc, char ** argv)
   int error;               /* error flag                            */
   double *A_p;             /* original matrix column block          */
   double *B_p;             /* transposed matrix column block        */
-  double *Work_in_p;       /* workspace for the transpose function  */
+  double **Work_in_p;      /* workspace for the transpose function  */
   double *Work_out_p;      /* workspace for the transpose function  */
   double epsilon = 1.e-8;  /* error tolerance                       */
   double avgtime;          /* timing parameters                     */
+  int *recv_flag;
   int *arguments;
 
 /*********************************************************************
@@ -211,6 +201,7 @@ int main(int argc, char ** argv)
   bail_out(error, pSync);
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("SHMEM matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
@@ -269,13 +260,22 @@ int main(int argc, char ** argv)
   bail_out(error, pSync);
 
   if (Num_procs>1) {
-    Work_in_p   = (double *)shmalloc(2*Block_size*sizeof(double));
-    if (Work_in_p == NULL){
+    Work_in_p   = (double**)malloc((Num_procs-1)*sizeof(double));
+
+    for(i=0;i<(Num_procs-1);i++)
+      Work_in_p[i]=(double*)shmalloc(Block_size*sizeof(double));
+
+    Work_out_p = (double*)shmalloc(Block_size*sizeof(double));
+    if ((Work_in_p == NULL)||(Work_out_p==NULL)){
       printf(" Error allocating space for work on node %d\n",my_ID);
       error = 1;
     }
     bail_out(error, pSync);
-    Work_out_p = Work_in_p + Block_size;
+
+    recv_flag=(int*)shmalloc((Num_procs-1)*sizeof(int));
+
+    for(i=0;i<Num_procs-1;i++)
+      recv_flag[i]=0;
   }
   
   /* Fill the original column matrix                                                */
@@ -314,6 +314,7 @@ int main(int argc, char ** argv)
       recv_from = (my_ID + phase            )%Num_procs;
       send_to   = (my_ID - phase + Num_procs)%Num_procs;
 
+
       istart = send_to*Block_order; 
       if (!tiling) {
         for (i=0; i<Block_order; i++) 
@@ -330,17 +331,17 @@ int main(int argc, char ** argv)
 	      }
       }
 
-      shmem_double_put(&Work_in_p[0], &Work_out_p[0], Block_size, send_to);
-      shmem_barrier_all();
+      shmem_double_put(&Work_in_p[phase-1][0], &Work_out_p[0], Block_size, send_to);
+      shmem_fence();
+      shmem_int_inc(&recv_flag[phase-1], send_to);
+
+      shmem_int_wait_until(&recv_flag[phase-1], SHMEM_CMP_EQ, iter+1);
 
       istart = recv_from*Block_order; 
       /* scatter received block to transposed matrix; no need to tile */
       for (j=0; j<Block_order; j++)
         for (i=0; i<Block_order; i++) 
-          B(i,j) = Work_in(i,j);
-
-      shmem_barrier_all();
-
+          B(i,j) = Work_in(phase, i,j);
     }  /* end of phase loop  */
   } /* end of iterations */
 
@@ -383,6 +384,15 @@ int main(int argc, char ** argv)
 
   bail_out(error, pSync);
 
+  shfree(recv_flag);
+  shfree(Work_out_p);
+
+  for(i=0;i<Num_procs-1;i++)
+    shfree(Work_in_p[i]);
+
+  free(Work_in_p);
+
+  //shmem_finalize();
   exit(EXIT_SUCCESS);
 
 }  /* end of main */

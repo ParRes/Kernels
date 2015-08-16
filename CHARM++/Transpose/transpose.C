@@ -79,6 +79,7 @@ public:
         bytes = 2 * sizeof(double) * order * order;
 
         // print info
+        CkPrintf("Parallel Research Kernels Version %s\n", PRKVERSION);
         CkPrintf("Charm++ transpose execution\n");
         CkPrintf("Number of Charm++ PEs = %d\n", CkNumPes());
         CkPrintf("Overdecomposition     = %d\n", overdecomposition);

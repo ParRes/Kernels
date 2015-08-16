@@ -225,6 +225,7 @@ int main(int argc, char ** argv)
   tiling = (Tile_order > 0) && (Tile_order < order);
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI+OpenMP matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Number of threads    = %d\n", omp_get_max_threads());

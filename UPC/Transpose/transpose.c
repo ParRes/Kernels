@@ -192,6 +192,7 @@ int main(int argc, char ** argv) {
   int sizey = N;
 
   if(MYTHREAD == 0) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("UPC matrix transpose: B = A^T\n");
     printf("Number of threads    = %d\n", THREADS);
     printf("Matrix order         = %d\n", N);

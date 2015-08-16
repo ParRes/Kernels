@@ -152,6 +152,7 @@ main(int argc, char **argv){
     C_arr(i,j) = 0.0;
   }
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP Dense matrix-matrix multiplication\n");
 
 #ifndef MKL

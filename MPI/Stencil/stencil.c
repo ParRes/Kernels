@@ -217,6 +217,7 @@ int main(int argc, char ** argv) {
   bottom_nbr = my_ID-Num_procsx;
  
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Grid size              = %d\n", n);

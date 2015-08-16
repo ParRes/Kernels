@@ -199,7 +199,7 @@ int main(int argc, char **argv)
   b = a + length + offset;
   c = b + length + offset;
  
- 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial stream triad: A = B + scalar*C\n");
   printf("Vector length        = %ld\n", length);
   printf("Offset               = %ld\n", offset);

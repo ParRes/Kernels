@@ -193,6 +193,7 @@ int main(int argc, char **argv){
     exit(EXIT_FAILURE);
   } 
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial Sparse matrix-vector multiplication\n");
   printf("Matrix order          = "FSTR64U"\n", size2);
   printf("Stencil diameter      = %16d\n", 2*radius+1);

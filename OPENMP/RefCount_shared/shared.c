@@ -158,6 +158,7 @@ int main(int argc, char ** argv)
   #pragma omp master
   {
   nthread = omp_get_num_threads();
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP exclusive access test RefCount, shared counters\n");
   if (nthread != nthread_input) {
     num_error = 1;

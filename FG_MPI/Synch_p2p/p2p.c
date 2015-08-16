@@ -151,6 +151,7 @@ int mymain(int argc, char ** argv)
 
   if (my_ID == root) {
     MPIX_Get_collocated_size(&procsize);
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("FG_MPI pipeline execution on 2D grid\n");
     printf("Number of ranks          = %d\n", Num_procs);
     printf("Number of ranks/process  = %d\n", procsize);

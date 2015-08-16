@@ -36,6 +36,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 #include <math.h>
 
+#define PRKVERSION "2.14"
 #ifndef MIN
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #endif

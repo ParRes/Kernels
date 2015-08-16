@@ -174,6 +174,7 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
 
+  printf("Parallel Research Kernels Version %s\n", PRKVERSION);
   printf("Serial stencil execution on 2D grid\n");
   printf("Grid size            = %d\n", n);
   printf("Radius of stencil    = %d\n", RADIUS);

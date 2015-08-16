@@ -48,23 +48,13 @@ USAGE:   The program takes as input the linear dimension of the grid,
  
 FUNCTIONS CALLED:
  
-         Other than MPI or standard C functions, the following 
+         Other than SHMEM or standard C functions, the following 
          functions are used in this program:
  
          wtime()
          bail_out()
  
-HISTORY: - Written by Rob Van der Wijngaart, November 2006.
-         - RvdW, August 2013: Removed unrolling pragmas for clarity;
-           fixed bug in compuation of width of strip assigned to 
-           each rank;
-         - RvdW, August 2013: added constant to array "in" at end of 
-           each iteration to force refreshing of neighbor data in 
-           parallel versions
-         - RvdW, October 2014: introduced 2D domain decomposition
-         - RvdW, October 2014: removed barrier at start of each iteration
-         - RvdW, October 2014: replaced single rank/single iteration timing
-           with global timing of all iterations across all ranks
+HISTORY: - Written by Tom St. John, July 2015.
   
 *********************************************************************************/
  
@@ -100,6 +90,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #define OUT(i,j)      out[INDEXOUT(i-istart,j-jstart)]
 #define WEIGHT(ii,jj) weight[ii+RADIUS][jj+RADIUS]
 
+int recv_count;
 double local_stencil_time, stencil_time;
 DTYPE local_norm, norm;
 long pSync[_SHMEM_BCAST_SYNC_SIZE];
@@ -110,7 +101,7 @@ int main(int argc, char ** argv) {
  
   int    Num_procs;       /* number of ranks                                     */
   int    Num_procsx, Num_procsy; /* number of ranks in each coord direction      */
-  int    my_ID;           /* MPI rank                                            */
+  int    my_ID;           /* SHMEM rank                                          */
   int    my_IDx, my_IDy;  /* coordinates of rank in rank grid                    */
   int    right_nbr;       /* global rank of right neighboring tile               */
   int    left_nbr;        /* global rank of left neighboring tile                */
@@ -142,11 +133,11 @@ int main(int argc, char ** argv) {
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   int *arguments;
+  int count_case=4;
 
   /*******************************************************************************
   ** Initialize the SHMEM environment
   ********************************************************************************/
-
   start_pes(0);
 
   my_ID=shmem_my_pe();
@@ -167,8 +158,6 @@ int main(int argc, char ** argv) {
     error = 1;
     goto ENDOFTESTS;
 #endif
-    
-    //printf("start error %d %d\n", error, my_ID);
       
     if (argc != 3){
       printf("Usage: %s <# iterations> <array dimension> \n", 
@@ -176,7 +165,7 @@ int main(int argc, char ** argv) {
       error = 1;
       goto ENDOFTESTS;
     }
-
+ 
     iterations  = atoi(*++argv); 
     arguments[0]=iterations;
 
@@ -185,7 +174,7 @@ int main(int argc, char ** argv) {
       error = 1;
       goto ENDOFTESTS;  
     }
-
+ 
     n  = atoi(*++argv);
     arguments[1]=n;
     long nsquare = (long)n * (long)n;
@@ -195,22 +184,21 @@ int main(int argc, char ** argv) {
       error = 1;
       goto ENDOFTESTS;
     }
-
+ 
     if (RADIUS < 0) {
       printf("ERROR: Stencil radius %d should be non-negative\n", RADIUS);
       error = 1;
       goto ENDOFTESTS;  
     }
-
+ 
     if (2*RADIUS +1 > n) {
       printf("ERROR: Stencil radius %d exceeds grid size %d\n", RADIUS, n);
       error = 1;
       goto ENDOFTESTS;  
     }
-
+ 
     ENDOFTESTS:;  
   }
-
   bail_out(error, pSync);
  
   /* determine best way to create a 2D grid of ranks (closest to square, for 
@@ -229,8 +217,16 @@ int main(int argc, char ** argv) {
   left_nbr   = my_ID-1;
   top_nbr    = my_ID+Num_procsx;
   bottom_nbr = my_ID-Num_procsx;
+
+  recv_count=0;
+
+  if((my_IDx==0)||(my_IDx==Num_procsx-1))
+    count_case--;
+  if((my_IDy==0)||(my_IDy==Num_procsy-1))
+    count_case--;
  
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("SHMEM stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Grid size              = %d\n", n);
@@ -307,7 +303,7 @@ int main(int argc, char ** argv) {
   total_length_out = width;
   total_length_out *= height;
   total_length_out *= sizeof(DTYPE);
-
+ 
   in  = (DTYPE *) malloc(total_length_in);
   out = (DTYPE *) malloc(total_length_out);
   if (!in || !out) {
@@ -316,7 +312,7 @@ int main(int argc, char ** argv) {
     error = 1;
   }
   bail_out(error, pSync);
-
+ 
   /* fill the stencil weights to reflect a discrete divergence operator         */
   for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++)
     WEIGHT(ii,jj) = (DTYPE) 0.0;
@@ -326,7 +322,7 @@ int main(int argc, char ** argv) {
     WEIGHT(0, ii) = WEIGHT( ii,0) =  (DTYPE) (1.0/(2.0*ii*RADIUS));
     WEIGHT(0,-ii) = WEIGHT(-ii,0) = -(DTYPE) (1.0/(2.0*ii*RADIUS));
   }
-
+ 
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
 
@@ -369,8 +365,7 @@ int main(int argc, char ** argv) {
       local_stencil_time = wtime();
     }
 
-    /* need to fetch ghost point data from neighbors in y-direction                 */
-    shmem_barrier_all();
+    /* need to fetch ghost point data from neighbors */
 
     if (my_IDy < Num_procsy-1) {
       for (kk=0,j=jend-RADIUS; j<=jend-1; j++) for (i=istart; i<=iend; i++) {
@@ -385,7 +380,32 @@ int main(int argc, char ** argv) {
       shmem_putmem(&top_buf_in[0], &bottom_buf_out[0], RADIUS*width*sizeof(DTYPE), bottom_nbr);
     }
 
-    shmem_barrier_all();
+    if(my_IDx < Num_procsx-1) {
+      for(kk=0,j=jstart;j<=jend;j++) for(i=iend-RADIUS;i<=iend-1;i++) {
+	right_buf_out[kk++]=IN(i,j);
+      }
+      shmem_putmem(&left_buf_in[0], &right_buf_out[0], RADIUS*height*sizeof(DTYPE), right_nbr);
+    }
+
+    if(my_IDx>0) {
+      for(kk=0,j=jstart;j<=jend;j++) for(i=istart;i<=istart+RADIUS-1;i++) {
+	left_buf_out[kk++]=IN(i,j);
+      }
+      shmem_putmem(&right_buf_in[0], &left_buf_out[0], RADIUS*height*sizeof(DTYPE), left_nbr);
+    }
+
+    shmem_fence();
+
+    if(my_IDy<Num_procsy-1)
+      shmem_int_inc(&recv_count, top_nbr);
+    if(my_IDy>0)
+      shmem_int_inc(&recv_count, bottom_nbr);
+    if(my_IDx<Num_procsx-1)
+      shmem_int_inc(&recv_count, right_nbr);
+    if(my_IDx>0)
+      shmem_int_inc(&recv_count, left_nbr);
+
+    shmem_int_wait_until(&recv_count, SHMEM_CMP_EQ, count_case*(iter+1));
 
     if (my_IDy < Num_procsy-1) {
       for (kk=0,j=jend; j<=jend+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
@@ -397,23 +417,6 @@ int main(int argc, char ** argv) {
           IN(i,j) = bottom_buf_in[kk++];
       }      
     }
-
-    /* need to fetch ghost point data from neighbors in x-direction                 */
-
-    if (my_IDx < Num_procsx-1) {
-      for (kk=0,j=jstart; j<=jend; j++) for (i=iend-RADIUS; i<=iend-1; i++) {
-          right_buf_out[kk++]= IN(i,j);
-      }
-      shmem_putmem(&left_buf_in[0], &right_buf_out[0], RADIUS*height*sizeof(DTYPE), right_nbr);
-    }
-    if (my_IDx > 0) {
-      for (kk=0,j=jstart; j<=jend; j++) for (i=istart; i<=istart+RADIUS-1; i++) {
-          left_buf_out[kk++]= IN(i,j);
-      }
-      shmem_putmem(&right_buf_in[0], &left_buf_out[0], RADIUS*height*sizeof(DTYPE), left_nbr);
-    }
-
-    shmem_barrier_all();
 
     if (my_IDx < Num_procsx-1) {
       for (kk=0,j=jstart; j<=jend; j++) for (i=iend; i<=iend+RADIUS-1; i++) {
