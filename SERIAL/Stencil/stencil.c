@@ -86,7 +86,9 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 
 int main(int argc, char ** argv) {
 
-  int    n;               /* linear grid dimension                               */
+  long   n;               /* linear grid dimension                               */
+  int    tile_size;       /* loop nest block factor                              */
+  int    tiling=0;        /* boolean indication loop nest blocking               */
   int    i, j, ii, jj, it, jt, iter;  /* dummies                                 */
   DTYPE  norm,            /* L1 norm of solution                                 */
          reference_norm;
@@ -98,14 +100,14 @@ int main(int argc, char ** argv) {
   int    stencil_size;    /* number of points in stencil                         */
   DTYPE  * RESTRICT in;   /* input grid values                                   */
   DTYPE  * RESTRICT out;  /* output grid values                                  */
-  int    total_length;    /* total required length to store grid values          */
+  long   total_length;    /* total required length to store grid values          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
 
   /*******************************************************************************
   ** process and test input parameters    
   ********************************************************************************/
 
-  if (argc != 3){
+  if (argc != 3 && argc !=4){
     printf("Usage: %s <# iterations> <array dimension>\n", 
            *argv);
     return(EXIT_FAILURE);
@@ -117,11 +119,17 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  n  = atoi(*++argv);
+  n  = atol(*++argv);
 
   if (n < 1){
-    printf("ERROR: grid dimension must be positive: %d\n", n);
+    printf("ERROR: grid dimension must be positive: %ld\n", n);
     exit(EXIT_FAILURE);
+  }
+
+  if (argc == 4) {
+    tile_size = atoi(*++argv);
+    if (tile_size<=0 || tile_size>n) tile_size=n;
+    else tiling=1; 
   }
 
   if (RADIUS < 1) {
@@ -188,6 +196,8 @@ int main(int argc, char ** argv) {
 #else
   printf("Data type            = single precision\n");
 #endif
+  if (tiling) printf("Tile size            = %d\n", tile_size);
+  else        printf("Untiled\n");
   printf("Number of iterations = %d\n", iterations);
 
   /* intialize the input and output arrays                                     */
@@ -202,19 +212,41 @@ int main(int argc, char ** argv) {
     if (iter == 1)  stencil_time = wtime();
 
     /* Apply the stencil operator                                              */
-    for (j=RADIUS; j<n-RADIUS; j++) {
-      for (i=RADIUS; i<n-RADIUS; i++) {
+    if (!tiling) {
+      for (j=RADIUS; j<n-RADIUS; j++) {
+        for (i=RADIUS; i<n-RADIUS; i++) {
 #ifdef STAR
-        for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-        for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-        for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+          for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
 #else
-        /* would like to be able to unroll this loop, but compiler will ignore  */
-        for (jj=-RADIUS; jj<=RADIUS; jj++) 
-        for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
+          /* would like to be able to unroll this loop, but compiler will ignore  */
+          for (jj=-RADIUS; jj<=RADIUS; jj++) 
+          for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
 #endif
+        }
       }
     }
+    else {
+      for (j=RADIUS; j<n-RADIUS; j+=tile_size) {
+        for (i=RADIUS; i<n-RADIUS; i+=tile_size) {
+          for (jt=j; jt<MIN(n-RADIUS,j+tile_size); jt++) {
+            for (it=i; it<MIN(n-RADIUS,i+tile_size); it++) {
+#ifdef STAR
+              for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(it,jt) += WEIGHT(0,jj)*IN(it,jt+jj);
+              for (ii=-RADIUS; ii<0; ii++)        OUT(it,jt) += WEIGHT(ii,0)*IN(it+ii,jt);
+              for (ii=1; ii<=RADIUS; ii++)        OUT(it,jt) += WEIGHT(ii,0)*IN(it+ii,jt);
+#else
+              /* would like to be able to unroll this loop, but compiler will ignore  */
+              for (jj=-RADIUS; jj<=RADIUS; jj++) 
+              for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(it,jt) += WEIGHT(ii,jj)*IN(it+ii,jt+jj);
+#endif
+            }
+          }
+        }
+      }
+    }
+
 
     /* add constant to solution to force refresh of neighbor data, if any       */
     for (j=0; j<n; j++) for (i=0; i<n; i++) IN(i,j)+= 1.0;
