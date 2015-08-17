@@ -108,7 +108,7 @@ int main(int argc, char ** argv) {
   ********************************************************************************/
 
   if (argc != 3 && argc !=4){
-    printf("Usage: %s <# iterations> <array dimension>\n", 
+    printf("Usage: %s <# iterations> <array dimension> [tile_size]\n", 
            *argv);
     return(EXIT_FAILURE);
   }
