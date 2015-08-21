@@ -345,6 +345,7 @@ int main(int argc, char * argv[]) {
 		    writeXF( &bottom_halo[kk], val);
 		  } );
 	      }
+	      // FullEmpty<Bool>
 
 	  if (my_IDy > 0 && readFE( CTS_bottom))
 	    for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++)
@@ -379,7 +380,6 @@ int main(int argc, char * argv[]) {
 	    Grappa::delegate::call<async>( top_nbr, [=] () {
 		writeXF( CTS_bottom, true);
 	      } );
-	    Grappa::impl::global_rdma_aggregator.flush( top_nbr );
 	  }
 	  if (my_IDy > 0) {
 	    for (kk=0,j=jstart-RADIUS; j<=jstart-1; j++)
@@ -389,7 +389,6 @@ int main(int argc, char * argv[]) {
 	    Grappa::delegate::call<async>( bottom_nbr, [=] () {
 		writeXF( CTS_top, true);
 	      } );
-	    Grappa::impl::global_rdma_aggregator.flush( bottom_nbr );
 	  }
 	  if (my_IDx < Num_procsx-1) {
             for (kk=0,j=jstart; j<=jend; j++)
@@ -398,7 +397,6 @@ int main(int argc, char * argv[]) {
 	    Grappa::delegate::call<async>( right_nbr, [=] () {
 		writeXF( CTS_left, true);
 	      } );
-	    Grappa::impl::global_rdma_aggregator.flush( right_nbr );
 	  }
 	  if (my_IDx > 0) {
 	    for (kk=0,j=jstart; j<=jend; j++) 
@@ -407,7 +405,6 @@ int main(int argc, char * argv[]) {
 	    Grappa::delegate::call<async>( left_nbr, [=] () {
 		writeXF( CTS_right, true);
 	      } );
-	    Grappa::impl::global_rdma_aggregator.flush( left_nbr );
 	  }
 	  
 	  // Apply the stencil operator
@@ -429,7 +426,21 @@ int main(int argc, char * argv[]) {
 	  
 	} // end of iterations                                                   */
       } );
+    //LOG(INFO) << "on_all_cores complete. waiting to finish";
       } );       
+
+    //LOG(INFO) << "iterations complete";
+
+
+
+
+	    // // if last data element is empty, go ahead and right through
+	    // Grappa::delegate::call<async>( top_nbr, [=] {
+	    // 	// if fullbit isEmpty, write otherwise suspend
+	    //   }
+
+
+
     
  
     symmetric DTYPE local_norm;
@@ -460,7 +471,7 @@ int main(int argc, char * argv[]) {
       // plus one flop for the update of the input of the array       
       int stencil_size = 4*RADIUS+1;
       double flops = (DTYPE) (2*stencil_size+1) * f_active_points;
-      double avgtime = iter_time/(double)iterations;
+      double avgtime = iter_time/iterations;
       std::cout << "Solution validates"<<std::endl;
       std::cout << "Rate (MFlops/s): " << 1.0E-06*flops/avgtime<<
         "  Avg time (s): "<<avgtime<<std::endl;

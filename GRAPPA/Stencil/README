@@ -1,0 +1,10 @@
+We have included three versions here:
+
+- stencil.cpp uses only point-to-point synchronization in the timed region.
+   Build with "make stencil".
+
+- stencil-onallcores.cpp uses an on_all_cores construct within each iteration of the timed region with an implicit barrier.
+   Build with "make PROGRAM=stencil-onallcores stencil-onallcores".
+
+- stencil-barrier.cpp uses an explicit barrier within each iteration of the timed region.
+   Build with "make PROGRAM=stencil-barrier stencil-barrier".
