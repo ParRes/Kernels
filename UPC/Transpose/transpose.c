@@ -314,7 +314,7 @@ int main(int argc, char ** argv) {
     printf("Solution validates\n");
     double transfer_size = 2 * N * N * sizeof(double);
     avgtime = (end_time - start_time) / num_iterations;
-    double rate = transfer_size / avgtime / 1024 / 1024;
+    double rate = transfer_size / avgtime * 1.0E-06;
     printf("Rate (MB/s): %lf Avg time (s): %lf\n",rate, avgtime);
   }
 }
