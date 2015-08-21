@@ -123,9 +123,9 @@ double pWrk[_SHMEM_BCAST_SYNC_SIZE];
 
 int main(int argc, char ** argv)
 {
-  int64_t Block_order;     /* number of columns owned by rank       */
-  int64_t Block_size;      /* size of a single block                */
-  int64_t Colblock_size;   /* size of column block                  */
+  int Block_order;         /* number of columns owned by rank       */
+  int Block_size;          /* size of a single block                */
+  int Colblock_size;       /* size of column block                  */
   int Tile_order=32;       /* default Tile order                    */
   int tiling;              /* boolean: true if tiling is used       */
   int Num_procs;           /* number of ranks                       */
@@ -201,7 +201,6 @@ int main(int argc, char ** argv)
   bail_out(error, pSync);
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("SHMEM matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
@@ -262,17 +261,21 @@ int main(int argc, char ** argv)
   if (Num_procs>1) {
     Work_in_p   = (double**)malloc((Num_procs-1)*sizeof(double));
 
-    for(i=0;i<(Num_procs-1);i++)
-      Work_in_p[i]=(double*)shmalloc(Block_size*sizeof(double));
-
     Work_out_p = (double*)shmalloc(Block_size*sizeof(double));
-    if ((Work_in_p == NULL)||(Work_out_p==NULL)){
-      printf(" Error allocating space for work on node %d\n",my_ID);
+    recv_flag=(int*)shmalloc((Num_procs-1)*sizeof(int));
+    if ((Work_in_p == NULL)||(Work_out_p==NULL) || (recv_flag == NULL)){
+      printf(" Error allocating space for work or flags on node %d\n",my_ID);
       error = 1;
     }
     bail_out(error, pSync);
-
-    recv_flag=(int*)shmalloc((Num_procs-1)*sizeof(int));
+    for(i=0;i<(Num_procs-1);i++) {
+      Work_in_p[i]=(double*)shmalloc(Block_size*sizeof(double));
+      if (Work_in_p[i] == NULL) {
+        printf(" Error allocating space for work on node %d\n",my_ID);
+        error = 1;
+      }
+      bail_out(error, pSync);
+    }
 
     for(i=0;i<Num_procs-1;i++)
       recv_flag[i]=0;
@@ -313,7 +316,6 @@ int main(int argc, char ** argv)
     for (phase=1; phase<Num_procs; phase++){
       recv_from = (my_ID + phase            )%Num_procs;
       send_to   = (my_ID - phase + Num_procs)%Num_procs;
-
 
       istart = send_to*Block_order; 
       if (!tiling) {
@@ -384,9 +386,7 @@ int main(int argc, char ** argv)
 
   bail_out(error, pSync);
 
-  shfree(recv_flag);
-  shfree(Work_out_p);
-
+  if (Num_procs>1) shfree(recv_flag);
   for(i=0;i<Num_procs-1;i++)
     shfree(Work_in_p[i]);
 

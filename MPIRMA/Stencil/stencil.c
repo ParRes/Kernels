@@ -138,8 +138,6 @@ int main(int argc, char ** argv) {
   long   total_length_out;/* total required length to store output array         */
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
-  MPI_Request request[8];
-  MPI_Status  status[8];
   MPI_Win rma_winx;       /* RMA window object x-direction */
   MPI_Win rma_winy;       /* RMA window object y-direction */
   MPI_Info rma_winfo;     /* info for window */
