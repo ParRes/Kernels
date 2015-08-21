@@ -226,6 +226,7 @@ int main(int argc, char ** argv) {
     count_case--;
  
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("SHMEM stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Grid size              = %d\n", n);
