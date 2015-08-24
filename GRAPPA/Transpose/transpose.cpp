@@ -176,7 +176,7 @@ int main(int argc, char * argv[]) {
       symmetric FullEmpty<double> * Work_in_p;
       symmetric int i, j, it, jt, istart, iter, phase; // dummies 
       symmetric double abserr, epsilon = 1.e-8;
-      double trans_time, avgtime;
+      double trans_time, avgtime, abserr_tot;
 
       int Tile_order = 32; /* default tile size for tiling of local transpose */
       if (argc == 4) Tile_order = atoi(argv[3]);
@@ -307,7 +307,7 @@ int main(int argc, char * argv[]) {
 	});
 	});
 
-      Grappa::on_all_cores( [=] {
+      Grappa::on_all_cores( [timer] {
 	  timer->total = Grappa::walltime() - timer->start;
 	});
 
@@ -325,12 +325,12 @@ int main(int argc, char * argv[]) {
 	    }
 	});
 
-      double abserr_tot = Grappa::reduce<double, collective_sum<double>>(&ae->abserr);
+      abserr_tot = Grappa::reduce<double, collective_sum<double>>(&ae->abserr);
       trans_time = Grappa::reduce<double,collective_max<double>>( &timer->total );
       if (abserr_tot < epsilon) {
 	std::cout << "Solution validates" << std::endl;
 	avgtime = trans_time/(double)iterations;
-	std::cout << "Rate (MB/s): " << 1.0E-06*bytes
+	std::cout << "Rate (MB/s): " << 1.0E-06*bytes/avgtime
 		  << " Avg time (s): " << avgtime << std::endl;
 	std::cout << "Summed errors: " << abserr_tot << std::endl;
       } else {
