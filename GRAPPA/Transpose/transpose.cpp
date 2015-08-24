@@ -366,7 +366,7 @@ int main(int argc, char * argv[]) {
       if (abserr_tot < epsilon) {
 	std::cout << "Solution validates" << std::endl;
 	avgtime = trans_time/(double)iterations;
-	std::cout << "Rate (MB/s): " << 1.0E-06*bytes
+	std::cout << "Rate (MB/s): " << 1.0E-06*bytes/avgtime
 		  << " Avg time (s): " << avgtime << std::endl;
 	std::cout << "Summed errors: " << abserr_tot << std::endl;
       } else {
