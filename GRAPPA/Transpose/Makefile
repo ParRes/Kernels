@@ -36,7 +36,7 @@ LIBPATHS     = $(GRAPPA_LDFLAGS)
 CXXFLAGS= $(GRAPPA_CXXFLAGS)  
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG) $(RADIUSFLAG)  $(USERFLAGS) $(CXXFLAGS)
-PROGRAM     = transpose
-OBJS        = $(PROGRAM).o $(COMOBJS)
+PROGRAM      = transpose
+OBJS         = $(PROGRAM).o $(COMOBJS)
 
 include ../../common/make.common
