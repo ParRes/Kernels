@@ -130,7 +130,6 @@ struct Timer {
   double start;
   double total;
 } GRAPPA_BLOCK_ALIGNED;
-<<<<<<< 8fe49954990c8455044bef0d90afb38eaee11dc2
 struct AbsErr {
   double abserr;
 } GRAPPA_BLOCK_ALIGNED;
@@ -139,36 +138,20 @@ struct AbsErr {
 #define B(i,j)        B_p[(i+istart)+order*(j)]
 #define Work_out(i,j) Work_out_p[i+Block_order*(j)]
 
-=======
-
-#define A(i,j)        A_p[(i+istart)+order*(j)]
-#define B(i,j)        B_p[(i+istart)+order*(j)]
-#define Work_in(i,j)  Work_in_p[i+Block_order*(j)]
-#define Work_out(i,j) Work_out_p[i+Block_order*(j)]
->>>>>>> parallel transpose (currently invalid)
 #define root 0
 
 #define symmetric static
 
-<<<<<<< 8fe49954990c8455044bef0d90afb38eaee11dc2
-const int CHUNK_LENGTH = 16;
-typedef double row_t[CHUNK_LENGTH];
-
-=======
->>>>>>> parallel transpose (currently invalid)
 int main(int argc, char * argv[]) {
   Grappa::init( &argc, &argv );
 
   int Num_procs = Grappa::cores();
 
-<<<<<<< 8fe49954990c8455044bef0d90afb38eaee11dc2
   if (Grappa::mycore() == root) {
     std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
     std::cout << "Grappa matrix transpose: B = A^T" << std::endl;
   }
 
-=======
->>>>>>> parallel transpose (currently invalid)
   if (argc != 3 && argc != 4) {
     if (Grappa::mycore() == root)
       std::cout << "Usage: " << argv[0] << " <#iterations> <matrix order> [tile size]"
@@ -189,7 +172,6 @@ int main(int argc, char * argv[]) {
       std::cout << "ERROR: Matrix Order must be greater than 0 : " << order << std::endl;
     exit(1);
   }
-<<<<<<< 8fe49954990c8455044bef0d90afb38eaee11dc2
   if (order%Num_procs) {
     if (Grappa::mycore() == root)
       std::cout << "ERROR: order "<<order<<" should be divisible by # of procs "
@@ -221,30 +203,6 @@ int main(int argc, char * argv[]) {
       Grappa::on_all_cores( [=] {
 	  my_ID = Grappa::mycore();
 	  int64_t i, j, istart; // dummies 
-=======
-
-
-  Grappa::run( [iterations, order, Num_procs, argc, argv] {
-      symmetric int my_ID;
-      symmetric int Block_order,Block_size,Colblock_size,colstart;
-      symmetric double * A_p, * B_p;
-      symmetric FullEmpty<double> * Work_in_p;
-      symmetric int i, j, it, jt, istart, iter, phase; // dummies 
-      symmetric double abserr, epsilon = 1.e-8;
-      double trans_time, avgtime;
-
-      int Tile_order = 32; /* default tile size for tiling of local transpose */
-      if (argc == 4) Tile_order = atoi(argv[3]);
-      
-      int tiling = (Tile_order > 0) && (Tile_order < order);
-      if (!tiling) Tile_order = order;
-      int bytes = 2.0 * sizeof(double) * order * order;
-      
-      Grappa::on_all_cores( [=] {
-	  my_ID = Grappa::mycore();
-
->>>>>>> parallel transpose (currently invalid)
-
 /*********************************************************************
 ** The matrix is broken up into column blocks that are mapped one to a 
 ** rank.  Each column block is made up of Num_procs smaller square 
@@ -263,7 +221,6 @@ int main(int argc, char * argv[]) {
 *********************************************************************/
 	  A_p = Grappa::locale_new_array<double>(Colblock_size);
 	  B_p = Grappa::locale_new_array<double>(Colblock_size);
-<<<<<<< 8fe49954990c8455044bef0d90afb38eaee11dc2
 	  if (!A_p || !B_p) {
 	    std::cout << "Core " << my_ID << " could not allocate space for "
 		      << "matrices" << std::endl;
@@ -272,30 +229,15 @@ int main(int argc, char * argv[]) {
 	  if (Num_procs > 1) {
 	    Work_out_p = Grappa::locale_new_array<double>(Block_size);
 	    if (!Work_out_p){
-=======
-	  if (Num_procs > 1) {
-	    Work_in_p = Grappa::locale_new_array<FullEmpty<double>>(Block_size);
-	    if (!Work_in_p){
->>>>>>> parallel transpose (currently invalid)
-	      std::cout << "Error allocating space for work on node " << my_ID << std::endl;
+      std::cout << "Error allocating space for work on node " << my_ID << std::endl;
 	      exit(1);
 	    }
 	  }
 
-<<<<<<< 8fe49954990c8455044bef0d90afb38eaee11dc2
-=======
-	  if (!A_p || !B_p) {
-	    std::cout << "Core " << my_ID << " could not allocate space for "
-		      << "matrices" << std::endl;
-	    exit(1);
-	  }
-
->>>>>>> parallel transpose (currently invalid)
 	  // fill the original column matrix
 	  istart = 0;
 	  for (j = 0; j < Block_order; j++)
 	    for (i = 0; i < order; i++) {
-<<<<<<< 8fe49954990c8455044bef0d90afb38eaee11dc2
 	      A(i,j) = (double)(order * (j+colstart) + i);
 	      B(i,j) = -1.0;
 	    }
@@ -424,8 +366,9 @@ int main(int argc, char * argv[]) {
       if (abserr_tot < epsilon) {
 	std::cout << "Solution validates" << std::endl;
 	avgtime = trans_time/(double)iterations;
-	std::cout << "Rate (MB/s): " << -1.0E-06*bytes/avgtime
+	std::cout << "Rate (MB/s): " << 1.0E-06*bytes
 		  << " Avg time (s): " << avgtime << std::endl;
+	std::cout << "Summed errors: " << abserr_tot << std::endl;
       } else {
 	std::cout << "ERROR: Aggregate squared error " << abserr_tot
 		  << " exceeds threshold " << epsilon << std::endl;
