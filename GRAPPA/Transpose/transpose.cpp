@@ -130,6 +130,9 @@ struct Timer {
   double start;
   double total;
 } GRAPPA_BLOCK_ALIGNED;
+struct AbsErr {
+  double abserr;
+} GRAPPA_BLOCK_ALIGNED;
 
 #define A(i,j)        A_p[(i+istart)+order*(j)]
 #define B(i,j)        B_p[(i+istart)+order*(j)]
@@ -222,7 +225,7 @@ int main(int argc, char * argv[]) {
 	  istart = 0;
 	  for (j = 0; j < Block_order; j++)
 	    for (i = 0; i < order; i++) {
-	      A(i,j) = order * (j+colstart) + i;
+	      A(i,j) = (double)(order * (j+colstart) + i);
 	      B(i,j) = -1.0;
 	    }
 	});
@@ -291,14 +294,11 @@ int main(int argc, char * argv[]) {
 			  }); 
 		      }
 	      }
-	      //LOG(INFO) << "Node " << my_ID << " sent to node " << send_to;
-	      Grappa::barrier();
 	      istart = recv_from * Block_order;
 	      // scatter received block to transposed matrix; no need to tile
 	      for (j=0; j<Block_order; j++)
 		for (i=0; i<Block_order; i++)
-		  B(i,j) = readFE(&Work_in(i,j));
-	      //LOG(INFO) << "Node " << my_ID << "received from node " << recv_from;
+		  B(i,j) = readFE(&Work_in(i,j));	       
 
 	      Grappa::barrier(); // ensures each phase completes before the next starts
 	    
@@ -311,25 +311,32 @@ int main(int argc, char * argv[]) {
 	  timer->total = Grappa::walltime() - timer->start;
 	});
 
-	// check for errors
-	Grappa::on_all_cores( [=] {
-	    istart = 0;
-	    for (j=0;j<Block_order;j++) for (i=0;i<order;i++) {
-		//abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
-		if (B(i,j) != order*i+j*colstart){
-		  LOG(INFO)<<"Expected: "<<order*i+j*colstart;
-		  LOG(INFO)<<"Observed: "<<B(i,j)<<" at ("<<i<<","<<j<<")";
-		  std::cout << "Solution invalid. Exiting..." << std::endl;
-		  exit(1);
-		}
+      GlobalAddress<AbsErr> ae = Grappa::symmetric_global_alloc<AbsErr>();
+      // check for errors
+      Grappa::on_all_cores( [=] {
+	  istart = 0;
+	  ae->abserr = 0;
+	  for (j=0;j<Block_order;j++) for (i=0;i<order;i++) {
+	      ae->abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
+	      if (B(i,j) != order*i+j+colstart){
+		LOG(INFO)<<"Expected: "<<order*i+j+colstart<<"  Observed: "
+			 <<B(i,j)<<" at ("<<i<<","<<j<<")";
 	      }
-	  });
+	    }
+	});
 
+      double abserr_tot = Grappa::reduce<double, collective_sum<double>>(&ae->abserr);
+      trans_time = Grappa::reduce<double,collective_max<double>>( &timer->total );
+      if (abserr_tot < epsilon) {
 	std::cout << "Solution validates" << std::endl;
-	trans_time = Grappa::reduce<double,collective_max<double>>( &timer->total );
 	avgtime = trans_time/(double)iterations;
 	std::cout << "Rate (MB/s): " << 1.0E-06*bytes
-	<< " Avg time (s): " << avgtime << std::endl;
+		  << " Avg time (s): " << avgtime << std::endl;
+	std::cout << "Summed errors: " << abserr_tot << std::endl;
+      } else {
+	std::cout << "ERROR: Aggregate squared error " << abserr_tot
+		  << " exceeds threshold " << epsilon << std::endl;
+      }
     });
 
   Grappa::finalize();
