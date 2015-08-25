@@ -242,25 +242,16 @@ int main(int argc, char ** argv)
     /* execute pipeline algorithm for grid lines 1 through n-1 (skip bottom line) */
     for (j=1; j<n; j++) {
 
-      /* if I am not at the left boundary, I need to wait for my left neighbor to
-         send data                                                                */
-      if (my_ID > 0) {
-        /*  Exposure epoch at target*/
-        MPI_Win_post(origin_group, MPI_MODE_NOSTORE, rma_win);
-        MPI_Win_wait(rma_win);
-      }
-
+      MPI_Win_fence(0, rma_win);
       for (i=start[my_ID]; i<= end[my_ID]; i++) {
         ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
       }
 
+      MPI_Win_fence(0, rma_win);
       /* if I am not on the right boundary, send data to my right neighbor        */  
       if (my_ID != Num_procs-1) {
-        /* Access epoch at origin */	
-        MPI_Win_start(target_group, 0, rma_win);
         MPI_Put(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE, my_ID+1,
 		NBR_INDEX(0,j), 1, MPI_DOUBLE, rma_win);
-        MPI_Win_complete(rma_win);	
       }
     }
 
@@ -268,15 +259,10 @@ int main(int argc, char ** argv)
     if (Num_procs >1) {
       if (my_ID==root) {
         corner_val = -ARRAY(end[my_ID],n-1);
-        MPI_Win_start(target_group, 0, rma_win);
         MPI_Put(&corner_val, 1, MPI_DOUBLE, 0,
 	 	NBR_INDEX(1,0), 1, MPI_DOUBLE, rma_win);
-        MPI_Win_complete(rma_win);
       }
-      if (my_ID==0) {
-        MPI_Win_post(origin_group, MPI_MODE_NOSTORE, rma_win);
-        MPI_Win_wait(rma_win);
-      }
+      MPI_Win_fence(0, rma_win);
     }
     else ARRAY(0,0)= -ARRAY(end[my_ID],n-1);
 

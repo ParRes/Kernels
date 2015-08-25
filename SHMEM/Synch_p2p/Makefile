@@ -9,6 +9,9 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEBUGFLAG    =  -DVERBOSE
 #description: default diagnostic style is silent
 
+#SYNCHFLAG  = -DSYNCHRONOUS
+#description: default handshake between threads is off
+
 USERFLAGS     = 
 #description: parameter to specify optional flags
 
@@ -21,7 +24,7 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS   = $(DEBUGFLAG) $(USERFLAGS)
+TUNEFLAGS   = $(DEBUGFLAG) $(USERFLAGS) $(SYNCHFLAG)
 PROGRAM     = p2p
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

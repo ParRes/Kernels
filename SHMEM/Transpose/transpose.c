@@ -198,7 +198,7 @@ int main(int argc, char ** argv)
 
     ENDOFTESTS:;
   }
-  bail_out(error, pSync);
+  bail_out(error);
 
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
@@ -250,14 +250,14 @@ int main(int argc, char ** argv)
     printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
   }
-  bail_out(error, pSync);
+  bail_out(error);
 
   B_p = (double *)malloc(Colblock_size*sizeof(double));
   if (B_p == NULL){
     printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
     error = 1;
   }
-  bail_out(error, pSync);
+  bail_out(error);
 
   if (Num_procs>1) {
     Work_in_p   = (double**)malloc((Num_procs-1)*sizeof(double));
@@ -268,14 +268,14 @@ int main(int argc, char ** argv)
       printf(" Error allocating space for work or flags on node %d\n",my_ID);
       error = 1;
     }
-    bail_out(error, pSync);
+    bail_out(error);
     for(i=0;i<(Num_procs-1);i++) {
       Work_in_p[i]=(double*)shmalloc(Block_size*sizeof(double));
       if (Work_in_p[i] == NULL) {
         printf(" Error allocating space for work on node %d\n",my_ID);
         error = 1;
       }
-      bail_out(error, pSync);
+      bail_out(error);
     }
 
     for(i=0;i<Num_procs-1;i++)
@@ -385,7 +385,7 @@ int main(int argc, char ** argv)
     }
   }
 
-  bail_out(error, pSync);
+  bail_out(error);
 
   if (Num_procs>1) shfree(recv_flag);
   for(i=0;i<Num_procs-1;i++)
