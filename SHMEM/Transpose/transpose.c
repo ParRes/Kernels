@@ -58,8 +58,8 @@ FUNCTIONS CALLED:
           bail_out()        Determine global error and exit if nonzero.
 
 HISTORY: Written by Tom St. John, July 2015.  
-         
-  
+         Rob vdW: Fixed race condition on synchronization flags, August 2015
+           
 *******************************************************************/
 
 /******************************************************************
@@ -116,11 +116,6 @@ o The original and transposed matrices are called A and B
 #define Work_in(phase, i,j)  Work_in_p[phase-1][i+Block_order*(j)]
 #define Work_out(i,j) Work_out_p[i+Block_order*(j)]
 
-double local_trans_time, trans_time;
-double abserr, abserr_tot;
-long pSync[_SHMEM_BCAST_SYNC_SIZE];
-double pWrk[_SHMEM_BCAST_SYNC_SIZE];
-
 int main(int argc, char ** argv)
 {
   int Block_order;         /* number of columns owned by rank       */
@@ -146,8 +141,14 @@ int main(int argc, char ** argv)
   double *Work_out_p;      /* workspace for the transpose function  */
   double epsilon = 1.e-8;  /* error tolerance                       */
   double avgtime;          /* timing parameters                     */
-  int *recv_flag;
-  int *arguments;
+  long   *pSync;           /* work space for SHMEM collectives      */
+  double *pWrk;            /* work space for SHMEM collectives      */
+  double *local_trans_time, 
+         *trans_time;      /* timing parameters                     */
+  double *abserr, 
+         *abserr_tot;      /* local and aggregate error             */
+  int    *recv_flag;       /* synchronization flags                 */
+  int    *arguments;       /* command line arguments                */
 
 /*********************************************************************
 ** Initialize the SHMEM environment
@@ -157,10 +158,21 @@ int main(int argc, char ** argv)
   my_ID=shmem_my_pe();
   Num_procs=shmem_n_pes();
 
+// initialize sync variables for error checks
+  pSync            = (long *)   shmalloc(sizeof(long)   * SHMEM_BCAST_SYNC_SIZE);
+  pWrk             = (double *) shmalloc(sizeof(double) * SHMEM_BCAST_SYNC_SIZE);
+  local_trans_time = (double *) shmalloc(sizeof(double));
+  trans_time       = (double *) shmalloc(sizeof(double));
+  arguments        = (int *)    shmalloc(3*sizeof(int));
+  abserr           = (double *) shmalloc(2*sizeof(double));
+  abserr_tot       = abserr + 1;
+  if (!pSync || !pWrk || !local_trans_time || !trans_time || !arguments || !abserr) {
+    printf("Rank %d could not allocate scalar work space on symm heap\n", my_ID);
+    error = 1;
+    goto ENDOFTESTS;
+  }
   for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
     pSync[i]=_SHMEM_SYNC_VALUE;
-
-  arguments=(int*)shmalloc(3*sizeof(int));
 
 /*********************************************************************
 ** process, test and broadcast input parameters
@@ -262,15 +274,15 @@ int main(int argc, char ** argv)
   if (Num_procs>1) {
     Work_in_p   = (double**)malloc((Num_procs-1)*sizeof(double));
 
-    Work_out_p = (double*)shmalloc(Block_size*sizeof(double));
-    recv_flag=(int*)shmalloc((Num_procs-1)*sizeof(int));
+    Work_out_p = (double *) shmalloc(Block_size*sizeof(double));
+    recv_flag  = (int*)     shmalloc((Num_procs-1)*sizeof(int));
     if ((Work_in_p == NULL)||(Work_out_p==NULL) || (recv_flag == NULL)){
       printf(" Error allocating space for work or flags on node %d\n",my_ID);
       error = 1;
     }
     bail_out(error);
     for(i=0;i<(Num_procs-1);i++) {
-      Work_in_p[i]=(double*)shmalloc(Block_size*sizeof(double));
+      Work_in_p[i]=(double *) shmalloc(Block_size*sizeof(double));
       if (Work_in_p[i] == NULL) {
         printf(" Error allocating space for work on node %d\n",my_ID);
         error = 1;
@@ -290,12 +302,14 @@ int main(int argc, char ** argv)
       B(i,j) = -1.0;
   }
 
+  shmem_barrier_all();
+
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration                                        */
     if (iter == 1) { 
       shmem_barrier_all();
-      local_trans_time = wtime();
+      local_trans_time[0] = wtime();
     }
 
     /* do the local transpose                                                     */
@@ -348,39 +362,37 @@ int main(int argc, char ** argv)
     }  /* end of phase loop  */
   } /* end of iterations */
 
-  local_trans_time = wtime() - local_trans_time;
+  local_trans_time[0] = wtime() - local_trans_time[0];
 
   for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
     pSync[i]=_SHMEM_SYNC_VALUE;
 
   shmem_barrier_all();
+  shmem_double_max_to_all(trans_time, local_trans_time, 1, 0, 0, Num_procs, pWrk, pSync);
 
-  shmem_double_max_to_all(&trans_time, &local_trans_time, 1, 0, 0, Num_procs, pWrk, pSync);
-
-  abserr = 0.0;
+  abserr[0] = 0.0;
   istart = 0;
   for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
-      abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
+      abserr[0] += ABS(B(i,j) - (double)(order*i + j+colstart));
   }
 
   for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
     pSync[i]=_SHMEM_SYNC_VALUE;
 
   shmem_barrier_all();
-
-  shmem_double_sum_to_all(&abserr_tot, &abserr, 1, 0, 0, Num_procs, pWrk, pSync);
+  shmem_double_sum_to_all(abserr_tot, abserr, 1, 0, 0, Num_procs, pWrk, pSync);
 
   if (my_ID == root) {
-    if (abserr_tot < epsilon) {
+    if (abserr_tot[0] < epsilon) {
       printf("Solution validates\n");
-      avgtime = trans_time/(double)iterations;
+      avgtime = trans_time[0]/(double)iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
 #ifdef VERBOSE
-      printf("Summed errors: %f \n", abserr);
+      printf("Summed errors: %f \n", abserr[0]);
 #endif
     }
     else {
-      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr, epsilon);
+      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr[0], epsilon);
       error = 1;
     }
   }
