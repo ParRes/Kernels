@@ -90,14 +90,14 @@ int main(int argc, char ** argv)
   int    Num_procs;       /* Number of ranks                                     */
   double *vector;         /* array holding grid values                           */
   long   total_length;    /* total required length to store grid values          */
-  int    *flag_left;       /* synchronization flags                               */
+  int    *flag_left;      /* synchronization flags                               */
 #ifdef SYNCHRONOUS
-  int    *flag_right;       /* synchronization flags                               */
+  int    *flag_right;     /* synchronization flags                               */
 #endif
   double *dst;            /* target address of communication                     */
   double *src;            /* source address of communication                     */
-  long   *pSync; /* work space for SHMEM collectives      */
-  double *pWrk; /* work space for SHMEM collectives      */
+  long   *pSync;          /* work space for SHMEM collectives                    */
+  double *pWrk;           /* work space for SHMEM collectives                    */
   
 /*********************************************************************************
 ** Initialize the SHMEM environment
@@ -138,8 +138,13 @@ int main(int argc, char ** argv)
   }
 
 // initialize sync variables for error checks
-  pSync = shmalloc ( sizeof(long) * SHMEM_BCAST_SYNC_SIZE );
-  pWrk = shmalloc ( sizeof(long) * SHMEM_BCAST_SYNC_SIZE );
+  pSync = (long *)   shmalloc ( sizeof(long) * SHMEM_BCAST_SYNC_SIZE );
+  pWrk  = (double *) shmalloc ( sizeof(double) * SHMEM_BCAST_SYNC_SIZE );
+  if (!pSync || !pWrk) {
+    printf("Rank %d could not allocate work space for collectives\n", my_ID);
+    error = 1;
+    goto ENDOFTESTS;
+  }
   for (i = 0; i < SHMEM_BCAST_SYNC_SIZE; i += 1) {
     pSync[i] = _SHMEM_SYNC_VALUE;
   }
