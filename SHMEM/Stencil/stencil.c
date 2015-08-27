@@ -151,6 +151,13 @@ int main(int argc, char ** argv) {
   stencil_time       = (double *) shmalloc(sizeof(double));
   local_norm         = (DTYPE *)  shmalloc(sizeof(DTYPE));
   norm               = (DTYPE *)  shmalloc(sizeof(DTYPE));
+  if (!(pSync && pWrk_time && pWrk_norm && recv_count&&send_count &&
+	local_stencil_time&&stencil_time && local_norm && norm))
+  {
+    printf("Could not allocate scalar variables on rank %d\n", my_ID);
+    error = 1;
+  }
+  bail_out(error);
 
   for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
     pSync[i]=_SHMEM_SYNC_VALUE;
