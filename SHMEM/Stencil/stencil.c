@@ -101,13 +101,13 @@ int main(int argc, char ** argv) {
   int    top_nbr;         /* global rank of top neighboring tile                 */
   int    bottom_nbr;      /* global rank of bottom neighboring tile              */
   DTYPE *top_buf_out;     /* communication buffer                                */
-  DTYPE *top_buf_in;      /*       "         "                                   */
+  DTYPE *top_buf_in[2];   /*       "         "                                   */
   DTYPE *bottom_buf_out;  /*       "         "                                   */
-  DTYPE *bottom_buf_in;   /*       "         "                                   */
+  DTYPE *bottom_buf_in[2];/*       "         "                                   */
   DTYPE *right_buf_out;   /*       "         "                                   */
-  DTYPE *right_buf_in;    /*       "         "                                   */
+  DTYPE *right_buf_in[2]; /*       "         "                                   */
   DTYPE *left_buf_out;    /*       "         "                                   */
-  DTYPE *left_buf_in;     /*       "         "                                   */
+  DTYPE *left_buf_in[2];  /*       "         "                                   */
   int    root = 0;
   int    n, width, height;/* linear global and local grid dimension              */
   int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
@@ -131,7 +131,8 @@ int main(int argc, char ** argv) {
   long   *pSync;          /* work space for collectives                          */
   double *pWrk_time;      /* work space for collectives                          */
   DTYPE  *pWrk_norm;      /* work space for collectives                          */
-  int    *recv_count, *send_count; /* synchronization flags                      */
+  int    *iterflag;       /* synchronization flags                               */
+  int    sw;              /* double buffering switch                             */
   DTYPE  *local_norm, *norm; /* local and global error norms                     */
 
   /*******************************************************************************
@@ -145,14 +146,13 @@ int main(int argc, char ** argv) {
   pSync              = (long *)   shmalloc(_SHMEM_BCAST_SYNC_SIZE*sizeof(long));
   pWrk_time          = (double *) shmalloc(_SHMEM_BCAST_SYNC_SIZE*sizeof(double));
   pWrk_norm          = (DTYPE *)  shmalloc(_SHMEM_BCAST_SYNC_SIZE*sizeof(DTYPE));
-  recv_count         = (int *)    shmalloc(sizeof(int));
-  send_count         = (int *)    shmalloc(sizeof(int));
   local_stencil_time = (double *) shmalloc(sizeof(double));
   stencil_time       = (double *) shmalloc(sizeof(double));
   local_norm         = (DTYPE *)  shmalloc(sizeof(DTYPE));
   norm               = (DTYPE *)  shmalloc(sizeof(DTYPE));
-  if (!(pSync && pWrk_time && pWrk_norm && recv_count&&send_count &&
-	local_stencil_time&&stencil_time && local_norm && norm))
+  iterflag           = (int *)    shmalloc(2*sizeof(int));
+  if (!(pSync && pWrk_time && pWrk_norm && iterflag &&
+	local_stencil_time && stencil_time && local_norm && norm))
   {
     printf("Could not allocate scalar variables on rank %d\n", my_ID);
     error = 1;
@@ -234,8 +234,7 @@ int main(int argc, char ** argv) {
   top_nbr    = my_ID+Num_procsx;
   bottom_nbr = my_ID-Num_procsx;
 
-  send_count[0]=0;
-  recv_count[0]=0;
+  iterflag[0] = iterflag[1] = 0;
 
   if(my_IDx==0)            count_case--;
   if(my_IDx==Num_procsx-1) count_case--;
@@ -356,18 +355,18 @@ int main(int argc, char ** argv) {
     error = 1;
   }
   bail_out(error);
+  bottom_buf_out = top_buf_out+RADIUS*width;
 
-  bottom_buf_out=top_buf_out+RADIUS*width;
-
-  top_buf_in=(DTYPE*)shmalloc(2*sizeof(DTYPE)*RADIUS*width);
+  top_buf_in[0]=(DTYPE*)shmalloc(4*sizeof(DTYPE)*RADIUS*width);
   if(!top_buf_in)
   {
     printf("ERROR: Rank %d could not allocate input comm buffers for y-direction\n", my_ID);
     error=1;
   }
   bail_out(error);
-
-  bottom_buf_in=top_buf_in+RADIUS*width;
+  top_buf_in[1]    = top_buf_in[0]    + RADIUS*width;
+  bottom_buf_in[0] = top_buf_in[1]    + RADIUS*width;
+  bottom_buf_in[1] = bottom_buf_in[0] + RADIUS*width;
  
   right_buf_out=(DTYPE*)malloc(2*sizeof(DTYPE)*RADIUS*height);
   if (!right_buf_out) {
@@ -375,18 +374,18 @@ int main(int argc, char ** argv) {
     error = 1;
   }
   bail_out(error);
-
   left_buf_out=right_buf_out+RADIUS*height;
 
-  right_buf_in=(DTYPE*)shmalloc(2*sizeof(DTYPE)*RADIUS*height);
+  right_buf_in[0]=(DTYPE*)shmalloc(2*sizeof(DTYPE)*RADIUS*height);
   if(!right_buf_in)
   {
     printf("ERROR: Rank %d could not allocate input comm buffers for x-dimension\n", my_ID);
     error=1;
   }
   bail_out(error);
-
-  left_buf_in=right_buf_in+RADIUS*height;
+  right_buf_in[1] = right_buf_in[0] + RADIUS*height;
+  left_buf_in[0]  = right_buf_in[1] + RADIUS*height;
+  left_buf_in[1]  = left_buf_in[0]  + RADIUS*height;
 
   for (iter = 0; iter<=iterations; iter++){
 
@@ -395,75 +394,67 @@ int main(int argc, char ** argv) {
       shmem_barrier_all();
       local_stencil_time[0] = wtime();
     }
+    /* sw determines which incoming buffer to select */
+    sw = iter%2;
 
     /* need to fetch ghost point data from neighbors */
-
-    shmem_int_wait_until(&send_count[0], SHMEM_CMP_EQ, count_case*iter);
 
     if (my_IDy < Num_procsy-1) {
       for (kk=0,j=jend-RADIUS; j<=jend-1; j++) for (i=istart; i<=iend; i++) {
           top_buf_out[kk++]= IN(i,j);
       }
-      shmem_putmem(&bottom_buf_in[0], &top_buf_out[0], RADIUS*width*sizeof(DTYPE), top_nbr);
+      shmem_putmem(bottom_buf_in[sw], top_buf_out, RADIUS*width*sizeof(DTYPE), top_nbr);
     }
     if (my_IDy > 0) {
       for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
           bottom_buf_out[kk++]= IN(i,j);
       }
-      shmem_putmem(&top_buf_in[0], &bottom_buf_out[0], RADIUS*width*sizeof(DTYPE), bottom_nbr);
+      shmem_putmem(top_buf_in[sw], bottom_buf_out, RADIUS*width*sizeof(DTYPE), bottom_nbr);
     }
 
     if(my_IDx < Num_procsx-1) {
       for(kk=0,j=jstart;j<=jend;j++) for(i=iend-RADIUS;i<=iend-1;i++) {
 	right_buf_out[kk++]=IN(i,j);
       }
-      shmem_putmem(&left_buf_in[0], &right_buf_out[0], RADIUS*height*sizeof(DTYPE), right_nbr);
+      shmem_putmem(left_buf_in[sw], right_buf_out, RADIUS*height*sizeof(DTYPE), right_nbr);
     }
 
     if(my_IDx>0) {
       for(kk=0,j=jstart;j<=jend;j++) for(i=istart;i<=istart+RADIUS-1;i++) {
 	left_buf_out[kk++]=IN(i,j);
       }
-      shmem_putmem(&right_buf_in[0], &left_buf_out[0], RADIUS*height*sizeof(DTYPE), left_nbr);
+      shmem_putmem(right_buf_in[sw], left_buf_out, RADIUS*height*sizeof(DTYPE), left_nbr);
     }
 
     shmem_fence();
 
-    if(my_IDy<Num_procsy-1)
-      shmem_int_inc(&recv_count[0], top_nbr);
-    if(my_IDy>0)
-      shmem_int_inc(&recv_count[0], bottom_nbr);
-    if(my_IDx<Num_procsx-1)
-      shmem_int_inc(&recv_count[0], right_nbr);
-    if(my_IDx>0)
-      shmem_int_inc(&recv_count[0], left_nbr);
+    if(my_IDy<Num_procsy-1) shmem_int_inc(&iterflag[sw], top_nbr);
+    if(my_IDy>0)            shmem_int_inc(&iterflag[sw], bottom_nbr);
+    if(my_IDx<Num_procsx-1) shmem_int_inc(&iterflag[sw], right_nbr);
+    if(my_IDx>0)            shmem_int_inc(&iterflag[sw], left_nbr);
 
-    shmem_int_wait_until(&recv_count[0], SHMEM_CMP_EQ, count_case*(iter+1));
+    shmem_int_wait_until(&iterflag[sw], SHMEM_CMP_EQ, count_case*(iter/2+1));
 
     if (my_IDy < Num_procsy-1) {
       for (kk=0,j=jend; j<=jend+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
-          IN(i,j) = top_buf_in[kk++];
+          IN(i,j) = top_buf_in[sw][kk++];
       }      
-      shmem_int_inc(&send_count[0], top_nbr);
     }
     if (my_IDy > 0) {
       for (kk=0,j=jstart-RADIUS; j<=jstart-1; j++) for (i=istart; i<=iend; i++) {
-          IN(i,j) = bottom_buf_in[kk++];
+          IN(i,j) = bottom_buf_in[sw][kk++];
       }      
-      shmem_int_inc(&send_count[0], bottom_nbr);
     }
 
     if (my_IDx < Num_procsx-1) {
       for (kk=0,j=jstart; j<=jend; j++) for (i=iend; i<=iend+RADIUS-1; i++) {
-          IN(i,j) = right_buf_in[kk++];
+          IN(i,j) = right_buf_in[sw][kk++];
       }      
-      shmem_int_inc(&send_count[0], right_nbr);
     }
     if (my_IDx > 0) {
       for (kk=0,j=jstart; j<=jend; j++) for (i=istart-RADIUS; i<=istart-1; i++) {
-          IN(i,j) = left_buf_in[kk++];
+          IN(i,j) = left_buf_in[sw][kk++];
       }      
-      shmem_int_inc(&send_count[0], left_nbr);
     }
  
     /* Apply the stencil operator */
