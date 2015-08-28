@@ -12,8 +12,10 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 USERFLAGS     = 
 #description: parameter to specify optional flags
 
-#set the following variables for custom libraries and/or other objects
+#SPLITFENCEFLAG = -DSPLITFENCE
+#description: controls using a single "big" fence, or multiple "smaller" fences
 
+#set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
 LIBS         = -lshmem
 LIBPATHS     = -L$(SHMEMTOP)/lib
@@ -21,7 +23,7 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS   = $(DEBUGFLAG) $(USERFLAGS)
+TUNEFLAGS   = $(DEBUGFLAG) $(USERFLAGS) $(SPLITFENCEFLAG)
 PROGRAM     = stencil
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

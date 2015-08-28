@@ -254,6 +254,11 @@ int main(int argc, char ** argv) {
 #else
     printf("Data type              = single precision\n");
 #endif
+#ifdef SPLITFENCE
+    printf("Split fence            = ON\n");
+#else
+    printf("Split fence            = OFF\n");
+#endif
     printf("Number of iterations   = %d\n", iterations);
   }
 
@@ -404,12 +409,20 @@ int main(int argc, char ** argv) {
           top_buf_out[kk++]= IN(i,j);
       }
       shmem_putmem(bottom_buf_in[sw], top_buf_out, RADIUS*width*sizeof(DTYPE), top_nbr);
+#ifdef SPLITFENCE
+      shmem_fence();
+      shmem_int_inc(&iterflag[sw], top_nbr);
+#endif
     }
     if (my_IDy > 0) {
       for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
           bottom_buf_out[kk++]= IN(i,j);
       }
       shmem_putmem(top_buf_in[sw], bottom_buf_out, RADIUS*width*sizeof(DTYPE), bottom_nbr);
+#ifdef SPLITFENCE
+      shmem_fence();
+      shmem_int_inc(&iterflag[sw], bottom_nbr);
+#endif
     }
 
     if(my_IDx < Num_procsx-1) {
@@ -417,6 +430,10 @@ int main(int argc, char ** argv) {
 	right_buf_out[kk++]=IN(i,j);
       }
       shmem_putmem(left_buf_in[sw], right_buf_out, RADIUS*height*sizeof(DTYPE), right_nbr);
+#ifdef SPLITFENCE
+      shmem_fence();
+      shmem_int_inc(&iterflag[sw], right_nbr);
+#endif
     }
 
     if(my_IDx>0) {
@@ -424,14 +441,19 @@ int main(int argc, char ** argv) {
 	left_buf_out[kk++]=IN(i,j);
       }
       shmem_putmem(right_buf_in[sw], left_buf_out, RADIUS*height*sizeof(DTYPE), left_nbr);
+#ifdef SPLITFENCE
+      shmem_fence();
+      shmem_int_inc(&iterflag[sw], left_nbr);
+#endif
     }
 
+#ifndef SPLITFENCE
     shmem_fence();
-
     if(my_IDy<Num_procsy-1) shmem_int_inc(&iterflag[sw], top_nbr);
     if(my_IDy>0)            shmem_int_inc(&iterflag[sw], bottom_nbr);
     if(my_IDx<Num_procsx-1) shmem_int_inc(&iterflag[sw], right_nbr);
     if(my_IDx>0)            shmem_int_inc(&iterflag[sw], left_nbr);
+#endif
 
     shmem_int_wait_until(&iterflag[sw], SHMEM_CMP_EQ, count_case*(iter/2+1));
 
