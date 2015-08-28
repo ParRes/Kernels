@@ -136,9 +136,12 @@ struct AbsErr {
 
 #define A(i,j)        A_p[(i+istart)+order*(j)]
 #define B(i,j)        B_p[(i+istart)+order*(j)]
-#define Work_in(i,j)  Work_in_p[i+Block_order*(j)]
 #define Work_out(i,j) Work_out_p[i+Block_order*(j)]
+
 #define root 0
+
+const int CHUNK_LENGTH = 16;
+typedef double row_t[CHUNK_LENGTH];
 
 #define symmetric static
 
@@ -173,8 +176,7 @@ int main(int argc, char * argv[]) {
       symmetric int my_ID;
       symmetric int Block_order,Block_size,Colblock_size,colstart;
       symmetric double * A_p, * B_p;
-      symmetric FullEmpty<double> * Work_in_p;
-      symmetric int i, j, it, jt, istart, iter, phase; // dummies 
+      symmetric double * Work_out_p;
       symmetric double abserr, epsilon = 1.e-8;
       double trans_time, avgtime, abserr_tot;
 
@@ -184,10 +186,10 @@ int main(int argc, char * argv[]) {
       int tiling = (Tile_order > 0) && (Tile_order < order);
       if (!tiling) Tile_order = order;
       int bytes = 2.0 * sizeof(double) * order * order;
-      
+
       Grappa::on_all_cores( [=] {
 	  my_ID = Grappa::mycore();
-
+	  int i, j, istart; // dummies 
 
 /*********************************************************************
 ** The matrix is broken up into column blocks that are mapped one to a 
@@ -207,20 +209,20 @@ int main(int argc, char * argv[]) {
 *********************************************************************/
 	  A_p = Grappa::locale_new_array<double>(Colblock_size);
 	  B_p = Grappa::locale_new_array<double>(Colblock_size);
-	  if (Num_procs > 1) {
-	    Work_in_p = Grappa::locale_new_array<FullEmpty<double>>(Block_size);
-	    if (!Work_in_p){
-	      std::cout << "Error allocating space for work on node " << my_ID << std::endl;
-	      exit(1);
-	    }
-	  }
-
 	  if (!A_p || !B_p) {
 	    std::cout << "Core " << my_ID << " could not allocate space for "
 		      << "matrices" << std::endl;
 	    exit(1);
 	  }
+	  if (Num_procs > 1) {
+	    Work_out_p = Grappa::locale_new_array<double>(Block_size);
+	    if (!Work_out_p){
+	      std::cout << "Error allocating space for work on node " << my_ID << std::endl;
+	      exit(1);
+	    }
+	  }
 
+	
 	  // fill the original column matrix
 	  istart = 0;
 	  for (j = 0; j < Block_order; j++)
@@ -243,6 +245,10 @@ int main(int argc, char * argv[]) {
 
       Grappa::finish( [=] {
       Grappa::on_all_cores( [=] {
+	  int send_to, recv_from;
+	  int i, j, it, jt, istart, iter, phase; // dummies 
+	  double val;
+	  int index;
 
 	  for ( iter = 0; iter < iterations; iter++) {
 	    
@@ -268,18 +274,14 @@ int main(int argc, char * argv[]) {
 
 	    for (phase=1; phase<Num_procs; phase++) {
 	      
-	      int recv_from = (my_ID + phase             )%Num_procs;
-	      int send_to   = (my_ID - phase + Num_procs  )%Num_procs;
+	      recv_from = (my_ID + phase             )%Num_procs;
+	      send_to   = (my_ID - phase + Num_procs  )%Num_procs;
 	      
 	      istart = send_to*Block_order;
 	      if (!tiling) {
 		for (i=0; i<Block_order; i++) 
 		  for (j=0; j<Block_order; j++){
-		    auto val = A(i,j);
-		    int index = j+Block_order*(i);
-		    Grappa::delegate::call<async>(send_to, [index,val] () {
-			writeXF(&Work_in_p[index], val);
-		      });
+		    Work_out(j,i) = A(i,j);
 		  }
 	      }
 	      else {
@@ -287,20 +289,37 @@ int main(int argc, char * argv[]) {
 		  for (j=0; j<Block_order; j+=Tile_order) 
 		    for (it=i; it<MIN(Block_order,i+Tile_order); it++)
 		      for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-			auto val = A(it,jt);
-			int index = jt+Block_order*(it);
-			Grappa::delegate::call<async>(send_to, [index,val] () {
-			    writeXF(&Work_in_p[index], val);
-			  }); 
+			Work_out(jt,it) = A(it,jt);
 		      }
 	      }
-	      istart = recv_from * Block_order;
-	      // scatter received block to transposed matrix; no need to tile
-	      for (j=0; j<Block_order; j++)
-		for (i=0; i<Block_order; i++)
-		  B(i,j) = readFE(&Work_in(i,j));	       
 
-	      Grappa::barrier(); // ensures each phase completes before the next starts
+	      istart = my_ID * Block_order;
+	      // write local buffer to transposed matrix
+	      if (!tiling) {
+		for (i=0; i<Block_order; i+=CHUNK_LENGTH) 
+		  for (j=0; j<Block_order; j++) {
+		    int target = i+istart+(order*j);
+		    row_t& row = *reinterpret_cast<row_t*>(&Work_out(i,j));
+		    Grappa::delegate::call<async>(send_to, [row,target] {
+			memcpy(&B_p[target], &row, sizeof(row_t));
+		      });
+		  }
+	      }
+	      else {
+		for (i=0; i<Block_order; i+=Tile_order) 
+		  for (j=0; j<Block_order; j+=Tile_order) 
+		    for (it=i; it<MIN(Block_order,i+Tile_order); it+=CHUNK_LENGTH)
+		      for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+			int target = it+istart+(order*jt);
+			row_t& row = *reinterpret_cast<row_t*>(&Work_out(it,jt));
+			Grappa::delegate::call<async>(send_to, [row,target] {
+			    memcpy(&B_p[target], &row, sizeof(row_t));
+		      });
+		      }
+	      }	       
+
+	      // ensures all async writes complete before moving to next phase
+	      Grappa::impl::local_ce.wait();
 	    
 	    } // end of phase loop
 	  } // done with iterations
@@ -314,7 +333,8 @@ int main(int argc, char * argv[]) {
       GlobalAddress<AbsErr> ae = Grappa::symmetric_global_alloc<AbsErr>();
       // check for errors
       Grappa::on_all_cores( [=] {
-	  istart = 0;
+	  int i,j;
+	  int istart = 0;
 	  ae->abserr = 0;
 	  for (j=0;j<Block_order;j++) for (i=0;i<order;i++) {
 	      ae->abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
