@@ -140,6 +140,9 @@ struct AbsErr {
 
 #define root 0
 
+const int CHUNK_LENGTH = 16;
+typedef double row_t[CHUNK_LENGTH];
+
 #define symmetric static
 
 int main(int argc, char * argv[]) {
@@ -229,11 +232,12 @@ int main(int argc, char * argv[]) {
 	  if (Num_procs > 1) {
 	    Work_out_p = Grappa::locale_new_array<double>(Block_size);
 	    if (!Work_out_p){
-      std::cout << "Error allocating space for work on node " << my_ID << std::endl;
+	      std::cout << "Error allocating space for work on node " << my_ID << std::endl;
 	      exit(1);
 	    }
 	  }
 
+	
 	  // fill the original column matrix
 	  istart = 0;
 	  for (j = 0; j < Block_order; j++)
@@ -317,7 +321,7 @@ int main(int argc, char * argv[]) {
 		    val = Work_out(i,j);
 		    Grappa::delegate::call<async>(send_to, [val,target] {
 			B_p[target] = val;
-		      });
+				      });
 		  }
 	      }
 	      else {
