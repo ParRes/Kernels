@@ -173,10 +173,14 @@ clean:
 	cd FG_MPI/Branch;           $(MAKE) clean
 	cd MPIRMA/Stencil;          $(MAKE) clean
 	cd MPIRMA/Synch_p2p;        $(MAKE) clean
+	cd UPC/Stencil;             $(MAKE) clean
+	cd UPC/Transpose;           $(MAKE) clean
 	cd MPISHM/Stencil;          $(MAKE) clean
-	cd SHMEM/Synch_p2p;         $(MAKE) clean
 	cd MPISHM/Synch_p2p;        $(MAKE) clean
 	cd MPISHM/Transpose;        $(MAKE) clean
+	cd SHMEM/Transpose;         $(MAKE) clean
+	cd SHMEM/Stencil;           $(MAKE) clean
+	cd SHMEM/Synch_p2p;         $(MAKE) clean
 	cd CHARM++/Stencil;         $(MAKE) clean
 	cd CHARM++/Synch_p2p;       $(MAKE) clean
 	cd CHARM++/Transpose;       $(MAKE) clean
