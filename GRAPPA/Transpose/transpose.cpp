@@ -140,10 +140,10 @@ struct AbsErr {
 
 #define root 0
 
+#define symmetric static
+
 const int CHUNK_LENGTH = 16;
 typedef double row_t[CHUNK_LENGTH];
-
-#define symmetric static
 
 int main(int argc, char * argv[]) {
   Grappa::init( &argc, &argv );
@@ -237,7 +237,6 @@ int main(int argc, char * argv[]) {
 	    }
 	  }
 
-	
 	  // fill the original column matrix
 	  istart = 0;
 	  for (j = 0; j < Block_order; j++)
@@ -251,12 +250,12 @@ int main(int argc, char * argv[]) {
       // TODO: get rid of this restriction
       tiling = tiling && (Block_order%CHUNK_LENGTH == 0);
 
+      std::cout << "Grappa matrix transpose: B = A^T" << std::endl;
       std::cout << "Number of cores         = " << Num_procs << std::endl;
       std::cout << "Matrix order            = " << order << std::endl;
       std::cout << "Number of iterations    = " << iterations << std::endl;
       if (tiling) std::cout << "Tile size               = " << Tile_order << std::endl;
-      else        std::cout << "Untiled" << std::endl;
-      std::cout << "Implementation DEPRECATED: result accumulation not yet implemented" << std::endl;
+      else std::cout << "Untiled" << std::endl;
 
       GlobalAddress<Timer> timer = Grappa::symmetric_global_alloc<Timer>();
 
