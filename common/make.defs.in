@@ -4,7 +4,7 @@ MPICC=
 #name of C compiler, e.g. icc, xlc, gcc
 CC=
 
-#name of compile line flag enabling OpenMP, e.g. -qopenmp, -openmp, -fopenmp
+#name of compile line flag enabling OpenMP, e.g. -openmp, -qopenmp, -fopenmp
 OPENMPFLAG=
 
 #default compiler optimization flags
@@ -14,6 +14,12 @@ DEFAULT_OPT_FLAGS=-O3
 
 #name of C++ compiler (to be used in MPI context for Grappa), e.g. mpigxx, mpiicpc
 CXX=
+
+#name of UPC compiler, e.g. gupc, cc, upcc
+UPCC=
+
+#name of compile line flag enabling UPC if necessary, e.g. -h upc
+UPCFLAG=
 
 #name of MPI C compiler (to be used in Fine-Grain MPI context), e.g. mpicc
 FGMPICC=
@@ -27,7 +33,7 @@ SHMEMCC=
 #location where Charm++ is installed, e.g. $(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
 CHARMTOP=
 
-#location where Grappa is installed, e.g. $(HOME)/grappa
+#location where Grappa is installed, e.g. $(GRAPPA_PREFIX)
 GRAPPATOP=
 
 #location where Fine-Grain MPI is installed, e.g. $(HOME)/fgmpi-install

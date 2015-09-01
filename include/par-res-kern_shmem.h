@@ -32,4 +32,4 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <shmem.h>
 
-extern void bail_out(int, long *);
+extern void bail_out(int);

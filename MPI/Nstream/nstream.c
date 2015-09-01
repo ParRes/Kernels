@@ -204,6 +204,7 @@ int main(int argc, char **argv)
   bytes   = 4.0 * sizeof(double) * length * Num_procs;
  
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI stream triad: A = B + scalar*C\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Vector length        = %ld\n", total_length);

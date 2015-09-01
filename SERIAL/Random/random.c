@@ -279,6 +279,7 @@ int main(int argc, char **argv) {
 
   error = 0;
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial Random Access\n");
   printf("Table size (shared)    = "FSTR64U"\n", tablesize);
   printf("Update ratio           = "FSTR64U"\n", (u64Int) update_ratio);

@@ -71,12 +71,14 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
 
+void bail_out (int ierror);
+
 int main(int argc, char ** argv)
 {
-  int    my_ID;           /* MPI rank                                            */
+  int    my_ID;           /* SHMEM thread ID                                     */
   int    root;            /* ID of master rank                                   */
   int    m, n;            /* grid dimensions                                     */
-  double *pipeline_time,   /* timing parameters                                   */
+  double *pipeline_time,   /* timing parameters                                  */
          *local_pipeline_time, avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;      /* verification value at top right corner of grid      */
@@ -88,11 +90,14 @@ int main(int argc, char ** argv)
   int    Num_procs;       /* Number of ranks                                     */
   double *vector;         /* array holding grid values                           */
   long   total_length;    /* total required length to store grid values          */
-  int    *flag_snd;       /* synchronization flags                               */
+  int    *flag_left;      /* synchronization flags                               */
+#ifdef SYNCHRONOUS
+  int    *flag_right;     /* synchronization flags                               */
+#endif
   double *dst;            /* target address of communication                     */
   double *src;            /* source address of communication                     */
-  long   pSync[_SHMEM_BCAST_SYNC_SIZE]; /* work space for SHMEM collectives      */
-  double pWrk [_SHMEM_BCAST_SYNC_SIZE]; /* work space for SHMEM collectives      */
+  long   *pSync;          /* work space for SHMEM collectives                    */
+  double *pWrk;           /* work space for SHMEM collectives                    */
   
 /*********************************************************************************
 ** Initialize the SHMEM environment
@@ -101,7 +106,7 @@ int main(int argc, char ** argv)
   my_ID =  shmem_my_pe();
   Num_procs =  shmem_n_pes();
 /* we set root equal to the highest rank, because this is also the rank that 
-   reports on the verification value                                             */
+   reports on the verification value                                            */
   root = Num_procs-1;
 
 /*********************************************************************
@@ -132,37 +137,57 @@ int main(int argc, char ** argv)
     goto ENDOFTESTS;
   }
 
-/* initialize sync variables for error checks                                    */
+// initialize sync variables for error checks
+  pSync = (long *)   shmalloc ( sizeof(long) * SHMEM_BCAST_SYNC_SIZE );
+  pWrk  = (double *) shmalloc ( sizeof(double) * SHMEM_BCAST_SYNC_SIZE );
+  if (!pSync || !pWrk) {
+    printf("Rank %d could not allocate work space for collectives\n", my_ID);
+    error = 1;
+    goto ENDOFTESTS;
+  }
   for (i = 0; i < SHMEM_BCAST_SYNC_SIZE; i += 1) {
     pSync[i] = _SHMEM_SYNC_VALUE;
   }
 
   if (m<=Num_procs) {
     if (my_ID == root)
-      printf("ERROR: First grid dimension %d must be > #ranks %d\n", m, Num_procs);
+      printf("ERROR: First grid dimension %d must be >= #ranks %d\n", m, Num_procs);
     error = 1;
   }
   ENDOFTESTS:;
-  bail_out (error, pSync);
+  bail_out (error);
+  shmem_barrier_all ();
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("SHMEM pipeline execution on 2D grid\n");
     printf("Number of ranks            = %d\n",Num_procs);
     printf("Grid sizes                 = %d, %d\n", m, n);
     printf("Number of iterations       = %d\n", iterations);
+#ifdef SYNCHRONOUS
+    printf("Handshake between neighbor threads\n");
+#else
+    printf("No handshake between neighbor threads\n");
+#endif
   }
 
-  flag_snd = (int *) shmalloc (sizeof(int) * n);
+  flag_left = (int *) shmalloc (sizeof(int) * n);
+#ifdef SYNCHRONOUS
+  flag_right = (int *) shmalloc (sizeof(int) * n);
+  int recv_val [1];
+  recv_val [0] = -1;
+#endif
   dst = (double *) shmalloc (sizeof(double) * (n));
-  src = (double *) shmalloc (sizeof(double) * (n));
+  //src = (double *) shmalloc (sizeof(double) * (n));
+  src = (double *) malloc (sizeof(double) * (n));
   local_pipeline_time = (double *) shmalloc (sizeof(double));
   pipeline_time = (double *) shmalloc (sizeof(double));
-  if (!flag_snd || !dst || !src || !local_pipeline_time || !pipeline_time) {
+  if (!flag_left || !dst || !src) {
     printf("ERROR: could not allocate flags or communication buffers on rank %d\n", 
            my_ID);
     error = 1;
   }
-  bail_out(error, pSync); 
+  bail_out(error); 
 
   start = (int *) shmalloc(2*Num_procs*sizeof(int));
   if (!start) {
@@ -170,7 +195,7 @@ int main(int argc, char ** argv)
            my_ID);
     error = 1;
   }
-  bail_out(error,pSync);
+  bail_out(error);
   end = start + Num_procs;
   start[0] = 0;
   for (ID=0; ID<Num_procs; ID++) {
@@ -185,14 +210,15 @@ int main(int argc, char ** argv)
 
   /* total_length takes into account one ghost cell on left side of segment      */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  vector = (double *) shmalloc(total_length*sizeof(double));
+  //vector = (double *) shmalloc(total_length*sizeof(double));
+  vector = (double *) malloc(total_length*sizeof(double));
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %d by %d points", 
            segment_size, n);
     printf(" on rank %d\n", my_ID);
     error = 1;
   }
-  bail_out(error, pSync);
+  bail_out(error);
 
   /* clear the array                                                             */
   for (j=0; j<n; j++) for (i=start[my_ID]-1; i<=end[my_ID]; i++) {
@@ -208,56 +234,93 @@ int main(int argc, char ** argv)
   end[my_ID] = segment_size-1;
 
   /* initialize synchronization flags                                            */
-  for (j=0; j<n; j++) flag_snd[j] = 0;
+  /* set flags to zero to indicate no data is available yet                      */
+  int true = 1; int false = !true;
+  for (j=0; j<n; j++) {
+    flag_left[j] = false;
+#ifdef SYNCHRONOUS
+    flag_right[j] = false;
+#endif
+  }  
+
+  shmem_barrier_all ();
 
   for (iter=0; iter<=iterations; iter++) {
 
+#ifndef SYNCHRONOUS
+    /* true and false toggle each iteration                                      */
+    true = (iter+1)%2; false = !true;
+#endif
+
     if (iter == 1) {
       shmem_barrier_all ();
-      local_pipeline_time [0] = wtime();
+      local_pipeline_time[0] = wtime();
+    }
+
+    if (my_ID==0 && Num_procs>1) { /* first thread waits for corner value to be copied            */
+      shmem_int_wait_until(&flag_left[0], SHMEM_CMP_EQ, false);
+      if (iter>0) {
+        ARRAY(start[my_ID]-1,0) = dst[0];
+      }
+#ifdef SYNCHRONOUS
+      flag_left[0]= true;
+      shmem_int_p(&flag_right[0], true, root);
+      shmem_fence();
+#endif      
     }
 
     for (j=1; j<n; j++) {
 
       /* if I am not at the left boundary, wait for left neighbor to send data   */
       if (my_ID > 0) {
-        shmem_int_wait_until (&flag_snd [j], SHMEM_CMP_NE, iter%2);
+        shmem_int_wait_until(&flag_left[j], SHMEM_CMP_EQ, true);
+#ifdef SYNCHRONOUS
+        flag_left[j]= false;
+        // tell the left neighbor I got the data
+        shmem_int_p(&flag_right[j], false, my_ID-1);
+#endif      
         ARRAY(start[my_ID]-1,j) = dst[j];
       }
 
       for (i=start[my_ID]; i<= end[my_ID]; i++) {
         ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
       }
- 
-      /* if I am not on the right boundary, send data to my right neighbor       */
+
       if (my_ID != Num_procs-1) {
+#ifdef SYNCHRONOUS 
+        shmem_int_wait_until(&flag_right[j], SHMEM_CMP_EQ, false);
+        flag_right[j] = true;
+#endif 
         src[j] = ARRAY (end[my_ID],j);
-        shmem_putmem(&dst[j], &src[j], sizeof(double), my_ID+1);
+        shmem_double_p(&dst[j], src[j], my_ID+1);
         shmem_fence();
-        shmem_int_swap (&flag_snd [j], !(iter%2), my_ID+1);
-      }
+     /* indicate to right neighbor that data is available  */
+        shmem_int_p(&flag_left[j], true, my_ID+1);
+      }  
     }
 
-     corner_val = 0.;
     /* copy top right corner value to bottom left corner to create dependency      */
     if (Num_procs >1) {
       if (my_ID==root) {
         corner_val = -ARRAY(end[my_ID],n-1);
         src [0] = corner_val;
-        shmem_putmem(&dst[0], &src[0], sizeof(double), 0);
+        shmem_double_p(&dst[0], src[0], 0);
         shmem_fence();
-        shmem_int_swap(&flag_snd[0], !(iter%2), 0);
-      }
-      if (my_ID==0) {
-        shmem_int_wait_until (&flag_snd[0], SHMEM_CMP_NE, iter%2);
-        ARRAY(0,0) = dst[0];
+        /* indicate to PE 0 that data is available  */
+#ifdef SYNCHRONOUS
+        shmem_int_wait_until(&flag_right[0], SHMEM_CMP_EQ, true);
+        flag_right[j] = false;
+        shmem_int_p(&flag_left[0], false, 0);
+#else
+        shmem_int_p(&flag_left[0], true, 0);
+#endif
       }
     }
     else ARRAY(0,0)= -ARRAY(end[my_ID],n-1);
   }
 
   local_pipeline_time [0] = wtime() - local_pipeline_time [0];
-  shmem_double_max_to_all(pipeline_time, local_pipeline_time, 1, 0, 0, Num_procs,
+  shmem_double_max_to_all(pipeline_time, local_pipeline_time, 1, 0, 0, Num_procs, 
                           pWrk, pSync);
 
   /* verify correctness, using top right value                                     */
@@ -269,7 +332,7 @@ int main(int argc, char ** argv)
       error = 1;
     }
   }
-  bail_out(error, pSync);
+  bail_out(error);
 
   if (my_ID == root) {
     avgtime = pipeline_time [0]/iterations;
@@ -280,7 +343,7 @@ int main(int argc, char ** argv)
 #else
     printf("Solution validates\n");
 #endif
-    printf("Rate (MFlops/s): %lf, Avg time (s): %lf\n",
+    printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
  

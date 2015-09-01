@@ -85,6 +85,7 @@ public:
         }
 
         // print info
+        CkPrintf("Parallel Research Kernels Version %s\n", PRKVERSION);
         CkPrintf("Charm++ pipeline execution on 2D grid\n");
         CkPrintf("Number of Charm++ PEs = %d\n", CkNumPes());
         CkPrintf("Overdecomposition     = %d\n", overdecomposition);

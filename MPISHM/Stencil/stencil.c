@@ -322,6 +322,7 @@ int main(int argc, char ** argv) {
 
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI+SHM stencil execution on 2D grid\n");
     printf("Number of ranks                 = %d\n", Num_procs);
     printf("Grid size                       = %d\n", n);
@@ -435,7 +436,7 @@ int main(int argc, char ** argv) {
                           (void *) &in, &shm_win_in);
   MPI_Win_shared_query(shm_win_in, MPI_PROC_NULL, &size_in, &disp_unit, (void *)&in);
   if (in == NULL){
-    printf(" Error allocating space for original matrix on node %d\n",my_ID);
+    printf("Error allocating space for input array by group %d\n",my_group);
     error = 1;
   }
   bail_out(error);
@@ -445,7 +446,7 @@ int main(int argc, char ** argv) {
                           (void *) &out, &shm_win_out);
   MPI_Win_shared_query(shm_win_out, MPI_PROC_NULL, &size_out, &disp_unit, (void *)&out);
   if (out == NULL){
-    printf(" Error allocating space for transposed matrix by group %d\n", my_group);
+    printf("Error allocating space for output array by group %d\n", my_group);
     error = 1;
   }
   bail_out(error);
@@ -477,6 +478,11 @@ int main(int argc, char ** argv) {
   }
   
   height_rank = jend_rank - jstart_rank + 1;
+  if (height_rank*width_rank==0) {
+    error = 1;
+    printf("Rank %d has no work to do\n", my_ID);
+  }
+  bail_out(error);
 
   /* allocate communication buffers for halo values                            */
   top_buf_out = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*width_rank);
@@ -619,7 +625,6 @@ int main(int argc, char ** argv) {
         }
         for (ii=1; ii<=RADIUS; ii++) {
           OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
- 
         }
       }
     }

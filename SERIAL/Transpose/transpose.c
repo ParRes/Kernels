@@ -123,6 +123,7 @@ int main(int argc, char ** argv) {
 
   bytes = 2.0 * sizeof(double) * order * order;
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial Matrix transpose: B = A^T\n");
   printf("Matrix order          = %d\n", order);
   if (tile_size < order) printf("Tile size             = %d\n", tile_size);

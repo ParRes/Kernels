@@ -147,6 +147,7 @@ int main(int argc, char **argv){
 *********************************************************************/
 
   if (my_ID == root){
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI sparse matrix-vector multiplication\n");
     if (argc != 4){
       printf("Usage: %s <# iterations> <2log grid size> <stencil radius>\n",*argv);

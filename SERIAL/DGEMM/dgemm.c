@@ -128,6 +128,7 @@ main(int argc, char **argv){
     C_arr(i,j) = 0.0;
   }
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial Dense matrix-matrix multiplication: C = A x B\n");
 
 #ifndef MKL

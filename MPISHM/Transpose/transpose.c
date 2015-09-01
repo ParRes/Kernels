@@ -192,6 +192,7 @@ int main(int argc, char ** argv)
   MPI_Bcast(&group_size, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI+SHM Matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Rank group size      = %d\n", group_size);

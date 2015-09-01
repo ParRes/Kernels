@@ -9,19 +9,22 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEBUGFLAG    =  -DVERBOSE
 #description: default diagnostic style is silent
 
+#SYNCHFLAG  = -DSYNCHRONOUS
+#description: default handshake between threads is off
+
 USERFLAGS     = 
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
 
 EXTOBJS      = 
-LIBS         = 
-LIBPATHS     = 
+LIBS         = -lshmem
+LIBPATHS     = -L$(SHMEMTOP)/lib
 INCLUDEPATHS = 
 
 ### End User configurable options ###
 
-TUNEFLAGS   = $(DEBUGFLAG) $(USERFLAGS)
+TUNEFLAGS   = $(DEBUGFLAG) $(USERFLAGS) $(SYNCHFLAG)
 PROGRAM     = p2p
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

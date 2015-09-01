@@ -175,7 +175,7 @@ int main(int argc, char ** argv) {
     }
  
     n       = atoi(*++argv); 
-    nsquare = n * n;
+    nsquare = (long) n * (long) n;
     if (nsquare < Num_procs){ 
       printf("ERROR: grid size %d must be at least # ranks: %ld\n", 
 	     nsquare, Num_procs); 
@@ -217,6 +217,7 @@ int main(int argc, char ** argv) {
   bottom_nbr = my_ID-Num_procsx;
  
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Grid size              = %d\n", n);
@@ -279,15 +280,8 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
  
-  total_length_in = (width+2*RADIUS)*(height+2*RADIUS)*sizeof(DTYPE);
-  if (total_length_in/(height+2*RADIUS) != (width+2*RADIUS)*sizeof(DTYPE)) {
-    printf("ERROR: Space for %d x %d input array cannot be represented\n", 
-           width+2*RADIUS, height+2*RADIUS);
-    error = 1;
-  }
-  bail_out(error);
- 
-  total_length_out = width*height*sizeof(DTYPE);
+  total_length_in  = (long) (width+2*RADIUS)*(long) (height+2*RADIUS)*sizeof(DTYPE);
+  total_length_out = (long) width* (long) height*sizeof(DTYPE);
  
   in  = (DTYPE *) malloc(total_length_in);
   out = (DTYPE *) malloc(total_length_out);
