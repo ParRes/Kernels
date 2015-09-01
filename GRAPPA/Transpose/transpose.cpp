@@ -194,7 +194,6 @@ int main(int argc, char * argv[]) {
 	exit(1);
       }
 
-      // NOTE: tiling only works on matrices with a power of two order
       int tiling = (Tile_order > 0) && (Tile_order < order);
       if (!tiling) Tile_order = order;
       int bytes = 2.0 * sizeof(double) * order * order;
