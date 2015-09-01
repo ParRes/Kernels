@@ -140,10 +140,10 @@ struct AbsErr {
 
 #define root 0
 
+#define symmetric static
+
 const int CHUNK_LENGTH = 16;
 typedef double row_t[CHUNK_LENGTH];
-
-#define symmetric static
 
 int main(int argc, char * argv[]) {
   Grappa::init( &argc, &argv );
@@ -170,7 +170,12 @@ int main(int argc, char * argv[]) {
       std::cout << "ERROR: Matrix Order must be greater than 0 : " << order << std::endl;
     exit(1);
   }
-
+  if (order%Num_procs) {
+    if (Grappa::mycore() == root)
+      std::cout << "ERROR: order "<<order<<" should be divisible by # of procs "
+		<<Num_procs<<std::endl;
+    exit(1);
+  }
 
   Grappa::run( [iterations, order, Num_procs, argc, argv] {
       symmetric int my_ID;
@@ -182,7 +187,14 @@ int main(int argc, char * argv[]) {
 
       int Tile_order = 32; /* default tile size for tiling of local transpose */
       if (argc == 4) Tile_order = atoi(argv[3]);
-      
+      if (Tile_order%CHUNK_LENGTH != 0){
+	std::cout<<"ERROR: Tile Order: "<<Tile_order
+		 <<" must be a multiple of const CHUNK_LENGTH "
+		 <<CHUNK_LENGTH<<std::endl;
+	exit(1);
+      }
+
+      // NOTE: tiling only works on matrices with a power of two order
       int tiling = (Tile_order > 0) && (Tile_order < order);
       if (!tiling) Tile_order = order;
       int bytes = 2.0 * sizeof(double) * order * order;
@@ -222,7 +234,6 @@ int main(int argc, char * argv[]) {
 	    }
 	  }
 
-	
 	  // fill the original column matrix
 	  istart = 0;
 	  for (j = 0; j < Block_order; j++)
@@ -230,16 +241,18 @@ int main(int argc, char * argv[]) {
 	      A(i,j) = (double)(order * (j+colstart) + i);
 	      B(i,j) = -1.0;
 	    }
+
 	});
 
-      if (my_ID == root) {
-	std::cout << "Grappa matrix transpose: B = A^T" << std::endl;
-	std::cout << "Number of cores         = " << Num_procs << std::endl;
-	std::cout << "Matrix order            = " << order << std::endl;
-	std::cout << "Number of iterations    = " << iterations << std::endl;
-	if (tiling) std::cout << "Tile size               = " << Tile_order << std::endl;
-	else std::cout << "Untiled" << std::endl;
-      }
+      // TODO: get rid of this restriction
+      tiling = tiling && (Block_order%CHUNK_LENGTH == 0);
+
+      std::cout << "Grappa matrix transpose: B = A^T" << std::endl;
+      std::cout << "Number of cores         = " << Num_procs << std::endl;
+      std::cout << "Matrix order            = " << order << std::endl;
+      std::cout << "Number of iterations    = " << iterations << std::endl;
+      if (tiling) std::cout << "Tile size               = " << Tile_order << std::endl;
+      else std::cout << "Untiled" << std::endl;
 
       GlobalAddress<Timer> timer = Grappa::symmetric_global_alloc<Timer>();
 
@@ -248,7 +261,7 @@ int main(int argc, char * argv[]) {
 	  int send_to, recv_from;
 	  int i, j, it, jt, istart, iter, phase; // dummies 
 	  double val;
-	  int index;
+	  int target;
 
 	  for ( iter = 0; iter < iterations; iter++) {
 	    
@@ -296,12 +309,12 @@ int main(int argc, char * argv[]) {
 	      istart = my_ID * Block_order;
 	      // write local buffer to transposed matrix
 	      if (!tiling) {
-		for (i=0; i<Block_order; i+=CHUNK_LENGTH) 
+		for (i=0; i<Block_order; i++) 
 		  for (j=0; j<Block_order; j++) {
-		    int target = i+istart+(order*j);
-		    row_t& row = *reinterpret_cast<row_t*>(&Work_out(i,j));
-		    Grappa::delegate::call<async>(send_to, [row,target] {
-			memcpy(&B_p[target], &row, sizeof(row_t));
+		    target = i+istart+(order*j);
+		    val = Work_out(i,j);
+		    Grappa::delegate::call<async>(send_to, [val,target] {
+			B_p[target] = val;
 		      });
 		  }
 	      }
@@ -310,11 +323,11 @@ int main(int argc, char * argv[]) {
 		  for (j=0; j<Block_order; j+=Tile_order) 
 		    for (it=i; it<MIN(Block_order,i+Tile_order); it+=CHUNK_LENGTH)
 		      for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-			int target = it+istart+(order*jt);
+			target = it+istart+(order*jt);
 			row_t& row = *reinterpret_cast<row_t*>(&Work_out(it,jt));
 			Grappa::delegate::call<async>(send_to, [row,target] {
 			    memcpy(&B_p[target], &row, sizeof(row_t));
-		      });
+			  });
 		      }
 	      }	       
 
@@ -339,8 +352,8 @@ int main(int argc, char * argv[]) {
 	  for (j=0;j<Block_order;j++) for (i=0;i<order;i++) {
 	      ae->abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
 	      if (B(i,j) != order*i+j+colstart){
-		LOG(INFO)<<"Expected: "<<order*i+j+colstart<<"  Observed: "
-			 <<B(i,j)<<" at ("<<i<<","<<j<<")";
+	      	LOG(INFO)<<"Expected: "<<order*i+j+colstart<<"  Observed: "
+	      		 <<B(i,j)<<" at ("<<i<<","<<j<<")";
 	      }
 	    }
 	});
