@@ -147,7 +147,6 @@ int main(int argc, char ** argv) {
   int    tile_size=32;  /* default tile size for tiling of local transpose */
   int    num_iterations;/* number of times to do the transpose             */
   int    tiling;        /* boolean: true if tiling is used                 */
-  double total_bytes;   /* combined size of matrices                       */
   double start_time,    /* timing parameters                               */
          end_time, avgtime;
 
@@ -205,9 +204,6 @@ int main(int argc, char ** argv) {
   /*********************************************************************
   ** Allocate memory for input and output matrices
   *********************************************************************/
-
-  total_bytes = 2.0 * sizeof(double) * N * N;
-
   int myoffsetx = MYTHREAD * sizex;
   int myoffsety = 0;
 
