@@ -51,15 +51,26 @@ USAGE:   Program inputs are the matrix order, the number of times to
 
 FUNCTIONS CALLED:
 
-         Other than SHMEM or standard C functions, the following 
+         Other than MPI or standard C functions, the following 
          functions are used in this program:
 
           wtime()           Portable wall-timer interface.
           bail_out()        Determine global error and exit if nonzero.
 
-HISTORY: Written by Tom St. John, July 2015.  
-         Rob vdW: Fixed race condition on synchronization flags, August 2015
-           
+HISTORY: Written by Tim Mattson, April 1999.  
+         Updated by Rob Van der Wijngaart, December 2005.
+         Updated by Rob Van der Wijngaart, October 2006.
+         Updated by Rob Van der Wijngaart, November 2014::
+         - made variable names more consistent 
+         - put timing around entire iterative loop of transposes
+         - fixed incorrect matrix block access; no separate function
+           for local transpose of matrix block
+         - reordered initialization and verification loops to
+           produce unit stride
+         - changed initialization values, such that the input matrix
+           elements are: A(i,j) = i+order*j
+         
+  
 *******************************************************************/
 
 /******************************************************************
@@ -109,12 +120,12 @@ o The original and transposed matrices are called A and B
  -----------------------------------------------------------------*/
 
 #include <par-res-kern_general.h>
-#include <par-res-kern_shmem.h>
+#include <par-res-kern_mpi.h>
 
-#define A(i,j)        A_p[(i+istart)+order*(j)]
-#define B(i,j)        B_p[(i+istart)+order*(j)]
-#define Work_in(phase, i,j)  Work_in_p[phase-1][i+Block_order*(j)]
-#define Work_out(i,j) Work_out_p[i+Block_order*(j)]
+#define A(i,j)          A_p[(i+istart)+order*(j)]
+#define B(i,j)          B_p[(i+istart)+order*(j)]
+#define Work_in(p,i,j)  Work_in_p[(p)*Block_size+i+Block_order*(j)]
+#define Work_out(i,j)   Work_out_p[i+Block_order*(j)]
 
 int main(int argc, char ** argv)
 {
@@ -126,6 +137,8 @@ int main(int argc, char ** argv)
   int Num_procs;           /* number of ranks                       */
   int order;               /* order of overall matrix               */
   int send_to, recv_from;  /* ranks with which to communicate       */
+  MPI_Status status;       
+  MPI_Request send_req, recv_req;
   long bytes;              /* combined size of matrices             */
   int my_ID;               /* rank                                  */
   int root=0;              /* rank of root                          */
@@ -137,42 +150,23 @@ int main(int argc, char ** argv)
   int error;               /* error flag                            */
   double *A_p;             /* original matrix column block          */
   double *B_p;             /* transposed matrix column block        */
-  double **Work_in_p;      /* workspace for the transpose function  */
+  double *Work_in_p;       /* workspace for the transpose function  */
   double *Work_out_p;      /* workspace for the transpose function  */
+  double abserr,           /* absolute error                        */
+         abserr_tot;       /* aggregate absolute error              */
   double epsilon = 1.e-8;  /* error tolerance                       */
-  double avgtime;          /* timing parameters                     */
-  long   *pSync;           /* work space for SHMEM collectives      */
-  double *pWrk;            /* work space for SHMEM collectives      */
-  double *local_trans_time, 
-         *trans_time;      /* timing parameters                     */
-  double *abserr, 
-         *abserr_tot;      /* local and aggregate error             */
-  int    *recv_flag;       /* synchronization flags                 */
-  int    *arguments;       /* command line arguments                */
+  double local_trans_time, /* timing parameters                     */
+         trans_time,
+         avgtime;
+  MPI_Win  rma_win;
+  MPI_Info rma_winfo;
 
 /*********************************************************************
-** Initialize the SHMEM environment
+** Initialize the MPI environment
 *********************************************************************/
-
-  start_pes(0);
-  my_ID=shmem_my_pe();
-  Num_procs=shmem_n_pes();
-
-// initialize sync variables for error checks
-  pSync            = (long *)   shmalloc(sizeof(long)   * SHMEM_BCAST_SYNC_SIZE);
-  pWrk             = (double *) shmalloc(sizeof(double) * SHMEM_BCAST_SYNC_SIZE);
-  local_trans_time = (double *) shmalloc(sizeof(double));
-  trans_time       = (double *) shmalloc(sizeof(double));
-  arguments        = (int *)    shmalloc(3*sizeof(int));
-  abserr           = (double *) shmalloc(2*sizeof(double));
-  abserr_tot       = abserr + 1;
-  if (!pSync || !pWrk || !local_trans_time || !trans_time || !arguments || !abserr) {
-    printf("Rank %d could not allocate scalar work space on symm heap\n", my_ID);
-    error = 1;
-    goto ENDOFTESTS;
-  }
-  for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync[i]=_SHMEM_SYNC_VALUE;
+  MPI_Init(&argc,&argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
+  MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
 /*********************************************************************
 ** process, test and broadcast input parameters
@@ -186,14 +180,12 @@ int main(int argc, char ** argv)
     }
 
     iterations  = atoi(*++argv);
-    arguments[0]=iterations;
     if(iterations < 1){
       printf("ERROR: iterations must be >= 1 : %d \n",iterations);
       error = 1; goto ENDOFTESTS;
     }
 
     order = atoi(*++argv);
-    arguments[1]=order;
     if (order < Num_procs) {
       printf("ERROR: matrix order %d should at least # procs %d\n", 
              order, Num_procs);
@@ -206,7 +198,6 @@ int main(int argc, char ** argv)
     }
 
     if (argc == 4) Tile_order = atoi(*++argv);
-    arguments[2]=Tile_order;
 
     ENDOFTESTS:;
   }
@@ -214,7 +205,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("SHMEM matrix transpose: B = A^T\n");
+    printf("MPI matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
     printf("Number of iterations = %d\n", iterations);
@@ -223,20 +214,10 @@ int main(int argc, char ** argv)
     else  printf("Untiled\n");
   }
   
-  shmem_barrier_all();
-
   /*  Broadcast input data to all ranks */
-  shmem_broadcast32(&arguments[0], &arguments[0], 3, root, 0, 0, Num_procs, pSync);
-
-  iterations=arguments[0];
-  order=arguments[1];
-  Tile_order=arguments[2];
-
-  shmem_barrier_all();
-  shfree(arguments);
-
-  for(i=0;i<_SHMEM_REDUCE_SYNC_SIZE;i++)
-    pSync[i]=_SHMEM_SYNC_VALUE;
+  MPI_Bcast (&order,      1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast (&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast (&Tile_order, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);
@@ -270,28 +251,24 @@ int main(int argc, char ** argv)
     error = 1;
   }
   bail_out(error);
-
+  
+  MPI_Info_create (&rma_winfo);
+  MPI_Info_set (rma_winfo, "no locks", "true");
   if (Num_procs>1) {
-    Work_in_p   = (double**)malloc((Num_procs-1)*sizeof(double));
-
-    Work_out_p = (double *) shmalloc(Block_size*sizeof(double));
-    recv_flag  = (int*)     shmalloc((Num_procs-1)*sizeof(int));
-    if ((Work_in_p == NULL)||(Work_out_p==NULL) || (recv_flag == NULL)){
-      printf(" Error allocating space for work or flags on node %d\n",my_ID);
+    Work_out_p = (double *) malloc(sizeof(double)*Block_size);
+    if (Work_out_p == NULL){
+      printf(" Error allocating space for work_out on node %d\n",my_ID);
       error = 1;
     }
     bail_out(error);
-    for(i=0;i<(Num_procs-1);i++) {
-      Work_in_p[i]=(double *) shmalloc(Block_size*sizeof(double));
-      if (Work_in_p[i] == NULL) {
-        printf(" Error allocating space for work on node %d\n",my_ID);
-        error = 1;
-      }
-      bail_out(error);
-    }
 
-    for(i=0;i<Num_procs-1;i++)
-      recv_flag[i]=0;
+    MPI_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
+                      rma_winfo, MPI_COMM_WORLD, (void *) &Work_in_p, &rma_win);
+    if (Work_in_p == NULL){
+      printf(" Error allocating space for work on node %d\n",my_ID);
+      error = 1;
+    }
+    bail_out(error);
   }
   
   /* Fill the original column matrix                                                */
@@ -302,14 +279,14 @@ int main(int argc, char ** argv)
       B(i,j) = -1.0;
   }
 
-  shmem_barrier_all();
+  MPI_Barrier(MPI_COMM_WORLD);
 
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration                                        */
     if (iter == 1) { 
-      shmem_barrier_all();
-      local_trans_time[0] = wtime();
+      MPI_Barrier(MPI_COMM_WORLD);
+      local_trans_time = wtime();
     }
 
     /* do the local transpose                                                     */
@@ -328,8 +305,8 @@ int main(int argc, char ** argv)
               B(jt,it) = A(it,jt); 
     }
 
+    MPI_Win_fence (MPI_MODE_NOPRECEDE, rma_win);
     for (phase=1; phase<Num_procs; phase++){
-      recv_from = (my_ID + phase            )%Num_procs;
       send_to   = (my_ID - phase + Num_procs)%Num_procs;
 
       istart = send_to*Block_order; 
@@ -348,64 +325,52 @@ int main(int argc, char ** argv)
 	      }
       }
 
-      shmem_double_put(&Work_in_p[phase-1][0], &Work_out_p[0], Block_size, send_to);
-      shmem_fence();
-      shmem_int_inc(&recv_flag[phase-1], send_to);
+      MPI_Put (Work_out_p, Block_size, MPI_DOUBLE, send_to, Block_size*(phase-1), 
+               Block_size, MPI_DOUBLE, rma_win); 
+    }  /* end of phase loop for puts  */
+    MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
 
-      shmem_int_wait_until(&recv_flag[phase-1], SHMEM_CMP_EQ, iter+1);
-
+    for (phase=1; phase<Num_procs; phase++) {
+      recv_from = (my_ID + phase            )%Num_procs;
       istart = recv_from*Block_order; 
       /* scatter received block to transposed matrix; no need to tile */
       for (j=0; j<Block_order; j++)
         for (i=0; i<Block_order; i++) 
-          B(i,j) = Work_in(phase, i,j);
-    }  /* end of phase loop  */
+          B(i,j) = Work_in(phase-1,i,j);
+    } /* end of phase loop for scatters */
+
   } /* end of iterations */
 
-  local_trans_time[0] = wtime() - local_trans_time[0];
+  local_trans_time = wtime() - local_trans_time;
+  MPI_Reduce(&local_trans_time, &trans_time, 1, MPI_DOUBLE, MPI_MAX, root,
+             MPI_COMM_WORLD);
 
-  for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync[i]=_SHMEM_SYNC_VALUE;
-
-  shmem_barrier_all();
-  shmem_double_max_to_all(trans_time, local_trans_time, 1, 0, 0, Num_procs, pWrk, pSync);
-
-  abserr[0] = 0.0;
+  abserr = 0.0;
   istart = 0;
   for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
-      abserr[0] += ABS(B(i,j) - (double)(order*i + j+colstart));
+      abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
   }
 
-  for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync[i]=_SHMEM_SYNC_VALUE;
-
-  shmem_barrier_all();
-  shmem_double_sum_to_all(abserr_tot, abserr, 1, 0, 0, Num_procs, pWrk, pSync);
+  MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
 
   if (my_ID == root) {
-    if (abserr_tot[0] < epsilon) {
+    if (abserr_tot < epsilon) {
       printf("Solution validates\n");
-      avgtime = trans_time[0]/(double)iterations;
+      avgtime = trans_time/(double)iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
 #ifdef VERBOSE
-      printf("Summed errors: %f \n", abserr[0]);
+      printf("Summed errors: %f \n", abserr);
 #endif
     }
     else {
-      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr[0], epsilon);
+      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr, epsilon);
       error = 1;
     }
   }
 
   bail_out(error);
 
-  if (Num_procs>1) shfree(recv_flag);
-  for(i=0;i<Num_procs-1;i++)
-    shfree(Work_in_p[i]);
-
-  free(Work_in_p);
-
-  //shmem_finalize();
+  MPI_Finalize();
   exit(EXIT_SUCCESS);
 
 }  /* end of main */

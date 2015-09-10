@@ -90,13 +90,6 @@ HISTORY: - Written by Tom St. John, July 2015.
 #define OUT(i,j)      out[INDEXOUT(i-istart,j-jstart)]
 #define WEIGHT(ii,jj) weight[ii+RADIUS][jj+RADIUS]
 
-int recv_count;
-double local_stencil_time, stencil_time;
-DTYPE local_norm, norm;
-long pSync[_SHMEM_BCAST_SYNC_SIZE];
-double pWrk_time[_SHMEM_BCAST_SYNC_SIZE];
-DTYPE pWrk_norm[_SHMEM_BCAST_SYNC_SIZE];
-
 int main(int argc, char ** argv) {
  
   int    Num_procs;       /* number of ranks                                     */
@@ -108,13 +101,13 @@ int main(int argc, char ** argv) {
   int    top_nbr;         /* global rank of top neighboring tile                 */
   int    bottom_nbr;      /* global rank of bottom neighboring tile              */
   DTYPE *top_buf_out;     /* communication buffer                                */
-  DTYPE *top_buf_in;      /*       "         "                                   */
+  DTYPE *top_buf_in[2];   /*       "         "                                   */
   DTYPE *bottom_buf_out;  /*       "         "                                   */
-  DTYPE *bottom_buf_in;   /*       "         "                                   */
+  DTYPE *bottom_buf_in[2];/*       "         "                                   */
   DTYPE *right_buf_out;   /*       "         "                                   */
-  DTYPE *right_buf_in;    /*       "         "                                   */
+  DTYPE *right_buf_in[2]; /*       "         "                                   */
   DTYPE *left_buf_out;    /*       "         "                                   */
-  DTYPE *left_buf_in;     /*       "         "                                   */
+  DTYPE *left_buf_in[2];  /*       "         "                                   */
   int    root = 0;
   int    n, width, height;/* linear global and local grid dimension              */
   int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
@@ -122,18 +115,25 @@ int main(int argc, char ** argv) {
   int    jstart, jend;    /* bounds of grid tile assigned to calling rank        */
   DTYPE  reference_norm;
   DTYPE  f_active_points; /* interior of grid with respect to stencil            */
+  int    stencil_size;    /* number of points in the stencil                     */
   DTYPE  flops;           /* floating point ops per iteration                    */
   int    iterations;      /* number of times to run the algorithm                */
-  double avgtime;         /* timing parameters                                 */
-  int    stencil_size;    /* number of points in stencil                         */
+  double avgtime,         /* timing parameters                                   */
+         *local_stencil_time, *stencil_time; 
   DTYPE  * RESTRICT in;   /* input grid values                                   */
   DTYPE  * RESTRICT out;  /* output grid values                                  */
   long   total_length_in; /* total required length to store input array          */
   long   total_length_out;/* total required length to store output array         */
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
-  int *arguments;
-  int count_case=4;
+  int    *arguments;      /* command line parameters                             */
+  int    count_case=4;    /* number of neighbors of a rank                       */
+  long   *pSync;          /* work space for collectives                          */
+  double *pWrk_time;      /* work space for collectives                          */
+  DTYPE  *pWrk_norm;      /* work space for collectives                          */
+  int    *iterflag;       /* synchronization flags                               */
+  int    sw;              /* double buffering switch                             */
+  DTYPE  *local_norm, *norm; /* local and global error norms                     */
 
   /*******************************************************************************
   ** Initialize the SHMEM environment
@@ -142,6 +142,22 @@ int main(int argc, char ** argv) {
 
   my_ID=shmem_my_pe();
   Num_procs=shmem_n_pes();
+
+  pSync              = (long *)   shmalloc(_SHMEM_BCAST_SYNC_SIZE*sizeof(long));
+  pWrk_time          = (double *) shmalloc(_SHMEM_BCAST_SYNC_SIZE*sizeof(double));
+  pWrk_norm          = (DTYPE *)  shmalloc(_SHMEM_BCAST_SYNC_SIZE*sizeof(DTYPE));
+  local_stencil_time = (double *) shmalloc(sizeof(double));
+  stencil_time       = (double *) shmalloc(sizeof(double));
+  local_norm         = (DTYPE *)  shmalloc(sizeof(DTYPE));
+  norm               = (DTYPE *)  shmalloc(sizeof(DTYPE));
+  iterflag           = (int *)    shmalloc(2*sizeof(int));
+  if (!(pSync && pWrk_time && pWrk_norm && iterflag &&
+	local_stencil_time && stencil_time && local_norm && norm))
+  {
+    printf("Could not allocate scalar variables on rank %d\n", my_ID);
+    error = 1;
+  }
+  bail_out(error);
 
   for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
     pSync[i]=_SHMEM_SYNC_VALUE;
@@ -218,12 +234,12 @@ int main(int argc, char ** argv) {
   top_nbr    = my_ID+Num_procsx;
   bottom_nbr = my_ID-Num_procsx;
 
-  recv_count=0;
+  iterflag[0] = iterflag[1] = 0;
 
-  if((my_IDx==0)||(my_IDx==Num_procsx-1))
-    count_case--;
-  if((my_IDy==0)||(my_IDy==Num_procsy-1))
-    count_case--;
+  if(my_IDx==0)            count_case--;
+  if(my_IDx==Num_procsx-1) count_case--;
+  if(my_IDy==0)            count_case--;
+  if(my_IDy==Num_procsy-1) count_case--;
  
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
@@ -237,6 +253,11 @@ int main(int argc, char ** argv) {
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
+#endif
+#ifdef SPLITFENCE
+    printf("Split fence            = ON\n");
+#else
+    printf("Split fence            = OFF\n");
 #endif
     printf("Number of iterations   = %d\n", iterations);
   }
@@ -323,7 +344,7 @@ int main(int argc, char ** argv) {
     WEIGHT(0,-ii) = WEIGHT(-ii,0) = -(DTYPE) (1.0/(2.0*ii*RADIUS));
   }
  
-  norm = (DTYPE) 0.0;
+  norm[0] = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
 
   /* intialize the input and output arrays                                     */
@@ -333,37 +354,53 @@ int main(int argc, char ** argv) {
   }
 
   /* allocate communication buffers for halo values                            */
-  top_buf_out=(DTYPE*)shmalloc(4*sizeof(DTYPE)*RADIUS*width);
-
+  top_buf_out=(DTYPE*)malloc(2*sizeof(DTYPE)*RADIUS*width);
   if (!top_buf_out) {
-    printf("ERROR: Rank %d could not allocate comm buffers for y-direction\n", my_ID);
+    printf("ERROR: Rank %d could not allocate output comm buffers for y-direction\n", my_ID);
     error = 1;
   }
   bail_out(error);
+  bottom_buf_out = top_buf_out+RADIUS*width;
 
-  top_buf_in=top_buf_out+RADIUS*width;
-  bottom_buf_out=top_buf_out+2*RADIUS*width;;
-  bottom_buf_in=top_buf_out+3*RADIUS*width;
+  top_buf_in[0]=(DTYPE*)shmalloc(4*sizeof(DTYPE)*RADIUS*width);
+  if(!top_buf_in)
+  {
+    printf("ERROR: Rank %d could not allocate input comm buffers for y-direction\n", my_ID);
+    error=1;
+  }
+  bail_out(error);
+  top_buf_in[1]    = top_buf_in[0]    + RADIUS*width;
+  bottom_buf_in[0] = top_buf_in[1]    + RADIUS*width;
+  bottom_buf_in[1] = bottom_buf_in[0] + RADIUS*width;
  
-  right_buf_out=(DTYPE*)shmalloc(4*sizeof(DTYPE)*RADIUS*height);
-
+  right_buf_out=(DTYPE*)malloc(2*sizeof(DTYPE)*RADIUS*height);
   if (!right_buf_out) {
-    printf("ERROR: Rank %d could not allocate comm buffers for x-direction\n", my_ID);
+    printf("ERROR: Rank %d could not allocate output comm buffers for x-direction\n", my_ID);
     error = 1;
   }
   bail_out(error);
+  left_buf_out=right_buf_out+RADIUS*height;
 
-  right_buf_in   = right_buf_out +   RADIUS*height;
-  left_buf_out   = right_buf_out + 2*RADIUS*height;
-  left_buf_in    = right_buf_out + 3*RADIUS*height;
+  right_buf_in[0]=(DTYPE*)shmalloc(2*sizeof(DTYPE)*RADIUS*height);
+  if(!right_buf_in)
+  {
+    printf("ERROR: Rank %d could not allocate input comm buffers for x-dimension\n", my_ID);
+    error=1;
+  }
+  bail_out(error);
+  right_buf_in[1] = right_buf_in[0] + RADIUS*height;
+  left_buf_in[0]  = right_buf_in[1] + RADIUS*height;
+  left_buf_in[1]  = left_buf_in[0]  + RADIUS*height;
 
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration */
     if (iter == 1) { 
       shmem_barrier_all();
-      local_stencil_time = wtime();
+      local_stencil_time[0] = wtime();
     }
+    /* sw determines which incoming buffer to select */
+    sw = iter%2;
 
     /* need to fetch ghost point data from neighbors */
 
@@ -371,61 +408,74 @@ int main(int argc, char ** argv) {
       for (kk=0,j=jend-RADIUS; j<=jend-1; j++) for (i=istart; i<=iend; i++) {
           top_buf_out[kk++]= IN(i,j);
       }
-      shmem_putmem(&bottom_buf_in[0], &top_buf_out[0], RADIUS*width*sizeof(DTYPE), top_nbr);
+      shmem_putmem(bottom_buf_in[sw], top_buf_out, RADIUS*width*sizeof(DTYPE), top_nbr);
+#ifdef SPLITFENCE
+      shmem_fence();
+      shmem_int_inc(&iterflag[sw], top_nbr);
+#endif
     }
     if (my_IDy > 0) {
       for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
           bottom_buf_out[kk++]= IN(i,j);
       }
-      shmem_putmem(&top_buf_in[0], &bottom_buf_out[0], RADIUS*width*sizeof(DTYPE), bottom_nbr);
+      shmem_putmem(top_buf_in[sw], bottom_buf_out, RADIUS*width*sizeof(DTYPE), bottom_nbr);
+#ifdef SPLITFENCE
+      shmem_fence();
+      shmem_int_inc(&iterflag[sw], bottom_nbr);
+#endif
     }
 
     if(my_IDx < Num_procsx-1) {
       for(kk=0,j=jstart;j<=jend;j++) for(i=iend-RADIUS;i<=iend-1;i++) {
 	right_buf_out[kk++]=IN(i,j);
       }
-      shmem_putmem(&left_buf_in[0], &right_buf_out[0], RADIUS*height*sizeof(DTYPE), right_nbr);
+      shmem_putmem(left_buf_in[sw], right_buf_out, RADIUS*height*sizeof(DTYPE), right_nbr);
+#ifdef SPLITFENCE
+      shmem_fence();
+      shmem_int_inc(&iterflag[sw], right_nbr);
+#endif
     }
 
     if(my_IDx>0) {
       for(kk=0,j=jstart;j<=jend;j++) for(i=istart;i<=istart+RADIUS-1;i++) {
 	left_buf_out[kk++]=IN(i,j);
       }
-      shmem_putmem(&right_buf_in[0], &left_buf_out[0], RADIUS*height*sizeof(DTYPE), left_nbr);
+      shmem_putmem(right_buf_in[sw], left_buf_out, RADIUS*height*sizeof(DTYPE), left_nbr);
+#ifdef SPLITFENCE
+      shmem_fence();
+      shmem_int_inc(&iterflag[sw], left_nbr);
+#endif
     }
 
+#ifndef SPLITFENCE
     shmem_fence();
+    if(my_IDy<Num_procsy-1) shmem_int_inc(&iterflag[sw], top_nbr);
+    if(my_IDy>0)            shmem_int_inc(&iterflag[sw], bottom_nbr);
+    if(my_IDx<Num_procsx-1) shmem_int_inc(&iterflag[sw], right_nbr);
+    if(my_IDx>0)            shmem_int_inc(&iterflag[sw], left_nbr);
+#endif
 
-    if(my_IDy<Num_procsy-1)
-      shmem_int_inc(&recv_count, top_nbr);
-    if(my_IDy>0)
-      shmem_int_inc(&recv_count, bottom_nbr);
-    if(my_IDx<Num_procsx-1)
-      shmem_int_inc(&recv_count, right_nbr);
-    if(my_IDx>0)
-      shmem_int_inc(&recv_count, left_nbr);
-
-    shmem_int_wait_until(&recv_count, SHMEM_CMP_EQ, count_case*(iter+1));
+    shmem_int_wait_until(&iterflag[sw], SHMEM_CMP_EQ, count_case*(iter/2+1));
 
     if (my_IDy < Num_procsy-1) {
       for (kk=0,j=jend; j<=jend+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
-          IN(i,j) = top_buf_in[kk++];
+          IN(i,j) = top_buf_in[sw][kk++];
       }      
     }
     if (my_IDy > 0) {
       for (kk=0,j=jstart-RADIUS; j<=jstart-1; j++) for (i=istart; i<=iend; i++) {
-          IN(i,j) = bottom_buf_in[kk++];
+          IN(i,j) = bottom_buf_in[sw][kk++];
       }      
     }
 
     if (my_IDx < Num_procsx-1) {
       for (kk=0,j=jstart; j<=jend; j++) for (i=iend; i<=iend+RADIUS-1; i++) {
-          IN(i,j) = right_buf_in[kk++];
+          IN(i,j) = right_buf_in[sw][kk++];
       }      
     }
     if (my_IDx > 0) {
       for (kk=0,j=jstart; j<=jend; j++) for (i=istart-RADIUS; i<=istart-1; i++) {
-          IN(i,j) = left_buf_in[kk++];
+          IN(i,j) = left_buf_in[sw][kk++];
       }      
     }
  
@@ -450,20 +500,20 @@ int main(int argc, char ** argv) {
  
   }
  
-  local_stencil_time = wtime() - local_stencil_time;
+  local_stencil_time[0] = wtime() - local_stencil_time[0];
 
   for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
     pSync[i]=_SHMEM_SYNC_VALUE;
 
   shmem_barrier_all();
 
-  shmem_double_max_to_all(&stencil_time, &local_stencil_time, 1, 0, 0, Num_procs, pWrk_time, pSync);
+  shmem_double_max_to_all(&stencil_time[0], &local_stencil_time[0], 1, 0, 0, Num_procs, pWrk_time, pSync);
   
   /* compute L1 norm in parallel                                                */
-  local_norm = (DTYPE) 0.0;
+  local_norm[0] = (DTYPE) 0.0;
   for (j=MAX(jstart,RADIUS); j<MIN(n-RADIUS,jend); j++) {
     for (i=MAX(istart,RADIUS); i<MIN(n-RADIUS,iend); i++) {
-      local_norm += (DTYPE)ABS(OUT(i,j));
+      local_norm[0] += (DTYPE)ABS(OUT(i,j));
     }
   }
 
@@ -473,9 +523,9 @@ int main(int argc, char ** argv) {
   shmem_barrier_all();
  
 #ifdef DOUBLE
-  shmem_double_sum_to_all(&norm, &local_norm, 1, 0, 0, Num_procs, pWrk_norm, pSync);
+  shmem_double_sum_to_all(&norm[0], &local_norm[0], 1, 0, 0, Num_procs, pWrk_norm, pSync);
 #else
-  shmem_float_sum_to_all(&norm, &local_norm, 1, 0, 0, Num_procs, pWrk_norm, pSync);
+  shmem_float_sum_to_all(&norm[0], &local_norm[0], 1, 0, 0, Num_procs, pWrk_norm, pSync);
 #endif
  
   /*******************************************************************************
@@ -484,23 +534,23 @@ int main(int argc, char ** argv) {
  
 /* verify correctness                                                            */
   if (my_ID == root) {
-    norm /= f_active_points;
+    norm[0] /= f_active_points;
     if (RADIUS > 0) {
       reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
     }
     else {
       reference_norm = (DTYPE) 0.0;
     }
-    if (ABS(norm-reference_norm) > EPSILON) {
+    if (ABS(norm[0]-reference_norm) > EPSILON) {
       printf("ERROR: L1 norm = "FSTR", Reference L1 norm = "FSTR"\n",
-             norm, reference_norm);
+             norm[0], reference_norm);
       error = 1;
     }
     else {
       printf("Solution validates\n");
 #ifdef VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
-             reference_norm, norm);
+             reference_norm, norm[0]);
 #endif
     }
   }
@@ -510,13 +560,20 @@ int main(int argc, char ** argv) {
     /* flops/stencil: 2 flops (fma) for each point in the stencil, 
        plus one flop for the update of the input of the array        */
     flops = (DTYPE) (2*stencil_size+1) * f_active_points;
-    avgtime = stencil_time/iterations;
+    avgtime = stencil_time[0]/iterations;
     printf("Rate (MFlops/s): "FSTR"  Avg time (s): %lf\n",
            1.0E-06 * flops/avgtime, avgtime);
   }
  
-  shfree(top_buf_out);
-  shfree(right_buf_out);
+
+  shfree(top_buf_in);
+  shfree(right_buf_in);
+  free(top_buf_out);
+  free(right_buf_out);
+
+  shfree(pSync);
+  shfree(pWrk_time);
+  shfree(pWrk_norm);
 
   //shmem_finalize();
 

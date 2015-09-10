@@ -1,4 +1,4 @@
-include ../../common/SHMEM.defs
+include ../../common/MPI.defs
 ##### User configurable options #####
 
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
@@ -6,25 +6,27 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 
 #uncomment any of the following flags (and change values) to change defaults
 
-#DEBUGFLAG    =  -DVERBOSE
+#RESTRICTFLAG = -DRESTRICT_KEYWORD
+#description: the "restrict" keyword can be used on IA platforms to disambiguate  
+#             data accessed through pointers
+
+#DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS     = 
+USERFLAGS    = 
 #description: parameter to specify optional flags
-
-#SPLITFENCEFLAG = -DSPLITFENCE
-#description: controls using a single "big" fence, or multiple "smaller" fences
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         = -lshmem
-LIBPATHS     = -L$(SHMEMTOP)/lib
+LIBS         = -lm
+LIBPATHS     = 
 INCLUDEPATHS = 
 
 ### End User configurable options ###
 
-TUNEFLAGS   = $(DEBUGFLAG) $(USERFLAGS) $(SPLITFENCEFLAG)
-PROGRAM     = stencil
+TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) \
+               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)
+PROGRAM     = transpose
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
 include ../../common/make.common

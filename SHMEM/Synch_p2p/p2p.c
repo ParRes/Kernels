@@ -75,10 +75,10 @@ void bail_out (int ierror);
 
 int main(int argc, char ** argv)
 {
-  int    my_ID;           /* MPI rank                                            */
+  int    my_ID;           /* SHMEM thread ID                                     */
   int    root;            /* ID of master rank                                   */
   int    m, n;            /* grid dimensions                                     */
-  double *pipeline_time,   /* timing parameters                                   */
+  double *pipeline_time,   /* timing parameters                                  */
          *local_pipeline_time, avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;      /* verification value at top right corner of grid      */
@@ -90,14 +90,14 @@ int main(int argc, char ** argv)
   int    Num_procs;       /* Number of ranks                                     */
   double *vector;         /* array holding grid values                           */
   long   total_length;    /* total required length to store grid values          */
-  int    *flag_left;       /* synchronization flags                               */
+  int    *flag_left;      /* synchronization flags                               */
 #ifdef SYNCHRONOUS
-  int    *flag_right;       /* synchronization flags                               */
+  int    *flag_right;     /* synchronization flags                               */
 #endif
   double *dst;            /* target address of communication                     */
   double *src;            /* source address of communication                     */
-  long   *pSync; /* work space for SHMEM collectives      */
-  double *pWrk; /* work space for SHMEM collectives      */
+  long   *pSync;          /* work space for SHMEM collectives                    */
+  double *pWrk;           /* work space for SHMEM collectives                    */
   
 /*********************************************************************************
 ** Initialize the SHMEM environment
@@ -138,8 +138,13 @@ int main(int argc, char ** argv)
   }
 
 // initialize sync variables for error checks
-  pSync = shmalloc ( sizeof(long) * SHMEM_BCAST_SYNC_SIZE );
-  pWrk = shmalloc ( sizeof(long) * SHMEM_BCAST_SYNC_SIZE );
+  pSync = (long *)   shmalloc ( sizeof(long) * SHMEM_BCAST_SYNC_SIZE );
+  pWrk  = (double *) shmalloc ( sizeof(double) * SHMEM_BCAST_SYNC_SIZE );
+  if (!pSync || !pWrk) {
+    printf("Rank %d could not allocate work space for collectives\n", my_ID);
+    error = 1;
+    goto ENDOFTESTS;
+  }
   for (i = 0; i < SHMEM_BCAST_SYNC_SIZE; i += 1) {
     pSync[i] = _SHMEM_SYNC_VALUE;
   }
@@ -259,7 +264,7 @@ int main(int argc, char ** argv)
       }
 #ifdef SYNCHRONOUS
       flag_left[0]= true;
-      shmem_putmem(&flag_right[0], &true, sizeof(int), root);
+      shmem_int_p(&flag_right[0], true, root);
       shmem_fence();
 #endif      
     }
@@ -272,8 +277,7 @@ int main(int argc, char ** argv)
 #ifdef SYNCHRONOUS
         flag_left[j]= false;
         // tell the left neighbor I got the data
-        shmem_putmem(&flag_right[j], &false, sizeof(int), my_ID-1);
-	// shmem_fence();        
+        shmem_int_p(&flag_right[j], false, my_ID-1);
 #endif      
         ARRAY(start[my_ID]-1,j) = dst[j];
       }
@@ -288,11 +292,10 @@ int main(int argc, char ** argv)
         flag_right[j] = true;
 #endif 
         src[j] = ARRAY (end[my_ID],j);
-        shmem_putmem(&dst[j], &src[j], sizeof(double), my_ID+1);
+        shmem_double_p(&dst[j], src[j], my_ID+1);
         shmem_fence();
      /* indicate to right neighbor that data is available  */
-        shmem_putmem(&flag_left[j], &true, sizeof(int), my_ID+1);
-	// shmem_fence();
+        shmem_int_p(&flag_left[j], true, my_ID+1);
       }  
     }
 
@@ -301,17 +304,16 @@ int main(int argc, char ** argv)
       if (my_ID==root) {
         corner_val = -ARRAY(end[my_ID],n-1);
         src [0] = corner_val;
-        shmem_putmem(&dst[0], &src[0], sizeof(double), 0);
+        shmem_double_p(&dst[0], src[0], 0);
         shmem_fence();
         /* indicate to PE 0 that data is available  */
 #ifdef SYNCHRONOUS
         shmem_int_wait_until(&flag_right[0], SHMEM_CMP_EQ, true);
         flag_right[j] = false;
-        shmem_putmem(&flag_left[0], &false, sizeof(int), 0);
+        shmem_int_p(&flag_left[0], false, 0);
 #else
-        shmem_putmem(&flag_left[0], &true, sizeof(int), 0);
+        shmem_int_p(&flag_left[0], true, 0);
 #endif
-	// shmem_fence();
       }
     }
     else ARRAY(0,0)= -ARRAY(end[my_ID],n-1);
