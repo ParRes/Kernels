@@ -104,6 +104,7 @@ allmpiopenmp:
 allmpirma:
 	cd MPIRMA/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd MPIRMA/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPIRMA/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allshmem:
 	cd SHMEM/Synch_p2p;         $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -180,6 +181,7 @@ clean:
 	cd FG_MPI/Branch;           $(MAKE) clean
 	cd MPIRMA/Stencil;          $(MAKE) clean
 	cd MPIRMA/Synch_p2p;        $(MAKE) clean
+	cd MPIRMA/Transpose;        $(MAKE) clean
 	cd UPC/Stencil;             $(MAKE) clean
 	cd UPC/Transpose;           $(MAKE) clean
 	cd MPISHM/Stencil;          $(MAKE) clean
