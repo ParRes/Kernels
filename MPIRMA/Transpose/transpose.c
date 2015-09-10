@@ -255,7 +255,6 @@ int main(int argc, char ** argv)
   MPI_Info_create (&rma_winfo);
   MPI_Info_set (rma_winfo, "no locks", "true");
   if (Num_procs>1) {
-  // NEED TO TEST NEXT TWO MALLOCS FOR SUCCESS
     Work_out_p = (double *) malloc(sizeof(double)*Block_size);
     if (Work_out_p == NULL){
       printf(" Error allocating space for work_out on node %d\n",my_ID);
@@ -279,6 +278,8 @@ int main(int argc, char ** argv)
       A(i,j) = (double) (order*(j+colstart) + i);
       B(i,j) = -1.0;
   }
+
+  MPI_Barrier(MPI_COMM_WORLD);
 
   for (iter = 0; iter<=iterations; iter++){
 
@@ -306,7 +307,6 @@ int main(int argc, char ** argv)
 
     MPI_Win_fence (MPI_MODE_NOPRECEDE, rma_win);
     for (phase=1; phase<Num_procs; phase++){
-      recv_from = (my_ID + phase            )%Num_procs;
       send_to   = (my_ID - phase + Num_procs)%Num_procs;
 
       istart = send_to*Block_order; 
@@ -325,15 +325,20 @@ int main(int argc, char ** argv)
 	      }
       }
 
-      MPI_Put (Work_out_p, Block_size, MPI_DOUBLE, send_to, Block_size*(phase-1), Block_size, MPI_DOUBLE, rma_win); 
+      MPI_Put (Work_out_p, Block_size, MPI_DOUBLE, send_to, Block_size*(phase-1), 
+               Block_size, MPI_DOUBLE, rma_win); 
+    }  /* end of phase loop for puts  */
+    MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
+
+    for (phase=1; phase<Num_procs; phase++) {
+      recv_from = (my_ID + phase            )%Num_procs;
       istart = recv_from*Block_order; 
       /* scatter received block to transposed matrix; no need to tile */
       for (j=0; j<Block_order; j++)
         for (i=0; i<Block_order; i++) 
           B(i,j) = Work_in(phase-1,i,j);
+    } /* end of phase loop for scatters */
 
-    }  /* end of phase loop  */
-    MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
   } /* end of iterations */
 
   local_trans_time = wtime() - local_trans_time;
