@@ -252,8 +252,8 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
   
-  MPI_Info_create (&rma_winfo);
-  MPI_Info_set (rma_winfo, "no locks", "true");
+  MPI_Info_create(&rma_winfo);
+  MPI_Info_set(rma_winfo, "no locks", "true");
   if (Num_procs>1) {
     Work_out_p = (double *) malloc(sizeof(double)*Block_size);
     if (Work_out_p == NULL){
@@ -262,8 +262,8 @@ int main(int argc, char ** argv)
     }
     bail_out(error);
 
-    MPI_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
-                      rma_winfo, MPI_COMM_WORLD, (void *) &Work_in_p, &rma_win);
+    MPI_Win_allocate(Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
+                    rma_winfo, MPI_COMM_WORLD, &Work_in_p, &rma_win);
     if (Work_in_p == NULL){
       printf(" Error allocating space for work on node %d\n",my_ID);
       error = 1;
@@ -305,7 +305,7 @@ int main(int argc, char ** argv)
               B(jt,it) = A(it,jt); 
     }
 
-    MPI_Win_fence (MPI_MODE_NOPRECEDE, rma_win);
+    MPI_Win_fence(MPI_MODE_NOPRECEDE, rma_win);
     for (phase=1; phase<Num_procs; phase++){
       send_to   = (my_ID - phase + Num_procs)%Num_procs;
 
@@ -328,7 +328,7 @@ int main(int argc, char ** argv)
       MPI_Put (Work_out_p, Block_size, MPI_DOUBLE, send_to, Block_size*(phase-1), 
                Block_size, MPI_DOUBLE, rma_win); 
     }  /* end of phase loop for puts  */
-    MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
+    MPI_Win_fence(MPI_MODE_NOSUCCEED, rma_win);
 
     for (phase=1; phase<Num_procs; phase++) {
       recv_from = (my_ID + phase            )%Num_procs;
