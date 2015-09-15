@@ -1,10 +1,10 @@
 /*
 Copyright (c) 2013, Intel Corporation
-
+ 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions 
 are met:
-
+ 
 * Redistributions of source code must retain the above copyright 
       notice, this list of conditions and the following disclaimer.
 * Redistributions in binary form must reproduce the above 
@@ -15,7 +15,7 @@ are met:
       contributors may be used to endorse or promote products 
       derived from this software without specific prior written 
       permission.
-
+ 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
@@ -29,34 +29,34 @@ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
 POSSIBILITY OF SUCH DAMAGE.
 */
-
+ 
 /*******************************************************************
-
+ 
 NAME:    transpose
-
+ 
 PURPOSE: This program tests the efficiency with which a square matrix
          can be transposed and stored in another matrix. The matrices
          are distributed identically.
   
 USAGE:   Program inputs are the matrix order, the number of times to 
          repeat the operation, and the communication mode
-
+ 
          transpose <# iterations> <matrix order> [tile size]
-
+ 
          An optional parameter specifies the tile size used to divide the 
          individual matrix blocks for improved cache and TLB performance. 
   
          The output consists of diagnostics to make sure the 
          transpose worked and timing statistics.
-
+ 
 FUNCTIONS CALLED:
-
+ 
          Other than MPI or standard C functions, the following 
          functions are used in this program:
-
+ 
           wtime()           Portable wall-timer interface.
           bail_out()        Determine global error and exit if nonzero.
-
+ 
 HISTORY: Written by Tim Mattson, April 1999.  
          Updated by Rob Van der Wijngaart, December 2005.
          Updated by Rob Van der Wijngaart, October 2006.
@@ -72,11 +72,11 @@ HISTORY: Written by Tim Mattson, April 1999.
          
   
 *******************************************************************/
-
+ 
 /******************************************************************
                      Layout nomenclature                         
                      -------------------
-
+ 
 o Each rank owns one block of columns (Colblock) of the overall
   matrix to be transposed, as well as of the transposed matrix.
 o Colblock is stored contiguously in the memory of the rank. 
@@ -92,7 +92,7 @@ o Colblock is logically composed of #ranks Blocks, but a Block is
 o When tiling is applied to reduce TLB misses, each block gets 
   accessed by tiles. 
 o The original and transposed matrices are called A and B
-
+ 
  -----------------------------------------------------------------
 |           |           |           |                             |
 | Colblock  |           |           |                             |
@@ -118,15 +118,15 @@ o The original and transposed matrices are called A and B
 |           |           |           |                             |
 |           |           |           |                             |
  -----------------------------------------------------------------*/
-
+ 
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
-
+ 
 #define A(i,j)          A_p[(i+istart)+order*(j)]
 #define B(i,j)          B_p[(i+istart)+order*(j)]
 #define Work_in(p,i,j)  Work_in_p[(p)*Block_size+i+Block_order*(j)]
-#define Work_out(i,j)   Work_out_p[i+Block_order*(j)]
-
+#define Work_out(p,i,j) Work_out_p[(p)*Block_size+i+Block_order*(j)]
+ 
 int main(int argc, char ** argv)
 {
   int Block_order;         /* number of columns owned by rank       */
@@ -160,14 +160,14 @@ int main(int argc, char ** argv)
          avgtime;
   MPI_Win  rma_win;
   MPI_Info rma_winfo;
-
+ 
 /*********************************************************************
 ** Initialize the MPI environment
 *********************************************************************/
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
-
+ 
 /*********************************************************************
 ** process, test and broadcast input parameters
 *********************************************************************/
@@ -178,13 +178,13 @@ int main(int argc, char ** argv)
                                                                *argv);
       error = 1; goto ENDOFTESTS;
     }
-
+ 
     iterations  = atoi(*++argv);
     if(iterations < 1){
       printf("ERROR: iterations must be >= 1 : %d \n",iterations);
       error = 1; goto ENDOFTESTS;
     }
-
+ 
     order = atoi(*++argv);
     if (order < Num_procs) {
       printf("ERROR: matrix order %d should at least # procs %d\n", 
@@ -196,13 +196,13 @@ int main(int argc, char ** argv)
              order, Num_procs);
       error = 1; goto ENDOFTESTS;
     }
-
+ 
     if (argc == 4) Tile_order = atoi(*++argv);
-
+ 
     ENDOFTESTS:;
   }
   bail_out(error);
-
+ 
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI matrix transpose: B = A^T\n");
@@ -218,22 +218,22 @@ int main(int argc, char ** argv)
   MPI_Bcast (&order,      1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast (&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast (&Tile_order, 1, MPI_INT, root, MPI_COMM_WORLD);
-
+ 
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);
   bytes = 2 * sizeof(double) * order * order;
-
+ 
 /*********************************************************************
 ** The matrix is broken up into column blocks that are mapped one to a 
 ** rank.  Each column block is made up of Num_procs smaller square 
 ** blocks of order block_order.
 *********************************************************************/
-
+ 
   Block_order    = order/Num_procs;
   colstart       = Block_order * my_ID;
   Colblock_size  = order * Block_order;
   Block_size     = Block_order * Block_order;
-
+ 
 /*********************************************************************
 ** Create the column block of the test matrix, the row block of the 
 ** transposed matrix, and workspace (workspace only if #procs>1)
@@ -244,7 +244,7 @@ int main(int argc, char ** argv)
     error = 1;
   }
   bail_out(error);
-
+ 
   B_p = (double *)malloc(Colblock_size*sizeof(double));
   if (B_p == NULL){
     printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
@@ -252,18 +252,19 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
   
-  MPI_Info_create(&rma_winfo);
-  MPI_Info_set(rma_winfo, "no locks", "true");
+  MPI_Info_create (&rma_winfo);
+  MPI_Info_set (rma_winfo, "no locks", "true");
   if (Num_procs>1) {
-    Work_out_p = (double *) malloc(sizeof(double)*Block_size);
+    MPI_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
+                      rma_winfo, MPI_COMM_WORLD, &Work_out_p, &rma_win);
     if (Work_out_p == NULL){
       printf(" Error allocating space for work_out on node %d\n",my_ID);
       error = 1;
     }
     bail_out(error);
-
-    MPI_Win_allocate(Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
-                    rma_winfo, MPI_COMM_WORLD, &Work_in_p, &rma_win);
+ 
+    MPI_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
+                      rma_winfo, MPI_COMM_WORLD, &Work_in_p, &rma_win);
     if (Work_in_p == NULL){
       printf(" Error allocating space for work on node %d\n",my_ID);
       error = 1;
@@ -278,24 +279,24 @@ int main(int argc, char ** argv)
       A(i,j) = (double) (order*(j+colstart) + i);
       B(i,j) = -1.0;
   }
-
+ 
   MPI_Barrier(MPI_COMM_WORLD);
-
+ 
   for (iter = 0; iter<=iterations; iter++){
-
+ 
     /* start timer after a warmup iteration                                        */
     if (iter == 1) { 
       MPI_Barrier(MPI_COMM_WORLD);
       local_trans_time = wtime();
     }
-
+ 
     /* do the local transpose                                                     */
     istart = colstart; 
     if (!tiling) {
       for (i=0; i<Block_order; i++) 
         for (j=0; j<Block_order; j++) {
           B(j,i) = A(i,j);
-	}
+        }
     }
     else {
       for (i=0; i<Block_order; i+=Tile_order) 
@@ -304,32 +305,33 @@ int main(int argc, char ** argv)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
               B(jt,it) = A(it,jt); 
     }
-
-    MPI_Win_fence(MPI_MODE_NOPRECEDE, rma_win);
+ 
+    MPI_Win_fence (MPI_MODE_NOPRECEDE, rma_win);
     for (phase=1; phase<Num_procs; phase++){
       send_to   = (my_ID - phase + Num_procs)%Num_procs;
-
+ 
       istart = send_to*Block_order; 
       if (!tiling) {
         for (i=0; i<Block_order; i++) 
           for (j=0; j<Block_order; j++){
-	    Work_out(j,i) = A(i,j);
-	  }
+            Work_out(phase-1,j,i) = A(i,j);
+          }
       }
       else {
         for (i=0; i<Block_order; i+=Tile_order) 
           for (j=0; j<Block_order; j+=Tile_order) 
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-                Work_out(jt,it) = A(it,jt); 
-	      }
+                Work_out(phase-1,jt,it) = A(it,jt); 
+              }
       }
-
-      MPI_Put (Work_out_p, Block_size, MPI_DOUBLE, send_to, Block_size*(phase-1), 
+ 
+      MPI_Put (Work_out_p+Block_size*(phase-1), Block_size, MPI_DOUBLE, send_to, Block_size*(phase-1), 
                Block_size, MPI_DOUBLE, rma_win); 
     }  /* end of phase loop for puts  */
-    MPI_Win_fence(MPI_MODE_NOSUCCEED, rma_win);
-
+    MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
+ 
+ 
     for (phase=1; phase<Num_procs; phase++) {
       recv_from = (my_ID + phase            )%Num_procs;
       istart = recv_from*Block_order; 
@@ -338,21 +340,21 @@ int main(int argc, char ** argv)
         for (i=0; i<Block_order; i++) 
           B(i,j) = Work_in(phase-1,i,j);
     } /* end of phase loop for scatters */
-
+ 
   } /* end of iterations */
-
+ 
   local_trans_time = wtime() - local_trans_time;
   MPI_Reduce(&local_trans_time, &trans_time, 1, MPI_DOUBLE, MPI_MAX, root,
              MPI_COMM_WORLD);
-
+ 
   abserr = 0.0;
   istart = 0;
   for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
       abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
   }
-
+ 
   MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
-
+ 
   if (my_ID == root) {
     if (abserr_tot < epsilon) {
       printf("Solution validates\n");
@@ -363,15 +365,14 @@ int main(int argc, char ** argv)
 #endif
     }
     else {
-      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr, epsilon);
+      printf("ERROR: Aggregate absolute error %lf exceeds threshold %e\n", abserr_tot, epsilon);
       error = 1;
     }
   }
-
+ 
   bail_out(error);
-
+ 
   MPI_Finalize();
   exit(EXIT_SUCCESS);
-
+ 
 }  /* end of main */
-
