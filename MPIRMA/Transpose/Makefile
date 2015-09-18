@@ -1,4 +1,5 @@
 include ../../common/MPI.defs
+
 ##### User configurable options #####
 
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
@@ -6,26 +7,27 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 
 #uncomment any of the following flags (and change values) to change defaults
 
-#RESTRICTFLAG = -DRESTRICT_KEYWORD
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers
+#BLOCKFLAG    = -DSYNCHRONOUS
+#description: turn on synchronous (blocking) communications
 
-#DEBUGFLAG   = -DVERBOSE
+#GRAINFLAG = -DMANYPUT
+#description: use many small puts directly into target matrix
+
+DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS    = 
+USERFLAGS     = 
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
-EXTOBJS      = 
-LIBS         = -lm
-LIBPATHS     = 
-INCLUDEPATHS = 
+EXTOBJS      =
+LIBS         =
+LIBPATHS     =
+INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) \
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)
+TUNEFLAGS   = $(BLOCKFLAG) $(DEBUGFLAG) $(USERFLAGS) $(GRAINFLAG)
 PROGRAM     = transpose
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

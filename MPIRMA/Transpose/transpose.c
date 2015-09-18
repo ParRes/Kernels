@@ -245,24 +245,28 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
  
+  MPI_Info_create (&rma_winfo);
+  MPI_Info_set (rma_winfo, "no locks", "true");
+#ifdef MANYPUT
+  MPI_Win_allocate (Colblock_size*sizeof(double), sizeof(double), rma_winfo, MPI_COMM_WORLD, (void *) &B_p, &rma_win);
+#else
   B_p = (double *)malloc(Colblock_size*sizeof(double));
+#endif
   if (B_p == NULL){
     printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
   
-  MPI_Info_create (&rma_winfo);
-  MPI_Info_set (rma_winfo, "no locks", "true");
   if (Num_procs>1) {
-    MPI_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
-                      rma_winfo, MPI_COMM_WORLD, &Work_out_p, &rma_win);
+    Work_out_p = (double *) malloc (Block_size*(Num_procs-1)*sizeof(double));
     if (Work_out_p == NULL){
       printf(" Error allocating space for work_out on node %d\n",my_ID);
       error = 1;
     }
     bail_out(error);
  
+#ifndef MANYPUT
     MPI_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
                       rma_winfo, MPI_COMM_WORLD, &Work_in_p, &rma_win);
     if (Work_in_p == NULL){
@@ -270,6 +274,7 @@ int main(int argc, char ** argv)
       error = 1;
     }
     bail_out(error);
+#endif
   }
   
   /* Fill the original column matrix                                                */
@@ -325,13 +330,19 @@ int main(int argc, char ** argv)
                 Work_out(phase-1,jt,it) = A(it,jt); 
               }
       }
+#ifdef MANYPUT
+      for (j = 0; j < Block_order; j++) {
+        MPI_Put (&Work_out(phase-1, 0, j), Block_order, MPI_DOUBLE, send_to, (my_ID * Block_order)  + j * order, Block_order, MPI_DOUBLE, rma_win);
+      }
+#else
  
       MPI_Put (Work_out_p+Block_size*(phase-1), Block_size, MPI_DOUBLE, send_to, Block_size*(phase-1), 
                Block_size, MPI_DOUBLE, rma_win); 
+#endif
     }  /* end of phase loop for puts  */
     MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
  
- 
+#ifndef MANYPUT 
     for (phase=1; phase<Num_procs; phase++) {
       recv_from = (my_ID + phase            )%Num_procs;
       istart = recv_from*Block_order; 
@@ -340,6 +351,7 @@ int main(int argc, char ** argv)
         for (i=0; i<Block_order; i++) 
           B(i,j) = Work_in(phase-1,i,j);
     } /* end of phase loop for scatters */
+#endif
  
   } /* end of iterations */
  
