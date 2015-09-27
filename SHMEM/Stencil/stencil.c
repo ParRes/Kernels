@@ -565,7 +565,9 @@ int main(int argc, char ** argv) {
            1.0E-06 * flops/avgtime, avgtime);
   }
  
-
+  //skip freeing for now, to reduce teardown time
+  exit(EXIT_SUCCESS);
+  
   shfree(top_buf_in);
   shfree(right_buf_in);
   free(top_buf_out);

@@ -153,6 +153,7 @@ int main(int argc, char ** argv)
   int nthread_input,       /* thread parameters                     */
       nthread; 
   int error;               /* error flag                            */
+  int concurrency;         /* number of threads that can be active  */
   double *A_p;             /* original matrix column block          */
   double *B_p;             /* transposed matrix column block        */
   double *Work_in_p;       /* workspace for the transpose function  */
@@ -221,8 +222,26 @@ int main(int argc, char ** argv)
 
   omp_set_num_threads(nthread_input);
 
+/*********************************************************************
+** The matrix is broken up into column blocks that are mapped one to a 
+** rank.  Each column block is made up of Num_procs smaller square 
+** blocks of order block_order.
+*********************************************************************/
+
+  Block_order    = order/Num_procs;
+  colstart       = Block_order * my_ID;
+  Colblock_size  = order * Block_order;
+  Block_size     = Block_order * Block_order;
+
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);
+  /* test whether tiling will leave threads idle. If so, turn it off */
+  concurrency = ceil((double)Block_order/(double)Tile_order);
+#ifdef COLLAPSE  
+  concurrency *= concurrency;
+#endif
+  if (tiling && (concurrency < nthread_input)) tiling = 0;
+  printf("Concurrency = %d\n", concurrency);
 
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
@@ -245,17 +264,6 @@ int main(int argc, char ** argv)
   }
 
   bytes = 2.0 * sizeof(double) * order * order;
-
-/*********************************************************************
-** The matrix is broken up into column blocks that are mapped one to a 
-** rank.  Each column block is made up of Num_procs smaller square 
-** blocks of order block_order.
-*********************************************************************/
-
-  Block_order    = order/Num_procs;
-  colstart       = Block_order * my_ID;
-  Colblock_size  = order * Block_order;
-  Block_size     = Block_order * Block_order;
 
 /*********************************************************************
 ** Create the column block of the test matrix, the row block of the 
