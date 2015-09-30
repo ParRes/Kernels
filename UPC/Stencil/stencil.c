@@ -270,10 +270,6 @@ int main(int argc, char ** argv) {
   int blockx = (n + x_divs - 1)/ x_divs;
   int blocky = (n + y_divs - 1)/ y_divs;
 
-  if(blockx < RADIUS || blocky < RADIUS){
-    die("blockx < RADIUS || blocky < RADIUS");
-  }
-
   int mygridposx = MYTHREAD % x_divs;
   int mygridposy = MYTHREAD / x_divs;
 
@@ -292,6 +288,10 @@ int main(int argc, char ** argv) {
   }
   else if(mygridposx == x_divs - 1){
     blockx = n - blockx * (x_divs - 1);
+  }
+
+  if(blockx < RADIUS || blocky < RADIUS){
+    die("blockx < RADIUS || blocky < RADIUS");
   }
 
   int sizex = blockx + 2*RADIUS;
