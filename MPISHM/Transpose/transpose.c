@@ -254,6 +254,7 @@ int main(int argc, char ** argv)
   MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, shm_comm, 
                           (void *) &A_p, &shm_win_A);
   MPI_Win_shared_query(shm_win_A, MPI_PROC_NULL, &size, &disp_unit, (void *)&A_p);
+
   if (A_p == NULL){
     printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
