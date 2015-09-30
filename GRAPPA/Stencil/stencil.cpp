@@ -198,12 +198,12 @@ int main(int argc, char * argv[]) {
 
     symmetric double start;
     symmetric double total;
-    symmetric int istart;
-    symmetric int iend;
-    symmetric int jstart;
-    symmetric int jend;
-    symmetric int width;
-    symmetric int height;
+    symmetric long istart;
+    symmetric long iend;
+    symmetric long jstart;
+    symmetric long jend;
+    symmetric long width;
+    symmetric long height;
  
     symmetric FullEmpty<DTYPE> * left_halo;
     symmetric FullEmpty<DTYPE> * right_halo;
@@ -259,12 +259,8 @@ int main(int argc, char * argv[]) {
         exit(1);
       }
       long total_length_in = (width+2*RADIUS)*(height+2*RADIUS);
-      if (total_length_in/(height+2*RADIUS) != (width+2*RADIUS)) {
-        std::cout<<"ERROR: Space for "<<width+2*RADIUS<<" x "<<height+2*RADIUS<<
-          " input array cannot be represented"<<std::endl;
-        exit(1);
-      }
       long total_length_out = width*height;
+
       in  = Grappa::locale_new_array<DTYPE>(total_length_in);
       out = Grappa::locale_new_array<DTYPE>(total_length_out);
       if (!in || !out) {
@@ -458,6 +454,7 @@ int main(int argc, char * argv[]) {
     }
   });
 
-  Grappa::finalize();
+  // skipping finalize, which creates spurious errors
+  //  Grappa::finalize();
   return 0;
 }
