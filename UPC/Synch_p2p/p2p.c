@@ -195,11 +195,16 @@ int main(int argc, char ** argv) {
   /*********************************************************************
   ** Allocate memory for input and output matrices
   *********************************************************************/
-  int sizex = (m + THREADS - 1) / THREADS;
-  int myoffsetx = MYTHREAD * sizex;
+  int segment_size = m / THREADS;
+  int leftover = m % THREADS;
+  int myoffsetx, sizex;
 
-  if(MYTHREAD == THREADS - 1){
-    sizex = m - sizex*(THREADS - 1);
+  if(MYTHREAD < leftover){
+    myoffsetx = (segment_size + 1) * MYTHREAD;
+    sizex = segment_size + 1;
+  }else{
+    myoffsetx = (segment_size + 1) * leftover + segment_size * (MYTHREAD - leftover);
+    sizex = segment_size;
   }
 
   int sizey = n;
@@ -231,12 +236,13 @@ int main(int argc, char ** argv) {
       ARRAY(i, j) = 0.0;
 
   /* set boundary values (bottom and left side of grid                           */
-  if (MYTHREAD==0) 
+  if(MYTHREAD == 0)
   for (j=0; j<n; j++)
     ARRAY(0, j) = (double) j;
 
   for (i=myoffsetx; i<myoffsetx + sizex; i++)
     ARRAY(i, 0) = (double) i;
+
   upc_barrier;
 
   for (iter = 0; iter<=iterations; iter++){
@@ -268,7 +274,7 @@ int main(int argc, char ** argv) {
       current_max_line[MYTHREAD] = 0;
 
 
-    if( MYTHREAD == THREADS - 1){
+    if(MYTHREAD == THREADS - 1){
       in_arrays[0][0][0] = -ARRAY(m-1, n-1);
     }
     upc_barrier;
