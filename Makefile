@@ -117,6 +117,7 @@ allmpishm:
 	cd MPISHM/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allupc:
+	cd UPC/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd UPC/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd UPC/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
@@ -184,6 +185,7 @@ clean:
 	cd MPIRMA/Transpose;        $(MAKE) clean
 	cd UPC/Stencil;             $(MAKE) clean
 	cd UPC/Transpose;           $(MAKE) clean
+	cd UPC/Synch_p2p;           $(MAKE) clean
 	cd MPISHM/Stencil;          $(MAKE) clean
 	cd MPISHM/Synch_p2p;        $(MAKE) clean
 	cd MPISHM/Transpose;        $(MAKE) clean

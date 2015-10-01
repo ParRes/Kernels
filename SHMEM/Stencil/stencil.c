@@ -392,6 +392,8 @@ int main(int argc, char ** argv) {
   left_buf_in[0]  = right_buf_in[1] + RADIUS*height;
   left_buf_in[1]  = left_buf_in[0]  + RADIUS*height;
 
+  shmem_barrier_all();
+
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration */
