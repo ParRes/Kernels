@@ -241,7 +241,6 @@ int main(int argc, char ** argv)
   concurrency *= concurrency;
 #endif
   if (tiling && (concurrency < nthread_input)) tiling = 0;
-  printf("Concurrency = %d\n", concurrency);
 
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
