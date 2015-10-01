@@ -203,6 +203,8 @@ int main(int argc, char ** argv) {
          avgtime, max_time;
   int    stencil_size;    /* number of points in stencil */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil */
+  int    istart;    /* bounds of grid tile assigned to calling rank        */
+  int    jstart;    /* bounds of grid tile assigned to calling rank        */
   int x_divs, y_divs;
 
   /*******************************************************************************
@@ -267,32 +269,45 @@ int main(int argc, char ** argv) {
     die("x_divs * y_divs != THREADS");
   }
 
-  int blockx = (n + x_divs - 1)/ x_divs;
-  int blocky = (n + y_divs - 1)/ y_divs;
+  /* compute amount of space required for input and solution arrays             */
 
   int mygridposx = MYTHREAD % x_divs;
   int mygridposy = MYTHREAD / x_divs;
 
-  int myoffsetx = mygridposx * blockx - RADIUS;
-  int myoffsety = mygridposy * blocky - RADIUS;
-
-  thread_offsetx[MYTHREAD] = myoffsetx;
-  thread_offsety[MYTHREAD] = myoffsety;
-
-  if(mygridposy == y_divs - 1 && mygridposx == x_divs - 1){
-    blockx = n - blockx * (x_divs - 1);
-    blocky = n - blocky * (y_divs - 1);
+  int blockx = n / x_divs;
+  int leftover = n % x_divs;
+  if (mygridposx < leftover) {
+    istart = (blockx + 1) * mygridposx;
+    blockx += 1;
   }
-  else if(mygridposy == y_divs - 1){
-    blocky = n - blocky * (y_divs - 1);
-  }
-  else if(mygridposx == x_divs - 1){
-    blockx = n - blockx * (x_divs - 1);
+  else {
+    istart = (blockx+1) * leftover + blockx * (mygridposx-leftover);
   }
 
-  if(blockx < RADIUS || blocky < RADIUS){
+  if (blockx == 0)
+    die("No work to do on x-direction!");
+
+  int blocky = n / y_divs;
+  leftover = n % y_divs;
+  if (mygridposy < leftover) {
+    jstart = (blocky+1) * mygridposy;
+    blocky += 1;
+  }
+  else {
+    jstart = (blocky+1) * leftover + blocky * (mygridposy-leftover);
+  }
+
+  if (blocky == 0)
+    die("No work to do on y-direction!");
+
+  if(blockx < RADIUS || blocky < RADIUS) {
     die("blockx < RADIUS || blocky < RADIUS");
   }
+
+  int myoffsetx = istart - RADIUS;
+  int myoffsety = jstart - RADIUS;
+  thread_offsetx[MYTHREAD] = myoffsetx;
+  thread_offsety[MYTHREAD] = myoffsety;
 
   int sizex = blockx + 2*RADIUS;
   int sizey = blocky + 2*RADIUS;
