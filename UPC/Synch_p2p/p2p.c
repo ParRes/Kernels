@@ -186,6 +186,7 @@ int main(int argc, char ** argv) {
 
   if(MYTHREAD == 0){
     printf("UPC pipeline execution on 2D grid\n");
+    printf("Number of threads         = %d\n", THREADS);
     printf("Grid sizes                = %d, %d\n", m, n);
     printf("Number of iterations      = %d\n", iterations);
   }
