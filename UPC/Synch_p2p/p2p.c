@@ -185,6 +185,7 @@ int main(int argc, char ** argv) {
   }
 
   if(MYTHREAD == 0){
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("UPC pipeline execution on 2D grid\n");
     printf("Number of threads         = %d\n", THREADS);
     printf("Grid sizes                = %d, %d\n", m, n);
@@ -230,12 +231,12 @@ int main(int argc, char ** argv) {
       ARRAY(i, j) = 0.0;
 
   /* set boundary values (bottom and left side of grid                           */
+  if (MYTHREAD==0) 
   for (j=0; j<n; j++)
     ARRAY(0, j) = (double) j;
 
   for (i=myoffsetx; i<myoffsetx + sizex; i++)
     ARRAY(i, 0) = (double) i;
-
   upc_barrier;
 
   for (iter = 0; iter<=iterations; iter++){
