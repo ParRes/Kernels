@@ -549,6 +549,9 @@ int main(int argc, char ** argv) {
     OUT(i,j) = (DTYPE)0.0;
   }
 
+  /* LOAD/STORE FENCE */
+  MPI_Win_sync(shm_win_in);
+  MPI_Win_sync(shm_win_out);
   MPI_Barrier(shm_comm); 
 
   for (iter = 0; iter<=iterations; iter++){
@@ -600,6 +603,9 @@ int main(int argc, char ** argv) {
       }
     }
 
+    /* LOAD/STORE FENCE */
+    MPI_Win_sync(shm_win_in);
+
     /* need to fetch ghost point data from neighbors in x-direction                 */
     if (right_nbr != -1) {
       MPI_Irecv(right_buf_in, RADIUS*height_rank, MPI_DTYPE, right_nbr, 1010,
@@ -641,6 +647,9 @@ int main(int argc, char ** argv) {
       }
     }
 
+    /* LOAD/STORE FENCE */
+    MPI_Win_sync(shm_win_in);
+
     /* Apply the stencil operator */
     for (j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
       for (i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
@@ -656,6 +665,9 @@ int main(int argc, char ** argv) {
       }
     }
 
+    /* LOAD/STORE FENCE */
+    MPI_Win_sync(shm_win_out);
+
 #ifdef LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid writing IN while other ranks are reading it
 #else
@@ -669,6 +681,9 @@ int main(int argc, char ** argv) {
     /* add constant to solution to force refresh of neighbor data, if any */
     for (j=jstart_rank; j<=jend_rank; j++) 
     for (i=istart_rank; i<=iend_rank; i++) IN(i,j)+= 1.0;
+
+    /* LOAD/STORE FENCE */
+    MPI_Win_sync(shm_win_in);
 
 #ifdef LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid reading IN while other ranks are writing it
