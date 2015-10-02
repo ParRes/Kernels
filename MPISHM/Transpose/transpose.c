@@ -349,13 +349,6 @@ int main(int argc, char ** argv)
       recv_from = ((group_ID + phase             )%Num_groups);
       send_to   = ((group_ID - phase + Num_groups)%Num_groups);
 
-#ifndef SYNCHRONOUS
-      if (shm_ID==0) {
-         MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
-                   recv_from*group_size, phase, MPI_COMM_WORLD, &recv_req);  
-      }
-#endif
-
       istart = send_to*Block_order; 
       if (!tiling) {
         for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i++) 
@@ -376,6 +369,10 @@ int main(int argc, char ** argv)
       MPI_Barrier(shm_comm);
       if (shm_ID==0) {
 #ifndef SYNCHRONOUS  
+        /* if we place the Irecv outside this block, it would not be
+           protected by a local barrier, which creates a race                    */
+        MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
+                  recv_from*group_size, phase, MPI_COMM_WORLD, &recv_req);  
         MPI_Isend(Work_out_p, Block_size, MPI_DOUBLE, send_to*group_size,
                   phase, MPI_COMM_WORLD, &send_req);
         MPI_Wait(&recv_req, &status);
