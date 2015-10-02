@@ -206,6 +206,7 @@ int main(int argc, char ** argv)
 
   MPI_Win_allocate_shared(total_length*sizeof(double), sizeof(double), 
                           rma_winfo, shm_comm, (void *) &vector, &shm_win);
+  MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win);
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %d by %d points",
            segment_size, n);
@@ -238,6 +239,7 @@ int main(int argc, char ** argv)
 
     /* start timer after a warmup iteration */
     if (iter == 1) {
+      MPI_Win_sync(shm_win);
       MPI_Barrier(MPI_COMM_WORLD);
       local_pipeline_time = wtime();
     }
@@ -256,6 +258,9 @@ int main(int argc, char ** argv)
 	}
       }
 
+      /* LOAD+STORE FENCE because of boudning through source_ptr */
+      MPI_Win_sync(shm_win);
+
       i = start[my_ID];
 
       if (shm_ID != 0) {
@@ -263,16 +268,29 @@ int main(int argc, char ** argv)
 	i++;
       }
 
+      /* LOAD+STORE FENCE because of boudning through source_ptr */
+      MPI_Win_sync(shm_win);
+
       for (; i<= end[my_ID]; i++) {
 	ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
       }
 
+      /****************************************************************************
+       *
+       * WARNING: Must use synchronous send to enforce dependencies explicitly.
+       *          Eager protocol is fire-and-forget so processes can Send and the
+       *          race ahead of the processes that call Recv.  When we switch to
+       *          Ssend, the senders cannot proceed until the receivers have the
+       *          data.  (Jeff Hammond 10/2/2015)
+       *
+       ****************************************************************************/
+
       /* if I am not on the right boundary, send data to my right neighbor        */
       if (my_ID != Num_procs-1) {
 	if (shm_ID != shm_procs-1) {
-	  MPI_Send(&p2pbuf, 0, MPI_INT, shm_ID+1, 1, shm_comm);
+	  MPI_Ssend(&p2pbuf, 0, MPI_INT, shm_ID+1, 1, shm_comm);
 	} else {
-	  MPI_Send(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE,
+	  MPI_Ssend(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE,
 		   my_ID+1, j, MPI_COMM_WORLD);
 	}
       }
@@ -282,7 +300,7 @@ int main(int argc, char ** argv)
     if (Num_procs >1) {
       if (my_ID==root) {
         corner_val = -ARRAY(end[my_ID],n-1);
-        MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
+        MPI_Ssend(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
       }
       if (my_ID==0) {
         MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
@@ -310,6 +328,9 @@ int main(int argc, char ** argv)
     }
   }
   bail_out(error);
+
+  MPI_Win_unlock_all(shm_win);
+  MPI_Win_free(&shm_win);
 
   if (my_ID == root) {
     avgtime = pipeline_time/iterations;
