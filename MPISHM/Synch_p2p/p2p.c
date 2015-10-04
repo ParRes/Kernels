@@ -67,8 +67,8 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
 
-#define ARRAY(i,j) vector[i+1+(j)*(width)]
-#define NBR_INDEX(i,j) (i+(j)*(nbr_width+1))
+#define ARRAY(i,j,start,offset,width)     vector[i-start+offset+(j)*(width)]
+#define NBR_INDEX(i,j,start,offset,width)       (i-start+offset+(j)*(width))
 
 int main(int argc, char ** argv)
 {
@@ -100,7 +100,7 @@ int main(int argc, char ** argv)
   int source_disp;
   double *source_ptr;
   int p2pbuf;
-  int width, nbr_width;
+  long width, nbr_width, offset, nbr_offset, skip;
 
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -162,9 +162,6 @@ int main(int argc, char ** argv)
     printf("Number of ranks                = %i\n",Num_procs);
     printf("Grid sizes                     = %d, %d\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
-#ifdef VERBOSE
-    printf("Synchronizations/iteration     = %d\n", (Num_procs-1)*(n-1));
-#endif
   }
 
   /* Broadcast benchmark data to all ranks */
@@ -185,7 +182,6 @@ int main(int argc, char ** argv)
     if (ID>0) start[ID] = end[ID-1]+1;
     end[ID] = start[ID]+segment_size-1;
   }
-
   /* now set segment_size to the value needed by the calling rank               */
   segment_size = end[my_ID] - start[my_ID] + 1;
 
@@ -195,18 +191,20 @@ int main(int argc, char ** argv)
    * It is the one info key that MPICH actually uses for optimization. */
   MPI_Info_set(rma_winfo, "no_locks", "true");
 
-  /* total_length takes into account one ghost cell on left side of segment     */
-  if (shm_ID == 0) {
-    total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-    width = segment_size+1;
-  } else {
-    total_length = (end[my_ID]-start[my_ID]+1)*n;
-    width = segment_size;
-  }
+  /* leftmost rank in shared memory region leaves memory for a ghost point      */
+  offset = (shm_ID == 0);
+
+  /* leftmost global rank skips updating left boundary                          */
+  skip = (my_ID==0);
+
+  /* width takes into account an offset for a ghost point for the leftmost
+     rank in a shared memory region                                             */
+  width = segment_size+offset;
+  /* storage takes the ghost points into account                                */
+  total_length = width*n;
 
   MPI_Win_allocate_shared(total_length*sizeof(double), sizeof(double), 
                           rma_winfo, shm_comm, (void *) &vector, &shm_win);
-  MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win);
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %d by %d points",
            segment_size, n);
@@ -219,27 +217,22 @@ int main(int argc, char ** argv)
   if (shm_ID > 0) {
     MPI_Win_shared_query(shm_win, shm_ID-1, &nbr_segment_size, &source_disp, &source_ptr);
     nbr_segment_size = end[my_ID-1] - start[my_ID-1] + 1;
-    nbr_width = nbr_segment_size;
+    nbr_offset = (shm_ID-1==0);
+    nbr_width = nbr_segment_size+nbr_offset;
   }
 
   /* clear the array                                                             */
-  for (j=0; j<n; j++) for (i=start[my_ID]-1; i<=end[my_ID]; i++) {
-    ARRAY(i-start[my_ID],j) = 0.0;
+  for (j=0; j<n; j++) for (i=start[my_ID]; i<=end[my_ID]; i++) {
+      ARRAY(i,j,start[my_ID],offset,width) = 0.0;
   }
   /* set boundary values (bottom and left side of grid                           */
-  if (my_ID==0) for (j=0; j<n; j++) ARRAY(0,j) = (double) j;
-  for (i=start[my_ID]-1; i<=end[my_ID]; i++) ARRAY(i-start[my_ID],0) = (double) i;
+  if (my_ID==0) for (j=0; j<n; j++) ARRAY(0,j,start[my_ID],offset,width) = (double) j;
+  for (i=start[my_ID]; i<=end[my_ID]; i++) ARRAY(i,0,start[my_ID],offset,width) = (double) i;
 
-  /* redefine start and end for calling rank to reflect local indices            */
-  if (my_ID==0) start[my_ID] = 1;
-  else          start[my_ID] = 0;
-  end[my_ID] = segment_size-1;
-
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
 
     /* start timer after a warmup iteration */
     if (iter == 1) {
-      MPI_Win_sync(shm_win);
       MPI_Barrier(MPI_COMM_WORLD);
       local_pipeline_time = wtime();
     }
@@ -253,68 +246,49 @@ int main(int argc, char ** argv)
 	if (shm_ID > 0) {
 	  MPI_Recv(&p2pbuf, 0, MPI_INT, shm_ID-1, 1, shm_comm, &status);
 	} else {
-	  MPI_Recv(&(ARRAY(start[my_ID]-1,j)), 1, MPI_DOUBLE,
+	  MPI_Recv(&(ARRAY(start[my_ID]-1,j,start[my_ID],offset,width)), 1, MPI_DOUBLE,
 		   my_ID-1, j, MPI_COMM_WORLD, &status);
 	}
       }
 
-      /* LOAD+STORE FENCE because of boudning through source_ptr */
-      MPI_Win_sync(shm_win);
-
-      i = start[my_ID];
-
+      i = start[my_ID]+skip;
+ 
       if (shm_ID != 0) {
-        printf("%d my_ID %d, j=%d ptr_end_j=%lf, ptr_end_j-1=%lf\n", iter, my_ID, j, source_ptr[NBR_INDEX(end[my_ID],j)], source_ptr[NBR_INDEX(end[my_ID],j-1)]);
-	ARRAY(i,j) = source_ptr[NBR_INDEX(end[my_ID],j)] + ARRAY(i,j-1) - source_ptr[NBR_INDEX(end[my_ID],j-1)];
+	ARRAY(i,j,start[my_ID],offset,width) = 
+	  source_ptr[NBR_INDEX(end[my_ID-1],j,start[my_ID-1],nbr_offset,nbr_width)] + 
+          ARRAY(i,j-1,start[my_ID],offset,width) - 
+          source_ptr[NBR_INDEX(end[my_ID-1],j-1,start[my_ID-1],nbr_offset,nbr_width)];
 	i++;
       }
 
-      /* LOAD+STORE FENCE because of boudning through source_ptr */
-      MPI_Win_sync(shm_win);
-
       for (; i<= end[my_ID]; i++) {
-	ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
+	ARRAY(i,j,start[my_ID],offset,width) = ARRAY(i-1,j,  start[my_ID],offset,width) + 
+                                               ARRAY(i,  j-1,start[my_ID],offset,width) - 
+                                               ARRAY(i-1,j-1,start[my_ID],offset,width);
       }
-
-      /****************************************************************************
-       *
-       * WARNING: Must use synchronous send to enforce dependencies explicitly.
-       *          Eager protocol is fire-and-forget so processes can Send and the
-       *          race ahead of the processes that call Recv.  When we switch to
-       *          Ssend, the senders cannot proceed until the receivers have the
-       *          data.  (Jeff Hammond 10/2/2015)
-       *
-       ****************************************************************************/
 
       /* if I am not on the right boundary, send data to my right neighbor        */
       if (my_ID != Num_procs-1) {
 	if (shm_ID != shm_procs-1) {
-	  MPI_Ssend(&p2pbuf, 0, MPI_INT, shm_ID+1, 1, shm_comm);
+	  MPI_Send(&p2pbuf, 0, MPI_INT, shm_ID+1, 1, shm_comm);
 	} else {
-	  MPI_Ssend(&(ARRAY(end[my_ID],j)), 1, MPI_DOUBLE,
+	  MPI_Send(&(ARRAY(end[my_ID],j,start[my_ID],offset,width)), 1, MPI_DOUBLE,
 		   my_ID+1, j, MPI_COMM_WORLD);
 	}
       }
     }
-#if 1
-    for (j=0; j<n; j++) {
-      for (i=start[my_ID]; i<=end[my_ID]; i++) printf("%d my_ID %d, xA[%d,%d]=%lf\n", iter, my_ID, i, j, ARRAY(i,j));
-      printf("\n");
-    }
-#endif
-
 
     /* copy top right corner value to bottom left corner to create dependency      */
     if (Num_procs >1) {
       if (my_ID==root) {
-        corner_val = -ARRAY(end[my_ID],n-1);
-        MPI_Ssend(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
+        corner_val = -ARRAY(end[my_ID],n-1,start[my_ID],offset,width);
+        MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
       }
       if (my_ID==0) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
+        MPI_Recv(&(ARRAY(0,0,start[my_ID],offset,width)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
       }
     }
-    else ARRAY(0,0)= -ARRAY(end[my_ID],n-1);
+    else ARRAY(0,0,start[my_ID],offset,width)= -ARRAY(end[my_ID],n-1,start[my_ID],offset,width);
 
   }
 
@@ -327,18 +301,15 @@ int main(int argc, char ** argv)
   ********************************************************************************/
 
   /* verify correctness, using top right value                                     */
-  corner_val = (double) ((iterations)*(m+n-2));
+  corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == root) {
-    if (abs(ARRAY(end[my_ID],n-1)-corner_val)/corner_val >= epsilon) {
+    if (abs(ARRAY(end[my_ID],n-1,start[my_ID],offset,width)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
-             ARRAY(end[my_ID],n-1), corner_val);
+             ARRAY(end[my_ID],n-1,start[my_ID],offset,width), corner_val);
       error = 1;
     }
   }
   bail_out(error);
-
-  MPI_Win_unlock_all(shm_win);
-  MPI_Win_free(&shm_win);
 
   if (my_ID == root) {
     avgtime = pipeline_time/iterations;
