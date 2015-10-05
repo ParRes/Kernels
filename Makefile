@@ -49,6 +49,7 @@ default:
 	@echo "       \"make allmpi1\"      (re-)builds all conventional MPI targets"
 	@echo "       \"make allfgmpi\"     (re-)builds all Fine-Grain MPI targets"
 	@echo "       \"make allmpiopenmp\" (re-)builds all MPI + OpenMP targets"
+	@echo "       \"make allmpishm\"    (re-)builds all MPI+MPI aka MPI+Shm targets"
 	@echo "       \"make allmpirma\"    (re-)builds all MPI-3 RMA targets"
 	@echo "       \"make allshmem\"     (re-)builds all SHMEM targets"
 	@echo "       \"make allmpishm\"    (re-)builds all MPI-3 shared memory segments targets"
