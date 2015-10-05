@@ -68,39 +68,41 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_mpi.h>
 
 #define ARRAY(i,j,start,offset,width)     vector[i-start+offset+(j)*(width)]
-#define NBR_INDEX(i,j,start,offset,width)       (i-start+offset+(j)*(width))
+#define NBR_ARRAY(i,j,start,offset,width) source_ptr[i-start+offset+(j)*(width)]
 
 int main(int argc, char ** argv)
 {
   int    my_ID;         /* rank                                                  */
-  int    root;
+  int    root;          /* root rank; corresponds to rightmost global rank       */
   int    m, n;          /* grid dimensions                                       */
   double local_pipeline_time, /* timing parameters                               */
          pipeline_time,
          avgtime;
-  double epsilon = 1.e-8; /* error tolerance                                     */
+  double epsilon =1.e-8;/* error tolerance                                       */
   double corner_val;    /* verification value at top right corner of grid        */
   int    i, j, iter, ID;/* dummies                                               */
   int    iterations;    /* number of times to run the pipeline algorithm         */
   int    *start, *end;  /* starts and ends of grid slices                        */
-  int    segment_size;
+  MPI_Aint segment_size,/* net size of first dimension of 2D array of grid values
+                           of target and neighbor ranks, exclusing ghost point   */
+         nbr_segment_size;
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of ranks                                       */
   double *vector;       /* array holding grid values                             */
   long   total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
-  MPI_Group shm_group, origin_group, target_group;
-  int origin_ranks[1], target_ranks[1];
-  MPI_Aint nbr_segment_size;
   MPI_Win shm_win;      /* Shared Memory window object                           */
   MPI_Info rma_winfo;   /* info for window                                       */
   MPI_Comm shm_comm;    /* Shared Memory Communicator                            */
   int shm_procs;        /* # of ranks in shared domain                           */
   int shm_ID;           /* MPI rank                                              */
-  int source_disp;
-  double *source_ptr;
-  int p2pbuf;
-  long width, nbr_width, offset, nbr_offset, skip;
+  int source_disp;      /* ignored                                               */
+  double *source_ptr;   /* pointer to left neighbor's shared memory window       */
+  int p2pbuf;           /* dummy buffer used for empty synchronization message   */
+  long width, nbr_width;/* size of first dimension of 2D array of grid values of
+                           target and neighbor ranks, including ghost point      */
+  int  offset, nbr_offset;/* space reserved for ghost point, if present          */
+  int  skip;            /* grid point to be skipped (only leftmost global rank)  */
 
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -225,9 +227,12 @@ int main(int argc, char ** argv)
   for (j=0; j<n; j++) for (i=start[my_ID]; i<=end[my_ID]; i++) {
       ARRAY(i,j,start[my_ID],offset,width) = 0.0;
   }
-  /* set boundary values (bottom and left side of grid                           */
+  /* set boundary values: left side of grid                                      */
   if (my_ID==0) for (j=0; j<n; j++) ARRAY(0,j,start[my_ID],offset,width) = (double) j;
-  for (i=start[my_ID]-offset; i<=end[my_ID]; i++) ARRAY(i,0,start[my_ID],offset,width) = (double) i;
+  /* set boundary values: bottom side of grid, including ghost point values for
+     "leftmost ranks inside coherence domains                                    */
+  for (i=start[my_ID]-offset; i<=end[my_ID]; i++) 
+    ARRAY(i,0,start[my_ID],offset,width) = (double) i;
 
   for (iter=0; iter<=iterations; iter++) {
 
@@ -255,9 +260,9 @@ int main(int argc, char ** argv)
  
       if (shm_ID != 0) {
 	ARRAY(i,j,start[my_ID],offset,width) = 
-	  source_ptr[NBR_INDEX(end[my_ID-1],j,start[my_ID-1],nbr_offset,nbr_width)] + 
+	  NBR_ARRAY(end[my_ID-1],j,start[my_ID-1],nbr_offset,nbr_width) + 
           ARRAY(i,j-1,start[my_ID],offset,width) - 
-          source_ptr[NBR_INDEX(end[my_ID-1],j-1,start[my_ID-1],nbr_offset,nbr_width)];
+          NBR_ARRAY(end[my_ID-1],j-1,start[my_ID-1],nbr_offset,nbr_width);
 	i++;
       }
 
