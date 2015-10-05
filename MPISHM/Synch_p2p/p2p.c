@@ -217,7 +217,7 @@ int main(int argc, char ** argv)
   if (shm_ID > 0) {
     MPI_Win_shared_query(shm_win, shm_ID-1, &nbr_segment_size, &source_disp, &source_ptr);
     nbr_segment_size = end[my_ID-1] - start[my_ID-1] + 1;
-    nbr_offset = (shm_ID-1==0);
+    nbr_offset = (shm_ID==1);
     nbr_width = nbr_segment_size+nbr_offset;
   }
 
@@ -227,7 +227,7 @@ int main(int argc, char ** argv)
   }
   /* set boundary values (bottom and left side of grid                           */
   if (my_ID==0) for (j=0; j<n; j++) ARRAY(0,j,start[my_ID],offset,width) = (double) j;
-  for (i=start[my_ID]; i<=end[my_ID]; i++) ARRAY(i,0,start[my_ID],offset,width) = (double) i;
+  for (i=start[my_ID]-offset; i<=end[my_ID]; i++) ARRAY(i,0,start[my_ID],offset,width) = (double) i;
 
   for (iter=0; iter<=iterations; iter++) {
 
