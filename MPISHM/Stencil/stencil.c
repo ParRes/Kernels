@@ -456,6 +456,7 @@ int main(int argc, char ** argv) {
   size_in= total_length_in*size_mul; 
   MPI_Win_allocate_shared(size_in, sizeof(double), MPI_INFO_NULL, shm_comm, 
                           (void *) &in, &shm_win_in);
+  MPI_Win_lock_all(MPI_MODE_NOCHECK, shm_win_in);
   MPI_Win_shared_query(shm_win_in, MPI_PROC_NULL, &size_in, &disp_unit, (void *)&in);
   if (in == NULL){
     printf("Error allocating space for input array by group %d\n",my_group);
@@ -466,6 +467,7 @@ int main(int argc, char ** argv) {
   size_out= total_length_out*size_mul;
   MPI_Win_allocate_shared(size_out, sizeof(double), MPI_INFO_NULL, shm_comm, 
                           (void *) &out, &shm_win_out);
+  MPI_Win_lock_all(MPI_MODE_NOCHECK, shm_win_out);
   MPI_Win_shared_query(shm_win_out, MPI_PROC_NULL, &size_out, &disp_unit, (void *)&out);
   if (out == NULL){
     printf("Error allocating space for output array by group %d\n", my_group);
@@ -737,6 +739,11 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
  
+  MPI_Win_unlock_all(shm_win_in);
+  MPI_Win_unlock_all(shm_win_out);
+  MPI_Win_free(&shm_win_in);
+  MPI_Win_free(&shm_win_out);
+
   if (my_ID == root) {
     /* flops/stencil: 2 flops (fma) for each point in the stencil, 
        plus one flop for the update of the input of the array        */
