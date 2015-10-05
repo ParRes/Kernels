@@ -314,14 +314,15 @@ int main(int argc, char ** argv)
   if (my_ID == root) {
     avgtime = pipeline_time/iterations;
 #ifdef VERBOSE
-    printf("Solution validates; verification value = %lf\n", corner_val);
+    printf("Solution validates; corner value = %lf, verification value = %lf\n", 
+	   ARRAY(end[my_ID],n-1,start[my_ID],offset,width), corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",
            ((float)((n-1)*(Num_procs-1)))/(avgtime));
 #else
     printf("Solution validates\n");
 #endif
     printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
-           1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
+           1.0E-06 * 2 * ((double)((m-1)*(double)(n-1)))/avgtime, avgtime);
   }
 
   MPI_Finalize();
