@@ -317,8 +317,8 @@ int main(int argc, char ** argv)
       }
   }
   /* NEED A STORE FENCE HERE                                                     */
-  MPI_Win_sync(shm_win_A);
-  MPI_Win_sync(shm_win_B);
+  //  MPI_Win_sync(shm_win_A);
+  //  MPI_Win_sync(shm_win_B);
   MPI_Barrier(shm_comm);
 
   for (iter=0; iter<=iterations; iter++) {
@@ -368,8 +368,8 @@ int main(int argc, char ** argv)
       }
 
       /* NEED A LOAD/STORE FENCE HERE                                            */
-      MPI_Win_sync(shm_win_Work_in);
-      MPI_Win_sync(shm_win_Work_out);
+      //      MPI_Win_sync(shm_win_Work_in);
+      //      MPI_Win_sync(shm_win_Work_out);
       MPI_Barrier(shm_comm);
       if (shm_ID==0) {
 #ifndef SYNCHRONOUS  
@@ -388,8 +388,8 @@ int main(int argc, char ** argv)
 #endif
       }
       /* NEED A LOAD FENCE HERE                                                  */ 
-      MPI_Win_sync(shm_win_Work_in);
-      MPI_Win_sync(shm_win_Work_out);
+      //      MPI_Win_sync(shm_win_Work_in);
+      //      MPI_Win_sync(shm_win_Work_out);
       MPI_Barrier(shm_comm);
 
       istart = recv_from*Block_order; 

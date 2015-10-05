@@ -369,8 +369,6 @@ int main(int argc, char ** argv) {
   my_global_IDx = my_group_IDx*group_sizex+my_local_IDx;
   my_global_IDy = my_group_IDy*group_sizey+my_local_IDy;
 
-  //  printf("my_ID= %d shm_ID=%d, my_group=%d\n", my_ID, shm_ID, my_group);
-
   /* set all neighboring ranks to -1 (no communication with those ranks) */
   left_nbr = right_nbr = top_nbr = bottom_nbr = -1;
   /* keep track of local neighbors for local synchronization             */
@@ -550,8 +548,8 @@ int main(int argc, char ** argv) {
   }
 
   /* LOAD/STORE FENCE */
-  MPI_Win_sync(shm_win_in);
-  MPI_Win_sync(shm_win_out);
+  //  MPI_Win_sync(shm_win_in);
+  //  MPI_Win_sync(shm_win_out);
   MPI_Barrier(shm_comm); 
 
   for (iter = 0; iter<=iterations; iter++){
@@ -604,7 +602,7 @@ int main(int argc, char ** argv) {
     }
 
     /* LOAD/STORE FENCE */
-    MPI_Win_sync(shm_win_in);
+    //    MPI_Win_sync(shm_win_in);
 
     /* need to fetch ghost point data from neighbors in x-direction                 */
     if (right_nbr != -1) {
@@ -648,7 +646,7 @@ int main(int argc, char ** argv) {
     }
 
     /* LOAD/STORE FENCE */
-    MPI_Win_sync(shm_win_in);
+    //    MPI_Win_sync(shm_win_in);
 
     /* Apply the stencil operator */
     for (j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
@@ -666,7 +664,7 @@ int main(int argc, char ** argv) {
     }
 
     /* LOAD/STORE FENCE */
-    MPI_Win_sync(shm_win_out);
+    //    MPI_Win_sync(shm_win_out);
 
 #ifdef LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid writing IN while other ranks are reading it
@@ -683,7 +681,7 @@ int main(int argc, char ** argv) {
     for (i=istart_rank; i<=iend_rank; i++) IN(i,j)+= 1.0;
 
     /* LOAD/STORE FENCE */
-    MPI_Win_sync(shm_win_in);
+    //    MPI_Win_sync(shm_win_in);
 
 #ifdef LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid reading IN while other ranks are writing it
