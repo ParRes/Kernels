@@ -253,6 +253,7 @@ int main(int argc, char ** argv)
   MPI_Aint size= (Colblock_size+offset)*sizeof(double)*size_mul; int disp_unit;
   MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, shm_comm, 
                           (void *) &A_p, &shm_win_A);
+  MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win_A);
   MPI_Win_shared_query(shm_win_A, MPI_PROC_NULL, &size, &disp_unit, (void *)&A_p);
 
   if (A_p == NULL){
@@ -264,6 +265,7 @@ int main(int argc, char ** argv)
 
   MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, shm_comm, 
                           (void *) &B_p, &shm_win_B);
+  MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win_B);
   MPI_Win_shared_query(shm_win_B, MPI_PROC_NULL, &size, &disp_unit, (void *)&B_p);
   if (B_p == NULL){
     printf(" Error allocating space for transposed matrix by group %d\n",group_ID);
@@ -277,6 +279,7 @@ int main(int argc, char ** argv)
     size = Block_size*sizeof(double)*size_mul;
     MPI_Win_allocate_shared(size, sizeof(double),rma_winfo, shm_comm, 
                            (void *) &Work_in_p, &shm_win_Work_in);
+    MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win_Work_in);
     MPI_Win_shared_query(shm_win_Work_in, MPI_PROC_NULL, &size, &disp_unit, 
                          (void *)&Work_in_p);
     if (Work_in_p == NULL){
@@ -287,6 +290,7 @@ int main(int argc, char ** argv)
 
     MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, 
                             shm_comm, (void *) &Work_out_p, &shm_win_Work_out);
+    MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win_Work_out);
     MPI_Win_shared_query(shm_win_Work_out, MPI_PROC_NULL, &size, &disp_unit, 
                          (void *)&Work_out_p);
     if (Work_out_p == NULL){
@@ -317,8 +321,8 @@ int main(int argc, char ** argv)
       }
   }
   /* NEED A STORE FENCE HERE                                                     */
-  //  MPI_Win_sync(shm_win_A);
-  //  MPI_Win_sync(shm_win_B);
+  MPI_Win_sync(shm_win_A);
+  MPI_Win_sync(shm_win_B);
   MPI_Barrier(shm_comm);
 
   for (iter=0; iter<=iterations; iter++) {
@@ -368,8 +372,8 @@ int main(int argc, char ** argv)
       }
 
       /* NEED A LOAD/STORE FENCE HERE                                            */
-      //      MPI_Win_sync(shm_win_Work_in);
-      //      MPI_Win_sync(shm_win_Work_out);
+      MPI_Win_sync(shm_win_Work_in);
+      MPI_Win_sync(shm_win_Work_out);
       MPI_Barrier(shm_comm);
       if (shm_ID==0) {
 #ifndef SYNCHRONOUS  
@@ -388,8 +392,8 @@ int main(int argc, char ** argv)
 #endif
       }
       /* NEED A LOAD FENCE HERE                                                  */ 
-      //      MPI_Win_sync(shm_win_Work_in);
-      //      MPI_Win_sync(shm_win_Work_out);
+      MPI_Win_sync(shm_win_Work_in);
+      MPI_Win_sync(shm_win_Work_out);
       MPI_Barrier(shm_comm);
 
       istart = recv_from*Block_order; 
@@ -432,9 +436,14 @@ int main(int argc, char ** argv)
 
   bail_out(error);
 
+  MPI_Win_unlock_all(shm_win_A);
+  MPI_Win_unlock_all(shm_win_B);
+
   MPI_Win_free(&shm_win_A);
   MPI_Win_free(&shm_win_B);
   if (Num_groups>1) {
+      MPI_Win_unlock_all(shm_win_Work_in);
+      MPI_Win_unlock_all(shm_win_Work_out);
       MPI_Win_free(&shm_win_Work_in);
       MPI_Win_free(&shm_win_Work_out);
   }
