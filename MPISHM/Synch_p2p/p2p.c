@@ -74,7 +74,7 @@ int main(int argc, char ** argv)
 {
   int    my_ID;         /* rank                                                  */
   int    root;          /* root rank; corresponds to rightmost global rank       */
-  int    m, n;          /* grid dimensions                                       */
+  long   m, n;          /* grid dimensions                                       */
   double local_pipeline_time, /* timing parameters                               */
          pipeline_time,
          avgtime;
@@ -139,8 +139,8 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     }
 
-    m = atoi(*++argv);
-    n = atoi(*++argv);
+    m = atol(*++argv);
+    n = atol(*++argv);
     if (m < 1 || n < 1){
       printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
       error = 1;
@@ -162,13 +162,13 @@ int main(int argc, char ** argv)
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI+SHM pipeline execution on 2D grid\n");
     printf("Number of ranks                = %i\n",Num_procs);
-    printf("Grid sizes                     = %d, %d\n", m, n);
+    printf("Grid sizes                     = %ld, %ld\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
   }
 
   /* Broadcast benchmark data to all ranks */
-  MPI_Bcast(&m, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&n, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&m, 1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n, 1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   start = (int *) malloc(2*Num_procs*sizeof(int));
@@ -327,7 +327,7 @@ int main(int argc, char ** argv)
     printf("Solution validates\n");
 #endif
     printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
-           1.0E-06 * 2 * ((double)((m-1)*(double)(n-1)))/avgtime, avgtime);
+           1.0E-06 * 2 * (double)((m-1)*(double)(n-1))/avgtime, avgtime);
   }
 
   MPI_Win_free(&shm_win);
