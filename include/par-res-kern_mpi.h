@@ -32,4 +32,14 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <mpi.h>
 
+/* This code appears in MADNESS, which is GPL, but it was
+ * written by Jeff Hammond and contributed to multiple projects
+ * using an implicit public domain license. */
+#define PRK_MPI_THREAD_STRING(level)  \
+        ( level==MPI_THREAD_SERIALIZED ? "THREAD_SERIALIZED" : \
+            ( level==MPI_THREAD_MULTIPLE ? "THREAD_MULTIPLE" : \
+                ( level==MPI_THREAD_FUNNELED ? "THREAD_FUNNELED" : \
+                    ( level==MPI_THREAD_SINGLE ? "THREAD_SINGLE" : "THREAD_UNKNOWN" ) ) ) )
+
+
 extern void bail_out(int);
