@@ -73,7 +73,7 @@ int main(int argc, char ** argv)
 {
   int    my_ID;         /* MPI rank                                              */
   int    root;          /* ID of root rank                                       */
-  int    m, n;          /* grid dimensions                                       */
+  long   m, n;          /* grid dimensions                                       */
   double local_pipeline_time, /* timing parameters                               */
          pipeline_time,
          avgtime;
@@ -81,8 +81,8 @@ int main(int argc, char ** argv)
   double corner_val;    /* verification value at top right corner of grid        */
   int    i, j, jj, iter, ID;/* dummies                                           */
   int    iterations;    /* number of times to run the pipeline algorithm         */
-  int    start, end;    /* start and end of grid slice owned by calling rank     */
-  int    segment_size;  /* size of x-dimension of grid owned by calling rank     */
+  long   start, end;    /* start and end of grid slice owned by calling rank     */
+  long   segment_size;  /* size of x-dimension of grid owned by calling rank     */
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of ranks                                       */
   int    grp;           /* grid line aggregation factor                          */
@@ -122,10 +122,10 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     } 
 
-    m = atoi(*++argv);
-    n = atoi(*++argv);
+    m = atol(*++argv);
+    n = atol(*++argv);
     if (m < 1 || n < 1){
-      printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
+      printf("ERROR: grid dimensions must be positive: %ld, %ld \n", m, n);
       error = 1;
       goto ENDOFTESTS;
     }
@@ -159,8 +159,8 @@ int main(int argc, char ** argv)
   }
   
   /* Broadcast benchmark data to all rankes */
-  MPI_Bcast(&m,          1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&m,          1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n,          1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast(&grp,        1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
 

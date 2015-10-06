@@ -10,7 +10,7 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-SYNCHFLAG  = -DSYNCHRONOUS
+#SYNCHFLAG  = -DSYNCHRONOUS
 #description: default handshake between threads is off
 
 USERFLAGS     = 
