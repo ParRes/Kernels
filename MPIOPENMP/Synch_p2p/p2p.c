@@ -67,9 +67,6 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpiomp.h>
  
-/* THIS IS BROKEN */
-// #define PRK_SERIALIZE_MPI
-
 /* define shorthand for flag with cache line padding                             */ 
 #define LINEWORDS  16 
 #define flag(TID,j)    flag[((TID)+(j)*nthread)*LINEWORDS] 
@@ -106,11 +103,7 @@ int main(int argc, char ** argv)
 /*********************************************************************************
 ** Initialize the MPI environment
 **********************************************************************************/
-#ifdef PRK_SERIALIZE_MPI
-  int requested = MPI_THREAD_SERIALIZED;
-#else
   int requested = MPI_THREAD_MULTIPLE;
-#endif
   MPI_Init_thread(&argc,&argv, requested, &provided);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   if (requested<provided) {
@@ -316,13 +309,8 @@ int main(int argc, char ** argv)
          send data                                                                */
       if (TID==0){
         if (my_ID > 0) {
-#ifdef PRK_SERIALIZE_MPI
-#pragma omp critical
-#endif
-          {
-            MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
+          MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
                      MPI_COMM_WORLD, &status);
-          }
         }
       }
       else {
@@ -351,12 +339,7 @@ int main(int argc, char ** argv)
       }
       else { /* if not on the right boundary, send data to my right neighbor      */  
         if (my_ID < Num_procs-1) {
-#ifdef PRK_SERIALIZE_MPI
-#pragma omp critical
-#endif
-          {
-            MPI_Send(&(ARRAY(end,j)), 1, MPI_DOUBLE, my_ID+1, j, MPI_COMM_WORLD);
-          }
+          MPI_Send(&(ARRAY(end,j)), 1, MPI_DOUBLE, my_ID+1, j, MPI_COMM_WORLD);
         }
       }
     }
@@ -365,20 +348,10 @@ int main(int argc, char ** argv)
     if (Num_procs>1) {
       if (TID==nthread-1 && my_ID==root) {
         corner_val = -ARRAY(end,n-1);
-#ifdef PRK_SERIALIZE_MPI
-#pragma omp critical
-#endif
-        {
-          MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
-        }
+        MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
       }
       if (TID==0  && my_ID==0) {
-#ifdef PRK_SERIALIZE_MPI
-#pragma omp critical
-#endif
-        {
-          MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
-        }
+        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
       }
     }
     else {
