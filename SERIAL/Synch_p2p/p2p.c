@@ -64,7 +64,7 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 
 int main(int argc, char ** argv) {
 
-  int    m, n;            /* grid dimensions                                     */
+  long   m, n;            /* grid dimensions                                     */
   int    i, j, iter;      /* dummies                                             */
   int    iterations;      /* number of times to run the pipeline algorithm       */
   double pipeline_time,   /* timing parameters                                   */
@@ -90,11 +90,11 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  m  = atoi(*++argv);
-  n  = atoi(*++argv);
+  m  = atol(*++argv);
+  n  = atol(*++argv);
 
   if (m < 1 || n < 1){
-    printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
+    printf("ERROR: grid dimensions must be positive: %ld, %ld \n", m, n);
     exit(EXIT_FAILURE);
   }
 
@@ -107,7 +107,7 @@ int main(int argc, char ** argv) {
 
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial pipeline execution on 2D grid\n");
-  printf("Grid sizes                = %d, %d\n", m, n);
+  printf("Grid sizes                = %ld, %ld\n", m, n);
   printf("Number of iterations      = %d\n", iterations);
 
   /* clear the array                                                             */
