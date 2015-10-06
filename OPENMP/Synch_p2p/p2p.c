@@ -76,7 +76,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 int main(int argc, char ** argv) {
 
   int    TID;             /* Thread ID                                           */
-  int    m, n;            /* grid dimensions                                     */
+  long   m, n;            /* grid dimensions                                     */
   int    i, j, jj, iter, ID; /* dummies                                          */
   int    iterations;      /* number of times to run the pipeline algorithm       */
   int    *flag;           /* used for pairwise synchronizations                  */
@@ -122,11 +122,11 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  m  = atoi(*++argv);
-  n  = atoi(*++argv);
+  m  = atol(*++argv);
+  n  = atol(*++argv);
 
   if (m < 1 || n < 1){
-    printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
+    printf("ERROR: grid dimensions must be positive: %ld, %ld \n", m, n);
     exit(EXIT_FAILURE);
   }
 
@@ -187,7 +187,7 @@ int main(int argc, char ** argv) {
   } 
   else {
     printf("Number of threads         = %d\n",nthread_input);
-    printf("Grid sizes                = %d, %d\n", m, n);
+    printf("Grid sizes                = %ld, %ld\n", m, n);
     printf("Number of iterations      = %d\n", iterations);
     if (grp > 1)
     printf("Group factor              = %d (cheating!)\n", grp);
