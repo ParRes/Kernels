@@ -263,6 +263,8 @@ int main(int argc, char ** argv)
   bail_out(error);
   A_p += offset;
 
+  /* recompute memory size (overwritten by prior query                 */
+  size= (Colblock_size+offset)*sizeof(double)*size_mul; 
   MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, shm_comm, 
                           (void *) &B_p, &shm_win_B);
   MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win_B);
@@ -288,6 +290,8 @@ int main(int argc, char ** argv)
     }
     bail_out(error);
 
+    /* recompute memory size (overwritten by prior query                 */
+    size = Block_size*sizeof(double)*size_mul;
     MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, 
                             shm_comm, (void *) &Work_out_p, &shm_win_Work_out);
     MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win_Work_out);
@@ -308,7 +312,7 @@ int main(int argc, char ** argv)
       for (i=0;i<order; i+=Tile_order) 
         for (jt=j; jt<MIN((shm_ID+1)*chunk_size,j+Tile_order); jt++)
           for (it=i; it<MIN(order,i+Tile_order); it++) {
-            A(it,jt) = (double) (order*(jt+colstart) + it);
+            A(it,jt) = (double) ((double)order*(jt+colstart) + it);
             B(it,jt) = -1.0;
           }
     }
@@ -316,7 +320,7 @@ int main(int argc, char ** argv)
   else {
     for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j++) 
       for (i=0;i<order; i++) {
-        A(i,j) = (double) (order*(j+colstart) + i);
+        A(i,j) = (double)((double)order*(j+colstart) + i);
         B(i,j) = -1.0;
       }
   }
@@ -414,7 +418,7 @@ int main(int argc, char ** argv)
   /*  for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) { */
   for (j=shm_ID*chunk_size; j<(shm_ID+1)*chunk_size; j++)
     for (i=0;i<order; i++) { 
-      abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
+      abserr += ABS(B(i,j) - (double)((double)order*i + j+colstart));
     }
 
   MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
