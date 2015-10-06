@@ -78,7 +78,7 @@ int main(int argc, char ** argv)
   int    my_ID;         /* rank                                                  */
   int    TID;           /* thread ID                                             */
   int    root;
-  int    m, n;          /* grid dimensions                                       */
+  long   m, n;          /* grid dimensions                                       */
   double local_pipeline_time, /* timing parameters                               */
          pipeline_time,
          avgtime;
@@ -86,11 +86,11 @@ int main(int argc, char ** argv)
   double corner_val;    /* verification value at top right corner of grid        */
   int    i, j, iter, ID;/* dummies                                               */
   int    iterations;    /* number of times to run the pipeline algorithm         */
-  int    start, end;    /* start and end of grid slice owned by calling rank     */
-  int    segment_size;
+  long   start, end;    /* start and end of grid slice owned by calling rank     */
+  long   segment_size;
   int    *flag;         /* used for pairwise synchronizations                    */
-  int    *tstart, *tend;/* starts and ends of grid slices for respective threads */
-  int    *tsegment_size;
+  long   *tstart, *tend;/* starts and ends of grid slices for respective threads */
+  long   *tsegment_size;
   int    nthread;       /* number of threads                                     */
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of ranks                                       */
@@ -145,8 +145,8 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     } 
  
-    m = atoi(*++argv);
-    n = atoi(*++argv);
+    m = atol(*++argv);
+    n = atol(*++argv);
     if (m < 1 || n < 1){
       printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
       error = 1;
@@ -165,8 +165,8 @@ int main(int argc, char ** argv)
   bail_out(error); 
  
   /* Broadcast benchmark data to all ranks */
-  MPI_Bcast(&m,          1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&m,          1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n,          1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&nthread,    1, MPI_INT, root, MPI_COMM_WORLD);
  
@@ -177,7 +177,7 @@ int main(int argc, char ** argv)
     printf("MPI+OpenMP pipeline execution on 2D grid\n");
     printf("Number of ranks                = %i\n",Num_procs);
     printf("Number of threads              = %d\n", omp_get_max_threads());
-    printf("Grid sizes                     = %d, %d\n", m, n);
+    printf("Grid sizes                     = %ld, %ld\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
 #ifdef SYNCHRONOUS
     printf("Handshake between neighbor threads\n");
@@ -213,7 +213,7 @@ int main(int argc, char ** argv)
   bail_out(error);
  
   /* now divide the rank's grid slice among the threads                          */
-  tstart = (int *) malloc(3*nthread*sizeof(int));
+  tstart = (long *) malloc(3*nthread*sizeof(long));
   if (!tstart) {
     printf("ERROR: Could not allocate space for array of slice boundaries\n");
     exit(EXIT_FAILURE);
