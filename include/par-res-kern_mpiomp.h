@@ -48,12 +48,4 @@ POSSIBILITY OF SUCH DAMAGE.
                 ( level==MPI_THREAD_FUNNELED ? "THREAD_FUNNELED" : \
                     ( level==MPI_THREAD_SINGLE ? "THREAD_SINGLE" : "THREAD_UNKNOWN" ) ) ) )
 
-#if (( __STDC_VERSION__ >= 199901L ) || (__cplusplus >= 201103L ))
-#define PRK_PRAGMA(x) _Pragma(#x)
-#define OMP_CRITICAL(name) PRK_PRAGMA(omp critical name)
-#else
-#warning Please compile with C99 or later.
-#define OMP_CRITICAL(name)
-#endif
-
 extern void bail_out(int);
