@@ -32,10 +32,28 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <mpi.h>
 #include <omp.h>
+
 #ifndef MAXTHREADS
   #define MAX_THREADS 256
 #else
   #define MAX_THREADS MAXTHREADS
+#endif
+
+/* This code appears in MADNESS, which is GPL, but it was
+ * written by Jeff Hammond and contributed to multiple projects
+ * using an implicit public domain license. */
+#define PRK_MPI_THREAD_STRING(level)  \
+        ( level==MPI_THREAD_SERIALIZED ? "THREAD_SERIALIZED" : \
+            ( level==MPI_THREAD_MULTIPLE ? "THREAD_MULTIPLE" : \
+                ( level==MPI_THREAD_FUNNELED ? "THREAD_FUNNELED" : \
+                    ( level==MPI_THREAD_SINGLE ? "THREAD_SINGLE" : "THREAD_UNKNOWN" ) ) ) )
+
+#if (( __STDC_VERSION__ >= 199901L ) || (__cplusplus >= 201103L ))
+#define PRK_PRAGMA(x) _Pragma(#x)
+#define OMP_CRITICAL(name) PRK_PRAGMA(omp critical name)
+#else
+#warning Please compile with C99 or later.
+#define OMP_CRITICAL(name)
 #endif
 
 extern void bail_out(int);
