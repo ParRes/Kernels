@@ -67,7 +67,9 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpiomp.h>
  
- 
+/* THIS IS BROKEN */
+// #define PRK_SERIALIZE_MPI
+
 /* define shorthand for flag with cache line padding                             */ 
 #define LINEWORDS  16 
 #define flag(TID,j)    flag[((TID)+(j)*nthread)*LINEWORDS] 
@@ -104,20 +106,18 @@ int main(int argc, char ** argv)
 /*********************************************************************************
 ** Initialize the MPI environment
 **********************************************************************************/
-  MPI_Init_thread(&argc,&argv, MPI_THREAD_MULTIPLE, &provided);
+#ifdef PRK_SERIALIZE_MPI
+  int requested = MPI_THREAD_SERIALIZED;
+#else
+  int requested = MPI_THREAD_MULTIPLE;
+#endif
+  MPI_Init_thread(&argc,&argv, requested, &provided);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
-  switch (provided) {
-    case  MPI_THREAD_SERIALIZED: error=1; name="SERIALIZED"; break;
-    case  MPI_THREAD_FUNNELED:   error=1; name="FUNNELED";   break;
-    case  MPI_THREAD_SINGLE:     error=1; name="SINGLE";     break;
-    case  MPI_THREAD_MULTIPLE:   error=0;                    break;
-    default:                     error=1; name="UNKNOWN";    break;
+  if (requested<provided) {
+    if (my_ID==0) printf("ERROR: requested=%d less than provided=%s\n",
+                         PRK_MPI_THREAD_STRING(requested),PRK_MPI_THREAD_STRING(provided));
+    bail_out(requested-provided);
   }
-  if (error) {
-    if (my_ID==0) printf("ERROR: need MPI_THREAD_MULTIPLE but gets MPI_THREAD_%s\n",
-                         name);
-  }
-  bail_out(error);
  
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
  
@@ -293,6 +293,7 @@ int main(int argc, char ** argv)
     if (iter == 1) { 
       #pragma omp barrier
       if (TID==0) {
+        /* No critical required here because only called from master thread */
         MPI_Barrier(MPI_COMM_WORLD);
         local_pipeline_time = wtime();
       }
@@ -315,8 +316,13 @@ int main(int argc, char ** argv)
          send data                                                                */
       if (TID==0){
         if (my_ID > 0) {
-          MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
-                   MPI_COMM_WORLD, &status);
+#ifdef PRK_SERIALIZE_MPI
+#pragma omp critical
+#endif
+          {
+            MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
+                     MPI_COMM_WORLD, &status);
+          }
         }
       }
       else {
@@ -345,7 +351,12 @@ int main(int argc, char ** argv)
       }
       else { /* if not on the right boundary, send data to my right neighbor      */  
         if (my_ID < Num_procs-1) {
-          MPI_Send(&(ARRAY(end,j)), 1, MPI_DOUBLE, my_ID+1, j, MPI_COMM_WORLD);
+#ifdef PRK_SERIALIZE_MPI
+#pragma omp critical
+#endif
+          {
+            MPI_Send(&(ARRAY(end,j)), 1, MPI_DOUBLE, my_ID+1, j, MPI_COMM_WORLD);
+          }
         }
       }
     }
@@ -354,10 +365,20 @@ int main(int argc, char ** argv)
     if (Num_procs>1) {
       if (TID==nthread-1 && my_ID==root) {
         corner_val = -ARRAY(end,n-1);
-        MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
+#ifdef PRK_SERIALIZE_MPI
+#pragma omp critical
+#endif
+        {
+          MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
+        }
       }
       if (TID==0  && my_ID==0) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
+#ifdef PRK_SERIALIZE_MPI
+#pragma omp critical
+#endif
+        {
+          MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
+        }
       }
     }
     else {
