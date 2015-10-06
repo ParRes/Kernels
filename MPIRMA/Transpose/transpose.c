@@ -363,6 +363,7 @@ int main(int argc, char ** argv)
  
       MPI_Put (Work_out_p+Block_size*(phase-1), Block_size, MPI_DOUBLE, send_to, Block_size*(phase-1), 
                Block_size, MPI_DOUBLE, rma_win); 
+#endif // MANYPUT
       if (passive_target) {
         if (flush_bundle==1) {
             if (flush_local==1) {
@@ -379,7 +380,6 @@ int main(int argc, char ** argv)
             }
         }
       }
-#endif // MANYPUT
     }  /* end of phase loop for puts  */
     if (passive_target) {
         MPI_Win_flush_all(rma_win);
