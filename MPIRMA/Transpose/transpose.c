@@ -158,8 +158,11 @@ int main(int argc, char ** argv)
   double local_trans_time, /* timing parameters                     */
          trans_time,
          avgtime;
-  MPI_Win  rma_win;
-  MPI_Info rma_winfo;
+  MPI_Win  rma_win = MPI_WIN_NULL;
+  MPI_Info rma_winfo = MPI_INFO_NULL;
+  int passive_target = 0,  /* use passive target RMA sync           */
+      flush_local = 1,     /* flush local (or remote) after put     */
+      flush_bundle = 1;    /* flush every <bundle> put calls        */
  
 /*********************************************************************
 ** Initialize the MPI environment
@@ -173,8 +176,8 @@ int main(int argc, char ** argv)
 *********************************************************************/
   error = 0;
   if (my_ID == root) {
-    if (argc != 3 && argc != 4){
-      printf("Usage: %s <# iterations> <matrix order> [Tile size]\n",
+    if (argc <= 3){
+      printf("Usage: %s <# iterations> <matrix order> [Tile size] [sync (0=fence, 1=flush)] [flush local?] [flush bundle]\n",
                                                                *argv);
       error = 1; goto ENDOFTESTS;
     }
@@ -197,7 +200,10 @@ int main(int argc, char ** argv)
       error = 1; goto ENDOFTESTS;
     }
  
-    if (argc == 4) Tile_order = atoi(*++argv);
+    if (argc >= 4) Tile_order     = atoi(*++argv);
+    if (argc >= 5) passive_target = atoi(*++argv);
+    if (argc >= 6) flush_local    = atoi(*++argv);
+    if (argc >= 7) flush_bundle   = atoi(*++argv);
  
     ENDOFTESTS:;
   }
@@ -212,12 +218,20 @@ int main(int argc, char ** argv)
     if ((Tile_order > 0) && (Tile_order < order))
           printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
+    if (passive_target) {
+        printf("Synchronization      = MPI_Win_flush%s (bundle=%d)\n", flush_local ? "_local" : "", flush_bundle);
+    } else {
+        printf("Synchronization      = MPI_Win_fence\n");
+    }
   }
   
   /*  Broadcast input data to all ranks */
-  MPI_Bcast (&order,      1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast (&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast (&Tile_order, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast (&order,          1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast (&iterations,     1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast (&Tile_order,     1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast (&passive_target, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast (&flush_local,    1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast (&flush_bundle,   1, MPI_INT, root, MPI_COMM_WORLD);
  
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);
@@ -276,6 +290,14 @@ int main(int argc, char ** argv)
     bail_out(error);
 #endif
   }
+
+  if (passive_target) {
+      /* So if Num_procs=1, the no-MANYPUT version does not allocate the window.
+       * Testing for !=MPI_WIN_NULL is our workaround for this. */
+      if (rma_win!=MPI_WIN_NULL) {
+        MPI_Win_lock_all(MPI_MODE_NOCHECK,rma_win);
+      }
+  }
   
   /* Fill the original column matrix                                                */
   istart = 0;  
@@ -311,7 +333,10 @@ int main(int argc, char ** argv)
               B(jt,it) = A(it,jt); 
     }
  
-    MPI_Win_fence (MPI_MODE_NOPRECEDE, rma_win);
+    if (!passive_target) {
+      MPI_Win_fence (MPI_MODE_NOPRECEDE, rma_win);
+    }
+
     for (phase=1; phase<Num_procs; phase++){
       send_to   = (my_ID - phase + Num_procs)%Num_procs;
  
@@ -334,13 +359,35 @@ int main(int argc, char ** argv)
       for (j = 0; j < Block_order; j++) {
         MPI_Put (&Work_out(phase-1, 0, j), Block_order, MPI_DOUBLE, send_to, (my_ID * Block_order)  + j * order, Block_order, MPI_DOUBLE, rma_win);
       }
-#else
+#else // MANYPUT
  
       MPI_Put (Work_out_p+Block_size*(phase-1), Block_size, MPI_DOUBLE, send_to, Block_size*(phase-1), 
                Block_size, MPI_DOUBLE, rma_win); 
-#endif
+      if (passive_target) {
+        if (flush_bundle==1) {
+            if (flush_local==1) {
+                MPI_Win_flush_local(send_to, rma_win);
+            } else {
+                MPI_Win_flush(send_to, rma_win);
+            }
+        } else if ( (phase%flush_bundle) == 0) {
+            /* Too lazy to record all targets, so let MPI do it internally (hopefully) */
+            if (flush_local==1) {
+                MPI_Win_flush_local_all(rma_win);
+            } else {
+                MPI_Win_flush_all(rma_win);
+            }
+        }
+      }
+#endif // MANYPUT
     }  /* end of phase loop for puts  */
-    MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
+    if (passive_target) {
+        MPI_Win_flush_all(rma_win);
+        /* Should there be a barrier here?  MPI_Win_fence has barrier semantics in most cases... */
+        //MPI_Barrier(MPI_COMM_WORLD);
+    } else {
+        MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
+    }
  
 #ifndef MANYPUT 
     for (phase=1; phase<Num_procs; phase++) {
@@ -383,6 +430,13 @@ int main(int argc, char ** argv)
   }
  
   bail_out(error);
+
+  if (rma_win!=MPI_WIN_NULL) {
+    if (passive_target) {
+      MPI_Win_unlock_all(rma_win);
+    }
+    MPI_Win_free(&rma_win);
+  }
  
   MPI_Finalize();
   exit(EXIT_SUCCESS);
