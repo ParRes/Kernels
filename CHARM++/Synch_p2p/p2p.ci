@@ -1,7 +1,7 @@
 mainmodule p2p {
   readonly CProxy_Main mainProxy;
-  readonly int n;
-  readonly int m;
+  readonly long n;
+  readonly long m;
   readonly int overdecomposition;
   readonly int maxiterations;
   readonly int grp;
