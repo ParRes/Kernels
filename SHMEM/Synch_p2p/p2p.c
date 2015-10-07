@@ -77,7 +77,7 @@ int main(int argc, char ** argv)
 {
   int    my_ID;           /* SHMEM thread ID                                     */
   int    root;            /* ID of master rank                                   */
-  int    m, n;            /* grid dimensions                                     */
+  long   m, n;            /* grid dimensions                                     */
   double *pipeline_time,   /* timing parameters                                  */
          *local_pipeline_time, avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
@@ -85,7 +85,7 @@ int main(int argc, char ** argv)
   int    i, j, iter, ID;  /* dummies                                             */
   int    iterations;      /* number of times to run the pipeline algorithm       */
   int    *start, *end;    /* starts and ends of grid slices                      */
-  int    segment_size;    /* x-dimension of grid slice owned by calling rank     */
+  long   segment_size;    /* x-dimension of grid slice owned by calling rank     */
   int    error=0;         /* error flag                                          */
   int    Num_procs;       /* Number of ranks                                     */
   double *vector;         /* array holding grid values                           */
@@ -128,8 +128,8 @@ int main(int argc, char ** argv)
     goto ENDOFTESTS;
   } 
 
-  m = atoi(*++argv);
-  n = atoi(*++argv);
+  m = atol(*++argv);
+  n = atol(*++argv);
   if (m < 1 || n < 1){
     if (my_ID == root)
       printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
@@ -151,7 +151,7 @@ int main(int argc, char ** argv)
 
   if (m<=Num_procs) {
     if (my_ID == root)
-      printf("ERROR: First grid dimension %d must be >= #ranks %d\n", m, Num_procs);
+      printf("ERROR: First grid dimension %d must be > #ranks %ld\n", m, Num_procs);
     error = 1;
   }
   ENDOFTESTS:;
@@ -162,7 +162,7 @@ int main(int argc, char ** argv)
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("SHMEM pipeline execution on 2D grid\n");
     printf("Number of ranks            = %d\n",Num_procs);
-    printf("Grid sizes                 = %d, %d\n", m, n);
+    printf("Grid sizes                 = %ld, %ld\n", m, n);
     printf("Number of iterations       = %d\n", iterations);
 #ifdef SYNCHRONOUS
     printf("Handshake between neighbor threads\n");
@@ -178,7 +178,6 @@ int main(int argc, char ** argv)
   recv_val [0] = -1;
 #endif
   dst = (double *) shmalloc (sizeof(double) * (n));
-  //src = (double *) shmalloc (sizeof(double) * (n));
   src = (double *) malloc (sizeof(double) * (n));
   local_pipeline_time = (double *) shmalloc (sizeof(double));
   pipeline_time = (double *) shmalloc (sizeof(double));
@@ -210,10 +209,9 @@ int main(int argc, char ** argv)
 
   /* total_length takes into account one ghost cell on left side of segment      */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  //vector = (double *) shmalloc(total_length*sizeof(double));
   vector = (double *) malloc(total_length*sizeof(double));
   if (vector == NULL) {
-    printf("Could not allocate space for grid slice of %d by %d points", 
+    printf("Could not allocate space for grid slice of %ld by %ld points", 
            segment_size, n);
     printf(" on rank %d\n", my_ID);
     error = 1;
@@ -257,7 +255,8 @@ int main(int argc, char ** argv)
       local_pipeline_time[0] = wtime();
     }
 
-    if (my_ID==0 && Num_procs>1) { /* first thread waits for corner value to be copied            */
+    if (my_ID==0 && Num_procs>1) { 
+      /* first thread waits for corner value to be copied                        */
       shmem_int_wait_until(&flag_left[0], SHMEM_CMP_EQ, false);
       if (iter>0) {
         ARRAY(start[my_ID]-1,0) = dst[0];
