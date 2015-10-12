@@ -380,8 +380,7 @@ int main(int argc, char ** argv)
     if (Num_procs>1) {
       if (passive_target) {
           MPI_Win_flush_all(rma_win);
-          /* Should there be a barrier here?  MPI_Win_fence has barrier semantics in most cases... */
-          //MPI_Barrier(MPI_COMM_WORLD);
+          MPI_Barrier(MPI_COMM_WORLD);
       } else {
           MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
       }
