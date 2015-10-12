@@ -291,12 +291,8 @@ int main(int argc, char ** argv)
 #endif
   }
 
-  if (passive_target) {
-      /* So if Num_procs=1, the no-MANYPUT version does not allocate the window.
-       * Testing for !=MPI_WIN_NULL is our workaround for this. */
-      if (rma_win!=MPI_WIN_NULL) {
-        MPI_Win_lock_all(MPI_MODE_NOCHECK,rma_win);
-      }
+  if (passive_target && Num_procs>1) {
+    MPI_Win_lock_all(MPI_MODE_NOCHECK,rma_win);
   }
   
   /* Fill the original column matrix                                                */
@@ -333,7 +329,7 @@ int main(int argc, char ** argv)
               B(jt,it) = A(it,jt); 
     }
  
-    if (!passive_target) {
+    if (!passive_target && Num_procs>1) {
       MPI_Win_fence (MPI_MODE_NOPRECEDE, rma_win);
     }
 
@@ -381,12 +377,14 @@ int main(int argc, char ** argv)
         }
       }
     }  /* end of phase loop for puts  */
-    if (passive_target) {
-        MPI_Win_flush_all(rma_win);
-        /* Should there be a barrier here?  MPI_Win_fence has barrier semantics in most cases... */
-        //MPI_Barrier(MPI_COMM_WORLD);
-    } else {
-        MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
+    if (Num_procs>1) {
+      if (passive_target) {
+          MPI_Win_flush_all(rma_win);
+          /* Should there be a barrier here?  MPI_Win_fence has barrier semantics in most cases... */
+          //MPI_Barrier(MPI_COMM_WORLD);
+      } else {
+          MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
+      }
     }
  
 #ifndef MANYPUT 
