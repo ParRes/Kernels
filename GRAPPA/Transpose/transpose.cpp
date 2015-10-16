@@ -246,6 +246,7 @@ int main(int argc, char * argv[]) {
       // TODO: get rid of this restriction
       tiling = tiling && (Block_order%CHUNK_LENGTH == 0);
 
+      std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
       std::cout << "Grappa matrix transpose: B = A^T" << std::endl;
       std::cout << "Number of cores         = " << Num_procs << std::endl;
       std::cout << "Matrix order            = " << order << std::endl;
