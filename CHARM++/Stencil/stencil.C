@@ -328,6 +328,8 @@ public:
   }
     
     void compute() {
+      double * restrict in = this->in;
+      double * restrict out = this->out;
 
       for (int j=MAX(jstart,RADIUS); j<=MIN(n-1-RADIUS,jend); j++) {
         for (int i=MAX(istart,RADIUS); i<=MIN(n-1-RADIUS,iend); i++) {
