@@ -139,7 +139,7 @@ int main(int argc, char ** argv) {
 
   /*  Set the transpose matrix to a known garbage value.                            */
   for (j=0;j<order;j++) for (i=0;i<order; i++)  {
-    B(i,j) = -1.0;
+    B(i,j) = 0.0;
   }
 
   for (iter = 0; iter<=iterations; iter++){
@@ -154,13 +154,15 @@ int main(int argc, char ** argv) {
         for (j=0; j<order; j+=tile_size) 
           for (it=i; it<MIN(order,i+tile_size); it++)
             for (jt=j; jt<MIN(order,j+tile_size);jt++){ 
-              B(jt,it) = A(it,jt); 
+              B(jt,it) += A(it,jt); 
+              A(it,jt) += 1.0;
             } 
     }
     else {
       for (i=0;i<order; i++) 
         for (j=0;j<order;j++) {
-          B(j,i) = A(i,j);
+          B(j,i) += A(i,j);
+          A(i,j) += 1.0;
         }
     }	
 
@@ -173,8 +175,9 @@ int main(int argc, char ** argv) {
   trans_time = wtime() - trans_time;
 
   abserr = 0.0;
+  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   for (j=0;j<order;j++) for (i=0;i<order; i++) {
-    abserr += ABS(B(i,j) - (double)(order*i + j));
+      abserr += ABS(B(i,j) - ((double)(order*i + j)*(iterations+1)+addit));
   }
 
 #ifdef VERBOSE
