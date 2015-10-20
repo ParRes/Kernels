@@ -158,8 +158,8 @@ public:
       }
       else {
         CkPrintf("Solution does not validate\n");
+        CkPrintf("Reference norm: %lf, norm: %lf, |diff|: %e\n", ref_norm, result, diff);
       }
-      CkPrintf("Reference norm: %lf, norm: %lf, |diff|: %e\n", ref_norm, result, diff);
       CkExit();
     }
 
@@ -328,8 +328,8 @@ public:
   }
     
     void compute() {
-      double * restrict in = this->in;
-      double * restrict out = this->out;
+      double * RESTRICT in = this->in;
+      double * RESTRICT out = this->out;
 
       for (int j=MAX(jstart,RADIUS); j<=MIN(n-1-RADIUS,jend); j++) {
         for (int i=MAX(istart,RADIUS); i<=MIN(n-1-RADIUS,iend); i++) {
