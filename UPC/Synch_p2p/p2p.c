@@ -53,6 +53,7 @@ HISTORY: Written by Abdullah Kayi, September 2015
 #include <par-res-kern_general.h>
 #include <par-res-kern_upc.h>
 
+#define USE_BUPC_EXT
 shared double times[THREADS];
 
 int is_debugging = 0;
@@ -143,10 +144,13 @@ double **shared_2d_array_to_private(local_shared_block_ptrs array, int sizex, in
 #define ARRAY(i,j) in_array_private[j][i]
 
 strict shared int current_max_line[THREADS];
+#ifdef USE_BUPC_EXT
+bupc_sem_t * shared allflags[THREADS];
+#endif
 
 int main(int argc, char ** argv) {
 
-  int    m, n;            /* grid dimensions                                     */
+  long    m, n;            /* grid dimensions                                     */
   int    i, j, iter;      /* dummies                                             */
   int    iterations;      /* number of times to run the pipeline algorithm       */
   double pipeline_time,   /* timing parameters                                   */
@@ -175,8 +179,8 @@ int main(int argc, char ** argv) {
     upc_global_exit(EXIT_FAILURE);
   }
 
-  m  = atoi(*++argv);
-  n  = atoi(*++argv);
+  m  = atol(*++argv);
+  n  = atol(*++argv);
 
   if (m < 1 || n < 1){
     if(MYTHREAD == 0)
@@ -188,14 +192,25 @@ int main(int argc, char ** argv) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("UPC pipeline execution on 2D grid\n");
     printf("Number of threads         = %d\n", THREADS);
-    printf("Grid sizes                = %d, %d\n", m, n);
+    printf("Grid sizes                = %ld, %ld\n", m, n);
     printf("Number of iterations      = %d\n", iterations);
+#ifdef USE_BUPC_EXT
+    printf("Using Berkeley UPC extensions\n");
+#endif
   }
 
   /*********************************************************************
   ** Allocate memory for input and output matrices
   *********************************************************************/
-  int segment_size = m / THREADS;
+#ifdef USE_BUPC_EXT
+  bupc_sem_t *myflag = bupc_sem_alloc(BUPC_SEM_INTEGER | BUPC_SEM_MPRODUCER);
+  upc_barrier;
+  allflags[MYTHREAD] = myflag;
+  upc_barrier;
+  bupc_sem_t *mypeer = allflags[(MYTHREAD+1) % THREADS];
+#endif
+
+  long segment_size = m / THREADS;
   int leftover = m % THREADS;
   int myoffsetx, sizex;
 
@@ -206,6 +221,13 @@ int main(int argc, char ** argv) {
     myoffsetx = (segment_size + 1) * leftover + segment_size * (MYTHREAD - leftover);
     sizex = segment_size;
   }
+
+#ifdef USE_BUPC_EXT
+  if(MYTHREAD != 0){
+    myoffsetx -= 1;
+    sizex += 1;
+  }
+#endif
 
   int sizey = n;
   int myoffsety = 0;
@@ -249,29 +271,49 @@ int main(int argc, char ** argv) {
     /* start timer after a warmup iteration */
     if (iter == 1)
       pipeline_time = wtime();
+    if(MYTHREAD == 0)
+      debug("start it %d, %f", iter, ARRAY(0, 0));
+
+    if(MYTHREAD != THREADS - 1)  // Send the element in line 0
+      in_arrays[MYTHREAD + 1][0][myoffsetx + sizex -1] = ARRAY(myoffsetx + sizex - 1, 0);
 
     for (j=1; j<n; j++) {
-      while(j > current_max_line[MYTHREAD])
-        // Normally not necessary: bupc_poll();
+#ifdef USE_BUPC_EXT
+      if(MYTHREAD > 0){
+        bupc_sem_wait(myflag);
+      }
+
+      for (i=myoffsetx+1; i<myoffsetx + sizex; i++)
+        ARRAY(i, j) = ARRAY(i-1, j) + ARRAY(i, j-1) - ARRAY(i-1, j-1);
+
+      if(MYTHREAD != THREADS - 1){
+        in_arrays[MYTHREAD + 1][j][myoffsetx + sizex -1] = ARRAY(myoffsetx + sizex - 1, j);
+
+        bupc_sem_post(mypeer);
+      }
+#else
+      while(j > current_max_line[MYTHREAD]) // Normally not necessary: bupc_poll();
         ;
+
       if(MYTHREAD > 0)
         ARRAY(myoffsetx, j) = in_arrays[MYTHREAD - 1][j][myoffsetx-1] + ARRAY(myoffsetx, j-1) - in_arrays[MYTHREAD-1][j-1][myoffsetx-1];
-      for (i=myoffsetx+1; i<myoffsetx + sizex; i++) {
+
+      for (i=myoffsetx+1; i<myoffsetx + sizex; i++)
         ARRAY(i, j) = ARRAY(i-1, j) + ARRAY(i, j-1) - ARRAY(i-1, j-1);
-      }
-      if(MYTHREAD < THREADS - 1){
+
+      if(MYTHREAD < THREADS - 1)
         current_max_line[MYTHREAD+1] = j;
       }
+      if(MYTHREAD == 0)
+        current_max_line[MYTHREAD] = sizey;
+      else
+        current_max_line[MYTHREAD] = 0;
+#endif
     }
 
     /* copy top right corner value to bottom left corner to create dependency; we
        need a barrier to make sure the latest value is used. This also guarantees
      that the flags for the next iteration (if any) are not getting clobbered  */
-
-    if(MYTHREAD == 0)
-      current_max_line[MYTHREAD] = sizey;
-    else
-      current_max_line[MYTHREAD] = 0;
 
 
     if(MYTHREAD == THREADS - 1){
@@ -314,8 +356,9 @@ int main(int argc, char ** argv) {
     printf("Solution validates\n");
 #endif
     avgtime = max_time/iterations;
-    printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
-           1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
-    exit(EXIT_SUCCESS);
+  printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
+         1.0E-06 * 2 * ((double)(m-1)*(double)(n-1))/avgtime, avgtime);
+  printf("\n");
+  exit(EXIT_SUCCESS);
   }
 }
