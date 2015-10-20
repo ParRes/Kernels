@@ -67,7 +67,6 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpiomp.h>
  
- 
 /* define shorthand for flag with cache line padding                             */ 
 #define LINEWORDS  16 
 #define flag(TID,j)    flag[((TID)+(j)*nthread)*LINEWORDS] 
@@ -79,7 +78,7 @@ int main(int argc, char ** argv)
   int    my_ID;         /* rank                                                  */
   int    TID;           /* thread ID                                             */
   int    root;
-  int    m, n;          /* grid dimensions                                       */
+  long   m, n;          /* grid dimensions                                       */
   double local_pipeline_time, /* timing parameters                               */
          pipeline_time,
          avgtime;
@@ -87,11 +86,11 @@ int main(int argc, char ** argv)
   double corner_val;    /* verification value at top right corner of grid        */
   int    i, j, iter, ID;/* dummies                                               */
   int    iterations;    /* number of times to run the pipeline algorithm         */
-  int    start, end;    /* start and end of grid slice owned by calling rank     */
-  int    segment_size;
+  long   start, end;    /* start and end of grid slice owned by calling rank     */
+  long   segment_size;
   int    *flag;         /* used for pairwise synchronizations                    */
-  int    *tstart, *tend;/* starts and ends of grid slices for respective threads */
-  int    *tsegment_size;
+  long   *tstart, *tend;/* starts and ends of grid slices for respective threads */
+  long   *tsegment_size;
   int    nthread;       /* number of threads                                     */
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of ranks                                       */
@@ -104,20 +103,14 @@ int main(int argc, char ** argv)
 /*********************************************************************************
 ** Initialize the MPI environment
 **********************************************************************************/
-  MPI_Init_thread(&argc,&argv, MPI_THREAD_MULTIPLE, &provided);
+  int requested = MPI_THREAD_MULTIPLE;
+  MPI_Init_thread(&argc,&argv, requested, &provided);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
-  switch (provided) {
-    case  MPI_THREAD_SERIALIZED: error=1; name="SERIALIZED"; break;
-    case  MPI_THREAD_FUNNELED:   error=1; name="FUNNELED";   break;
-    case  MPI_THREAD_SINGLE:     error=1; name="SINGLE";     break;
-    case  MPI_THREAD_MULTIPLE:   error=0;                    break;
-    default:                     error=1; name="UNKNOWN";    break;
+  if (requested<provided) {
+    if (my_ID==0) printf("ERROR: requested=%d less than provided=%s\n",
+                         PRK_MPI_THREAD_STRING(requested),PRK_MPI_THREAD_STRING(provided));
+    bail_out(requested-provided);
   }
-  if (error) {
-    if (my_ID==0) printf("ERROR: need MPI_THREAD_MULTIPLE but gets MPI_THREAD_%s\n",
-                         name);
-  }
-  bail_out(error);
  
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
  
@@ -152,8 +145,8 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     } 
  
-    m = atoi(*++argv);
-    n = atoi(*++argv);
+    m = atol(*++argv);
+    n = atol(*++argv);
     if (m < 1 || n < 1){
       printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
       error = 1;
@@ -172,8 +165,8 @@ int main(int argc, char ** argv)
   bail_out(error); 
  
   /* Broadcast benchmark data to all ranks */
-  MPI_Bcast(&m,          1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&m,          1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n,          1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&nthread,    1, MPI_INT, root, MPI_COMM_WORLD);
  
@@ -184,7 +177,7 @@ int main(int argc, char ** argv)
     printf("MPI+OpenMP pipeline execution on 2D grid\n");
     printf("Number of ranks                = %i\n",Num_procs);
     printf("Number of threads              = %d\n", omp_get_max_threads());
-    printf("Grid sizes                     = %d, %d\n", m, n);
+    printf("Grid sizes                     = %ld, %ld\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
 #ifdef SYNCHRONOUS
     printf("Handshake between neighbor threads\n");
@@ -220,7 +213,7 @@ int main(int argc, char ** argv)
   bail_out(error);
  
   /* now divide the rank's grid slice among the threads                          */
-  tstart = (int *) malloc(3*nthread*sizeof(int));
+  tstart = (long *) malloc(3*nthread*sizeof(long));
   if (!tstart) {
     printf("ERROR: Could not allocate space for array of slice boundaries\n");
     exit(EXIT_FAILURE);
@@ -293,6 +286,7 @@ int main(int argc, char ** argv)
     if (iter == 1) { 
       #pragma omp barrier
       if (TID==0) {
+        /* No critical required here because only called from master thread */
         MPI_Barrier(MPI_COMM_WORLD);
         local_pipeline_time = wtime();
       }
@@ -316,7 +310,7 @@ int main(int argc, char ** argv)
       if (TID==0){
         if (my_ID > 0) {
           MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
-                   MPI_COMM_WORLD, &status);
+                     MPI_COMM_WORLD, &status);
         }
       }
       else {

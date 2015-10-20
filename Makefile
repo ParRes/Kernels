@@ -46,13 +46,17 @@ default:
 	@echo "Usage: \"make all\"          (re-)builds all targets"
 	@echo "       \"make allserial\"    (re-)builds all serial targets"
 	@echo "       \"make allopenmp\"    (re-)builds all OpenMP targets"
-	@echo "       \"make allmpi\"       (re-)builds all MPI targets"
+	@echo "       \"make allmpi1\"      (re-)builds all conventional MPI targets"
 	@echo "       \"make allfgmpi\"     (re-)builds all Fine-Grain MPI targets"
 	@echo "       \"make allmpiopenmp\" (re-)builds all MPI + OpenMP targets"
+	@echo "       \"make allmpiomp\"    (re-)builds all MPI + OpenMP targets"
+	@echo "       \"make allmpishm\"    (re-)builds all MPI+MPI aka MPI+Shm targets"
 	@echo "       \"make allmpirma\"    (re-)builds all MPI-3 RMA targets"
+	@echo "       \"make allmpi\"       (re-)builds all MPI targets"
 	@echo "       \"make allshmem\"     (re-)builds all SHMEM targets"
 	@echo "       \"make allmpishm\"    (re-)builds all MPI-3 shared memory segments targets"
 	@echo "       \"make allupc\"       (re-)builds all UPC targets"
+	@echo "       \"make allpgas\"      (re-)builds all PGAS (UPC, SHMEM, MPI-3 RMA) targets"
 	@echo "       \"make alldarwin\"    (re-)builds all of the above targets"
 	@echo "       \"make allcharm++\"   (re-)builds all Charm++ targets"
 	@echo "       \"make allgrappa\"    (re-)builds all Grappa targets"
@@ -63,20 +67,20 @@ default:
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
 all: alldarwin allfreaks
-alldarwin: allserial allopenmp allmpi allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc
+alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc
 allfreaks: allcharm++ allgrappa
 
-allmpi:
-	cd MPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI/Sparse;              $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI/DGEMM;               $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI/Nstream;             $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI/Reduce;              $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI/Random;              $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"  \
+allmpi1:
+	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPI1/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPI1/Sparse;              $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPI1/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPI1/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPI1/DGEMM;               $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPI1/Nstream;             $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPI1/Reduce;              $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPI1/Random;              $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPI1/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"  \
                                                       "MATRIX_RANK         = $(matrix_rank)"        \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
@@ -101,9 +105,12 @@ allmpiopenmp:
 	cd MPIOPENMP/Stencil;       $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd MPIOPENMP/Transpose;     $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
+allmpiomp: allmpiopenmp
+
 allmpirma:
 	cd MPIRMA/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd MPIRMA/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPIRMA/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allshmem:
 	cd SHMEM/Synch_p2p;         $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -115,9 +122,14 @@ allmpishm:
 	cd MPISHM/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd MPISHM/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
+allmpi: allmpi1 allmpiomp allmpirma allmpishm
+
 allupc:
+	cd UPC/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd UPC/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd UPC/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+
+allpgas: allshmem allupc allmpirma
 
 allopenmp:
 	cd OPENMP/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -141,8 +153,9 @@ allcharm++:
 	cd CHARM++/Transpose;       $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allgrappa:
-	cd GRAPPA/Synch_p2p;       $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd GRAPPA/Stencil;         $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd GRAPPA/Synch_p2p;       $(MAKE) p2p        "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd GRAPPA/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd GRAPPA/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allserial:
 	cd SERIAL/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -158,16 +171,16 @@ allserial:
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
 clean:
-	cd MPI/DGEMM;               $(MAKE) clean
-	cd MPI/Nstream;             $(MAKE) clean
-	cd MPI/Reduce;              $(MAKE) clean
-	cd MPI/Stencil;             $(MAKE) clean
-	cd MPI/Transpose;           $(MAKE) clean
-	cd MPI/Random;              $(MAKE) clean
-	cd MPI/Sparse;              $(MAKE) clean
-	cd MPI/Synch_global;        $(MAKE) clean
-	cd MPI/Synch_p2p;           $(MAKE) clean
-	cd MPI/Branch;              $(MAKE) clean
+	cd MPI1/DGEMM;              $(MAKE) clean
+	cd MPI1/Nstream;            $(MAKE) clean
+	cd MPI1/Reduce;             $(MAKE) clean
+	cd MPI1/Stencil;            $(MAKE) clean
+	cd MPI1/Transpose;          $(MAKE) clean
+	cd MPI1/Random;             $(MAKE) clean
+	cd MPI1/Sparse;             $(MAKE) clean
+	cd MPI1/Synch_global;       $(MAKE) clean
+	cd MPI1/Synch_p2p;          $(MAKE) clean
+	cd MPI1/Branch;             $(MAKE) clean
 	cd FG_MPI/DGEMM;            $(MAKE) clean
 	cd FG_MPI/Nstream;          $(MAKE) clean
 	cd FG_MPI/Reduce;           $(MAKE) clean
@@ -180,8 +193,10 @@ clean:
 	cd FG_MPI/Branch;           $(MAKE) clean
 	cd MPIRMA/Stencil;          $(MAKE) clean
 	cd MPIRMA/Synch_p2p;        $(MAKE) clean
+	cd MPIRMA/Transpose;        $(MAKE) clean
 	cd UPC/Stencil;             $(MAKE) clean
 	cd UPC/Transpose;           $(MAKE) clean
+	cd UPC/Synch_p2p;           $(MAKE) clean
 	cd MPISHM/Stencil;          $(MAKE) clean
 	cd MPISHM/Synch_p2p;        $(MAKE) clean
 	cd MPISHM/Transpose;        $(MAKE) clean
@@ -193,6 +208,7 @@ clean:
 	cd CHARM++/Transpose;       $(MAKE) clean
 	cd GRAPPA/Synch_p2p;        $(MAKE) clean
 	cd GRAPPA/Stencil;          $(MAKE) clean
+	cd GRAPPA/Transpose;        $(MAKE) clean
 	cd MPIOPENMP/Nstream;       $(MAKE) clean
 	cd MPIOPENMP/Stencil;       $(MAKE) clean
 	cd MPIOPENMP/Transpose;     $(MAKE) clean
@@ -221,8 +237,9 @@ clean:
 	rm -f stats.json
 
 veryclean: clean
-	cd MPI/Branch;       $(MAKE) veryclean
+	cd MPI1/Branch;      $(MAKE) veryclean
 	cd OPENMP/Branch;    $(MAKE) veryclean
 	cd SERIAL/Branch;    $(MAKE) veryclean
+	cd FG_MPI/Branch;    $(MAKE) veryclean
 	cd Run;              $(MAKE) -f  Makefile_FG_MPI veryclean
 	cd common; rm -f make.defs

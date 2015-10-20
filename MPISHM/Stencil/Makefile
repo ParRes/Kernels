@@ -19,6 +19,9 @@ DOUBLEFLAG = -DDOUBLE
 STARFLAG   = -DSTAR
 #description: default stencil is compact (dense, square)
 
+#SYNCHFLAG  = -DLOCAL_BARRIER_SYNCH
+#description: default is not to use a barrier but point to point local synchronization
+
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
@@ -34,7 +37,7 @@ INCLUDEPATHS =
 ### End User configurable options ###
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) \
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)
+               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)  $(SYNCHFLAG)
 PROGRAM     = stencil
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

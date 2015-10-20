@@ -52,7 +52,7 @@ struct Timer {
 int main( int argc, char * argv[] ) {
  
   int iterations;
-  int m, n;
+  long m, n;
  
   Grappa::init( &argc, &argv );
  
@@ -70,8 +70,8 @@ int main( int argc, char * argv[] ) {
     exit(1);
   } 
  
-  m = atoi(argv[2]);
-  n = atoi(argv[3]);
+  m = atol(argv[2]);
+  n = atol(argv[3]);
   if (m < 1 || n < 1){
     if( Grappa::mycore() == root )
       std::cout <<"ERROR: grid dimensions must be positive: "<<m<<","<<n<< std::endl;
@@ -218,6 +218,6 @@ int main( int argc, char * argv[] ) {
     }
  
   });
-  Grappa::finalize();
+  //  Grappa::finalize();
   return 0;
 }

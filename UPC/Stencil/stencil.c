@@ -137,7 +137,7 @@ shared [1] int thread_offsetx[THREADS];
 shared [1] int thread_offsety[THREADS];
 
 local_shared_block_ptrs shared_2d_array_alloc(int sizex, int sizey, int offsetx, int offsety){
-  int alloc_size = sizex * sizey * sizeof(DTYPE);
+  long int alloc_size = sizex * sizey * sizeof(DTYPE);
   local_shared_block ptr;
 
   debug("Allocating main array size(%d, %d) offset(%d, %d) %d", sizex, sizey, offsetx, offsety, alloc_size);
@@ -145,7 +145,7 @@ local_shared_block_ptrs shared_2d_array_alloc(int sizex, int sizey, int offsetx,
   if(ptr == NULL)
     die("Failing shared allocation of %d bytes", alloc_size);
 
-  int line_ptrs_size = sizeof(local_shared_block) * sizey;
+  long int line_ptrs_size = sizeof(local_shared_block) * sizey;
   debug("Allocating ptr array %d", line_ptrs_size);
   local_shared_block_ptrs line_ptrs = upc_alloc(line_ptrs_size);
   if(line_ptrs == NULL)
@@ -161,7 +161,7 @@ local_shared_block_ptrs shared_2d_array_alloc(int sizex, int sizey, int offsetx,
 }
 
 DTYPE **shared_2d_array_to_private(local_shared_block_ptrs array, int sizex, int sizey, int offsetx, int offsety){
-  int alloc_size = sizey * sizeof(DTYPE*);
+  long int alloc_size = sizey * sizeof(DTYPE*);
   DTYPE **ptr = malloc(alloc_size);
   if(ptr == NULL)
     die("Unable to allocate array");
@@ -178,7 +178,7 @@ private_shared_block_ptrs partially_privatize(local_shared_block_ptrs array, int
   int sizey = thread_sizey[thread];
   int offsety = thread_offsety[thread];
 
-  int alloc_size = sizey * sizeof(local_shared_block);
+  long int alloc_size = sizey * sizeof(local_shared_block);
   private_shared_block_ptrs ptr = malloc(alloc_size);
   if(ptr == NULL)
     die("Unable to allocate array2");
@@ -203,6 +203,8 @@ int main(int argc, char ** argv) {
          avgtime, max_time;
   int    stencil_size;    /* number of points in stencil */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil */
+  int    istart;    /* bounds of grid tile assigned to calling rank        */
+  int    jstart;    /* bounds of grid tile assigned to calling rank        */
   int x_divs, y_divs;
 
   /*******************************************************************************
@@ -255,10 +257,6 @@ int main(int argc, char ** argv) {
     y_divs = THREADS / x_divs;
   }
 
-  if(THREADS % x_divs != 0)
-    if(MYTHREAD == 0)
-      die("THREADS %% x_divs != 0 (%d)", x_divs);
-
   if(RADIUS < 1)
     if(MYTHREAD == 0)
       die("Stencil radius %d should be positive", RADIUS);
@@ -267,26 +265,54 @@ int main(int argc, char ** argv) {
     if(MYTHREAD == 0)
       die("Stencil radius %d exceeds grid size %d", RADIUS, n);
 
-  if(n%THREADS != 0)
-    if(MYTHREAD == 0)
-      die("n%%THREADS should be zero\n");
+  if(x_divs * y_divs != THREADS){
+    die("x_divs * y_divs != THREADS");
+  }
 
-  int blockx = n / x_divs;
-  int blocky = n / y_divs;
-
-  int sizex = (n / x_divs) + 2*RADIUS;
-  int sizey = (n / y_divs) + 2*RADIUS;
+  /* compute amount of space required for input and solution arrays             */
 
   int mygridposx = MYTHREAD % x_divs;
   int mygridposy = MYTHREAD / x_divs;
 
-  int myoffsetx = mygridposx * blockx - RADIUS;
-  int myoffsety = mygridposy * blocky - RADIUS;
+  int blockx = n / x_divs;
+  int leftover = n % x_divs;
+  if (mygridposx < leftover) {
+    istart = (blockx + 1) * mygridposx;
+    blockx += 1;
+  }
+  else {
+    istart = (blockx+1) * leftover + blockx * (mygridposx-leftover);
+  }
 
-  thread_sizex[MYTHREAD] = sizex;
-  thread_sizey[MYTHREAD] = sizey;
+  if (blockx == 0)
+    die("No work to do on x-direction!");
+
+  int blocky = n / y_divs;
+  leftover = n % y_divs;
+  if (mygridposy < leftover) {
+    jstart = (blocky+1) * mygridposy;
+    blocky += 1;
+  }
+  else {
+    jstart = (blocky+1) * leftover + blocky * (mygridposy-leftover);
+  }
+
+  if (blocky == 0)
+    die("No work to do on y-direction!");
+
+  if(blockx < RADIUS || blocky < RADIUS) {
+    die("blockx < RADIUS || blocky < RADIUS");
+  }
+
+  int myoffsetx = istart - RADIUS;
+  int myoffsety = jstart - RADIUS;
   thread_offsetx[MYTHREAD] = myoffsetx;
   thread_offsety[MYTHREAD] = myoffsety;
+
+  int sizex = blockx + 2*RADIUS;
+  int sizey = blocky + 2*RADIUS;
+  thread_sizex[MYTHREAD] = sizex;
+  thread_sizey[MYTHREAD] = sizey;
 
   upc_barrier;
 
@@ -423,15 +449,19 @@ int main(int argc, char ** argv) {
 
     /* Apply the stencil operator */
     for (int y=starty; y<endy; y++) {
+      DTYPE *liney = in_array_private[y];
       for (int x=startx; x<endx; x++) {
+        double value = out_array_private[y][x];
         for (int xx=-RADIUS; xx<=RADIUS; xx++)
-          out_array_private[y][x] += WEIGHT(0, xx) * in_array_private[y][x + xx];
+          value += WEIGHT(0, xx) * liney[x + xx];
 
         for (int yy=-RADIUS; yy<0; yy++)
-          out_array_private[y][x] += WEIGHT(yy, 0) * in_array_private[y + yy][x];
+          value += WEIGHT(yy, 0) * in_array_private[y + yy][x];
 
         for (int yy=1; yy<=RADIUS; yy++)
-          out_array_private[y][x] += WEIGHT(yy, 0) * in_array_private[y + yy][x];
+          value += WEIGHT(yy, 0) * in_array_private[y + yy][x];
+
+        out_array_private[y][x] = value ;
       }
     }
 
@@ -459,8 +489,8 @@ int main(int argc, char ** argv) {
     }
   }
 
-  norm = (DTYPE) 0.0;
-  f_active_points = (double) (n-2*RADIUS)*(double) (n-2*RADIUS);
+  norm = (double) 0.0;
+  f_active_points = (double)(n-2*RADIUS) * (double)(n-2*RADIUS);
 
   /* compute L1 norm in parallel */
   for (int y=starty; y<endy; y++) {
@@ -484,9 +514,9 @@ int main(int argc, char ** argv) {
     ********************************************************************************/
 
     /* verify correctness */
-    reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
+    reference_norm = (double) (iterations+1) * (COEFX + COEFY);
 
-    if (ABS(norm-reference_norm) > EPSILON)
+    if (ABS(norm - reference_norm) > EPSILON)
       die("L1 norm = "FSTR", Reference L1 norm = "FSTR"\n", norm, reference_norm);
     else {
       printf("Solution validates\n");
