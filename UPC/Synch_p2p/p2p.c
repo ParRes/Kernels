@@ -53,7 +53,6 @@ HISTORY: Written by Abdullah Kayi, September 2015
 #include <par-res-kern_general.h>
 #include <par-res-kern_upc.h>
 
-#define USE_BUPC_EXT
 shared double times[THREADS];
 
 int is_debugging = 0;
@@ -259,8 +258,8 @@ int main(int argc, char ** argv) {
 
   /* set boundary values (bottom and left side of grid                           */
   if(MYTHREAD == 0)
-  for (j=0; j<n; j++)
-    ARRAY(0, j) = (double) j;
+    for (j=0; j<n; j++)
+      ARRAY(0, j) = (double) j;
 
   for (i=myoffsetx; i<myoffsetx + sizex; i++)
     ARRAY(i, 0) = (double) i;
@@ -303,7 +302,7 @@ int main(int argc, char ** argv) {
 
       if(MYTHREAD < THREADS - 1)
         current_max_line[MYTHREAD+1] = j;
-      }
+
       if(MYTHREAD == 0)
         current_max_line[MYTHREAD] = sizey;
       else
@@ -323,7 +322,7 @@ int main(int argc, char ** argv) {
   }
 
   pipeline_time = wtime() - pipeline_time;
-  times[MYTHREAD] = pipeline_time;;
+  times[MYTHREAD] = pipeline_time;
 
   upc_barrier;
 
