@@ -36,7 +36,6 @@
 #include <FullEmpty.hpp>
  
 using namespace Grappa;
-
  
 #define ARRAY(i,j) (local[(i+1)+((j)*(segment_size+1))])
 #define root 0
