@@ -148,8 +148,8 @@ int main(int argc, char * argv[]) {
       std::cout<<"ERROR: iterations must be >= 1 :"<<iterations<<std::endl;
     exit(1);
   }
-  int n       = atoi(argv[2]);
-  long nsquare = n * n;
+  int n        = atoi(argv[2]);
+  long nsquare = (long) n * n;
   if (nsquare < Grappa::cores()){
     if (my_ID == root)
       std::cout<<"ERROR: grid size "<<nsquare<<" must be at least # cores "<<

@@ -22,7 +22,8 @@ STARFLAG   = -DSTAR
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS    =
+#USERFLAGS    = -DUSE_BUPC_EXT
+#uncomment this to enable BUPC extensions
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
