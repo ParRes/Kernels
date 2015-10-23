@@ -253,7 +253,9 @@ int main(int argc, char ** argv)
 
     case LINEAR:
 
-       #pragma omp barrier
+       {
+        #pragma omp barrier
+       }
        #pragma omp master
        {
        for (id=1; id<nthread; id++) {
