@@ -210,7 +210,17 @@ int main(int argc, char **argv) {
 
   if (my_ID == root) {
     if (argc != 3){
-      printf("Usage: %s <log2 tablesize> <#update ratio>\n", *argv);
+      printf("Usage: %s <#update ratio> <log2 tablesize>\n", *argv);
+      error = 1;
+      goto ENDOFTESTS;
+    }
+
+    update_ratio  = atoi(*++argv);
+    /* test whether update ratio is a power of two                                 */
+    log2update_ratio = poweroftwo(update_ratio);
+    if (log2update_ratio <0) {
+      printf("ERROR: Invalid update ratio: %d, must be a power of 2\n",
+             update_ratio);
       error = 1;
       goto ENDOFTESTS;
     }
@@ -229,16 +239,6 @@ int main(int argc, char **argv) {
       printf("ERROR: Log2 tablesize is %d; must be >= 1\n",log2tablesize);
       error = 1;
       goto ENDOFTESTS;      
-    }
-
-    update_ratio  = atoi(*++argv);
-    /* test whether update ratio is a power of two                                 */
-    log2update_ratio = poweroftwo(update_ratio);
-    if (log2update_ratio <0) {
-      printf("ERROR: Invalid update ratio: %d, must be a power of 2\n",
-             update_ratio);
-      error = 1;
-      goto ENDOFTESTS;
     }
 
     /* for simplicity we set the vector length equal to the LOOKAHEAD size         */

@@ -108,26 +108,31 @@ prompt the user for the correct parameter syntax.
 # Running test suite
 
 After the desired kernels have been built, they can be tested by
-executing scripts in the Run subdirectory from the root of the
-kernels package. Only very small examples are provided that should
-complete in just a few seconds. Only a few parameters can be changed
-globally; for rigorous testing, the user should run each kernel 
-individually, carefully choosing the right parameters. This may involve 
-editing the individual Makefile and rerunning  the code.
+executing scripts in the 'scripts' subdirectory from the root of the
+kernels package. Currently two types of run scripts are supported.
+scripts/small: tests only very small examples that should complete in 
+               just a few seconds. This merely tests functionality
+               of kernels and installed runtimes
+scripts/wide:  tests examples that will take up most memory on a 
+               single node with 64 GB of memory. 
 
-# Example build and run
+Only a few parameters can be changed globally; for rigorous testing, 
+the user should run each kernel individually, carefully choosing the 
+right parameters. This may involve editing the individual Makefiles 
+and rerunning the kernels.
 
-```
-make all default_opt_flags="-xP -restrict" matrix_rank=7 number_of_functions=200
-./Run/smallopenmp
-./Run/smallmpi
-./Run/smallserial
-./Run/smallcharm++
-./Run/smallmpiopenmp
+# Example build and runs
+
+make all default_opt_flags="-O2" "matrix_rank=7" "number_of_functions=200" 
+./scripts/small/runopenmp
+./scripts/small/runmpi1
+./scripts/wide/runserial
+./scripts/small/runcharm++
+./scripts/wide/runmpiopenmp
 ```
 
 To exercise all kernels, type
-```
-./Run/smallall
-```
+./scripts/small/runall
+./scripts/wide/runall
+
 

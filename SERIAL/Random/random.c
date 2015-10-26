@@ -79,7 +79,7 @@ USAGE:   The program takes as input the 2log
          over number of updates, and the vector length of simultaneously
          updatable table elements. 
 
-         <progname> <log2 tablesize> <#update ratio> <vector length>
+         <progname> <#update ratio> <log2 tablesize> <vector length>
 
 FUNCTIONS CALLED:
 
@@ -168,7 +168,7 @@ int main(int argc, char **argv) {
   int               nstarts;     /* vector length                                  */
   s64Int            i, j, round, oldsize; /* dummies                               */
   s64Int            error;       /* number of incorrect table elements             */
-  s64Int            tablesize;   /* aggregate table size (all threads              */
+  s64Int            tablesize;   /* aggregate table size (all threads)              */
   s64Int            nupdate;     /* number of updates per thread                   */
   size_t            tablespace;  /* bytes per thread required for table            */
   u64Int            *ran;        /* vector of random numbers                       */
@@ -196,14 +196,8 @@ int main(int argc, char **argv) {
 *********************************************************************/
 
   if (argc != 4){
-    printf("Usage: %s <log2 tablesize> <#update ratio> ", *argv);
+    printf("Usage: %s <#update ratio> <log2 tablesize> ", *argv);
     printf("<vector length>\n");
-    exit(EXIT_FAILURE);
-  }
-
-  log2tablesize  = atoi(*++argv);
-  if (log2tablesize < 1){
-    printf("ERROR: Log2 tablesize is %d; must be >= 1\n",log2tablesize);
     exit(EXIT_FAILURE);
   }
 
@@ -213,6 +207,12 @@ int main(int argc, char **argv) {
   if (log2update_ratio <0) {
     printf("ERROR: Invalid update ratio: %d, must be a power of 2\n",
            update_ratio);
+    exit(EXIT_FAILURE);
+  }
+
+  log2tablesize  = atoi(*++argv);
+  if (log2tablesize < 1){
+    printf("ERROR: Log2 tablesize is %d; must be >= 1\n",log2tablesize);
     exit(EXIT_FAILURE);
   }
 

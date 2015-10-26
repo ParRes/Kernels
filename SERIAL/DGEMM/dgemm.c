@@ -91,8 +91,9 @@ main(int argc, char **argv){
   double  epsilon = 1.e-8;      /* error tolerance                                */
   static  
   double *A, *B, *C;            /* input (A,B) and output (C) matrices            */
-  int     order;                /* number of rows and columns of matrices         */
-  int     block;                /* tile size of matrices                          */
+  long    order;                /* number of rows and columns of matrices         */
+  long    block;                /* tile size of matrices                          */
+  int     shortcut;             /* true if only doing initialization              */
 
 #ifndef MKL  
   if (argc != 4 && argc != 3) {
@@ -111,10 +112,33 @@ main(int argc, char **argv){
   }
 
   order = atoi(*++argv);
+  if (order < 0) {
+    shortcut = 1;
+    order    = -order;
+  }
   if (order < 1) {
     printf("ERROR: Matrix order must be positive: %d\n", order);
     exit(EXIT_FAILURE);
   }
+
+#ifndef MKL
+  if (argc == 4) {
+         block = atoi(*++argv);
+  } else block = DEFAULTBLOCK;
+#endif
+
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Serial Dense matrix-matrix multiplication: C = A x B\n");
+  printf("Matrix order          = %d\n", order);
+  if (shortcut) 
+    printf("Only doing initialization\n"); 
+  if (block>0)
+    printf("Blocking factor       = %d\n", block);
+  else
+    printf("No blocking\n");
+  printf("Number of iterations  = %d\n", iterations);
+
+
   A = (double *) malloc(order*order*sizeof(double));
   B = (double *) malloc(order*order*sizeof(double));
   C = (double *) malloc(order*order*sizeof(double));
@@ -128,14 +152,7 @@ main(int argc, char **argv){
     C_arr(i,j) = 0.0;
   }
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial Dense matrix-matrix multiplication: C = A x B\n");
-
 #ifndef MKL
-  if (argc == 4) {
-         block = atoi(*++argv);
-  } else block = DEFAULTBLOCK;
-
   double *AA, *BB, *CC;
 
   if (block > 0) {
@@ -149,12 +166,7 @@ main(int argc, char **argv){
     CC = BB + block*(block+BOFFSET);
   } 
 
-  printf("Matrix order          = %d\n", order);
-  if (block>0)
-    printf("Blocking factor       = %d\n", block);
-  else
-    printf("No blocking\n");
-  printf("Number of iterations  = %d\n", iterations);
+  if (shortcut) exit(EXIT_SUCCESS);
 
   for (iter=0; iter<iterations; iter++) {
 

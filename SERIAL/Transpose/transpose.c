@@ -68,8 +68,8 @@ static double test_results (int , double*);
 
 int main(int argc, char ** argv) {
 
-  int    order;         /* order of a the matrix                           */
-  int    tile_size=32;  /* default tile size for tiling of local transpose */
+  long   order;         /* order of a the matrix                           */
+  long   tile_size=32;  /* default tile size for tiling of local transpose */
   int    iterations;    /* number of times to do the transpose             */
   int    i, j, it, jt, iter;  /* dummies                                   */
   double bytes;         /* combined size of matrices                       */
@@ -96,7 +96,7 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  order = atoi(*++argv); 
+  order = atol(*++argv); 
   if (order < 0){
     printf("ERROR: Matrix Order must be greater than 0 : %d \n", order);
     exit(EXIT_FAILURE);

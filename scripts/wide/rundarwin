@@ -1,0 +1,9 @@
+./scripts/wide/runserial 
+./scripts/wide/runmpi1
+./scripts/wide/runfgmpi 
+./scripts/wide/runopenmp 
+./scripts/wide/runmpiopenmp 
+./scripts/wide/runmpirma 
+./scripts/wide/runshmem
+./scripts/wide/runmpishm
+./scripts/wide/runupc

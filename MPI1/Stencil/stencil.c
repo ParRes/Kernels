@@ -309,27 +309,29 @@ int main(int argc, char ** argv) {
     IN(i,j)  = COEFX*i+COEFY*j;
     OUT(i,j) = (DTYPE)0.0;
   }
+
+  if (Num_procs > 1) { 
+    /* allocate communication buffers for halo values                          */
+    top_buf_out = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*width);
+    if (!top_buf_out) {
+      printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
+      error = 1;
+    }
+    bail_out(error);
+    top_buf_in     = top_buf_out +   RADIUS*width;
+    bottom_buf_out = top_buf_out + 2*RADIUS*width;
+    bottom_buf_in  = top_buf_out + 3*RADIUS*width;
  
-  /* allocate communication buffers for halo values                            */
-  top_buf_out = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*width);
-  if (!top_buf_out) {
-    printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
-    error = 1;
+    right_buf_out  = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*height);
+    if (!right_buf_out) {
+      printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
+      error = 1;
+    }
+    bail_out(error);
+    right_buf_in   = right_buf_out +   RADIUS*height;
+    left_buf_out   = right_buf_out + 2*RADIUS*height;
+    left_buf_in    = right_buf_out + 3*RADIUS*height;
   }
-  bail_out(error);
-  top_buf_in     = top_buf_out +   RADIUS*width;
-  bottom_buf_out = top_buf_out + 2*RADIUS*width;
-  bottom_buf_in  = top_buf_out + 3*RADIUS*width;
- 
-  right_buf_out  = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*height);
-  if (!right_buf_out) {
-    printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
-    error = 1;
-  }
-  bail_out(error);
-  right_buf_in   = right_buf_out +   RADIUS*height;
-  left_buf_out   = right_buf_out + 2*RADIUS*height;
-  left_buf_in    = right_buf_out + 3*RADIUS*height;
 
   for (iter = 0; iter<=iterations; iter++){
 

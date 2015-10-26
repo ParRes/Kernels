@@ -85,7 +85,7 @@ allmpi1:
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
 allfgmpi:
-	cd Run;                        $(MAKE) -f  Makefile_FG_MPI smallfgmpi
+	cd scripts/small;              $(MAKE) -f  Makefile_FG_MPI runfgmpi
 	cd FG_MPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd FG_MPI/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd FG_MPI/Sparse;              $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
@@ -241,5 +241,6 @@ veryclean: clean
 	cd OPENMP/Branch;    $(MAKE) veryclean
 	cd SERIAL/Branch;    $(MAKE) veryclean
 	cd FG_MPI/Branch;    $(MAKE) veryclean
-	cd Run;              $(MAKE) -f  Makefile_FG_MPI veryclean
+	cd scripts/small;    $(MAKE) -f  Makefile_FG_MPI veryclean
+	cd scripts/wide;     $(MAKE) -f  Makefile_FG_MPI veryclean
 	cd common; rm -f make.defs

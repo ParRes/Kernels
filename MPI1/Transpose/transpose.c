@@ -129,13 +129,13 @@ o The original and transposed matrices are called A and B
 
 int main(int argc, char ** argv)
 {
-  int Block_order;         /* number of columns owned by rank       */
-  int Block_size;          /* size of a single block                */
-  int Colblock_size;       /* size of column block                  */
+  long Block_order;        /* number of columns owned by rank       */
+  long Block_size;         /* size of a single block                */
+  long Colblock_size;      /* size of column block                  */
   int Tile_order=32;       /* default Tile order                    */
   int tiling;              /* boolean: true if tiling is used       */
   int Num_procs;           /* number of ranks                       */
-  int order;               /* order of overall matrix               */
+  long order;              /* order of overall matrix               */
   int send_to, recv_from;  /* ranks with which to communicate       */
   MPI_Status status;       
 #ifndef SYNCHRONOUS
@@ -186,7 +186,7 @@ int main(int argc, char ** argv)
       error = 1; goto ENDOFTESTS;
     }
 
-    order = atoi(*++argv);
+    order = atol(*++argv);
     if (order < Num_procs) {
       printf("ERROR: matrix order %d should at least # procs %d\n", 
              order, Num_procs);
@@ -220,9 +220,9 @@ int main(int argc, char ** argv)
   }
   
   /*  Broadcast input data to all ranks */
-  MPI_Bcast (&order,      1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast (&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast (&Tile_order, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast (&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Bcast (&iterations, 1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast (&Tile_order, 1, MPI_INT,  root, MPI_COMM_WORLD);
 
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);
