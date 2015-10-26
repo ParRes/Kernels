@@ -256,7 +256,9 @@ int main(int argc, char * argv[]) {
 
       GlobalAddress<Timer> timer = Grappa::symmetric_global_alloc<Timer>();
 
-      Grappa::finish( [=] {
+      // set up re-enrolling across iterations
+      auto completion_target = local_gce.enroll_recurring(cores());
+
       Grappa::on_all_cores( [=] {
 	  int send_to, recv_from;
 	  int64_t i, j, it, jt, istart, iter, phase; // dummies 
@@ -331,13 +333,13 @@ int main(int argc, char * argv[]) {
 		      }
 	      }	       
 
-	      // ensures all async writes complete before moving to next phase
-	      Grappa::impl::local_ce.wait();
-
-        barrier();
 	    } // end of phase loop
+
+	      // ensures all async writes complete before moving to next iteration
+	      Grappa::impl::local_gce.complete( completion_target );
+	      Grappa::impl::local_gce.wait();
+
 	  } // done with iterations
-	});
 	});
 
       Grappa::on_all_cores( [timer] {
