@@ -142,13 +142,20 @@ double **shared_2d_array_to_private(local_shared_block_ptrs array, int sizex, in
   return ptr;
 }
 
+#define OUT_ARRAY(x,y) out_array_private[local_blk_id * sizex + x][myoffsetx + y]
+#define IN_ARRAY(x,y)  in_array_private[local_blk_id * sizex + x][myoffsetx + y]
+#define BUF_ARRAY(x,y) buf_array_private[local_blk_id * sizex + x][myoffsetx + y]
+
+
 int main(int argc, char ** argv) {
-  int    N;
+  long   N;
   int    tile_size=32;  /* default tile size for tiling of local transpose */
-  int    num_iterations;/* number of times to do the transpose             */
+  long   num_iterations;/* number of times to do the transpose             */
   int    tiling;        /* boolean: true if tiling is used                 */
   double start_time,    /* timing parameters                               */
          end_time, avgtime;
+  double epsilon = 1.e-8;/* error tolerance                                */
+  double abserr;        /* running aggregate of absolute error             */
 
   /*********************************************************************
   ** read and test input parameters
@@ -160,14 +167,14 @@ int main(int argc, char ** argv) {
     upc_global_exit(EXIT_FAILURE);
   }
 
-  num_iterations = atoi(*++argv);
+  num_iterations = atol(*++argv);
   if(num_iterations < 1){
     if(MYTHREAD == 0)
       printf("ERROR: iterations must be >= 1 : %d \n", num_iterations);
     upc_global_exit(EXIT_FAILURE);
   }
 
-  N = atoi(*++argv);
+  N = atol(*++argv);
   if(N < 0){
     if(MYTHREAD == 0)
       printf("ERROR: Matrix Order must be greater than 0 : %d \n", N);
@@ -182,13 +189,13 @@ int main(int argc, char ** argv) {
   if(!tiling)
     tile_size = N;
 
-  int sizex = N / THREADS;
+  long sizex = N / THREADS;
   if(N % THREADS != 0) {
     if(MYTHREAD == 0)
       printf("N %% THREADS != 0\n");
     upc_global_exit(EXIT_FAILURE);
   }
-  int sizey = N;
+  long sizey = N;
 
   if(MYTHREAD == 0) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
@@ -227,27 +234,18 @@ int main(int argc, char ** argv) {
   /*********************************************************************
   ** Initialize the matrices
   *********************************************************************/
-  for(int y=myoffsety; y<myoffsety + sizey; y++){
-    for(int x=myoffsetx; x<myoffsetx + sizex; x++){
+  for(long y=myoffsety; y<myoffsety + sizey; y++){
+    for(long x=myoffsetx; x<myoffsetx + sizex; x++){
       in_array_private[y][x] = (double) (x+N*y);
-      out_array[y][x] = -1.0;
+      out_array[y][x] = 0.0;
     }
   }
   upc_barrier;
 
-  for(int y=myoffsety; y<myoffsety + sizey; y++){
-    for(int x=myoffsetx; x<myoffsetx + sizex; x++){
-      if(in_array_private[y][x] !=(double) (x+N*y))
-        die("x=%d y=%d in_array=%f != %f", x, y, in_array[y][x], (x+N*y));
-      if(out_array_private[y][x] != -1.0)
-        die("out_array_private error");
-    }
-  }
-
   /*********************************************************************
   ** Transpose
   *********************************************************************/
-  int transfer_size = sizex * sizex * sizeof(double);
+  long transfer_size = sizex * sizex * sizeof(double);
   if(MYTHREAD == 0)
     debug("transfer size = %d", transfer_size);
 
@@ -259,20 +257,18 @@ int main(int argc, char ** argv) {
     }
 
     for(int i=0; i<THREADS; i++){
-      int local_blk_id = (MYTHREAD + i) % THREADS;
-      int remote_blk_id = MYTHREAD;
-      int remote_thread = local_blk_id;
+      long local_blk_id = (MYTHREAD + i) % THREADS;
+      long remote_blk_id = MYTHREAD;
+      long remote_thread = local_blk_id;
 
       upc_memget(&buf_array_private[local_blk_id * sizex][myoffsetx],
-                  &in_arrays[remote_thread][remote_blk_id * sizex][remote_thread * sizex], transfer_size);
-
-#define OUT_ARRAY(x,y) out_array_private[local_blk_id * sizex + x][myoffsetx + y]
-#define BUF_ARRAY(x,y) buf_array_private[local_blk_id * sizex + x][myoffsetx + y]
+                  &in_arrays[remote_thread][remote_blk_id * sizex][remote_thread * sizex], 
+                  transfer_size);
 
       if(!tiling){
         for(int x=0; x<sizex; x++){
           for(int y=0; y<sizex; y++){
-            OUT_ARRAY(x,y) = BUF_ARRAY(y,x);
+            OUT_ARRAY(x,y) += BUF_ARRAY(y,x);
           }
         }
       }
@@ -281,7 +277,7 @@ int main(int argc, char ** argv) {
           for(int y=0; y<sizex; y+=tile_size){
             for(int bx=x; bx<MIN(sizex, x+tile_size); bx++){
               for(int by=y; by<MIN(sizex, y+tile_size); by++){
-                OUT_ARRAY(bx,by) = BUF_ARRAY(by,bx);
+                OUT_ARRAY(bx,by) += BUF_ARRAY(by,bx);
               }
             }
           }
@@ -289,6 +285,14 @@ int main(int argc, char ** argv) {
       }
     }
     upc_barrier;
+    /* increment input array */
+    for(long y=myoffsety; y<myoffsety + sizey; y++){
+      for(long x=myoffsetx; x<myoffsetx + sizex; x++){
+        in_array_private[y][x] += 1.0;
+      }
+    }
+    upc_barrier; // sadly, we need a second barrier to avoid untimely reads
+
   }
 
   upc_barrier;
@@ -297,14 +301,17 @@ int main(int argc, char ** argv) {
   /*********************************************************************
   ** Analyze and output results.
   *********************************************************************/
-  for(int y=myoffsety; y<myoffsety + sizey; y++){
-    for(int x=myoffsetx; x<myoffsetx + sizex; x++){
-      if(in_array_private[y][x] != (double)(x+ N*y))
-        die("Error in input: x=%d y=%d", x, y);
-      if(out_array_private[y][x] != (double)(y + N*x))
-        die("x=%d y=%d in_array=%f != %f   %d %d", x, y, out_array[y][x], (double)(y + N*x), (int)(out_array[y][x]) % N, (int)(out_array[y][x]) / N);
+
+  abserr = 0.0;
+  double addit = ((double)(num_iterations+1) * (double) (num_iterations))/2.0;
+  for(long y=myoffsety; y<myoffsety + sizey; y++){
+    for(long x=myoffsetx; x<myoffsetx + sizex; x++){
+      abserr += ABS(out_array_private[y][x] - (double)((y + N*x)*(num_iterations+1)+addit));
     }
   }
+
+  if (abserr >= epsilon)
+  die("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr, epsilon);
 
   if(MYTHREAD == 0){
     printf("Solution validates\n");
