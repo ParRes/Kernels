@@ -261,11 +261,7 @@ int main(int argc, char ** argv)
  
   MPI_Info_create (&rma_winfo);
   MPI_Info_set (rma_winfo, "no locks", "true");
-#ifdef MANYPUT
-  MPI_Win_allocate (Colblock_size*sizeof(double), sizeof(double), rma_winfo, MPI_COMM_WORLD, (void *) &B_p, &rma_win);
-#else
   B_p = (double *)malloc(Colblock_size*sizeof(double));
-#endif
   if (B_p == NULL){
     printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
     error = 1;
@@ -280,7 +276,6 @@ int main(int argc, char ** argv)
     }
     bail_out(error);
  
-#ifndef MANYPUT
     MPI_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
                       rma_winfo, MPI_COMM_WORLD, &Work_in_p, &rma_win);
     if (Work_in_p == NULL){
@@ -288,7 +283,6 @@ int main(int argc, char ** argv)
       error = 1;
     }
     bail_out(error);
-#endif
   }
 
   if (passive_target && Num_procs>1) {
@@ -356,16 +350,10 @@ int main(int argc, char ** argv)
 		A(it,jt) += 1.0;
               }
       }
-#ifdef MANYPUT
-      for (j = 0; j < Block_order; j++) {
-        MPI_Put (&Work_out(phase-1, 0, j), Block_order, MPI_DOUBLE, send_to, 
-                 (my_ID * Block_order)  + j * order, Block_order, MPI_DOUBLE, rma_win);
-      }
-#else // MANYPUT
  
       MPI_Put(Work_out_p+Block_size*(phase-1), Block_size, MPI_DOUBLE, send_to, 
               Block_size*(phase-1), Block_size, MPI_DOUBLE, rma_win); 
-#endif // MANYPUT
+
       if (passive_target) {
         if (flush_bundle==1) {
             if (flush_local==1) {
@@ -392,7 +380,6 @@ int main(int argc, char ** argv)
       }
     }
  
-#ifndef MANYPUT 
     for (phase=1; phase<Num_procs; phase++) {
       recv_from = (my_ID + phase            )%Num_procs;
       istart = recv_from*Block_order; 
@@ -401,7 +388,6 @@ int main(int argc, char ** argv)
         for (i=0; i<Block_order; i++) 
           B(i,j) += Work_in(phase-1,i,j);
     } /* end of phase loop for scatters */
-#endif
 
     /* for the flush case we need to make sure we have consumed Work_in 
        before overwriting it in the next iteration                    */
