@@ -150,7 +150,7 @@ double **shared_2d_array_to_private(local_shared_block_ptrs array, int sizex, in
 int main(int argc, char ** argv) {
   long   N;
   int    tile_size=32;  /* default tile size for tiling of local transpose */
-  long   num_iterations;/* number of times to do the transpose             */
+  long   iterations;    /* number of times to do the transpose             */
   int    tiling;        /* boolean: true if tiling is used                 */
   double start_time,    /* timing parameters                               */
          end_time, avgtime;
@@ -167,10 +167,10 @@ int main(int argc, char ** argv) {
     upc_global_exit(EXIT_FAILURE);
   }
 
-  num_iterations = atol(*++argv);
-  if(num_iterations < 1){
+  iterations = atol(*++argv);
+  if(iterations < 1){
     if(MYTHREAD == 0)
-      printf("ERROR: iterations must be >= 1 : %d \n", num_iterations);
+      printf("ERROR: iterations must be >= 1 : %d \n", iterations);
     upc_global_exit(EXIT_FAILURE);
   }
 
@@ -202,7 +202,7 @@ int main(int argc, char ** argv) {
     printf("UPC matrix transpose: B = A^T\n");
     printf("Number of threads    = %d\n", THREADS);
     printf("Matrix order         = %d\n", N);
-    printf("Number of iterations = %d\n", num_iterations);
+    printf("Number of iterations = %d\n", iterations);
     if (tiling)
           printf("Tile size            = %d\n", tile_size);
     else  printf("Untiled\n");
@@ -249,7 +249,7 @@ int main(int argc, char ** argv) {
   if(MYTHREAD == 0)
     debug("transfer size = %d", transfer_size);
 
-  for(int iter=0; iter<=num_iterations; iter++){
+  for(int iter=0; iter<=iterations; iter++){
     /* start timer after a warmup iteration */
     if(iter == 1){
       upc_barrier;
@@ -284,6 +284,7 @@ int main(int argc, char ** argv) {
         }
       }
     }
+    /* we need two barriers to avoid read/write conflicts on in_array */
     upc_barrier;
     /* increment input array */
     for(long y=myoffsety; y<myoffsety + sizey; y++){
@@ -291,7 +292,7 @@ int main(int argc, char ** argv) {
         in_array_private[y][x] += 1.0;
       }
     }
-    upc_barrier; // sadly, we need a second barrier to avoid untimely reads
+    upc_barrier; 
 
   }
 
@@ -303,10 +304,10 @@ int main(int argc, char ** argv) {
   *********************************************************************/
 
   abserr = 0.0;
-  double addit = ((double)(num_iterations+1) * (double) (num_iterations))/2.0;
+  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   for(long y=myoffsety; y<myoffsety + sizey; y++){
     for(long x=myoffsetx; x<myoffsetx + sizex; x++){
-      abserr += ABS(out_array_private[y][x] - (double)((y + N*x)*(num_iterations+1)+addit));
+      abserr += ABS(out_array_private[y][x] - (double)((y + N*x)*(iterations+1)+addit));
     }
   }
 
@@ -316,7 +317,7 @@ int main(int argc, char ** argv) {
   if(MYTHREAD == 0){
     printf("Solution validates\n");
     double transfer_size = 2 * N * N * sizeof(double);
-    avgtime = (end_time - start_time) / num_iterations;
+    avgtime = (end_time - start_time) / iterations;
     double rate = transfer_size / avgtime * 1.0E-06;
     printf("Rate (MB/s): %lf Avg time (s): %lf\n",rate, avgtime);
   }
