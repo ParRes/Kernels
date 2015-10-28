@@ -348,7 +348,7 @@ int main(int argc, char ** argv)
     else {
       for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order) {
         for (j=0; j<Block_order; j+=Tile_order) 
-          for (it=i; it<MIN(Block_order,i+Tile_order); it++)
+          for (it=i; it<MIN((shm_ID+1)*chunk_size,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
               B(jt,it) = A(it,jt); 
 	    }
@@ -369,7 +369,7 @@ int main(int argc, char ** argv)
       else {
         for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order)
           for (j=0; j<Block_order; j+=Tile_order) 
-            for (it=i; it<MIN(Block_order,i+Tile_order); it++)
+            for (it=i; it<MIN((shm_ID+1)*chunk_size,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
                 Work_out(jt,it) = A(it,jt); 
 	      }
