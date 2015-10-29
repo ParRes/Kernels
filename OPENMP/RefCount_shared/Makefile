@@ -10,8 +10,11 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-DEPENDENCEFLAG = -DDEPENDENT
+#DEPENDENCEFLAG = -DDEPENDENT
 #description: default counter update is with inter-dependence
+
+#ATOMICFLAG = -DATOMIC
+#description: default update of independent counter pair is using locks
 
 #NTHREADFLAG  = -DMAXTHREADS=n
 #description: default thread limit is 256
@@ -26,7 +29,8 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS    = $(DEPENDENCEFLAG) $(DEBUGFLAG) $(NTHREADFLAG) $(USERFLAGS)
+TUNEFLAGS    = $(DEPENDENCEFLAG) $(DEBUGFLAG) $(NTHREADFLAG) $(USERFLAGS)\
+               $(ATOMICFLAG)
 PROGRAM     = shared
 # objects below are the default, used by "clean," if invoked
 OBJS        = $(PROGRAM).o $(COMOBJS)
