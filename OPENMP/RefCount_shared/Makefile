@@ -13,7 +13,7 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEPENDENCEFLAG = -DDEPENDENT
 #description: default counter update is with inter-dependence
 
-#ATOMICFLAG = -DATOMIC
+ATOMICFLAG = -DATOMIC
 #description: default update of independent counter pair is using locks
 
 #NTHREADFLAG  = -DMAXTHREADS=n
