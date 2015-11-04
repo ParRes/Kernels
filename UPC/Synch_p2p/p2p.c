@@ -303,17 +303,16 @@ int main(int argc, char ** argv) {
       if(MYTHREAD < THREADS - 1)
         current_max_line[MYTHREAD+1] = j;
 
-      if(MYTHREAD == 0)
-        current_max_line[MYTHREAD] = sizey;
-      else
-        current_max_line[MYTHREAD] = 0;
 #endif
     }
 
     /* copy top right corner value to bottom left corner to create dependency; we
        need a barrier to make sure the latest value is used. This also guarantees
      that the flags for the next iteration (if any) are not getting clobbered  */
-
+    if(MYTHREAD == 0)
+      current_max_line[MYTHREAD] = sizey;
+    else
+      current_max_line[MYTHREAD] = 0;
 
     if(MYTHREAD == THREADS - 1){
       in_arrays[0][0][0] = -ARRAY(m-1, n-1);
