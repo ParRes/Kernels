@@ -6,7 +6,7 @@ for type in vector_go vector_stop no_vector ins_heavy; do
 done 
 SERIAL/DGEMM/dgemm              $NUMITERS 500 32;            echo $SEPLINE 
 SERIAL/Nstream/nstream          $NUMITERS 2000000 0;         echo $SEPLINE 
-SERIAL/Random/random            20 16 4;                     echo $SEPLINE 
+SERIAL/Random/random            16 16 4;                     echo $SEPLINE 
 SERIAL/Reduce/reduce            $NUMITERS 2000000;           echo $SEPLINE 
 SERIAL/Sparse/sparse            $NUMITERS 10 4;              echo $SEPLINE 
 SERIAL/Stencil/stencil          $NUMITERS 1000;              echo $SEPLINE                                                                                                                                                       

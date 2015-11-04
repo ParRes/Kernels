@@ -1,5 +1,4 @@
-include ../../common/OPENMP.defs
-
+include ../../common/AMPI.defs
 ##### User configurable options #####
 
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
@@ -10,29 +9,20 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
-#DEPENDENCEFLAG = -DDEPENDENT
-#description: default counter update is with  independent counter updates
-
-ATOMICFLAG = -DATOMIC
-#description: default update of independent counter pair is using locks
-
-#NTHREADFLAG  = -DMAXTHREADS=n
-#description: default thread limit is 256
-
 USERFLAGS     = 
 #description: parameter to specify optional flags
 
+#set the following variables for custom libraries and/or other objects
+
 EXTOBJS      = 
-LIBS         = -lm
+LIBS         =
 LIBPATHS     = 
 INCLUDEPATHS = 
 
 ### End User configurable options ###
 
-TUNEFLAGS    = $(DEPENDENCEFLAG) $(DEBUGFLAG) $(NTHREADFLAG) $(USERFLAGS)\
-               $(ATOMICFLAG)
-PROGRAM     = shared
-# objects below are the default, used by "clean," if invoked
+TUNEFLAGS   = $(DEBUGFLAG) $(USERFLAGS)
+PROGRAM     = p2p
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
 include ../../common/make.common

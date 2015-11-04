@@ -56,6 +56,10 @@ The run script charmrun may not give the desired result. If Charm++
 is built to use MPI, the code can be run in most cases by using
 mpiexec.hydra, with the usual command line parameters.
 
+Adaptive MPI
+------------
+This runtime is based on Charm++ and can be built from its sources.
+
 Fine-Grain MPI
 --------------
 Care must be taken to use the specific MPI version supporting this

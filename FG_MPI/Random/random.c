@@ -415,8 +415,8 @@ int main(int argc, char **argv) {
       }
 
       /* let all other rankes know how many indices to expect                      */
-      MPI_Alltoall(sizeSendBucket, 1, MPI_INTEGER,
-                   sizeRecvBucket, 1, MPI_INTEGER, MPI_COMM_WORLD);
+      MPI_Alltoall(sizeSendBucket, 1, MPI_INT,
+                   sizeRecvBucket, 1, MPI_INT, MPI_COMM_WORLD);
 
       /* compute receive buffer offsets so that received data is contiguous        */
       for (proc=1; proc<Num_procs; proc++) 

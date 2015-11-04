@@ -8,7 +8,7 @@ for type in vector_go vector_stop no_vector ins_heavy; do
 done
 $MPIRUN -np $NUMPROCS MPI1/DGEMM/dgemm               $NUMITERS 500 32 1;   echo $SEPLINE
 $MPIRUN -np $NUMPROCS MPI1/Nstream/nstream           $NUMITERS 2000000 0;  echo $SEPLINE
-$MPIRUN -np $NUMPROCS MPI1/Random/random             20 16;                echo $SEPLINE
+$MPIRUN -np $NUMPROCS MPI1/Random/random             16 16;                echo $SEPLINE
 $MPIRUN -np $NUMPROCS MPI1/Reduce/reduce             $NUMITERS 2000000;    echo $SEPLINE
 $MPIRUN -np $NUMPROCS MPI1/Sparse/sparse             $NUMITERS 10 4;       echo $SEPLINE
 $MPIRUN -np $NUMPROCS MPI1/Stencil/stencil           $NUMITERS 1000;       echo $SEPLINE

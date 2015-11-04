@@ -212,9 +212,9 @@ int main(int argc, char ** argv)
   }
 
   /* broadcast input data  */
-  MPI_Bcast(&vector_length, 1, MPI_INTEGER, root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations,    1, MPI_INTEGER, root, MPI_COMM_WORLD);
-  MPI_Bcast(&btype,         1, MPI_INTEGER, root, MPI_COMM_WORLD);
+  MPI_Bcast(&vector_length, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&btype,         1, MPI_INT, root, MPI_COMM_WORLD);
 
   vector = malloc(vector_length*2*sizeof(int));
   if (!vector) {
@@ -348,7 +348,7 @@ int main(int argc, char ** argv)
   total = 0;
   for (i=0; i<vector_length; i++) total += vector[i];
 
-  MPI_Reduce(&total, &total_sum, 1, MPI_INTEGER, MPI_SUM, root, MPI_COMM_WORLD);
+  MPI_Reduce(&total, &total_sum, 1, MPI_INT, MPI_SUM, root, MPI_COMM_WORLD);
 
   /* compute verification values                                             */
   total_ref = ((vector_length%8)*(vector_length%8-8) + vector_length)/2*Num_procs;
