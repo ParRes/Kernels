@@ -7,5 +7,5 @@ SERIAL/Random/random            $NUMITERS 32 8;              echo $SEPLINE
 SERIAL/Reduce/reduce            $NUMITERS 2000000000L;       echo $SEPLINE 
 SERIAL/Sparse/sparse            $NUMITERS 13 7;              echo $SEPLINE 
 SERIAL/Stencil/stencil          $NUMITERS 50000;             echo $SEPLINE
-SERIAL/Synch_p2p/p2p            $NUMITERS 50000 50000;       echo $SEPLINE 
+SERIAL/Synch_p2p/p2p            $NUMITERS 70000 70000;       echo $SEPLINE 
 SERIAL/Transpose/transpose      $NUMITERS 50000 64;          echo $SEPLINE 

@@ -1,20 +1,14 @@
 NUMTHREADS=4 
-NUMITERS=10 
+NUMITERS=1
 SEPLINE="===============================================================" 
  
-for type in vector_go vector_stop no_vector ins_heavy; do 
-  OPENMP/Branch/branch          $NUMTHREADS  $NUMITERS 1000 $type;        echo $SEPLINE 
-done 
-OPENMP/DGEMM/dgemm              $NUMTHREADS $NUMITERS 500 32;             echo $SEPLINE 
-OPENMP/Nstream/nstream          $NUMTHREADS $NUMITERS 2000000 0;          echo $SEPLINE 
-OPENMP/Random/random $NUMTHREADS 20 16 4;                                 echo $SEPLINE 
+OPENMP/DGEMM/dgemm              $NUMTHREADS $NUMITERS -50000 32;              echo $SEPLINE 
+OPENMP/Nstream/nstream          $NUMTHREADS $NUMITERS 2000000000L 0;          echo $SEPLINE 
+OPENMP/Random/random            $NUMTHREADS 32 4 4;                           echo $SEPLINE 
 for ALGORITHM in linear binary-barrier binary-p2p long-optimal; do 
-  OPENMP/Reduce/reduce          $NUMTHREADS $NUMITERS 2000000 $ALGORITHM; echo $SEPLINE 
+  OPENMP/Reduce/reduce          $NUMTHREADS $NUMITERS 1400000000L $ALGORITHM; echo $SEPLINE 
 done 
-OPENMP/RefCount_shared/shared   $NUMTHREADS 2000000 100;                  echo $SEPLINE 
-OPENMP/RefCount_private/private $NUMTHREADS 2000000;                      echo $SEPLINE 
-OPENMP/Sparse/sparse            $NUMTHREADS $NUMITERS 10 4;               echo $SEPLINE 
-OPENMP/Stencil/stencil          $NUMTHREADS $NUMITERS 1000;               echo $SEPLINE                                                                                                                                          
-OPENMP/Synch_global/global      $NUMTHREADS $NUMITERS 10000;              echo $SEPLINE 
-OPENMP/Synch_p2p/p2p            $NUMTHREADS $NUMITERS 1000 100;           echo $SEPLINE 
-OPENMP/Transpose/transpose      $NUMTHREADS $NUMITERS 2000 64;            echo $SEPLINE
+OPENMP/Sparse/sparse            $NUMTHREADS $NUMITERS 13 7;                   echo $SEPLINE 
+OPENMP/Stencil/stencil          $NUMTHREADS $NUMITERS 50000;                  echo $SEPLINE
+OPENMP/Synch_p2p/p2p            $NUMTHREADS $NUMITERS 70000 70000;            echo $SEPLINE 
+OPENMP/Transpose/transpose      $NUMTHREADS $NUMITERS 50000 64;               echo $SEPLINE

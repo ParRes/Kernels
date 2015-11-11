@@ -134,7 +134,6 @@ int main(int argc, char **argv){
   }
   /* compute number of points in the grid                                         */
   size2 = size*size;
-  printf("size = %ld, size2 = %ld\n", size, size2);
 
   radius = atoi(*++argv);
   if (radius <0) {

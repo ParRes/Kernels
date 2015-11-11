@@ -74,7 +74,7 @@ static double test_results (int , double*);
 
 int main(int argc, char ** argv) {
 
-  int    order;         /* order of a the matrix                           */
+  long   order;         /* order of a the matrix                           */
   int    Tile_order=32; /* default tile size for tiling of local transpose */
   int    iterations;    /* number of times to do the transpose             */
   int    tiling;        /* boolean: true if tiling is used                 */
@@ -134,12 +134,14 @@ int main(int argc, char ** argv) {
 
   A   = (double *)malloc(order*order*sizeof(double));
   if (A == NULL){
-    printf(" Error allocating space for input matrix\n");
+    printf(" ERROR: cannot allocate space for input matrix: %ld\n", 
+           order*order*sizeof(double));
     exit(EXIT_FAILURE);
   }
   B  = (double *)malloc(order*order*sizeof(double));
   if (B == NULL){
-    printf(" Error allocating space for transposed matrix\n");
+    printf(" ERROR: cannot allocate space for output matrix: %ld\n", 
+           order*order*sizeof(double));
     exit(EXIT_FAILURE);
   }
 
@@ -162,7 +164,7 @@ int main(int argc, char ** argv) {
   } 
   else {
     printf("Number of threads     = %i;\n",nthread_input);
-    printf("Matrix order          = %d\n", order);
+    printf("Matrix order          = %ld\n", order);
     printf("Number of iterations  = %d\n", iterations);
     if (tiling) {
       printf("Tile size             = %d\n", Tile_order);
@@ -272,7 +274,7 @@ int main(int argc, char ** argv) {
 
 /* function that computes the error committed during the transposition */
 
-double test_results (int order, double *B) {
+double test_results (long order, double *B) {
 
   double abserr=0.0;
   int i,j;
@@ -280,7 +282,7 @@ double test_results (int order, double *B) {
   #pragma omp parallel for private(i) reduction(+:abserr)
   for (j=0;j<order;j++) {
     for (i=0;i<order; i++) {
-      abserr += ABS(B(i,j) - (i*order + j));
+      abserr += ABS(B(i,j) - (order*i + j));
     }
   }
 

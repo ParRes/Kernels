@@ -149,7 +149,7 @@ bupc_sem_t * shared allflags[THREADS];
 
 int main(int argc, char ** argv) {
 
-  long    m, n;            /* grid dimensions                                     */
+  long   m, n;            /* grid dimensions                                     */
   int    i, j, iter;      /* dummies                                             */
   int    iterations;      /* number of times to run the pipeline algorithm       */
   double pipeline_time,   /* timing parameters                                   */
@@ -250,11 +250,14 @@ int main(int argc, char ** argv) {
   /*********************************************************************
   ** Initialize the matrices
   *********************************************************************/
+  printf("got this far\n");
 
   /* clear the array                                                             */
   for (j=0; j<n; j++)
     for (i=myoffsetx; i<myoffsetx + sizex; i++)
       ARRAY(i, j) = 0.0;
+
+  printf("got this far2\n");
 
   /* set boundary values (bottom and left side of grid                           */
   if(MYTHREAD == 0)

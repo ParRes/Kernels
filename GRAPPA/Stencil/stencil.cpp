@@ -454,7 +454,6 @@ int main(int argc, char * argv[]) {
     }
   });
 
-  // skipping finalize, which creates spurious errors
-  //  Grappa::finalize();
+  Grappa::finalize();
   return 0;
 }

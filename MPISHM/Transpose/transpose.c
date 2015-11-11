@@ -82,13 +82,13 @@ HISTORY: Written by Tim Mattson, April 1999.
 
 int main(int argc, char ** argv)
 {
-  int Block_order;
+  size_t Block_order;
   size_t Block_size;
   size_t Colblock_size;
   int Tile_order=32;
   int tiling;
   int Num_procs;     /* Number of ranks                                          */
-  int order;         /* overall matrix order                                     */
+  size_t order;      /* overall matrix order                                     */
   int send_to, recv_from; /* communicating ranks                                 */
   size_t bytes;      /* total amount of data to be moved                         */
   int my_ID;         /* rank                                                     */
@@ -122,7 +122,7 @@ int main(int argc, char ** argv)
   int Num_groups;    /* number of shared memory group                            */
   int group_ID;      /* sequence number of shared memory group                   */
   int size_mul;      /* size multiplier; 0 for non-root ranks in coherence domain*/
-  int istart;
+  size_t istart;
   MPI_Request send_req, recv_req;
 
 /*********************************************************************************
@@ -166,7 +166,7 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     } 
 
-    order = atoi(*++argv);
+    order = atol(*++argv);
     if (order < Num_procs) {
       printf("ERROR: matrix order %d should at least # procs %d\n", 
              order, Num_procs);
@@ -186,7 +186,7 @@ int main(int argc, char ** argv)
   bail_out(error); 
 
   /*  Broadcast input data to all ranks */
-  MPI_Bcast(&order,      1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&Tile_order, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&group_size, 1, MPI_INT, root, MPI_COMM_WORLD);

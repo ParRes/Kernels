@@ -89,7 +89,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 
 int main(int argc, char ** argv) {
 
-  int    n;               /* linear grid dimension                               */
+  long   n;               /* linear grid dimension                               */
   int    i, j, ii, jj, it, jt, iter;  /* dummies                                 */
   DTYPE  norm,            /* L1 norm of solution                                 */
          reference_norm;
@@ -134,7 +134,7 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  n  = atoi(*++argv);
+  n  = atol(*++argv);
 
   if (n < 1){
     printf("ERROR: grid dimension must be positive: %d\n", n);
@@ -157,7 +157,8 @@ int main(int argc, char ** argv) {
   in  = (DTYPE *) malloc(total_length);
   out = (DTYPE *) malloc(total_length);
   if (!in || !out) {
-    printf("ERROR: could not allocate space for input or output array\n");
+    printf("ERROR: could not allocate space for input or output array: %ld\n",
+           total_length);
     exit(EXIT_FAILURE);
   }
 

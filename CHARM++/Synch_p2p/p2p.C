@@ -131,12 +131,12 @@ public:
   int iterations;
   double result;
   int    offset, istart, iend, j; // global grid indices of strip
-  int    width; 
+  long   width; 
   double *vector;
 
   // Constructor, initialize values
   P2p() {
-    int i, iloc, leftover;
+    long i, iloc, leftover;
       
     /* compute amount of space required for input and solution arrays             */
     width = m/num_chares;

@@ -137,9 +137,10 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
 
-  /* fill the base string with copies (truncated) of scrable string         */
+  /* fill the base string with copies (truncated) of scramble string        */
   for (i=0; i<thread_length; i++) basestring[i]=scramble[i%32];
   basestring[thread_length] = EOS;
+
 
   catstring=(char *) malloc((length+1)*sizeof(char));
   if (catstring==NULL) {

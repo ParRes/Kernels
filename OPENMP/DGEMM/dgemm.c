@@ -102,8 +102,9 @@ main(int argc, char **argv){
                                    obtained numbers of threads are the same       */
   static  
   double *A, *B, *C;            /* input (A,B) and output (C) matrices            */
-  int     order;                /* number of rows and columns of matrices         */
+  long    order;                /* number of rows and columns of matrices         */
   int     block;                /* tile size of matrices                          */
+  int shortcut;                 /* true if only doing initialization              */
 
 #ifndef MKL  
   if (argc != 4 && argc != 5) {
@@ -131,9 +132,13 @@ main(int argc, char **argv){
     exit(EXIT_FAILURE);
   }
 
-  order = atoi(*++argv);
+  order = atol(*++argv);
+  if (order < 0) {
+    shortcut = 1;
+    order    = -order;
+  }
   if (order < 1) {
-    printf("ERROR: Matrix order must be positive: %d\n", order);
+    printf("ERROR: Matrix order must be positive: %ld\n", order);
     exit(EXIT_FAILURE);
   }
   A = (double *) malloc(order*order*sizeof(double));
@@ -188,16 +193,20 @@ main(int argc, char **argv){
     printf("number of spawned threads %d\n", nthread);
   } 
   else {
-    printf("Matrix order          = %d\n", order);
+    printf("Matrix order          = %ld\n", order);
     printf("Number of threads     = %d\n", nthread_input);
     if (block>0)
       printf("Blocking factor       = %d\n", block);
     else
       printf("No blocking\n");
     printf("Number of iterations  = %d\n", iterations);
+    if (shortcut) 
+      printf("Only doing initialization\n"); 
   }
   }
   bail_out(num_error); 
+
+  if (shortcut) exit(EXIT_SUCCESS);
 
   for (iter=0; iter<=iterations; iter++) {
 
@@ -263,7 +272,7 @@ main(int argc, char **argv){
 
 #else
 
-  printf("Matrix size           = %dx%d\n", order, order);
+  printf("Matrix size           = %ldx%ld\n", order, order);
   printf("Number of threads     = %d\n", nthread_input);
   printf("Using Math Kernel Library\n");
   printf("Number of iterations  = %d\n", iterations);

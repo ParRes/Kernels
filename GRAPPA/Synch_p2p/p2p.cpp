@@ -218,6 +218,6 @@ int main( int argc, char * argv[] ) {
     }
  
   });
-  //  Grappa::finalize();
+  Grappa::finalize();
   return 0;
 }
