@@ -302,7 +302,7 @@ int main(int argc, char **argv) {
     }
 
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI Random Access\n");
+    printf("Adaptive MPI Random Access\n");
     printf("Number of ranks               = "FSTR64U"\n", (u64Int) Num_procs);
     printf("Table size (aggregate)        = "FSTR64U"\n", tablesize);
     printf("Update ratio                  = "FSTR64U"\n", (u64Int) update_ratio);

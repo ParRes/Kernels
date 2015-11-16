@@ -150,7 +150,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI pipeline execution on 2D grid\n");
+    printf("Adaptive MPI pipeline execution on 2D grid\n");
     printf("Number of ranks                = %d\n",Num_procs);
     printf("Grid sizes                     = %d, %d\n", m, n);
     printf("Number of iterations           = %d\n", iterations);

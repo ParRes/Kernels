@@ -132,7 +132,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI global synchronization\n");
+    printf("Adaptive MPI global synchronization\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Scramble string length = %ld\n", length);
     printf("Number of iterations   = %d\n", iterations);

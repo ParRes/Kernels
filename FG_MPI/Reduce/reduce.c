@@ -73,7 +73,7 @@ int main(int argc, char ** argv)
   int my_ID;            /* rank                                              */
   int root=0;
   int iterations;       /* number of times the reduction is carried out      */
-  int i, iter;          /* dummies                                           */
+  long i, iter;         /* dummies                                           */
   long vector_length;   /* length of the vectors to be aggregated            */
   double * RESTRICT vector; /* vector to be reduced                          */
   double * RESTRICT ones;   /* constant vector                               */

@@ -250,14 +250,11 @@ int main(int argc, char ** argv) {
   /*********************************************************************
   ** Initialize the matrices
   *********************************************************************/
-  printf("got this far\n");
 
   /* clear the array                                                             */
   for (j=0; j<n; j++)
     for (i=myoffsetx; i<myoffsetx + sizex; i++)
       ARRAY(i, j) = 0.0;
-
-  printf("got this far2\n");
 
   /* set boundary values (bottom and left side of grid                           */
   if(MYTHREAD == 0)
@@ -359,7 +356,6 @@ int main(int argc, char ** argv) {
     avgtime = max_time/iterations;
   printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
          1.0E-06 * 2 * ((double)(m-1)*(double)(n-1))/avgtime, avgtime);
-  printf("\n");
   exit(EXIT_SUCCESS);
   }
 }

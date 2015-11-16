@@ -206,7 +206,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI matrix transpose: B = A^T\n");
+    printf("Adaptive MPI matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
     printf("Number of iterations = %d\n", iterations);

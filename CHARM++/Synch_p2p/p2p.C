@@ -203,7 +203,6 @@ public:
         CkSetRefNum(msg, j+iterations*(n-1));
         for (jj=0; jj<jjsize; jj++) {
           msg->gp[jj] = ARRAY(iend-istart,j+jj);
-	  //          CkPrintf("Chare %d, send_msg->[%d]=%lf\n", thisIndex, jj, msg->gp[jj]);
         }
         thisProxy(thisIndex+1).receiveGhost(msg);
       }

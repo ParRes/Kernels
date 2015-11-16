@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI Dense matrix-matrix multiplication: C = A x B\n");
+    printf("Adaptive MPI Dense matrix-matrix multiplication: C = A x B\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Rank grid            = %d rows x %d columns\n", nprow, npcol); 
     printf("Matrix order         = %d\n", order);
@@ -197,7 +197,10 @@ int main(int argc, char *argv[])
       printf("No local dgemm blocking\n");
     if (shortcut) 
       printf("Only doing initialization\n"); 
+    printf("WARNING: Exciting until MPI_Comm_create is fixed\n");
+    error = 1;
   }
+  bail_out(error);
 
   /* set up row and column communicators                           */
 
@@ -219,7 +222,7 @@ int main(int argc, char *argv[])
   for (i=1; i<npcol; i++) ranks[i] = ranks[i-1] + 1;
 
   /* create row group and communicator                             */
-  error=MPI_Group_incl( world_group, npcol, ranks, &temp_group );
+  MPI_Group_incl( world_group, npcol, ranks, &temp_group );
   MPI_Comm_create( MPI_COMM_WORLD, temp_group, &comm_row );
 
 
@@ -228,7 +231,7 @@ int main(int argc, char *argv[])
   for (i=1; i<nprow; i++) ranks[i] = ranks[i-1] + npcol;
 
   /* create column group and communicator                          */
-  error =MPI_Group_incl( world_group, nprow, ranks, &temp_group );
+  MPI_Group_incl( world_group, nprow, ranks, &temp_group );
   MPI_Comm_create( MPI_COMM_WORLD, temp_group, &comm_col );
 
 

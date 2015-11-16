@@ -218,7 +218,7 @@ int main(int argc, char ** argv) {
  
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI stencil execution on 2D grid\n");
+    printf("Adaptive MPI stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Grid size              = %d\n", n);
     printf("Radius of stencil      = %d\n", RADIUS);

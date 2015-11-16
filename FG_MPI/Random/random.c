@@ -78,7 +78,7 @@ USAGE:   The program takes as input the 2log of the size of the table that
          The code can be vectorized, in principle, with a vector length
          that is automatically set to the size of the LOOKAHEAD parameter.
 
-         <progname> <log2 tablesize> <#update ratio> 
+         <progname> <#update ratio> <log2 tablesize> 
 
 FUNCTIONS CALLED:
 
@@ -211,7 +211,7 @@ int main(int argc, char **argv) {
 
   if (my_ID == root) {
     if (argc != 3){
-      printf("Usage: %s <log2 tablesize> <#update ratio>\n", *argv);
+      printf("Usage: %s <#update ratio> <log2 tablesize>\n", *argv);
       error = 1;
       goto ENDOFTESTS;
     }
@@ -225,13 +225,6 @@ int main(int argc, char **argv) {
       goto ENDOFTESTS;
     }
 
-    log2tablesize  = atoi(*++argv);
-    if (log2tablesize < 1){
-      printf("ERROR: Log2 tablesize is %d; must be >= 1\n",log2tablesize);
-      error = 1;
-      goto ENDOFTESTS;      
-    }
-
     update_ratio  = atoi(*++argv);
     /* test whether update ratio is a power of two                                 */
     log2update_ratio = poweroftwo(update_ratio);
@@ -240,6 +233,13 @@ int main(int argc, char **argv) {
              update_ratio);
       error = 1;
       goto ENDOFTESTS;
+    }
+
+    log2tablesize  = atoi(*++argv);
+    if (log2tablesize < 1){
+      printf("ERROR: Log2 tablesize is %d; must be >= 1\n",log2tablesize);
+      error = 1;
+      goto ENDOFTESTS;      
     }
 
     /* for simplicity we set the vector length equal to the LOOKAHEAD size         */

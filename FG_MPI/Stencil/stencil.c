@@ -118,7 +118,7 @@ int main(int argc, char ** argv) {
   DTYPE *left_buf_out;    /*       "         "                                   */
   DTYPE *left_buf_in;     /*       "         "                                   */
   int    root = 0;
-  int    n, width, height;/* linear global and local grid dimension              */
+  long   n, width, height;/* linear global and local grid dimension              */
   long   nsquare;         /* total number of grid points                         */
   int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
@@ -175,7 +175,7 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;  
     }
  
-    n       = atoi(*++argv); 
+    n       = atol(*++argv); 
     nsquare = n * n;
     if (nsquare < Num_procs){ 
       printf("ERROR: grid size %d must be at least # ranks: %ld\n", 
