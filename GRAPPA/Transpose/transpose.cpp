@@ -252,7 +252,8 @@ int main(int argc, char * argv[]) {
       std::cout << "Matrix order            = " << order << std::endl;
       std::cout << "Number of iterations    = " << iterations << std::endl;
       if (tiling) std::cout << "Tile size               = " << Tile_order << std::endl;
-      else std::cout << "Untiled" << std::endl;
+      else        std::cout << "Untiled" << std::endl;
+      std::cout << "Implementation DEPRECATED: result accumulation not yet implemented" << std::endl;
 
       GlobalAddress<Timer> timer = Grappa::symmetric_global_alloc<Timer>();
 
@@ -364,7 +365,7 @@ int main(int argc, char * argv[]) {
       if (abserr_tot < epsilon) {
 	std::cout << "Solution validates" << std::endl;
 	avgtime = trans_time/(double)iterations;
-	std::cout << "Rate (MB/s): " << 1.0E-06*bytes/avgtime
+	std::cout << "Rate (MB/s): " << -1.0E-06*bytes/avgtime
 		  << " Avg time (s): " << avgtime << std::endl;
 	std::cout << "Summed errors: " << abserr_tot << std::endl;
       } else {
