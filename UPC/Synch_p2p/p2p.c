@@ -164,7 +164,7 @@ int main(int argc, char ** argv) {
   ********************************************************************************/
 
   if (argc != 4){
-    if(MYTHREAD == 0){
+    if(MYTHREAD == THREADS-1){
       printf("Usage: %s <# iterations> <first array dimension> ", *argv);
       printf("<second array dimension>\n");
     }
@@ -173,7 +173,7 @@ int main(int argc, char ** argv) {
 
   iterations  = atoi(*++argv);
   if (iterations < 1){
-    if(MYTHREAD == 0)
+    if(MYTHREAD == THREADS-1)
       printf("ERROR: iterations must be >= 1 : %d \n",iterations);
     upc_global_exit(EXIT_FAILURE);
   }
@@ -182,12 +182,12 @@ int main(int argc, char ** argv) {
   n  = atol(*++argv);
 
   if (m < 1 || n < 1){
-    if(MYTHREAD == 0)
+    if(MYTHREAD == THREADS-1)
       printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
     upc_global_exit(EXIT_FAILURE);
   }
 
-  if(MYTHREAD == 0){
+  if(MYTHREAD == THREADS-1){
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("UPC pipeline execution on 2D grid\n");
     printf("Number of threads         = %d\n", THREADS);
