@@ -150,6 +150,11 @@ int main(int argc, char * argv[]) {
 
   int Num_procs = Grappa::cores();
 
+  if (Grappa::mycore() == root) {
+    std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
+    std::cout << "Grappa matrix transpose: B = A^T" << std::endl;
+  }
+
   if (argc != 3 && argc != 4) {
     if (Grappa::mycore() == root)
       std::cout << "Usage: " << argv[0] << " <#iterations> <matrix order> [tile size]"
@@ -246,8 +251,6 @@ int main(int argc, char * argv[]) {
       // TODO: get rid of this restriction
       tiling = tiling && (Block_order%CHUNK_LENGTH == 0);
 
-      std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
-      std::cout << "Grappa matrix transpose: B = A^T" << std::endl;
       std::cout << "Number of cores         = " << Num_procs << std::endl;
       std::cout << "Matrix order            = " << order << std::endl;
       std::cout << "Number of iterations    = " << iterations << std::endl;
@@ -369,7 +372,6 @@ int main(int argc, char * argv[]) {
 	avgtime = trans_time/(double)iterations;
 	std::cout << "Rate (MB/s): " << -1.0E-06*bytes/avgtime
 		  << " Avg time (s): " << avgtime << std::endl;
-	std::cout << "Summed errors: " << abserr_tot << std::endl;
       } else {
 	std::cout << "ERROR: Aggregate squared error " << abserr_tot
 		  << " exceeds threshold " << epsilon << std::endl;
