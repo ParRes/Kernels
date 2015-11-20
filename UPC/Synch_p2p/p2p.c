@@ -163,6 +163,11 @@ int main(int argc, char ** argv) {
   ** process and test input parameters
   ********************************************************************************/
 
+  if(MYTHREAD == THREADS-1){
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("UPC pipeline execution on 2D grid\n");
+  }
+
   if (argc != 4){
     if(MYTHREAD == THREADS-1){
       printf("Usage: %s <# iterations> <first array dimension> ", *argv);
@@ -188,8 +193,6 @@ int main(int argc, char ** argv) {
   }
 
   if(MYTHREAD == THREADS-1){
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("UPC pipeline execution on 2D grid\n");
     printf("Number of threads         = %d\n", THREADS);
     printf("Grid sizes                = %ld, %ld\n", m, n);
     printf("Number of iterations      = %d\n", iterations);

@@ -161,6 +161,11 @@ int main(int argc, char ** argv) {
   ** read and test input parameters
   *********************************************************************/
 
+  if(MYTHREAD == 0) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("UPC matrix transpose: B = A^T\n");
+  }
+
   if(argc != 3 && argc != 4){
     if(MYTHREAD == 0)
       printf("Usage: %s <# iterations> <matrix order> [tile size]\n", *argv);
@@ -198,8 +203,6 @@ int main(int argc, char ** argv) {
   long sizey = N;
 
   if(MYTHREAD == 0) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("UPC matrix transpose: B = A^T\n");
     printf("Number of threads    = %d\n", THREADS);
     printf("Matrix order         = %d\n", N);
     printf("Number of iterations = %d\n", iterations);
