@@ -102,6 +102,9 @@ int main(int argc, char ** argv)
   ** process, and test input parameter
   ***************************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP global synchronization test\n");
+
   if (argc != 4){
      printf("Usage: %s <# threads> <# iterations> <scramble string length>\n", *argv);
      exit(EXIT_FAILURE);
@@ -172,9 +175,6 @@ int main(int argc, char ** argv)
   #pragma omp master
   {
   nthread = omp_get_num_threads();
-
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP global synchronization test\n");
   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",

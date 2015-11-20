@@ -95,6 +95,9 @@ int main(int argc, char ** argv) {
   ** read and test input parameters
   *********************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP Matrix transpose: B = A^T\n");
+
   if (argc != 4 && argc != 5){
     printf("Usage: %s <# threads> <# iterations> <matrix order> [tile size]\n",
            *argv);
@@ -153,9 +156,6 @@ int main(int argc, char ** argv) {
   #pragma omp master
   {
   nthread = omp_get_num_threads();
-
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP Matrix transpose: B = A^T\n");
   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",

@@ -176,6 +176,9 @@ int main(int argc, char ** argv)
 *********************************************************************/
   error = 0;
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPIRMA matrix transpose: B = A^T\n");
+
     if (argc <= 3){
       printf("Usage: %s <# iterations> <matrix order> [Tile size] [sync (0=fence, 1=flush)] [flush local?] [flush bundle]\n",
                                                                *argv);
@@ -210,8 +213,6 @@ int main(int argc, char ** argv)
   bail_out(error);
  
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPIRMA matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
     printf("Number of iterations = %d\n", iterations);
@@ -415,9 +416,6 @@ int main(int argc, char ** argv)
       printf("Solution validates\n");
       avgtime = trans_time/(double)iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
-#ifdef VERBOSE
-      printf("Summed errors: %f \n", abserr);
-#endif
     }
     else {
       printf("ERROR: Aggregate absolute error %lf exceeds threshold %e\n", abserr_tot, epsilon);

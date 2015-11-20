@@ -106,6 +106,9 @@ main(int argc, char **argv){
   int     block;                /* tile size of matrices                          */
   int shortcut;                 /* true if only doing initialization              */
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP Dense matrix-matrix multiplication\n");
+
 #ifndef MKL  
   if (argc != 4 && argc != 5) {
     printf("Usage: %s <# threads> <# iterations> <matrix order> [tile size]\n",*argv);
@@ -156,9 +159,6 @@ main(int argc, char **argv){
     A_arr(i,j) = B_arr(i,j) = (double) j; 
     C_arr(i,j) = 0.0;
   }
-
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP Dense matrix-matrix multiplication\n");
 
 #ifndef MKL
   if (argc == 5) {

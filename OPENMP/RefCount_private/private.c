@@ -91,6 +91,9 @@ int main(int argc, char ** argv)
 ** process and test input parameters    
 *********************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP exclusive access test RefCount, private counters\n");
+
   if (argc != 3){
     printf("Usage: %s <# threads> <# counter pair updates>\n", *argv);
     exit(EXIT_FAILURE);
@@ -194,8 +197,6 @@ int main(int argc, char ** argv)
   #pragma omp master
   {
   nthread = omp_get_num_threads();
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP exclusive access test RefCount, private counters\n");
   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",
