@@ -129,6 +129,11 @@ int main(int argc, char *argv[])
   MPI_Comm_rank( MPI_COMM_WORLD, &my_ID );
   MPI_Comm_size( MPI_COMM_WORLD, &Num_procs );
 
+  if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("Adaptive MPI Dense matrix-matrix multiplication: C = A x B\n");
+  }
+
 /*********************************************************************
 ** process, test and broadcast input parameters
 *********************************************************************/
@@ -184,8 +189,6 @@ int main(int argc, char *argv[])
   npcol = Num_procs/nprow;
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("Adaptive MPI Dense matrix-matrix multiplication: C = A x B\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Rank grid            = %d rows x %d columns\n", nprow, npcol); 
     printf("Matrix order         = %d\n", order);

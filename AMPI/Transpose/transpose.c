@@ -174,6 +174,9 @@ int main(int argc, char ** argv)
 *********************************************************************/
   error = 0;
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("Adaptive MPI matrix transpose: B = A^T\n");
+
     if (argc != 3 && argc != 4){
       printf("Usage: %s <# iterations> <matrix order> [Tile size]\n",
                                                                *argv);
@@ -205,8 +208,6 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("Adaptive MPI matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
     printf("Number of iterations = %d\n", iterations);

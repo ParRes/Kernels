@@ -209,6 +209,9 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD,&my_ID);
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("Adaptive MPI Random Access\n");
+
     if (argc != 3){
       printf("Usage: %s <#update ratio> <log2 tablesize>\n", *argv);
       error = 1;
@@ -301,8 +304,6 @@ int main(int argc, char **argv) {
       goto ENDOFTESTS;
     }
 
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("Adaptive MPI Random Access\n");
     printf("Number of ranks               = "FSTR64U"\n", (u64Int) Num_procs);
     printf("Table size (aggregate)        = "FSTR64U"\n", tablesize);
     printf("Update ratio                  = "FSTR64U"\n", (u64Int) update_ratio);

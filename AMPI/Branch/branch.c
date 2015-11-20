@@ -159,6 +159,11 @@ int main(int argc, char ** argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
+  if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("Adaptive MPI Branching Bonanza\n");
+  }
+
 /**********************************************************************************
 ** process and test input parameters    
 ***********************************************************************************/
@@ -201,8 +206,6 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("Adaptive MPI Branching Bonanza\n");
     printf("Number of ranks            = %d\n", Num_procs);
     printf("Vector length              = %d\n", vector_length);
     printf("Number of iterations       = %d\n", iterations);
