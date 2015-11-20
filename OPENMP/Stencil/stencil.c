@@ -108,6 +108,9 @@ int main(int argc, char ** argv) {
                              numbers of threads are the same                     */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP stencil execution on 2D grid\n");
+
   /*******************************************************************************
   ** process and test input parameters    
   ********************************************************************************/
@@ -195,8 +198,6 @@ int main(int argc, char ** argv) {
   {
   nthread = omp_get_num_threads();
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP stencil execution on 2D grid\n");
   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",

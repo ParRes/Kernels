@@ -239,6 +239,11 @@ int main(int argc, char ** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
  
+  if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI+SHM stencil execution on 2D grid\n");
+  }
+
   /*******************************************************************************
   ** process, test, and broadcast input parameters    
   ********************************************************************************/
@@ -325,8 +330,6 @@ int main(int argc, char ** argv) {
 
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI+SHM stencil execution on 2D grid\n");
     printf("Number of ranks                 = %d\n", Num_procs);
     printf("Grid size                       = %d\n", n);
     printf("Radius of stencil               = %d\n", RADIUS);

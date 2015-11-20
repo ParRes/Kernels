@@ -45,6 +45,9 @@ public:
       int num_chares, min_size;
       long nsquare;         
 
+      CkPrintf("Parallel Research Kernels Version %s\n", PRKVERSION);
+      CkPrintf("Charm++ stencil execution on 2D grid\n");
+
       if (m->argc != 4) {
         CkPrintf("%s <maxiterations> <grid_size> <overdecomposition factor>\n", m->argv[0]);
         CkExit();
@@ -99,8 +102,6 @@ public:
       }
 
       // print info
-      CkPrintf("Parallel Research Kernels Version %s\n", PRKVERSION);
-      CkPrintf("Charm++ stencil execution on 2D grid\n");
       CkPrintf("Number of Charm++ PEs   = %d\n", CkNumPes());
       CkPrintf("Overdecomposition       = %d\n", overdecomposition);
       CkPrintf("Grid size               = %d\n", n);

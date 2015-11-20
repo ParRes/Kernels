@@ -143,6 +143,11 @@ int main(int argc, char ** argv) {
   my_ID=shmem_my_pe();
   Num_procs=shmem_n_pes();
 
+  if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("SHMEM stencil execution on 2D grid\n");
+  }
+
   for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
     pSync[i]=_SHMEM_SYNC_VALUE;
 
@@ -233,8 +238,6 @@ int main(int argc, char ** argv) {
   shmem_barrier_all();
  
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("SHMEM stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Grid size              = %d\n", n);
     printf("Radius of stencil      = %d\n", RADIUS);

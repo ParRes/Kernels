@@ -150,6 +150,11 @@ int main(int argc, char ** argv) {
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+  if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI+OPENMP stencil execution on 2D grid\n");
+  }
  
   /*******************************************************************************
   ** process, test, and broadcast input parameters    
@@ -234,8 +239,6 @@ int main(int argc, char ** argv) {
   omp_set_num_threads(nthread_input);
   
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI+OPENMP stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Number of threads      = %d\n", omp_get_max_threads());
     printf("Grid size              = %d\n", n);

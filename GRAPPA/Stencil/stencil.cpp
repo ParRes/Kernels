@@ -128,6 +128,11 @@ int main(int argc, char * argv[]) {
   Grappa::init( &argc, &argv );
   symmetric int my_ID = Grappa::mycore();
  
+  if (my_ID == root) {
+    std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
+    std::cout<<"Grappa stencil execution on 2D grid"<<std::endl;
+  }
+
   /*******************************************************************************
   ** process and test input parameters   
   ********************************************************************************/
@@ -182,8 +187,6 @@ int main(int argc, char * argv[]) {
         my_IDy = my_ID/Num_procsx; }
       );
  
-    std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
-    std::cout<<"Grappa stencil execution on 2D grid"<<std::endl;
     std::cout<<"Number of cores        = "<<Num_procs<<std::endl;
     std::cout<<"Grid size              = "<<n<<std::endl;
     std::cout<<"Radius of stencil      = "<<RADIUS<<std::endl;

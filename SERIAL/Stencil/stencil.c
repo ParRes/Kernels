@@ -103,6 +103,9 @@ int main(int argc, char ** argv) {
   long   total_length;    /* total required length to store grid values          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
 
+  printf("Parallel Research Kernels Version %s\n", PRKVERSION);
+  printf("Serial stencil execution on 2D grid\n");
+
   /*******************************************************************************
   ** process and test input parameters    
   ********************************************************************************/
@@ -182,8 +185,6 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
 
-  printf("Parallel Research Kernels Version %s\n", PRKVERSION);
-  printf("Serial stencil execution on 2D grid\n");
   printf("Grid size            = %d\n", n);
   printf("Radius of stencil    = %d\n", RADIUS);
 #ifdef STAR
