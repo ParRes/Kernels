@@ -195,6 +195,9 @@ int main(int argc, char **argv) {
 ** process and test input parameters    
 *********************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Serial Random Access\n");
+
   if (argc != 4){
     printf("Usage: %s <#update ratio> <log2 tablesize> ", *argv);
     printf("<vector length>\n");
@@ -279,8 +282,6 @@ int main(int argc, char **argv) {
 
   error = 0;
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial Random Access\n");
   printf("Table size (shared)    = "FSTR64U"\n", tablesize);
   printf("Update ratio           = "FSTR64U"\n", (u64Int) update_ratio);
   printf("Number of updates      = "FSTR64U"\n", nupdate);

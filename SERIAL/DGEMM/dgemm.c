@@ -95,6 +95,9 @@ main(int argc, char **argv){
   long    block;                /* tile size of matrices                          */
   int     shortcut;             /* true if only doing initialization              */
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Serial Dense matrix-matrix multiplication: C = A x B\n");
+
 #ifndef MKL  
   if (argc != 4 && argc != 3) {
     printf("Usage: %s <# iterations> <matrix order> [tile size]\n",*argv);
@@ -127,8 +130,6 @@ main(int argc, char **argv){
   } else block = DEFAULTBLOCK;
 #endif
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial Dense matrix-matrix multiplication: C = A x B\n");
   printf("Matrix order          = %d\n", order);
   if (shortcut) 
     printf("Only doing initialization\n"); 

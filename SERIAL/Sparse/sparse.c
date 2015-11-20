@@ -113,6 +113,9 @@ int main(int argc, char **argv){
                     matrix_space,
                     index_space;
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Serial Sparse matrix-vector multiplication\n");
+
   if (argc != 4) {
     printf("Usage: %s <# iterations> <2log grid size> <stencil radius>\n",*argv);
     exit(EXIT_FAILURE);
@@ -188,8 +191,6 @@ int main(int argc, char **argv){
     exit(EXIT_FAILURE);
   } 
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial Sparse matrix-vector multiplication\n");
   printf("Matrix order          = "FSTR64U"\n", size2);
   printf("Stencil diameter      = %16d\n", 2*radius+1);
   printf("Sparsity              = %16.10lf\n", sparsity);

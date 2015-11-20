@@ -84,6 +84,9 @@ int main(int argc, char ** argv) {
   ** read and test input parameters
   *********************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Serial Matrix transpose: B = A^T\n");
+
   if (argc != 4 && argc != 3){
     printf("Usage: %s <# iterations> <matrix order> [tile size]\n",
            *argv);
@@ -123,8 +126,6 @@ int main(int argc, char ** argv) {
 
   bytes = 2.0 * sizeof(double) * order * order;
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial Matrix transpose: B = A^T\n");
   printf("Matrix order          = %d\n", order);
   if (tile_size < order) printf("Tile size             = %d\n", tile_size);
   else                   printf("Untiled\n");
