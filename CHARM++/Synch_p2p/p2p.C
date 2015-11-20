@@ -36,6 +36,10 @@ public:
     CProxy_P2p array;
 
     Main(CkArgMsg* cmdlinearg) {
+
+        CkPrintf("Parallel Research Kernels Version %s\n", PRKVERSION);
+        CkPrintf("Charm++ pipeline execution on 2D grid\n");
+
         if (cmdlinearg->argc != 5 && cmdlinearg->argc != 6 ) {
           CkPrintf("%s <#iterations> <grid_size x> <grid_size y> <overdecomposition factor> ",
           cmdlinearg->argv[0]);
@@ -85,8 +89,6 @@ public:
         }
 
         // print info
-        CkPrintf("Parallel Research Kernels Version %s\n", PRKVERSION);
-        CkPrintf("Charm++ pipeline execution on 2D grid\n");
         CkPrintf("Number of Charm++ PEs = %d\n", CkNumPes());
         CkPrintf("Overdecomposition     = %d\n", overdecomposition);
         CkPrintf("Grid sizes            = %ld,%ld\n", m, n);

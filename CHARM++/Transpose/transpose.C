@@ -30,6 +30,9 @@ public:
     CProxy_Transpose array;
 
     Main(CkArgMsg* cmdlinearg) {
+        CkPrintf("Parallel Research Kernels Version %s\n", PRKVERSION);
+        CkPrintf("Charm++ transpose execution\n");
+
         if (cmdlinearg->argc != 5) {
           CkPrintf("%s <#iterations> <matrix order> <tile size><overdecomposition factor>\n",
           cmdlinearg->argv[0]); CkExit();
@@ -79,8 +82,6 @@ public:
         bytes = 2 * sizeof(double) * order * order;
 
         // print info
-        CkPrintf("Parallel Research Kernels Version %s\n", PRKVERSION);
-        CkPrintf("Charm++ transpose execution\n");
         CkPrintf("Number of Charm++ PEs = %d\n", CkNumPes());
         CkPrintf("Overdecomposition     = %d\n", overdecomposition);
         CkPrintf("Matrix order          = %d\n", order);
