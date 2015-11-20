@@ -106,6 +106,12 @@ int main(int argc, char ** argv)
   int requested = MPI_THREAD_MULTIPLE;
   MPI_Init_thread(&argc,&argv, requested, &provided);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
+
+  if (my_ID == 0) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI+OpenMP pipeline execution on 2D grid\n");
+  }
+
   if (requested<provided) {
     if (my_ID==0) printf("ERROR: requested=%d less than provided=%s\n",
                          PRK_MPI_THREAD_STRING(requested),PRK_MPI_THREAD_STRING(provided));
@@ -173,8 +179,6 @@ int main(int argc, char ** argv)
   omp_set_num_threads(nthread);
  
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI+OpenMP pipeline execution on 2D grid\n");
     printf("Number of ranks                = %i\n",Num_procs);
     printf("Number of threads              = %d\n", omp_get_max_threads());
     printf("Grid sizes                     = %ld, %ld\n", m, n);

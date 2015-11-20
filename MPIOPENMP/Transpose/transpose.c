@@ -177,6 +177,9 @@ int main(int argc, char ** argv)
 *********************************************************************/
   error = 0;
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI+OpenMP matrix transpose: B = A^T\n");
+
     if (argc != 4 && argc != 5){
       printf("Usage: %s <#threads><#iterations> <matrix order> [Tile size]\n",
                                                                *argv);
@@ -243,8 +246,6 @@ int main(int argc, char ** argv)
   if (tiling && (concurrency < nthread_input)) tiling = 0;
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI+OpenMP matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Number of threads    = %d\n", omp_get_max_threads());
     printf("Matrix order         = %d\n", order);
