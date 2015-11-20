@@ -135,6 +135,9 @@ int main(int argc, char *argv[])
 *********************************************************************/
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("FG_MPI Dense matrix-matrix multiplication: C = A x B\n");
+
     if (argc != 5) {
       printf("Usage: %s <# iterations> <matrix order> <outer block size> ",
                                                                *argv);
@@ -186,8 +189,6 @@ int main(int argc, char *argv[])
 
   if (my_ID == root) {
     MPIX_Get_collocated_size(&procsize);
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("FG_MPI Dense matrix-matrix multiplication: C = A x B\n");
     printf("Number of ranks          = %d\n", Num_procs);
     printf("Number of ranks/process  = %d\n", procsize);
     printf("Ranks grid               = %d rows x %d columns\n", nprow, npcol); 
