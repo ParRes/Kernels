@@ -134,6 +134,9 @@ int main(int argc, char *argv[])
 *********************************************************************/
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI Dense matrix-matrix multiplication: C = A x B\n");
+
     if (argc != 5) {
       printf("Usage: %s <# iterations> <matrix order> <outer block size> ",
                                                                *argv);
@@ -184,8 +187,6 @@ int main(int argc, char *argv[])
   npcol = Num_procs/nprow;
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI Dense matrix-matrix multiplication: C = A x B\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Rank grid            = %d rows x %d columns\n", nprow, npcol); 
     printf("Matrix order         = %d\n", order);

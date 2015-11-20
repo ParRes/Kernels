@@ -149,20 +149,17 @@ int main(int argc, char ** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
-  if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI stencil execution on 2D grid\n");
-  }
- 
   /*******************************************************************************
   ** process, test, and broadcast input parameters    
   ********************************************************************************/
  
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI stencil execution on 2D grid\n");
 #ifndef STAR
-      printf("ERROR: Compact stencil not supported\n");
-      error = 1;
-      goto ENDOFTESTS;
+    printf("ERROR: Compact stencil not supported\n");
+    error = 1;
+    goto ENDOFTESTS;
 #endif
     
     if (argc != 3){
