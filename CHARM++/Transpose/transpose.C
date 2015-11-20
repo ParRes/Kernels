@@ -8,7 +8,7 @@
 /*readonly*/ int order; // array size
 /*readonly*/ int num_chares;
 /*readonly*/ int overdecomposition; 
-/*readonly*/ int maxiterations;
+/*readonly*/ int iterations;
 /*readonly*/ int Block_order;
 /*readonly*/ int Tile_order;
 /*readonly*/ int tiling;
@@ -38,9 +38,9 @@ public:
         // store the main proxy
         mainProxy = thisProxy;
 
-        maxiterations = atoi(cmdlinearg->argv[1]);
-        if (maxiterations < 1) {
-          CkPrintf("ERROR: #iterations must be positive: %d\n", maxiterations);
+        iterations = atoi(cmdlinearg->argv[1]);
+        if (iterations < 1) {
+          CkPrintf("ERROR: #iterations must be positive: %d\n", iterations);
           CkExit();
         }
         order = atoi(cmdlinearg->argv[2]);
@@ -67,7 +67,7 @@ public:
           CkExit();
         }
         if (order%num_chares) {
-          CkPrintf("ERROR: Matrix order %d not multiple of #chares $d\n", order, num_chares);
+          CkPrintf("ERROR: Matrix order %d not multiple of #chares %d\n", order, num_chares);
           CkExit();
         }
 
@@ -85,7 +85,7 @@ public:
         CkPrintf("Overdecomposition     = %d\n", overdecomposition);
         CkPrintf("Matrix order          = %d\n", order);
         CkPrintf("Tile size             = %d\n", Tile_order);
-        CkPrintf("Number of iterations  = %d\n", maxiterations);
+        CkPrintf("Number of iterations  = %d\n", iterations);
 
         // Create new array of worker chares
         array = CProxy_Transpose::ckNew(num_chares);
@@ -113,7 +113,7 @@ class Transpose: public CBase_Transpose {
   Transpose_SDAG_CODE
 
 public:
-  int iterations, phase, colstart;
+  int iter, phase, colstart;
   double result, local_error;
   int send_to, recv_from;
   double *A_p, *B_p, *Work_in_p, *Work_out_p;
@@ -137,8 +137,8 @@ public:
       A(i,j) = (double) (order*(j+colstart) + i);
     }
 
-    /*  Set the transpose matrix to a known garbage value.              */
-    for (int i=0;i<Colblock_size; i++) B_p[i] = -1.0;
+    /*  Set the transpose matrix to zero                                */
+    for (int i=0;i<Colblock_size; i++) B_p[i] = 0.0;
     
   }
 
@@ -157,15 +157,18 @@ public:
     if (!tiling) {
       for (int i=0; i<Block_order; i++) 
         for (int j=0; j<Block_order; j++) {
-          B(j,i) = A(i,j);
+          B(j,i) += A(i,j);
+          A(i,j) += 1.0;
 	}
     }
     else {
       for (int i=0; i<Block_order; i+=Tile_order) 
         for (int j=0; j<Block_order; j+=Tile_order) 
           for (int it=i; it<MIN(Block_order,i+Tile_order); it++)
-            for (int jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
-              B(jt,it) = A(it,jt); 
+            for (int jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+              B(jt,it) += A(it,jt); 
+              A(it,jt) += 1.0;
+            }
     }
   }
 
@@ -181,6 +184,7 @@ public:
         for (int i=0; i<Block_order; i++) 
           for (int j=0; j<Block_order; j++){
 	    msg->blockData[j+Block_order*i] = A(i,j);
+            A(i,j) += 1.0;
 	  }
       }
       else {
@@ -189,9 +193,10 @@ public:
             for (int it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (int jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
                 msg->blockData[it+Block_order*jt] = A(jt,it); 
+                A(jt,it) += 1.0;
 	      }
       }
-      CkSetRefNum(msg,iterations*num_chares);
+      CkSetRefNum(msg,iter*num_chares);
       thisProxy(send_to).receiveBlock(msg);
   }
 
@@ -202,7 +207,7 @@ public:
     /* scatter received block to transposed matrix; no need to tile */
     for (int j=0; j<Block_order; j++)
       for (int i=0; i<Block_order; i++) 
-        B(i,j) = msg->blockData[i+Block_order*j];
+        B(i,j) += msg->blockData[i+Block_order*j];
   
     delete msg;
   }
@@ -211,8 +216,9 @@ public:
 
     local_error = 0.0;
     int istart = 0;
+    double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
     for (int j=0;j<Block_order;j++) for (int i=0;i<order; i++) {
-        local_error += ABS(B(i,j) - (double)(order*i + j+colstart));
+      local_error += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1) +addit));
     }
   }
 
