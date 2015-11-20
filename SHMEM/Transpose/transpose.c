@@ -158,6 +158,11 @@ int main(int argc, char ** argv)
   my_ID=shmem_my_pe();
   Num_procs=shmem_n_pes();
 
+  if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("SHMEM matrix transpose: B = A^T\n");
+  }
+
 // initialize sync variables for error checks
   pSync            = (long *)   shmalloc(sizeof(long)   * SHMEM_BCAST_SYNC_SIZE);
   pWrk             = (double *) shmalloc(sizeof(double) * SHMEM_BCAST_SYNC_SIZE);
@@ -213,8 +218,6 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("SHMEM matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
     printf("Number of iterations = %d\n", iterations);
