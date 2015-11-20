@@ -261,11 +261,7 @@ int main(int argc, char ** argv)
  
   MPI_Info_create (&rma_winfo);
   MPI_Info_set (rma_winfo, "no locks", "true");
-#ifdef MANYPUT
-  MPI_Win_allocate (Colblock_size*sizeof(double), sizeof(double), rma_winfo, MPI_COMM_WORLD, (void *) &B_p, &rma_win);
-#else
   B_p = (double *)malloc(Colblock_size*sizeof(double));
-#endif
   if (B_p == NULL){
     printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
     error = 1;
@@ -280,7 +276,6 @@ int main(int argc, char ** argv)
     }
     bail_out(error);
  
-#ifndef MANYPUT
     MPI_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
                       rma_winfo, MPI_COMM_WORLD, &Work_in_p, &rma_win);
     if (Work_in_p == NULL){
@@ -288,7 +283,6 @@ int main(int argc, char ** argv)
       error = 1;
     }
     bail_out(error);
-#endif
   }
 
   if (passive_target && Num_procs>1) {
@@ -300,7 +294,7 @@ int main(int argc, char ** argv)
   for (j=0;j<Block_order;j++) 
     for (i=0;i<order; i++)  {
       A(i,j) = (double) (order*(j+colstart) + i);
-      B(i,j) = -1.0;
+      B(i,j) = 0.0;
   }
  
   MPI_Barrier(MPI_COMM_WORLD);
@@ -318,15 +312,18 @@ int main(int argc, char ** argv)
     if (!tiling) {
       for (i=0; i<Block_order; i++) 
         for (j=0; j<Block_order; j++) {
-          B(j,i) = A(i,j);
+          B(j,i) += A(i,j);
+          A(i,j) += 1.0;
         }
     }
     else {
       for (i=0; i<Block_order; i+=Tile_order) 
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
-            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
-              B(jt,it) = A(it,jt); 
+            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+              B(jt,it) += A(it,jt);  
+              A(it,jt) += 1.0;
+	    }
     }
  
     if (!passive_target && Num_procs>1) {
@@ -341,6 +338,7 @@ int main(int argc, char ** argv)
         for (i=0; i<Block_order; i++) 
           for (j=0; j<Block_order; j++){
             Work_out(phase-1,j,i) = A(i,j);
+            A(i,j) += 1.0;
           }
       }
       else {
@@ -349,17 +347,13 @@ int main(int argc, char ** argv)
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
                 Work_out(phase-1,jt,it) = A(it,jt); 
+		A(it,jt) += 1.0;
               }
       }
-#ifdef MANYPUT
-      for (j = 0; j < Block_order; j++) {
-        MPI_Put (&Work_out(phase-1, 0, j), Block_order, MPI_DOUBLE, send_to, (my_ID * Block_order)  + j * order, Block_order, MPI_DOUBLE, rma_win);
-      }
-#else // MANYPUT
  
-      MPI_Put (Work_out_p+Block_size*(phase-1), Block_size, MPI_DOUBLE, send_to, Block_size*(phase-1), 
-               Block_size, MPI_DOUBLE, rma_win); 
-#endif // MANYPUT
+      MPI_Put(Work_out_p+Block_size*(phase-1), Block_size, MPI_DOUBLE, send_to, 
+              Block_size*(phase-1), Block_size, MPI_DOUBLE, rma_win); 
+
       if (passive_target) {
         if (flush_bundle==1) {
             if (flush_local==1) {
@@ -386,16 +380,20 @@ int main(int argc, char ** argv)
       }
     }
  
-#ifndef MANYPUT 
     for (phase=1; phase<Num_procs; phase++) {
       recv_from = (my_ID + phase            )%Num_procs;
       istart = recv_from*Block_order; 
       /* scatter received block to transposed matrix; no need to tile */
       for (j=0; j<Block_order; j++)
         for (i=0; i<Block_order; i++) 
-          B(i,j) = Work_in(phase-1,i,j);
+          B(i,j) += Work_in(phase-1,i,j);
     } /* end of phase loop for scatters */
-#endif
+
+    /* for the flush case we need to make sure we have consumed Work_in 
+       before overwriting it in the next iteration                    */
+    if (Num_procs>1 && passive_target) {
+      MPI_Barrier(MPI_COMM_WORLD);
+    }
  
   } /* end of iterations */
  
@@ -405,8 +403,9 @@ int main(int argc, char ** argv)
  
   abserr = 0.0;
   istart = 0;
+  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
-      abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
+      abserr += ABS(B(i,j) - ((double)(order*i + j+colstart)*(iterations+1)+addit));
   }
  
   MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);

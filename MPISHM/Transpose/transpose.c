@@ -313,7 +313,7 @@ int main(int argc, char ** argv)
         for (jt=j; jt<MIN((shm_ID+1)*chunk_size,j+Tile_order); jt++)
           for (it=i; it<MIN(order,i+Tile_order); it++) {
             A(it,jt) = (double) ((double)order*(jt+colstart) + it);
-            B(it,jt) = -1.0;
+            B(it,jt) = 0.0;
           }
     }
   }
@@ -321,7 +321,7 @@ int main(int argc, char ** argv)
     for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j++) 
       for (i=0;i<order; i++) {
         A(i,j) = (double)((double)order*(j+colstart) + i);
-        B(i,j) = -1.0;
+        B(i,j) = 0.0;
       }
   }
   /* NEED A STORE FENCE HERE                                                     */
@@ -341,17 +341,23 @@ int main(int argc, char ** argv)
     istart = colstart; 
     if (!tiling) {
       for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i++) {
-        for (j=0; j<Block_order; j++) 
-              B(j,i) = A(i,j);
+        for (j=0; j<Block_order; j++) {
+              B(j,i) += A(i,j);
+              A(i,j) += 1.0;
+	      //              printf("(%d,%d,%d)\n", my_ID, i,j);
 	}
+      }
     }
     else {
       for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order) {
-        for (j=0; j<Block_order; j+=Tile_order) 
+        for (j=0; j<Block_order; j+=Tile_order) {
           for (it=i; it<MIN((shm_ID+1)*chunk_size,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-              B(jt,it) = A(it,jt); 
+              B(jt,it) += A(it,jt); 
+              A(it,jt) += 1.0;
+	      //              printf("(%d,%d,%d)\n", my_ID, it,jt);
 	    }
+	}
       }
     }
 
@@ -364,6 +370,7 @@ int main(int argc, char ** argv)
         for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i++) 
           for (j=0; j<Block_order; j++){
 	    Work_out(j,i) = A(i,j);
+            A(i,j) += 1.0;
 	  }
       }
       else {
@@ -372,6 +379,7 @@ int main(int argc, char ** argv)
             for (it=i; it<MIN((shm_ID+1)*chunk_size,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
                 Work_out(jt,it) = A(it,jt); 
+                A(it,jt) += 1.0;
 	      }
       }
 
@@ -404,9 +412,10 @@ int main(int argc, char ** argv)
       /* scatter received block to transposed matrix; no need to tile */
       for (j=shm_ID*chunk_size; j<(shm_ID+1)*chunk_size; j++)
         for (i=0; i<Block_order; i++) 
-          B(i,j) = Work_in(i,j);
+          B(i,j) += Work_in(i,j);
 
     }  /* end of phase loop  */
+
   } /* end of iterations */
 
   local_trans_time = wtime() - local_trans_time;
@@ -415,10 +424,11 @@ int main(int argc, char ** argv)
 
   abserr = 0.0;
   istart = 0;
+  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   /*  for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) { */
   for (j=shm_ID*chunk_size; j<(shm_ID+1)*chunk_size; j++)
     for (i=0;i<order; i++) { 
-      abserr += ABS(B(i,j) - (double)((double)order*i + j+colstart));
+      abserr += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
     }
 
   MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);

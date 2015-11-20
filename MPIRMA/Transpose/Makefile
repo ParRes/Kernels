@@ -10,9 +10,6 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #BLOCKFLAG    = -DSYNCHRONOUS
 #description: turn on synchronous (blocking) communications
 
-#GRAINFLAG = -DMANYPUT
-#description: use many small puts directly into target matrix
-
 DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
@@ -27,7 +24,7 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS   = $(BLOCKFLAG) $(DEBUGFLAG) $(USERFLAGS) $(GRAINFLAG)
+TUNEFLAGS   = $(BLOCKFLAG) $(DEBUGFLAG) $(USERFLAGS)
 PROGRAM     = transpose
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

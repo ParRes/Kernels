@@ -294,12 +294,12 @@ int main(int argc, char ** argv)
       recv_flag[i]=0;
   }
   
-  /* Fill the original column matrix                                                */
+  /* Fill the original column matrices                                              */
   istart = 0;  
   for (j=0;j<Block_order;j++) 
     for (i=0;i<order; i++)  {
       A(i,j) = (double) (order*(j+colstart) + i);
-      B(i,j) = -1.0;
+      B(i,j) = 0.0;
   }
 
   shmem_barrier_all();
@@ -317,15 +317,18 @@ int main(int argc, char ** argv)
     if (!tiling) {
       for (i=0; i<Block_order; i++) 
         for (j=0; j<Block_order; j++) {
-          B(j,i) = A(i,j);
+          B(j,i) += A(i,j);
+          A(i,j) += 1.0;
 	}
     }
     else {
       for (i=0; i<Block_order; i+=Tile_order) 
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
-            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
-              B(jt,it) = A(it,jt); 
+            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+              B(jt,it) += A(it,jt); 
+              A(it,jt) += 1.0;
+            }
     }
 
     for (phase=1; phase<Num_procs; phase++){
@@ -337,6 +340,7 @@ int main(int argc, char ** argv)
         for (i=0; i<Block_order; i++) 
           for (j=0; j<Block_order; j++){
 	    Work_out(j,i) = A(i,j);
+            A(i,j) += 1.0;
 	  }
       }
       else {
@@ -345,6 +349,7 @@ int main(int argc, char ** argv)
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
                 Work_out(jt,it) = A(it,jt); 
+                A(it,jt) += 1.0;
 	      }
       }
 
@@ -358,7 +363,7 @@ int main(int argc, char ** argv)
       /* scatter received block to transposed matrix; no need to tile */
       for (j=0; j<Block_order; j++)
         for (i=0; i<Block_order; i++) 
-          B(i,j) = Work_in(phase, i,j);
+          B(i,j) += Work_in(phase, i,j);
     }  /* end of phase loop  */
   } /* end of iterations */
 
@@ -372,8 +377,9 @@ int main(int argc, char ** argv)
 
   abserr[0] = 0.0;
   istart = 0;
+  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
-      abserr[0] += ABS(B(i,j) - (double)(order*i + j+colstart));
+      abserr[0] += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
   }
 
   for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
