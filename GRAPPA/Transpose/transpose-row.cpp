@@ -243,9 +243,6 @@ int main(int argc, char * argv[]) {
 
 	});
 
-      // TODO: get rid of this restriction
-      //      tiling = tiling && (Block_order%CHUNK_LENGTH == 0);
-
       std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
       std::cout << "Grappa matrix transpose: B = A^T" << std::endl;
       std::cout << "Number of cores         = " << Num_procs << std::endl;
@@ -277,7 +274,6 @@ int main(int argc, char * argv[]) {
 		for (j=0; j<Block_order; j++) {
 		  B(j,i) += A(i,j);
 		  A(i,j) += 1.0;
-		  //std::cout<<"iter "<<iter<<" on core "<<mycore()<<"  B("<<j<<","<<i<<")="<<B(j,i)<<std::endl;
 		}
 	    } else {
 	      for (i=0; i<Block_order; i+=Tile_order) 
@@ -286,7 +282,6 @@ int main(int argc, char * argv[]) {
 		    for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
 		      B(jt,it) += A(it,jt);
 		      A(it,jt) += 1.0;
-		      //		      std::cout<<"iter "<<iter<<" on core "<<mycore()<<"  B("<<j<<","<<i<<")="<<B(j,i)<<std::endl;
 		    }
 	    }
 
@@ -316,8 +311,8 @@ int main(int argc, char * argv[]) {
 	      istart = my_ID * Block_order;
 	      // write local buffer to transposed matrix
 	      if (!tiling) {
-		for (j=0; i<Block_order; i++) 
-		  for (i=0; j<Block_order; j++) {
+		for (i=0; i<Block_order; i++) 
+		  for (j=0; j<Block_order; j++) {
 		    target = i+istart+(order*j);
 		    val = Work_out(i,j);
 		    Grappa::delegate::call<async>(send_to, [val,target] {
@@ -326,22 +321,27 @@ int main(int argc, char * argv[]) {
 		  }
 	      }
 	      else {
-		for (j=0; j<Block_order; j+=Tile_order) 
-		  for (i=0; i<Block_order; i+=Tile_order) 
-		    for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
-		      for (it=i; it<MIN(Block_order,i+Tile_order); it++) {
+		for (i=0; i<Block_order; i+=Tile_order) 
+		  for (j=0; j<Block_order; j+=Tile_order) 
+		    for (it=i; it<MIN(Block_order,i+Tile_order); it++) {
+		      for (jt=j; jt+CHUNK_LENGTH<MIN(Block_order,j+Tile_order);jt+=CHUNK_LENGTH) {
 			target = it+istart+(order*jt);
-			val = Work_out(it,jt);
-			Grappa::delegate::call<async>(send_to, [val,target] {
-			    B_p[target] += val;
+			row_t& row = *reinterpret_cast<row_t*>(&Work_out(it,jt));
+			Grappa::delegate::call<async>(send_to, [row,target,order] {
+			    for (int k=0; k<CHUNK_LENGTH; k++) {
+			      B_p[target+order*k] += reinterpret_cast<const double*>(&row)[k];
+			      //		std::cout<<" on core "<<mycore()<<"  B["<<target+order*k<<"]="<<B_p[target+order*k]<<std::endl;
+			    }			    // memcpy(&B_p[target], &row, sizeof(row_t));
 			  });
-			// row_t& row = *reinterpret_cast<row_t*>(&Work_out(it,jt));
-			// Grappa::delegate::call<async>(send_to, [row,target] {
-			//     for (int k=0; k<CHUNK_LENGTH; k++) 
-			//       B_p[target] += reinterpret_cast<double *>(&row)[k];
-			//     // memcpy(&B_p[target], &row, sizeof(row_t));
-			//   });
 		      }
+		      // for (; jt<MIN(Block_order,j+Tile_order); jt++) {
+		      // 	target = it+istart+(order*jt);
+		      // 	val = Work_out(it,jt);
+		      // 	Grappa::delegate::call<async>(send_to, [target,val] {
+		      // 	    B_p[target] += val; 
+		      // 	  });
+		      // }
+		    }
 	      }	       
 
 	      // ensures all async writes complete before moving to next phase
@@ -367,8 +367,8 @@ int main(int argc, char * argv[]) {
 	  for (j=0;j<Block_order;j++) for (i=0;i<order;i++) {
 	      ae->abserr += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
 	      if (B(i,j) != (order*i+j+colstart)*(iterations+1)+addit){
-	      	// LOG(INFO)<<"Expected: "<<(double)((order*i+j+colstart)*(iterations+1)+addit)<<"  Observed: "
-	      	// 	 <<B(i,j)<<" at ("<<i<<","<<j<<")";
+	      	LOG(INFO)<<"Expected: "<<(double)((order*i+j+colstart)*(iterations+1)+addit)<<"  Observed: "
+	      		 <<B(i,j)<<" at ("<<i<<","<<j<<")";
 	      }
 	    }
 	});
