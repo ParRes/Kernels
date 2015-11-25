@@ -1,0 +1,86 @@
+RADIUS=$1
+STAR=$2
+FILE=loop_body.incl
+echo "if (tiling) {"                                                               >  loop_body.incl
+  echo "  for (j=$RADIUS; j<n-$RADIUS; j++) {"                                     >> loop_body.incl
+  echo "    for (i=$RADIUS; i<n-$RADIUS; i++) {"                                   >> loop_body.incl
+  echo "  #ifdef STAR"                                                             >> loop_body.incl
+    echo "      /* Star shaped stencil of radius $RADIUS without tiling */"        >> loop_body.incl
+    echo "      OUT(i,j) += WEIGHT(0,0)*IN(i,j)"                                   >> loop_body.incl
+    jj=1
+    while [ $jj -le $RADIUS ]; do
+      echo "        +WEIGHT(0,-$jj)*IN(i,j-$jj)+WEIGHT(0,$jj)*IN(i,j+$jj)"         >> loop_body.incl
+      echo "        +WEIGHT(-$jj,0)*IN(i-$jj,j)+WEIGHT($jj,0)*IN(i+$jj,j)"         >> loop_body.incl
+      jj=`expr $jj + 1`
+    done
+  echo "  #else"                                                                   >> loop_body.incl
+    echo "      /* Compact stencil of radius $RADIUS without tiling */"            >> loop_body.incl
+    echo "      OUT(i,j) +="                                                       >> loop_body.incl
+    jj=`expr -1 \* $RADIUS`
+    while [ $jj -le $RADIUS ]; do
+      ii=`expr -1 \* $RADIUS`
+      while [ $ii -le $RADIUS ]; do
+        si=''
+        if [ $ii -lt 0 ]; then si=$ii
+        else
+          if [ $ii -gt 0 ]; then si=+$ii; fi
+        fi
+        sj=''
+        if [ $jj -lt 0 ]; then sj=$jj
+        else
+          if [ $jj -gt 0 ]; then sj=+$jj; fi
+        fi
+        echo "        +WEIGHT($ii,$jj)*IN(i$si,j$sj)"                              >> loop_body.incl
+        ii=`expr $ii + 1`
+      done
+      jj=`expr $jj + 1`
+    done
+  echo "  #endif"                                                                  >> loop_body.incl
+  echo "      ;"                                                                   >> loop_body.incl
+  echo "    }"                                                                     >> loop_body.incl
+  echo "  }"                                                                       >> loop_body.incl
+echo "}"                                                                           >> loop_body.incl
+echo "else {"                                                                      >> loop_body.incl
+  echo "  for (j=$RADIUS; j<n-$RADIUS; j+=tile_size) {"                            >> loop_body.incl
+  echo "    for (i=$RADIUS; i<n-$RADIUS; i+=tile_size) {"                          >> loop_body.incl
+  echo "      for (jt=j; jt<MIN(n-$RADIUS,j+tile_size); jt++) {"                   >> loop_body.incl
+  echo "        for (it=i; it<MIN(n-$RADIUS,i+tile_size); it++) {"                 >> loop_body.incl
+  echo "  #ifdef STAR"                                                             >> loop_body.incl
+    echo "          /* Star shaped stencil of radius $RADIUS with tiling */"       >> loop_body.incl
+    echo "          OUT(it,jt) += WEIGHT(0,0)*IN(it,jt)"                           >> loop_body.incl
+    jj=1
+    while [ $jj -le $RADIUS ]; do
+      echo "            +WEIGHT(0,-$jj)*IN(it,jt-$jj)+WEIGHT(0,$jj)*IN(it,jt+$jj)" >> loop_body.incl
+      echo "            +WEIGHT(-$jj,0)*IN(it-$jj,jt)+WEIGHT($jj,0)*IN(it+$jj,jt)" >> loop_body.incl
+      jj=`expr $jj + 1`
+    done
+  echo "  #else"                                                                   >> loop_body.incl
+    echo "          /* Compact stencil of radius $RADIUS with tiling */"           >> loop_body.incl
+    echo "          OUT(i,j) +=  "                                                 >> loop_body.incl
+    jj=`expr -1 \* $RADIUS`
+    while [ $jj -le $RADIUS ]; do
+      ii=`expr -1 \* $RADIUS`
+      while [ $ii -le $RADIUS ]; do
+        si=''
+        if [ $ii -lt 0 ]; then si=$ii
+        else
+          if [ $ii -gt 0 ]; then si=+$ii; fi
+        fi
+        sj=''
+        if [ $jj -lt 0 ]; then sj=$jj
+        else
+          if [ $jj -gt 0 ]; then sj=+$jj; fi
+        fi
+        echo "            +WEIGHT($ii,$jj)*IN(it$si,jt$sj)"                        >> loop_body.incl
+        ii=`expr $ii + 1`
+      done
+      jj=`expr $jj + 1`
+    done
+  echo "  #endif"                                                                  >> loop_body.incl
+  echo "          ;"                                                               >> loop_body.incl
+  echo "        }"                                                                 >> loop_body.incl
+  echo "      }"                                                                   >> loop_body.incl
+  echo "    }"                                                                     >> loop_body.incl
+  echo "  }"                                                                       >> loop_body.incl
+echo "}"                                                                           >> loop_body.incl
+

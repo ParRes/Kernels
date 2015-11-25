@@ -197,6 +197,11 @@ int main(int argc, char ** argv) {
 #else
   printf("Data type            = single precision\n");
 #endif
+#if LOOPGEN
+  printf("Script used to expand stencil loop body\n");
+#else
+  printf("Compact representation of stencil loop body\n");
+#endif
   if (tiling) printf("Tile size            = %d\n", tile_size);
   else        printf("Untiled\n");
   printf("Number of iterations = %d\n", iterations);
@@ -213,6 +218,10 @@ int main(int argc, char ** argv) {
     if (iter == 1)  stencil_time = wtime();
 
     /* Apply the stencil operator                                              */
+
+#if LOOPGEN
+    #include "loop_body.incl"
+#else
     if (!tiling) {
       for (j=RADIUS; j<n-RADIUS; j++) {
         for (i=RADIUS; i<n-RADIUS; i++) {
@@ -247,7 +256,7 @@ int main(int argc, char ** argv) {
         }
       }
     }
-
+#endif
 
     /* add constant to solution to force refresh of neighbor data, if any       */
     for (j=0; j<n; j++) for (i=0; i<n; i++) IN(i,j)+= 1.0;

@@ -266,6 +266,7 @@ veryclean: clean
 	cd MPI1/Branch;      $(MAKE) veryclean
 	cd OPENMP/Branch;    $(MAKE) veryclean
 	cd SERIAL/Branch;    $(MAKE) veryclean
+	cd SERIAL/Stencil;   $(MAKE) veryclean
 	cd FG_MPI/Branch;    $(MAKE) veryclean
 	cd AMPI/Branch;      $(MAKE) veryclean
 	cd scripts/small;    $(MAKE) -f  Makefile_FG_MPI veryclean
