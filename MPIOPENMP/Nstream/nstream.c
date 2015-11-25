@@ -173,6 +173,7 @@ int main(int argc, char **argv)
   MPI_Comm_rank(MPI_COMM_WORLD,&my_ID);
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI+OpenMP stream triad: A = B + scalar*C\n");
     if (argc != 5){
       printf("Usage:  %s  <#threads> <#iterations> <vector length> <offset>\n", *argv);

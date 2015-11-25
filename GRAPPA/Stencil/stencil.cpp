@@ -57,7 +57,6 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
  
 *********************************************************************************/
 #include <par-res-kern_general.h>
-#include <par-res-kern_mpi.h>
 #include <Grappa.hpp>
 #include <FullEmpty.hpp>
 using namespace Grappa;
@@ -83,8 +82,6 @@ using namespace Grappa;
 #endif
 #define root 0
 
-#define FOCUS 1
- 
 // temporary hack to allocate symmetric data with lower overhead
 #define symmetric static
  
@@ -151,8 +148,8 @@ int main(int argc, char * argv[]) {
       std::cout<<"ERROR: iterations must be >= 1 :"<<iterations<<std::endl;
     exit(1);
   }
-  int n       = atoi(argv[2]);
-  long nsquare = n * n;
+  int n           = atoi(argv[2]);
+  int64_t nsquare = (int64_t) n * n;
   if (nsquare < Grappa::cores()){
     if (my_ID == root)
       std::cout<<"ERROR: grid size "<<nsquare<<" must be at least # cores "<<
@@ -185,6 +182,7 @@ int main(int argc, char * argv[]) {
         my_IDy = my_ID/Num_procsx; }
       );
  
+    std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
     std::cout<<"Grappa stencil execution on 2D grid"<<std::endl;
     std::cout<<"Number of cores        = "<<Num_procs<<std::endl;
     std::cout<<"Grid size              = "<<n<<std::endl;
@@ -200,12 +198,12 @@ int main(int argc, char * argv[]) {
 
     symmetric double start;
     symmetric double total;
-    symmetric int istart;
-    symmetric int iend;
-    symmetric int jstart;
-    symmetric int jend;
-    symmetric int width;
-    symmetric int height;
+    symmetric long istart;
+    symmetric long iend;
+    symmetric long jstart;
+    symmetric long jend;
+    symmetric long width;
+    symmetric long height;
  
     symmetric FullEmpty<DTYPE> * left_halo;
     symmetric FullEmpty<DTYPE> * right_halo;
@@ -261,12 +259,8 @@ int main(int argc, char * argv[]) {
         exit(1);
       }
       long total_length_in = (width+2*RADIUS)*(height+2*RADIUS);
-      if (total_length_in/(height+2*RADIUS) != (width+2*RADIUS)) {
-        std::cout<<"ERROR: Space for "<<width+2*RADIUS<<" x "<<height+2*RADIUS<<
-          " input array cannot be represented"<<std::endl;
-        exit(1);
-      }
       long total_length_out = width*height;
+
       in  = Grappa::locale_new_array<DTYPE>(total_length_in);
       out = Grappa::locale_new_array<DTYPE>(total_length_out);
       if (!in || !out) {
@@ -316,9 +310,6 @@ int main(int argc, char * argv[]) {
       writeXF( CTS_left, true);
     } );
   
-    
-            
-
     Grappa::finish( [n,Num_procsx,Num_procsy, iterations] {
     Grappa::on_all_cores( [n,Num_procsx,Num_procsy, iterations] {
 	
@@ -463,6 +454,7 @@ int main(int argc, char * argv[]) {
     }
   });
 
-  Grappa::finalize();
+  // skipping finalize, which creates spurious errors
+  //  Grappa::finalize();
   return 0;
 }

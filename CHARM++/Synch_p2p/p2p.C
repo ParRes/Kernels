@@ -5,8 +5,8 @@
 #define ARRAY(i,j) vector[i+1+(j)*(width+1)]
 
 /*readonly*/ CProxy_Main mainProxy;
-/*readonly*/ int n; // array size
-/*readonly*/ int m; // array size
+/*readonly*/ long n; // array size
+/*readonly*/ long m; // array size
 /*readonly*/ int overdecomposition; 
 /*readonly*/ int maxiterations;
 /*readonly*/ int grp;
@@ -51,15 +51,15 @@ public:
           CkPrintf("ERROR: #iterations must be positive: %d", maxiterations);
           CkExit();
         }
-        m = atoi(cmdlinearg->argv[2]);
+        m = atol(cmdlinearg->argv[2]);
         if (m < CkNumPes()) {
-          CkPrintf("ERROR: Horizontal grid size %d smaller than #PEs %d\n", m, CkNumPes());
+          CkPrintf("ERROR: Horizontal grid size %ld smaller than #PEs %d\n", m, CkNumPes());
           CkExit();
         }
 
-        n = atoi(cmdlinearg->argv[3]);
+        n = atol(cmdlinearg->argv[3]);
         if (n < 1) {
-          CkPrintf("ERROR: Vertical grid size must be positive: %d\n", n);
+          CkPrintf("ERROR: Vertical grid size must be positive: %ld\n", n);
           CkExit();
         }
 
@@ -85,10 +85,11 @@ public:
         }
 
         // print info
+        CkPrintf("Parallel Research Kernels Version %s\n", PRKVERSION);
         CkPrintf("Charm++ pipeline execution on 2D grid\n");
         CkPrintf("Number of Charm++ PEs = %d\n", CkNumPes());
         CkPrintf("Overdecomposition     = %d\n", overdecomposition);
-        CkPrintf("Grid sizes            = %d,%d\n", m, n);
+        CkPrintf("Grid sizes            = %ld,%ld\n", m, n);
         CkPrintf("Number of iterations  = %d\n", maxiterations);
         if (grp > 1)
         CkPrintf("Group factor          = %d (cheating!)\n", grp);

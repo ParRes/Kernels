@@ -192,6 +192,7 @@ int main(int argc, char ** argv)
   MPI_Bcast(&group_size, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI+SHM Matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Rank group size      = %d\n", group_size);
@@ -252,7 +253,9 @@ int main(int argc, char ** argv)
   MPI_Aint size= (Colblock_size+offset)*sizeof(double)*size_mul; int disp_unit;
   MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, shm_comm, 
                           (void *) &A_p, &shm_win_A);
+  MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win_A);
   MPI_Win_shared_query(shm_win_A, MPI_PROC_NULL, &size, &disp_unit, (void *)&A_p);
+
   if (A_p == NULL){
     printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
@@ -260,8 +263,11 @@ int main(int argc, char ** argv)
   bail_out(error);
   A_p += offset;
 
+  /* recompute memory size (overwritten by prior query                 */
+  size= (Colblock_size+offset)*sizeof(double)*size_mul; 
   MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, shm_comm, 
                           (void *) &B_p, &shm_win_B);
+  MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win_B);
   MPI_Win_shared_query(shm_win_B, MPI_PROC_NULL, &size, &disp_unit, (void *)&B_p);
   if (B_p == NULL){
     printf(" Error allocating space for transposed matrix by group %d\n",group_ID);
@@ -275,6 +281,7 @@ int main(int argc, char ** argv)
     size = Block_size*sizeof(double)*size_mul;
     MPI_Win_allocate_shared(size, sizeof(double),rma_winfo, shm_comm, 
                            (void *) &Work_in_p, &shm_win_Work_in);
+    MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win_Work_in);
     MPI_Win_shared_query(shm_win_Work_in, MPI_PROC_NULL, &size, &disp_unit, 
                          (void *)&Work_in_p);
     if (Work_in_p == NULL){
@@ -283,8 +290,11 @@ int main(int argc, char ** argv)
     }
     bail_out(error);
 
+    /* recompute memory size (overwritten by prior query                 */
+    size = Block_size*sizeof(double)*size_mul;
     MPI_Win_allocate_shared(size, sizeof(double), rma_winfo, 
                             shm_comm, (void *) &Work_out_p, &shm_win_Work_out);
+    MPI_Win_lock_all(MPI_MODE_NOCHECK,shm_win_Work_out);
     MPI_Win_shared_query(shm_win_Work_out, MPI_PROC_NULL, &size, &disp_unit, 
                          (void *)&Work_out_p);
     if (Work_out_p == NULL){
@@ -302,7 +312,7 @@ int main(int argc, char ** argv)
       for (i=0;i<order; i+=Tile_order) 
         for (jt=j; jt<MIN((shm_ID+1)*chunk_size,j+Tile_order); jt++)
           for (it=i; it<MIN(order,i+Tile_order); it++) {
-            A(it,jt) = (double) (order*(jt+colstart) + it);
+            A(it,jt) = (double) ((double)order*(jt+colstart) + it);
             B(it,jt) = -1.0;
           }
     }
@@ -310,11 +320,13 @@ int main(int argc, char ** argv)
   else {
     for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j++) 
       for (i=0;i<order; i++) {
-        A(i,j) = (double) (order*(j+colstart) + i);
+        A(i,j) = (double)((double)order*(j+colstart) + i);
         B(i,j) = -1.0;
       }
   }
   /* NEED A STORE FENCE HERE                                                     */
+  MPI_Win_sync(shm_win_A);
+  MPI_Win_sync(shm_win_B);
   MPI_Barrier(shm_comm);
 
   for (iter=0; iter<=iterations; iter++) {
@@ -347,13 +359,6 @@ int main(int argc, char ** argv)
       recv_from = ((group_ID + phase             )%Num_groups);
       send_to   = ((group_ID - phase + Num_groups)%Num_groups);
 
-#ifndef SYNCHRONOUS
-      if (shm_ID==0) {
-         MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
-                   recv_from*group_size, phase, MPI_COMM_WORLD, &recv_req);  
-      }
-#endif
-
       istart = send_to*Block_order; 
       if (!tiling) {
         for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i++) 
@@ -371,9 +376,15 @@ int main(int argc, char ** argv)
       }
 
       /* NEED A LOAD/STORE FENCE HERE                                            */
+      MPI_Win_sync(shm_win_Work_in);
+      MPI_Win_sync(shm_win_Work_out);
       MPI_Barrier(shm_comm);
       if (shm_ID==0) {
 #ifndef SYNCHRONOUS  
+        /* if we place the Irecv outside this block, it would not be
+           protected by a local barrier, which creates a race                    */
+        MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
+                  recv_from*group_size, phase, MPI_COMM_WORLD, &recv_req);  
         MPI_Isend(Work_out_p, Block_size, MPI_DOUBLE, send_to*group_size,
                   phase, MPI_COMM_WORLD, &send_req);
         MPI_Wait(&recv_req, &status);
@@ -385,6 +396,8 @@ int main(int argc, char ** argv)
 #endif
       }
       /* NEED A LOAD FENCE HERE                                                  */ 
+      MPI_Win_sync(shm_win_Work_in);
+      MPI_Win_sync(shm_win_Work_out);
       MPI_Barrier(shm_comm);
 
       istart = recv_from*Block_order; 
@@ -405,7 +418,7 @@ int main(int argc, char ** argv)
   /*  for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) { */
   for (j=shm_ID*chunk_size; j<(shm_ID+1)*chunk_size; j++)
     for (i=0;i<order; i++) { 
-      abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
+      abserr += ABS(B(i,j) - (double)((double)order*i + j+colstart));
     }
 
   MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
@@ -427,9 +440,14 @@ int main(int argc, char ** argv)
 
   bail_out(error);
 
+  MPI_Win_unlock_all(shm_win_A);
+  MPI_Win_unlock_all(shm_win_B);
+
   MPI_Win_free(&shm_win_A);
   MPI_Win_free(&shm_win_B);
   if (Num_groups>1) {
+      MPI_Win_unlock_all(shm_win_Work_in);
+      MPI_Win_unlock_all(shm_win_Work_out);
       MPI_Win_free(&shm_win_Work_in);
       MPI_Win_free(&shm_win_Work_out);
   }

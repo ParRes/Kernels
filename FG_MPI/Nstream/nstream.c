@@ -203,6 +203,7 @@ int main(int argc, char **argv)
  
   if (my_ID == root) {
     MPIX_Get_collocated_size(&procsize);
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("FG_MPI stream triad: A = B + scalar*C\n");
     printf("Number of ranks         = %d\n", Num_procs);
     printf("Number of ranks/process = %d\n", procsize);

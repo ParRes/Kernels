@@ -152,6 +152,7 @@ int main(int argc, char ** argv) {
   {
   nthread = omp_get_num_threads();
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP Matrix transpose: B = A^T\n");
   if (nthread != nthread_input) {
     num_error = 1;

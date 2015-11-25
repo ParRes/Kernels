@@ -138,8 +138,6 @@ int main(int argc, char ** argv) {
   long   total_length_out;/* total required length to store output array         */
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
-  MPI_Request request[8];
-  MPI_Status  status[8];
   MPI_Win rma_winx;       /* RMA window object x-direction */
   MPI_Win rma_winy;       /* RMA window object y-direction */
   MPI_Info rma_winfo;     /* info for window */
@@ -177,7 +175,7 @@ int main(int argc, char ** argv) {
     }
  
     n  = atoi(*++argv);
-    long nsquare = n * n;
+    long nsquare = (long) n * (long) n;
     if (nsquare < Num_procs){ 
       printf("ERROR: grid size must be at least # ranks: %ld\n", nsquare);
       error = 1;
@@ -218,6 +216,7 @@ int main(int argc, char ** argv) {
   bottom_nbr = my_ID-Num_procsx;
  
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPIRMA stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Grid size              = %d\n", n);
@@ -280,8 +279,8 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
  
-  total_length_in = (width+2*RADIUS)*(height+2*RADIUS)*sizeof(DTYPE);
-  total_length_out = width*height*sizeof(DTYPE);
+  total_length_in  = (long) (width+2*RADIUS)* (long) (height+2*RADIUS)*sizeof(DTYPE);
+  total_length_out = (long) width* (long) height*sizeof(DTYPE);
  
   in  = (DTYPE *) malloc(total_length_in);
   out = (DTYPE *) malloc(total_length_out);
@@ -345,7 +344,7 @@ int main(int argc, char ** argv) {
     }
 
     /* need to fetch ghost point data from neighbors in y-direction                 */
-    MPI_Win_fence(0, rma_winy);
+    MPI_Win_fence(MPI_MODE_NOSTORE, rma_winy);
     if (my_IDy < Num_procsy-1) {
       for (kk=0,j=jend-RADIUS; j<=jend-1; j++) for (i=istart; i<=iend; i++) {
           top_buf_out[kk++]= IN(i,j);
@@ -360,7 +359,7 @@ int main(int argc, char ** argv) {
       MPI_Put(bottom_buf_out, RADIUS*width, MPI_DTYPE, bottom_nbr,
 	      RADIUS*width, RADIUS*width, MPI_DTYPE, rma_winy);
     }
-    MPI_Win_fence(0, rma_winy);
+    MPI_Win_fence(MPI_MODE_NOSTORE, rma_winy);
     if (my_IDy < Num_procsy-1) {
       for (kk=0,j=jend; j<=jend+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
           IN(i,j) = top_buf_in[kk++];
@@ -373,7 +372,7 @@ int main(int argc, char ** argv) {
     }
 
     /* need to fetch ghost point data from neighbors in x-direction                 */
-    MPI_Win_fence(0, rma_winx);
+    MPI_Win_fence(MPI_MODE_NOSTORE, rma_winx);
     if (my_IDx < Num_procsx-1) {
       for (kk=0,j=jstart; j<=jend; j++) for (i=iend-RADIUS; i<=iend-1; i++) {
           right_buf_out[kk++]= IN(i,j);
@@ -388,7 +387,7 @@ int main(int argc, char ** argv) {
       MPI_Put(left_buf_out, RADIUS*height, MPI_DTYPE, left_nbr,
 	      RADIUS*height, RADIUS*height, MPI_DTYPE, rma_winx);
     }
-    MPI_Win_fence(0, rma_winx);
+    MPI_Win_fence(MPI_MODE_NOSTORE, rma_winx);
     if (my_IDx < Num_procsx-1) {
       for (kk=0,j=jstart; j<=jend; j++) for (i=iend; i<=iend+RADIUS-1; i++) {
           IN(i,j) = right_buf_in[kk++];

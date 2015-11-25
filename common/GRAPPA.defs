@@ -1,6 +1,8 @@
 include ../../common/make.defs
+ifneq ($(GRAPPATOP),)
 include $(GRAPPATOP)/share/Grappa/grappa.mk
+endif
 CCOMPILER=$(GRAPPA_CXX)
-CLINKER=$(GRAPPA_LD) 
+CLINKER=$(GRAPPA_LD)
 COMOBJS=
 PROG_ENV=-DGRAPPA

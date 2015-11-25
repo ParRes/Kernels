@@ -181,6 +181,9 @@ int main(int argc, char ** argv) {
   int    left_nbr;        /* global rank of left neighboring tile                */
   int    top_nbr;         /* global rank of top neighboring tile                 */
   int    bottom_nbr;      /* global rank of bottom neighboring tile              */
+  int    local_nbr[4];    /* list of synchronizing local neighbors               */
+  int    num_local_nbrs;  /* number of synchronizing local neighbors             */
+  int    dummy;
   DTYPE *top_buf_out;     /* communication buffer                                */
   DTYPE *top_buf_in;      /*       "         "                                   */
   DTYPE *bottom_buf_out;  /*       "         "                                   */
@@ -190,7 +193,7 @@ int main(int argc, char ** argv) {
   DTYPE *left_buf_out;    /*       "         "                                   */
   DTYPE *left_buf_in;     /*       "         "                                   */
   int    root = 0;
-  int    n, width, height;/* linear global and block grid dimension              */
+  long   n, width, height;/* linear global and block grid dimension              */
   int    width_rank, 
          height_rank;     /* linear local dimension                              */
   int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
@@ -274,7 +277,7 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;  
     }
  
-    n  = atoi(*++argv);
+    n  = atol(*++argv);
     long nsquare = n * n;
     if (nsquare < Num_procs){ 
       printf("ERROR: grid size must be at least # ranks: %ld\n", nsquare);
@@ -298,7 +301,7 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
 
-  MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n,          1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&group_size, 1, MPI_INT, root, MPI_COMM_WORLD);
  
@@ -322,6 +325,7 @@ int main(int argc, char ** argv) {
 
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI+SHM stencil execution on 2D grid\n");
     printf("Number of ranks                 = %d\n", Num_procs);
     printf("Grid size                       = %d\n", n);
@@ -330,6 +334,11 @@ int main(int argc, char ** argv) {
     printf("Tiles per shared memory domain  = %d\n", group_size);
     printf("Tiles in x/y-direction in group = %d/%d\n", group_sizex,  group_sizey);
     printf("Type of stencil                 = star\n");
+#ifdef LOCAL_BARRIER_SYNCH
+    printf("Local synchronization           = barrier\n");
+#else
+    printf("Local synchronization           = point to point\n");
+#endif
 #ifdef DOUBLE
     printf("Data type                       = double precision\n");
 #else
@@ -342,7 +351,7 @@ int main(int argc, char ** argv) {
 
   /* first divide WORLD in groups of size group_size */
   MPI_Comm_split(MPI_COMM_WORLD, my_ID/group_size, my_ID%group_size, &shm_comm_prep);
-  /* derive from that a SHM communicator */
+  /* derive from that an SHM communicator */
   MPI_Comm_split_type(shm_comm_prep, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &shm_comm);
   MPI_Comm_rank(shm_comm, &shm_ID);
   MPI_Comm_size(shm_comm, &shm_procs);
@@ -360,23 +369,37 @@ int main(int argc, char ** argv) {
   my_global_IDx = my_group_IDx*group_sizex+my_local_IDx;
   my_global_IDy = my_group_IDy*group_sizey+my_local_IDy;
 
-  /* set all neighboring ranks to -1 (no communication with other coherence domain) */
+  /* set all neighboring ranks to -1 (no communication with those ranks) */
   left_nbr = right_nbr = top_nbr = bottom_nbr = -1;
+  /* keep track of local neighbors for local synchronization             */
+  num_local_nbrs = 0;
 
   if (my_local_IDx == group_sizex-1 && my_group_IDx != (Num_groupsx-1)) {
     right_nbr = (my_group+1)*group_size+shm_ID-group_sizex+1;
+  }
+  if (my_local_IDx != group_sizex-1) {
+    local_nbr[num_local_nbrs++] = shm_ID + 1;
   }
 
   if (my_local_IDx == 0 && my_group_IDx != 0) {
     left_nbr = (my_group-1)*group_size+shm_ID+group_sizex-1;
   }
+  if (my_local_IDx != 0) {
+    local_nbr[num_local_nbrs++] = shm_ID - 1;
+  }
 
   if (my_local_IDy == group_sizey-1 && my_group_IDy != (Num_groupsy-1)) {
     top_nbr = (my_group+Num_groupsx)*group_size + my_local_IDx;
   }
+  if (my_local_IDy != group_sizey-1) {
+    local_nbr[num_local_nbrs++] = shm_ID + group_sizex;
+  }
 
   if (my_local_IDy == 0 && my_group_IDy != 0) {
     bottom_nbr = (my_group-Num_groupsx)*group_size + group_sizex*(group_sizey-1)+my_local_IDx;
+  }
+  if (my_local_IDy != 0) {
+    local_nbr[num_local_nbrs++] = shm_ID - group_sizex;
   }
 
   /* compute amount of space required for input and solution arrays for the block,
@@ -419,8 +442,8 @@ int main(int argc, char ** argv) {
   bail_out(error);
  
   if (width < RADIUS || height < RADIUS) {
-    printf("ERROR: rank %d has work tile smaller then stencil radius\n",
-           my_ID);
+    printf("ERROR: rank %d has work tile smaller then stencil radius; w=%ld,h=%ld\n",
+           my_ID, width, height);
     error = 1;
   }
   bail_out(error);
@@ -433,9 +456,10 @@ int main(int argc, char ** argv) {
   size_in= total_length_in*size_mul; 
   MPI_Win_allocate_shared(size_in, sizeof(double), MPI_INFO_NULL, shm_comm, 
                           (void *) &in, &shm_win_in);
+  MPI_Win_lock_all(MPI_MODE_NOCHECK, shm_win_in);
   MPI_Win_shared_query(shm_win_in, MPI_PROC_NULL, &size_in, &disp_unit, (void *)&in);
   if (in == NULL){
-    printf(" Error allocating space for original matrix on node %d\n",my_ID);
+    printf("Error allocating space for input array by group %d\n",my_group);
     error = 1;
   }
   bail_out(error);
@@ -443,40 +467,49 @@ int main(int argc, char ** argv) {
   size_out= total_length_out*size_mul;
   MPI_Win_allocate_shared(size_out, sizeof(double), MPI_INFO_NULL, shm_comm, 
                           (void *) &out, &shm_win_out);
+  MPI_Win_lock_all(MPI_MODE_NOCHECK, shm_win_out);
   MPI_Win_shared_query(shm_win_out, MPI_PROC_NULL, &size_out, &disp_unit, (void *)&out);
   if (out == NULL){
-    printf(" Error allocating space for transposed matrix by group %d\n", my_group);
+    printf("Error allocating space for output array by group %d\n", my_group);
     error = 1;
   }
   bail_out(error);
 
   /* determine index set assigned to each rank                         */
 
-  width_rank = n/Num_procsx;
-  leftover = n%Num_procsx;
-  if (my_global_IDx<leftover) {
-    istart_rank = (width_rank+1) * my_global_IDx; 
+  width_rank = width/group_sizex;
+  leftover = width%group_sizex;
+  if (my_local_IDx<leftover) {
+    istart_rank = (width_rank+1) * my_local_IDx; 
     iend_rank = istart_rank + width_rank;
   }
   else {
-    istart_rank = (width_rank+1) * leftover + width_rank * (my_global_IDx-leftover);
+    istart_rank = (width_rank+1) * leftover + width_rank * (my_local_IDx-leftover);
     iend_rank = istart_rank + width_rank - 1;
   }
-
+  istart_rank += istart;
+  iend_rank += istart;
   width_rank = iend_rank - istart_rank + 1;   
 
-  height_rank = n/Num_procsy;
-  leftover = n%Num_procsy;
-  if (my_global_IDy<leftover) {
-    jstart_rank = (height_rank+1) * my_global_IDy; 
+  height_rank = height/group_sizey;
+  leftover = height%group_sizey;
+  if (my_local_IDy<leftover) {
+    jstart_rank = (height_rank+1) * my_local_IDy; 
     jend_rank = jstart_rank + height_rank;
   }
   else {
-    jstart_rank = (height_rank+1) * leftover + height_rank * (my_global_IDy-leftover);
+    jstart_rank = (height_rank+1) * leftover + height_rank * (my_local_IDy-leftover);
     jend_rank = jstart_rank + height_rank - 1;
   }
-  
+  jstart_rank+=jstart;
+  jend_rank+=jstart;
   height_rank = jend_rank - jstart_rank + 1;
+
+  if (height_rank*width_rank==0) {
+    error = 1;
+    printf("Rank %d has no work to do\n", my_ID);
+  }
+  bail_out(error);
 
   /* allocate communication buffers for halo values                            */
   top_buf_out = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*width_rank);
@@ -507,7 +540,7 @@ int main(int argc, char ** argv) {
     WEIGHT(0, ii) = WEIGHT( ii,0) =  (DTYPE) (1.0/(2.0*ii*RADIUS));
     WEIGHT(0,-ii) = WEIGHT(-ii,0) = -(DTYPE) (1.0/(2.0*ii*RADIUS));
   }
- 
+
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
   /* intialize the input and output arrays                                     */
@@ -516,6 +549,9 @@ int main(int argc, char ** argv) {
     OUT(i,j) = (DTYPE)0.0;
   }
 
+  /* LOAD/STORE FENCE */
+  MPI_Win_sync(shm_win_in);
+  MPI_Win_sync(shm_win_out);
   MPI_Barrier(shm_comm); 
 
   for (iter = 0; iter<=iterations; iter++){
@@ -567,6 +603,9 @@ int main(int argc, char ** argv) {
       }
     }
 
+    /* LOAD/STORE FENCE */
+    MPI_Win_sync(shm_win_in);
+
     /* need to fetch ghost point data from neighbors in x-direction                 */
     if (right_nbr != -1) {
       MPI_Irecv(right_buf_in, RADIUS*height_rank, MPI_DTYPE, right_nbr, 1010,
@@ -608,6 +647,9 @@ int main(int argc, char ** argv) {
       }
     }
 
+    /* LOAD/STORE FENCE */
+    MPI_Win_sync(shm_win_in);
+
     /* Apply the stencil operator */
     for (j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
       for (i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
@@ -619,18 +661,39 @@ int main(int argc, char ** argv) {
         }
         for (ii=1; ii<=RADIUS; ii++) {
           OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
- 
         }
       }
     }
- 
+
+    /* LOAD/STORE FENCE */
+    MPI_Win_sync(shm_win_out);
+
+#ifdef LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid writing IN while other ranks are reading it
+#else
+    for (i=0; i<num_local_nbrs; i++) {
+      MPI_Irecv(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm, &(request[i]));
+      MPI_Send(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm);
+    }
+    MPI_Waitall(num_local_nbrs, request, status);
+#endif
 
     /* add constant to solution to force refresh of neighbor data, if any */
     for (j=jstart_rank; j<=jend_rank; j++) 
     for (i=istart_rank; i<=iend_rank; i++) IN(i,j)+= 1.0;
 
+    /* LOAD/STORE FENCE */
+    MPI_Win_sync(shm_win_in);
+
+#ifdef LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid reading IN while other ranks are writing it
+#else
+    for (i=0; i<num_local_nbrs; i++) {
+      MPI_Irecv(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm, &(request[i]));
+      MPI_Send(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm);
+    }
+    MPI_Waitall(num_local_nbrs, request, status);
+#endif
  
   } /* end of iterations                                                   */
  
@@ -676,6 +739,11 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
  
+  MPI_Win_unlock_all(shm_win_in);
+  MPI_Win_unlock_all(shm_win_out);
+  MPI_Win_free(&shm_win_in);
+  MPI_Win_free(&shm_win_out);
+
   if (my_ID == root) {
     /* flops/stencil: 2 flops (fma) for each point in the stencil, 
        plus one flop for the update of the input of the array        */

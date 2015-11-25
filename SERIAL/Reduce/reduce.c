@@ -91,6 +91,7 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial Vector Reduction\n");
   printf("Vector length                  = %ld\n", vector_length);
   printf("Number of iterations           = %d\n", iterations);

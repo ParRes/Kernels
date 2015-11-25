@@ -194,6 +194,7 @@ int main(int argc, char ** argv)
   #pragma omp master
   {
   nthread = omp_get_num_threads();
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP exclusive access test RefCount, private counters\n");
   if (nthread != nthread_input) {
     num_error = 1;
@@ -255,7 +256,7 @@ int main(int argc, char ** argv)
 #else 
     printf("Solution validates\n");
 #endif
-    printf("Rate (MCPUPs/s): %lf, time (s): %lf\n",
+    printf("Rate (MCPUPs/s): %lf, time (s): %lf\n", 
            iterations/refcount_time*1.e-6, refcount_time);
   }
   exit(EXIT_SUCCESS);

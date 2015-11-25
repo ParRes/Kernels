@@ -31,13 +31,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 ///////////////////////////////////////////////////////////////////////
  
+#include <par-res-kern_general.h>
 #include <Grappa.hpp>
 #include <FullEmpty.hpp>
  
 using namespace Grappa;
+
  
-#define ARRAY(i,j) (local[(i)+((j)*segment_size)])
-#define ABS(x) ((x)>0 ? (x) : (-(x)))
+#define ARRAY(i,j) (local[(i+1)+((j)*(segment_size+1))])
 #define root 0
  
 double *local;
@@ -52,7 +53,7 @@ struct Timer {
 int main( int argc, char * argv[] ) {
  
   int iterations;
-  int m, n;
+  long m, n;
  
   Grappa::init( &argc, &argv );
  
@@ -70,8 +71,8 @@ int main( int argc, char * argv[] ) {
     exit(1);
   } 
  
-  m = atoi(argv[2]);
-  n = atoi(argv[3]);
+  m = atol(argv[2]);
+  n = atol(argv[3]);
   if (m < 1 || n < 1){
     if( Grappa::mycore() == root )
       std::cout <<"ERROR: grid dimensions must be positive: "<<m<<","<<n<< std::endl;
@@ -88,6 +89,7 @@ int main( int argc, char * argv[] ) {
       std::cout <<"ERROR: First grid dimension "<<m<<" smaller than #cores+1 "<<std::endl;
       exit(1);
     }
+    std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
     std::cout<<"Grappa pipeline execution on 2D grid"<<std::endl;
     std::cout<<"Number of processes            = "<<Num_procs<<std::endl;
     std::cout<<"Grid sizes                     = "<<m<<"x"<<n<<std::endl;
@@ -117,13 +119,7 @@ int main( int argc, char * argv[] ) {
       // now set segment_size to the value needed by the calling core
       segment_size = end - start + 1;
  
-      total_length = segment_size*n;
-      if (total_length/segment_size != n) {
-        if (my_ID == root) {
-          std::cout<<"ERROR: Grid of "<<m<<" by "<<n<<" points too large"<<std::endl;
-        }
-        exit(1);
-      }
+      total_length = (segment_size+1)*n;
       local = new double[total_length];
       if (!local) {
         std::cout<<"ERROR: core "<<my_ID<<" could not allocate "
@@ -137,7 +133,7 @@ int main( int argc, char * argv[] ) {
       }
       // set boundary values (bottom and left side of grid 
       if (my_ID==root) for (int j=0; j<n; j++) ARRAY(0,j) = (double) j;
-      for (int i=start; i<=end; i++)      ARRAY(i-start,0) = (double) i;
+      for (int i=start-1; i<=end; i++)      ARRAY(i-start,0) = (double) i;
  
       if (my_ID == root) {
         for( int j = 0; j < n; j++ ) {
@@ -159,44 +155,34 @@ int main( int argc, char * argv[] ) {
     } );
       
     GlobalAddress<Timer> timer = Grappa::symmetric_global_alloc<Timer>();
+
+    Grappa::finish( [timer,iterations,n,m] {
+    Grappa::on_all_cores( [timer,iterations,n,m] {
  
-    for (int iter = 0; iter <= iterations; ++iter ) {
+      for (int iter = 0; iter <= iterations; ++iter ) {
  
-      Grappa::on_all_cores( [timer,iter,n] {
-        for( int j = 1; j < n; j++ ) {
-          if( Grappa::mycore() != root) {
-                lefts[j].reset();
-          }
-        }
         if (iter==1) timer->start = Grappa::walltime();
-      } );
         
       // execute kernel
  
-      Grappa::finish( [m,n] {
-        Grappa::on_all_cores( [m,n] {
-          double left, diag, up, current;
+          double current;
           int my_ID = Grappa::mycore();
  
+          if (my_ID==root) ARRAY(0,0) = readFE( &lefts[0]);
           for(int j=1; j<n; j++) {
  
             // prepare to iterate over this segment      
-            left = readFF( &lefts[j] );
-            diag = readFF( &lefts[j-1] );
+            if (my_ID!=root) ARRAY(start-1,j) = readFE( &lefts[j] );
  
             for (int i=start; i<= end; i++) {
-              // compute this cell's value
-              up = ARRAY(i,j-1);
-              current = up + left - diag;
-              diag = up;
-              left = current;
+              current = ARRAY(i,j-1) + ARRAY(i-1,j) - ARRAY(i-1,j-1);
               ARRAY(i,j) = current;
             }
  
             // if we're at the end of a segment, write to corresponding full bit
             if(my_ID < Grappa::cores()-1 ) {
               Grappa::delegate::call<async>( my_ID+1, [=] () {
-                                       writeXF( &lefts[j], current );
+                                       writeEF( &lefts[j], current );
               } );
             }
           }
@@ -204,14 +190,13 @@ int main( int argc, char * argv[] ) {
           // store top right corner value in a location to be read by the root core
           if (my_ID==Grappa::cores()-1) {
             Grappa::delegate::call<async>(root, [=] () {
-                writeXF(&lefts[0], -1.0*current);
+                writeEF(&lefts[0], -1.0*current);
             } );
           }
-        } );
-      } );
  
-    } // done with all iterations 
- 
+        } // done with all iterations 
+      } ); // done with on_all_cores
+    } ); // done with finish
  
     Grappa::on_all_cores ( [timer] {
       Grappa::barrier();      
@@ -234,6 +219,6 @@ int main( int argc, char * argv[] ) {
     }
  
   });
-  Grappa::finalize();
+  //  Grappa::finalize();
   return 0;
 }

@@ -234,6 +234,7 @@ int main(int argc, char ** argv) {
   omp_set_num_threads(nthread_input);
   
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI+OPENMP stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Number of threads      = %d\n", omp_get_max_threads());
@@ -429,7 +430,7 @@ int main(int argc, char ** argv) {
     }
 
     /* Apply the stencil operator */
-    #pragma omp parallel for private (i)
+    #pragma omp parallel for  private (i, j, ii, jj) 
     for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
       for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
         for (jj=-RADIUS; jj<=RADIUS; jj++) {

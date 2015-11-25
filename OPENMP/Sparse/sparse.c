@@ -215,6 +215,7 @@ int main(int argc, char **argv){
   {
   nthread = omp_get_num_threads();
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP Sparse matrix-vector multiplication\n");
   if (nthread != nthread_input) {
     num_error = 1;

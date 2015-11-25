@@ -27,7 +27,7 @@ USERFLAGS    =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         = $(GRAPPA_LDLIBS) 
+LIBS         = $(GRAPPA_LDLIBS)
 LIBPATHS     = $(GRAPPA_LDFLAGS)
 
 ### End User configurable options ###

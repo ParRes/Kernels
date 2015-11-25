@@ -243,9 +243,6 @@ int main(int argc, char * argv[]) {
 
 	});
 
-      // TODO: get rid of this restriction
-      //      tiling = tiling && (Block_order%CHUNK_LENGTH == 0);
-
       std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
       std::cout << "Grappa matrix transpose: B = A^T" << std::endl;
       std::cout << "Number of cores         = " << Num_procs << std::endl;
@@ -256,7 +253,9 @@ int main(int argc, char * argv[]) {
 
       GlobalAddress<Timer> timer = Grappa::symmetric_global_alloc<Timer>();
 
+      // set up re-enrolling across iterations
       auto completion_target = local_gce.enroll_recurring(cores());
+
       Grappa::on_all_cores( [=] {
 	  int send_to, recv_from;
 	  int64_t i, j, it, jt, istart, iter, phase; // dummies 
@@ -277,7 +276,6 @@ int main(int argc, char * argv[]) {
 		for (j=0; j<Block_order; j++) {
 		  B(j,i) += A(i,j);
 		  A(i,j) += 1.0;
-		  //std::cout<<"iter "<<iter<<" on core "<<mycore()<<"  B("<<j<<","<<i<<")="<<B(j,i)<<std::endl;
 		}
 	    } else {
 	      for (i=0; i<Block_order; i+=Tile_order) 
@@ -286,7 +284,6 @@ int main(int argc, char * argv[]) {
 		    for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
 		      B(jt,it) += A(it,jt);
 		      A(it,jt) += 1.0;
-		      //		      std::cout<<"iter "<<iter<<" on core "<<mycore()<<"  B("<<j<<","<<i<<")="<<B(j,i)<<std::endl;
 		    }
 	    }
 
@@ -343,13 +340,11 @@ int main(int argc, char * argv[]) {
 			//   });
 		      }
 	      }	       
-
-	      // ensures all async writes complete before moving to next phase
+	    } // end of phase loop
+	    
 	      // wait for everyone to finish and prepare for next iteration.
 	      local_gce.complete( completion_target );
 	      local_gce.wait();
-	     
-	    } // end of phase loop
 	  } // done with iterations
 	});
 

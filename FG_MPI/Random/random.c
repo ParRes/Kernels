@@ -303,6 +303,7 @@ int main(int argc, char **argv) {
     }
 
     MPIX_Get_collocated_size(&procsize);
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("FG_MI Random access\n");
     printf("Number of ranks               = "FSTR64U"\n", Num_procs);
     printf("Number of ranks/process       = "FSTR64U"\n", procsize);
