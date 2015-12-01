@@ -56,10 +56,6 @@ HISTORY: Written by Abdullah Kayi, June 2015
 #include <par-res-kern_general.h>
 #include <par-res-kern_upc.h>
 
-#ifndef RADIUS
-  #define RADIUS 2
-#endif
-
 #ifdef DOUBLE
   #define DTYPE   double
   #define EPSILON 1.e-8
@@ -74,8 +70,10 @@ HISTORY: Written by Abdullah Kayi, June 2015
   #define FSTR    "%f"
 #endif
 
-/* define shorthand for indexing a multi-dimensional array */
+/* define shorthand for indexing multi-dimensional arrays */
 #define WEIGHT(ii,jj) weight[ii+RADIUS][jj+RADIUS]
+#define IN(i,j)   in_array_private[j][i]
+#define OUT(i,j)  out_array_private[j][i]
 
 shared DTYPE times[THREADS];
 
@@ -378,6 +376,11 @@ int main(int argc, char ** argv) {
 #else
     printf("Data type              = single precision\n");
 #endif
+#if LOOPGEN
+    printf("Script used to expand stencil loop body\n");
+#else
+    printf("Compact representation of stencil loop body\n");
+#endif
     printf("Number of iterations   = %d\n", iterations);
   }
 
@@ -447,35 +450,31 @@ int main(int argc, char ** argv) {
       }
     }
 
-    ///* Apply the stencil operator */
-    //for (j=starty; j<endy; j++) {
-      //for (i=startx; i<endx; i++) {
-        //for (jj=-RADIUS; jj<=RADIUS; jj++)
-          //out_array_private[j][i] += WEIGHT(0, jj) * in_array_private[j][i + jj];
-
-        //for (ii=-RADIUS; ii<0; ii++)
-          //out_array_private[j][i] += WEIGHT(ii, 0) * in_array_private[j + ii][i];
-
-        //for (ii=1; ii<=RADIUS; ii++)
-          //out_array_private[j][i] += WEIGHT(ii, 0) * in_array_private[j + ii][i];
-      //}
-    //}
-
-#define IN(i,j)   in_array_private[i][j]
-#define OUT(i,j)  out_array_private[i][j]
     /* Apply the stencil operator */
     for (j=starty; j<endy; j++) {
       for (i=startx; i<endx; i++) {
-        for (jj=-RADIUS; jj<=RADIUS; jj++)
-          OUT(j,i) += WEIGHT(0, jj) * IN(j,i+jj);
-
-        for (ii=-RADIUS; ii<0; ii++)
-          OUT(j,i) += WEIGHT(ii, 0) * IN(j+ii,i);
-
-        for (ii=1; ii<=RADIUS; ii++)
-          OUT(j,i) += WEIGHT(ii, 0) * IN(j+ii,i);
+        #if LOOPGEN
+          #include "loop_body_star.incl"
+        #else
+          for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+          for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+        #endif
       }
     }
+    //    /* Apply the stencil operator */
+    //    for (j=starty; j<endy; j++) {
+    //      for (i=startx; i<endx; i++) {
+    //        for (jj=-RADIUS; jj<=RADIUS; jj++)
+    //          OUT(i,j) += WEIGHT(0, jj) * IN(i,j+jj);
+    //
+    //        for (ii=-RADIUS; ii<0; ii++)
+    //          OUT(i,j) += WEIGHT(ii, 0) * IN(i+ii,j);
+    //
+    //        for (ii=1; ii<=RADIUS; ii++)
+    //          OUT(i,j) += WEIGHT(ii, 0) * IN(i+ii,j);
+    //      }
+    //    }
 
     upc_barrier; /* <- Necessary barrier: some slow threads could use future data */
 

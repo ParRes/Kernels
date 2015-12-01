@@ -263,21 +263,22 @@ clean:
 	rm -f stats.json
 
 veryclean: clean
-	cd MPI1/Branch;      $(MAKE) veryclean
-	cd OPENMP/Branch;    $(MAKE) veryclean
-	cd SERIAL/Branch;    $(MAKE) veryclean
-	cd MPI1/Stencil;     $(MAKE) veryclean
-	cd OPENMP/Stencil;   $(MAKE) veryclean
-	cd SERIAL/Stencil;   $(MAKE) veryclean
-	cd MPIRMA/Stencil;   $(MAKE) veryclean
-	cd MPISHM/Stencil;   $(MAKE) veryclean
-	cd SHMEM/Stencil;    $(MAKE) veryclean
-	cd FG_MPI/Stencil;   $(MAKE) veryclean
-	cd MPIOPENMP/Stencil;$(MAKE) veryclean
-	cd GRAPPA/Stencil;   $(MAKE) veryclean
-	cd CHARM++/Stencil;  $(MAKE) veryclean
-	cd FG_MPI/Branch;    $(MAKE) veryclean
-	cd AMPI/Branch;      $(MAKE) veryclean
-	cd scripts/small;    $(MAKE) -f  Makefile_FG_MPI veryclean
-	cd scripts/wide;     $(MAKE) -f  Makefile_FG_MPI veryclean
+	cd MPI1/Branch;             $(MAKE) veryclean
+	cd OPENMP/Branch;           $(MAKE) veryclean
+	cd SERIAL/Branch;           $(MAKE) veryclean
+	cd MPI1/Stencil;            $(MAKE) veryclean
+	cd OPENMP/Stencil;          $(MAKE) veryclean
+	cd SERIAL/Stencil;          $(MAKE) veryclean
+	cd MPIRMA/Stencil;          $(MAKE) veryclean
+	cd MPISHM/Stencil;          $(MAKE) veryclean
+	cd SHMEM/Stencil;           $(MAKE) veryclean
+	cd FG_MPI/Stencil;          $(MAKE) veryclean
+	cd MPIOPENMP/Stencil;       $(MAKE) veryclean
+	cd GRAPPA/Stencil;          $(MAKE) veryclean
+	cd CHARM++/Stencil;         $(MAKE) veryclean
+	cd UPC/Stencil;             $(MAKE) veryclean
+	cd FG_MPI/Branch;           $(MAKE) veryclean
+	cd AMPI/Branch;             $(MAKE) veryclean
+	cd scripts/small;           $(MAKE) -f  Makefile_FG_MPI veryclean
+	cd scripts/wide;            $(MAKE) -f  Makefile_FG_MPI veryclean
 	cd common; rm -f make.defs
