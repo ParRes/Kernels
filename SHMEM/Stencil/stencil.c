@@ -60,13 +60,6 @@ HISTORY: - Written by Tom St. John, July 2015.
  
 #include <par-res-kern_general.h>
 #include <par-res-kern_shmem.h>
-
-#define STAR
-#define DOUBLE
- 
-#ifndef RADIUS
-  #define RADIUS 2
-#endif
  
 #ifdef DOUBLE
   #define DTYPE     double
@@ -248,6 +241,11 @@ int main(int argc, char ** argv) {
 #else
     printf("Data type              = single precision\n");
 #endif
+#if LOOPGEN
+    printf("Script used to expand stencil loop body\n");
+#else
+    printf("Compact representation of stencil loop body\n");
+#endif
     printf("Number of iterations   = %d\n", iterations);
   }
 
@@ -323,8 +321,6 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
 
-  //printf("rank %d check1\n");
- 
   /* fill the stencil weights to reflect a discrete divergence operator         */
   for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++)
     WEIGHT(ii,jj) = (DTYPE) 0.0;
@@ -344,12 +340,8 @@ int main(int argc, char ** argv) {
     OUT(i,j) = (DTYPE)0.0;
   }
 
-  //printf("rank %d check2\n", my_ID);
-
   /* allocate communication buffers for halo values                            */
   top_buf_out=(DTYPE*)shmalloc(4*sizeof(DTYPE)*RADIUS*width);
-
-  //printf("rank %d check3\n", my_ID);
 
   if (!top_buf_out) {
     printf("ERROR: Rank %d could not allocate comm buffers for y-direction\n", my_ID);
@@ -361,26 +353,17 @@ int main(int argc, char ** argv) {
   bottom_buf_out=top_buf_out+2*RADIUS*width;;
   bottom_buf_in=top_buf_out+3*RADIUS*width;
 
-  //printf("rank %d check4\n", my_ID);
- 
   right_buf_out=(DTYPE*)shmalloc(4*sizeof(DTYPE)*RADIUS*height);
-
-  //printf("rank %d check5\n", my_ID);
 
   if (!right_buf_out) {
     printf("ERROR: Rank %d could not allocate comm buffers for x-direction\n", my_ID);
     error = 1;
   }
-  //printf("rank %d error %d\n", my_ID, error);
   bail_out(error);
-
-  //printf("rank %d check6\n", my_ID);
 
   right_buf_in   = right_buf_out +   RADIUS*height;
   left_buf_out   = right_buf_out + 2*RADIUS*height;
   left_buf_in    = right_buf_out + 3*RADIUS*height;
-
-  //printf("rank %d check7\n", my_ID);
 
   for (iter = 0; iter<=iterations; iter++){
 
@@ -432,13 +415,7 @@ int main(int argc, char ** argv) {
     if(my_IDx>0)
       shmem_int_inc(&recv_count, left_nbr);
 
-    //printf("my_ID %d iter %d check4\n", my_ID, iter);
-
-    //shmem_barrier_all();
-
     shmem_int_wait_until(&recv_count, SHMEM_CMP_EQ, count_case*(iter+1));
-
-    //printf("my_ID %d iter %d check5\n", my_ID, iter);
 
     if (my_IDy < Num_procsy-1) {
       for (kk=0,j=jend; j<=jend+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
@@ -467,18 +444,15 @@ int main(int argc, char ** argv) {
     }
  
     /* Apply the stencil operator */
-    for (j=MAX(jstart,RADIUS); j<MIN(n-RADIUS,jend); j++) {
-      for (i=MAX(istart,RADIUS); i<MIN(n-RADIUS,iend); i++) {
-        for (jj=-RADIUS; jj<=RADIUS; jj++) {
-          OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-        }
-        for (ii=-RADIUS; ii<0; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-        }
-        for (ii=1; ii<=RADIUS; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
- 
-        }
+    for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
+      for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
+        #if LOOPGEN
+          #include "loop_body_star.incl"
+        #else
+          for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+          for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+        #endif
       }
     }
  
@@ -554,8 +528,6 @@ int main(int argc, char ** argv) {
  
   shfree(top_buf_out);
   shfree(right_buf_out);
-
-  //shmem_finalize();
 
   exit(EXIT_SUCCESS);
 }

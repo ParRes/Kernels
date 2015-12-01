@@ -60,11 +60,8 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <Grappa.hpp>
 #include <FullEmpty.hpp>
 using namespace Grappa;
-#ifndef RADIUS
-  #define RADIUS 2
-#endif
+
 #define DOUBLE
-#define STAR
 #ifdef DOUBLE
   #define DTYPE     double
   #define MPI_DTYPE MPI_DOUBLE
@@ -196,6 +193,11 @@ int main(int argc, char * argv[]) {
       std::cout<<"Data type              = double precision"<<std::endl;
 #else
       std::cout<<"Data type              = single precision"<<std::endl;
+#endif
+#if LOOPGEN
+      std::cout<<"Script used to expand stencil loop body"<<std::endl;
+#else
+      std::cout<<"Compact representation of stencil loop body"<<std::endl;
 #endif
     std::cout<<"Number of iterations   = "<<iterations<<std::endl;
 
@@ -403,15 +405,13 @@ int main(int argc, char * argv[]) {
 	  // Apply the stencil operator
 	  for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
 	    for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
-	      for (jj=-RADIUS; jj<=RADIUS; jj++) {
-		OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-              }
-	      for (ii=-RADIUS; ii<0; ii++) {
-		OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-	      }
-	      for (ii=1; ii<=RADIUS; ii++) {
-		OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-	      }
+              #if LOOPGEN
+                #include "loop_body_star.incl"
+              #else
+                for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+                for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+                for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+              #endif
 	    }
 	  }
 	  // add constant to solution to force refresh of neighbor data, if any
