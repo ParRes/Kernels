@@ -447,21 +447,33 @@ int main(int argc, char ** argv) {
       }
     }
 
+    ///* Apply the stencil operator */
+    //for (j=starty; j<endy; j++) {
+      //for (i=startx; i<endx; i++) {
+        //for (jj=-RADIUS; jj<=RADIUS; jj++)
+          //out_array_private[j][i] += WEIGHT(0, jj) * in_array_private[j][i + jj];
+
+        //for (ii=-RADIUS; ii<0; ii++)
+          //out_array_private[j][i] += WEIGHT(ii, 0) * in_array_private[j + ii][i];
+
+        //for (ii=1; ii<=RADIUS; ii++)
+          //out_array_private[j][i] += WEIGHT(ii, 0) * in_array_private[j + ii][i];
+      //}
+    //}
+
+#define IN(i,j)   in_array_private[i][j]
+#define OUT(i,j)  out_array_private[i][j]
     /* Apply the stencil operator */
-    for (int y=starty; y<endy; y++) {
-      DTYPE *liney = in_array_private[y];
-      for (int x=startx; x<endx; x++) {
-        double value = out_array_private[y][x];
-        for (int xx=-RADIUS; xx<=RADIUS; xx++)
-          value += WEIGHT(0, xx) * liney[x + xx];
+    for (j=starty; j<endy; j++) {
+      for (i=startx; i<endx; i++) {
+        for (jj=-RADIUS; jj<=RADIUS; jj++)
+          OUT(j,i) += WEIGHT(0, jj) * IN(j,i+jj);
 
-        for (int yy=-RADIUS; yy<0; yy++)
-          value += WEIGHT(yy, 0) * in_array_private[y + yy][x];
+        for (ii=-RADIUS; ii<0; ii++)
+          OUT(j,i) += WEIGHT(ii, 0) * IN(j+ii,i);
 
-        for (int yy=1; yy<=RADIUS; yy++)
-          value += WEIGHT(yy, 0) * in_array_private[y + yy][x];
-
-        out_array_private[y][x] = value ;
+        for (ii=1; ii<=RADIUS; ii++)
+          OUT(j,i) += WEIGHT(ii, 0) * IN(j+ii,i);
       }
     }
 
