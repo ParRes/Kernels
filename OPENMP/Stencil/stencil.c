@@ -64,10 +64,6 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_omp.h>
 
-#ifndef RADIUS
-  #define RADIUS 2
-#endif
-
 #ifdef DOUBLE
   #define DTYPE   double
   #define EPSILON 1.e-8
@@ -219,6 +215,11 @@ int main(int argc, char ** argv) {
 #else
     printf("Data type            = single precision\n");
 #endif
+#if LOOPGEN
+    printf("Script used to expand stencil loop body\n");
+#else
+    printf("Compact representation of stencil loop body\n");
+#endif
 #ifndef PARALLELFOR
     printf("Parallel regions     = fused (omp for)\n");
 #else
@@ -268,15 +269,23 @@ int main(int argc, char ** argv) {
 #endif
     for (j=RADIUS; j<n-RADIUS; j++) {
       for (i=RADIUS; i<n-RADIUS; i++) {
-#ifdef STAR
-        for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-        for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-        for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-#else
-        /* would like to be able to unroll this loop, but compiler will ignore  */
-        for (jj=-RADIUS; jj<=RADIUS; jj++) 
-        for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
-#endif
+        #ifdef STAR
+          #if LOOPGEN
+            #include "loop_body_star.incl"
+          #else
+            for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+            for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+            for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          #endif
+        #else 
+          #if LOOPGEN
+            #include "loop_body_compact.incl"
+          #else
+            /* would like to be able to unroll this loop, but compiler will ignore  */
+            for (jj=-RADIUS; jj<=RADIUS; jj++) 
+            for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
+          #endif
+        #endif
       }
     }
 

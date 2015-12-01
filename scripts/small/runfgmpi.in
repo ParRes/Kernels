@@ -9,7 +9,7 @@ for type in vector_go vector_stop no_vector ins_heavy; do
 done
 $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/DGEMM/dgemm               $NUMITERS 500 32 1;   echo $SEPLINE
 $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Nstream/nstream           $NUMITERS 2000000 0;  echo $SEPLINE
-$MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Random/random             20 16;                echo $SEPLINE
+$MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Random/random             16 16;                echo $SEPLINE
 $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Reduce/reduce             $NUMITERS 2000000;    echo $SEPLINE
 $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Sparse/sparse             $NUMITERS 10 4;       echo $SEPLINE
 $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Stencil/stencil           $NUMITERS 1000;       echo $SEPLINE
