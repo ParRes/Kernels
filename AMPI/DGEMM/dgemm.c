@@ -200,8 +200,6 @@ int main(int argc, char *argv[])
       printf("No local dgemm blocking\n");
     if (shortcut) 
       printf("Only doing initialization\n"); 
-    printf("WARNING: Exciting until MPI_Comm_create is fixed\n");
-    error = 1;
   }
   bail_out(error);
 
