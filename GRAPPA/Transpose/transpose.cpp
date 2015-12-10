@@ -55,8 +55,6 @@ FUNCTIONS CALLED:
          Other than MPI or standard C functions, the following 
          functions are used in this program:
 
-          wtime()           Portable wall-timer interface.
-          bail_out()        Determine global error and exit if nonzero.
 
 HISTORY: Written by Tim Mattson, April 1999.  
          Updated by Rob Van der Wijngaart, December 2005.
@@ -122,7 +120,6 @@ o The original and transposed matrices are called A and B
 
 #include <par-res-kern_general.h>
 #include <Grappa.hpp>
-#include <FullEmpty.hpp>
 
 using namespace Grappa;
 
@@ -141,9 +138,6 @@ struct AbsErr {
 #define root 0
 
 #define symmetric static
-
-const int CHUNK_LENGTH = 16;
-typedef double row_t[CHUNK_LENGTH];
 
 int main(int argc, char * argv[]) {
   Grappa::init( &argc, &argv );
@@ -192,12 +186,6 @@ int main(int argc, char * argv[]) {
 
       int Tile_order = 32; /* default tile size for tiling of local transpose */
       if (argc == 4) Tile_order = atoi(argv[3]);
-      if (Tile_order%CHUNK_LENGTH != 0){
-	std::cout<<"ERROR: Tile Order: "<<Tile_order
-		 <<" must be a multiple of const CHUNK_LENGTH "
-		 <<CHUNK_LENGTH<<std::endl;
-	exit(1);
-      }
 
       int64_t tiling = (Tile_order > 0) && (Tile_order < order);
       if (!tiling) Tile_order = order;
@@ -341,19 +329,12 @@ int main(int argc, char * argv[]) {
 			Grappa::delegate::call<async>(send_to, [val,target] {
 			    B_p[target] += val;
 			  });
-			// row_t& row = *reinterpret_cast<row_t*>(&Work_out(it,jt));
-			// Grappa::delegate::call<async>(send_to, [row,target] {
-			//     for (int k=0; k<CHUNK_LENGTH; k++) 
-			//       B_p[target] += reinterpret_cast<double *>(&row)[k];
-			//     // memcpy(&B_p[target], &row, sizeof(row_t));
-			//   });
 		      }
 	      }	       
 
 	      // ensures all async writes complete before moving to next phase
 	      Grappa::impl::local_gce.complete( completion_target );
 	      Grappa::impl::local_gce.wait();
-
 	  } // done with iterations
 	});
 
