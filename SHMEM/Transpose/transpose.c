@@ -408,11 +408,15 @@ int main(int argc, char ** argv)
 
   bail_out(error);
 
-  if (Num_procs>1) shfree(recv_flag);
-  for(i=0;i<Num_procs-1;i++)
-    shfree(Work_in_p[i]);
+  if (Num_procs>1) 
+    {
+      shfree(recv_flag);
 
-  free(Work_in_p);
+      for(i=0;i<Num_procs-1;i++)
+	shfree(Work_in_p[i]);
+
+      free(Work_in_p);
+    }
 
   //shmem_finalize();
   exit(EXIT_SUCCESS);
