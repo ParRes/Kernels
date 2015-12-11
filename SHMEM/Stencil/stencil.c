@@ -365,6 +365,9 @@ int main(int argc, char ** argv) {
   left_buf_out   = right_buf_out + 2*RADIUS*height;
   left_buf_in    = right_buf_out + 3*RADIUS*height;
 
+  /* barrier ensures all symmetric heaps have been defined before being used */
+  shmem_barrier_all();
+
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration */
