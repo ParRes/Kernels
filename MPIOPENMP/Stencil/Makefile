@@ -10,11 +10,18 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers
 
-#RADIUSFLAG  = -DRADIUS=R
+ifndef RADIUS
+  RADIUS=2
+endif
 #description: default radius of filter to be applied is 2
 
 DOUBLEFLAG = -DDOUBLE
 #description: default data type is single precision
+
+ifndef LOOPGEN
+  LOOPGEN=0
+endif
+#description: default is compact (non-expanded) form of loop body
 
 STARFLAG   = -DSTAR
 #description: default stencil is compact (dense, square)
@@ -32,10 +39,25 @@ LIBPATHS     =
 INCLUDEPATHS = 
 
 ### End User configurable options ###
+LOOPGENFLAG= -DLOOPGEN=$(LOOPGEN)
+RADIUSFLAG  = -DRADIUS=$(RADIUS)
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) \
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)
+TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS)   \
+               $(DOUBLEFLAG)   $(RADIUSFLAG) $(LOOPGENFLAG) \
+               $(STARFLAG)
 PROGRAM     = stencil
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
 include ../../common/make.common
+
+$(PROGRAM).o: loop_body_star.incl 
+
+loop_body_star.incl:
+	@echo "#########################################################################"
+	@echo "##### No file loop_body_star.incl -- invoking loop_gen to create it #####"
+	@echo "#########################################################################"
+	../../common/Stencil/loop_gen $(RADIUS) 1
+
+veryclean:
+	@rm -f loop_body_star.incl
+	make clean

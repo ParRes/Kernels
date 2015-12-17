@@ -154,6 +154,9 @@ int main(int argc, char **argv)
 /**********************************************************************************
 * process and test input parameters    
 ***********************************************************************************/
+
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Serial stream triad: A = B + scalar*C\n");
  
   if (argc != 4){
      printf("Usage:  %s <# iterations> <vector length> <offset>\n", *argv);
@@ -199,8 +202,6 @@ int main(int argc, char **argv)
   b = a + length + offset;
   c = b + length + offset;
  
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial stream triad: A = B + scalar*C\n");
   printf("Vector length        = %ld\n", length);
   printf("Offset               = %ld\n", offset);
   printf("Number of iterations = %d\n", iterations);

@@ -82,13 +82,13 @@ HISTORY: Written by Tim Mattson, April 1999.
 
 int main(int argc, char ** argv)
 {
-  int Block_order;
+  size_t Block_order;
   size_t Block_size;
   size_t Colblock_size;
   int Tile_order=32;
   int tiling;
   int Num_procs;     /* Number of ranks                                          */
-  int order;         /* overall matrix order                                     */
+  size_t order;      /* overall matrix order                                     */
   int send_to, recv_from; /* communicating ranks                                 */
   size_t bytes;      /* total amount of data to be moved                         */
   int my_ID;         /* rank                                                     */
@@ -122,7 +122,7 @@ int main(int argc, char ** argv)
   int Num_groups;    /* number of shared memory group                            */
   int group_ID;      /* sequence number of shared memory group                   */
   int size_mul;      /* size multiplier; 0 for non-root ranks in coherence domain*/
-  int istart;
+  size_t istart;
   MPI_Request send_req, recv_req;
 
 /*********************************************************************************
@@ -139,6 +139,9 @@ int main(int argc, char ** argv)
 *********************************************************************/
 
   if (my_ID == root){
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI+SHM Matrix transpose: B = A^T\n");
+
     if (argc != 4 && argc !=5){
       printf("Usage: %s  <#ranks per coherence domain> <# iterations> <matrix order> [tile size]\n", 
              *argv);
@@ -166,7 +169,7 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     } 
 
-    order = atoi(*++argv);
+    order = atol(*++argv);
     if (order < Num_procs) {
       printf("ERROR: matrix order %d should at least # procs %d\n", 
              order, Num_procs);
@@ -186,14 +189,12 @@ int main(int argc, char ** argv)
   bail_out(error); 
 
   /*  Broadcast input data to all ranks */
-  MPI_Bcast(&order,      1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&Tile_order, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&group_size, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI+SHM Matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Rank group size      = %d\n", group_size);
     printf("Matrix order         = %d\n", order);
@@ -313,7 +314,7 @@ int main(int argc, char ** argv)
         for (jt=j; jt<MIN((shm_ID+1)*chunk_size,j+Tile_order); jt++)
           for (it=i; it<MIN(order,i+Tile_order); it++) {
             A(it,jt) = (double) ((double)order*(jt+colstart) + it);
-            B(it,jt) = -1.0;
+            B(it,jt) = 0.0;
           }
     }
   }
@@ -321,7 +322,7 @@ int main(int argc, char ** argv)
     for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j++) 
       for (i=0;i<order; i++) {
         A(i,j) = (double)((double)order*(j+colstart) + i);
-        B(i,j) = -1.0;
+        B(i,j) = 0.0;
       }
   }
   /* NEED A STORE FENCE HERE                                                     */
@@ -341,17 +342,23 @@ int main(int argc, char ** argv)
     istart = colstart; 
     if (!tiling) {
       for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i++) {
-        for (j=0; j<Block_order; j++) 
-              B(j,i) = A(i,j);
+        for (j=0; j<Block_order; j++) {
+              B(j,i) += A(i,j);
+              A(i,j) += 1.0;
+	      //              printf("(%d,%d,%d)\n", my_ID, i,j);
 	}
+      }
     }
     else {
       for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order) {
-        for (j=0; j<Block_order; j+=Tile_order) 
-          for (it=i; it<MIN(Block_order,i+Tile_order); it++)
+        for (j=0; j<Block_order; j+=Tile_order) {
+          for (it=i; it<MIN((shm_ID+1)*chunk_size,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-              B(jt,it) = A(it,jt); 
+              B(jt,it) += A(it,jt); 
+              A(it,jt) += 1.0;
+	      //              printf("(%d,%d,%d)\n", my_ID, it,jt);
 	    }
+	}
       }
     }
 
@@ -364,14 +371,16 @@ int main(int argc, char ** argv)
         for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i++) 
           for (j=0; j<Block_order; j++){
 	    Work_out(j,i) = A(i,j);
+            A(i,j) += 1.0;
 	  }
       }
       else {
         for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order)
           for (j=0; j<Block_order; j+=Tile_order) 
-            for (it=i; it<MIN(Block_order,i+Tile_order); it++)
+            for (it=i; it<MIN((shm_ID+1)*chunk_size,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
                 Work_out(jt,it) = A(it,jt); 
+                A(it,jt) += 1.0;
 	      }
       }
 
@@ -404,9 +413,10 @@ int main(int argc, char ** argv)
       /* scatter received block to transposed matrix; no need to tile */
       for (j=shm_ID*chunk_size; j<(shm_ID+1)*chunk_size; j++)
         for (i=0; i<Block_order; i++) 
-          B(i,j) = Work_in(i,j);
+          B(i,j) += Work_in(i,j);
 
     }  /* end of phase loop  */
+
   } /* end of iterations */
 
   local_trans_time = wtime() - local_trans_time;
@@ -415,10 +425,11 @@ int main(int argc, char ** argv)
 
   abserr = 0.0;
   istart = 0;
+  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   /*  for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) { */
   for (j=shm_ID*chunk_size; j<(shm_ID+1)*chunk_size; j++)
     for (i=0;i<order; i++) { 
-      abserr += ABS(B(i,j) - (double)((double)order*i + j+colstart));
+      abserr += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
     }
 
   MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);

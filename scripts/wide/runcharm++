@@ -1,0 +1,11 @@
+NUMPROCS=2
+OVERDECOMPOSITION=2
+NUMITERS=1
+SEPLINE="==============================================================="
+CHARMRUN=CHARM++/Stencil/charmrun
+
+$CHARMRUN +p$NUMPROCS CHARM++/Stencil/stencil        $NUMITERS 50000       $OVERDECOMPOSITION;  echo $SEPLINE
+$CHARMRUN +p$NUMPROCS CHARM++/Synch_p2p/p2p          $NUMITERS 70000 70000 $OVERDECOMPOSITION;  echo $SEPLINE
+$CHARMRUN +p$NUMPROCS CHARM++/Transpose/transpose    $NUMITERS 50000 64    $OVERDECOMPOSITION;  echo $SEPLINE
+
+

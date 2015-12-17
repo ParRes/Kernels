@@ -111,6 +111,9 @@ int main(int argc, char ** argv)
 *********************************************************************/
 
   if (my_ID == root){
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPIRMA pipeline execution on 2D grid\n");
+
     if (argc != 4){
       printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>\n",
              *argv);
@@ -145,8 +148,6 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPIRMA pipeline execution on 2D grid\n");
     printf("Number of ranks                = %i\n",Num_procs);
     printf("Grid sizes                     = %ld, %ld\n", m, n);
     printf("Number of iterations           = %d\n", iterations);

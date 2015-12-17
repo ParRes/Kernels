@@ -205,6 +205,9 @@ int main(int argc, char **argv) {
   int               num_error=0; /* flag that signals that requested and obtained
                                     numbers of threads are the same                */
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP Random Access test\n");
+
 #ifdef LONG_IS_64BITS
   if (sizeof(long) != 8) {
     printf("ERROR: Makefile says \"long\" is 8 bytes, but it is %d bytes\n",
@@ -325,9 +328,6 @@ int main(int argc, char **argv) {
   #pragma omp master 
   {  
   nthread = omp_get_num_threads();
-
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP Random Access test\n");
   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",

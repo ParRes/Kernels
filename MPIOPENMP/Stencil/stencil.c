@@ -71,10 +71,6 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpiomp.h>
  
-#ifndef RADIUS
-  #define RADIUS 2
-#endif
- 
 #ifdef DOUBLE
   #define DTYPE     double
   #define MPI_DTYPE MPI_DOUBLE
@@ -150,12 +146,15 @@ int main(int argc, char ** argv) {
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
- 
+
   /*******************************************************************************
   ** process, test, and broadcast input parameters    
   ********************************************************************************/
  
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI+OPENMP stencil execution on 2D grid\n");
+
 #ifndef STAR
       printf("ERROR: Compact stencil not supported\n");
       error = 1;
@@ -234,8 +233,6 @@ int main(int argc, char ** argv) {
   omp_set_num_threads(nthread_input);
   
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI+OPENMP stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Number of threads      = %d\n", omp_get_max_threads());
     printf("Grid size              = %d\n", n);
@@ -246,6 +243,11 @@ int main(int argc, char ** argv) {
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
+#endif
+#if LOOPGEN
+    printf("Script used to expand stencil loop body\n");
+#else
+    printf("Compact representation of stencil loop body\n");
 #endif
     printf("Number of iterations   = %d\n", iterations);
   }
@@ -433,16 +435,13 @@ int main(int argc, char ** argv) {
     #pragma omp parallel for  private (i, j, ii, jj) 
     for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
       for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
-        for (jj=-RADIUS; jj<=RADIUS; jj++) {
-          OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-        }
-        for (ii=-RADIUS; ii<0; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-        }
-        for (ii=1; ii<=RADIUS; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
- 
-        }
+        #if LOOPGEN
+          #include "loop_body_star.incl"
+        #else
+          for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+          for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+        #endif
       }
     }
  

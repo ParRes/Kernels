@@ -71,10 +71,6 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
  
-#ifndef RADIUS
-  #define RADIUS 2
-#endif
- 
 #ifdef DOUBLE
   #define DTYPE     double
   #define MPI_DTYPE MPI_DOUBLE
@@ -148,16 +144,18 @@ int main(int argc, char ** argv) {
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
- 
+
   /*******************************************************************************
   ** process, test, and broadcast input parameters    
   ********************************************************************************/
  
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI stencil execution on 2D grid\n");
 #ifndef STAR
-      printf("ERROR: Compact stencil not supported\n");
-      error = 1;
-      goto ENDOFTESTS;
+    printf("ERROR: Compact stencil not supported\n");
+    error = 1;
+    goto ENDOFTESTS;
 #endif
     
     if (argc != 3){
@@ -217,8 +215,6 @@ int main(int argc, char ** argv) {
   bottom_nbr = my_ID-Num_procsx;
  
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Grid size              = %d\n", n);
     printf("Radius of stencil      = %d\n", RADIUS);
@@ -228,6 +224,11 @@ int main(int argc, char ** argv) {
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
+#endif
+#if LOOPGEN
+    printf("Script used to expand stencil loop body\n");
+#else
+    printf("Compact representation of stencil loop body\n");
 #endif
     printf("Number of iterations   = %d\n", iterations);
   }
@@ -309,27 +310,29 @@ int main(int argc, char ** argv) {
     IN(i,j)  = COEFX*i+COEFY*j;
     OUT(i,j) = (DTYPE)0.0;
   }
+
+  if (Num_procs > 1) { 
+    /* allocate communication buffers for halo values                          */
+    top_buf_out = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*width);
+    if (!top_buf_out) {
+      printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
+      error = 1;
+    }
+    bail_out(error);
+    top_buf_in     = top_buf_out +   RADIUS*width;
+    bottom_buf_out = top_buf_out + 2*RADIUS*width;
+    bottom_buf_in  = top_buf_out + 3*RADIUS*width;
  
-  /* allocate communication buffers for halo values                            */
-  top_buf_out = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*width);
-  if (!top_buf_out) {
-    printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
-    error = 1;
+    right_buf_out  = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*height);
+    if (!right_buf_out) {
+      printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
+      error = 1;
+    }
+    bail_out(error);
+    right_buf_in   = right_buf_out +   RADIUS*height;
+    left_buf_out   = right_buf_out + 2*RADIUS*height;
+    left_buf_in    = right_buf_out + 3*RADIUS*height;
   }
-  bail_out(error);
-  top_buf_in     = top_buf_out +   RADIUS*width;
-  bottom_buf_out = top_buf_out + 2*RADIUS*width;
-  bottom_buf_in  = top_buf_out + 3*RADIUS*width;
- 
-  right_buf_out  = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*height);
-  if (!right_buf_out) {
-    printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
-    error = 1;
-  }
-  bail_out(error);
-  right_buf_in   = right_buf_out +   RADIUS*height;
-  left_buf_out   = right_buf_out + 2*RADIUS*height;
-  left_buf_in    = right_buf_out + 3*RADIUS*height;
 
   for (iter = 0; iter<=iterations; iter++){
 
@@ -410,16 +413,13 @@ int main(int argc, char ** argv) {
     /* Apply the stencil operator */
     for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
       for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
-        for (jj=-RADIUS; jj<=RADIUS; jj++) {
-          OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-        }
-        for (ii=-RADIUS; ii<0; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-        }
-        for (ii=1; ii<=RADIUS; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
- 
-        }
+        #if LOOPGEN
+          #include "loop_body_star.incl"
+        #else
+          for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+          for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+        #endif
       }
     }
  

@@ -56,6 +56,11 @@ int main( int argc, char * argv[] ) {
  
   Grappa::init( &argc, &argv );
  
+  if( Grappa::mycore() == root ) {
+    std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
+    std::cout<<"Grappa pipeline execution on 2D grid"<<std::endl;
+  }
+
   if( argc != 4 && argc !=5 ) {
     if( Grappa::mycore() == root ) 
       std::cout <<"Usage: " << argv[0] << 
@@ -88,8 +93,6 @@ int main( int argc, char * argv[] ) {
       std::cout <<"ERROR: First grid dimension "<<m<<" smaller than #cores+1 "<<std::endl;
       exit(1);
     }
-    std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
-    std::cout<<"Grappa pipeline execution on 2D grid"<<std::endl;
     std::cout<<"Number of processes            = "<<Num_procs<<std::endl;
     std::cout<<"Grid sizes                     = "<<m<<"x"<<n<<std::endl;
     std::cout<<"Number of iterations           = "<<iterations<<std::endl;
@@ -218,6 +221,6 @@ int main( int argc, char * argv[] ) {
     }
  
   });
-  //  Grappa::finalize();
+  Grappa::finalize();
   return 0;
 }

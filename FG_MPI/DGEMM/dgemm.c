@@ -95,17 +95,19 @@ int main(int argc, char *argv[])
       order,            /* matrix order                            */
       mynrows, myfrow,  /* my number of rows and index of first row*/
       mylrow,           /* and last row                            */
-      myncols, myfcol,  /* my number of cols and index of first row*/
+    /*myncols,*/ myfcol,/* my number of cols and index of first row*/
       mylcol,           /* and last row                            */
       *mm,              /* arrays that hold m_i's and n_j's        */
       *nn,
-      nb,               /* block factor for SUMMA                  */
+    /*nb,*/             /* block factor for SUMMA                  */
       inner_block_flag, /* flag to select local DGEMM blocking     */
       error=0,          /* error flag                              */
       *ranks,           /* work array for row and column ranks     */
-      lda, ldb, ldc,    /* leading array dimensions of a, b, and c */
+    /*lda, ldb, ldc,*/  /* leading array dimensions of a, b, and c */
       i, j, ii, jj,     /* dummy variables                         */
       iter, iterations;
+  long lda, ldb, ldc,
+       nb, myncols;     /* make long to avoid integer overflow     */
   double *a, *b, *c,    /* arrays that hold local a, b, c          */
       *work1, *work2,   /* work arrays to pass to dpmmmult         */
       local_dgemm_time, /* timing parameters                       */
@@ -120,7 +122,8 @@ int main(int argc, char *argv[])
       temp_group;
   MPI_Comm comm_row,    /* communicators for row and column ranks  */
       comm_col;         /* of rank grid                            */
-  int procsize;         /* number of ranks per OS process          */
+  int shortcut;         /* true if only doing initialization       */
+  int procsize;         /* number or ranks per process             */
 
   /* initialize                                                    */
   MPI_Init(&argc,&argv);
@@ -132,6 +135,9 @@ int main(int argc, char *argv[])
 *********************************************************************/
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("FG_MPI Dense matrix-matrix multiplication: C = A x B\n");
+
     if (argc != 5) {
       printf("Usage: %s <# iterations> <matrix order> <outer block size> ",
                                                                *argv);
@@ -148,13 +154,17 @@ int main(int argc, char *argv[])
     }
 
     order = atoi(*++argv);
+    if (order < 0) {
+      shortcut = 1;
+      order    = -order;
+    }
     if (order < Num_procs) {
       printf("ERROR: matrix order too small: %d\n", order);
       error = 1;
       goto ENDOFTESTS;
     }
 
-    nb = atoi(*++argv);
+    nb = atol(*++argv);
     /* a non-positive tile size means no outer level tiling        */
 
     inner_block_flag = atoi(*++argv);
@@ -163,10 +173,11 @@ int main(int argc, char *argv[])
   }
   bail_out(error);
 
-  MPI_Bcast(&order,  1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&nb, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&inner_block_flag, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&order,            1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations,       1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&nb,               1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Bcast(&shortcut,         1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&inner_block_flag, 1, MPI_INT,  root, MPI_COMM_WORLD);
 
   /* compute rank grid to most closely match a square; to do so,
      compute largest divisor of Num_procs, using hare-brained method. 
@@ -178,8 +189,6 @@ int main(int argc, char *argv[])
 
   if (my_ID == root) {
     MPIX_Get_collocated_size(&procsize);
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("FG_MPI Dense matrix-matrix multiplication: C = A x B\n");
     printf("Number of ranks          = %d\n", Num_procs);
     printf("Number of ranks/process  = %d\n", procsize);
     printf("Ranks grid               = %d rows x %d columns\n", nprow, npcol); 
@@ -190,6 +199,8 @@ int main(int argc, char *argv[])
       printf("Using local dgemm blocking\n");
     else
       printf("No local dgemm blocking\n");
+    if (shortcut) 
+      printf("Only doing initialization\n"); 
   }
 
   /* set up row and column communicators                           */
@@ -282,6 +293,11 @@ int main(int argc, char *argv[])
     A(ii,jj) = (double) (j-1); 
     B(ii,jj) = (double) (j-1); 
     C(ii,jj) = 0.0;
+  }
+
+  if (shortcut) {
+    MPI_Finalize();
+    exit(EXIT_SUCCESS);
   }
 
   for (iter=0; iter<=iterations; iter++) {
@@ -414,7 +430,8 @@ MPI_Comm comm_row,      /* Communicator for this row of nodes      */
 void dgemm_local(int M, int N, int K, double *a, int lda, double *b,
            int ldb, double *c, int ldc, int nb, int inner_block_flag) {
 
-  int m, n, k, mg, ng, kg, mm, nn, kk, ldaa, ldbb, ldcc;
+  int m, n, k, mg, ng, kg, mm, nn, kk;
+  long ldaa, ldbb, ldcc;
   double *aa, *bb, *cc;
 
   if (nb >= MAX(M,MAX(N,K)) || !inner_block_flag) {
@@ -424,13 +441,13 @@ void dgemm_local(int M, int N, int K, double *a, int lda, double *b,
       C(m,n) += A(m,k)*B(k,n);
   }
   else {
-    aa = (double *) malloc(3*(nb+BOFFSET)*nb*sizeof(double));
+    aa = (double *) malloc(3*((long)nb+BOFFSET)*(long)nb*sizeof(double));
     /* if this allocation fails, we make an ungraceful exit; we do not
        want to test whether any other ranks failed, because that
        requires an expensive barrier                               */
     if (!aa) MPI_Abort(MPI_COMM_WORLD,666);
-    bb = aa + (nb+BOFFSET)*nb;
-    cc = bb + (nb+BOFFSET)*nb;
+    bb = aa + ((long)nb+BOFFSET)*(long)nb;
+    cc = bb + ((long)nb+BOFFSET)*(long)nb;
     /* select leading dimensions of tiles such that storage
        is (mostly) contiguous                                 */
     ldaa = MIN(M,(nb+BOFFSET));
@@ -491,3 +508,4 @@ void RING_Bcast(double *buf, int count, MPI_Datatype type, int root,
   if (( my_ID+1 )%Num_procs != root)
     MPI_Send(buf, count, type, (my_ID+1)%Num_procs, root, comm);
 }
+

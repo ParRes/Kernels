@@ -177,6 +177,9 @@ int main(int argc, char ** argv)
 *********************************************************************/
   error = 0;
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI+OpenMP matrix transpose: B = A^T\n");
+
     if (argc != 4 && argc != 5){
       printf("Usage: %s <#threads><#iterations> <matrix order> [Tile size]\n",
                                                                *argv);
@@ -243,8 +246,6 @@ int main(int argc, char ** argv)
   if (tiling && (concurrency < nthread_input)) tiling = 0;
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI+OpenMP matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Number of threads    = %d\n", omp_get_max_threads());
     printf("Matrix order         = %d\n", order);
@@ -306,7 +307,7 @@ int main(int argc, char ** argv)
         for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) 
           for (it=i; it<MIN(order,i+Tile_order); it++) {
             A(it,jt) = (double) (order*(jt+colstart) + it);
-            B(it,jt) = -1.0;
+            B(it,jt) = 0.0;
           }
   }
   else {
@@ -314,7 +315,7 @@ int main(int argc, char ** argv)
     for (j=0;j<Block_order;j++) 
       for (i=0;i<order; i++) {
         A(i,j) = (double) (order*(j+colstart) + i);
-        B(i,j) = -1.0;
+        B(i,j) = 0.0;
     }
   }
 
@@ -332,7 +333,8 @@ int main(int argc, char ** argv)
     #pragma omp parallel for private (j)
       for (i=0; i<Block_order; i++) 
         for (j=0; j<Block_order; j++) {
-          B(j,i) = A(i,j);
+          B(j,i) += A(i,j);
+          A(i,j) += 1.0;
 	}
     }
     else {
@@ -345,7 +347,8 @@ int main(int argc, char ** argv)
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-              B(jt,it) = A(it,jt); 
+              B(jt,it) += A(it,jt); 
+              A(it,jt) += 1.0;
 	    }
     }
 
@@ -364,6 +367,7 @@ int main(int argc, char ** argv)
         for (i=0; i<Block_order; i++) 
           for (j=0; j<Block_order; j++){
 	    Work_out(j,i) = A(i,j);
+            A(i,j) += 1.0;
 	  }
       }
       else {
@@ -377,6 +381,7 @@ int main(int argc, char ** argv)
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
                 Work_out(jt,it) = A(it,jt); 
+                A(it,jt) += 1.0;
 	      }
       }
 
@@ -396,7 +401,7 @@ int main(int argc, char ** argv)
       #pragma omp parallel for private (i)
       for (j=0; j<Block_order; j++)
         for (i=0; i<Block_order; i++) {
-          B(i,j) = Work_in(i,j);
+          B(i,j) += Work_in(i,j);
         }
 
     }  /* end of phase loop  */
@@ -408,9 +413,10 @@ int main(int argc, char ** argv)
 
   abserr = 0.0;
   istart = 0;
+  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   #pragma omp parallel for private (i)
   for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
-      abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
+      abserr += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
   }
 
   MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);

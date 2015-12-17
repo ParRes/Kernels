@@ -149,7 +149,7 @@ bupc_sem_t * shared allflags[THREADS];
 
 int main(int argc, char ** argv) {
 
-  long    m, n;            /* grid dimensions                                     */
+  long   m, n;            /* grid dimensions                                     */
   int    i, j, iter;      /* dummies                                             */
   int    iterations;      /* number of times to run the pipeline algorithm       */
   double pipeline_time,   /* timing parameters                                   */
@@ -163,8 +163,13 @@ int main(int argc, char ** argv) {
   ** process and test input parameters
   ********************************************************************************/
 
+  if(MYTHREAD == THREADS-1){
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("UPC pipeline execution on 2D grid\n");
+  }
+
   if (argc != 4){
-    if(MYTHREAD == 0){
+    if(MYTHREAD == THREADS-1){
       printf("Usage: %s <# iterations> <first array dimension> ", *argv);
       printf("<second array dimension>\n");
     }
@@ -173,7 +178,7 @@ int main(int argc, char ** argv) {
 
   iterations  = atoi(*++argv);
   if (iterations < 1){
-    if(MYTHREAD == 0)
+    if(MYTHREAD == THREADS-1)
       printf("ERROR: iterations must be >= 1 : %d \n",iterations);
     upc_global_exit(EXIT_FAILURE);
   }
@@ -182,14 +187,12 @@ int main(int argc, char ** argv) {
   n  = atol(*++argv);
 
   if (m < 1 || n < 1){
-    if(MYTHREAD == 0)
+    if(MYTHREAD == THREADS-1)
       printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
     upc_global_exit(EXIT_FAILURE);
   }
 
-  if(MYTHREAD == 0){
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("UPC pipeline execution on 2D grid\n");
+  if(MYTHREAD == THREADS-1){
     printf("Number of threads         = %d\n", THREADS);
     printf("Grid sizes                = %ld, %ld\n", m, n);
     printf("Number of iterations      = %d\n", iterations);
@@ -303,17 +306,16 @@ int main(int argc, char ** argv) {
       if(MYTHREAD < THREADS - 1)
         current_max_line[MYTHREAD+1] = j;
 
-      if(MYTHREAD == 0)
-        current_max_line[MYTHREAD] = sizey;
-      else
-        current_max_line[MYTHREAD] = 0;
 #endif
     }
 
     /* copy top right corner value to bottom left corner to create dependency; we
        need a barrier to make sure the latest value is used. This also guarantees
      that the flags for the next iteration (if any) are not getting clobbered  */
-
+    if(MYTHREAD == 0)
+      current_max_line[MYTHREAD] = sizey;
+    else
+      current_max_line[MYTHREAD] = 0;
 
     if(MYTHREAD == THREADS - 1){
       in_arrays[0][0][0] = -ARRAY(m-1, n-1);
@@ -357,7 +359,6 @@ int main(int argc, char ** argv) {
     avgtime = max_time/iterations;
   printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
          1.0E-06 * 2 * ((double)(m-1)*(double)(n-1))/avgtime, avgtime);
-  printf("\n");
   exit(EXIT_SUCCESS);
   }
 }

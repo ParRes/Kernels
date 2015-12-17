@@ -3,7 +3,7 @@ mainmodule transpose {
   readonly int         order;
   readonly int         num_chares;
   readonly int         overdecomposition;
-  readonly int         maxiterations;
+  readonly int         iterations;
   readonly int         Block_order;
   readonly int         Tile_order;
   readonly int         tiling;
@@ -27,8 +27,8 @@ mainmodule transpose {
     entry [reductiontarget] void barrier_stop(void);
     entry [reductiontarget] void barrier_start(void);
     entry void run() {
-      for (iterations=0; iterations<=maxiterations; iterations++) {
-        if (iterations == 1) {
+      for (iter=0; iter<=iterations; iter++) {
+        if (iter == 1) {
           serial "start the timer" {
             // implement a barrier by doing an empty collective; then start the timer          
             CkCallback cb(CkReductionTarget(Transpose, barrier_start), thisProxy[0]);     
@@ -56,7 +56,7 @@ mainmodule transpose {
         }
         for (phase=1; phase<num_chares; phase++) {
 #endif
-          when receiveBlock[iterations*num_chares](blockMsg *msg)
+          when receiveBlock[iter*num_chares](blockMsg *msg)
             serial "processBlock" {
               processBlock(msg);
             }
@@ -71,7 +71,7 @@ mainmodule transpose {
       {
         when barrier_stop() serial "barrier_stop" {
           endTime = CkWallTimer();
-          double avgtime = (endTime-startTime)/(double)maxiterations;
+          double avgtime = (endTime-startTime)/(double)iterations;
           CkPrintf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
         }
       }

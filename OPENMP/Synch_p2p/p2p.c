@@ -100,6 +100,9 @@ int main(int argc, char ** argv) {
   ** process and test input parameters    
   ********************************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP pipeline execution on 2D grid\n");
+
   if (argc != 5 && argc != 6){
     printf("Usage: %s <# threads> <# iterations> <first array dimension> ", *argv);
     printf("<second array dimension> [group factor]\n");
@@ -176,9 +179,6 @@ int main(int argc, char ** argv) {
   #pragma omp master
   {
   nthread = omp_get_num_threads();
-
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP pipeline execution on 2D grid\n");
   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",

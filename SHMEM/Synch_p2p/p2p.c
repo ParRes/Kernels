@@ -112,6 +112,12 @@ int main(int argc, char ** argv)
 /*********************************************************************
 ** process, test and broadcast input parameter
 *********************************************************************/
+
+  if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("SHMEM pipeline execution on 2D grid\n");
+  }
+
   if (argc != 4){
     if (my_ID == root)
       printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension>\n", 
@@ -159,8 +165,6 @@ int main(int argc, char ** argv)
   shmem_barrier_all ();
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("SHMEM pipeline execution on 2D grid\n");
     printf("Number of ranks            = %d\n",Num_procs);
     printf("Grid sizes                 = %ld, %ld\n", m, n);
     printf("Number of iterations       = %d\n", iterations);

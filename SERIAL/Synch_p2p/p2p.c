@@ -78,6 +78,9 @@ int main(int argc, char ** argv) {
   ** process and test input parameters    
   ********************************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Serial pipeline execution on 2D grid\n");
+
   if (argc != 4){
     printf("Usage: %s <# iterations> <first array dimension> ", *argv);
     printf("<second array dimension>\n");
@@ -105,8 +108,6 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial pipeline execution on 2D grid\n");
   printf("Grid sizes                = %ld, %ld\n", m, n);
   printf("Number of iterations      = %d\n", iterations);
 

@@ -108,6 +108,9 @@ int main(int argc, char ** argv)
 *********************************************************************/
 
   if (my_ID == root){
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI pipeline execution on 2D grid\n");
+
     if (argc != 4 && argc != 5){
       printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension> [group factor]\n", 
              *argv);
@@ -149,8 +152,6 @@ int main(int argc, char ** argv)
   bail_out(error); 
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI pipeline execution on 2D grid\n");
     printf("Number of ranks                = %d\n",Num_procs);
     printf("Grid sizes                     = %d, %d\n", m, n);
     printf("Number of iterations           = %d\n", iterations);

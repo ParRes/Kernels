@@ -1,0 +1,14 @@
+NUMTHREADS=4 
+NUMITERS=1
+SEPLINE="===============================================================" 
+ 
+OPENMP/DGEMM/dgemm              $NUMTHREADS $NUMITERS -50000 32;              echo $SEPLINE 
+OPENMP/Nstream/nstream          $NUMTHREADS $NUMITERS 2000000000L 0;          echo $SEPLINE 
+OPENMP/Random/random            $NUMTHREADS 32 4 4;                           echo $SEPLINE 
+for ALGORITHM in linear binary-barrier binary-p2p long-optimal; do 
+  OPENMP/Reduce/reduce          $NUMTHREADS $NUMITERS 1000000000L $ALGORITHM; echo $SEPLINE 
+done 
+OPENMP/Sparse/sparse            $NUMTHREADS $NUMITERS 13 7;                   echo $SEPLINE 
+OPENMP/Stencil/stencil          $NUMTHREADS $NUMITERS 46000;                  echo $SEPLINE
+OPENMP/Synch_p2p/p2p            $NUMTHREADS $NUMITERS 70000 70000;            echo $SEPLINE 
+OPENMP/Transpose/transpose      $NUMTHREADS $NUMITERS 50000 64;               echo $SEPLINE

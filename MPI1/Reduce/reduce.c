@@ -74,7 +74,7 @@ int main(int argc, char ** argv)
   int my_ID;            /* Rank                                              */
   int root=0;
   int iterations;       /* number of times the reduction is carried out      */
-  int i, iter;          /* dummies                                           */
+  long i, iter;         /* dummies                                           */
   long vector_length;   /* length of the vectors to be aggregated            */
   double * RESTRICT vector; /* vector to be reduced                          */
   double * RESTRICT ones;   /* constant vector                               */
@@ -97,6 +97,9 @@ int main(int argc, char ** argv)
   ****************************************************************************/
 
   if (my_ID == root){
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI vector reduction\n");
+
     if (argc != 3){
       printf("Usage: %s <# iterations> <vector_length>\n", *argv);
       error = 1;
@@ -123,8 +126,6 @@ int main(int argc, char ** argv)
 
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI vector reduction\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Vector length        = %ld\n", vector_length);
     printf("Number of iterations = %d\n", iterations);     

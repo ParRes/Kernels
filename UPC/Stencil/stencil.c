@@ -56,10 +56,6 @@ HISTORY: Written by Abdullah Kayi, June 2015
 #include <par-res-kern_general.h>
 #include <par-res-kern_upc.h>
 
-#ifndef RADIUS
-  #define RADIUS 2
-#endif
-
 #ifdef DOUBLE
   #define DTYPE   double
   #define EPSILON 1.e-8
@@ -74,28 +70,14 @@ HISTORY: Written by Abdullah Kayi, June 2015
   #define FSTR    "%f"
 #endif
 
-/* define shorthand for indexing a multi-dimensional array */
+/* define shorthand for indexing multi-dimensional arrays */
 #define WEIGHT(ii,jj) weight[ii+RADIUS][jj+RADIUS]
+#define IN(i,j)   in_array_private[j][i]
+#define OUT(i,j)  out_array_private[j][i]
 
 shared DTYPE times[THREADS];
 
-int is_debugging = 0;
-void debug(char *fmt, ...){
-  va_list argp;
-  char buffer[1024];
-
-  if(!is_debugging)
-      return;
-
-  va_start(argp, fmt);
-  vsnprintf(buffer, 1024, fmt, argp);
-  va_end(argp);
-
-  fprintf(stdout, "%2d > %s \n", MYTHREAD, buffer);
-  fflush(stdout);
-}
-
-void message(char *fmt, ...){
+void bail_out(char *fmt, ...){
   va_list argp;
   char buffer[1024];
 
@@ -103,19 +85,7 @@ void message(char *fmt, ...){
   vsnprintf(buffer, 1024, fmt, argp);
   va_end(argp);
 
-  fprintf(stdout, "%2d > %s \n", MYTHREAD, buffer);
-  fflush(stdout);
-}
-
-void die(char *fmt, ...){
-  va_list argp;
-  char buffer[1024];
-
-  va_start(argp, fmt);
-  vsnprintf(buffer, 1024, fmt, argp);
-  va_end(argp);
-
-  fprintf(stderr, "FATAL ERROR %s\n", buffer);
+  fprintf(stderr, "ERROR: %s\n", buffer);
 
   upc_global_exit(EXIT_FAILURE);
 }
@@ -140,16 +110,14 @@ local_shared_block_ptrs shared_2d_array_alloc(int sizex, int sizey, int offsetx,
   long int alloc_size = sizex * sizey * sizeof(DTYPE);
   local_shared_block ptr;
 
-  debug("Allocating main array size(%d, %d) offset(%d, %d) %d", sizex, sizey, offsetx, offsety, alloc_size);
   ptr = upc_alloc(alloc_size);
   if(ptr == NULL)
-    die("Failing shared allocation of %d bytes", alloc_size);
+    bail_out("Failing shared allocation of %d bytes", alloc_size);
 
   long int line_ptrs_size = sizeof(local_shared_block) * sizey;
-  debug("Allocating ptr array %d", line_ptrs_size);
   local_shared_block_ptrs line_ptrs = upc_alloc(line_ptrs_size);
   if(line_ptrs == NULL)
-    die("Failing shared allocation of %d bytes", line_ptrs_size);
+    bail_out("Failing shared allocation of %d bytes", line_ptrs_size);
 
   for(int y=0; y<sizey; y++){
     line_ptrs[y] = ptr + (y * sizex) - offsetx;
@@ -164,7 +132,7 @@ DTYPE **shared_2d_array_to_private(local_shared_block_ptrs array, int sizex, int
   long int alloc_size = sizey * sizeof(DTYPE*);
   DTYPE **ptr = malloc(alloc_size);
   if(ptr == NULL)
-    die("Unable to allocate array");
+    bail_out("Unable to allocate array");
 
   ptr -= offsety;
 
@@ -181,7 +149,7 @@ private_shared_block_ptrs partially_privatize(local_shared_block_ptrs array, int
   long int alloc_size = sizey * sizeof(local_shared_block);
   private_shared_block_ptrs ptr = malloc(alloc_size);
   if(ptr == NULL)
-    die("Unable to allocate array2");
+    bail_out("Unable to allocate array2");
 
   ptr -= offsety;
   for(int y=offsety; y<offsety + sizey; y++)
@@ -205,7 +173,7 @@ int main(int argc, char ** argv) {
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil */
   int    istart;    /* bounds of grid tile assigned to calling rank        */
   int    jstart;    /* bounds of grid tile assigned to calling rank        */
-  int x_divs, y_divs;
+  int    Num_procsx, Num_procsy;
 
   /*******************************************************************************
   ** process and test input parameters
@@ -218,90 +186,90 @@ int main(int argc, char ** argv) {
 
   if (argc != 4 && argc != 3)
     if(MYTHREAD == 0)
-      die("Usage: %s <# iterations> <array dimension> [x_tiles]\n", *argv);
+      bail_out("Usage: %s <# iterations> <array dimension> [x_tiles]\n", *argv);
 
   iterations  = atoi(*++argv);
   if (iterations < 1)
     if(MYTHREAD == 0)
-      die("iterations must be >= 1 : %d", iterations);
+      bail_out("iterations must be >= 1 : %d", iterations);
 
   n  = atoi(*++argv);
 
   if (n < 1)
     if(MYTHREAD == 0)
-      die("grid dimension must be positive: %d", n);
+      bail_out("grid dimension must be positive: %d", n);
 
   if (argc == 4)
-    x_divs  = atoi(*++argv);
+    Num_procsx  = atoi(*++argv);
   else
-    x_divs = 0;
+    Num_procsx = 0;
 
-  if(x_divs < 0)
+  if(Num_procsx < 0)
     if(MYTHREAD == 0)
-      die("Number of tiles in the x-direction should be positive (got: %d)", x_divs);
+      bail_out("Number of tiles in the x-direction should be positive (got: %d)", Num_procsx);
 
-  if(x_divs > THREADS)
+  if(Num_procsx > THREADS)
     if(MYTHREAD == 0)
-      die("Number of tiles in the x-direction should be < THREADS (got: %d)", x_divs);
+      bail_out("Number of tiles in the x-direction should be < THREADS (got: %d)", Num_procsx);
 
-  /* x_divs=0 refers to automated calculation of division on each coordinates like MPI code */
-  if(x_divs == 0){
-    for (x_divs=(int) (sqrt(THREADS+1)); x_divs>0; x_divs--) {
-      if (!(THREADS%x_divs)) {
-        y_divs = THREADS/x_divs;
+  /* Num_procsx=0 refers to automated calculation of division on each coordinates like MPI code */
+  if(Num_procsx == 0){
+    for (Num_procsx=(int) (sqrt(THREADS+1)); Num_procsx>0; Num_procsx--) {
+      if (!(THREADS%Num_procsx)) {
+        Num_procsy = THREADS/Num_procsx;
         break;
       }
     }
   }
   else {
-    y_divs = THREADS / x_divs;
+    Num_procsy = THREADS / Num_procsx;
   }
 
   if(RADIUS < 1)
     if(MYTHREAD == 0)
-      die("Stencil radius %d should be positive", RADIUS);
+      bail_out("Stencil radius %d should be positive", RADIUS);
 
   if(2*RADIUS +1 > n)
     if(MYTHREAD == 0)
-      die("Stencil radius %d exceeds grid size %d", RADIUS, n);
+      bail_out("Stencil radius %d exceeds grid size %d", RADIUS, n);
 
-  if(x_divs * y_divs != THREADS){
-    die("x_divs * y_divs != THREADS");
+  if(Num_procsx * Num_procsy != THREADS){
+    bail_out("Num_procsx * Num_procsy != THREADS");
   }
 
   /* compute amount of space required for input and solution arrays             */
 
-  int mygridposx = MYTHREAD % x_divs;
-  int mygridposy = MYTHREAD / x_divs;
+  int my_IDx = MYTHREAD % Num_procsx;
+  int my_IDy = MYTHREAD / Num_procsx;
 
-  int blockx = n / x_divs;
-  int leftover = n % x_divs;
-  if (mygridposx < leftover) {
-    istart = (blockx + 1) * mygridposx;
+  int blockx = n / Num_procsx;
+  int leftover = n % Num_procsx;
+  if (my_IDx < leftover) {
+    istart = (blockx + 1) * my_IDx;
     blockx += 1;
   }
   else {
-    istart = (blockx+1) * leftover + blockx * (mygridposx-leftover);
+    istart = (blockx+1) * leftover + blockx * (my_IDx-leftover);
   }
 
   if (blockx == 0)
-    die("No work to do on x-direction!");
+    bail_out("No work to do on x-direction!");
 
-  int blocky = n / y_divs;
-  leftover = n % y_divs;
-  if (mygridposy < leftover) {
-    jstart = (blocky+1) * mygridposy;
+  int blocky = n / Num_procsy;
+  leftover = n % Num_procsy;
+  if (my_IDy < leftover) {
+    jstart = (blocky+1) * my_IDy;
     blocky += 1;
   }
   else {
-    jstart = (blocky+1) * leftover + blocky * (mygridposy-leftover);
+    jstart = (blocky+1) * leftover + blocky * (my_IDy-leftover);
   }
 
   if (blocky == 0)
-    die("No work to do on y-direction!");
+    bail_out("No work to do on y-direction!");
 
   if(blockx < RADIUS || blocky < RADIUS) {
-    die("blockx < RADIUS || blocky < RADIUS");
+    bail_out("blockx < RADIUS || blocky < RADIUS");
   }
 
   int myoffsetx = istart - RADIUS;
@@ -316,7 +284,6 @@ int main(int argc, char ** argv) {
 
   upc_barrier;
 
-  debug("Allocating arrays (%d, %d), offset (%d, %d)", sizex, sizey, myoffsetx, myoffsety);
   local_shared_block_ptrs in_array  = shared_2d_array_alloc(sizex, sizey, myoffsetx, myoffsety);
   local_shared_block_ptrs out_array = shared_2d_array_alloc(sizex, sizey, myoffsetx, myoffsety);
 
@@ -330,11 +297,11 @@ int main(int argc, char ** argv) {
 
   private_in_arrays = malloc(sizeof(private_shared_block_ptrs) * THREADS);
   if(private_in_arrays == NULL)
-    die("Cannot allocate private_in_arrays");
+    bail_out("Cannot allocate private_in_arrays");
 
   private_out_arrays = malloc(sizeof(private_shared_block_ptrs) * THREADS);
   if(private_out_arrays == NULL)
-    die("Cannot allocate private_out_arrays");
+    bail_out("Cannot allocate private_out_arrays");
 
   for(int thread=0; thread<THREADS; thread++){
     private_in_arrays[thread] = partially_privatize(in_arrays[thread], thread);
@@ -353,7 +320,7 @@ int main(int argc, char ** argv) {
   for(int y=myoffsety; y<myoffsety + sizey; y++){
     for(int x=myoffsetx; x<myoffsetx + sizex; x++){
       if(in_array_private[y][x] != COEFX*x + COEFY*y)
-        die("x=%d y=%d in_array=%f != %f", x, y, in_array[y][x], COEFX*x + COEFY*y);
+        bail_out("x=%d y=%d in_array=%f != %f", x, y, in_array[y][x], COEFX*x + COEFY*y);
     }
   }
 
@@ -372,11 +339,16 @@ int main(int argc, char ** argv) {
     printf("Number of threads      = %d\n", THREADS);
     printf("Grid size              = %d\n", n);
     printf("Radius of stencil      = %d\n", RADIUS);
-    printf("Tiles in x/y-direction = %d/%d\n", x_divs, y_divs);
+    printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
 #ifdef DOUBLE
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
+#endif
+#if LOOPGEN
+    printf("Script used to expand stencil loop body\n");
+#else
+    printf("Compact representation of stencil loop body\n");
 #endif
     printf("Number of iterations   = %d\n", iterations);
   }
@@ -389,48 +361,47 @@ int main(int argc, char ** argv) {
   int starty = myoffsety + RADIUS;
   int endy = myoffsety + sizey - RADIUS;
 
-  if(mygridposx == 0)
+  if(my_IDx == 0)
     startx += RADIUS;
 
-  if(mygridposx == x_divs - 1)
+  if(my_IDx == Num_procsx - 1)
     endx -= RADIUS;
 
-  if(mygridposy == 0)
+  if(my_IDy == 0)
     starty += RADIUS;
 
-  if(mygridposy == y_divs - 1)
+  if(my_IDy == Num_procsy - 1)
     endy -= RADIUS;
-
-  debug("divx=%d, divy= %d, endx=%d, endy=%d", x_divs, y_divs, endx, endy);
-  debug("startx =%d, starty= %d, endx=%d, endy=%d", startx, starty, endx, endy);
 
   upc_barrier;
 
   for (iter = 0; iter<=iterations; iter++){
     /* start timer after a warmup iteration */
-    if (iter == 1)
+    if (iter == 1) {
+      upc_barrier;
       stencil_time = wtime();
+    }
 
     /* Get ghost zones */
     /* NORTH */
-    if(mygridposy != 0){
-      int peer = (mygridposy - 1) * x_divs + mygridposx;
+    if(my_IDy != 0){
+      int peer = (my_IDy - 1) * Num_procsx + my_IDx;
       for (int y=starty - RADIUS; y<starty; y++) {
         int transfer_size = (endx - startx) * sizeof(DTYPE);
         upc_memget(&in_array_private[y][startx], &private_in_arrays[peer][y][startx], transfer_size);
       }
     }
     /* SOUTH */
-    if(mygridposy != y_divs - 1){
-      int peer = (mygridposy + 1) * x_divs + mygridposx;
+    if(my_IDy != Num_procsy - 1){
+      int peer = (my_IDy + 1) * Num_procsx + my_IDx;
       for (int y=endy; y<endy + RADIUS; y++) {
         int transfer_size = (endx - startx) * sizeof(DTYPE);
         upc_memget(&in_array_private[y][startx], &private_in_arrays[peer][y][startx], transfer_size);
       }
     }
     /* LEFT */
-    if(mygridposx != 0){
-      int peer = mygridposy * x_divs + mygridposx - 1;
+    if(my_IDx != 0){
+      int peer = my_IDy * Num_procsx + my_IDx - 1;
       for (int y=starty; y<endy; y++) {
         for (int x=startx - RADIUS; x<startx; x++) {
           in_array_private[y][x] = private_in_arrays[peer][y][x];
@@ -438,8 +409,8 @@ int main(int argc, char ** argv) {
       }
     }
     /* RIGHT*/
-    if(mygridposx != x_divs - 1){
-      int peer = mygridposy * x_divs + mygridposx + 1;
+    if(my_IDx != Num_procsx - 1){
+      int peer = my_IDy * Num_procsx + my_IDx + 1;
       for (int y=starty; y<endy; y++) {
         for (int x=endx; x<endx + RADIUS; x++) {
           in_array_private[y][x] = private_in_arrays[peer][y][x];
@@ -448,20 +419,15 @@ int main(int argc, char ** argv) {
     }
 
     /* Apply the stencil operator */
-    for (int y=starty; y<endy; y++) {
-      DTYPE *liney = in_array_private[y];
-      for (int x=startx; x<endx; x++) {
-        double value = out_array_private[y][x];
-        for (int xx=-RADIUS; xx<=RADIUS; xx++)
-          value += WEIGHT(0, xx) * liney[x + xx];
-
-        for (int yy=-RADIUS; yy<0; yy++)
-          value += WEIGHT(yy, 0) * in_array_private[y + yy][x];
-
-        for (int yy=1; yy<=RADIUS; yy++)
-          value += WEIGHT(yy, 0) * in_array_private[y + yy][x];
-
-        out_array_private[y][x] = value ;
+    for (j=starty; j<endy; j++) {
+      for (i=startx; i<endx; i++) {
+        #if LOOPGEN
+          #include "loop_body_star.incl"
+        #else
+          for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+          for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+        #endif
       }
     }
 
@@ -506,8 +472,7 @@ int main(int argc, char ** argv) {
 
   if(MYTHREAD == 0){
     norm = 0.;
-    for(int i=0;i<THREADS;i++)
-      norm += norms[i];
+    for(int i=0; i<THREADS; i++) norm += norms[i];
 
     /*******************************************************************************
     ** Analyze and output results.
@@ -517,7 +482,7 @@ int main(int argc, char ** argv) {
     reference_norm = (double) (iterations+1) * (COEFX + COEFY);
 
     if (ABS(norm - reference_norm) > EPSILON)
-      die("L1 norm = "FSTR", Reference L1 norm = "FSTR"\n", norm, reference_norm);
+      bail_out("L1 norm = "FSTR", Reference L1 norm = "FSTR"\n", norm, reference_norm);
     else {
       printf("Solution validates\n");
 #ifdef VERBOSE

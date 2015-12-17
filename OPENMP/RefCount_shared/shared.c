@@ -54,8 +54,11 @@ FUNCTIONS CALLED:
          wtime()
          bail_out()
          getpagesize()
+         private_stream()
  
 HISTORY: Written by Rob Van der Wijngaart, January 2006.
+         Updated by RvdW to include private work, and a dependence 
+         between update pairs, October 2015
   
 *******************************************************************/
  
@@ -64,16 +67,28 @@ HISTORY: Written by Rob Van der Wijngaart, January 2006.
  
 /* shouldn't need the prototype below, since it is defined in <unistd.h>. But it
    depends on the existence of symbols __USE_BSD or _USE_XOPEN_EXTENDED, neither
-   of which may be present. To avoid warnings, we define the prototype here      */
+   of which may be present. To avoid warnings, we define the prototype here     */
 #if !defined(__USE_BSD) && !defined(__USE_XOPEN_EXTENDED)
 extern int getpagesize(void);
 #endif
 #define COUNTER1  (*pcounter1)
 #define COUNTER2  (*pcounter2)
+#define SCALAR    3.0
+#define A0        0.0
+#define B0        2.0
+#define C0        2.0
+
+/* declare a simple function that does some work                                */
+void private_stream(double *a, double *b, double *c, int size) {
+  int j;
+  for (j=0; j<size; j++) a[j] += b[j] + SCALAR*c[j];
+  return;
+}
  
 int main(int argc, char ** argv)
 {
-  int        iterations;      /* total number of reference pair counter updates */
+  long       iterations;      /* total number of reference pair counter updates */
+  long       stream_size;     /* length of stream triad creating private work   */ 
   int        page_fit;        /* indicates that counters fit on different pages */
   size_t     store_size;      /* amount of space reserved for counters          */
   double     *pcounter1,     
@@ -87,15 +102,16 @@ int main(int argc, char ** argv)
   double     refcount_time;   /* timing parameter                               */
   int        nthread_input;   /* thread parameters                              */
   int        nthread; 
-  int        num_error=0;     /* flag that signals that requested and obtained
-                                 numbers of threads are the same                */
  
 /*********************************************************************
 ** process and test input parameters    
 *********************************************************************/
+
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP exclusive access test RefCount, shared counters\n");
  
-  if (argc != 3){
-    printf("Usage: %s <# threads> <# counter pair updates>\n", *argv);
+  if (argc != 4){
+    printf("Usage: %s <# threads> <# counter pair updates> <# private stream size>\n", *argv);
     return(1);
   }
  
@@ -105,9 +121,15 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
  
-  iterations  = atoi(*++argv);
+  iterations  = atol(*++argv);
   if (iterations < 1){
     printf("ERROR: iterations must be >= 1 : %d \n",iterations);
+    exit(EXIT_FAILURE);
+  }
+
+  stream_size = atol(*++argv);
+  if (stream_size < 0) {
+    printf("ERROR: private stream size %ld must be non-negative\n", stream_size);
     exit(EXIT_FAILURE);
   }
  
@@ -152,14 +174,30 @@ int main(int argc, char ** argv)
  
   #pragma omp parallel 
   {
-  int iter;         /* dummy                                          */
+  long   iter, j;   /* dummies                                        */
   double tmp1;      /* local copy of previous value of COUNTER1       */
+  double *a, *b, *c;/* private vectors                                */
+  int    num_error=0;/* errors in private stream execution            */
+  double aj, bj, cj;
+  long space;
+  space = 3*sizeof(double)*stream_size;
+  a = (double *) malloc(space);
+  if (!a) {
+    printf("ERROR: Could not allocate %ld words for private streams\n", 
+           space);
+    exit(EXIT_FAILURE);
+  }
+  b = a + stream_size;
+  c = b + stream_size;
+  for (j=0; j<stream_size; j++) {
+    a[j] = A0;
+    b[j] = B0;
+    c[j] = C0;
+  }
  
   #pragma omp master
   {
   nthread = omp_get_num_threads();
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP exclusive access test RefCount, shared counters\n");
   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",
@@ -168,16 +206,47 @@ int main(int argc, char ** argv)
   } 
   else {
     printf("Number of threads              = %d\n",nthread_input);
-    printf("Number of counter pair updates = %d\n", iterations);
+    printf("Number of counter pair updates = %ld\n", iterations);
+    printf("Length of private stream       = %ld\n", stream_size);
 #ifdef DEPENDENT
-    printf("Dependent atomic counter pair update\n");
+    printf("Dependent counter pair update\n");
 #else
-    printf("Independent atomic counter updates\n");
+    printf("Independent counter pair updates using");
+  #ifdef ATOMIC
+    printf(" atomic operations\n");
+  #else
+    printf(" using locks\n");
+  #endif
 #endif
   }
   }
   bail_out(num_error);
  
+  /* do one warmup iteration outside main loop to avoid overhead      */
+#ifdef DEPENDENT
+  omp_set_lock(&counter_lock);
+  tmp1 = COUNTER1;
+  COUNTER1 = cosa*tmp1 - sina*COUNTER2;
+  COUNTER2 = sina*tmp1 + cosa*COUNTER2;
+  omp_unset_lock(&counter_lock);
+#else
+  #ifndef ATOMIC
+    omp_set_lock(&counter_lock);
+  #else
+    #pragma omp atomic
+  #endif
+    COUNTER1++;
+  #ifdef ATOMIC
+    #pragma omp atomic
+  #endif
+    COUNTER2++;
+  #ifndef ATOMIC
+    omp_unset_lock(&counter_lock);
+  #endif
+#endif
+  /* give each thread some (overlappable) work to do                */
+  private_stream(a, b, c, stream_size);
+
   #pragma omp master
   {
   refcount_time = wtime();
@@ -185,31 +254,60 @@ int main(int argc, char ** argv)
  
   #pragma omp for
   /* start with iteration nthread to take into account pre-loop iter  */
-  for (iter=0; iter<iterations; iter++) { 
-    omp_set_lock(&counter_lock);
+  for (iter=nthread; iter<=iterations; iter++) { 
 #ifdef DEPENDENT
-    double tmp1 = COUNTER1;
+    omp_set_lock(&counter_lock);
+    tmp1 = COUNTER1;
     COUNTER1 = cosa*tmp1 - sina*COUNTER2;
     COUNTER2 = sina*tmp1 + cosa*COUNTER2;
-#else
-    COUNTER1++;
-    COUNTER2++;
-#endif
     omp_unset_lock(&counter_lock);
+#else
+  #ifndef ATOMIC
+    omp_set_lock(&counter_lock);
+  #else
+    #pragma omp atomic
+  #endif
+    COUNTER1++;
+  #ifdef ATOMIC
+    #pragma omp atomic
+  #endif
+    COUNTER2++;
+  #ifndef ATOMIC
+    omp_unset_lock(&counter_lock);
+  #endif
+#endif
+    /* give each thread some (overlappable) work to do                */
+    private_stream(a, b, c, stream_size);
   }
  
   #pragma omp master 
   { 
   refcount_time = wtime() - refcount_time;
   }
+
+  /* check whether the private work has been done correctly           */
+  aj = A0; bj = B0; cj = C0;
+  #pragma omp for
+  for (iter=0; iter<=iterations; iter++) {
+    aj += bj + SCALAR*cj;
+  }
+  for (j=0; j<stream_size; j++) {
+    num_error += MAX(ABS(a[j]-aj)>epsilon,num_error);
+  }
+  if (num_error>0) {
+    printf("ERROR: Thread %d encountered errors in private work\n",
+           omp_get_thread_num());           
+  }
+  bail_out(num_error);
+
   } /* end of OpenMP parallel region */
  
 #ifdef DEPENDENT
-  refcounter1 = cos(iterations);
-  refcounter2 = sin(iterations);
+  refcounter1 = cos(iterations+1);
+  refcounter2 = sin(iterations+1);
 #else
-  refcounter1 = (double)(iterations+1);
-  refcounter2 = (double) iterations;
+  refcounter1 = (double)(iterations+2);
+  refcounter2 = (double)(iterations+1);
 #endif
   if ((ABS(COUNTER1-refcounter1)>epsilon) || 
       (ABS(COUNTER2-refcounter2)>epsilon)) {
@@ -224,7 +322,7 @@ int main(int argc, char ** argv)
 #else
     printf("Solution validates\n");
 #endif
-    printf("Rate (MCPUPs/s): %lf, time (s): %lf\n", 
+    printf("Rate (MCPUPs/s): %lf time (s): %lf\n", 
            iterations/refcount_time*1.e-6, refcount_time);
   }
  

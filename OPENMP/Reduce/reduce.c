@@ -122,6 +122,9 @@ int main(int argc, char ** argv)
 ** process and test input parameters    
 ******************************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP Vector Reduction\n");
+
   if (argc != 4 && argc != 5){
     printf("Usage:     %s <# threads> <# iterations> <vector length> ", *argv);
     printf("[<alghorithm>]\n");
@@ -151,10 +154,10 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
 
-  total_length = 2*nthread_input*sizeof(double)*vector_length;
+  total_length = vector_length*2*nthread_input*sizeof(double);
   vector = (double *) malloc(total_length);
   if (!vector) {
-    printf("Could not allocate space for vectors\n");
+    printf("ERROR: Could not allocate space for vectors: %ld\n", total_length);
     exit(EXIT_FAILURE);
   }
 
@@ -184,9 +187,6 @@ int main(int argc, char ** argv)
   #pragma omp master 
   {
   nthread = omp_get_num_threads();
-
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP Vector Reduction\n");
   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",
@@ -253,9 +253,7 @@ int main(int argc, char ** argv)
 
     case LINEAR:
 
-       {
-        #pragma omp barrier
-       }
+       #pragma omp barrier
        #pragma omp master
        {
        for (id=1; id<nthread; id++) {

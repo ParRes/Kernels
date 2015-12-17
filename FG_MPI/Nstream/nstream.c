@@ -151,6 +151,9 @@ int main(int argc, char **argv)
   MPI_Comm_rank(MPI_COMM_WORLD,&my_ID);
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("FG_MPI stream triad: A = B + scalar*C\n");
+
     if (argc != 4){
       printf("Usage:  %s <# iterations> <vector length> <offset>\n", *argv);
       error = 1;
@@ -203,8 +206,6 @@ int main(int argc, char **argv)
  
   if (my_ID == root) {
     MPIX_Get_collocated_size(&procsize);
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("FG_MPI stream triad: A = B + scalar*C\n");
     printf("Number of ranks         = %d\n", Num_procs);
     printf("Number of ranks/process = %d\n", procsize);
     printf("Vector length           = %ld\n", total_length);

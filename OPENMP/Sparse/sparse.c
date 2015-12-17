@@ -118,6 +118,9 @@ int main(int argc, char **argv){
                     matrix_space,
                     index_space;
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP Sparse matrix-vector multiplication\n");
+
   if (argc != 5) {
     printf("Usage: %s <# threads> <# iterations> <2log grid size> <stencil radius>\n",*argv);
     exit(EXIT_FAILURE);
@@ -214,9 +217,6 @@ int main(int argc, char **argv){
   #pragma omp master 
   {
   nthread = omp_get_num_threads();
-
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP Sparse matrix-vector multiplication\n");
   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",

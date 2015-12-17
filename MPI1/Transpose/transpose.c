@@ -129,13 +129,13 @@ o The original and transposed matrices are called A and B
 
 int main(int argc, char ** argv)
 {
-  int Block_order;         /* number of columns owned by rank       */
-  int Block_size;          /* size of a single block                */
-  int Colblock_size;       /* size of column block                  */
+  long Block_order;        /* number of columns owned by rank       */
+  long Block_size;         /* size of a single block                */
+  long Colblock_size;      /* size of column block                  */
   int Tile_order=32;       /* default Tile order                    */
   int tiling;              /* boolean: true if tiling is used       */
   int Num_procs;           /* number of ranks                       */
-  int order;               /* order of overall matrix               */
+  long order;              /* order of overall matrix               */
   int send_to, recv_from;  /* ranks with which to communicate       */
   MPI_Status status;       
 #ifndef SYNCHRONOUS
@@ -174,6 +174,9 @@ int main(int argc, char ** argv)
 *********************************************************************/
   error = 0;
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI matrix transpose: B = A^T\n");
+
     if (argc != 3 && argc != 4){
       printf("Usage: %s <# iterations> <matrix order> [Tile size]\n",
                                                                *argv);
@@ -186,7 +189,7 @@ int main(int argc, char ** argv)
       error = 1; goto ENDOFTESTS;
     }
 
-    order = atoi(*++argv);
+    order = atol(*++argv);
     if (order < Num_procs) {
       printf("ERROR: matrix order %d should at least # procs %d\n", 
              order, Num_procs);
@@ -205,8 +208,6 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI matrix transpose: B = A^T\n");
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
     printf("Number of iterations = %d\n", iterations);
@@ -220,9 +221,9 @@ int main(int argc, char ** argv)
   }
   
   /*  Broadcast input data to all ranks */
-  MPI_Bcast (&order,      1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast (&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast (&Tile_order, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast (&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Bcast (&iterations, 1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast (&Tile_order, 1, MPI_INT,  root, MPI_COMM_WORLD);
 
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);
@@ -272,7 +273,7 @@ int main(int argc, char ** argv)
   for (j=0;j<Block_order;j++) 
     for (i=0;i<order; i++)  {
       A(i,j) = (double) (order*(j+colstart) + i);
-      B(i,j) = -1.0;
+      B(i,j) = 0.0;
   }
 
   for (iter = 0; iter<=iterations; iter++){
@@ -288,15 +289,18 @@ int main(int argc, char ** argv)
     if (!tiling) {
       for (i=0; i<Block_order; i++) 
         for (j=0; j<Block_order; j++) {
-          B(j,i) = A(i,j);
+          B(j,i) += A(i,j);
+          A(i,j) += 1.0;
 	}
     }
     else {
       for (i=0; i<Block_order; i+=Tile_order) 
         for (j=0; j<Block_order; j+=Tile_order) 
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
-            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
-              B(jt,it) = A(it,jt); 
+            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+              B(jt,it) += A(it,jt); 
+              A(it,jt) += 1.0;
+	    }
     }
 
     for (phase=1; phase<Num_procs; phase++){
@@ -313,6 +317,7 @@ int main(int argc, char ** argv)
         for (i=0; i<Block_order; i++) 
           for (j=0; j<Block_order; j++){
 	    Work_out(j,i) = A(i,j);
+            A(i,j) += 1.0;
 	  }
       }
       else {
@@ -321,6 +326,7 @@ int main(int argc, char ** argv)
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
                 Work_out(jt,it) = A(it,jt); 
+                A(it,jt) += 1,0;
 	      }
       }
 
@@ -339,7 +345,7 @@ int main(int argc, char ** argv)
       /* scatter received block to transposed matrix; no need to tile */
       for (j=0; j<Block_order; j++)
         for (i=0; i<Block_order; i++) 
-          B(i,j) = Work_in(i,j);
+          B(i,j) += Work_in(i,j);
 
     }  /* end of phase loop  */
   } /* end of iterations */
@@ -350,8 +356,9 @@ int main(int argc, char ** argv)
 
   abserr = 0.0;
   istart = 0;
+  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
-      abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
+      abserr += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
   }
 
   MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);

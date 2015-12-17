@@ -1,0 +1,9 @@
+NUMPROCS=4 
+NUMSUBPROCS=2 
+NUMITERS=1 
+SEPLINE="===============================================================" 
+MPIRUN=mpirun 
+#we would like to run larger problems, but are limited by a bug in MPICH's MPI_Win_create_shared
+$MPIRUN -np $NUMPROCS MPISHM/Stencil/stencil        $NUMSUBPROCS $NUMITERS 45000;      echo $SEPLINE 
+$MPIRUN -np $NUMPROCS MPISHM/Synch_p2p/p2p          $NUMITERS 60000 60000;             echo $SEPLINE 
+$MPIRUN -np $NUMPROCS MPISHM/Transpose/transpose    $NUMSUBPROCS $NUMITERS 37000 64;   echo $SEPLINE
