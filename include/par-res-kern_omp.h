@@ -32,7 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <omp.h>
 #ifndef MAXTHREADS
-  #define MAX_THREADS 512
+  #define MAX_THREADS 256
 #else
   #define MAX_THREADS MAXTHREADS
 #endif
