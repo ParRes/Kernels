@@ -61,10 +61,6 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 
 #include <par-res-kern_general.h>
 
-#ifndef RADIUS
-  #define RADIUS 2
-#endif
-
 #ifdef DOUBLE
   #define DTYPE   double
   #define EPSILON 1.e-8
@@ -102,6 +98,9 @@ int main(int argc, char ** argv) {
   DTYPE  * RESTRICT out;  /* output grid values                                  */
   long   total_length;    /* total required length to store grid values          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
+
+  printf("Parallel Research Kernels Version %s\n", PRKVERSION);
+  printf("Serial stencil execution on 2D grid\n");
 
   /*******************************************************************************
   ** process and test input parameters    
@@ -182,8 +181,6 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
 
-  printf("Parallel Research Kernels Version %s\n", PRKVERSION);
-  printf("Serial stencil execution on 2D grid\n");
   printf("Grid size            = %d\n", n);
   printf("Radius of stencil    = %d\n", RADIUS);
 #ifdef STAR
@@ -195,6 +192,11 @@ int main(int argc, char ** argv) {
   printf("Data type            = double precision\n");
 #else
   printf("Data type            = single precision\n");
+#endif
+#if LOOPGEN
+  printf("Script used to expand stencil loop body\n");
+#else
+  printf("Compact representation of stencil loop body\n");
 #endif
   if (tiling) printf("Tile size            = %d\n", tile_size);
   else        printf("Untiled\n");
@@ -212,41 +214,57 @@ int main(int argc, char ** argv) {
     if (iter == 1)  stencil_time = wtime();
 
     /* Apply the stencil operator                                              */
+
     if (!tiling) {
       for (j=RADIUS; j<n-RADIUS; j++) {
         for (i=RADIUS; i<n-RADIUS; i++) {
-#ifdef STAR
-          for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-          for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-          for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-#else
-          /* would like to be able to unroll this loop, but compiler will ignore  */
-          for (jj=-RADIUS; jj<=RADIUS; jj++) 
-          for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
-#endif
+          #ifdef STAR
+            #if LOOPGEN
+              #include "loop_body_star.incl"
+            #else
+              for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+              for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+              for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+            #endif
+          #else 
+            #if LOOPGEN
+              #include "loop_body_compact.incl"
+            #else
+              /* would like to be able to unroll this loop, but compiler will ignore  */
+              for (jj=-RADIUS; jj<=RADIUS; jj++) 
+              for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
+            #endif
+          #endif
         }
       }
     }
     else {
-      for (j=RADIUS; j<n-RADIUS; j+=tile_size) {
-        for (i=RADIUS; i<n-RADIUS; i+=tile_size) {
-          for (jt=j; jt<MIN(n-RADIUS,j+tile_size); jt++) {
-            for (it=i; it<MIN(n-RADIUS,i+tile_size); it++) {
-#ifdef STAR
-              for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(it,jt) += WEIGHT(0,jj)*IN(it,jt+jj);
-              for (ii=-RADIUS; ii<0; ii++)        OUT(it,jt) += WEIGHT(ii,0)*IN(it+ii,jt);
-              for (ii=1; ii<=RADIUS; ii++)        OUT(it,jt) += WEIGHT(ii,0)*IN(it+ii,jt);
-#else
-              /* would like to be able to unroll this loop, but compiler will ignore  */
-              for (jj=-RADIUS; jj<=RADIUS; jj++) 
-              for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(it,jt) += WEIGHT(ii,jj)*IN(it+ii,jt+jj);
-#endif
+      for (jt=RADIUS; jt<n-RADIUS; jt+=tile_size) {
+        for (it=RADIUS; it<n-RADIUS; it+=tile_size) {
+          for (j=jt; j<MIN(n-RADIUS,jt+tile_size); j++) {
+            for (i=it; i<MIN(n-RADIUS,it+tile_size); i++) {
+              #ifdef STAR
+                #if LOOPGEN
+                  #include "loop_body_star.incl"
+                #else
+                  for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+                  for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+                  for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+                #endif
+              #else 
+                #if LOOPGEN
+                  #include "loop_body_compact.incl"
+                #else
+                  /* would like to be able to unroll this loop, but compiler will ignore  */
+                  for (jj=-RADIUS; jj<=RADIUS; jj++) 
+                  for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
+                #endif
+              #endif
             }
           }
         }
       }
     }
-
 
     /* add constant to solution to force refresh of neighbor data, if any       */
     for (j=0; j<n; j++) for (i=0; i<n; i++) IN(i,j)+= 1.0;

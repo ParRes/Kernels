@@ -74,6 +74,9 @@ int main(int argc, char ** argv)
 ** process and test input parameters    
 ******************************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Serial Vector Reduction\n");
+
   if (argc != 3){
     printf("Usage:     %s <# iterations> <vector length>\n", *argv);
     return(EXIT_FAILURE);
@@ -91,8 +94,6 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial Vector Reduction\n");
   printf("Vector length                  = %ld\n", vector_length);
   printf("Number of iterations           = %d\n", iterations);
 

@@ -4,10 +4,10 @@
 #define EPSILON       1.e-8
 #define COEFX         1.0
 #define COEFY         1.0
-#define TINDEX(i,j)   (i+RADIUS+(width+2*RADIUS)*(j+RADIUS))
-#define IN(i,j)       in[TINDEX(i,j)]
-#define TNINDEX(i,j)  (i+width*(j))
-#define OUT(i,j)      out[TNINDEX(i,j)]
+#define INDEXIN(i,j)  (i+RADIUS+(width+2*RADIUS)*(j+RADIUS))
+#define IN(i,j)       in[INDEXIN(i-istart,j-jstart)]
+#define INDEXOUT(i,j) (i+width*(j))
+#define OUT(i,j)      out[INDEXOUT(i-istart,j-jstart)]
 #define WEIGHT(i,j)   weight[i+RADIUS+(j+RADIUS)*(2*RADIUS+1)]
 #define LEFT          1111 
 #define RIGHT         2222
@@ -44,6 +44,9 @@ public:
 
       int num_chares, min_size;
       long nsquare;         
+
+      CkPrintf("Parallel Research Kernels Version %s\n", PRKVERSION);
+      CkPrintf("Charm++ stencil execution on 2D grid\n");
 
       if (m->argc != 4) {
         CkPrintf("%s <maxiterations> <grid_size> <overdecomposition factor>\n", m->argv[0]);
@@ -99,8 +102,6 @@ public:
       }
 
       // print info
-      CkPrintf("Parallel Research Kernels Version %s\n", PRKVERSION);
-      CkPrintf("Charm++ stencil execution on 2D grid\n");
       CkPrintf("Number of Charm++ PEs   = %d\n", CkNumPes());
       CkPrintf("Overdecomposition       = %d\n", overdecomposition);
       CkPrintf("Grid size               = %d\n", n);
@@ -112,6 +113,11 @@ public:
       CkPrintf("Type of stencil         = compact\n");
       CkPrintf("ERROR: Compact stencil not (yet) supported\n");
       CkExit();
+#endif
+#if LOOPGEN
+      CkPrintf("Script used to expand stencil loop body\n");
+#else
+      CkPrintf("Compact representation of stencil loop body\n");
 #endif
       CkPrintf("Number of iterations    = %d\n", maxiterations);
 
@@ -220,10 +226,10 @@ public:
     if (thisIndex.y == num_chare_rows-1) {max_messages_due--; }
     messages_due = max_messages_due;
 
-    for(j=jstart,jloc=0;j<=jend;j++,jloc++){
-      for(i=istart,iloc=0;i<=iend;i++,iloc++){
-        IN(iloc,jloc) = COEFX*i+COEFY*j;
-        OUT(iloc,jloc) = 0.0;
+    for(j=jstart;j<=jend;j++){
+      for(i=istart;i<=iend;i++){
+        IN(i,j) = COEFX*i+COEFY*j;
+        OUT(i,j) = 0.0;
       }
     }
   }
@@ -240,32 +246,19 @@ public:
     // Perform one iteration of work
     // The first step is to send the local state to the neighbors
     void begin_iteration(void) {
-      int k;
+      int kk;
 
-        // Send my left edge
-        if (thisIndex.x > 0) {
-          ghostMsg *msg = new (height*RADIUS) ghostMsg(LEFT, height);
+	// Send my top edge
+        if (thisIndex.y < num_chare_rows-1) {
+          ghostMsg *msg = new (width*RADIUS) ghostMsg(TOP, width);
           if (!msg) {
             CkPrintf("Could not allocate space for message\n");
             CkExit();
           }
           CkSetRefNum(msg, iterations);
-          for(int j=0, k=0;j<height;++j) for (int i=0; i<RADIUS; i++)
-					    msg->edge[k++]    = IN(i,j);
-          thisProxy(thisIndex.x-1, thisIndex.y).receiveGhosts(msg);
-        }
-
-	// Send my right edge
-        if (thisIndex.x < num_chare_cols-1) {
-          ghostMsg *msg = new (height*RADIUS) ghostMsg(RIGHT, height);
-          if (!msg) {
-            CkPrintf("Could not allocate space for message\n");
-            CkExit();
-          }
-          CkSetRefNum(msg, iterations);
-          for(int j=0, k=0;j<height;++j) for (int i=0; i<RADIUS; i++)
-					    msg->edge[k++]   = IN(width-RADIUS+i,j);
-          thisProxy(thisIndex.x+1, thisIndex.y).receiveGhosts(msg);
+          for (int j=jend-RADIUS+1, kk=0; j<=jend; j++) for(int i=istart;i<=iend;i++)
+					 msg->edge[kk++]  = IN(i,j);
+          thisProxy(thisIndex.x, thisIndex.y+1).receiveGhosts(msg);
         }
 
 	// Send my bottom edge
@@ -276,49 +269,62 @@ public:
             CkExit();
           }
           CkSetRefNum(msg, iterations);
-          for (int j=0, k=0; j<RADIUS; j++) for(int i=0;i<width;i++)
-					 msg->edge[k++]   = IN(i,j);
+          for (int j=jstart, kk=0; j<=jstart+RADIUS-1; j++) for(int i=istart;i<=iend;i++)
+					 msg->edge[kk++]   = IN(i,j);
           thisProxy(thisIndex.x, thisIndex.y-1).receiveGhosts(msg);
         }
 
-	// Send my top edge
-        if (thisIndex.y < num_chare_rows-1) {
-          ghostMsg *msg = new (width*RADIUS) ghostMsg(TOP, width);
+	// Send my right edge
+        if (thisIndex.x < num_chare_cols-1) {
+          ghostMsg *msg = new (height*RADIUS) ghostMsg(RIGHT, height);
           if (!msg) {
             CkPrintf("Could not allocate space for message\n");
             CkExit();
           }
           CkSetRefNum(msg, iterations);
-          for (int j=0, k=0; j<RADIUS; j++) for(int i=0;i<width;i++)
-					 msg->edge[k++]  = IN(i,height-RADIUS+j);
-          thisProxy(thisIndex.x, thisIndex.y+1).receiveGhosts(msg);
+          for(int j=jstart, kk=0;j<=jend;j++) for (int i=iend-RADIUS+1; i<=iend; i++)
+					    msg->edge[kk++]   = IN(i,j);
+          thisProxy(thisIndex.x+1, thisIndex.y).receiveGhosts(msg);
+        }
+
+        // Send my left edge
+        if (thisIndex.x > 0) {
+          ghostMsg *msg = new (height*RADIUS) ghostMsg(LEFT, height);
+          if (!msg) {
+            CkPrintf("Could not allocate space for message\n");
+            CkExit();
+          }
+          CkSetRefNum(msg, iterations);
+          for(int j=jstart, kk=0;j<=jend;j++) for (int i=istart; i<=istart+RADIUS-1; i++)
+					    msg->edge[kk++]    = IN(i,j);
+          thisProxy(thisIndex.x-1, thisIndex.y).receiveGhosts(msg);
         }
     }
 
   void processGhosts(ghostMsg *msg) {
-      int k; k=0; 
+      int kk=0; 
       int size = msg->size;
 
       switch(msg->dir) {
       case LEFT:
-        for(int j=0;j<size;++j) for (int i=0; i<RADIUS; i++)
-	  IN(width+i,j) = msg->edge[k++];
+        for(int j=jstart;j<=jend;j++) for (int i=iend+1; i<=iend+RADIUS; i++)
+	  IN(i,j) = msg->edge[kk++];
         break;
 
       case RIGHT:
-        for(int j=0;j<size;++j) for (int i=0; i<RADIUS; i++)
-	  IN(-RADIUS+i,j) = msg->edge[k++];
+        for(int j=jstart;j<=jend;j++) for (int i=istart-RADIUS; i<=istart-1; i++)
+	  IN(i,j) = msg->edge[kk++];
         break;
 
       case BOTTOM:
-        for (int j=0; j<RADIUS; j++) for(int i=0;i<size;++i){
-	  IN(i,height+j) = msg->edge[k++];
+        for (int j=jend+1; j<=jend+RADIUS; j++) for(int i=istart;i<=iend;i++){
+	  IN(i,j) = msg->edge[kk++];
         }
         break;
 
       case TOP:
-        for (int j=0; j<RADIUS; j++) for(int i=0;i<size;++i)
-	  IN(i,-RADIUS+j) = msg->edge[k++];
+        for (int j=jstart-RADIUS; j<=jstart-1; j++) for(int i=istart;i<=iend;i++)
+	  IN(i,j) = msg->edge[kk++];
         break;
 
       default: CkPrintf("ERROR: invalid direction\n");
@@ -330,19 +336,17 @@ public:
     void compute() {
       double * RESTRICT in = this->in;
       double * RESTRICT out = this->out;
+      int ii, jj;
 
       for (int j=MAX(jstart,RADIUS); j<=MIN(n-1-RADIUS,jend); j++) {
         for (int i=MAX(istart,RADIUS); i<=MIN(n-1-RADIUS,iend); i++) {
-
-          for (int jj=-RADIUS; jj<=RADIUS; jj++) {
-            OUT(i-istart,j-jstart) += WEIGHT(0,jj)*IN(i-istart,j-jstart+jj);
-	  }
-          for (int ii=-RADIUS; ii<0; ii++) {
-            OUT(i-istart,j-jstart) += WEIGHT(ii,0)*IN(i-istart+ii,j-jstart);
-	  }
-          for (int ii=1; ii<=RADIUS; ii++) {
-            OUT(i-istart,j-jstart) += WEIGHT(ii,0)*IN(i-istart+ii,j-jstart);
-	  }
+          #if LOOPGEN
+            #include "loop_body_star.incl"
+          #else
+            for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+            for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+            for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          #endif
         }
       }
     }
@@ -352,7 +356,7 @@ public:
       local_norm = 0.0;
       for (int j=MAX(jstart,RADIUS); j<=MIN(n-1-RADIUS,jend); j++) {
         for (int i=MAX(istart,RADIUS); i<=MIN(n-1-RADIUS,iend); i++) {
-           local_norm += OUT(i-istart,j-jstart);
+           local_norm += OUT(i,j);
          }
        }
     }

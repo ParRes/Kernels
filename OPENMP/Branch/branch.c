@@ -155,6 +155,9 @@ int main(int argc, char ** argv)
 ** process and test input parameters    
 **********************************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP Branching Bonanza\n");
+
   if (argc != 5){
     printf("Usage:     %s <# threads> <# iterations> <vector length>", *argv);
     printf("<branching type>\n");
@@ -201,9 +204,6 @@ int main(int argc, char ** argv)
   #pragma omp master
   {
   nthread = omp_get_num_threads();
-
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP Branching Bonanza\n");
   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",

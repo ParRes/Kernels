@@ -109,6 +109,9 @@ int mymain(int argc, char ** argv)
 *********************************************************************/
 
   if (my_ID == root){
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("FG_MPI pipeline execution on 2D grid\n");
+
     if (argc != 4 && argc != 5){
       printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension> [group factor]\n", 
              *argv);
@@ -151,8 +154,6 @@ int mymain(int argc, char ** argv)
 
   if (my_ID == root) {
     MPIX_Get_collocated_size(&procsize);
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("FG_MPI pipeline execution on 2D grid\n");
     printf("Number of ranks          = %d\n", Num_procs);
     printf("Number of ranks/process  = %d\n", procsize);
     printf("Grid sizes               = %ld, %ld\n", m, n);

@@ -71,10 +71,6 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
  
-#ifndef RADIUS
-  #define RADIUS 2
-#endif
- 
 #ifdef DOUBLE
   #define DTYPE     double
   #define MPI_DTYPE MPI_DOUBLE
@@ -154,6 +150,9 @@ int main(int argc, char ** argv) {
   ********************************************************************************/
  
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPIRMA stencil execution on 2D grid\n");
+
 #ifndef STAR
       printf("ERROR: Compact stencil not supported\n");
       error = 1;
@@ -216,8 +215,6 @@ int main(int argc, char ** argv) {
   bottom_nbr = my_ID-Num_procsx;
  
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPIRMA stencil execution on 2D grid\n");
     printf("Number of ranks        = %d\n", Num_procs);
     printf("Grid size              = %d\n", n);
     printf("Radius of stencil      = %d\n", RADIUS);
@@ -227,6 +224,11 @@ int main(int argc, char ** argv) {
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
+#endif
+#if LOOPGEN
+    printf("Script used to expand stencil loop body\n");
+#else
+    printf("Compact representation of stencil loop body\n");
 #endif
     printf("Number of iterations   = %d\n", iterations);
   }
@@ -402,16 +404,13 @@ int main(int argc, char ** argv) {
     /* Apply the stencil operator */
     for (j=MAX(jstart,RADIUS); j<MIN(n-RADIUS,jend); j++) {
       for (i=MAX(istart,RADIUS); i<MIN(n-RADIUS,iend); i++) {
-        for (jj=-RADIUS; jj<=RADIUS; jj++) {
-          OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-        }
-        for (ii=-RADIUS; ii<0; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-        }
-        for (ii=1; ii<=RADIUS; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
- 
-        }
+        #if LOOPGEN
+          #include "loop_body_star.incl"
+        #else
+          for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+          for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+        #endif
       }
     }
  

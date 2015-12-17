@@ -151,6 +151,9 @@ int main(int argc, char ** argv)
 ** process and test input parameters    
 **********************************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Serial Branching Bonanza\n");
+
   if (argc != 4){
     printf("Usage:     %s <# iterations> <vector length>", *argv);
     printf("<branching type>\n");
@@ -181,8 +184,6 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial Branching Bonanza\n");
   printf("Vector length              = %ld\n", vector_length);
   printf("Number of iterations       = %d\n", iterations);
   printf("Branching type             = %s\n", branch_type);

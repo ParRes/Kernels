@@ -87,11 +87,11 @@ static int compare(const void *el1, const void *el2);
 int main(int argc, char **argv){
 
   int               iter, r;    /* dummies                                        */
-  int               lsize;      /* logarithmic linear size of grid                */
-  int               lsize2;     /* logarithmic size of grid                       */
-  int               size;       /* linear size of grid                            */
+  s64Int            lsize;      /* logarithmic linear size of grid                */
+  s64Int            lsize2;     /* logarithmic size of grid                       */
+  s64Int            size;       /* linear size of grid                            */
   s64Int            size2;      /* matrix order (=total # points in grid)         */
-  int               radius,     /* stencil parameters                             */
+  s64Int            radius,     /* stencil parameters                             */
                     stencil_size; 
   s64Int            row, col, first, last; /* dummies                             */
   s64Int            i, j;       /* dummies                                        */
@@ -113,6 +113,9 @@ int main(int argc, char **argv){
                     matrix_space,
                     index_space;
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Serial Sparse matrix-vector multiplication\n");
+
   if (argc != 4) {
     printf("Usage: %s <# iterations> <2log grid size> <stencil radius>\n",*argv);
     exit(EXIT_FAILURE);
@@ -124,9 +127,9 @@ int main(int argc, char **argv){
     exit(EXIT_FAILURE);
   }
 
-  lsize = atoi(*++argv);
+  lsize = atol(*++argv);
   lsize2 = 2*lsize;
-  size = 1<<lsize;
+  size = 1L<<lsize;
   if (lsize <0) {
     printf("ERROR: Log of grid size must be greater than or equal to zero: %d\n", 
            (int) lsize);
@@ -157,14 +160,9 @@ int main(int argc, char **argv){
   nent = size2*stencil_size;
 
   matrix_space = nent*sizeof(double);
-  if (matrix_space/sizeof(double) != nent) {
-    printf("ERROR: Cannot represent space for matrix: %ul\n", matrix_space);
-    exit(EXIT_FAILURE);
-  } 
-
   matrix = (double *) malloc(matrix_space);
   if (!matrix) {
-    printf("ERROR: Could not allocate space for sparse matrix: "FSTR64U"\n", nent);
+    printf("ERROR: Could not allocate space for sparse matrix: %ld\n", nent);
     exit(EXIT_FAILURE);
   } 
 
@@ -193,8 +191,6 @@ int main(int argc, char **argv){
     exit(EXIT_FAILURE);
   } 
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial Sparse matrix-vector multiplication\n");
   printf("Matrix order          = "FSTR64U"\n", size2);
   printf("Stencil diameter      = %16d\n", 2*radius+1);
   printf("Sparsity              = %16.10lf\n", sparsity);

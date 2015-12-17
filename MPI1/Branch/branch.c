@@ -164,6 +164,9 @@ int main(int argc, char ** argv)
 ***********************************************************************************/
 
   if(my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI Branching Bonanza\n");
+
     if (argc != 4){
       printf("USAGE:     %s <# iterations> <loop length> <branching type>\n", *argv);
       printf("branching type: vector_go, vector_stop, no_vector, ins_heavy\n");
@@ -201,8 +204,6 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI Branching Bonanza\n");
     printf("Number of ranks            = %d\n", Num_procs);
     printf("Vector length              = %d\n", vector_length);
     printf("Number of iterations       = %d\n", iterations);
@@ -210,9 +211,9 @@ int main(int argc, char ** argv)
   }
 
   /* broadcast input data  */
-  MPI_Bcast(&vector_length, 1, MPI_INTEGER, root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations,    1, MPI_INTEGER, root, MPI_COMM_WORLD);
-  MPI_Bcast(&btype,         1, MPI_INTEGER, root, MPI_COMM_WORLD);
+  MPI_Bcast(&vector_length, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&btype,         1, MPI_INT, root, MPI_COMM_WORLD);
 
   vector = malloc(vector_length*2*sizeof(int));
   if (!vector) {
@@ -346,7 +347,7 @@ int main(int argc, char ** argv)
   total = 0;
   for (i=0; i<vector_length; i++) total += vector[i];
 
-  MPI_Reduce(&total, &total_sum, 1, MPI_INTEGER, MPI_SUM, root, MPI_COMM_WORLD);
+  MPI_Reduce(&total, &total_sum, 1, MPI_INT, MPI_SUM, root, MPI_COMM_WORLD);
 
   /* compute verification values                                             */
   total_ref = ((vector_length%8)*(vector_length%8-8) + vector_length)/2*Num_procs;

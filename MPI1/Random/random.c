@@ -209,8 +209,21 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD,&my_ID);
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("MPI Random Access\n");
+
     if (argc != 3){
-      printf("Usage: %s <log2 tablesize> <#update ratio>\n", *argv);
+      printf("Usage: %s <#update ratio> <log2 tablesize>\n", *argv);
+      error = 1;
+      goto ENDOFTESTS;
+    }
+
+    update_ratio  = atoi(*++argv);
+    /* test whether update ratio is a power of two                                 */
+    log2update_ratio = poweroftwo(update_ratio);
+    if (log2update_ratio <0) {
+      printf("ERROR: Invalid update ratio: %d, must be a power of 2\n",
+             update_ratio);
       error = 1;
       goto ENDOFTESTS;
     }
@@ -229,16 +242,6 @@ int main(int argc, char **argv) {
       printf("ERROR: Log2 tablesize is %d; must be >= 1\n",log2tablesize);
       error = 1;
       goto ENDOFTESTS;      
-    }
-
-    update_ratio  = atoi(*++argv);
-    /* test whether update ratio is a power of two                                 */
-    log2update_ratio = poweroftwo(update_ratio);
-    if (log2update_ratio <0) {
-      printf("ERROR: Invalid update ratio: %d, must be a power of 2\n",
-             update_ratio);
-      error = 1;
-      goto ENDOFTESTS;
     }
 
     /* for simplicity we set the vector length equal to the LOOKAHEAD size         */
@@ -301,8 +304,6 @@ int main(int argc, char **argv) {
       goto ENDOFTESTS;
     }
 
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI Random Access\n");
     printf("Number of ranks               = "FSTR64U"\n", (u64Int) Num_procs);
     printf("Table size (aggregate)        = "FSTR64U"\n", tablesize);
     printf("Update ratio                  = "FSTR64U"\n", (u64Int) update_ratio);
@@ -412,8 +413,8 @@ int main(int argc, char **argv) {
       }
 
       /* let all other rankes know how many indices to expect                      */
-      MPI_Alltoall(sizeSendBucket, 1, MPI_INTEGER,
-                   sizeRecvBucket, 1, MPI_INTEGER, MPI_COMM_WORLD);
+      MPI_Alltoall(sizeSendBucket, 1, MPI_INT,
+                   sizeRecvBucket, 1, MPI_INT, MPI_COMM_WORLD);
 
       /* compute receive buffer offsets so that received data is contiguous        */
       for (proc=1; proc<Num_procs; proc++) 

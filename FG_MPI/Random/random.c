@@ -78,7 +78,7 @@ USAGE:   The program takes as input the 2log of the size of the table that
          The code can be vectorized, in principle, with a vector length
          that is automatically set to the size of the LOOKAHEAD parameter.
 
-         <progname> <log2 tablesize> <#update ratio> 
+         <progname> <#update ratio> <log2 tablesize> 
 
 FUNCTIONS CALLED:
 
@@ -210,8 +210,11 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD,&my_ID);
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("FG_MI Random access\n");
+
     if (argc != 3){
-      printf("Usage: %s <log2 tablesize> <#update ratio>\n", *argv);
+      printf("Usage: %s <#update ratio> <log2 tablesize>\n", *argv);
       error = 1;
       goto ENDOFTESTS;
     }
@@ -225,13 +228,6 @@ int main(int argc, char **argv) {
       goto ENDOFTESTS;
     }
 
-    log2tablesize  = atoi(*++argv);
-    if (log2tablesize < 1){
-      printf("ERROR: Log2 tablesize is %d; must be >= 1\n",log2tablesize);
-      error = 1;
-      goto ENDOFTESTS;      
-    }
-
     update_ratio  = atoi(*++argv);
     /* test whether update ratio is a power of two                                 */
     log2update_ratio = poweroftwo(update_ratio);
@@ -240,6 +236,13 @@ int main(int argc, char **argv) {
              update_ratio);
       error = 1;
       goto ENDOFTESTS;
+    }
+
+    log2tablesize  = atoi(*++argv);
+    if (log2tablesize < 1){
+      printf("ERROR: Log2 tablesize is %d; must be >= 1\n",log2tablesize);
+      error = 1;
+      goto ENDOFTESTS;      
     }
 
     /* for simplicity we set the vector length equal to the LOOKAHEAD size         */
@@ -303,8 +306,6 @@ int main(int argc, char **argv) {
     }
 
     MPIX_Get_collocated_size(&procsize);
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("FG_MI Random access\n");
     printf("Number of ranks               = "FSTR64U"\n", Num_procs);
     printf("Number of ranks/process       = "FSTR64U"\n", procsize);
     printf("Table size (aggregate)        = "FSTR64U"\n", tablesize);
@@ -415,8 +416,8 @@ int main(int argc, char **argv) {
       }
 
       /* let all other rankes know how many indices to expect                      */
-      MPI_Alltoall(sizeSendBucket, 1, MPI_INTEGER,
-                   sizeRecvBucket, 1, MPI_INTEGER, MPI_COMM_WORLD);
+      MPI_Alltoall(sizeSendBucket, 1, MPI_INT,
+                   sizeRecvBucket, 1, MPI_INT, MPI_COMM_WORLD);
 
       /* compute receive buffer offsets so that received data is contiguous        */
       for (proc=1; proc<Num_procs; proc++) 

@@ -155,6 +155,9 @@ int main(int argc, char **argv)
 * process and test input parameters    
 ***********************************************************************************/
  
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP stream triad: A = B + scalar*C\n");
+
   if (argc != 5){
      printf("Usage:  %s <# threads> <# iterations> <vector length> <offset>\n", *argv);
      exit(EXIT_FAILURE);
@@ -212,10 +215,7 @@ int main(int argc, char **argv)
   #pragma omp master
   {
   nthread = omp_get_num_threads();
- 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP stream triad: A = B + scalar*C\n");
-  if (nthread != nthread_input) {
+   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",
            nthread_input);

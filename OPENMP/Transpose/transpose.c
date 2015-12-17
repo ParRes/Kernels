@@ -70,11 +70,11 @@ HISTORY: Written by Tim Mattson, April 1999.
 
 #define A(i,j)    A[i+order*(j)]
 #define B(i,j)    B[i+order*(j)]
-static double test_results (int , double*);
+static double test_results (int , double*, int);
 
 int main(int argc, char ** argv) {
 
-  int    order;         /* order of a the matrix                           */
+  long   order;         /* order of a the matrix                           */
   int    Tile_order=32; /* default tile size for tiling of local transpose */
   int    iterations;    /* number of times to do the transpose             */
   int    tiling;        /* boolean: true if tiling is used                 */
@@ -94,6 +94,9 @@ int main(int argc, char ** argv) {
   /*********************************************************************
   ** read and test input parameters
   *********************************************************************/
+
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("OpenMP Matrix transpose: B = A^T\n");
 
   if (argc != 4 && argc != 5){
     printf("Usage: %s <# threads> <# iterations> <matrix order> [tile size]\n",
@@ -134,12 +137,14 @@ int main(int argc, char ** argv) {
 
   A   = (double *)malloc(order*order*sizeof(double));
   if (A == NULL){
-    printf(" Error allocating space for input matrix\n");
+    printf(" ERROR: cannot allocate space for input matrix: %ld\n", 
+           order*order*sizeof(double));
     exit(EXIT_FAILURE);
   }
   B  = (double *)malloc(order*order*sizeof(double));
   if (B == NULL){
-    printf(" Error allocating space for transposed matrix\n");
+    printf(" ERROR: cannot allocate space for output matrix: %ld\n", 
+           order*order*sizeof(double));
     exit(EXIT_FAILURE);
   }
 
@@ -151,9 +156,6 @@ int main(int argc, char ** argv) {
   #pragma omp master
   {
   nthread = omp_get_num_threads();
-
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("OpenMP Matrix transpose: B = A^T\n");
   if (nthread != nthread_input) {
     num_error = 1;
     printf("ERROR: number of requested threads %d does not equal ",
@@ -162,7 +164,7 @@ int main(int argc, char ** argv) {
   } 
   else {
     printf("Number of threads     = %i;\n",nthread_input);
-    printf("Matrix order          = %d\n", order);
+    printf("Matrix order          = %ld\n", order);
     printf("Number of iterations  = %d\n", iterations);
     if (tiling) {
       printf("Tile size             = %d\n", Tile_order);
@@ -189,7 +191,7 @@ int main(int argc, char ** argv) {
         for (jt=j; jt<MIN(order,j+Tile_order);jt++)
           for (it=i; it<MIN(order,i+Tile_order); it++){
             A(it,jt) = (double) (order*jt + it);
-            B(it,jt) = -1.0;
+            B(it,jt) = 0.0;
           }
   }
   else {
@@ -197,7 +199,7 @@ int main(int argc, char ** argv) {
     for (j=0;j<order;j++) 
       for (i=0;i<order; i++) {
         A(i,j) = (double) (order*j + i);
-        B(i,j) = -1.0;
+        B(i,j) = 0.0;
       }
   }
 
@@ -217,7 +219,8 @@ int main(int argc, char ** argv) {
       #pragma omp for private (j)
       for (i=0;i<order; i++) 
         for (j=0;j<order;j++) { 
-          B(j,i) = A(i,j);
+          B(j,i) += A(i,j);
+          A(i,j) += 1.0;
         }
     }
     else {
@@ -230,7 +233,8 @@ int main(int argc, char ** argv) {
         for (j=0; j<order; j+=Tile_order) 
           for (it=i; it<MIN(order,i+Tile_order); it++) 
             for (jt=j; jt<MIN(order,j+Tile_order);jt++) {
-              B(jt,it) = A(it,jt);
+              B(jt,it) += A(it,jt);
+              A(it,jt) += 1.0;
             } 
     }	
 
@@ -244,7 +248,7 @@ int main(int argc, char ** argv) {
 
   } /* end of OpenMP parallel region */
 
-  abserr =  test_results (order, B);
+  abserr =  test_results (order, B, iterations);
 
   /*********************************************************************
   ** Analyze and output results.
@@ -272,15 +276,16 @@ int main(int argc, char ** argv) {
 
 /* function that computes the error committed during the transposition */
 
-double test_results (int order, double *B) {
+double test_results (int order, double *B, int iterations) {
 
   double abserr=0.0;
   int i,j;
 
+  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   #pragma omp parallel for private(i) reduction(+:abserr)
   for (j=0;j<order;j++) {
     for (i=0;i<order; i++) {
-      abserr += ABS(B(i,j) - (i*order + j));
+      abserr += ABS(B(i,j) - ((i*order + j)*(iterations+1)+addit));
     }
   }
 

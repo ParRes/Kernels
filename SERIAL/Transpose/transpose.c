@@ -68,8 +68,8 @@ static double test_results (int , double*);
 
 int main(int argc, char ** argv) {
 
-  int    order;         /* order of a the matrix                           */
-  int    tile_size=32;  /* default tile size for tiling of local transpose */
+  long   order;         /* order of a the matrix                           */
+  long   tile_size=32;  /* default tile size for tiling of local transpose */
   int    iterations;    /* number of times to do the transpose             */
   int    i, j, it, jt, iter;  /* dummies                                   */
   double bytes;         /* combined size of matrices                       */
@@ -84,6 +84,9 @@ int main(int argc, char ** argv) {
   ** read and test input parameters
   *********************************************************************/
 
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Serial Matrix transpose: B = A^T\n");
+
   if (argc != 4 && argc != 3){
     printf("Usage: %s <# iterations> <matrix order> [tile size]\n",
            *argv);
@@ -96,7 +99,7 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  order = atoi(*++argv); 
+  order = atol(*++argv); 
   if (order < 0){
     printf("ERROR: Matrix Order must be greater than 0 : %d \n", order);
     exit(EXIT_FAILURE);
@@ -123,8 +126,6 @@ int main(int argc, char ** argv) {
 
   bytes = 2.0 * sizeof(double) * order * order;
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial Matrix transpose: B = A^T\n");
   printf("Matrix order          = %d\n", order);
   if (tile_size < order) printf("Tile size             = %d\n", tile_size);
   else                   printf("Untiled\n");
@@ -139,7 +140,7 @@ int main(int argc, char ** argv) {
 
   /*  Set the transpose matrix to a known garbage value.                            */
   for (j=0;j<order;j++) for (i=0;i<order; i++)  {
-    B(i,j) = -1.0;
+    B(i,j) = 0.0;
   }
 
   for (iter = 0; iter<=iterations; iter++){
@@ -154,13 +155,15 @@ int main(int argc, char ** argv) {
         for (j=0; j<order; j+=tile_size) 
           for (it=i; it<MIN(order,i+tile_size); it++)
             for (jt=j; jt<MIN(order,j+tile_size);jt++){ 
-              B(jt,it) = A(it,jt); 
+              B(jt,it) += A(it,jt); 
+              A(it,jt) += 1.0;
             } 
     }
     else {
       for (i=0;i<order; i++) 
         for (j=0;j<order;j++) {
-          B(j,i) = A(i,j);
+          B(j,i) += A(i,j);
+          A(i,j) += 1.0;
         }
     }	
 
@@ -173,8 +176,9 @@ int main(int argc, char ** argv) {
   trans_time = wtime() - trans_time;
 
   abserr = 0.0;
+  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   for (j=0;j<order;j++) for (i=0;i<order; i++) {
-    abserr += ABS(B(i,j) - (double)(order*i + j));
+      abserr += ABS(B(i,j) - ((double)(order*i + j)*(iterations+1)+addit));
   }
 
 #ifdef VERBOSE
