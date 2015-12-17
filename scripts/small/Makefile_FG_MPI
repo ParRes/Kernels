@@ -1,0 +1,9 @@
+include ../../common/make.defs
+runfgmpi: runfgmpi.in
+	@echo PATH=$(FGMPITOP)/bin:$(PATH) > runfgmpi
+	@echo LD_LIBRARY_PATH=$(FGMPITOP)/lib:$(LD_LIBRARY_PATH) >> runfgmpi
+	@cat runfgmpi.in >> runfgmpi
+	@chmod u+x runfgmpi
+
+veryclean:
+	rm -f runfgmpi

@@ -1,0 +1,9 @@
+NUMITERS=1
+NUMPROCS=2
+SEPLINE="===============================================================" 
+MPIRUN=mpiexec.hydra
+ 
+$MPIRUN -np $NUMPROCS GRAPPA/Stencil/stencil        $NUMITERS 39000;       echo $SEPLINE 
+$MPIRUN -np $NUMPROCS GRAPPA/Synch_p2p/p2p          $NUMITERS 65000 65000; echo $SEPLINE
+$MPIRUN -np $NUMPROCS GRAPPA/Transpose/transpose    $NUMITERS 24000 64;    echo $SEPLINE
+

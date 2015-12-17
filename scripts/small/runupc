@@ -1,0 +1,7 @@
+NUMTHREADS=4 
+NUMITERS=10 
+SEPLINE="===============================================================" 
+ 
+UPC/Stencil/stencil     -n $NUMTHREADS $NUMITERS 1000;               echo $SEPLINE
+UPC/Synch_p2p/p2p       -n $NUMTHREADS $NUMITERS 1000 1000;          echo $SEPLINE
+UPC/Transpose/transpose -n $NUMTHREADS $NUMITERS 2000 64;            echo $SEPLINE

@@ -1,0 +1,17 @@
+NUMITERS=1
+SEPLINE="==============================================================="
+MPIRUN=mpirun
+
+for NUMPROCS in 1 2; do
+  $MPIRUN -np $NUMPROCS MPI1/DGEMM/dgemm               $NUMITERS -50000 32 1;    echo $SEPLINE
+  $MPIRUN -np $NUMPROCS MPI1/Nstream/nstream           $NUMITERS 2000000000L 0;  echo $SEPLINE
+  $MPIRUN -np $NUMPROCS MPI1/Random/random             $NUMITERS 32;             echo $SEPLINE
+  $MPIRUN -np $NUMPROCS MPI1/Reduce/reduce             $NUMITERS 2000000000L;    echo $SEPLINE
+  $MPIRUN -np $NUMPROCS MPI1/Sparse/sparse             $NUMITERS 13 7;           echo $SEPLINE
+  $MPIRUN -np $NUMPROCS MPI1/Stencil/stencil           $NUMITERS 50000;          echo $SEPLINE
+  $MPIRUN -np $NUMPROCS MPI1/Synch_global/global       $NUMITERS 2000000000L;    echo $SEPLINE
+  $MPIRUN -np $NUMPROCS MPI1/Synch_p2p/p2p             $NUMITERS 70000 70000;    echo $SEPLINE
+  $MPIRUN -np $NUMPROCS MPI1/Transpose/transpose       $NUMITERS 50000 64;       echo $SEPLINE
+done
+
+

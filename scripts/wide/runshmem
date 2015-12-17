@@ -1,0 +1,10 @@
+NUMPROCS=4
+NUMITERS=1
+SEPLINE="==============================================================="
+MPIRUN=mpirun
+
+$MPIRUN -np $NUMPROCS SHMEM/Stencil/stencil        $NUMITERS 50000;         echo $SEPLINE
+$MPIRUN -np $NUMPROCS SHMEM/Synch_p2p/p2p          $NUMITERS 70000 70000;   echo $SEPLINE
+$MPIRUN -np $NUMPROCS SHMEM/Transpose/transpose    $NUMITERS 50000 64;      echo $SEPLINE
+
+

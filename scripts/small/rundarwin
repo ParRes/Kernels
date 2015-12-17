@@ -1,0 +1,9 @@
+./scripts/small/runserial 
+./scripts/small/runmpi1
+./scripts/small/runfgmpi 
+./scripts/small/runopenmp 
+./scripts/small/runmpiopenmp 
+./scripts/small/runmpirma 
+./scripts/small/runshmem
+./scripts/small/runmpishm
+./scripts/small/runupc
