@@ -1,8 +1,0 @@
-include ../common/make.defs
-smallfgmpi: smallfgmpi.in
-	@echo PATH=$(FGMPITOP)/bin:$(PATH) > smallfgmpi
-	@cat smallfgmpi.in >> smallfgmpi
-	@chmod u+x smallfgmpi
-
-veryclean:
-	rm -f smallfgmpi
