@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
     if (order < 0) {
       shortcut = 1;
       order    = -order;
-    }
+    } else shortcut = 0;
     if (order < Num_procs) {
       printf("ERROR: matrix order too small: %d\n", order);
       error = 1;

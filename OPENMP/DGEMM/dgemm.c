@@ -104,7 +104,7 @@ main(int argc, char **argv){
   double *A, *B, *C;            /* input (A,B) and output (C) matrices            */
   long    order;                /* number of rows and columns of matrices         */
   int     block;                /* tile size of matrices                          */
-  int shortcut;                 /* true if only doing initialization              */
+  int     shortcut;             /* true if only doing initialization              */
 
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP Dense matrix-matrix multiplication\n");
@@ -139,7 +139,7 @@ main(int argc, char **argv){
   if (order < 0) {
     shortcut = 1;
     order    = -order;
-  }
+  } else shortcut = 0;
   if (order < 1) {
     printf("ERROR: Matrix order must be positive: %ld\n", order);
     exit(EXIT_FAILURE);
