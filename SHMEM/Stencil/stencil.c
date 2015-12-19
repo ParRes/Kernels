@@ -122,7 +122,8 @@ int main(int argc, char ** argv) {
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   int    *arguments;      /* command line parameters                             */
   int    count_case=4;    /* number of neighbors of a rank                       */
-  long   *pSync;          /* work space for collectives                          */
+  long   *pSync_bcast;    /* work space for collectives                          */
+  long   *pSync_reduce;   /* work space for collectives                          */
   double *pWrk_time;      /* work space for collectives                          */
   DTYPE  *pWrk_norm;      /* work space for collectives                          */
   int    *iterflag;       /* synchronization flags                               */
@@ -137,15 +138,16 @@ int main(int argc, char ** argv) {
   my_ID=shmem_my_pe();
   Num_procs=shmem_n_pes();
 
-  pSync              = (long *)   shmalloc(_SHMEM_BCAST_SYNC_SIZE*sizeof(long));
-  pWrk_time          = (double *) shmalloc(_SHMEM_BCAST_SYNC_SIZE*sizeof(double));
-  pWrk_norm          = (DTYPE *)  shmalloc(_SHMEM_BCAST_SYNC_SIZE*sizeof(DTYPE));
+  pSync_bcast        = (long *)   shmalloc(_SHMEM_BCAST_SYNC_SIZE*sizeof(long));
+  pSync_reduce       = (long *)   shmalloc(_SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
+  pWrk_time          = (double *) shmalloc(_SHMEM_REDUCE_MIN_WRKDATA_SIZE*sizeof(double));
+  pWrk_norm          = (DTYPE *)  shmalloc(_SHMEM_REDUCE_MIN_WRKDATA_SIZE*sizeof(DTYPE));
   local_stencil_time = (double *) shmalloc(sizeof(double));
   stencil_time       = (double *) shmalloc(sizeof(double));
   local_norm         = (DTYPE *)  shmalloc(sizeof(DTYPE));
   norm               = (DTYPE *)  shmalloc(sizeof(DTYPE));
   iterflag           = (int *)    shmalloc(2*sizeof(int));
-  if (!(pSync && pWrk_time && pWrk_norm && iterflag &&
+  if (!(pSync_bcast && pSync_reduce && pWrk_time && pWrk_norm && iterflag &&
 	local_stencil_time && stencil_time && local_norm && norm))
   {
     printf("Could not allocate scalar variables on rank %d\n", my_ID);
@@ -154,7 +156,10 @@ int main(int argc, char ** argv) {
   bail_out(error);
 
   for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync[i]=_SHMEM_SYNC_VALUE;
+    pSync_bcast[i]=_SHMEM_SYNC_VALUE;
+
+  for(i=0;i<_SHMEM_REDUCE_SYNC_SIZE;i++)
+    pSync_reduce[i]=_SHMEM_SYNC_VALUE;
 
   arguments=(int*)shmalloc(2*sizeof(int));
  
@@ -263,7 +268,7 @@ int main(int argc, char ** argv) {
 
   shmem_barrier_all();
  
-  shmem_broadcast32(&arguments[0], &arguments[0], 2, root, 0, 0, Num_procs, pSync);
+  shmem_broadcast32(&arguments[0], &arguments[0], 2, root, 0, 0, Num_procs, pSync_bcast);
 
   iterations=arguments[0];
   n=arguments[1];
@@ -501,12 +506,10 @@ int main(int argc, char ** argv) {
  
   local_stencil_time[0] = wtime() - local_stencil_time[0];
 
-  for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync[i]=_SHMEM_SYNC_VALUE;
-
   shmem_barrier_all();
 
-  shmem_double_max_to_all(&stencil_time[0], &local_stencil_time[0], 1, 0, 0, Num_procs, pWrk_time, pSync);
+  shmem_double_max_to_all(&stencil_time[0], &local_stencil_time[0], 1, 0, 0,
+                          Num_procs, pWrk_time, pSync_reduce);
   
   /* compute L1 norm in parallel                                                */
   local_norm[0] = (DTYPE) 0.0;
@@ -516,15 +519,12 @@ int main(int argc, char ** argv) {
     }
   }
 
-  for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync[i]=_SHMEM_SYNC_VALUE;
-
   shmem_barrier_all();
  
 #ifdef DOUBLE
-  shmem_double_sum_to_all(&norm[0], &local_norm[0], 1, 0, 0, Num_procs, pWrk_norm, pSync);
+  shmem_double_sum_to_all(&norm[0], &local_norm[0], 1, 0, 0, Num_procs, pWrk_norm, pSync_reduce);
 #else
-  shmem_float_sum_to_all(&norm[0], &local_norm[0], 1, 0, 0, Num_procs, pWrk_norm, pSync);
+  shmem_float_sum_to_all(&norm[0], &local_norm[0], 1, 0, 0, Num_procs, pWrk_norm, pSync_reduce);
 #endif
  
   /*******************************************************************************
@@ -570,7 +570,8 @@ int main(int argc, char ** argv) {
   free(top_buf_out);
   free(right_buf_out);
 
-  shfree(pSync);
+  shfree(pSync_bcast);
+  shfree(pSync_reduce);
   shfree(pWrk_time);
   shfree(pWrk_norm);
 
