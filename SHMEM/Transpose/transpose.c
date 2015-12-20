@@ -141,7 +141,8 @@ int main(int argc, char ** argv)
   double *Work_out_p;      /* workspace for the transpose function  */
   double epsilon = 1.e-8;  /* error tolerance                       */
   double avgtime;          /* timing parameters                     */
-  long   *pSync;           /* work space for SHMEM collectives      */
+  long   *pSync_bcast;     /* work space for collectives            */
+  long   *pSync_reduce;    /* work space for collectives            */
   double *pWrk;            /* work space for SHMEM collectives      */
   double *local_trans_time, 
          *trans_time;      /* timing parameters                     */
@@ -164,20 +165,26 @@ int main(int argc, char ** argv)
   }
 
 // initialize sync variables for error checks
-  pSync            = (long *)   shmalloc(sizeof(long)   * SHMEM_BCAST_SYNC_SIZE);
-  pWrk             = (double *) shmalloc(sizeof(double) * SHMEM_BCAST_SYNC_SIZE);
+  pSync_bcast      = (long *)   shmalloc(SHMEM_BCAST_SYNC_SIZE*sizeof(long));
+  pSync_reduce     = (long *)   shmalloc(SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
+  pWrk             = (double *) shmalloc(sizeof(double) * SHMEM_REDUCE_MIN_WRKDATA_SIZE);
   local_trans_time = (double *) shmalloc(sizeof(double));
   trans_time       = (double *) shmalloc(sizeof(double));
   arguments        = (int *)    shmalloc(3*sizeof(int));
   abserr           = (double *) shmalloc(2*sizeof(double));
   abserr_tot       = abserr + 1;
-  if (!pSync || !pWrk || !local_trans_time || !trans_time || !arguments || !abserr) {
+  if (!pSync_bcast || !pSync_reduce || !pWrk || !local_trans_time ||
+      !trans_time || !arguments || !abserr) {
     printf("Rank %d could not allocate scalar work space on symm heap\n", my_ID);
     error = 1;
     goto ENDOFTESTS;
   }
-  for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync[i]=_SHMEM_SYNC_VALUE;
+
+  for(i=0;i<SHMEM_BCAST_SYNC_SIZE;i++)
+    pSync_bcast[i]=SHMEM_SYNC_VALUE;
+
+  for(i=0;i<SHMEM_REDUCE_SYNC_SIZE;i++)
+    pSync_reduce[i]=SHMEM_SYNC_VALUE;
 
 /*********************************************************************
 ** process, test and broadcast input parameters
@@ -229,7 +236,7 @@ int main(int argc, char ** argv)
   shmem_barrier_all();
 
   /*  Broadcast input data to all ranks */
-  shmem_broadcast32(&arguments[0], &arguments[0], 3, root, 0, 0, Num_procs, pSync);
+  shmem_broadcast32(&arguments[0], &arguments[0], 3, root, 0, 0, Num_procs, pSync_bcast);
 
   iterations=arguments[0];
   order=arguments[1];
@@ -237,9 +244,6 @@ int main(int argc, char ** argv)
 
   shmem_barrier_all();
   shfree(arguments);
-
-  for(i=0;i<_SHMEM_REDUCE_SYNC_SIZE;i++)
-    pSync[i]=_SHMEM_SYNC_VALUE;
 
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);
@@ -372,11 +376,8 @@ int main(int argc, char ** argv)
 
   local_trans_time[0] = wtime() - local_trans_time[0];
 
-  for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync[i]=_SHMEM_SYNC_VALUE;
-
   shmem_barrier_all();
-  shmem_double_max_to_all(trans_time, local_trans_time, 1, 0, 0, Num_procs, pWrk, pSync);
+  shmem_double_max_to_all(trans_time, local_trans_time, 1, 0, 0, Num_procs, pWrk, pSync_reduce);
 
   abserr[0] = 0.0;
   istart = 0;
@@ -385,11 +386,8 @@ int main(int argc, char ** argv)
       abserr[0] += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
   }
 
-  for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync[i]=_SHMEM_SYNC_VALUE;
-
   shmem_barrier_all();
-  shmem_double_sum_to_all(abserr_tot, abserr, 1, 0, 0, Num_procs, pWrk, pSync);
+  shmem_double_sum_to_all(abserr_tot, abserr, 1, 0, 0, Num_procs, pWrk, pSync_reduce);
 
   if (my_ID == root) {
     if (abserr_tot[0] < epsilon) {
@@ -417,6 +415,10 @@ int main(int argc, char ** argv)
 
       free(Work_in_p);
     }
+
+  shfree(pSync_bcast);
+  shfree(pSync_reduce);
+  shfree(pWrk);
 
   //shmem_finalize();
   exit(EXIT_SUCCESS);
