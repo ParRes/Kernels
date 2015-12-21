@@ -138,10 +138,10 @@ int main(int argc, char ** argv) {
   my_ID=shmem_my_pe();
   Num_procs=shmem_n_pes();
 
-  pSync_bcast        = (long *)   shmalloc(_SHMEM_BCAST_SYNC_SIZE*sizeof(long));
-  pSync_reduce       = (long *)   shmalloc(_SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
-  pWrk_time          = (double *) shmalloc(_SHMEM_REDUCE_MIN_WRKDATA_SIZE*sizeof(double));
-  pWrk_norm          = (DTYPE *)  shmalloc(_SHMEM_REDUCE_MIN_WRKDATA_SIZE*sizeof(DTYPE));
+  pSync_bcast        = (long *)   shmalloc(PRK_SHMEM_BCAST_SYNC_SIZE*sizeof(long));
+  pSync_reduce       = (long *)   shmalloc(PRK_SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
+  pWrk_time          = (double *) shmalloc(PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE*sizeof(double));
+  pWrk_norm          = (DTYPE *)  shmalloc(PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE*sizeof(DTYPE));
   local_stencil_time = (double *) shmalloc(sizeof(double));
   stencil_time       = (double *) shmalloc(sizeof(double));
   local_norm         = (DTYPE *)  shmalloc(sizeof(DTYPE));
@@ -155,11 +155,11 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
 
-  for(i=0;i<_SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync_bcast[i]=_SHMEM_SYNC_VALUE;
+  for(i=0;i<PRK_SHMEM_BCAST_SYNC_SIZE;i++)
+    pSync_bcast[i]=PRK_SHMEM_SYNC_VALUE;
 
-  for(i=0;i<_SHMEM_REDUCE_SYNC_SIZE;i++)
-    pSync_reduce[i]=_SHMEM_SYNC_VALUE;
+  for(i=0;i<PRK_SHMEM_REDUCE_SYNC_SIZE;i++)
+    pSync_reduce[i]=PRK_SHMEM_SYNC_VALUE;
 
   arguments=(int*)shmalloc(2*sizeof(int));
  

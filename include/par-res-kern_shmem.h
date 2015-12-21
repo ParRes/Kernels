@@ -35,14 +35,22 @@ POSSIBILITY OF SUCH DAMAGE.
 extern void bail_out(int);
 
 #if defined(SHMEM_MAJOR_VERSION) && defined(SHMEM_MINOR_VERSION)
+/* OpenSHMEM 1.3 and later */
 # if (SHMEM_MAJOR_VERSION>1) || ((SHMEM_MAJOR_VERSION == 1) && (SHMEM_MINOR_VERSION >= 3))
 #  define PRK_SHMEM_BCAST_SYNC_SIZE SHMEM_BCAST_SYNC_SIZE
 #  define PRK_SHMEM_REDUCE_SYNC_SIZE SHMEM_REDUCE_SYNC_SIZE
-# else // pre-1.3 OpenSHMEM or some other SHMEM
+#  define PRK_SHMEM_SYNC_VALUE SHMEM_SYNC_VALUE
+#  define PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE SHMEM_REDUCE_MIN_WRKDATA_SIZE
+/* OpenSHMEM 1.2 and earlier, or other SHMEM that defines VERSION symbols */
+# else
 #  define PRK_SHMEM_BCAST_SYNC_SIZE _SHMEM_BCAST_SYNC_SIZE
 #  define PRK_SHMEM_REDUCE_SYNC_SIZE _SHMEM_REDUCE_SYNC_SIZE
-# endif // OpenSHMEM versions
-#else // no VERSION symbols
+#  define PRK_SHMEM_SYNC_VALUE _SHMEM_SYNC_VALUE
+#  define PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE _SHMEM_REDUCE_MIN_WRKDATA_SIZE
+# endif
+/* no VERSION symbols */
+#else
+/* PRK_SHMEM_BCAST_SYNC_SIZE */
 # if defined(SHMEM_BCAST_SYNC_SIZE)
 #  define PRK_SHMEM_BCAST_SYNC_SIZE SHMEM_BCAST_SYNC_SIZE
 # elif defined(_SHMEM_BCAST_SYNC_SIZE)
@@ -50,6 +58,7 @@ extern void bail_out(int);
 # else
 #  error No preprocesor definition of SHMEM_BCAST_SYNC_SIZE!
 # endif
+/* PRK_SHMEM_REDUCE_SYNC_SIZE */
 # if defined(SHMEM_REDUCE_SYNC_SIZE)
 #  define PRK_SHMEM_REDUCE_SYNC_SIZE SHMEM_REDUCE_SYNC_SIZE
 # elif defined(_SHMEM_REDUCE_SYNC_SIZE)
@@ -57,6 +66,23 @@ extern void bail_out(int);
 # else
 #  error No preprocesor definition of SHMEM_REDUCE_SYNC_SIZE!
 # endif
+/* PRK_SHMEM_SYNC_VALUE */
+# if defined(SHMEM_SYNC_VALUE)
+#  define PRK_SHMEM_SYNC_VALUE SHMEM_SYNC_VALUE
+# elif defined(SHMEM_SYNC_VALUE)
+#  define PRK_SHMEM_SYNC_VALUE _SHMEM_SYNC_VALUE
+# else
+#  error No preprocesor definition of SHMEM_SYNC_VALUE!
+# endif
+/* PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE */
+# if defined(SHMEM_REDUCE_MIN_WRKDATA_SIZE)
+#  define PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE SHMEM_REDUCE_MIN_WRKDATA_SIZE
+# elif defined(SHMEM_REDUCE_MIN_WRKDATA_SIZE)
+#  define PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE _SHMEM_REDUCE_MIN_WRKDATA_SIZE
+# else
+#  error No preprocesor definition of SHMEM_REDUCE_MIN_WRKDATA_SIZE!
+# endif
+/* end manual definition detection */
 #endif // VERSION symbols
 
 

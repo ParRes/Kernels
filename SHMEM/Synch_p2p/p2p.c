@@ -144,15 +144,15 @@ int main(int argc, char ** argv)
   }
 
 // initialize sync variables for error checks
-  pSync = (long *)   shmalloc ( sizeof(long) * SHMEM_REDUCE_SYNC_SIZE );
-  pWrk  = (double *) shmalloc ( sizeof(double) * SHMEM_REDUCE_MIN_WRKDATA_SIZE );
+  pSync = (long *)   shmalloc ( sizeof(long) * PRK_SHMEM_REDUCE_SYNC_SIZE );
+  pWrk  = (double *) shmalloc ( sizeof(double) * PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE );
   if (!pSync || !pWrk) {
     printf("Rank %d could not allocate work space for collectives\n", my_ID);
     error = 1;
     goto ENDOFTESTS;
   }
-  for (i = 0; i < SHMEM_BCAST_SYNC_SIZE; i += 1) {
-    pSync[i] = SHMEM_SYNC_VALUE;
+  for (i = 0; i < PRK_SHMEM_BCAST_SYNC_SIZE; i += 1) {
+    pSync[i] = PRK_SHMEM_SYNC_VALUE;
   }
 
   if (m<=Num_procs) {
