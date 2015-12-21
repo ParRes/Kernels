@@ -33,3 +33,32 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <shmem.h>
 
 extern void bail_out(int);
+
+#if defined(SHMEM_MAJOR_VERSION) && defined(SHMEM_MINOR_VERSION)
+# if (SHMEM_MAJOR_VERSION>1) || ((SHMEM_MAJOR_VERSION == 1) && (SHMEM_MINOR_VERSION >= 3))
+#  define PRK_SHMEM_BCAST_SYNC_SIZE SHMEM_BCAST_SYNC_SIZE
+#  define PRK_SHMEM_REDUCE_SYNC_SIZE SHMEM_REDUCE_SYNC_SIZE
+# else // pre-1.3 OpenSHMEM or some other SHMEM
+#  define PRK_SHMEM_BCAST_SYNC_SIZE _SHMEM_BCAST_SYNC_SIZE
+#  define PRK_SHMEM_REDUCE_SYNC_SIZE _SHMEM_REDUCE_SYNC_SIZE
+# endif // OpenSHMEM versions
+#else // no VERSION symbols
+# if defined(SHMEM_BCAST_SYNC_SIZE)
+#  define PRK_SHMEM_BCAST_SYNC_SIZE SHMEM_BCAST_SYNC_SIZE
+# elif defined(_SHMEM_BCAST_SYNC_SIZE)
+#  define PRK_SHMEM_BCAST_SYNC_SIZE _SHMEM_BCAST_SYNC_SIZE
+# else
+#  error No preprocesor definition of SHMEM_BCAST_SYNC_SIZE!
+# endif
+# if defined(SHMEM_REDUCE_SYNC_SIZE)
+#  define PRK_SHMEM_REDUCE_SYNC_SIZE SHMEM_REDUCE_SYNC_SIZE
+# elif defined(_SHMEM_REDUCE_SYNC_SIZE)
+#  define PRK_SHMEM_REDUCE_SYNC_SIZE _SHMEM_REDUCE_SYNC_SIZE
+# else
+#  error No preprocesor definition of SHMEM_REDUCE_SYNC_SIZE!
+# endif
+#endif // VERSION symbols
+
+
+
+
