@@ -71,8 +71,6 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
 
-void bail_out (int ierror);
-
 int main(int argc, char ** argv)
 {
   int    my_ID;           /* SHMEM thread ID                                     */
