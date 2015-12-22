@@ -420,7 +420,7 @@ int main(int argc, char ** argv)
   prk_shmem_free(pSync_reduce);
   prk_shmem_free(pWrk);
 
-  //shmem_finalize();
+  prk_shmem_finalize();
   exit(EXIT_SUCCESS);
 
 }  /* end of main */

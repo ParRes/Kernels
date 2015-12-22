@@ -575,7 +575,7 @@ int main(int argc, char ** argv) {
   prk_shmem_free(pWrk_time);
   prk_shmem_free(pWrk_norm);
 
-  //shmem_finalize();
+  prk_shmem_finalize();
 
   exit(EXIT_SUCCESS);
 }

@@ -349,7 +349,9 @@ int main(int argc, char ** argv)
     printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
- 
+
+  prk_shmem_finalize();
+
   exit(EXIT_SUCCESS);
 
 }  /* end of main */
