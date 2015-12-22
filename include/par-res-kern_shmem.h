@@ -94,7 +94,8 @@ static void * prk_shmem_align(size_t alignment, size_t size) {
 #ifdef PRK_HAVE_OPENSHMEM_1_2
     return shmem_align(alignment,size);
 #else
-    return shmalign(alignment,size);
+    /* It seems that shmalign did not exist. */
+    return shmalloc(size);
 #endif
 }
 
