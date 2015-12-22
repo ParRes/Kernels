@@ -68,9 +68,9 @@ static int prk_shmem_my_pe(void) {
 
 static int prk_shmem_n_pes(void) {
 #ifdef PRK_HAVE_OPENSHMEM_1_2
-    return shmem_my_pe();
+    return shmem_n_pes();
 #else
-    return _my_pe();
+    return _num_pes();
 #endif
 }
 
