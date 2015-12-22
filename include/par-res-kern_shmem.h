@@ -34,10 +34,10 @@ POSSIBILITY OF SUCH DAMAGE.
 
 extern void bail_out(int);
 
-#if defined(SHMEM_MAJOR_VERSION) && defined(SHMEM_MINOR_VERSION) && \\
-       ((SHMEM_MAJOR_VERSION>1) || \\
-        ((SHMEM_MAJOR_VERSION == 1) && (SHMEM_MINOR_VERSION >= 2)))
+#if defined(SHMEM_MAJOR_VERSION) && defined(SHMEM_MINOR_VERSION)
+#if ((SHMEM_MAJOR_VERSION>1) || ((SHMEM_MAJOR_VERSION == 1) && (SHMEM_MINOR_VERSION >= 2)))
 #define PRK_HAVE_OPENSHMEM_1_2
+#endif
 #endif
 
 static void prk_shmem_init(void) {
