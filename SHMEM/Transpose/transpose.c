@@ -165,9 +165,9 @@ int main(int argc, char ** argv)
   }
 
 // initialize sync variables for error checks
-  pSync_bcast      = (long *)   shmalloc(SHMEM_BCAST_SYNC_SIZE*sizeof(long));
-  pSync_reduce     = (long *)   shmalloc(SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
-  pWrk             = (double *) shmalloc(sizeof(double) * SHMEM_REDUCE_MIN_WRKDATA_SIZE);
+  pSync_bcast      = (long *)   shmalloc(PRK_SHMEM_BCAST_SYNC_SIZE*sizeof(long));
+  pSync_reduce     = (long *)   shmalloc(PRK_SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
+  pWrk             = (double *) shmalloc(sizeof(double) * PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE);
   local_trans_time = (double *) shmalloc(sizeof(double));
   trans_time       = (double *) shmalloc(sizeof(double));
   arguments        = (int *)    shmalloc(3*sizeof(int));
@@ -180,11 +180,11 @@ int main(int argc, char ** argv)
     goto ENDOFTESTS;
   }
 
-  for(i=0;i<SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync_bcast[i]=SHMEM_SYNC_VALUE;
+  for(i=0;i<PRK_SHMEM_BCAST_SYNC_SIZE;i++)
+    pSync_bcast[i]=PRK_SHMEM_SYNC_VALUE;
 
-  for(i=0;i<SHMEM_REDUCE_SYNC_SIZE;i++)
-    pSync_reduce[i]=SHMEM_SYNC_VALUE;
+  for(i=0;i<PRK_SHMEM_REDUCE_SYNC_SIZE;i++)
+    pSync_reduce[i]=PRK_SHMEM_SYNC_VALUE;
 
 /*********************************************************************
 ** process, test and broadcast input parameters
