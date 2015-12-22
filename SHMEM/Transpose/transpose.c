@@ -118,7 +118,7 @@ o The original and transposed matrices are called A and B
 
 int main(int argc, char ** argv)
 {
-  int Block_order;         /* number of columns owned by rank       */
+  long Block_order;        /* number of columns owned by rank       */
   int Block_size;          /* size of a single block                */
   int Colblock_size;       /* size of column block                  */
   int Tile_order=32;       /* default Tile order                    */
@@ -130,7 +130,7 @@ int main(int argc, char ** argv)
   int my_ID;               /* rank                                  */
   int root=0;              /* rank of root                          */
   int iterations;          /* number of times to do the transpose   */
-  int i, j, it, jt, istart;/* dummies                               */
+  long i, j, it, jt, istart;/* dummies                               */
   int iter;                /* index of iteration                    */
   int phase;               /* phase inside staged communication     */
   int colstart;            /* starting column for owning rank       */
