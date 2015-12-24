@@ -92,4 +92,13 @@ case "$PRK_TARGET" in
         mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil $PRK_MPISHM_RANKS 10 1024
         mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose $PRK_MPISHM_RANKS 10 1024 32
         ;;
+    allshmem)
+        echo "SHMEM"
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=SHMEM
+        export PRK_SHMEM_PROCS=4
+        # widely supported
+        mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
+        mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil 10 1024
+        mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
 esac
