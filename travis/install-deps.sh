@@ -16,6 +16,6 @@ case "$PRK_TARGET" in
         ;;
     allmpi*)
         echo "Any MPI"
-        ./travis/install-mpi.sh $MPI_LIBRARY
+        sh ./travis/install-mpi.sh $MPI_LIBRARY
         ;;
 esac
