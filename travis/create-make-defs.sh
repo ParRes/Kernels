@@ -13,11 +13,11 @@ case "$os" in
         echo "Mac"
         case "$COMPILER" in
             gcc)
-                echo -e "CC=gcc-5\nCXX=g++-5\nOPENMPFLAG=-fopenmp\n" > common/make.defs
+                echo -e "CC=gcc-5\nMPICC=mpicc\nCXX=g++-5\nOPENMPFLAG=-fopenmp\n" > common/make.defs
                 ;;
             clang)
                 echo "Clang probably does not support OpenMP yet..."
-                echo -e "CC=clang\nCXX=clang++\nOPENMPFLAG=-fopenmp\n" > common/make.defs
+                echo -e "CC=clang\nMPICC=mpicc\nCXX=clang++\nOPENMPFLAG=-fopenmp\n" > common/make.defs
                 ;;
             *)
                 echo "Unknown compiler: $COMPILER"
@@ -30,11 +30,11 @@ case "$os" in
         echo "Linux"
         case "$COMPILER" in
             gcc)
-                echo -e "CC=gcc\nCXX=g++\nOPENMPFLAG=-fopenmp\n" > common/make.defs
+                echo -e "CC=gcc\nMPICC=mpicc\nCXX=g++\nOPENMPFLAG=-fopenmp\n" > common/make.defs
                 ;;
             clang)
                 echo "Clang probably does not support OpenMP yet..."
-                echo -e "CC=clang\nCXX=clang++\nOPENMPFLAG=-fopenmp\n" > common/make.defs
+                echo -e "CC=clang\nMPICC=mpicc\nCXX=clang++\nOPENMPFLAG=-fopenmp\n" > common/make.defs
                 ;;
             *)
                 echo "Unknown compiler: $COMPILER"
