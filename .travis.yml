@@ -23,6 +23,8 @@ env:
 #  - PRK_TARGET=allfgmpi
 before_install:
   - sh ./travis/install-deps.sh $PRK_TARGET
+  - export PATH=$HOME/bin:$PATH
+  - export LD_LIBRARY_PATH=$HOME/lib:$LD_LIBRARY_PATH
 script:
   - sh ./travis/create-make-defs.sh gcc
   - cat common/make.defs

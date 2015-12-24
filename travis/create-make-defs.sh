@@ -7,7 +7,6 @@ set -x
 
 os=`uname`
 COMPILER="$1"
-SHMEM="$2"
 
 case "$os" in
     Darwin)
