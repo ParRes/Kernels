@@ -1,6 +1,9 @@
+# required for package manager installs
+#sudo: true
 language: c
 os:
   - linux
+# OpenMP compiler support on Mac is an issue
 #  - osx
 compiler:
   - gcc
@@ -19,16 +22,16 @@ env:
 #  - PRK_TARGET=allampi
 #  - PRK_TARGET=allgrappa
 before_install:
+  - sh ./travis/install-deps.sh $PRK_TARGET
+script:
   - sed -e "s/MYCC/gcc/"               < common/make.defs.in > common/make.defs.1
   - sed -e "s/MYCXX/g++/"              < common/make.defs.1  > common/make.defs.2
   - sed -e "s/MYOPENMPFLAG/-fopenmp/"  < common/make.defs.2  > common/make.defs
+  - echo -e "SHMEMCC=oshcc\nSHMEMTOP=$$TRAVIS_INSTALL\n" > common/make.defs
   - cat common/make.defs
-  - sh ./travis/install-deps.sh $PRK_TARGET
-script:
   - sh ./travis/build-run-prk.sh $PRK_TARGET
 after_failure:
-  - cat ./config.log
-  - head -n100 ./test/*.log
+  - echo "Sad panda"
 notifications:
   email:
     #recipients:
