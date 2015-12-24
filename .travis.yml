@@ -7,7 +7,7 @@ compiler:
 #  - clang
 env:
   - PRK_TARGET=allserial
-#  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allopenmp
 #  - PRK_TARGET=allmpi1
 #  - PRK_TARGET=allfgmpi
 #  - PRK_TARGET=allmpiopenmp
@@ -19,10 +19,9 @@ env:
 #  - PRK_TARGET=allampi
 #  - PRK_TARGET=allgrappa
 before_install:
-  - echo $(CC)
-  - echo $(CXX)
-  - sed -e "s/MYCC/$(CC)/g"              < common/make.defs.in > common/make.defs.1
-  - sed -e "s/MYCXX/$(CXX)/g"            < common/make.defs.1  > common/make.defs
+  - sed -e "s/MYCC/gcc/"               < common/make.defs.in > common/make.defs.1
+  - sed -e "s/MYCXX/g++/"              < common/make.defs.1  > common/make.defs.2
+  - sed -e "s/MYOPENMPFLAG/-fopenmp/"  < common/make.defs.2  > common/make.defs
   - cat common/make.defs
   - sh ./travis/install-deps.sh $PRK_TARGET
 script:
