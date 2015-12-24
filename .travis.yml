@@ -1,5 +1,5 @@
 # required for package manager installs
-#sudo: true
+sudo: true
 language: c
 os:
   - linux
@@ -9,9 +9,9 @@ compiler:
   - gcc
 #  - clang
 env:
-  - PRK_TARGET=allserial
-  - PRK_TARGET=allopenmp
-#  - PRK_TARGET=allmpi1
+#  - PRK_TARGET=allserial
+#  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allmpi1
 #  - PRK_TARGET=allfgmpi
 #  - PRK_TARGET=allmpiopenmp
 #  - PRK_TARGET=allmpishm

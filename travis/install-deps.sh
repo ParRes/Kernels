@@ -3,6 +3,9 @@ set -x
 
 PRK_TARGET="$1"
 
+# eventually make this runtime configurable
+MPI_LIBRARY=mpich
+
 case "$PRK_TARGET" in
     allserial)
         echo "Serial"
@@ -10,5 +13,9 @@ case "$PRK_TARGET" in
 
     allopenmp)
         echo "OpenMP"
+        ;;
+    allmpi*)
+        echo "Any MPI"
+        ./travis/install-mpi.sh $MPI_LIBRARY
         ;;
 esac

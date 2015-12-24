@@ -13,7 +13,7 @@ case "$os" in
         echo "Mac"
         brew update
         case "$MPI_IMPL" in
-            mpich|mpich3)
+            mpich)
                 brew install mpich
                 ;;
             openmpi)
@@ -30,14 +30,8 @@ case "$os" in
         echo "Linux"
         sudo apt-get update -q
         case "$MPI_IMPL" in
-            mpich1)
-                sudo apt-get install -q cmake gfortran mpich-shmem-bin libmpich-shmem1.0-dev
-                ;;
-            mpich2)
-                sudo apt-get install -q cmake gfortran mpich2 libmpich2-3 libmpich2-dev
-                ;;
-            mpich|mpich3)
-                sudo apt-get install -q cmake gfortran libcr0 default-jdk
+            mpich)
+                sudo apt-get install -q gfortran libcr0 default-jdk
                 wget -q http://www.cebacad.net/files/mpich/ubuntu/mpich-3.2b3/mpich_3.2b3-1ubuntu_amd64.deb
                 sudo dpkg -i ./mpich_3.2b3-1ubuntu_amd64.deb
                 ;;
