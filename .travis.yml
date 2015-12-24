@@ -31,8 +31,8 @@ after_failure:
   - head -n100 ./test/*.log
 notifications:
   email:
-    recipients:
-      - rob.f.van.der.wijngaart@intel.com
-      - jeff.r.hammond@intel.com
+    #recipients:
+    #  - rob.f.van.der.wijngaart@intel.com
+    #  - jeff.r.hammond@intel.com
     on_success: [change]
     on_failure: [always]
