@@ -19,6 +19,8 @@ env:
 #  - PRK_TARGET=allampi
 #  - PRK_TARGET=allgrappa
 before_install:
+  - sed -e 's|[@]CC[@]|$(CC)|g'              < common/make.defs.in > common/make.defs
+  - sed -e 's|[@]CXX[@]|$(CXX)|g'            < common/make.defs.in > common/make.defs
   - sh ./travis/install-deps.sh $PRK_TARGET
 script:
   - sh ./travis/build-run-prk.sh $PRK_TARGET
