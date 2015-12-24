@@ -88,7 +88,7 @@ case "$PRK_TARGET" in
         export PRK_MPI_PROCS=4
         export PRK_MPISHM_RANKS=$(($PRK_MPI_PROCS/2))
         # widely supported
-        mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p $PRK_MPISHM_RANKS 10 1024 1024
+        mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
         mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil $PRK_MPISHM_RANKS 10 1024
         mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose $PRK_MPISHM_RANKS 10 1024 32
         ;;
