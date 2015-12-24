@@ -25,7 +25,7 @@ case "$PRK_TARGET" in
         export OMP_NUM_THREADS=4
         # widely supported
         ./OPENMP/Synch_p2p/p2p $OMP_NUM_THREADS 10 1024 1024
-        ./OPENMP/Stencil/stencil $OMP_NUM_THREADS 10 1024 32
+        ./OPENMP/Stencil/stencil $OMP_NUM_THREADS 10 1024
         ./OPENMP/Transpose/transpose $OMP_NUM_THREADS 10 1024 32
         # less support
         ./OPENMP/Reduce/reduce $OMP_NUM_THREADS 10 1024
