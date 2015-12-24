@@ -1,40 +1,40 @@
 #name of MPI C compiler, e.g. mpiicc, mpicc
-MPICC=@MPICC@
+MPICC=MYMPICC
 
 #name of C compiler, e.g. icc, xlc, gcc
-CC=@CC@
+CC=MYCC
 
 #name of compile line flag enabling OpenMP, e.g. -openmp, -qopenmp, -fopenmp
-OPENMPFLAG=@OPENMPFLAG@
+OPENMPFLAG=MYOPENMPFLAG
 
 #default compiler optimization flags
-DEFAULT_OPT_FLAGS:=@DEFAULT_OPT_FLAGS@
+DEFAULT_OPT_FLAGS:=MYDEFAULT_OPT_FLAGS
 
 ############################   OPTIONAL #########################
 
 #name of C++ compiler (to be used in MPI context for Grappa), e.g. mpigxx, mpiicpc
-CXX=@CXX@
+CXX=MYCXX
 
 #name of UPC compiler, e.g. gupc, cc, upcc
-UPCC=@UPCC@
+UPCC=MYUPCC
 
 #name of compile line flag enabling UPC if necessary, e.g. -h upc
-UPCFLAG=@UPCFLAG@
+UPCFLAG=MYUPCFLAG
 
 #name of MPI C compiler (to be used in Fine-Grain MPI context), e.g. mpicc
-FGMPICC=@FGMPICC@
+FGMPICC=MYFGMPICC
 
 #location where SHMEM is installed, e.g. $(HOME)/oshmpi-install
-SHMEMTOP=@SHMEMTOP@
+SHMEMTOP=MYSHMEMTOP
 
 #name of C compiler (to be used in MPI context of OpenSHMEM), e.g. $(MPICC)
-SHMEMCC=@SHMEMCC@
+SHMEMCC=MYSHMEMCC
 
 #location where Charm++ is installed, e.g. $(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
-CHARMTOP=@CHARMTOP@
+CHARMTOP=MYCHARMTOP
 
 #location where Grappa is installed, e.g. $(GRAPPA_PREFIX) if you've done "source <grappa install dir>/bin/settings.sh"
-GRAPPATOP=@GRAPPATOP@
+GRAPPATOP=MYGRAPPATOP
 
 #location where Fine-Grain MPI is installed, e.g. $(HOME)/fgmpi-install
-FGMPITOP=@FGMPITOP@
+FGMPITOP=MYFGMPITOP
