@@ -18,4 +18,8 @@ case "$PRK_TARGET" in
         echo "Any MPI"
         sh ./travis/install-mpi.sh $MPI_LIBRARY
         ;;
+    allshmem)
+        echo "SHMEM"
+        sh ./travis/install-sandia-openshmem.sh
+        ;;
 esac
