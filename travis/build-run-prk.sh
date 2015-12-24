@@ -23,8 +23,8 @@ case "$PRK_TARGET" in
         echo "OpenMP"
         make $PRK_TARGET
         export OMP_NUM_THREADS=4
-        ./SERIAL/Synch_p2p/p2p 10 1024 1024
-        ./SERIAL/Stencil/stencil 10 1024 32
-        ./SERIAL/Transpose/transpose 10 1024 32
+        ./OPENMP/Synch_p2p/p2p 10 1024 1024
+        ./OPENMP/Stencil/stencil 10 1024 32
+        ./OPENMP/Transpose/transpose 10 1024 32
         ;;
 esac
