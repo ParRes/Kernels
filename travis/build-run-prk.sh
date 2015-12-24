@@ -54,7 +54,7 @@ case "$PRK_TARGET" in
         mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Reduce/reduce 10 16777216
         mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Nstream/nstream 10 16777216 32
         mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Sparse/sparse 10 10 5
-        mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/DGEMM/dgemm 10 1024 32
+        mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/DGEMM/dgemm 10 1024 32 1
         mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Random/random 32 20
         # no serial equivalent
         mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_global/global 10 16384
