@@ -24,10 +24,7 @@ env:
 before_install:
   - sh ./travis/install-deps.sh $PRK_TARGET
 script:
-  - sed -e "s/MYCC/gcc/"               < common/make.defs.in > common/make.defs.1
-  - sed -e "s/MYCXX/g++/"              < common/make.defs.1  > common/make.defs.2
-  - sed -e "s/MYOPENMPFLAG/-fopenmp/"  < common/make.defs.2  > common/make.defs
-  - echo -e "SHMEMCC=oshcc\nSHMEMTOP=$$TRAVIS_INSTALL\n" > common/make.defs
+  - sh ./travis/create-make-defs.sh gcc
   - cat common/make.defs
   - sh ./travis/build-run-prk.sh $PRK_TARGET
 after_failure:
