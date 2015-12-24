@@ -1,13 +1,13 @@
 language: c
 os:
   - linux
-  - osx
+#  - osx
 compiler:
   - gcc
-  - clang
+#  - clang
 env:
   - PRK_TARGET=allserial
-  - PRK_TARGET=allopenmp
+#  - PRK_TARGET=allopenmp
 #  - PRK_TARGET=allmpi1
 #  - PRK_TARGET=allfgmpi
 #  - PRK_TARGET=allmpiopenmp
