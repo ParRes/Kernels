@@ -194,4 +194,16 @@ case "$PRK_TARGET" in
         # no serial equivalent
         mpiexec -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Synch_global/global 10 16384
         ;;
+    allgrappa)
+        echo "Grappa"
+        # compiler for static thread execution, so set this prior to build
+        echo "GRAPPATOP=$HOME/grappa" > common/make.defs
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=GRAPPA
+        export PRK_MPI_PROCS=4
+        # widely supported
+        mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
+        mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1024
+        mpirun -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
+        ;;
 esac
