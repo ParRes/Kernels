@@ -176,10 +176,20 @@ case "$PRK_TARGET" in
         echo "FGMPITOP=MY_FGMPI_TOP" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=FG_MPI
-        export PRK_FGMPI_PROCS=4
+        export PRK_MPI_PROCS=2
+        export PRK_FGMPI_THREADS=2
         # widely supported
-        mpiexec -n $PRK_FGMPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
-        mpiexec -n $PRK_FGMPI_PROCS $PRK_TARGET_PATH/Stencil/stencil 10 1024
-        mpiexec -n $PRK_FGMPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
+        # widely supported
+        mpiexec -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
+        mpiexec -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Stencil/stencil 10 1024
+        mpiexec -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
+        # less support
+        mpiexec -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Reduce/reduce 10 16777216
+        mpiexec -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Nstream/nstream 10 16777216 32
+        mpiexec -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Sparse/sparse 10 10 5
+        mpiexec -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/DGEMM/dgemm 10 1024 32 1
+        mpiexec -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Random/random 32 20
+        # no serial equivalent
+        mpiexec -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Synch_global/global 10 16384
         ;;
 esac
