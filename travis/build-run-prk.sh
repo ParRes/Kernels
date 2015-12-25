@@ -117,6 +117,7 @@ case "$PRK_TARGET" in
         export PRK_UPC_PROCS=4
         # this is specific to GUPC (http://www.gccupc.org/gnu-upc-external/gnu-upc-user-manual#_invoking_gnu_upc)
         echo -e "UPCC=gcc -x upc -fupc-threads=$PRK_UPC_PROCS" > common/make.defs
+        cat common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
         # widely supported
