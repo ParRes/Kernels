@@ -6,6 +6,17 @@ PRK_TARGET="$1"
 # make this runtime configurable later
 COMPILER=gcc
 
+# Needed for Charm++ and AMPI below
+os=`uname`
+case "$os" in
+    Darwin)
+        export MY_CHARM_TOP=$HOME/charm/netlrts-darwin-x86_64
+        ;;
+    Linux)
+        export MY_CHARM_TOP=$HOME/charm/netlrts-linux-x86_64
+        ;;
+esac
+
 case "$PRK_TARGET" in
     allserial)
         echo "Serial"
@@ -125,7 +136,7 @@ case "$PRK_TARGET" in
         ;;
     allcharm++)
         echo "Charm++"
-        echo "CHARMTOP=$HOME/charm" > common/make.defs
+        echo "CHARMTOP=$MY_CHARM_TOP" > common/make.defs
         find $HOME -name charmc
         find $HOME -name charmrun
         make $PRK_TARGET
@@ -138,7 +149,7 @@ case "$PRK_TARGET" in
         ;;
     allampi)
         echo "Adaptive MPI (AMPI)"
-        echo "CHARMTOP=$HOME/charm" > common/make.defs
+        echo "CHARMTOP=$MY_CHARM_TOP" > common/make.defs
         find $HOME -name ampicc
         find $HOME -name charmrun
         make $PRK_TARGET
