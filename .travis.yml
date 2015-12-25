@@ -23,7 +23,7 @@ env:
 #  - PRK_TARGET=allfgmpi
 before_install:
   - sh ./travis/install-deps.sh $PRK_TARGET
-  - export PATH=$HOME/bin:$HOME/charm/netlrts-linux-x86_64/bin:$HOME/charm/netlrts-darwin-x86_64/bin:$PATH
+  - export PATH=$HOME/bin:$PATH
   - export LD_LIBRARY_PATH=$HOME/lib:$LD_LIBRARY_PATH
 script:
   - sh ./travis/build-run-prk.sh $PRK_TARGET
