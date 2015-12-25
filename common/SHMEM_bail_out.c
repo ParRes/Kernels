@@ -47,9 +47,7 @@ HISTORY: - Written by Gabriele Jost, March 2015.
 **********************************************************************************/
 
 #include <par-res-kern_general.h>
-#include <shmem.h>
-
-#define shmem_finalize()
+#include <par-res-kern_shmem.h>
 
 void bail_out (int error) {
    long *global_error;
@@ -58,18 +56,18 @@ void bail_out (int error) {
    long *pSync_local;
 
    int i;
-   global_error = shmalloc(sizeof(long));
-   local_error = shmalloc(sizeof(long));
-   pWrk = shmalloc(sizeof(long)*SHMEM_BCAST_SYNC_SIZE);
-   pSync_local = shmalloc(sizeof(long)*SHMEM_BCAST_SYNC_SIZE);
-   for (i = 0; i < SHMEM_BCAST_SYNC_SIZE; i += 1) {
-    pSync_local[i] = _SHMEM_SYNC_VALUE;
+   global_error = prk_shmem_malloc(sizeof(long));
+   local_error = prk_shmem_malloc(sizeof(long));
+   pWrk = prk_shmem_malloc(sizeof(long)*PRK_SHMEM_BCAST_SYNC_SIZE);
+   pSync_local = prk_shmem_malloc(sizeof(long)*PRK_SHMEM_BCAST_SYNC_SIZE);
+   for (i = 0; i < PRK_SHMEM_BCAST_SYNC_SIZE; i += 1) {
+    pSync_local[i] = PRK_SHMEM_SYNC_VALUE;
    }
    local_error [0] = error;
    shmem_barrier_all ();
-   shmem_long_max_to_all (global_error, local_error, 1, 0, 0, _num_pes (), pWrk, pSync_local); 
+   shmem_long_max_to_all (global_error, local_error, 1, 0, 0, prk_shmem_n_pes(), pWrk, pSync_local); 
    if (global_error [0] > 0) {
-     shmem_finalize ();
+     prk_shmem_finalize ();
      exit (1);
   }
   return;

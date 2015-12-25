@@ -71,8 +71,6 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
 
-void bail_out (int ierror);
-
 int main(int argc, char ** argv)
 {
   int    my_ID;           /* SHMEM thread ID                                     */
@@ -102,9 +100,9 @@ int main(int argc, char ** argv)
 /*********************************************************************************
 ** Initialize the SHMEM environment
 **********************************************************************************/
-  start_pes (0);
-  my_ID =  shmem_my_pe();
-  Num_procs =  shmem_n_pes();
+  prk_shmem_init();
+  my_ID =  prk_shmem_my_pe();
+  Num_procs =  prk_shmem_n_pes();
 /* we set root equal to the highest rank, because this is also the rank that 
    reports on the verification value                                            */
   root = Num_procs-1;
@@ -144,15 +142,15 @@ int main(int argc, char ** argv)
   }
 
 // initialize sync variables for error checks
-  pSync = (long *)   shmalloc ( sizeof(long) * SHMEM_REDUCE_SYNC_SIZE );
-  pWrk  = (double *) shmalloc ( sizeof(double) * SHMEM_REDUCE_MIN_WRKDATA_SIZE );
+  pSync = (long *)   prk_shmem_malloc ( sizeof(long) * PRK_SHMEM_REDUCE_SYNC_SIZE );
+  pWrk  = (double *) prk_shmem_malloc ( sizeof(double) * PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE );
   if (!pSync || !pWrk) {
     printf("Rank %d could not allocate work space for collectives\n", my_ID);
     error = 1;
     goto ENDOFTESTS;
   }
-  for (i = 0; i < SHMEM_BCAST_SYNC_SIZE; i += 1) {
-    pSync[i] = SHMEM_SYNC_VALUE;
+  for (i = 0; i < PRK_SHMEM_BCAST_SYNC_SIZE; i += 1) {
+    pSync[i] = PRK_SHMEM_SYNC_VALUE;
   }
 
   if (m<=Num_procs) {
@@ -175,16 +173,16 @@ int main(int argc, char ** argv)
 #endif
   }
 
-  flag_left = (int *) shmalloc (sizeof(int) * n);
+  flag_left = (int *) prk_shmem_malloc (sizeof(int) * n);
 #ifdef SYNCHRONOUS
-  flag_right = (int *) shmalloc (sizeof(int) * n);
+  flag_right = (int *) prk_shmem_malloc (sizeof(int) * n);
   int recv_val [1];
   recv_val [0] = -1;
 #endif
-  dst = (double *) shmalloc (sizeof(double) * (n));
+  dst = (double *) prk_shmem_malloc (sizeof(double) * (n));
   src = (double *) malloc (sizeof(double) * (n));
-  local_pipeline_time = (double *) shmalloc (sizeof(double));
-  pipeline_time = (double *) shmalloc (sizeof(double));
+  local_pipeline_time = (double *) prk_shmem_malloc (sizeof(double));
+  pipeline_time = (double *) prk_shmem_malloc (sizeof(double));
   if (!flag_left || !dst || !src) {
     printf("ERROR: could not allocate flags or communication buffers on rank %d\n", 
            my_ID);
@@ -192,7 +190,7 @@ int main(int argc, char ** argv)
   }
   bail_out(error); 
 
-  start = (int *) shmalloc(2*Num_procs*sizeof(int));
+  start = (int *) prk_shmem_malloc(2*Num_procs*sizeof(int));
   if (!start) {
     printf("ERROR: Could not allocate space for array of slice boundaries on rank %d\n",
            my_ID);
@@ -349,7 +347,9 @@ int main(int argc, char ** argv)
     printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
- 
+
+  prk_shmem_finalize();
+
   exit(EXIT_SUCCESS);
 
 }  /* end of main */

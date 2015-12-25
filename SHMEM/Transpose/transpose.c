@@ -118,7 +118,7 @@ o The original and transposed matrices are called A and B
 
 int main(int argc, char ** argv)
 {
-  int Block_order;         /* number of columns owned by rank       */
+  long Block_order;        /* number of columns owned by rank       */
   int Block_size;          /* size of a single block                */
   int Colblock_size;       /* size of column block                  */
   int Tile_order=32;       /* default Tile order                    */
@@ -130,7 +130,7 @@ int main(int argc, char ** argv)
   int my_ID;               /* rank                                  */
   int root=0;              /* rank of root                          */
   int iterations;          /* number of times to do the transpose   */
-  int i, j, it, jt, istart;/* dummies                               */
+  long i, j, it, jt, istart;/* dummies                              */
   int iter;                /* index of iteration                    */
   int phase;               /* phase inside staged communication     */
   int colstart;            /* starting column for owning rank       */
@@ -155,9 +155,9 @@ int main(int argc, char ** argv)
 ** Initialize the SHMEM environment
 *********************************************************************/
 
-  start_pes(0);
-  my_ID=shmem_my_pe();
-  Num_procs=shmem_n_pes();
+  prk_shmem_init();
+  my_ID=prk_shmem_my_pe();
+  Num_procs=prk_shmem_n_pes();
 
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
@@ -165,13 +165,13 @@ int main(int argc, char ** argv)
   }
 
 // initialize sync variables for error checks
-  pSync_bcast      = (long *)   shmalloc(SHMEM_BCAST_SYNC_SIZE*sizeof(long));
-  pSync_reduce     = (long *)   shmalloc(SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
-  pWrk             = (double *) shmalloc(sizeof(double) * SHMEM_REDUCE_MIN_WRKDATA_SIZE);
-  local_trans_time = (double *) shmalloc(sizeof(double));
-  trans_time       = (double *) shmalloc(sizeof(double));
-  arguments        = (int *)    shmalloc(3*sizeof(int));
-  abserr           = (double *) shmalloc(2*sizeof(double));
+  pSync_bcast      = (long *)   prk_shmem_malloc(PRK_SHMEM_BCAST_SYNC_SIZE*sizeof(long));
+  pSync_reduce     = (long *)   prk_shmem_malloc(PRK_SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
+  pWrk             = (double *) prk_shmem_malloc(sizeof(double) * PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE);
+  local_trans_time = (double *) prk_shmem_malloc(sizeof(double));
+  trans_time       = (double *) prk_shmem_malloc(sizeof(double));
+  arguments        = (int *)    prk_shmem_malloc(3*sizeof(int));
+  abserr           = (double *) prk_shmem_malloc(2*sizeof(double));
   abserr_tot       = abserr + 1;
   if (!pSync_bcast || !pSync_reduce || !pWrk || !local_trans_time ||
       !trans_time || !arguments || !abserr) {
@@ -180,11 +180,11 @@ int main(int argc, char ** argv)
     goto ENDOFTESTS;
   }
 
-  for(i=0;i<SHMEM_BCAST_SYNC_SIZE;i++)
-    pSync_bcast[i]=SHMEM_SYNC_VALUE;
+  for(i=0;i<PRK_SHMEM_BCAST_SYNC_SIZE;i++)
+    pSync_bcast[i]=PRK_SHMEM_SYNC_VALUE;
 
-  for(i=0;i<SHMEM_REDUCE_SYNC_SIZE;i++)
-    pSync_reduce[i]=SHMEM_SYNC_VALUE;
+  for(i=0;i<PRK_SHMEM_REDUCE_SYNC_SIZE;i++)
+    pSync_reduce[i]=PRK_SHMEM_SYNC_VALUE;
 
 /*********************************************************************
 ** process, test and broadcast input parameters
@@ -243,7 +243,7 @@ int main(int argc, char ** argv)
   Tile_order=arguments[2];
 
   shmem_barrier_all();
-  shfree(arguments);
+  prk_shmem_free(arguments);
 
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);
@@ -281,15 +281,15 @@ int main(int argc, char ** argv)
   if (Num_procs>1) {
     Work_in_p   = (double**)malloc((Num_procs-1)*sizeof(double));
 
-    Work_out_p = (double *) shmalloc(Block_size*sizeof(double));
-    recv_flag  = (int*)     shmalloc((Num_procs-1)*sizeof(int));
+    Work_out_p = (double *) prk_shmem_malloc(Block_size*sizeof(double));
+    recv_flag  = (int*)     prk_shmem_malloc((Num_procs-1)*sizeof(int));
     if ((Work_in_p == NULL)||(Work_out_p==NULL) || (recv_flag == NULL)){
       printf(" Error allocating space for work or flags on node %d\n",my_ID);
       error = 1;
     }
     bail_out(error);
     for(i=0;i<(Num_procs-1);i++) {
-      Work_in_p[i]=(double *) shmalloc(Block_size*sizeof(double));
+      Work_in_p[i]=(double *) prk_shmem_malloc(Block_size*sizeof(double));
       if (Work_in_p[i] == NULL) {
         printf(" Error allocating space for work on node %d\n",my_ID);
         error = 1;
@@ -408,19 +408,19 @@ int main(int argc, char ** argv)
 
   if (Num_procs>1) 
     {
-      shfree(recv_flag);
+      prk_shmem_free(recv_flag);
 
       for(i=0;i<Num_procs-1;i++)
-	shfree(Work_in_p[i]);
+	prk_shmem_free(Work_in_p[i]);
 
       free(Work_in_p);
     }
 
-  shfree(pSync_bcast);
-  shfree(pSync_reduce);
-  shfree(pWrk);
+  prk_shmem_free(pSync_bcast);
+  prk_shmem_free(pSync_reduce);
+  prk_shmem_free(pWrk);
 
-  //shmem_finalize();
+  prk_shmem_finalize();
   exit(EXIT_SUCCESS);
 
 }  /* end of main */
