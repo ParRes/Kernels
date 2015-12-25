@@ -102,10 +102,10 @@ case "$PRK_TARGET" in
         ;;
     allshmem)
         echo "SHMEM"
-        export PRK_SHMEM_PROCS=4
         echo "SHMEMTOP=$HOME\nSHMEMCC=oshcc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=SHMEM
+        export PRK_SHMEM_PROCS=4
         # widely supported
         mpirun -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
         mpirun -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Stencil/stencil 10 1024
@@ -114,8 +114,6 @@ case "$PRK_TARGET" in
     allupc)
         echo "UPC"
         # compiler for static thread execution, so set this prior to build
-        export PRK_UPC_PROCS=4
-        # this is specific to GUPC (http://www.gccupc.org/gnu-upc-external/gnu-upc-user-manual#_invoking_gnu_upc)
         echo "UPCC=/usr/local/gupc/bin/upc" > common/make.defs
         cat common/make.defs
         ls -l /usr/local/
@@ -123,6 +121,7 @@ case "$PRK_TARGET" in
         ls -l /usr/local/gupc/bin/
         make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
+        export PRK_UPC_PROCS=4
         # widely supported
         $PRK_TARGET_PATH/Synch_p2p/p2p -n $PRK_UPC_PROCS 10 1024 1024
         $PRK_TARGET_PATH/Stencil/stencil -n $PRK_UPC_PROCS 10 1024
