@@ -173,7 +173,7 @@ case "$PRK_TARGET" in
         ;;
     allfgmpi)
         echo "Fine-Grain MPI (FG-MPI)"
-        echo "FGMPITOP=MY_FGMPI_TOP" > common/make.defs
+        echo "FGMPITOP=$MY_FGMPI_TOP" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=FG_MPI
         export PRK_MPI_PROCS=2
