@@ -116,13 +116,13 @@ case "$PRK_TARGET" in
         # compiler for static thread execution, so set this prior to build
         export PRK_UPC_PROCS=4
         # this is specific to GUPC (http://www.gccupc.org/gnu-upc-external/gnu-upc-user-manual#_invoking_gnu_upc)
-        echo -e "UPCC=gcc -x upc -fupc-threads=$PRK_UPC_PROCS" > common/make.defs
+        echo -e "UPCC=gcc -x upc" > common/make.defs
         cat common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
         # widely supported
-        $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil 10 1024
-        $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
+        $PRK_TARGET_PATH/Synch_p2p/p2p -n $PRK_UPC_PROCS 10 1024 1024
+        $PRK_TARGET_PATH/Stencil/stencil -n $PRK_UPC_PROCS 10 1024
+        $PRK_TARGET_PATH/Transpose/transpose -n $PRK_UPC_PROCS 10 1024 32
         ;;
 esac
