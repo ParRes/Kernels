@@ -38,10 +38,10 @@ USERFLAGS     =
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
-EXTOBJS      = 
-LIBS         = -lshmem
-LIBPATHS     = -L$(SHMEMTOP)/lib
-INCLUDEPATHS = 
+EXTOBJS      =
+LIBS         =
+LIBPATHS     =
+INCLUDEPATHS =
 
 ### End User configurable options ###
 LOOPGENFLAG    = -DLOOPGEN=$(LOOPGEN)
