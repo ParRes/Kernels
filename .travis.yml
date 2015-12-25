@@ -19,8 +19,8 @@ env:
 #  - PRK_TARGET=allupc
   - PRK_TARGET=allcharm++
   - PRK_TARGET=allampi
+  - PRK_TARGET=allfgmpi
 #  - PRK_TARGET=allgrappa
-#  - PRK_TARGET=allfgmpi
 before_install:
   - sh ./travis/install-deps.sh $PRK_TARGET
   - export PATH=$HOME/bin:$PATH
