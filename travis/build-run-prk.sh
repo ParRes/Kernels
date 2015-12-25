@@ -19,7 +19,6 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/Sparse/sparse 10 10 5
         $PRK_TARGET_PATH/DGEMM/dgemm 10 1024 32
         ;;
-
     allopenmp)
         echo "OpenMP"
         make $PRK_TARGET
@@ -101,6 +100,7 @@ case "$PRK_TARGET" in
         mpirun -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
         mpirun -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Stencil/stencil 10 1024
         mpirun -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
+        ;;
     allupc)
         echo "UPC"
         # compiler for static thread execution, so set this prior to build
@@ -113,4 +113,5 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
         $PRK_TARGET_PATH/Stencil/stencil 10 1024
         $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
+        ;;
 esac
