@@ -17,6 +17,17 @@ case "$os" in
         ;;
 esac
 
+# Needed for FG-MPI below
+os=`uname`
+case "$os" in
+    Darwin)
+        export MY_FGMPI_TOP=$HOME/fgmpi
+        ;;
+    Linux)
+        export MY_FGMPI_TOP=/usr
+        ;;
+esac
+
 case "$PRK_TARGET" in
     allserial)
         echo "Serial"
@@ -143,9 +154,9 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=CHARM++
         export PRK_CHARM_PROCS=4
         # widely supported
-        charmrun $PRK_TARGET_PATH/Synch_p2p/p2p +p$PRK_CHARM_PROCS 10 1024 1024
-        charmrun $PRK_TARGET_PATH/Stencil/stencil +p$PRK_CHARM_PROCS 10 1024
-        charmrun $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS 10 1024 32
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Synch_p2p/p2p +p$PRK_CHARM_PROCS 10 1024 1024
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Stencil/stencil +p$PRK_CHARM_PROCS 10 1024
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS 10 1024 32
         ;;
     allampi)
         echo "Adaptive MPI (AMPI)"
@@ -156,8 +167,19 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=CHARM++
         export PRK_CHARM_PROCS=4
         # widely supported
-        charmrun $PRK_TARGET_PATH/Synch_p2p/p2p +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 1024
-        charmrun $PRK_TARGET_PATH/Stencil/stencil +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024
-        charmrun $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 32
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Synch_p2p/p2p +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 1024
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Stencil/stencil +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 32
+        ;;
+    allfgmpi)
+        echo "Fine-Grain MPI (FG-MPI)"
+        echo "FGMPITOP=MY_FGMPI_TOP" > common/make.defs
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=FG_MPI
+        export PRK_FGMPI_PROCS=4
+        # widely supported
+        mpiexec -n $PRK_FGMPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
+        mpiexec -n $PRK_FGMPI_PROCS $PRK_TARGET_PATH/Stencil/stencil 10 1024
+        mpiexec -n $PRK_FGMPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
         ;;
 esac
