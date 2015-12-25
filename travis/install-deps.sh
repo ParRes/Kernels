@@ -15,7 +15,7 @@ case "$PRK_TARGET" in
         echo "OpenMP"
         ;;
     allmpi*)
-        echo "Any MPI"
+        echo "Any normal MPI"
         sh ./travis/install-mpi.sh $MPI_LIBRARY
         ;;
     allshmem)
@@ -25,5 +25,17 @@ case "$PRK_TARGET" in
     allupc)
         echo "UPC"
         sh ./travis/install-intrepid-upc.sh
+        ;;
+    allcharm++)
+        echo "Charm++"
+        sh ./travis/install-charm++.sh charm++
+        ;;
+    allampi)
+        echo "Adaptive MPI (AMPI)"
+        sh ./travis/install-charm++.sh AMPI
+        ;;
+    allfgmpi)
+        echo "Fine-Grain MPI (FG-MPI)"
+        sh ./travis/install-fgmpi.sh
         ;;
 esac
