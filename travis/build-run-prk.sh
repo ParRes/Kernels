@@ -116,8 +116,11 @@ case "$PRK_TARGET" in
         # compiler for static thread execution, so set this prior to build
         export PRK_UPC_PROCS=4
         # this is specific to GUPC (http://www.gccupc.org/gnu-upc-external/gnu-upc-user-manual#_invoking_gnu_upc)
-        echo "UPCC=$HOME/usr/local/gupc/bin/upc" > common/make.defs
+        echo "UPCC=/usr/local/gupc/bin/upc" > common/make.defs
         cat common/make.defs
+        ls -l /usr/local/
+        ls -l /usr/local/gupc/
+        ls -l /usr/local/gupc/bin/
         make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
         # widely supported

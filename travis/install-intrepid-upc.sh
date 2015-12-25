@@ -26,6 +26,6 @@ case "$os" in
         echo "Linux"
         wget -q http://www.gccupc.org/gupc-5201-1/30-gupc-5201-x8664-ubuntu-1204/file
         mv file upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
-        tar -xzvf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
+        sudo tar -C / -xzvf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
         ;;
 esac
