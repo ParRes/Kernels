@@ -13,7 +13,9 @@ case "$os" in
         export MY_CHARM_TOP=$HOME/charm/netlrts-darwin-x86_64-smp
         ;;
     Linux)
-        export MY_CHARM_TOP=$HOME/charm/netlrts-linux-x86_64-smp
+        #export MY_CHARM_TOP=$HOME/charm/netlrts-linux-x86_64
+        #export MY_CHARM_TOP=$HOME/charm/netlrts-linux-x86_64-smp
+        export MY_CHARM_TOP=$HOME/charm/multicore-linux64
         ;;
 esac
 
