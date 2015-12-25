@@ -22,4 +22,8 @@ case "$PRK_TARGET" in
         echo "SHMEM"
         sh ./travis/install-sandia-openshmem.sh
         ;;
+    allupc)
+        echo "UPC"
+        sh ./travis/install-intrepid-upc.sh
+        ;;
 esac
