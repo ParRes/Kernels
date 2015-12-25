@@ -12,7 +12,7 @@ case "$os" in
         tar -C $HOME -xzvf fgmpi-2.0.tar.gz
         cd $HOME/fgmpi-2.0
         mkdir build && cd build
-        ../configure --prefix=$HOME
+        ../configure --prefix=$HOME/fgmpi
         ;;
 
     Linux)
