@@ -13,7 +13,8 @@ case "$os" in
         wget -q http://charm.cs.illinois.edu/distrib/charm-6.6.1.tar.gz
         tar -xzf charm-6.6.1.tar.gz
         cd charm
-        ./build $RUNTIME netlrts-darwin-x86_64 --with-production -j4
+        #./build $RUNTIME netlrts-darwin-x86_64 --with-production -j4
+        ./build $RUNTIME netlrts-darwin-x86_64 smp --with-production -j4
         ;;
 
     Linux)
@@ -22,7 +23,9 @@ case "$os" in
         wget -q http://charm.cs.illinois.edu/distrib/charm-6.6.1.tar.gz
         tar -xzf charm-6.6.1.tar.gz
         cd charm
-        #./build charm++ netlrts-linux-x86_64 smp --with-production
-        ./build $RUNTIME netlrts-linux-x86_64 --with-production -j4
+        # This fails with: The authenticity of host 'localhost (127.0.0.1)' can't be established.
+        #./build $RUNTIME netlrts-linux-x86_64 --with-production -j4
+        ./build charm++ netlrts-linux-x86_64 smp --with-production
+        #./build charm++ multicore-linux64 --with-production
         ;;
 esac
