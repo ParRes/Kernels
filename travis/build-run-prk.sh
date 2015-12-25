@@ -101,4 +101,16 @@ case "$PRK_TARGET" in
         mpirun -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
         mpirun -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Stencil/stencil 10 1024
         mpirun -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
+    allupc)
+        echo "UPC"
+        # compiler for static thread execution, so set this prior to build
+        export PRK_UPC_PROCS=4
+        # this is specific to GUPC (http://www.gccupc.org/gnu-upc-external/gnu-upc-user-manual#_invoking_gnu_upc)
+        alias upcc="gcc -x upc -fupc-threads=$PRK_UPC_PROCS"
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=UPC
+        # widely supported
+        $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
+        $PRK_TARGET_PATH/Stencil/stencil 10 1024
+        $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
 esac

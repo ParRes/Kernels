@@ -16,7 +16,7 @@ env:
   - PRK_TARGET=allmpishm
   - PRK_TARGET=allmpirma
   - PRK_TARGET=allshmem
-#  - PRK_TARGET=allupc
+  - PRK_TARGET=allupc
 #  - PRK_TARGET=allcharm++
 #  - PRK_TARGET=allampi
 #  - PRK_TARGET=allgrappa
