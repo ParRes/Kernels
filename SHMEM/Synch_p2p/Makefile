@@ -18,7 +18,7 @@ USERFLAGS     =
 #set the following variables for custom libraries and/or other objects
 
 EXTOBJS      =
-LIBS         =
+LIBS         = -lm
 LIBPATHS     =
 INCLUDEPATHS =
 
