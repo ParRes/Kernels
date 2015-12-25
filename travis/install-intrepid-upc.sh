@@ -15,7 +15,11 @@ case "$os" in
         #tar -xzvf upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
         wget -q http://www.gccupc.org/gupc-5201-1/32-gupc-5-2-0-1-source-release/file
         mv file upc-5.2.0.1.src.tar.bz2
-        tar -xjvf upc-5.2.0.1.src.tar.bz2
+        tar -xjf upc-5.2.0.1.src.tar.bz2
+        cd upc-5.2.0.1
+        mkdir build && cd build
+        ../configure --disable-multilib --enable-languages=c,c++ --prefix=$HOME
+        make && make install
         ;;
 
     Linux)
