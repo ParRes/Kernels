@@ -10,10 +10,10 @@ COMPILER=gcc
 os=`uname`
 case "$os" in
     Darwin)
-        export MY_CHARM_TOP=$HOME/charm/netlrts-darwin-x86_64
+        export MY_CHARM_TOP=$HOME/charm/netlrts-darwin-x86_64-smp
         ;;
     Linux)
-        export MY_CHARM_TOP=$HOME/charm/netlrts-linux-x86_64
+        export MY_CHARM_TOP=$HOME/charm/netlrts-linux-x86_64-smp
         ;;
 esac
 
