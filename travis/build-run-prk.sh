@@ -47,7 +47,7 @@ case "$PRK_TARGET" in
         ;;
     allmpi1)
         echo "MPI-1"
-        echo -e "MPICC=mpicc" > common/make.defs
+        echo "MPICC=mpicc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPI1
         export PRK_MPI_PROCS=4
@@ -66,7 +66,7 @@ case "$PRK_TARGET" in
         ;;
     allmpiomp)
         echo "MPI+OpenMP"
-        echo -e "MPICC=mpicc" > common/make.defs
+        echo "MPICC=mpicc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIOMP
         export PRK_MPI_PROCS=4
@@ -79,7 +79,7 @@ case "$PRK_TARGET" in
         ;;
     allmpirma)
         echo "MPI-RMA"
-        echo -e "MPICC=mpicc" > common/make.defs
+        echo "MPICC=mpicc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIRMA
         export PRK_MPI_PROCS=4
@@ -90,7 +90,7 @@ case "$PRK_TARGET" in
         ;;
     allmpishm)
         echo "MPI+MPI"
-        echo -e "MPICC=mpicc" > common/make.defs
+        echo "MPICC=mpicc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPISHM
         export PRK_MPI_PROCS=4
@@ -103,7 +103,7 @@ case "$PRK_TARGET" in
     allshmem)
         echo "SHMEM"
         export PRK_SHMEM_PROCS=4
-        echo -e "SHMEMTOP=$HOME\nSHMEMCC=oshcc" > common/make.defs
+        echo "SHMEMTOP=$HOME\nSHMEMCC=oshcc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=SHMEM
         # widely supported
@@ -116,7 +116,7 @@ case "$PRK_TARGET" in
         # compiler for static thread execution, so set this prior to build
         export PRK_UPC_PROCS=4
         # this is specific to GUPC (http://www.gccupc.org/gnu-upc-external/gnu-upc-user-manual#_invoking_gnu_upc)
-        echo -e "UPCC=gcc -x upc" > common/make.defs
+        echo "UPCC=$HOME/usr/local/gupc/bin/upc" > common/make.defs
         cat common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
