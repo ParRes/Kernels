@@ -115,10 +115,6 @@ case "$PRK_TARGET" in
         echo "UPC"
         # compiler for static thread execution, so set this prior to build
         echo "UPCC=/usr/local/gupc/bin/upc" > common/make.defs
-        cat common/make.defs
-        ls -l /usr/local/
-        ls -l /usr/local/gupc/
-        ls -l /usr/local/gupc/bin/
         make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
         export PRK_UPC_PROCS=4
@@ -126,5 +122,31 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/Synch_p2p/p2p -n $PRK_UPC_PROCS 10 1024 1024
         $PRK_TARGET_PATH/Stencil/stencil -n $PRK_UPC_PROCS 10 1024
         $PRK_TARGET_PATH/Transpose/transpose -n $PRK_UPC_PROCS 10 1024 32
+        ;;
+    allcharm++)
+        echo "Charm++"
+        echo "CHARMTOP=$HOME/charm" > common/make.defs
+        find $HOME -name charmc
+        find $HOME -name charmrun
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=CHARM++
+        export PRK_CHARM_PROCS=4
+        # widely supported
+        charmrun $PRK_TARGET_PATH/Synch_p2p/p2p +p$PRK_CHARM_PROCS 10 1024 1024
+        charmrun $PRK_TARGET_PATH/Stencil/stencil +p$PRK_CHARM_PROCS 10 1024
+        charmrun $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS 10 1024 32
+        ;;
+    allampi)
+        echo "Adaptive MPI (AMPI)"
+        echo "CHARMTOP=$HOME/charm" > common/make.defs
+        find $HOME -name ampicc
+        find $HOME -name charmrun
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=CHARM++
+        export PRK_CHARM_PROCS=4
+        # widely supported
+        charmrun $PRK_TARGET_PATH/Synch_p2p/p2p +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 1024
+        charmrun $PRK_TARGET_PATH/Stencil/stencil +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024
+        charmrun $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 32
         ;;
 esac

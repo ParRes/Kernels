@@ -9,16 +9,16 @@ compiler:
   - gcc
 #  - clang
 env:
-  - PRK_TARGET=allserial
-  - PRK_TARGET=allopenmp
-  - PRK_TARGET=allmpi1
-  - PRK_TARGET=allmpiopenmp
-  - PRK_TARGET=allmpishm
-  - PRK_TARGET=allmpirma
-  - PRK_TARGET=allshmem
-  - PRK_TARGET=allupc
-#  - PRK_TARGET=allcharm++
-#  - PRK_TARGET=allampi
+#  - PRK_TARGET=allserial
+#  - PRK_TARGET=allopenmp
+#  - PRK_TARGET=allmpi1
+#  - PRK_TARGET=allmpiopenmp
+#  - PRK_TARGET=allmpishm
+#  - PRK_TARGET=allmpirma
+#  - PRK_TARGET=allshmem
+#  - PRK_TARGET=allupc
+  - PRK_TARGET=allcharm++
+  - PRK_TARGET=allampi
 #  - PRK_TARGET=allgrappa
 #  - PRK_TARGET=allfgmpi
 before_install:
