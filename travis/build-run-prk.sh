@@ -3,9 +3,13 @@ set -x
 
 PRK_TARGET="$1"
 
+# make this runtime configurable later
+COMPILER=gcc
+
 case "$PRK_TARGET" in
     allserial)
         echo "Serial"
+        sh ./travis/create-make-defs.sh $COMPILER
         make $PRK_TARGET
         export PRK_TARGET_PATH=SERIAL
         # widely supported
@@ -21,6 +25,7 @@ case "$PRK_TARGET" in
         ;;
     allopenmp)
         echo "OpenMP"
+        sh ./travis/create-make-defs.sh $COMPILER
         make $PRK_TARGET
         export PRK_TARGET_PATH=OPENMP
         export OMP_NUM_THREADS=4
@@ -42,6 +47,7 @@ case "$PRK_TARGET" in
         ;;
     allmpi1)
         echo "MPI-1"
+        echo -e "MPICC=mpicc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPI1
         export PRK_MPI_PROCS=4
@@ -60,6 +66,7 @@ case "$PRK_TARGET" in
         ;;
     allmpiomp)
         echo "MPI+OpenMP"
+        echo -e "MPICC=mpicc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIOMP
         export PRK_MPI_PROCS=4
@@ -72,6 +79,7 @@ case "$PRK_TARGET" in
         ;;
     allmpirma)
         echo "MPI-RMA"
+        echo -e "MPICC=mpicc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIRMA
         export PRK_MPI_PROCS=4
@@ -82,6 +90,7 @@ case "$PRK_TARGET" in
         ;;
     allmpishm)
         echo "MPI+MPI"
+        echo -e "MPICC=mpicc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPISHM
         export PRK_MPI_PROCS=4
@@ -93,9 +102,10 @@ case "$PRK_TARGET" in
         ;;
     allshmem)
         echo "SHMEM"
+        export PRK_SHMEM_PROCS=4
+        echo -e "SHMEMTOP=$HOME\nSHMEMCC=oshcc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=SHMEM
-        export PRK_SHMEM_PROCS=4
         # widely supported
         mpirun -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p 10 1024 1024
         mpirun -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Stencil/stencil 10 1024
@@ -106,7 +116,7 @@ case "$PRK_TARGET" in
         # compiler for static thread execution, so set this prior to build
         export PRK_UPC_PROCS=4
         # this is specific to GUPC (http://www.gccupc.org/gnu-upc-external/gnu-upc-user-manual#_invoking_gnu_upc)
-        alias upcc="gcc -x upc -fupc-threads=$PRK_UPC_PROCS"
+        echo -e "UPCC=gcc -x upc -fupc-threads=$PRK_UPC_PROCS" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
         # widely supported

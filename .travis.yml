@@ -26,7 +26,6 @@ before_install:
   - export PATH=$HOME/bin:$PATH
   - export LD_LIBRARY_PATH=$HOME/lib:$LD_LIBRARY_PATH
 script:
-  - sh ./travis/create-make-defs.sh gcc
   - cat common/make.defs
   - sh ./travis/build-run-prk.sh $PRK_TARGET
 after_failure:
