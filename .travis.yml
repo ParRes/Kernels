@@ -9,12 +9,12 @@ compiler:
   - gcc
 #  - clang
 env:
-#  - PRK_TARGET=allserial
-#  - PRK_TARGET=allopenmp
-#  - PRK_TARGET=allmpi1
-#  - PRK_TARGET=allmpiopenmp
-#  - PRK_TARGET=allmpishm
-#  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allserial
+  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allmpiopenmp
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpirma
   - PRK_TARGET=allshmem
 #  - PRK_TARGET=allupc
 #  - PRK_TARGET=allcharm++
@@ -31,7 +31,6 @@ script:
   - sh ./travis/build-run-prk.sh $PRK_TARGET
 after_failure:
   - echo "Sad panda"
-  - cat ~/sandia-shmem/config.log
 notifications:
   email:
     #recipients:
