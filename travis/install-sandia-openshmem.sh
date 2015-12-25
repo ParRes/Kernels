@@ -24,4 +24,5 @@ git clone --depth 10 https://github.com/regrant/sandia-shmem.git
 cd sandia-shmem
 ./autogen.sh
 ./configure --with-ofi=$HOME --with-ofi-libdir=$HOME/lib --disable-fortran --enable-error-checking --enable-remote-virtual-addressing --enable-pmi-simple
+cat config.log
 make && sudo make install
