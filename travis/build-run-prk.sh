@@ -150,8 +150,6 @@ case "$PRK_TARGET" in
     allcharm++)
         echo "Charm++"
         echo "CHARMTOP=$MY_CHARM_TOP" > common/make.defs
-        find $HOME -name charmc
-        find $HOME -name charmrun
         make $PRK_TARGET
         export PRK_TARGET_PATH=CHARM++
         export PRK_CHARM_PROCS=4
@@ -164,8 +162,6 @@ case "$PRK_TARGET" in
     allampi)
         echo "Adaptive MPI (AMPI)"
         echo "CHARMTOP=$MY_CHARM_TOP" > common/make.defs
-        find $HOME -name ampicc
-        find $HOME -name charmrun
         make $PRK_TARGET
         export PRK_TARGET_PATH=AMPI
         export PRK_CHARM_PROCS=4
