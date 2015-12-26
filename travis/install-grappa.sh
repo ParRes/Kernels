@@ -2,13 +2,14 @@ set -e
 set -x
 
 os=`uname`
-MPI_IMPL="$1"
+
+# TODO: Make compiler and MPI configurable...
 
 case "$os" in
     Darwin)
         echo "Mac"
         brew update
-        brew install cmake ruby boost
+        brew install cmake ruby boost mpich
         ;;
 
     Linux)
