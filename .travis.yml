@@ -1,0 +1,40 @@
+# required for package manager installs
+sudo: true
+language: c
+os:
+  - linux
+# OpenMP compiler support on Mac is an issue
+#  - osx
+compiler:
+  - gcc
+#  - clang
+env:
+  - PRK_TARGET=allserial
+  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allmpiopenmp
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allshmem
+  - PRK_TARGET=allupc
+  - PRK_TARGET=allcharm++
+  - PRK_TARGET=allampi
+  - PRK_TARGET=allfgmpi
+#  - PRK_TARGET=allgrappa
+before_install:
+  - sh ./travis/install-deps.sh $PRK_TARGET
+  - export PATH=$HOME/bin:$PATH
+  - export LD_LIBRARY_PATH=$HOME/lib:$LD_LIBRARY_PATH
+  # recent CMake required for Grappa build
+  - export PATH=$HOME/cmake/bin:$PATH
+script:
+  - sh ./travis/build-run-prk.sh $PRK_TARGET
+after_failure:
+  - echo "Sad panda"
+notifications:
+  email:
+    #recipients:
+    #  - rob.f.van.der.wijngaart@intel.com
+    #  - jeff.r.hammond@intel.com
+    on_success: [change]
+    on_failure: [always]
