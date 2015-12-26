@@ -6,7 +6,11 @@ set -e
 set -x
 
 os=`uname`
-MPI_IMPL="$1"
+
+# unused right now, but will be used if building MPI from source
+TRAVIS_ROOT="$1"
+
+MPI_IMPL="$2"
 
 case "$os" in
     Darwin)

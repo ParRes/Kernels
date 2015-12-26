@@ -2,17 +2,18 @@ set -e
 set -x
 
 os=`uname`
-MPI_IMPL="$1"
+TRAVIS_ROOT="$1"
+MPI_IMPL="$2"
 
 case "$os" in
     Darwin)
         echo "Mac"
         brew update
         wget -q http://www.cs.ubc.ca/~humaira/code/fgmpi-2.0.tar.gz
-        tar -C $HOME -xzvf fgmpi-2.0.tar.gz
-        cd $HOME/fgmpi-2.0
+        tar -C $TRAVIS_ROOT -xzvf fgmpi-2.0.tar.gz
+        cd $TRAVIS_ROOT/fgmpi-2.0
         mkdir build && cd build
-        ../configure --prefix=$HOME/fgmpi
+        ../configure --prefix=$TRAVIS_ROOT/fgmpi
         ;;
 
     Linux)
