@@ -25,6 +25,8 @@ before_install:
   - sh ./travis/install-deps.sh $PRK_TARGET
   - export PATH=$HOME/bin:$PATH
   - export LD_LIBRARY_PATH=$HOME/lib:$LD_LIBRARY_PATH
+  # recent CMake required for Grappa build
+  - export PATH=$HOME/cmake/bin:$PATH
 script:
   - sh ./travis/build-run-prk.sh $PRK_TARGET
 after_failure:
