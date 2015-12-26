@@ -155,10 +155,11 @@ case "$PRK_TARGET" in
         make $PRK_TARGET
         export PRK_TARGET_PATH=CHARM++
         export PRK_CHARM_PROCS=4
-        # widely supported
-        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Synch_p2p/p2p       +p$PRK_CHARM_PROCS 10 1024 1024
-        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Stencil/stencil     +p$PRK_CHARM_PROCS 10 1024
-        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS 10 1024 32
+        # widely supported                                                                               |
+        # For Charm++, the last argument is the overdecomposition factor -->                            \|/
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Synch_p2p/p2p       +p$PRK_CHARM_PROCS 10 1024 1024  1
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Stencil/stencil     +p$PRK_CHARM_PROCS 10 1024       1
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS 10 1024 32    1
         ;;
     allampi)
         echo "Adaptive MPI (AMPI)"
