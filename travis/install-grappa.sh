@@ -6,23 +6,26 @@ TRAVIS_ROOT="$1"
 
 # TODO: Make compiler and MPI configurable...
 
-case "$os" in
-    Darwin)
-        echo "Mac"
-        brew update
-        brew install ruby boost
-        ;;
+if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
+    case "$os" in
+        Darwin)
+            echo "Mac"
+            brew update
+            brew install ruby boost
+            ;;
 
-    Linux)
-        echo "Linux"
-        # yes sudo #
-        #sudo apt-get update -q
-        #sudo apt-get install -y ruby
-        ;;
-esac
+        Linux)
+            echo "Linux"
+            ;;
+    esac
 
-git clone https://github.com/uwsampa/grappa.git grappa-source
-cd grappa-source
-./configure --prefix=$TRAVIS_ROOT/grappa
-cd build/Make+Release
-make -j4 && make install
+    cd $TRAVIS_ROOT
+    git clone https://github.com/uwsampa/grappa.git grappa-source
+    cd grappa-source
+    ./configure --prefix=$TRAVIS_ROOT/grappa
+    cd build/Make+Release
+    make -j4 && make install
+else
+    echo "Grappa installed..."
+    find $TRAVIS_ROOT -name grappa.mk
+fi

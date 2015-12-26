@@ -59,12 +59,13 @@ before_install:
   - export TRAVIS_ROOT=$HOME/PRK-deps
   - mkdir $TRAVIS_ROOT
 install:
+  - export PATH=$TRAVIS_ROOT/bin:$PATH
+  - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
+  - export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
+  - export PATH=$TRAVIS_ROOT/fgmpi/bin:$PATH
+  - export PATH=$TRAVIS_ROOT/gupc/bin:$PATH
   - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
 before_script:
-  - export PATH=$TRAVIS_ROOT/bin:$PATH
-  - export LD_LIBRARY_PATH=$TRAVIS_ROOT/lib:$LD_LIBRARY_PATH
-  # recent CMake required for Grappa build
-  - export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
 script:
   - sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
 after_failure:
