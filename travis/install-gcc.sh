@@ -16,10 +16,11 @@ case "$os" in
         wget -q ftp://gcc.gnu.org/pub/gcc/releases/gcc-5.3.0/gcc-5.3.0.tar.bz2
         tar -xjf gcc-5.3.0.tar.bz2
         cd gcc-5.3.0
-        ./contrib/download_prerequisites
+        ./contrib/download_prerequisites >& p.log
         mkdir build && cd build
-        ../configure --prefix=$TRAVIS_ROOT --enable-threads=posix --with-system-zlib --enable-__cxa_atexit --enable-languages=c,c++ --with-tune=native --enable-lto --disable-multilib
-        make -j4 && make install
+        ../configure --prefix=$TRAVIS_ROOT --enable-threads=posix --with-system-zlib --enable-__cxa_atexit --enable-languages=c,c++ --with-tune=native --enable-lto --disable-multilib >& c.log
+        make -j4 >& m.log
+        make install
         ;;
 esac
 
