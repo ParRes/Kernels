@@ -17,15 +17,7 @@ case "$os" in
         cd /tmp/gcc-5.3.0
         ./contrib/download_prerequisites
         mkdir build && cd build
-        ../configure \
-          --prefix=$HOME
-          --enable-threads=posix \
-          --with-system-zlib \
-          --enable-__cxa_atexit \
-          --enable-languages=c,c++ \
-          --with-tune=native \
-          --enable-lto \
-          --disable-multilib
+        ../configure --prefix=$HOME --enable-threads=posix --with-system-zlib --enable-__cxa_atexit --enable-languages=c,c++ --with-tune=native --enable-lto --disable-multilib
         make -j4 && make install
         ;;
 esac
