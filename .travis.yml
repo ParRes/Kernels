@@ -6,16 +6,16 @@ language: c
 os:
   - linux
 # OpenMP compiler support on Mac is an issue
-  - osx
+#  - osx
 compiler:
   - gcc
   - clang
-matrix:
-  exclude:
-  - compiler: clang
-      env:
-      - PRK_TARGET=allopenmp
-      - PRK_TARGET=allmpiopenmp
+#matrix:
+#  exclude:
+#  - compiler: clang
+#      env:
+#      - PRK_TARGET=allopenmp
+#      - PRK_TARGET=allmpiopenmp
 # may not be necessary...
 #  allow_failures:
 #    - env: PRK_TARGET=allgrappa
