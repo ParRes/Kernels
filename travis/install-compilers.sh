@@ -6,7 +6,9 @@ set -e
 set -x
 
 os=`uname`
-MPI_IMPL="$1"
+# unused for now
+TRAVIS_ROOT="$1"
+MPI_IMPL="$2"
 
 case "$os" in
     Darwin)
