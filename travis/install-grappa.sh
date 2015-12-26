@@ -15,8 +15,9 @@ case "$os" in
 
     Linux)
         echo "Linux"
-        sudo apt-get update -q
-        sudo apt-get install -y ruby
+        # yes sudo #
+        #sudo apt-get update -q
+        #sudo apt-get install -y ruby
         ;;
 esac
 

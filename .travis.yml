@@ -1,30 +1,66 @@
 # required for package manager installs
-sudo: true
+#sudo: true
+# use addons-apt instead
+sudo: false
 language: c
 os:
   - linux
 # OpenMP compiler support on Mac is an issue
-#  - osx
+  - osx
 compiler:
   - gcc
-#  - clang
+  - clang
+matrix:
+  exclude:
+  - compiler: clang
+      env:
+      - PRK_TARGET=allopenmp
+      - PRK_TARGET=allmpiopenmp
+# may not be necessary...
+#  allow_failures:
+#    - env: PRK_TARGET=allgrappa
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    #  Boost is for Grappa
+    - boost-latest
+    packages:
+    - cmake
+    - gcc-4.8
+    - g++-4.8
+    #  Boost is for Grappa
+    - libboost-date-time1.55-dev
+    - libboost-exception1.55-dev
+    - libboost-filesystem1.55-dev
+    - libboost-iostreams1.55-dev
+    - libboost-math1.55-dev
+    - libboost-random1.55-dev
+    - libboost-regex1.55-dev
+    - libboost-serialization1.55-dev
+    - libboost-signals1.55-dev
+    - libboost-system1.55-dev
+    - libboost-test1.55-dev
+    - libboost-timer1.55-dev
 env:
-#  - PRK_TARGET=allserial
-#  - PRK_TARGET=allopenmp
-#  - PRK_TARGET=allmpi1
-#  - PRK_TARGET=allmpiopenmp
-#  - PRK_TARGET=allmpishm
-#  - PRK_TARGET=allmpirma
-#  - PRK_TARGET=allshmem
-#  - PRK_TARGET=allupc
-#  - PRK_TARGET=allcharm++
-#  - PRK_TARGET=allampi
-#  - PRK_TARGET=allfgmpi
+  - PRK_TARGET=allserial
+  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allmpiopenmp
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allshmem
+  - PRK_TARGET=allupc
+  - PRK_TARGET=allcharm++
+  - PRK_TARGET=allampi
+  - PRK_TARGET=allfgmpi
   - PRK_TARGET=allgrappa
 before_install:
   - export TRAVIS_ROOT=$HOME/travis
   - mkdir $TRAVIS_ROOT
+install:
   - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
+before_script:
   - export PATH=$TRAVIS_ROOT/bin:$PATH
   - export LD_LIBRARY_PATH=$TRAVIS_ROOT/lib:$LD_LIBRARY_PATH
   # recent CMake required for Grappa build

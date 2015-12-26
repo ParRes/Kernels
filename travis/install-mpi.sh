@@ -32,15 +32,26 @@ case "$os" in
 
     Linux)
         echo "Linux"
-        sudo apt-get update -q
         case "$MPI_IMPL" in
             mpich)
-                sudo apt-get install -y gfortran libcr0 default-jdk
-                wget -q http://www.cebacad.net/files/mpich/ubuntu/mpich-3.2b3/mpich_3.2b3-1ubuntu_amd64.deb
-                sudo dpkg -i ./mpich_3.2b3-1ubuntu_amd64.deb
+                # yes sudo #
+                #sudo apt-get update -q
+                #sudo apt-get install -y gfortran libcr0 default-jdk
+                #wget -q http://www.cebacad.net/files/mpich/ubuntu/mpich-3.2b3/mpich_3.2b3-1ubuntu_amd64.deb
+                #sudo dpkg -i ./mpich_3.2b3-1ubuntu_amd64.deb
+                # no sudo #
+                wget --no-check-certificate -q http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz
+                tar xzf mpich-3.2.tar.gz
+                cd mpich-3.2
+                mkdir build && cd build
+                ../configure --disable-fortran --prefix=$TRAVIS_ROOT
+                make -j4 && make install
                 ;;
             openmpi)
-                sudo apt-get install -y cmake gfortran openmpi-bin openmpi-common libopenmpi-dev
+                #sudo apt-get update -q
+                #sudo apt-get install -y cmake gfortran openmpi-bin openmpi-common libopenmpi-dev
+                echo "Need source build of Open-MPI since no-sudo"
+                exit 15
                 ;;
             *)
                 echo "Unknown MPI implementation: $MPI_IMPL"

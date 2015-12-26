@@ -12,7 +12,6 @@ case "$os" in
 
     Linux)
         echo "Linux"
-        #sudo apt-get update -q
         # from source
         #wget -q https://cmake.org/files/v3.4/cmake-3.4.1.tar.gz
         #tar -C $TRAVIS_ROOT -xzf cmake-3.4.1.tar.gz
