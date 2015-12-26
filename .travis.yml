@@ -33,8 +33,8 @@ after_failure:
   - echo "Sad panda"
 notifications:
   email:
-    #recipients:
+    recipients:
     #  - rob.f.van.der.wijngaart@intel.com
-    #  - jeff.r.hammond@intel.com
+      - jeff.r.hammond@intel.com
     on_success: [change]
     on_failure: [always]
