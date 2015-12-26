@@ -167,12 +167,20 @@ case "$PRK_TARGET" in
         find $HOME -name ampicc
         find $HOME -name charmrun
         make $PRK_TARGET
-        export PRK_TARGET_PATH=CHARM++
+        export PRK_TARGET_PATH=AMPI
         export PRK_CHARM_PROCS=4
         # widely supported
         $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Synch_p2p/p2p       +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 1024
         $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Stencil/stencil     +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024
         $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 32
+        # less support
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Reduce/reduce       +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 16777216
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Nstream/nstream     +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 16777216 32
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Sparse/sparse       +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 10 5
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/DGEMM/dgemm         +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 32 1
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Random/random       +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 32 20
+        # no serial equivalent
+        $MY_CHARM_TOP/bin/charmrun $PRK_TARGET_PATH/Synch_global/global +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 16384
         ;;
     allfgmpi)
         echo "Fine-Grain MPI (FG-MPI)"
