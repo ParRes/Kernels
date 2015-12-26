@@ -41,6 +41,10 @@ case "$PRK_TARGET" in
         ;;
     allgrappa)
         echo "Grappa"
+        sh ./travis/install-gcc.sh $TRAVIS_ROOT
+        sh ./travis/install-cmake.sh $TRAVIS_ROOT
+        # only use MPICH with Grappa due to MPI-3 feature requirements
+        sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich
         sh ./travis/install-grappa.sh $TRAVIS_ROOT
         ;;
 esac
