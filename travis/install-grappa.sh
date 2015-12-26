@@ -15,7 +15,8 @@ case "$os" in
     Linux)
         echo "Linux"
         sudo apt-get update -q
-        sudo apt-get install -y cmake ruby clang
+        sudo apt-get install -y cmake ruby
+        gcc --version
         # Grappa requires MPI-3, for which we can depend on MPICH
         sudo apt-get install -y gfortran libcr0 default-jdk
         wget -q http://www.cebacad.net/files/mpich/ubuntu/mpich-3.2b3/mpich_3.2b3-1ubuntu_amd64.deb
