@@ -41,6 +41,7 @@ case "$PRK_TARGET" in
     allgrappa)
         echo "Grappa"
         sh ./travis/install-gcc.sh
+        sh ./travis/install-cmake.sh
         sh ./travis/install-grappa.sh
         ;;
 esac
