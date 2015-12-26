@@ -2,14 +2,14 @@ set -e
 set -x
 
 os=`uname`
-
+TRAVIS_ROOT="$1"
 # charm++ or AMPI
-RUNTIME="$1"
+RUNTIME="$2"
 
 case "$os" in
     Darwin)
         echo "Mac"
-        cd ~
+        cd $TRAVIS_ROOT
         wget -q https://charm.cs.illinois.edu/distrib/charm-6.7.0.tar.gz
         tar -xzf charm-6.7.0.tar.gz
         cd charm-6.7.0
@@ -19,7 +19,7 @@ case "$os" in
 
     Linux)
         echo "Linux"
-        cd ~
+        cd $TRAVIS_ROOT
         wget -q https://charm.cs.illinois.edu/distrib/charm-6.7.0.tar.gz
         tar -xzf charm-6.7.0.tar.gz
         cd charm-6.7.0

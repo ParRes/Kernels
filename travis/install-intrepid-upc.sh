@@ -6,6 +6,7 @@ set -e
 set -x
 
 os=`uname`
+TRAVIS_ROOT="$1"
 
 case "$os" in
     Darwin)
@@ -18,7 +19,7 @@ case "$os" in
         tar -xjf upc-5.2.0.1.src.tar.bz2
         cd upc-5.2.0.1
         mkdir build && cd build
-        ../configure --disable-multilib --enable-languages=c,c++ --prefix=$HOME
+        ../configure --disable-multilib --enable-languages=c,c++ --prefix=$TRAVIS_ROOT
         make && make install
         ;;
 
@@ -28,6 +29,6 @@ case "$os" in
         sudo apt-get install -y libnuma-dev
         wget -q http://www.gccupc.org/gupc-5201-1/30-gupc-5201-x8664-ubuntu-1204/file
         mv file upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
-        sudo tar -C / -xzvf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
+        sudo tar -C $TRAVIS_ROOT -xzvf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
         ;;
 esac
