@@ -38,4 +38,8 @@ case "$PRK_TARGET" in
         echo "Fine-Grain MPI (FG-MPI)"
         sh ./travis/install-fgmpi.sh
         ;;
+    allgrappa)
+        echo "Grappa"
+        sh ./travis/install-grappa.sh
+        ;;
 esac
