@@ -23,6 +23,7 @@ env:
   - PRK_TARGET=allgrappa
 before_install:
   - export TRAVIS_ROOT=$HOME/travis
+  - mkdir $TRAVIS_ROOT
   - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
   - export PATH=$TRAVIS_ROOT/bin:$PATH
   - export LD_LIBRARY_PATH=$TRAVIS_ROOT/lib:$LD_LIBRARY_PATH
