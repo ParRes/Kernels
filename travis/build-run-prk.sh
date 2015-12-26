@@ -10,12 +10,12 @@ COMPILER=gcc
 os=`uname`
 case "$os" in
     Darwin)
-        export MY_CHARM_TOP=$HOME/charm/netlrts-darwin-x86_64-smp
+        export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
         ;;
     Linux)
-        #export MY_CHARM_TOP=$HOME/charm/netlrts-linux-x86_64
-        #export MY_CHARM_TOP=$HOME/charm/netlrts-linux-x86_64-smp
-        export MY_CHARM_TOP=$HOME/charm/multicore-linux64
+        #export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
+        #export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
+        export MY_CHARM_TOP=$TRAVIS_ROOT/charm/multicore-linux64
         ;;
 esac
 
@@ -23,7 +23,7 @@ esac
 os=`uname`
 case "$os" in
     Darwin)
-        export MY_FGMPI_TOP=$HOME/fgmpi
+        export MY_FGMPI_TOP=$TRAVIS_ROOT/fgmpi
         ;;
     Linux)
         export MY_FGMPI_TOP=/usr
@@ -126,7 +126,7 @@ case "$PRK_TARGET" in
         ;;
     allshmem)
         echo "SHMEM"
-        echo "SHMEMTOP=$HOME\nSHMEMCC=oshcc" > common/make.defs
+        echo "SHMEMTOP=$TRAVIS_ROOT\nSHMEMCC=oshcc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=SHMEM
         export PRK_SHMEM_PROCS=4
@@ -203,7 +203,7 @@ case "$PRK_TARGET" in
     allgrappa)
         echo "Grappa"
         # compiler for static thread execution, so set this prior to build
-        echo "GRAPPATOP=$HOME/grappa" > common/make.defs
+        echo "GRAPPATOP=$TRAVIS_ROOT/grappa" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=GRAPPA
         export PRK_MPI_PROCS=4
