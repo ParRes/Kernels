@@ -24,7 +24,8 @@ if [ ! -d "$TRAVIS_ROOT/fgmpi" ]; then
     tar -C $TRAVIS_ROOT -xzvf fgmpi-2.0.tar.gz
     cd $TRAVIS_ROOT/fgmpi-2.0
     mkdir build && cd build
-    ../configure --prefix=$TRAVIS_ROOT/fgmpi
+    ../configure --disable-fortran --prefix=$TRAVIS_ROOT/fgmpi
+    make -j4 && make install
 else
     echo "FG-MPI installed..."
     find $TRAVIS_ROOT/fgmpi -name mpiexec
