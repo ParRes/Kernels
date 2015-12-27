@@ -63,8 +63,6 @@ install:
   - export PATH=$TRAVIS_ROOT/bin:$PATH
   - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
   - export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
-  - export PATH=$TRAVIS_ROOT/fgmpi/bin:$PATH
-  - export PATH=$TRAVIS_ROOT/gupc/bin:$PATH
   - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
 before_script:
 script:
