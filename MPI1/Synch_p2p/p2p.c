@@ -134,7 +134,7 @@ int main(int argc, char ** argv)
     }
 
     if (m<=Num_procs) {
-      printf("ERROR: First grid dimension %d must be >= number of ranks %d\n", 
+      printf("ERROR: First grid dimension %ld must be >= number of ranks %d\n", 
              m, Num_procs);
       error = 1;
       goto ENDOFTESTS;
@@ -153,7 +153,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("Number of ranks                = %d\n",Num_procs);
-    printf("Grid sizes                     = %d, %d\n", m, n);
+    printf("Grid sizes                     = %ld, %ld\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
     if (grp > 1)
     printf("Group factor                   = %d (cheating!)\n", grp);
@@ -184,7 +184,7 @@ int main(int argc, char ** argv)
   total_length = ((end-start+1)+1)*n;
   vector = (double *) malloc(total_length*sizeof(double));
   if (vector == NULL) {
-    printf("Could not allocate space for grid slice of %d by %d points", 
+    printf("Could not allocate space for grid slice of %ld by %ld points",
            segment_size, n);
     printf(" on rank %d\n", my_ID);
     error = 1;

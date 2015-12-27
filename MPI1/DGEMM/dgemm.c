@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Rank grid            = %d rows x %d columns\n", nprow, npcol); 
     printf("Matrix order         = %d\n", order);
-    printf("Outer block size     = %d\n", nb);
+    printf("Outer block size     = %ld\n", nb);
     printf("Number of iterations = %d\n", iterations);
     if (inner_block_flag)
       printf("Using local dgemm blocking\n");
