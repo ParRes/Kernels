@@ -17,7 +17,9 @@ case "$CC" in
             ./contrib/download_prerequisites
             mkdir build && cd build
             ../configure --disable-multilib --enable-languages=c,c++ --prefix=$TRAVIS_ROOT/gupc
-            make -j4 && make install
+            # Travis has problems with how much output the GCC build creates
+            make -j4 >& /dev/null
+            make install
         else
             echo "GCC UPC installed..."
             find $TRAVIS_ROOT/gupc -name gupc
