@@ -28,7 +28,10 @@ if [ ! -d "$SHMEM_ROOT" ]; then
     cd sandia-shmem
     ./autogen.sh
     # must build in-place (https://github.com/regrant/sandia-shmem/issues/49)
-    ./configure --with-ofi=$SHMEM_ROOT --with-ofi-libdir=$SHMEM_ROOT/lib --disable-fortran --enable-error-checking --enable-remote-virtual-addressing --enable-pmi-simple --prefix=$SHMEM_ROOT
+    ./configure --with-ofi=$SHMEM_ROOT --with-ofi-libdir=$SHMEM_ROOT/lib \
+                --disable-fortran --enable-error-checking \
+                --enable-remote-virtual-addressing --enable-pmi-simple \
+                --prefix=$SHMEM_ROOT
     make && make install
 else
     echo "Sandia OpenSHMEM installed..."
