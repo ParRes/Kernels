@@ -131,13 +131,13 @@ int main(int argc, char ** argv)
     m = atol(*++argv);
     n = atol(*++argv);
     if (m < 1 || n < 1){
-      printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
+      printf("ERROR: grid dimensions must be positive: %ld, %ld \n", m, n);
       error = 1;
       goto ENDOFTESTS;
     }
 
     if (m<Num_procs) {
-      printf("ERROR: First grid dimension %d smaller than number of ranks %d\n",
+      printf("ERROR: First grid dimension %ld smaller than number of ranks %d\n",
              m, Num_procs);
       error = 1;
       goto ENDOFTESTS;
@@ -191,7 +191,7 @@ int main(int argc, char ** argv)
   MPI_Win_create(vector, total_length*sizeof(double), sizeof(double), rma_winfo, MPI_COMM_WORLD, &rma_win);
   /* MPI_Win_allocate(total_length*sizeof(double), sizeof(double), rma_winfo, MPI_COMM_WORLD, (void *) &vector, &rma_win); */
   if (vector == NULL) {
-    printf("Could not allocate space for grid slice of %d by %d points",
+    printf("Could not allocate space for grid slice of %ld by %ld points",
            segment_size, n);
     printf(" on rank %d\n", my_ID);
     error = 1;

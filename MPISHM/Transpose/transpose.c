@@ -171,13 +171,13 @@ int main(int argc, char ** argv)
 
     order = atol(*++argv);
     if (order < Num_procs) {
-      printf("ERROR: matrix order %d should at least # procs %d\n", 
+      printf("ERROR: matrix order %ld should at least # procs %d\n", 
              order, Num_procs);
       error = 1; goto ENDOFTESTS;
     }
 
     if (order%Num_procs) {
-      printf("ERROR: matrix order %d should be divisible by # procs %d\n",
+      printf("ERROR: matrix order %ld should be divisible by # procs %d\n",
              order, Num_procs);
       error = 1; goto ENDOFTESTS;
     }
@@ -197,7 +197,7 @@ int main(int argc, char ** argv)
   if (my_ID == root) {
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Rank group size      = %d\n", group_size);
-    printf("Matrix order         = %d\n", order);
+    printf("Matrix order         = %ld\n", order);
     printf("Number of iterations = %d\n", iterations);
     if ((Tile_order > 0) && (Tile_order < order))
        printf("Tile size            = %d\n", Tile_order);
