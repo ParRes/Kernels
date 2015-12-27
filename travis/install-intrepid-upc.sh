@@ -14,7 +14,7 @@ if [ ! -d "$TRAVIS_ROOT/gupc" ]; then
             #echo "Mac"
             # This is for Mac OSX 10.10 - Travis currently uses 10.9.5
             #wget -q http://www.gccupc.org/gupc-5201-1/28-gupc-5201-x8664-mac-os-1010-yosemiti/file
-            #tar -xzvf upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
+            #tar -xzf upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
             # TODO
             ;;
 
@@ -25,7 +25,7 @@ if [ ! -d "$TRAVIS_ROOT/gupc" ]; then
             #sudo apt-get install -y libnuma-dev
             #wget -q http://www.gccupc.org/gupc-5201-1/30-gupc-5201-x8664-ubuntu-1204/file
             #mv file upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
-            #sudo tar -C $TRAVIS_ROOT -xzvf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
+            #sudo tar -C $TRAVIS_ROOT -xzf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
             ;;
     esac
     wget -q http://www.gccupc.org/gupc-5201-1/32-gupc-5-2-0-1-source-release/file

@@ -21,7 +21,7 @@ if [ ! -d "$TRAVIS_ROOT/fgmpi" ]; then
             ;;
     esac
     wget -q http://www.cs.ubc.ca/~humaira/code/fgmpi-2.0.tar.gz
-    tar -C $TRAVIS_ROOT -xzvf fgmpi-2.0.tar.gz
+    tar -C $TRAVIS_ROOT -xzf fgmpi-2.0.tar.gz
     cd $TRAVIS_ROOT/fgmpi-2.0
     mkdir build && cd build
     ../configure --disable-fortran --prefix=$TRAVIS_ROOT/fgmpi
