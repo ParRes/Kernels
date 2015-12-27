@@ -6,10 +6,7 @@ set -e
 set -x
 
 os=`uname`
-
-# unused right now, but will be used if building MPI from source
 TRAVIS_ROOT="$1"
-
 MPI_IMPL="$2"
 
 case "$os" in
@@ -35,12 +32,6 @@ case "$os" in
         case "$MPI_IMPL" in
             mpich)
                 if [ ! -d "$TRAVIS_ROOT/mpich" ]; then
-                    # yes sudo #
-                    #sudo apt-get update -q
-                    #sudo apt-get install -y gfortran libcr0 default-jdk
-                    #wget --no-check-certificate -q http://www.cebacad.net/files/mpich/ubuntu/mpich-3.2b3/mpich_3.2b3-1ubuntu_amd64.deb
-                    #sudo dpkg -i ./mpich_3.2b3-1ubuntu_amd64.deb
-                    # no sudo #
                     wget --no-check-certificate -q http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz
                     tar xzf mpich-3.2.tar.gz
                     cd mpich-3.2
@@ -55,8 +46,6 @@ case "$os" in
                 fi
                 ;;
             openmpi)
-                #sudo apt-get update -q
-                #sudo apt-get install -y cmake gfortran openmpi-bin openmpi-common libopenmpi-dev
                 echo "Need source build of Open-MPI since no-sudo"
                 exit 15
                 ;;
