@@ -5,40 +5,39 @@
 set -e
 set -x
 
-os=`uname`
 TRAVIS_ROOT="$1"
 
-if [ ! -d "$TRAVIS_ROOT/gupc" ]; then
-    case "$os" in
-        Darwin)
-            #echo "Mac"
-            # This is for Mac OSX 10.10 - Travis currently uses 10.9.5
-            #wget -q http://www.gccupc.org/gupc-5201-1/28-gupc-5201-x8664-mac-os-1010-yosemiti/file
-            #tar -xzf upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
-            # TODO
-            ;;
+case "$CC" in
+    gcc)
+        if [ ! -d "$TRAVIS_ROOT/gupc" ]; then
+            wget -q http://www.gccupc.org/gupc-5201-1/32-gupc-5-2-0-1-source-release/file
+            mv file upc-5.2.0.1.src.tar.bz2
+            tar -xjf upc-5.2.0.1.src.tar.bz2
+            cd upc-5.2.0.1
+            ./contrib/download_prerequisites
+            mkdir build && cd build
+            ../configure --disable-multilib --enable-languages=c,c++ --prefix=$TRAVIS_ROOT/gupc
+            make -j4 && make install
+        else
+            echo "GCC UPC installed..."
+            find $TRAVIS_ROOT/gupc -name gupc
+            gupc --version
+            gcc  --version
+        fi
+        ;;
 
-        Linux)
-            #echo "Linux"
-            # yes sudo #
-            #sudo apt-get update -qq
-            #sudo apt-get install -y libnuma-dev
-            #wget -q http://www.gccupc.org/gupc-5201-1/30-gupc-5201-x8664-ubuntu-1204/file
-            #mv file upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
-            #sudo tar -C $TRAVIS_ROOT -xzf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
-            ;;
-    esac
-    wget -q http://www.gccupc.org/gupc-5201-1/32-gupc-5-2-0-1-source-release/file
-    mv file upc-5.2.0.1.src.tar.bz2
-    tar -xjf upc-5.2.0.1.src.tar.bz2
-    cd upc-5.2.0.1
-    ./contrib/download_prerequisites
-    mkdir build && cd build
-    ../configure --disable-multilib --enable-languages=c,c++ --prefix=$TRAVIS_ROOT/gupc
-    make -j4 && make install
-else
-    echo "GCC UPC installed..."
-    find $TRAVIS_ROOT -name gupc
-    gupc --version
-    gcc  --version
-fi
+    clang)
+        echo "Clang UPC not supported yet..."
+        exit 60
+        if [ ! -d "$TRAVIS_ROOT/clupc" ]; then
+            # get source files
+            mkdir build && cd build
+            ../configure --disable-multilib --enable-languages=c,c++ --prefix=$TRAVIS_ROOT/clupc
+            make -j4 && make install
+        else
+            echo "GCC UPC installed..."
+            find $TRAVIS_ROOT/clupc -name clang
+            clang --version
+        fi
+        ;;
+esac
