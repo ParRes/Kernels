@@ -17,7 +17,7 @@ case "$PRK_TARGET" in
         make $PRK_TARGET
         export PRK_TARGET_PATH=SERIAL
         $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil     10 1024 32
+        $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
         $PRK_TARGET_PATH/Reduce/reduce       10 1024
         $PRK_TARGET_PATH/Random/random       64 10 16384
@@ -32,7 +32,7 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=OPENMP
         export OMP_NUM_THREADS=4
         $PRK_TARGET_PATH/Synch_p2p/p2p            $OMP_NUM_THREADS 10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil          $OMP_NUM_THREADS 10 1024
+        $PRK_TARGET_PATH/Stencil/stencil          $OMP_NUM_THREADS 10 1000
         $PRK_TARGET_PATH/Transpose/transpose      $OMP_NUM_THREADS 10 1024 32
         $PRK_TARGET_PATH/Reduce/reduce            $OMP_NUM_THREADS 10 16777216
         $PRK_TARGET_PATH/Nstream/nstream          $OMP_NUM_THREADS 10 16777216 32
@@ -53,7 +53,7 @@ case "$PRK_TARGET" in
         export PRK_MPI_PROCS=4
         export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1024
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Reduce/reduce       10 16777216
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Nstream/nstream     10 16777216 32
@@ -72,7 +72,7 @@ case "$PRK_TARGET" in
         export OMP_NUM_THREADS=2
         export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1024
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
         # less support
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Nstream/nstream     10 16777216 32
@@ -86,7 +86,7 @@ case "$PRK_TARGET" in
         export PRK_MPI_PROCS=4
         export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1024
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
         ;;
     allmpishm)
@@ -99,7 +99,7 @@ case "$PRK_TARGET" in
         export PRK_MPISHM_RANKS=$(($PRK_MPI_PROCS/2))
         export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p                         10 1024 1024
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     $PRK_MPISHM_RANKS 10 1024
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     $PRK_MPISHM_RANKS 10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose $PRK_MPISHM_RANKS 10 1024 32
         ;;
     allshmem)
@@ -117,7 +117,7 @@ case "$PRK_TARGET" in
         export OSHRUN_LAUNCHER=$SHMEM_ROOT/bin/mpirun
         export PRK_LAUNCHER=$SHMEM_ROOT/bin/oshrun
         $PRK_LAUNCHER -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        $PRK_LAUNCHER -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1024
+        $PRK_LAUNCHER -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
         ;;
     allupc)
@@ -156,9 +156,9 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=CHARM++
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
-        # For Charm++, the last argument is the overdecomposition factor -->                            \|/
+        # For Charm++, the last argument is the overdecomposition factor -->               \|/
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       +p$PRK_CHARM_PROCS 10 1024 1024  1
-        $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     +p$PRK_CHARM_PROCS 10 1024       1
+        $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     +p$PRK_CHARM_PROCS 10 1000       1
         $PRK_LAUNCHER $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS 10 1024 32    1
         ;;
     allampi)
@@ -180,7 +180,7 @@ case "$PRK_TARGET" in
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 1024
-        $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024
+        $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1000
         $PRK_LAUNCHER $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 32
         $PRK_LAUNCHER $PRK_TARGET_PATH/Reduce/reduce       +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 16777216
         $PRK_LAUNCHER $PRK_TARGET_PATH/Nstream/nstream     +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 16777216 32
@@ -199,7 +199,7 @@ case "$PRK_TARGET" in
         export PRK_FGMPI_THREADS=2
         export PRK_LAUNCHER=$FGMPI_ROOT/bin/mpiexec
         $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Stencil/stencil     10 1024
+        $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
         $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Reduce/reduce       10 16777216
         $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Nstream/nstream     10 16777216 32
@@ -217,7 +217,7 @@ case "$PRK_TARGET" in
         export PRK_MPI_PROCS=4
         export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1024
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
         ;;
 esac
