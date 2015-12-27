@@ -32,6 +32,7 @@ if [ ! -d "$TRAVIS_ROOT/gupc" ]; then
     mv file upc-5.2.0.1.src.tar.bz2
     tar -xjf upc-5.2.0.1.src.tar.bz2
     cd upc-5.2.0.1
+    ./contrib/download_prerequisites
     mkdir build && cd build
     ../configure --disable-multilib --enable-languages=c,c++ --prefix=$TRAVIS_ROOT/gupc
     make -j4 && make install
