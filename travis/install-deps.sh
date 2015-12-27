@@ -41,7 +41,16 @@ case "$PRK_TARGET" in
         ;;
     allgrappa)
         echo "Grappa"
-        sh ./travis/install-gcc.sh $TRAVIS_ROOT
+        case "$CC" in
+            gcc)
+                # test for version - only install if required
+                #sh ./travis/install-gcc.sh $TRAVIS_ROOT
+                ;;
+            clang)
+                # test for version - only install if required
+                #sh ./travis/install-clang.sh $TRAVIS_ROOT
+                ;;
+        esac
         sh ./travis/install-cmake.sh $TRAVIS_ROOT
         sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich
         sh ./travis/install-grappa.sh $TRAVIS_ROOT
