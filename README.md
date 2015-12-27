@@ -1,3 +1,7 @@
+# Quality Control
+
+[![Build Status](https://travis-ci.org/jeffhammond/PRK.svg)](https://travis-ci.org/jeffhammond/PRK)
+
 # License
 
 See LICENSE for licensing information.

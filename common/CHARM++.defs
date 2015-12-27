@@ -2,6 +2,6 @@ include ../../common/make.defs
 CHARMC=$(CHARMTOP)/bin/charmc
 CCOMPILER=$(CHARMC)
 CITRANSLATOR=$(CHARMC) -E
-CLINKER=$(CCOMPILER) -language charm++ -mt_mpi
+CLINKER=$(CCOMPILER) -language charm++
 COMOBJS=
 PROG_ENV=-DCHARM++

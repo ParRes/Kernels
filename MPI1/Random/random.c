@@ -328,7 +328,7 @@ int main(int argc, char **argv) {
 
   ran = (u64Int *) malloc(nstarts*sizeof(u64Int));
   if (!ran) {
-    printf("ERROR: rank %d could not allocate %d bytes for random numbers\n",
+    printf("ERROR: rank %d could not allocate %zu bytes for random numbers\n",
            my_ID, nstarts*sizeof(u64Int));
     error = 1;
   }

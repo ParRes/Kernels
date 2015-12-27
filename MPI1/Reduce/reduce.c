@@ -188,7 +188,7 @@ int main(int argc, char ** argv)
         printf("ERROR at i=%d; value: %lf; reference value: %lf\n",
                i, vector[i], element_value);
 #else
-        printf("First error at i=%d; value: %lf; reference value: %lf\n",
+        printf("First error at i=%ld; value: %lf; reference value: %lf\n",
                i, vector[i], element_value);
         break;
 #endif
