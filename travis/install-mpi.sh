@@ -36,7 +36,7 @@ case "$os" in
                     tar xzf mpich-3.2.tar.gz
                     cd mpich-3.2
                     mkdir build && cd build
-                    ../configure --disable-fortran --prefix=$TRAVIS_ROOT/mpich
+                    ../configure --disable-fortran --disable-romio --prefix=$TRAVIS_ROOT/mpich
                     make -j4 && make install
                 else
                     echo "MPICH installed..."

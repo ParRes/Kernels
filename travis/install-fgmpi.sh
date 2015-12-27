@@ -9,7 +9,7 @@ if [ ! -d "$TRAVIS_ROOT/fgmpi" ]; then
     cd $TRAVIS_ROOT/fgmpi-2.0
     mkdir build && cd build
     # Clang defaults to C99, which chokes on "Set_PROC_NULL"
-    ../configure --disable-fortran CFLAGS="-std=gnu89" --prefix=$TRAVIS_ROOT/fgmpi
+    ../configure --disable-fortran --disable-romio CFLAGS="-std=gnu89" --prefix=$TRAVIS_ROOT/fgmpi
     make -j4 && make install
 else
     echo "FG-MPI installed..."
