@@ -38,7 +38,7 @@ case "$os" in
                     # yes sudo #
                     #sudo apt-get update -q
                     #sudo apt-get install -y gfortran libcr0 default-jdk
-                    #wget -q http://www.cebacad.net/files/mpich/ubuntu/mpich-3.2b3/mpich_3.2b3-1ubuntu_amd64.deb
+                    #wget --no-check-certificate -q http://www.cebacad.net/files/mpich/ubuntu/mpich-3.2b3/mpich_3.2b3-1ubuntu_amd64.deb
                     #sudo dpkg -i ./mpich_3.2b3-1ubuntu_amd64.deb
                     # no sudo #
                     wget --no-check-certificate -q http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz

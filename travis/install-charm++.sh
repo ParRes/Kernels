@@ -11,7 +11,7 @@ if [ ! -d "$TRAVIS_ROOT/charm" ]; then
         Darwin)
             echo "Mac"
             cd $TRAVIS_ROOT
-            wget -q https://charm.cs.illinois.edu/distrib/charm-6.7.0.tar.gz
+            wget --no-check-certificate -q https://charm.cs.illinois.edu/distrib/charm-6.7.0.tar.gz
             tar -xzf charm-6.7.0.tar.gz
             cd charm-6.7.0
             #./build $RUNTIME netlrts-darwin-x86_64 --with-production -j4
@@ -21,7 +21,7 @@ if [ ! -d "$TRAVIS_ROOT/charm" ]; then
         Linux)
             echo "Linux"
             cd $TRAVIS_ROOT
-            wget -q https://charm.cs.illinois.edu/distrib/charm-6.7.0.tar.gz
+            wget --no-check-certificate -q https://charm.cs.illinois.edu/distrib/charm-6.7.0.tar.gz
             tar -xzf charm-6.7.0.tar.gz
             cd charm-6.7.0
             # This fails with: The authenticity of host 'localhost (127.0.0.1)' can't be established.

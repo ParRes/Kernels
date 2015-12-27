@@ -10,7 +10,7 @@ TRAVIS_ROOT="$1"
 case "$CC" in
     gcc)
         if [ ! -d "$TRAVIS_ROOT/gupc" ]; then
-            wget -q http://www.gccupc.org/gupc-5201-1/32-gupc-5-2-0-1-source-release/file
+            wget --no-check-certificate -q http://www.gccupc.org/gupc-5201-1/32-gupc-5-2-0-1-source-release/file
             mv file upc-5.2.0.1.src.tar.bz2
             tar -xjf upc-5.2.0.1.src.tar.bz2
             cd upc-5.2.0.1

@@ -16,7 +16,7 @@ if [ ! -d "$SHMEM_ROOT" ]; then
 
     # install Hydra
     cd $TRAVIS_ROOT
-    wget http://www.mpich.org/static/downloads/3.2/hydra-3.2.tar.gz
+    wget --no-check-certificate -q http://www.mpich.org/static/downloads/3.2/hydra-3.2.tar.gz
     tar xvzf hydra-3.2.tar.gz
     cd hydra-3.2
     ./configure --prefix=$SHMEM_ROOT
