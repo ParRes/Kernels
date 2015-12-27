@@ -11,15 +11,19 @@ os:
 compiler:
   - gcc
   - clang
-#matrix:
-#  exclude:
-#  - compiler: clang
-#      env:
-#      - PRK_TARGET=allopenmp
-#      - PRK_TARGET=allmpiopenmp
-# may not be necessary...
-#  allow_failures:
-#    - env: PRK_TARGET=allgrappa
+matrix:
+  exclude:
+  - compiler: clang
+      env:
+      - PRK_TARGET=allopenmp
+      - PRK_TARGET=allmpiopenmp
+  allow_failures:
+    - env: PRK_TARGET=allshmem
+    - env: PRK_TARGET=allupc
+    - env: PRK_TARGET=allcharm++
+    - env: PRK_TARGET=allampi
+    - env: PRK_TARGET=allfgmpi
+    - env: PRK_TARGET=allgrappa
 addons:
   apt:
     sources:
