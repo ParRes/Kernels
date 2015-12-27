@@ -2,7 +2,7 @@
 #sudo: true
 # use addons-apt instead
 sudo: false
-language: c
+language: cpp
 os:
   - linux
 # OpenMP compiler support on Mac is an issue
