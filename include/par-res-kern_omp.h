@@ -43,29 +43,29 @@ void omp_set_num_threads(int i) { return; }
 typedef int omp_lock_t;
 void omp_init_lock(omp_lock_t * l)
 {
-    l=0;
+    *l=0;
 }
 void omp_destroy_lock(omp_lock_t * l)
 {
     /* "It is illegal to call this routine with a lock variable that is not initialized." */
-    if (l==-1) abort();
-    l=-1;
+    if (*l==-1) abort();
+    *l=-1;
 }
 void omp_set_lock(omp_lock_t * l)
 {
-    if (l==-1) abort();
-    if (l==0) l=1;
+    if (*l==-1) abort();
+    if (*l==0) *l=1;
 }
 void omp_unset_lock(omp_lock_t * l)
 {
-    if (l==-1) abort();
-    if (l==1) l=0;
+    if (*l==-1) abort();
+    if (*l==1) l=0;
 }
 int omp_test_lock(omp_lock_t * l)
 {
-    if (l==-1) abort();
-    if (l==0) {
-        l=1;
+    if (*l==-1) abort();
+    if (*l==0) {
+        *l=1;
         return 1;
     } else {
         return 0;
