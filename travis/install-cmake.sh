@@ -25,6 +25,7 @@ case "$os" in
             cd $TRAVIS_ROOT
             wget --no-check-certificate -q https://cmake.org/files/v3.4/cmake-3.4.1-Linux-x86_64.sh
             chmod +x cmake-3.4.1-Linux-x86_64.sh # just in case
+            mkdir $TRAVIS_ROOT/cmake
             ./cmake-3.4.1-Linux-x86_64.sh --prefix=$TRAVIS_ROOT/cmake --skip-license --exclude-subdir
         else
             echo "CMake installed..."
