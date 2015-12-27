@@ -143,19 +143,19 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
-                #export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
-                #export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
-                export MY_CHARM_TOP=$TRAVIS_ROOT/charm/multicore-linux64
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
                 ;;
         esac
-        echo "CHARMTOP=$MY_CHARM_TOP" > common/make.defs
+        echo "CHARMTOP=$CHARM_ROOT" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=CHARM++
         export PRK_CHARM_PROCS=4
-        export PRK_LAUNCHER=$MY_CHARM_TOP/bin/charmrun
+        export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
         # For Charm++, the last argument is the overdecomposition factor -->                            \|/
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       +p$PRK_CHARM_PROCS 10 1024 1024  1
         $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     +p$PRK_CHARM_PROCS 10 1024       1
@@ -166,19 +166,19 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
-                #export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
-                #export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
-                export MY_CHARM_TOP=$TRAVIS_ROOT/charm/multicore-linux64
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
                 ;;
         esac
-        echo "CHARMTOP=$MY_CHARM_TOP" > common/make.defs
+        echo "CHARMTOP=$CHARM_ROOT" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=AMPI
         export PRK_CHARM_PROCS=4
-        export PRK_LAUNCHER=$MY_CHARM_TOP/bin/charmrun
+        export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 1024
         $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024
         $PRK_LAUNCHER $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS 10 1024 32
