@@ -1,7 +1,8 @@
 set -e
 set -x
 
-PRK_TARGET="$1"
+TRAVIS_ROOT="$1"
+PRK_TARGET="$2"
 
 # make this runtime configurable later
 COMPILER=gcc
