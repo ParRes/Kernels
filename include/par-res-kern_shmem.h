@@ -38,10 +38,13 @@ extern void bail_out(int);
 #if ((SHMEM_MAJOR_VERSION>1) || ((SHMEM_MAJOR_VERSION == 1) && (SHMEM_MINOR_VERSION >= 2)))
 #define PRK_HAVE_OPENSHMEM_1_2
 #endif
+/* Cray SHMEM provides some but not all of the changes in OpenSHMEM 1.2. */
+#elif defined(CRAY_SHMEM_NUMVERSION)
+#define PRK_HAVE_CRAY_SHMEM
 #endif
 
 static void prk_shmem_init(void) {
-#ifdef PRK_HAVE_OPENSHMEM_1_2
+#if defined(PRK_HAVE_OPENSHMEM_1_2) || defined(PRK_HAVE_CRAY_SHMEM)
     shmem_init();
 #else
     start_pes(0);
@@ -49,7 +52,7 @@ static void prk_shmem_init(void) {
 }
 
 static void prk_shmem_finalize(void) {
-#ifdef PRK_HAVE_OPENSHMEM_1_2
+#if defined(PRK_HAVE_OPENSHMEM_1_2) || defined(PRK_HAVE_CRAY_SHMEM)
     shmem_finalize();
 #else
     /* shmem_finalize contains implicit barrier, so we include this
@@ -59,7 +62,7 @@ static void prk_shmem_finalize(void) {
 }
 
 static int prk_shmem_my_pe(void) {
-#ifdef PRK_HAVE_OPENSHMEM_1_2
+#if defined(PRK_HAVE_OPENSHMEM_1_2) || defined(PRK_HAVE_CRAY_SHMEM)
     return shmem_my_pe();
 #else
     return _my_pe();
@@ -67,7 +70,7 @@ static int prk_shmem_my_pe(void) {
 }
 
 static int prk_shmem_n_pes(void) {
-#ifdef PRK_HAVE_OPENSHMEM_1_2
+#if defined(PRK_HAVE_OPENSHMEM_1_2) || defined(PRK_HAVE_CRAY_SHMEM)
     return shmem_n_pes();
 #else
     return _num_pes();
@@ -77,6 +80,11 @@ static int prk_shmem_n_pes(void) {
 static void * prk_shmem_malloc(size_t n) {
 #ifdef PRK_HAVE_OPENSHMEM_1_2
     return shmem_malloc(n);
+#elif defined(PRK_HAVE_CRAY_SHMEM)
+    /* Cray SHMEM has not had barrier semantics for shmalloc in the past. */
+    void * ptr = shmalloc(n);
+    shmem_barrier_all();
+    return ptr;
 #else
     return shmalloc(n);
 #endif
@@ -94,7 +102,8 @@ static void * prk_shmem_align(size_t alignment, size_t size) {
 #ifdef PRK_HAVE_OPENSHMEM_1_2
     return shmem_align(alignment,size);
 #else
-    return shmalign(alignment,size);
+    /* It seems that shmalign did not exist. */
+    return shmalloc(size);
 #endif
 }
 
