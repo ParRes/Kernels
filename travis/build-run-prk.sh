@@ -139,7 +139,7 @@ case "$PRK_TARGET" in
     allupc)
         echo "UPC"
         # compiler for static thread execution, so set this prior to build
-        echo "UPCC=$PRK_TARGET_PATH/usr/local/gupc/bin/upc" > common/make.defs
+        echo "UPCC=$TRAVIS_ROOT/usr/local/gupc/bin/upc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
         export PRK_UPC_PROCS=4
