@@ -11,12 +11,12 @@ COMPILER=gcc
 os=`uname`
 case "$os" in
     Darwin)
-        export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
+        export MY_CHARM_TOP=$TRAVIS_ROOT/charm-6.7.0/netlrts-darwin-x86_64-smp
         ;;
     Linux)
-        #export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
-        #export MY_CHARM_TOP=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
-        export MY_CHARM_TOP=$TRAVIS_ROOT/charm/multicore-linux64
+        #export MY_CHARM_TOP=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
+        #export MY_CHARM_TOP=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64-smp
+        export MY_CHARM_TOP=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
         ;;
 esac
 
