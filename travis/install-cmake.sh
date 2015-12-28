@@ -14,6 +14,10 @@ case "$os" in
     Linux)
         echo "Linux"
         if [ ! -d "$TRAVIS_ROOT/cmake" ]; then
+            mkdir -p $TRAVIS_ROOT/cmake
+            # DEBUG
+            ls -l $TRAVIS_ROOT
+            ls -l $TRAVIS_ROOT/cmake
             # from source
             #wget --no-check-certificate -q https://cmake.org/files/v3.4/cmake-3.4.1.tar.gz
             #tar -C $TRAVIS_ROOT -xzf cmake-3.4.1.tar.gz
@@ -24,9 +28,7 @@ case "$os" in
             # from binary
             cd $TRAVIS_ROOT
             wget --no-check-certificate -q https://cmake.org/files/v3.4/cmake-3.4.1-Linux-x86_64.sh
-            chmod +x cmake-3.4.1-Linux-x86_64.sh # just in case
-            mkdir $TRAVIS_ROOT/cmake
-            ./cmake-3.4.1-Linux-x86_64.sh --prefix=$TRAVIS_ROOT/cmake --skip-license --exclude-subdir
+            sh ./cmake-3.4.1-Linux-x86_64.sh --prefix=$TRAVIS_ROOT/cmake --skip-license --exclude-subdir
         else
             echo "CMake installed..."
             find $TRAVIS_ROOT/cmake -name cmake
