@@ -18,7 +18,7 @@ case "$CC" in
             mkdir build && cd build
             ../configure --disable-multilib --enable-languages=c,c++ --prefix=$TRAVIS_ROOT/gupc
             # Travis has problems with how much output the GCC build creates
-            make -j4 >& /dev/null
+            make -j4 &> /dev/null
             make install
         else
             echo "GCC UPC installed..."
@@ -35,7 +35,8 @@ case "$CC" in
             # get source files
             mkdir build && cd build
             ../configure --disable-multilib --enable-languages=c,c++ --prefix=$TRAVIS_ROOT/clupc
-            make -j4 && make install
+            make -j4
+            make install
         else
             echo "GCC UPC installed..."
             find $TRAVIS_ROOT/clupc -name clang

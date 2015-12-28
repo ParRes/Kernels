@@ -55,6 +55,7 @@ env:
   - PRK_TARGET=allmpishm
   - PRK_TARGET=allmpirma
   - PRK_TARGET=allshmem
+#  GUPC fails because building GCC 5.2 takes too long / outputs too much
   - PRK_TARGET=allupc
   - PRK_TARGET=allcharm++
   - PRK_TARGET=allampi
