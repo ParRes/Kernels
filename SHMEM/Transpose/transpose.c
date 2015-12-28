@@ -130,7 +130,7 @@ int main(int argc, char ** argv)
   int my_ID;               /* rank                                  */
   int root=0;              /* rank of root                          */
   int iterations;          /* number of times to do the transpose   */
-  long i, j, it, jt, istart;/* dummies                               */
+  long i, j, it, jt, istart;/* dummies                              */
   int iter;                /* index of iteration                    */
   int phase;               /* phase inside staged communication     */
   int colstart;            /* starting column for owning rank       */
