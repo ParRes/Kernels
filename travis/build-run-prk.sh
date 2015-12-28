@@ -139,13 +139,13 @@ case "$PRK_TARGET" in
     allupc)
         echo "UPC"
         # compiler for static thread execution, so set this prior to build
-        echo "UPCC=/usr/local/gupc/bin/upc" > common/make.defs
+        echo "UPCC=$PRK_TARGET_PATH/usr/local/gupc/bin/upc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
         export PRK_UPC_PROCS=4
         # widely supported
-        $PRK_TARGET_PATH/Synch_p2p/p2p -n $PRK_UPC_PROCS       10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil -n $PRK_UPC_PROCS     10 1024
+        $PRK_TARGET_PATH/Synch_p2p/p2p       -n $PRK_UPC_PROCS 10 1024 1024
+        $PRK_TARGET_PATH/Stencil/stencil     -n $PRK_UPC_PROCS 10 1024
         $PRK_TARGET_PATH/Transpose/transpose -n $PRK_UPC_PROCS 10 1024 32
         ;;
     allcharm++)
