@@ -153,10 +153,11 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=CHARM++
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
+        export PRK_LAUNCHER_ARGS=+p$PRK_CHARM_PROCS ++local
         # For Charm++, the last argument is the overdecomposition factor -->               \|/
-        $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       +p$PRK_CHARM_PROCS 10 1024 1024  1
-        $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     +p$PRK_CHARM_PROCS 10 1000       1
-        $PRK_LAUNCHER $PRK_TARGET_PATH/Transpose/transpose +p$PRK_CHARM_PROCS 10 1024 32    1
+        $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       $PRK_LAUNCHER_ARGS 10 1024 1024  1
+        $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     $PRK_LAUNCHER_ARGS 10 1000       1
+        $PRK_LAUNCHER $PRK_TARGET_PATH/Transpose/transpose $PRK_LAUNCHER_ARGS 10 1024 32    1
         ;;
     allampi)
         echo "Adaptive MPI (AMPI)"
@@ -176,7 +177,7 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=AMPI
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
-        export PRK_LAUNCHER_ARGS=+p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS +isomalloc_sync
+        export PRK_LAUNCHER_ARGS=+p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS +isomalloc_sync ++local
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       $PRK_LAUNCHER_ARGS 10 1024 1024
         $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     $PRK_LAUNCHER_ARGS 10 1000
         $PRK_LAUNCHER $PRK_TARGET_PATH/Transpose/transpose $PRK_LAUNCHER_ARGS 10 1024 32
