@@ -4,16 +4,13 @@ set -x
 os=`uname`
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
-
-# make this runtime configurable later
-COMPILER=gcc
-
-
+# Travis exports this
+PRK_COMPILER="$CC"
 
 case "$PRK_TARGET" in
     allserial)
         echo "Serial"
-        sh ./travis/create-make-defs.sh $COMPILER
+        echo "CC=$PRK_COMPILER" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=SERIAL
         $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
@@ -27,7 +24,7 @@ case "$PRK_TARGET" in
         ;;
     allopenmp)
         echo "OpenMP"
-        sh ./travis/create-make-defs.sh $COMPILER
+        echo "CC=$PRK_COMPILER\nOPENMPFLAG=-fopenmp" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=OPENMP
         export OMP_NUM_THREADS=4
@@ -65,7 +62,7 @@ case "$PRK_TARGET" in
     allmpio*mp)
         echo "MPI+OpenMP"
         export MPI_ROOT=$TRAVIS_ROOT/mpich
-        echo "MPICC=$MPI_ROOT/bin/mpicc" > common/make.defs
+        echo "MPICC=$MPI_ROOT/bin/mpicc\nOPENMPFLAG=-fopenmp" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIOMP
         export PRK_MPI_PROCS=2
