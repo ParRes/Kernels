@@ -64,7 +64,7 @@ case "$PRK_TARGET" in
         export MPI_ROOT=$TRAVIS_ROOT/mpich
         echo "MPICC=$MPI_ROOT/bin/mpicc\nOPENMPFLAG=-fopenmp" > common/make.defs
         make $PRK_TARGET
-        export PRK_TARGET_PATH=MPIOMP
+        export PRK_TARGET_PATH=MPIOPENMP
         export PRK_MPI_PROCS=2
         export OMP_NUM_THREADS=2
         export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
