@@ -17,7 +17,10 @@ matrix:
       env: PRK_TARGET=allopenmp
     - compiler: clang
       env: PRK_TARGET=allmpiomp
-    # This should work but it just isn't worth it
+    # Clang UPC requires source build, which takes too long
+    - compiler: clang
+      env: PRK_TARGET=allupc
+    # TODO Revisit this later...
     - compiler: gcc
       env: PRK_TARGET=allgrappa
   allow_failures:
@@ -61,7 +64,7 @@ env:
   - PRK_TARGET=allmpirma
   - PRK_TARGET=allshmem
 #  GUPC fails because building GCC 5.2 takes too long / outputs too much
-#  - PRK_TARGET=allupc
+  - PRK_TARGET=allupc
   - PRK_TARGET=allcharm++
   - PRK_TARGET=allampi
   - PRK_TARGET=allfgmpi
