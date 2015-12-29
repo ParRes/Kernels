@@ -26,7 +26,6 @@ case "$CC" in
             mv file upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
             tar -C $TRAVIS_ROOT/gupc -xzvf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
             find $TRAVIS_ROOT/gupc
-            exit 0
         else
             echo "GCC UPC installed..."
             find $TRAVIS_ROOT/gupc -name gupc

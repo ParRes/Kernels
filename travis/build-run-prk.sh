@@ -120,7 +120,10 @@ case "$PRK_TARGET" in
         echo "UPC"
         case "$CC" in
             gcc)
-                export UPC_ROOT=$TRAVIS_ROOT/gupc
+                # If building from source (impossible)
+                #export UPC_ROOT=$TRAVIS_ROOT/gupc
+                # If installing deb file
+                export UPC_ROOT=$TRAVIS_ROOT/gupc/usr/local/gupc
                 ;;
             clang)
                 export UPC_ROOT=$TRAVIS_ROOT/clupc
