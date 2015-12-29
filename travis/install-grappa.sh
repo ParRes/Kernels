@@ -75,7 +75,7 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
              -DMPI_C_LIBRARIES="-lmpi" \
              -DMPI_C_INCLUDE_PATH="$MPI_ROOT/include" \
              -DMPI_CXX_COMPILER="\"MPICH_CXX=$PRK_CXX $MPI_ROOT/bin/mpicxx\"" \
-             -DMPI_CXX_LINK_FLAGS="-L$MPI_ROOT/lib"
+             -DMPI_CXX_LINK_FLAGS="-L$MPI_ROOT/lib" \
              -DMPI_CXX_LIBRARIES="-lmpicxx -lmpi" \
              -DMPI_CXX_INCLUDE_PATH="$MPI_ROOT/include" \
              -DGRAPPA_INSTALL_PREFIX=$TRAVIS_ROOT/grappa
