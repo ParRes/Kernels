@@ -17,6 +17,9 @@ matrix:
       env: PRK_TARGET=allopenmp
     - compiler: clang
       env: PRK_TARGET=allmpiomp
+    # This should work but it just isn't worth it
+    - compiler: gcc
+      env: PRK_TARGET=allgrappa
   allow_failures:
     - env: PRK_TARGET=allupc
     # just disable broken tests for now
