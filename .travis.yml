@@ -81,6 +81,8 @@ before_script:
 script:
   - sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
 after_failure:
+  - find . -name CMakeOutput.log -exec cat {} ";"
+  - find . -name CMakeError.log -exec cat {} ";"
   - echo "Sad panda"
 notifications:
   email:
