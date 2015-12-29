@@ -63,7 +63,7 @@ env:
   - PRK_TARGET=allgrappa
 before_install:
   - export TRAVIS_ROOT=$HOME/PRK-deps
-  - mkdir $TRAVIS_ROOT
+  - mkdir -p $TRAVIS_ROOT
 install:
   - export PATH=$TRAVIS_ROOT/bin:$PATH
   - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
