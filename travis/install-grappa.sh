@@ -21,34 +21,34 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
                 gcc)
                     # I am sure there is a decent way to condense this...
                     if [ -f "/usr/bin/gcc-5.3" ]; then
-                        export CMAKE_C_COMPILER=gcc-5.3
-                        export CMAKE_CXX_COMPILER=g++-5.3
+                        export PRK_CC=gcc-5.3
+                        export PRK_CXX=g++-5.3
                     elif [ -f "/usr/bin/gcc-5.2" ]; then
-                        export CMAKE_C_COMPILER=gcc-5.2
-                        export CMAKE_CXX_COMPILER=g++-5.2
+                        export PRK_CC=gcc-5.2
+                        export PRK_CXX=g++-5.2
                     elif [ -f "/usr/bin/gcc-5.1" ]; then
-                        export CMAKE_C_COMPILER=gcc-5.1
-                        export CMAKE_CXX_COMPILER=g++-5.1
+                        export PRK_CC=gcc-5.1
+                        export PRK_CXX=g++-5.1
                     elif [ -f "/usr/bin/gcc-5" ]; then
-                        export CMAKE_C_COMPILER=gcc-5
-                        export CMAKE_CXX_COMPILER=g++-5
+                        export PRK_CC=gcc-5
+                        export PRK_CXX=g++-5
                     elif [ -f "/usr/bin/gcc-4.9" ]; then
-                        export CMAKE_C_COMPILER=gcc-4.9
-                        export CMAKE_CXX_COMPILER=g++-4.9
+                        export PRK_CC=gcc-4.9
+                        export PRK_CXX=g++-4.9
                     elif [ -f "/usr/bin/gcc-4.8" ]; then
-                        export CMAKE_C_COMPILER=gcc-4.8
-                        export CMAKE_CXX_COMPILER=g++-4.8
+                        export PRK_CC=gcc-4.8
+                        export PRK_CXX=g++-4.8
                     elif [ -f "/usr/bin/gcc-4.7" ]; then
-                        export CMAKE_C_COMPILER=gcc-4.7
-                        export CMAKE_CXX_COMPILER=g++-4.7
+                        export PRK_CC=gcc-4.7
+                        export PRK_CXX=g++-4.7
                     else
-                        export CMAKE_C_COMPILER=gcc
-                        export CMAKE_CXX_COMPILER=g++
+                        export PRK_CC=gcc
+                        export PRK_CXX=g++
                     fi
                     ;;
                 clang)
-                    export CMAKE_C_COMPILER=clang
-                    export CMAKE_CXX_COMPILER=clang++
+                    export PRK_CC=clang
+                    export PRK_CXX=clang++
                     ;;
             esac
             ;;
@@ -69,13 +69,13 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     mkdir build && cd build
     export MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
     cmake .. \
-             -DCMAKE_CC_COMPILER=$CMAKE_CC_COMPILER \
-             -DCMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER \
-             -DMPI_C_COMPILER="MPICH_CC=$CMAKE_CC_COMPILER $MPI_ROOT/bin/mpicc" \
+             -DCMAKE_CC_COMPILER="$PRK_CC" \
+             -DCMAKE_CXX_COMPILER="$PRK_CXX" \
+             -DMPI_C_COMPILER="MPICH_CC=$PRK_CC $MPI_ROOT/bin/mpicc" \
              -DMPI_C_LINK_FLAGS="-L$MPI_ROOT/lib"
              -DMPI_C_LIBRARIES="-lmpi" \
              -DMPI_C_INCLUDE_PATH="$MPI_ROOT/include" \
-             -DMPI_CXX_COMPILER="MPICH_CXX=$CMAKE_CXX_COMPILER $MPI_ROOT/bin/mpicxx" \
+             -DMPI_CXX_COMPILER="MPICH_CXX=$PRK_CXX $MPI_ROOT/bin/mpicxx" \
              -DMPI_CXX_LINK_FLAGS="-L$MPI_ROOT/lib"
              -DMPI_CXX_LIBRARIES="-lmpicxx -lmpi" \
              -DMPI_CXX_INCLUDE_PATH="$MPI_ROOT/include" \
