@@ -10,16 +10,22 @@ TRAVIS_ROOT="$1"
 case "$CC" in
     gcc)
         if [ ! -d "$TRAVIS_ROOT/gupc" ]; then
-            wget --no-check-certificate -q http://www.gccupc.org/gupc-5201-1/32-gupc-5-2-0-1-source-release/file
-            mv file upc-5.2.0.1.src.tar.bz2
-            tar -xjf upc-5.2.0.1.src.tar.bz2
-            cd upc-5.2.0.1
-            ./contrib/download_prerequisites
-            mkdir build && cd build
-            ../configure --disable-multilib --enable-languages=c,c++ --prefix=$TRAVIS_ROOT/gupc
-            # Travis has problems with how much output the GCC build creates
-            make -j4 &> /dev/null
-            make install
+            # Building from source overflows Travis CI 4 MB output...
+            #wget --no-check-certificate -q http://www.gccupc.org/gupc-5201-1/32-gupc-5-2-0-1-source-release/file
+            #mv file upc-5.2.0.1.src.tar.bz2
+            #tar -xjf upc-5.2.0.1.src.tar.bz2
+            #cd upc-5.2.0.1
+            #./contrib/download_prerequisites
+            #mkdir build && cd build
+            #../configure --disable-multilib --enable-languages=c,c++ --prefix=$TRAVIS_ROOT/gupc
+            ## Travis has problems with how much output the GCC build creates
+            #make -j4 &> /dev/null
+            #make install
+            wget -q http://www.gccupc.org/gupc-5201-1/30-gupc-5201-x8664-ubuntu-1204/file
+            mv file upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
+            tar -C $TRAVIS_ROOT/gupc -xzvf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
+            find $TRAVIS_ROOT/gupc
+            exit 0
         else
             echo "GCC UPC installed..."
             find $TRAVIS_ROOT/gupc -name gupc
