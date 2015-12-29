@@ -68,7 +68,7 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     mkdir build && cd build
     export MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
     cmake .. \
-             -DCMAKE_CC_COMPILER="$PRK_CC" \
+             -DCMAKE_C_COMPILER="$PRK_CC" \
              -DCMAKE_CXX_COMPILER="$PRK_CXX" \
              -DMPI_C_COMPILER="\"MPICH_CC=$PRK_CC $MPI_ROOT/bin/mpicc\"" \
              -DMPI_C_LINK_FLAGS="-L$MPI_ROOT/lib" \
