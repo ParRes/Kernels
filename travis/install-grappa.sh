@@ -61,17 +61,20 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     find /usr -name gcc\* -type f
     find $TRAVIS_ROOT/$MPI_IMPL
     # END
-    export MPI_C_COMPILER="MPICH_CC=$CMAKE_CC_COMPILER $TRAVIS_ROOT/$MPI_IMPL/bin/mpicc"
-    export MPI_CXX_COMPILER="MPICH_CXX=$CMAKE_CXX_COMPILER $TRAVIS_ROOT/$MPI_IMPL/bin/mpicxx"
-    export MPI_C_INCLUDE_PATH=$TRAVIS_ROOT/$MPI_IMPL/include
-    export MPI_C_LIBRARIES=$TRAVIS_ROOT/$MPI_IMPL/lib/libmpi.so
     # Using Grappa's configure script
     #./configure --prefix=$TRAVIS_ROOT/grappa
     #cd build/Make+Release
     # Invoking CMake directly
     export DGRAPPA_INSTALL_PREFIX=$TRAVIS_ROOT/grappa
     mkdir build && cd build
-    cmake ..
+    export MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
+    cmake .. -DGRAPPA_INSTALL_PREFIX=$TRAVIS_ROOT/grappa \
+             -DMPI_C_LIBRARIES=$MPI_ROOT/lib/libmpi.so \
+             -DMPI_C_INCLUDE_PATH=$MPI_ROOT/include \
+             -DCMAKE_CC_COMPILER=$CMAKE_CC_COMPILER \
+             -DCMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER \
+             -DMPI_C_COMPILER="MPICH_CC=$CMAKE_CC_COMPILER $MPI_ROOT/bin/mpicc" \
+             -DMPI_CXX_COMPILER="MPICH_CXX=$CMAKE_CXX_COMPILER $MPI_ROOT/bin/mpicxx"
     # END
     make -j4
     make install
