@@ -12,11 +12,11 @@ compiler:
   - gcc
   - clang
 matrix:
-# apparently, there is a syntax error here...
-#  exclude:
-#    compiler: clang
-#      - env: PRK_TARGET=allopenmp
-#      - env: PRK_TARGET=allmpiomp
+  exclude:
+    - compiler: clang
+       env: PRK_TARGET=allopenmp
+    - compiler: clang
+       env: PRK_TARGET=allmpiomp
   allow_failures:
     - env: PRK_TARGET=allupc
     - env: PRK_TARGET=allampi
