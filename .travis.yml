@@ -13,14 +13,11 @@ compiler:
   - clang
 matrix:
   exclude:
-  - compiler: clang
-      env:
-      - PRK_TARGET=allopenmp
-      - PRK_TARGET=allmpiopenmp
+    compiler: clang
+      - env: PRK_TARGET=allopenmp
+      - env: PRK_TARGET=allmpiomp
   allow_failures:
-    - env: PRK_TARGET=allshmem
     - env: PRK_TARGET=allupc
-    - env: PRK_TARGET=allcharm++
     - env: PRK_TARGET=allampi
     - env: PRK_TARGET=allfgmpi
     - env: PRK_TARGET=allgrappa
@@ -51,7 +48,7 @@ env:
   - PRK_TARGET=allserial
   - PRK_TARGET=allopenmp
   - PRK_TARGET=allmpi1
-  - PRK_TARGET=allmpiopenmp
+  - PRK_TARGET=allmpiomp
   - PRK_TARGET=allmpishm
   - PRK_TARGET=allmpirma
   - PRK_TARGET=allshmem
