@@ -6,14 +6,16 @@ TRAVIS_ROOT="$1"
 if [ ! -d "$TRAVIS_ROOT/fgmpi" ]; then
 
     # TAR build
-    #wget --no-check-certificate -q http://www.cs.ubc.ca/~humaira/code/fgmpi-2.0.tar.gz
-    #tar -C $TRAVIS_ROOT -xzf fgmpi-2.0.tar.gz
-    #cd $TRAVIS_ROOT/fgmpi-2.0
+    wget --no-check-certificate -q http://www.cs.ubc.ca/~humaira/code/fgmpi-2.0.tar.gz
+    tar -C $TRAVIS_ROOT -xzf fgmpi-2.0.tar.gz
+    cd $TRAVIS_ROOT/fgmpi-2.0
 
     # GIT build
-    cd $TRAVIS_ROOT
-    git clone --depth 10 https://github.com/humairakamal/fgmpi.git fgmpi-source
-    cd fgmpi-source
+    #cd $TRAVIS_ROOT
+    #git clone --depth 10 https://github.com/humairakamal/fgmpi.git fgmpi-source
+    #cd fgmpi-source
+    ## this may fail on older autotools
+    #./autogen.sh
 
     # TAR or GIT
     mkdir build && cd build
