@@ -144,8 +144,8 @@ case "$PRK_TARGET" in
                 ;;
             Linux)
                 #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64-smp
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64-smp
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" > common/make.defs
@@ -167,8 +167,8 @@ case "$PRK_TARGET" in
                 ;;
             Linux)
                 #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64-smp
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64-smp
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" > common/make.defs
