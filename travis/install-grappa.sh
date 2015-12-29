@@ -25,10 +25,10 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     cd grappa-source
     # DEBUG
     which gcc
-    which gcc-4
-    which gcc-4.6
-    which gcc-4.7
-    which gcc-4.8
+    #which gcc-4
+    #which gcc-4.6
+    #which gcc-4.7
+    #which gcc-4.8
     find /usr -name gcc\* -type f
     find $TRAVIS_ROOT/$MPI_IMPL
     # END
