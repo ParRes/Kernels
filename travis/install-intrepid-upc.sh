@@ -21,6 +21,7 @@ case "$CC" in
             ## Travis has problems with how much output the GCC build creates
             #make -j4 &> /dev/null
             #make install
+            mkdir $TRAVIS_ROOT/gupc
             wget -q http://www.gccupc.org/gupc-5201-1/30-gupc-5201-x8664-ubuntu-1204/file
             mv file upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
             tar -C $TRAVIS_ROOT/gupc -xzvf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
