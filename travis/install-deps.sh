@@ -53,6 +53,6 @@ case "$PRK_TARGET" in
         esac
         sh ./travis/install-cmake.sh $TRAVIS_ROOT
         sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich
-        sh ./travis/install-grappa.sh $TRAVIS_ROOT
+        sh ./travis/install-grappa.sh $TRAVIS_ROOT mpich
         ;;
 esac

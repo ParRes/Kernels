@@ -31,6 +31,7 @@ addons:
     - boost-latest
     packages:
     - cmake
+    # Grappa CMake is not finding these...
     - gcc-4.8
     - g++-4.8
     #  Boost is for Grappa
