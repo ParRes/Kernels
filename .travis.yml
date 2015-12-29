@@ -37,6 +37,8 @@ addons:
     # Grappa CMake is not finding these...
     - gcc-4.8
     - g++-4.8
+    # Required by GUPC
+    - libnuma-dev
     #  Boost is for Grappa
     - libboost-date-time1.55-dev
     - libboost-exception1.55-dev
