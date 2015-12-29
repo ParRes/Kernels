@@ -56,19 +56,20 @@ addons:
     - libboost-test1.55-dev
     - libboost-timer1.55-dev
 env:
-  - PRK_TARGET=allserial
-  - PRK_TARGET=allopenmp
-  - PRK_TARGET=allmpi1
-  - PRK_TARGET=allmpiomp
-  - PRK_TARGET=allmpishm
-  - PRK_TARGET=allmpirma
-  - PRK_TARGET=allshmem
+# Order by likelihood of failing...
+  - PRK_TARGET=allgrappa
 #  GUPC fails because building GCC 5.2 takes too long / outputs too much
   - PRK_TARGET=allupc
-  - PRK_TARGET=allcharm++
   - PRK_TARGET=allampi
+  - PRK_TARGET=allcharm++
   - PRK_TARGET=allfgmpi
-  - PRK_TARGET=allgrappa
+  - PRK_TARGET=allshmem
+  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpiomp
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allserial
 before_install:
   - export TRAVIS_ROOT=$HOME/PRK-deps
   - mkdir -p $TRAVIS_ROOT
