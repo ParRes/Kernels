@@ -35,6 +35,8 @@ matrix:
     #- env: PRK_TARGET=allampi
     #- env: PRK_TARGET=allfgmpi
     - env: PRK_TARGET=allgrappa
+    # lots of issues with Mac right now...
+    - os: osx
 addons:
   apt:
     sources:
