@@ -215,6 +215,7 @@ case "$PRK_TARGET" in
         ;;
     allgrappa)
         echo "Grappa"
+        export MPI_ROOT=$TRAVIS_ROOT/mpich
         # compiler for static thread execution, so set this prior to build
         echo "GRAPPATOP=$TRAVIS_ROOT/grappa" > common/make.defs
         make $PRK_TARGET
