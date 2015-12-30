@@ -18,6 +18,11 @@ matrix:
       env: PRK_TARGET=allopenmp
     - compiler: clang
       env: PRK_TARGET=allmpiomp
+    # dealing with broken GCC on Mac not worth it here
+    - os: osx
+      env: PRK_TARGET=allopenmp
+    - os: osx
+      env: PRK_TARGET=allmpiomp
     # Clang UPC requires source build, which probably takes too long
     - compiler: clang
       env: PRK_TARGET=allupc
