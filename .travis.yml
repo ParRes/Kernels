@@ -9,8 +9,8 @@ os:
 #  - osx
 # Travis will export CC=$compiler
 compiler:
-  - gcc
   - clang
+  - gcc
 matrix:
   exclude:
     - compiler: clang
