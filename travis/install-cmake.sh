@@ -8,6 +8,7 @@ case "$os" in
     Darwin)
         echo "Mac"
         brew update
+        brew unlink cmake
         brew install cmake
         ;;
 
