@@ -39,8 +39,8 @@ USERFLAGS     =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      =
-LIBS         = -lm
-LIBPATHS     =
+LIBS         = -lm -lshmem
+LIBPATHS     = -L $(SHMEMTOP)/lib
 INCLUDEPATHS =
 
 ### End User configurable options ###
