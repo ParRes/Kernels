@@ -724,21 +724,30 @@ int main(int argc, char ** argv) {
    
   T = atol(*++argv);  args_used++;   
   if (T<1) {
-    printf("Grid size must be positive: %ld\n", g);
+    printf("ERROR: Number of time steps must be positive: %ld\n", g);
     exit(FAILURE);
   }
   L = atol(*++argv);  args_used++;   
   if (L<1 || L%2) {
-    printf("Number of grid cells must be positive and even: %ld\n", L);
+    printf("ERROR: Number of grid cells must be positive and even: %ld\n", L);
     exit(FAILURE);
   }
   g = L+1;
   grid_patch = (bbox_t){0, g, 0, g};
   n = atol(*++argv);  args_used++;   
+  if (n<1) {
+    printf("ERROR: Number of particles must be positive: %ld\n", n);
+    exit(FAILURE);
+  }
+
   particle_steps = n*T;  
   particle_mode  = UNDEFINED;
   partial_correctness = 1;
   k = atoi(*++argv);   args_used++; 
+  if (k<0) {
+    printf("ERROR: Particle semi-charge must be non-negative: %d\n", k);
+    exit(FAILURE);
+  }
   m = atoi(*++argv);   args_used++; 
   init_mode = *++argv; args_used++;  
    
@@ -814,7 +823,16 @@ int main(int argc, char ** argv) {
          injection_mode = 1;
          /* Particles per cell to inject */
          particles_per_cell = atoi(*++argv);
+         if (particles_per_cell < 0) {
+           printf("Injected particles per cell need to be non-negative: %ld\n", 
+		  particles_per_cell);
+           exit(FAILURE);
+         }
          injection_timestep = atoi(*++argv);
+         if (injection_timestep < 0) {
+           printf("Injection time step needs to be non-negative: %ld\n", injection_timestep);
+           exit(FAILURE);
+         }           
          /* Coordinates that define the simulation area where injection will take place */
          injection_patch.xleft   = atoi(*++argv);
          injection_patch.xright  = atoi(*++argv);
@@ -828,7 +846,7 @@ int main(int argc, char ** argv) {
          printf("  Bounding box              = %d, %d, %d, %d\n",     
                 injection_patch.xleft, injection_patch.xright, 
                 injection_patch.ybottom, injection_patch.ytop);   
-         printf("  Inject time step          = %d\n", injection_timestep);
+         printf("  Injection time step       = %d\n", injection_timestep);
          printf("  Particles per cell        = %d\n",  particles_per_cell);
          particles_added = 
            (injection_patch.xright-injection_patch.xleft)*
