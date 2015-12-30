@@ -10,6 +10,25 @@ TRAVIS_ROOT="$1"
 case "$CC" in
     gcc)
         if [ ! -d "$TRAVIS_ROOT/gupc" ]; then
+            case "$os" in
+                Darwin)
+                    echo "Mac"
+                    # Travis uses Mac OSX 10.9, so this might not work...
+                    mkdir $TRAVIS_ROOT/gupc
+                    wget -q http://www.gccupc.org/gupc-5201-1/28-gupc-5201-x8664-mac-os-1010-yosemiti/file
+                    mv file upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
+                    tar -C $TRAVIS_ROOT/gupc -xzvf upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
+                    find $TRAVIS_ROOT/gupc -name gupc -type f
+                    ;;
+                Linux)
+                    echo "Linux"
+                    mkdir $TRAVIS_ROOT/gupc
+                    wget -q http://www.gccupc.org/gupc-5201-1/30-gupc-5201-x8664-ubuntu-1204/file
+                    mv file upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
+                    tar -C $TRAVIS_ROOT/gupc -xzvf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
+                    find $TRAVIS_ROOT/gupc -name gupc -type f
+                    ;;
+            esac
             # Building from source overflows Travis CI 4 MB output...
             #wget --no-check-certificate -q http://www.gccupc.org/gupc-5201-1/32-gupc-5-2-0-1-source-release/file
             #mv file upc-5.2.0.1.src.tar.bz2
@@ -21,23 +40,6 @@ case "$CC" in
             ## Travis has problems with how much output the GCC build creates
             #make -j4 &> /dev/null
             #make install
-            case "$os" in
-                Darwin)
-                    # Travis uses Mac OSX 10.9, so this might not work...
-                    mkdir $TRAVIS_ROOT/gupc
-                    wget -q http://www.gccupc.org/gupc-5201-1/28-gupc-5201-x8664-mac-os-1010-yosemiti/file
-                    mv file upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
-                    tar -C $TRAVIS_ROOT/gupc -xzvf upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
-                    find $TRAVIS_ROOT/gupc -name gupc -type f
-                    ;;
-                Linux)
-                    mkdir $TRAVIS_ROOT/gupc
-                    wget -q http://www.gccupc.org/gupc-5201-1/30-gupc-5201-x8664-ubuntu-1204/file
-                    mv file upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
-                    tar -C $TRAVIS_ROOT/gupc -xzvf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
-                    find $TRAVIS_ROOT/gupc -name gupc -type f
-                    ;;
-            esac
         else
             echo "GCC UPC installed..."
             find $TRAVIS_ROOT/gupc -name gupc -type f
@@ -58,5 +60,9 @@ case "$CC" in
             find $TRAVIS_ROOT/clupc -name clang
             clang --version
         fi
+        ;;
+    *)
+        echo "This should not happen..."
+        exit 70
         ;;
 esac
