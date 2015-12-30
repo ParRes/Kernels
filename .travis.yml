@@ -32,6 +32,9 @@ matrix:
     # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
     - os: osx
       env: PRK_TARGET=allfgmpi
+    # Mac issue with libtoolize (see https://github.com/regrant/sandia-shmem/pull/87)
+    - os: osx
+      env: PRK_TARGET=allshmem
     # TODO Revisit this later...
     #- compiler: gcc
     #  env: PRK_TARGET=allgrappa
@@ -40,8 +43,6 @@ matrix:
     #- env: PRK_TARGET=allampi
     #- env: PRK_TARGET=allfgmpi
     - env: PRK_TARGET=allgrappa
-    # lots of issues with Mac right now...
-    - os: osx
 addons:
   apt:
     sources:
