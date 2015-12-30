@@ -7,6 +7,17 @@ PRK_TARGET="$2"
 # Travis exports this
 PRK_COMPILER="$CC"
 
+case "$os" in
+    Darwin)
+        # Homebrew should put MPI here...
+        export MPI_ROOT=/usr/local
+        ;;
+    Linux)
+        # This will only work with MPICH, obviously...
+        export MPI_ROOT=$TRAVIS_ROOT/mpich
+        ;;
+esac
+
 case "$PRK_TARGET" in
     allserial)
         echo "Serial"
@@ -43,7 +54,6 @@ case "$PRK_TARGET" in
         ;;
     allmpi1)
         echo "MPI-1"
-        export MPI_ROOT=$TRAVIS_ROOT/mpich
         echo "MPICC=$MPI_ROOT/bin/mpicc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPI1
@@ -61,7 +71,6 @@ case "$PRK_TARGET" in
         ;;
     allmpio*mp)
         echo "MPI+OpenMP"
-        export MPI_ROOT=$TRAVIS_ROOT/mpich
         echo "MPICC=$MPI_ROOT/bin/mpicc\nOPENMPFLAG=-fopenmp" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIOPENMP
@@ -75,7 +84,6 @@ case "$PRK_TARGET" in
         ;;
     allmpirma)
         echo "MPI-RMA"
-        export MPI_ROOT=$TRAVIS_ROOT/mpich
         echo "MPICC=$MPI_ROOT/bin/mpicc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIRMA
@@ -87,7 +95,6 @@ case "$PRK_TARGET" in
         ;;
     allmpishm)
         echo "MPI+MPI"
-        export MPI_ROOT=$TRAVIS_ROOT/mpich
         echo "MPICC=$MPI_ROOT/bin/mpicc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPISHM
@@ -215,7 +222,6 @@ case "$PRK_TARGET" in
         ;;
     allgrappa)
         echo "Grappa"
-        export MPI_ROOT=$TRAVIS_ROOT/mpich
         # compiler for static thread execution, so set this prior to build
         echo "GRAPPATOP=$TRAVIS_ROOT/grappa" > common/make.defs
         make $PRK_TARGET

@@ -24,6 +24,9 @@ matrix:
     # no binary install yet
     - os: osx
       env: PRK_TARGET=allupc
+    # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
+    - os: osx
+      env: PRK_TARGET=allfgmpi
     # TODO Revisit this later...
     #- compiler: gcc
     #  env: PRK_TARGET=allgrappa
