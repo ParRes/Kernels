@@ -5,12 +5,11 @@
 set -e
 set -x
 
+os=`uname`
 TRAVIS_ROOT="$1"
 
 case "$CC" in
     gcc)
-        ls -s $TRAVIS_ROOT
-        find $TRAVIS_ROOT -name gupc -type f
         if [ ! -d "$TRAVIS_ROOT/gupc" ]; then
             case "$os" in
                 Darwin)
