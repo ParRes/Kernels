@@ -5,7 +5,6 @@ sudo: false
 language: cpp
 os:
   - linux
-# OpenMP compiler support on Mac is an issue
   - osx
 # Travis will export CC=$compiler
 compiler:
@@ -51,12 +50,11 @@ addons:
     - boost-latest
     packages:
     - cmake
-    # Grappa CMake is not finding these...
     - gcc-4.8
     - g++-4.8
     # Required by GUPC
     - libnuma-dev
-    #  Boost is for Grappa
+    # Boost is for Grappa
     - libboost-date-time1.55-dev
     - libboost-exception1.55-dev
     - libboost-filesystem1.55-dev
@@ -72,7 +70,6 @@ addons:
 env:
 # Order by likelihood of failing...
   - PRK_TARGET=allgrappa
-#  GUPC fails because building GCC 5.2 takes too long / outputs too much
   - PRK_TARGET=allupc
   - PRK_TARGET=allampi
   - PRK_TARGET=allcharm++
@@ -96,13 +93,12 @@ before_script:
 script:
   - sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
 after_failure:
+  - echo "Sad panda"
   - find . -name CMakeOutput.log -exec cat {} ";"
   - find . -name CMakeError.log -exec cat {} ";"
-  - echo "Sad panda"
 notifications:
   email:
-    #recipients:
-    #  - rob.f.van.der.wijngaart@intel.com
-    #  - jeff.r.hammond@intel.com
+    recipients:
+      - jeff.science@gmail.com
     on_success: [change]
     on_failure: [always]
