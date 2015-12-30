@@ -26,7 +26,10 @@ case "$PRK_TARGET" in
         ;;
     allupc)
         echo "UPC"
+        # GUPC is working fine
         sh ./travis/install-intrepid-upc.sh $TRAVIS_ROOT
+        # BUPC is new
+        #sh ./travis/install-berkeley-upc.sh $TRAVIS_ROOT ofi
         ;;
     allcharm++)
         echo "Charm++"
