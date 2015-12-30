@@ -21,6 +21,9 @@ matrix:
     # Clang UPC requires source build, which probably takes too long
     - compiler: clang
       env: PRK_TARGET=allupc
+    # no binary install yet
+    - os: osx
+      env: PRK_TARGET=allupc
     # TODO Revisit this later...
     #- compiler: gcc
     #  env: PRK_TARGET=allgrappa
