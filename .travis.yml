@@ -6,25 +6,25 @@ language: cpp
 os:
   - linux
 # OpenMP compiler support on Mac is an issue
-#  - osx
+  - osx
 # Travis will export CC=$compiler
 compiler:
   - clang
   - gcc
 matrix:
   exclude:
+    # Clang does not yet have OpenMP support
     - compiler: clang
       env: PRK_TARGET=allopenmp
     - compiler: clang
       env: PRK_TARGET=allmpiomp
-    # Clang UPC requires source build, which takes too long
+    # Clang UPC requires source build, which probably takes too long
     - compiler: clang
       env: PRK_TARGET=allupc
     # TODO Revisit this later...
-    - compiler: gcc
-      env: PRK_TARGET=allgrappa
+    #- compiler: gcc
+    #  env: PRK_TARGET=allgrappa
   allow_failures:
-    - env: PRK_TARGET=allupc
     # just disable broken tests for now
     #- env: PRK_TARGET=allampi
     #- env: PRK_TARGET=allfgmpi
