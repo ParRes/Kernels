@@ -23,8 +23,12 @@ case "$CC" in
             #make install
             case "$os" in
                 Darwin)
-                    echo "No binary install for GUPC on Mac OSX"
-                    exit 99
+                    # Travis uses Mac OSX 10.9, so this might not work...
+                    mkdir $TRAVIS_ROOT/gupc
+                    wget -q http://www.gccupc.org/gupc-5201-1/28-gupc-5201-x8664-mac-os-1010-yosemiti/file
+                    mv file upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
+                    tar -C $TRAVIS_ROOT/gupc -xzvf upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
+                    find $TRAVIS_ROOT/gupc -name gupc -type f
                     ;;
                 Linux)
                     mkdir $TRAVIS_ROOT/gupc
