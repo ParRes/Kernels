@@ -65,8 +65,6 @@ HISTORY: - Written by Evangelos Georganas, August 2015.
 #include <par-res-kern_general.h>
 #include <lcg.h>
 
-#define VERIF_AUX
-
 #include <math.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -101,13 +99,11 @@ typedef struct particle_t {
    double   v_y;
    double   q;
    /* The following variables are used only for verification/debug purposes */
-#ifdef VERIF_AUX
    double   x0;
    double   y0;
    int64_t  k; //  determines how many cells particles move per time step in the x direction 
    int64_t  m; //  determines how many cells particles move per time step in the y direction 
    int64_t  initTimestamp;
-#endif
 } particle_t;
 
 /* Initializes the grid of charges
@@ -149,9 +145,8 @@ particle_t *initializeParticlesGeometric(int64_t n, int64_t g, double rho, int k
 {
    particle_t  *particles;
    int64_t     y, x, p, pi;
-   double      A, x_coord, y_coord, rel_x, rel_y, r1_sq, r2_sq, r1, r2, cos_theta, cos_phi;
+   double      A, x_coord, y_coord, rel_x, rel_y, r1_sq, r2_sq;
    int64_t     n_part_column, remainders;
-   double      charge;
    
    particles = (particle_t*) malloc(n * sizeof(particle_t));
    if (particles == NULL) {
@@ -159,41 +154,24 @@ particle_t *initializeParticlesGeometric(int64_t n, int64_t g, double rho, int k
       exit(EXIT_FAILURE);
    }
    
-   /* Add appropriate number of particles on each cell in order to form the distribution decribed in the spec. */
-   /* In particular, each cell in the i-th column of cells contains p(i) = A * rho^i particles */
+   /* Add appropriate number of particles to each cell to form distribution decribed in spec. 
+      Each cell in the i-th column of cells contains p(i) = A * rho^i particles */
    A = n * ((1-rho) / (1-pow(rho, g-1)));
    pi = 0;
    for (x=0; x<g-1; x++) {
       n_part_column = (int64_t) floor(A * pow(rho, x));
       
       for (p=0; p<n_part_column; p++) {
-         /* arc4random_uniform() would avoid bias caused by modulo operation, but is not reproducible. */
-         /* use Knuth's reproducible mixed linear congruential generator instead */
+         /* arc4random_uniform() would avoid bias caused by modulo operation, but is not 
+            reproducible. Use Knuth's reproducible mixed LCG instead */
          y = LCG_next(g-1);
          rel_y = 0.5;
          y_coord = y + rel_y;
          rel_x = 0.5;
          x_coord = x + rel_x;
             
-         r1_sq = rel_y * rel_y + rel_x * rel_x;
-         r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
-         cos_theta = rel_x/sqrt(r1_sq);
-         cos_phi = (1.0-rel_x)/sqrt(r2_sq);
-         charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
-            
          particles[pi].x = x_coord;
          particles[pi].y = y_coord;
-         particles[pi].v_x = 0.0;
-         particles[pi].v_y = ((double) m) / dt;
-         /* In the following way we guarantee that the cloud of particles will move always into a particular direction. In essence we check if a particle initially has "positive column of charges" to its left and we assign appopriate sign to the charge. */
-         particles[pi].q = (x%2 == 0) ? (2*k+1) * charge : -1.0 * (2*k+1) * charge ;
-#ifdef VERIF_AUX
-         particles[pi].x0 = x_coord;
-         particles[pi].y0 = y_coord;
-         particles[pi].k = k;
-         particles[pi].m = m;
-         particles[pi].initTimestamp = 0;
-#endif
          pi++;
       }
    }
@@ -207,24 +185,8 @@ particle_t *initializeParticlesGeometric(int64_t n, int64_t g, double rho, int k
       rel_x = 0.5;
       x_coord = rel_x;
       
-      r1_sq = rel_y * rel_y + rel_x * rel_x;
-      r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
-      cos_theta = rel_x/sqrt(r1_sq);
-      cos_phi = (1.0-rel_x)/sqrt(r2_sq);
-      charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
-      
       particles[pi].x = x_coord;
       particles[pi].y = y_coord;
-      particles[pi].v_x = 0.0;
-      particles[pi].v_y = ((double) m) * 1.0 / dt;
-      particles[pi].q = (2*k+1) * charge;
-#ifdef VERIF_AUX
-      particles[pi].x0 = x_coord;
-      particles[pi].y0 = y_coord;
-      particles[pi].k = k;
-      particles[pi].m = m;
-      particles[pi].initTimestamp = 0;
-#endif
       pi++;
    }
    
@@ -239,7 +201,7 @@ particle_t *initializeParticlesSinusoidal(int64_t n, int64_t g, int k, int m)
    double      total_weight = 0.0 , step = 2*M_PI / (g-2), current_weight;
    int64_t     x, y;
    int64_t     pi = 0, i, remainders, p, n_part_column;
-   double      rel_x, rel_y, r1_sq, r2_sq, cos_phi, cos_theta, x_coord, y_coord, charge;
+   double      rel_x, rel_y, r1_sq, r2_sq, x_coord, y_coord;
 
    particles = (particle_t*) malloc(n * sizeof(particle_t));
    if (particles == NULL) {
@@ -247,7 +209,7 @@ particle_t *initializeParticlesSinusoidal(int64_t n, int64_t g, int k, int m)
       exit(EXIT_FAILURE);
    }
    
-   /* First, find the sum of all the corresponding weights in order to normalize the number of particles later */
+   /* First, find sum of all corresponding weights to normalize number of particles later */
    for (i=0; i<=g-2; i++) {
       total_weight += (1 + cos(step * ((double) i)));
    }
@@ -263,24 +225,8 @@ particle_t *initializeParticlesSinusoidal(int64_t n, int64_t g, int k, int m)
          rel_x = 0.5;
          x_coord = x + rel_x;
          
-         r1_sq = rel_y * rel_y + rel_x * rel_x;
-         r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
-         cos_theta = rel_x/sqrt(r1_sq);
-         cos_phi = (1.0-rel_x)/sqrt(r2_sq);
-         charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
-         
          particles[pi].x = x_coord;
          particles[pi].y = y_coord;
-         particles[pi].v_x = 0.0;
-         particles[pi].v_y = ((double) m) / dt;
-         particles[pi].q = (x%2 == 0) ? (2*k+1) * charge : -1.0 * (2*k+1) * charge ;
-#ifdef VERIF_AUX
-         particles[pi].x0 = x_coord;
-         particles[pi].y0 = y_coord;
-         particles[pi].k = k;
-         particles[pi].m = m;
-         particles[pi].initTimestamp = 0;
-#endif
          pi++;
       
       }
@@ -296,24 +242,8 @@ particle_t *initializeParticlesSinusoidal(int64_t n, int64_t g, int k, int m)
       x = LCG_next(g-1);
       x_coord = x + rel_x;
       
-      r1_sq = rel_y * rel_y + rel_x * rel_x;
-      r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
-      cos_theta = rel_x/sqrt(r1_sq);
-      cos_phi = (1.0-rel_x)/sqrt(r2_sq);
-      charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
-      
       particles[pi].x = x_coord;
       particles[pi].y = y_coord;
-      particles[pi].v_x = 0.0;
-      particles[pi].v_y = ((double) m) / dt;
-      particles[pi].q = (x%2 == 0) ? (2*k+1) * charge : -1.0 * (2*k+1) * charge ;
-#ifdef VERIF_AUX
-      particles[pi].x0 = x_coord;
-      particles[pi].y0 = y_coord;
-      particles[pi].k = k;
-      particles[pi].m = m;
-      particles[pi].initTimestamp = 0;
-#endif
       pi++;
    }
    
@@ -352,24 +282,8 @@ particle_t *initializeParticlesLinear(int64_t n, int64_t g, int alpha, int beta,
          rel_x = 0.5;
          x_coord = x + rel_x;
          
-         r1_sq = rel_y * rel_y + rel_x * rel_x;
-         r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
-         cos_theta = rel_x/sqrt(r1_sq);
-         cos_phi = (1.0-rel_x)/sqrt(r2_sq);
-         charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
-         
          particles[pi].x = x_coord;
          particles[pi].y = y_coord;
-         particles[pi].v_x = 0.0;
-         particles[pi].v_y = ((double) m) / dt;
-         particles[pi].q = (x%2 == 0) ? (2*k+1) * charge : -1.0 * (2*k+1) * charge ;
-#ifdef VERIF_AUX
-         particles[pi].x0 = x_coord;
-         particles[pi].y0 = y_coord;
-         particles[pi].k = k;
-         particles[pi].m = m;
-         particles[pi].initTimestamp = 0;
-#endif
          pi++;
          
       }
@@ -385,24 +299,8 @@ particle_t *initializeParticlesLinear(int64_t n, int64_t g, int alpha, int beta,
       x = LCG_next(g-1);
       x_coord = x  + rel_x;
       
-      r1_sq = rel_y * rel_y + rel_x * rel_x;
-      r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
-      cos_theta = rel_x/sqrt(r1_sq);
-      cos_phi = (1.0-rel_x)/sqrt(r2_sq);
-      charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
-      
       particles[pi].x = x_coord;
       particles[pi].y = y_coord;
-      particles[pi].v_x = 0.0;
-      particles[pi].v_y = ((double) m) / dt;
-      particles[pi].q = (x%2 == 0) ? (2*k+1) * charge : -1.0 * (2*k+1) * charge ;
-#ifdef VERIF_AUX
-      particles[pi].x0 = x_coord;
-      particles[pi].y0 = y_coord;
-      particles[pi].k = k;
-      particles[pi].m = m;
-      particles[pi].initTimestamp = 0;
-#endif
       pi++;
    }
    
@@ -435,25 +333,11 @@ particle_t *initializeParticlesPatch(int64_t n, int64_t g, bbox_t patch, int k, 
          y_coord = y + rel_y;
          rel_x = 0.5;
          x_coord = x + rel_x;
-         r1_sq = rel_y * rel_y + rel_x * rel_x;
-         r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
-         cos_theta = rel_x/sqrt(r1_sq);
-         cos_phi = (1.0-rel_x)/sqrt(r2_sq);
-         charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
          
          for (i=0; i<particles_per_cell; i++) {
             particles[pi].x = x_coord;
             particles[pi].y = y_coord;
             particles[pi].v_x = 0.0;
-            particles[pi].v_y = ((double) m) / dt;
-            particles[pi].q = (x%2 == 0) ? (2*k+1) * charge : -1.0 * (2*k+1) * charge ;
-#ifdef VERIF_AUX
-            particles[pi].x0 = x_coord;
-            particles[pi].y0 = y_coord;
-            particles[pi].k = k;
-            particles[pi].m = m;
-            particles[pi].initTimestamp = 0;
-#endif
             pi++;
          }
       }
@@ -467,24 +351,9 @@ particle_t *initializeParticlesPatch(int64_t n, int64_t g, bbox_t patch, int k, 
          y_coord = y + rel_y;
          rel_x = 0.5;
          x_coord = x + rel_x;
-         r1_sq = rel_y * rel_y + rel_x * rel_x;
-         r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
-         cos_theta = rel_x/sqrt(r1_sq);
-         cos_phi = (1.0-rel_x)/sqrt(r2_sq);
-         charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
          
          particles[pi].x = x_coord;
          particles[pi].y = y_coord;
-         particles[pi].v_x = 0.0;
-         particles[pi].v_y = ((double) m) / dt;
-         particles[pi].q = (x%2 == 0) ? (2*k+1) * charge : -1.0 * (2*k+1) * charge ;
-#ifdef VERIF_AUX
-         particles[pi].x0 = x_coord;
-         particles[pi].y0 = y_coord;
-         particles[pi].k = k;
-         particles[pi].m = m;
-         particles[pi].initTimestamp = 0;
-#endif
          pi++;
       }
    }
@@ -516,23 +385,9 @@ particle_t *inject_particles(int64_t injection_timestep, bbox_t patch, int parti
             y_coord = y + rel_y;
             rel_x = 0.5;
             x_coord = x + rel_x;
-            r1_sq = rel_y * rel_y + rel_x * rel_x;
-            r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
-            cos_theta = rel_x/sqrt(r1_sq);
-            cos_phi = (1.0-rel_x)/sqrt(r2_sq);
-            charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
+
             new_particles_array[pos].x = x_coord;
             new_particles_array[pos].y = y_coord;
-            new_particles_array[pos].v_x = 0.0;
-            new_particles_array[pos].v_y = ((double) m) / dt;
-            new_particles_array[pos].q = (x%2 == 0) ? (2*k+1) * charge : -1.0 * (2*k+1) * charge ;
-#ifdef VERIF_AUX
-            new_particles_array[pos].x0 = x_coord;
-            new_particles_array[pos].y0 = y_coord;
-            new_particles_array[pos].k = k;
-            new_particles_array[pos].m = m;
-            new_particles_array[pos].initTimestamp = injection_timestep;
-#endif
             pos++;
          }
       }
@@ -540,6 +395,35 @@ particle_t *inject_particles(int64_t injection_timestep, bbox_t patch, int parti
    
    (*n) = new_size;
    return new_particles_array;
+}
+
+/* Completes particle distribution */
+void finish_distribution(int64_t timestep, int k, int m, int64_t n, particle_t *particles) {
+
+  double x_coord, y_coord, rel_x, rel_y, cos_theta, cos_phi, r1_sq, r2_sq, charge;
+  int64_t x, pi;
+
+  for (pi=0; pi<n; pi++) {
+    x_coord = particles[pi].x;
+    y_coord = particles[pi].y;
+    rel_x = fmod(x_coord,1.0);
+    rel_y = fmod(y_coord,1.0);
+    x = (int64_t) x_coord;
+    r1_sq = rel_y * rel_y + rel_x * rel_x;
+    r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
+    cos_theta = rel_x/sqrt(r1_sq);
+    cos_phi = (1.0-rel_x)/sqrt(r2_sq);
+    charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
+         
+    particles[pi].v_x = 0.0;
+    particles[pi].v_y = ((double) m) / dt;
+    particles[pi].q = (x%2 == 0) ? (2*k+1) * charge : -1.0 * (2*k+1) * charge ;
+    particles[pi].x0 = x_coord;
+    particles[pi].y0 = y_coord;
+    particles[pi].k = k;
+    particles[pi].m = m;
+    particles[pi].initTimestamp = timestep;;
+  }
 }
 
 /* Verifies the final position of a particle */
@@ -589,10 +473,8 @@ particle_t *remove_particles(int64_t removal_timestep, bbox_t patch, int64_t *n,
          pos++;
       }
    }
-   
    (*n) = pos;
 
-   
    return particles;
 }
 
@@ -602,12 +484,10 @@ int computeCoulomb(double x_dist, double y_dist, double q1, double q2, double *f
 {
    double   r2 = x_dist * x_dist + y_dist * y_dist;
    double   r = sqrt(r2);
-   double   cos_theta = x_dist / r;
-   double   sin_theta = y_dist / r;
    double   f_coulomb = q1 * q2 / r2;
    
-   (*fx) = f_coulomb * cos_theta;
-   (*fy) = f_coulomb * sin_theta;
+   (*fx) = f_coulomb * x_dist / r; // f_coulomb * cos_theta
+   (*fy) = f_coulomb * y_dist / r; // f_coulomb * sin_theta
    
    return 0;
 }
@@ -842,17 +722,17 @@ int main(int argc, char ** argv) {
            printf("ERROR: inconsistent injection patch: %d\n",error);
            exit(FAILURE);
          }
-         printf("Population change mode      = INJECTION\n");
-         printf("  Bounding box              = %d, %d, %d, %d\n",     
+         printf("Population change mode         = INJECTION\n");
+         printf("  Bounding box                 = %d, %d, %d, %d\n",     
                 injection_patch.xleft, injection_patch.xright, 
                 injection_patch.ybottom, injection_patch.ytop);   
-         printf("  Injection time step       = %d\n", injection_timestep);
-         printf("  Particles per cell        = %d\n",  particles_per_cell);
+         printf("  Injection time step          = %d\n", injection_timestep);
+         printf("  Particles per cell           = %d\n",  particles_per_cell);
          particles_added = 
            (injection_patch.xright-injection_patch.xleft)*
            (injection_patch.ytop-injection_patch.ybottom)*
            particles_per_cell;
-         printf("  Total particles added     = %d\n",  particles_added);
+         printf("  Total particles added        = %d\n",  particles_added);
          particle_steps += particles_added*(T+1-injection_timestep);
       }
       
@@ -868,11 +748,11 @@ int main(int argc, char ** argv) {
            printf("ERROR: inconsistent removal patch\n");
            exit(FAILURE);
          }
-         printf("Population change mode      = REMOVAL\n");
-         printf("  Bounding box              = %d, %d, %d, %d\n",     
+         printf("Population change mode         = REMOVAL\n");
+         printf("  Bounding box                 = %d, %d, %d, %d\n",     
                 removal_patch.xleft, removal_patch.xright, 
                 removal_patch.ybottom, removal_patch.ytop);   
-         printf("  removal time step         = %d\n", removal_timestep);
+         printf("  removal time step            = %d\n", removal_timestep);
       }
    }
 
@@ -887,6 +767,8 @@ int main(int argc, char ** argv) {
    default:         printf("ERROR: No supported particle distribution\n");  exit(FAILURE);
    }   
 
+   finish_distribution(0, k, m, n, particles);
+
    /* Run the simulation */
    for (t=0; t<=T; t++) {
     
@@ -894,8 +776,9 @@ int main(int argc, char ** argv) {
       if (t==1) simulation_time = wtime();  
       /* Check if we have to inject particles at this timestep  */
       if (injection_mode && (t == injection_timestep)) {
-         particles = inject_particles(t, injection_patch, 
-                                      particles_per_cell, &n, particles);
+         n_old=n;
+         particles = inject_particles(t, injection_patch, particles_per_cell, &n, particles);
+         finish_distribution(t, k, m, n-n_old, particles+n_old);
       }
       
       /* Check if we have to remove particles now. Validate removed particlesiable */
