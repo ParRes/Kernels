@@ -78,6 +78,9 @@ HISTORY: - Written by Evangelos Georganas, August 2015.
 #define SUCCESS 1
 #define FAILURE 0
 
+#define REL_X 0.5
+#define REL_Y 0.5
+
 #define GEOMETRIC  0
 #define SINUSOIDAL 1
 #define LINEAR     2
@@ -141,12 +144,11 @@ double *initializeGrid(int64_t g)
 }
 
 /* Initializes the particles following the geometric distribution as described in the spec */
-particle_t *initializeParticlesGeometric(int64_t n, int64_t g, double rho, int k, int m)
+particle_t *initializeParticlesGeometric(int64_t n, int64_t g, double rho)
 {
    particle_t  *particles;
-   int64_t     y, x, p, pi;
-   double      A, x_coord, y_coord, rel_x, rel_y, r1_sq, r2_sq;
-   int64_t     n_part_column, remainders;
+   int64_t     y, x, p, pi, n_part_column;
+   double      A;
    
    particles = (particle_t*) malloc(n * sizeof(particle_t));
    if (particles == NULL) {
@@ -157,37 +159,22 @@ particle_t *initializeParticlesGeometric(int64_t n, int64_t g, double rho, int k
    /* Add appropriate number of particles to each cell to form distribution decribed in spec. 
       Each cell in the i-th column of cells contains p(i) = A * rho^i particles */
    A = n * ((1-rho) / (1-pow(rho, g-1)));
-   pi = 0;
-   for (x=0; x<g-1; x++) {
+   for (pi=0,x=0; x<g-1; x++) {
       n_part_column = (int64_t) floor(A * pow(rho, x));
       
       for (p=0; p<n_part_column; p++) {
          /* arc4random_uniform() would avoid bias caused by modulo operation, but is not 
             reproducible. Use Knuth's reproducible mixed LCG instead */
-         y = LCG_next(g-1);
-         rel_y = 0.5;
-         y_coord = y + rel_y;
-         rel_x = 0.5;
-         x_coord = x + rel_x;
-            
-         particles[pi].x = x_coord;
-         particles[pi].y = y_coord;
+         particles[pi].x = x + REL_X;
+         particles[pi].y = LCG_next(g-1) + REL_Y;
          pi++;
       }
    }
    
-   /* Add the rest particles in the first column of cells such that we have exactly n particles */
-   remainders = n - pi;
-   
-   for (y=0; y<remainders; y++) {
-      rel_y = 0.5;
-      y_coord = (y%(g-1)) + rel_y;
-      rel_x = 0.5;
-      x_coord = rel_x;
-      
-      particles[pi].x = x_coord;
-      particles[pi].y = y_coord;
-      pi++;
+   /* Add remaining particles in first column of cells */
+   for (; pi<n; pi++) {
+      particles[pi].x = REL_X;
+      particles[pi].y = LCG_next(g-1) + REL_Y;
    }
    
    return particles;
@@ -195,13 +182,11 @@ particle_t *initializeParticlesGeometric(int64_t n, int64_t g, double rho, int k
 
 
 /* Initialize with a particle distribution where the number of particles per cell-column follows a sinusoidal distribution */
-particle_t *initializeParticlesSinusoidal(int64_t n, int64_t g, int k, int m)
+particle_t *initializeParticlesSinusoidal(int64_t n, int64_t g)
 {
    particle_t  *particles;
    double      total_weight = 0.0 , step = 2*M_PI / (g-2), current_weight;
-   int64_t     x, y;
-   int64_t     pi = 0, i, remainders, p, n_part_column;
-   double      rel_x, rel_y, r1_sq, r2_sq, x_coord, y_coord;
+   int64_t     x, y, pi = 0, i, p, n_part_column;
 
    particles = (particle_t*) malloc(n * sizeof(particle_t));
    if (particles == NULL) {
@@ -219,32 +204,16 @@ particle_t *initializeParticlesSinusoidal(int64_t n, int64_t g, int k, int m)
       current_weight = (1 + cos(step * ((double) x)));
       n_part_column = (int64_t) floor(n * current_weight / total_weight);
       for (p=0; p < n_part_column; p++) {
-         y = LCG_next(g-1);
-         rel_y = 0.5;
-         y_coord = y  + rel_y;
-         rel_x = 0.5;
-         x_coord = x + rel_x;
-         
-         particles[pi].x = x_coord;
-         particles[pi].y = y_coord;
+         particles[pi].x = x + REL_X;
+         particles[pi].y = LCG_next(g-1) + REL_Y;
          pi++;
-      
       }
    }
-   
-   remainders = n - pi;
-   
-   for (i=0; i<remainders; i++) {
-      rel_y = 0.5;
-      y = LCG_next(g-1);
-      y_coord = y + rel_y;
-      rel_x = 0.5;
-      x = LCG_next(g-1);
-      x_coord = x + rel_x;
-      
-      particles[pi].x = x_coord;
-      particles[pi].y = y_coord;
-      pi++;
+
+   /* distribute remaining particles across entire grid */   
+   for (; pi<n; pi++) {
+      particles[pi].x = LCG_next(g-1) + REL_X;
+      particles[pi].y = LCG_next(g-1) + REL_Y;
    }
    
    return particles;
@@ -252,13 +221,11 @@ particle_t *initializeParticlesSinusoidal(int64_t n, int64_t g, int k, int m)
 
 /* Initialize particles with "linearly-decreasing" distribution */
 /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
-particle_t *initializeParticlesLinear(int64_t n, int64_t g, int alpha, int beta, int k, int m )
+particle_t *initializeParticlesLinear(int64_t n, int64_t g, int alpha, int beta)
 {
    particle_t  *particles;
    double      total_weight = 0.0 , step = 1.0 / (g-2), current_weight;
-   int64_t     x, y;
-   int64_t     pi = 0, i, remainders, p, n_part_column;
-   double      rel_x, rel_y, r1_sq, r2_sq, cos_phi, cos_theta, x_coord, y_coord, charge;
+   int64_t     pi = 0, i, p, n_part_column, x, y;
    
    particles = (particle_t*) malloc(n * sizeof(particle_t));
    if (particles == NULL) {
@@ -276,32 +243,16 @@ particle_t *initializeParticlesLinear(int64_t n, int64_t g, int alpha, int beta,
       current_weight = (beta - alpha * step * ((double) x));
       n_part_column = (int64_t) floor(n * current_weight / total_weight);
       for (p=0; p < n_part_column; p++) {
-         y = LCG_next(g-1);
-         rel_y = 0.5;
-         y_coord = y + rel_y;
-         rel_x = 0.5;
-         x_coord = x + rel_x;
-         
-         particles[pi].x = x_coord;
-         particles[pi].y = y_coord;
+         particles[pi].x = x + REL_X;
+         particles[pi].y = LCG_next(g-1) + REL_Y;
          pi++;
          
       }
    }
    
-   remainders = n - pi;
-   
-   for (i=0; i<remainders; i++) {
-      rel_y = 0.5;
-      y = LCG_next(g-1);
-      y_coord = y  + rel_y;
-      rel_x = 0.5;
-      x = LCG_next(g-1);
-      x_coord = x  + rel_x;
-      
-      particles[pi].x = x_coord;
-      particles[pi].y = y_coord;
-      pi++;
+   for (; pi<n; pi++) {
+      particles[pi].x = LCG_next(g-1) + REL_X;
+      particles[pi].y = LCG_next(g-1) + REL_Y;
    }
    
    return particles;
@@ -309,12 +260,10 @@ particle_t *initializeParticlesLinear(int64_t n, int64_t g, int alpha, int beta,
 
 /* Initialize uniformly particles within a "patch" */
 
-particle_t *initializeParticlesPatch(int64_t n, int64_t g, bbox_t patch, int k, int m)
+particle_t *initializeParticlesPatch(int64_t n, int64_t g, bbox_t patch)
 {
    particle_t  *particles;
-   int64_t     x, y;
-   int64_t     pi = 0, i, remainders, p, n_part_column;
-   double      rel_x, rel_y, r1_sq, r2_sq, cos_phi, cos_theta, x_coord, y_coord, charge;
+   int64_t     pi = 0, i, p, n_part_column, x, y, total_cells, particles_per_cell;
    
    particles = (particle_t*) malloc(n * sizeof(particle_t));
    if (particles == NULL) {
@@ -322,38 +271,24 @@ particle_t *initializeParticlesPatch(int64_t n, int64_t g, bbox_t patch, int k, 
       exit(EXIT_FAILURE);
    }
    
-   int64_t  cells_in_X = patch.xright - patch.xleft;
-   int64_t  cells_in_Y = patch.ytop - patch.ybottom;
-   int64_t  total_cells  = cells_in_X * cells_in_Y;
-   int64_t  particles_per_cell = (int64_t) floor((1.0*n)/total_cells);
+   total_cells  = (patch.xright - patch.xleft)*(patch.ytop - patch.ybottom);
+   particles_per_cell = (int64_t) floor((1.0*n)/total_cells);
    
    for (x = patch.xleft; x < patch.xright; x++) {
       for (y = patch.ybottom; y < patch.ytop; y++) {
-         rel_y = 0.5;
-         y_coord = y + rel_y;
-         rel_x = 0.5;
-         x_coord = x + rel_x;
-         
          for (i=0; i<particles_per_cell; i++) {
-            particles[pi].x = x_coord;
-            particles[pi].y = y_coord;
-            particles[pi].v_x = 0.0;
+            particles[pi].x = x + REL_X;
+            particles[pi].y = y + REL_Y;
             pi++;
          }
       }
    }
    
-   remainders = n - pi;
    /* Distribute the remaining particles evenly */
-   for (x = patch.xleft; (x < patch.xright) && (pi < n); x++) {
+   for (x = patch.xleft; x < patch.xright; x++) {
       for (y = patch.ybottom; (y < patch.ytop)&& (pi < n); y++) {
-         rel_y = 0.5;
-         y_coord = y + rel_y;
-         rel_x = 0.5;
-         x_coord = x + rel_x;
-         
-         particles[pi].x = x_coord;
-         particles[pi].y = y_coord;
+         particles[pi].x = x + REL_X;
+         particles[pi].y = y + REL_Y;
          pi++;
       }
    }
@@ -364,13 +299,10 @@ particle_t *initializeParticlesPatch(int64_t n, int64_t g, bbox_t patch, int k, 
 /* Injects particles in a specified area of the simulation domain */
 particle_t *inject_particles(int64_t injection_timestep, bbox_t patch, int particles_per_cell, int64_t *n, particle_t *particles)
 {
-   int64_t  cells_in_X = patch.xright - patch.xleft;
-   int64_t  cells_in_Y = patch.ytop - patch.ybottom;
-   int64_t  total_cells  = cells_in_X * cells_in_Y;
+   int64_t  total_cells  = (patch.xright - patch.xleft)*(patch.ytop - patch.ybottom);
    int64_t  total_injected_particles = total_cells * particles_per_cell;
    int64_t  new_size = (*n) + total_injected_particles;
-   int64_t  x, y, m = 0, k = 0, pos = (*n), i;
-   double   rel_x, rel_y, r1_sq, r2_sq, cos_phi, cos_theta, x_coord, y_coord, charge;
+   int64_t  x, y, pos = (*n), i;
    
    /* Allocate new array for existing and injected particles */
    particle_t *new_particles_array = (particle_t*) malloc(new_size * sizeof(particle_t));
@@ -381,13 +313,8 @@ particle_t *inject_particles(int64_t injection_timestep, bbox_t patch, int parti
    for (y=patch.ybottom; y<patch.ytop; y++) {
       for (x=patch.xleft; x<patch.xright; x++) {
          for (i=0; i<particles_per_cell; i++) {
-            rel_y = 0.5;
-            y_coord = y + rel_y;
-            rel_x = 0.5;
-            x_coord = x + rel_x;
-
-            new_particles_array[pos].x = x_coord;
-            new_particles_array[pos].y = y_coord;
+            new_particles_array[pos].x = x + REL_X;
+            new_particles_array[pos].y = y + REL_Y;
             pos++;
          }
       }
@@ -452,7 +379,7 @@ int verifyParticle(particle_t p, int64_t current_timestep, double *Qgrid, int64_
 }
 
 /* Removes particles from a specified area of the simulation domain */
-particle_t *remove_particles(int64_t removal_timestep, bbox_t patch, int64_t *n, particle_t *particles, int *partial_correctness, double *Qgrid, int64_t g)
+void remove_particles(int64_t removal_timestep, bbox_t patch, int64_t *n, particle_t *particles, int *partial_correctness, double *Qgrid, int64_t g)
 {
    int64_t  pos = 0, i;
    /* The boundaries of the simulation domain where we have to remove the particles */
@@ -474,8 +401,7 @@ particle_t *remove_particles(int64_t removal_timestep, bbox_t patch, int64_t *n,
       }
    }
    (*n) = pos;
-
-   return particles;
+   return;
 }
 
 
@@ -566,9 +492,10 @@ int main(int argc, char ** argv) {
   int64_t     n_old; // number of particled before removal
   char        *init_mode; // Initialization mode for particles
   double      rho;   // rho parameter for the initial geometric particle distribution
-  int64_t     k, m;  // determine initial horizontal and vertical velocityof particles -- 
+  int64_t     k, m;  // determine initial horizontal and vertical velocity of particles-- 
                      //  (2*k)+1 cells per time step 
-  int64_t     particle_mode, alpha, beta;
+  int64_t     particle_mode;
+  double      alpha, beta;
   bbox_t      grid_patch, init_patch, injection_patch, removal_patch;
   int         removal_mode = 0, injection_mode = 0, injection_timestep, removal_timestep, particles_per_cell;
   int         partial_correctness = 1;
@@ -650,11 +577,11 @@ int main(int argc, char ** argv) {
    if (strcmp(init_mode, "LINEAR") == 0) {
       if (argc<args_used+2) {
          printf("ERROR: Not enough arguments\n");
-         exit(FAILURE);
+         exit(EXIT_FAILURE);
       }
       particle_mode = LINEAR;
-      alpha = atoi(*++argv); args_used++;
-      beta  = atoi(*++argv); args_used++;
+      alpha = atof(*++argv); args_used++; 
+      beta  = atof(*++argv); args_used++;
    }
    
    /* Initialize uniformly particles within a "patch" */
@@ -680,12 +607,12 @@ int main(int argc, char ** argv) {
    printf("Initialization mode            = %s\n", init_mode);
    switch(particle_mode) {
    case GEOMETRIC: printf("  Attenuation factor           = %lf\n", rho);    break;
-   case SINUSOIDAL:                                               break;
+   case SINUSOIDAL:                                                          break;
    case LINEAR:    printf("  Negative slope               = %lf\n", alpha);
                    printf("  Offset                       = %lf\n", beta);   break;
    case PATCH:     printf("  Bounding box                 = %d, %d, %d, %d\n",
                           init_patch.xleft, init_patch.xright, 
-                          init_patch.ybottom, init_patch.ytop);   break;
+                          init_patch.ybottom, init_patch.ytop);              break;
    default:        printf("ERROR: Unsupported particle initializating mode\n");
                    exit(FAILURE);
    }
@@ -760,10 +687,10 @@ int main(int argc, char ** argv) {
    Qgrid = initializeGrid(g);
    
    switch(particle_mode) {
-   case GEOMETRIC:  particles = initializeParticlesGeometric(n, g, rho, k, m);      break;
-   case SINUSOIDAL: particles = initializeParticlesSinusoidal(n, g, k, m);          break;
-   case LINEAR:     particles = initializeParticlesLinear(n, g, alpha, beta, k, m); break;
-   case PATCH:      particles = initializeParticlesPatch(n, g, init_patch, k, m);   break;
+   case GEOMETRIC:  particles = initializeParticlesGeometric(n, g, rho);      break;
+   case SINUSOIDAL: particles = initializeParticlesSinusoidal(n, g);          break;
+   case LINEAR:     particles = initializeParticlesLinear(n, g, alpha, beta); break;
+   case PATCH:      particles = initializeParticlesPatch(n, g, init_patch);   break;
    default:         printf("ERROR: No supported particle distribution\n");  exit(FAILURE);
    }   
 
@@ -778,13 +705,13 @@ int main(int argc, char ** argv) {
       if (injection_mode && (t == injection_timestep)) {
          n_old=n;
          particles = inject_particles(t, injection_patch, particles_per_cell, &n, particles);
-         finish_distribution(t, k, m, n-n_old, particles+n_old);
+         finish_distribution(t, 0, 0, n-n_old, particles+n_old);
       }
       
-      /* Check if we have to remove particles now. Validate removed particlesiable */
+      /* Check if we have to remove particles now. Validate removed particles */
       if (removal_mode && (t == removal_timestep)) {
          n_old = n;
-         particles = remove_particles(t, removal_patch, &n, particles, &partial_correctness, Qgrid, g);
+         remove_particles(t, removal_patch, &n, particles, &partial_correctness, Qgrid, g);
          particle_steps -= (n_old-n)*(T+1-removal_timestep);
       }
       
