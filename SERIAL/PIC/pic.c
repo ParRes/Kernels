@@ -176,10 +176,8 @@ particle_t *initializeParticlesGeometric(int64_t n, int64_t g, double rho)
       particles[pi].x = REL_X;
       particles[pi].y = LCG_next(g-1) + REL_Y;
    }
-   
    return particles;
 }
-
 
 /* Initialize with a particle distribution where the number of particles per cell-column follows a sinusoidal distribution */
 particle_t *initializeParticlesSinusoidal(int64_t n, int64_t g)
@@ -215,7 +213,6 @@ particle_t *initializeParticlesSinusoidal(int64_t n, int64_t g)
       particles[pi].x = LCG_next(g-1) + REL_X;
       particles[pi].y = LCG_next(g-1) + REL_Y;
    }
-   
    return particles;
 }
 
@@ -254,7 +251,6 @@ particle_t *initializeParticlesLinear(int64_t n, int64_t g, int alpha, int beta)
       particles[pi].x = LCG_next(g-1) + REL_X;
       particles[pi].y = LCG_next(g-1) + REL_Y;
    }
-   
    return particles;
 }
 
@@ -327,7 +323,7 @@ particle_t *inject_particles(int64_t injection_timestep, bbox_t patch, int parti
 /* Completes particle distribution */
 void finish_distribution(int64_t timestep, int k, int m, int64_t n, particle_t *particles) {
 
-  double x_coord, y_coord, rel_x, rel_y, cos_theta, cos_phi, r1_sq, r2_sq, charge;
+  double x_coord, y_coord, rel_x, rel_y, cos_theta, cos_phi, r1_sq, r2_sq, base_charge;
   int64_t x, pi;
 
   for (pi=0; pi<n; pi++) {
@@ -340,11 +336,12 @@ void finish_distribution(int64_t timestep, int k, int m, int64_t n, particle_t *
     r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
     cos_theta = rel_x/sqrt(r1_sq);
     cos_phi = (1.0-rel_x)/sqrt(r2_sq);
-    charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
+    base_charge = 1.0 / ((dt*dt) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
          
     particles[pi].v_x = 0.0;
     particles[pi].v_y = ((double) m) / dt;
-    particles[pi].q = (x%2 == 0) ? (2*k+1) * charge : -1.0 * (2*k+1) * charge ;
+    /* this particle charge assures movemen in positive x-direction */
+    particles[pi].q = (x%2 == 0) ? (2*k+1) * base_charge : -1.0 * (2*k+1) * base_charge ;
     particles[pi].x0 = x_coord;
     particles[pi].y0 = y_coord;
     particles[pi].k = k;
@@ -356,13 +353,12 @@ void finish_distribution(int64_t timestep, int k, int m, int64_t n, particle_t *
 /* Verifies the final position of a particle */
 int verifyParticle(particle_t p, int64_t current_timestep, double *Qgrid, int64_t g)
 {
-   int64_t  total_steps = current_timestep - p.initTimestamp;
-   double   x_T, y_T, x_periodic, y_periodic;
-   double   L = (g-1);
+   int64_t  total_steps = current_timestep - p.initTimestamp, x, y;
+   double   x_T, y_T, x_periodic, y_periodic, L = (g-1);
    
    /* Coordinates of the cell containing the particle initially */
-   int64_t y = (int64_t) floor(p.y0);
-   int64_t x = (int64_t) floor(p.x0);
+   y = (int64_t) floor(p.y0);
+   x = (int64_t) floor(p.x0);
    
    /* According to initial location and charge determine the direction of displacements */
    x_T = ( (p.q * QG(y,x)) > 0) ? p.x0 + total_steps * (2*p.k+1) : p.x0 - total_steps * (2*p.k+1)  ;
@@ -374,7 +370,6 @@ int verifyParticle(particle_t p, int64_t current_timestep, double *Qgrid, int64_
    if ( fabs(p.x - x_periodic) > epsilon || fabs(p.y - y_periodic) > epsilon) {
       return FAILURE;
    }
-   
    return SUCCESS;
 }
 
@@ -383,15 +378,10 @@ void remove_particles(int64_t removal_timestep, bbox_t patch, int64_t *n, partic
 {
    int64_t  pos = 0, i;
    /* The boundaries of the simulation domain where we have to remove the particles */
-   double   left_boundary = patch.xleft;
-   double   right_boundary = patch.xright;
-   double   top_boundary = patch.ytop;
-   double   bottom_boundary = patch.ybottom;
-   particle_t  *new_particles_array;
    
    for (i = 0; i < (*n); i++) {
-      if ( (particles[i].x > left_boundary) && (particles[i].x < right_boundary) && 
-           (particles[i].y > bottom_boundary) && (particles[i].y < top_boundary)) {
+      if ( (particles[i].x > patch.xleft)   && (particles[i].x < patch.xright) && 
+           (particles[i].y > patch.ybottom) && (particles[i].y < patch.ytop)) {
          /* We should remove and verify this particle */
          (*partial_correctness) *= verifyParticle(particles[i], removal_timestep, Qgrid, g);
       } else {
@@ -406,25 +396,22 @@ void remove_particles(int64_t removal_timestep, bbox_t patch, int64_t *n, partic
 
 
 /* Computes the Coulomb force among two charges q1 and q2 */
-int computeCoulomb(double x_dist, double y_dist, double q1, double q2, double *fx, double *fy)
+void computeCoulomb(double x_dist, double y_dist, double q1, double q2, double *fx, double *fy)
 {
    double   r2 = x_dist * x_dist + y_dist * y_dist;
    double   r = sqrt(r2);
    double   f_coulomb = q1 * q2 / r2;
    
-   (*fx) = f_coulomb * x_dist / r; // f_coulomb * cos_theta
-   (*fy) = f_coulomb * y_dist / r; // f_coulomb * sin_theta
-   
-   return 0;
+   (*fx) = f_coulomb * x_dist/r; // f_coulomb * cos_theta
+   (*fy) = f_coulomb * y_dist/r; // f_coulomb * sin_theta
+   return;
 }
 
 /* Computes the total Coulomb force on a particle exerted from the charges of the corresponding cell */
 int computeTotalForce(particle_t p, int64_t g, double *Qgrid, double *fx, double *fy)
 {
-   int64_t  y, x, k;
-   double   tmp_fx, tmp_fy, rel_y, rel_x;
-   double   tmp_res_x = 0.0;
-   double   tmp_res_y = 0.0;
+   int64_t  y, x;
+   double   tmp_fx, tmp_fy, rel_y, rel_x, tmp_res_x = 0.0, tmp_res_y = 0.0;
    
    /* Coordinates of the cell containing the particle */
    y = (int64_t) floor(p.y);
@@ -459,9 +446,8 @@ int computeTotalForce(particle_t p, int64_t g, double *Qgrid, double *fx, double
 }
 
 /* Moves a particle given the total acceleration */
-int moveParticle(particle_t *particle, double ax, double ay, double L)
+void moveParticle(particle_t *particle, double ax, double ay, double L)
 {
-   
    /* Update particle positions, taking into account periodic boundaries */
    particle->x = fmod(particle->x + particle->v_x*dt + 0.5*ax*dt*dt + L, L);
    particle->y = fmod(particle->y + particle->v_y*dt + 0.5*ay*dt*dt + L, L);
@@ -469,10 +455,7 @@ int moveParticle(particle_t *particle, double ax, double ay, double L)
    /* Update velocities */
    particle->v_x += ax * dt;
    particle->v_y += ay * dt;
-   
-   return 0;
 }
-
 
 int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
   if (patch->xleft>=patch->xright || patch->ybottom>=patch->ytop) return(1);
@@ -485,24 +468,31 @@ int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
 
 int main(int argc, char ** argv) {
 
-  int         args_used = 1; // keeps track of # consumed arguments
-  int64_t     g;     // dimension of grid in points
-  int64_t     T;     // total number of simulation steps
-  int64_t     n;     // total number of particles in the simulation
-  int64_t     n_old; // number of particled before removal
-  char        *init_mode; // Initialization mode for particles
-  double      rho;   // rho parameter for the initial geometric particle distribution
-  int64_t     k, m;  // determine initial horizontal and vertical velocity of particles-- 
-                     //  (2*k)+1 cells per time step 
-  int64_t     particle_mode;
-  double      alpha, beta;
-  bbox_t      grid_patch, init_patch, injection_patch, removal_patch;
-  int         removal_mode = 0, injection_mode = 0, injection_timestep, removal_timestep, particles_per_cell;
-  int         partial_correctness = 1;
-  int64_t     L;     // dimension of grid in cells
-  double      *Qgrid;// the grid is represented as an array of charges
-  particle_t  *particles; // the particles array
-  int64_t     t, i, j;
+  int         args_used = 1;     // keeps track of # consumed arguments
+  int64_t     g;                 // dimension of grid in points
+  int64_t     L;                 // dimension of grid in cells
+  int64_t     T;                 // total number of simulation steps
+  int64_t     n;                 // total number of particles in the simulation
+  int64_t     n_old;             // number of particled before particle population change
+  char        *init_mode;        // particle initialization mode (char)
+  int64_t     particle_mode;     // particle initialization mode (int)
+  double      rho;               // attenuation factor for geometric particle distribution
+  int64_t     k, m;              // determine initial horizontal and vertical velocity of 
+                                 // particles-- (2*k)+1 cells per time step 
+  double      alpha, beta;       // slope and offset values for linear particle distribution
+  bbox_t      grid_patch,        // whole grid
+              init_patch,        // subset of grid used for localized initialization
+              injection_patch,   // subset of grid that will receive particle injection
+              removal_patch;     // subset of grid from which particles will be removed
+  int         removal_mode=0,    // determines whether particles will be removed
+              removal_timestep,  //determines when particles will be removed
+              injection_mode = 0,// determines whether particles will be added
+              injection_timestep;//determines when particles will be added
+  int         particles_per_cell;// number of particles per cell to be injected
+  int         correctness = 1;   // determines whether simulation was correct
+  double      *Qgrid;            // field of fixed charges
+  particle_t  *particles;        // the particles array
+  int64_t     t, i;
   double      fx, fy, ax, ay, simulation_time;
   int         correct_simulation = 1;
   int         error;
@@ -549,7 +539,6 @@ int main(int argc, char ** argv) {
 
   particle_steps = n*T;  
   particle_mode  = UNDEFINED;
-  partial_correctness = 1;
   k = atoi(*++argv);   args_used++; 
   if (k<0) {
     printf("ERROR: Particle semi-charge must be non-negative: %d\n", k);
@@ -558,195 +547,189 @@ int main(int argc, char ** argv) {
   m = atoi(*++argv);   args_used++; 
   init_mode = *++argv; args_used++;  
    
-   /* Initialize particles with geometric distribution */
-   if (strcmp(init_mode, "GEOMETRIC") == 0) {
-      if (argc<args_used+1) {
-         printf("ERROR: Not enough arguments\n"); exit(FAILURE);
-      }
-      particle_mode = GEOMETRIC;
-      rho = atof(*++argv);   args_used++;
-   }
+  /* Initialize particles with geometric distribution */
+  if (strcmp(init_mode, "GEOMETRIC") == 0) {
+    if (argc<args_used+1) {
+      printf("ERROR: Not enough arguments\n"); exit(FAILURE);
+    }
+    particle_mode = GEOMETRIC;
+    rho = atof(*++argv);   args_used++;
+  }
    
-   /* Initialize with a sinusoidal particle distribution (single period) */
-   if (strcmp(init_mode, "SINUSOIDAL") == 0) {
-      particle_mode = SINUSOIDAL;
-   }
+  /* Initialize with a sinusoidal particle distribution (single period) */
+  if (strcmp(init_mode, "SINUSOIDAL") == 0) {
+    particle_mode = SINUSOIDAL;
+  }
    
-   /* Initialize particles with linear distribution */
-   /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
-   if (strcmp(init_mode, "LINEAR") == 0) {
-      if (argc<args_used+2) {
-         printf("ERROR: Not enough arguments\n");
-         exit(EXIT_FAILURE);
-      }
-      particle_mode = LINEAR;
-      alpha = atof(*++argv); args_used++; 
-      beta  = atof(*++argv); args_used++;
-   }
+  /* Initialize particles with linear distribution */
+  /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
+  if (strcmp(init_mode, "LINEAR") == 0) {
+    if (argc<args_used+2) {
+      printf("ERROR: Not enough arguments\n");
+      exit(EXIT_FAILURE);
+    }
+    particle_mode = LINEAR;
+    alpha = atof(*++argv); args_used++; 
+    beta  = atof(*++argv); args_used++;
+  }
    
-   /* Initialize uniformly particles within a "patch" */
-   if (strcmp(init_mode, "PATCH") == 0) {
-      if (argc<args_used+4) {
-         printf("ERROR: Not enough arguments\n");
-         exit(FAILURE);
-      }
-      particle_mode = PATCH;
-      init_patch.xleft   = atoi(*++argv); args_used++;
-      init_patch.xright  = atoi(*++argv); args_used++;
-      init_patch.ybottom = atoi(*++argv); args_used++;
-      init_patch.ytop    = atoi(*++argv); args_used++;
-      if (bad_patch(&init_patch, 0)) {
-        printf("ERROR: inconsistent initial patch\n");
+  /* Initialize uniformly particles within a "patch" */
+  if (strcmp(init_mode, "PATCH") == 0) {
+    if (argc<args_used+4) {
+      printf("ERROR: Not enough arguments\n");
+      exit(FAILURE);
+    }
+    particle_mode = PATCH;
+    init_patch.xleft   = atoi(*++argv); args_used++;
+    init_patch.xright  = atoi(*++argv); args_used++;
+    init_patch.ybottom = atoi(*++argv); args_used++;
+    init_patch.ytop    = atoi(*++argv); args_used++;
+    if (bad_patch(&init_patch, 0)) {
+      printf("ERROR: inconsistent initial patch\n");
+      exit(FAILURE);
+    }
+  }
+
+  printf("Grid size                      = %lld\n", L);
+  printf("Initial number of particles    = %lld\n", n);
+  printf("Number of time steps           = %lld\n", T);
+  printf("Initialization mode            = %s\n", init_mode);
+  switch(particle_mode) {
+  case GEOMETRIC: printf("  Attenuation factor           = %lf\n", rho);    break;
+  case SINUSOIDAL:                                                          break;
+  case LINEAR:    printf("  Negative slope               = %lf\n", alpha);
+                  printf("  Offset                       = %lf\n", beta);   break;
+  case PATCH:     printf("  Bounding box                 = %d, %d, %d, %d\n",
+                         init_patch.xleft, init_patch.xright, 
+                         init_patch.ybottom, init_patch.ytop);              break;
+  default:        printf("ERROR: Unsupported particle initializating mode\n");
+                   exit(FAILURE);
+  }
+  printf("Particle charge semi-increment = %d\n", k);
+  printf("Vertical velocity              = %d\n", m);
+   
+  /* Check if user requested injection/removal of particles */
+  if (argc > args_used) {
+    char *ir_mode=*++argv; args_used++;
+    if (strcmp(ir_mode, "INJECTION") == 0 ) {
+      if (argc<args_used+6) {
+        printf("ERROR: Not enough arguments\n");
         exit(FAILURE);
       }
-   }
-
-   printf("Grid size                      = %lld\n", L);
-   printf("Initial number of particles    = %lld\n", n);
-   printf("Number of time steps           = %lld\n", T);
-   printf("Initialization mode            = %s\n", init_mode);
-   switch(particle_mode) {
-   case GEOMETRIC: printf("  Attenuation factor           = %lf\n", rho);    break;
-   case SINUSOIDAL:                                                          break;
-   case LINEAR:    printf("  Negative slope               = %lf\n", alpha);
-                   printf("  Offset                       = %lf\n", beta);   break;
-   case PATCH:     printf("  Bounding box                 = %d, %d, %d, %d\n",
-                          init_patch.xleft, init_patch.xright, 
-                          init_patch.ybottom, init_patch.ytop);              break;
-   default:        printf("ERROR: Unsupported particle initializating mode\n");
-                   exit(FAILURE);
-   }
-   printf("Particle charge semi-increment = %d\n", k);
-   printf("Vertical velocity              = %d\n", m);
-   
-   /* Check if user requested injection/removal of particles */
-   if (argc > args_used) {
-      char *ir_mode=*++argv; args_used++;
-      if (strcmp(ir_mode, "INJECTION") == 0 ) {
-      if (argc<args_used+6) {
-         printf("ERROR: Not enough arguments\n");
-         exit(FAILURE);
+      injection_mode = 1;
+      particles_per_cell = atoi(*++argv);
+      if (particles_per_cell < 1) {
+        printf("ERROR: Injected particles per cell must be positive: %ld\n", particles_per_cell);
+        exit(FAILURE);
       }
-         injection_mode = 1;
-         /* Particles per cell to inject */
-         particles_per_cell = atoi(*++argv);
-         if (particles_per_cell < 0) {
-           printf("Injected particles per cell need to be non-negative: %ld\n", 
-		  particles_per_cell);
-           exit(FAILURE);
-         }
-         injection_timestep = atoi(*++argv);
-         if (injection_timestep < 0) {
-           printf("Injection time step needs to be non-negative: %ld\n", injection_timestep);
-           exit(FAILURE);
-         }           
-         /* Coordinates that define the simulation area where injection will take place */
-         injection_patch.xleft   = atoi(*++argv);
-         injection_patch.xright  = atoi(*++argv);
-         injection_patch.ybottom = atoi(*++argv);
-         injection_patch.ytop    = atoi(*++argv);
-         if (error=bad_patch(&injection_patch, &grid_patch)) {
-           printf("ERROR: inconsistent injection patch: %d\n",error);
-           exit(FAILURE);
-         }
-         printf("Population change mode         = INJECTION\n");
-         printf("  Bounding box                 = %d, %d, %d, %d\n",     
-                injection_patch.xleft, injection_patch.xright, 
-                injection_patch.ybottom, injection_patch.ytop);   
-         printf("  Injection time step          = %d\n", injection_timestep);
-         printf("  Particles per cell           = %d\n",  particles_per_cell);
-         particles_added = 
-           (injection_patch.xright-injection_patch.xleft)*
-           (injection_patch.ytop-injection_patch.ybottom)*
-           particles_per_cell;
-         printf("  Total particles added        = %d\n",  particles_added);
-         particle_steps += particles_added*(T+1-injection_timestep);
+      injection_timestep = atoi(*++argv);
+      if (injection_timestep < 0) {
+        printf("ERROR: Injection time step must be non-negative: %ld\n", injection_timestep);
+        exit(FAILURE);
+      }           
+      /* Coordinates that define the simulation area where injection will take place */
+      injection_patch.xleft   = atoi(*++argv);
+      injection_patch.xright  = atoi(*++argv);
+      injection_patch.ybottom = atoi(*++argv);
+      injection_patch.ytop    = atoi(*++argv);
+      if (error=bad_patch(&injection_patch, &grid_patch)) {
+        printf("ERROR: inconsistent injection patch: %d\n",error);
+        exit(FAILURE);
       }
+      printf("Population change mode         = INJECTION\n");
+      printf("  Bounding box                 = %d, %d, %d, %d\n",     
+             injection_patch.xleft, injection_patch.xright, 
+             injection_patch.ybottom, injection_patch.ytop);   
+      printf("  Injection time step          = %d\n", injection_timestep);
+      printf("  Particles per cell           = %d\n",  particles_per_cell);
+      particles_added = 
+        (injection_patch.xright-injection_patch.xleft)*
+        (injection_patch.ytop-injection_patch.ybottom)*particles_per_cell;
+      printf("  Total particles added        = %d\n",  particles_added);
+      particle_steps += particles_added*(T+1-injection_timestep);
+    }
       
-      if (strcmp(ir_mode, "REMOVAL") == 0 ) {
-         removal_mode = 1;
-         removal_timestep = atoi(*++argv);
-         /* Coordinates that define the simulation area where the particles will be removed */
-         removal_patch.xleft   = atoi(*++argv);
-         removal_patch.xright  = atoi(*++argv);
-         removal_patch.ybottom = atoi(*++argv);
-         removal_patch.ytop    = atoi(*++argv);
-         if (bad_patch(&removal_patch, &grid_patch)) {
-           printf("ERROR: inconsistent removal patch\n");
-           exit(FAILURE);
-         }
-         printf("Population change mode         = REMOVAL\n");
-         printf("  Bounding box                 = %d, %d, %d, %d\n",     
-                removal_patch.xleft, removal_patch.xright, 
-                removal_patch.ybottom, removal_patch.ytop);   
-         printf("  removal time step            = %d\n", removal_timestep);
+    if (strcmp(ir_mode, "REMOVAL") == 0 ) {
+      removal_mode = 1;
+      removal_timestep = atoi(*++argv);
+      /* Coordinates that define the simulation area where the particles will be removed */
+      removal_patch.xleft   = atoi(*++argv);
+      removal_patch.xright  = atoi(*++argv);
+      removal_patch.ybottom = atoi(*++argv);
+      removal_patch.ytop    = atoi(*++argv);
+      if (bad_patch(&removal_patch, &grid_patch)) {
+        printf("ERROR: inconsistent removal patch\n");
+        exit(FAILURE);
       }
-   }
+      printf("Population change mode         = REMOVAL\n");
+      printf("  Bounding box                 = %d, %d, %d, %d\n",     
+             removal_patch.xleft, removal_patch.xright, 
+             removal_patch.ybottom, removal_patch.ytop);   
+      printf("  removal time step            = %d\n", removal_timestep);
+    }
+  }
 
-   /* Initialize grid of charges and particles */
-   Qgrid = initializeGrid(g);
+  /* Initialize grid of charges and particles */
+  Qgrid = initializeGrid(g);
    
-   switch(particle_mode) {
-   case GEOMETRIC:  particles = initializeParticlesGeometric(n, g, rho);      break;
-   case SINUSOIDAL: particles = initializeParticlesSinusoidal(n, g);          break;
-   case LINEAR:     particles = initializeParticlesLinear(n, g, alpha, beta); break;
-   case PATCH:      particles = initializeParticlesPatch(n, g, init_patch);   break;
-   default:         printf("ERROR: No supported particle distribution\n");  exit(FAILURE);
-   }   
+  switch(particle_mode) {
+  case GEOMETRIC:  particles = initializeParticlesGeometric(n, g, rho);      break;
+  case SINUSOIDAL: particles = initializeParticlesSinusoidal(n, g);          break;
+  case LINEAR:     particles = initializeParticlesLinear(n, g, alpha, beta); break;
+  case PATCH:      particles = initializeParticlesPatch(n, g, init_patch);   break;
+  default:         printf("ERROR: No supported particle distribution\n");  exit(FAILURE);
+  }   
 
-   finish_distribution(0, k, m, n, particles);
+  finish_distribution(0, k, m, n, particles);
 
-   /* Run the simulation */
-   for (t=0; t<=T; t++) {
+  for (t=0; t<=T; t++) {
     
-     /* start the timer after one warm-up time step */
-      if (t==1) simulation_time = wtime();  
-      /* Check if we have to inject particles at this timestep  */
-      if (injection_mode && (t == injection_timestep)) {
-         n_old=n;
-         particles = inject_particles(t, injection_patch, particles_per_cell, &n, particles);
-         finish_distribution(t, 0, 0, n-n_old, particles+n_old);
-      }
+    /* start the timer after one warm-up time step */
+    if (t==1) simulation_time = wtime();  
+ 
+   /* Check if we have to inject particles at this timestep  */
+    if (injection_mode && (t == injection_timestep)) {
+      n_old=n;
+      particles = inject_particles(t, injection_patch, particles_per_cell, &n, particles);
+      finish_distribution(t, 0, 0, n-n_old, particles+n_old);
+    }
       
-      /* Check if we have to remove particles now. Validate removed particles */
-      if (removal_mode && (t == removal_timestep)) {
-         n_old = n;
-         remove_particles(t, removal_patch, &n, particles, &partial_correctness, Qgrid, g);
-         particle_steps -= (n_old-n)*(T+1-removal_timestep);
-      }
+    /* Check if we have to remove particles now. Validate removed particles */
+    if (removal_mode && (t == removal_timestep)) {
+      n_old = n;
+      remove_particles(t, removal_patch, &n, particles, &correctness, Qgrid, g);
+      particle_steps -= (n_old-n)*(T+1-removal_timestep);
+    }
       
-      /* Calculate forces on particles and update positions */
-      for (i=0; i<n; i++) {
-         fx = 0.0;
-         fy = 0.0;
-         computeTotalForce(particles[i], g, Qgrid, &fx, &fy);
-         ax = fx * mass_inv;
-         ay = fy * mass_inv;
-         moveParticle(&particles[i], ax, ay, L);
-      }
-   }
+    /* Calculate forces on particles and update positions */
+    for (i=0; i<n; i++) {
+      fx = 0.0;
+      fy = 0.0;
+      computeTotalForce(particles[i], g, Qgrid, &fx, &fy);
+      ax = fx * mass_inv;
+      ay = fy * mass_inv;
+      moveParticle(&particles[i], ax, ay, L);
+    }
+  }
    
-   simulation_time = wtime() - simulation_time;
+  simulation_time = wtime() - simulation_time;
    
-   /* In case of particles removal initalize the correctness flag with the correctness */
-   correct_simulation = partial_correctness;
+  /* Run the verification test */
+  for (i=0; i<n; i++) {
+    correctness *= verifyParticle(particles[i], T+1, Qgrid, g);
+  }
    
-   /* Run the verification test */
-   for (i=0; i<n; i++) {
-      correct_simulation *= verifyParticle(particles[i], T+1, Qgrid, g);
-   }
-   
-   if (correct_simulation) {
-     printf("Solution validates\n");
+  if (correct_simulation) {
+    printf("Solution validates\n");
 #ifdef VERBOSE
-      printf("Final number of particles = %lld\n", n);
+    printf("Final number of particles = %lld\n", n);
+    printf("Simulation time is %lf seconds\n", simulation_time);
 #endif
-      printf("Simulation time is %lf seconds\n", simulation_time);
-      avg_time = particle_steps/simulation_time;
-      printf("Rate (Mparticles_moved/s): %lf\n", 1.0e-6*avg_time);
-   } else {
-      printf("Solution does not validate\n");
-   }
+    avg_time = particle_steps/simulation_time;
+    printf("Rate (Mparticles_moved/s): %lf\n", 1.0e-6*avg_time);
+  } else {
+    printf("Solution does not validate\n");
+  }
    
-   return 0;
+  return(EXIT_SUCCESS);
 }
