@@ -291,7 +291,7 @@ int main(int argc, char ** argv) {
     }
  
     if (2*RADIUS +1 > n) {
-      printf("ERROR: Stencil radius %d exceeds grid size %d\n", RADIUS, n);
+      printf("ERROR: Stencil radius %d exceeds grid size %ld\n", RADIUS, n);
       error = 1;
       goto ENDOFTESTS;  
     }
@@ -325,7 +325,7 @@ int main(int argc, char ** argv) {
 
   if (my_ID == root) {
     printf("Number of ranks                 = %d\n", Num_procs);
-    printf("Grid size                       = %d\n", n);
+    printf("Grid size                       = %ld\n", n);
     printf("Radius of stencil               = %d\n", RADIUS);
     printf("Tiles in x/y-direction          = %d/%d\n", Num_procsx, Num_procsy);
     printf("Tiles per shared memory domain  = %d\n", group_size);

@@ -240,7 +240,7 @@ int main(int argc, char **argv){
 
   matrix_space = nent*sizeof(double);
   if (matrix_space/sizeof(double) != nent) {
-    printf("ERROR: rank %d cannot represent space for matrix: %ul\n", 
+    printf("ERROR: rank %d cannot represent space for matrix: %zu\n",
            my_ID, matrix_space);
     error = 1;
   } 
@@ -256,7 +256,7 @@ int main(int argc, char **argv){
 
   vector_space = (size2 + nrows)*sizeof(double);
   if (vector_space/sizeof(double) != (size2+nrows)) {
-    printf("ERROR: rank %d Cannot represent space for vectors: %ul\n", 
+    printf("ERROR: rank %d Cannot represent space for vectors: %zu\n",
            my_ID, vector_space);
     error = 1; 
   } 
@@ -273,7 +273,7 @@ int main(int argc, char **argv){
 
   index_space = nent*sizeof(s64Int);
   if (index_space/sizeof(s64Int) != nent) {
-    printf("ERROR: rank %d cannot represent space for column indices: %ul\n", 
+    printf("ERROR: rank %d cannot represent space for column indices: %zu\n", 
            my_ID, index_space);
     error = 1;
   } 

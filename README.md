@@ -1,6 +1,6 @@
 # Quality Control
 
-[![Build Status](https://travis-ci.org/jeffhammond/PRK.svg)](https://travis-ci.org/jeffhammond/PRK)
+[![Build Status](https://travis-ci.org/ParRes/Kernels.svg)](https://travis-ci.org/ParRes/Kernels)
 
 # License
 
