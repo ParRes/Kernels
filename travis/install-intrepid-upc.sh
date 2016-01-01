@@ -16,23 +16,20 @@ case "$CC" in
                     echo "Mac"
                     # Travis uses Mac OSX 10.9, so this might not work...
                     mkdir $TRAVIS_ROOT/gupc
-                    wget -q http://www.gccupc.org/gupc-5201-1/28-gupc-5201-x8664-mac-os-1010-yosemiti/file
-                    mv file upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
+                    wget --no-check-certificate -q http://www.gccupc.org/gupc-5201-1/28-gupc-5201-x8664-mac-os-1010-yosemiti/file -O upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
                     tar -C $TRAVIS_ROOT/gupc -xzvf upc-5.2.0.1-x86_64-apple-macosx10.10.tar.gz
                     find $TRAVIS_ROOT/gupc -name gupc -type f
                     ;;
                 Linux)
                     echo "Linux"
                     mkdir $TRAVIS_ROOT/gupc
-                    wget -q http://www.gccupc.org/gupc-5201-1/30-gupc-5201-x8664-ubuntu-1204/file
-                    mv file upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
+                    wget --no-check-certificate -q http://www.gccupc.org/gupc-5201-1/30-gupc-5201-x8664-ubuntu-1204/file -O upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
                     tar -C $TRAVIS_ROOT/gupc -xzvf upc-5.2.0.1-x86_64-linux-ubuntu12.4.tar.gz
                     find $TRAVIS_ROOT/gupc -name gupc -type f
                     ;;
             esac
             # Building from source overflows Travis CI 4 MB output...
-            #wget --no-check-certificate -q http://www.gccupc.org/gupc-5201-1/32-gupc-5-2-0-1-source-release/file
-            #mv file upc-5.2.0.1.src.tar.bz2
+            #wget --no-check-certificate -q http://www.gccupc.org/gupc-5201-1/32-gupc-5-2-0-1-source-release/file -O upc-5.2.0.1.src.tar.bz2
             #tar -xjf upc-5.2.0.1.src.tar.bz2
             #cd upc-5.2.0.1
             #./contrib/download_prerequisites
