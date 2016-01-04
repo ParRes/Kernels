@@ -512,7 +512,7 @@ int main(int argc, char ** argv) {
     printf("          <init mode> <init parameters> [<population change mode> <population change parameters>]\n");
     printf("   init mode \"GEOMETRIC\"  parameters: <attenuation factor>\n");
     printf("             \"SINUSOIDAL\" parameters: none\n");
-    printf("             \"LINEAR\"     parameters: <slope> <constant>\n");
+    printf("             \"LINEAR\"     parameters: <negative slope> <constant offset>\n");
     printf("             \"PATCH\"      parameters: <xleft> <xright>  <ybottom> <ytop>\n");
     printf("   population change mode \"INJECTION\" parameters:  <# particles> <time step> <xleft> <xright>  <ybottom> <ytop>\n");
     printf("                          \"REMOVAL\"   parameters:  <time step> <xleft> <xright>  <ybottom> <ytop>\n");
@@ -571,6 +571,10 @@ int main(int argc, char ** argv) {
     particle_mode = LINEAR;
     alpha = atof(*++argv); args_used++; 
     beta  = atof(*++argv); args_used++;
+    if (beta <0 || beta<alpha) {
+      printf("ERROR: linear profile gives negative particle density\n");
+      exit(EXIT_FAILURE);
+    }
   }
    
   /* Initialize uniformly particles within a "patch" */
