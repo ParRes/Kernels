@@ -162,6 +162,8 @@ case "$PRK_TARGET" in
                         export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -v -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
                         ;;
                     mpi)
+                        # see if this is causing Mac tests to hang
+                        export MPICH_ASYNC_PROGRESS=1
                         # so that upcrun can find mpirun - why it doesn't cache this from build is beyond me
                         export PATH="$TRAVIS_ROOT/$MPI_IMPL/bin:$PATH"
                         export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
