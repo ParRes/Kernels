@@ -48,6 +48,8 @@ if [ ! -d "$BUPC_PREFIX" ]; then
             ../configure --prefix=$BUPC_PREFIX --disable-aligned-segments
             ;;
     esac
+    make -j2
+    make install
 else
     echo "Berkeley UPC (w/ $CC) installed..."
     find $BUPC_PREFIX -name upcc -type f
