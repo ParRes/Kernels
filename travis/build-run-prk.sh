@@ -160,6 +160,11 @@ case "$PRK_TARGET" in
                         export LD_LIBRARY_PATH="$TRAVIS_ROOT/libfabric/lib:$LD_LIBRARY_PATH"
                         export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
                         ;;
+                    mpi)
+                        # so that upcrun can find mpirun - why it doesn't cache this from build is beyond me
+                        export PATH="$TRAVIS_ROOT/$MPI_IMPL/bin:$PATH"
+                        export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
+                        ;;
                     *)
                         export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
                         ;;
