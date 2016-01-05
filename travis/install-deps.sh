@@ -33,7 +33,7 @@ case "$PRK_TARGET" in
                 ;;
             bupc)
                 # BUPC is new
-                sh ./travis/install-berkeley-upc.sh $TRAVIS_ROOT udp
+                sh ./travis/install-berkeley-upc.sh $TRAVIS_ROOT $UPC_CONDUIT
                 ;;
             *)
                 echo "Apparently UPC_IMPL was not exported properly"

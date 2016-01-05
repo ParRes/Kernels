@@ -30,6 +30,10 @@ matrix:
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
+    - os: osx
+    - env: PRK_TARGET=allupc
+           UPC_IMPL=bupc
+           UPC_CONDUIT=udp
     # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
     - os: osx
       env: PRK_TARGET=allfgmpi
@@ -50,6 +54,8 @@ addons:
     - ubuntu-toolchain-r-test
     #  Boost is for Grappa
     - boost-latest
+    # clang-3.8 comes from this
+    - llvm-toolchain-precise
     packages:
     - cmake
     - gcc-4.8
@@ -69,6 +75,8 @@ addons:
     - libboost-system1.55-dev
     - libboost-test1.55-dev
     - libboost-timer1.55-dev
+    # This should provide OpenMP
+    - clang-3.8
 env:
 # Order by likelihood of failing...
 #  - PRK_TARGET=allgrappa
@@ -76,6 +84,16 @@ env:
     UPC_IMPL=gupc
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
+    UPC_CONDUIT=smp
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    UPC_CONDUIT=udp
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    UPC_CONDUIT=ofi
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    UPC_CONDUIT=mpi
 #  - PRK_TARGET=allampi
 #  - PRK_TARGET=allcharm++
 #  - PRK_TARGET=allfgmpi
