@@ -59,7 +59,7 @@ matrix:
            GASNET_CONDUIT=ofi
     # UPC over MPICH on Mac hangs - may be async progress issue
     - os: osx
-    - env: PRK_TARGET=allupc
+      env: PRK_TARGET=allupc
            UPC_IMPL=bupc
            GASNET_CONDUIT=ofi
 addons:
