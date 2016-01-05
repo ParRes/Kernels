@@ -20,7 +20,7 @@ export BUPC_RELEASE=berkeley_upc-2.22.0
 os=`uname`
 case $os in
     Darwin)
-        BUPC_NO_PTHREADS="--disable-par --enable-pshm"
+        BUPC_NO_PTHREADS="--disable-par" # --enable-pshm # configure test fails
         MPI_ROOT=/usr/local
         ;;
     Linux)
