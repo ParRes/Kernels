@@ -45,7 +45,7 @@ if [ ! -d "$BUPC_PREFIX" ]; then
             ;;
         *)
             echo "GASNet conduit not specified - configure will guess."
-            ../configure --prefix=$BUPC_PREFIX
+            ../configure --prefix=$BUPC_PREFIX --disable-aligned-segments
             ;;
     esac
 else
