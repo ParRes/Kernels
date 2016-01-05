@@ -144,14 +144,15 @@ case "$PRK_TARGET" in
                 echo "UPCC=$UPC_ROOT/bin/upc" > common/make.defs
                 export PRK_LAUNCHER=""
                 export PRK_LAUNCHER_ARGS="-n $PRK_UPC_PROCS"
+                make $PRK_TARGET
                 ;;
             bupc)
                 export UPC_ROOT=$TRAVIS_ROOT/bupc-$CC
                 echo "UPCC=$UPC_ROOT/bin/upcc" > common/make.defs
                 export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -n $PRK_UPC_PROCS"
+                make $PRK_TARGET default_opt_flags="-Wc,-O3"
                 ;;
         esac
-        make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       $PRK_LAUNCHER_ARGS 10 1024 1024
         $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     $PRK_LAUNCHER_ARGS 10 1024
