@@ -34,11 +34,13 @@ if [ ! -d "$BUPC_PREFIX" ]; then
     case "$GASNET_CONDUIT" in
         smp)
             ../configure --prefix=$BUPC_PREFIX --disable-ibv --disable-aligned-segments \
-                         --enable-$GASNET_CONDUIT --without-mpi-cc --disable-udp $BUPC_NO_PTHREADS
+                         --enable-$GASNET_CONDUIT --without-mpi-cc \
+                         --disable-udp $BUPC_NO_PTHREADS
             ;;
         udp)
             ../configure --prefix=$BUPC_PREFIX --disable-ibv --disable-aligned-segments \
-                         --enable-$GASNET_CONDUIT --without-mpi-cc $BUPC_NO_PTHREADS
+                         --enable-$GASNET_CONDUIT --without-mpi-cc \
+                         --disable-smp $BUPC_NO_PTHREADS
             ;;
         ofi)
             # TODO factor Hydra out of Sandia OpenSHMEM install so it can be used as spawner here
