@@ -37,25 +37,23 @@ if [ ! -d "$BUPC_PREFIX" ]; then
     # disable IBV just in case Linux has headers for it
     case "$GASNET_CONDUIT" in
         smp)
-            ../configure --prefix=$BUPC_PREFIX --disable-ibv --disable-aligned-segments \
-                         --enable-$GASNET_CONDUIT --without-mpi-cc \
-                         --disable-udp $BUPC_NO_PTHREADS
+            ../configure --prefix=$BUPC_PREFIX --disable-aligned-segments $BUPC_NO_PTHREADS \
+                         --enable-$GASNET_CONDUIT --disable-auto-conduit-detect
             ;;
         udp)
-            ../configure --prefix=$BUPC_PREFIX --disable-ibv --disable-aligned-segments \
-                         --enable-$GASNET_CONDUIT --without-mpi-cc \
-                         --disable-smp $BUPC_NO_PTHREADS
+            ../configure --prefix=$BUPC_PREFIX --disable-aligned-segments $BUPC_NO_PTHREADS \
+                         --enable-$GASNET_CONDUIT --disable-auto-conduit-detect
             ;;
         ofi)
             # TODO factor Hydra out of Sandia OpenSHMEM install so it can be used as spawner here
-            ../configure --prefix=$BUPC_PREFIX --disable-ibv --without-mpi-cc --disable-aligned-segments \
+            ../configure --prefix=$BUPC_PREFIX --disable-aligned-segments $BUPC_NO_PTHREADS \
                          --enable-$GASNET_CONDUIT --with-ofihome=$TRAVIS_ROOT/libfabric --with-ofi-spawner=ssh \
-                         --disable-smp --disable-udp $BUPC_NO_PTHREADS
+                         --disable-auto-conduit-detect
             ;;
         mpi)
-            ../configure --prefix=$BUPC_PREFIX --disable-ibv --disable-aligned-segments \
+            ../configure --prefix=$BUPC_PREFIX --disable-aligned-segments $BUPC_NO_PTHREADS \
                          --enable-$GASNET_CONDUIT --with-mpi-cc=$MPI_ROOT/bin/mpicc \
-                         --disable-smp --disable-udp $BUPC_NO_PTHREADS
+                         --disable-auto-conduit-detect
             ;;
         *)
             echo "GASNet conduit not specified - configure will guess."
