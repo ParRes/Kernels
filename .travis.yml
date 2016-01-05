@@ -53,6 +53,10 @@ matrix:
     #- env: PRK_TARGET=allampi
     #- env: PRK_TARGET=allfgmpi
     - env: PRK_TARGET=allgrappa
+    # UPC GASNet OFI conduit is busted, perhaps due to SSH spawner
+    - env: PRK_TARGET=allupc
+           UPC_IMPL=bupc
+           GASNET_CONDUIT=ofi
 addons:
   apt:
     sources:
@@ -96,10 +100,9 @@ env:
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
     GASNET_CONDUIT=mpi
-# UPC GASNet OFI conduit is busted
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=ofi
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=ofi
 #  - PRK_TARGET=allampi
 #  - PRK_TARGET=allcharm++
 #  - PRK_TARGET=allfgmpi
