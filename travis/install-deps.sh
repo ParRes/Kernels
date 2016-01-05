@@ -21,11 +21,15 @@ case "$PRK_TARGET" in
         ;;
     allshmem)
         echo "SHMEM"
+        sh ./travis/install-libfabric.sh $TRAVIS_ROOT
         sh ./travis/install-sandia-openshmem.sh $TRAVIS_ROOT
         ;;
     allupc)
         echo "UPC"
+        # GUPC is working fine
         sh ./travis/install-intrepid-upc.sh $TRAVIS_ROOT
+        # BUPC is new
+        #sh ./travis/install-berkeley-upc.sh $TRAVIS_ROOT ofi
         ;;
     allcharm++)
         echo "Charm++"
@@ -41,10 +45,18 @@ case "$PRK_TARGET" in
         ;;
     allgrappa)
         echo "Grappa"
-        sh ./travis/install-gcc.sh $TRAVIS_ROOT
+        case "$CC" in
+            gcc)
+                # test for version - only install if required
+                #sh ./travis/install-gcc.sh $TRAVIS_ROOT
+                ;;
+            clang)
+                # test for version - only install if required
+                #sh ./travis/install-clang.sh $TRAVIS_ROOT
+                ;;
+        esac
         sh ./travis/install-cmake.sh $TRAVIS_ROOT
-        # only use MPICH with Grappa due to MPI-3 feature requirements
         sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich
-        sh ./travis/install-grappa.sh $TRAVIS_ROOT
+        sh ./travis/install-grappa.sh $TRAVIS_ROOT mpich
         ;;
 esac

@@ -1,41 +1,104 @@
 # required for package manager installs
-sudo: true
-language: c
+#sudo: true
+# use addons-apt instead
+sudo: false
+language: cpp
 os:
   - linux
-# OpenMP compiler support on Mac is an issue
-#  - osx
+  - osx
+# Travis will export CC=$compiler
 compiler:
+  - clang
   - gcc
-#  - clang
+matrix:
+  exclude:
+    # Clang does not yet have OpenMP support
+    - compiler: clang
+      env: PRK_TARGET=allopenmp
+    - compiler: clang
+      env: PRK_TARGET=allmpiomp
+    # dealing with broken GCC on Mac not worth it here
+    - os: osx
+      env: PRK_TARGET=allopenmp
+    - os: osx
+      env: PRK_TARGET=allmpiomp
+    # Clang UPC requires source build, which probably takes too long
+    - compiler: clang
+      env: PRK_TARGET=allupc
+    # no binary install yet
+    - os: osx
+      env: PRK_TARGET=allupc
+    # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
+    - os: osx
+      env: PRK_TARGET=allfgmpi
+    # Mac issue with libtoolize (see https://github.com/regrant/sandia-shmem/pull/87)
+    - os: osx
+      env: PRK_TARGET=allshmem
+    # TODO Revisit this later...
+    #- compiler: gcc
+    #  env: PRK_TARGET=allgrappa
+  allow_failures:
+    # just disable broken tests for now
+    #- env: PRK_TARGET=allampi
+    #- env: PRK_TARGET=allfgmpi
+    - env: PRK_TARGET=allgrappa
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    #  Boost is for Grappa
+    - boost-latest
+    packages:
+    - cmake
+    - gcc-4.8
+    - g++-4.8
+    # Required by GUPC
+    - libnuma-dev
+    # Boost is for Grappa
+    - libboost-date-time1.55-dev
+    - libboost-exception1.55-dev
+    - libboost-filesystem1.55-dev
+    - libboost-iostreams1.55-dev
+    - libboost-math1.55-dev
+    - libboost-random1.55-dev
+    - libboost-regex1.55-dev
+    - libboost-serialization1.55-dev
+    - libboost-signals1.55-dev
+    - libboost-system1.55-dev
+    - libboost-test1.55-dev
+    - libboost-timer1.55-dev
 env:
-  - PRK_TARGET=allserial
-  - PRK_TARGET=allopenmp
-  - PRK_TARGET=allmpi1
-  - PRK_TARGET=allmpiopenmp
-  - PRK_TARGET=allmpishm
-  - PRK_TARGET=allmpirma
-  - PRK_TARGET=allshmem
+# Order by likelihood of failing...
+  - PRK_TARGET=allgrappa
   - PRK_TARGET=allupc
-  - PRK_TARGET=allcharm++
   - PRK_TARGET=allampi
+  - PRK_TARGET=allcharm++
   - PRK_TARGET=allfgmpi
-#  - PRK_TARGET=allgrappa
+  - PRK_TARGET=allshmem
+  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpiomp
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allserial
 before_install:
-  - export TRAVIS_ROOT=$HOME/travis
-  - mkdir $TRAVIS_ROOT
-  - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
+  - export TRAVIS_ROOT=$HOME/PRK-deps
+  - mkdir -p $TRAVIS_ROOT
+install:
   - export PATH=$TRAVIS_ROOT/bin:$PATH
-  - export LD_LIBRARY_PATH=$TRAVIS_ROOT/lib:$LD_LIBRARY_PATH
+  - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
   - export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
+  - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
+before_script:
 script:
   - sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
 after_failure:
   - echo "Sad panda"
+  - find . -name CMakeOutput.log -exec cat {} ";"
+  - find . -name CMakeError.log -exec cat {} ";"
 notifications:
   email:
     recipients:
-    #  - rob.f.van.der.wijngaart@intel.com
-      - jeff.r.hammond@intel.com
+      - jeff.science@gmail.com
     on_success: [change]
     on_failure: [always]
