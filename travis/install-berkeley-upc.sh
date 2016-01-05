@@ -25,22 +25,22 @@ if [ ! -d "$BUPC_PREFIX" ]; then
     # disable IBV just in case Linux has headers for it
     case "$GASNET_CONDUIT" in
         smp)
-            ../configure --prefix=$BUPC_PREFIX --disable-ibv --without-mpi-cc \
-                         --enable-$GASNET_CONDUIT
+            ../configure --prefix=$BUPC_PREFIX --disable-ibv --disable-aligned-segments \
+                         --enable-$GASNET_CONDUIT --without-mpi-cc
             ;;
         udp)
-            ../configure --prefix=$BUPC_PREFIX --disable-ibv --without-mpi-cc \
-                         --enable-$GASNET_CONDUIT
+            ../configure --prefix=$BUPC_PREFIX --disable-ibv --disable-aligned-segments \
+                         --enable-$GASNET_CONDUIT --without-mpi-cc
             ;;
         ofi)
             # TODO factor Hydra out of Sandia OpenSHMEM install so it can be used as spawner here
             sh ./travis/install-libfabric.sh $TRAVIS_ROOT
-            ../configure --prefix=$BUPC_PREFIX --disable-ibv --without-mpi-cc \
+            ../configure --prefix=$BUPC_PREFIX --disable-ibv --without-mpi-cc --disable-aligned-segments \
                          --enable-$GASNET_CONDUIT --with-ofihome=$TRAVIS_ROOT/libfabric --with-ofi-spawner=ssh
             ;;
         mpi)
             sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich
-            ../configure --prefix=$BUPC_PREFIX --disable-ibv \
+            ../configure --prefix=$BUPC_PREFIX --disable-ibv --disable-aligned-segments \
                          --enable-$GASNET_CONDUIT --with-mpi-cc=$TRAVIS_ROOT/mpich/bin/mpicc
             ;;
         *)
