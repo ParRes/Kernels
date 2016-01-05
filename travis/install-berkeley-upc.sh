@@ -19,8 +19,10 @@ export BUPC_RELEASE=berkeley_upc-2.22.0
 #   upcrun: When network=smp compile with '-pthreads' or PSHM support to run with > 1 thread
 if [ "`uname`" -eq "Darwin" ]; then
     BUPC_NO_PTHREADS="--disable-par --enable-pshm"
+    MPI_ROOT=/usr/local
 else
     BUPC_NO_PTHREADS=""
+    MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
 fi
 
 if [ ! -d "$BUPC_PREFIX" ]; then
@@ -48,7 +50,7 @@ if [ ! -d "$BUPC_PREFIX" ]; then
             ;;
         mpi)
             ../configure --prefix=$BUPC_PREFIX --disable-ibv --disable-aligned-segments \
-                         --enable-$GASNET_CONDUIT --with-mpi-cc=$TRAVIS_ROOT/$MPI_IMPL/bin/mpicc \
+                         --enable-$GASNET_CONDUIT --with-mpi-cc=$MPI_ROOT/bin/mpicc \
                          --disable-smp --disable-udp $BUPC_NO_PTHREADS
             ;;
         *)
