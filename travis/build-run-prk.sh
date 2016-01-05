@@ -157,9 +157,9 @@ case "$PRK_TARGET" in
                         export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS -localhost"
                         ;;
                     ofi)
-                        export GASNET_SSH_SERVERS="localhost,localhost,localhost,localhost"
+                        export GASNET_SSH_SERVERS="localhost"
                         export LD_LIBRARY_PATH="$TRAVIS_ROOT/libfabric/lib:$LD_LIBRARY_PATH"
-                        export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
+                        export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -v -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
                         ;;
                     mpi)
                         # so that upcrun can find mpirun - why it doesn't cache this from build is beyond me
