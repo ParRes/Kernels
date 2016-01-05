@@ -72,7 +72,7 @@ addons:
     - libboost-timer1.55-dev
 env:
 # Order by likelihood of failing...
-#  - PRK_TARGET=allgrappa
+  - PRK_TARGET=allgrappa
   - PRK_TARGET=allupc
     UPC_IMPL=gupc
   - PRK_TARGET=allupc
