@@ -149,7 +149,8 @@ case "$PRK_TARGET" in
             bupc)
                 export UPC_ROOT=$TRAVIS_ROOT/bupc-$CC
                 echo "UPCC=$UPC_ROOT/bin/upcc" > common/make.defs
-                export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -n $PRK_UPC_PROCS"
+                # -N $nodes -n UPC threads -c $cores_per_node
+                export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
                 make $PRK_TARGET default_opt_flags="-Wc,-O3"
                 ;;
         esac
