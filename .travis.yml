@@ -30,10 +30,15 @@ matrix:
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
+    # BUPD on Mac is annoying
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=bupc
            GASNET_CONDUIT=udp
+    - os: osx
+      env: PRK_TARGET=allupc
+           UPC_IMPL=bupc
+           GASNET_CONDUIT=smp
     # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
     - os: osx
       env: PRK_TARGET=allfgmpi
