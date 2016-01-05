@@ -7,14 +7,15 @@ PRK_TARGET="$2"
 # Travis exports this
 PRK_COMPILER="$CC"
 
+MPI_IMPL=mpich
+
 case "$os" in
     Darwin)
         # Homebrew should put MPI here...
         export MPI_ROOT=/usr/local
         ;;
     Linux)
-        # This will only work with MPICH, obviously...
-        export MPI_ROOT=$TRAVIS_ROOT/mpich
+        export MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
         ;;
 esac
 

@@ -4,8 +4,9 @@ set -x
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 
-# eventually make this runtime configurable
-MPI_LIBRARY=mpich
+MPI_IMPL=mpich
+
+echo "PWD=$PWD"
 
 case "$PRK_TARGET" in
     allserial)
@@ -17,7 +18,7 @@ case "$PRK_TARGET" in
         ;;
     allmpi*)
         echo "Any normal MPI"
-        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_LIBRARY
+        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL
         ;;
     allshmem)
         echo "SHMEM"
@@ -33,12 +34,15 @@ case "$PRK_TARGET" in
                 ;;
             bupc)
                 # BUPC is new
+                case $UPC_CONDUIT in
+                    ofi)
+                        sh ./travis/install-libfabric.sh $TRAVIS_ROOT
+                        ;;
+                    mpi)
+                        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL
+                        ;;
+                esac
                 sh ./travis/install-berkeley-upc.sh $TRAVIS_ROOT $UPC_CONDUIT
-                ;;
-            *)
-                echo "Apparently UPC_IMPL was not exported properly"
-                echo "UPC_IMPL=$UPC_IMPL"
-                exit 5
                 ;;
         esac
         ;;
@@ -56,18 +60,8 @@ case "$PRK_TARGET" in
         ;;
     allgrappa)
         echo "Grappa"
-        case "$CC" in
-            gcc)
-                # test for version - only install if required
-                #sh ./travis/install-gcc.sh $TRAVIS_ROOT
-                ;;
-            clang)
-                # test for version - only install if required
-                #sh ./travis/install-clang.sh $TRAVIS_ROOT
-                ;;
-        esac
         sh ./travis/install-cmake.sh $TRAVIS_ROOT
-        sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich
-        sh ./travis/install-grappa.sh $TRAVIS_ROOT mpich
+        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL
+        sh ./travis/install-grappa.sh $TRAVIS_ROOT $MPI_IMPL
         ;;
 esac

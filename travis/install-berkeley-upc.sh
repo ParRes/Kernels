@@ -7,6 +7,8 @@ TRAVIS_ROOT="$1"
 #  smp, udp, mpi, ofi
 GASNET_CONDUIT="$2"
 
+MPI_IMPL=mpich
+
 # we can't handle this yet in build-run-prk.sh
 #if [ "x$GASNET_CONDUIT" -eq "x" ] ; then
 #    BUPC_PREFIX=bupc-$CC
@@ -44,15 +46,13 @@ if [ ! -d "$BUPC_PREFIX" ]; then
             ;;
         ofi)
             # TODO factor Hydra out of Sandia OpenSHMEM install so it can be used as spawner here
-            sh ./travis/install-libfabric.sh $TRAVIS_ROOT
             ../configure --prefix=$BUPC_PREFIX --disable-ibv --without-mpi-cc --disable-aligned-segments \
                          --enable-$GASNET_CONDUIT --with-ofihome=$TRAVIS_ROOT/libfabric --with-ofi-spawner=ssh \
                          --disable-smp --disable-udp $BUPC_NO_PTHREADS
             ;;
         mpi)
-            sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich
             ../configure --prefix=$BUPC_PREFIX --disable-ibv --disable-aligned-segments \
-                         --enable-$GASNET_CONDUIT --with-mpi-cc=$TRAVIS_ROOT/mpich/bin/mpicc \
+                         --enable-$GASNET_CONDUIT --with-mpi-cc=$TRAVIS_ROOT/$MPI_IMPL/bin/mpicc \
                          --disable-smp --disable-udp $BUPC_NO_PTHREADS
             ;;
         *)
