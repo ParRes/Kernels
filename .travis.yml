@@ -33,7 +33,7 @@ matrix:
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=bupc
-           UPC_CONDUIT=udp
+           GASNET_CONDUIT=udp
     # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
     - os: osx
       env: PRK_TARGET=allfgmpi
@@ -84,16 +84,16 @@ env:
     UPC_IMPL=gupc
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
-    UPC_CONDUIT=smp
+    GASNET_CONDUIT=smp
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
-    UPC_CONDUIT=udp
+    GASNET_CONDUIT=udp
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
-    UPC_CONDUIT=ofi
+    GASNET_CONDUIT=ofi
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
-    UPC_CONDUIT=mpi
+    GASNET_CONDUIT=mpi
 #  - PRK_TARGET=allampi
 #  - PRK_TARGET=allcharm++
 #  - PRK_TARGET=allfgmpi

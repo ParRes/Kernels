@@ -34,7 +34,7 @@ case "$PRK_TARGET" in
                 ;;
             bupc)
                 # BUPC is new
-                case $UPC_CONDUIT in
+                case $GASNET_CONDUIT in
                     ofi)
                         sh ./travis/install-libfabric.sh $TRAVIS_ROOT
                         ;;
@@ -42,7 +42,7 @@ case "$PRK_TARGET" in
                         sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL
                         ;;
                 esac
-                sh ./travis/install-berkeley-upc.sh $TRAVIS_ROOT $UPC_CONDUIT
+                sh ./travis/install-berkeley-upc.sh $TRAVIS_ROOT
                 ;;
         esac
         ;;

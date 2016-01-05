@@ -3,10 +3,6 @@ set -x
 
 TRAVIS_ROOT="$1"
 
-# reasonable options include:
-#  smp, udp, mpi, ofi
-GASNET_CONDUIT="$2"
-
 MPI_IMPL=mpich
 
 # we can't handle this yet in build-run-prk.sh
