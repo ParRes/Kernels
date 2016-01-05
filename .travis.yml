@@ -31,7 +31,7 @@ matrix:
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
     - os: osx
-    - env: PRK_TARGET=allupc
+      env: PRK_TARGET=allupc
            UPC_IMPL=bupc
            UPC_CONDUIT=udp
     # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
