@@ -13,7 +13,7 @@ GASNET_CONDUIT="$2"
 #else
 #    BUPC_PREFIX=bupc-$CC-$GASNET_CONDUIT
 #fi
-BUPC_PREFIX=bupc-$CC
+BUPC_PREFIX=$TRAVIS_ROOT/bupc-$CC
 
 export BUPC_RELEASE=berkeley_upc-2.22.0
 
