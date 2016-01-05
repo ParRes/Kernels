@@ -4,7 +4,7 @@ set -x
 TRAVIS_ROOT="$1"
 HYDRA_ROOT=$TRAVIS_ROOT/hydra
 
-if [ ! -d "$SHMEM_ROOT" ]; then
+if [ ! -d "$HYDRA_ROOT" ]; then
     cd $TRAVIS_ROOT
     wget --no-check-certificate -q http://www.mpich.org/static/downloads/3.2/hydra-3.2.tar.gz
     tar xvzf hydra-3.2.tar.gz
