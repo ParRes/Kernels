@@ -47,7 +47,8 @@ if [ ! -d "$BUPC_PREFIX" ]; then
         ofi)
             # TODO factor Hydra out of Sandia OpenSHMEM install so it can be used as spawner here
             ../configure --prefix=$BUPC_PREFIX --disable-aligned-segments $BUPC_NO_PTHREADS \
-                         --enable-$GASNET_CONDUIT --with-ofihome=$TRAVIS_ROOT/libfabric --with-ofi-spawner=ssh \
+                         --enable-$GASNET_CONDUIT --with-ofihome=$TRAVIS_ROOT/libfabric \
+                         --with-ofi-spawner=pmi --with-pmi=$TRAVIS_ROOT/hydra \
                          --disable-auto-conduit-detect
             ;;
         mpi)
