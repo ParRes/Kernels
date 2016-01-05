@@ -60,7 +60,7 @@ addons:
     #  Boost is for Grappa
     - boost-latest
     # clang-3.8 comes from this
-    - llvm-toolchain-precise
+    #- llvm-toolchain-precise
     packages:
     - cmake
     - gcc-4.8
@@ -81,7 +81,7 @@ addons:
     - libboost-test1.55-dev
     - libboost-timer1.55-dev
     # This should provide OpenMP
-    - clang-3.8
+    #- clang-3.8
 env:
 # Order by likelihood of failing...
 #  - PRK_TARGET=allgrappa
