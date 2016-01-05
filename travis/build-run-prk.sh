@@ -152,11 +152,14 @@ case "$PRK_TARGET" in
                 echo "UPCC=$UPC_ROOT/bin/upcc" > common/make.defs
                 # -N $nodes -n UPC threads -c $cores_per_node
                 # -localhost is only for UDP
-                if [ "$GASNET_CONDUIT" -eq "udp" ]; then
-                    export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS -localhost"
-                else
-                    export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
-                fi
+                case "$GASNET_CONDUIT" in
+                    udp)
+                        export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS -localhost"
+                        ;;
+                    *)
+                        export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
+                        ;;
+                esac
                 make $PRK_TARGET default_opt_flags="-Wc,-O3"
                 ;;
         esac
