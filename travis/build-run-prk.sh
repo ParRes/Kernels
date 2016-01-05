@@ -125,24 +125,37 @@ case "$PRK_TARGET" in
         ;;
     allupc)
         echo "UPC"
-        case "$CC" in
-            gcc)
-                # If building from source (impossible)
-                #export UPC_ROOT=$TRAVIS_ROOT/gupc
-                # If installing deb file
-                export UPC_ROOT=$TRAVIS_ROOT/gupc/usr/local/gupc
+        export PRK_UPC_PROCS=4
+        case "$UPC_IMPL" in
+            gupc)
+                case "$CC" in
+                    gcc)
+                        # If building from source (impossible)
+                        #export UPC_ROOT=$TRAVIS_ROOT/gupc
+                        # If installing deb file
+                        export UPC_ROOT=$TRAVIS_ROOT/gupc/usr/local/gupc
+                        ;;
+                    clang)
+                        echo "Clang UPC is not supported."
+                        exit 9
+                        export UPC_ROOT=$TRAVIS_ROOT/clupc
+                        ;;
+                esac
+                echo "UPCC=$UPC_ROOT/bin/upc" > common/make.defs
+                export PRK_LAUNCHER=""
+                export PRK_LAUNCHER_ARGS="-n $PRK_UPC_PROCS"
                 ;;
-            clang)
-                export UPC_ROOT=$TRAVIS_ROOT/clupc
+            bupc)
+                export UPC_ROOT=$TRAVIS_ROOT/bupc-$CC
+                echo "UPCC=$UPC_ROOT/bin/upcc" > common/make.defs
+                export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -n $PRK_UPC_PROCS"
                 ;;
         esac
-        echo "UPCC=$UPC_ROOT/bin/upc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
-        export PRK_UPC_PROCS=4
-        $PRK_TARGET_PATH/Synch_p2p/p2p -n $PRK_UPC_PROCS       10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil -n $PRK_UPC_PROCS     10 1024
-        $PRK_TARGET_PATH/Transpose/transpose -n $PRK_UPC_PROCS 10 1024 32
+        $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       $PRK_LAUNCHER_ARGS 10 1024 1024
+        $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     $PRK_LAUNCHER_ARGS 10 1024
+        $PRK_LAUNCHER $PRK_TARGET_PATH/Transpose/transpose $PRK_LAUNCHER_ARGS 10 1024 32
         ;;
     allcharm++)
         echo "Charm++"

@@ -26,10 +26,21 @@ case "$PRK_TARGET" in
         ;;
     allupc)
         echo "UPC"
-        # GUPC is working fine
-        sh ./travis/install-intrepid-upc.sh $TRAVIS_ROOT
-        # BUPC is new
-        #sh ./travis/install-berkeley-upc.sh $TRAVIS_ROOT ofi
+        case "$UPC_IMPL" in
+            gupc)
+                # GUPC is working fine
+                sh ./travis/install-intrepid-upc.sh $TRAVIS_ROOT
+                ;;
+            bupc)
+                # BUPC is new
+                sh ./travis/install-berkeley-upc.sh $TRAVIS_ROOT # conduit
+                ;;
+            *)
+                echo "Apparently UPC_IMPL was not exported properly"
+                echo "UPC_IMPL=$UPC_IMPL"
+                exit 5
+                ;;
+        esac
         ;;
     allcharm++)
         echo "Charm++"
