@@ -17,13 +17,17 @@ export BUPC_RELEASE=berkeley_upc-2.22.0
 
 # On Mac (not Linux), we see this error:
 #   upcrun: When network=smp compile with '-pthreads' or PSHM support to run with > 1 thread
-if [ "`uname`" -eq "Darwin" ]; then
-    BUPC_NO_PTHREADS="--disable-par --enable-pshm"
-    MPI_ROOT=/usr/local
-else
-    BUPC_NO_PTHREADS=""
-    MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
-fi
+os=`uname`
+case $os in
+    Darwin)
+        BUPC_NO_PTHREADS="--disable-par --enable-pshm"
+        MPI_ROOT=/usr/local
+        ;;
+    Linux)
+        BUPC_NO_PTHREADS=""
+        MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
+        ;;
+esac
 
 if [ ! -d "$BUPC_PREFIX" ]; then
     wget --no-check-certificate -q http://upc.lbl.gov/download/release/$BUPC_RELEASE.tar.gz
