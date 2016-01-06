@@ -110,10 +110,8 @@ case "$PRK_TARGET" in
         echo "SHMEM"
         # oshrun uses mpirun it seems
         export PATH="$TRAVIS_ROOT/hydra/bin:$PATH"
-        # BEGIN TEMPORARY FIX
         # This should be fixed by rpath (https://github.com/regrant/sandia-shmem/issues/83)
         export LD_LIBRARY_PATH=$TRAVIS_ROOT/sandia-openshmem/lib:$TRAVIS_ROOT/libfabric/lib:$LD_LIBRARY_PATH
-        # END TEMPORARY FIX
         export SHMEM_ROOT=$TRAVIS_ROOT/sandia-openshmem
         echo "SHMEMTOP=$SHMEM_ROOT\nSHMEMCC=$SHMEM_ROOT/bin/oshcc" > common/make.defs
         make $PRK_TARGET
