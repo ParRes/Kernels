@@ -1,6 +1,3 @@
-# required for package manager installs
-#sudo: true
-# use addons-apt instead
 sudo: false
 language: cpp
 os:
@@ -30,7 +27,7 @@ matrix:
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
-    # BUPD on Mac is annoying
+    # BUPC on Mac is annoying
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=bupc
