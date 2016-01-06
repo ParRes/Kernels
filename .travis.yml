@@ -61,7 +61,7 @@ matrix:
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=bupc
-           GASNET_CONDUIT=ofi
+           GASNET_CONDUIT=mpi
 addons:
   apt:
     sources:
