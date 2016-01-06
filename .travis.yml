@@ -1,6 +1,3 @@
-# required for package manager installs
-#sudo: true
-# use addons-apt instead
 sudo: false
 language: cpp
 os:
@@ -25,9 +22,20 @@ matrix:
     # Clang UPC requires source build, which probably takes too long
     - compiler: clang
       env: PRK_TARGET=allupc
+           UPC_IMPL=gupc
     # no binary install yet
     - os: osx
       env: PRK_TARGET=allupc
+           UPC_IMPL=gupc
+    # BUPC on Mac is annoying
+    - os: osx
+      env: PRK_TARGET=allupc
+           UPC_IMPL=bupc
+           GASNET_CONDUIT=udp
+    - os: osx
+      env: PRK_TARGET=allupc
+           UPC_IMPL=bupc
+           GASNET_CONDUIT=smp
     # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
     - os: osx
       env: PRK_TARGET=allfgmpi
@@ -42,12 +50,23 @@ matrix:
     #- env: PRK_TARGET=allampi
     #- env: PRK_TARGET=allfgmpi
     - env: PRK_TARGET=allgrappa
+    # UPC GASNet OFI conduit is busted, perhaps due to SSH spawner
+    - env: PRK_TARGET=allupc
+           UPC_IMPL=bupc
+           GASNET_CONDUIT=ofi
+    # UPC over MPICH on Mac hangs - may be async progress issue
+    - os: osx
+      env: PRK_TARGET=allupc
+           UPC_IMPL=bupc
+           GASNET_CONDUIT=mpi
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
     #  Boost is for Grappa
     - boost-latest
+    # clang-3.8 comes from this
+    #- llvm-toolchain-precise
     packages:
     - cmake
     - gcc-4.8
@@ -67,10 +86,25 @@ addons:
     - libboost-system1.55-dev
     - libboost-test1.55-dev
     - libboost-timer1.55-dev
+    # This should provide OpenMP
+    #- clang-3.8
 env:
 # Order by likelihood of failing...
   - PRK_TARGET=allgrappa
   - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=mpi
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=ofi
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=smp
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=udp
+  - PRK_TARGET=allupc
+    UPC_IMPL=gupc
   - PRK_TARGET=allampi
   - PRK_TARGET=allcharm++
   - PRK_TARGET=allfgmpi

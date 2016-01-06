@@ -7,14 +7,15 @@ PRK_TARGET="$2"
 # Travis exports this
 PRK_COMPILER="$CC"
 
+MPI_IMPL=mpich
+
 case "$os" in
     Darwin)
         # Homebrew should put MPI here...
         export MPI_ROOT=/usr/local
         ;;
     Linux)
-        # This will only work with MPICH, obviously...
-        export MPI_ROOT=$TRAVIS_ROOT/mpich
+        export MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
         ;;
 esac
 
@@ -107,17 +108,15 @@ case "$PRK_TARGET" in
         ;;
     allshmem)
         echo "SHMEM"
-        # BEGIN TEMPORARY FIX
         # This should be fixed by rpath (https://github.com/regrant/sandia-shmem/issues/83)
         export LD_LIBRARY_PATH=$TRAVIS_ROOT/sandia-openshmem/lib:$TRAVIS_ROOT/libfabric/lib:$LD_LIBRARY_PATH
-        # END TEMPORARY FIX
         export SHMEM_ROOT=$TRAVIS_ROOT/sandia-openshmem
         echo "SHMEMTOP=$SHMEM_ROOT\nSHMEMCC=$SHMEM_ROOT/bin/oshcc" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=SHMEM
         export PRK_SHMEM_PROCS=4
         find $SHMEM_ROOT
-        export OSHRUN_LAUNCHER=$SHMEM_ROOT/bin/mpirun
+        export OSHRUN_LAUNCHER=$TRAVIS_ROOT/hydra/bin/mpirun
         export PRK_LAUNCHER=$SHMEM_ROOT/bin/oshrun
         $PRK_LAUNCHER -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
         $PRK_LAUNCHER -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
@@ -125,24 +124,59 @@ case "$PRK_TARGET" in
         ;;
     allupc)
         echo "UPC"
-        case "$CC" in
-            gcc)
-                # If building from source (impossible)
-                #export UPC_ROOT=$TRAVIS_ROOT/gupc
-                # If installing deb file
-                export UPC_ROOT=$TRAVIS_ROOT/gupc/usr/local/gupc
+        export PRK_UPC_PROCS=4
+        case "$UPC_IMPL" in
+            gupc)
+                case "$CC" in
+                    gcc)
+                        # If building from source (impossible)
+                        #export UPC_ROOT=$TRAVIS_ROOT/gupc
+                        # If installing deb file
+                        export UPC_ROOT=$TRAVIS_ROOT/gupc/usr/local/gupc
+                        ;;
+                    clang)
+                        echo "Clang UPC is not supported."
+                        exit 9
+                        export UPC_ROOT=$TRAVIS_ROOT/clupc
+                        ;;
+                esac
+                echo "UPCC=$UPC_ROOT/bin/upc" > common/make.defs
+                export PRK_LAUNCHER=""
+                export PRK_LAUNCHER_ARGS="-n $PRK_UPC_PROCS"
+                make $PRK_TARGET
                 ;;
-            clang)
-                export UPC_ROOT=$TRAVIS_ROOT/clupc
+            bupc)
+                export UPC_ROOT=$TRAVIS_ROOT/bupc-$CC
+                echo "UPCC=$UPC_ROOT/bin/upcc" > common/make.defs
+                # -N $nodes -n UPC threads -c $cores_per_node
+                # -localhost is only for UDP
+                case "$GASNET_CONDUIT" in
+                    udp)
+                        export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS -localhost"
+                        ;;
+                    ofi)
+                        export GASNET_SSH_SERVERS="localhost"
+                        export LD_LIBRARY_PATH="$TRAVIS_ROOT/libfabric/lib:$LD_LIBRARY_PATH"
+                        export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -v -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
+                        ;;
+                    mpi)
+                        # see if this is causing Mac tests to hang
+                        export MPICH_ASYNC_PROGRESS=1
+                        # so that upcrun can find mpirun - why it doesn't cache this from build is beyond me
+                        export PATH="$TRAVIS_ROOT/$MPI_IMPL/bin:$PATH"
+                        export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
+                        ;;
+                    *)
+                        export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
+                        ;;
+                esac
+                make $PRK_TARGET default_opt_flags="-Wc,-O3"
                 ;;
         esac
-        echo "UPCC=$UPC_ROOT/bin/upc" > common/make.defs
-        make $PRK_TARGET
         export PRK_TARGET_PATH=UPC
-        export PRK_UPC_PROCS=4
-        $PRK_TARGET_PATH/Synch_p2p/p2p -n $PRK_UPC_PROCS       10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil -n $PRK_UPC_PROCS     10 1024
-        $PRK_TARGET_PATH/Transpose/transpose -n $PRK_UPC_PROCS 10 1024 32
+        $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       $PRK_LAUNCHER_ARGS 10 1024 1024
+        $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     $PRK_LAUNCHER_ARGS 10 1024
+        $PRK_LAUNCHER $PRK_TARGET_PATH/Transpose/transpose $PRK_LAUNCHER_ARGS 10 1024 32
         ;;
     allcharm++)
         echo "Charm++"
