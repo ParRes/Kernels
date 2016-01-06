@@ -109,7 +109,7 @@ case "$PRK_TARGET" in
     allshmem)
         echo "SHMEM"
         # oshrun uses mpirun it seems
-        export PATH="$TRAVIS_ROOT/$MPI_IMPL/bin:$PATH"
+        export PATH="$TRAVIS_ROOT/hydra/bin:$PATH"
         # BEGIN TEMPORARY FIX
         # This should be fixed by rpath (https://github.com/regrant/sandia-shmem/issues/83)
         export LD_LIBRARY_PATH=$TRAVIS_ROOT/sandia-openshmem/lib:$TRAVIS_ROOT/libfabric/lib:$LD_LIBRARY_PATH
