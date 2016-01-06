@@ -115,7 +115,6 @@ case "$PRK_TARGET" in
         make $PRK_TARGET
         export PRK_TARGET_PATH=SHMEM
         export PRK_SHMEM_PROCS=4
-        find $SHMEM_ROOT
         export OSHRUN_LAUNCHER=$TRAVIS_ROOT/hydra/bin/mpirun
         export PRK_LAUNCHER=$SHMEM_ROOT/bin/oshrun
         $PRK_LAUNCHER -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
@@ -256,7 +255,7 @@ case "$PRK_TARGET" in
         ;;
     allgrappa)
         echo "Grappa"
-        # compiler for static thread execution, so set this prior to build
+        source $TRAVIS_ROOT/grappa/bin/settings.sh
         echo "GRAPPATOP=$TRAVIS_ROOT/grappa" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=GRAPPA
