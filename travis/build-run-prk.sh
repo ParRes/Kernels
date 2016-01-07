@@ -263,7 +263,7 @@ case "$PRK_TARGET" in
         echo "GRAPPATOP=$TRAVIS_ROOT/grappa" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=GRAPPA
-        export PRK_MPI_PROCS=4
+        export PRK_MPI_PROCS=2
         export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
