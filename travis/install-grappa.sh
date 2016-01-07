@@ -11,8 +11,8 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     case "$os" in
         Darwin)
             echo "Mac"
-            brew update
-            brew install ruby boost
+            #brew update
+            #brew install ruby boost
             ;;
 
         Linux)
