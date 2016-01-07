@@ -255,7 +255,11 @@ case "$PRK_TARGET" in
         ;;
     allgrappa)
         echo "Grappa"
-        . $TRAVIS_ROOT/grappa/bin/settings.sh
+        ########################
+        #. $TRAVIS_ROOT/grappa/bin/settings.sh
+        export GRAPPA_PREFIX=$TRAVIS_ROOT/grappa
+        export SCRIPT_PATH=$TRAVIS_ROOT/grappa/bin
+        ########################
         echo "GRAPPATOP=$TRAVIS_ROOT/grappa" > common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=GRAPPA
