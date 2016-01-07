@@ -90,31 +90,31 @@ addons:
     #- clang-3.8
 env:
 # Order by likelihood of failing...
-  - PRK_TARGET=allgrappa
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=mpi
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=ofi
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=smp
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=udp
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=gupc
-#  - PRK_TARGET=allampi
-#  - PRK_TARGET=allcharm++
-#  - PRK_TARGET=allfgmpi
-#  - PRK_TARGET=allshmem
-#  - PRK_TARGET=allmpirma
-#  - PRK_TARGET=allmpishm
-#  - PRK_TARGET=allmpiomp
-#  - PRK_TARGET=allmpi1
-#  - PRK_TARGET=allopenmp
-#  - PRK_TARGET=allserial
+#  - PRK_TARGET=allgrappa
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=mpi
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=ofi
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=smp
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=udp
+  - PRK_TARGET=allupc
+    UPC_IMPL=gupc
+  - PRK_TARGET=allampi
+  - PRK_TARGET=allcharm++
+  - PRK_TARGET=allfgmpi
+  - PRK_TARGET=allshmem
+  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpiomp
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allserial
 before_install:
   - pwd
   - export TRAVIS_ROOT=$HOME/PRK-deps
