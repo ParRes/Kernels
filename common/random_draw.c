@@ -50,7 +50,13 @@ History:   Written by Rob Van der Wijngaart, December 2015
 
 **********************************************************************/
 
-#include <lcg.h>
+#include <par-res-kern_general.h>
+#include <math.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <limits.h>
+
+#include <random_draw.h>
 
 #define NMAX 64
 static uint64_t  LCG_a = 6364136223846793005;
@@ -150,3 +156,33 @@ void LCG_init(void){
   return;
 }
 
+uint64_t random_draw(double mu)
+{
+  const double   two_pi      = 2.0*3.14159265358979323846;
+  const uint64_t rand_max    = ULLONG_MAX;
+  const double   rand_div    = 1.0/ULLONG_MAX;
+  const uint64_t denominator = UINT_MAX;
+
+  static double   z0, z1;
+  double          u0, u1, sigma;
+  static uint64_t numerator;
+  static uint64_t i0, i1;
+
+  sigma = mu*0.15;  
+  if (mu>=1.0) {
+    u0 = LCG_next(rand_max) * rand_div;
+    u1 = LCG_next(rand_max) * rand_div;
+
+    z0 = sqrt(-2.0 * log(u0)) * cos(two_pi * u1);
+    z1 = sqrt(-2.0 * log(u0)) * sin(two_pi * u1);
+    return (uint64_t) (z0 * sigma + mu+0.5);
+  }
+  else {
+    /* we need to pick two integers whose quotient approximates mu; set one to UINT_MAX */
+    numerator = (uint32_t) (mu*(double)denominator);
+    i0 = LCG_next(denominator); /* don't use this value, but must call LCG_next twice   */
+    i1 = LCG_next(denominator);
+    return ((uint64_t)(i1<=numerator));
+  }
+
+}

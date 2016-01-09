@@ -1,5 +1,5 @@
 include ../../common/SERIAL.defs
-COMOBJS += lcg.o
+COMOBJS += random_draw.o
 
 ##### User configurable options #####
 #uncomment any of the following flags (or change values) to change defaults

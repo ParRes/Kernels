@@ -55,7 +55,7 @@ FUNCTIONS CALLED:
          this program:
          wtime()
          bad_path()
-         LCG_next()
+         random_draw()
 
 HISTORY: - Written by Evangelos Georganas, August 2015.
          - RvdW: Refactored to make the code PRK conforming, December 2015
@@ -63,7 +63,7 @@ HISTORY: - Written by Evangelos Georganas, August 2015.
 **********************************************************************************/
 
 #include <par-res-kern_general.h>
-#include <lcg.h>
+#include <random_draw.h>
 
 #include <math.h>
 #include <stdint.h>
@@ -144,13 +144,14 @@ double *initializeGrid(int64_t g)
 }
 
 /* Initializes the particles following the geometric distribution as described in the spec */
-particle_t *initializeParticlesGeometric(int64_t n, int64_t g, double rho)
+particle_t *initializeParticlesGeometric(int64_t n_input, int64_t g, double rho, int64_t *n)
 {
    particle_t  *particles;
-   int64_t     y, x, p, pi, n_part_column;
+   int64_t     y, x, p, pi;
+   uint64_t    actual_particles;
    double      A;
    
-   particles = (particle_t*) malloc(n * sizeof(particle_t));
+   particles = (particle_t*) malloc(2*n_input * sizeof(particle_t));
    if (particles == NULL) {
       printf("ERROR: Could not allocate space for particles\n");
       exit(EXIT_FAILURE);
@@ -158,137 +159,116 @@ particle_t *initializeParticlesGeometric(int64_t n, int64_t g, double rho)
    
    /* Add appropriate number of particles to each cell to form distribution decribed in spec. 
       Each cell in the i-th column of cells contains p(i) = A * rho^i particles */
-   A = n * ((1-rho) / (1-pow(rho, g-1)));
+   A = n_input * ((1-rho) / (1-pow(rho, g-1))) / (double)(g-1);
    for (pi=0,x=0; x<g-1; x++) {
-      n_part_column = (int64_t) floor(A * pow(rho, x));
-      
-      for (p=0; p<n_part_column; p++) {
-         /* arc4random_uniform() would avoid bias caused by modulo operation, but is not 
-            reproducible. Use Knuth's reproducible mixed LCG instead */
+     for (y=0; y<g-1; y++) {
+       actual_particles = random_draw(A * pow(rho, x));
+       for (p=0; p<actual_particles; p++,pi++) {
          particles[pi].x = x + REL_X;
-         particles[pi].y = LCG_next(g-1) + REL_Y;
-         pi++;
-      }
+         particles[pi].y = y + REL_Y;
+       }
+     }
    }
    
-   /* Add remaining particles in first column of cells */
-   for (; pi<n; pi++) {
-      particles[pi].x = REL_X;
-      particles[pi].y = LCG_next(g-1) + REL_Y;
-   }
+   *n = pi;
    return particles;
 }
 
 /* Initialize with a particle distribution where the number of particles per cell-column follows a sinusoidal distribution */
-particle_t *initializeParticlesSinusoidal(int64_t n, int64_t g)
+particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t g, int64_t *n)
 {
    particle_t  *particles;
-   double      total_weight = 0.0 , step = 2*M_PI / (g-2), current_weight;
-   int64_t     x, y, pi = 0, i, p, n_part_column;
+   double      step = M_PI / (g-2);
+   int64_t     x, y, pi, i, p;
+   uint64_t    actual_particles;
 
-   particles = (particle_t*) malloc(n * sizeof(particle_t));
+   particles = (particle_t*) malloc(2*n_input * sizeof(particle_t));
    if (particles == NULL) {
       printf("ERROR: Could not allocate space for particles\n");
       exit(EXIT_FAILURE);
    }
    
-   /* First, find sum of all corresponding weights to normalize number of particles later */
-   for (i=0; i<=g-2; i++) {
-      total_weight += (1 + cos(step * ((double) i)));
+   /* Iterate over the columns of cells and assign number of particles proportional to the corresponding sinusodial weight */
+   for (pi=0,x=0; x<g-1; x++) {
+     for (y=0; y<g-1; y++) {
+       actual_particles = random_draw(2.0*cos(x*step)*cos(x*step)*n_input/((g-1)*(g-1)));
+       for (p=0; p<actual_particles; p++,pi++) {
+         particles[pi].x = x + REL_X;
+         particles[pi].y = y + REL_Y;
+       }
+     }
    }
    
-   /* Iterate over the columns of cells and assign number of particles proportional to the corresponding sinusodial weight */
-   for (x=0; x<=g-2; x++) {
-      current_weight = (1 + cos(step * ((double) x)));
-      n_part_column = (int64_t) floor(n * current_weight / total_weight);
-      for (p=0; p < n_part_column; p++) {
-         particles[pi].x = x + REL_X;
-         particles[pi].y = LCG_next(g-1) + REL_Y;
-         pi++;
-      }
-   }
-
-   /* distribute remaining particles across entire grid */   
-   for (; pi<n; pi++) {
-      particles[pi].x = LCG_next(g-1) + REL_X;
-      particles[pi].y = LCG_next(g-1) + REL_Y;
-   }
+   *n = pi;
    return particles;
 }
 
 /* Initialize particles with "linearly-decreasing" distribution */
 /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
-particle_t *initializeParticlesLinear(int64_t n, int64_t g, int alpha, int beta)
+particle_t *initializeParticlesLinear(int64_t n_input, int64_t g, double alpha, double beta, int64_t *n)
 {
    particle_t  *particles;
-   double      total_weight = 0.0 , step = 1.0 / (g-2), current_weight;
-   int64_t     pi = 0, i, p, n_part_column, x, y;
+   double      total_weight, step = 1.0/(g-2), current_weight;
+   int64_t     pi, i, p, n_part_column, x, y;
+   uint64_t    actual_particles;
    
-   particles = (particle_t*) malloc(n * sizeof(particle_t));
+   particles = (particle_t*) malloc(2*n_input * sizeof(particle_t));
    if (particles == NULL) {
       printf("ERROR: Could not allocate space for particles\n");
       exit(EXIT_FAILURE);
    }
    
    /* First, find the sum of all the corresponding weights in order to normalize the number of particles later */
-   for (i=0; i<=g-2; i++) {
-      total_weight += (beta - alpha * step * ((double) i));
-   }
+   total_weight = beta*(g-1)-alpha*0.5*step*(g-1)*(g-2);
    
    /* Iterate over the columns of cells and assign number of particles proportional to the corresponding linear weight */
-   for (x=0; x<=g-2; x++) {
-      current_weight = (beta - alpha * step * ((double) x));
-      n_part_column = (int64_t) floor(n * current_weight / total_weight);
-      for (p=0; p < n_part_column; p++) {
+   for (pi=0,x=0; x<g-1; x++) {
+     current_weight = (beta - alpha * step * ((double) x));
+     for (y=0; y<g-1; y++) {
+       actual_particles = random_draw(n_input * (current_weight/total_weight) / (g-1));
+       for (p=0; p<actual_particles; p++,pi++) {
          particles[pi].x = x + REL_X;
-         particles[pi].y = LCG_next(g-1) + REL_Y;
-         pi++;
-         
-      }
+         particles[pi].y = y + REL_Y;
+       }
+     }
    }
-   
-   for (; pi<n; pi++) {
-      particles[pi].x = LCG_next(g-1) + REL_X;
-      particles[pi].y = LCG_next(g-1) + REL_Y;
-   }
+
+   *n = pi;
    return particles;
 }
 
 /* Initialize uniformly particles within a "patch" */
 
-particle_t *initializeParticlesPatch(int64_t n, int64_t g, bbox_t patch)
+particle_t *initializeParticlesPatch(int64_t n_input, int64_t g, bbox_t patch, int64_t *n)
 {
    particle_t  *particles;
-   int64_t     pi = 0, i, p, n_part_column, x, y, total_cells, particles_per_cell;
+   int64_t     pi, p, x, y, total_cells;
+   double      particles_per_cell;
+   uint64_t    actual_particles;
    
-   particles = (particle_t*) malloc(n * sizeof(particle_t));
+   particles = (particle_t*) malloc(2*n_input * sizeof(particle_t));
    if (particles == NULL) {
       printf("ERROR: Could not allocate space for particles\n");
       exit(EXIT_FAILURE);
    }
    
-   total_cells  = (patch.xright - patch.xleft)*(patch.ytop - patch.ybottom);
-   particles_per_cell = (int64_t) floor((1.0*n)/total_cells);
-   
-   for (x = patch.xleft; x < patch.xright; x++) {
-      for (y = patch.ybottom; y < patch.ytop; y++) {
-         for (i=0; i<particles_per_cell; i++) {
-            particles[pi].x = x + REL_X;
-            particles[pi].y = y + REL_Y;
-            pi++;
-         }
-      }
-   }
-   
-   /* Distribute the remaining particles evenly */
-   for (x = patch.xleft; x < patch.xright; x++) {
-      for (y = patch.ybottom; (y < patch.ytop)&& (pi < n); y++) {
+   total_cells  = (patch.xright - patch.xleft+1)*(patch.ytop - patch.ybottom+1);
+   particles_per_cell = (double) n_input/total_cells;
+
+   /* Iterate over the columns of cells and assign number of particles proportional to the corresponding linear weight */
+   for (pi=0,x=0; x<g-1; x++) {
+     for (y=0; y<g-1; y++) {
+       actual_particles = random_draw(particles_per_cell);
+       if (x<patch.xleft || x>patch.xright || y<patch.ybottom || y>patch.ytop)
+         actual_particles = 0;
+       for (p=0; p<actual_particles; p++,pi++) {
          particles[pi].x = x + REL_X;
          particles[pi].y = y + REL_Y;
-         pi++;
-      }
+       }
+     }
    }
-   
+
+   *n = pi;   
    return particles;
 }
 
@@ -677,13 +657,14 @@ int main(int argc, char ** argv) {
   Qgrid = initializeGrid(g);
    
   switch(particle_mode) {
-  case GEOMETRIC:  particles = initializeParticlesGeometric(n, g, rho);      break;
-  case SINUSOIDAL: particles = initializeParticlesSinusoidal(n, g);          break;
-  case LINEAR:     particles = initializeParticlesLinear(n, g, alpha, beta); break;
-  case PATCH:      particles = initializeParticlesPatch(n, g, init_patch);   break;
-  default:         printf("ERROR: No supported particle distribution\n");  exit(FAILURE);
+  case GEOMETRIC:  particles = initializeParticlesGeometric(n, g, rho, &n);      break;
+  case SINUSOIDAL: particles = initializeParticlesSinusoidal(n, g, &n);          break;
+  case LINEAR:     particles = initializeParticlesLinear(n, g, alpha, beta, &n); break;
+  case PATCH:      particles = initializeParticlesPatch(n, g, init_patch, &n);   break;
+  default:         printf("ERROR: Unsupported particle distribution\n");  exit(FAILURE);
   }   
 
+  printf("Number of particles placed     = %lld\n", n);
   finish_distribution(0, k, m, n, particles);
 
   for (t=0; t<=T; t++) {
