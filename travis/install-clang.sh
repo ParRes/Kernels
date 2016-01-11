@@ -16,6 +16,9 @@ if [ "${CC}" == "clang" ] || [ "${CXX}" == "clang++" ] ; then
                     brew test clang-omp
                     # make sure that these are found before the system installation
                     # there are less evil but less local ways to impart this effect
+                    if [ ! -d "$TRAVIS_ROOT/bin" ]; then
+                        mkdir -p $TRAVIS_ROOT/bin
+                    fi
                     ln -s `which clang-omp`   $TRAVIS_ROOT/bin/clang
                     ln -s `which clang-omp++` $TRAVIS_ROOT/bin/clang++
                     ;;
