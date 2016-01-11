@@ -18,14 +18,16 @@ matrix:
       env: PRK_TARGET=allmpiomp
     # dealing with broken GCC on Mac not worth it here
     - os: osx
+      compiler: gcc
       env: PRK_TARGET=allopenmp
     - os: osx
+      compiler: gcc
       env: PRK_TARGET=allmpiomp
     # Clang UPC requires source build, which probably takes too long
     - compiler: clang
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
-    # no binary install yet
+    # no binary install yet, source build impossible (too much time+stdout)
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
