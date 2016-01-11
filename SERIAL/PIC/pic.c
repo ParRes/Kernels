@@ -54,7 +54,7 @@ FUNCTIONS CALLED:
          Other than standard C functions, the following functions are used in 
          this program:
          wtime()
-         bad_path()
+         bad_patch()
          random_draw()
 
 HISTORY: - Written by Evangelos Georganas, August 2015.
@@ -69,7 +69,7 @@ HISTORY: - Written by Evangelos Georganas, August 2015.
 #include <stdint.h>
 #include <inttypes.h>
 
-#define QG(i,j) Qgrid[(j)*(g)+i]
+#define QG(i,j,g) Qgrid[(j)*(g)+i]
 #define mass_inv 1.0
 #define Q 1.0
 #define epsilon 0.000001
@@ -136,14 +136,14 @@ double *initializeGrid(uint64_t g) {
   /* initialization with dipoles */
   for (x=0; x<g; x++) {
     for (y=0; y<g; y++) {
-      QG(y,x) = (x%2 == 0) ? Q : -Q;
+      QG(y,x,g) = (x%2 == 0) ? Q : -Q;
     }
   }
   return Qgrid;
 }
 
 /* Initializes the particles following the geometric distribution as described in the spec */
-particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t g, double rho, uint64_t *n){
+particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rho, uint64_t *n){
   particle_t  *particles;
   uint64_t     y, x, p, pi, actual_particles;
   double      A;
@@ -156,9 +156,9 @@ particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t g, double rh
    
   /* Add appropriate number of particles to each cell to form distribution decribed in spec. 
      Each cell in the i-th column of cells contains p(i) = A * rho^i particles */
-  A = n_input * ((1-rho) / (1-pow(rho, g-1))) / (double)(g-1);
-  for (pi=0,x=0; x<g-1; x++) {
-    for (y=0; y<g-1; y++) {
+  A = n_input * ((1-rho) / (1-pow(rho,L))) / (double)L;
+  for (pi=0,x=0; x<L; x++) {
+    for (y=0; y<L; y++) {
       actual_particles = random_draw(A * pow(rho, x));
       for (p=0; p<actual_particles; p++,pi++) {
         particles[pi].x = x + REL_X;
@@ -172,9 +172,9 @@ particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t g, double rh
 }
 
 /* Initialize with a particle distribution where the number of particles per cell-column follows a sinusoidal distribution */
-particle_t *initializeParticlesSinusoidal(uint64_t n_input, uint64_t g, uint64_t *n){
+particle_t *initializeParticlesSinusoidal(uint64_t n_input, uint64_t L, uint64_t *n){
   particle_t  *particles;
-  double      step = M_PI / (g-2);
+  double      step = M_PI / (L-1);
   uint64_t     x, y, pi, i, p, actual_particles;
 
   particles = (particle_t*) malloc(2*n_input * sizeof(particle_t));
@@ -184,9 +184,9 @@ particle_t *initializeParticlesSinusoidal(uint64_t n_input, uint64_t g, uint64_t
   }
    
   /* Iterate over the columns of cells and assign number of particles proportional to the corresponding sinusodial weight */
-  for (pi=0,x=0; x<g-1; x++) {
-    for (y=0; y<g-1; y++) {
-      actual_particles = random_draw(2.0*cos(x*step)*cos(x*step)*n_input/((g-1)*(g-1)));
+  for (pi=0,x=0; x<L; x++) {
+    for (y=0; y<L; y++) {
+      actual_particles = random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L));
       for (p=0; p<actual_particles; p++,pi++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
@@ -200,9 +200,9 @@ particle_t *initializeParticlesSinusoidal(uint64_t n_input, uint64_t g, uint64_t
 
 /* Initialize particles with "linearly-decreasing" distribution */
 /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
-particle_t *initializeParticlesLinear(uint64_t n_input, uint64_t g, double alpha, double beta, uint64_t *n){
+particle_t *initializeParticlesLinear(uint64_t n_input, uint64_t L, double alpha, double beta, uint64_t *n){
   particle_t  *particles;
-  double      total_weight, step = 1.0/(g-2), current_weight;
+  double      total_weight, step = 1.0/(L-1), current_weight;
   uint64_t     pi, i, p, x, y, actual_particles;
    
   particles = (particle_t*) malloc(2*n_input * sizeof(particle_t));
@@ -212,13 +212,13 @@ particle_t *initializeParticlesLinear(uint64_t n_input, uint64_t g, double alpha
   }
    
   /* First, find the sum of all the corresponding weights in order to normalize the number of particles later */
-  total_weight = beta*(g-1)-alpha*0.5*step*(g-1)*(g-2);
+  total_weight = beta*L-alpha*0.5*step*L*(L-1);
    
   /* Iterate over the columns of cells and assign number of particles proportional to the corresponding linear weight */
-  for (pi=0,x=0; x<g-1; x++) {
+  for (pi=0,x=0; x<L; x++) {
     current_weight = (beta - alpha * step * ((double) x));
-    for (y=0; y<g-1; y++) {
-      actual_particles = random_draw(n_input * (current_weight/total_weight) / (g-1));
+    for (y=0; y<L; y++) {
+      actual_particles = random_draw(n_input * (current_weight/total_weight) / L);
       for (p=0; p<actual_particles; p++,pi++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
@@ -232,7 +232,7 @@ particle_t *initializeParticlesLinear(uint64_t n_input, uint64_t g, double alpha
 
 /* Initialize uniformly particles within a "patch" */
 
-particle_t *initializeParticlesPatch(uint64_t n_input, uint64_t g, bbox_t patch, uint64_t *n){
+particle_t *initializeParticlesPatch(uint64_t n_input, uint64_t L, bbox_t patch, uint64_t *n){
   particle_t  *particles;
   uint64_t     pi, p, x, y, total_cells, actual_particles;
   double      particles_per_cell;
@@ -246,9 +246,9 @@ particle_t *initializeParticlesPatch(uint64_t n_input, uint64_t g, bbox_t patch,
   total_cells  = (patch.right - patch.left+1)*(patch.top - patch.bottom+1);
   particles_per_cell = (double) n_input/total_cells;
 
-  /* Iterate over the columns of cells and assign number of particles proportional to the corresponding linear weight */
-  for (pi=0,x=0; x<g-1; x++) {
-    for (y=0; y<g-1; y++) {
+  /* Iterate over the columns of cells and assign uniform number of particles */
+  for (pi=0,x=0; x<L; x++) {
+    for (y=0; y<L; y++) {
       actual_particles = random_draw(particles_per_cell);
       if (x<patch.left || x>patch.right || y<patch.bottom || y>patch.top)
         actual_particles = 0;
@@ -330,7 +330,7 @@ int verifyParticle(particle_t p, uint64_t current_timestep, double *Qgrid, uint6
   x = (uint64_t) floor(p.x0);
    
   /* According to initial location and charge determine the direction of displacements */
-  x_T = ( (p.q * QG(y,x)) > 0) ? p.x0 + total_steps * (2*p.k+1) : p.x0 - total_steps * (2*p.k+1)  ;
+  x_T = ( (p.q * QG(y,x,g)) > 0) ? p.x0 + total_steps * (2*p.k+1) : p.x0 - total_steps * (2*p.k+1)  ;
   y_T = p.y0 + p.m * total_steps;
    
   x_periodic = fmod(x_T+total_steps *(2*p.k+1)*L, L);
@@ -386,22 +386,22 @@ int computeTotalForce(particle_t p, uint64_t g, double *Qgrid, double *fx, doubl
   rel_y = p.y -  y;
    
   /* Coulomb force from top-left charge */
-  computeCoulomb(rel_x, rel_y, p.q, QG(y,x), &tmp_fx, &tmp_fy);
+  computeCoulomb(rel_x, rel_y, p.q, QG(y,x,g), &tmp_fx, &tmp_fy);
   tmp_res_x += tmp_fx;
   tmp_res_y += tmp_fy;
    
   /* Coulomb force from bottom-left charge */
-  computeCoulomb(rel_x, 1.0-rel_y, p.q, QG(y+1,x), &tmp_fx, &tmp_fy);
+  computeCoulomb(rel_x, 1.0-rel_y, p.q, QG(y+1,x,g), &tmp_fx, &tmp_fy);
   tmp_res_x += tmp_fx;
   tmp_res_y -= tmp_fy;
    
   /* Coulomb force from top-right charge */
-  computeCoulomb(1.0-rel_x, rel_y, p.q, QG(y,x+1), &tmp_fx, &tmp_fy);
+  computeCoulomb(1.0-rel_x, rel_y, p.q, QG(y,x+1,g), &tmp_fx, &tmp_fy);
   tmp_res_x -= tmp_fx;
   tmp_res_y += tmp_fy;
    
   /* Coulomb force from bottom-right charge */
-  computeCoulomb(1.0-rel_x, 1.0-rel_y, p.q, QG(y+1,x+1), &tmp_fx, &tmp_fy);
+  computeCoulomb(1.0-rel_x, 1.0-rel_y, p.q, QG(y+1,x+1,g), &tmp_fx, &tmp_fy);
   tmp_res_x -= tmp_fx;
   tmp_res_y -= tmp_fy;
    
@@ -486,7 +486,7 @@ int main(int argc, char ** argv) {
    
   T = atol(*++argv);  args_used++;   
   if (T<1) {
-    printf("ERROR: Number of time steps must be positive: %ld\n", g);
+    printf("ERROR: Number of time steps must be positive: %ld\n", T);
     exit(FAILURE);
   }
   L = atol(*++argv);  args_used++;   
@@ -515,7 +515,8 @@ int main(int argc, char ** argv) {
   /* Initialize particles with geometric distribution */
   if (strcmp(init_mode, "GEOMETRIC") == 0) {
     if (argc<args_used+1) {
-      printf("ERROR: Not enough arguments\n"); exit(FAILURE);
+      printf("ERROR: Not enough arguments for GEOMETRIC\n"); 
+      exit(FAILURE);
     }
     particle_mode = GEOMETRIC;
     rho = atof(*++argv);   args_used++;
@@ -530,7 +531,7 @@ int main(int argc, char ** argv) {
   /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
   if (strcmp(init_mode, "LINEAR") == 0) {
     if (argc<args_used+2) {
-      printf("ERROR: Not enough arguments\n");
+      printf("ERROR: Not enough arguments for LINEAR initialization\n");
       exit(EXIT_FAILURE);
     }
     particle_mode = LINEAR;
@@ -542,10 +543,10 @@ int main(int argc, char ** argv) {
     }
   }
    
-  /* Initialize uniformly particles within a "patch" */
+  /* Initialize particles uniformly within a "patch" */
   if (strcmp(init_mode, "PATCH") == 0) {
     if (argc<args_used+4) {
-      printf("ERROR: Not enough arguments\n");
+      printf("ERROR: Not enough arguments for PATCH initialization\n");
       exit(FAILURE);
     }
     particle_mode = PATCH;
@@ -553,7 +554,7 @@ int main(int argc, char ** argv) {
     init_patch.right  = atoi(*++argv); args_used++;
     init_patch.bottom = atoi(*++argv); args_used++;
     init_patch.top    = atoi(*++argv); args_used++;
-    if (bad_patch(&init_patch, 0)) {
+    if (bad_patch(&init_patch, &grid_patch)) {
       printf("ERROR: inconsistent initial patch\n");
       exit(FAILURE);
     }
@@ -642,10 +643,10 @@ int main(int argc, char ** argv) {
   Qgrid = initializeGrid(g);
    
   switch(particle_mode) {
-  case GEOMETRIC:  particles = initializeParticlesGeometric(n, g, rho, &n);      break;
-  case SINUSOIDAL: particles = initializeParticlesSinusoidal(n, g, &n);          break;
-  case LINEAR:     particles = initializeParticlesLinear(n, g, alpha, beta, &n); break;
-  case PATCH:      particles = initializeParticlesPatch(n, g, init_patch, &n);   break;
+  case GEOMETRIC:  particles = initializeParticlesGeometric(n, L, rho, &n);      break;
+  case SINUSOIDAL: particles = initializeParticlesSinusoidal(n, L, &n);          break;
+  case LINEAR:     particles = initializeParticlesLinear(n, L, alpha, beta, &n); break;
+  case PATCH:      particles = initializeParticlesPatch(n, L, init_patch, &n);   break;
   default:         printf("ERROR: Unsupported particle distribution\n");  exit(FAILURE);
   }   
 
