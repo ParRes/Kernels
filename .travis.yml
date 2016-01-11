@@ -9,10 +9,12 @@ compiler:
   - gcc
 matrix:
   exclude:
-    # Clang does not yet have OpenMP support
-    - compiler: clang
+    # only test Clang OpenMP on Mac where we can Homebrew it
+    - os: linux
+      compiler: clang
       env: PRK_TARGET=allopenmp
-    - compiler: clang
+    - os: linux
+      compiler: clang
       env: PRK_TARGET=allmpiomp
     # dealing with broken GCC on Mac not worth it here
     - os: osx
@@ -91,26 +93,26 @@ addons:
 env:
 # Order by likelihood of failing...
 #  - PRK_TARGET=allgrappa
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=mpi
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=ofi
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=smp
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=udp
-  - PRK_TARGET=allupc
-    UPC_IMPL=gupc
-  - PRK_TARGET=allampi
-  - PRK_TARGET=allcharm++
-  - PRK_TARGET=allfgmpi
-  - PRK_TARGET=allshmem
-  - PRK_TARGET=allmpirma
-  - PRK_TARGET=allmpishm
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=mpi
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=ofi
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=smp
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=udp
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=gupc
+#  - PRK_TARGET=allampi
+#  - PRK_TARGET=allcharm++
+#  - PRK_TARGET=allfgmpi
+#  - PRK_TARGET=allshmem
+#  - PRK_TARGET=allmpirma
+#  - PRK_TARGET=allmpishm
   - PRK_TARGET=allmpiomp
   - PRK_TARGET=allmpi1
   - PRK_TARGET=allopenmp

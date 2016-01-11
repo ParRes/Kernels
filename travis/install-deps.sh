@@ -15,9 +15,11 @@ case "$PRK_TARGET" in
 
     allopenmp)
         echo "OpenMP"
+        sh ./travis/install-clang.sh $TRAVIS_ROOT omp
         ;;
     allmpi*)
         echo "Any normal MPI"
+        sh ./travis/install-clang.sh $TRAVIS_ROOT omp
         sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL
         ;;
     allshmem)
