@@ -14,6 +14,10 @@ if [ ${CC} == "clang" || ${CXX} == "clang++" ]; then
                 omp)
                     brew install clang-omp
                     brew test clang-omp
+                    # make sure that these are found before the system installation
+                    # there are less evil but less local ways to impart this effect
+                    ln -s `which clang-omp`   $TRAVIS_ROOT/bin/clang
+                    ln -s `which clang-omp++` $TRAVIS_ROOT/bin/clang++
                     ;;
                 37)
                     brew install llvm$CLANG_VERSION --with-clang --with-compiler-rt --with-libcxx --with-lld --without-assertions
