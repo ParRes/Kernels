@@ -92,12 +92,15 @@ program main
     stop 1
   endif
 
+  iterations = 1
   call get_command_argument(1,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i)') iterations
 
+  order = 1
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i)') order
 
+  tile_size = order
   if (command_argument_count().gt.2) then
       call get_command_argument(3,argtmp,arglen,err)
       if (err.eq.0) read(argtmp,'(i)') tile_size
@@ -112,6 +115,12 @@ program main
     print*,'ERROR: order must be >= 1 : ', order
     stop 1
   endif
+
+  if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
+    print*,'WARNING: tile_size must be >= 1 and <= order : ', tile_size
+    tile_size = order ! no tiling
+  endif
+
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -135,6 +144,7 @@ program main
 
   print*,'Matrix order = ', order
   print*,'Number of iterations = ', iterations
+  print*,'Tile size = ', tile_size
 
   ! Fill the original matrix, set transpose to known garbage value. */
 
@@ -158,12 +168,25 @@ program main
     if (k.eq.1) call cpu_time(t0)
 
     !  Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
-    do i=1,order
-      do j=1,order
-        B(j,i) = B(j,i) + A(i,j)
-        A(i,j) = A(i,j) + 1.0
+    if (tile_size.lt.order) then
+      do i=1,order,tile_size
+        do j=1,order,tile_size
+          do it=i,min(order,i+tile_size-1)
+            do jt=j,min(order,j+tile_size-1)
+              B(jt,it) = B(jt,it) + A(it,jt)
+              A(it,jt) = A(it,jt) + 1.0
+            enddo
+          enddo
+        enddo
       enddo
-    enddo
+    else
+      do i=1,order
+        do j=1,order
+          B(j,i) = B(j,i) + A(i,j)
+          A(i,j) = A(i,j) + 1.0
+        enddo
+      enddo
+    endif
 
   enddo ! iterations
 
