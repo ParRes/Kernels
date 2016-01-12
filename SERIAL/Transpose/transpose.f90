@@ -84,12 +84,12 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  print*,'Parallel Research Kernels version ', -1 !PRKVERSION
-  print*,'Serial Matrix transpose: B = A^T'
+  write(*,'(a,a)') 'Parallel Research Kernels version ', 'PRKVERSION'
+  write(*,'(a)')   'Serial Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
-    print*,'argument count = ', command_argument_count()
-    print*,'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
+    write(*,'(a,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
     stop 1
   endif
 
@@ -101,24 +101,25 @@ program main
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i)') order
 
-  tile_size = order
+  ! same default as the C implementation
+  tile_size = 32
   if (command_argument_count().gt.2) then
       call get_command_argument(3,argtmp,arglen,err)
       if (err.eq.0) read(argtmp,'(i)') tile_size
   endif
 
   if (iterations .lt. 1) then
-    print*,'ERROR: iterations must be >= 1 : ', iterations
+    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
   endif
 
   if (order .lt. 1) then
-    print*,'ERROR: order must be >= 1 : ', order
+    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
     stop 1
   endif
 
   if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    print*,'WARNING: tile_size must be >= 1 and <= order : ', tile_size
+    write(*,'(a,i5)') 'WARNING: tile_size must be >= 1 and <= order : ', tile_size
     tile_size = order ! no tiling
   endif
 
@@ -129,13 +130,13 @@ program main
 
   allocate( A(order,order), stat=err)
   if (err .ne. 0) then
-    print*,'allocation of A returned ',err
+    write(*,'(a,i3)') 'allocation of A returned ',err
     stop 1
   endif
 
   allocate( B(order,order), stat=err )
   if (err .ne. 0) then
-    print*,'allocation of A returned ',err
+    write(*,'(a,i3)') 'allocation of A returned ',err
     stop 1
   endif
 
@@ -144,9 +145,9 @@ program main
   bytes = bytes * order
   bytes = bytes * storage_size(A)/8
 
-  print*,'Matrix order = ', order
-  print*,'Number of iterations = ', iterations
-  print*,'Tile size = ', tile_size
+  write(*,'(a,i)') 'Matrix order         = ', order
+  write(*,'(a,i)') 'Tile size            = ', tile_size
+  write(*,'(a,i)') 'Number of iterations = ', iterations
 
   ! Fill the original matrix, set transpose to known garbage value. */
 
@@ -230,13 +231,13 @@ program main
   deallocate( A )
 
   if (abserr .lt. epsilon) then
-    print*,'Solution validates'
+    write(*,'(a)') 'Solution validates'
     avgtime = trans_time/iterations
-    print*,'Rate (MB/s): ',1.e-6*bytes/avgtime, &
+    write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',1.e-6*bytes/avgtime, &
            ' Avg time (s): ', avgtime
     stop
   else
-    print*,'ERROR: Aggregate squared error ',abserr, &
+    write(*,'(a,f,a,f)') 'ERROR: Aggregate squared error ',abserr, &
            'exceeds threshold ',epsilon
     stop 1
   endif
