@@ -169,10 +169,10 @@ program main
 
     !  Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
-      do i=1,order,tile_size
-        do j=1,order,tile_size
-          do it=i,min(order,i+tile_size-1)
-            do jt=j,min(order,j+tile_size-1)
+      do j=1,order,tile_size
+        do i=1,order,tile_size
+          do jt=j,min(order,j+tile_size-1)
+            do it=i,min(order,i+tile_size-1)
               B(jt,it) = B(jt,it) + A(it,jt)
               A(it,jt) = A(it,jt) + 1.0
             enddo
@@ -180,8 +180,8 @@ program main
         enddo
       enddo
     else
-      do i=1,order
-        do j=1,order
+      do j=1,order
+        do i=1,order
           B(j,i) = B(j,i) + A(i,j)
           A(i,j) = A(i,j) + 1.0
         enddo
