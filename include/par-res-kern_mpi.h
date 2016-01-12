@@ -69,8 +69,10 @@ int PRK_Win_free(MPI_Win * win)
 #if MPI_VERSION < 3
     int flag = 0;
     void * attr_ptr;
+#ifndef ADAPTIVE_MPI
     rc = MPI_Win_get_attr(*win, MPI_WIN_BASE, (void*)&attr_ptr, &flag);
     if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+#endif
     /* We do not check for the case of size=0 here,
      * but it may be worth adding in the future. */
     if (flag) {
@@ -91,15 +93,19 @@ int PRK_Win_free(MPI_Win * win)
     /* See if window was created with MPI_Win_create... */
     int flag = 0;
     void * attr_ptr;
+#ifndef ADAPTIVE_MPI
     rc = MPI_Win_get_attr(*win, MPI_WIN_CREATE_FLAVOR, (void*)&attr_ptr, &flag);
     if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+#endif
     if (flag) {
         int * flavor = (int*)attr_ptr;
         /* ...if it was, determine the base address of the user buffer... */
         if (*flavor==MPI_WIN_FLAVOR_CREATE) {
             flag = 0;
+#ifndef ADAPTIVE_MPI
             rc = MPI_Win_get_attr(*win, MPI_WIN_BASE, (void*)&attr_ptr, &flag);
             if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+#endif
             /* ...and free the base address. */
             if (flag) {
                 baseptr = attr_ptr;
