@@ -142,6 +142,7 @@ program main
   ! avoid overflow 64<-32
   bytes = 2 * order
   bytes = bytes * order
+  bytes = bytes * storage_size(A)/8
 
   print*,'Matrix order = ', order
   print*,'Number of iterations = ', iterations
