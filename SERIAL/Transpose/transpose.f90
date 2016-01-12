@@ -60,7 +60,6 @@
 ! *******************************************************************
 
 program main
-  use omp_lib
   use iso_fortran_env
   implicit none
   ! for argument parsing
@@ -68,16 +67,16 @@ program main
   integer :: argnum, arglen
   character(len=32) :: argtmp
   ! problem definition
-  integer(kind=INT32) ::  iterations               !  number of times to do the transpose
-  integer(kind=INT64) ::  order                    !  order of a the matrix
-  real(kind=REAL64), allocatable ::  A(:,:)        !  buffer to hold original matrix
-  real(kind=REAL64), allocatable ::  B(:,:)        !  buffer to hold transposed matrix
-  integer(kind=INT64) ::  bytes                    !  combined size of matrices
+  integer(kind=INT32) ::  iterations                ! number of times to do the transpose
+  integer(kind=INT64) ::  order                     ! order of a the matrix
+  real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
+  real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
+  integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
   integer(kind=INT64) ::  i, j, k
-  real(kind=REAL64) ::  abserr, addit, temp        !  squared error
-  real(kind=REAL64) ::  trans_time, avgtime        !  timing parameters
-  real(kind=REAL64), parameter ::  epsilon=1.D-8   !  error tolerance
+  real(kind=REAL64) ::  abserr, addit, temp         ! squared error
+  real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
+  real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
 
   ! ********************************************************************
   ! read and test input parameters
@@ -148,7 +147,7 @@ program main
   do k=0,iterations
 
     !  start timer after a warmup iteration
-    if (k.eq.1) trans_time = omp_get_wtime();
+    if (k.eq.1) call cpu_time(t0)
 
     !  Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
     do i=1,order
@@ -164,7 +163,8 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  trans_time = omp_get_wtime() - trans_time
+  call cpu_time(t1)
+  trans_time = t1 - t0
 
   abserr = 0.0;
   addit = 0.5*(iterations)*(iterations+1.0)
