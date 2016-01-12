@@ -69,6 +69,7 @@ program main
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
   integer(kind=INT32) ::  order                     ! order of a the matrix
+  !dec$ attributes align:16 :: A, B
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
@@ -198,12 +199,15 @@ program main
   trans_time = t1 - t0
 
   abserr = 0.0;
-  addit = (0.5*iterations)
-  addit = addit * (iterations+1)
+  ! this will overflow if iterations>>1000
+  addit = (0.5*iterations) * (iterations+1)
   do j=1,order
     do i=1,order
-      ! this was overflowing for iterations>15
-      temp   = ((j-1.)+(i-1.)*order)
+      ! this was overflowing for iterations>15, order=1000
+      ! temp = ((order*(i-1))+ (j-1)) * (iterations+1)
+      temp   = order
+      temp   = temp * (i-1)
+      temp   = temp + (j-1)
       temp   = temp * (iterations+1)
       abserr = abserr + abs(B(i,j) - (temp+addit))
     enddo
