@@ -149,16 +149,16 @@ program main
   ! Fill the original matrix, set transpose to known garbage value. */
 
   !  Fill the original column matrix
-  do i=1,order
-    do j=1,order
-      A(j,i) = (j-1)+(i-1)*order
+  do j=1,order
+    do i=1,order
+      A(i,j) = (i-1)+(j-1)*order
     enddo
   enddo
 
   !   Set the transpose matrix to a known garbage value.
-  do i=1,order
-    do j=1,order
-      B(j,i) = 0.0
+  do j=1,order
+    do i=1,order
+      B(i,j) = 0.0
     enddo
   enddo
 
@@ -198,11 +198,14 @@ program main
   trans_time = t1 - t0
 
   abserr = 0.0;
-  addit = 0.5*(iterations)*(iterations+1.)
+  addit = (0.5*iterations)
+  addit = addit * (iterations+1)
   do j=1,order
     do i=1,order
-      temp   = ((i-1)+(j-1)*order)*(iterations+1.)
-      abserr = abserr + abs(B(j,i) - (temp+addit))
+      ! this was overflowing for iterations>15
+      temp   = ((j-1.)+(i-1.)*order)
+      temp   = temp * (iterations+1)
+      abserr = abserr + abs(B(i,j) - (temp+addit))
     enddo
   enddo
 
