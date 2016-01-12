@@ -287,7 +287,7 @@ int main(int argc, char ** argv)
     }
     bail_out(error);
  
-    MPI_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
+    PRK_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
                       rma_winfo, MPI_COMM_WORLD, &Work_in_p, &rma_win);
     if (Work_in_p == NULL){
       printf(" Error allocating space for work on node %d\n",my_ID);
@@ -454,7 +454,7 @@ int main(int argc, char ** argv)
       MPI_Win_unlock_all(rma_win);
     }
 #endif
-    MPI_Win_free(&rma_win);
+    PRK_Win_free(&rma_win);
   }
  
   MPI_Finalize();
