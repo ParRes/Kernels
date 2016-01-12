@@ -68,12 +68,13 @@ program main
   character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
-  integer(kind=INT64) ::  order                     ! order of a the matrix
+  integer(kind=INT32) ::  order                     ! order of a the matrix
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
-  integer(kind=INT64) ::  i, j, k
+  integer(kind=INT32) ::  i, j, k
+  integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp         ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
@@ -82,12 +83,12 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  print*,'Parallel Research Kernels version ', 0.0 !PRKVERSION
+  print*,'Parallel Research Kernels version ', -1 !PRKVERSION
   print*,'Serial Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
     print*,'argument count = ', command_argument_count()
-    print*,'Usage: ./transpose <# iterations> <matrix order>'
+    print*,'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
     stop 1
   endif
 
@@ -96,6 +97,11 @@ program main
 
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i)') order
+
+  if (command_argument_count().gt.2) then
+      call get_command_argument(3,argtmp,arglen,err)
+      if (err.eq.0) read(argtmp,'(i)') tile_size
+  endif
 
   if (iterations .lt. 1) then
     print*,'ERROR: iterations must be >= 1 : ', iterations
@@ -123,7 +129,9 @@ program main
     stop 1
   endif
 
-  bytes = 2 * order**2
+  ! avoid overflow 64<-32
+  bytes = 2 * order
+  bytes = bytes * order
 
   print*,'Matrix order = ', order
   print*,'Number of iterations = ', iterations
@@ -167,10 +175,10 @@ program main
   trans_time = t1 - t0
 
   abserr = 0.0;
-  addit = 0.5*(iterations)*(iterations+1.0)
+  addit = 0.5*(iterations)*(iterations+1.)
   do j=1,order
     do i=1,order
-      temp   = ((i-1)+(j-1)*order)*(iterations+1.0)
+      temp   = ((i-1)+(j-1)*order)*(iterations+1.)
       abserr = abserr + abs(B(j,i) - (temp+addit))
     enddo
   enddo
