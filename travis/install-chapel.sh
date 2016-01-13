@@ -20,4 +20,5 @@ else
     ln -s chapel-1.12.0 chapel
     cd chapel
     make
+    ln -s `find $PWD -type f -name chpl` $TRAVIS_HOME/bin/chpl
 fi

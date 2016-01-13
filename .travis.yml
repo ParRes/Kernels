@@ -49,6 +49,10 @@ matrix:
     # TODO Revisit this later...
     #- compiler: gcc
     #  env: PRK_TARGET=allgrappa
+    # Mac + Chapel + GASNet does not work and I do not care
+    - os: osx
+      env: PRK_TARGET=allchapel
+           CHPL_COMM=gasnet
   allow_failures:
     # just disable broken tests for now
     #- env: PRK_TARGET=allampi
