@@ -289,20 +289,22 @@ void finish_distribution(int k, int m, uint64_t n, particle_t *particles) {
 }
 
 /* Verifies the final position of a particle */
-int verifyParticle(particle_t p, uint64_t current_timestep, double *Qgrid, uint64_t g){
-  uint64_t  total_steps = current_timestep, x, y;
-  double   x_T, y_T, x_periodic, y_periodic, L = (g-1);
+int verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t g){
+  uint64_t x, y;
+  double   x_T, y_T, x_periodic, y_periodic, L = (g-1), disp;
    
   /* Coordinates of the cell containing the particle initially */
-  y = (uint64_t) floor(p.y0);
-  x = (uint64_t) floor(p.x0);
+  y = (uint64_t) p.y0;
+  x = (uint64_t) p.x0;
    
   /* According to initial location and charge determine the direction of displacements */
-  x_T = ( (p.q * QG(y,x,g)) > 0) ? p.x0 + total_steps * (2*p.k+1) : p.x0 - total_steps * (2*p.k+1)  ;
-  y_T = p.y0 + p.m * total_steps;
+  disp = (double)(iterations+1)*(2*p.k+1);
+  x_T = ( (p.q * QG(y,x,g)) > 0) ? p.x0+disp : p.x0-disp;
+  y_T = p.y0 + p.m * (double)(iterations+1);
    
-  x_periodic = fmod(x_T+total_steps *(2*p.k+1)*L, L);
-  y_periodic = fmod(y_T+total_steps *fabs(p.m)*L, L);
+  /* apply periodicity, making sure we never mod a negative value */
+  x_periodic = fmod(x_T+(double)(iterations+1) *(2*p.k+1)*L, L);
+  y_periodic = fmod(y_T+(double)(iterations+1) *fabs(p.m)*L, L);
    
   if ( fabs(p.x - x_periodic) > epsilon || fabs(p.y - y_periodic) > epsilon) {
     return FAILURE;
@@ -322,7 +324,7 @@ void computeCoulomb(double x_dist, double y_dist, double q1, double q2, double *
 }
 
 /* Computes the total Coulomb force on a particle exerted from the charges of the corresponding cell */
-int computeTotalForce(particle_t p, uint64_t g, double *Qgrid, double *fx, double *fy){
+void computeTotalForce(particle_t p, uint64_t g, double *Qgrid, double *fx, double *fy){
   uint64_t  y, x;
   double   tmp_fx, tmp_fy, rel_y, rel_x, tmp_res_x = 0.0, tmp_res_y = 0.0;
    
@@ -354,19 +356,6 @@ int computeTotalForce(particle_t p, uint64_t g, double *Qgrid, double *fx, doubl
    
   (*fx) = tmp_res_x;
   (*fy) = tmp_res_y;
-   
-  return 0;
-}
-
-/* Move a particle, given total acceleration and periodicity */
-void moveParticle(particle_t *particle, double ax, double ay, double L){
-  /* Update particle positions, taking into account periodic boundaries */
-  particle->x = fmod(particle->x + particle->v_x*DT + 0.5*ax*DT*DT + L, L);
-  particle->y = fmod(particle->y + particle->v_y*DT + 0.5*ay*DT*DT + L, L);
-   
-  /* Update velocities */
-  particle->v_x += ax * DT;
-  particle->v_y += ay * DT;
 }
 
 int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
@@ -396,7 +385,7 @@ int main(int argc, char ** argv) {
   int         particles_per_cell;// number of particles per cell to be injected
   int         correctness = 1;   // determines whether simulation was correct
   double      *Qgrid;            // field of fixed charges
-  particle_t  *particles;        // the particles array
+  particle_t  *particles, *p;    // the particles array
   uint64_t    iter, i;           // dummies
   double      fx, fy, ax, ay, simulation_time;
   int         error;
@@ -534,12 +523,20 @@ int main(int argc, char ** argv) {
  
     /* Calculate forces on particles and update positions */
     for (i=0; i<n; i++) {
+      p = particles;
       fx = 0.0;
       fy = 0.0;
-      computeTotalForce(particles[i], g, Qgrid, &fx, &fy);
+      computeTotalForce(p[i], g, Qgrid, &fx, &fy);
       ax = fx * MASS_INV;
       ay = fy * MASS_INV;
-      moveParticle(&particles[i], ax, ay, L);
+
+      /* Update particle positions, taking into account periodic boundaries */
+      p[i].x = fmod(p[i].x + p[i].v_x*DT + 0.5*ax*DT*DT + L, L);
+      p[i].y = fmod(p[i].y + p[i].v_y*DT + 0.5*ay*DT*DT + L, L);
+   
+      /* Update velocities */
+      p[i].v_x += ax * DT;
+      p[i].v_y += ay * DT;
     }
   }
    
@@ -547,7 +544,7 @@ int main(int argc, char ** argv) {
    
   /* Run the verification test */
   for (i=0; i<n; i++) {
-    correctness *= verifyParticle(particles[i], iterations+1, Qgrid, g);
+    correctness *= verifyParticle(particles[i], iterations, Qgrid, g);
   }
    
   if (correctness) {
