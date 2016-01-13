@@ -188,6 +188,8 @@ int main(int argc, char ** argv)
 
   vector = (double *) malloc(total_length*sizeof(double));
   MPI_Win_create(vector, total_length*sizeof(double), sizeof(double), rma_winfo, MPI_COMM_WORLD, &rma_win);
+#warning Why are we not using MPI_Win_allocate here?
+#warning If this is a shared-memory bug, then we need to fix the bug.
   /* MPI_Win_allocate(total_length*sizeof(double), sizeof(double), rma_winfo, MPI_COMM_WORLD, (void *) &vector, &rma_win); */
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %ld by %ld points",
@@ -315,7 +317,7 @@ int main(int argc, char ** argv)
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
 
-  MPI_Win_free(&rma_win);
+  PRK_Win_free(&rma_win);
   MPI_Info_free(&rma_winfo);
 
   MPI_Finalize();
