@@ -68,4 +68,8 @@ case "$PRK_TARGET" in
         sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL
         sh ./travis/install-grappa.sh $TRAVIS_ROOT $MPI_IMPL
         ;;
+    allchapel)
+        echo "Chapel"
+        sh ./travis/install-chapel.sh $TRAVIS_ROOT $MPI_IMPL
+        ;;
 esac
