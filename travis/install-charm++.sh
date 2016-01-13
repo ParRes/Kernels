@@ -5,7 +5,9 @@ os=`uname`
 TRAVIS_ROOT="$1"
 # charm++ or AMPI
 RUNTIME="$2"
-CHARM_CONDUIT="$3"
+
+# not here: pull this out of Travis environment
+#CHARM_CONDUIT="$3"
 
 # unused for now
 case "$TRAVIS_OS_NAME" in
