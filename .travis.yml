@@ -46,18 +46,19 @@ matrix:
     # Mac issue with libtoolize (see https://github.com/regrant/sandia-shmem/pull/87)
     - os: osx
       env: PRK_TARGET=allshmem
-    # TODO Revisit this later...
-    #- compiler: gcc
-    #  env: PRK_TARGET=allgrappa
-  allow_failures:
-    # just disable broken tests for now
-    #- env: PRK_TARGET=allampi
-    #- env: PRK_TARGET=allfgmpi
-    - env: PRK_TARGET=allgrappa
+    # Revisit this once Grappa is working with Clang
+    - compiler: gcc
+      env: PRK_TARGET=allgrappa
+    # Mac + Chapel + GASNet does not work and I do not care
+    - os: osx
+      env: PRK_TARGET=allchapel
+           CHPL_COMM=gasnet
     # UPC GASNet OFI conduit is busted, perhaps due to SSH spawner
     - env: PRK_TARGET=allupc
            UPC_IMPL=bupc
            GASNET_CONDUIT=ofi
+  allow_failures:
+    - env: PRK_TARGET=allgrappa
     # UPC over MPICH on Mac hangs - may be async progress issue
     - os: osx
       env: PRK_TARGET=allupc
@@ -94,7 +95,6 @@ addons:
     #- clang-3.8
 env:
 # Order by likelihood of failing...
-  - PRK_TARGET=allgrappa
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
     GASNET_CONDUIT=mpi
@@ -119,6 +119,13 @@ env:
   - PRK_TARGET=allmpi1
   - PRK_TARGET=allopenmp
   - PRK_TARGET=allserial
+# Chapel kernels are not merged yet.  Activate these when they are.
+#  - PRK_TARGET=allchapel
+#    CHPL_COMM=none
+#  - PRK_TARGET=allchapel
+#    CHPL_COMM=gasnet
+# Grappa is a problem.  No reason to test it every time.
+#  - PRK_TARGET=allgrappa
 before_install:
   - pwd
   - export TRAVIS_ROOT=$HOME/PRK-deps

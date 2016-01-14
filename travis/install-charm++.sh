@@ -6,6 +6,32 @@ TRAVIS_ROOT="$1"
 # charm++ or AMPI
 RUNTIME="$2"
 
+# not here: pull this out of Travis environment
+#CHARM_CONDUIT="$3"
+
+# unused for now
+case "$TRAVIS_OS_NAME" in
+    linux)
+        CHARM_OS=linux
+        ;;
+    osx)
+        CHARM_OS=darwin
+        ;;
+esac
+
+# unused for now
+case "$CHARM_CONDUIT" in
+    multicore)
+        CHARM_CONDUIT_OPTIONS="multicore-linux64"
+        ;;
+    netlrts)
+        CHARM_CONDUIT_OPTIONS="netlrts-$CHARM_OS-x86_64"
+        ;;
+    netlrts-smp)
+        CHARM_CONDUIT_OPTIONS="netlrts-$CHARM_OS-x86_64 smp"
+        ;;
+esac
+
 if [ ! -d "$TRAVIS_ROOT/charm" ]; then
     case "$os" in
         Darwin)
