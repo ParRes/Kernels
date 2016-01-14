@@ -69,7 +69,7 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     #  Boost is for Grappa
-    - boost-latest
+    #- boost-latest
     # clang-3.8 comes from this
     #- llvm-toolchain-precise
     packages:
@@ -79,18 +79,18 @@ addons:
     # Required by GUPC
     - libnuma-dev
     # Boost is for Grappa
-    - libboost-date-time1.55-dev
-    - libboost-exception1.55-dev
-    - libboost-filesystem1.55-dev
-    - libboost-iostreams1.55-dev
-    - libboost-math1.55-dev
-    - libboost-random1.55-dev
-    - libboost-regex1.55-dev
-    - libboost-serialization1.55-dev
-    - libboost-signals1.55-dev
-    - libboost-system1.55-dev
-    - libboost-test1.55-dev
-    - libboost-timer1.55-dev
+    #- libboost-date-time1.55-dev
+    #- libboost-exception1.55-dev
+    #- libboost-filesystem1.55-dev
+    #- libboost-iostreams1.55-dev
+    #- libboost-math1.55-dev
+    #- libboost-random1.55-dev
+    #- libboost-regex1.55-dev
+    #- libboost-serialization1.55-dev
+    #- libboost-signals1.55-dev
+    #- libboost-system1.55-dev
+    #- libboost-test1.55-dev
+    #- libboost-timer1.55-dev
     # This should provide OpenMP
     #- clang-3.8
 env:
