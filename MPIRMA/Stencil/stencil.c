@@ -317,7 +317,7 @@ int main(int argc, char ** argv) {
   MPI_Info_set(rma_winfo, "no_locks", "true");
 
   /* allocate communication buffers for halo values                            */
-  MPI_Win_allocate(4*sizeof(DTYPE)*RADIUS*width, sizeof(DTYPE), rma_winfo, MPI_COMM_WORLD, (void *) &top_buf_out, &rma_winy);
+  PRK_Win_allocate(4*sizeof(DTYPE)*RADIUS*width, sizeof(DTYPE), rma_winfo, MPI_COMM_WORLD, (void *) &top_buf_out, &rma_winy);
   if (!top_buf_out) {
     printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
     error = 1;
@@ -327,7 +327,7 @@ int main(int argc, char ** argv) {
   bottom_buf_out = top_buf_out + 2*RADIUS*width;
   bottom_buf_in  = top_buf_out + 3*RADIUS*width;
  
-  MPI_Win_allocate(4*sizeof(DTYPE)*RADIUS*height, sizeof(DTYPE), rma_winfo, MPI_COMM_WORLD, (void *) &right_buf_out, &rma_winx);
+  PRK_Win_allocate(4*sizeof(DTYPE)*RADIUS*height, sizeof(DTYPE), rma_winfo, MPI_COMM_WORLD, (void *) &right_buf_out, &rma_winx);
   if (!right_buf_out) {
     printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
     error = 1;
@@ -470,8 +470,8 @@ int main(int argc, char ** argv) {
            1.0E-06 * flops/avgtime, avgtime);
   }
  
-  MPI_Win_free(&rma_winx);
-  MPI_Win_free(&rma_winy);
+  PRK_Win_free(&rma_winx);
+  PRK_Win_free(&rma_winy);
 
   MPI_Info_free(&rma_winfo);
 
