@@ -79,7 +79,7 @@ int main(int argc, char ** argv)
          avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;    /* verification value at top right corner of grid        */
-  int    i, j, jj, iter, ID;/* dummies                                           */
+  int    i, j, jj, iter;/* dummies                                           */
   int    iterations;    /* number of times to run the pipeline algorithm         */
   long   start, end;    /* start and end of grid slice owned by calling rank     */
   long   segment_size;  /* size of x-dimension of grid owned by calling rank     */

@@ -103,7 +103,7 @@ int main(int argc, char **argv){
   int               radius,     /* stencil parameters                             */
                     stencil_size; 
   s64Int            row, col, first, last; /* dummies                             */
-  u64Int            i, j;       /* dummies                                        */
+  int               i, j;       /* dummies                                        */
   int               iterations; /* number of times the multiplication is done     */
 
   s64Int            elm;        /* sequence number of matrix nonzero              */
@@ -358,7 +358,9 @@ int main(int argc, char **argv){
     /* do the actual matrix multiplication                                        */
     for (row=0; row<nrows; row++) {
       first = stencil_size*row; last = first+stencil_size-1;
+#ifdef __INTEL_COMPILER
       #pragma simd reduction(+:temp) 
+#endif
       for (temp=0.0,col=first; col<=last; col++) {
         temp += matrix[col]*vector[colIndex[col]];
       }
