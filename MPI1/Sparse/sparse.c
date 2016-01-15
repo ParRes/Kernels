@@ -99,7 +99,7 @@ int main(int argc, char **argv){
   int               lsize;      /* logarithmic linear size of grid                */
   int               lsize2;     /* logarithmic size of grid                       */
   int               size;       /* linear size of grid                            */
-  s64Int            size2;      /* matrix order (=total # points in grid)         */
+  u64Int            size2;      /* matrix order (=total # points in grid)         */
   int               radius,     /* stencil parameters                             */
                     stencil_size; 
   s64Int            row, col, first, last; /* dummies                             */
@@ -112,7 +112,7 @@ int main(int argc, char **argv){
                     jend,
                     nrows,
                     row_offset;
-  s64Int            nent;       /* number of nonzero entries                      */
+  u64Int            nent;       /* number of nonzero entries                      */
   double            sparsity;   /* fraction of non-zeroes in matrix               */
   double            local_sparse_time,/* timing parameters                        */
                     sparse_time, 
