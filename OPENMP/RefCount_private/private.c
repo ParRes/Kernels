@@ -71,8 +71,10 @@ HISTORY: Written by Rob Van der Wijngaart, January 2006.
 int main(int argc, char ** argv)
 {
   int        iterations;      /* number of reference counter updates per thread */
-  int        iter, thread;
+  int        thread;
+#ifdef VERBOSE
   int        line_fit;        /* indicates that elements fit on different lines */
+#endif
   s64Int     alloc_unit;      /* amount of space reserved per element           */
   s64Int     **pcounter1,
              **pcounter2;     /* pointers to pointers to space for counters     */
@@ -123,15 +125,19 @@ int main(int argc, char ** argv)
   }
 
   /* we try to put counter locks on different cache lines              */
+#ifdef VERBOSE
   line_fit = 1;
+#endif
   if (sizeof(omp_lock_t) > LINE_LENGTH)
     alloc_unit = (sizeof(omp_lock_t)/LINE_LENGTH+1)*LINE_LENGTH;
   else
     alloc_unit = LINE_LENGTH;
 
   lock_space = (omp_lock_t *) malloc(2*nthread_input*alloc_unit);
-  while (!lock_space && alloc_unit >= 2*sizeof(s64Int)) {
+  while (!lock_space && alloc_unit >= (s64Int)(2*sizeof(s64Int))) {
+#ifdef VERBOSE
     line_fit = 0;
+#endif
     alloc_unit/=2;
     lock_space = (omp_lock_t *)malloc(2*nthread_input*alloc_unit);
   }
@@ -153,14 +159,18 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
 
+#ifdef VERBOSE
   line_fit = 1;
+#endif
   if (sizeof(s64Int) > LINE_LENGTH)
     alloc_unit = (sizeof(s64Int)/LINE_LENGTH+1)*LINE_LENGTH;
   else
     alloc_unit = LINE_LENGTH;
   counter_space = malloc(2*nthread_input*alloc_unit);
-  while (!counter_space && alloc_unit >= 2*sizeof(s64Int)) {
+  while (!counter_space && alloc_unit >= (s64Int)(2*sizeof(s64Int))) {
+#ifdef VERBOSE
     line_fit = 0;
+#endif
     alloc_unit/=2;
     counter_space = malloc(2*nthread_input*alloc_unit);
   }
@@ -178,7 +188,6 @@ int main(int argc, char ** argv)
   {
 
   int my_ID;      /* Thread ID                                          */
-  int iter;       /* dummy                                              */
 
   my_ID = omp_get_thread_num();
 
@@ -220,7 +229,7 @@ int main(int argc, char ** argv)
   }
 
   #pragma omp for 
-  for (iter=0; iter<iterations; iter++) { 
+  for (int iter=0; iter<iterations; iter++) { 
 #ifdef LOCK
     omp_set_lock(counter_lock[my_ID]);
 #endif
