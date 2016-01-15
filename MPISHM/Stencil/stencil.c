@@ -169,8 +169,10 @@ int main(int argc, char ** argv) {
   int    group_sizex,
          group_sizey;     /* number of ranks in block in each coord direction    */
   int    my_ID;           /* MPI rank                                            */
+#ifdef UNUSED
   int    my_global_IDx, 
          my_global_IDy;   /* coordinates of rank in overall rank grid            */
+#endif
   int    my_local_IDx, 
          my_local_IDy;    /* coordinates of rank within shared memory block      */
   int    right_nbr;       /* global rank of right neighboring tile               */
@@ -368,8 +370,10 @@ int main(int argc, char ** argv) {
   my_group_IDy = my_group/Num_groupsx;
   my_local_IDx = my_ID%group_sizex;
   my_local_IDy = (my_ID%group_size)/group_sizex;
+#ifdef UNUSED
   my_global_IDx = my_group_IDx*group_sizex+my_local_IDx;
   my_global_IDy = my_group_IDy*group_sizey+my_local_IDy;
+#endif
 
   /* set all neighboring ranks to -1 (no communication with those ranks) */
   left_nbr = right_nbr = top_nbr = bottom_nbr = -1;
