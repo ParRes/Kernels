@@ -115,7 +115,7 @@ int main(int argc, char ** argv) {
   DTYPE *left_buf_in;     /*       "         "                                   */
   int    root = 0;
   int    n, width, height;/* linear global and local grid dimension              */
-  int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
+  int    i, j, ii, jj, kk, iter, leftover;  /* dummies                   */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
   int    jstart, jend;    /* bounds of grid tile assigned to calling rank        */
   DTYPE  norm,            /* L1 norm of solution                                 */
