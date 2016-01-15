@@ -175,7 +175,7 @@ int main(int argc, char **argv){
   nent = size2*stencil_size;
 
   matrix_space = nent*sizeof(double);
-  if (matrix_space/sizeof(double) != nent) {
+  if ((s64Int)(matrix_space/sizeof(double)) != nent) {
     printf("ERROR: Cannot represent space for matrix: %lu\n", matrix_space);
     exit(EXIT_FAILURE);
   } 
@@ -187,7 +187,7 @@ int main(int argc, char **argv){
   } 
 
   vector_space = 2*size2*sizeof(double);
-  if (vector_space/sizeof(double) != 2*size2) {
+  if ((s64Int)(vector_space/sizeof(double)) != 2*size2) {
     printf("ERROR: Cannot represent space for vectors: %lu\n", vector_space);
     exit(EXIT_FAILURE);
   } 
@@ -200,7 +200,7 @@ int main(int argc, char **argv){
   result = vector + size2;
 
   index_space = nent*sizeof(s64Int);
-  if (index_space/sizeof(s64Int) != nent) {
+  if ((s64Int)(index_space/sizeof(s64Int)) != nent) {
     printf("ERROR: Cannot represent space for column indices: %lu\n", index_space);
     exit(EXIT_FAILURE);
   } 

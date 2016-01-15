@@ -227,7 +227,7 @@ int main(int argc, char ** argv)
   basesum=0;
   for (i=0; i<thread_length; i++) basesum += chartoi(basestring[i]);
   checksum=0;
-  for (i=0; i<strlen(catstring);i++) checksum += chartoi(catstring[i]);
+  for (i=0; i<(signed)strlen(catstring);i++) checksum += chartoi(catstring[i]);
   if (checksum != basesum*nthread) {
     printf("Incorrect checksum: %d instead of %d\n", checksum, basesum*nthread);
     exit(EXIT_FAILURE);
