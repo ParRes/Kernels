@@ -75,7 +75,7 @@ int main(int argc, char ** argv)
 {
   int    my_ID;           /* SHMEM thread ID                                     */
   int    root;            /* ID of master rank                                   */
-  long   m, n;            /* grid dimensions                                     */
+  long   m=0, n=0;         /* grid dimensions                                     */
   double *pipeline_time,   /* timing parameters                                  */
          *local_pipeline_time, avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
@@ -136,7 +136,7 @@ int main(int argc, char ** argv)
   n = atol(*++argv);
   if (m < 1 || n < 1){
     if (my_ID == root)
-      printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
+      printf("ERROR: grid dimensions must be positive: %ld, %ld \n", m, n);
     error = 1;
     goto ENDOFTESTS;
   }
@@ -155,7 +155,7 @@ int main(int argc, char ** argv)
 
   if (m<=Num_procs) {
     if (my_ID == root)
-      printf("ERROR: First grid dimension %d must be > #ranks %ld\n", m, Num_procs);
+      printf("ERROR: First grid dimension %ld must be > #ranks %d\n", m, Num_procs);
     error = 1;
   }
   ENDOFTESTS:;
@@ -327,7 +327,7 @@ int main(int argc, char ** argv)
   /* verify correctness, using top right value                                     */
   corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == root) {
-    if (abs(ARRAY(end[my_ID],n-1)-corner_val)/corner_val >= epsilon) {
+    if (fabs(ARRAY(end[my_ID],n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
              ARRAY(end[my_ID],n-1), corner_val);
       error = 1;
@@ -347,6 +347,9 @@ int main(int argc, char ** argv)
     printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
+
+  prk_shmem_free(pSync);
+  prk_shmem_free(pWrk);
 
   prk_shmem_finalize();
 

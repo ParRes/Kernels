@@ -90,6 +90,7 @@ static void * prk_shmem_malloc(size_t n) {
 #endif
 }
 
+#if UNUSED
 static void * prk_shmem_realloc(void *ptr, size_t size) {
 #ifdef PRK_HAVE_OPENSHMEM_1_2
     return shmem_realloc(ptr,size);
@@ -106,6 +107,7 @@ static void * prk_shmem_align(size_t alignment, size_t size) {
     return shmalloc(size);
 #endif
 }
+#endif
 
 static void prk_shmem_free(void * ptr) {
 #ifdef PRK_HAVE_OPENSHMEM_1_2
