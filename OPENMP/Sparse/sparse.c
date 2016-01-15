@@ -282,7 +282,9 @@ int main(int argc, char **argv){
     #pragma omp for
     for (row=0; row<size2; row++) {
       first = stencil_size*row; last = first+stencil_size-1;
-      #pragma simd reduction(+:temp) 
+#ifdef __INTEL_COMPILER
+      #pragma simd reduction(+:temp)
+#endif
       for (temp=0.0,col=first; col<=last; col++) {
         temp += matrix[col]*vector[colIndex[col]];
       }
