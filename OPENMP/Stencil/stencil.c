@@ -86,7 +86,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 int main(int argc, char ** argv) {
 
   long   n;               /* linear grid dimension                               */
-  int    i, j, ii, jj, it, jt, iter;  /* dummies                                 */
+  int    i, j, ii, jj, iter;  /* dummies                                 */
   DTYPE  norm,            /* L1 norm of solution                                 */
          reference_norm;
   DTYPE  f_active_points; /* interior of grid with respect to stencil            */
@@ -187,7 +187,7 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
 
-  #pragma omp parallel private(i, j, ii, jj, it, jt, iter) 
+  #pragma omp parallel private(i, j, ii, jj, iter) 
   {
 
   #pragma omp master
@@ -232,6 +232,8 @@ int main(int argc, char ** argv) {
 #ifdef PARALLELFOR
 } 
 #endif
+
+  stencil_time = 0.0; /* silence compiler warning */
 
   /* intialize the input and output arrays                                     */
 #ifdef PARALLELFOR
