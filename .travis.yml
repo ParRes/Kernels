@@ -95,23 +95,23 @@ addons:
     #- clang-3.8
 env:
 # Order by likelihood of failing...
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=mpi
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=ofi
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=smp
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=udp
-  - PRK_TARGET=allupc
-    UPC_IMPL=gupc
-  - PRK_TARGET=allampi
-  - PRK_TARGET=allcharm++
-  - PRK_TARGET=allfgmpi
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=mpi
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=ofi
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=smp
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=udp
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=gupc
+#  - PRK_TARGET=allampi
+#  - PRK_TARGET=allcharm++
+#  - PRK_TARGET=allfgmpi
   - PRK_TARGET=allshmem
   - PRK_TARGET=allmpirma
   - PRK_TARGET=allmpishm
@@ -138,6 +138,8 @@ install:
 before_script:
   - pwd
 script:
+  # This is going to cause most of our tests to fail!
+  - export PRK_FLAGS="-O3 -Wall -Wextra -Wformat -Werror -pedantic -std=c11"
   - sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
 after_failure:
   - echo "Sad panda"
