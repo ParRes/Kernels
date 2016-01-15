@@ -80,8 +80,8 @@ HISTORY: Written by Rob Van der Wijngaart, February 2009.
 
 #define forder (1.0*order)
 
-main(int argc, char **argv){
-
+int main(int argc, char **argv)
+{
   int     iter, i,ii,j,jj,k,kk,ig,jg,kg; /* dummies                               */
   int     iterations;           /* number of times the multiplication is done     */
   double  dgemm_time,           /* timing parameters                              */
