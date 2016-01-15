@@ -150,8 +150,7 @@ int main(int argc, char ** argv)
   int iter;                /* index of iteration                    */
   int phase;               /* phase inside staged communication     */
   int colstart;            /* starting column for owning rank       */
-  int nthread_input,       /* thread parameters                     */
-      nthread; 
+  int nthread_input;       /* thread parameters                     */
   int error;               /* error flag                            */
   int concurrency;         /* number of threads that can be active  */
   double *A_p;             /* original matrix column block          */
