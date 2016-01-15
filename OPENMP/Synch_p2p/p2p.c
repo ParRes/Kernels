@@ -148,7 +148,7 @@ int main(int argc, char ** argv) {
   }
 
   if (m<nthread_input) {
-    printf("First grid dimension %d smaller than number of threads requested: %d\n", 
+    printf("First grid dimension %ld smaller than number of threads requested: %d\n", 
            m, nthread_input);
     exit(EXIT_FAILURE);
   }
