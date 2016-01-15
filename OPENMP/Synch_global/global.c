@@ -128,7 +128,7 @@ int main(int argc, char ** argv)
 
   length = atol(*++argv);
   if (length <nthread_input || length%nthread_input !=0) {
-    printf("ERROR: length of string %d must be multiple of # threads: %d\n", 
+    printf("ERROR: length of string %ld must be multiple of # threads: %d\n", 
            length, nthread_input);
     exit(EXIT_FAILURE);
   }
@@ -147,7 +147,7 @@ int main(int argc, char ** argv)
 
   catstring=(char *) malloc((length+1)*sizeof(char));
   if (catstring==NULL) {
-    printf("ERROR: Could not allocate space for concatenation string: %d\n",
+    printf("ERROR: Could not allocate space for concatenation string: %ld\n",
            length+1);
     exit(EXIT_FAILURE);
   }

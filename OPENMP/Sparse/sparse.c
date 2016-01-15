@@ -176,7 +176,7 @@ int main(int argc, char **argv){
 
   matrix_space = nent*sizeof(double);
   if (matrix_space/sizeof(double) != nent) {
-    printf("ERROR: Cannot represent space for matrix: %ul\n", matrix_space);
+    printf("ERROR: Cannot represent space for matrix: %lu\n", matrix_space);
     exit(EXIT_FAILURE);
   } 
 
@@ -188,7 +188,7 @@ int main(int argc, char **argv){
 
   vector_space = 2*size2*sizeof(double);
   if (vector_space/sizeof(double) != 2*size2) {
-    printf("ERROR: Cannot represent space for vectors: %ul\n", vector_space);
+    printf("ERROR: Cannot represent space for vectors: %lu\n", vector_space);
     exit(EXIT_FAILURE);
   } 
 
@@ -201,7 +201,7 @@ int main(int argc, char **argv){
 
   index_space = nent*sizeof(s64Int);
   if (index_space/sizeof(s64Int) != nent) {
-    printf("ERROR: Cannot represent space for column indices: %ul\n", index_space);
+    printf("ERROR: Cannot represent space for column indices: %lu\n", index_space);
     exit(EXIT_FAILURE);
   } 
   colIndex = (s64Int *) malloc(index_space);
