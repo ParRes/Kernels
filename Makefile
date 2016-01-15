@@ -71,7 +71,7 @@ help:
 
 all: alldarwin allfreaks
 alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc
-allfreaks: allcharm++ allampi allgrappa 
+allfreaks: allcharm allampi allgrappa
 
 allmpi1:
 	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -165,7 +165,9 @@ allopenmp:
                                                       "MATRIX_RANK         = $(matrix_rank)"        \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
-allcharm++:
+allcharm++: allcharm
+
+allcharm:
 	cd CHARM++/Synch_p2p;       $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd CHARM++/Stencil;         $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd CHARM++/Transpose;       $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -189,6 +191,27 @@ allserial:
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
 clean:
+	cd SERIAL/DGEMM;            $(MAKE) clean
+	cd SERIAL/Nstream;          $(MAKE) clean
+	cd SERIAL/Reduce;           $(MAKE) clean
+	cd SERIAL/Stencil;          $(MAKE) clean
+	cd SERIAL/Transpose;        $(MAKE) clean
+	cd SERIAL/Random;           $(MAKE) clean
+	cd SERIAL/Sparse;           $(MAKE) clean
+	cd SERIAL/Synch_p2p;        $(MAKE) clean
+	cd SERIAL/Branch;           $(MAKE) clean
+	cd OPENMP/DGEMM;            $(MAKE) clean
+	cd OPENMP/Nstream;          $(MAKE) clean
+	cd OPENMP/Reduce;           $(MAKE) clean
+	cd OPENMP/RefCount_shared;  $(MAKE) clean
+	cd OPENMP/RefCount_private; $(MAKE) clean
+	cd OPENMP/Stencil;          $(MAKE) clean
+	cd OPENMP/Transpose;        $(MAKE) clean
+	cd OPENMP/Random;           $(MAKE) clean
+	cd OPENMP/Sparse;           $(MAKE) clean
+	cd OPENMP/Synch_global;     $(MAKE) clean
+	cd OPENMP/Synch_p2p;        $(MAKE) clean
+	cd OPENMP/Branch;           $(MAKE) clean
 	cd MPI1/DGEMM;              $(MAKE) clean
 	cd MPI1/Nstream;            $(MAKE) clean
 	cd MPI1/Reduce;             $(MAKE) clean
@@ -199,6 +222,22 @@ clean:
 	cd MPI1/Synch_global;       $(MAKE) clean
 	cd MPI1/Synch_p2p;          $(MAKE) clean
 	cd MPI1/Branch;             $(MAKE) clean
+	cd MPIOPENMP/Nstream;       $(MAKE) clean
+	cd MPIOPENMP/Stencil;       $(MAKE) clean
+	cd MPIOPENMP/Transpose;     $(MAKE) clean
+	cd MPIOPENMP/Synch_p2p;     $(MAKE) clean
+	cd MPIRMA/Stencil;          $(MAKE) clean
+	cd MPIRMA/Synch_p2p;        $(MAKE) clean
+	cd MPIRMA/Transpose;        $(MAKE) clean
+	cd MPISHM/Stencil;          $(MAKE) clean
+	cd MPISHM/Synch_p2p;        $(MAKE) clean
+	cd MPISHM/Transpose;        $(MAKE) clean
+	cd SHMEM/Transpose;         $(MAKE) clean
+	cd SHMEM/Stencil;           $(MAKE) clean
+	cd SHMEM/Synch_p2p;         $(MAKE) clean
+	cd UPC/Stencil;             $(MAKE) clean
+	cd UPC/Transpose;           $(MAKE) clean
+	cd UPC/Synch_p2p;           $(MAKE) clean
 	cd FG_MPI/DGEMM;            $(MAKE) clean
 	cd FG_MPI/Nstream;          $(MAKE) clean
 	cd FG_MPI/Reduce;           $(MAKE) clean
@@ -219,66 +258,29 @@ clean:
 	cd AMPI/Synch_global;       $(MAKE) clean
 	cd AMPI/Synch_p2p;          $(MAKE) clean
 	cd AMPI/Branch;             $(MAKE) clean
-	cd MPIRMA/Stencil;          $(MAKE) clean
-	cd MPIRMA/Synch_p2p;        $(MAKE) clean
-	cd MPIRMA/Transpose;        $(MAKE) clean
-	cd UPC/Stencil;             $(MAKE) clean
-	cd UPC/Transpose;           $(MAKE) clean
-	cd UPC/Synch_p2p;           $(MAKE) clean
-	cd MPISHM/Stencil;          $(MAKE) clean
-	cd MPISHM/Synch_p2p;        $(MAKE) clean
-	cd MPISHM/Transpose;        $(MAKE) clean
-	cd SHMEM/Transpose;         $(MAKE) clean
-	cd SHMEM/Stencil;           $(MAKE) clean
-	cd SHMEM/Synch_p2p;         $(MAKE) clean
 	cd CHARM++/Stencil;         $(MAKE) clean
 	cd CHARM++/Synch_p2p;       $(MAKE) clean
 	cd CHARM++/Transpose;       $(MAKE) clean
 	cd GRAPPA/Synch_p2p;        $(MAKE) clean
 	cd GRAPPA/Stencil;          $(MAKE) clean
 	cd GRAPPA/Transpose;        $(MAKE) clean
-	cd MPIOPENMP/Nstream;       $(MAKE) clean
-	cd MPIOPENMP/Stencil;       $(MAKE) clean
-	cd MPIOPENMP/Transpose;     $(MAKE) clean
-	cd MPIOPENMP/Synch_p2p;     $(MAKE) clean
-	cd OPENMP/DGEMM;            $(MAKE) clean
-	cd OPENMP/Nstream;          $(MAKE) clean
-	cd OPENMP/Reduce;           $(MAKE) clean
-	cd OPENMP/RefCount_shared;  $(MAKE) clean
-	cd OPENMP/RefCount_private; $(MAKE) clean
-	cd OPENMP/Stencil;          $(MAKE) clean
-	cd OPENMP/Transpose;        $(MAKE) clean
-	cd OPENMP/Random;           $(MAKE) clean
-	cd OPENMP/Sparse;           $(MAKE) clean
-	cd OPENMP/Synch_global;     $(MAKE) clean
-	cd OPENMP/Synch_p2p;        $(MAKE) clean
-	cd OPENMP/Branch;           $(MAKE) clean
-	cd SERIAL/DGEMM;            $(MAKE) clean
-	cd SERIAL/Nstream;          $(MAKE) clean
-	cd SERIAL/Reduce;           $(MAKE) clean
-	cd SERIAL/Stencil;          $(MAKE) clean
-	cd SERIAL/Transpose;        $(MAKE) clean
-	cd SERIAL/Random;           $(MAKE) clean
-	cd SERIAL/Sparse;           $(MAKE) clean
-	cd SERIAL/Synch_p2p;        $(MAKE) clean
-	cd SERIAL/Branch;           $(MAKE) clean
 	rm -f stats.json
 
 veryclean: clean
-	cd MPI1/Branch;             $(MAKE) veryclean
-	cd OPENMP/Branch;           $(MAKE) veryclean
 	cd SERIAL/Branch;           $(MAKE) veryclean
-	cd MPI1/Stencil;            $(MAKE) veryclean
-	cd OPENMP/Stencil;          $(MAKE) veryclean
 	cd SERIAL/Stencil;          $(MAKE) veryclean
+	cd OPENMP/Branch;           $(MAKE) veryclean
+	cd OPENMP/Stencil;          $(MAKE) veryclean
+	cd MPI1/Branch;             $(MAKE) veryclean
+	cd MPI1/Stencil;            $(MAKE) veryclean
+	cd MPIOPENMP/Stencil;       $(MAKE) veryclean
 	cd MPIRMA/Stencil;          $(MAKE) veryclean
 	cd MPISHM/Stencil;          $(MAKE) veryclean
 	cd SHMEM/Stencil;           $(MAKE) veryclean
+	cd UPC/Stencil;             $(MAKE) veryclean
 	cd FG_MPI/Stencil;          $(MAKE) veryclean
-	cd MPIOPENMP/Stencil;       $(MAKE) veryclean
 	cd GRAPPA/Stencil;          $(MAKE) veryclean
 	cd CHARM++/Stencil;         $(MAKE) veryclean
-	cd UPC/Stencil;             $(MAKE) veryclean
 	cd FG_MPI/Branch;           $(MAKE) veryclean
 	cd AMPI/Branch;             $(MAKE) veryclean
 	cd scripts/small;           $(MAKE) -f  Makefile_FG_MPI veryclean
