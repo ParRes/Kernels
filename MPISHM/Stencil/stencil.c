@@ -192,7 +192,7 @@ int main(int argc, char ** argv) {
   long   n, width, height;/* linear global and block grid dimension              */
   int    width_rank, 
          height_rank;     /* linear local dimension                              */
-  int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
+  int    i, j, ii, jj, kk, iter, leftover;  /* dummies                   */
   int    istart_rank, 
          iend_rank;       /* bounds of grid tile assigned to calling rank        */
   int    jstart_rank, 

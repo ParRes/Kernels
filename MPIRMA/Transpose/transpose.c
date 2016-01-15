@@ -137,8 +137,6 @@ int main(int argc, char ** argv)
   int Num_procs;           /* number of ranks                       */
   long order;               /* order of overall matrix               */
   int send_to, recv_from;  /* ranks with which to communicate       */
-  MPI_Status status;       
-  MPI_Request send_req, recv_req;
   long bytes;              /* combined size of matrices             */
   int my_ID;               /* rank                                  */
   int root=0;              /* rank of root                          */
