@@ -39,10 +39,12 @@ ifndef matrix_rank
 endif
 
 ifndef default_opt_flags
-  default_opt_flags=-O3
+  default_opt_flags=-O3 -Wall -Wextra -Wformat -Werror -pedantic -std=c11
 endif
 
-default:
+default: allserial allopenmp allmpi
+
+help:
 	@echo "Usage: \"make all\"          (re-)builds all targets"
 	@echo "       \"make allserial\"    (re-)builds all serial targets"
 	@echo "       \"make allopenmp\"    (re-)builds all OpenMP targets"
