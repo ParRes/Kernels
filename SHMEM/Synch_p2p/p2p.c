@@ -81,7 +81,7 @@ int main(int argc, char ** argv)
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;      /* verification value at top right corner of grid      */
   int    i, j, iter, ID;  /* dummies                                             */
-  int    iterations;      /* number of times to run the pipeline algorithm       */
+  int    iterations=0;    /* number of times to run the pipeline algorithm       */
   int    *start, *end;    /* starts and ends of grid slices                      */
   long   segment_size;    /* x-dimension of grid slice owned by calling rank     */
   int    error=0;         /* error flag                                          */
@@ -94,8 +94,8 @@ int main(int argc, char ** argv)
 #endif
   double *dst;            /* target address of communication                     */
   double *src;            /* source address of communication                     */
-  long   *pSync;          /* work space for SHMEM collectives                    */
-  double *pWrk;           /* work space for SHMEM collectives                    */
+  long   *pSync=NULL;     /* work space for SHMEM collectives                    */
+  double *pWrk=NULL;      /* work space for SHMEM collectives                    */
   
 /*********************************************************************************
 ** Initialize the SHMEM environment

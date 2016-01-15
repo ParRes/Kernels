@@ -103,7 +103,7 @@ int main(int argc, char ** argv) {
   DTYPE *left_buf_out;    /*       "         "                                   */
   DTYPE *left_buf_in[2];  /*       "         "                                   */
   int    root = 0;
-  int    n, width, height;/* linear global and local grid dimension              */
+  int    n=0, width, height;/* linear global and local grid dimension              */
   int    i, j, ii, jj, kk, iter, leftover;  /* dummies                   */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
   int    jstart, jend;    /* bounds of grid tile assigned to calling rank        */
@@ -111,7 +111,7 @@ int main(int argc, char ** argv) {
   DTYPE  f_active_points; /* interior of grid with respect to stencil            */
   int    stencil_size;    /* number of points in the stencil                     */
   DTYPE  flops;           /* floating point ops per iteration                    */
-  int    iterations;      /* number of times to run the algorithm                */
+  int    iterations=0;    /* number of times to run the algorithm                */
   double avgtime,         /* timing parameters                                   */
          *local_stencil_time, *stencil_time; 
   DTYPE  * RESTRICT in;   /* input grid values                                   */
