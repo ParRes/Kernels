@@ -150,15 +150,14 @@ int main(int argc, char **argv)
   double  scalar;        /* constant used in Triad operation            */
   int     iterations;    /* number of times vector loop gets repeated   */
   long    length,        /* vector length per rank                      */
-          total_length,  /* total vector length                         */
+          total_length=0,/* total vector length                         */
           offset;        /* offset between vectors a and b, and b and c */
   double  bytes;         /* memory IO size                              */
   size_t  space;         /* memory used for a single vector             */
   double  local_nstream_time,/* timing parameters                       */
           nstream_time, 
           avgtime;
-  int     nthread_input,   /* thread parameters                         */
-          nthread; 
+  int     nthread_input; /* thread parameters                         */
   int     Num_procs,     /* number of ranks                             */
           my_ID,         /* rank of calling rank                        */
           root=0;        /* ID of master rank                           */
@@ -253,7 +252,9 @@ int main(int argc, char **argv)
   }
 
   #pragma omp parallel for
+#ifdef __INTEL_COMPILER
   #pragma vector always
+#endif
   for (j=0; j<length; j++) {
     a[j] = 0.0;
     b[j] = 2.0;
@@ -273,7 +274,9 @@ int main(int argc, char **argv)
     }
 
     #pragma omp parallel for
+#ifdef __INTEL_COMPILER
     #pragma vector always
+#endif
     for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
 
   } /* end iterations */

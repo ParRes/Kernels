@@ -248,7 +248,7 @@ int main(int argc, char **argv){
 
   matrix = (double *) malloc(matrix_space);
   if (!matrix) {
-    printf("ERROR: rank %d could not allocate space for sparse matrix: "FSTR64U"\n", 
+    printf("ERROR: rank %d could not allocate space for sparse matrix: %zu\n", 
            my_ID, matrix_space);
     error = 1;
   } 
