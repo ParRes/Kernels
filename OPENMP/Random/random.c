@@ -210,7 +210,7 @@ int main(int argc, char **argv) {
 
 #ifdef LONG_IS_64BITS
   if (sizeof(long) != 8) {
-    printf("ERROR: Makefile says \"long\" is 8 bytes, but it is %d bytes\n",
+    printf("ERROR: Makefile says \"long\" is 8 bytes, but it is %zu bytes\n",
            sizeof(long)); 
     exit(EXIT_FAILURE);
   }

@@ -146,7 +146,7 @@ int main(int argc, char **argv){
 
   /* emit error if (periodic) stencil overlaps with itself                        */
   if (size <2*radius+1) {
-    printf("ERROR: Grid extent %lld smaller than stencil diameter 2*%lld+1= %lld\n",
+    printf("ERROR: Grid extent " FSTR64 " smaller than stencil diameter 2*" FSTR64 "+1= " FSTR64 "\n",
            size, radius, radius*2+1);
     exit(EXIT_FAILURE);
   }
@@ -162,7 +162,7 @@ int main(int argc, char **argv){
   matrix_space = nent*sizeof(double);
   matrix = (double *) malloc(matrix_space);
   if (!matrix) {
-    printf("ERROR: Could not allocate space for sparse matrix: %lld\n", nent);
+    printf("ERROR: Could not allocate space for sparse matrix: " FSTR64 "\n", nent);
     exit(EXIT_FAILURE);
   } 
 
@@ -192,7 +192,7 @@ int main(int argc, char **argv){
   } 
 
   printf("Matrix order          = "FSTR64U"\n", size2);
-  printf("Stencil diameter      = %16lld\n", 2*radius+1);
+  printf("Stencil diameter      = " FSTR64 "\n", 2*radius+1);
   printf("Sparsity              = %16.10lf\n", sparsity);
   printf("Number of iterations  = %16d\n", iterations);
 #ifdef SCRAMBLE
