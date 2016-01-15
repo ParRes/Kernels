@@ -87,7 +87,7 @@ HISTORY: - Written by Tom St. John, July 2015.
 int main(int argc, char ** argv) {
  
   int    Num_procs;       /* number of ranks                                     */
-  int    Num_procsx, Num_procsy; /* number of ranks in each coord direction      */
+  int    Num_procsx=0, Num_procsy=0; /* number of ranks in each coord direction      */
   int    my_ID;           /* SHMEM rank                                          */
   int    my_IDx, my_IDy;  /* coordinates of rank in rank grid                    */
   int    right_nbr;       /* global rank of right neighboring tile               */
@@ -104,7 +104,7 @@ int main(int argc, char ** argv) {
   DTYPE *left_buf_in[2];  /*       "         "                                   */
   int    root = 0;
   int    n, width, height;/* linear global and local grid dimension              */
-  int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
+  int    i, j, ii, jj, kk, iter, leftover;  /* dummies                   */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
   int    jstart, jend;    /* bounds of grid tile assigned to calling rank        */
   DTYPE  reference_norm;
@@ -367,7 +367,7 @@ int main(int argc, char ** argv) {
   bottom_buf_out = top_buf_out+RADIUS*width;
 
   top_buf_in[0]=(DTYPE*)prk_shmem_malloc(4*sizeof(DTYPE)*RADIUS*width);
-  if(!top_buf_in)
+  if(!(top_buf_in[0]))
   {
     printf("ERROR: Rank %d could not allocate input comm buffers for y-direction\n", my_ID);
     error=1;
@@ -386,7 +386,7 @@ int main(int argc, char ** argv) {
   left_buf_out=right_buf_out+RADIUS*height;
 
   right_buf_in[0]=(DTYPE*)prk_shmem_malloc(4*sizeof(DTYPE)*RADIUS*height);
-  if(!right_buf_in)
+  if(!(right_buf_in[0]))
   {
     printf("ERROR: Rank %d could not allocate input comm buffers for x-dimension\n", my_ID);
     error=1;
