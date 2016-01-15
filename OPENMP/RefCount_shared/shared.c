@@ -123,7 +123,7 @@ int main(int argc, char ** argv)
  
   iterations  = atol(*++argv);
   if (iterations < 1){
-    printf("ERROR: iterations must be >= 1 : %d \n",iterations);
+    printf("ERROR: iterations must be >= 1 : %ld \n",iterations);
     exit(EXIT_FAILURE);
   }
 

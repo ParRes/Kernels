@@ -122,7 +122,7 @@ int main(int argc, char ** argv) {
 
   order = atoi(*++argv); 
   if (order < 0){
-    printf("ERROR: Matrix Order must be greater than 0 : %d \n", order);
+    printf("ERROR: Matrix Order must be greater than 0 : %ld \n", order);
     exit(EXIT_FAILURE);
   }
 
