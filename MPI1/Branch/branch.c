@@ -126,6 +126,7 @@ HISTORY: Written by Rob Van der Wijngaart, May 2006.
 #define INS_HEAVY         99
 #define WITH_BRANCHES      1
 #define WITHOUT_BRANCHES   0
+#define MONKEY_BANANA     -1
 
 extern int fill_vec(int *vector, int vector_length, int iterations, int branch,
                     int *nfunc, int *rank);
@@ -144,7 +145,7 @@ int main(int argc, char ** argv)
   int        iterations;      /* number of times the branching loop is executed  */
   int        i, iter, aux;    /* dummies                                         */
   int        error = 0;       /* error flag                                      */
-  char       *branch_type;
+  char       *branch_type="";
   int        total=0, 
              total_sum,
              total_ref;       /* computed and stored verification values         */
@@ -196,6 +197,7 @@ int main(int argc, char ** argv)
       printf("Wrong branch type: %s; choose vector_stop, vector_go, ", branch_type);
       printf("no_vector, or ins_heavy\n");
       error = 1;
+      btype = MONKEY_BANANA;
       goto ENDOFTESTS;
     }
     ENDOFTESTS:;

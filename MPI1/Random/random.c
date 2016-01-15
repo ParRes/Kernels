@@ -180,7 +180,7 @@ int main(int argc, char **argv) {
   int               *senddispls; /* successive displacements in send buffer        */
   int               *recvdispls; /* successive dispalcemetns in receive buffer     */
   u64Int * RESTRICT Table;       /* (pseudo-)randomly accessed array               */
-  double            random_time; /* timing parameters                              */
+  double            random_time=0.0; /* timing parameters                              */
   int               Num_procs,   /* rank parameters                                */
                     my_ID,       /* rank of calling rank                           */
                     root=0;      /* ID of master rank                              */
@@ -287,7 +287,7 @@ int main(int argc, char **argv) {
     /* even though the table size can be represented, computing the space 
        required for the table may lead to overflow                                 */
     tablespace = (size_t) loctablesize*sizeof(u64Int);
-    if ((tablespace/sizeof(u64Int)) != loctablesize || tablespace <=0) {
+    if ((tablespace/((signed)sizeof(u64Int))) != loctablesize || tablespace <=0) {
       printf("ERROR: Cannot represent space for table on this system; ");
       printf("reduce log2 tablesize\n");
       error = 1;

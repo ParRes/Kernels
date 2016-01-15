@@ -129,7 +129,7 @@ int main(int argc, char **argv)
   double   scalar;        /* constant used in Triad operation            */
   int      iterations;    /* number of times vector loop gets repeated   */
   long int length,        /* vector length per rank                      */
-           total_length,  /* total vector length                         */
+           total_length=0,  /* total vector length                         */
            offset;        /* offset between vectors a and b, and b and c */
   double   bytes;         /* memory IO size                              */
   size_t   space;         /* memory used for a single vector             */

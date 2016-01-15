@@ -148,8 +148,8 @@ int main(int argc, char ** argv)
   int error;               /* error flag                            */
   double *A_p;             /* original matrix column block          */
   double *B_p;             /* transposed matrix column block        */
-  double *Work_in_p;       /* workspace for the transpose function  */
-  double *Work_out_p;      /* workspace for the transpose function  */
+  double *Work_in_p=NULL;       /* workspace for the transpose function  */
+  double *Work_out_p=NULL;      /* workspace for the transpose function  */
   double abserr,           /* absolute error                        */
          abserr_tot;       /* aggregate absolute error              */
   double epsilon = 1.e-8;  /* error tolerance                       */

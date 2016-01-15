@@ -99,9 +99,9 @@ int main(int argc, char ** argv)
   int source_disp;      /* ignored                                               */
   double *source_ptr;   /* pointer to left neighbor's shared memory window       */
   int p2pbuf;           /* dummy buffer used for empty synchronization message   */
-  long width, nbr_width;/* size of first dimension of 2D array of grid values of
+  long width, nbr_width=0;/* size of first dimension of 2D array of grid values of
                            target and neighbor ranks, including ghost point      */
-  int  offset, nbr_offset;/* space reserved for ghost point, if present          */
+  int  offset, nbr_offset=0;/* space reserved for ghost point, if present          */
   int  skip;            /* grid point to be skipped (only leftmost global rank)  */
 
 /*********************************************************************************
