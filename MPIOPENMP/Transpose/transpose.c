@@ -146,7 +146,6 @@ int main(int argc, char ** argv)
   int my_ID;               /* rank                                  */
   int root=0;              /* ID of root rank                       */
   int iterations;          /* number of times to do the transpose   */
-  int i, j, it, jt, istart;/* dummies                               */
   int iter;                /* index of iteration                    */
   int phase;               /* phase inside staged communication     */
   int colstart;            /* starting column for owning rank       */
@@ -293,26 +292,26 @@ int main(int argc, char ** argv)
   }
   
   /* Fill the original column matrix                                                */
-  istart = 0;  
+  int istart = 0;
 
   if (tiling) {
 #ifdef COLLAPSE
-    #pragma omp parallel for private (i,it,jt) collapse(2)
+    #pragma omp parallel for collapse(2)
 #else
-    #pragma omp parallel for private (i,it,jt)
+    #pragma omp parallel for
 #endif
-    for (j=0; j<Block_order; j+=Tile_order) 
-      for (i=0; i<order; i+=Tile_order) 
-        for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) 
-          for (it=i; it<MIN(order,i+Tile_order); it++) {
+    for (int j=0; j<Block_order; j+=Tile_order) 
+      for (int i=0; i<order; i+=Tile_order) 
+        for (int jt=j; jt<MIN(Block_order,j+Tile_order);jt++) 
+          for (int it=i; it<MIN(order,i+Tile_order); it++) {
             A(it,jt) = (double) (order*(jt+colstart) + it);
             B(it,jt) = 0.0;
           }
   }
   else {
-    #pragma omp parallel for private (i)
-    for (j=0;j<Block_order;j++) 
-      for (i=0;i<order; i++) {
+    #pragma omp parallel for
+    for (int j=0;j<Block_order;j++) 
+      for (int i=0;i<order; i++) {
         A(i,j) = (double) (order*(j+colstart) + i);
         B(i,j) = 0.0;
     }
@@ -329,23 +328,23 @@ int main(int argc, char ** argv)
     /* do the local transpose                                                       */
     istart = colstart; 
     if (!tiling) {
-    #pragma omp parallel for private (j)
-      for (i=0; i<Block_order; i++) 
-        for (j=0; j<Block_order; j++) {
+    #pragma omp parallel for
+      for (int i=0; i<Block_order; i++) 
+        for (int j=0; j<Block_order; j++) {
           B(j,i) += A(i,j);
           A(i,j) += 1.0;
 	}
     }
     else {
 #ifdef COLLAPSE
-      #pragma omp parallel for private (j,it,jt) collapse(2)
+      #pragma omp parallel for collapse(2)
 #else
-      #pragma omp parallel for private (j,it,jt)
+      #pragma omp parallel for
 #endif
-      for (i=0; i<Block_order; i+=Tile_order) 
-        for (j=0; j<Block_order; j+=Tile_order) 
-          for (it=i; it<MIN(Block_order,i+Tile_order); it++)
-            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+      for (int i=0; i<Block_order; i+=Tile_order) 
+        for (int j=0; j<Block_order; j+=Tile_order) 
+          for (int it=i; it<MIN(Block_order,i+Tile_order); it++)
+            for (int jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
               B(jt,it) += A(it,jt); 
               A(it,jt) += 1.0;
 	    }
@@ -362,23 +361,23 @@ int main(int argc, char ** argv)
 
       istart = send_to*Block_order; 
       if (!tiling) {
-        #pragma omp parallel for private (j)
-        for (i=0; i<Block_order; i++) 
-          for (j=0; j<Block_order; j++){
+        #pragma omp parallel for
+        for (int i=0; i<Block_order; i++) 
+          for (int j=0; j<Block_order; j++){
 	    Work_out(j,i) = A(i,j);
             A(i,j) += 1.0;
 	  }
       }
       else {
 #ifdef COLLAPSE
-        #pragma omp parallel for private (j,it,jt) collapse(2)
+        #pragma omp parallel for collapse(2)
 #else
-        #pragma omp parallel for private (j,it,jt)
+        #pragma omp parallel for
 #endif
-        for (i=0; i<Block_order; i+=Tile_order) 
-          for (j=0; j<Block_order; j+=Tile_order) 
-            for (it=i; it<MIN(Block_order,i+Tile_order); it++)
-              for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+        for (int i=0; i<Block_order; i+=Tile_order) 
+          for (int j=0; j<Block_order; j+=Tile_order) 
+            for (int it=i; it<MIN(Block_order,i+Tile_order); it++)
+              for (int jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
                 Work_out(jt,it) = A(it,jt); 
                 A(it,jt) += 1.0;
 	      }
@@ -397,11 +396,12 @@ int main(int argc, char ** argv)
 
       istart = recv_from*Block_order; 
       /* scatter received block to transposed matrix; no need to tile */
-      #pragma omp parallel for private (i)
-      for (j=0; j<Block_order; j++)
-        for (i=0; i<Block_order; i++) {
+      #pragma omp parallel for
+      for (int j=0; j<Block_order; j++) {
+        for (int i=0; i<Block_order; i++) {
           B(i,j) += Work_in(i,j);
         }
+      }
 
     }  /* end of phase loop  */
   } /* end of iterations */
@@ -413,9 +413,11 @@ int main(int argc, char ** argv)
   abserr = 0.0;
   istart = 0;
   double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
-  #pragma omp parallel for private (i)
-  for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
-      abserr += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
+  #pragma omp parallel for
+  for (int j=0;j<Block_order;j++) {
+      for (int i=0;i<order; i++) {
+          abserr += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
+      }
   }
 
   MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
