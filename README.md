@@ -18,7 +18,7 @@ they have not been optimimzed for the features of any particular system.
 
 ### Note on stream
 
-Note that while our "nstream" operations are based on the well
+Note that while our `nstream` operations are based on the well
 known STREAM benchmark by John D. McCalpin, we modified the source 
 code and do not follow the run-rules associated with this benchmark.
 Hence, according to the rules defined in the STREAM license (see 
@@ -130,6 +130,7 @@ and rerunning the kernels.
 
 # Example build and runs
 
+```sh
 make all default_opt_flags="-O2" "matrix_rank=7" "number_of_functions=200" 
 ./scripts/small/runopenmp
 ./scripts/small/runmpi1
@@ -139,7 +140,7 @@ make all default_opt_flags="-O2" "matrix_rank=7" "number_of_functions=200"
 ```
 
 To exercise all kernels, type
+```sh
 ./scripts/small/runall
 ./scripts/wide/runall
-
-
+```
