@@ -21,7 +21,7 @@ case "$os" in
     Linux)
         MAKE_JNUM=2
         M4_VERSION=1.4.17
-        LIBTOOL_VERSION=2.4.4
+        LIBTOOL_VERSION=2.4.6
         AUTOCONF_VERSION=2.69
         AUTOMAKE_VERSION=1.15
 
