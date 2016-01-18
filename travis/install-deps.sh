@@ -74,6 +74,7 @@ case "$PRK_TARGET" in
         ;;
     allhpx5)
         echo "HPX-5"
+        sh ./travis/install-autotools.sh $TRAVIS_ROOT
         sh ./travis/install-hpx5.sh $TRAVIS_ROOT
         ;;
 esac
