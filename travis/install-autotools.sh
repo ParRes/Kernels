@@ -8,15 +8,17 @@ TRAVIS_ROOT="$1"
 
 case "$os" in
     Darwin)
+        set +e # do not fail on error
         brew update
         brew info autoconf automake libtool
-        #brew install autoconf automake libtool
+        brew install autoconf automake libtool
         brew upgrade autoconf automake libtool
         which glibtool
         which glibtoolize
         glibtool --version
         ln -s `which glibtool` ${TRAVIS_ROOT}/bin/libtool
         ln -s `which glibtoolize` ${TRAVIS_ROOT}/bin/libtoolize
+        set -e # restore fail on error
         ;;
     Linux)
         MAKE_JNUM=2
