@@ -21,7 +21,7 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     esac
 
     cd $TRAVIS_ROOT
-    git clone https://github.com/uwsampa/grappa.git grappa-source
+    git clone --depth 10 https://github.com/uwsampa/grappa.git grappa-source
     cd grappa-source
     # DEBUG
     find /usr -name gcc\* -type f
