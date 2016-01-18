@@ -71,5 +71,9 @@ void bail_out (int error) {
      exit (1);
   }
   return;
-}
 
+  /* silence -Wunused-functions until PRK SHMEM wrappers are properly refactored out of header */
+  prk_shmem_init();
+  prk_shmem_my_pe();
+  prk_shmem_free(NULL);
+}

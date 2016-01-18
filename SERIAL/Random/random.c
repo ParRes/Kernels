@@ -185,7 +185,7 @@ int main(int argc, char **argv) {
 
 #ifdef LONG_IS_64BITS
   if (sizeof(long) != 8) {
-    printf("ERROR: Makefile says \"long\" is 8 bytes, but it is %d bytes\n",
+    printf("ERROR: Makefile says \"long\" is 8 bytes, but it is %zu bytes\n",
            sizeof(long)); 
     exit(EXIT_FAILURE);
   }
@@ -250,7 +250,7 @@ int main(int argc, char **argv) {
   /* even though the table size can be represented, computing the space 
      required for the table may lead to overflow                            */
   tablespace = (size_t) tablesize*sizeof(u64Int);
-  if ((tablespace/sizeof(u64Int)) != tablesize || tablespace <=0) {
+  if ((signed)(tablespace/sizeof(u64Int)) != tablesize || tablespace <=0) {
     printf("Cannot represent space for table on this system; ");
     printf("reduce log2 tablesize\n");
     exit(EXIT_FAILURE);

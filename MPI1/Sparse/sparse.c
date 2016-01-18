@@ -99,11 +99,11 @@ int main(int argc, char **argv){
   int               lsize;      /* logarithmic linear size of grid                */
   int               lsize2;     /* logarithmic size of grid                       */
   int               size;       /* linear size of grid                            */
-  s64Int            size2;      /* matrix order (=total # points in grid)         */
+  u64Int            size2;      /* matrix order (=total # points in grid)         */
   int               radius,     /* stencil parameters                             */
                     stencil_size; 
   s64Int            row, col, first, last; /* dummies                             */
-  u64Int            i, j;       /* dummies                                        */
+  int               i, j;       /* dummies                                        */
   int               iterations; /* number of times the multiplication is done     */
 
   s64Int            elm;        /* sequence number of matrix nonzero              */
@@ -112,7 +112,7 @@ int main(int argc, char **argv){
                     jend,
                     nrows,
                     row_offset;
-  s64Int            nent;       /* number of nonzero entries                      */
+  u64Int            nent;       /* number of nonzero entries                      */
   double            sparsity;   /* fraction of non-zeroes in matrix               */
   double            local_sparse_time,/* timing parameters                        */
                     sparse_time, 
@@ -248,7 +248,7 @@ int main(int argc, char **argv){
 
   matrix = (double *) malloc(matrix_space);
   if (!matrix) {
-    printf("ERROR: rank %d could not allocate space for sparse matrix: "FSTR64U"\n", 
+    printf("ERROR: rank %d could not allocate space for sparse matrix: %zu\n", 
            my_ID, matrix_space);
     error = 1;
   } 
@@ -358,7 +358,9 @@ int main(int argc, char **argv){
     /* do the actual matrix multiplication                                        */
     for (row=0; row<nrows; row++) {
       first = stencil_size*row; last = first+stencil_size-1;
+#ifdef __INTEL_COMPILER
       #pragma simd reduction(+:temp) 
+#endif
       for (temp=0.0,col=first; col<=last; col++) {
         temp += matrix[col]*vector[colIndex[col]];
       }

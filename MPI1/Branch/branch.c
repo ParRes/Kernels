@@ -126,6 +126,7 @@ HISTORY: Written by Rob Van der Wijngaart, May 2006.
 #define INS_HEAVY         99
 #define WITH_BRANCHES      1
 #define WITHOUT_BRANCHES   0
+#define MONKEY_BANANA     -1
 
 extern int fill_vec(int *vector, int vector_length, int iterations, int branch,
                     int *nfunc, int *rank);
@@ -144,13 +145,12 @@ int main(int argc, char ** argv)
   int        iterations;      /* number of times the branching loop is executed  */
   int        i, iter, aux;    /* dummies                                         */
   int        error = 0;       /* error flag                                      */
-  char       *branch_type;
+  char       *branch_type="";
   int        total=0, 
              total_sum,
              total_ref;       /* computed and stored verification values         */
   int        btype;
   int        * RESTRICT vector, * RESTRICT index;
-  int        factor = -1;
 
 /*********************************************************************
 ** Initialize the MPI environment
@@ -197,6 +197,7 @@ int main(int argc, char ** argv)
       printf("Wrong branch type: %s; choose vector_stop, vector_go, ", branch_type);
       printf("no_vector, or ins_heavy\n");
       error = 1;
+      btype = MONKEY_BANANA;
       goto ENDOFTESTS;
     }
     ENDOFTESTS:;
@@ -239,13 +240,17 @@ int main(int argc, char ** argv)
 
     case VECTOR_STOP:
       for (iter=0; iter<iterations; iter+=2) {
+#ifdef __INTEL_COMPILER
         #pragma vector always
+#endif
         for (i=0; i<vector_length; i++) { 
           aux = -(3 - (i&7));
           if (vector[index[i]]>0) vector[i] -= 2*vector[i];
           else                    vector[i] -= 2*aux;
         }
+#ifdef __INTEL_COMPILER
         #pragma vector always
+#endif
         for (i=0; i<vector_length; i++) { 
           aux = (3 - (i&7));
           if (vector[index[i]]>0) vector[i] -= 2*vector[i];
@@ -256,13 +261,17 @@ int main(int argc, char ** argv)
 
     case VECTOR_GO:
       for (iter=0; iter<iterations; iter+=2) {
+#ifdef __INTEL_COMPILER
         #pragma vector always
+#endif
         for (i=0; i<vector_length; i++) {
           aux = -(3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[i];
           else       vector[i] -= 2*aux;
         }
+#ifdef __INTEL_COMPILER
         #pragma vector always
+#endif
         for (i=0; i<vector_length; i++) {
           aux = (3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[i];
@@ -273,13 +282,17 @@ int main(int argc, char ** argv)
 
     case NO_VECTOR:
       for (iter=0; iter<iterations; iter+=2) {
+#ifdef __INTEL_COMPILER
         #pragma vector always
+#endif
         for (i=0; i<vector_length; i++) {
           aux = -(3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[index[i]];
           else       vector[i] -= 2*aux;
         }
+#ifdef __INTEL_COMPILER
         #pragma vector always
+#endif
         for (i=0; i<vector_length; i++) {
           aux = (3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[index[i]];
@@ -311,7 +324,9 @@ int main(int argc, char ** argv)
   case VECTOR_STOP:
   case VECTOR_GO:
     for (iter=0; iter<iterations; iter+=2) {
+#ifdef __INTEL_COMPILER
       #pragma vector always
+#endif
       for (i=0; i<vector_length; i++) { 
         aux = -(3-(i&7)); 
         vector[i] -= (vector[i] + aux);
@@ -325,12 +340,16 @@ int main(int argc, char ** argv)
 
   case NO_VECTOR:
     for (iter=0; iter<iterations; iter+=2) {
+#ifdef __INTEL_COMPILER
       #pragma vector always
+#endif
       for (i=0; i<vector_length; i++) {
         aux = -(3-(i&7));
         vector[i] -= (vector[index[i]]+aux); 
       }
+#ifdef __INTEL_COMPILER
       #pragma vector always
+#endif
       for (i=0; i<vector_length; i++) {
         aux = (3-(i&7));
         vector[i] -= (vector[index[i]]+aux); 

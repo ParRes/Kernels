@@ -89,11 +89,15 @@ int main(int argc, char ** argv)
 {
   long       iterations;      /* total number of reference pair counter updates */
   long       stream_size;     /* length of stream triad creating private work   */ 
+#ifdef VERBOSE
   int        page_fit;        /* indicates that counters fit on different pages */
+#endif
   size_t     store_size;      /* amount of space reserved for counters          */
   double     *pcounter1,     
              *pcounter2;      /* pointers to counters                           */
+#ifdef DEPENDENT
   double     cosa, sina;      /* cosine and sine of rotation angle              */
+#endif
   double     *counter_space;  /* pointer to space reserved for counters         */
   double     refcounter1,
              refcounter2;     /* reference values for counters                  */
@@ -123,7 +127,7 @@ int main(int argc, char ** argv)
  
   iterations  = atol(*++argv);
   if (iterations < 1){
-    printf("ERROR: iterations must be >= 1 : %d \n",iterations);
+    printf("ERROR: iterations must be >= 1 : %ld \n",iterations);
     exit(EXIT_FAILURE);
   }
 
@@ -138,14 +142,18 @@ int main(int argc, char ** argv)
   /* initialize shared counters; we put them on different pages, if possible.
      If the page size equals the whole memory, this will fail, and we reduce
      the space required */
+#ifdef VERBOSE
   page_fit = 1;
+#endif
   store_size = (size_t) getpagesize();
 #ifdef VERBOSE
   printf("Page size = %d\n", getpagesize());
 #endif
   counter_space = (double *) malloc(store_size+sizeof(double));
   while (!counter_space && store_size>2*sizeof(double)) {
+#ifdef VERBOSE
     page_fit=0;
+#endif
 
     store_size/=2;
     counter_space = (double *) malloc(store_size+sizeof(double));
@@ -166,8 +174,10 @@ int main(int argc, char ** argv)
   COUNTER1 = 1.0;
   COUNTER2 = 0.0;
 
+#ifdef DEPENDENT
   cosa = cos(1.0);
   sina = sin(1.0);
+#endif
  
   /* initialize the lock on which we will be pounding */
   omp_init_lock(&counter_lock);
@@ -175,7 +185,9 @@ int main(int argc, char ** argv)
   #pragma omp parallel 
   {
   long   iter, j;   /* dummies                                        */
+#ifdef DEPENDENT
   double tmp1;      /* local copy of previous value of COUNTER1       */
+#endif
   double *a, *b, *c;/* private vectors                                */
   int    num_error=0;/* errors in private stream execution            */
   double aj, bj, cj;

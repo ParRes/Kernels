@@ -153,8 +153,8 @@ int main(int argc, char ** argv)
   int error;               /* error flag                            */
   double *A_p;             /* original matrix column block          */
   double *B_p;             /* transposed matrix column block        */
-  double *Work_in_p;       /* workspace for the transpose function  */
-  double *Work_out_p;      /* workspace for the transpose function  */
+  double *Work_in_p=NULL;  /* workspace for the transpose function  */
+  double *Work_out_p=NULL; /* workspace for the transpose function  */
   double abserr,           /* absolute error                        */
          abserr_tot;       /* aggregate absolute error              */
   double epsilon = 1.e-8;  /* error tolerance                       */
@@ -326,7 +326,7 @@ int main(int argc, char ** argv)
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
                 Work_out(jt,it) = A(it,jt); 
-                A(it,jt) += 1,0;
+                A(it,jt) += 1.0;
 	      }
       }
 

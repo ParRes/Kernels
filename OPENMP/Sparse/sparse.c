@@ -175,8 +175,8 @@ int main(int argc, char **argv){
   nent = size2*stencil_size;
 
   matrix_space = nent*sizeof(double);
-  if (matrix_space/sizeof(double) != nent) {
-    printf("ERROR: Cannot represent space for matrix: %ul\n", matrix_space);
+  if ((s64Int)(matrix_space/sizeof(double)) != nent) {
+    printf("ERROR: Cannot represent space for matrix: %lu\n", matrix_space);
     exit(EXIT_FAILURE);
   } 
 
@@ -187,8 +187,8 @@ int main(int argc, char **argv){
   } 
 
   vector_space = 2*size2*sizeof(double);
-  if (vector_space/sizeof(double) != 2*size2) {
-    printf("ERROR: Cannot represent space for vectors: %ul\n", vector_space);
+  if ((s64Int)(vector_space/sizeof(double)) != 2*size2) {
+    printf("ERROR: Cannot represent space for vectors: %lu\n", vector_space);
     exit(EXIT_FAILURE);
   } 
 
@@ -200,8 +200,8 @@ int main(int argc, char **argv){
   result = vector + size2;
 
   index_space = nent*sizeof(s64Int);
-  if (index_space/sizeof(s64Int) != nent) {
-    printf("ERROR: Cannot represent space for column indices: %ul\n", index_space);
+  if ((s64Int)(index_space/sizeof(s64Int)) != nent) {
+    printf("ERROR: Cannot represent space for column indices: %lu\n", index_space);
     exit(EXIT_FAILURE);
   } 
   colIndex = (s64Int *) malloc(index_space);
@@ -282,7 +282,9 @@ int main(int argc, char **argv){
     #pragma omp for
     for (row=0; row<size2; row++) {
       first = stencil_size*row; last = first+stencil_size-1;
-      #pragma simd reduction(+:temp) 
+#ifdef __INTEL_COMPILER
+      #pragma simd reduction(+:temp)
+#endif
       for (temp=0.0,col=first; col<=last; col++) {
         temp += matrix[col]*vector[colIndex[col]];
       }

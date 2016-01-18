@@ -86,7 +86,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 int main(int argc, char ** argv) {
 
   long   n;               /* linear grid dimension                               */
-  int    i, j, ii, jj, it, jt, iter;  /* dummies                                 */
+  int    i, j, ii, jj, iter;  /* dummies                                 */
   DTYPE  norm,            /* L1 norm of solution                                 */
          reference_norm;
   DTYPE  f_active_points; /* interior of grid with respect to stencil            */
@@ -136,7 +136,7 @@ int main(int argc, char ** argv) {
   n  = atol(*++argv);
 
   if (n < 1){
-    printf("ERROR: grid dimension must be positive: %d\n", n);
+    printf("ERROR: grid dimension must be positive: %ld\n", n);
     exit(EXIT_FAILURE);
   }
 
@@ -146,7 +146,7 @@ int main(int argc, char ** argv) {
   }
 
   if (2*RADIUS +1 > n) {
-    printf("ERROR: Stencil radius %d exceeds grid size %d\n", RADIUS, n);
+    printf("ERROR: Stencil radius %d exceeds grid size %ld\n", RADIUS, n);
     exit(EXIT_FAILURE);
   }
 
@@ -187,7 +187,7 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
 
-  #pragma omp parallel private(i, j, ii, jj, it, jt, iter) 
+  #pragma omp parallel private(i, j, ii, jj, iter) 
   {
 
   #pragma omp master
@@ -202,7 +202,7 @@ int main(int argc, char ** argv) {
   } 
   else {
     printf("Number of threads    = %d\n",nthread_input);
-    printf("Grid size            = %d\n", n);
+    printf("Grid size            = %ld\n", n);
     printf("Radius of stencil    = %d\n", RADIUS);
     printf("Number of iterations = %d\n", iterations);
 #ifdef STAR
@@ -232,6 +232,8 @@ int main(int argc, char ** argv) {
 #ifdef PARALLELFOR
 } 
 #endif
+
+  stencil_time = 0.0; /* silence compiler warning */
 
   /* intialize the input and output arrays                                     */
 #ifdef PARALLELFOR

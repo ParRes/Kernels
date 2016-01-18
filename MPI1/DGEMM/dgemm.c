@@ -368,8 +368,7 @@ MPI_Comm comm_row,      /* Communicator for this row of nodes      */
        comm_col;        /* Communicator for this column of nodes   */
 {
   int myrow, mycol,     /* my  row and column index                */
-      nprow, npcol,     /* number of node rows and columns         */
-      i, j, kk, updt,   /* misc. index variables                   */
+      kk, updt,         /* misc. index variables                   */
       currow, curcol,   /* index of row and column that hold current 
                            row and column, resp., for rank-1 update*/
       ii, jj;           /* local index (on currow and curcol, resp.)

@@ -179,7 +179,17 @@ HISTORY: Written by Rob Van der Wijngaart, June 2006.
 #endif
 
 static u64Int PRK_starts(s64Int);
-static int    poweroftwo(int);
+
+#ifdef UNUSED
+/* utility routine that tests whether an integer is a power of two         */
+static int poweroftwo(int n) {
+  int log2n = 0;
+
+  while ((1<<log2n)<n) log2n++;
+  if (1<<log2n != n) return (-1);
+  else               return (log2n);
+}
+#endif
 
 int main(int argc, char **argv) {
 
@@ -210,7 +220,7 @@ int main(int argc, char **argv) {
 
 #ifdef LONG_IS_64BITS
   if (sizeof(long) != 8) {
-    printf("ERROR: Makefile says \"long\" is 8 bytes, but it is %d bytes\n",
+    printf("ERROR: Makefile says \"long\" is 8 bytes, but it is %zu bytes\n",
            sizeof(long)); 
     exit(EXIT_FAILURE);
   }
@@ -286,7 +296,7 @@ int main(int argc, char **argv) {
   /* even though the table size can be represented, computing the space 
      required for the table may lead to overflow                            */
   tablespace = (size_t) tablesize*sizeof(u64Int);
-  if ((tablespace/sizeof(u64Int)) != tablesize || tablespace <=0) {
+  if ((s64Int)(tablespace/sizeof(u64Int)) != tablesize || tablespace <=0) {
     printf("Cannot represent space for table on this system; ");
     printf("reduce log2 tablesize\n");
     exit(EXIT_FAILURE);
@@ -490,11 +500,3 @@ u64Int PRK_starts(s64Int n)
   return ran; 
 } 
 
-/* utility routine that tests whether an integer is a power of two         */
-int poweroftwo(int n) {
-  int log2n = 0;
-
-  while ((1<<log2n)<n) log2n++;
-  if (1<<log2n != n) return (-1);
-  else               return (log2n);
-}

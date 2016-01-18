@@ -85,7 +85,7 @@ int main(int argc, char ** argv)
   size_t Block_order;
   size_t Block_size;
   size_t Colblock_size;
-  int Tile_order=32;
+  size_t Tile_order=32;
   int tiling;
   int Num_procs;     /* Number of ranks                                          */
   size_t order;      /* overall matrix order                                     */
@@ -94,7 +94,6 @@ int main(int argc, char ** argv)
   int my_ID;         /* rank                                                     */
   int root=0;        /* root rank of a communicator                              */
   int iterations;    /* number of times to run the pipeline algorithm            */
-  int i, j, it, jt, ID;/* dummies                                                */
   int iter;          /* index of iteration                                       */
   int phase;         /* phase in the staged communication                        */
   size_t colstart;   /* sequence number of first column owned by calling rank    */
@@ -170,7 +169,7 @@ int main(int argc, char ** argv)
     } 
 
     order = atol(*++argv);
-    if (order < Num_procs) {
+    if (order < (size_t)Num_procs) {
       printf("ERROR: matrix order %ld should at least # procs %d\n", 
              order, Num_procs);
       error = 1; goto ENDOFTESTS;
@@ -200,7 +199,7 @@ int main(int argc, char ** argv)
     printf("Matrix order         = %ld\n", order);
     printf("Number of iterations = %d\n", iterations);
     if ((Tile_order > 0) && (Tile_order < order))
-       printf("Tile size            = %d\n", Tile_order);
+       printf("Tile size            = %zu\n", Tile_order);
     else  printf("Untiled\n");
 #ifndef SYNCHRONOUS
     printf("Non-");
@@ -307,20 +306,20 @@ int main(int argc, char ** argv)
 
   /* Fill the original column matrix                                             */
   istart = 0;  
-  int chunk_size = Block_order/group_size;
+  size_t chunk_size = Block_order/group_size;
   if (tiling) {
-      for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j+=Tile_order) {
-      for (i=0;i<order; i+=Tile_order) 
-        for (jt=j; jt<MIN((shm_ID+1)*chunk_size,j+Tile_order); jt++)
-          for (it=i; it<MIN(order,i+Tile_order); it++) {
+      for (size_t j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j+=Tile_order) {
+      for (size_t i=0;i<order; i+=Tile_order) 
+        for (size_t jt=j; jt<MIN((shm_ID+1)*chunk_size,j+Tile_order); jt++)
+          for (size_t it=i; it<MIN(order,i+Tile_order); it++) {
             A(it,jt) = (double) ((double)order*(jt+colstart) + it);
             B(it,jt) = 0.0;
           }
     }
   }
   else {
-    for (j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j++) 
-      for (i=0;i<order; i++) {
+    for (size_t j=shm_ID*chunk_size;j<(shm_ID+1)*chunk_size;j++) 
+      for (size_t i=0;i<order; i++) {
         A(i,j) = (double)((double)order*(j+colstart) + i);
         B(i,j) = 0.0;
       }
@@ -341,8 +340,8 @@ int main(int argc, char ** argv)
     /* do the local transpose                                                    */
     istart = colstart; 
     if (!tiling) {
-      for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i++) {
-        for (j=0; j<Block_order; j++) {
+      for (size_t i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i++) {
+        for (size_t j=0; j<Block_order; j++) {
               B(j,i) += A(i,j);
               A(i,j) += 1.0;
 	      //              printf("(%d,%d,%d)\n", my_ID, i,j);
@@ -350,10 +349,10 @@ int main(int argc, char ** argv)
       }
     }
     else {
-      for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order) {
-        for (j=0; j<Block_order; j+=Tile_order) {
-          for (it=i; it<MIN((shm_ID+1)*chunk_size,i+Tile_order); it++)
-            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+      for (size_t i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order) {
+        for (size_t j=0; j<Block_order; j+=Tile_order) {
+          for (size_t it=i; it<MIN((shm_ID+1)*chunk_size,i+Tile_order); it++)
+            for (size_t jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
               B(jt,it) += A(it,jt); 
               A(it,jt) += 1.0;
 	      //              printf("(%d,%d,%d)\n", my_ID, it,jt);
@@ -368,17 +367,17 @@ int main(int argc, char ** argv)
 
       istart = send_to*Block_order; 
       if (!tiling) {
-        for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i++) 
-          for (j=0; j<Block_order; j++){
+        for (size_t i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i++) 
+          for (size_t j=0; j<Block_order; j++){
 	    Work_out(j,i) = A(i,j);
             A(i,j) += 1.0;
 	  }
       }
       else {
-        for (i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order)
-          for (j=0; j<Block_order; j+=Tile_order) 
-            for (it=i; it<MIN((shm_ID+1)*chunk_size,i+Tile_order); it++)
-              for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+        for (size_t i=shm_ID*chunk_size; i<(shm_ID+1)*chunk_size; i+=Tile_order)
+          for (size_t j=0; j<Block_order; j+=Tile_order) 
+            for (size_t it=i; it<MIN((shm_ID+1)*chunk_size,i+Tile_order); it++)
+              for (size_t jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
                 Work_out(jt,it) = A(it,jt); 
                 A(it,jt) += 1.0;
 	      }
@@ -411,8 +410,8 @@ int main(int argc, char ** argv)
 
       istart = recv_from*Block_order; 
       /* scatter received block to transposed matrix; no need to tile */
-      for (j=shm_ID*chunk_size; j<(shm_ID+1)*chunk_size; j++)
-        for (i=0; i<Block_order; i++) 
+      for (size_t j=shm_ID*chunk_size; j<(shm_ID+1)*chunk_size; j++)
+        for (size_t i=0; i<Block_order; i++) 
           B(i,j) += Work_in(i,j);
 
     }  /* end of phase loop  */
@@ -427,8 +426,8 @@ int main(int argc, char ** argv)
   istart = 0;
   double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   /*  for (j=shm_ID;j<Block_order;j+=group_size) for (i=0;i<order; i++) { */
-  for (j=shm_ID*chunk_size; j<(shm_ID+1)*chunk_size; j++)
-    for (i=0;i<order; i++) { 
+  for (size_t j=shm_ID*chunk_size; j<(shm_ID+1)*chunk_size; j++)
+    for (size_t i=0;i<order; i++) { 
       abserr += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
     }
 

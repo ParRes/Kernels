@@ -98,7 +98,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 int main(int argc, char ** argv) {
  
   int    Num_procs;       /* number of ranks                                     */
-  int    Num_procsx, Num_procsy; /* number of ranks in each coord direction      */
+  int    Num_procsx=0, Num_procsy=0; /* number of ranks in each coord direction      */
   int    my_ID;           /* MPI rank                                            */
   int    my_IDx, my_IDy;  /* coordinates of rank in rank grid                    */
   int    right_nbr;       /* global rank of right neighboring tile               */
@@ -115,7 +115,7 @@ int main(int argc, char ** argv) {
   DTYPE *left_buf_in;     /*       "         "                                   */
   int    root = 0;
   int    n, width, height;/* linear global and local grid dimension              */
-  int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
+  int    i, j, ii, jj, kk, iter, leftover;  /* dummies                   */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
   int    jstart, jend;    /* bounds of grid tile assigned to calling rank        */
   DTYPE  norm,            /* L1 norm of solution                                 */

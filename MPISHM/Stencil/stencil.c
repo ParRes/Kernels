@@ -158,20 +158,22 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 int main(int argc, char ** argv) {
  
   int    Num_procs;       /* number of ranks                                     */
-  int    Num_procsx, 
-         Num_procsy;      /* number of ranks in each coord direction             */
-  int    Num_groupsx, 
-         Num_groupsy;     /* number of blocks in each coord direction            */
+  int    Num_procsx=0,
+         Num_procsy=0;    /* number of ranks in each coord direction             */
+  int    Num_groupsx=0,
+         Num_groupsy=0;   /* number of blocks in each coord direction            */
   int    my_group;        /* sequence number of shared memory block              */
   int    my_group_IDx,
          my_group_IDy;    /* coordinates of block within block grid              */
   int    group_size;      /* number of ranks in shared memory group              */
-  int    group_sizex,
-         group_sizey;     /* number of ranks in block in each coord direction    */
+  int    group_sizex=0,
+         group_sizey=0;   /* number of ranks in block in each coord direction    */
   int    my_ID;           /* MPI rank                                            */
-  int    my_global_IDx, 
+#ifdef UNUSED
+  int    my_global_IDx,
          my_global_IDy;   /* coordinates of rank in overall rank grid            */
-  int    my_local_IDx, 
+#endif
+  int    my_local_IDx,
          my_local_IDy;    /* coordinates of rank within shared memory block      */
   int    right_nbr;       /* global rank of right neighboring tile               */
   int    left_nbr;        /* global rank of left neighboring tile                */
@@ -192,7 +194,7 @@ int main(int argc, char ** argv) {
   long   n, width, height;/* linear global and block grid dimension              */
   int    width_rank, 
          height_rank;     /* linear local dimension                              */
-  int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
+  int    i, j, ii, jj, kk, iter, leftover;  /* dummies                   */
   int    istart_rank, 
          iend_rank;       /* bounds of grid tile assigned to calling rank        */
   int    jstart_rank, 
@@ -368,8 +370,10 @@ int main(int argc, char ** argv) {
   my_group_IDy = my_group/Num_groupsx;
   my_local_IDx = my_ID%group_sizex;
   my_local_IDy = (my_ID%group_size)/group_sizex;
+#ifdef UNUSED
   my_global_IDx = my_group_IDx*group_sizex+my_local_IDx;
   my_global_IDy = my_group_IDy*group_sizey+my_local_IDy;
+#endif
 
   /* set all neighboring ranks to -1 (no communication with those ranks) */
   left_nbr = right_nbr = top_nbr = bottom_nbr = -1;

@@ -62,7 +62,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #else 
   typedef unsigned long long u64Int; 
   typedef long long          s64Int; 
-  #define FSTR64             "%16ll" 
+  #define FSTR64             "%16lld" 
   #define FSTR64U            "%16llu" 
 #endif 
 

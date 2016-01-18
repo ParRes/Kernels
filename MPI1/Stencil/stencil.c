@@ -98,25 +98,25 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 int main(int argc, char ** argv) {
  
   int    Num_procs;       /* number of ranks                                     */
-  int    Num_procsx, Num_procsy; /* number of ranks in each coord direction      */
+  int    Num_procsx=0, Num_procsy=0; /* number of ranks in each coord direction      */
   int    my_ID;           /* MPI rank                                            */
   int    my_IDx, my_IDy;  /* coordinates of rank in rank grid                    */
   int    right_nbr;       /* global rank of right neighboring tile               */
   int    left_nbr;        /* global rank of left neighboring tile                */
   int    top_nbr;         /* global rank of top neighboring tile                 */
   int    bottom_nbr;      /* global rank of bottom neighboring tile              */
-  DTYPE *top_buf_out;     /* communication buffer                                */
-  DTYPE *top_buf_in;      /*       "         "                                   */
-  DTYPE *bottom_buf_out;  /*       "         "                                   */
-  DTYPE *bottom_buf_in;   /*       "         "                                   */
-  DTYPE *right_buf_out;   /*       "         "                                   */
-  DTYPE *right_buf_in;    /*       "         "                                   */
-  DTYPE *left_buf_out;    /*       "         "                                   */
-  DTYPE *left_buf_in;     /*       "         "                                   */
+  DTYPE *top_buf_out=NULL;     /* communication buffer                                */
+  DTYPE *top_buf_in=NULL;      /*       "         "                                   */
+  DTYPE *bottom_buf_out=NULL;  /*       "         "                                   */
+  DTYPE *bottom_buf_in=NULL;   /*       "         "                                   */
+  DTYPE *right_buf_out=NULL;   /*       "         "                                   */
+  DTYPE *right_buf_in=NULL;    /*       "         "                                   */
+  DTYPE *left_buf_out=NULL;    /*       "         "                                   */
+  DTYPE *left_buf_in=NULL;     /*       "         "                                   */
   int    root = 0;
   int    n, width, height;/* linear global and local grid dimension              */
   long   nsquare;         /* total number of grid points                         */
-  int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
+  int    i, j, ii, jj, kk, iter, leftover;  /* dummies                   */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
   int    jstart, jend;    /* bounds of grid tile assigned to calling rank        */
   DTYPE  norm,            /* L1 norm of solution                                 */

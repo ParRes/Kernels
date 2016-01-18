@@ -98,7 +98,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 int main(int argc, char ** argv) {
  
   int    Num_procs;       /* number of ranks                                     */
-  int    Num_procsx, Num_procsy; /* number of ranks in each coord direction      */
+  int    Num_procsx=0, Num_procsy=0; /* number of ranks in each coord direction      */
   int    my_ID;           /* MPI rank                                            */
   int    my_IDx, my_IDy;  /* coordinates of rank in rank grid                    */
   int    right_nbr;       /* global rank of right neighboring tile               */
@@ -116,7 +116,7 @@ int main(int argc, char ** argv) {
   int    root = 0;
   int    n, width, height;/* linear global and local grid dimension              */
   long   nsquare;         /* total number of grid points                         */
-  int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
+  int    i, j, ii, jj, kk, iter, leftover;  /* dummies                   */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
   int    jstart, jend;    /* bounds of grid tile assigned to calling rank        */
   DTYPE  norm,            /* L1 norm of solution                                 */
@@ -129,8 +129,7 @@ int main(int argc, char ** argv) {
          stencil_time,
          avgtime; 
   int    stencil_size;    /* number of points in stencil                         */
-  int    nthread_input,   /* thread parameters                                   */
-         nthread; 
+  int    nthread_input;   /* thread parameters                                   */
   DTYPE  * RESTRICT in;   /* input grid values                                   */
   DTYPE  * RESTRICT out;  /* output grid values                                  */
   long   total_length_in; /* total required length to store input array          */
@@ -186,7 +185,7 @@ int main(int argc, char ** argv) {
     n       = atoi(*++argv); 
     nsquare = n * n;
     if (nsquare < Num_procs){ 
-      printf("ERROR: grid size %d must be at least # ranks: %ld\n", 
+      printf("ERROR: grid size %ld must be at least # ranks: %d\n", 
 	     nsquare, Num_procs); 
       error = 1; 
       goto ENDOFTESTS; 
@@ -298,7 +297,7 @@ int main(int argc, char ** argv) {
   bail_out(error);
  
   total_length_in = (width+2*RADIUS)*(height+2*RADIUS)*sizeof(DTYPE);
-  if (total_length_in/(height+2*RADIUS) != (width+2*RADIUS)*sizeof(DTYPE)) {
+  if (total_length_in/(height+2*RADIUS) != (width+2*RADIUS)*((signed)sizeof(DTYPE))) {
     printf("ERROR: Space for %d x %d input array cannot be represented\n", 
            width+2*RADIUS, height+2*RADIUS);
     error = 1;
