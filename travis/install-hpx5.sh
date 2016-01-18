@@ -2,7 +2,6 @@ set -e
 set -x
 
 TRAVIS_ROOT="$1"
-MPI_IMPL="$2"
 
 if [ ! -d "$TRAVIS_ROOT/hpx5" ]; then
     cd $TRAVIS_ROOT
@@ -14,7 +13,6 @@ if [ ! -d "$TRAVIS_ROOT/hpx5" ]; then
     tar -xzf HPX_Release_v2.0.0.tar.gz
     cd HPX_Release_v2.0.0/hpx
     ./bootstrap
-    # This does not include MPI...
     ./configure --prefix=$TRAVIS_ROOT/hpx5
     make -j2
     make check
