@@ -26,7 +26,6 @@ case "$os" in
                 ;;
         esac
         ;;
-
     Linux)
         echo "Linux"
         case "$CC" in
@@ -64,7 +63,6 @@ case "$os" in
                 ;;
         esac
         case "$MPI_IMPL" in
-            cd $TRAVIS_ROOT
             mpich)
                 if [ ! -d "$TRAVIS_ROOT/mpich" ]; then
                     set +e
@@ -78,7 +76,7 @@ case "$os" in
                              -O mpich-3.2.tar.gz
                         tar -xzf mpich-3.2.tar.gz
                         cd mpich-3.2
-                        sh $TRAVIS_HOME/travis/install-autotools.sh
+                        sh $TRAVIS_HOME/travis/install-autotools.sh $TRAVIS_ROOT
                         ./autogen.sh
                     else
                         tar -xzf mpich-3.2.tar.gz
