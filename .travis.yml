@@ -57,6 +57,10 @@ matrix:
     - env: PRK_TARGET=allupc
            UPC_IMPL=bupc
            GASNET_CONDUIT=ofi
+    # probably because of old GCC (4.6)
+    - os: linux
+      compiler: gcc
+      env: PRK_TARGET=allhpx5
   allow_failures:
     - env: PRK_TARGET=allgrappa
     # UPC over MPICH on Mac hangs - may be async progress issue
@@ -95,38 +99,38 @@ addons:
     #- clang-3.8
 env:
 # Order by likelihood of failing...
-## HPX-5 kernels are not merged yet.  Activate these when they are.
+# HPX-5 kernels are not merged yet.  Activate these when they are.
   - PRK_TARGET=allhpx5
-## Chapel kernels are not merged yet.  Activate these when they are.
-##  - PRK_TARGET=allchapel
-##    CHPL_COMM=none
-##  - PRK_TARGET=allchapel
-##    CHPL_COMM=gasnet
-## Grappa is a problem.  No reason to test it every time.
-##  - PRK_TARGET=allgrappa
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=mpi
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=ofi
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=smp
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=udp
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=gupc
-#  - PRK_TARGET=allampi
-#  - PRK_TARGET=allcharm++
-#  - PRK_TARGET=allfgmpi
-#  - PRK_TARGET=allshmem
-#  - PRK_TARGET=allmpirma
-#  - PRK_TARGET=allmpishm
-#  - PRK_TARGET=allmpiomp
-#  - PRK_TARGET=allmpi1
-#  - PRK_TARGET=allopenmp
+# Chapel kernels are not merged yet.  Activate these when they are.
+  - PRK_TARGET=allchapel
+    CHPL_COMM=none
+  - PRK_TARGET=allchapel
+    CHPL_COMM=gasnet
+# Grappa is a problem.  No reason to test it every time.
+#  - PRK_TARGET=allgrappa
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=mpi
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=ofi
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=smp
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=udp
+  - PRK_TARGET=allupc
+    UPC_IMPL=gupc
+  - PRK_TARGET=allampi
+  - PRK_TARGET=allcharm++
+  - PRK_TARGET=allfgmpi
+  - PRK_TARGET=allshmem
+  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpiomp
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allopenmp
   - PRK_TARGET=allserial
 before_install:
   - pwd
