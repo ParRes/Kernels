@@ -26,7 +26,6 @@ case "$os" in
                 ;;
         esac
         ;;
-
     Linux)
         echo "Linux"
         case "$CC" in
@@ -66,9 +65,23 @@ case "$os" in
         case "$MPI_IMPL" in
             mpich)
                 if [ ! -d "$TRAVIS_ROOT/mpich" ]; then
-                    wget --no-check-certificate -q http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz
-                    tar -xzf mpich-3.2.tar.gz
-                    cd mpich-3.2
+                    set +e
+                    wget --no-check-certificate -q \
+                         http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz
+                    set -e
+                    if [ ! -f "$TRAVIS_ROOT/mpich-3.2.tar.gz" ]; then
+                        echo "MPICH download from mpich.org failed - trying Github mirror"
+                        wget --no-check-certificate -q \
+                             https://github.com/jeffhammond/mpich/archive/v3.2.tar.gz \
+                             -O mpich-3.2.tar.gz
+                        tar -xzf mpich-3.2.tar.gz
+                        cd mpich-3.2
+                        sh $TRAVIS_HOME/travis/install-autotools.sh $TRAVIS_ROOT
+                        ./autogen.sh
+                    else
+                        tar -xzf mpich-3.2.tar.gz
+                        cd mpich-3.2
+                    fi
                     mkdir build && cd build
                     ../configure CC=$PRK_CC CXX=$PRK_CXX --disable-fortran --prefix=$TRAVIS_ROOT/mpich
                     make -j4
