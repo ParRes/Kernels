@@ -70,6 +70,11 @@ case "$PRK_TARGET" in
         ;;
     allchapel)
         echo "Chapel"
-        sh ./travis/install-chapel.sh $TRAVIS_ROOT $MPI_IMPL
+        sh ./travis/install-chapel.sh $TRAVIS_ROOT
+        ;;
+    allhpx5)
+        echo "HPX-5"
+        sh ./travis/install-autotools.sh $TRAVIS_ROOT
+        sh ./travis/install-hpx5.sh $TRAVIS_ROOT
         ;;
 esac

@@ -272,4 +272,7 @@ case "$PRK_TARGET" in
     allchapel)
         echo "Nothing to do yet"
         ;;
+    allhpx5)
+        echo "Nothing to do yet"
+        ;;
 esac
