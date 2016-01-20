@@ -3,9 +3,14 @@ set -x
 
 TRAVIS_ROOT="$1"
 
-# install OSHMPI
-git clone https://github.com/jeffhammond/oshmpi.git
-cd oshmpi
-./autogen.sh
-./configure --prefix=$TRAVIS_ROOT
-make && sudo make install
+if [ ! -d "$TRAVIS_ROOT/oshmpi" ]; then
+    git clone --depth 10 https://github.com/jeffhammond/oshmpi.git
+    cd oshmpi
+    ./autogen.sh
+    ./configure CC=mpicc --prefix=$TRAVIS_ROOT/oshmpi
+    make
+    make install
+else
+    echo "OSHMPI installed..."
+    find $TRAVIS_ROOT/oshmpi -name shmem.h
+fi

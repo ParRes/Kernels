@@ -160,9 +160,11 @@ int main(int argc, char ** argv)
          avgtime;
   MPI_Win  rma_win = MPI_WIN_NULL;
   MPI_Info rma_winfo = MPI_INFO_NULL;
-  int passive_target = 0,  /* use passive target RMA sync           */
-      flush_local = 1,     /* flush local (or remote) after put     */
-      flush_bundle = 1;    /* flush every <bundle> put calls        */
+  int passive_target = 0;  /* use passive target RMA sync           */
+#if MPI_VERSION >= 3
+  int  flush_local  = 1;   /* flush local (or remote) after put     */
+  int  flush_bundle = 1;   /* flush every <bundle> put calls        */
+#endif
  
 /*********************************************************************
 ** Initialize the MPI environment
@@ -205,8 +207,10 @@ int main(int argc, char ** argv)
  
     if (argc >= 4) Tile_order     = atoi(*++argv);
     if (argc >= 5) passive_target = atoi(*++argv);
+#if MPI_VERSION >= 3
     if (argc >= 6) flush_local    = atoi(*++argv);
     if (argc >= 7) flush_bundle   = atoi(*++argv);
+#endif
  
     ENDOFTESTS:;
   }
@@ -220,7 +224,11 @@ int main(int argc, char ** argv)
           printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
     if (passive_target) {
+#if MPI_VERSION < 3
+        printf("Synchronization      = MPI_Win_(un)lock\n");
+#else
         printf("Synchronization      = MPI_Win_flush%s (bundle=%d)\n", flush_local ? "_local" : "", flush_bundle);
+#endif
     } else {
         printf("Synchronization      = MPI_Win_fence\n");
     }
@@ -231,8 +239,10 @@ int main(int argc, char ** argv)
   MPI_Bcast (&iterations,     1, MPI_INT,  root, MPI_COMM_WORLD);
   MPI_Bcast (&Tile_order,     1, MPI_INT,  root, MPI_COMM_WORLD);
   MPI_Bcast (&passive_target, 1, MPI_INT,  root, MPI_COMM_WORLD);
+#if MPI_VERSION >= 3
   MPI_Bcast (&flush_local,    1, MPI_INT,  root, MPI_COMM_WORLD);
   MPI_Bcast (&flush_bundle,   1, MPI_INT,  root, MPI_COMM_WORLD);
+#endif
  
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);
@@ -277,7 +287,7 @@ int main(int argc, char ** argv)
     }
     bail_out(error);
  
-    MPI_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
+    PRK_Win_allocate (Block_size*(Num_procs-1)*sizeof(double), sizeof(double), 
                       rma_winfo, MPI_COMM_WORLD, &Work_in_p, &rma_win);
     if (Work_in_p == NULL){
       printf(" Error allocating space for work on node %d\n",my_ID);
@@ -286,9 +296,11 @@ int main(int argc, char ** argv)
     bail_out(error);
   }
 
+#if MPI_VERSION >= 3
   if (passive_target && Num_procs>1) {
     MPI_Win_lock_all(MPI_MODE_NOCHECK,rma_win);
   }
+#endif
   
   /* Fill the original column matrix                                                */
   istart = 0;  
@@ -351,11 +363,19 @@ int main(int argc, char ** argv)
 		A(it,jt) += 1.0;
               }
       }
- 
+
+#if MPI_VERSION < 3
+      if (passive_target) {
+          MPI_Win_lock(MPI_LOCK_SHARED, send_to, MPI_MODE_NOCHECK, rma_win);
+      }
+#endif
       MPI_Put(Work_out_p+Block_size*(phase-1), Block_size, MPI_DOUBLE, send_to, 
               Block_size*(phase-1), Block_size, MPI_DOUBLE, rma_win); 
 
       if (passive_target) {
+#if MPI_VERSION < 3
+        MPI_Win_unlock(send_to, rma_win);
+#else
         if (flush_bundle==1) {
             if (flush_local==1) {
                 MPI_Win_flush_local(send_to, rma_win);
@@ -370,11 +390,14 @@ int main(int argc, char ** argv)
                 MPI_Win_flush_all(rma_win);
             }
         }
+#endif
       }
     }  /* end of phase loop for puts  */
     if (Num_procs>1) {
       if (passive_target) {
+#if MPI_VERSION >= 3
           MPI_Win_flush_all(rma_win);
+#endif
           MPI_Barrier(MPI_COMM_WORLD);
       } else {
           MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
@@ -426,10 +449,12 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (rma_win!=MPI_WIN_NULL) {
+#if MPI_VERSION >=3
     if (passive_target) {
       MPI_Win_unlock_all(rma_win);
     }
-    MPI_Win_free(&rma_win);
+#endif
+    PRK_Win_free(&rma_win);
   }
  
   MPI_Finalize();

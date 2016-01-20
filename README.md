@@ -18,7 +18,7 @@ they have not been optimimzed for the features of any particular system.
 
 ### Note on stream
 
-Note that while our "nstream" operations are based on the well
+Note that while our `nstream` operations are based on the well
 known STREAM benchmark by John D. McCalpin, we modified the source 
 code and do not follow the run-rules associated with this benchmark.
 Hence, according to the rules defined in the STREAM license (see 
@@ -50,13 +50,13 @@ OpenSHMEM, or Fine-Grain MPI are in `README.special`.
 
 The suite of kernels currently has complete parallel implementations in 
 [OpenMP](http://openmp.org/), 
-[MPI](http://www.mpi-forum.org/), and 
+[MPI](http://www.mpi-forum.org/), Adaptive MPI and 
 [Fine-Grain MPI](http://www.cs.ubc.ca/~humaira/fgmpi.html). 
 There is also a SERIAL reference implementation. 
 The suite is currently being extended to include 
 [Charm++](http://charm.cs.illinois.edu/research/charm),
 MPI+OpenMP, 
-[OpenSHMEM](http://openshmem.org/), and
+[OpenSHMEM](http://openshmem.org/), UPC, and
 [Grappa](http://grappa.io/), 
 as well as two new variations of MPI: 
   1. MPI with one-sided communications (MPIRMA) 
@@ -72,12 +72,15 @@ directory:
 |----------------------|-------------------------|  
 | `make all`           | builds all kernels. |  
 | `make allopenmp`     | builds all OpenMP kernels. |  
-| `make allmpi`        | builds all MPI kernels. |  
+| `make allmpi`        | builds all conventional two-sided MPI kernels. |  
+| `make allmpi1`       | builds all MPI kernels. |  
 | `make allfgmpi`      | builds all Fine-Grain MPI kernels. |  
+| `make allampi`       | builds all Adaptive MPI kernels. |  
 | `make allserial`     | builds all serial kernels. |  
 | `make allmpiopenmp`  | builds all hybrid MPI+OpenMP kernels. |  
 | `make allmpirma`     | builds all MPI kernels with one-sided communications. |  
 | `make allshmem`      | builds all OpenSHMEM kernels. |  
+| `make allupc`        | builds all Unified Parallel C kernels. |  
 | `make allmpishm`     | builds all kernels with MPI3 shared memory. |  
 | `make allcharm++`    | builds all Charm++ kernels. |  
 | `make allgrappa`     | builds all Grappa kernels. |  
@@ -127,6 +130,7 @@ and rerunning the kernels.
 
 # Example build and runs
 
+```sh
 make all default_opt_flags="-O2" "matrix_rank=7" "number_of_functions=200" 
 ./scripts/small/runopenmp
 ./scripts/small/runmpi1
@@ -136,7 +140,7 @@ make all default_opt_flags="-O2" "matrix_rank=7" "number_of_functions=200"
 ```
 
 To exercise all kernels, type
+```sh
 ./scripts/small/runall
 ./scripts/wide/runall
-
-
+```

@@ -41,5 +41,90 @@ POSSIBILITY OF SUCH DAMAGE.
                 ( level==MPI_THREAD_FUNNELED ? "THREAD_FUNNELED" : \
                     ( level==MPI_THREAD_SINGLE ? "THREAD_SINGLE" : "THREAD_UNKNOWN" ) ) ) )
 
+/* We should set an attribute that indicates we need to free memory
+ * when using this so that the MPI_Win_free does not create a
+ * double-free situation when paired with a real MPI_Win_create call. */
+int PRK_Win_allocate(MPI_Aint size, int disp_unit, MPI_Info info,
+                     MPI_Comm comm, void * baseptr, MPI_Win * win)
+{
+#if MPI_VERSION < 3
+    int rc = MPI_SUCCESS;
+    /* Strip info keys because MPI-2 will not understand the ones
+     * that were added in MPI-3, which are the only useful ones. */
+    MPI_Info alloc_info = MPI_INFO_NULL;
+    MPI_Info win_info = MPI_INFO_NULL;
+    rc = MPI_Alloc_mem(size, alloc_info, &baseptr);
+    if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+    rc = MPI_Win_create(baseptr, size, disp_unit, win_info, comm, win);
+    if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+    return MPI_SUCCESS;
+#else
+    return MPI_Win_allocate(size, disp_unit, info, comm, baseptr, win);
+#endif
+}
+
+int PRK_Win_free(MPI_Win * win)
+{
+    int rc = MPI_SUCCESS;
+#if MPI_VERSION < 3
+    int flag = 0;
+    void * attr_ptr;
+#ifndef ADAPTIVE_MPI
+    rc = MPI_Win_get_attr(*win, MPI_WIN_BASE, (void*)&attr_ptr, &flag);
+    if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+#endif
+    /* We do not check for the case of size=0 here,
+     * but it may be worth adding in the future. */
+    if (flag) {
+        void * baseptr = (void*)attr_ptr;
+        rc = MPI_Free_mem(baseptr);
+        if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+    } else {
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+        printf("%d: could not capture baseptr from win attribute: memory leak.\n",rank);
+    }
+    rc = MPI_Win_free(win);
+    if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+    return MPI_SUCCESS;
+#else
+    int free_mem = 0;
+    void * baseptr = NULL;
+    /* See if window was created with MPI_Win_create... */
+    int flag = 0;
+    void * attr_ptr;
+#ifndef ADAPTIVE_MPI
+    rc = MPI_Win_get_attr(*win, MPI_WIN_CREATE_FLAVOR, (void*)&attr_ptr, &flag);
+    if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+#endif
+    if (flag) {
+        int * flavor = (int*)attr_ptr;
+        /* ...if it was, determine the base address of the user buffer... */
+        if (*flavor==MPI_WIN_FLAVOR_CREATE) {
+            flag = 0;
+#ifndef ADAPTIVE_MPI
+            rc = MPI_Win_get_attr(*win, MPI_WIN_BASE, (void*)&attr_ptr, &flag);
+            if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+#endif
+            /* ...and free the base address. */
+            if (flag) {
+                baseptr = attr_ptr;
+                free_mem = 1;
+                /* We cannot free memory until after the window has been freed:
+                 * "The memory associated with windows created by a call to
+                 *  MPI_WIN_CREATE may be freed after the call returns."
+                 *          - MPI 3.1 11.2.5                                    */
+            }
+        }
+    }
+    rc = MPI_Win_free(win);
+    if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+    if (free_mem) {
+        rc = MPI_Free_mem(baseptr);
+        if (rc!=MPI_SUCCESS) MPI_Abort(rc,MPI_COMM_WORLD);
+    }
+    return MPI_SUCCESS;
+#endif
+}
 
 extern void bail_out(int);

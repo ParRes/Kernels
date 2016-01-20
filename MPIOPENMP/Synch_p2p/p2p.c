@@ -77,7 +77,7 @@ int main(int argc, char ** argv)
 {
   int    my_ID;         /* rank                                                  */
   int    TID;           /* thread ID                                             */
-  int    root;
+  int    root=0, final; /* IDs of root rank and rank that verifies result        */
   long   m, n;          /* grid dimensions                                       */
   double local_pipeline_time, /* timing parameters                               */
          pipeline_time,
@@ -120,9 +120,8 @@ int main(int argc, char ** argv)
  
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
  
-/* we set root equal to highest rank, because this is also the rank 
-   that reports on the verification value                           */
-  root = Num_procs-1;
+  /* set final equal to highest rank, because it computes verification value       */
+  final = Num_procs-1;
  
 /*********************************************************************
 ** process, test and broadcast input parameter
@@ -350,12 +349,12 @@ int main(int argc, char ** argv)
  
     /* copy top right corner value to bottom left corner to create dependency     */
     if (Num_procs>1) {
-      if (TID==nthread-1 && my_ID==root) {
+      if (TID==nthread-1 && my_ID==final) {
         corner_val = -ARRAY(end,n-1);
-        MPI_Send(&corner_val,1,MPI_DOUBLE,0,888,MPI_COMM_WORLD);
+        MPI_Send(&corner_val,1,MPI_DOUBLE,root,888,MPI_COMM_WORLD);
       }
-      if (TID==0  && my_ID==0) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,root,888,MPI_COMM_WORLD,&status);
+      if (TID==0  && my_ID==root) {
+        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,&status);
       }
     }
     else {
@@ -379,7 +378,7 @@ int main(int argc, char ** argv)
   } /* end of parallel section */
  
   local_pipeline_time = wtime() - local_pipeline_time;
-  MPI_Reduce(&local_pipeline_time, &pipeline_time, 1, MPI_DOUBLE, MPI_MAX, root,
+  MPI_Reduce(&local_pipeline_time, &pipeline_time, 1, MPI_DOUBLE, MPI_MAX, final,
              MPI_COMM_WORLD);
  
   /*******************************************************************************
@@ -388,7 +387,7 @@ int main(int argc, char ** argv)
  
   /* verify correctness, using top right value                                     */
   corner_val = (double) ((iterations+1)*(m+n-2));
-  if (my_ID == root) {
+  if (my_ID == final) {
     if (abs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
              ARRAY(end,n-1), corner_val);

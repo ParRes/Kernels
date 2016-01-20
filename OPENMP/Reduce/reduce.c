@@ -252,15 +252,16 @@ int main(int argc, char ** argv)
        break;
 
     case LINEAR:
-
-       #pragma omp barrier
-       #pragma omp master
        {
-       for (id=1; id<nthread; id++) {
-         for (i=0; i<vector_length; i++) {
-           VEC0(0,i) += VEC0(id,i);
-         }
-       }
+           #pragma omp barrier
+           #pragma omp master
+           {
+               for (id=1; id<nthread; id++) {
+                 for (i=0; i<vector_length; i++) {
+                   VEC0(0,i) += VEC0(id,i);
+                 }
+               }
+           }
        }
        break;
 
