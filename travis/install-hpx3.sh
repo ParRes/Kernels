@@ -8,9 +8,8 @@ case "$TRAVIS_OS_NAME" in
         ;;
     osx)
         set +e
-        #brew tap homebrew/science
         brew update
-        for p in boost jemalloc gperftools "homebrew/science/hwloc" ; do
+        for p in boost jemalloc gperftools ; do
             if [ `brew list $p` ] ; then
                 echo "$p is not installed - installing it"
                 brew install $p
@@ -19,10 +18,6 @@ case "$TRAVIS_OS_NAME" in
                 brew upgrade $p
             fi
         done
-        # if hwloc was not installed, disable it for CMake
-        if [ `brew list hwloc` ] ; then
-            export HPX_WITH_HWLOC=OFF
-        fi
         set -e
         ;;
 esac
@@ -40,7 +35,7 @@ if [ ! -d "$TRAVIS_ROOT/hpx3" ]; then
     cd hpx_0.9.11
     mkdir build
     cd build
-    cmake .. -DCMAKE_INSTALL_PREFIX:PATH=$TRAVIS_ROOT/hpx3 -DCMAKE_MACOSX_RPATH=YES
+    cmake .. -DCMAKE_INSTALL_PREFIX:PATH=$TRAVIS_ROOT/hpx3 -DCMAKE_MACOSX_RPATH=YES -DHPX_WITH_HWLOC=OFF
     make -j2
     make check
     make install
