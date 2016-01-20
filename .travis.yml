@@ -106,11 +106,11 @@ addons:
     # This should provide OpenMP
     #- clang-3.8
 env:
-###
-### VIM cheatsheet
-###  * comment out lines m to n by prepending #
-###    :m,n s/^/#/g
-###
+#
+# VIM cheatsheet
+#  * comment out lines m to n by prepending #
+#    :m,n s/^/#/g
+#
 # Order by likelihood of failing...
 # HPX-3 kernels are not merged yet.  Activate these when they are.
   - PRK_TARGET=allhpx3
@@ -146,7 +146,7 @@ env:
 #  - PRK_TARGET=allmpiomp
 #  - PRK_TARGET=allmpi1
 #  - PRK_TARGET=allopenmp
-#  - PRK_TARGET=allserial
+  - PRK_TARGET=allserial
 before_install:
   - pwd
   - export TRAVIS_HOME=$PWD
