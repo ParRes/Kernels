@@ -10,7 +10,7 @@ case "$TRAVIS_OS_NAME" in
         set +e
         brew update
         for p in boost jemalloc gperftools ; do
-            if [ `brew list $p` ] ; then
+            if [ "x`brew ls --versions $p`" == "x" ] ; then
                 echo "$p is not installed - installing it"
                 brew install $p
             else
