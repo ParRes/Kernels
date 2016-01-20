@@ -3,6 +3,21 @@ set -x
 
 TRAVIS_ROOT="$1"
 
+case "$TRAVIS_OS_NAME" in
+    linux)
+        ;;
+    osx)
+        set +e
+        for p in hwloc jemalloc gperftools boost ; do
+            brew info $p
+            brew install $p
+            brew upgrade $p
+        done
+        brew list
+        set -e
+        ;;
+esac
+
 if [ ! -d "$TRAVIS_ROOT/hpx3" ]; then
     cd $TRAVIS_ROOT
     wget -q --no-check-certificate http://stellar.cct.lsu.edu/files/hpx_0.9.11.tar.bz2

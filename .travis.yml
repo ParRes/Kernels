@@ -61,6 +61,9 @@ matrix:
     - os: linux
       compiler: gcc
       env: PRK_TARGET=allhpx5
+    # Travis whitelist missing three Boost packages HPX-3 needs
+    - os: linux
+      env: PRK_TARGET=allhpx3
   allow_failures:
     - env: PRK_TARGET=allgrappa
     # UPC over MPICH on Mac hangs - may be async progress issue
@@ -96,10 +99,10 @@ addons:
     - libboost-system1.55-dev
     - libboost-test1.55-dev
     - libboost-timer1.55-dev
-    # HPX-3 needs these
-    - libboost_chrono1.55-dev
-    - libboost_program_options1.55-dev
-    - libboost_thread1.55-dev
+    # HPX-3 needs these - not whitelisted yet
+    #- libboost_chrono1.55-dev
+    #- libboost_program_options1.55-dev
+    #- libboost_thread1.55-dev
     # This should provide OpenMP
     #- clang-3.8
 env:
