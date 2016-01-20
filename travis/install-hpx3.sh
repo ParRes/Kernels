@@ -8,12 +8,17 @@ case "$TRAVIS_OS_NAME" in
         ;;
     osx)
         set +e
+        brew tap homebrew/science
+        brew update
         for p in hwloc jemalloc gperftools boost ; do
             brew info $p
             brew install $p
             brew upgrade $p
         done
-        brew list
+        # if hwloc was not installed, disable it for CMake
+        if [ `brew info hwloc` ] ; then
+            export HPX_WITH_HWLOC=OFF
+        fi
         set -e
         ;;
 esac
