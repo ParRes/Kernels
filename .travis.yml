@@ -106,42 +106,47 @@ addons:
     # This should provide OpenMP
     #- clang-3.8
 env:
+###
+### VIM cheatsheet
+###  * comment out lines m to n by prepending #
+###    :m,n s/^/#/g
+###
 # Order by likelihood of failing...
 # HPX-3 kernels are not merged yet.  Activate these when they are.
   - PRK_TARGET=allhpx3
-# HPX-5 kernels are not merged yet.  Activate these when they are.
-  - PRK_TARGET=allhpx5
-# Chapel kernels are not merged yet.  Activate these when they are.
-  - PRK_TARGET=allchapel
-    CHPL_COMM=none
-  - PRK_TARGET=allchapel
-    CHPL_COMM=gasnet
-# Grappa is a problem.  No reason to test it every time.
-#  - PRK_TARGET=allgrappa
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=mpi
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=ofi
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=smp
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=udp
-  - PRK_TARGET=allupc
-    UPC_IMPL=gupc
-  - PRK_TARGET=allampi
-  - PRK_TARGET=allcharm++
-  - PRK_TARGET=allfgmpi
-  - PRK_TARGET=allshmem
-  - PRK_TARGET=allmpirma
-  - PRK_TARGET=allmpishm
-  - PRK_TARGET=allmpiomp
-  - PRK_TARGET=allmpi1
-  - PRK_TARGET=allopenmp
-  - PRK_TARGET=allserial
+## HPX-5 kernels are not merged yet.  Activate these when they are.
+#  - PRK_TARGET=allhpx5
+## Chapel kernels are not merged yet.  Activate these when they are.
+#  - PRK_TARGET=allchapel
+#    CHPL_COMM=none
+#  - PRK_TARGET=allchapel
+#    CHPL_COMM=gasnet
+## Grappa is a problem.  No reason to test it every time.
+##  - PRK_TARGET=allgrappa
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=mpi
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=ofi
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=smp
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=udp
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=gupc
+#  - PRK_TARGET=allampi
+#  - PRK_TARGET=allcharm++
+#  - PRK_TARGET=allfgmpi
+#  - PRK_TARGET=allshmem
+#  - PRK_TARGET=allmpirma
+#  - PRK_TARGET=allmpishm
+#  - PRK_TARGET=allmpiomp
+#  - PRK_TARGET=allmpi1
+#  - PRK_TARGET=allopenmp
+#  - PRK_TARGET=allserial
 before_install:
   - pwd
   - export TRAVIS_HOME=$PWD

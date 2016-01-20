@@ -9,19 +9,21 @@ case "$TRAVIS_OS_NAME" in
     osx)
         set +e
         brew update
-        for p in boost jemalloc gperftools ; do
-            #if [ "x`brew ls --versions $p`" == "x" ] ; then
-            #    echo "$p is not installed - installing it"
-            #    brew install $p
-            #else
-            #    echo "$p is installed - upgrading it"
-            #    brew upgrade $p
-            #fi
-            brew install $p || brew upgrade $p
+        for p in homebrew/versions/boost155 jemalloc gperftools ; do
+            if [ "x`brew ls --versions $p`" == "x" ] ; then
+                echo "$p is not installed - installing it"
+                brew install $p
+            else
+                echo "$p is installed - upgrading it"
+                brew upgrade $p
+            fi
+            #brew install $p || brew upgrade $p
         done
         set -e
         ;;
 esac
+
+exit
 
 if [ ! -d "$TRAVIS_ROOT/hpx3" ]; then
     cd $TRAVIS_ROOT
