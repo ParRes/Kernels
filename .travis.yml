@@ -83,6 +83,7 @@ addons:
     # Required by GUPC
     - libnuma-dev
     # Boost is for Grappa and HPX-3
+    # Grappa needs these (according to their .travis.yml)
     - libboost-date-time1.55-dev
     - libboost-exception1.55-dev
     - libboost-filesystem1.55-dev
@@ -95,6 +96,10 @@ addons:
     - libboost-system1.55-dev
     - libboost-test1.55-dev
     - libboost-timer1.55-dev
+    # HPX-3 needs these
+    - libboost_chrono1.55-dev
+    - libboost_program_options1.55-dev
+    - libboost_thread1.55-dev
     # This should provide OpenMP
     #- clang-3.8
 env:
