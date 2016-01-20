@@ -3,9 +3,11 @@ set -x
 
 TRAVIS_ROOT="$1"
 
+export USE_HPX_TARBALL=0
+
 if [ ! -d "$TRAVIS_ROOT/hpx5" ]; then
     cd $TRAVIS_ROOT
-    if [ -z "$USE_HPX_TARBALL" ] ; then
+    if [ "$USE_HPX_TARBALL" ] ; then
         wget -q --no-check-certificate http://hpx.crest.iu.edu/release/HPX_Release_v2.0.0.tar.gz
         if [ `which shasum` ] ; then
             echo "SHA-256 signature is:"

@@ -3,13 +3,15 @@ set -x
 
 TRAVIS_ROOT="$1"
 
+export USE_HPX_TARBALL=0
+
 case "$TRAVIS_OS_NAME" in
     linux)
         ;;
     osx)
         set +e
         brew update
-        if [ -z "$USE_HPX_TARBALL" ] ; then
+        if [ "$USE_HPX_TARBALL" ] ; then
             export HPX_BOOST="homebrew/versions/boost155"
         else
             export HPX_BOOST="boost"
@@ -29,7 +31,7 @@ esac
 
 if [ ! -d "$TRAVIS_ROOT/hpx3" ]; then
     cd $TRAVIS_ROOT
-    if [ -z "$USE_HPX_TARBALL" ] ; then
+    if [ "$USE_HPX_TARBALL" ] ; then
         wget -q --no-check-certificate http://stellar.cct.lsu.edu/files/hpx_0.9.11.tar.bz2
         if [ `which md5` ] ; then
             echo "MD5 signature is:"
