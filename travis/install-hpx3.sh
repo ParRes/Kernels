@@ -11,7 +11,7 @@ if [ ! -d "$TRAVIS_ROOT/hpx3" ]; then
         md5 hpx_0.9.11.tar.bz2
         echo "MD5 signature should be:"
         echo "86a71189fb6344d27bf53d6aa2b33122"
-    if
+    fi
     tar -xjf hpx_0.9.11.tar.bz2
     cd hpx_0.9.11
     mkdir build
