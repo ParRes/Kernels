@@ -18,7 +18,8 @@ if [ ! -d "$TRAVIS_ROOT/hpx5" ]; then
     #    tar -xzf HPX_Release_v2.0.0.tar.gz
     #    cd HPX_Release_v2.0.0/hpx
     #else
-        git clone https://gitlab.crest.iu.edu/extreme/hpx.git hpx5-source
+        # cannot use https
+        git clone http://gitlab.crest.iu.edu/extreme/hpx.git hpx5-source
         cd hpx5-source
     #fi
     ./bootstrap
