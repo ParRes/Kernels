@@ -134,7 +134,8 @@ env:
   - PRK_TARGET=allserial
 before_install:
   - pwd
-  - export TRAVIS_ROOT=$HOME/PRK-deps
+  - export TRAVIS_HOME=$PWD
+  - export TRAVIS_ROOT=$TRAVIS_HOME/PRK-deps
   - mkdir -p $TRAVIS_ROOT
 install:
   - export PATH=$TRAVIS_ROOT/bin:$PATH
