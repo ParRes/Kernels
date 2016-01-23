@@ -47,7 +47,7 @@ if [ ! -d "$TRAVIS_ROOT/hpx3" ]; then
     cd build
     cmake .. -DCMAKE_INSTALL_PREFIX:PATH=$TRAVIS_ROOT/hpx3 -DCMAKE_MACOSX_RPATH=YES -DHPX_WITH_HWLOC=OFF
     make -j2
-    make check
+    # make check # target does not exist
     make install
 else
     echo "HPX-3 installed..."
