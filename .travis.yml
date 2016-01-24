@@ -61,6 +61,9 @@ matrix:
     - os: linux
       compiler: gcc
       env: PRK_TARGET=allhpx5
+    # Travis whitelist missing three Boost packages HPX-3 needs
+    - os: linux
+      env: PRK_TARGET=allhpx3
   allow_failures:
     - env: PRK_TARGET=allgrappa
     # UPC over MPICH on Mac hangs - may be async progress issue
@@ -73,7 +76,7 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     #  Boost is for Grappa
-    #- boost-latest
+    - boost-latest
     # clang-3.8 comes from this
     #- llvm-toolchain-precise
     packages:
@@ -82,32 +85,44 @@ addons:
     - g++-4.8
     # Required by GUPC
     - libnuma-dev
-    # Boost is for Grappa
-    #- libboost-date-time1.55-dev
-    #- libboost-exception1.55-dev
-    #- libboost-filesystem1.55-dev
-    #- libboost-iostreams1.55-dev
-    #- libboost-math1.55-dev
-    #- libboost-random1.55-dev
-    #- libboost-regex1.55-dev
-    #- libboost-serialization1.55-dev
-    #- libboost-signals1.55-dev
-    #- libboost-system1.55-dev
-    #- libboost-test1.55-dev
-    #- libboost-timer1.55-dev
+    # Boost is for Grappa and HPX-3
+    # Grappa needs these (according to their .travis.yml)
+    - libboost-date-time1.55-dev
+    - libboost-exception1.55-dev
+    - libboost-filesystem1.55-dev
+    - libboost-iostreams1.55-dev
+    - libboost-math1.55-dev
+    - libboost-random1.55-dev
+    - libboost-regex1.55-dev
+    - libboost-serialization1.55-dev
+    - libboost-signals1.55-dev
+    - libboost-system1.55-dev
+    - libboost-test1.55-dev
+    - libboost-timer1.55-dev
+    # HPX-3 needs these - not whitelisted yet
+    #- libboost_chrono1.55-dev
+    #- libboost_program_options1.55-dev
+    #- libboost_thread1.55-dev
     # This should provide OpenMP
     #- clang-3.8
 env:
+#
+# VIM cheatsheet
+#  * comment out lines m to n by prepending #
+#    :m,n s/^/#/g
+#
 # Order by likelihood of failing...
+# HPX-3 kernels are not merged yet.  Activate these when they are.
+  - PRK_TARGET=allhpx3
 # HPX-5 kernels are not merged yet.  Activate these when they are.
   - PRK_TARGET=allhpx5
-# Chapel kernels are not merged yet.  Activate these when they are.
+## Chapel kernels are not merged yet.  Activate these when they are.
   - PRK_TARGET=allchapel
     CHPL_COMM=none
   - PRK_TARGET=allchapel
     CHPL_COMM=gasnet
-# Grappa is a problem.  No reason to test it every time.
-#  - PRK_TARGET=allgrappa
+## Grappa is a problem.  No reason to test it every time.
+##  - PRK_TARGET=allgrappa
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
     GASNET_CONDUIT=mpi
