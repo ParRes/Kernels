@@ -57,6 +57,11 @@ matrix:
     - env: PRK_TARGET=allupc
            UPC_IMPL=bupc
            GASNET_CONDUIT=ofi
+    # UPC over MPICH on Mac hangs - may be async progress issue
+    - os: osx
+      env: PRK_TARGET=allupc
+           UPC_IMPL=bupc
+           GASNET_CONDUIT=mpi
     # probably because of old GCC (4.6)
     - os: linux
       compiler: gcc
@@ -66,11 +71,6 @@ matrix:
       env: PRK_TARGET=allhpx3
   allow_failures:
     - env: PRK_TARGET=allgrappa
-    # UPC over MPICH on Mac hangs - may be async progress issue
-    - os: osx
-      env: PRK_TARGET=allupc
-           UPC_IMPL=bupc
-           GASNET_CONDUIT=mpi
 addons:
   apt:
     sources:
@@ -112,17 +112,17 @@ env:
 #    :m,n s/^/#/g
 #
 # Order by likelihood of failing...
+# Grappa is a problem.  No reason to test it every time.
+#  - PRK_TARGET=allgrappa
 # HPX-3 kernels are not merged yet.  Activate these when they are.
   - PRK_TARGET=allhpx3
 # HPX-5 kernels are not merged yet.  Activate these when they are.
   - PRK_TARGET=allhpx5
-## Chapel kernels are not merged yet.  Activate these when they are.
+# Chapel kernels are not merged yet.  Activate these when they are.
   - PRK_TARGET=allchapel
     CHPL_COMM=none
   - PRK_TARGET=allchapel
     CHPL_COMM=gasnet
-## Grappa is a problem.  No reason to test it every time.
-##  - PRK_TARGET=allgrappa
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
     GASNET_CONDUIT=mpi
