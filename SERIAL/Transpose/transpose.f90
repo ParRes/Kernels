@@ -119,7 +119,7 @@ program main
   endif
 
   if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    write(*,'(a,i5)') 'WARNING: tile_size must be >= 1 and <= order : ', tile_size
+    write(*,'(a,i5)') 'WARNING: tile_size must be >= 1 and <= order: ',tile_size
     tile_size = order ! no tiling
   endif
 
@@ -141,9 +141,7 @@ program main
   endif
 
   ! avoid overflow 64<-32
-  bytes = 2 * order
-  bytes = bytes * order
-  bytes = bytes * storage_size(A)/8
+  bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
   write(*,'(a,i)') 'Matrix order         = ', order
   write(*,'(a,i)') 'Tile size            = ', tile_size
