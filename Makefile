@@ -187,6 +187,7 @@ allserial:
 	cd SERIAL/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                       "MATRIX_RANK         = $(matrix_rank)"        \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
@@ -262,6 +263,7 @@ clean:
 	cd SERIAL/Sparse;           $(MAKE) clean
 	cd SERIAL/Synch_p2p;        $(MAKE) clean
 	cd SERIAL/Branch;           $(MAKE) clean
+	cd SERIAL/PIC;              $(MAKE) clean
 	rm -f stats.json
 
 veryclean: clean
