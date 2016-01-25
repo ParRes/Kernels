@@ -12,3 +12,7 @@ SERIAL/Sparse/sparse            $NUMITERS 10 4;              echo $SEPLINE
 SERIAL/Stencil/stencil          $NUMITERS 1000;              echo $SEPLINE                                                                                                                                                       
 SERIAL/Synch_p2p/p2p            $NUMITERS 1000 100;          echo $SEPLINE 
 SERIAL/Transpose/transpose      $NUMITERS 2000 64;           echo $SEPLINE 
+SERIAL/PIC/pic                  $NUMITERS 1000 1000000 1 2 GEOMETRIC 0.99;      echo $SEPLINE
+SERIAL/PIC/pic                  $NUMITERS 1000 1000000 0 1 SINUSOIDAL;          echo $SEPLINE
+SERIAL/PIC/pic                  $NUMITERS 1000 1000000 1 0 LINEAR 1.0 3.0;      echo $SEPLINE
+SERIAL/PIC/pic                  $NUMITERS 1000 1000000 1 0 PATCH 0 200 100 200; echo $SEPLINE

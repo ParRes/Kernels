@@ -23,6 +23,9 @@ endif
 wtime.o:$(COMMON)/wtime.c
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
  
+random_draw.o:$(COMMON)/random_draw.c
+	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
+ 
 MPI_bail_out.o:$(COMMON)/MPI_bail_out.c
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
  
