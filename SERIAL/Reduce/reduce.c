@@ -112,6 +112,8 @@ int main(int argc, char ** argv)
     ones[i]    = (double)1;
   }
 
+  reduce_time = 0.0; /* silence compiler warning */
+
   for (iter=0; iter<=iterations; iter++) {
 
     /* start timer after a warmup iteration */

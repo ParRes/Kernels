@@ -117,6 +117,8 @@ int main(int argc, char ** argv) {
   for (j=0; j<n; j++) ARRAY(0,j) = (double) j;
   for (i=0; i<m; i++) ARRAY(i,0) = (double) i;
 
+  pipeline_time = 0.0; /* silence compiler warning */
+
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration */

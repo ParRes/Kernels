@@ -80,8 +80,8 @@ HISTORY: Written by Rob Van der Wijngaart, February 2009.
 
 #define forder (1.0*order)
 
-main(int argc, char **argv){
-
+int main(int argc, char **argv)
+{
   int     iter, i,ii,j,jj,k,kk,ig,jg,kg; /* dummies                               */
   int     iterations;           /* number of times the multiplication is done     */
   double  dgemm_time,           /* timing parameters                              */
@@ -120,7 +120,7 @@ main(int argc, char **argv){
     order    = -order;
   }
   if (order < 1) {
-    printf("ERROR: Matrix order must be positive: %d\n", order);
+    printf("ERROR: Matrix order must be positive: %ld\n", order);
     exit(EXIT_FAILURE);
   }
 
@@ -130,11 +130,11 @@ main(int argc, char **argv){
   } else block = DEFAULTBLOCK;
 #endif
 
-  printf("Matrix order          = %d\n", order);
+  printf("Matrix order          = %ld\n", order);
   if (shortcut) 
     printf("Only doing initialization\n"); 
   if (block>0)
-    printf("Blocking factor       = %d\n", block);
+    printf("Blocking factor       = %ld\n", block);
   else
     printf("No blocking\n");
   printf("Number of iterations  = %d\n", iterations);

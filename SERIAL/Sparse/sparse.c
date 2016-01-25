@@ -146,7 +146,7 @@ int main(int argc, char **argv){
 
   /* emit error if (periodic) stencil overlaps with itself                        */
   if (size <2*radius+1) {
-    printf("ERROR: Grid extent %d smaller than stencil diameter 2*%d+1= %d\n",
+    printf("ERROR: Grid extent %lld smaller than stencil diameter 2*%lld+1= %lld\n",
            size, radius, radius*2+1);
     exit(EXIT_FAILURE);
   }
@@ -162,13 +162,13 @@ int main(int argc, char **argv){
   matrix_space = nent*sizeof(double);
   matrix = (double *) malloc(matrix_space);
   if (!matrix) {
-    printf("ERROR: Could not allocate space for sparse matrix: %ld\n", nent);
+    printf("ERROR: Could not allocate space for sparse matrix: %lld\n", nent);
     exit(EXIT_FAILURE);
   } 
 
   vector_space = 2*size2*sizeof(double);
-  if (vector_space/sizeof(double) != 2*size2) {
-    printf("ERROR: Cannot represent space for vectors: %ul\n", vector_space);
+  if (vector_space/sizeof(double) != (size_t)2*size2) {
+    printf("ERROR: Cannot represent space for vectors: %lu\n", vector_space);
     exit(EXIT_FAILURE);
   } 
 
@@ -180,8 +180,8 @@ int main(int argc, char **argv){
   result = vector + size2;
 
   index_space = nent*sizeof(s64Int);
-  if (index_space/sizeof(s64Int) != nent) {
-    printf("ERROR: Cannot represent space for column indices: %ul\n", index_space);
+  if (index_space/sizeof(s64Int) != (size_t)nent) {
+    printf("ERROR: Cannot represent space for column indices: %lu\n", index_space);
     exit(EXIT_FAILURE);
   } 
   colIndex = (s64Int *) malloc(index_space);
@@ -192,7 +192,7 @@ int main(int argc, char **argv){
   } 
 
   printf("Matrix order          = "FSTR64U"\n", size2);
-  printf("Stencil diameter      = %16d\n", 2*radius+1);
+  printf("Stencil diameter      = %16lld\n", 2*radius+1);
   printf("Sparsity              = %16.10lf\n", sparsity);
   printf("Number of iterations  = %16d\n", iterations);
 #ifdef SCRAMBLE
@@ -224,6 +224,8 @@ int main(int argc, char **argv){
       matrix[elm] = 1.0/(double)(colIndex[elm]+1);
   }
 
+  sparse_time = 0.0; /* silence compiler warning */
+
   for (iter=0; iter<=iterations; iter++) {
 
     if (iter==1) sparse_time = wtime();
@@ -234,7 +236,9 @@ int main(int argc, char **argv){
     /* do the actual matrix-vector multiplication                                 */
     for (row=0; row<size2; row++) {
       first = stencil_size*row; last = first+stencil_size-1;
+#ifdef __INTEL_COMPILER
       #pragma simd reduction(+:temp)
+#endif
       for (temp=0.0,col=first; col<=last; col++) {
         temp += matrix[col]*vector[colIndex[col]];
       }

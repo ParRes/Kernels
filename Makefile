@@ -38,11 +38,13 @@ ifndef matrix_rank
   matrix_rank=5
 endif
 
-ifndef default_opt_flags
-  default_opt_flags=-O3
+ifndef PRK_FLAGS
+  PRK_FLAGS=-O3
 endif
 
-default:
+default: allserial allopenmp allmpi
+
+help:
 	@echo "Usage: \"make all\"          (re-)builds all targets"
 	@echo "       \"make allserial\"    (re-)builds all serial targets"
 	@echo "       \"make allopenmp\"    (re-)builds all OpenMP targets"
@@ -72,117 +74,117 @@ alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem 
 allfreaks: allcharm++ allampi allgrappa 
 
 allmpi1:
-	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI1/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI1/Sparse;              $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI1/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI1/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI1/DGEMM;               $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI1/Nstream;             $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI1/Reduce;              $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI1/Random;              $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPI1/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"  \
+	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPI1/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPI1/Sparse;              $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPI1/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPI1/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPI1/DGEMM;               $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPI1/Nstream;             $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPI1/Reduce;              $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPI1/Random;              $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPI1/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                        "MATRIX_RANK         = $(matrix_rank)"        \
                                                        "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
 allampi:
-	cd AMPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd AMPI/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd AMPI/Sparse;              $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd AMPI/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd AMPI/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd AMPI/DGEMM;               $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd AMPI/Nstream;             $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd AMPI/Reduce;              $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd AMPI/Random;              $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd AMPI/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"  \
+	cd AMPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd AMPI/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd AMPI/Sparse;              $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd AMPI/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd AMPI/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd AMPI/DGEMM;               $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd AMPI/Nstream;             $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd AMPI/Reduce;              $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd AMPI/Random;              $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd AMPI/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                        "MATRIX_RANK         = $(matrix_rank)"        \
                                                        "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
 allfgmpi:
 	cd scripts/small;              $(MAKE) -f  Makefile_FG_MPI runfgmpi
 	cd scripts/wide;               $(MAKE) -f  Makefile_FG_MPI runfgmpi
-	cd FG_MPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd FG_MPI/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd FG_MPI/Sparse;              $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd FG_MPI/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd FG_MPI/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd FG_MPI/DGEMM;               $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd FG_MPI/Nstream;             $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd FG_MPI/Reduce;              $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd FG_MPI/Random;              $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd FG_MPI/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"  \
+	cd FG_MPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FG_MPI/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FG_MPI/Sparse;              $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FG_MPI/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FG_MPI/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FG_MPI/DGEMM;               $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FG_MPI/Nstream;             $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FG_MPI/Reduce;              $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FG_MPI/Random;              $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FG_MPI/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                          "MATRIX_RANK         = $(matrix_rank)"        \
                                                          "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
 allmpiopenmp:
-	cd MPIOPENMP/Nstream;       $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPIOPENMP/Synch_p2p;     $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPIOPENMP/Stencil;       $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPIOPENMP/Transpose;     $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPIOPENMP/Nstream;       $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPIOPENMP/Synch_p2p;     $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPIOPENMP/Stencil;       $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPIOPENMP/Transpose;     $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allmpiomp: allmpiopenmp
 
 allmpirma:
-	cd MPIRMA/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPIRMA/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPIRMA/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPIRMA/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPIRMA/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPIRMA/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allshmem:
-	cd SHMEM/Synch_p2p;         $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd SHMEM/Stencil;           $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd SHMEM/Transpose;         $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd SHMEM/Synch_p2p;         $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SHMEM/Stencil;           $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SHMEM/Transpose;         $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allmpishm:
-	cd MPISHM/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPISHM/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd MPISHM/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd MPISHM/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPISHM/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPISHM/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allmpi: allmpi1 allmpiomp allmpirma allmpishm
 
 allupc:
-	cd UPC/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd UPC/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd UPC/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd UPC/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd UPC/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd UPC/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allpgas: allshmem allupc allmpirma
 
 allopenmp:
-	cd OPENMP/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd OPENMP/Nstream;          $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd OPENMP/Reduce;           $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd OPENMP/RefCount_shared;  $(MAKE) shared    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd OPENMP/RefCount_private; $(MAKE) private   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd OPENMP/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd OPENMP/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd OPENMP/Random;           $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd OPENMP/Sparse;           $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd OPENMP/Synch_global;     $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd OPENMP/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd OPENMP/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"  \
+	cd OPENMP/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Nstream;          $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Reduce;           $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/RefCount_shared;  $(MAKE) shared    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/RefCount_private; $(MAKE) private   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Random;           $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Sparse;           $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Synch_global;     $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                       "MATRIX_RANK         = $(matrix_rank)"        \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
 allcharm++:
-	cd CHARM++/Synch_p2p;       $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd CHARM++/Stencil;         $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd CHARM++/Transpose;       $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd CHARM++/Synch_p2p;       $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd CHARM++/Stencil;         $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd CHARM++/Transpose;       $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allgrappa:
-	cd GRAPPA/Synch_p2p;       $(MAKE) p2p        "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd GRAPPA/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd GRAPPA/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd GRAPPA/Synch_p2p;       $(MAKE) p2p        "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd GRAPPA/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd GRAPPA/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allserial:
-	cd SERIAL/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd SERIAL/Nstream;          $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd SERIAL/Reduce;           $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd SERIAL/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd SERIAL/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd SERIAL/Random;           $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd SERIAL/Sparse;           $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd SERIAL/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd SERIAL/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"  \
+	cd SERIAL/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SERIAL/Nstream;          $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SERIAL/Reduce;           $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SERIAL/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SERIAL/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SERIAL/Random;           $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SERIAL/Sparse;           $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SERIAL/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SERIAL/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                       "MATRIX_RANK         = $(matrix_rank)"        \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 

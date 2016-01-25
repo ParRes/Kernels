@@ -230,8 +230,11 @@ int main(int argc, char **argv)
   }
   bail_out(num_error); 
 
+  /* FIXME Use OpenMP 4 via _Pragma */
   #pragma omp for
+#ifdef __INTEL_COMPILER
   #pragma vector always
+#endif
   for (j=0; j<length; j++) {
     a[j] = 0.0;
     b[j] = 2.0;
@@ -252,8 +255,11 @@ int main(int argc, char **argv)
       }
     }
  
+  /* FIXME Use OpenMP 4 via _Pragma */
     #pragma omp for
+#ifdef __INTEL_COMPILER
     #pragma vector always
+#endif
     for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
  
   } /* end of iterations                                              */
