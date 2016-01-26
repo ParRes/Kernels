@@ -96,10 +96,18 @@ program main
   iterations = 1
   call get_command_argument(1,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i)') iterations
+  if (iterations .lt. 1) then
+    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
+    stop 1
+  endif
 
   order = 1
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i)') order
+  if (order .lt. 1) then
+    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
+    stop 1
+  endif
 
   ! same default as the C implementation
   tile_size = 32
@@ -107,22 +115,11 @@ program main
       call get_command_argument(3,argtmp,arglen,err)
       if (err.eq.0) read(argtmp,'(i)') tile_size
   endif
-
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  if (order .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
-    stop 1
-  endif
-
   if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    write(*,'(a,i5)') 'WARNING: tile_size must be >= 1 and <= order: ',tile_size
+    write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
+                           ' must be >= 1 and <= ',order
     tile_size = order ! no tiling
   endif
-
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -136,7 +133,7 @@ program main
 
   allocate( B(order,order), stat=err )
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a,i3)') 'allocation of B returned ',err
     stop 1
   endif
 
