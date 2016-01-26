@@ -12,14 +12,14 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #SYNCHFLAG  = -DSYNCHRONOUS
 #description: default handshake between threads is off
 
-USERFLAGS     = 
+USERFLAGS     =
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
 
 EXTOBJS      =
-LIBS         = -lm -lshmem
-LIBPATHS     = -L $(SHMEMTOP)/lib
+LIBS         = -lm
+LIBPATHS     =
 INCLUDEPATHS =
 
 ### End User configurable options ###

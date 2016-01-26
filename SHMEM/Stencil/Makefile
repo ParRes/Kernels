@@ -34,13 +34,13 @@ STARFLAG   = -DSTAR
 #DEBUGFLAG    =  -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS     = 
+USERFLAGS     =
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      =
-LIBS         = -lm -lshmem
-LIBPATHS     = -L $(SHMEMTOP)/lib
+LIBS         = -lm
+LIBPATHS     =
 INCLUDEPATHS =
 
 ### End User configurable options ###
