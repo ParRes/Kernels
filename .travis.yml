@@ -73,6 +73,9 @@ matrix:
     # Travis whitelist missing three Boost packages HPX-3 needs
     - os: linux
       env: PRK_TARGET=allhpx3
+    # LLVM Fortran is not ready.
+    - compiler: clang
+      env: PRK_TARGET=allfortran
   allow_failures:
     - env: PRK_TARGET=allgrappa
 addons:

@@ -13,6 +13,10 @@ case "$PRK_TARGET" in
         echo "Serial"
         ;;
 
+    allfortran)
+        echo "Fortran"
+        ;;
+
     allopenmp)
         echo "OpenMP"
         sh ./travis/install-clang.sh $TRAVIS_ROOT omp
