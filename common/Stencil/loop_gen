@@ -1,3 +1,4 @@
+#!/bin/sh
 RADIUS=$1
 STAR=$2
 if [ $STAR -ne 0 ]; then 
