@@ -34,7 +34,7 @@ STARFLAG   = -DSTAR
 #DEBUGFLAG    =  -DVERBOSE
 #description: default diagnostic style is silent
 
-USERFLAGS     = 
+USERFLAGS     =
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
