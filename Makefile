@@ -193,7 +193,7 @@ allserial:
 allfortran:
 	cd FORTRAN/Transpose;       $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 	cd FORTRAN/Synch_p2p;       $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	#cd FORTRAN/Stencil;         $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd FORTRAN/Stencil;         $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
