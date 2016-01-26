@@ -191,9 +191,9 @@ allserial:
 	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
 allfortran:
-	cd FORTRAN/Transpose;       $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
-	cd FORTRAN/Stencil;         $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd FORTRAN/Transpose;       $(MAKE) transpose
+	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
+	cd FORTRAN/Stencil;         $(MAKE) stencil
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
@@ -272,7 +272,7 @@ clean:
 	cd SERIAL/PIC;              $(MAKE) clean
 	cd FORTRAN/Transpose;       $(MAKE) clean
 	cd FORTRAN/Synch_p2p;       $(MAKE) clean
-	#cd FORTRAN/Stencil;         $(MAKE) clean
+	cd FORTRAN/Stencil;         $(MAKE) clean
 	rm -f stats.json
 
 veryclean: clean

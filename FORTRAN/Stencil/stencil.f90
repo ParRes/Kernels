@@ -91,7 +91,7 @@ program main
   integer(kind=INT32) ::  stencil_size                  ! number of points in stencil
   logical ::  tiling                                    ! boolean indication loop nest blocking
   integer(kind=INT32) ::  tile_size                     ! loop nest block factor
-  integer(kind=INT32), parameter :: r=2                 ! radius of stencil
+  integer(kind=INT32), parameter :: r=RADIUS            ! radius of stencil
   real(kind=REAL64) :: W(2*r+1,2*r+1)                   ! weights of points in the stencil
   real(kind=REAL64), allocatable :: A(:,:), B(:,:)      ! grid values
   real(kind=REAL64), parameter :: cx=1.0, cy=1.0
@@ -137,13 +137,12 @@ program main
   tiling    = .false.
   tile_size = 0
   if (command_argument_count().gt.2) then
-      call get_command_argument(3,argtmp,arglen,err)
-      if (err.eq.0) read(argtmp,'(i)') tile_size
-  endif
-  if ((tile_size .ge. 1).or.(tile_size.le.n)) then
-    write(*,'(a,i5,a,i5)') 'WARNAG: tile_size ',tile_size,&
-                           ' must be >= 1 and <= ',n
-   tiling = .true.
+    call get_command_argument(3,argtmp,arglen,err)
+    if (err.eq.0) read(argtmp,'(i)') tile_size
+    if ((tile_size .lt. 1).or.(tile_size.gt.n)) then
+      write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
+                             ' must be >= 1 and <= ',n
+    endif
   endif
 
   if (r .lt. 1) then
@@ -169,29 +168,29 @@ program main
     stop 1
   endif
 
-  ! fill the stencil weights to reflect a discrete divergence operator         */
+  ! fill the stencil weights to reflect a discrete divergence operator
   do jj=-r,r
     do ii=-r,r
-      W(ii,jj) = 0.0
+      W(ii+r+1,jj+r+1) = 0.0
     enddo
   enddo
 #ifdef STAR
   stencil_size = 4*r+1
   do ii=1,r
-    W(1,1+ii) = W(1+ii,1) =  1.0/real(2*ii*r
-    W(1,1-ii) = W(1-ii,1) = -1.0/real(2*ii*r
+    W(r+1, ii+r+1) = W( ii+r+1,r+1) =  1.0/real(2*ii*r,REAL64)
+    W(r+1,-ii+r+1) = W(-ii+r+1,r+1) = -1.0/real(2*ii*r,REAL64)
   enddo
 #else
   stencil_size = (2*r+1)*(2*r+1)
   do jj=1,r
     do ii=-jj+1,jj-1
-      W( ii, jj) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii,-jj) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj, ii) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj, ii) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii+r+1, jj+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii+r+1,-jj+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj+r+1, ii+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj+r+1, ii+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
     enddo
-    W( jj, jj)  =  1.0/real(4.0*jj*r,REAL64)
-    W(-jj,-jj)  = -1.0/real(4.0*jj*r,REAL64)
+    W( jj+r+1, jj+r+1)  =  1.0/real(4.0*jj*r,REAL64)
+    W(-jj+r+1,-jj+r+1)  = -1.0/real(4.0*jj*r,REAL64)
   enddo
 #endif
 
@@ -218,12 +217,12 @@ program main
   ! intialize the input and output arrays
   do j=1,n
     do i=1,n
-      A(i,j) = cx*i+cy*j;
+      A(i,j) = cx*i+cy*j
     enddo
   enddo
-  do j=r,n-r
-    do i=r,n-r
-      B(i,j) = 0.0;
+  do j=r-1,n-r
+    do i=r-1,n-r
+      B(i,j) = 0.0
     enddo
   enddo
 
@@ -233,34 +232,34 @@ program main
     if (k.eq.1) call cpu_time(t0)
 
     ! Apply the stencil operator
-    if (tiling) then
-      do j=r,n-r
-        do i=r,n-r
+    if (.not.tiling) then
+      do j=r,n-r-1
+        do i=r,n-r-1
 #ifdef STAR
             do jj=-r,r
-              B(i,j) = B(i,j) + W(1,1+jj) * A(i,j+jj)
+              B(i+1,j+1) = B(i+1,j+1) + W(r+1,jj+r+1) * A(i+1,j+jj+1)
             enddo
-            do ii=-r,0
-              B(i,j) = B(i,j) + W(1+ii,1) * A(1+i+ii,1+j)
+            do ii=-r,-1
+              B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,r+1) * A(i+ii+1,j+1)
             enddo
             do ii=1,r
-              B(i,j) = B(i,j) + W(1+ii,1) * A(1+i+ii,1+j)
+              B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,r+1) * A(i+ii+1,j+1)
             enddo
 #else
             ! would like to be able to unroll this loop, but compiler will ignore
             do jj=-r,r
               do ii=-r,r
-                B(i,j) = B(i,j) + W(ii,jj) * A(i+ii,j+jj)
+                B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,jj+r+1) * A(i+ii+1,j+jj+1)
               enddo
             enddo
 #endif
         enddo
       enddo
     else ! no tiling
-      do jt=r,n-r,tile_size
-        do it=r,n-r,tile_size
-          do j=jt,min(n-r,jt+tile_size)
-            do i=it,min(n-r,it+tile_size)
+      do jt=r,n-r-1,tile_size
+        do it=r,n-r-1,tile_size
+          do j=jt,min(n-r-1,jt+tile_size)
+            do i=it,min(n-r-1,it+tile_size)
 #ifdef STAR
                 do jj=-r,r
                   B(i,j) = B(i,j) + W(1,1+jj) * A(i,j+jj)
@@ -275,7 +274,7 @@ program main
                 ! would like to be able to unroll this loop
                 do jj=-r,r
                   do ii=-r,r
-                    B(i,j) = B(i,j) + W(ii,jj) * A(i+ii,j+jj)
+                    B(i,j) = B(i,j) + W(ii+r+1,jj+r+1) * A(i+ii,j+jj)
                   enddo
                 enddo
 #endif
@@ -328,8 +327,8 @@ program main
 
   flops = int(2*stencil_size+1,INT64) * active_points
   avgtime = stencil_time/iterations
-  write(*,'(a)') 'Rate (MFlops/s): ',1.0d-6*flops/avgtime, &
-                 'Avg time (s): ',avgtime
+  write(*,'(a,f13.6,a,f13.6)') 'Rate (MFlops/s): ',1.0d-6*flops/avgtime, &
+                               ' Avg time (s): ',avgtime
 
   stop
 

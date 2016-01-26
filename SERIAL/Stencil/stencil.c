@@ -156,8 +156,11 @@ int main(int argc, char ** argv) {
   }
 
   /* fill the stencil weights to reflect a discrete divergence operator         */
-  for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++)
-    WEIGHT(ii,jj) = (DTYPE) 0.0;
+  for (jj=-RADIUS; jj<=RADIUS; jj++) {
+      for (ii=-RADIUS; ii<=RADIUS; ii++) {
+          WEIGHT(ii,jj) = (DTYPE) 0.0;
+      }
+  }
 #ifdef STAR
   stencil_size = 4*RADIUS+1;
   for (ii=1; ii<=RADIUS; ii++) {
@@ -171,12 +174,12 @@ int main(int argc, char ** argv) {
       WEIGHT(ii,jj)  =  (DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
       WEIGHT(ii,-jj) = -(DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
       WEIGHT(jj,ii)  =  (DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
-      WEIGHT(-jj,ii) = -(DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));      
+      WEIGHT(-jj,ii) = -(DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
     }
     WEIGHT(jj,jj)    =  (DTYPE) (1.0/(4.0*jj*RADIUS));
     WEIGHT(-jj,-jj)  = -(DTYPE) (1.0/(4.0*jj*RADIUS));
   }
-#endif  
+#endif
 
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
