@@ -115,46 +115,47 @@ env:
 #  * comment out lines m to n by prepending #
 #    :m,n s/^/#/g
 #
-# Order by likelihood of failing...
-# Grappa is a problem.  No reason to test it every time.
-#  - PRK_TARGET=allgrappa
-# HPX-3 kernels are not merged yet.  Activate these when they are.
-  - PRK_TARGET=allhpx3
-# HPX-5 kernels are not merged yet.  Activate these when they are.
-  - PRK_TARGET=allhpx5
-# Chapel kernels are not merged yet.  Activate these when they are.
-  - PRK_TARGET=allchapel
-    CHPL_COMM=none
-  - PRK_TARGET=allchapel
-    CHPL_COMM=gasnet
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=mpi
-    PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=ofi
-    PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=smp
-    PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=udp
-    PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allupc
-    UPC_IMPL=gupc
-  - PRK_TARGET=allampi
-  - PRK_TARGET=allcharm++
-  - PRK_TARGET=allfgmpi
-  - PRK_TARGET=allshmem
-  - PRK_TARGET=allmpirma
-  - PRK_TARGET=allmpishm
-  - PRK_TARGET=allmpiomp
-  - PRK_TARGET=allmpi1
-  - PRK_TARGET=allopenmp
-  - PRK_TARGET=allserial
+  - PRK_TARGET=allfortran
+## Order by likelihood of failing...
+## Grappa is a problem.  No reason to test it every time.
+##  - PRK_TARGET=allgrappa
+## HPX-3 kernels are not merged yet.  Activate these when they are.
+#  - PRK_TARGET=allhpx3
+## HPX-5 kernels are not merged yet.  Activate these when they are.
+#  - PRK_TARGET=allhpx5
+## Chapel kernels are not merged yet.  Activate these when they are.
+#  - PRK_TARGET=allchapel
+#    CHPL_COMM=none
+#  - PRK_TARGET=allchapel
+#    CHPL_COMM=gasnet
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=mpi
+#    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=ofi
+#    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=smp
+#    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=udp
+#    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=gupc
+#  - PRK_TARGET=allampi
+#  - PRK_TARGET=allcharm++
+#  - PRK_TARGET=allfgmpi
+#  - PRK_TARGET=allshmem
+#  - PRK_TARGET=allmpirma
+#  - PRK_TARGET=allmpishm
+#  - PRK_TARGET=allmpiomp
+#  - PRK_TARGET=allmpi1
+#  - PRK_TARGET=allopenmp
+#  - PRK_TARGET=allserial
 before_install:
   - pwd
   - export TRAVIS_HOME=$PWD
