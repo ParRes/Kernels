@@ -4,6 +4,9 @@ MPICC=MYMPICC
 #name of C compiler, e.g. icc, xlc, gcc
 CC=MYCC
 
+#name of Fortran compiler, e.g. ifort, xlf_r, gfortran
+FC=MYFC
+
 #name of compile line flag enabling OpenMP, e.g. -openmp, -qopenmp, -fopenmp
 OPENMPFLAG=MYOPENMPFLAG
 
