@@ -87,7 +87,7 @@ HISTORY: Written by Rob Van der Wijngaart, September 2006.
 
 #define forder (1.0*order)
 
-main(int argc, char **argv){
+int main(int argc, char **argv){
 
   int     iter, i,ii,j,jj,k,kk,ig,jg,kg; /* dummies                               */
   int     iterations;           /* number of times the multiplication is done     */
@@ -167,7 +167,7 @@ main(int argc, char **argv){
 
   #pragma omp parallel private (i,j,k,ii,jj,kk,ig,jg,kg,iter)
   {
-  double *AA, *BB, *CC;
+  double *AA=NULL, *BB=NULL, *CC=NULL;
 
   if (block > 0) {
     /* matrix blocks for local temporary copies                                     */

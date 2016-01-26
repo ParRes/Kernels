@@ -36,10 +36,12 @@ matrix:
       env: PRK_TARGET=allupc
            UPC_IMPL=bupc
            GASNET_CONDUIT=udp
+           PRK_FLAGS="-Wc,-O3"
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=bupc
            GASNET_CONDUIT=smp
+           PRK_FLAGS="-Wc,-O3"
     # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
     - os: osx
       env: PRK_TARGET=allfgmpi
@@ -57,11 +59,13 @@ matrix:
     - env: PRK_TARGET=allupc
            UPC_IMPL=bupc
            GASNET_CONDUIT=ofi
+           PRK_FLAGS="-Wc,-O3"
     # UPC over MPICH on Mac hangs - may be async progress issue
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=bupc
            GASNET_CONDUIT=mpi
+           PRK_FLAGS="-Wc,-O3"
     # probably because of old GCC (4.6)
     - os: linux
       compiler: gcc
@@ -126,15 +130,19 @@ env:
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
     GASNET_CONDUIT=mpi
+    PRK_FLAGS="-Wc,-O3"
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
     GASNET_CONDUIT=ofi
+    PRK_FLAGS="-Wc,-O3"
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
     GASNET_CONDUIT=smp
+    PRK_FLAGS="-Wc,-O3"
   - PRK_TARGET=allupc
     UPC_IMPL=bupc
     GASNET_CONDUIT=udp
+    PRK_FLAGS="-Wc,-O3"
   - PRK_TARGET=allupc
     UPC_IMPL=gupc
   - PRK_TARGET=allampi
