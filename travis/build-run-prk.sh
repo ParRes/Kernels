@@ -60,7 +60,7 @@ case "$PRK_TARGET" in
         make $PRK_TARGET
         export PRK_TARGET_PATH=FORTRAN
         $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        #$PRK_TARGET_PATH/Stencil/stencil     10 1000
+        $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
         ;;
     allopenmp)
