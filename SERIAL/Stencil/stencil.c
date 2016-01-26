@@ -137,14 +137,14 @@ int main(int argc, char ** argv) {
   }
 
   if (2*RADIUS +1 > n) {
-    printf("ERROR: Stencil radius %d exceeds grid size %d\n", RADIUS, n);
+    printf("ERROR: Stencil radius %d exceeds grid size %ld\n", RADIUS, n);
     exit(EXIT_FAILURE);
   }
 
   /*  make sure the vector space can be represented                             */
   total_length = n*n*sizeof(DTYPE);
-  if (total_length/n != n*sizeof(DTYPE)) {
-    printf("ERROR: Space for %d x %d grid cannot be represented; ", n, n);
+  if (total_length/n != n*(signed)sizeof(DTYPE)) {
+    printf("ERROR: Space for %ld x %ld grid cannot be represented; ", n, n);
     exit(EXIT_FAILURE);
   }
 
@@ -181,7 +181,7 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
 
-  printf("Grid size            = %d\n", n);
+  printf("Grid size            = %ld\n", n);
   printf("Radius of stencil    = %d\n", RADIUS);
 #ifdef STAR
   printf("Type of stencil      = star\n");
@@ -207,6 +207,8 @@ int main(int argc, char ** argv) {
     IN(i,j) = COEFX*i+COEFY*j;
   for (j=RADIUS; j<n-RADIUS; j++) for (i=RADIUS; i<n-RADIUS; i++) 
     OUT(i,j) = (DTYPE)0.0;
+
+  stencil_time = 0.0; /* silence compiler warning */
 
   for (iter = 0; iter<=iterations; iter++){
 

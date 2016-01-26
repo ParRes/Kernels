@@ -206,7 +206,9 @@ int main(int argc, char **argv)
   printf("Offset               = %ld\n", offset);
   printf("Number of iterations = %d\n", iterations);
 
+#ifdef __INTEL_COMPILER
   #pragma vector always
+#endif
   for (j=0; j<length; j++) {
     a[j] = 0.0;
     b[j] = 2.0;
@@ -217,12 +219,16 @@ int main(int argc, char **argv)
  
   scalar = SCALAR;
  
+  nstream_time = 0.0; /* silence compiler warning */
+
   for (iter=0; iter<=iterations; iter++) {
  
     /* start timer after a warmup iteration */
     if (iter == 1) nstream_time = wtime();
  
+#ifdef __INTEL_COMPILER
     #pragma vector always
+#endif
     for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
  
   }
