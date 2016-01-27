@@ -160,30 +160,29 @@ program main
   !$omp&  private(i,j,it,jt,k)
 
   ! Fill the original matrix, set transpose to known garbage value. */
-  ! Fill the original column matrix
-  !$omp do collapse(2)
-  do j=1,order
-    do i=1,order
-      ! (1) this will overflow for order > 46340
-      !! A(i,j) = (i-1)+(j-1)*order
-      ! (2) this is safe, but ugly
-      !! temp = order
-      !! temp = temp * (j-1) + (i-1)
-      !! A(i,j) = temp
-      ! (3) this is the proper way to cast
-      A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+  if (tile_size.lt.order) then
+    !$omp do collapse(2)
+    do j=1,order,tile_size
+      do i=1,order,tile_size
+        do jt=j,min(order,j+tile_size-1)
+          do it=i,min(order,i+tile_size-1)
+              A(it,jt) = real(order,REAL64) * real(jt-1,REAL64) + real(it-1,REAL64)
+              B(it,jt) = 0.0
+          enddo
+        enddo
+      enddo
     enddo
-  enddo
-  !$omp end do nowait
-
-  ! Set the transpose matrix to a known garbage value.
-  !$omp do collapse(2)
-  do j=1,order
-    do i=1,order
-      B(i,j) = 0.0
+    !$omp end do nowait
+  else
+    !$omp do collapse(2)
+    do j=1,order
+      do i=1,order
+        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+        B(i,j) = 0.0
+      enddo
     enddo
-  enddo
-  !$omp end do nowait
+    !$omp end do nowait
+  endif
 
   do k=0,iterations
 
