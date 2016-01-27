@@ -15,6 +15,20 @@ case "$PRK_TARGET" in
 
     allfortran)
         echo "Fortran"
+        if [ "${TRAVIS_OS_NAME}" == "osx" ] ; then
+            set +e
+            brew update
+            p=gcc
+            if [ "x`brew ls --versions $p`" == "x" ] ; then
+                echo "$p is not installed - installing it"
+                brew install $p
+            else
+                echo "$p is installed - upgrading it"
+                brew upgrade $p
+            fi
+            brew list gcc
+            set -e
+        fi
         ;;
 
     allopenmp)
