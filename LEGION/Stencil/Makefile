@@ -49,5 +49,5 @@ usage:
 	@echo "Usage: type \"make $(OUTFILE)\" to build executable"
 	@echo "            \"make clean\" to remove objects and executables"
 
-$(GEN_SRC): clean
 include $(LG_RT_DIR)/runtime.mk
+$(GEN_OBJS): clean
