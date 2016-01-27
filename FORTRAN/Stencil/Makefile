@@ -6,7 +6,7 @@ ifndef RADIUS
   RADIUS=2
 endif
 
-STARFLAG   = -DSTAR
+STARFLAG   = #-DSTAR
 
 .PHONY: all clean run
 

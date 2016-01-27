@@ -259,11 +259,11 @@ program main
 #endif
         enddo
       enddo
-    else ! no tiling
+    else ! tiling
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
-          do j=jt,min(n-r-1,jt+tile_size)
-            do i=it,min(n-r-1,it+tile_size)
+          do j=jt,min(n-r-1,jt+tile_size-1)
+            do i=it,min(n-r-1,it+tile_size-1)
 #ifdef STAR
                 do jj=-r,r
                   B(i+1,j+1) = B(i+1,j+1) + W(r+1,jj+r+1) * A(i+1,j+jj+1)
