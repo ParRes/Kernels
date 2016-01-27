@@ -95,7 +95,7 @@ program main
 
   iterations = 1
   call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i)') iterations
+  if (err.eq.0) read(argtmp,'(i32)') iterations
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
@@ -103,7 +103,7 @@ program main
 
   order = 1
   call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i)') order
+  if (err.eq.0) read(argtmp,'(i32)') order
   if (order .lt. 1) then
     write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
     stop 1
@@ -113,7 +113,7 @@ program main
   tile_size = 32
   if (command_argument_count().gt.2) then
       call get_command_argument(3,argtmp,arglen,err)
-      if (err.eq.0) read(argtmp,'(i)') tile_size
+      if (err.eq.0) read(argtmp,'(i32)') tile_size
   endif
   if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
     write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
@@ -140,9 +140,9 @@ program main
   ! avoid overflow 64<-32
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
-  write(*,'(a,i)') 'Matrix order         = ', order
-  write(*,'(a,i)') 'Tile size            = ', tile_size
-  write(*,'(a,i)') 'Number of iterations = ', iterations
+  write(*,'(a,i8)') 'Matrix order         = ', order
+  write(*,'(a,i8)') 'Tile size            = ', tile_size
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   ! Fill the original matrix, set transpose to known garbage value. */
 
@@ -232,7 +232,7 @@ program main
            ' Avg time (s): ', avgtime
     stop
   else
-    write(*,'(a,f,a,f)') 'ERROR: Aggregate squared error ',abserr, &
+    write(*,'(a,f13.6,a,f13.6)') 'ERROR: Aggregate squared error ',abserr, &
            'exceeds threshold ',epsilon
     stop 1
   endif

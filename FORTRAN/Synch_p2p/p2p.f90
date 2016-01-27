@@ -87,15 +87,15 @@ program main
 
   iterations = 1
   call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i)') iterations
+  if (err.eq.0) read(argtmp,'(i32)') iterations
 
   m = 1
   call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i)') m
+  if (err.eq.0) read(argtmp,'(i32)') m
 
   n = 1
   call get_command_argument(3,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i)') n
+  if (err.eq.0) read(argtmp,'(i32)') n
 
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
@@ -113,8 +113,8 @@ program main
     stop 1
   endif
 
-  write(*,'(a,i,i)') 'Grid sizes               = ', m, n
-  write(*,'(a,i)')   'Number of iterations     = ', iterations
+  write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
+  write(*,'(a,i8)')    'Number of iterations     = ', iterations
 
   do j=1,n
     do i=1,m

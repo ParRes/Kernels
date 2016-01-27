@@ -120,7 +120,7 @@ program main
 
   iterations = 1
   call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i)') iterations
+  if (err.eq.0) read(argtmp,'(i32)') iterations
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
@@ -128,7 +128,7 @@ program main
 
   n = 1
   call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i)') n
+  if (err.eq.0) read(argtmp,'(i32)') n
   if (n .lt. 1) then
     write(*,'(a,i5)') 'ERROR: array dimension must be >= 1 : ', n
     stop 1
@@ -138,7 +138,7 @@ program main
   tile_size = 0
   if (command_argument_count().gt.2) then
     call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i)') tile_size
+    if (err.eq.0) read(argtmp,'(i32)') tile_size
     if ((tile_size .lt. 1).or.(tile_size.gt.n)) then
       write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
                              ' must be >= 1 and <= ',n
@@ -202,8 +202,8 @@ program main
   norm = 0.0;
   active_points = int((n-2*r)*(n-2*r),INT64);
 
-  write(*,'(a,i)') 'Grid size            = ', n
-  write(*,'(a,i)') 'Radius of stencil    = ', r
+  write(*,'(a,i8)') 'Grid size            = ', n
+  write(*,'(a,i8)') 'Radius of stencil    = ', r
   write(*,'(a,a)') 'Type of stencil      = ', &
 #ifdef STAR
                    'star'
@@ -217,7 +217,7 @@ program main
   else
       write(*,'(a)') 'Untiled'
   endif
-  write(*,'(a,i)') 'Number of iterations = ', iterations
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   ! intialize the input and output arrays
   do j=1,n
