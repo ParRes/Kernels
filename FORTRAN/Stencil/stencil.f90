@@ -229,28 +229,43 @@ program main
   endif
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
+  !$omp parallel default(none)                                        &
+  !$omp&  shared(A,B,W,t0,t1,iterations,tiling,tile_size,stencil_time)&
+  !$omp&  firstprivate(n)                                             &
+  !$omp&  private(i,j,ii,jj,it,jt,k)                                  &
+  !$omp&  reduction(+:norm)
+
   ! intialize the input and output arrays
+  !$omp do collapse(2)
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
     enddo
   enddo
-  do j=r-1,n-r
-    do i=r-1,n-r
+  !$omp end do nowait
+  !$omp do collapse(2)
+  do j=r+1,n-r
+    do i=r+1,n-r
       B(i,j) = 0.0
     enddo
   enddo
+  !$omp end do nowait
 
   do k=0,iterations
 
     ! start timer after a warmup iteration
+    !$omp barrier
+    !$omp master
     if (k.eq.1) call cpu_time(t0)
+    !$omp end master
 
     ! Apply the stencil operator
     if (.not.tiling) then
+      !$omp do collapse(2)
       do j=r,n-r-1
         do i=r,n-r-1
 #ifdef STAR
+            ! do not use Intel Fortran unroll directive here (slows down)
             do jj=-r,r
               B(i+1,j+1) = B(i+1,j+1) + W(r+1,jj+r+1) * A(i+1,j+jj+1)
             enddo
@@ -269,7 +284,9 @@ program main
 #endif
         enddo
       enddo
+      !$omp end do nowait
     else ! tiling
+      !$omp do collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -295,26 +312,37 @@ program main
           enddo
         enddo
       enddo
+      !$omp end do nowait
     endif ! tiling
 
+    !$omp barrier
+
     ! add constant to solution to force refresh of neighbor data, if any
+    !$omp do collapse(2)
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.0
       enddo
     enddo
+    !$omp end do nowait
 
   enddo ! iterations
 
+  !$omp barrier
+  !$omp master
   call cpu_time(t1)
   stencil_time = t1 - t0
+  !$omp end master
 
   ! compute L1 norm in parallel
+  !$omp do collapse(2)
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
+
+  !$omp end parallel
 
   norm = norm / real(active_points,REAL64)
 
