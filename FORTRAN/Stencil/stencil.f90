@@ -268,7 +268,7 @@ program main
                 do jj=-r,r
                   B(i+1,j+1) = B(i+1,j+1) + W(r+1,jj+r+1) * A(i+1,j+jj+1)
                 enddo
-                do ii=-r,0
+                do ii=-r,-1
                   B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,r+1) * A(i+ii+1,j+1)
                 enddo
                 do ii=1,r
