@@ -17,4 +17,5 @@ run: $(PROGRAM)
 
 clean:
 	-rm -f $(PROGRAM)
+	-rm -f $(PROGRAM)-omp
 

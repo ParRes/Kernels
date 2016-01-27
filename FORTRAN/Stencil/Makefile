@@ -22,6 +22,6 @@ run: $(PROGRAM)
 	$(PROGRAM) 10 4096 32
 
 clean:
-	-rm -f $(PROGRAM).o
 	-rm -f $(PROGRAM)
+	-rm -f $(PROGRAM)-omp
 
