@@ -246,7 +246,6 @@ program main
               B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,r+1) * A(i+ii+1,j+1)
             enddo
 #else
-            ! would like to be able to unroll this loop, but compiler will ignore
             do jj=-r,r
               do ii=-r,r
                 B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,jj+r+1) * A(i+ii+1,j+jj+1)
@@ -262,19 +261,18 @@ program main
             do i=it,min(n-r-1,it+tile_size)
 #ifdef STAR
                 do jj=-r,r
-                  B(i,j) = B(i,j) + W(1,1+jj) * A(i,j+jj)
+                  B(i+1,j+1) = B(i+1,j+1) + W(r+1,jj+r+1) * A(i+1,j+jj+1)
                 enddo
                 do ii=-r,0
-                  B(i,j) = B(i,j) + W(1+ii,1) * A(i+ii,j)
+                  B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,r+1) * A(i+ii+1,j+1)
                 enddo
                 do ii=1,r
-                  B(i,j) = B(i,j) + W(1+ii,1) * A(i+ii,j)
+                  B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,r+1) * A(i+ii+1,j+1)
                 enddo
 #else
-                ! would like to be able to unroll this loop
                 do jj=-r,r
                   do ii=-r,r
-                    B(i,j) = B(i,j) + W(ii+r+1,jj+r+1) * A(i+ii,j+jj)
+                    B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,jj+r+1) * A(i+ii+1,j+jj+1)
                   enddo
                 enddo
 #endif

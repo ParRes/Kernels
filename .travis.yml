@@ -90,6 +90,9 @@ addons:
     - cmake
     - gcc-4.8
     - g++-4.8
+    - gfortran-4.8
+    - gfortran-4.9
+    - gfortran-5
     # Required by GUPC
     - libnuma-dev
     # Boost is for Grappa and HPX-3
