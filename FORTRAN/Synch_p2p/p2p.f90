@@ -126,28 +126,45 @@ program main
   write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
 
+  !$omp parallel default(none)                                        &
+  !$omp&  shared(grid,t0,t1,iterations,pipeline_time)                 &
+  !$omp&  firstprivate(m,n)                                           &
+  !$omp&  private(i,j,k)
+
+  !$omp do collapse(2)
   do j=1,n
     do i=1,m
       grid(i,j) = 0.0d0
     enddo
   enddo
+  !$omp end do nowait
+  !$omp do
   do j=1,n
     grid(1,j) = real(j-1,REAL64)
   enddo
+  !$omp end do nowait
+  !$omp do
   do i=1,m
     grid(i,1) = real(i-1,REAL64)
   enddo
+  !$omp end do nowait
 
   do k=0,iterations
 
     !  start timer after a warmup iteration
+    !$omp barrier
+    !$omp master
     if (k.eq.1) call cpu_time(t0)
+    !$omp end master
 
+    ! TODO
+    !$omp master
     do j=2,n
       do i=2,m
         grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
       enddo
     enddo
+    !$omp end master
 
     ! copy top right corner value to bottom left corner to create dependency; we
     ! need a barrier to make sure the latest value is used. This also guarantees
@@ -156,8 +173,13 @@ program main
 
   enddo ! iterations
 
+  !$omp barrier
+  !$omp master
   call cpu_time(t1)
   pipeline_time = t1 - t0
+  !$omp end master
+
+  !$omp end parallel
 
   ! ********************************************************************
   ! ** Analyze and output results.
