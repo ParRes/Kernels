@@ -43,12 +43,16 @@ case "$PRK_TARGET" in
         case "$CC" in
             gcc)
                 for gccversion in "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
-                    if [ -f "/usr/bin/gfortran$gccversion" ]; then
-                        export PRK_FC="/usr/bin/gfortran$gccversion -std=f2008 -cpp"
+                    if [ -f "`which gfortran$gccversion`" ]; then
+                        export PRK_FC="gfortran$gccversion -std=f2008 -cpp"
                         echo "Found GCC Fortran: $PRK_FC"
                         break
                     fi
                 done
+                if [ "x$PRK_FC" == "x" ] ; then
+                    echo "No Fortran compiler found!"
+                    exit 9
+                fi
                 echo "FC=$PRK_FC" > common/make.defs
                 ;;
             clang)
