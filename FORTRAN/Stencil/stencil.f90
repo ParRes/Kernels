@@ -142,6 +142,9 @@ program main
     if ((tile_size .lt. 1).or.(tile_size.gt.n)) then
       write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
                              ' must be >= 1 and <= ',n
+    else
+      tiling = .true.
+      write(*,'(a)') 'WARNING: tiling is broken!!!!'
     endif
   endif
 
@@ -177,8 +180,10 @@ program main
 #ifdef STAR
   stencil_size = 4*r+1
   do ii=1,r
-    W(r+1, ii+r+1) = W( ii+r+1,r+1) =  1.0/real(2*ii*r,REAL64)
-    W(r+1,-ii+r+1) = W(-ii+r+1,r+1) = -1.0/real(2*ii*r,REAL64)
+    W(r+1, ii+r+1) =  1.0/real(2*ii*r,REAL64)
+    W(r+1,-ii+r+1) = -1.0/real(2*ii*r,REAL64)
+    W( ii+r+1,r+1) =  1.0/real(2*ii*r,REAL64)
+    W(-ii+r+1,r+1) = -1.0/real(2*ii*r,REAL64)
   enddo
 #else
   stencil_size = (2*r+1)*(2*r+1)
@@ -208,7 +213,7 @@ program main
   write(*,'(a)') 'Data type            = double precision'
   write(*,'(a)') 'Compact representation of stencil loop body'
   if (tiling) then
-      write(*,'(a)') 'Tile size            = ', tile_size
+      write(*,'(a,i5)') 'Tile size            = ', tile_size
   else
       write(*,'(a)') 'Untiled'
   endif
