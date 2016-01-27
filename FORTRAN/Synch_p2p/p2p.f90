@@ -59,7 +59,7 @@ program main
   implicit none
   ! for argument parsing
   integer :: err
-  integer :: argnum, arglen
+  integer :: arglen
   character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
