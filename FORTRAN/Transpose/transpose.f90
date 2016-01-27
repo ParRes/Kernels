@@ -242,15 +242,6 @@ program main
   !$omp do collapse(2)
   do j=1,order
     do i=1,order
-      ! (1) this was overflowing for iterations>15, order=1000
-      !! temp = ((order*(i-1))+ (j-1)) * (iterations+1)
-      ! (2) this is safe, but ugly
-      !! temp   = order
-      !! temp   = temp * (i-1)
-      !! temp   = temp + (j-1)
-      !! temp   = temp * (iterations+1)
-      !! abserr = abserr + abs(B(i,j) - (temp+addit))
-      ! (3) this is the proper way to cast
       temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
            * real(iterations+1,REAL64)
       abserr = abserr + abs(B(i,j) - (temp+addit))
