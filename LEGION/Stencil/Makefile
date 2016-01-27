@@ -14,6 +14,7 @@
 #
 include ../../common/LEGION.defs
 LG_RT_DIR=$(LEGIONTOP)/runtime
+
 ifndef LG_RT_DIR
 $(error LG_RT_DIR variable is not defined, aborting build)
 endif

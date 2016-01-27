@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+include ../../common/LEGION.defs
+LG_RT_DIR=$(LEGIONTOP)/runtime
 
 ifndef LG_RT_DIR
 $(error LG_RT_DIR variable is not defined, aborting build)
@@ -44,5 +45,10 @@ LD_FLAGS	?=
 #
 ###########################################################################
 
+usage:
+	@echo "Usage: type \"make $(OUTFILE)\" to build executable"
+	@echo "            \"make clean\" to remove objects and executables"
+
 include $(LG_RT_DIR)/runtime.mk
+$(GEN_OBJS): clean
 
