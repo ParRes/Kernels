@@ -53,7 +53,7 @@ case "$PRK_TARGET" in
                     echo "No Fortran compiler found!"
                     exit 9
                 fi
-                echo "FC=$PRK_FC" > common/make.defs
+                echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp" > common/make.defs
                 ;;
             clang)
                 echo "LLVM Fortran is not supported."
@@ -63,9 +63,13 @@ case "$PRK_TARGET" in
         esac
         make $PRK_TARGET
         export PRK_TARGET_PATH=FORTRAN
-        $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil     10 1000
-        $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
+        $PRK_TARGET_PATH/Synch_p2p/p2p           10 1024 1024
+        $PRK_TARGET_PATH/Stencil/stencil         10 1000
+        $PRK_TARGET_PATH/Transpose/transpose     10 1024 32
+        export OMP_NUM_THREADS=2
+        $PRK_TARGET_PATH/Synch_p2p/p2p-omp       10 1024 1024
+        $PRK_TARGET_PATH/Stencil/stencil-omp     10 1000
+        $PRK_TARGET_PATH/Transpose/transpose-omp 10 1024 32
         ;;
     allopenmp)
         echo "OpenMP"
