@@ -1,18 +1,18 @@
+#!/bin/sh
 RADIUS=$1
 STAR=$2
 if [ $STAR -ne 0 ]; then 
-    echo "      /* Star shaped stencil of radius $RADIUS */"                >  loop_body_star.incl
-    echo "      OUT(i,j) += WEIGHT(0,0)*IN(i,j)"                            >> loop_body_star.incl
+    echo "      ! Star shaped stencil of radius $RADIUS"                >  loop_body_star.incl
+    echo "      OUT(i,j) = OUT(i,j) + WEIGHT(1,1)*IN(i,j)"                            >> loop_body_star.incl
     jj=1
     while [ $jj -le $RADIUS ]; do
-      echo "        +WEIGHT(0,-$jj)*IN(i,j-$jj)+WEIGHT(0,$jj)*IN(i,j+$jj)"  >> loop_body_star.incl
-      echo "        +WEIGHT(-$jj,0)*IN(i-$jj,j)+WEIGHT($jj,0)*IN(i+$jj,j)"  >> loop_body_star.incl
+      echo "        +WEIGHT(1,1-$jj)*IN(i,j-$jj)+WEIGHT(1,1+$jj)*IN(i,j+$jj)"  >> loop_body_star.incl
+      echo "        +WEIGHT(1-$jj,1)*IN(i-$jj,j)+WEIGHT(1+$jj,1)*IN(i+$jj,j)"  >> loop_body_star.incl
       jj=`expr $jj + 1`
     done
-    echo "        ;"                                                        >> loop_body_star.incl
 else
-    echo "      /* Compact stencil of radius $RADIUS */"                    >  loop_body_compact.incl
-    echo "      OUT(i,j) +="                                                >> loop_body_compact.incl
+    echo "      ! Compact stencil of radius $RADIUS"                    >  loop_body_compact.incl
+    echo "      OUT(i,j) = OUT(,j) +"                                                >> loop_body_compact.incl
     jj=`expr -1 \* $RADIUS`
     while [ $jj -le $RADIUS ]; do
       ii=`expr -1 \* $RADIUS`

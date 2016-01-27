@@ -38,6 +38,35 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 LINEAR 1.0 3.0
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 PATCH 0 200 100 200 
         ;;
+    allfortran)
+        echo "Fortran"
+        case "$CC" in
+            gcc)
+                for gccversion in "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
+                    if [ -f "`which gfortran$gccversion`" ]; then
+                        export PRK_FC="gfortran$gccversion -std=f2008 -cpp"
+                        echo "Found GCC Fortran: $PRK_FC"
+                        break
+                    fi
+                done
+                if [ "x$PRK_FC" == "x" ] ; then
+                    echo "No Fortran compiler found!"
+                    exit 9
+                fi
+                echo "FC=$PRK_FC" > common/make.defs
+                ;;
+            clang)
+                echo "LLVM Fortran is not supported."
+                exit 9
+                echo "FC=flang" > common/make.defs
+                ;;
+        esac
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=FORTRAN
+        $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
+        $PRK_TARGET_PATH/Stencil/stencil     10 1000
+        $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
+        ;;
     allopenmp)
         echo "OpenMP"
         echo "CC=$PRK_COMPILER\nOPENMPFLAG=-fopenmp" > common/make.defs

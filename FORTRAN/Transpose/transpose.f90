@@ -64,12 +64,12 @@ program main
   implicit none
   ! for argument parsing
   integer :: err
-  integer :: argnum, arglen
+  integer :: arglen
   character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
   integer(kind=INT32) ::  order                     ! order of a the matrix
-  !dec$ attributes align:16 :: A, B
+  !dec$ attributes align:64 :: A, B
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
@@ -95,34 +95,31 @@ program main
 
   iterations = 1
   call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i)') iterations
-
-  order = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i)') order
-
-  ! same default as the C implementation
-  tile_size = 32
-  if (command_argument_count().gt.2) then
-      call get_command_argument(3,argtmp,arglen,err)
-      if (err.eq.0) read(argtmp,'(i)') tile_size
-  endif
-
+  if (err.eq.0) read(argtmp,'(i32)') iterations
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
   endif
 
+  order = 1
+  call get_command_argument(2,argtmp,arglen,err)
+  if (err.eq.0) read(argtmp,'(i32)') order
   if (order .lt. 1) then
     write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
     stop 1
   endif
 
+  ! same default as the C implementation
+  tile_size = 32
+  if (command_argument_count().gt.2) then
+      call get_command_argument(3,argtmp,arglen,err)
+      if (err.eq.0) read(argtmp,'(i32)') tile_size
+  endif
   if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    write(*,'(a,i5)') 'WARNING: tile_size must be >= 1 and <= order : ', tile_size
+    write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
+                           ' must be >= 1 and <= ',order
     tile_size = order ! no tiling
   endif
-
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -136,18 +133,16 @@ program main
 
   allocate( B(order,order), stat=err )
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a,i3)') 'allocation of B returned ',err
     stop 1
   endif
 
   ! avoid overflow 64<-32
-  bytes = 2 * order
-  bytes = bytes * order
-  bytes = bytes * storage_size(A)/8
+  bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
-  write(*,'(a,i)') 'Matrix order         = ', order
-  write(*,'(a,i)') 'Tile size            = ', tile_size
-  write(*,'(a,i)') 'Number of iterations = ', iterations
+  write(*,'(a,i8)') 'Matrix order         = ', order
+  write(*,'(a,i8)') 'Tile size            = ', tile_size
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   ! Fill the original matrix, set transpose to known garbage value. */
 
@@ -237,7 +232,7 @@ program main
            ' Avg time (s): ', avgtime
     stop
   else
-    write(*,'(a,f,a,f)') 'ERROR: Aggregate squared error ',abserr, &
+    write(*,'(a,f13.6,a,f13.6)') 'ERROR: Aggregate squared error ',abserr, &
            'exceeds threshold ',epsilon
     stop 1
   endif

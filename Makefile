@@ -63,6 +63,7 @@ help:
 	@echo "       \"make allcharm++\"   (re-)builds all Charm++ targets"
 	@echo "       \"make allampi\"      (re-)builds all Adaptive MPI targets"
 	@echo "       \"make allgrappa\"    (re-)builds all Grappa targets"
+	@echo "       \"make allfortran\"   (re-)builds all Fortran targets"
 	@echo "       \"make allfreaks\"    (re-)builds the above two targets"
 	@echo "       optionally, specify   \"matrix_rank=<n> number_of_functions=<m>\""
 	@echo "       optionally, specify   \"default_opt_flags=<list of optimization flags>\""
@@ -70,8 +71,8 @@ help:
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
 all: alldarwin allfreaks
-alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc
-allfreaks: allcharm++ allampi allgrappa 
+alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran
+allfreaks: allcharm++ allampi allgrappa
 
 allmpi1:
 	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -189,6 +190,11 @@ allserial:
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
+allfortran:
+	cd FORTRAN/Transpose;       $(MAKE) transpose
+	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
+	cd FORTRAN/Stencil;         $(MAKE) stencil
+
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
 	cd MPI1/Nstream;            $(MAKE) clean
@@ -264,6 +270,9 @@ clean:
 	cd SERIAL/Synch_p2p;        $(MAKE) clean
 	cd SERIAL/Branch;           $(MAKE) clean
 	cd SERIAL/PIC;              $(MAKE) clean
+	cd FORTRAN/Transpose;       $(MAKE) clean
+	cd FORTRAN/Synch_p2p;       $(MAKE) clean
+	cd FORTRAN/Stencil;         $(MAKE) clean
 	rm -f stats.json
 
 veryclean: clean
