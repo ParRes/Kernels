@@ -76,10 +76,6 @@ matrix:
     # LLVM Fortran is not ready.
     - compiler: clang
       env: PRK_TARGET=allfortran
-    # Travis is not installing gfortran...
-    - os: linux
-      compiler: gcc
-      env: PRK_TARGET=allfortran
   allow_failures:
     - env: PRK_TARGET=allgrappa
 addons:
