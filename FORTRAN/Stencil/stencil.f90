@@ -178,34 +178,6 @@ program main
     stop 1
   endif
 
-  ! fill the stencil weights to reflect a discrete divergence operator
-  do jj=-r,r
-    do ii=-r,r
-      W(ii+r+1,jj+r+1) = 0.0
-    enddo
-  enddo
-#ifdef STAR
-  stencil_size = 4*r+1
-  do ii=1,r
-    W(r+1, ii+r+1) =  1.0/real(2*ii*r,REAL64)
-    W(r+1,-ii+r+1) = -1.0/real(2*ii*r,REAL64)
-    W( ii+r+1,r+1) =  1.0/real(2*ii*r,REAL64)
-    W(-ii+r+1,r+1) = -1.0/real(2*ii*r,REAL64)
-  enddo
-#else
-  stencil_size = (2*r+1)*(2*r+1)
-  do jj=1,r
-    do ii=-jj+1,jj-1
-      W( ii+r+1, jj+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii+r+1,-jj+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj+r+1, ii+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj+r+1, ii+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
-    enddo
-    W( jj+r+1, jj+r+1)  =  1.0/real(4.0*jj*r,REAL64)
-    W(-jj+r+1,-jj+r+1)  = -1.0/real(4.0*jj*r,REAL64)
-  enddo
-#endif
-
   norm = 0.0;
   active_points = int((n-2*r)*(n-2*r),INT64);
 
@@ -217,8 +189,10 @@ program main
   write(*,'(a,a)')  'Type of stencil      = ', &
 #ifdef STAR
                    'star'
+  stencil_size = 4*r+1
 #else
                    'stencil'
+  stencil_size = (2*r+1)*(2*r+1)
 #endif
   write(*,'(a)') 'Data type            = double precision'
   write(*,'(a)') 'Compact representation of stencil loop body'
@@ -234,6 +208,38 @@ program main
   !$omp&  firstprivate(n)                                             &
   !$omp&  private(i,j,ii,jj,it,jt,k)                                  &
   !$omp&  reduction(+:norm)
+
+  ! fill the stencil weights to reflect a discrete divergence operator
+  !$omp do collapse(2)
+  do jj=-r,r
+    do ii=-r,r
+      W(ii+r+1,jj+r+1) = 0.0
+    enddo
+  enddo
+  !$omp end do nowait
+#ifdef STAR
+  !$omp do
+  do ii=1,r
+    W(r+1, ii+r+1) =  1.0/real(2*ii*r,REAL64)
+    W(r+1,-ii+r+1) = -1.0/real(2*ii*r,REAL64)
+    W( ii+r+1,r+1) =  1.0/real(2*ii*r,REAL64)
+    W(-ii+r+1,r+1) = -1.0/real(2*ii*r,REAL64)
+  enddo
+  !$omp end do nowait
+#else
+  !$omp do collapse(2)
+  do jj=1,r
+    do ii=-jj+1,jj-1
+      W( ii+r+1, jj+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii+r+1,-jj+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj+r+1, ii+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj+r+1, ii+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+    enddo
+    W( jj+r+1, jj+r+1)  =  1.0/real(4.0*jj*r,REAL64)
+    W(-jj+r+1,-jj+r+1)  = -1.0/real(4.0*jj*r,REAL64)
+  enddo
+  !$omp end do nowait
+#endif
 
   ! intialize the input and output arrays
   !$omp do collapse(2)
