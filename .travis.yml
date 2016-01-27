@@ -122,6 +122,7 @@ env:
 #    :m,n s/^/#/g
 #
   - PRK_TARGET=allfortran
+    PRK_FLAGS="-O3 -std=f2008 -cpp"
 ## Order by likelihood of failing...
 ## Grappa is a problem.  No reason to test it every time.
 ##  - PRK_TARGET=allgrappa
