@@ -80,6 +80,9 @@
 
 program main
   use iso_fortran_env
+#ifdef _OPENMP
+  use omp_lib
+#endif
   implicit none
   ! for argument parsing
   integer :: err
@@ -109,7 +112,11 @@ program main
   ! ********************************************************************
 
   write(*,'(a,a)') 'Parallel Research Kernels version ', 'PRKVERSION'
+#ifdef _OPENMP
+  write(*,'(a)')   'OpenMP stencil execution on 2D grid'
+#else
   write(*,'(a)')   'Serial stencil execution on 2D grid'
+#endif
 
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
@@ -202,9 +209,12 @@ program main
   norm = 0.0;
   active_points = int((n-2*r)*(n-2*r),INT64);
 
+#ifdef _OPENMP
+  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
+#endif
   write(*,'(a,i8)') 'Grid size            = ', n
   write(*,'(a,i8)') 'Radius of stencil    = ', r
-  write(*,'(a,a)') 'Type of stencil      = ', &
+  write(*,'(a,a)')  'Type of stencil      = ', &
 #ifdef STAR
                    'star'
 #else

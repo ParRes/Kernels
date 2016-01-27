@@ -56,6 +56,9 @@
 
 program main
   use iso_fortran_env
+#ifdef _OPENMP
+  use omp_lib
+#endif
   implicit none
   ! for argument parsing
   integer :: err
@@ -76,7 +79,11 @@ program main
   ! ********************************************************************
 
   write(*,'(a,a)') 'Parallel Research Kernels version ', 'PRKVERSION'
+#ifdef _OPENMP
+  write(*,'(a)')   'OpenMP pipeline execution on 2D grid'
+#else
   write(*,'(a)')   'Serial pipeline execution on 2D grid'
+#endif
 
   if (command_argument_count().lt.3) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
@@ -113,6 +120,9 @@ program main
     stop 1
   endif
 
+#ifdef _OPENMP
+  write(*,'(a,i8)')    'Number of threads        = ',omp_get_max_threads()
+#endif
   write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
 

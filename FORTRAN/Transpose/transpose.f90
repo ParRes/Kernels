@@ -61,6 +61,9 @@
 
 program main
   use iso_fortran_env
+#ifdef _OPENMP
+  use omp_lib
+#endif
   implicit none
   ! for argument parsing
   integer :: err
@@ -85,7 +88,11 @@ program main
   ! ********************************************************************
 
   write(*,'(a,a)') 'Parallel Research Kernels version ', 'PRKVERSION'
+#ifdef _OPENMP
+  write(*,'(a)')   'OpenMP Matrix transpose: B = A^T'
+#else
   write(*,'(a)')   'Serial Matrix transpose: B = A^T'
+#endif
 
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
@@ -140,6 +147,9 @@ program main
   ! avoid overflow 64<-32
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
+#ifdef _OPENMP
+  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
+#endif
   write(*,'(a,i8)') 'Matrix order         = ', order
   write(*,'(a,i8)') 'Tile size            = ', tile_size
   write(*,'(a,i8)') 'Number of iterations = ', iterations
