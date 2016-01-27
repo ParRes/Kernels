@@ -44,7 +44,7 @@ case "$PRK_TARGET" in
             gcc)
                 for gccversion in "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
                     if [ -f "/usr/bin/gfortran$gccversion" ]; then
-                        export PRK_FC=/usr/bin/gfortran$gccversion
+                        export PRK_FC="/usr/bin/gfortran$gccversion -std=f2008 -cpp"
                         echo "Found GCC Fortran: $PRK_FC"
                         break
                     fi
