@@ -154,9 +154,14 @@ program main
   write(*,'(a,i8)') 'Tile size            = ', tile_size
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
-  ! Fill the original matrix, set transpose to known garbage value. */
+  !$omp parallel default(none)                                        &
+  !$omp&  shared(A,B,t0,t1,trans_time)                                &
+  !$omp&  firstprivate(order,iterations,tile_size)                    &
+  !$omp&  private(i,j,it,jt,k)
 
-  !  Fill the original column matrix
+  ! Fill the original matrix, set transpose to known garbage value. */
+  ! Fill the original column matrix
+  !$omp do collapse(2)
   do j=1,order
     do i=1,order
       ! (1) this will overflow for order > 46340
@@ -169,21 +174,28 @@ program main
       A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
     enddo
   enddo
+  !$omp end do nowait
 
-  !   Set the transpose matrix to a known garbage value.
+  ! Set the transpose matrix to a known garbage value.
+  !$omp do collapse(2)
   do j=1,order
     do i=1,order
       B(i,j) = 0.0
     enddo
   enddo
+  !$omp end do nowait
 
   do k=0,iterations
 
-    !  start timer after a warmup iteration
+    ! start timer after a warmup iteration
+    !$omp barrier
+    !$omp master
     if (k.eq.1) call cpu_time(t0)
+    !$omp end master
 
-    !  Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
+    ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
+      !$omp do collapse(2)
       do j=1,order,tile_size
         do i=1,order,tile_size
           do jt=j,min(order,j+tile_size-1)
@@ -194,27 +206,41 @@ program main
           enddo
         enddo
       enddo
+      !$omp end do nowait
     else
+      !$omp do collapse(2)
       do j=1,order
         do i=1,order
           B(j,i) = B(j,i) + A(i,j)
           A(i,j) = A(i,j) + 1.0
         enddo
       enddo
+      !$omp end do nowait
     endif
 
   enddo ! iterations
+
+  !$omp barrier
+  !$omp master
+  call cpu_time(t1)
+  trans_time = t1 - t0
+  !$omp end master
+
+  !$omp end parallel
 
   ! ********************************************************************
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  call cpu_time(t1)
-  trans_time = t1 - t0
-
   abserr = 0.0;
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
+  !$omp parallel default(none)                                        &
+  !$omp&  shared(B)                                                   &
+  !$omp&  firstprivate(order,iterations,addit)                        &
+  !$omp&  private(i,j,temp)                                           &
+  !$omp&  reduction(+:abserr)
+  !$omp do collapse(2)
   do j=1,order
     do i=1,order
       ! (1) this was overflowing for iterations>15, order=1000
@@ -231,6 +257,8 @@ program main
       abserr = abserr + abs(B(i,j) - (temp+addit))
     enddo
   enddo
+  !$omp end do nowait
+  !$omp end parallel
 
   deallocate( B )
   deallocate( A )
