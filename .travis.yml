@@ -77,6 +77,11 @@ matrix:
     - compiler: clang
       env: PRK_TARGET=allfortran
            PRK_FLAGS="-O3 -std=f2008 -cpp"
+    # Travis is not installing gfortran...
+    - os: linux
+      compiler: gcc
+      env: PRK_TARGET=allfortran
+           PRK_FLAGS="-O3 -std=f2008 -cpp"
   allow_failures:
     - env: PRK_TARGET=allgrappa
 addons:
