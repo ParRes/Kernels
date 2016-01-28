@@ -1,5 +1,9 @@
 include ../../common/make.defs
-CHARMC=$(CHARMTOP)/bin/charmc
+ifeq ($(CHARMTOP),)
+    CHARMC=true
+else
+    CHARMC=$(CHARMTOP)/bin/charmc
+endif
 CCOMPILER=$(CHARMC)
 CITRANSLATOR=$(CHARMC) -E
 CLINKER=$(CCOMPILER) -language charm++

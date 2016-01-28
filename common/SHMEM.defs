@@ -1,5 +1,8 @@
 include ../../common/make.defs
-CCOMPILER=$(SHMEMCC) -I$(SHMEMTOP)/include
-CLINKER=$(CCOMPILER) 
+ifeq ($(SHMEMCC),)
+    SHMEMCC=true
+endif
+CCOMPILER=$(SHMEMCC)
+CLINKER=$(CCOMPILER)
 COMOBJS=wtime.o SHMEM_bail_out.o
 PROG_ENV=-DSHMEM

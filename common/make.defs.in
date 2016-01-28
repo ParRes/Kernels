@@ -30,9 +30,6 @@ UPCFLAG=
 #name of MPI C compiler (to be used in Fine-Grain MPI context), e.g. mpicc
 FGMPICC=
 
-#location where SHMEM is installed, e.g. $(HOME)/oshmpi-install
-SHMEMTOP=
-
 #name of C compiler (to be used in MPI context of OpenSHMEM), e.g. $(MPICC)
 SHMEMCC=
 
