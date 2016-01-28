@@ -87,7 +87,7 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a,a)') 'Parallel Research Kernels version ', 'PRKVERSION'
+  write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
 #ifdef _OPENMP
   write(*,'(a)')   'OpenMP Matrix transpose: B = A^T'
 #else
