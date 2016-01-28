@@ -42,7 +42,7 @@ USAGE:   Program input is three command line arguments that give the
          matrix order, the number of times to repeat the operation
          (iterations), and the number of threads to use:
 
-         transpose <# threads> <matrix_size> <# iterations> <tile size>
+         <progname> <# threads> <matrix_size> <# iterations> <tile size>
 
          An optional parameter specifies the tile size used to divide the
          individual matrix blocks for improved cache and TLB performance.
@@ -53,31 +53,11 @@ USAGE:   Program input is three command line arguments that give the
 HISTORY: Written by Abdullah Kayi, May 2015.
 
 *******************************************************************/
-
-#include <cstdio>
-#include <cassert>
-#include <cstdlib>
-#include <float.h>
+#include "../../include/par-res-kern_legion.h"
 
 #include <sys/time.h>
 #define  USEC_TO_SEC   1.0e-6    /* to convert microsecs to secs */
-
-#include "legion.h"
 #include "default_mapper.h"
-
-#ifndef MIN
-#define MIN(x,y) ((x)<(y)?(x):(y))
-#endif
-#ifndef MAX
-#define MAX(x,y) ((x)>(y)?(x):(y))
-#endif
-#ifndef ABS
-#define ABS(a) ((a) >= 0 ? (a) : -(a))
-#endif
-
-using namespace LegionRuntime::HighLevel;
-using namespace LegionRuntime::Accessor;
-using namespace LegionRuntime::Arrays;
 
 enum TaskIDs {
   TASKID_TOPLEVEL = 1,
@@ -92,12 +72,10 @@ enum FieldIDs {
   FID_Y
 };
 
-const int DEFAULT_ORDER = 1024, DEFAULT_ITERATIONS = 100, DEFAULT_TILE_SIZE = 32, DEFAULT_PARTITIONS = 4;
-
 struct BlockArgs {
   int order;
   int tile_size;
-  int num_iterations;
+  int iterations;
   int num_partitions;
 };
 
@@ -118,11 +96,7 @@ void task_toplevel(const Task *task,
                    const std::vector<PhysicalRegion> &regions,
                    Context ctx, HighLevelRuntime *runtime)
 {
-  int
-    num_partitions = DEFAULT_PARTITIONS,
-    order = DEFAULT_ORDER,
-    tile_size = DEFAULT_TILE_SIZE,
-    num_iterations = DEFAULT_ITERATIONS;
+  int num_partitions, order, tile_size, iterations;
 
   const InputArgs &inputs = HighLevelRuntime::get_input_args();
 
@@ -131,7 +105,7 @@ void task_toplevel(const Task *task,
   *********************************************************************/
 
   if (inputs.argc < 5){
-    printf("Usage: %s <# partitions> <# iterations> <matrix order> [tile size]\n",
+    printf("Usage: %s  <# threads> <# iterations> <matrix order> <# partitions>[tile size]\n",
            *inputs.argv);
     exit(EXIT_FAILURE);
   }
@@ -142,9 +116,9 @@ void task_toplevel(const Task *task,
       exit(EXIT_FAILURE);
   }
 
-  num_iterations  = atoi((inputs.argv[2]));
-  if (num_iterations < 1){
-      printf("ERROR: num_iterations must be >= 1 : %d \n",num_iterations);
+  iterations  = atoi((inputs.argv[2]));
+  if (iterations < 1){
+      printf("ERROR: iterations must be >= 1 : %d \n",iterations);
       exit(EXIT_FAILURE);
   }
 
@@ -158,13 +132,19 @@ void task_toplevel(const Task *task,
   /* a non-positive tile size means no tiling of the local transpose */
   if (tile_size <=0) tile_size = order;
 
-  printf("Legion transpose: num_partitions=%d,  num_iterations=%d, order=%d, tile_size=%d\n",
-      num_partitions, num_iterations, order, tile_size);
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
+  printf("Legion matrix transpose: B = A^T\n");
+  printf("Number of threads    = %d\n", num_partitions);
+  printf("Matrix order         = %ld\n", order);
+  printf("Number of iterations = %d\n", iterations);
+  if ((tile_size > 0) && (tile_size < order))
+          printf("Tile size            = %d\n", tile_size);
+  else    printf("Untiled\n");
 
   BlockArgs args;
   args.order = order;
   args.tile_size = tile_size;
-  args.num_iterations = num_iterations;
+  args.iterations = iterations;
   args.num_partitions = num_partitions;
 
   /*********************************************************************
@@ -257,7 +237,6 @@ void task_toplevel(const Task *task,
   double ts_start = DBL_MAX, ts_end = DBL_MIN;
   std::pair<double, double> times(ts_start, ts_end);
 
-
   for (GenericPointInRectIterator<1> pir(color_bounds); pir; pir++){
     std::pair<double, double> times(fm.get_result<pairdd>(DomainPoint::from_point<1>(pir.p)));
     ts_start = MIN(ts_start, times.first);
@@ -265,7 +244,7 @@ void task_toplevel(const Task *task,
   }
 
   double max_time = ts_end - ts_start;
-  double avg_time = max_time / num_iterations;
+  double avg_time = max_time / iterations;
 
   double bytes = 2.0 * sizeof(double) * order * order;
   printf("Rate (MB/s): %lf Avg time (s): %lf\n", 1.0E-06 * bytes/avg_time, avg_time);
@@ -334,7 +313,7 @@ void init_b_task(const Task *task,
 
   for (GenericPointInRectIterator<1> pir(rect); pir; pir++)
   {
-    accessor_b.write(DomainPoint::from_point<1>(pir.p), -1.0);
+    accessor_b.write(DomainPoint::from_point<1>(pir.p), 0.0);
   }
 }
 
@@ -347,7 +326,7 @@ std::pair<double, double> transpose_task(const Task *task,
   assert(task->arglen == sizeof(BlockArgs));
   BlockArgs args = *static_cast<const BlockArgs *>(task->args);
   int n = args.order;
-  int num_iterations = args.num_iterations;
+  int iterations = args.iterations;
   int blocks = args.tile_size;
   int num_partitions = args.num_partitions;
   int tiling = (blocks > 0) && (blocks < n);
@@ -385,7 +364,7 @@ std::pair<double, double> transpose_task(const Task *task,
   int colstart = blockx * MYTHREAD;
   int myoffset_b = blockx * n * MYTHREAD;
 
-  for (int iter = 0; iter<num_iterations; iter++)
+  for (int iter = 0; iter<=iterations; iter++)
   {
     if (iter == 1)
       ts_start = wtime();
@@ -394,7 +373,8 @@ std::pair<double, double> transpose_task(const Task *task,
     if(!tiling){
       for (int j = colstart; j < colstart+blockx; j++) {
         for (int i = 0; i < n; i++){
-          b[local_idx++] = a[j+i*n];
+          b[local_idx++] += a[j+i*n];
+          a[j+i*n] += 1.0;
         }
       }
     }
@@ -404,7 +384,8 @@ std::pair<double, double> transpose_task(const Task *task,
           for (int jj = j; jj < MIN(colstart+blockx, j+blocks); jj++)
             for (int ii = i; ii < MIN(n, i+blocks); ii++)
             {
-              b[ii+jj*n-myoffset_b] = a[jj+ii*n];
+              b[ii+jj*n-myoffset_b] += a[jj+ii*n];
+              a[jj+ii*n] += 1.0;
             }
       }
     }
@@ -424,6 +405,7 @@ void check_task(const Task *task,
   assert(task->arglen == sizeof(BlockArgs));
   BlockArgs args = *static_cast<const BlockArgs *>(task->args);
   int n = args.order;
+  int iterations = args.iterations;
 
   RegionAccessor<AccessorType::Generic, double> acc_b =
     regions[0].get_field_accessor(FID_Y).typeify<double>();
@@ -435,13 +417,15 @@ void check_task(const Task *task,
   double abserr = 0.0;
   double epsilon=1.e-8; /* error tolerance */
 
+  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
+
   for (GenericPointInRectIterator<1> pir(rect); pir; pir++) {
     int index_b = pir.p.x[0];
     int i = index_b / n;
     int j = index_b % n;
     Point<1> p_b(index_b);
     double value = acc_b.read(DomainPoint::from_point<1>(p_b));
-    abserr += ABS(value - (double)(j*n + i));
+    abserr += ABS(value - (double)((j*n + i)*(iterations+1)+addit));
   }
 
 #ifdef VERBOSE

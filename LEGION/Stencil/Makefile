@@ -15,9 +15,13 @@
 include ../../common/LEGION.defs
 LG_RT_DIR=$(LEGIONTOP)/runtime
 
-ifndef LG_RT_DIR
-$(error LG_RT_DIR variable is not defined, aborting build)
+CXX=$(LEGIONCC)
+
+ifndef RADIUS
+  RADIUS=2
 endif
+#description: default radius of filter to be applied is 2
+RADIUSFLAG  = -DRADIUS=$(RADIUS)
 
 #Flags for directing the runtime makefile what to include
 #DEBUG           ?= 1		# Include debugging symbols
@@ -30,11 +34,10 @@ ALT_MAPPERS     ?= 0		# Compile the alternative mappers
 OUTFILE		?= stencil
 # List all the application source files here
 GEN_SRC		?= stencil.cc 					# .cc files
-GEN_GPU_SRC	?= 					# .cu files
 
 # You can modify these variables, some will be appended to by the runtime makefile
 INC_FLAGS	?=
-CC_FLAGS	?=
+CC_FLAGS	= $(RADIUSFLAG)
 #CC_FLAGS	?= -DPRIVILEGE_CHECKS -DBOUNDS_CHECKS
 NVCC_FLAGS	?=
 GASNET_FLAGS	?=

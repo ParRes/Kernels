@@ -1,0 +1,8 @@
+NUMPROCS=4
+NUMITERS=10
+SEPLINE="==============================================================="
+
+LEGION/Stencil/stencil     $NUMPROCS $NUMITERS 1000 2  -ll:cpu $NUMPROCS;    echo $SEPLINE
+LEGION/Transpose/transpose $NUMPROCS $NUMITERS 2000 64 -ll:cpu $NUMPROCS;    echo $SEPLINE
+
+

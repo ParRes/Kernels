@@ -15,9 +15,7 @@
 include ../../common/LEGION.defs
 LG_RT_DIR=$(LEGIONTOP)/runtime
 
-ifndef LG_RT_DIR
-$(error LG_RT_DIR variable is not defined, aborting build)
-endif
+CXX=$(LEGIONCC)
 
 #Flags for directing the runtime makefile what to include
 DEBUG           ?= 0		# Include debugging symbols

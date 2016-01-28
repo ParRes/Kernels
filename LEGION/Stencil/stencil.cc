@@ -1,31 +1,64 @@
-#include <cstdio>
-#include <cassert>
-#include <cstdlib>
-#include <cmath>
-#include <string>
-#include <float.h>
-#include "legion.h"
+/*
+Copyright (c) 2015, Intel Corporation
 
-using namespace LegionRuntime::HighLevel;
-using namespace LegionRuntime::Accessor;
-using namespace LegionRuntime::Arrays;
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+* Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+* Neither the name of Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products
+      derived from this software without specific prior written
+      permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/*******************************************************************
+
+NAME:    stencil
+
+PURPOSE: This program tests the efficiency with which a space-invariant,
+         linear, symmetric filter (stencil) can be applied to a square
+         grid or image.
+
+USAGE:   The program takes as input the linear dimension of the grid, 
+         and the number of iterations on the grid
+ 
+         <progname> <# threads> <# iterations> <array dimension>
+  
+         The output consists of diagnostics to make sure the 
+         algorithm worked, and of timing statistics.
+ 
+         An optional parameter specifies the tile size used to divide the
+         individual matrix blocks for improved cache and TLB performance.
+
+         The output consists of diagnostics to make sure the
+         transpose worked and timing statistics.
+
+HISTORY: Written by Abdullah Kayi, May 2015.
+
+*******************************************************************/
+#include "../../include/par-res-kern_legion.h"
 
 #include <sys/time.h>
 #define  USEC_TO_SEC   1.0e-6    /* to convert microsecs to secs */
-
-#ifndef MIN
-#define MIN(x,y) ((x)<(y)?(x):(y))
-#endif
-#ifndef MAX
-#define MAX(x,y) ((x)>(y)?(x):(y))
-#endif
-#ifndef ABS
-#define ABS(a) ((a) >= 0 ? (a) : -(a))
-#endif
-
-#ifndef RADIUS
-  #define RADIUS 2
-#endif
 
 #ifdef DOUBLE
   #define DTYPE   double
@@ -109,53 +142,40 @@ void top_level_task(const Task *task,
   const InputArgs &inputs = HighLevelRuntime::get_input_args();
 
   if (inputs.argc < 4){
-    printf("Usage: %s <# iterations> <matrix order> <THREADS> <x_divisions>\n",
+    printf("Usage: %s <# threads> <# iterations> <array dimension>\n",
            *inputs.argv);
     exit(EXIT_FAILURE);
   }
 
-  iterations = atoi((inputs.argv[1]));
-  if (iterations < 1){
-      printf("ERROR: iterations must be >= 1 : %d \n", iterations);
-      exit(EXIT_FAILURE);
-  }
-
-  n = atoi(inputs.argv[2]);
-  if (n <= 0){
-      printf("ERROR: Matrix Order must be greater than 0 : %d \n", n);
-      exit(EXIT_FAILURE);
-  }
-
-  threads = atoi((inputs.argv[3]));
+  threads = atoi((inputs.argv[1]));
   if (threads <= 0){
       printf("ERROR: Number of THREADS must be > 0 : %d \n", threads);
       exit(EXIT_FAILURE);
   }
 
-  if (inputs.argc == 4){
-    x_divs = 0;
-  }
-  else if (inputs.argc >=5 ){
-    x_divs = atoi((inputs.argv[4]));
-    if (x_divs < 0){
-        printf("ERROR: Number of partitions in the horizontal axis must be >= 1 : %d \n", x_divs);
-        exit(EXIT_FAILURE);
-    }
-  }
-  else {
-    x_divs = 0;
+  iterations = atoi((inputs.argv[2]));
+  if (iterations < 1){
+      printf("ERROR: iterations must be >= 1 : %d \n", iterations);
+      exit(EXIT_FAILURE);
   }
 
+  n = atoi(inputs.argv[3]);
+  if (n <= 0){
+      printf("ERROR: Matrix Order must be greater than 0 : %d \n", n);
+      exit(EXIT_FAILURE);
+  }
+
+  printf("Parallel Research Kernels Version %s\n", PRKVERSION);
   printf("Legion Stencil Execution on 2D grid\n");
-  printf("Grid size            = %d\n", n);
-  printf("Number of threads    = %d\n", threads);
-  printf("Radius of stencil    = %d\n", RADIUS);
+  printf("Grid size              = %d\n", n);
+  printf("Number of threads      = %d\n", threads);
+  printf("Radius of stencil      = %d\n", RADIUS);
 #ifdef DOUBLE
-  printf("Data type            = double precision\n");
+  printf("Data type              = double precision\n");
 #else
-  printf("Data type            = single precision\n");
+  printf("Data type              = single precision\n");
 #endif
-  printf("Number of iterations = %d\n", iterations);
+  printf("Number of iterations   = %d\n", iterations);
 
   /*********************************************************************
   ** Create the master index space
@@ -168,33 +188,25 @@ void top_level_task(const Task *task,
   Rect<2> elem_rect(lower_bounds_point, upper_bounds_point);
   Domain domain = Domain::from_rect<2>(elem_rect);
   IndexSpace is = runtime->create_index_space(ctx, domain);
-  runtime->attach_name(is, "is");
 
   /*********************************************************************
   ** Create ghost field space
   *********************************************************************/
 
   FieldSpace ghost_fs = runtime->create_field_space(ctx);
-  runtime->attach_name(ghost_fs, "ghost_fs");
   {
     FieldAllocator allocator =
       runtime->create_field_allocator(ctx, ghost_fs);
     allocator.allocate_field(sizeof(double),FID_GHOST);
-    runtime->attach_name(ghost_fs, FID_GHOST, "GHOST");
   }
 
   /* x_divs=0 refers to automated calculation of division on each coordinates like MPI code */
-  if(x_divs == 0){
-    for (x_divs=(int) (sqrt(threads+1)); x_divs>0; x_divs--) {
+  for (x_divs=(int) (sqrt(threads+1)); x_divs>0; x_divs--) {
       if (!(threads%x_divs)) {
         y_divs = threads/x_divs;
         break;
       }
     }
-  }
-  else {
-    y_divs = threads / x_divs;
-  }
 
   if(threads % x_divs != 0){
     printf("THREADS %% x_divs != 0 (%d)\n", x_divs);
@@ -216,8 +228,7 @@ void top_level_task(const Task *task,
     exit(EXIT_FAILURE);
   }
 
-  printf("Number of x partitions = %d\n", x_divs);
-  printf("Number of y partitions = %d\n", y_divs);
+  printf("Tiles in x/y-direction = %d/%d\n", x_divs, y_divs);
 
   /*********************************************************************
   ** Create partitions for blocks
@@ -235,7 +246,6 @@ void top_level_task(const Task *task,
     Point<2> block_sizes_point(block_sizes);
     Blockify<2> coloring(block_sizes_point);
     disjoint_ip = runtime->create_index_partition(ctx, is, coloring);
-    runtime->attach_name(disjoint_ip, "disjoint_ip");
   }
 
   // Now iterate over each of the sub-regions and make the ghost partitions
@@ -246,8 +256,6 @@ void top_level_task(const Task *task,
   std::vector<LogicalRegion> ghost_north;
   std::vector<LogicalRegion> ghost_right;
   std::vector<LogicalRegion> ghost_south;
-  char buf[32];
-  const char* parts[4] = {"L", "N", "R", "S"};
   FieldSpace main_fs;
   std::vector<LogicalRegion> main_lr;
 
@@ -256,7 +264,6 @@ void top_level_task(const Task *task,
     // Get each of the subspaces and create a main logical region from each
     // each subspace is a 2D block that belongs to a thread
     IndexSpace subspace = runtime->get_index_subspace(ctx, disjoint_ip, itr.p);
-    runtime->attach_name(subspace, buf);
     Domain dom = runtime->get_index_space_domain(ctx, subspace);
     Rect<2> rect = dom.get_rect<2>();
 
@@ -264,9 +271,7 @@ void top_level_task(const Task *task,
     FieldAllocator allocator =
       runtime->create_field_allocator(ctx, main_fs);
     allocator.allocate_field(sizeof(double),FID_VAL);
-    runtime->attach_name(main_fs, FID_VAL, "VAL");
     allocator.allocate_field(sizeof(double),FID_DERIV);
-    runtime->attach_name(main_fs, FID_DERIV, "DERIV");
     main_lr.push_back(runtime->create_logical_region(ctx, subspace, main_fs));
 
     // Make four sub-regions: LEFT,NORTH,RIGHT,SOUTH
@@ -307,16 +312,12 @@ void top_level_task(const Task *task,
     IndexPartition ghost_ip =
       runtime->create_index_partition(ctx, subspace, ghost_domain,
                                       ghost_coloring, true/*disjoint*/);
-    runtime->attach_name(ghost_ip, buf);
     // Make explicit logical regions for each of the ghost spaces
     for (int idx = GHOST_LEFT; idx <= GHOST_SOUTH; idx++)
     {
       IndexSpace ghost_space = runtime->get_index_subspace(ctx, ghost_ip, idx);
       LogicalRegion ghost_lr =
         runtime->create_logical_region(ctx, ghost_space, ghost_fs);
-      sprintf(buf, "ghost_lr_(%d, %d)_%s", itr.p.x[0], itr.p.x[1], parts[idx]);
-      //printf("%s\n", buf);
-      runtime->attach_name(ghost_lr, buf);
       if (idx == GHOST_LEFT)
         ghost_left.push_back(ghost_lr);
       else if (idx == GHOST_NORTH)
@@ -614,7 +615,6 @@ std::pair<double, double> spmd_task(const Task *task,
 
   assert((regions.size() - 1) % 2 == 0);
   unsigned num_neighbors = (regions.size() - 1) / 2;
-  //printf("SPMD: #regions:%zu #neighbors:%u\n", regions.size(), num_neighbors);
 
   unsigned idx = 0;
   for (unsigned dir = GHOST_LEFT; dir <= GHOST_SOUTH; ++dir){
@@ -639,17 +639,13 @@ std::pair<double, double> spmd_task(const Task *task,
   Rect<2> weight_rect(weight_start_point, weight_end_point);
   Domain domain_weight = Domain::from_rect<2>(weight_rect);
   IndexSpace is_weight = runtime->create_index_space(ctx, domain_weight);
-  runtime->attach_name(is_weight, "is_weight");
 
   FieldSpace fs_weight = runtime->create_field_space(ctx);
-  runtime->attach_name(fs_weight, "fs_weight");
   {
     FieldAllocator allocator = runtime->create_field_allocator(ctx, fs_weight);
     allocator.allocate_field(sizeof(double),FID_WEIGHT);
-    runtime->attach_name(fs_weight, FID_WEIGHT, "WEIGHT");
   }
   LogicalRegion lr_weight = runtime->create_logical_region(ctx, is_weight, fs_weight);
-  runtime->attach_name(lr_weight, "lr_weight");
 
   TaskLauncher weight_init_launcher(TASKID_WEIGHT_INITIALIZE,
                               TaskArgument(NULL, 0));
@@ -674,7 +670,6 @@ std::pair<double, double> spmd_task(const Task *task,
 
   // Run a bunch of steps
   double ts_start, ts_end;
-  //for (int iter = 0; iter < args->iterations; iter++)
   for (int iter = 0; iter <= args->iterations; iter++)
   {
     if(iter == 1)
