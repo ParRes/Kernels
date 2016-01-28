@@ -193,14 +193,14 @@ allserial:
 allfortran: allfortser allfortomp
 
 allfortser:
-	cd FORTRAN/Transpose;       $(MAKE) transpose
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
 	cd FORTRAN/Stencil;         $(MAKE) stencil
+	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
+	cd FORTRAN/Transpose;       $(MAKE) transpose
 
 allfortomp:
-	cd FORTRAN/Transpose;       $(MAKE) transpose-omp
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-omp
 	cd FORTRAN/Stencil;         $(MAKE) stencil-omp
+	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-omp
+	cd FORTRAN/Transpose;       $(MAKE) transpose-omp
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean

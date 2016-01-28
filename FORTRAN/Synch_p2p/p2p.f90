@@ -78,7 +78,7 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a,a)') 'Parallel Research Kernels version ', 'PRKVERSION'
+  write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
 #ifdef _OPENMP
   write(*,'(a)')   'OpenMP pipeline execution on 2D grid'
 #else
