@@ -78,6 +78,9 @@ matrix:
       env: PRK_TARGET=allfortran
   allow_failures:
     - env: PRK_TARGET=allgrappa
+    # wget tarball fails right now
+    - os: linux
+      env: PRK_TARGET=allfgmpi
 addons:
   apt:
     sources:
