@@ -1,6 +1,7 @@
 PROGRAM=stencil
 
 include ../../common/make.defs
+include ../../common/PRKVERSION
 
 ifndef RADIUS
   RADIUS=2

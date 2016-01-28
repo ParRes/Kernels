@@ -1,6 +1,3 @@
-# only Fortran uses this for now, but this should change
-PRKVERSION="'2.16'"
-
 #name of MPI C compiler, e.g. mpiicc, mpicc
 MPICC=
 

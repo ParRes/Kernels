@@ -1,6 +1,7 @@
 PROGRAM=p2p
 
 include ../../common/make.defs
+include ../../common/PRKVERSION
 
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
 FCFLAGS += -DPRKVERSION=$(PRKVERSION)
