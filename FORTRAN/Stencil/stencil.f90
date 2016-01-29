@@ -80,6 +80,9 @@
 
 program main
   use iso_fortran_env
+#ifdef _OPENMP
+  use omp_lib
+#endif
   implicit none
   ! for argument parsing
   integer :: err
@@ -108,8 +111,16 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a,a)') 'Parallel Research Kernels version ', 'PRKVERSION'
+#ifndef PRKVERSION
+#warning Your common/make.defs is missing PRKVERSION
+#define PRKVERSION "N/A"
+#endif
+  write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
+#ifdef _OPENMP
+  write(*,'(a)')   'OpenMP stencil execution on 2D grid'
+#else
   write(*,'(a)')   'Serial stencil execution on 2D grid'
+#endif
 
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
@@ -171,44 +182,21 @@ program main
     stop 1
   endif
 
-  ! fill the stencil weights to reflect a discrete divergence operator
-  do jj=-r,r
-    do ii=-r,r
-      W(ii+r+1,jj+r+1) = 0.0
-    enddo
-  enddo
-#ifdef STAR
-  stencil_size = 4*r+1
-  do ii=1,r
-    W(r+1, ii+r+1) =  1.0/real(2*ii*r,REAL64)
-    W(r+1,-ii+r+1) = -1.0/real(2*ii*r,REAL64)
-    W( ii+r+1,r+1) =  1.0/real(2*ii*r,REAL64)
-    W(-ii+r+1,r+1) = -1.0/real(2*ii*r,REAL64)
-  enddo
-#else
-  stencil_size = (2*r+1)*(2*r+1)
-  do jj=1,r
-    do ii=-jj+1,jj-1
-      W( ii+r+1, jj+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii+r+1,-jj+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj+r+1, ii+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj+r+1, ii+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
-    enddo
-    W( jj+r+1, jj+r+1)  =  1.0/real(4.0*jj*r,REAL64)
-    W(-jj+r+1,-jj+r+1)  = -1.0/real(4.0*jj*r,REAL64)
-  enddo
-#endif
-
   norm = 0.0;
   active_points = int((n-2*r)*(n-2*r),INT64);
 
+#ifdef _OPENMP
+  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
+#endif
   write(*,'(a,i8)') 'Grid size            = ', n
   write(*,'(a,i8)') 'Radius of stencil    = ', r
-  write(*,'(a,a)') 'Type of stencil      = ', &
+  write(*,'(a,a)')  'Type of stencil      = ', &
 #ifdef STAR
                    'star'
+  stencil_size = 4*r+1
 #else
                    'stencil'
+  stencil_size = (2*r+1)*(2*r+1)
 #endif
   write(*,'(a)') 'Data type            = double precision'
   write(*,'(a)') 'Compact representation of stencil loop body'
@@ -219,28 +207,75 @@ program main
   endif
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
+  !$omp parallel default(none)                                        &
+  !$omp&  shared(A,B,W,t0,t1,iterations,tiling,tile_size,stencil_time)&
+  !$omp&  firstprivate(n)                                             &
+  !$omp&  private(i,j,ii,jj,it,jt,k)                                  &
+  !$omp&  reduction(+:norm)
+
+  ! fill the stencil weights to reflect a discrete divergence operator
+  !$omp do collapse(2)
+  do jj=-r,r
+    do ii=-r,r
+      W(ii+r+1,jj+r+1) = 0.0
+    enddo
+  enddo
+  !$omp end do nowait
+#ifdef STAR
+  !$omp do
+  do ii=1,r
+    W(r+1, ii+r+1) =  1.0/real(2*ii*r,REAL64)
+    W(r+1,-ii+r+1) = -1.0/real(2*ii*r,REAL64)
+    W( ii+r+1,r+1) =  1.0/real(2*ii*r,REAL64)
+    W(-ii+r+1,r+1) = -1.0/real(2*ii*r,REAL64)
+  enddo
+  !$omp end do nowait
+#else
+  !$omp do collapse(2)
+  do jj=1,r
+    do ii=-jj+1,jj-1
+      W( ii+r+1, jj+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii+r+1,-jj+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj+r+1, ii+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj+r+1, ii+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+    enddo
+    W( jj+r+1, jj+r+1)  =  1.0/real(4.0*jj*r,REAL64)
+    W(-jj+r+1,-jj+r+1)  = -1.0/real(4.0*jj*r,REAL64)
+  enddo
+  !$omp end do nowait
+#endif
+
   ! intialize the input and output arrays
+  !$omp do collapse(2)
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
     enddo
   enddo
-  do j=r-1,n-r
-    do i=r-1,n-r
+  !$omp end do nowait
+  !$omp do collapse(2)
+  do j=r+1,n-r
+    do i=r+1,n-r
       B(i,j) = 0.0
     enddo
   enddo
+  !$omp end do nowait
 
   do k=0,iterations
 
     ! start timer after a warmup iteration
+    !$omp barrier
+    !$omp master
     if (k.eq.1) call cpu_time(t0)
+    !$omp end master
 
     ! Apply the stencil operator
     if (.not.tiling) then
+      !$omp do collapse(2)
       do j=r,n-r-1
         do i=r,n-r-1
 #ifdef STAR
+            ! do not use Intel Fortran unroll directive here (slows down)
             do jj=-r,r
               B(i+1,j+1) = B(i+1,j+1) + W(r+1,jj+r+1) * A(i+1,j+jj+1)
             enddo
@@ -259,7 +294,9 @@ program main
 #endif
         enddo
       enddo
+      !$omp end do nowait
     else ! tiling
+      !$omp do collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -285,26 +322,37 @@ program main
           enddo
         enddo
       enddo
+      !$omp end do nowait
     endif ! tiling
 
+    !$omp barrier
+
     ! add constant to solution to force refresh of neighbor data, if any
+    !$omp do collapse(2)
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.0
       enddo
     enddo
+    !$omp end do nowait
 
   enddo ! iterations
 
+  !$omp barrier
+  !$omp master
   call cpu_time(t1)
   stencil_time = t1 - t0
+  !$omp end master
 
   ! compute L1 norm in parallel
+  !$omp do collapse(2)
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
+
+  !$omp end parallel
 
   norm = norm / real(active_points,REAL64)
 

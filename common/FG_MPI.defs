@@ -1,6 +1,8 @@
 include ../../common/make.defs
+ifeq ($(FGMPICC),)
+    FGMPICC=true
+endif
 CCOMPILER=$(FGMPICC)
-CLINKER=$(CCOMPILER) 
-PATH:=$(FGMPITOP)/bin:$(PATH)
+CLINKER=$(CCOMPILER)
 COMOBJS=MPI_bail_out.o wtime.o
 PROG_ENV=-DFG_MPI

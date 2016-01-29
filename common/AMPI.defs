@@ -1,5 +1,9 @@
 include ../../common/make.defs
-AMPICC=$(CHARMTOP)/bin/ampicc
+ifeq ($(CHARMTOP),)
+    AMPICC=true
+else
+    AMPICC=$(CHARMTOP)/bin/ampicc
+endif
 CCOMPILER=$(AMPICC)
 CITRANSLATOR=$(AMPICC) -E
 CLINKER=$(CCOMPILER) -language ampi

@@ -190,10 +190,17 @@ allserial:
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
-allfortran:
-	cd FORTRAN/Transpose;       $(MAKE) transpose
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
+allfortran: allfortser allfortomp
+
+allfortser:
 	cd FORTRAN/Stencil;         $(MAKE) stencil
+	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
+	cd FORTRAN/Transpose;       $(MAKE) transpose
+
+allfortomp:
+	cd FORTRAN/Stencil;         $(MAKE) stencil-omp
+	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-omp
+	cd FORTRAN/Transpose;       $(MAKE) transpose-omp
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
