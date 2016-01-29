@@ -133,7 +133,7 @@ void top_level_task(const Task *task,
                     Context ctx, HighLevelRuntime *runtime)
 {
   int n;
-  int x_divs, y_divs, threads;
+  int x_divs = INT_MAX, y_divs = INT_MAX, threads;
   int iterations;
 
   /*********************************************************************
@@ -669,7 +669,7 @@ std::pair<double, double> spmd_task(const Task *task,
   runtime->execute_task(ctx, init_launcher);
 
   // Run a bunch of steps
-  double ts_start, ts_end;
+  double ts_start = DBL_MAX, ts_end = DBL_MIN;
   for (int iter = 0; iter <= args->iterations; iter++)
   {
     if(iter == 1)
@@ -874,8 +874,11 @@ void stencil_field_task(const Task *task,
   FieldID weight_fid = *(task->regions[2].privilege_fields.begin());
   FieldID ghost_fid;
 
-  if(num_neighbors > 0)
+  if(num_neighbors > 0) {
     ghost_fid = *(task->regions[3].privilege_fields.begin());
+  } else {
+    ghost_fid = INT_MAX; /* silence uninitialized warning */
+  }
 
   RegionAccessor<AccessorType::Generic, double> write_acc =
     regions[0].get_field_accessor(write_fid).typeify<double>();
