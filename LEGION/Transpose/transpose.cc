@@ -128,14 +128,18 @@ void task_toplevel(const Task *task,
       exit(EXIT_FAILURE);
   }
 
-  if (inputs.argc >= 5) tile_size = atoi(inputs.argv[4]);
+  if (inputs.argc >= 5) {
+      tile_size = atoi(inputs.argv[4]);
+  } else {
+      tile_size = order;
+  }
   /* a non-positive tile size means no tiling of the local transpose */
   if (tile_size <=0) tile_size = order;
 
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Legion matrix transpose: B = A^T\n");
   printf("Number of threads    = %d\n", num_partitions);
-  printf("Matrix order         = %ld\n", order);
+  printf("Matrix order         = %d\n", order);
   printf("Number of iterations = %d\n", iterations);
   if ((tile_size > 0) && (tile_size < order))
           printf("Tile size            = %d\n", tile_size);

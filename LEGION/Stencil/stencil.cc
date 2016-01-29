@@ -931,7 +931,9 @@ void stencil_field_task(const Task *task,
   RegionAccessor<AccessorType::Generic, double> right_ghost_acc;
   RegionAccessor<AccessorType::Generic, double> south_ghost_acc;
 
-  unsigned MYTHREAD = args->MYTHREAD;
+  /* UNUSED
+   * unsigned MYTHREAD = args->MYTHREAD;
+   */
 
   unsigned idx = 0;
   if (args->region_idx[GHOST_LEFT] != -1){
@@ -978,10 +980,12 @@ void stencil_field_task(const Task *task,
       assert(south_rect == subrect_g);
   }
 
-  int lower_y = main_rect.lo.x[1];
-  int lower_x = main_rect.lo.x[0];
-  int upper_y = main_rect.hi.x[1];
-  int upper_x = main_rect.hi.x[0];
+  /* UNUSED
+   * int lower_y = main_rect.lo.x[1];
+   * int lower_x = main_rect.lo.x[0];
+   * int upper_y = main_rect.hi.x[1];
+   * int upper_x = main_rect.hi.x[0];
+   */
 
   int x_divs = args->x_divs;
   int y_divs = args->y_divs;
@@ -1004,7 +1008,9 @@ void stencil_field_task(const Task *task,
 
   int start_idx = (starty*blockx) + startx;
   int end_idx = (endy*blockx) + endx;
-  int grid_size = (endx-startx+1) * (endy-starty+1);
+  /* UNUSED
+   * int grid_size = (endx-startx+1) * (endy-starty+1);
+   */
 
   int sizew = 2*RADIUS+1;
 
