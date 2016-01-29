@@ -64,7 +64,8 @@ help:
 	@echo "       \"make allampi\"      (re-)builds all Adaptive MPI targets"
 	@echo "       \"make allgrappa\"    (re-)builds all Grappa targets"
 	@echo "       \"make allfortran\"   (re-)builds all Fortran targets"
-	@echo "       \"make allfreaks\"    (re-)builds the above two targets"
+	@echo "       \"make alllegion\"    (re-)builds all Legion targets"
+	@echo "       \"make allfreaks\"    (re-)builds the above four targets"
 	@echo "       optionally, specify   \"matrix_rank=<n> number_of_functions=<m>\""
 	@echo "       optionally, specify   \"default_opt_flags=<list of optimization flags>\""
 	@echo "       \"make clean\"        removes all objects and executables"
@@ -72,7 +73,7 @@ help:
 
 all: alldarwin allfreaks
 alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran
-allfreaks: allcharm++ allampi allgrappa
+allfreaks: allcharm++ allampi allgrappa alllegion
 
 allmpi1:
 	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
