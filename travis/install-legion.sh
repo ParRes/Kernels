@@ -9,7 +9,7 @@ $CXX --version
 
 if [ ! -d "$TRAVIS_ROOT/legion" ]; then
     cd $TRAVIS_ROOT
-    git clone --depth 10 https://github.com/StanfordLegion/legion.git
+    git clone -b master --depth 10 https://github.com/StanfordLegion/legion.git
 else
     echo "Legion present..."
     find $TRAVIS_ROOT/legion
