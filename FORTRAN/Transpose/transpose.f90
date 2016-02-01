@@ -148,7 +148,6 @@ program main
     stop 1
   endif
 
-  ! avoid overflow 64<-32
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
 #ifdef _OPENMP
@@ -163,7 +162,7 @@ program main
   !$omp&  firstprivate(order,iterations,tile_size)                    &
   !$omp&  private(i,j,it,jt,k)
 
-  ! Fill the original matrix, set transpose to known garbage value. */
+  ! Fill the original matrix, set transpose to known garbage value.
   if (tile_size.lt.order) then
     !$omp do collapse(2)
     do j=1,order,tile_size
