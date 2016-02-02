@@ -64,6 +64,13 @@ HISTORY: - Written by Evangelos Georganas, August 2015.
 #include <random_draw.h>
 
 #include <math.h>
+/* M_PI is not defined in strict C99 */
+#ifdef M_PI
+#define PRK_M_PI M_PI
+#else
+#define PRK_M_PI 3.14159265358979323846264338327950288419716939937510
+#endif
+
 #include <stdint.h>
 #include <inttypes.h>
 
