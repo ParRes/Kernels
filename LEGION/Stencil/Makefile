@@ -24,7 +24,6 @@ endif
 RADIUSFLAG  = -DRADIUS=$(RADIUS)
 
 #Flags for directing the runtime makefile what to include
-#DEBUG           ?= 1		# Include debugging symbols
 DEBUG           ?= 0		# Include debugging symbols
 OUTPUT_LEVEL    ?= LEVEL_DEBUG	# Compile time print level
 SHARED_LOWLEVEL ?= 0		# Use shared-memory runtime (not recommended)
@@ -40,8 +39,7 @@ GEN_SRC		?= stencil.cc 					# .cc files
 
 # You can modify these variables, some will be appended to by the runtime makefile
 INC_FLAGS	?=
-CC_FLAGS	= $(RADIUSFLAG)
-#CC_FLAGS	?= -DPRIVILEGE_CHECKS -DBOUNDS_CHECKS
+CC_FLAGS	= $(RADIUSFLAG) 
 NVCC_FLAGS	?=
 GASNET_FLAGS	?=
 LD_FLAGS	?=

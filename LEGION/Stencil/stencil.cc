@@ -107,9 +107,9 @@ public:
   int region_idx[4];
   unsigned num_regions;
   int iterations;
-  unsigned x_divs;
-  unsigned y_divs;
-  unsigned MYTHREAD;
+  unsigned Num_procsx;
+  unsigned Num_procsy;
+  unsigned my_ID;
   int x;
   int y;
   int n;
@@ -133,7 +133,7 @@ void top_level_task(const Task *task,
                     Context ctx, HighLevelRuntime *runtime)
 {
   int n;
-  int x_divs = INT_MAX, y_divs = INT_MAX, threads;
+  int Num_procsx, Num_procsy, threads;
   int iterations;
 
   /*********************************************************************
@@ -200,16 +200,17 @@ void top_level_task(const Task *task,
     allocator.allocate_field(sizeof(double),FID_GHOST);
   }
 
-  /* x_divs=0 refers to automated calculation of division on each coordinates like MPI code */
-  for (x_divs=(int) (sqrt(threads+1)); x_divs>0; x_divs--) {
-      if (!(threads%x_divs)) {
-        y_divs = threads/x_divs;
+  /* compute "processor" grid; initialize Num_procsy to avoid compiler warnings */
+  Num_procsy = 0;
+  for (Num_procsx=(int) (sqrt(threads+1)); Num_procsx>0; Num_procsx--) {
+      if (!(threads%Num_procsx)) {
+        Num_procsy = threads/Num_procsx;
         break;
       }
     }
 
-  if(threads % x_divs != 0){
-    printf("THREADS %% x_divs != 0 (%d)\n", x_divs);
+  if(threads % Num_procsx != 0){
+    printf("THREADS %% Num_procsx != 0 (%d)\n", Num_procsx);
     exit(EXIT_FAILURE);
   }
 
@@ -228,13 +229,13 @@ void top_level_task(const Task *task,
     exit(EXIT_FAILURE);
   }
 
-  printf("Tiles in x/y-direction = %d/%d\n", x_divs, y_divs);
+  printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
 
   /*********************************************************************
   ** Create partitions for blocks
   *********************************************************************/
   int color_lower_bounds[] = {0, 0};
-  int color_upper_bounds[] = {x_divs - 1, y_divs - 1};
+  int color_upper_bounds[] = {Num_procsx - 1, Num_procsy - 1};
 
   Point<2> color_lower_bounds_point(color_lower_bounds);
   Point<2> color_upper_bounds_point(color_upper_bounds);
@@ -242,7 +243,7 @@ void top_level_task(const Task *task,
 
   IndexPartition disjoint_ip;
   {
-    int block_sizes[] = {n / x_divs, n / y_divs};
+    int block_sizes[] = {n / Num_procsx, n / Num_procsy};
     Point<2> block_sizes_point(block_sizes);
     Blockify<2> coloring(block_sizes_point);
     disjoint_ip = runtime->create_index_partition(ctx, is, coloring);
@@ -366,10 +367,10 @@ void top_level_task(const Task *task,
     // for its neighbors as well as our ghost regions and the  necessary phase
     // barriers.
 
-    for (int mygridposy = 0; mygridposy < y_divs; ++mygridposy)
-      for (int mygridposx = 0; mygridposx < x_divs; ++mygridposx)
+    for (int my_IDy = 0; my_IDy < Num_procsy; ++my_IDy)
+      for (int my_IDx = 0; my_IDx < Num_procsx; ++my_IDx)
       {
-        int color = mygridposy * x_divs + mygridposx;
+        int color = my_IDy * Num_procsx + my_IDx;
 
         args[color].notify_ready[GHOST_LEFT] = left_ready_barriers[color];
         args[color].notify_ready[GHOST_RIGHT] = right_ready_barriers[color];
@@ -382,9 +383,9 @@ void top_level_task(const Task *task,
         args[color].wait_empty[GHOST_SOUTH] = south_empty_barriers[color];
 
         {
-          int neighbor_x = mygridposx - 1;
+          int neighbor_x = my_IDx - 1;
           if (neighbor_x >= 0){
-            int neighbor_color = mygridposy * x_divs + neighbor_x;
+            int neighbor_color = my_IDy * Num_procsx + neighbor_x;
             args[color].wait_ready[GHOST_LEFT] = right_ready_barriers[neighbor_color];
             args[color].notify_empty[GHOST_LEFT] = right_empty_barriers[neighbor_color];
             args[color].region_idx[GHOST_LEFT] = 0;
@@ -393,9 +394,9 @@ void top_level_task(const Task *task,
             args[color].region_idx[GHOST_LEFT] = -1;
         }
         {
-          int neighbor_x = mygridposx + 1;
-          if (neighbor_x < x_divs){
-            int neighbor_color = mygridposy * x_divs + neighbor_x;
+          int neighbor_x = my_IDx + 1;
+          if (neighbor_x < Num_procsx){
+            int neighbor_color = my_IDy * Num_procsx + neighbor_x;
             args[color].wait_ready[GHOST_RIGHT] = left_ready_barriers[neighbor_color];
             args[color].notify_empty[GHOST_RIGHT] = left_empty_barriers[neighbor_color];
             args[color].region_idx[GHOST_RIGHT] = 0;
@@ -404,9 +405,9 @@ void top_level_task(const Task *task,
             args[color].region_idx[GHOST_RIGHT] = -1;
         }
         {
-          int neighbor_y = mygridposy - 1;
+          int neighbor_y = my_IDy - 1;
           if (neighbor_y >= 0){
-            int neighbor_color = neighbor_y * x_divs + mygridposx;
+            int neighbor_color = neighbor_y * Num_procsx + my_IDx;
             args[color].wait_ready[GHOST_NORTH] = south_ready_barriers[neighbor_color];
             args[color].notify_empty[GHOST_NORTH] = south_empty_barriers[neighbor_color];
             args[color].region_idx[GHOST_NORTH] = 0;
@@ -415,9 +416,9 @@ void top_level_task(const Task *task,
             args[color].region_idx[GHOST_NORTH] = -1;
         }
         {
-          int neighbor_y = mygridposy + 1;
-          if (neighbor_y < y_divs){
-            int neighbor_color = neighbor_y * x_divs + mygridposx;
+          int neighbor_y = my_IDy + 1;
+          if (neighbor_y < Num_procsy){
+            int neighbor_color = neighbor_y * Num_procsx + my_IDx;
             args[color].wait_ready[GHOST_SOUTH] = north_ready_barriers[neighbor_color];
             args[color].notify_empty[GHOST_SOUTH] = north_empty_barriers[neighbor_color];
             args[color].region_idx[GHOST_SOUTH] = 0;
@@ -427,12 +428,12 @@ void top_level_task(const Task *task,
         }
 
         args[color].iterations = iterations;
-        args[color].x_divs = x_divs;
-        args[color].y_divs = y_divs;
-        args[color].x = mygridposx;
-        args[color].y = mygridposy;
+        args[color].Num_procsx = Num_procsx;
+        args[color].Num_procsy = Num_procsy;
+        args[color].x = my_IDx;
+        args[color].y = my_IDy;
         args[color].n = n;
-        args[color].MYTHREAD = color;
+        args[color].my_ID = color;
 
         TaskLauncher spmd_launcher(TASKID_SPMD,
             TaskArgument(&args[color], sizeof(SPMDArgs)));
@@ -444,31 +445,31 @@ void top_level_task(const Task *task,
         spmd_launcher.region_requirements[0].flags |= NO_ACCESS_FLAG;
 
         // Our Left
-        if (mygridposx != 0)
+        if (my_IDx != 0)
           spmd_launcher.add_region_requirement(
               RegionRequirement(ghost_left[color], READ_WRITE,
                 SIMULTANEOUS, ghost_left[color]));
         // Our North
-        if (mygridposy != 0)
+        if (my_IDy != 0)
           spmd_launcher.add_region_requirement(
               RegionRequirement(ghost_north[color], READ_WRITE,
                 SIMULTANEOUS, ghost_north[color]));
         // Our Right
-        if (mygridposx != (x_divs-1))
+        if (my_IDx != (Num_procsx-1))
           spmd_launcher.add_region_requirement(
               RegionRequirement(ghost_right[color], READ_WRITE,
                 SIMULTANEOUS, ghost_right[color]));
         // Our South
-        if (mygridposy != y_divs-1)
+        if (my_IDy != Num_procsy-1)
           spmd_launcher.add_region_requirement(
               RegionRequirement(ghost_south[color], READ_WRITE,
                 SIMULTANEOUS, ghost_south[color]));
 
         // Left Ghost
         {
-          int neighbor_x = mygridposx - 1;
+          int neighbor_x = my_IDx - 1;
           if (neighbor_x >= 0) {
-            int neighbor_color = mygridposy * x_divs + neighbor_x;
+            int neighbor_color = my_IDy * Num_procsx + neighbor_x;
             spmd_launcher.add_region_requirement(
                 RegionRequirement(ghost_right[neighbor_color], READ_ONLY,
                   SIMULTANEOUS, ghost_right[neighbor_color]));
@@ -477,9 +478,9 @@ void top_level_task(const Task *task,
 
         // North Ghost
         {
-          int neighbor_y = mygridposy - 1;
+          int neighbor_y = my_IDy - 1;
           if (neighbor_y >= 0) {
-            int neighbor_color = neighbor_y * x_divs + mygridposx;
+            int neighbor_color = neighbor_y * Num_procsx + my_IDx;
             spmd_launcher.add_region_requirement(
                 RegionRequirement(ghost_south[neighbor_color], READ_ONLY,
                   SIMULTANEOUS, ghost_south[neighbor_color]));
@@ -488,9 +489,9 @@ void top_level_task(const Task *task,
 
         // Right Ghost
         {
-          int neighbor_x = mygridposx + 1;
-          if (neighbor_x < x_divs) {
-            int neighbor_color = mygridposy * x_divs + neighbor_x;
+          int neighbor_x = my_IDx + 1;
+          if (neighbor_x < Num_procsx) {
+            int neighbor_color = my_IDy * Num_procsx + neighbor_x;
             spmd_launcher.add_region_requirement(
                 RegionRequirement(ghost_left[neighbor_color], READ_ONLY,
                   SIMULTANEOUS, ghost_left[neighbor_color]));
@@ -499,9 +500,9 @@ void top_level_task(const Task *task,
 
         // South Ghost
         {
-          int neighbor_y = mygridposy + 1;
-          if (neighbor_y < y_divs) {
-            int neighbor_color = neighbor_y * x_divs + mygridposx;
+          int neighbor_y = my_IDy + 1;
+          if (neighbor_y < Num_procsy) {
+            int neighbor_color = neighbor_y * Num_procsx + my_IDx;
             spmd_launcher.add_region_requirement(
                 RegionRequirement(ghost_north[neighbor_color], READ_ONLY,
                   SIMULTANEOUS, ghost_north[neighbor_color]));
@@ -857,7 +858,6 @@ void init_field_task(const Task *task,
       double value = COEFY*pir.p.x[1] + COEFX*pir.p.x[0];
       in_acc.write(DomainPoint::from_point<2>(pir.p), value);
       out_acc.write(DomainPoint::from_point<2>(pir.p), 0.0);
-      //printf("(%d,%d)=%f\n", pir.p.x[0], pir.p.x[1], value);
   }
 }
 
@@ -934,10 +934,6 @@ void stencil_field_task(const Task *task,
   RegionAccessor<AccessorType::Generic, double> right_ghost_acc;
   RegionAccessor<AccessorType::Generic, double> south_ghost_acc;
 
-  /* UNUSED
-   * unsigned MYTHREAD = args->MYTHREAD;
-   */
-
   unsigned idx = 0;
   if (args->region_idx[GHOST_LEFT] != -1){
       left_ghost_acc = stencil_ghosts_pr[idx].get_field_accessor(ghost_fid).typeify<double>();
@@ -983,39 +979,28 @@ void stencil_field_task(const Task *task,
       assert(south_rect == subrect_g);
   }
 
-  /* UNUSED
-   * int lower_y = main_rect.lo.x[1];
-   * int lower_x = main_rect.lo.x[0];
-   * int upper_y = main_rect.hi.x[1];
-   * int upper_x = main_rect.hi.x[0];
-   */
-
-  int x_divs = args->x_divs;
-  int y_divs = args->y_divs;
-  int blockx = args->n / x_divs;
-  int blocky = args->n / y_divs;
-  int mygridposx = args->x;
-  int mygridposy = args->y;
-  int myoffsetx = mygridposx * blockx;
-  int myoffsety = mygridposy * blocky;
+  int Num_procsx = args->Num_procsx;
+  int Num_procsy = args->Num_procsy;
+  int blockx = args->n / Num_procsx;
+  int blocky = args->n / Num_procsy;
+  int my_IDx = args->x;
+  int my_IDy = args->y;
+  int myoffsetx = my_IDx * blockx;
+  int myoffsety = my_IDy * blocky;
 
   int startx = 0;
   int starty = 0;
   int endx = blockx-1;
   int endy = blocky-1;
 
-  if(mygridposx == 0)        startx += RADIUS;
-  if(mygridposy == 0)        starty += RADIUS;
-  if(mygridposx == x_divs-1) endx   -= RADIUS;
-  if(mygridposy == y_divs-1) endy   -= RADIUS;
+  if(my_IDx == 0)        startx += RADIUS;
+  if(my_IDy == 0)        starty += RADIUS;
+  if(my_IDx == Num_procsx-1) endx   -= RADIUS;
+  if(my_IDy == Num_procsy-1) endy   -= RADIUS;
 
   int start_idx = (starty*blockx) + startx;
-  int end_idx = (endy*blockx) + endx;
-  /* UNUSED
-   * int grid_size = (endx-startx+1) * (endy-starty+1);
-   */
-
-  int sizew = 2*RADIUS+1;
+  int end_idx   = (endy*blockx) + endx;
+  int sizew     = 2*RADIUS+1;
 
 #define WEIGHT_X(i) weight_ptr[i+(sizew*RADIUS+RADIUS)]
 #define WEIGHT_Y(i) weight_ptr[i+(sizew-1)*(i+RADIUS+1)]
@@ -1081,9 +1066,7 @@ void stencil_field_task(const Task *task,
           }
       }
 
-      double current_val = write_ptr[i];
-      double output_val = current_val + val;
-      write_ptr[i] = output_val;
+      write_ptr[i] += val;
   }
  
 }
@@ -1116,24 +1099,24 @@ void check_task(const Task *task,
     assert(rect == subrect_a);
   }
 
-  int x_divs = args->x_divs;
-  int y_divs = args->y_divs;
-  int blockx = args->n / x_divs;
-  int blocky = args->n / y_divs;
-  int mygridposx = args->x;
-  int mygridposy = args->y;
-  int myoffsetx = mygridposx * blockx;
-  int myoffsety = mygridposy * blocky;
+  int Num_procsx = args->Num_procsx;
+  int Num_procsy = args->Num_procsy;
+  int blockx = args->n / Num_procsx;
+  int blocky = args->n / Num_procsy;
+  int my_IDx = args->x;
+  int my_IDy = args->y;
+  int myoffsetx = my_IDx * blockx;
+  int myoffsety = my_IDy * blocky;
 
   int startx = 0;
   int starty = 0;
   int endx = blockx-1;
   int endy = blocky-1;
 
-  if(mygridposx == 0)        startx += RADIUS;
-  if(mygridposy == 0)        starty += RADIUS;
-  if(mygridposx == x_divs-1) endx   -= RADIUS;
-  if(mygridposy == y_divs-1) endy   -= RADIUS;
+  if(my_IDx == 0)        startx += RADIUS;
+  if(my_IDy == 0)        starty += RADIUS;
+  if(my_IDx == Num_procsx-1) endx   -= RADIUS;
+  if(my_IDy == Num_procsy-1) endy   -= RADIUS;
 
   int start_idx = (starty*blocky) + startx;
   int end_idx = (endy*blocky) + endx;
@@ -1158,13 +1141,13 @@ void check_task(const Task *task,
   }
 
   if (abserr < epsilon) {
-    if (args->MYTHREAD == 0) printf("Solution validates\n");
+    if (args->my_ID == 0) printf("Solution validates\n");
 #ifdef VERBOSE
-    if (args->MYTHREAD == 0) printf("Squared errors: %f \n", abserr);
+    if (args->my_ID == 0) printf("Squared errors: %f \n", abserr);
 #endif
   }
   else {
-    if (args->MYTHREAD == 0) printf("ERROR: Squared error %lf exceeds threshold %e\n",
+    if (args->my_ID == 0) printf("ERROR: Squared error %lf exceeds threshold %e\n",
         abserr, epsilon);
     exit(EXIT_FAILURE);
   }
