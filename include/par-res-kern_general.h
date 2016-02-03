@@ -31,10 +31,11 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
+#include <unistd.h>
 
 #define PRKVERSION "2.16"
 #ifndef MIN
@@ -54,16 +55,43 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 /* Define 64-bit types and corresponding format strings for printf() */
-#ifdef LONG_IS_64BITS 
-  typedef unsigned long      u64Int; 
-  typedef long               s64Int; 
-  #define FSTR64             "%16ld" 
-  #define FSTR64U            "%16lu" 
-#else 
-  typedef unsigned long long u64Int; 
-  typedef long long          s64Int; 
-  #define FSTR64             "%16ll" 
-  #define FSTR64U            "%16llu" 
-#endif 
+#ifdef LONG_IS_64BITS
+  typedef unsigned long      u64Int;
+  typedef long               s64Int;
+  #define FSTR64             "%16ld"
+  #define FSTR64U            "%16lu"
+#else
+  typedef unsigned long long u64Int;
+  typedef long long          s64Int;
+  #define FSTR64             "%16ll"
+  #define FSTR64U            "%16llu"
+#endif
 
 extern double wtime(void);
+
+static inline void* prk_malloc(size_t bytes)
+{
+#if defined(__INTEL_COMPILER) || defined(PRK_USE_POSIX_MEMALIGN)
+    char* temp = getenv("PRK_ALIGNMENT");
+    int alignment = (temp!=NULL) ? atoi(temp) : 64;
+    void * ptr = NULL;
+#endif
+
+#if defined(__INTEL_COMPILER) && !defined(PRK_USE_POSIX_MEMALIGN)
+    return _mm_malloc(bytes,alignment);
+#elif PRK_USE_POSIX_MEMALIGN
+    posix_memalign(&ptr,alignment,bytes);
+    return ptr;
+#else
+    return malloc(bytes);
+#endif
+}
+
+static inline void free(void* p)
+{
+#if defined(__INTEL_COMPILER) && !defined(PRK_USE_POSIX_MEMALIGN)
+    _mm_free(p);
+#else
+    free(p);
+#endif
+}
