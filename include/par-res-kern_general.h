@@ -69,11 +69,17 @@ POSSIBILITY OF SUCH DAMAGE.
 
 extern double wtime(void);
 
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#define PRK_HAS_C11 1
+#endif
+
 static inline void* prk_malloc(size_t bytes)
 {
-#if defined(__INTEL_COMPILER) || defined(PRK_USE_POSIX_MEMALIGN)
+#if defined(__INTEL_COMPILER) || \
+    defined(PRK_USE_POSIX_MEMALIGN) || \
+    defined(PRK_HAS_C11)
     char* temp = getenv("PRK_ALIGNMENT");
-    int alignment = (temp!=NULL) ? atoi(temp) : 64;
+    long alignment = (temp!=NULL) ? atol(temp) : 64;
     void * ptr = NULL;
 #endif
 
@@ -82,6 +88,23 @@ static inline void* prk_malloc(size_t bytes)
 #elif PRK_USE_POSIX_MEMALIGN
     posix_memalign(&ptr,alignment,bytes);
     return ptr;
+#elif defined(PRK_HAS_C11)
+/* From ISO C11:
+ *
+ * "The aligned_alloc function allocates space for an object
+ *  whose alignment is specified by alignment, whose size is
+ *  specified by size, and whose value is indeterminate.
+ *  The value of alignment shall be a valid alignment supported
+ *  by the implementation and the value of size shall be an
+ *  integral multiple of alignment."
+ *
+ *  Thus, if we do not round up the bytes to be a multiple
+ *  of the alignment, we violate ISO C.
+ */
+    size_t padded = bytes;
+    size_t excess = bytes % alignment;
+    if (excess>0) padded += (alignment - excess);
+    return aligned_alloc(alignment,padded);
 #else
     return malloc(bytes);
 #endif
