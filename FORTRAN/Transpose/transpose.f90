@@ -198,7 +198,13 @@ program main
     ! start timer after a warmup iteration
     !$omp barrier
     !$omp master
-    if (k.eq.1) call cpu_time(t0)
+    if (k.eq.1) then
+#ifdef _OPENMP
+        t0 = omp_get_wtime()
+#else
+        call cpu_time(t0)
+#endif
+    endif
     !$omp end master
 
     ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
@@ -235,7 +241,11 @@ program main
 
   !$omp barrier
   !$omp master
+#ifdef _OPENMP
+  t1 = omp_get_wtime()
+#else
   call cpu_time(t1)
+#endif
   trans_time = t1 - t0
   !$omp end master
 
