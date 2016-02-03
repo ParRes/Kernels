@@ -158,7 +158,13 @@ program main
     !  start timer after a warmup iteration
     !$omp barrier
     !$omp master
-    if (k.eq.1) call cpu_time(t0)
+    if (k.eq.1) then
+#ifdef _OPENMP
+        t0 = omp_get_wtime()
+#else
+        call cpu_time(t0)
+#endif
+    endif
     !$omp end master
 
     ! TODO
@@ -179,7 +185,11 @@ program main
 
   !$omp barrier
   !$omp master
+#ifdef _OPENMP
+  t1 = omp_get_wtime()
+#else
   call cpu_time(t1)
+#endif
   pipeline_time = t1 - t0
   !$omp end master
 

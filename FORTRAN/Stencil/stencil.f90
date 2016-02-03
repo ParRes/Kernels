@@ -59,25 +59,6 @@
 !
 ! *******************************************************************
 
-!#ifdef DOUBLE
-!  #define DTYPE   double
-!  #define EPSILON 1.e-8
-!  #define cx   1.0
-!  #define cy   1.0
-!  #define FSTR    "%lf"
-!#else
-!  #define DTYPE   float
-!  #define EPSILON 0.0001f
-!  #define cx   1.0f
-!  #define cy   1.0f
-!  #define FSTR    "%f"
-!#endif
-
-!! define shorthand for indexing a multi-dimensional array                       */
-!#define A(i,j)       in[i+(j)*(n)]
-!#define B(i,j)      out[i+(j)*(n)]
-!#define W(ii,jj) weight[ii+r][jj+r]
-
 program main
   use iso_fortran_env
 #ifdef _OPENMP
@@ -266,7 +247,13 @@ program main
     ! start timer after a warmup iteration
     !$omp barrier
     !$omp master
-    if (k.eq.1) call cpu_time(t0)
+    if (k.eq.1) then
+#ifdef _OPENMP
+        t0 = omp_get_wtime()
+#else
+        call cpu_time(t0)
+#endif
+    endif
     !$omp end master
 
     ! Apply the stencil operator
@@ -340,7 +327,11 @@ program main
 
   !$omp barrier
   !$omp master
+#ifdef _OPENMP
+  t1 = omp_get_wtime()
+#else
   call cpu_time(t1)
+#endif
   stencil_time = t1 - t0
   !$omp end master
 
