@@ -59,25 +59,6 @@
 !
 ! *******************************************************************
 
-!#ifdef DOUBLE
-!  #define DTYPE   double
-!  #define EPSILON 1.e-8
-!  #define cx   1.0
-!  #define cy   1.0
-!  #define FSTR    "%lf"
-!#else
-!  #define DTYPE   float
-!  #define EPSILON 0.0001f
-!  #define cx   1.0f
-!  #define cy   1.0f
-!  #define FSTR    "%f"
-!#endif
-
-!! define shorthand for indexing a multi-dimensional array                       */
-!#define A(i,j)       in[i+(j)*(n)]
-!#define B(i,j)      out[i+(j)*(n)]
-!#define W(ii,jj) weight[ii+r][jj+r]
-
 program main
   use iso_fortran_env
 #ifdef _OPENMP

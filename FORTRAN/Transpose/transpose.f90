@@ -148,7 +148,6 @@ program main
     stop 1
   endif
 
-  ! avoid overflow 64<-32
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
 #ifdef _OPENMP
@@ -163,9 +162,15 @@ program main
   !$omp&  firstprivate(order,iterations,tile_size)                    &
   !$omp&  private(i,j,it,jt,k)
 
-  ! Fill the original matrix, set transpose to known garbage value. */
+  ! Fill the original matrix, set transpose to known garbage value.
   if (tile_size.lt.order) then
+#if defined(__INTEL_COMPILER) && defined(__INTEL_COMPILER_BUILD_DATE) \
+ && (__INTEL_COMPILER==1600) && (__INTEL_COMPILER_BUILD_DATE<20160101)
+#warning Disabling collapse because of IPS6000153696
+    !$omp do
+#else
     !$omp do collapse(2)
+#endif
     do j=1,order,tile_size
       do i=1,order,tile_size
         do jt=j,min(order,j+tile_size-1)
@@ -198,7 +203,12 @@ program main
 
     ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
+#if defined(__INTEL_COMPILER) && defined(__INTEL_COMPILER_BUILD_DATE) \
+ && (__INTEL_COMPILER==1600) && (__INTEL_COMPILER_BUILD_DATE<20160101)
+      !$omp do
+#else
       !$omp do collapse(2)
+#endif
       do j=1,order,tile_size
         do i=1,order,tile_size
           do jt=j,min(order,j+tile_size-1)
