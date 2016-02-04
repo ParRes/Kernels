@@ -34,6 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 
 #include <unistd.h>
 
@@ -69,25 +70,36 @@ POSSIBILITY OF SUCH DAMAGE.
 
 extern double wtime(void);
 
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+/*  We cannot use C11 aligned_alloc because of this GCC 5.3.0 bug:
+ *  https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69680 */
+#if 0 && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #define PRK_HAS_C11 1
 #endif
 
+/* This function is separate from prk_malloc() because
+ * we need it when calling prk_shmem_align(..)           */
+static inline long prk_get_alignment(void)
+{
+    /* a := alignment */
+# ifdef PRK_ALIGNMENT
+    long a = PRK_ALIGNMENT;
+# else
+    char* temp = getenv("PRK_ALIGNMENT");
+    long a = (temp!=NULL) ? atol(temp) : 64;
+    if (a < 8) a = 8;
+    assert( (a & (~a+1)) == a );
+#endif
+    return a;
+}
+
 static inline void* prk_malloc(size_t bytes)
 {
-#if defined(__INTEL_COMPILER) || \
-    defined(PRK_USE_POSIX_MEMALIGN) || \
-    defined(PRK_HAS_C11)
-    char* temp = getenv("PRK_ALIGNMENT");
-    long alignment = (temp!=NULL) ? atol(temp) : 64;
-    void * ptr = NULL;
+#ifndef PRK_USE_MALLOC
+    long alignment = prk_get_alignment();
 #endif
 
 #if defined(__INTEL_COMPILER) && !defined(PRK_USE_POSIX_MEMALIGN)
     return _mm_malloc(bytes,alignment);
-#elif PRK_USE_POSIX_MEMALIGN
-    posix_memalign(&ptr,alignment,bytes);
-    return ptr;
 #elif defined(PRK_HAS_C11)
 /* From ISO C11:
  *
@@ -105,8 +117,13 @@ static inline void* prk_malloc(size_t bytes)
     size_t excess = bytes % alignment;
     if (excess>0) padded += (alignment - excess);
     return aligned_alloc(alignment,padded);
-#else
+#elif defined(PRK_USE_MALLOC)
+#warning PRK_USE_MALLOC prevents the use of alignmed memory.
     return malloc(bytes);
+#else /* if defined(PRK_USE_POSIX_MEMALIGN) */
+    void * ptr = NULL;
+    posix_memalign(&ptr,alignment,bytes);
+    return ptr;
 #endif
 }
 
