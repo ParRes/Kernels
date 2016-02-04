@@ -165,13 +165,13 @@ int main(int argc, char ** argv)
   }
 
 // initialize sync variables for error checks
-  pSync_bcast      = (long *)   prk_shmem_malloc(PRK_SHMEM_BCAST_SYNC_SIZE*sizeof(long));
-  pSync_reduce     = (long *)   prk_shmem_malloc(PRK_SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
-  pWrk             = (double *) prk_shmem_malloc(sizeof(double) * PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE);
-  local_trans_time = (double *) prk_shmem_malloc(sizeof(double));
-  trans_time       = (double *) prk_shmem_malloc(sizeof(double));
-  arguments        = (int *)    prk_shmem_malloc(3*sizeof(int));
-  abserr           = (double *) prk_shmem_malloc(2*sizeof(double));
+  pSync_bcast      = (long *)   prk_shmem_align(prk_get_alignment(),PRK_SHMEM_BCAST_SYNC_SIZE*sizeof(long));
+  pSync_reduce     = (long *)   prk_shmem_align(prk_get_alignment(),PRK_SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
+  pWrk             = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double) * PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE);
+  local_trans_time = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double));
+  trans_time       = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double));
+  arguments        = (int *)    prk_shmem_align(prk_get_alignment(),3*sizeof(int));
+  abserr           = (double *) prk_shmem_align(prk_get_alignment(),2*sizeof(double));
   abserr_tot       = abserr + 1;
   if (!pSync_bcast || !pSync_reduce || !pWrk || !local_trans_time ||
       !trans_time || !arguments || !abserr) {
@@ -281,15 +281,15 @@ int main(int argc, char ** argv)
   if (Num_procs>1) {
     Work_in_p   = (double**)prk_malloc((Num_procs-1)*sizeof(double));
 
-    Work_out_p = (double *) prk_shmem_malloc(Block_size*sizeof(double));
-    recv_flag  = (int*)     prk_shmem_malloc((Num_procs-1)*sizeof(int));
+    Work_out_p = (double *) prk_shmem_align(prk_get_alignment(),Block_size*sizeof(double));
+    recv_flag  = (int*)     prk_shmem_align(prk_get_alignment(),(Num_procs-1)*sizeof(int));
     if ((Work_in_p == NULL)||(Work_out_p==NULL) || (recv_flag == NULL)){
       printf(" Error allocating space for work or flags on node %d\n",my_ID);
       error = 1;
     }
     bail_out(error);
     for(i=0;i<(Num_procs-1);i++) {
-      Work_in_p[i]=(double *) prk_shmem_malloc(Block_size*sizeof(double));
+      Work_in_p[i]=(double *) prk_shmem_align(prk_get_alignment(),Block_size*sizeof(double));
       if (Work_in_p[i] == NULL) {
         printf(" Error allocating space for work on node %d\n",my_ID);
         error = 1;
