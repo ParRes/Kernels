@@ -134,7 +134,7 @@ int main(int argc, char ** argv)
   }
   thread_length = length/nthread_input;
 
-  basestring = malloc((thread_length+1)*sizeof(char));
+  basestring = prk_malloc((thread_length+1)*sizeof(char));
   if (basestring==NULL) {
     printf("ERROR: Could not allocate space for scramble string\n");
     exit(EXIT_FAILURE);
@@ -145,7 +145,7 @@ int main(int argc, char ** argv)
   basestring[thread_length] = EOS;
 
 
-  catstring=(char *) malloc((length+1)*sizeof(char));
+  catstring=(char *) prk_malloc((length+1)*sizeof(char));
   if (catstring==NULL) {
     printf("ERROR: Could not allocate space for concatenation string: %d\n",
            length+1);
@@ -162,7 +162,7 @@ int main(int argc, char ** argv)
   my_ID = omp_get_thread_num();
 
   /* everybody receives a private copy of the base string                   */
-  iterstring = (char *) malloc((thread_length+1)*sizeof(char));
+  iterstring = (char *) prk_malloc((thread_length+1)*sizeof(char));
   if (!iterstring) {
     printf("ERROR: Thread %d could not allocate space for private string\n", 
            my_ID);

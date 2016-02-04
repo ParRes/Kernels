@@ -133,7 +133,7 @@ int main(int argc, char ** argv)
   /* Broadcast benchmark data to all ranks */
   MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&vector_length, 1, MPI_LONG, root, MPI_COMM_WORLD);
-  vector= (double *) malloc(2*vector_length*sizeof(double)); 
+  vector= (double *) prk_malloc(2*vector_length*sizeof(double)); 
   if (vector==NULL) {
     printf("ERROR: Could not allocate space %ld for vector in rank %d\n", 
            2*vector_length*sizeof(double),my_ID);

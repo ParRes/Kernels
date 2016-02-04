@@ -114,12 +114,12 @@ int main(int argc, char ** argv) {
   ** Allocate space for the input and transpose matrix
   *********************************************************************/
 
-  A_p   = (double *)malloc(order*order*sizeof(double));
+  A_p   = (double *)prk_malloc(order*order*sizeof(double));
   if (A_p == NULL){
     printf(" Error allocating space for input matrix\n");
     exit(EXIT_FAILURE);
   }
-  B_p  = (double *)malloc(order*order*sizeof(double));
+  B_p  = (double *)prk_malloc(order*order*sizeof(double));
   if (B_p == NULL){
     printf(" Error allocating space for transposed matrix\n");
     exit(EXIT_FAILURE);

@@ -247,14 +247,14 @@ int main(int argc, char ** argv)
 ** Create the column block of the test matrix, the row block of the 
 ** transposed matrix, and workspace (workspace only if #procs>1)
 *********************************************************************/
-  A_p = (double *)malloc(Colblock_size*sizeof(double));
+  A_p = (double *)prk_malloc(Colblock_size*sizeof(double));
   if (A_p == NULL){
     printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
 
-  B_p = (double *)malloc(Colblock_size*sizeof(double));
+  B_p = (double *)prk_malloc(Colblock_size*sizeof(double));
   if (B_p == NULL){
     printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
     error = 1;
@@ -262,7 +262,7 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (Num_procs>1) {
-    Work_in_p   = (double *)malloc(2*Block_size*sizeof(double));
+    Work_in_p   = (double *)prk_malloc(2*Block_size*sizeof(double));
     if (Work_in_p == NULL){
       printf(" Error allocating space for work on node %d\n",my_ID);
       error = 1;

@@ -180,7 +180,7 @@ int main(int argc, char ** argv)
   recv_val [0] = -1;
 #endif
   dst = (double *) prk_shmem_malloc (sizeof(double) * (n));
-  src = (double *) malloc (sizeof(double) * (n));
+  src = (double *) prk_malloc (sizeof(double) * (n));
   local_pipeline_time = (double *) prk_shmem_malloc (sizeof(double));
   pipeline_time = (double *) prk_shmem_malloc (sizeof(double));
   if (!flag_left || !dst || !src) {
@@ -211,7 +211,7 @@ int main(int argc, char ** argv)
 
   /* total_length takes into account one ghost cell on left side of segment      */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  vector = (double *) malloc(total_length*sizeof(double));
+  vector = (double *) prk_malloc(total_length*sizeof(double));
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %ld by %ld points", 
            segment_size, n);

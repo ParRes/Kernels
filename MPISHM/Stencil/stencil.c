@@ -514,7 +514,7 @@ int main(int argc, char ** argv) {
   bail_out(error);
 
   /* allocate communication buffers for halo values                            */
-  top_buf_out = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*width_rank);
+  top_buf_out = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*width_rank);
   if (!top_buf_out) {
     printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
     error = 1;
@@ -524,7 +524,7 @@ int main(int argc, char ** argv) {
   bottom_buf_out = top_buf_out + 2*RADIUS*width_rank;
   bottom_buf_in  = top_buf_out + 3*RADIUS*width_rank;
  
-  right_buf_out = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*height_rank);
+  right_buf_out = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*height_rank);
   if (!right_buf_out) { 
     printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
     error = 1;

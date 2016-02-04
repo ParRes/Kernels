@@ -143,12 +143,12 @@ int main(int argc, char ** argv)
 #ifdef VERBOSE
   printf("Page size = %d\n", getpagesize());
 #endif
-  counter_space = (double *) malloc(store_size+sizeof(double));
+  counter_space = (double *) prk_malloc(store_size+sizeof(double));
   while (!counter_space && store_size>2*sizeof(double)) {
     page_fit=0;
 
     store_size/=2;
-    counter_space = (double *) malloc(store_size+sizeof(double));
+    counter_space = (double *) prk_malloc(store_size+sizeof(double));
   }
   if (!counter_space) {
     printf("ERROR: could not allocate space for counters\n");
@@ -181,7 +181,7 @@ int main(int argc, char ** argv)
   double aj, bj, cj;
   long space;
   space = 3*sizeof(double)*stream_size;
-  a = (double *) malloc(space);
+  a = (double *) prk_malloc(space);
   if (!a) {
     printf("ERROR: Could not allocate %ld words for private streams\n", 
            space);

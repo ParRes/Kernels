@@ -215,7 +215,7 @@ int main(int argc, char ** argv)
   MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&btype,         1, MPI_INT, root, MPI_COMM_WORLD);
 
-  vector = malloc(vector_length*2*sizeof(int));
+  vector = prk_malloc(vector_length*2*sizeof(int));
   if (!vector) {
     printf("ERROR: rank %d failed to allocate space for vector\n", my_ID);
     error = 1;

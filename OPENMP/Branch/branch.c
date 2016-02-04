@@ -221,7 +221,7 @@ int main(int argc, char ** argv)
 
   my_ID = omp_get_thread_num();
 
-  vector = malloc(vector_length*2*sizeof(int));
+  vector = prk_malloc(vector_length*2*sizeof(int));
   if (!vector) {
     printf("ERROR: Thread %d failed to allocate space for vector\n", my_ID);
     num_error = 1;

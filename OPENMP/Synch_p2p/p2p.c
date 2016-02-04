@@ -141,7 +141,7 @@ int main(int argc, char ** argv) {
   else grp = 1;
 
   total_length = sizeof(double)*m*n;
-  vector = (double *) malloc(total_length);
+  vector = (double *) prk_malloc(total_length);
   if (!vector) {
     printf("ERROR: Could not allocate space for vector: %ld\n", total_length);
     exit(EXIT_FAILURE);
@@ -153,7 +153,7 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  start = (int *) malloc(2*nthread_input*sizeof(int));
+  start = (int *) prk_malloc(2*nthread_input*sizeof(int));
   if (!start) {
     printf("ERROR: Could not allocate space for array of slice boundaries\n");
     exit(EXIT_FAILURE);
@@ -167,7 +167,7 @@ int main(int argc, char ** argv) {
     end[ID] = start[ID]+segment_size-1;
   }
 
-  flag = (int *) malloc(sizeof(int)*nthread_input*LINEWORDS*n);
+  flag = (int *) prk_malloc(sizeof(int)*nthread_input*LINEWORDS*n);
   if (!flag) {
     printf("ERROR: COuld not allocate space for synchronization flags\n");
     exit(EXIT_FAILURE);

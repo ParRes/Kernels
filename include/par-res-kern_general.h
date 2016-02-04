@@ -119,7 +119,7 @@ static inline void* prk_malloc(size_t bytes)
     return aligned_alloc(alignment,padded);
 #elif defined(PRK_USE_MALLOC)
 #warning PRK_USE_MALLOC prevents the use of alignmed memory.
-    return malloc(bytes);
+    return prk_malloc(bytes);
 #else /* if defined(PRK_USE_POSIX_MEMALIGN) */
     void * ptr = NULL;
     posix_memalign(&ptr,alignment,bytes);

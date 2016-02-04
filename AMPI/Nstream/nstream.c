@@ -196,7 +196,7 @@ int main(int argc, char **argv)
   MPI_Bcast(&iterations,1, MPI_INT, root, MPI_COMM_WORLD);
 
   space = (3*length + 2*offset)*sizeof(double);
-  a = (double *) malloc(space);
+  a = (double *) prk_malloc(space);
   if (!a && my_ID == root) {
     printf("ERROR: Could not allocate %ld bytes for vectors\n", (long int)space);
     error = 1;

@@ -155,7 +155,7 @@ int main(int argc, char ** argv)
   }
 
   total_length = vector_length*2*nthread_input*sizeof(double);
-  vector = (double *) malloc(total_length);
+  vector = (double *) prk_malloc(total_length);
   if (!vector) {
     printf("ERROR: Could not allocate space for vectors: %ld\n", total_length);
     exit(EXIT_FAILURE);

@@ -284,8 +284,8 @@ int main(int argc, char ** argv) {
   total_length_in  = (long) (width+2*RADIUS)* (long) (height+2*RADIUS)*sizeof(DTYPE);
   total_length_out = (long) width* (long) height*sizeof(DTYPE);
  
-  in  = (DTYPE *) malloc(total_length_in);
-  out = (DTYPE *) malloc(total_length_out);
+  in  = (DTYPE *) prk_malloc(total_length_in);
+  out = (DTYPE *) prk_malloc(total_length_out);
   if (!in || !out) {
     printf("ERROR: rank %d could not allocate space for input/output array\n",
             my_ID);

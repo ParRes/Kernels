@@ -114,7 +114,7 @@ int main(int argc, char **argv){
                     nthread;   
   int               num_error=0; /* flag that signals that requested and 
                                    obtained numbers of threads are the same       */
-  size_t            vector_space, /* variables used to hold malloc sizes          */
+  size_t            vector_space, /* variables used to hold prk_malloc sizes          */
                     matrix_space,
                     index_space;
 
@@ -180,7 +180,7 @@ int main(int argc, char **argv){
     exit(EXIT_FAILURE);
   } 
 
-  matrix = (double *) malloc(matrix_space);
+  matrix = (double *) prk_malloc(matrix_space);
   if (!matrix) {
     printf("ERROR: Could not allocate space for sparse matrix: "FSTR64U"\n", nent);
     exit(EXIT_FAILURE);
@@ -192,7 +192,7 @@ int main(int argc, char **argv){
     exit(EXIT_FAILURE);
   } 
 
-  vector = (double *) malloc(vector_space);
+  vector = (double *) prk_malloc(vector_space);
   if (!vector) {
     printf("ERROR: Could not allocate space for vectors: %d\n", (int)(2*size2));
     exit(EXIT_FAILURE);
@@ -204,7 +204,7 @@ int main(int argc, char **argv){
     printf("ERROR: Cannot represent space for column indices: %ul\n", index_space);
     exit(EXIT_FAILURE);
   } 
-  colIndex = (s64Int *) malloc(index_space);
+  colIndex = (s64Int *) prk_malloc(index_space);
   if (!colIndex) {
     printf("ERROR: Could not allocate space for column indices: "FSTR64U"\n",
            nent*sizeof(s64Int));
