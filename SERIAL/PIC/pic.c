@@ -178,7 +178,7 @@ particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rh
 /* Initialize particles with a sinusoidal distribution */
 particle_t *initializeParticlesSinusoidal(uint64_t n_input, uint64_t L, uint64_t *n){
   particle_t  *particles;
-  double      step = M_PI / (L-1);
+  double      step = PRK_M_PI / (L-1);
   uint64_t     x, y, pi, i, p, actual_particles;
 
   particles = (particle_t*) malloc(2*n_input * sizeof(particle_t));
@@ -437,7 +437,7 @@ int main(int argc, char ** argv) {
   particle_mode  = UNDEFINED;
   k = atoi(*++argv);   args_used++; 
   if (k<0) {
-    printf("ERROR: Particle semi-charge must be non-negative: %d\n", k);
+    printf("ERROR: Particle semi-charge must be non-negative: %lu\n", k);
     exit(FAILURE);
   }
   m = atoi(*++argv);   args_used++; 
@@ -500,14 +500,14 @@ int main(int argc, char ** argv) {
   case SINUSOIDAL:                                                          break;
   case LINEAR:    printf("  Negative slope               = %lf\n", alpha);
                   printf("  Offset                       = %lf\n", beta);   break;
-  case PATCH:     printf("  Bounding box                 = %d, %d, %d, %d\n",
+  case PATCH:     printf("  Bounding box                 = %lu, %lu, %lu, %lu\n",
                          init_patch.left, init_patch.right, 
                          init_patch.bottom, init_patch.top);              break;
   default:        printf("ERROR: Unsupported particle initializating mode\n");
                    exit(FAILURE);
   }
-  printf("Particle charge semi-increment = %d\n", k);
-  printf("Vertical velocity              = %d\n", m);
+  printf("Particle charge semi-increment = %lu\n", k);
+  printf("Vertical velocity              = %lu\n", m);
    
   /* Initialize grid of charges and particles */
   Qgrid = initializeGrid(g);
