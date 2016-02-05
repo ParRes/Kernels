@@ -70,15 +70,14 @@ HISTORY: Written by Tim Mattson, April 1999.
 
 #define A(i,j)    A[i+order*(j)]
 #define B(i,j)    B[i+order*(j)]
-static double test_results (int , double*, int);
+static double test_results (size_t , double*, int);
 
 int main(int argc, char ** argv) {
 
-  long   order;         /* order of a the matrix                           */
+  size_t   order;         /* order of a the matrix                           */
   int    Tile_order=32; /* default tile size for tiling of local transpose */
   int    iterations;    /* number of times to do the transpose             */
   int    tiling;        /* boolean: true if tiling is used                 */
-  int    i, j, it, jt, iter;  /* dummies                                   */
   double bytes;         /* combined size of matrices                       */
   double * RESTRICT A;  /* buffer to hold original matrix                  */
   double * RESTRICT B;  /* buffer to hold transposed matrix                */
@@ -122,7 +121,7 @@ int main(int argc, char ** argv) {
 
   order = atoi(*++argv); 
   if (order < 0){
-    printf("ERROR: Matrix Order must be greater than 0 : %d \n", order);
+    printf("ERROR: Matrix Order must be greater than 0 : %zu \n", order);
     exit(EXIT_FAILURE);
   }
 
@@ -150,7 +149,7 @@ int main(int argc, char ** argv) {
 
   bytes = 2.0 * sizeof(double) * order * order;
 
-  #pragma omp parallel private (iter)
+  #pragma omp parallel
   {  
 
   #pragma omp master
@@ -182,28 +181,28 @@ int main(int argc, char ** argv) {
 
   if (tiling) {
 #ifdef COLLAPSE
-    #pragma omp for private (i,it,jt) collapse(2)
+    #pragma omp for collapse(2)
 #else
-    #pragma omp for private (i,it,jt)
+    #pragma omp for
 #endif
-    for (j=0; j<order; j+=Tile_order) 
-      for (i=0; i<order; i+=Tile_order) 
-        for (jt=j; jt<MIN(order,j+Tile_order);jt++)
-          for (it=i; it<MIN(order,i+Tile_order); it++){
+    for (size_t j=0; j<order; j+=Tile_order) 
+      for (size_t i=0; i<order; i+=Tile_order) 
+        for (size_t jt=j; jt<MIN(order,j+Tile_order);jt++)
+          for (size_t it=i; it<MIN(order,i+Tile_order); it++){
             A(it,jt) = (double) (order*jt + it);
             B(it,jt) = 0.0;
           }
   }
   else {
-    #pragma omp for private (i)
-    for (j=0;j<order;j++) 
-      for (i=0;i<order; i++) {
+    #pragma omp for
+    for (size_t j=0;j<order;j++) 
+      for (size_t i=0;i<order; i++) {
         A(i,j) = (double) (order*j + i);
         B(i,j) = 0.0;
       }
   }
 
-  for (iter = 0; iter<=iterations; iter++){
+  for (int iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration                                        */
     if (iter == 1) { 
@@ -216,23 +215,23 @@ int main(int argc, char ** argv) {
 
     /* Transpose the  matrix                                                       */
     if (!tiling) {
-      #pragma omp for private (j)
-      for (i=0;i<order; i++) 
-        for (j=0;j<order;j++) { 
+      #pragma omp for
+      for (size_t i=0;i<order; i++) 
+        for (size_t j=0;j<order;j++) { 
           B(j,i) += A(i,j);
           A(i,j) += 1.0;
         }
     }
     else {
 #ifdef COLLAPSE
-      #pragma omp for private (j,it,jt) collapse(2)
+      #pragma omp for collapse(2)
 #else
-      #pragma omp for private (j,it,jt)
+      #pragma omp for
 #endif
-      for (i=0; i<order; i+=Tile_order) 
-        for (j=0; j<order; j+=Tile_order) 
-          for (it=i; it<MIN(order,i+Tile_order); it++) 
-            for (jt=j; jt<MIN(order,j+Tile_order);jt++) {
+      for (size_t i=0; i<order; i+=Tile_order) 
+        for (size_t j=0; j<order; j+=Tile_order) 
+          for (size_t it=i; it<MIN(order,i+Tile_order); it++) 
+            for (size_t jt=j; jt<MIN(order,j+Tile_order);jt++) {
               B(jt,it) += A(it,jt);
               A(it,jt) += 1.0;
             } 
@@ -276,16 +275,15 @@ int main(int argc, char ** argv) {
 
 /* function that computes the error committed during the transposition */
 
-double test_results (int order, double *B, int iterations) {
+double test_results (size_t order, double *B, int iterations) {
 
   double abserr=0.0;
-  int i,j;
 
   double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
-  #pragma omp parallel for private(i) reduction(+:abserr)
-  for (j=0;j<order;j++) {
-    for (i=0;i<order; i++) {
-      abserr += ABS(B(i,j) - ((i*order + j)*(iterations+1)+addit));
+  #pragma omp parallel for reduction(+:abserr)
+  for (size_t j=0;j<order;j++) {
+    for (size_t i=0;i<order; i++) {
+      abserr += ABS(B(i,j) - ((i*order + j)*(iterations+1L)+addit));
     }
   }
 
