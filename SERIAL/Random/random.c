@@ -257,8 +257,8 @@ int main(int argc, char **argv) {
   }
 
 #ifdef VERBOSE
-  Hist = (u64Int *) malloc(tablespace);
-  HistHist = (unsigned int *) malloc(tablespace);
+  Hist = (u64Int *) prk_malloc(tablespace);
+  HistHist = (unsigned int *) prk_malloc(tablespace);
   if (!Hist || ! HistHist) {
     printf("ERROR: Could not allocate space for histograms\n");
     exit(EXIT_FAILURE);
@@ -273,7 +273,7 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  Table = (u64Int *) malloc(tablespace);
+  Table = (u64Int *) prk_malloc(tablespace);
   if (!Table) {
     printf("ERROR: Could not allocate space of "FSTR64U"  bytes for table\n",
            (u64Int) tablespace);
@@ -288,7 +288,7 @@ int main(int argc, char **argv) {
   printf("Vector length          = "FSTR64U"\n", (u64Int) nstarts);
   printf("Percent errors allowed = "FSTR64U"\n", (u64Int) ERRORPERCENT);
 
-  ran = (u64Int *) malloc(nstarts*sizeof(u64Int));
+  ran = (u64Int *) prk_malloc(nstarts*sizeof(u64Int));
   if (!ran) {
     printf("ERROR: Could not allocate %d bytes for random numbers\n",
            nstarts*(int)sizeof(u64Int));

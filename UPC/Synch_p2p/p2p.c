@@ -127,7 +127,7 @@ local_shared_block_ptrs shared_2d_array_alloc(int sizex, int sizey, int offsetx,
 
 double **shared_2d_array_to_private(local_shared_block_ptrs array, int sizex, int sizey, int offsetx, int offsety){
   size_t alloc_size = (size_t)sizey * sizeof(double*);
-  double **ptr = malloc(alloc_size);
+  double **ptr = prk_malloc(alloc_size);
   if(ptr == NULL)
     die("Unable to allocate array");
 

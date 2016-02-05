@@ -102,7 +102,7 @@ int main(int argc, char ** argv) {
   }
 
   total_length = sizeof(double)*m*n;
-  vector = (double *) malloc(total_length);
+  vector = (double *) prk_malloc(total_length);
   if (!vector) {
     printf("ERROR: Could not allocate space for array: %ld\n", total_length);
     exit(EXIT_FAILURE);

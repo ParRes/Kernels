@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
 
   /* set up row and column communicators                           */
 
-  ranks = (int *) malloc (3*Num_procs*sizeof(int));
+  ranks = (int *) prk_malloc (3*Num_procs*sizeof(int));
   if (!ranks) {
     printf("ERROR: Proc %d could not allocate rank work arrays\n",
            my_ID);
@@ -250,9 +250,9 @@ int main(int argc, char *argv[])
   else                     myncols = (order/npcol);
 
   /* get space for local blocks of A, B, C                         */
-  a = (double *) malloc( lda*myncols*sizeof(double) );
-  b = (double *) malloc( lda*myncols*sizeof(double) );
-  c = (double *) malloc( lda*myncols*sizeof(double) );
+  a = (double *) prk_malloc( lda*myncols*sizeof(double) );
+  b = (double *) prk_malloc( lda*myncols*sizeof(double) );
+  c = (double *) prk_malloc( lda*myncols*sizeof(double) );
   if ( a == NULL || b == NULL || c == NULL ) {
     error = 1;
     printf("ERROR: Proc %d could not allocate a, b, and/or c\n",my_ID);
@@ -260,8 +260,8 @@ int main(int argc, char *argv[])
   bail_out(error);
 
   /* get space for two work arrays for dgemm                       */
-  work1 = (double *) malloc( nb*lda*sizeof(double) );
-  work2 = (double *) malloc( nb*myncols*sizeof(double) );
+  work1 = (double *) prk_malloc( nb*lda*sizeof(double) );
+  work2 = (double *) prk_malloc( nb*myncols*sizeof(double) );
   if ( !work1 || !work2 ) {
     printf("ERROR: Proc %d could not allocate work buffers\n", my_ID);
     error = 1;
@@ -438,7 +438,7 @@ void dgemm_local(int M, int N, int K, double *a, int lda, double *b,
       C(m,n) += A(m,k)*B(k,n);
   }
   else {
-    aa = (double *) malloc(3*((long)nb+BOFFSET)*(long)nb*sizeof(double));
+    aa = (double *) prk_malloc(3*((long)nb+BOFFSET)*(long)nb*sizeof(double));
     /* if this allocation fails, we make an ungraceful exit; we do not
        want to test whether any other ranks failed, because that
        requires an expensive barrier                               */

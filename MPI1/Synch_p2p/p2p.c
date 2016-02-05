@@ -181,7 +181,7 @@ int main(int argc, char ** argv)
 
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end-start+1)+1)*n;
-  vector = (double *) malloc(total_length*sizeof(double));
+  vector = (double *) prk_malloc(total_length*sizeof(double));
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %ld by %ld points",
            segment_size, n);
@@ -191,7 +191,7 @@ int main(int argc, char ** argv)
   bail_out(error);
   
   /* reserve space for in and out buffers                                        */
-  inbuf = (double *) malloc(2*sizeof(double)*(grp));
+  inbuf = (double *) prk_malloc(2*sizeof(double)*(grp));
   if (inbuf == NULL) {
     printf("Could not allocate space for %d words of communication buffers", 
             2*grp);

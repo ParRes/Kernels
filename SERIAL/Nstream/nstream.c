@@ -192,7 +192,7 @@ int main(int argc, char **argv)
  
 #ifndef STATIC_ALLOCATION
   space = (3*length + 2*offset)*sizeof(double);
-  a = (double *) malloc(space);
+  a = (double *) prk_malloc(space);
   if (!a) {
     printf("ERROR: Could not allocate %ld words for vectors\n", 
            3*length+2*offset);

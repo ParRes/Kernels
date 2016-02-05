@@ -142,8 +142,8 @@ int main(int argc, char ** argv)
   }
 
 // initialize sync variables for error checks
-  pSync = (long *)   prk_shmem_malloc ( sizeof(long) * PRK_SHMEM_REDUCE_SYNC_SIZE );
-  pWrk  = (double *) prk_shmem_malloc ( sizeof(double) * PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE );
+  pSync = (long *)   prk_shmem_align(prk_get_alignment(), sizeof(long) * PRK_SHMEM_REDUCE_SYNC_SIZE );
+  pWrk  = (double *) prk_shmem_align(prk_get_alignment(), sizeof(double) * PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE );
   if (!pSync || !pWrk) {
     printf("Rank %d could not allocate work space for collectives\n", my_ID);
     error = 1;
@@ -173,16 +173,16 @@ int main(int argc, char ** argv)
 #endif
   }
 
-  flag_left = (int *) prk_shmem_malloc (sizeof(int) * n);
+  flag_left = (int *) prk_shmem_align(prk_get_alignment(),sizeof(int) * n);
 #ifdef SYNCHRONOUS
-  flag_right = (int *) prk_shmem_malloc (sizeof(int) * n);
+  flag_right = (int *) prk_shmem_align(prk_get_alignment(),sizeof(int) * n);
   int recv_val [1];
   recv_val [0] = -1;
 #endif
-  dst = (double *) prk_shmem_malloc (sizeof(double) * (n));
-  src = (double *) malloc (sizeof(double) * (n));
-  local_pipeline_time = (double *) prk_shmem_malloc (sizeof(double));
-  pipeline_time = (double *) prk_shmem_malloc (sizeof(double));
+  dst = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double) * (n));
+  src = (double *) prk_malloc (sizeof(double) * (n));
+  local_pipeline_time = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double));
+  pipeline_time = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double));
   if (!flag_left || !dst || !src) {
     printf("ERROR: could not allocate flags or communication buffers on rank %d\n", 
            my_ID);
@@ -190,7 +190,7 @@ int main(int argc, char ** argv)
   }
   bail_out(error); 
 
-  start = (int *) prk_shmem_malloc(2*Num_procs*sizeof(int));
+  start = (int *) prk_shmem_align(prk_get_alignment(),2*Num_procs*sizeof(int));
   if (!start) {
     printf("ERROR: Could not allocate space for array of slice boundaries on rank %d\n",
            my_ID);
@@ -211,7 +211,7 @@ int main(int argc, char ** argv)
 
   /* total_length takes into account one ghost cell on left side of segment      */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
-  vector = (double *) malloc(total_length*sizeof(double));
+  vector = (double *) prk_malloc(total_length*sizeof(double));
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %ld by %ld points", 
            segment_size, n);

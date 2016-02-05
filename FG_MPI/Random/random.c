@@ -329,7 +329,7 @@ int main(int argc, char **argv) {
   MPI_Bcast(&tablespace,       1, MPI_LONG_LONG_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&nupdate,          1, MPI_LONG_LONG_INT, root, MPI_COMM_WORLD);
 
-  ran = (u64Int *) malloc(nstarts*sizeof(u64Int));
+  ran = (u64Int *) prk_malloc(nstarts*sizeof(u64Int));
   if (!ran) {
     printf("ERROR: rank %d could not allocate %d bytes for random numbers\n",
            my_ID, nstarts*sizeof(u64Int));
@@ -337,7 +337,7 @@ int main(int argc, char **argv) {
   }
   bail_out(error);
   
-  Table = (u64Int *) malloc(tablespace);
+  Table = (u64Int *) prk_malloc(tablespace);
   if (!Table) {
     printf("ERROR: rank %d could not allocate space of "FSTR64U"  bytes for table\n",
            my_ID, (u64Int) tablespace);
@@ -346,7 +346,7 @@ int main(int argc, char **argv) {
   bail_out(error);
 
   /* allocate send and receive buckets                                             */
-  ranSendBucket = (u64Int **) malloc((Num_procs+1)*sizeof(u64Int *));
+  ranSendBucket = (u64Int **) prk_malloc((Num_procs+1)*sizeof(u64Int *));
   if (!ranSendBucket) {
     printf("ERROR: rank %d Could not allocate bucket pointers\n", my_ID);
     error = 1;
@@ -354,7 +354,7 @@ int main(int argc, char **argv) {
   bail_out(error);
   ranRecvBucket = ranSendBucket + Num_procs;
 
-  ranSendBucket[0] = (u64Int *) malloc(2*Num_procs*nstarts*sizeof(u64Int));
+  ranSendBucket[0] = (u64Int *) prk_malloc(2*Num_procs*nstarts*sizeof(u64Int));
   if (!ranSendBucket[0]) {
     printf("ERROR: rank %d Could not allocate bucket space\n", my_ID);
     error = 1;
@@ -367,7 +367,7 @@ int main(int argc, char **argv) {
   ranRecvBucket[0] = ranSendBucket[0] + Num_procs*nstarts;
 
   /* allocate send and receive bucket sizes plus buffer offsets                    */
-  sizeSendBucket = (int *) malloc(4*Num_procs*sizeof(int));
+  sizeSendBucket = (int *) prk_malloc(4*Num_procs*sizeof(int));
   if (!sizeSendBucket) {
     printf("ERROR: rank %d Could not allocate bucket sizes\n", my_ID);
     error = 1;

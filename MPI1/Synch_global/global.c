@@ -144,7 +144,7 @@ int main(int argc, char ** argv)
   MPI_Bcast(&length,     1, MPI_LONG, root, MPI_COMM_WORLD);
   proc_length = length/Num_procs;
 
-  basestring = malloc((proc_length+1)*sizeof(char));
+  basestring = prk_malloc((proc_length+1)*sizeof(char));
   if (basestring==NULL) {
     printf("ERROR: Could not allocate space for scramble string\n");
     error = 1;
@@ -155,7 +155,7 @@ int main(int argc, char ** argv)
   for (i=0; i<proc_length; i++) basestring[i]=scramble[i%32];
   basestring[proc_length] = EOS;
 
-  catstring=(char *) malloc((length+1)*sizeof(char));
+  catstring=(char *) prk_malloc((length+1)*sizeof(char));
   if (catstring==NULL) {
     printf("ERROR: Could not allocate space for concatenation string: %ld\n",
            length+1);
@@ -167,7 +167,7 @@ int main(int argc, char ** argv)
   for (i=0; i<length; i++) catstring[i]='9';
   catstring[length]=EOS;
 
-  iterstring= (char *) malloc((proc_length+1)*sizeof(char)); 
+  iterstring= (char *) prk_malloc((proc_length+1)*sizeof(char)); 
   if (iterstring==NULL) {
     printf("ERROR: Could not allocate space for strings in rank %d\n", my_ID);
     error = 1;
@@ -176,7 +176,7 @@ int main(int argc, char ** argv)
 
   strcpy(iterstring, basestring);
 
-  catstring=(char *) malloc((length+1)*sizeof(char));
+  catstring=(char *) prk_malloc((length+1)*sizeof(char));
   if (catstring==NULL) {
     printf("ERROR: Could not allocate space for strings in rank %d\n", my_ID);
     error = 1;

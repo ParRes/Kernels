@@ -116,7 +116,7 @@ int main(int argc, char ** argv)
   /* allocate the locks on which we will be pounding; we
      put them on different cache lines, if possible                    */
 
-  counter_lock = (omp_lock_t **) malloc(nthread_input*sizeof(omp_lock_t *));
+  counter_lock = (omp_lock_t **) prk_malloc(nthread_input*sizeof(omp_lock_t *));
   if (!counter_lock) {
     printf("Not able to allocate memory for counter lock handles\n");
     exit(EXIT_FAILURE);
@@ -129,11 +129,11 @@ int main(int argc, char ** argv)
   else
     alloc_unit = LINE_LENGTH;
 
-  lock_space = (omp_lock_t *) malloc(2*nthread_input*alloc_unit);
+  lock_space = (omp_lock_t *) prk_malloc(2*nthread_input*alloc_unit);
   while (!lock_space && alloc_unit >= 2*sizeof(s64Int)) {
     line_fit = 0;
     alloc_unit/=2;
-    lock_space = (omp_lock_t *)malloc(2*nthread_input*alloc_unit);
+    lock_space = (omp_lock_t *)prk_malloc(2*nthread_input*alloc_unit);
   }
   if (!lock_space) {
     printf("Not able to allocate memory for lock handles\n");
@@ -146,8 +146,8 @@ int main(int argc, char ** argv)
 #endif
       
   /* we try to put private counters on different cache lines           */
-  pcounter1 = (s64Int **) malloc(nthread_input*sizeof(s64Int *));
-  pcounter2 = (s64Int **) malloc(nthread_input*sizeof(s64Int *));
+  pcounter1 = (s64Int **) prk_malloc(nthread_input*sizeof(s64Int *));
+  pcounter2 = (s64Int **) prk_malloc(nthread_input*sizeof(s64Int *));
   if (!pcounter1 || !pcounter2) {
     printf("Not able to allocate memory for reference counter pointers\n");
     exit(EXIT_FAILURE);
@@ -158,11 +158,11 @@ int main(int argc, char ** argv)
     alloc_unit = (sizeof(s64Int)/LINE_LENGTH+1)*LINE_LENGTH;
   else
     alloc_unit = LINE_LENGTH;
-  counter_space = malloc(2*nthread_input*alloc_unit);
+  counter_space = prk_malloc(2*nthread_input*alloc_unit);
   while (!counter_space && alloc_unit >= 2*sizeof(s64Int)) {
     line_fit = 0;
     alloc_unit/=2;
-    counter_space = malloc(2*nthread_input*alloc_unit);
+    counter_space = prk_malloc(2*nthread_input*alloc_unit);
   }
   if (!counter_space) {
     printf("Not able to allocate memory for reference counters\n");

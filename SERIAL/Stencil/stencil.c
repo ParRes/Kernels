@@ -148,8 +148,8 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  in  = (DTYPE *) malloc(total_length);
-  out = (DTYPE *) malloc(total_length);
+  in  = (DTYPE *) prk_malloc(total_length);
+  out = (DTYPE *) prk_malloc(total_length);
   if (!in || !out) {
     printf("ERROR: could not allocate space for input or output array\n");
     exit(EXIT_FAILURE);

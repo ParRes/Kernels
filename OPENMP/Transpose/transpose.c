@@ -134,13 +134,13 @@ int main(int argc, char ** argv) {
   ** Allocate space for the input and transpose matrix
   *********************************************************************/
 
-  A   = (double *)malloc(order*order*sizeof(double));
+  A   = (double *)prk_malloc(order*order*sizeof(double));
   if (A == NULL){
     printf(" ERROR: cannot allocate space for input matrix: %ld\n", 
            order*order*sizeof(double));
     exit(EXIT_FAILURE);
   }
-  B  = (double *)malloc(order*order*sizeof(double));
+  B  = (double *)prk_malloc(order*order*sizeof(double));
   if (B == NULL){
     printf(" ERROR: cannot allocate space for output matrix: %ld\n", 
            order*order*sizeof(double));
@@ -248,6 +248,9 @@ int main(int argc, char ** argv) {
   } /* end of OpenMP parallel region */
 
   abserr =  test_results (order, B, iterations);
+
+  prk_free(B);
+  prk_free(A);
 
   /*********************************************************************
   ** Analyze and output results.
