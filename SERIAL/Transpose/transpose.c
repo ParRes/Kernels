@@ -134,14 +134,14 @@ int main(int argc, char ** argv) {
   /*  Fill the original matrix, set transpose to known garbage value. */
 
   /* Fill the original column matrix                                                */
-  for (int j=0;j<order;j++) {
+  for (int j=0;j<order; j++) {
     for (int i=0;i<order; i++) {
-      A(i,j) = (double) (order*(j) + i);
+      A(i,j) = (double) ((size_t)order*(size_t)j+(size_t)i);
     }
   }
 
   /*  Set the transpose matrix to a known garbage value.                            */
-  for (int j=0;j<order;j++) {
+  for (int j=0;j<order; j++) {
     for (int i=0;i<order; i++) {
       B(i,j) = 0.0;
     }
@@ -160,7 +160,7 @@ int main(int argc, char ** argv) {
       for (int i=0; i<order; i+=tile_size) {
         for (int j=0; j<order; j+=tile_size) {
           for (int it=i; it<MIN(order,i+tile_size); it++) {
-            for (int jt=j; jt<MIN(order,j+tile_size);jt++) {
+            for (int jt=j; jt<MIN(order,j+tile_size); jt++) {
               B(jt,it) += A(it,jt);
               A(it,jt) += 1.0;
             }
