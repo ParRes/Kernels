@@ -160,7 +160,7 @@ int main(int argc, char ** argv)
   MPI_Bcast(&n, 1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-  start = (int *) malloc(2*Num_procs*sizeof(int));
+  start = (int *) prk_malloc(2*Num_procs*sizeof(int));
   if (!start) {
     printf("ERROR: Could not allocate space for array of slice boundaries\n");
     exit(EXIT_FAILURE);
@@ -186,7 +186,7 @@ int main(int argc, char ** argv)
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end[my_ID]-start[my_ID]+1)+1)*n;
 
-  vector = (double *) malloc(total_length*sizeof(double));
+  vector = (double *) prk_malloc(total_length*sizeof(double));
   MPI_Win_create(vector, total_length*sizeof(double), sizeof(double), rma_winfo, MPI_COMM_WORLD, &rma_win);
 #warning Why are we not using MPI_Win_allocate here?
 #warning If this is a shared-memory bug, then we need to fix the bug.

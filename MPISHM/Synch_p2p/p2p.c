@@ -171,7 +171,7 @@ int main(int argc, char ** argv)
   MPI_Bcast(&n, 1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-  start = (int *) malloc(2*Num_procs*sizeof(int));
+  start = (int *) prk_malloc(2*Num_procs*sizeof(int));
   if (!start) {
     printf("ERROR: Could not allocate space for array of slice boundaries\n");
     exit(EXIT_FAILURE);

@@ -31,10 +31,12 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
+
+#include <unistd.h>
 
 #define PRKVERSION "2.16"
 #ifndef MIN
@@ -54,16 +56,82 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 /* Define 64-bit types and corresponding format strings for printf() */
-#ifdef LONG_IS_64BITS 
-  typedef unsigned long      u64Int; 
-  typedef long               s64Int; 
-  #define FSTR64             "%16ld" 
-  #define FSTR64U            "%16lu" 
-#else 
-  typedef unsigned long long u64Int; 
-  typedef long long          s64Int; 
-  #define FSTR64             "%16ll" 
-  #define FSTR64U            "%16llu" 
-#endif 
+#ifdef LONG_IS_64BITS
+  typedef unsigned long      u64Int;
+  typedef long               s64Int;
+  #define FSTR64             "%16ld"
+  #define FSTR64U            "%16lu"
+#else
+  typedef unsigned long long u64Int;
+  typedef long long          s64Int;
+  #define FSTR64             "%16ll"
+  #define FSTR64U            "%16llu"
+#endif
 
 extern double wtime(void);
+
+/*  We cannot use C11 aligned_alloc because of this GCC 5.3.0 bug:
+ *  https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69680 */
+#if 0 && defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#define PRK_HAS_C11 1
+#endif
+
+/* This function is separate from prk_malloc() because
+ * we need it when calling prk_shmem_align(..)           */
+static inline long prk_get_alignment(void)
+{
+    /* a := alignment */
+# ifdef PRK_ALIGNMENT
+    long a = PRK_ALIGNMENT;
+# else
+    char* temp = getenv("PRK_ALIGNMENT");
+    long a = (temp!=NULL) ? atol(temp) : 64;
+    if (a < 8) a = 8;
+    assert( (a & (~a+1)) == a );
+#endif
+    return a;
+}
+
+static inline void* prk_malloc(size_t bytes)
+{
+#ifndef PRK_USE_MALLOC
+    long alignment = prk_get_alignment();
+#endif
+
+#if defined(__INTEL_COMPILER) && !defined(PRK_USE_POSIX_MEMALIGN)
+    return _mm_malloc(bytes,alignment);
+#elif defined(PRK_HAS_C11)
+/* From ISO C11:
+ *
+ * "The aligned_alloc function allocates space for an object
+ *  whose alignment is specified by alignment, whose size is
+ *  specified by size, and whose value is indeterminate.
+ *  The value of alignment shall be a valid alignment supported
+ *  by the implementation and the value of size shall be an
+ *  integral multiple of alignment."
+ *
+ *  Thus, if we do not round up the bytes to be a multiple
+ *  of the alignment, we violate ISO C.
+ */
+    size_t padded = bytes;
+    size_t excess = bytes % alignment;
+    if (excess>0) padded += (alignment - excess);
+    return aligned_alloc(alignment,padded);
+#elif defined(PRK_USE_MALLOC)
+#warning PRK_USE_MALLOC prevents the use of alignmed memory.
+    return prk_malloc(bytes);
+#else /* if defined(PRK_USE_POSIX_MEMALIGN) */
+    void * ptr = NULL;
+    posix_memalign(&ptr,alignment,bytes);
+    return ptr;
+#endif
+}
+
+static inline void prk_free(void* p)
+{
+#if defined(__INTEL_COMPILER) && !defined(PRK_USE_POSIX_MEMALIGN)
+    _mm_free(p);
+#else
+    free(p);
+#endif
+}

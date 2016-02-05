@@ -15,7 +15,7 @@ LENGTHFLAG   = -DMAXLENGTH=1000000000
 #description: default vector length is 2000000
 
 #ALLOCFLAG    = -DSTATIC_ALLOCATION
-#description: default memory allocation is dynamic (using malloc)
+#description: default memory allocation is dynamic (using prk_malloc)
 
 #DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent

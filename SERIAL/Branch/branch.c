@@ -188,7 +188,7 @@ int main(int argc, char ** argv)
   printf("Number of iterations       = %d\n", iterations);
   printf("Branching type             = %s\n", branch_type);
 
-  vector = malloc(vector_length*2*sizeof(int));
+  vector = prk_malloc(vector_length*2*sizeof(int));
   if (!vector) {
     printf("ERROR: Failed to allocate space for vector\n");
     exit(EXIT_FAILURE);

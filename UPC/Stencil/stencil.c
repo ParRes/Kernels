@@ -130,7 +130,7 @@ local_shared_block_ptrs shared_2d_array_alloc(int sizex, int sizey, int offsetx,
 
 DTYPE **shared_2d_array_to_private(local_shared_block_ptrs array, int sizex, int sizey, int offsetx, int offsety){
   long int alloc_size = sizey * sizeof(DTYPE*);
-  DTYPE **ptr = malloc(alloc_size);
+  DTYPE **ptr = prk_malloc(alloc_size);
   if(ptr == NULL)
     bail_out("Unable to allocate array");
 
@@ -147,7 +147,7 @@ private_shared_block_ptrs partially_privatize(local_shared_block_ptrs array, int
   int offsety = thread_offsety[thread];
 
   long int alloc_size = sizey * sizeof(local_shared_block);
-  private_shared_block_ptrs ptr = malloc(alloc_size);
+  private_shared_block_ptrs ptr = prk_malloc(alloc_size);
   if(ptr == NULL)
     bail_out("Unable to allocate array2");
 
@@ -295,11 +295,11 @@ int main(int argc, char ** argv) {
 
   upc_barrier;
 
-  private_in_arrays = malloc(sizeof(private_shared_block_ptrs) * THREADS);
+  private_in_arrays = prk_malloc(sizeof(private_shared_block_ptrs) * THREADS);
   if(private_in_arrays == NULL)
     bail_out("Cannot allocate private_in_arrays");
 
-  private_out_arrays = malloc(sizeof(private_shared_block_ptrs) * THREADS);
+  private_out_arrays = prk_malloc(sizeof(private_shared_block_ptrs) * THREADS);
   if(private_out_arrays == NULL)
     bail_out("Cannot allocate private_out_arrays");
 

@@ -144,9 +144,9 @@ int main(int argc, char **argv){
     printf("ERROR: Matrix order must be positive: %ld\n", order);
     exit(EXIT_FAILURE);
   }
-  A = (double *) malloc(order*order*sizeof(double));
-  B = (double *) malloc(order*order*sizeof(double));
-  C = (double *) malloc(order*order*sizeof(double));
+  A = (double *) prk_malloc(order*order*sizeof(double));
+  B = (double *) prk_malloc(order*order*sizeof(double));
+  C = (double *) prk_malloc(order*order*sizeof(double));
   if (!A || !B || !C) {
     printf("ERROR: Could not allocate space for global matrices\n");
     exit(EXIT_FAILURE);
@@ -171,7 +171,7 @@ int main(int argc, char **argv){
 
   if (block > 0) {
     /* matrix blocks for local temporary copies                                     */
-    AA = (double *) malloc(block*(block+BOFFSET)*3*sizeof(double));
+    AA = (double *) prk_malloc(block*(block+BOFFSET)*3*sizeof(double));
     if (!AA) {
       num_error = 1;
       printf("Could not allocate space for matrix tiles on thread %d\n", 

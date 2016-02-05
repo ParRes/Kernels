@@ -282,8 +282,8 @@ int main(int argc, char ** argv) {
   total_length_in  = (long) (width+2*RADIUS)*(long) (height+2*RADIUS)*sizeof(DTYPE);
   total_length_out = (long) width* (long) height*sizeof(DTYPE);
  
-  in  = (DTYPE *) malloc(total_length_in);
-  out = (DTYPE *) malloc(total_length_out);
+  in  = (DTYPE *) prk_malloc(total_length_in);
+  out = (DTYPE *) prk_malloc(total_length_out);
   if (!in || !out) {
     printf("ERROR: rank %d could not allocate space for input/output array\n",
             my_ID);
@@ -311,7 +311,7 @@ int main(int argc, char ** argv) {
 
   if (Num_procs > 1) { 
     /* allocate communication buffers for halo values                          */
-    top_buf_out = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*width);
+    top_buf_out = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*width);
     if (!top_buf_out) {
       printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
       error = 1;
@@ -321,7 +321,7 @@ int main(int argc, char ** argv) {
     bottom_buf_out = top_buf_out + 2*RADIUS*width;
     bottom_buf_in  = top_buf_out + 3*RADIUS*width;
  
-    right_buf_out  = (DTYPE *) malloc(4*sizeof(DTYPE)*RADIUS*height);
+    right_buf_out  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*height);
     if (!right_buf_out) {
       printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
       error = 1;

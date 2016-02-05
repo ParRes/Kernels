@@ -153,8 +153,8 @@ int main(int argc, char ** argv) {
   /*  make sure the vector space can be represented                             */
   total_length = n*n*sizeof(DTYPE);
 
-  in  = (DTYPE *) malloc(total_length);
-  out = (DTYPE *) malloc(total_length);
+  in  = (DTYPE *) prk_malloc(total_length);
+  out = (DTYPE *) prk_malloc(total_length);
   if (!in || !out) {
     printf("ERROR: could not allocate space for input or output array: %ld\n",
            total_length);

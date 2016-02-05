@@ -131,7 +131,7 @@ double *initializeGrid(uint64_t g) {
   double   *Qgrid;
   uint64_t  y, x;
    
-  Qgrid = (double*) malloc(g*g*sizeof(double));
+  Qgrid = (double*) prk_malloc(g*g*sizeof(double));
   if (Qgrid == NULL) {
     printf("ERROR: Could not allocate space for grid\n");
     exit(EXIT_FAILURE);
@@ -152,7 +152,7 @@ particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rh
   uint64_t     y, x, p, pi, actual_particles;
   double      A;
    
-  particles = (particle_t*) malloc(2*n_input * sizeof(particle_t));
+  particles = (particle_t*) prk_malloc(2*n_input * sizeof(particle_t));
   if (particles == NULL) {
     printf("ERROR: Could not allocate space for particles\n");
     exit(EXIT_FAILURE);
@@ -181,7 +181,7 @@ particle_t *initializeParticlesSinusoidal(uint64_t n_input, uint64_t L, uint64_t
   double      step = PRK_M_PI / (L-1);
   uint64_t     x, y, pi, i, p, actual_particles;
 
-  particles = (particle_t*) malloc(2*n_input * sizeof(particle_t));
+  particles = (particle_t*) prk_malloc(2*n_input * sizeof(particle_t));
   if (particles == NULL) {
     printf("ERROR: Could not allocate space for particles\n");
     exit(EXIT_FAILURE);
@@ -209,7 +209,7 @@ particle_t *initializeParticlesLinear(uint64_t n_input, uint64_t L, double alpha
   double      total_weight, step = 1.0/L, current_weight;
   uint64_t     pi, i, p, x, y, actual_particles;
    
-  particles = (particle_t*) malloc(2*n_input * sizeof(particle_t));
+  particles = (particle_t*) prk_malloc(2*n_input * sizeof(particle_t));
   if (particles == NULL) {
     printf("ERROR: Could not allocate space for particles\n");
     exit(EXIT_FAILURE);
@@ -241,7 +241,7 @@ particle_t *initializeParticlesPatch(uint64_t n_input, uint64_t L, bbox_t patch,
   uint64_t     pi, p, x, y, total_cells, actual_particles;
   double      particles_per_cell;
    
-  particles = (particle_t*) malloc(2*n_input * sizeof(particle_t));
+  particles = (particle_t*) prk_malloc(2*n_input * sizeof(particle_t));
   if (particles == NULL) {
     printf("ERROR: Could not allocate space for particles\n");
     exit(EXIT_FAILURE);

@@ -206,7 +206,7 @@ int main(int argc, char ** argv)
  
   /* total_length takes into account one ghost cell on left side of segment     */
   total_length = ((end-start+1)+1)*n;
-  vector = (double *) malloc(sizeof(double)*total_length);
+  vector = (double *) prk_malloc(sizeof(double)*total_length);
   if (vector == NULL) {
     printf("Could not allocate space for grid slice of %d by %d points", 
            segment_size, n);
@@ -216,7 +216,7 @@ int main(int argc, char ** argv)
   bail_out(error);
  
   /* now divide the rank's grid slice among the threads                          */
-  tstart = (long *) malloc(3*nthread*sizeof(long));
+  tstart = (long *) prk_malloc(3*nthread*sizeof(long));
   if (!tstart) {
     printf("ERROR: Could not allocate space for array of slice boundaries\n");
     exit(EXIT_FAILURE);
@@ -232,7 +232,7 @@ int main(int argc, char ** argv)
     tend[TID] = tstart[TID]+tsegment_size[TID]-1;
   }
  
-  flag = (int *) malloc(sizeof(int)*nthread*LINEWORDS*n);
+  flag = (int *) prk_malloc(sizeof(int)*nthread*LINEWORDS*n);
   if (!flag) {
     printf("ERROR: Could not allocate space for synchronization flags\n");
     exit(EXIT_FAILURE);

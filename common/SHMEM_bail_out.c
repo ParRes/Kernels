@@ -56,10 +56,10 @@ void bail_out (int error) {
    long *pSync_local;
 
    int i;
-   global_error = prk_shmem_malloc(sizeof(long));
-   local_error = prk_shmem_malloc(sizeof(long));
-   pWrk = prk_shmem_malloc(sizeof(long)*PRK_SHMEM_BCAST_SYNC_SIZE);
-   pSync_local = prk_shmem_malloc(sizeof(long)*PRK_SHMEM_BCAST_SYNC_SIZE);
+   global_error = prk_shmem_align(prk_get_alignment(),sizeof(long));
+   local_error = prk_shmem_align(prk_get_alignment(),sizeof(long));
+   pWrk = prk_shmem_align(prk_get_alignment(),sizeof(long)*PRK_SHMEM_BCAST_SYNC_SIZE);
+   pSync_local = prk_shmem_align(prk_get_alignment(),sizeof(long)*PRK_SHMEM_BCAST_SYNC_SIZE);
    for (i = 0; i < PRK_SHMEM_BCAST_SYNC_SIZE; i += 1) {
     pSync_local[i] = PRK_SHMEM_SYNC_VALUE;
    }

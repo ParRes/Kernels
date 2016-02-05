@@ -131,7 +131,7 @@ int main(int argc, char **argv){
   double            epsilon = 1.e-8; /* error tolerance                           */
   s64Int * RESTRICT colIndex;   /* column indices of sparse matrix entries        */
   int               error=0;    /* error flag                                     */
-  size_t            vector_space, /* variables used to hold malloc sizes          */
+  size_t            vector_space, /* variables used to hold prk_malloc sizes          */
                     matrix_space,
                     index_space;
 
@@ -246,7 +246,7 @@ int main(int argc, char **argv){
   } 
   bail_out(error);
 
-  matrix = (double *) malloc(matrix_space);
+  matrix = (double *) prk_malloc(matrix_space);
   if (!matrix) {
     printf("ERROR: rank %d could not allocate space for sparse matrix: "FSTR64U"\n", 
            my_ID, matrix_space);
@@ -262,7 +262,7 @@ int main(int argc, char **argv){
   } 
   bail_out(error);
 
-  vector = (double *) malloc(vector_space);
+  vector = (double *) prk_malloc(vector_space);
   if (!vector) {
     printf("ERROR: rank %d could not allocate space for vectors: %d\n", 
            my_ID, (int)(2*nrows));
@@ -279,7 +279,7 @@ int main(int argc, char **argv){
   } 
   bail_out(error);
 
-  colIndex = (s64Int *) malloc(index_space);
+  colIndex = (s64Int *) prk_malloc(index_space);
   if (!colIndex) {
     printf("ERROR: rank %d Could not allocate space for column indices: "FSTR64U"\n",
            my_ID, nent*sizeof(s64Int));
@@ -317,13 +317,13 @@ int main(int argc, char **argv){
     printf("ERROR: Cannot represent space for matrix: %ul\n", matrix_space);
     exit(EXIT_FAILURE);
   } 
-  dense = (double *) malloc(matrix_space);
+  dense = (double *) prk_malloc(matrix_space);
   if (!dense) {
     printf("ERROR: Could not allocate space for dense matrix of order: %d\n",
            (int) size2);
     exit(EXIT_FAILURE);
   }
-  rhs   = (double *) malloc(vector_space);
+  rhs   = (double *) prk_malloc(vector_space);
   if (!rhs) {
     printf("ERROR: Could not allocate space for rhs: %d\n", (int) size2);
     exit(EXIT_FAILURE);

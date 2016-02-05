@@ -263,7 +263,7 @@ int main(int argc, char ** argv)
 ** Create the column block of the test matrix, the row block of the 
 ** transposed matrix, and workspace (workspace only if #procs>1)
 *********************************************************************/
-  A_p = (double *)malloc(Colblock_size*sizeof(double));
+  A_p = (double *)prk_malloc(Colblock_size*sizeof(double));
   if (A_p == NULL){
     printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
@@ -272,7 +272,7 @@ int main(int argc, char ** argv)
  
   MPI_Info_create (&rma_winfo);
   MPI_Info_set (rma_winfo, "no locks", "true");
-  B_p = (double *)malloc(Colblock_size*sizeof(double));
+  B_p = (double *)prk_malloc(Colblock_size*sizeof(double));
   if (B_p == NULL){
     printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
     error = 1;
@@ -280,7 +280,7 @@ int main(int argc, char ** argv)
   bail_out(error);
   
   if (Num_procs>1) {
-    Work_out_p = (double *) malloc (Block_size*(Num_procs-1)*sizeof(double));
+    Work_out_p = (double *) prk_malloc (Block_size*(Num_procs-1)*sizeof(double));
     if (Work_out_p == NULL){
       printf(" Error allocating space for work_out on node %d\n",my_ID);
       error = 1;
