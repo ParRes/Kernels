@@ -76,7 +76,7 @@ case "$PRK_TARGET" in
         ;;
     allopenmp)
         echo "OpenMP"
-        echo "CC=$PRK_COMPILER\nOPENMPFLAG=-fopenmp" >> common/make.defs
+        echo "CC=$PRK_COMPILER -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=OPENMP
         export OMP_NUM_THREADS=4
