@@ -24,7 +24,7 @@ esac
 case "$PRK_TARGET" in
     allserial)
         echo "Serial"
-        echo "CC=$PRK_COMPILER" >> common/make.defs
+        echo "CC=$PRK_COMPILER -std=c99" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=SERIAL
         $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
@@ -38,7 +38,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 2 GEOMETRIC 0.99
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 0 1 SINUSOIDAL
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 LINEAR 1.0 3.0
-        $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 PATCH 0 200 100 200 
+        $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 PATCH 0 200 100 200
         ;;
     allfortran)
         echo "Fortran"
