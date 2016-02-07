@@ -104,12 +104,12 @@ int main(int argc, char ** argv)
   size_t bytes = (size_t)order * (size_t)order * sizeof(double);
 
   double (* const restrict A)[order] = (double (*)[order]) prk_malloc(bytes);
-  if (B == NULL){
+  if (A == NULL){
     printf(" Error allocating space for transposed matrix\n");
     exit(EXIT_FAILURE);
   }
   double (* const restrict B)[order] = (double (*)[order]) prk_malloc(bytes);
-  if (A == NULL){
+  if (B == NULL){
     printf(" Error allocating space for input matrix\n");
     exit(EXIT_FAILURE);
   }
