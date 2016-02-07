@@ -57,29 +57,13 @@ FUNCTIONS CALLED:
          wtime()          portable wall-timer interface.
 
 HISTORY: Written by  Rob Van der Wijngaart, February 2009.
+         Modernized by Jeff Hammond, February 2016.
 *******************************************************************/
 
 #include <par-res-kern_general.h>
 
-#define A(i,j)        A_p[((size_t)i)+(size_t)order*((size_t)j)]
-#define B(i,j)        B_p[((size_t)i)+(size_t)order*((size_t)j)]
-
-/* Never used...
- * static double test_results (int , double*); */
-
-int main(int argc, char ** argv) {
-
-  int    order;          /* order of a the matrix                           */
-  int    tile_size=32;   /* default tile size for tiling of local transpose */
-  int    iterations;     /* number of times to do the transpose             */
-  size_t bytes;          /* combined size of matrices                       */
-  double * restrict A_p; /* buffer to hold original matrix                  */
-  double * restrict B_p; /* buffer to hold transposed matrix                */
-  double abserr;         /* squared error                                   */
-  double epsilon=1.e-8;  /* error tolerance                                 */
-  double trans_time,     /* timing parameters                               */
-         avgtime;
-
+int main(int argc, char ** argv)
+{
   /*********************************************************************
   ** read and test input parameters
   *********************************************************************/
@@ -87,82 +71,98 @@ int main(int argc, char ** argv) {
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial Matrix transpose: B = A^T\n");
 
-  if (argc != 4 && argc != 3){
-    printf("Usage: %s <# iterations> <matrix order> [tile size]\n",
-           *argv);
+  if (argc != 4 && argc != 3) {
+    printf("Usage: %s <# iterations> <matrix order> [tile size]\n", *argv);
     exit(EXIT_FAILURE);
   }
 
-  iterations  = atoi(*++argv);
-  if (iterations < 1){
-    printf("ERROR: iterations must be >= 1 : %d \n",iterations);
+  int iterations  = atoi(*++argv); /* number of times to do the transpose */
+  if (iterations < 1) {
+    printf("ERROR: iterations must be >= 1 : %d \n", iterations);
     exit(EXIT_FAILURE);
   }
 
-  order = atol(*++argv);
-  if (order < 0){
+  int order = atol(*++argv); /* order of a the matrix */
+  if (order < 0) {
     printf("ERROR: Matrix Order must be greater than 0 : %d \n", order);
     exit(EXIT_FAILURE);
   }
 
-  if (argc == 4) tile_size = atoi(*++argv);
+  int tile_size = 32; /* default tile size for tiling of local transpose */
+  if (argc == 4) {
+      tile_size = atoi(*++argv);
+  }
   /* a non-positive tile size means no tiling of the local transpose */
-  if (tile_size <=0) tile_size = order;
+  if (tile_size <=0) {
+      tile_size = order;
+  }
 
   /*********************************************************************
   ** Allocate space for the input and transpose matrix
   *********************************************************************/
 
-  bytes = (size_t)order * (size_t)order * sizeof(double);
+  size_t bytes = (size_t)order * (size_t)order * sizeof(double);
 
-  A_p   = (double *)prk_malloc(bytes);
+  double * A_p = (double *)prk_malloc(bytes);
   if (A_p == NULL){
     printf(" Error allocating space for input matrix\n");
     exit(EXIT_FAILURE);
   }
-  B_p  = (double *)prk_malloc(bytes);
+  double * B_p = (double *)prk_malloc(bytes);
   if (B_p == NULL){
     printf(" Error allocating space for transposed matrix\n");
     exit(EXIT_FAILURE);
   }
 
+  /* These are the 2D array overlays, which must be used exclusively
+   * throughout this code for the restrict attribute to be valid. */
+  double (* const restrict A)[order] = (double (*)[order]) A_p;
+  double (* const restrict B)[order] = (double (*)[order]) B_p;
+
   printf("Matrix order          = %d\n", order);
-  if (tile_size < order) printf("Tile size             = %d\n", tile_size);
-  else                   printf("Untiled\n");
+  if (tile_size < order) {
+      printf("Tile size             = %d\n", tile_size);
+  } else {
+      printf("Untiled\n");
+  }
   printf("Number of iterations  = %d\n", iterations);
 
   /*  Fill the original matrix, set transpose to known garbage value. */
 
-  /* Fill the original column matrix                                                */
-  for (int j=0;j<order; j++) {
-    for (int i=0;i<order; i++) {
-      A(i,j) = (double) ((size_t)order*(size_t)j+(size_t)i);
-    }
+  /* Fill the original column matrix. */
+  {
+      for (int j=0;j<order; j++) {
+        for (int i=0;i<order; i++) {
+          A[j][i] = (double) ((size_t)order*(size_t)j+(size_t)i);
+        }
+      }
   }
 
-  /*  Set the transpose matrix to a known garbage value.                            */
-  for (int j=0;j<order; j++) {
-    for (int i=0;i<order; i++) {
-      B(i,j) = 0.0;
-    }
+  /*  Set the transpose matrix to a known garbage value. */
+  {
+      double (* const restrict B)[order] = (double (*)[order]) B_p;
+      for (int j=0;j<order; j++) {
+        for (int i=0;i<order; i++) {
+          B[j][i] = 0.0;
+        }
+      }
   }
 
-  trans_time = 0.0; /* silence compiler warning */
+  double trans_time = 0.0;
 
   for (int iter = 0; iter<=iterations; iter++){
 
-    /* start timer after a warmup iteration                                        */
+    /* start timer after a warmup iteration */
     if (iter==1) trans_time = wtime();
 
-    /* Transpose the  matrix; only use tiling if the tile size is smaller
-       than the matrix */
+    /* Transpose the  matrix */
     if (tile_size < order) {
-      for (int i=0; i<order; i+=tile_size) {
-        for (int j=0; j<order; j+=tile_size) {
-          for (int it=i; it<MIN(order,i+tile_size); it++) {
-            for (int jt=j; jt<MIN(order,j+tile_size); jt++) {
-              B(jt,it) += A(it,jt);
-              A(it,jt) += 1.0;
+      for (int it=0; it<order; it+=tile_size) {
+        for (int jt=0; jt<order; jt+=tile_size) {
+          for (int i=it; i<MIN(order,it+tile_size); i++) {
+            for (int j=jt; j<MIN(order,jt+tile_size); j++) {
+              B[i][j] += A[j][i];
+              A[j][i] += 1.0;
             }
           }
         }
@@ -170,47 +170,50 @@ int main(int argc, char ** argv) {
     } else {
       for (int i=0;i<order; i++) {
         for (int j=0;j<order;j++) {
-          B(j,i) += A(i,j);
-          A(i,j) += 1.0;
+          B[i][j] += A[j][i];
+          A[j][i] += 1.0;
         }
       }
     }
   }  /* end of iter loop  */
 
+  trans_time = wtime() - trans_time;
+
   /*********************************************************************
   ** Analyze and output results.
   *********************************************************************/
 
-  trans_time = wtime() - trans_time;
-
-  abserr = 0.0;
   double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
+  double abserr = 0.0;
   for (int j=0;j<order;j++) {
     for (int i=0;i<order; i++) {
-      abserr += ABS(B(i,j) - ((double)(order*(size_t)i+(size_t)j)*(iterations+1L)+addit));
+      abserr += ABS(B[j][i] - ((double)(order*(size_t)i+(size_t)j)*(iterations+1L)+addit));
     }
   }
+
+  prk_free(B_p);
+  prk_free(A_p);
 
 #ifdef VERBOSE
   printf("Sum of absolute differences: %f\n",abserr);
 #endif
 
+  const double epsilon = 1.e-8;
   if (abserr < epsilon) {
     printf("Solution validates\n");
-    avgtime = trans_time/iterations;
-    printf("Rate (MB/s): %lf Avg time (s): %lf\n",
-           1.0E-06 * (2L*bytes)/avgtime, avgtime);
+    double avgtime = trans_time/iterations;
+    printf("Rate (MB/s): %lf Avg time (s): %lf\n", 1.0E-06 * (2L*bytes)/avgtime, avgtime);
 #ifdef VERBOSE
     printf("Squared errors: %f \n", abserr);
 #endif
     exit(EXIT_SUCCESS);
   }
   else {
-    printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n",
-           abserr, epsilon);
+    printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr, epsilon);
     exit(EXIT_FAILURE);
   }
 
-}  /* end of main */
+  return 0;
+}
 
 
