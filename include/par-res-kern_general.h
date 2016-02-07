@@ -38,6 +38,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <unistd.h>
 
+/* FIXME stdlib.h does not declare this function all the time. */
+int posix_memalign(void **memptr, size_t alignment, size_t size);
+
 #define PRKVERSION "2.16"
 #ifndef MIN
 #define MIN(x,y) ((x)<(y)?(x):(y))
