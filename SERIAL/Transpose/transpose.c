@@ -103,21 +103,16 @@ int main(int argc, char ** argv)
 
   size_t bytes = (size_t)order * (size_t)order * sizeof(double);
 
-  double * A_p = (double *)prk_malloc(bytes);
-  if (A_p == NULL){
-    printf(" Error allocating space for input matrix\n");
-    exit(EXIT_FAILURE);
-  }
-  double * B_p = (double *)prk_malloc(bytes);
-  if (B_p == NULL){
+  double (* const restrict A)[order] = (double (*)[order]) prk_malloc(bytes);
+  if (B == NULL){
     printf(" Error allocating space for transposed matrix\n");
     exit(EXIT_FAILURE);
   }
-
-  /* These are the 2D array overlays, which must be used exclusively
-   * throughout this code for the restrict attribute to be valid. */
-  double (* const restrict A)[order] = (double (*)[order]) A_p;
-  double (* const restrict B)[order] = (double (*)[order]) B_p;
+  double (* const restrict B)[order] = (double (*)[order]) prk_malloc(bytes);
+  if (A == NULL){
+    printf(" Error allocating space for input matrix\n");
+    exit(EXIT_FAILURE);
+  }
 
   printf("Matrix order          = %d\n", order);
   if (tile_size < order) {
@@ -140,7 +135,6 @@ int main(int argc, char ** argv)
 
   /*  Set the transpose matrix to a known garbage value. */
   {
-      double (* const restrict B)[order] = (double (*)[order]) B_p;
       for (int j=0;j<order; j++) {
         for (int i=0;i<order; i++) {
           B[j][i] = 0.0;
@@ -191,8 +185,8 @@ int main(int argc, char ** argv)
     }
   }
 
-  prk_free(B_p);
-  prk_free(A_p);
+  prk_free(B);
+  prk_free(A);
 
 #ifdef VERBOSE
   printf("Sum of absolute differences: %f\n",abserr);
