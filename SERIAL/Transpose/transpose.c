@@ -123,23 +123,11 @@ int main(int argc, char ** argv)
   printf("Number of iterations  = %d\n", iterations);
 
   /*  Fill the original matrix, set transpose to known garbage value. */
-
-  /* Fill the original column matrix. */
-  {
-      for (int j=0;j<order; j++) {
-        for (int i=0;i<order; i++) {
-          A[j][i] = (double) ((size_t)order*(size_t)j+(size_t)i);
-        }
-      }
-  }
-
-  /*  Set the transpose matrix to a known garbage value. */
-  {
-      for (int j=0;j<order; j++) {
-        for (int i=0;i<order; i++) {
-          B[j][i] = 0.0;
-        }
-      }
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
+      A[j][i] = (double) ((size_t)order*(size_t)j+(size_t)i);
+      B[j][i] = 0.0;
+    }
   }
 
   double trans_time = 0.0;
