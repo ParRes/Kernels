@@ -5,7 +5,8 @@ TRAVIS_ROOT="$1"
 SHMEM_ROOT=$TRAVIS_ROOT/sandia-openshmem
 
 if [ ! -d "$SHMEM_ROOT" ]; then
-    git clone --depth 10 https://github.com/regrant/sandia-shmem.git
+    #git clone --depth 10 https://github.com/regrant/sandia-shmem.git
+    git clone --depth 10 https://github.com/Sandia-OpenSHMEM/SOS.git
     cd sandia-shmem
     ./autogen.sh
     # must build in-place (https://github.com/regrant/sandia-shmem/issues/49)
