@@ -390,7 +390,7 @@ int main(int argc, char ** argv)
   shmem_double_sum_to_all(abserr_tot, abserr, 1, 0, 0, Num_procs, pWrk, pSync_reduce);
 
   if (my_ID == root) {
-    if (abserr_tot[0] < epsilon) {
+    if (abserr_tot[0] <= epsilon) {
       printf("Solution validates\n");
       avgtime = trans_time[0]/(double)iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
@@ -399,7 +399,7 @@ int main(int argc, char ** argv)
 #endif
     }
     else {
-      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr[0], epsilon);
+      printf("ERROR: Aggregate squared error %e exceeds threshold %e\n", abserr[0], epsilon);
       error = 1;
     }
   }
