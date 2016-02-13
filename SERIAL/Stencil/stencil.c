@@ -80,55 +80,38 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 #define OUT(i,j)      out[i+(j)*(n)]
 #define WEIGHT(ii,jj) weight[ii+RADIUS][jj+RADIUS]
 
-int main(int argc, char ** argv) {
-
-  long   n;               /* linear grid dimension                               */
-  int    tile_size;       /* loop nest block factor                              */
-  int    tiling=0;        /* boolean indication loop nest blocking               */
-  int    i, j, ii, jj, it, jt, iter;  /* dummies                                 */
-  DTYPE  norm,            /* L1 norm of solution                                 */
-         reference_norm;
-  DTYPE  f_active_points; /* interior of grid with respect to stencil            */
-  DTYPE  flops;           /* floating point ops per iteration                    */
-  int    iterations;      /* number of times to run the algorithm                */
-  double stencil_time,    /* timing parameters                                   */
-         avgtime;
-  int    stencil_size;    /* number of points in stencil                         */
-  DTYPE  * RESTRICT in;   /* input grid values                                   */
-  DTYPE  * RESTRICT out;  /* output grid values                                  */
-  long   total_length;    /* total required length to store grid values          */
-  DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
-
+int main(int argc, char ** argv)
+{
   printf("Parallel Research Kernels Version %s\n", PRKVERSION);
   printf("Serial stencil execution on 2D grid\n");
 
   /*******************************************************************************
-  ** process and test input parameters    
+  ** process and test input parameters
   ********************************************************************************/
 
   if (argc != 3 && argc !=4){
-    printf("Usage: %s <# iterations> <array dimension> [tile_size]\n", 
+    printf("Usage: %s <# iterations> <array dimension> [tilesize]\n",
            *argv);
     return(EXIT_FAILURE);
   }
 
-  iterations  = atoi(*++argv); 
+  int iterations  = atoi(*++argv); /* number of times to run the algorithm */
   if (iterations < 1){
     printf("ERROR: iterations must be >= 1 : %d \n",iterations);
     exit(EXIT_FAILURE);
   }
 
-  n  = atol(*++argv);
-
+  int n  = atoi(*++argv); /* linear grid dimension */
   if (n < 1){
-    printf("ERROR: grid dimension must be positive: %ld\n", n);
+    printf("ERROR: grid dimension must be positive: %d\n", n);
     exit(EXIT_FAILURE);
   }
 
+  int tilesize = 1; /* loop nest block factor */
   if (argc == 4) {
-    tile_size = atoi(*++argv);
-    if (tile_size<=0 || tile_size>n) tile_size=n;
-    else tiling=1; 
+    tilesize = atoi(*++argv);
+    if (tilesize>n)  tilesize=n;
+    if (tilesize<=0) tilesize=1;
   }
 
   if (RADIUS < 1) {
@@ -137,40 +120,37 @@ int main(int argc, char ** argv) {
   }
 
   if (2*RADIUS +1 > n) {
-    printf("ERROR: Stencil radius %d exceeds grid size %ld\n", RADIUS, n);
+    printf("ERROR: Stencil radius %d exceeds grid size %d\n", RADIUS, n);
     exit(EXIT_FAILURE);
   }
 
-  /*  make sure the vector space can be represented                             */
-  total_length = n*n*sizeof(DTYPE);
-  if (total_length/n != n*(signed)sizeof(DTYPE)) {
-    printf("ERROR: Space for %ld x %ld grid cannot be represented; ", n, n);
-    exit(EXIT_FAILURE);
-  }
-
-  in  = (DTYPE *) prk_malloc(total_length);
-  out = (DTYPE *) prk_malloc(total_length);
+  size_t bytes = (size_t)n*(size_t)n*sizeof(DTYPE);
+  DTYPE * restrict in  = (DTYPE *) prk_malloc(bytes); /* input grid values  */
+  DTYPE * restrict out = (DTYPE *) prk_malloc(bytes); /* output grid values */
   if (!in || !out) {
     printf("ERROR: could not allocate space for input or output array\n");
     exit(EXIT_FAILURE);
   }
 
+  DTYPE weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   /* fill the stencil weights to reflect a discrete divergence operator         */
-  for (jj=-RADIUS; jj<=RADIUS; jj++) {
-      for (ii=-RADIUS; ii<=RADIUS; ii++) {
+  for (int jj=-RADIUS; jj<=RADIUS; jj++) {
+      for (int ii=-RADIUS; ii<=RADIUS; ii++) {
           WEIGHT(ii,jj) = (DTYPE) 0.0;
       }
   }
+
+  int stencil_size; /* number of points in stencil */
 #ifdef STAR
   stencil_size = 4*RADIUS+1;
-  for (ii=1; ii<=RADIUS; ii++) {
+  for (int ii=1; ii<=RADIUS; ii++) {
     WEIGHT(0, ii) = WEIGHT( ii,0) =  (DTYPE) (1.0/(2.0*ii*RADIUS));
     WEIGHT(0,-ii) = WEIGHT(-ii,0) = -(DTYPE) (1.0/(2.0*ii*RADIUS));
   }
 #else
   stencil_size = (2*RADIUS+1)*(2*RADIUS+1);
-  for (jj=1; jj<=RADIUS; jj++) {
-    for (ii=-jj+1; ii<jj; ii++) {
+  for (int jj=1; jj<=RADIUS; jj++) {
+    for (int ii=-jj+1; ii<jj; ii++) {
       WEIGHT(ii,jj)  =  (DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
       WEIGHT(ii,-jj) = -(DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
       WEIGHT(jj,ii)  =  (DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
@@ -181,10 +161,9 @@ int main(int argc, char ** argv) {
   }
 #endif
 
-  norm = (DTYPE) 0.0;
-  f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
+  size_t active_points = ((size_t)n-2L*RADIUS)*((size_t)n-2L*RADIUS); /* interior of grid with respect to stencil */
 
-  printf("Grid size            = %ld\n", n);
+  printf("Grid size            = %d\n", n);
   printf("Radius of stencil    = %d\n", RADIUS);
 #ifdef STAR
   printf("Type of stencil      = star\n");
@@ -201,68 +180,94 @@ int main(int argc, char ** argv) {
 #else
   printf("Compact representation of stencil loop body\n");
 #endif
-  if (tiling) printf("Tile size            = %d\n", tile_size);
-  else        printf("Untiled\n");
+  if (1<tilesize && tilesize<n) {
+      printf("Tile size            = %d\n", tilesize);
+  } else {
+      printf("Untiled\n");
+  }
   printf("Number of iterations = %d\n", iterations);
 
   /* intialize the input and output arrays                                     */
-  for (j=0; j<n; j++) for (i=0; i<n; i++) 
-    IN(i,j) = COEFX*i+COEFY*j;
-  for (j=RADIUS; j<n-RADIUS; j++) for (i=RADIUS; i<n-RADIUS; i++) 
-    OUT(i,j) = (DTYPE)0.0;
+  for (int j=0; j<n; j++) {
+    for (int i=0; i<n; i++) {
+      IN(i,j) = COEFX*i+COEFY*j;
+    }
+  }
+  for (int j=RADIUS; j<n-RADIUS; j++) {
+    for (int i=RADIUS; i<n-RADIUS; i++) {
+      OUT(i,j) = (DTYPE)0.0;
+    }
+  }
 
-  stencil_time = 0.0; /* silence compiler warning */
+  double stencil_time = 0.0; /* silence compiler warning */
 
-  for (iter = 0; iter<=iterations; iter++){
+  for (int iter = 0; iter<=iterations; iter++) {
 
     /* start timer after a warmup iteration */
     if (iter == 1)  stencil_time = wtime();
 
-    /* Apply the stencil operator                                              */
+    /* Apply the stencil operator */
 
-    if (!tiling) {
-      for (j=RADIUS; j<n-RADIUS; j++) {
-        for (i=RADIUS; i<n-RADIUS; i++) {
+    if (tilesize==1 || tilesize==n) {
+      for (int j=RADIUS; j<n-RADIUS; j++) {
+        for (int i=RADIUS; i<n-RADIUS; i++) {
           #ifdef STAR
             #if LOOPGEN
               #include "loop_body_star.incl"
             #else
-              for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-              for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-              for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+              for (int jj=-RADIUS; jj<=RADIUS; jj++) {
+                OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+              }
+              for (int ii=-RADIUS; ii<0; ii++) {
+                OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+              }
+              for (int ii=1; ii<=RADIUS; ii++) { 
+                OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+              }
             #endif
           #else 
             #if LOOPGEN
               #include "loop_body_compact.incl"
             #else
               /* would like to be able to unroll this loop, but compiler will ignore  */
-              for (jj=-RADIUS; jj<=RADIUS; jj++) 
-              for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
+              for (int jj=-RADIUS; jj<=RADIUS; jj++) {
+                for (int ii=-RADIUS; ii<=RADIUS; ii++) {
+                  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
+                }
+              }
             #endif
           #endif
         }
       }
-    }
-    else {
-      for (jt=RADIUS; jt<n-RADIUS; jt+=tile_size) {
-        for (it=RADIUS; it<n-RADIUS; it+=tile_size) {
-          for (j=jt; j<MIN(n-RADIUS,jt+tile_size); j++) {
-            for (i=it; i<MIN(n-RADIUS,it+tile_size); i++) {
+    } else {
+      for (int jt=RADIUS; jt<n-RADIUS; jt+=tilesize) {
+        for (int it=RADIUS; it<n-RADIUS; it+=tilesize) {
+          for (int j=jt; j<MIN(n-RADIUS,jt+tilesize); j++) {
+            for (int i=it; i<MIN(n-RADIUS,it+tilesize); i++) {
               #ifdef STAR
                 #if LOOPGEN
                   #include "loop_body_star.incl"
                 #else
-                  for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-                  for (ii=-RADIUS; ii<0; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-                  for (ii=1; ii<=RADIUS; ii++)        OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+                  for (int jj=-RADIUS; jj<=RADIUS; jj++) {
+                    OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+                  }
+                  for (int ii=-RADIUS; ii<0; ii++) {
+                    OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+                  }
+                  for (int ii=1; ii<=RADIUS; ii++) {
+                    OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+                  }
                 #endif
-              #else 
+              #else
                 #if LOOPGEN
                   #include "loop_body_compact.incl"
                 #else
                   /* would like to be able to unroll this loop, but compiler will ignore  */
-                  for (jj=-RADIUS; jj<=RADIUS; jj++) 
-                  for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
+                  for (int jj=-RADIUS; jj<=RADIUS; jj++) {
+                    for (int ii=-RADIUS; ii<=RADIUS; ii++) {
+                      OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
+                    }
+                  }
                 #endif
               #endif
             }
@@ -272,42 +277,51 @@ int main(int argc, char ** argv) {
     }
 
     /* add constant to solution to force refresh of neighbor data, if any       */
-    for (j=0; j<n; j++) for (i=0; i<n; i++) IN(i,j)+= 1.0;
+    for (int j=0; j<n; j++) {
+      for (int i=0; i<n; i++) {
+        IN(i,j)+= 1.0;
+      }
+    }
 
   } /* end of iterations                                                        */
 
   stencil_time = wtime() - stencil_time;
 
   /* compute L1 norm in parallel                                                */
-  for (j=RADIUS; j<n-RADIUS; j++) for (i=RADIUS; i<n-RADIUS; i++) {
-    norm += (DTYPE)ABS(OUT(i,j));
+  DTYPE norm = 0; /* L1 norm of solution */
+  for (int j=RADIUS; j<n-RADIUS; j++) {
+    for (int i=RADIUS; i<n-RADIUS; i++) {
+      norm += (DTYPE)ABS(OUT(i,j));
+    }
   }
 
-  norm /= f_active_points;
+  norm /= active_points;
 
   /*******************************************************************************
   ** Analyze and output results.
   ********************************************************************************/
 
-/* verify correctness                                                            */
-  reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
+  /* verify correctness */
+  DTYPE reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
   if (ABS(norm-reference_norm) > EPSILON) {
-    printf("ERROR: L1 norm = "FSTR", Reference L1 norm = "FSTR"\n",
-           norm, reference_norm);
+    printf("ERROR: L1 norm = %lf, Reference L1 norm = %lf\n",
+           (double)norm, (double)reference_norm);
     exit(EXIT_FAILURE);
   }
   else {
     printf("Solution validates\n");
 #ifdef VERBOSE
-    printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
-           reference_norm, norm);
+    printf("Reference L1 norm = %lf, L1 norm = %lf\n",
+           (double)reference_norm, (double)norm);
 #endif
   }
 
-  flops = (DTYPE) (2*stencil_size+1) * f_active_points;
-  avgtime = stencil_time/iterations;
-  printf("Rate (MFlops/s): "FSTR"  Avg time (s): %lf\n",
-         1.0E-06 * flops/avgtime, avgtime);
+  size_t flops = (2L*(size_t)stencil_size+1L) * active_points;
+  double avgtime = stencil_time/iterations;
+  printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
+         1.0e-6 * (double)flops/avgtime, (double)avgtime);
 
   exit(EXIT_SUCCESS);
+
+  return 0;
 }

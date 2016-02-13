@@ -36,6 +36,16 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <math.h>
 #include <assert.h>
 
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
+#include <stdbool.h>
+typedef _Bool prkbool;
+#else
+typedef int prkbool;
+#define false 0
+#define true  1
+#endif
+
+/* This is not ISO C.  It is Linux/Unix. */
 #include <unistd.h>
 
 /* FIXME stdlib.h does not declare this function all the time. */
