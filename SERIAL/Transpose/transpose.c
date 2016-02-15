@@ -62,6 +62,107 @@ HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 
 #include <par-res-kern_general.h>
 
+/* Variable length arrays (VLA) were required in C99 but made optional
+ * in C11, so it is possible that a compiler does not support them,
+ * although such a compiler does not support C99, which we require
+ * in other ways.
+ **/
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && defined(__STDC_NO_VLA__)
+# warning Your C11 compiler does not support VLA.
+# define PRK_TRANSPOSE_1D_ARRAY 1
+#endif
+
+static inline void prk_transpose_fill(int order,
+#if PRK_TRANSPOSE_1D_ARRAY
+                                      double * const restrict A,
+                                      double * const restrict B)
+#else
+                                      double (* const restrict A)[order],
+                                      double (* const restrict B)[order])
+#endif
+{
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
+#if PRK_TRANSPOSE_1D_ARRAY
+      const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+      A[offset_ji] = (double)offset_ji;
+      B[offset_ji] = 0.0;
+#else
+      const double val = (double) ((size_t)order*(size_t)j+(size_t)i);
+      A[j][i] = val;
+      B[j][i] = 0.0;
+#endif
+    }
+  }
+}
+
+static inline void prk_transpose_doit(int order, int tile_size,
+#if PRK_TRANSPOSE_1D_ARRAY
+                                      double * const restrict A,
+                                      double * const restrict B)
+#else
+                                      double (* const restrict A)[order],
+                                      double (* const restrict B)[order])
+#endif
+{
+  if (tile_size < order) {
+    for (int it=0; it<order; it+=tile_size) {
+      for (int jt=0; jt<order; jt+=tile_size) {
+        for (int i=it; i<MIN(order,it+tile_size); i++) {
+          for (int j=jt; j<MIN(order,jt+tile_size); j++) {
+#if PRK_TRANSPOSE_1D_ARRAY
+            const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
+            const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+            B[offset_ij] += A[offset_ji];
+            A[offset_ji] += 1.0;
+#else
+            B[i][j] += A[j][i];
+            A[j][i] += 1.0;
+#endif
+          }
+        }
+      }
+    }
+  } else {
+    for (int i=0;i<order; i++) {
+      for (int j=0;j<order;j++) {
+#if PRK_TRANSPOSE_1D_ARRAY
+        const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
+        const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+        B[offset_ij] += A[offset_ji];
+        A[offset_ji] += 1.0;
+#else
+        B[i][j] += A[j][i];
+        A[j][i] += 1.0;
+#endif
+      }
+    }
+  }
+}
+
+static inline double prk_transpose_check(int order, int iterations,
+#if PRK_TRANSPOSE_1D_ARRAY
+                                         double * const restrict B)
+#else
+                                         double (* const restrict B)[order])
+#endif
+{
+  double abserr = 0.0;
+  const double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
+  for (int j=0;j<order;j++) {
+    for (int i=0;i<order; i++) {
+      const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
+#if PRK_TRANSPOSE_1D_ARRAY
+      const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+      abserr += fabs(B[offset_ji] - ((double)offset_ij*(iterations+1.)+addit));
+#else
+      abserr += fabs(B[j][i] - ((double)offset_ij*(iterations+1.)+addit));
+#endif
+    }
+  }
+  return abserr;
+}
+
 int main(int argc, char ** argv)
 {
   /*********************************************************************
@@ -103,12 +204,20 @@ int main(int argc, char ** argv)
 
   size_t bytes = (size_t)order * (size_t)order * sizeof(double);
 
+#if PRK_TRANSPOSE_1D_ARRAY
+  double * const restrict A = (double *)prk_malloc(bytes);
+#else
   double (* const restrict A)[order] = (double (*)[order]) prk_malloc(bytes);
+#endif
   if (A == NULL){
     printf(" Error allocating space for transposed matrix\n");
     exit(EXIT_FAILURE);
   }
+#if PRK_TRANSPOSE_1D_ARRAY
+  double * const restrict B = (double *)prk_malloc(bytes);
+#else
   double (* const restrict B)[order] = (double (*)[order]) prk_malloc(bytes);
+#endif
   if (B == NULL){
     printf(" Error allocating space for input matrix\n");
     exit(EXIT_FAILURE);
@@ -122,56 +231,22 @@ int main(int argc, char ** argv)
   }
   printf("Number of iterations  = %d\n", iterations);
 
-  /*  Fill the original matrix, set transpose to known garbage value. */
-  for (int j=0; j<order; j++) {
-    for (int i=0; i<order; i++) {
-      A[j][i] = (double) ((size_t)order*(size_t)j+(size_t)i);
-      B[j][i] = 0.0;
-    }
-  }
+  prk_transpose_fill(order, A, B);
 
   double trans_time = 0.0;
-
   for (int iter = 0; iter<=iterations; iter++){
-
     /* start timer after a warmup iteration */
     if (iter==1) trans_time = wtime();
-
     /* Transpose the  matrix */
-    if (tile_size < order) {
-      for (int it=0; it<order; it+=tile_size) {
-        for (int jt=0; jt<order; jt+=tile_size) {
-          for (int i=it; i<MIN(order,it+tile_size); i++) {
-            for (int j=jt; j<MIN(order,jt+tile_size); j++) {
-              B[i][j] += A[j][i];
-              A[j][i] += 1.0;
-            }
-          }
-        }
-      }
-    } else {
-      for (int i=0;i<order; i++) {
-        for (int j=0;j<order;j++) {
-          B[i][j] += A[j][i];
-          A[j][i] += 1.0;
-        }
-      }
-    }
+    prk_transpose_doit(order, tile_size, A, B);
   }  /* end of iter loop  */
-
   trans_time = wtime() - trans_time;
 
   /*********************************************************************
   ** Analyze and output results.
   *********************************************************************/
 
-  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
-  double abserr = 0.0;
-  for (int j=0;j<order;j++) {
-    for (int i=0;i<order; i++) {
-      abserr += ABS(B[j][i] - ((double)(order*(size_t)i+(size_t)j)*(iterations+1L)+addit));
-    }
-  }
+  double abserr = prk_transpose_check(order, iterations, B);
 
   prk_free(B);
   prk_free(A);

@@ -149,13 +149,3 @@ static inline void prk_free(void* p)
 #endif
 }
 
-/* Variable length arrays (VLA) were required in C99 but made optional
- * in C11, so it is possible that a compiler does not support them,
- * although such a compiler does not support C99, which we require
- * in other ways.
- **/
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
-#if defined(__STDC_NO_VLA__)
-#warning Your C11 compiler claims to not support VLA, which may be a problem for transpose.
-#endif
-#endif
