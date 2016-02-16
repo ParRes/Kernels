@@ -171,12 +171,12 @@ program main
 #else
     !$omp do collapse(2)
 #endif
-    do j=1,order,tile_size
-      do i=1,order,tile_size
-        do jt=j,min(order,j+tile_size-1)
-          do it=i,min(order,i+tile_size-1)
-              A(it,jt) = real(order,REAL64) * real(jt-1,REAL64) + real(it-1,REAL64)
-              B(it,jt) = 0.0
+    do jt=1,order,tile_size
+      do it=1,order,tile_size
+        do j=jt,min(order,jt+tile_size-1)
+          do i=it,min(order,it+tile_size-1)
+              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+              B(i,j) = 0.0
           enddo
         enddo
       enddo
@@ -215,12 +215,12 @@ program main
 #else
       !$omp do collapse(2)
 #endif
-      do j=1,order,tile_size
-        do i=1,order,tile_size
-          do jt=j,min(order,j+tile_size-1)
-            do it=i,min(order,i+tile_size-1)
-              B(jt,it) = B(jt,it) + A(it,jt)
-              A(it,jt) = A(it,jt) + 1.0
+      do jt=1,order,tile_size
+        do it=1,order,tile_size
+          do j=jt,min(order,jt+tile_size-1)
+            do i=it,min(order,it+tile_size-1)
+              B(j,i) = B(j,i) + A(i,j)
+              A(i,j) = A(i,j) + 1.0
             enddo
           enddo
         enddo
