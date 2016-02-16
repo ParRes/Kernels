@@ -79,7 +79,7 @@ program main
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! distributed data helpers
   integer(kind=INT32) :: col_per_pe                 ! columns per PE = order/npes
-  integer(kind=INT32) :: col_begin, col_end         ! loop bounds of column-blocked loops
+  !integer(kind=INT32) :: col_begin, col_end         ! loop bounds of column-blocked loops
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
   integer(kind=INT32) ::  it, jt, tile_size
@@ -176,15 +176,16 @@ program main
   endif
 
   ! Fill the original matrix, set transpose to known garbage value.
-  col_begin = me*col_per_pe+1
-  col_end   = (me+1)*col_per_pe
-  write(6,'(a30,i5,i5,i10)') 'col_begin,col_end=',col_begin,col_end
+  !col_begin = me*col_per_pe+1
+  !col_end   = (me+1)*col_per_pe
+  !write(6,'(a30,i5,i5,i10)') 'col_begin,col_end=',col_begin,col_end
   if ((tile_size.gt.1).and.(tile_size.lt.order)) then
-    do jt=col_begin,col_end,tile_size
+    do jt=1,col_per_pe,tile_size
       do it=1,order,tile_size
-        do j=jt,min(col_end,jt+tile_size-1)
+        do j=jt,min(col_per_pe,jt+tile_size-1)
           do i=it,min(order,it+tile_size-1)
-              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64) &
+                     + real(me*col_per_pe,REAL64)
               B(i,j) = 0.0
               write(6,'(a8,i5,i5,i5,f20.10)') 'tiled',me, i, j, A(i,j)
           enddo
@@ -192,9 +193,10 @@ program main
       enddo
     enddo
   else
-    do j=col_begin,col_end
+    do j=1,col_per_pe,tile_size
       do i=1,order
-        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64) &
+               + real(me*col_per_pe,REAL64)
         B(i,j) = 0.0
         write(6,'(a8,i5,i5,i5,f20.10)') 'untiled',me, i, j, A(i,j)
       enddo
@@ -204,9 +206,7 @@ program main
   flush(6)
   sync all ! barrier
 
-  col_begin = me*col_per_pe+1
-  col_end   = (me+1)*col_per_pe
-  do j=col_begin,col_end
+  do j=1,col_per_pe
     do i=1,order
       write(6,'(i5,i5,i5,f20.10)') me, i, j, A(i,j)
     enddo
