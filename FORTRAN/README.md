@@ -1,12 +1,12 @@
-Fortran coarrays information
+# Fortran coarrays
 
-# Compilers
+## Compilers
 
-## Cray
+### Cray
 
 `COARRAYFLAG=-h caf`
 
-## Intel
+### Intel
 
 Platform|`COARRAYFLAG`
 ---|---
@@ -21,7 +21,7 @@ Please use the former.
 
 See [Tutorial: Using Coarray Fortran](https://software.intel.com/en-us/compiler_15.0_coa_f) for details.
 
-## GCC
+### GCC
 
 Purpose|`COARRAYFLAG`|Library
 ---|---|---
