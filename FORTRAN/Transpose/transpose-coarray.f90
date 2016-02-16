@@ -100,14 +100,14 @@ program main
 #define PRKVERSION "N/A"
 #endif
   if (printer) then
-    write(*,'(a34,a8)') 'Parallel Research Kernels version ', PRKVERSION
-    write(*,'(a60)')   'Fortran coarray Matrix transpose: B = A^T'
+    write(6,'(a34,a8)') 'Parallel Research Kernels version ', PRKVERSION
+    write(6,'(a60)')   'Fortran coarray Matrix transpose: B = A^T'
   endif
 
   if (command_argument_count().lt.2) then
     if (printer) then
-      write(*,'(a16,i1)') 'argument count = ', command_argument_count()
-      write(*,'(a60)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
+      write(6,'(a16,i1)') 'argument count = ', command_argument_count()
+      write(6,'(a60)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
     endif
     stop 1
   endif
@@ -120,7 +120,7 @@ program main
   call get_command_argument(1,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') iterations
   if (iterations .lt. 1) then
-    write(*,'(a35,i5)') 'ERROR: iterations must be >= 1 : ', iterations
+    write(6,'(a35,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
   endif
 
@@ -128,11 +128,11 @@ program main
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') order
   if (order .lt. 1) then
-    write(*,'(a30,i5)') 'ERROR: order must be >= 1 : ', order
+    write(6,'(a30,i5)') 'ERROR: order must be >= 1 : ', order
     stop 1
   endif
   if (modulo(order,npes).gt.0) then
-    write(*,'(a20,i5,a35,i5)') 'ERROR: matrix order ',order,&
+    write(6,'(a20,i5,a35,i5)') 'ERROR: matrix order ',order,&
                       ' should be divisible by # images ',npes
     stop 1
   endif
@@ -145,7 +145,7 @@ program main
       if (err.eq.0) read(argtmp,'(i32)') tile_size
   endif
   if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    write(*,'(a20,i5,a22,i5)') 'WARNING: tile_size ',tile_size,&
+    write(6,'(a20,i5,a22,i5)') 'WARNING: tile_size ',tile_size,&
                            ' must be >= 1 and <= ',order
     tile_size = order ! no tiling
   endif
@@ -156,29 +156,29 @@ program main
 
   allocate( A(col_per_pe,order)[*], stat=err)
   if (err .ne. 0) then
-    write(*,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
+    write(6,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
     stop 1
   endif
 
   allocate( B(col_per_pe,order)[*], stat=err )
   if (err .ne. 0) then
-    write(*,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
+    write(6,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
     stop 1
   endif
 
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
   if (printer) then
-    write(*,'(a25,i8)') 'Number of images     = ', num_images()
-    write(*,'(a25,i8)') 'Matrix order         = ', order
-    write(*,'(a25,i8)') 'Tile size            = ', tile_size
-    write(*,'(a25,i8)') 'Number of iterations = ', iterations
+    write(6,'(a25,i8)') 'Number of images     = ', num_images()
+    write(6,'(a25,i8)') 'Matrix order         = ', order
+    write(6,'(a25,i8)') 'Tile size            = ', tile_size
+    write(6,'(a25,i8)') 'Number of iterations = ', iterations
   endif
 
   ! Fill the original matrix, set transpose to known garbage value.
   col_begin = me*col_per_pe+1
   col_end   = (me+1)*col_per_pe
-  write(*,'(a30,i5,i5,i10)') 'col_begin,col_end=',col_begin,col_end
+  write(6,'(a30,i5,i5,i10)') 'col_begin,col_end=',col_begin,col_end
   if ((tile_size.gt.1).and.(tile_size.lt.order)) then
     do jt=col_begin,col_end,tile_size
       do it=1,order,tile_size
@@ -186,7 +186,7 @@ program main
           do i=it,min(order,it+tile_size-1)
               A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
               B(i,j) = 0.0
-              write(*,'(a8,i5,i5,i5,f20.10)') 'tiled',me, i, j, A(i,j)
+              write(6,'(a8,i5,i5,i5,f20.10)') 'tiled',me, i, j, A(i,j)
           enddo
         enddo
       enddo
@@ -196,18 +196,23 @@ program main
       do i=1,order
         A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
         B(i,j) = 0.0
-        write(*,'(a8,i5,i5,i5,f20.10)') 'untiled',me, i, j, A(i,j)
+        write(6,'(a8,i5,i5,i5,f20.10)') 'untiled',me, i, j, A(i,j)
       enddo
     enddo
   endif
 
+  flush(6)
   sync all ! barrier
 
+  col_begin = me*col_per_pe+1
+  col_end   = (me+1)*col_per_pe
   do j=col_begin,col_end
     do i=1,order
-      write(*,'(i5,i5,i5,f20.10)') me, i, j, A(i,j)
+      write(6,'(i5,i5,i5,f20.10)') me, i, j, A(i,j)
     enddo
   enddo
+  flush(6)
+  sync all ! barrier
   stop ! debug
 
   do k=0,iterations
@@ -264,15 +269,15 @@ program main
 
   if (abserr .lt. epsilon) then
     if (printer) then
-      write(*,'(a)') 'Solution validates'
+      write(6,'(a)') 'Solution validates'
       avgtime = trans_time/iterations
-      write(*,'(a12,f13.6,a12,f10.6)') 'Rate (MB/s): ',&
+      write(6,'(a12,f13.6,a12,f10.6)') 'Rate (MB/s): ',&
               1.e-6*bytes/avgtime,' Avg time (s): ', avgtime
     endif
     stop
   else
     if (printer) then
-      write(*,'(a30,f13.6,a18,f13.6)') 'ERROR: Aggregate squared error ', &
+      write(6,'(a30,f13.6,a18,f13.6)') 'ERROR: Aggregate squared error ', &
               abserr,' exceeds threshold ',epsilon
     endif
     stop 1
