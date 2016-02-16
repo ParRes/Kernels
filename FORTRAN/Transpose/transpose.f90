@@ -274,7 +274,7 @@ program main
     avgtime = trans_time/iterations
     write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',1.e-6*bytes/avgtime, &
            ' Avg time (s): ', avgtime
-    stop
+    !stop
   else
     write(*,'(a,f13.6,a,f13.6)') 'ERROR: Aggregate squared error ',abserr, &
            'exceeds threshold ',epsilon

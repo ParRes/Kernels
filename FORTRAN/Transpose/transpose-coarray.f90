@@ -313,7 +313,7 @@ program main
       write(6,'(a12,f13.6,a17,f10.6)') 'Rate (MB/s): ',&
               1.e-6*bytes/avgtime,' Avg time (s): ', avgtime
     endif
-    stop
+    !stop
   else
     addit = (0.5*iterations) * (iterations+1)
     do p=0,npes-1
