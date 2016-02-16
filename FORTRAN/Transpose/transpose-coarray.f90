@@ -72,6 +72,8 @@ program main
   use iso_fortran_env
   implicit none
   real(kind=REAL64) :: prk_get_wtime
+  integer :: me, npes
+  logical :: printer
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -80,8 +82,8 @@ program main
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
   integer(kind=INT32) ::  order                     ! order of a the matrix
   !dec$ attributes align:4096 :: A, B
-  real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
-  real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
+  real(kind=REAL64), allocatable ::  A(:,:)[:]      ! buffer to hold original matrix
+  real(kind=REAL64), allocatable ::  B(:,:)[:]      ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
@@ -89,6 +91,10 @@ program main
   real(kind=REAL64) ::  abserr, addit, temp         ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
+
+  me   = this_image()
+  npes = num_images()
+  printer = (me.eq.0)
 
   ! ********************************************************************
   ! read and test input parameters
@@ -98,14 +104,22 @@ program main
 #warning Your common/make.defs is missing PRKVERSION
 #define PRKVERSION "N/A"
 #endif
-  write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
-  write(*,'(a)')   'Fortran coarray Matrix transpose: B = A^T'
+  if (printer) then
+    write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
+    write(*,'(a)')   'Fortran coarray Matrix transpose: B = A^T'
+  endif
 
   if (command_argument_count().lt.2) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
+    if (printer) then
+      write(*,'(a,i1)') 'argument count = ', command_argument_count()
+      write(*,'(a)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
+    endif
     stop 1
   endif
+
+  ! Fortran 2008 has no broadcast functionality, so for now,
+  ! I will just parse the arguments at every image.
+  ! The errors will be emitted O(npes) times.
 
   iterations = 1
   call get_command_argument(1,argtmp,arglen,err)
@@ -120,6 +134,11 @@ program main
   if (err.eq.0) read(argtmp,'(i32)') order
   if (order .lt. 1) then
     write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
+    stop 1
+  endif
+  if (modulo(order,npes).gt.0) then
+    write(*,'(a,i5)') 'ERROR: matrix order ',order,&
+                      ' should be divisible by # images ',npes
     stop 1
   endif
 
@@ -139,24 +158,26 @@ program main
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(order,order), stat=err)
+  allocate( A(order/np,order)[*], stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a,i3)') 'allocation of A returned ',err,' at image ',me
     stop 1
   endif
 
-  allocate( B(order,order), stat=err )
+  allocate( B(order/np,order)[*], stat=err )
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
+    write(*,'(a,i3)') 'allocation of B returned ',err,' at image ',me
     stop 1
   endif
 
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
-  write(*,'(a,i8)') 'Number of images     = ', num_images()
-  write(*,'(a,i8)') 'Matrix order         = ', order
-  write(*,'(a,i8)') 'Tile size            = ', tile_size
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
+  if (printer) then
+    write(*,'(a,i8)') 'Number of images     = ', num_images()
+    write(*,'(a,i8)') 'Matrix order         = ', order
+    write(*,'(a,i8)') 'Tile size            = ', tile_size
+    write(*,'(a,i8)') 'Number of iterations = ', iterations
+  endif
 
   ! Fill the original matrix, set transpose to known garbage value.
   if (tile_size.lt.order) then
@@ -230,14 +251,18 @@ program main
   deallocate( A )
 
   if (abserr .lt. epsilon) then
-    write(*,'(a)') 'Solution validates'
-    avgtime = trans_time/iterations
-    write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',1.e-6*bytes/avgtime, &
-           ' Avg time (s): ', avgtime
+    if (printer) then
+      write(*,'(a)') 'Solution validates'
+      avgtime = trans_time/iterations
+      write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',&
+              1.e-6*bytes/avgtime,' Avg time (s): ', avgtime
+    endif
     stop
   else
-    write(*,'(a,f13.6,a,f13.6)') 'ERROR: Aggregate squared error ',abserr, &
-           'exceeds threshold ',epsilon
+    if (printer) then
+      write(*,'(a,f13.6,a,f13.6)') 'ERROR: Aggregate squared error ', &
+              abserr,' exceeds threshold ',epsilon
+    endif
     stop 1
   endif
 
