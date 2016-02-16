@@ -79,9 +79,8 @@ program main
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! distributed data helpers
   integer(kind=INT32) :: col_per_pe                 ! columns per PE = order/npes
-  !integer(kind=INT32) :: col_begin, col_end         ! loop bounds of column-blocked loops
   ! runtime variables
-  integer(kind=INT32) ::  i, j, k
+  integer(kind=INT32) ::  i, j, k, p
   integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp         ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
@@ -154,13 +153,13 @@ program main
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(col_per_pe,order)[*], stat=err)
+  allocate( A(order,col_per_pe)[*], stat=err)
   if (err .ne. 0) then
     write(6,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
     stop 1
   endif
 
-  allocate( B(col_per_pe,order)[*], stat=err )
+  allocate( B(order,col_per_pe)[*], stat=err )
   if (err .ne. 0) then
     write(6,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
     stop 1
@@ -175,45 +174,45 @@ program main
     write(6,'(a25,i8)') 'Number of iterations = ', iterations
   endif
 
-  ! Fill the original matrix, set transpose to known garbage value.
-  !col_begin = me*col_per_pe+1
-  !col_end   = (me+1)*col_per_pe
-  !write(6,'(a30,i5,i5,i10)') 'col_begin,col_end=',col_begin,col_end
+  ! these are unnecessary in production
+  flush(6)
+  sync all ! barrier
+
+  ! initialization
+  ! local column index j corresponds to global column index col_per_pe*me+j
   if ((tile_size.gt.1).and.(tile_size.lt.order)) then
     do jt=1,col_per_pe,tile_size
       do it=1,order,tile_size
         do j=jt,min(col_per_pe,jt+tile_size-1)
           do i=it,min(order,it+tile_size-1)
-              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64) &
-                     + real(me*col_per_pe,REAL64)
-              B(i,j) = 0.0
-              write(6,'(a8,i5,i5,i5,f20.10)') 'tiled',me, i, j, A(i,j)
+            A(i,j) = real(order,REAL64) * real(col_per_pe*me+j-1,REAL64) + real(i-1,REAL64)
+            B(i,j) = 0.0
           enddo
         enddo
       enddo
     enddo
   else
-    do j=1,col_per_pe,tile_size
+    do j=1,col_per_pe
       do i=1,order
-        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64) &
-               + real(me*col_per_pe,REAL64)
+        A(i,j) = real(order,REAL64) * real(col_per_pe*me+j-1,REAL64) + real(i-1,REAL64)
         B(i,j) = 0.0
-        write(6,'(a8,i5,i5,i5,f20.10)') 'untiled',me, i, j, A(i,j)
       enddo
     enddo
   endif
+  sync all ! barrier to ensure initialization is finished at all PEs
 
-  flush(6)
-  sync all ! barrier
-
-  do j=1,col_per_pe
-    do i=1,order
-      write(6,'(i5,i5,i5,f20.10)') me, i, j, A(i,j)
-    enddo
+  ! DEBUG ordered printout of A
+  do p=0,npes-1
+    if (me.eq.p) then
+      do j=1,col_per_pe
+        do i=1,order
+          write(6,'(a7,i5,i5,i5,f20.10)') 'after', me, i, j, A(i,j)
+        enddo
+      enddo
+      flush(6)
+    endif
+    sync all ! barrier
   enddo
-  flush(6)
-  sync all ! barrier
-  stop ! debug
 
   do k=0,iterations
 
