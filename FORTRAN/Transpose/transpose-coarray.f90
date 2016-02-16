@@ -141,7 +141,7 @@ program main
   col_per_pe = order/npes
 
   ! same default as the C implementation
-  tile_size = 32
+  tile_size = 1
   if (command_argument_count().gt.2) then
       call get_command_argument(3,argtmp,arglen,err)
       if (err.eq.0) read(argtmp,'(i32)') tile_size
@@ -214,7 +214,7 @@ program main
     endif
 
     ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
-    if ((tile_size.gt.1).and.(tile_size.lt.order)) then
+    if (.false.) then !(tile_size.gt.1).and.(tile_size.lt.order)) then
       do p=0,npes-1
         col_start = p*col_per_pe
         row_start = me*col_per_pe
@@ -222,25 +222,19 @@ program main
           do it=1,col_per_pe,tile_size
             do j=jt,min(col_per_pe,jt+tile_size-1)
               do i=it,min(col_per_pe,it+tile_size-1)
-                write(6,'(a20,i3,i5,i5)') 'indices',me,i,j
                 B(col_start+j,i) = B(col_start+j,i) + A(row_start+i,j)[p+1]
               enddo
             enddo
           enddo
         enddo
         sync all
-        !do jt=1,col_per_pe,tile_size
-        !  do it=1,order,tile_size
-        !    do j=jt,min(col_per_pe,jt+tile_size-1)
-        !      do i=it,min(order,it+tile_size-1)
-        !        A(i,j) = A(i,j) + 1.0
-        !      enddo
-        !    enddo
-        !  enddo
-        !enddo
-        do j=1,col_per_pe
-          do i=1,order
-            A(i,j) = A(i,j) + 1.0
+        do jt=1,col_per_pe,tile_size
+          do it=1,order,tile_size
+            do j=jt,min(col_per_pe,jt+tile_size-1)
+              do i=it,min(order,it+tile_size-1)
+                A(i,j) = A(i,j) + 1.0
+              enddo
+            enddo
           enddo
         enddo
         sync all
@@ -251,7 +245,6 @@ program main
         row_start = me*col_per_pe
         do j=1,col_per_pe
           do i=1,col_per_pe
-            write(6,'(a20,i3,i5,i5)') 'indices',me,i,j
             B(col_start+i,j) = B(col_start+i,j) + A(row_start+j,i)[p+1]
           enddo
         enddo
