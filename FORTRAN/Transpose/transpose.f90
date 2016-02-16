@@ -47,14 +47,6 @@
 !          The output consists of diagnostics to make sure the
 !          transpose worked and timing statistics.
 !
-!
-! FUNCTIONS CALLED!:
-!
-!          Other than standard C functions, the following
-!          functions are used in this program:
-!
-!          wtime()          portable wall-timer interface.
-!
 ! HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 !          Converted to Fortran by Jeff Hammond, January 2015
 ! *******************************************************************

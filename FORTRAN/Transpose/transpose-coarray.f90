@@ -47,14 +47,6 @@
 !          The output consists of diagnostics to make sure the
 !          transpose worked and timing statistics.
 !
-!
-! FUNCTIONS CALLED!:
-!
-!          Other than standard C functions, the following
-!          functions are used in this program:
-!
-!          wtime()          portable wall-timer interface.
-!
 ! HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 !          Converted to Fortran by Jeff Hammond, January 2015
 ! *******************************************************************
@@ -85,6 +77,10 @@ program main
   real(kind=REAL64), allocatable ::  A(:,:)[:]      ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)[:]      ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
+  ! distributed data helpers
+  integer(kind=INT32) :: col_per_pe                 ! columns per PE = order/npes
+  integer(kind=INT64) :: col_start                  ! element count offset
+  integer(kind=INT32) :: col_begin, col_end         ! loop bounds of column-blocked loops
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
   integer(kind=INT32) ::  it, jt, tile_size
@@ -92,7 +88,7 @@ program main
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
 
-  me   = this_image()
+  me   = this_image()-1 ! use 0-based indexing of PEs
   npes = num_images()
   printer = (me.eq.0)
 
@@ -141,6 +137,7 @@ program main
                       ' should be divisible by # images ',npes
     stop 1
   endif
+  col_per_pe = order/npes
 
   ! same default as the C implementation
   tile_size = 32
@@ -158,13 +155,13 @@ program main
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(order/npes,order)[*], stat=err)
+  allocate( A(col_per_pe,order)[*], stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of A returned ',err,' at image ',me
     stop 1
   endif
 
-  allocate( B(order/npes,order)[*], stat=err )
+  allocate( B(col_per_pe,order)[*], stat=err )
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of B returned ',err,' at image ',me
     stop 1
@@ -180,25 +177,34 @@ program main
   endif
 
   ! Fill the original matrix, set transpose to known garbage value.
+  col_start = int(me,INT64) * ( int(col_per_pe,INT64) * int(order,INT64) )
   if (tile_size.lt.order) then
-    do jt=1,order,tile_size
+    col_begin = me*col_per_pe+1
+    col_end   = (me+1)*col_per_pe
+    do jt=col_begin,col_end,tile_size
       do it=1,order,tile_size
-        do j=jt,min(order,jt+tile_size-1)
-          do i=it,min(order,it+tile_size-1)
-              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+        do j=jt,min(col_end,jt+tile_size-1)
+          do i=it,min(col_end,it+tile_size-1)
+              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64) &
+                     + real(col_start,REAL64)
               B(i,j) = 0.0
           enddo
         enddo
       enddo
     enddo
   else
-    do j=1,order
+    col_begin = me*col_per_pe+1
+    col_end   = (me+1)*col_per_pe
+    do j=col_begin,col_end
       do i=1,order
-        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64) &
+               + real(col_start,REAL64)
         B(i,j) = 0.0
       enddo
     enddo
   endif
+
+  stop 9 ! debug
 
   do k=0,iterations
 
