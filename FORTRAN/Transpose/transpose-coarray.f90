@@ -287,12 +287,14 @@ program main
   t1 = prk_get_wtime()
   trans_time = t1 - t0
 
+  deallocate( T )
+  deallocate( A )
+
   ! ********************************************************************
   ! ** Analyze and output results.
   ! ********************************************************************
 
   abserr = 0.0;
-  ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1.0)
   do j=1,col_per_pe
     do i=1,order
@@ -302,10 +304,6 @@ program main
     enddo
   enddo
 
-  deallocate( T )
-  !deallocate( B )
-  deallocate( A )
-
   if (abserr .lt. (epsilon/npes)) then
     if (printer) then
       write(6,'(a)') 'Solution validates'
@@ -313,31 +311,34 @@ program main
       write(6,'(a12,f13.6,a17,f10.6)') 'Rate (MB/s): ',&
               1.e-6*bytes/avgtime,' Avg time (s): ', avgtime
     endif
-    !stop
   else
-    addit = (0.5*iterations) * (iterations+1)
-    do p=0,npes-1
-      if (me.eq.p) then
-        addit = (0.5*iterations) * (iterations+1.0)
-        do j=1,col_per_pe
-          do i=1,order
-            temp = ((real(order,REAL64)*real(i-1,REAL64))+real(col_per_pe*me+j-1,REAL64)) &
-                 * real(iterations+1,REAL64) + addit
-            if (abs(B(i,j)-temp).gt.1.e-12) then
-              write(6,'(a10,i5,i5,i5,2f20.10)') 'B,correct', me, i, j, B(i,j), temp
-            endif
-          enddo
-        enddo
-        flush(6)
-      endif
-      sync all ! barrier
-    enddo
     if (printer) then
       write(6,'(a30,f13.6,a18,f13.6)') 'ERROR: Aggregate squared error ', &
               abserr,' exceeds threshold ',(epsilon/npes)
     endif
+    if (order.lt.1000) then ! do not emit more than 1M lines of debug output
+      addit = (0.5*iterations) * (iterations+1)
+      do p=0,npes-1
+        if (me.eq.p) then
+          addit = (0.5*iterations) * (iterations+1.0)
+          do j=1,col_per_pe
+            do i=1,order
+              temp = ((real(order,REAL64)*real(i-1,REAL64))+real(col_per_pe*me+j-1,REAL64)) &
+                   * real(iterations+1,REAL64) + addit
+              if (abs(B(i,j)-temp).gt.1.e-12) then
+                write(6,'(a10,i5,i5,i5,2f20.10)') 'B,correct', me, i, j, B(i,j), temp
+              endif
+            enddo
+          enddo
+          flush(6)
+        endif
+        sync all ! barrier
+      enddo
+    endif
     stop 1
   endif
+
+  deallocate( B )
 
 end program main
 
