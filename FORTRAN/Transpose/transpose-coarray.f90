@@ -241,20 +241,43 @@ program main
       enddo
     else
       do p=0,npes-1
-        col_start = p*col_per_pe
+        ! Step 1: Gather A tile from remote image
         row_start = me*col_per_pe
+        ! * fully explicit version
+        !do i=1,col_per_pe
+        !  do j=1,col_per_pe
+        !    T(j,i) = A(row_start+j,i)[p+1]
+        !  enddo
+        !enddo
+        ! * half explicit, half colon
+        !do i=1,col_per_pe
+        !    T(:,i) = A(row_start+1:row_start+col_per_pe,i)[p+1]
+        !enddo
+        ! * full colon
+        T(:,:) = A(row_start+1:row_start+col_per_pe,:)[p+1]
+        ! Step 2: Transpose tile into B matrix
+        col_start = p*col_per_pe
+        ! * fully explicit version
+        !do j=1,col_per_pe
+        !  do i=1,col_per_pe
+        !    B(col_start+i,j) = B(col_start+i,j) + T(j,i)
+        !  enddo
+        !enddo
+        ! * half explicit, half colon
         do j=1,col_per_pe
-          do i=1,col_per_pe
-            B(col_start+i,j) = B(col_start+i,j) + A(row_start+j,i)[p+1]
-          enddo
+          B(col_start+1:col_start+col_per_pe,j) = B(col_start+1:col_start+col_per_pe,j) + T(j,:)
         enddo
       enddo
       sync all
-      do j=1,col_per_pe
-        do i=1,order
-          A(i,j) = A(i,j) + 1.0
-        enddo
-      enddo
+      ! Step 3: Update A matrix
+      ! * fully explicit version
+      !do j=1,col_per_pe
+      !  do i=1,order
+      !    A(i,j) = A(i,j) + 1.0
+      !  enddo
+      !enddo
+      ! * fully implicit version
+      A = A + 1.0
       sync all
     endif
 
