@@ -76,9 +76,11 @@ program main
   !dec$ attributes align:4096 :: A, B
   real(kind=REAL64), allocatable ::  A(:,:)[:]      ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)[:]      ! buffer to hold transposed matrix
+  real(kind=REAL64), allocatable ::  T(:,:)         ! temporary to hold tile
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! distributed data helpers
   integer(kind=INT32) :: col_per_pe                 ! columns per PE = order/npes
+  integer(kind=INT32) :: col_start, row_start
   ! runtime variables
   integer(kind=INT32) ::  i, j, k, p
   integer(kind=INT32) ::  it, jt, tile_size
@@ -118,10 +120,11 @@ program main
   iterations = 1
   call get_command_argument(1,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(6,'(a35,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
+  ! disable to allow me to run "0" = 1 iteration
+  !if (iterations .lt. 1) then
+  !  write(6,'(a35,i5)') 'ERROR: iterations must be >= 1 : ', iterations
+  !  stop 1
+  !endif
 
   order = 1
   call get_command_argument(2,argtmp,arglen,err)
@@ -161,7 +164,13 @@ program main
 
   allocate( B(order,col_per_pe)[*], stat=err )
   if (err .ne. 0) then
-    write(6,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
+    write(6,'(a20,i3,a10,i5)') 'allocation of B returned ',err,' at image ',me
+    stop 1
+  endif
+
+  allocate( T(col_per_pe,col_per_pe), stat=err )
+  if (err .ne. 0) then
+    write(6,'(a20,i3,a10,i5)') 'allocation of T returned ',err,' at image ',me
     stop 1
   endif
 
@@ -173,10 +182,6 @@ program main
     write(6,'(a25,i8)') 'Tile size            = ', tile_size
     write(6,'(a25,i8)') 'Number of iterations = ', iterations
   endif
-
-  ! these are unnecessary in production
-  flush(6)
-  sync all ! barrier
 
   ! initialization
   ! local column index j corresponds to global column index col_per_pe*me+j
@@ -201,19 +206,6 @@ program main
   endif
   sync all ! barrier to ensure initialization is finished at all PEs
 
-  ! DEBUG ordered printout of A
-  do p=0,npes-1
-    if (me.eq.p) then
-      do j=1,col_per_pe
-        do i=1,order
-          write(6,'(a7,i5,i5,i5,f20.10)') 'after', me, i, j, A(i,j)
-        enddo
-      enddo
-      flush(6)
-    endif
-    sync all ! barrier
-  enddo
-
   do k=0,iterations
 
     if (k.eq.1) then
@@ -223,23 +215,54 @@ program main
 
     ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
     if ((tile_size.gt.1).and.(tile_size.lt.order)) then
-      do jt=1,order,tile_size
-        do it=1,order,tile_size
-          do j=jt,min(order,jt+tile_size-1)
-            do i=it,min(order,it+tile_size-1)
-              B(j,i) = B(j,i) + A(i,j)
-              A(i,j) = A(i,j) + 1.0
+      do p=0,npes-1
+        col_start = p*col_per_pe
+        row_start = me*col_per_pe
+        do jt=1,col_per_pe,tile_size
+          do it=1,col_per_pe,tile_size
+            do j=jt,min(col_per_pe,jt+tile_size-1)
+              do i=it,min(col_per_pe,it+tile_size-1)
+                write(6,'(a20,i3,i5,i5)') 'indices',me,i,j
+                B(col_start+j,i) = B(col_start+j,i) + A(row_start+i,j)[p+1]
+              enddo
             enddo
           enddo
         enddo
+        sync all
+        !do jt=1,col_per_pe,tile_size
+        !  do it=1,order,tile_size
+        !    do j=jt,min(col_per_pe,jt+tile_size-1)
+        !      do i=it,min(order,it+tile_size-1)
+        !        A(i,j) = A(i,j) + 1.0
+        !      enddo
+        !    enddo
+        !  enddo
+        !enddo
+        do j=1,col_per_pe
+          do i=1,order
+            A(i,j) = A(i,j) + 1.0
+          enddo
+        enddo
+        sync all
       enddo
     else
-      do j=1,order
+      do p=0,npes-1
+        col_start = p*col_per_pe
+        row_start = me*col_per_pe
+        do j=1,col_per_pe
+          do i=1,col_per_pe
+            write(6,'(a20,i3,i5,i5)') 'indices',me,i,j
+            B(col_start+i,j) = B(col_start+i,j) + A(row_start+j,i)[p+1]
+          enddo
+        enddo
+      enddo
+      sync all
+      do j=1,col_per_pe
         do i=1,order
-          B(j,i) = B(j,i) + A(i,j)
           A(i,j) = A(i,j) + 1.0
         enddo
       enddo
+      sync all
     endif
 
   enddo ! iterations
@@ -254,30 +277,48 @@ program main
 
   abserr = 0.0;
   ! this will overflow if iterations>>1000
-  addit = (0.5*iterations) * (iterations+1)
-  do j=1,order
+  addit = (0.5*iterations) * (iterations+1.0)
+  do j=1,col_per_pe
     do i=1,order
-      temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
-           * real(iterations+1,REAL64)
-      abserr = abserr + abs(B(i,j) - (temp+addit))
+      temp = ((real(order,REAL64)*real(i-1,REAL64))+real(col_per_pe*me+j-1,REAL64)) &
+           * real(iterations+1,REAL64) + addit
+      abserr = abserr + abs(B(i,j) - temp)
     enddo
   enddo
 
-  deallocate( B )
+  deallocate( T )
+  !deallocate( B )
   deallocate( A )
 
-  if (abserr .lt. epsilon) then
+  if (abserr .lt. (epsilon/npes)) then
     if (printer) then
       write(6,'(a)') 'Solution validates'
       avgtime = trans_time/iterations
-      write(6,'(a12,f13.6,a12,f10.6)') 'Rate (MB/s): ',&
+      write(6,'(a12,f13.6,a17,f10.6)') 'Rate (MB/s): ',&
               1.e-6*bytes/avgtime,' Avg time (s): ', avgtime
     endif
     stop
   else
+    addit = (0.5*iterations) * (iterations+1)
+    do p=0,npes-1
+      if (me.eq.p) then
+        addit = (0.5*iterations) * (iterations+1.0)
+        do j=1,col_per_pe
+          do i=1,order
+            temp = ((real(order,REAL64)*real(i-1,REAL64))+real(col_per_pe*me+j-1,REAL64)) &
+                 * real(iterations+1,REAL64) + addit
+            if (abs(B(i,j)-temp).gt.1.e-12) then
+              write(6,'(a10,i5,i5,i5,2f20.10)') 'B,correct', me, i, j, B(i,j), temp
+            endif
+          enddo
+        enddo
+        flush(6)
+      endif
+      sync all ! barrier
+    enddo
     if (printer) then
       write(6,'(a30,f13.6,a18,f13.6)') 'ERROR: Aggregate squared error ', &
-              abserr,' exceeds threshold ',epsilon
+              abserr,' exceeds threshold ',(epsilon/npes)
     endif
     stop 1
   endif
