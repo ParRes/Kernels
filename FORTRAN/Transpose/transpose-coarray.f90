@@ -158,13 +158,13 @@ program main
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(order/np,order)[*], stat=err)
+  allocate( A(order/npes,order)[*], stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of A returned ',err,' at image ',me
     stop 1
   endif
 
-  allocate( B(order/np,order)[*], stat=err )
+  allocate( B(order/npes,order)[*], stat=err )
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of B returned ',err,' at image ',me
     stop 1
