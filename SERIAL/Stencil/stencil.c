@@ -69,10 +69,7 @@ typedef float prk_float_t;
 const prk_float_t epsilon = 1.0e-4f;
 #endif
 
-/* define shorthand for indexing a multi-dimensional array                       */
-#define IN(i,j)       in[i+(j)*(n)]
-#define OUT(i,j)      out[i+(j)*(n)]
-#define WEIGHT(ii,jj) weight[ii+RADIUS][jj+RADIUS]
+const int radius = RADIUS;
 
 int main(int argc, char ** argv)
 {
@@ -108,57 +105,57 @@ int main(int argc, char ** argv)
     if (tilesize<=0) tilesize=1;
   }
 
-  if (RADIUS < 1) {
-    printf("ERROR: Stencil radius %d should be positive\n", RADIUS);
+  if (radius < 1) {
+    printf("ERROR: Stencil radius %d should be positive\n", radius);
     exit(EXIT_FAILURE);
   }
 
-  if (2*RADIUS+1 > n) {
-    printf("ERROR: Stencil radius %d exceeds grid size %d\n", RADIUS, n);
+  if (2*radius+1 > n) {
+    printf("ERROR: Stencil radius %d exceeds grid size %d\n", radius, n);
     exit(EXIT_FAILURE);
   }
 
   size_t bytes = (size_t)n*(size_t)n*sizeof(prk_float_t);
-  prk_float_t * restrict in  = (prk_float_t *) prk_malloc(bytes); /* input grid values  */
-  prk_float_t * restrict out = (prk_float_t *) prk_malloc(bytes); /* output grid values */
-  if (!in || !out) {
+  prk_float_t (* const restrict in)[n]  = (prk_float_t (*)[n]) prk_malloc(bytes); /* input grid values  */
+  prk_float_t (* const restrict out)[n] = (prk_float_t (*)[n]) prk_malloc(bytes); /* output grid values */
+  if (in==NULL || out==NULL) {
     printf("ERROR: could not allocate space for input or output array\n");
     exit(EXIT_FAILURE);
   }
 
-  prk_float_t weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
+  prk_float_t weight[2*radius+1][2*radius+1]; /* weights of points in the stencil     */
   /* fill the stencil weights to reflect a discrete divergence operator         */
-  for (int jj=-RADIUS; jj<=RADIUS; jj++) {
-      for (int ii=-RADIUS; ii<=RADIUS; ii++) {
-          WEIGHT(ii,jj) = (prk_float_t) 0.0;
-      }
+  for (int jj=-radius; jj<=radius; jj++) {
+    for (int ii=-radius; ii<=radius; ii++) {
+      weight[ii+radius][jj+radius]= (prk_float_t)0;
+    }
   }
 
-  int stencil_size; /* number of points in stencil */
 #ifdef STAR
-  stencil_size = 4*RADIUS+1;
-  for (int ii=1; ii<=RADIUS; ii++) {
-    WEIGHT(0, ii) = WEIGHT( ii,0) =  (prk_float_t) (1.0/(2.0*ii*RADIUS));
-    WEIGHT(0,-ii) = WEIGHT(-ii,0) = -(prk_float_t) (1.0/(2.0*ii*RADIUS));
+  const int stencil_size = 4*radius+1;
+  for (int ii=1; ii<=radius; ii++) {
+    weight[radius][radius+ii] = weight[radius+ii][radius] = ((prk_float_t)+1)/(2*ii*radius);
+    weight[radius][radius-ii] = weight[radius-ii][radius] = ((prk_float_t)-1)/(2*ii*radius);
   }
 #else
-  stencil_size = (2*RADIUS+1)*(2*RADIUS+1);
-  for (int jj=1; jj<=RADIUS; jj++) {
+  const int stencil_size = (2*radius+1)*(2*radius+1);
+  for (int jj=1; jj<=radius; jj++) {
     for (int ii=-jj+1; ii<jj; ii++) {
-      WEIGHT(ii,jj)  =  (prk_float_t) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
-      WEIGHT(ii,-jj) = -(prk_float_t) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
-      WEIGHT(jj,ii)  =  (prk_float_t) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
-      WEIGHT(-jj,ii) = -(prk_float_t) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
+      weight[radius+ii][radius+jj]  = ((prk_float_t)+1)/(4*jj*(2*jj-1)*radius);
+      weight[radius+ii][radius-jj]  = ((prk_float_t)-1)/(4*jj*(2*jj-1)*radius);
+      weight[radius+jj][radius+ii]  = ((prk_float_t)+1)/(4*jj*(2*jj-1)*radius);
+      weight[radius-jj][radius+ii]  = ((prk_float_t)-1)/(4*jj*(2*jj-1)*radius);
     }
-    WEIGHT(jj,jj)    =  (prk_float_t) (1.0/(4.0*jj*RADIUS));
-    WEIGHT(-jj,-jj)  = -(prk_float_t) (1.0/(4.0*jj*RADIUS));
+    weight[radius+jj][radius+jj]    = ((prk_float_t)+1)/(4*jj*radius);
+    weight[radius-jj][radius-jj]    = ((prk_float_t)-1)/(4*jj*radius);
   }
 #endif
 
-  size_t active_points = ((size_t)n-2L*RADIUS)*((size_t)n-2L*RADIUS); /* interior of grid with respect to stencil */
+  /* interior of grid with respect to stencil */
+  size_t active_points = ((size_t)n-2*radius)*((size_t)n-2*radius);
 
   printf("Grid size            = %d\n", n);
-  printf("Radius of stencil    = %d\n", RADIUS);
+  printf("Radius of stencil    = %d\n", radius);
 #ifdef STAR
   printf("Type of stencil      = star\n");
 #else
@@ -182,14 +179,14 @@ int main(int argc, char ** argv)
   printf("Number of iterations = %d\n", iterations);
 
   /* intialize the input and output arrays                                     */
-  for (int j=0; j<n; j++) {
-    for (int i=0; i<n; i++) {
-      IN(i,j) = (prk_float_t)i+(prk_float_t)j;
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
+      in[i][j] = (prk_float_t)i+(prk_float_t)j;
     }
   }
-  for (int j=RADIUS; j<n-RADIUS; j++) {
-    for (int i=RADIUS; i<n-RADIUS; i++) {
-      OUT(i,j) = (prk_float_t)0.0;
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
+      out[i][j] = (prk_float_t)0;
     }
   }
 
@@ -201,68 +198,49 @@ int main(int argc, char ** argv)
     if (iter == 1)  stencil_time = wtime();
 
     /* Apply the stencil operator */
-
     if (tilesize==1 || tilesize==n) {
-      for (int j=RADIUS; j<n-RADIUS; j++) {
-        for (int i=RADIUS; i<n-RADIUS; i++) {
+      for (int j=radius; j<n-radius; j++) {
+        for (int i=radius; i<n-radius; i++) {
           #ifdef STAR
-            #if LOOPGEN
-              #include "loop_body_star.incl"
-            #else
-              for (int jj=-RADIUS; jj<=RADIUS; jj++) {
-                OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+              for (int jj=-radius; jj<=radius; jj++) {
+                out[i][j] += weight[radius][radius+jj]*in[i][j+jj];
               }
-              for (int ii=-RADIUS; ii<0; ii++) {
-                OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+              for (int ii=-radius; ii<0; ii++) {
+                out[i][j] += weight[radius+ii][radius]*in[i+ii][j];
               }
-              for (int ii=1; ii<=RADIUS; ii++) { 
-                OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+              for (int ii=1; ii<=radius; ii++) {
+                out[i][j] += weight[radius+ii][radius]*in[i+ii][j];
               }
-            #endif
-          #else 
-            #if LOOPGEN
-              #include "loop_body_compact.incl"
-            #else
-              /* would like to be able to unroll this loop, but compiler will ignore  */
-              for (int jj=-RADIUS; jj<=RADIUS; jj++) {
-                for (int ii=-RADIUS; ii<=RADIUS; ii++) {
-                  OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
+          #else
+              for (int ii=-radius; ii<=radius; ii++) {
+                for (int jj=-radius; jj<=radius; jj++) {
+                  out[i][j] += weight[radius+ii][radius+jj]*in[i+ii][j+jj];
                 }
               }
-            #endif
           #endif
         }
       }
     } else {
-      for (int jt=RADIUS; jt<n-RADIUS; jt+=tilesize) {
-        for (int it=RADIUS; it<n-RADIUS; it+=tilesize) {
-          for (int j=jt; j<MIN(n-RADIUS,jt+tilesize); j++) {
-            for (int i=it; i<MIN(n-RADIUS,it+tilesize); i++) {
+      for (int it=radius; it<n-radius; it+=tilesize) {
+        for (int jt=radius; jt<n-radius; jt+=tilesize) {
+          for (int i=it; i<MIN(n-radius,it+tilesize); i++) {
+            for (int j=jt; j<MIN(n-radius,jt+tilesize); j++) {
               #ifdef STAR
-                #if LOOPGEN
-                  #include "loop_body_star.incl"
-                #else
-                  for (int jj=-RADIUS; jj<=RADIUS; jj++) {
-                    OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+                  for (int jj=-radius; jj<=radius; jj++) {
+                    out[i][j] += weight[radius][radius+jj]*in[i][j+jj];
                   }
-                  for (int ii=-RADIUS; ii<0; ii++) {
-                    OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+                  for (int ii=-radius; ii<0; ii++) {
+                    out[i][j] += weight[radius+ii][radius]*in[i+ii][j];
                   }
-                  for (int ii=1; ii<=RADIUS; ii++) {
-                    OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+                  for (int ii=1; ii<=radius; ii++) {
+                    out[i][j] += weight[radius+ii][radius]*in[i+ii][j];
                   }
-                #endif
               #else
-                #if LOOPGEN
-                  #include "loop_body_compact.incl"
-                #else
-                  /* would like to be able to unroll this loop, but compiler will ignore  */
-                  for (int jj=-RADIUS; jj<=RADIUS; jj++) {
-                    for (int ii=-RADIUS; ii<=RADIUS; ii++) {
-                      OUT(i,j) += WEIGHT(ii,jj)*IN(i+ii,j+jj);
+                  for (int ii=-radius; ii<=radius; ii++) {
+                    for (int jj=-radius; jj<=radius; jj++) {
+                      out[i][j] += weight[radius+ii][radius+jj]*in[i+ii][j+jj];
                     }
                   }
-                #endif
               #endif
             }
           }
@@ -271,9 +249,9 @@ int main(int argc, char ** argv)
     }
 
     /* add constant to solution to force refresh of neighbor data, if any       */
-    for (int j=0; j<n; j++) {
-      for (int i=0; i<n; i++) {
-        IN(i,j)+= 1.0;
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        in[i][j] += (prk_float_t)1;
       }
     }
 
@@ -281,19 +259,23 @@ int main(int argc, char ** argv)
 
   stencil_time = wtime() - stencil_time;
 
+  //free(in);
+
+  /*******************************************************************************
+  ** Analyze and output results.
+  ********************************************************************************/
+
   /* compute L1 norm in parallel                                                */
   prk_float_t norm = 0; /* L1 norm of solution */
-  for (int j=RADIUS; j<n-RADIUS; j++) {
-    for (int i=RADIUS; i<n-RADIUS; i++) {
-      norm += (prk_float_t)ABS(OUT(i,j));
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
+      norm += (prk_float_t)ABS(out[i][j]);
     }
   }
 
   norm /= active_points;
 
-  /*******************************************************************************
-  ** Analyze and output results.
-  ********************************************************************************/
+  //free(out);
 
   /* verify correctness */
   prk_float_t reference_norm = (prk_float_t) 2*(iterations+1);
