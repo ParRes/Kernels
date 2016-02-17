@@ -62,17 +62,11 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 #include <par-res-kern_general.h>
 
 #ifdef DOUBLE
-  #define DTYPE   double
-  #define EPSILON 1.e-8
-  #define COEFX   1.0
-  #define COEFY   1.0
-  #define FSTR    "%lf"
+typedef double prk_float_t;
+const prk_float_t epsilon = 1.0e-8;
 #else
-  #define DTYPE   float
-  #define EPSILON 0.0001f
-  #define COEFX   1.0f
-  #define COEFY   1.0f
-  #define FSTR    "%f"
+typedef float prk_float_t;
+const prk_float_t epsilon = 1.0e-4f;
 #endif
 
 /* define shorthand for indexing a multi-dimensional array                       */
@@ -119,24 +113,24 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
 
-  if (2*RADIUS +1 > n) {
+  if (2*RADIUS+1 > n) {
     printf("ERROR: Stencil radius %d exceeds grid size %d\n", RADIUS, n);
     exit(EXIT_FAILURE);
   }
 
-  size_t bytes = (size_t)n*(size_t)n*sizeof(DTYPE);
-  DTYPE * restrict in  = (DTYPE *) prk_malloc(bytes); /* input grid values  */
-  DTYPE * restrict out = (DTYPE *) prk_malloc(bytes); /* output grid values */
+  size_t bytes = (size_t)n*(size_t)n*sizeof(prk_float_t);
+  prk_float_t * restrict in  = (prk_float_t *) prk_malloc(bytes); /* input grid values  */
+  prk_float_t * restrict out = (prk_float_t *) prk_malloc(bytes); /* output grid values */
   if (!in || !out) {
     printf("ERROR: could not allocate space for input or output array\n");
     exit(EXIT_FAILURE);
   }
 
-  DTYPE weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
+  prk_float_t weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   /* fill the stencil weights to reflect a discrete divergence operator         */
   for (int jj=-RADIUS; jj<=RADIUS; jj++) {
       for (int ii=-RADIUS; ii<=RADIUS; ii++) {
-          WEIGHT(ii,jj) = (DTYPE) 0.0;
+          WEIGHT(ii,jj) = (prk_float_t) 0.0;
       }
   }
 
@@ -144,20 +138,20 @@ int main(int argc, char ** argv)
 #ifdef STAR
   stencil_size = 4*RADIUS+1;
   for (int ii=1; ii<=RADIUS; ii++) {
-    WEIGHT(0, ii) = WEIGHT( ii,0) =  (DTYPE) (1.0/(2.0*ii*RADIUS));
-    WEIGHT(0,-ii) = WEIGHT(-ii,0) = -(DTYPE) (1.0/(2.0*ii*RADIUS));
+    WEIGHT(0, ii) = WEIGHT( ii,0) =  (prk_float_t) (1.0/(2.0*ii*RADIUS));
+    WEIGHT(0,-ii) = WEIGHT(-ii,0) = -(prk_float_t) (1.0/(2.0*ii*RADIUS));
   }
 #else
   stencil_size = (2*RADIUS+1)*(2*RADIUS+1);
   for (int jj=1; jj<=RADIUS; jj++) {
     for (int ii=-jj+1; ii<jj; ii++) {
-      WEIGHT(ii,jj)  =  (DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
-      WEIGHT(ii,-jj) = -(DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
-      WEIGHT(jj,ii)  =  (DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
-      WEIGHT(-jj,ii) = -(DTYPE) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
+      WEIGHT(ii,jj)  =  (prk_float_t) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
+      WEIGHT(ii,-jj) = -(prk_float_t) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
+      WEIGHT(jj,ii)  =  (prk_float_t) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
+      WEIGHT(-jj,ii) = -(prk_float_t) (1.0/(4.0*jj*(2.0*jj-1)*RADIUS));
     }
-    WEIGHT(jj,jj)    =  (DTYPE) (1.0/(4.0*jj*RADIUS));
-    WEIGHT(-jj,-jj)  = -(DTYPE) (1.0/(4.0*jj*RADIUS));
+    WEIGHT(jj,jj)    =  (prk_float_t) (1.0/(4.0*jj*RADIUS));
+    WEIGHT(-jj,-jj)  = -(prk_float_t) (1.0/(4.0*jj*RADIUS));
   }
 #endif
 
@@ -190,12 +184,12 @@ int main(int argc, char ** argv)
   /* intialize the input and output arrays                                     */
   for (int j=0; j<n; j++) {
     for (int i=0; i<n; i++) {
-      IN(i,j) = COEFX*i+COEFY*j;
+      IN(i,j) = (prk_float_t)i+(prk_float_t)j;
     }
   }
   for (int j=RADIUS; j<n-RADIUS; j++) {
     for (int i=RADIUS; i<n-RADIUS; i++) {
-      OUT(i,j) = (DTYPE)0.0;
+      OUT(i,j) = (prk_float_t)0.0;
     }
   }
 
@@ -288,10 +282,10 @@ int main(int argc, char ** argv)
   stencil_time = wtime() - stencil_time;
 
   /* compute L1 norm in parallel                                                */
-  DTYPE norm = 0; /* L1 norm of solution */
+  prk_float_t norm = 0; /* L1 norm of solution */
   for (int j=RADIUS; j<n-RADIUS; j++) {
     for (int i=RADIUS; i<n-RADIUS; i++) {
-      norm += (DTYPE)ABS(OUT(i,j));
+      norm += (prk_float_t)ABS(OUT(i,j));
     }
   }
 
@@ -302,8 +296,8 @@ int main(int argc, char ** argv)
   ********************************************************************************/
 
   /* verify correctness */
-  DTYPE reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
-  if (ABS(norm-reference_norm) > EPSILON) {
+  prk_float_t reference_norm = (prk_float_t) 2*(iterations+1);
+  if (ABS(norm-reference_norm) > epsilon) {
     printf("ERROR: L1 norm = %lf, Reference L1 norm = %lf\n",
            (double)norm, (double)reference_norm);
     exit(EXIT_FAILURE);
