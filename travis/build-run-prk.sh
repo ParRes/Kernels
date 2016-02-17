@@ -56,7 +56,7 @@ case "$PRK_TARGET" in
                     exit 9
                 fi
                 export PRK_FC="$PRK_FC -std=f2008 -cpp"
-                echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp\bCOARRAYFLAG=-fcoarray=single" >> common/make.defs
+                echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
                 ;;
             clang)
                 echo "LLVM Fortran is not supported."
