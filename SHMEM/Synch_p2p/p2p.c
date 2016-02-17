@@ -235,11 +235,11 @@ int main(int argc, char ** argv)
 
   /* initialize synchronization flags                                            */
   /* set flags to zero to indicate no data is available yet                      */
-  int true = 1; int false = !true;
+  int sync_true = 1; int sync_false = !sync_true;
   for (j=0; j<n; j++) {
-    flag_left[j] = false;
+    flag_left[j] = sync_false;
 #ifdef SYNCHRONOUS
-    flag_right[j] = false;
+    flag_right[j] = sync_false;
 #endif
   }  
 
@@ -248,8 +248,8 @@ int main(int argc, char ** argv)
   for (iter=0; iter<=iterations; iter++) {
 
 #ifndef SYNCHRONOUS
-    /* true and false toggle each iteration                                      */
-    true = (iter+1)%2; false = !true;
+    /* sync_true and sync_false toggle each iteration                                      */
+    sync_true = (iter+1)%2; sync_false = !sync_true;
 #endif
 
     if (iter == 1) {
@@ -259,13 +259,13 @@ int main(int argc, char ** argv)
 
     if (my_ID==0 && Num_procs>1) { 
       /* first thread waits for corner value to be copied                        */
-      shmem_int_wait_until(&flag_left[0], SHMEM_CMP_EQ, false);
+      shmem_int_wait_until(&flag_left[0], SHMEM_CMP_EQ, sync_false);
       if (iter>0) {
         ARRAY(start[my_ID]-1,0) = dst[0];
       }
 #ifdef SYNCHRONOUS
-      flag_left[0]= true;
-      shmem_int_p(&flag_right[0], true, root);
+      flag_left[0]= sync_true;
+      shmem_int_p(&flag_right[0], sync_true, root);
       shmem_fence();
 #endif      
     }
@@ -274,11 +274,11 @@ int main(int argc, char ** argv)
 
       /* if I am not at the left boundary, wait for left neighbor to send data   */
       if (my_ID > 0) {
-        shmem_int_wait_until(&flag_left[j], SHMEM_CMP_EQ, true);
+        shmem_int_wait_until(&flag_left[j], SHMEM_CMP_EQ, sync_true);
 #ifdef SYNCHRONOUS
-        flag_left[j]= false;
+        flag_left[j]= sync_false;
         // tell the left neighbor I got the data
-        shmem_int_p(&flag_right[j], false, my_ID-1);
+        shmem_int_p(&flag_right[j], sync_false, my_ID-1);
 #endif      
         ARRAY(start[my_ID]-1,j) = dst[j];
       }
@@ -289,14 +289,14 @@ int main(int argc, char ** argv)
 
       if (my_ID != Num_procs-1) {
 #ifdef SYNCHRONOUS 
-        shmem_int_wait_until(&flag_right[j], SHMEM_CMP_EQ, false);
-        flag_right[j] = true;
+        shmem_int_wait_until(&flag_right[j], SHMEM_CMP_EQ, sync_false);
+        flag_right[j] = sync_true;
 #endif 
         src[j] = ARRAY (end[my_ID],j);
         shmem_double_p(&dst[j], src[j], my_ID+1);
         shmem_fence();
      /* indicate to right neighbor that data is available  */
-        shmem_int_p(&flag_left[j], true, my_ID+1);
+        shmem_int_p(&flag_left[j], sync_true, my_ID+1);
       }  
     }
 
@@ -309,11 +309,11 @@ int main(int argc, char ** argv)
         shmem_fence();
         /* indicate to PE 0 that data is available  */
 #ifdef SYNCHRONOUS
-        shmem_int_wait_until(&flag_right[0], SHMEM_CMP_EQ, true);
-        flag_right[j] = false;
-        shmem_int_p(&flag_left[0], false, 0);
+        shmem_int_wait_until(&flag_right[0], SHMEM_CMP_EQ, sync_true);
+        flag_right[j] = sync_false;
+        shmem_int_p(&flag_left[0], sync_false, 0);
 #else
-        shmem_int_p(&flag_left[0], true, 0);
+        shmem_int_p(&flag_left[0], sync_true, 0);
 #endif
       }
     }
