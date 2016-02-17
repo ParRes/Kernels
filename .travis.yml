@@ -76,6 +76,7 @@ matrix:
     # LLVM Fortran is not ready.
     - compiler: clang
       env: PRK_TARGET=allfortran
+           PRK_FLAGS="-O3 -fcoarray=single"
   allow_failures:
     - env: PRK_TARGET=allgrappa
     # wget tarball fails right now
