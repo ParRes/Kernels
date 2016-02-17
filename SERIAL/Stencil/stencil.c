@@ -199,8 +199,8 @@ int main(int argc, char ** argv)
 
     /* Apply the stencil operator */
     if (tilesize==1 || tilesize==n) {
-      for (int j=radius; j<n-radius; j++) {
-        for (int i=radius; i<n-radius; i++) {
+      for (int i=radius; i<n-radius; i++) {
+        for (int j=radius; j<n-radius; j++) {
           #ifdef STAR
               for (int jj=-radius; jj<=radius; jj++) {
                 out[i][j] += weight[radius][radius+jj]*in[i][j+jj];
