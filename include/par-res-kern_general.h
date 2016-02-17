@@ -33,8 +33,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include <assert.h>
+
+/* Do not include math.h here, because some PRK might want
+ * to use tgmath.h instead, and the two are not compatible. */
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
 #include <stdbool.h>
@@ -47,9 +49,6 @@ typedef int prkbool;
 
 /* This is not ISO C.  It is Linux/Unix. */
 #include <unistd.h>
-
-/* FIXME stdlib.h does not declare this function all the time. */
-int posix_memalign(void **memptr, size_t alignment, size_t size);
 
 #define PRKVERSION "2.16"
 #ifndef MIN
