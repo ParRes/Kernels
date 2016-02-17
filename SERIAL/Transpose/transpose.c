@@ -234,12 +234,12 @@ int main(int argc, char ** argv)
   prk_transpose_fill(order, A, B);
 
   double trans_time = 0.0;
-  for (int iter = 0; iter<=iterations; iter++){
+  for (int iter = 0; iter<=iterations; iter++) {
     /* start timer after a warmup iteration */
     if (iter==1) trans_time = wtime();
     /* Transpose the  matrix */
     prk_transpose_doit(order, tile_size, A, B);
-  }  /* end of iter loop  */
+  }
   trans_time = wtime() - trans_time;
 
   /*********************************************************************
@@ -260,13 +260,10 @@ int main(int argc, char ** argv)
     printf("Solution validates\n");
     double avgtime = trans_time/iterations;
     printf("Rate (MB/s): %lf Avg time (s): %lf\n", 1.0E-06 * (2L*bytes)/avgtime, avgtime);
-#ifdef VERBOSE
-    printf("Squared errors: %f \n", abserr);
-#endif
     exit(EXIT_SUCCESS);
   }
   else {
-    printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr, epsilon);
+    printf("ERROR: Aggregate squared error %e exceeds threshold %e\n", abserr, epsilon);
     exit(EXIT_FAILURE);
   }
 
