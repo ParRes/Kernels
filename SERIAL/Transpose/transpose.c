@@ -62,6 +62,8 @@ HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 
 #include <par-res-kern_general.h>
 
+#include <math.h>
+
 /* Variable length arrays (VLA) were required in C99 but made optional
  * in C11, so it is possible that a compiler does not support them,
  * although such a compiler does not support C99, which we require

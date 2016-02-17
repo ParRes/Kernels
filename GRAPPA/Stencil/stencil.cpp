@@ -57,6 +57,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
  
 *********************************************************************************/
 #include <par-res-kern_general.h>
+#include <math.h>
 #include <Grappa.hpp>
 #include <FullEmpty.hpp>
 using namespace Grappa;

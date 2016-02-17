@@ -1,6 +1,8 @@
 #include "stencil.decl.h"
 #include <par-res-kern_general.h>
 
+#include <math.h>
+
 #define EPSILON       1.e-8
 #define COEFX         1.0
 #define COEFY         1.0
