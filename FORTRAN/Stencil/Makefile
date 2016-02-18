@@ -15,7 +15,7 @@ FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 .PHONY: all clean run
 
-all: $(PROGRAM)
+all: $(PROGRAM) $(PROGRAM)-omp
 
 $(PROGRAM): $(PROGRAM).f90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -24,7 +24,7 @@ $(PROGRAM)-omp: $(PROGRAM).f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 run: $(PROGRAM)
-	$(PROGRAM) 10 4096 32
+	$(PROGRAM) 10 4000 32
 
 clean:
 	-rm -f $(PROGRAM)
