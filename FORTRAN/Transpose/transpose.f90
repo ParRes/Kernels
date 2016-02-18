@@ -159,9 +159,9 @@ program main
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
 #ifdef _OPENMP
-  !$omp parallel default(none)                                        &
-  !$omp&  shared(A,B,t0,t1,trans_time)                                &
-  !$omp&  firstprivate(order,iterations,tile_size)                    &
+  !$omp parallel default(none)                     &
+  !$omp&  shared(A,B,t0,t1)                        &
+  !$omp&  firstprivate(order,iterations,tile_size) &
   !$omp&  private(i,j,it,jt,k)
 #endif
 
@@ -209,6 +209,10 @@ program main
     !$omp end do nowait
 #endif
   endif
+
+  ! need this because otherwise no barrier between initialization
+  ! and iteration 0 (warmup), which will lead to incorrectness.
+  !$omp barrier
 
   do k=0,iterations
 
