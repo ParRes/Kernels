@@ -165,7 +165,7 @@ program main
   endif
 
   norm = 0.0;
-  active_points = int((n-2*r)*(n-2*r),INT64);
+  active_points = int(n-2*r,INT64)**2;
 
 #ifdef _OPENMP
   write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
@@ -178,7 +178,7 @@ program main
   stencil_size = 4*r+1
 #else
                    'stencil'
-  stencil_size = (2*r+1)*(2*r+1)
+  stencil_size = (2*r+1)**2
 #endif
   write(*,'(a)') 'Data type            = double precision'
   write(*,'(a)') 'Compact representation of stencil loop body'
@@ -190,7 +190,7 @@ program main
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   !$omp parallel default(none)                                        &
-  !$omp&  shared(A,B,W,t0,t1,iterations,tiling,tile_size,stencil_time)&
+  !$omp&  shared(A,B,W,t0,t1,iterations,tiling,tile_size)             &
   !$omp&  firstprivate(n)                                             &
   !$omp&  private(i,j,ii,jj,it,jt,k)                                  &
   !$omp&  reduction(+:norm)
@@ -207,7 +207,7 @@ program main
   enddo
   !$omp end do nowait
 #else
-  !$omp do collapse(2)
+  !$omp do
   do jj=1,r
     do ii=-jj+1,jj-1
       W( ii+1, jj+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
@@ -222,14 +222,14 @@ program main
 #endif
 
   ! intialize the input and output arrays
-  !$omp do collapse(2)
+  !$omp do
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
     enddo
   enddo
   !$omp end do nowait
-  !$omp do collapse(2)
+  !$omp do
   do j=r+1,n-r
     do i=r+1,n-r
       B(i,j) = 0.0
@@ -253,7 +253,7 @@ program main
 
     ! Apply the stencil operator
     if (.not.tiling) then
-      !$omp do collapse(2)
+      !$omp do
       do j=r,n-r-1
         do i=r,n-r-1
 #ifdef STAR
@@ -278,7 +278,7 @@ program main
       enddo
       !$omp end do nowait
     else ! tiling
-      !$omp do collapse(2)
+      !$omp do
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -310,7 +310,7 @@ program main
     !$omp barrier
 
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp do collapse(2)
+    !$omp do
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.0
@@ -320,26 +320,27 @@ program main
 
   enddo ! iterations
 
+#ifdef _OPENMP
   !$omp barrier
   !$omp master
-#ifdef _OPENMP
   t1 = omp_get_wtime()
+  !$omp end master
 #else
   call cpu_time(t1)
 #endif
-  stencil_time = t1 - t0
-  !$omp end master
 
   ! compute L1 norm in parallel
-  !$omp do collapse(2)
+  !$omp do
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
+  !$omp end do
 
   !$omp end parallel
 
+  stencil_time = t1 - t0
   norm = norm / real(active_points,REAL64)
 
   !******************************************************************************
