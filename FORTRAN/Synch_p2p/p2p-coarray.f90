@@ -89,7 +89,8 @@ program main
   me = this_image()
   np = num_images()
 
-  if(me == 1) then
+  ! co_broadcast is part of Fortran 2015, so we will not assume it yet.
+  !if(me == 1) then
 #ifndef PRKVERSION
 #warning Your common/make.defs is missing PRKVERSION
 #define PRKVERSION "N/A"
@@ -126,19 +127,17 @@ program main
         stop 1
      endif
 
-  endif
+  !endif
+  !call co_broadcast(iterations, source_image = 1)
+  !call co_broadcast(m, source_image = 1)
+  !call co_broadcast(n, source_image = 1)
 
-  call co_broadcast(iterations, source_image = 1)
-  call co_broadcast(m, source_image = 1)
-  call co_broadcast(n, source_image = 1)
-
+  ! co_max is part of Fortran 2015, so we will not assume it.
+  ! Instead, we will just allocate more than necessary in some cases.
   m_local = int(m/np)
-  if((me-1) < mod(m,np)) m_local = m_local + 1
-  max_m_local = m_local
-
-  prev = me - 1; next = me + 1
-
-  call co_max(max_m_local)
+  !if((me-1) < mod(m,np)) m_local = m_local + 1
+  max_m_local = m_local + 1
+  !call co_max(max_m_local)
 
   allocate( grid(max_m_local,n)[*], stat=err)
 
@@ -167,6 +166,9 @@ program main
         grid(i,1) = real(i-1,REAL64)
      enddo
   endif
+
+  prev = me - 1
+  next = me + 1
 
   do k=0,iterations
 
