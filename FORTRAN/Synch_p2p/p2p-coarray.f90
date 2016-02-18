@@ -54,10 +54,18 @@
 !            Converted to Fortran by Jeff Hammond, January 2015
 ! *******************************************************************
 
+function prk_get_wtime() result(t)
+  use iso_fortran_env
+  real(kind=REAL64) ::  t
+  integer(kind=INT64) :: c, r
+  call system_clock(count = c, count_rate = r)
+  t = real(c,REAL64) / real(r,REAL64)
+end function prk_get_wtime
+
 program main
   use iso_fortran_env
-  use mpi
   implicit none
+  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -77,7 +85,9 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  me = this_image(); np = num_images()
+  ! WARNING: this code uses base-1 indexing of images - others use base-0.
+  me = this_image()
+  np = num_images()
 
   if(me == 1) then
 #ifndef PRKVERSION
@@ -93,29 +103,29 @@ program main
              '<first array dimension> <second array dimension>'
         stop 1
      endif
-     
+
      iterations = 1
      call get_command_argument(1,argtmp,arglen,err)
      if (err.eq.0) read(argtmp,'(i32)') iterations
-     
+
      m = 1
      call get_command_argument(2,argtmp,arglen,err)
      if (err.eq.0) read(argtmp,'(i32)') m
-     
+
      n = 1
      call get_command_argument(3,argtmp,arglen,err)
      if (err.eq.0) read(argtmp,'(i32)') n
-     
+
      if (iterations .lt. 1) then
         write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
         stop 1
      endif
-     
+
      if ((m .lt. 1).or.(n .lt. 1)) then
         write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
         stop 1
      endif
-     
+
   endif
 
   call co_broadcast(iterations, source_image = 1)
@@ -163,16 +173,14 @@ program main
     !  start timer after a warmup iteration
     if (k.eq.1) then
        sync all
-       t0 = MPI_Wtime()
+       t0 = prk_get_wtime()
     endif
 
     do j=2,n
        if(me > 1) sync images(prev)
-       
        do i=2,m_local
           grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
        enddo
-       
        if(me /= np) then
           grid(1,j)[next] = grid(m_local,j)
           sync images(next)
@@ -193,7 +201,7 @@ program main
 
   sync all
 
-  t1 = MPI_Wtime()
+  t1 = prk_get_wtime()
 
   pipeline_time = t1 - t0
 
