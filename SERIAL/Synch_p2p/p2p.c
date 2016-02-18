@@ -60,11 +60,10 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 
 #include <par-res-kern_general.h>
 
+#include <math.h> /* fabs */
+
 /* error tolerance */
 const double epsilon = 1.e-8;
-
-/* define shorthand for indexing a multi-dimensional array */
-#define ARRAY(i,j) vector[i+(j)*(m)]
 
 int main(int argc, char ** argv)
 {
@@ -99,8 +98,10 @@ int main(int argc, char ** argv)
 
   /* total required length to store grid values */
   size_t bytes = (size_t)m*(size_t)n*sizeof(double);
-  double * restrict vector = (double *) prk_malloc(bytes);
-  if (!vector) {
+
+  /* working set */
+  double (* restrict vector)[n] = (double (*)[n]) prk_malloc(bytes);
+  if (vector==NULL) {
     printf("ERROR: Could not allocate space for array: %zu\n", bytes);
     exit(EXIT_FAILURE);
   }
@@ -109,17 +110,17 @@ int main(int argc, char ** argv)
   printf("Number of iterations      = %d\n", iterations);
 
   /* clear the array */
-  for (int j=0; j<n; j++) {
-    for (int i=0; i<m; i++) {
-      ARRAY(i,j) = 0.0;
+  for (int i=0; i<m; i++) {
+    for (int j=0; j<n; j++) {
+      vector[i][j] = 0.0;
     }
   }
   /* set boundary values (bottom and left side of grid) */
   for (int j=0; j<n; j++) {
-      ARRAY(0,j) = (double) j;
+    vector[0][j] = (double)j;
   }
   for (int i=0; i<m; i++) {
-      ARRAY(i,0) = (double) i;
+    vector[i][0] = (double)i;
   }
 
   double pipeline_time = 0.0; /* silence compiler warning */
@@ -129,16 +130,16 @@ int main(int argc, char ** argv)
     /* start timer after a warmup iteration */
     if (iter == 1) pipeline_time = wtime();
 
-    for (int j=1; j<n; j++) {
-      for (int i=1; i<m; i++) {
-        ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
+    for (int i=1; i<m; i++) {
+      for (int j=1; j<n; j++) {
+        vector[i][j] = vector[i-1][j] + vector[i][j-1] - vector[i-1][j-1];
       }
     }
 
     /* copy top right corner value to bottom left corner to create dependency; we
        need a barrier to make sure the latest value is used. This also guarantees
        that the flags for the next iteration (if any) are not getting clobbered  */
-    ARRAY(0,0) = -ARRAY(m-1,n-1);
+    vector[0][0] = -vector[m-1][n-1];
   }
 
   pipeline_time = wtime() - pipeline_time;
@@ -149,11 +150,13 @@ int main(int argc, char ** argv)
 
   /* verify correctness, using top right value;                                  */
   double corner_val = (double)((iterations+1)*(n+m-2));
-  if (ABS(ARRAY(m-1,n-1)-corner_val)/corner_val > epsilon) {
+  if ( (fabs(vector[m-1][n-1] - corner_val)/corner_val) > epsilon) {
     printf("ERROR: checksum %lf does not match verification value %lf\n",
-           ARRAY(m-1,n-1), corner_val);
+           vector[m-1][n-1], corner_val);
     exit(EXIT_FAILURE);
   }
+
+  prk_free(vector);
 
 #ifdef VERBOSE
   printf("Solution validates; verification value = %lf\n", corner_val);
