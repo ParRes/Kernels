@@ -1,6 +1,6 @@
 PROGRAM=p2p
 
-include ../../common/make.defs
+include ../../common/FORTRAN.defs
 include ../../common/PRKVERSION
 
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
@@ -9,7 +9,7 @@ FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 .PHONY: all clean run
 
-all: $(PROGRAM)
+all: $(PROGRAM) $(PROGRAM)-coarray
 
 $(PROGRAM): $(PROGRAM).f90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -17,8 +17,11 @@ $(PROGRAM): $(PROGRAM).f90
 $(PROGRAM)-omp: $(PROGRAM).f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
+$(PROGRAM)-coarray: $(PROGRAM)-coarray.f90
+	$(CAFCOMPILER) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
+
 run: $(PROGRAM)
-	$(PROGRAM) 10 4096 32
+	$(PROGRAM) 10 4000 32
 
 clean:
 	-rm -f *.o
