@@ -178,7 +178,7 @@ int main(int argc, char ** argv)
   }
   printf("Number of iterations = %d\n", iterations);
 
-  /* intialize the input and output arrays                                     */
+  /* intialize the input and output arrays */
   for (int i=0; i<n; i++) {
     for (int j=0; j<n; j++) {
       in[i][j] = (prk_float_t)i+(prk_float_t)j;
@@ -255,18 +255,18 @@ int main(int argc, char ** argv)
       }
     }
 
-  } /* end of iterations                                                        */
+  } /* end of iterations */
 
   stencil_time = wtime() - stencil_time;
 
-  //free(in);
+  prk_free(in);
 
   /*******************************************************************************
   ** Analyze and output results.
   ********************************************************************************/
 
-  /* compute L1 norm in parallel                                                */
-  prk_float_t norm = 0; /* L1 norm of solution */
+  /* compute L1 norm in parallel */
+  prk_float_t norm = (prk_float_t)0; /* L1 norm of solution */
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
       norm += (prk_float_t)ABS(out[i][j]);
@@ -275,7 +275,7 @@ int main(int argc, char ** argv)
 
   norm /= active_points;
 
-  //free(out);
+  prk_free(out);
 
   /* verify correctness */
   prk_float_t reference_norm = (prk_float_t) 2*(iterations+1);
