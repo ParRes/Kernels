@@ -152,7 +152,7 @@ int main(int argc, char ** argv)
 #endif
 
   /* interior of grid with respect to stencil */
-  size_t active_points = ((size_t)n-2*radius)*((size_t)n-2*radius);
+  size_t active_points = ((size_t)(n-2*radius))*((size_t)(n-2*radius));
 
   printf("Grid size            = %d\n", n);
   printf("Radius of stencil    = %d\n", radius);
