@@ -1,6 +1,6 @@
 PROGRAM=transpose
 
-include ../../common/make.defs
+include ../../common/FORTRAN.defs
 include ../../common/PRKVERSION
 
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
@@ -18,10 +18,10 @@ $(PROGRAM)-omp: $(PROGRAM).f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 $(PROGRAM)-coarray: $(PROGRAM)-coarray.f90
-	$(FC) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
+	$(CAFCOMPILER) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
 
 run: $(PROGRAM)
-	$(PROGRAM) 10 4096 32
+	$(PROGRAM) 10 4000 32
 
 clean:
 	-rm -f *.o
