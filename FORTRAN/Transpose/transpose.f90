@@ -273,7 +273,9 @@ program main
 #ifdef _OPENMP
   !$omp barrier
   !$omp master
+#endif
   t1 = prk_get_wtime()
+#ifdef _OPENMP
   !$omp end master
 #endif
 
