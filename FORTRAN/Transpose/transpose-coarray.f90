@@ -51,7 +51,6 @@
 !          Converted to Fortran by Jeff Hammond, January 2015
 ! *******************************************************************
 
-
 function prk_get_wtime() result(t)
   use iso_fortran_env
   real(kind=REAL64) ::  t
@@ -102,7 +101,7 @@ program main
 #endif
   if (printer) then
     write(6,'(a34,a8)') 'Parallel Research Kernels version ', PRKVERSION
-    write(6,'(a60)')   'Fortran coarray Matrix transpose: B = A^T'
+    write(6,'(a41)')    'Fortran coarray Matrix transpose: B = A^T'
   endif
 
   if (command_argument_count().lt.2) then
@@ -177,17 +176,17 @@ program main
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
   if (printer) then
-    write(6,'(a25,i8)') 'Number of images     = ', num_images()
-    write(6,'(a25,i8)') 'Matrix order         = ', order
-    write(6,'(a25,i8)') 'Tile size            = ', tile_size
-    write(6,'(a25,i8)') 'Number of iterations = ', iterations
+    write(6,'(a23,i8)') 'Number of images     = ', num_images()
+    write(6,'(a23,i8)') 'Matrix order         = ', order
+    write(6,'(a23,i8)') 'Tile size            = ', tile_size
+    write(6,'(a23,i8)') 'Number of iterations = ', iterations
   endif
 
   ! initialization
   ! local column index j corresponds to global column index col_per_pe*me+j
   if ((tile_size.gt.1).and.(tile_size.lt.order)) then
-    do jt=1,col_per_pe,tile_size
-      do it=1,order,tile_size
+    do concurrent (jt=1:col_per_pe:tile_size)
+      do concurrent (it=1:order:tile_size)
         do j=jt,min(col_per_pe,jt+tile_size-1)
           do i=it,min(order,it+tile_size-1)
             A(i,j) = real(order,REAL64) * real(col_per_pe*me+j-1,REAL64) + real(i-1,REAL64)
@@ -197,7 +196,7 @@ program main
       enddo
     enddo
   else
-    do j=1,col_per_pe
+    do concurrent (j=1:col_per_pe)
       do i=1,order
         A(i,j) = real(order,REAL64) * real(col_per_pe*me+j-1,REAL64) + real(i-1,REAL64)
         B(i,j) = 0.0
@@ -232,8 +231,8 @@ program main
       col_start = p*col_per_pe
       ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
       if ((tile_size.gt.1).and.(tile_size.lt.order)) then
-        do jt=1,col_per_pe,tile_size
-          do it=1,col_per_pe,tile_size
+        do concurrent (jt=1:col_per_pe:tile_size)
+          do concurrent (it=1:col_per_pe:tile_size)
             do j=jt,min(col_per_pe,jt+tile_size-1)
               do i=it,min(col_per_pe,it+tile_size-1)
                 B(col_start+i,j) = B(col_start+i,j) + T(j,i)
@@ -249,7 +248,7 @@ program main
         !  enddo
         !enddo
         ! * half explicit, half colon
-        do j=1,col_per_pe
+        do concurrent (j=1:col_per_pe)
           B(col_start+1:col_start+col_per_pe,j) = B(col_start+1:col_start+col_per_pe,j) + T(j,:)
         enddo
       endif
@@ -262,8 +261,12 @@ program main
     !    A(i,j) = A(i,j) + 1.0
     !  enddo
     !enddo
+    ! * half explicit, half colon
+    do concurrent (j=1:col_per_pe)
+       A(:,j) = A(:,j) + 1.0
+    enddo
     ! * fully implicit version
-    A = A + 1.0
+    !A = A + 1.0
     sync all
 
   enddo ! iterations
@@ -289,6 +292,8 @@ program main
     enddo
   enddo
 
+  deallocate( B )
+
   if (abserr .lt. (epsilon/npes)) then
     if (printer) then
       write(6,'(a)') 'Solution validates'
@@ -301,29 +306,8 @@ program main
       write(6,'(a30,f13.6,a18,f13.6)') 'ERROR: Aggregate squared error ', &
               abserr,' exceeds threshold ',(epsilon/npes)
     endif
-    if (order.lt.1000) then ! do not emit more than 1M lines of debug output
-      addit = (0.5*iterations) * (iterations+1)
-      do p=0,npes-1
-        if (me.eq.p) then
-          addit = (0.5*iterations) * (iterations+1.0)
-          do j=1,col_per_pe
-            do i=1,order
-              temp = ((real(order,REAL64)*real(i-1,REAL64))+real(col_per_pe*me+j-1,REAL64)) &
-                   * real(iterations+1,REAL64) + addit
-              if (abs(B(i,j)-temp).gt.1.e-12) then
-                write(6,'(a10,i5,i5,i5,2f20.10)') 'B,correct', me, i, j, B(i,j), temp
-              endif
-            enddo
-          enddo
-          flush(6)
-        endif
-        sync all ! barrier
-      enddo
-    endif
     stop 1
   endif
-
-  deallocate( B )
 
 end program main
 
