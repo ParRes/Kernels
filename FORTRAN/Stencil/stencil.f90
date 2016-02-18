@@ -195,7 +195,10 @@ program main
   !$omp&  reduction(+:norm)
 
   ! fill the stencil weights to reflect a discrete divergence operator
+  ! Jeff: if one does not use workshare here, the code is wrong.
+  !$omp workshare
   W = 0.0
+  !$omp end workshare
 #ifdef STAR
   !$omp do
   do ii=1,r
@@ -335,7 +338,7 @@ program main
       norm = norm + abs(B(i,j))
     enddo
   enddo
-  !$omp end do
+  !$omp end do nowait
 
   !$omp end parallel
 
