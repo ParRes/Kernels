@@ -325,6 +325,9 @@ int main(int argc, char ** argv) {
   ** Analyze and output results.
   ********************************************************************************/
 
+  prk_free(out);
+  prk_free(in);
+
 /* verify correctness                                                            */
   reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
   if (ABS(norm-reference_norm) > EPSILON) {
