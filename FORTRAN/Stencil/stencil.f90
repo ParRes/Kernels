@@ -164,8 +164,8 @@ program main
     stop 1
   endif
 
-  norm = 0.0;
-  active_points = int(n-2*r,INT64)**2;
+  norm = 0.0
+  active_points = int(n-2*r,INT64)**2
 
 #ifdef _OPENMP
   write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
@@ -225,14 +225,14 @@ program main
 #endif
 
   ! intialize the input and output arrays
-  !$omp do collapse(2)
+  !$omp do !!! collapse(2)
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
     enddo
   enddo
   !$omp end do nowait
-  !$omp do collapse(2)
+  !$omp do !!! collapse(2)
   do j=r+1,n-r
     do i=r+1,n-r
       B(i,j) = 0.0
@@ -256,7 +256,7 @@ program main
 
     ! Apply the stencil operator
     if (.not.tiling) then
-      !$omp do collapse(2)
+      !$omp do !!! collapse(2)
       do j=r,n-r-1
         do i=r,n-r-1
 #ifdef STAR
@@ -281,7 +281,7 @@ program main
       enddo
       !$omp end do nowait
     else ! tiling
-      !$omp do collapse(2)
+      !$omp do !!! collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -313,7 +313,7 @@ program main
     !$omp barrier
 
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp do collapse(2)
+    !$omp do !!! collapse(2)
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.0
@@ -333,7 +333,7 @@ program main
 #endif
 
   ! compute L1 norm in parallel
-  !$omp do collapse(2)
+  !$omp do !!! collapse(2)
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
@@ -352,6 +352,9 @@ program main
 
   deallocate( B )
   deallocate( A )
+
+  ! Jeff: valgrind says that this is branching on uninitialized value (norm),
+  !       but this is nonsense since norm is initialized to 0.0 at line 167.
 
   ! verify correctness
   reference_norm = real(iterations+1,REAL64) * (cx + cy);
