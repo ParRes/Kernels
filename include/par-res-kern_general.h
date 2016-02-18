@@ -78,28 +78,34 @@ extern double wtime(void);
 
 /* This function is separate from prk_malloc() because
  * we need it when calling prk_shmem_align(..)           */
-static inline long prk_get_alignment(void)
+static inline int prk_get_alignment(void)
 {
     /* a := alignment */
 # ifdef PRK_ALIGNMENT
-    long a = PRK_ALIGNMENT;
+    int a = PRK_ALIGNMENT;
 # else
     char* temp = getenv("PRK_ALIGNMENT");
-    long a = (temp!=NULL) ? atol(temp) : 64;
+    int a = (temp!=NULL) ? atoi(temp) : 64;
     if (a < 8) a = 8;
     assert( (a & (~a+1)) == a );
 #endif
     return a;
 }
 
+/* There are a variety of reasons why this function is not declared by stdlib.h. */
+#if defined(__UPC__)
+int posix_memalign(void **memptr, size_t alignment, size_t size);
+#endif
+
 static inline void* prk_malloc(size_t bytes)
 {
 #ifndef PRK_USE_MALLOC
-    long alignment = prk_get_alignment();
+    int alignment = prk_get_alignment();
 #endif
 
-#if defined(__INTEL_COMPILER) && !defined(PRK_USE_POSIX_MEMALIGN)
-    return _mm_malloc(bytes,alignment);
+/* Berkeley UPC throws warnings related to this function for no obvious reason... */
+#if !defined(__UPC__) && defined(__INTEL_COMPILER) && !defined(PRK_USE_POSIX_MEMALIGN)
+    return (void*)_mm_malloc(bytes,alignment);
 #elif defined(PRK_HAS_C11)
 /* From ISO C11:
  *
