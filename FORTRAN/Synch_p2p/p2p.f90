@@ -51,7 +51,7 @@
 !          functions are used in this program:
 !
 ! HISTORY: - Written by Rob Van der Wijngaart, February 2009.
-!            Converted to Fortran by Jeff Hammond, January 2015
+!            Converted to Fortran by Jeff Hammond, January 2016.
 ! *******************************************************************
 
 program main

@@ -15,6 +15,10 @@ DEFAULT_OPT_FLAGS:=
 
 ############################   OPTIONAL #########################
 
+# Fortran 2008 coarrays flag, including any library
+# ifort: -coarray=distributed, gfortran: -fcoarray(=single), crayftn: -h caf
+COARRAYFLAG=
+
 #name of C++ compiler (to be used in MPI context for Grappa), e.g. mpigxx, mpiicpc
 CXX=
 
