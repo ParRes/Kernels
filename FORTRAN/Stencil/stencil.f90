@@ -202,23 +202,24 @@ program main
 #ifdef STAR
   !$omp do
   do ii=1,r
-    W(1, ii+1) =  1.0/real(2*ii*r,REAL64)
-    W(1,-ii+1) = -1.0/real(2*ii*r,REAL64)
-    W( ii+1,1) =  1.0/real(2*ii*r,REAL64)
-    W(-ii+1,1) = -1.0/real(2*ii*r,REAL64)
+    W(0, ii) =  1.0/real(2*ii*r,REAL64)
+    W(0,-ii) = -1.0/real(2*ii*r,REAL64)
+    W( ii,0) =  1.0/real(2*ii*r,REAL64)
+    W(-ii,0) = -1.0/real(2*ii*r,REAL64)
   enddo
   !$omp end do nowait
 #else
+  ! Jeff: check that this is correct with the new W indexing
   !$omp do
   do jj=1,r
     do ii=-jj+1,jj-1
-      W( ii+1, jj+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii+1,-jj+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj+1, ii+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj+1, ii+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii, jj) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii,-jj) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj, ii) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj, ii) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
     enddo
-    W( jj+1, jj+1)  =  1.0/real(4.0*jj*r,REAL64)
-    W(-jj+1,-jj+1)  = -1.0/real(4.0*jj*r,REAL64)
+    W( jj, jj)  =  1.0/real(4.0*jj*r,REAL64)
+    W(-jj,-jj)  = -1.0/real(4.0*jj*r,REAL64)
   enddo
   !$omp end do nowait
 #endif
@@ -261,18 +262,18 @@ program main
 #ifdef STAR
             ! do not use Intel Fortran unroll directive here (slows down)
             do jj=-r,r
-              B(i+1,j+1) = B(i+1,j+1) + W(1,jj+1) * A(i+1,j+jj+1)
+              B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
             enddo
             do ii=-r,-1
-              B(i+1,j+1) = B(i+1,j+1) + W(ii+1,1) * A(i+ii+1,j+1)
+              B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
             enddo
             do ii=1,r
-              B(i+1,j+1) = B(i+1,j+1) + W(ii+1,1) * A(i+ii+1,j+1)
+              B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
             enddo
 #else
             do jj=-r,r
               do ii=-r,r
-                B(i+1,j+1) = B(i+1,j+1) + W(ii+1,jj+1) * A(i+ii+1,j+jj+1)
+                B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
               enddo
             enddo
 #endif
@@ -287,18 +288,18 @@ program main
             do i=it,min(n-r-1,it+tile_size-1)
 #ifdef STAR
                 do jj=-r,r
-                  B(i+1,j+1) = B(i+1,j+1) + W(1,jj+1) * A(i+1,j+jj+1)
+                  B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
                 enddo
                 do ii=-r,-1
-                  B(i+1,j+1) = B(i+1,j+1) + W(ii+1,1) * A(i+ii+1,j+1)
+                  B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
                 enddo
                 do ii=1,r
-                  B(i+1,j+1) = B(i+1,j+1) + W(ii+1,1) * A(i+ii+1,j+1)
+                  B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
                 enddo
 #else
                 do jj=-r,r
                   do ii=-r,r
-                    B(i+1,j+1) = B(i+1,j+1) + W(ii+1,jj+1) * A(i+ii+1,j+jj+1)
+                    B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
                   enddo
                 enddo
 #endif
