@@ -190,17 +190,20 @@ allserial:
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
-allfortran: allfortser allfortomp
+allfortran: allfortranserial allfortranopenmp allfortrancoarray
 
-allfortser:
+allfortranserial:
 	cd FORTRAN/Stencil;         $(MAKE) stencil
 	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
 	cd FORTRAN/Transpose;       $(MAKE) transpose
 
-allfortomp:
+allfortranopenmp:
 	cd FORTRAN/Stencil;         $(MAKE) stencil-omp
 	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-omp
 	cd FORTRAN/Transpose;       $(MAKE) transpose-omp
+
+allfortrancoarray:
+	cd FORTRAN/Transpose;       $(MAKE) transpose-coarray
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean

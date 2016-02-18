@@ -345,7 +345,6 @@ int main(int argc, char ** argv)
         for (j=0; j<Block_order; j++) {
               B(j,i) += A(i,j);
               A(i,j) += 1.0;
-	      //              printf("(%d,%d,%d)\n", my_ID, i,j);
 	}
       }
     }
@@ -356,7 +355,6 @@ int main(int argc, char ** argv)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
               B(jt,it) += A(it,jt); 
               A(it,jt) += 1.0;
-	      //              printf("(%d,%d,%d)\n", my_ID, it,jt);
 	    }
 	}
       }

@@ -137,7 +137,6 @@ int main(int argc, char ** argv)
   int Num_procs;           /* number of ranks                       */
   long order;              /* order of overall matrix               */
   int send_to, recv_from;  /* ranks with which to communicate       */
-  MPI_Status status;       
 #ifndef SYNCHRONOUS
   MPI_Request send_req;
   MPI_Request recv_req;
@@ -219,7 +218,7 @@ int main(int argc, char ** argv)
 #endif
     printf("Blocking messages\n");
   }
-  
+
   /*  Broadcast input data to all ranks */
   MPI_Bcast (&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
   MPI_Bcast (&iterations, 1, MPI_INT,  root, MPI_COMM_WORLD);
@@ -230,8 +229,8 @@ int main(int argc, char ** argv)
   bytes = 2 * sizeof(double) * order * order;
 
 /*********************************************************************
-** The matrix is broken up into column blocks that are mapped one to a 
-** rank.  Each column block is made up of Num_procs smaller square 
+** The matrix is broken up into column blocks that are mapped one to a
+** rank.  Each column block is made up of Num_procs smaller square
 ** blocks of order block_order.
 *********************************************************************/
 
@@ -241,7 +240,7 @@ int main(int argc, char ** argv)
   Block_size     = Block_order * Block_order;
 
 /*********************************************************************
-** Create the column block of the test matrix, the row block of the 
+** Create the column block of the test matrix, the row block of the
 ** transposed matrix, and workspace (workspace only if #procs>1)
 *********************************************************************/
   A_p = (double *)prk_malloc(Colblock_size*sizeof(double));
@@ -267,10 +266,10 @@ int main(int argc, char ** argv)
     bail_out(error);
     Work_out_p = Work_in_p + Block_size;
   }
-  
+
   /* Fill the original column matrix                                                */
-  istart = 0;  
-  for (j=0;j<Block_order;j++) 
+  istart = 0;
+  for (j=0;j<Block_order;j++)
     for (i=0;i<order; i++)  {
       A(i,j) = (double) (order*(j+colstart) + i);
       B(i,j) = 0.0;
@@ -279,26 +278,26 @@ int main(int argc, char ** argv)
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration                                        */
-    if (iter == 1) { 
+    if (iter == 1) {
       MPI_Barrier(MPI_COMM_WORLD);
       local_trans_time = wtime();
     }
 
     /* do the local transpose                                                     */
-    istart = colstart; 
+    istart = colstart;
     if (!tiling) {
-      for (i=0; i<Block_order; i++) 
+      for (i=0; i<Block_order; i++)
         for (j=0; j<Block_order; j++) {
           B(j,i) += A(i,j);
           A(i,j) += 1.0;
 	}
     }
     else {
-      for (i=0; i<Block_order; i+=Tile_order) 
-        for (j=0; j<Block_order; j+=Tile_order) 
+      for (i=0; i<Block_order; i+=Tile_order)
+        for (j=0; j<Block_order; j+=Tile_order)
           for (it=i; it<MIN(Block_order,i+Tile_order); it++)
             for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-              B(jt,it) += A(it,jt); 
+              B(jt,it) += A(it,jt);
               A(it,jt) += 1.0;
 	    }
     }
@@ -308,43 +307,43 @@ int main(int argc, char ** argv)
       send_to   = (my_ID - phase + Num_procs)%Num_procs;
 
 #ifndef SYNCHRONOUS
-      MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
-                recv_from, phase, MPI_COMM_WORLD, &recv_req);  
+      MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE,
+                recv_from, phase, MPI_COMM_WORLD, &recv_req);
 #endif
 
-      istart = send_to*Block_order; 
+      istart = send_to*Block_order;
       if (!tiling) {
-        for (i=0; i<Block_order; i++) 
+        for (i=0; i<Block_order; i++)
           for (j=0; j<Block_order; j++){
 	    Work_out(j,i) = A(i,j);
             A(i,j) += 1.0;
 	  }
       }
       else {
-        for (i=0; i<Block_order; i+=Tile_order) 
-          for (j=0; j<Block_order; j+=Tile_order) 
+        for (i=0; i<Block_order; i+=Tile_order)
+          for (j=0; j<Block_order; j+=Tile_order)
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-                Work_out(jt,it) = A(it,jt); 
+                Work_out(jt,it) = A(it,jt);
                 A(it,jt) += 1,0;
 	      }
       }
 
-#ifndef SYNCHRONOUS  
+#ifndef SYNCHRONOUS
       MPI_Isend(Work_out_p, Block_size, MPI_DOUBLE, send_to,
                 phase, MPI_COMM_WORLD, &send_req);
-      MPI_Wait(&recv_req, &status);
-      MPI_Wait(&send_req, &status);
+      MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+      MPI_Wait(&send_req, MPI_STATUS_IGNORE);
 #else
       MPI_Sendrecv(Work_out_p, Block_size, MPI_DOUBLE, send_to, phase,
-                   Work_in_p, Block_size, MPI_DOUBLE, 
-	           recv_from, phase, MPI_COMM_WORLD, &status);
+                   Work_in_p, Block_size, MPI_DOUBLE,
+	           recv_from, phase, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 #endif
 
-      istart = recv_from*Block_order; 
+      istart = recv_from*Block_order;
       /* scatter received block to transposed matrix; no need to tile */
       for (j=0; j<Block_order; j++)
-        for (i=0; i<Block_order; i++) 
+        for (i=0; i<Block_order; i++)
           B(i,j) += Work_in(i,j);
 
     }  /* end of phase loop  */
