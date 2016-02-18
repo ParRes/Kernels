@@ -190,8 +190,7 @@ program main
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   !$omp parallel default(none)                                        &
-  !$omp&  shared(A,B,W,t0,t1,iterations,tiling,tile_size)             &
-  !$omp&  firstprivate(n)                                             &
+  !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size)           &
   !$omp&  private(i,j,ii,jj,it,jt,k)                                  &
   !$omp&  reduction(+:norm)
 
@@ -222,14 +221,14 @@ program main
 #endif
 
   ! intialize the input and output arrays
-  !$omp do
+  !$omp do collapse(2)
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
     enddo
   enddo
   !$omp end do nowait
-  !$omp do
+  !$omp do collapse(2)
   do j=r+1,n-r
     do i=r+1,n-r
       B(i,j) = 0.0
@@ -253,7 +252,7 @@ program main
 
     ! Apply the stencil operator
     if (.not.tiling) then
-      !$omp do
+      !$omp do collapse(2)
       do j=r,n-r-1
         do i=r,n-r-1
 #ifdef STAR
@@ -278,7 +277,7 @@ program main
       enddo
       !$omp end do nowait
     else ! tiling
-      !$omp do
+      !$omp do collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -310,7 +309,7 @@ program main
     !$omp barrier
 
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp do
+    !$omp do collapse(2)
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.0
@@ -330,7 +329,7 @@ program main
 #endif
 
   ! compute L1 norm in parallel
-  !$omp do
+  !$omp do collapse(2)
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
