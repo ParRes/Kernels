@@ -166,7 +166,6 @@ program main
        t0 = MPI_Wtime()
     endif
 
-    ! TODO
     do j=2,n
        if(me > 1) sync images(prev)
        
