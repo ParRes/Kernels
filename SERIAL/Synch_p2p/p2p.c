@@ -55,27 +55,21 @@ FUNCTIONS CALLED:
          wtime()
 
 HISTORY: - Written by Rob Van der Wijngaart, February 2009.
+           C99-ification by Jeff Hammond, February 2016.
 *******************************************************************/
 
 #include <par-res-kern_general.h>
 
-/* define shorthand for indexing a multi-dimensional array                       */
+/* error tolerance */
+const double epsilon = 1.e-8;
+
+/* define shorthand for indexing a multi-dimensional array */
 #define ARRAY(i,j) vector[i+(j)*(m)]
 
-int main(int argc, char ** argv) {
-
-  long   m, n;            /* grid dimensions                                     */
-  int    i, j, iter;      /* dummies                                             */
-  int    iterations;      /* number of times to run the pipeline algorithm       */
-  double pipeline_time,   /* timing parameters                                   */
-         avgtime; 
-  double epsilon = 1.e-8; /* error tolerance                                     */
-  double corner_val;      /* verification value at top right corner of grid      */
-  double *RESTRICT vector;/* array holding grid values                           */
-  long   total_length;    /* total required length to store grid values          */
-
+int main(int argc, char ** argv)
+{
   /*******************************************************************************
-  ** process and test input parameters    
+  ** process and test input parameters
   ********************************************************************************/
 
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
@@ -87,45 +81,58 @@ int main(int argc, char ** argv) {
     return(EXIT_FAILURE);
   }
 
-  iterations  = atoi(*++argv); 
+  /* number of times to run the pipeline algorithm */
+  int iterations  = atoi(*++argv);
   if (iterations < 1){
     printf("ERROR: iterations must be >= 1 : %d \n",iterations);
     exit(EXIT_FAILURE);
   }
 
-  m  = atol(*++argv);
-  n  = atol(*++argv);
+  /* grid dimensions */
+  int m  = atol(*++argv);
+  int n  = atol(*++argv);
 
   if (m < 1 || n < 1){
-    printf("ERROR: grid dimensions must be positive: %ld, %ld \n", m, n);
+    printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
     exit(EXIT_FAILURE);
   }
 
-  total_length = sizeof(double)*m*n;
-  vector = (double *) prk_malloc(total_length);
+  /* total required length to store grid values */
+  size_t bytes = (size_t)m*(size_t)n*sizeof(double);
+  double * restrict vector = (double *) prk_malloc(bytes);
   if (!vector) {
-    printf("ERROR: Could not allocate space for array: %ld\n", total_length);
+    printf("ERROR: Could not allocate space for array: %zu\n", bytes);
     exit(EXIT_FAILURE);
   }
 
-  printf("Grid sizes                = %ld, %ld\n", m, n);
+  printf("Grid sizes                = %d, %d\n", m, n);
   printf("Number of iterations      = %d\n", iterations);
 
-  /* clear the array                                                             */
-  for (j=0; j<n; j++) for (i=0; i<m; i++) ARRAY(i,j) = 0.0;
-  /* set boundary values (bottom and left side of grid                           */
-  for (j=0; j<n; j++) ARRAY(0,j) = (double) j;
-  for (i=0; i<m; i++) ARRAY(i,0) = (double) i;
+  /* clear the array */
+  for (int j=0; j<n; j++) {
+    for (int i=0; i<m; i++) {
+      ARRAY(i,j) = 0.0;
+    }
+  }
+  /* set boundary values (bottom and left side of grid) */
+  for (int j=0; j<n; j++) {
+      ARRAY(0,j) = (double) j;
+  }
+  for (int i=0; i<m; i++) {
+      ARRAY(i,0) = (double) i;
+  }
 
-  pipeline_time = 0.0; /* silence compiler warning */
+  double pipeline_time = 0.0; /* silence compiler warning */
 
-  for (iter = 0; iter<=iterations; iter++){
+  for (int iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration */
     if (iter == 1) pipeline_time = wtime();
 
-    for (j=1; j<n; j++) for (i=1; i<m; i++) {
+    for (int j=1; j<n; j++) {
+      for (int i=1; i<m; i++) {
         ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
+      }
     }
 
     /* copy top right corner value to bottom left corner to create dependency; we
@@ -141,21 +148,23 @@ int main(int argc, char ** argv) {
   ********************************************************************************/
 
   /* verify correctness, using top right value;                                  */
-  corner_val = (double)((iterations+1)*(n+m-2));
+  double corner_val = (double)((iterations+1)*(n+m-2));
   if (ABS(ARRAY(m-1,n-1)-corner_val)/corner_val > epsilon) {
     printf("ERROR: checksum %lf does not match verification value %lf\n",
            ARRAY(m-1,n-1), corner_val);
     exit(EXIT_FAILURE);
   }
 
-#ifdef VERBOSE   
+#ifdef VERBOSE
   printf("Solution validates; verification value = %lf\n", corner_val);
 #else
   printf("Solution validates\n");
 #endif
-  avgtime = pipeline_time/iterations;
+  double avgtime = pipeline_time/iterations;
   printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
-         1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
+         1.0e-6 * 2 * ((double)((size_t)(m-1)*(size_t)(n-1)))/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
+
+  return 0;
 }
