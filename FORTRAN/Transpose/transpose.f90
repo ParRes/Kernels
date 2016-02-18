@@ -324,7 +324,7 @@ program main
     write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',1.e-6*bytes/avgtime, &
            ' Avg time (s): ', avgtime
   else
-    write(*,'(a,f13.6,a,f13.6)') 'ERROR: Aggregate squared error ',abserr, &
+    write(*,'(a,f30.15,a,f30.15)') 'ERROR: Aggregate squared error ',abserr, &
            'exceeds threshold ',epsilon
     stop 1
   endif
