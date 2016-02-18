@@ -51,14 +51,12 @@
 !          functions are used in this program:
 !
 ! HISTORY: - Written by Rob Van der Wijngaart, February 2009.
-!            Converted to Fortran by Jeff Hammond, January 2016.
+!            Converted to Fortran by Jeff Hammond, January 2015
 ! *******************************************************************
 
 program main
   use iso_fortran_env
-#ifdef _OPENMP
-  use omp_lib
-#endif
+  use mpi
   implicit none
   ! for argument parsing
   integer :: err
@@ -66,11 +64,12 @@ program main
   character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
-  integer(kind=INT32) :: m, n
+  integer(kind=INT32) :: m, n, m_local, max_m_local
   real(kind=REAL64) :: corner_val                       ! verification value at top right corner of grid
-  real(kind=REAL64), allocatable :: grid(:,:)           ! array holding grid values
+  real(kind=REAL64), allocatable :: grid(:,:)[:]           ! array holding grid values
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
+  integer(kind=INT32) ::  me, np, prev, next, stat
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
 
@@ -78,139 +77,146 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
+  me = this_image(); np = num_images()
+
+  if(me == 1) then
 #ifndef PRKVERSION
 #warning Your common/make.defs is missing PRKVERSION
 #define PRKVERSION "N/A"
 #endif
-  write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
-#ifdef _OPENMP
-  write(*,'(a)')   'OpenMP pipeline execution on 2D grid'
-#else
-  write(*,'(a)')   'Serial pipeline execution on 2D grid'
-#endif
+     write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
+     write(*,'(a)')   'CAF pipeline execution on 2D grid'
 
-  if (command_argument_count().lt.3) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a,a)')  'Usage: ./synch_p2p <# iterations> ',             &
-                      '<first array dimension> <second array dimension>'
-    stop 1
+     if (command_argument_count().lt.3) then
+        write(*,'(a,i1)') 'argument count = ', command_argument_count()
+        write(*,'(a,a)')  'Usage: ./synch_p2p <# iterations> ',             &
+             '<first array dimension> <second array dimension>'
+        stop 1
+     endif
+     
+     iterations = 1
+     call get_command_argument(1,argtmp,arglen,err)
+     if (err.eq.0) read(argtmp,'(i32)') iterations
+     
+     m = 1
+     call get_command_argument(2,argtmp,arglen,err)
+     if (err.eq.0) read(argtmp,'(i32)') m
+     
+     n = 1
+     call get_command_argument(3,argtmp,arglen,err)
+     if (err.eq.0) read(argtmp,'(i32)') n
+     
+     if (iterations .lt. 1) then
+        write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
+        stop 1
+     endif
+     
+     if ((m .lt. 1).or.(n .lt. 1)) then
+        write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
+        stop 1
+     endif
+     
   endif
 
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
+  call co_broadcast(iterations, source_image = 1)
+  call co_broadcast(m, source_image = 1)
+  call co_broadcast(n, source_image = 1)
 
-  m = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') m
+  m_local = int(m/np)
+  if((me-1) < mod(m,np)) m_local = m_local + 1
+  max_m_local = m_local
 
-  n = 1
-  call get_command_argument(3,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') n
+  prev = me - 1; next = me + 1
 
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
+  call co_max(max_m_local)
 
-  if ((m .lt. 1).or.(n .lt. 1)) then
-    write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
-    stop 1
-  endif
+  allocate( grid(max_m_local,n)[*], stat=err)
 
-  allocate( grid(m,n), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of grid returned ',err
     stop 1
   endif
 
-#ifdef _OPENMP
-  write(*,'(a,i8)')    'Number of threads        = ',omp_get_max_threads()
-#endif
-  write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
-  write(*,'(a,i8)')    'Number of iterations     = ', iterations
+  if(me == 1) then
+     write(*,'(a,i8)')    'Number of threads        = ', num_images()
+     write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
+     write(*,'(a,i8)')    'Number of iterations     = ', iterations
+  endif
 
-  !$omp parallel default(none)                                        &
-  !$omp&  shared(grid,t0,t1,iterations,pipeline_time)                 &
-  !$omp&  firstprivate(m,n)                                           &
-  !$omp&  private(i,j,k)
-
-  !$omp do collapse(2)
   do j=1,n
-    do i=1,m
+    do i=1,m_local
       grid(i,j) = 0.0d0
     enddo
   enddo
-  !$omp end do nowait
-  !$omp do
-  do j=1,n
-    grid(1,j) = real(j-1,REAL64)
-  enddo
-  !$omp end do nowait
-  !$omp do
-  do i=1,m
-    grid(i,1) = real(i-1,REAL64)
-  enddo
-  !$omp end do nowait
+
+  if(me == 1) then
+     do j=1,n
+        grid(1,j) = real(j-1,REAL64)
+     enddo
+     do i=1,m_local
+        grid(i,1) = real(i-1,REAL64)
+     enddo
+  endif
 
   do k=0,iterations
 
     !  start timer after a warmup iteration
-    !$omp barrier
-    !$omp master
     if (k.eq.1) then
-#ifdef _OPENMP
-        t0 = omp_get_wtime()
-#else
-        call cpu_time(t0)
-#endif
+       sync all
+       t0 = MPI_Wtime()
     endif
-    !$omp end master
 
-    ! TODO
-    !$omp master
     do j=2,n
-      do i=2,m
-        grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
-      enddo
+       if(me > 1) sync images(prev)
+       
+       do i=2,m_local
+          grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+       enddo
+       
+       if(me /= np) then
+          grid(1,j)[next] = grid(m_local,j)
+          sync images(next)
+       endif
     enddo
-    !$omp end master
-
     ! copy top right corner value to bottom left corner to create dependency; we
     ! need a barrier to make sure the latest value is used. This also guarantees
     ! that the flags for the next iteration (if any) are not getting clobbered
-    grid(1,1) = -grid(m,n)
+   if(me == np) then
+      corner_val = -grid(m_local,n)
+      grid(1,1)[1] = corner_val
+      sync images(1)
+   else if(me == 1) then
+      sync images(np)
+   endif
 
   enddo ! iterations
 
-  !$omp barrier
-  !$omp master
-#ifdef _OPENMP
-  t1 = omp_get_wtime()
-#else
-  call cpu_time(t1)
-#endif
-  pipeline_time = t1 - t0
-  !$omp end master
+  sync all
 
-  !$omp end parallel
+  t1 = MPI_Wtime()
+
+  pipeline_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.
   ! ********************************************************************
 
   ! verify correctness, using top right value
-  corner_val = real((iterations+1)*(n+m-2),REAL64);
-  if (abs(grid(m,n)-corner_val)/corner_val .gt. epsilon) then
-    write(*,'(a,f10.2,a,f10.2)') 'ERROR: checksum ',grid(m,n), &
-            ' does not match verification value ', corner_val
-    stop 1
+  corner_val = real((iterations+1)*(n+m_local-2),REAL64);
+  if(me == np) then
+     if (abs(grid(m_local,n)-corner_val)/corner_val .gt. epsilon) then
+        write(*,'(a,f10.2,a,f10.2)') 'ERROR: checksum ',grid(m_local,n), &
+             ' does not match verification value ', corner_val
+        stop 1
+     endif
+     write(*,'(a)') 'Solution validates'
+
+     avgtime = pipeline_time/iterations
+     write(*,'(a,f13.6,a,f10.6)') 'Rate (MFlop/s): ',1.e-6*2*real((m-1)*(n-1),INT64)/avgtime, &
+          ' Avg time (s): ', avgtime
   endif
 
-  write(*,'(a)') 'Solution validates'
-  avgtime = pipeline_time/iterations
-  write(*,'(a,f13.6,a,f10.6)') 'Rate (MFlop/s): ',1.e-6*2*real((m-1)*(n-1),INT64)/avgtime, &
-         ' Avg time (s): ', avgtime
+  sync all
 
   deallocate( grid )
 

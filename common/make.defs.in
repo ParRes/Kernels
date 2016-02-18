@@ -4,6 +4,9 @@ MPICC=
 #name of C compiler, e.g. icc, xlc, gcc
 CC=
 
+#name of MPI Fortran compiler, e.g. mpifort, mpif90
+MPIF90=
+
 #name of Fortran compiler, e.g. ifort, xlf_r, gfortran
 FC=
 
@@ -42,3 +45,6 @@ GRAPPATOP=
 
 #location where Fine-Grain MPI is installed, e.g. $(HOME)/fgmpi-install
 FGMPITOP=
+
+#location where OpenCoarrays is installed, e.g. $(HOME)/opencoarrays
+OCAS=
