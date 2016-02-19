@@ -57,7 +57,7 @@
 #            added constant to array "in" at end of each iteration to force
 #            refreshing of neighbor data in parallel versions; August 2013
 #          - Converted to Fortran by Jeff Hammond, January-February 2016.
-#          _ Converted to Python by Jeff Hammond, Fortran 2016.
+#          - Converted to Python by Jeff Hammond, Fortran 2016.
 #
 # *******************************************************************
 

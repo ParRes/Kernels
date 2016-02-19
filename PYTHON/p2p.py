@@ -52,6 +52,8 @@
 #
 # HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 #            Converted to Fortran by Jeff Hammond, January 2016.
+#          - Converted to Python by Jeff Hammond, Fortran 2016.
+#
 # *******************************************************************
 
 import sys
@@ -86,11 +88,11 @@ def main():
     print 'Grid sizes               = ', m, n
     print 'Number of iterations     = ', iterations
 
-    A = [[0.0 for x in range(n)] for x in range(m)]
+    grid = [[0.0 for x in range(n)] for x in range(m)]
     for j in range(n):
-        A[0][j] = j
+        grid[0][j] = float(j)
     for i in range(m):
-        A[i][0] = i
+        grid[i][0] = float(i)
 
     for k in range(iterations+1):
         # start timer after a warmup iteration
@@ -99,7 +101,7 @@ def main():
 
         for i in range(1,m):
             for j in range(1,n):
-                grid[i][j] = grid[i][j] + grid[i][j] - grid[i][j]
+                grid[i][j] = grid[i-1][j] + grid[i][j-1] - grid[i-1][j-1]
 
         # copy top right corner value to bottom left corner to create dependency; we
         # need a barrier to make sure the latest value is used. This also guarantees
@@ -114,9 +116,23 @@ def main():
     # ** Analyze and output results.
     # ********************************************************************
 
+    for i in range(1,m):
+        for j in range(1,n):
+            print 'AFTER',i,j,grid[i][j]
+
+    epsilon=1.e-8
+
     # verify correctness, using top right value
-    corner_val = real((iterations+1)*(n+m-2),REAL64);
- 
+    corner_val = float((iterations+1)*(n+m-2))
+    if (abs(grid[m-1][n-1] - corner_val)/corner_val) < epsilon:
+        print 'Solution validates'
+        avgtime = pipeline_time/iterations
+        print 'Rate (MFlops/s): ',1.e-6*2*(m-1)*(n-1)/avgtime,' Avg time (s): ',avgtime
+    else:
+        print 'ERROR: checksum ',grid[m-1][n-1],' does not match verification value', corner_val
+        sys.exit()
+
+
 if __name__ == '__main__':
     main()
 
