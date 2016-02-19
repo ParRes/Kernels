@@ -128,6 +128,7 @@ env:
 #  * comment out lines m to n by prepending #
 #    :m,n s/^/#/g
 #
+  - PRK_TARGET=allpython
   - PRK_TARGET=allserial
   - PRK_TARGET=allfortran
   - PRK_TARGET=allopenmp
@@ -136,6 +137,9 @@ env:
   - PRK_TARGET=allmpirma
   - PRK_TARGET=allmpishm
   - PRK_TARGET=allmpiomp
+  - PRK_TARGET=allampi
+  - PRK_TARGET=allfgmpi
+  - PRK_TARGET=allcharm++
   - PRK_TARGET=allupc
     UPC_IMPL=gupc
   - PRK_TARGET=allupc
@@ -155,9 +159,6 @@ env:
 #    UPC_IMPL=bupc
 #    GASNET_CONDUIT=ofi
 #    PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allampi
-  - PRK_TARGET=allcharm++
-  - PRK_TARGET=allfgmpi
     # Chapel kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allchapel
 #    CHPL_COMM=none
