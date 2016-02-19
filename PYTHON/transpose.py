@@ -90,19 +90,15 @@ def main():
         for j in range(order):
             A[i][j] = float(i*order+j)
 
-    for i in range(order):
-        for j in range(order):
-            print 'BEFORE',i,j,A[i][j],B[i][j]
-
-    for k in range(0,iterations):
+    for k in range(0,iterations+1):
       # start timer after a warmup iteration
       if k<1:
           t0 = time.clock()
 
       for i in range(order):
           for j in range(order):
-              B[j][i] += A[i][j]
-              A[i][j] += 1.0
+              B[i][j] += A[j][i]
+              A[j][i] += 1.0
 
 
     t1 = time.clock()
@@ -112,25 +108,19 @@ def main():
     # ** Analyze and output results.
     # ********************************************************************
 
-    for i in range(order):
-        for j in range(order):
-            print 'AFTER',i,j,A[i][j],B[i][j]
-
     abserr = 0.0;
     addit = (iterations * (iterations+1))/2
     for i in range(order):
         for j in range(order):
-            temp    = (order*i+j) * (iterations+1)
+            temp    = (order*j+i) * (iterations+1)
             abserr += abs(B[i][j] - float(temp+addit))
-            print 'CHECK',i,j,B[i][j],float(temp+addit)
-
 
     epsilon=1.e-8
     nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
     if abserr < epsilon:
         print 'Solution validates'
         avgtime = trans_time/iterations
-        print 'Rate (MB/s): ',1.e-6*bytes/avgtime, ' Avg time (s): ', avgtime
+        print 'Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime
     else:
       print 'ERROR: Aggregate squared error ',abserr, 'exceeds threshold ',epsilon
       sys.exit()
