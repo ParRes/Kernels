@@ -22,6 +22,13 @@ case "$os" in
 esac
 
 case "$PRK_TARGET" in
+    allpython)
+        echo "Python"
+        which python
+        python --version
+        export PRK_TARGET_PATH=PYTHON
+        python $PRK_TARGET_PATH/transpose.py 10 1024
+        ;;
     allserial)
         echo "Serial"
         echo "CC=$PRK_COMPILER" >> common/make.defs
