@@ -66,21 +66,12 @@ import time
 
 def main():
 
-    integer(kind=INT32) :: iterations                     # number of times to run the pipeline algorithm
-    integer(kind=INT32) ::  n                             # linear grid dimension
-    integer(kind=INT32) ::  stencil_size                  # number of points in stencil
-    logical ::  tiling                                    # boolean indication loop nest blocking
-    integer(kind=INT32) ::  tile_size                     # loop nest block factor
-    integer(kind=INT32), parameter :: r=RADIUS            # radius of stencil
-    real(kind=REAL64) :: W(-r:r,-r:r)                     # weights of points in the stencil
-    cx=1.0, cy=1.0
-
     # ********************************************************************
     # read and test input parameters
     # ********************************************************************
 
-     'Parallel Research Kernels version ' #, PRKVERSION
-     'Python stencil execution on 2D grid'
+    print 'Parallel Research Kernels version ' #, PRKVERSION
+    print 'Python stencil execution on 2D grid'
 
     if len(sys.argv) != 5:
         print 'argument count = ', len(sys.argv)
@@ -107,10 +98,8 @@ def main():
     print 'Radius of stencil    = ', r
     if pattern == 'star':
         print 'Type of stencil      = ','star'
-        stencil_size = 4*r+1
     else:
         print 'Type of stencil      = ','stencil'
-        stencil_size = (2*r+1)**2
 
     print 'Data type            = double precision'
     print 'Compact representation of stencil loop body'
@@ -118,33 +107,33 @@ def main():
 
     W = [[0.0 for x in range(2*r+1)] for x in range(2*r+1)]
     if pattern == 'star':
-        for i in range(r):
-            # FIXME look at C code
-            W(r, i) =  1/(2*i*r)
-            W(r,-i) = -1/(2*i*r)
-            W( i,0) =  1/(2*i*r)
-            W(-i,0) = -1/(2*i*r)
+        stencil_size = 4*r+1
+        for i in range(1,r+1):
+            W[r][r+i] = +1./(2*i*r)
+            W[r+i][r] = +1./(2*i*r)
+            W[r][r-i] = -1./(2*i*r)
+            W[r-i][r] = -1./(2*i*r)
 
     else:
-        for i in range(r):
-            for j in range(-i,i):
-                # FIXME look at C code
-                W( i, j) =  1/(4*j*(2*j-1)*r)
-                W( i,-j) = -1/(4*j*(2*j-1)*r)
-                W( j, i) =  1/(4*j*(2*j-1)*r)
-                W(-j, i) = -1/(4*j*(2*j-1)*r)
-            W( j, jj)  =  1/(4*j*r)
-            W(-j,-jj)  = -1/(4*j*r)
+        stencil_size = (2*r+1)**2
+        for j in range(1,r+1):
+            for i in range(-j+1,j):
+                W[r+i][r+j] = +1./(4*j*(2*j-1)*r)
+                W[r+i][r-j] = -1./(4*j*(2*j-1)*r)
+                W[r+j][r+i] = +1./(4*j*(2*j-1)*r)
+                W[r-j][r+i] = -1./(4*j*(2*j-1)*r)
+
+            W[r+j][r+j]    = +1./(4*j*r)
+            W[r-j][r-j]    = -1./(4*j*r)
 
     A = [[0.0 for x in range(n)] for x in range(n)]
-    for i in range(order):
-        for j in range(order):
-            A[i][j] = cx*i+cy*j
+    for i in range(n):
+        for j in range(n):
+            A[i][j] = float(i+j)
 
     B = [[0.0 for x in range(n)] for x in range(n)]
-    # FIXME look at C code
-    for i in range(order):
-        for j in range(order):
+    for i in range(r,n-r):
+        for j in range(r,n-r):
             B[i][j] = 0.0
 
     for k in range(iterations+1):
@@ -152,28 +141,22 @@ def main():
         if k<1:
             t0 = time.clock()
 
-        # FIXME look at C code
-        for j in range(r,n-r):
-            for i in range(r,n-r):
+        for i in range(r,n-r):
+            for j in range(r,n-r):
                 if pattern == 'star':
-                    do jj=-r,r
-                      B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
-                    enddo
-                    do ii=-r,-1
-                      B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-                    enddo
-                    do ii=1,r
-                      B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-                    enddo
+                    for jj in range(-r,r+1):
+                        B[i][j] += W[r][r+jj] * A[i][j+jj]
+                    for ii in range(-r,0):
+                        B[i][j] += W[r+ii][r] * A[i+ii][j]
+                    for ii in range(1,r+1):
+                        B[i][j] += W[r+ii][r] * A[i+ii][j]
                 else:
-                    do jj=-r,r
-                      do ii=-r,r
-                        B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
-                      enddo
-                    enddo
+                    for ii in range(-r,r+1):
+                        for jj in range(-r,r+1):
+                            B[i][j] += W[r+ii][r+jj] * A[i+ii][j+jj]
 
-        for i in range(order):
-            for j in range(order):
+        for i in range(n):
+            for j in range(n):
                 A[i][j] += 1.0
 
     t1 = time.clock()
@@ -184,8 +167,8 @@ def main():
     #******************************************************************************
 
     norm = 0.0
-    for i in range(order):
-        for j in range(order):
+    for i in range(n):
+        for j in range(n):
             norm += abs(B[i][j])
 
     active_points = (n-2*r)**2
@@ -194,7 +177,7 @@ def main():
     epsilon=1.e-8
 
     # verify correctness
-    reference_norm = (iterations+1) * (cx + cy)
+    reference_norm = 2*(iterations+1)
     if abs(norm-reference_norm) < epsilon:
         print 'Solution validates'
         flops = (2*stencil_size+1) * active_points
