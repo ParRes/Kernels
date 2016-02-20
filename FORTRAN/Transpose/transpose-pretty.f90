@@ -39,16 +39,13 @@
 ! USAGE:   Program input is the matrix order and the number of times to
 !          repeat the operation:
 !
-!          transpose <matrix_size> <# iterations> [tile size]
-!
-!          An optional parameter specifies the tile size used to divide the
-!          individual matrix blocks for improved cache and TLB performance.
+!          transpose <matrix_size> <# iterations>
 !
 !          The output consists of diagnostics to make sure the
 !          transpose worked and timing statistics.
 !
 ! HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-!          Converted to Fortran by Jeff Hammond, January 2015
+!          Converted to Fortran by Jeff Hammond, February 2015
 ! *******************************************************************
 
 function prk_get_wtime() result(t)
@@ -69,7 +66,7 @@ program main
   character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
-  integer(kind=INT32) ::  order                     ! order of a the matrix
+  integer(kind=INT64) ::  order                     ! order of a the matrix
   !dec$ attributes align:64 :: A, B
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
@@ -90,11 +87,11 @@ program main
 #define PRKVERSION "N/A"
 #endif
   write(*,'(a34,a10)') 'Parallel Research Kernels version ', PRKVERSION
-  write(*,'(a34)')   'Fortran Matrix transpose: B = A^T'
+  write(*,'(a34)')   'Pretty Fortran Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
+    write(*,'(a)')    'Usage: ./transpose <# iterations> <matrix order>'
     stop 1
   endif
 
@@ -114,17 +111,8 @@ program main
     stop 1
   endif
 
-  ! same default as the C implementation
-  tile_size = 32
-  if (command_argument_count().gt.2) then
-      call get_command_argument(3,argtmp,arglen,err)
-      if (err.eq.0) read(argtmp,'(i32)') tile_size
-  endif
-  if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
-                           ' must be >= 1 and <= ',order
-    tile_size = order ! no tiling
-  endif
+  write(*,'(a,i8)') 'Matrix order         = ', order
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -142,63 +130,15 @@ program main
     stop 1
   endif
 
-  bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
-
-  write(*,'(a,i8)') 'Matrix order         = ', order
-  write(*,'(a,i8)') 'Tile size            = ', tile_size
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-
-  ! Fill the original matrix, set transpose to known garbage value.
-  if (tile_size.lt.order) then
-    do concurrent (jt=1:order:tile_size)
-      do concurrent (it=1:order:tile_size)
-        do j=jt,min(order,jt+tile_size-1)
-          do i=it,min(order,it+tile_size-1)
-              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-              B(i,j) = 0.0
-          enddo
-        enddo
-      enddo
-    enddo
-  else
-    do concurrent (j=1:order)
-      do concurrent (i=1:order)
-        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-        B(i,j) = 0.0
-      enddo
-    enddo
-  endif
-
-  ! need this because otherwise no barrier between initialization
-  ! and iteration 0 (warmup), which will lead to incorrectness.
-  !$omp barrier
+  ! Fill the original matrix
+  A = reshape((/ (i, i = 0,order**2) /),(/order, order/))
+  B = 0
 
   do k=0,iterations
-
     ! start timer after a warmup iteration
     if (k.eq.1) t0 = prk_get_wtime()
-
-    ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
-    if (tile_size.lt.order) then
-      do concurrent (jt=1:order:tile_size)
-        do concurrent (it=1:order:tile_size)
-          do j=jt,min(order,jt+tile_size-1)
-            do i=it,min(order,it+tile_size-1)
-              B(j,i) = B(j,i) + A(i,j)
-              A(i,j) = A(i,j) + 1.0
-            enddo
-          enddo
-        enddo
-      enddo
-    else
-      do concurrent (j=1:order)
-        do concurrent (i=1:order)
-          B(j,i) = B(j,i) + A(i,j)
-          A(i,j) = A(i,j) + 1.0
-        enddo
-      enddo
-    endif
-
+    B = B + transpose(A)
+    A = A + 1
   enddo ! iterations
 
   t1 = prk_get_wtime()
@@ -208,16 +148,10 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  abserr = 0.0;
-  ! this will overflow if iterations>>1000
-  addit = (0.5*iterations) * (iterations+1)
-  do concurrent (j=1:order)
-    do concurrent (i=1:order)
-      temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
-           * real(iterations+1,REAL64)
-      abserr = abserr + abs(B(i,j) - (temp+addit))
-    enddo
-  enddo
+  ! we reuse A here as the reference matrix, to compute the error
+  A = ( transpose(reshape((/ (i, i = 0,order**2) /),(/order, order/))) &
+        * real(iterations+1,REAL64) ) + (0.5*iterations) * (iterations+1.0)
+  abserr = norm2(A-B)
 
   deallocate( B )
   deallocate( A )
@@ -225,6 +159,7 @@ program main
   if (abserr .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
     avgtime = trans_time/iterations
+    bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
     write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',1.e-6*bytes/avgtime, &
            ' Avg time (s): ', avgtime
   else
