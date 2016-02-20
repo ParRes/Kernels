@@ -82,13 +82,8 @@ def main():
     print 'Matrix order         = ', order
     print 'Number of iterations = ', iterations
 
-    A = numpy.zeros((order,order))
+    A = numpy.fromfunction(lambda i, j: i*order+j, (order, order), dtype=float)
     B = numpy.zeros((order,order))
-
-    # this is surely not the Pythonic way of doing this
-    for i in range(order):
-        for j in range(order):
-            A[i][j] = float(i*order+j)
 
     for k in range(0,iterations+1):
         # start timer after a warmup iteration
