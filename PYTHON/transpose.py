@@ -91,14 +91,14 @@ def main():
             A[i][j] = float(i*order+j)
 
     for k in range(0,iterations+1):
-      # start timer after a warmup iteration
-      if k<1:
-          t0 = time.clock()
-
-      for i in range(order):
-          for j in range(order):
-              B[i][j] += A[j][i]
-              A[j][i] += 1.0
+        # start timer after a warmup iteration
+        if k<1:
+            t0 = time.clock()
+       
+        for i in range(order):
+            for j in range(order):
+                B[i][j] += A[j][i]
+                A[j][i] += 1.0
 
 
     t1 = time.clock()
@@ -122,8 +122,8 @@ def main():
         avgtime = trans_time/iterations
         print 'Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime
     else:
-      print 'ERROR: Aggregate squared error ',abserr, 'exceeds threshold ',epsilon
-      sys.exit()
+        print 'ERROR: Aggregate squared error ',abserr, 'exceeds threshold ',epsilon
+        sys.exit()
 
 
 if __name__ == '__main__':
