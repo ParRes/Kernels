@@ -45,7 +45,6 @@
 #          transpose worked and timing statistics.
 #
 # HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-#          Converted to Fortran by Jeff Hammond, January 2015.
 #          Converted to Python by Jeff Hammond, Fortran 2016.
 # *******************************************************************
 

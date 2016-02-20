@@ -45,7 +45,6 @@
 #          transpose worked and timing statistics.
 #
 # HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-#          Converted to Fortran by Jeff Hammond, January 2015.
 #          Converted to Python by Jeff Hammond, February 2016.
 # *******************************************************************
 
@@ -64,31 +63,29 @@ def main():
 
     if len(sys.argv) != 3:
         print 'argument count = ', len(sys.argv)
-        print 'Usage: ./transpose <# iterations> <matrix order>'
-        sys.exit()
+        sys.exit("Usage: ./transpose <# iterations> <matrix n>")
 
-    iterations = int(sys.argv[1])
-    if iterations < 1:
-        sys.exit("ERROR: iterations must be >= 1")
+    # iterations
+    niter = int(sys.argv[1])
+    if niter < 1: sys.exit("ERROR: niter must be >= 1")
 
-    order = int(sys.argv[2])
-    if order < 1:
-        sys.exit("ERROR: order must be >= 1")
+    # matrix order
+    n = int(sys.argv[2])
+    if n < 1: sys.exit("ERROR: n must be >= 1")
+
+    print 'Matrix n         = ', n
+    print 'Number of niter = ', niter
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    print 'Matrix order         = ', order
-    print 'Number of iterations = ', iterations
+    A = numpy.fromfunction(lambda i,j: i*n+j, (n,n), dtype=float)
+    B = numpy.zeros((n,n))
 
-    A = numpy.fromfunction(lambda i, j: i*order+j, (order, order), dtype=float)
-    B = numpy.zeros((order,order))
-
-    for k in range(0,iterations+1):
-        # start timer after a warmup iteration
-        if k<1:
-            t0 = time.clock()
+    for k in range(0,niter+1):
+        # start timer after a warmup niteration
+        if k<1: t0 = time.clock()
 
         # this actually forms the transpose of A
         # B += numpy.transpose(A)
@@ -104,18 +101,18 @@ def main():
     # ** Analyze and output results.
     # ********************************************************************
 
-    C = numpy.fromfunction(lambda i, j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order, order), dtype=float)
+    C = numpy.fromfunction(lambda i,j: ((niter/2.0)+(n*j+i))*(niter+1.0), (n,n), dtype=float)
     abserr = numpy.linalg.norm(B-C,ord=1) # ord=numpy.inf is another way to do it
 
     epsilon=1.e-8
-    nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
+    nbytes = 2 * n**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
     if abserr < epsilon:
         print 'Solution validates'
-        avgtime = trans_time/iterations
+        avgtime = trans_time/niter
         print 'Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime
     else:
-      print 'ERROR: Aggregate squared error ',abserr, 'exceeds threshold ',epsilon
-      sys.exit()
+        print 'error ',abserr, ' exceeds threshold ',epsilon
+        sys.exit("ERROR: solution did not validate")
 
 
 if __name__ == '__main__':
