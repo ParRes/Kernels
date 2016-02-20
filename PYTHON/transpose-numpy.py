@@ -46,7 +46,7 @@
 #
 # HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 #          Converted to Fortran by Jeff Hammond, January 2015.
-#          Converted to Python by Jeff Hammond, Fortran 2016.
+#          Converted to Python by Jeff Hammond, February 2016.
 # *******************************************************************
 
 import sys
@@ -89,9 +89,12 @@ def main():
         # start timer after a warmup iteration
         if k<1:
             t0 = time.clock()
-       
-        B += numpy.transpose(A)
-        A += numpy.ones((order,order))
+
+        # this actually forms the transpose of A
+        # B += numpy.transpose(A)
+        # this only uses the transpose _view_ of A
+        B += A.T
+        A += 1.0
 
 
     t1 = time.clock()
@@ -101,12 +104,8 @@ def main():
     # ** Analyze and output results.
     # ********************************************************************
 
-    abserr = 0.0;
-    addit = (iterations * (iterations+1))/2
-    for i in range(order):
-        for j in range(order):
-            temp    = (order*j+i) * (iterations+1)
-            abserr += abs(B[i][j] - float(temp+addit))
+    C = numpy.fromfunction(lambda i, j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order, order), dtype=float)
+    abserr = numpy.linalg.norm(B-C,ord=1) # ord=numpy.inf is another way to do it
 
     epsilon=1.e-8
     nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
