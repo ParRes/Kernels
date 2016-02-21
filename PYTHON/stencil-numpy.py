@@ -139,27 +139,7 @@ def main():
         if k<1: t0 = time.clock()
 
         if pattern == 'star':
-            #for i in range(r,n-r):
-            #    for j in range(r,n-r):
-            #        B[i][j] += W[r][r] * A[i][j]
-            #        for jj in range(-r,0):
-            #            B[i][j] += W[r][r+jj] * A[i][j+jj]
-            #        for jj in range(1,r+1):
-            #            B[i][j] += W[r][r+jj] * A[i][j+jj]
-            #        for ii in range(-r,0):
-            #            B[i][j] += W[r+ii][r] * A[i+ii][j]
-            #        for ii in range(1,r+1):
-            #            B[i][j] += W[r+ii][r] * A[i+ii][j]
-            #B[r:-r,r:-r] += W[r][r] * A[r:-r,r:-r]
-            #for jj in range(-r,0):
-            #    B[r:-r,r:-r] += W[r][r+jj] * A[r:-r,r+jj:-r+jj]
-            #for jj in range(1,r+1):
-            #    B[r:-r,r:-r] += W[r][r+jj] * A[r:-r,r+jj:-r+jj]
-            #for ii in range(-r,0):
-            #    B[r:-r,r:-r] += W[r+ii][r] * A[ii,r:-r]
-            #for ii in range(1,r+1):
-            #    B[r:-r,r:-r] += W[r+ii][r] * A[ii,r:-r]
-            if radius==2:
+            if r==2:
                 B[2:-2,2:-2] += W[2][2] * A[ 2:-2, 2:-2] \
                               + W[2][0] * A[ 2:-2, 0:-4] \
                               + W[2][1] * A[ 2:-2, 1:-3] \
@@ -169,6 +149,28 @@ def main():
                               + W[1][2] * A[ 1:-3, 2:-2] \
                               + W[3][2] * A[ 3:-1, 2:-2] \
                               + W[4][2] * A[ 4:  , 2:-2]
+            # TODO generalize views impl like this if possible
+            #B[r:-r,r:-r] += W[r][r] * A[r:-r,r:-r]
+            #for jj in range(-r,0):
+            #    B[r:-r,r:-r] += W[r][r+jj] * A[r:-r,r+jj:-r+jj]
+            #for jj in range(1,r+1):
+            #    B[r:-r,r:-r] += W[r][r+jj] * A[r:-r,r+jj:-r+jj]
+            #for ii in range(-r,0):
+            #    B[r:-r,r:-r] += W[r+ii][r] * A[ii,r:-r]
+            #for ii in range(1,r+1):
+            #    B[r:-r,r:-r] += W[r+ii][r] * A[ii,r:-r]
+            else: # fallback to bad implementation
+                for i in range(r,n-r):
+                    for j in range(r,n-r):
+                        B[i][j] += W[r][r] * A[i][j]
+                        for jj in range(-r,0):
+                            B[i][j] += W[r][r+jj] * A[i][j+jj]
+                        for jj in range(1,r+1):
+                            B[i][j] += W[r][r+jj] * A[i][j+jj]
+                        for ii in range(-r,0):
+                            B[i][j] += W[r+ii][r] * A[i+ii][j]
+                        for ii in range(1,r+1):
+                            B[i][j] += W[r+ii][r] * A[i+ii][j]
         else:
             for i in range(r,n-r):
                 for j in range(r,n-r):
