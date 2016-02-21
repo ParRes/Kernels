@@ -1,5 +1,8 @@
 sudo: false
 language: cpp
+# this is for Python, per http://danielnouri.org/notes/2012/11/23/use-apt-get-to-install-python-dependencies-for-travis-ci/
+virtualenv:
+  system_site_packages: true
 os:
   - linux
   - osx
@@ -76,7 +79,11 @@ matrix:
     # LLVM Fortran is not ready.
     - compiler: clang
       env: PRK_TARGET=allfortran
+    # Python does not use compiler so only test one of them per OS (GCC)
+    - compiler: clang
+      env: PRK_TARGET=allpython
   allow_failures:
+    - env: PRK_TARGET=allpython
     - env: PRK_TARGET=allgrappa
     # wget tarball fails right now
     - os: linux
@@ -122,31 +129,36 @@ addons:
     #- libboost_thread1.55-dev
     # This should provide OpenMP
     #- clang-3.8
+    - python-numpy
 env:
 #
 # VIM cheatsheet
 #  * comment out lines m to n by prepending #
 #    :m,n s/^/#/g
 #
+  - PRK_TARGET=allpython
   - PRK_TARGET=allserial
-#  - PRK_TARGET=allfortran
-#  - PRK_TARGET=allopenmp
-#  - PRK_TARGET=allmpi1
-#  - PRK_TARGET=allshmem
-#  - PRK_TARGET=allmpirma
-#  - PRK_TARGET=allmpishm
-#  - PRK_TARGET=allmpiomp
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=gupc
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=smp
-#    PRK_FLAGS="-Wc,-O3"
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=udp
-#    PRK_FLAGS="-Wc,-O3"
-#  # We do not need to test BUPC this thoroughly every time
+  - PRK_TARGET=allfortran
+  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allshmem
+  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpiomp
+  - PRK_TARGET=allampi
+  - PRK_TARGET=allfgmpi
+  - PRK_TARGET=allcharm++
+  - PRK_TARGET=allupc
+    UPC_IMPL=gupc
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=smp
+    PRK_FLAGS="-Wc,-O3"
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=udp
+    PRK_FLAGS="-Wc,-O3"
+   # We do not need to test BUPC this thoroughly every time
 #  - PRK_TARGET=allupc
 #    UPC_IMPL=bupc
 #    GASNET_CONDUIT=mpi
@@ -158,7 +170,7 @@ env:
 #  - PRK_TARGET=allampi
 #  - PRK_TARGET=allcharm++
 #  - PRK_TARGET=allfgmpi
-#  # Chapel kernels are not merged yet.  Activate these when they are.
+    # Chapel kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allchapel
 #    CHPL_COMM=none
 #  - PRK_TARGET=allchapel
