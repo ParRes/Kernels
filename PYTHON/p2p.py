@@ -116,10 +116,6 @@ def main():
     # ** Analyze and output results.
     # ********************************************************************
 
-    for i in range(1,m):
-        for j in range(1,n):
-            print 'AFTER',i,j,grid[i][j]
-
     epsilon=1.e-8
 
     # verify correctness, using top right value
