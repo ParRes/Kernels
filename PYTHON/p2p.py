@@ -69,8 +69,7 @@ def main():
 
     if len(sys.argv) != 4:
         print 'argument count = ', len(sys.argv)
-        print 'Usage: ./synch_p2p <# iterations> <first array dimension> <second array dimension>'
-        sys.exit()
+        sys.exit("Usage: ./synch_p2p <# iterations> <first array dimension> <second array dimension>")
 
     iterations = int(sys.argv[1])
     if iterations < 1:
@@ -102,9 +101,7 @@ def main():
             for j in range(1,n):
                 grid[i][j] = grid[i-1][j] + grid[i][j-1] - grid[i-1][j-1]
 
-        # copy top right corner value to bottom left corner to create dependency; we
-        # need a barrier to make sure the latest value is used. This also guarantees
-        # that the flags for the next iteration (if any) are not getting clobbered
+        # copy top right corner value to bottom left corner to create dependency
         grid[0][0] = -grid[m-1][n-1]
 
 

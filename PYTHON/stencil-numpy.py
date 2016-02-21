@@ -78,7 +78,7 @@ def main():
         sys.exit("Usage: ./stencil <# iterations> <array dimension> [<radius> <star/stencil>]")
 
     iterations = int(sys.argv[1])
-    if iterations < 0:
+    if iterations < 1:
         sys.exit("ERROR: iterations must be >= 1")
 
     n = int(sys.argv[2])
