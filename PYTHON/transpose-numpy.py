@@ -102,7 +102,7 @@ def main():
     # ********************************************************************
 
     C = numpy.fromfunction(lambda i,j: ((niter/2.0)+(n*j+i))*(niter+1.0), (n,n), dtype=float)
-    abserr = numpy.linalg.norm(B-C,ord=1) # ord=numpy.inf is another way to do it
+    abserr = numpy.linalg.norm(numpy.reshape(B-C,n*n),ord=1)
 
     epsilon=1.e-8
     nbytes = 2 * n**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.

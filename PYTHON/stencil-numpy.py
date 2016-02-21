@@ -62,6 +62,7 @@
 
 import sys
 import time
+import numpy
 
 def main():
 
@@ -109,7 +110,7 @@ def main():
     print 'Compact representation of stencil loop body'
     print 'Number of iterations = ', iterations
 
-    W = [[0.0 for x in range(2*r+1)] for x in range(2*r+1)]
+    W = numpy.zeros(((2*r+1),(2*r+1)))
     if pattern == 'star':
         stencil_size = 4*r+1
         for i in range(1,r+1):
@@ -130,15 +131,8 @@ def main():
             W[r+j][r+j]    = +1./(4*j*r)
             W[r-j][r-j]    = -1./(4*j*r)
 
-    A = [[0.0 for x in range(n)] for x in range(n)]
-    for i in range(n):
-        for j in range(n):
-            A[i][j] = float(i+j)
-
-    B = [[0.0 for x in range(n)] for x in range(n)]
-    for i in range(r,n-r):
-        for j in range(r,n-r):
-            B[i][j] = 0.0
+    A = numpy.fromfunction(lambda i,j: i+j, (n,n), dtype=float)
+    B = numpy.zeros((n,n))
 
     for k in range(iterations+1):
         # start timer after a warmup iteration
@@ -160,9 +154,7 @@ def main():
                         for jj in range(-r,r+1):
                             B[i][j] += W[r+ii][r+jj] * A[i+ii][j+jj]
 
-        for i in range(n):
-            for j in range(n):
-                A[i][j] += 1.0
+        A += 1.0
 
     t1 = time.clock()
     stencil_time = t1 - t0
@@ -171,13 +163,7 @@ def main():
     #* Analyze and output results.
     #******************************************************************************
 
-    norm = 0.0
-    for i in range(n):
-        for j in range(n):
-            norm += abs(B[i][j])
-
-    active_points = (n-2*r)**2
-    norm /= active_points
+    norm = numpy.linalg.norm(numpy.reshape(B,n*n),ord=1)/((n-2*r)**2)
 
     epsilon=1.e-8
 
