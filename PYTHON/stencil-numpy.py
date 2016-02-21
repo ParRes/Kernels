@@ -62,6 +62,7 @@
 
 import sys
 import time
+import numpy
 
 def main():
 
@@ -77,7 +78,7 @@ def main():
         sys.exit("Usage: ./stencil <# iterations> <array dimension> [<radius> <star/stencil>]")
 
     iterations = int(sys.argv[1])
-    if iterations < 1:
+    if iterations < 0:
         sys.exit("ERROR: iterations must be >= 1")
 
     n = int(sys.argv[2])
@@ -109,7 +110,7 @@ def main():
     print 'Compact representation of stencil loop body'
     print 'Number of iterations = ', iterations
 
-    W = [[0.0 for x in range(2*r+1)] for x in range(2*r+1)]
+    W = numpy.zeros(((2*r+1),(2*r+1)))
     if pattern == 'star':
         stencil_size = 4*r+1
         for i in range(1,r+1):
@@ -130,29 +131,46 @@ def main():
             W[r+j][r+j]    = +1./(4*j*r)
             W[r-j][r-j]    = -1./(4*j*r)
 
-    A = [[0.0 for x in range(n)] for x in range(n)]
-    for i in range(n):
-        for j in range(n):
-            A[i][j] = float(i+j)
-
-    B = [[0.0 for x in range(n)] for x in range(n)]
-    for i in range(r,n-r):
-        for j in range(r,n-r):
-            B[i][j] = 0.0
+    A = numpy.fromfunction(lambda i,j: i+j, (n,n), dtype=float)
+    B = numpy.zeros((n,n))
 
     for k in range(iterations+1):
         # start timer after a warmup iteration
         if k<1: t0 = time.clock()
 
         if pattern == 'star':
-            for i in range(r,n-r):
-                for j in range(r,n-r):
-                    for jj in range(-r,r+1):
-                        B[i][j] += W[r][r+jj] * A[i][j+jj]
-                    for ii in range(-r,0):
-                        B[i][j] += W[r+ii][r] * A[i+ii][j]
-                    for ii in range(1,r+1):
-                        B[i][j] += W[r+ii][r] * A[i+ii][j]
+            if r==2:
+                B[2:-2,2:-2] += W[2][2] * A[ 2:-2, 2:-2] \
+                              + W[2][0] * A[ 2:-2, 0:-4] \
+                              + W[2][1] * A[ 2:-2, 1:-3] \
+                              + W[2][3] * A[ 2:-2, 3:-1] \
+                              + W[2][4] * A[ 2:-2, 4:  ] \
+                              + W[0][2] * A[ 0:-4, 2:-2] \
+                              + W[1][2] * A[ 1:-3, 2:-2] \
+                              + W[3][2] * A[ 3:-1, 2:-2] \
+                              + W[4][2] * A[ 4:  , 2:-2]
+            # TODO generalize views impl like this if possible
+            #B[r:-r,r:-r] += W[r][r] * A[r:-r,r:-r]
+            #for jj in range(-r,0):
+            #    B[r:-r,r:-r] += W[r][r+jj] * A[r:-r,r+jj:-r+jj]
+            #for jj in range(1,r+1):
+            #    B[r:-r,r:-r] += W[r][r+jj] * A[r:-r,r+jj:-r+jj]
+            #for ii in range(-r,0):
+            #    B[r:-r,r:-r] += W[r+ii][r] * A[ii,r:-r]
+            #for ii in range(1,r+1):
+            #    B[r:-r,r:-r] += W[r+ii][r] * A[ii,r:-r]
+            else: # fallback to bad implementation
+                for i in range(r,n-r):
+                    for j in range(r,n-r):
+                        B[i][j] += W[r][r] * A[i][j]
+                        for jj in range(-r,0):
+                            B[i][j] += W[r][r+jj] * A[i][j+jj]
+                        for jj in range(1,r+1):
+                            B[i][j] += W[r][r+jj] * A[i][j+jj]
+                        for ii in range(-r,0):
+                            B[i][j] += W[r+ii][r] * A[i+ii][j]
+                        for ii in range(1,r+1):
+                            B[i][j] += W[r+ii][r] * A[i+ii][j]
         else:
             for i in range(r,n-r):
                 for j in range(r,n-r):
@@ -160,9 +178,7 @@ def main():
                         for jj in range(-r,r+1):
                             B[i][j] += W[r+ii][r+jj] * A[i+ii][j+jj]
 
-        for i in range(n):
-            for j in range(n):
-                A[i][j] += 1.0
+        A += 1.0
 
     t1 = time.clock()
     stencil_time = t1 - t0
@@ -171,11 +187,7 @@ def main():
     #* Analyze and output results.
     #******************************************************************************
 
-    norm = 0.0
-    for i in range(n):
-        for j in range(n):
-            norm += abs(B[i][j])
-
+    norm = numpy.linalg.norm(numpy.reshape(B,n*n),ord=1)
     active_points = (n-2*r)**2
     norm /= active_points
 
