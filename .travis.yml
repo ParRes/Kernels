@@ -1,5 +1,8 @@
 sudo: false
 language: cpp
+# this is for Python, per http://danielnouri.org/notes/2012/11/23/use-apt-get-to-install-python-dependencies-for-travis-ci/
+virtualenv:
+  system_site_packages: true
 os:
   - linux
   - osx
@@ -126,6 +129,7 @@ addons:
     #- libboost_thread1.55-dev
     # This should provide OpenMP
     #- clang-3.8
+    - python-numpy
 env:
 #
 # VIM cheatsheet
