@@ -114,22 +114,22 @@ def main():
     if pattern == 'star':
         stencil_size = 4*r+1
         for i in range(1,r+1):
-            W[r][r+i] = +1./(2*i*r)
-            W[r+i][r] = +1./(2*i*r)
-            W[r][r-i] = -1./(2*i*r)
-            W[r-i][r] = -1./(2*i*r)
+            W[r,r+i] = +1./(2*i*r)
+            W[r+i,r] = +1./(2*i*r)
+            W[r,r-i] = -1./(2*i*r)
+            W[r-i,r] = -1./(2*i*r)
 
     else:
         stencil_size = (2*r+1)**2
         for j in range(1,r+1):
             for i in range(-j+1,j):
-                W[r+i][r+j] = +1./(4*j*(2*j-1)*r)
-                W[r+i][r-j] = -1./(4*j*(2*j-1)*r)
-                W[r+j][r+i] = +1./(4*j*(2*j-1)*r)
-                W[r-j][r+i] = -1./(4*j*(2*j-1)*r)
+                W[r+i,r+j] = +1./(4*j*(2*j-1)*r)
+                W[r+i,r-j] = -1./(4*j*(2*j-1)*r)
+                W[r+j,r+i] = +1./(4*j*(2*j-1)*r)
+                W[r-j,r+i] = -1./(4*j*(2*j-1)*r)
 
-            W[r+j][r+j]    = +1./(4*j*r)
-            W[r-j][r-j]    = -1./(4*j*r)
+            W[r+j,r+j]    = +1./(4*j*r)
+            W[r-j,r-j]    = -1./(4*j*r)
 
     A = numpy.fromfunction(lambda i,j: i+j, (n,n), dtype=float)
     B = numpy.zeros((n,n))
@@ -151,7 +151,7 @@ def main():
                                 + W[4,2] * A[4:n-0,2:n-2]
             else:
                 b = n-r
-                B[r:b,r:b] += W[r][r] * A[r:b,r:b]
+                B[r:b,r:b] += W[r,r] * A[r:b,r:b]
                 for s in range(1,r+1):
                     B[r:b,r:b] += W[r,r-s] * A[r:b,r-s:b-s] \
                                 + W[r,r+s] * A[r:b,r+s:b+s] \
