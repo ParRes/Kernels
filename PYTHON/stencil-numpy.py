@@ -140,23 +140,23 @@ def main():
 
         if pattern == 'star':
             if r==2:
-                B[2:n-2,2:n-2] += W[2][2] * A[2:n-2,2:n-2] \
-                                + W[2][0] * A[2:n-2,0:n-4] \
-                                + W[2][1] * A[2:n-2,1:n-3] \
-                                + W[2][3] * A[2:n-2,3:n-1] \
-                                + W[2][4] * A[2:n-2,4:n-0] \
-                                + W[0][2] * A[0:n-4,2:n-2] \
-                                + W[1][2] * A[1:n-3,2:n-2] \
-                                + W[3][2] * A[3:n-1,2:n-2] \
-                                + W[4][2] * A[4:n-0,2:n-2]
+                B[2:n-2,2:n-2] += W[2,2] * A[2:n-2,2:n-2] \
+                                + W[2,0] * A[2:n-2,0:n-4] \
+                                + W[2,1] * A[2:n-2,1:n-3] \
+                                + W[2,3] * A[2:n-2,3:n-1] \
+                                + W[2,4] * A[2:n-2,4:n-0] \
+                                + W[0,2] * A[0:n-4,2:n-2] \
+                                + W[1,2] * A[1:n-3,2:n-2] \
+                                + W[3,2] * A[3:n-1,2:n-2] \
+                                + W[4,2] * A[4:n-0,2:n-2]
             elif r>0:
                 B[r:n-r,r:n-r] += W[r][r] * A[r:n-r,r:n-r]
                 for s in range(1,r+1):
                     b = n-r
-                    B[r:n-r,r:n-r] += W[r][r-s] * A[r:b,r-s:b-s] \
-                                    + W[r][r+s] * A[r:b,r+s:b+s] \
-                                    + W[r-s][r] * A[r-s:b-s,r:b] \
-                                    + W[r+s][r] * A[r+s:b+s,r:b]
+                    B[r:n-r,r:n-r] += W[r,r-s] * A[r:b,r-s:b-s] \
+                                    + W[r,r+s] * A[r:b,r+s:b+s] \
+                                    + W[r-s,r] * A[r-s:b-s,r:b] \
+                                    + W[r+s,r] * A[r+s:b+s,r:b]
             else: # unreachable but preserved for debugging purposes
                 for i in range(r,n-r):
                     for j in range(r,n-r):
