@@ -76,8 +76,11 @@ matrix:
     # LLVM Fortran is not ready.
     - compiler: clang
       env: PRK_TARGET=allfortran
+    # Python does not use compiler so only test one of them per OS (GCC)
+    - compiler: clang
+      env: PRK_TARGET=allpython
   allow_failures:
-    - PRK_TARGET=allpython
+    - env: PRK_TARGET=allpython
     - env: PRK_TARGET=allgrappa
     # wget tarball fails right now
     - os: linux
