@@ -57,6 +57,7 @@
 
 import sys
 import time
+import numpy
 
 def main():
 
@@ -86,11 +87,9 @@ def main():
     print 'Grid sizes               = ', m, n
     print 'Number of iterations     = ', iterations
 
-    grid = [[0.0 for x in range(n)] for x in range(m)]
-    for j in range(n):
-        grid[0][j] = float(j)
-    for i in range(m):
-        grid[i][0] = float(i)
+    grid = numpy.zeros((m,n))
+    grid[0,:] = range(n)
+    grid[:,0] = range(m)
 
     for k in range(iterations+1):
         # start timer after a warmup iteration
@@ -102,7 +101,7 @@ def main():
                 grid[i][j] = grid[i-1][j] + grid[i][j-1] - grid[i-1][j-1]
 
         # copy top right corner value to bottom left corner to create dependency
-        grid[0][0] = -grid[m-1][n-1]
+        grid[0,0] = -grid[m-1,n-1]
 
 
     t1 = time.clock()
@@ -116,12 +115,12 @@ def main():
 
     # verify correctness, using top right value
     corner_val = float((iterations+1)*(n+m-2))
-    if (abs(grid[m-1][n-1] - corner_val)/corner_val) < epsilon:
+    if (abs(grid[m-1,n-1] - corner_val)/corner_val) < epsilon:
         print 'Solution validates'
         avgtime = pipeline_time/iterations
         print 'Rate (MFlops/s): ',1.e-6*2*(m-1)*(n-1)/avgtime,' Avg time (s): ',avgtime
     else:
-        print 'ERROR: checksum ',grid[m-1][n-1],' does not match verification value', corner_val
+        print 'ERROR: checksum ',grid[m-1,n-1],' does not match verification value', corner_val
         sys.exit()
 
 

@@ -45,7 +45,7 @@
 #          transpose worked and timing statistics.
 #
 # HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-#          Converted to Python by Jeff Hammond, Fortran 2016.
+#          Converted to Python by Jeff Hammond, February 2016.
 # *******************************************************************
 
 import sys
@@ -62,8 +62,7 @@ def main():
 
     if len(sys.argv) != 3:
         print 'argument count = ', len(sys.argv)
-        print 'Usage: ./transpose <# iterations> <matrix order>'
-        sys.exit()
+        sys.exit("Usage: ./transpose <# iterations> <matrix n>")
 
     iterations = int(sys.argv[1])
     if iterations < 1:
@@ -107,8 +106,8 @@ def main():
     # ** Analyze and output results.
     # ********************************************************************
 
-    abserr = 0.0;
     addit = (iterations * (iterations+1))/2
+    abserr = 0.0;
     for i in range(order):
         for j in range(order):
             temp    = (order*j+i) * (iterations+1)
@@ -121,8 +120,8 @@ def main():
         avgtime = trans_time/iterations
         print 'Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime
     else:
-        print 'ERROR: Aggregate squared error ',abserr, 'exceeds threshold ',epsilon
-        sys.exit()
+        print 'error ',abserr, ' exceeds threshold ',epsilon
+        sys.exit("ERROR: solution did not validate")
 
 
 if __name__ == '__main__':
