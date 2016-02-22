@@ -83,11 +83,11 @@ matrix:
     - compiler: clang
       env: PRK_TARGET=allpython
   allow_failures:
+    # GUPC will fail when libnuma cannot be acquired via apt
+    - env: PRK_TARGET=allupc
+    # will fail if numpy package cannot be acquired via apt
     - env: PRK_TARGET=allpython
     - env: PRK_TARGET=allgrappa
-    # wget tarball fails right now
-    - os: linux
-      env: PRK_TARGET=allfgmpi
 addons:
   apt:
     sources:
@@ -97,6 +97,11 @@ addons:
     # clang-3.8 comes from this
     #- llvm-toolchain-precise
     packages:
+    # Python Numpy only
+    - python-numpy
+    # Required by GUPC
+    - libnuma-dev
+    # Grappa and HPX use CMake
     - cmake
     - gcc-4.8
     - g++-4.8
@@ -107,8 +112,8 @@ addons:
     - gcc-5
     - g++-5
     - gfortran-5
-    # Required by GUPC
-    - libnuma-dev
+    # This should provide OpenMP
+    #- clang-3.8
     # Boost is for Grappa and HPX-3 - reactivate with them
     # Grappa needs these (according to their .travis.yml)
     #- libboost-date-time1.55-dev
@@ -127,9 +132,6 @@ addons:
     #- libboost_chrono1.55-dev
     #- libboost_program_options1.55-dev
     #- libboost_thread1.55-dev
-    # This should provide OpenMP
-    #- clang-3.8
-    - python-numpy
 env:
 #
 # VIM cheatsheet
