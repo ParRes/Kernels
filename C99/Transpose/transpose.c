@@ -140,7 +140,7 @@ int main(int argc, char * argv[])
 
   double trans_time = 0.0;
 
-  OMP_PARALLEL(shared(A,B))
+  OMP_PARALLEL()
   {
       OMP_FOR()
       for (prk_index_t j=0; j<order; j++) {
@@ -164,7 +164,6 @@ int main(int argc, char * argv[])
           OMP_FOR()
           for (prk_index_t it=0; it<order; it+=tile_size) {
             for (prk_index_t jt=0; jt<order; jt+=tile_size) {
-              OMP_SIMD()
               for (prk_index_t i=it; i<MIN(order,it+tile_size); i++) {
                 OMP_SIMD()
                 for (prk_index_t j=jt; j<MIN(order,jt+tile_size); j++) {

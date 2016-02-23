@@ -182,7 +182,7 @@ int main(int argc, char * argv[])
 
   double stencil_time = 0.0; /* silence compiler warning */
 
-  OMP_PARALLEL(shared(in,out) firstprivate(weight))
+  OMP_PARALLEL(firstprivate(weight))
   {
     /* initialize the input and output arrays */
     OMP_FOR()
