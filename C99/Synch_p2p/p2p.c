@@ -58,7 +58,7 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
            C99-ification by Jeff Hammond, February 2016.
 *******************************************************************/
 
-#include <par-res-kern_general.h>
+#include <prk_util.h>
 
 #include <math.h> /* fabs */
 

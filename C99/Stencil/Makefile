@@ -1,70 +1,37 @@
-include ../../common/SERIAL.defs
+PROGRAM=stencil
 
-##### User configurable options #####
-#uncomment any of the following flags (or change values) to change defaults
-
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
-#OPTFLAGS=-axCORE-AVX2 -O3 -restrict
-#description: change above into something that is a decent optimization on you system
-
-#RESTRICTFLAG = -DRESTRICT_KEYWORD
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers
+include ../../common/FORTRAN.defs
+include ../../common/PRKVERSION
 
 ifndef RADIUS
   RADIUS=2
 endif
-#description: default radius of filter to be applied is 2
-
-DOUBLEFLAG = -DDOUBLE
-#description: default data type is single precision
-
-ifndef LOOPGEN
-  LOOPGEN=0
-endif
-#description: default is compact (non-expanded) form of loop body
 
 STARFLAG   = -DSTAR
-#description: default stencil is compact (dense, square)
 
-#DEBUGFLAG   = -DVERBOSE
-#description: default diagnostic style is silent
+CFLAGS  = $(DEFAULT_OPT_FLAGS)
+CFLAGS += -DPRKVERSION=$(CPRKVERSION)
+CFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
+CFLAGS += -I..
 
-USERFLAGS    = 
-#description: parameter to specify optional flags
+.PHONY: all clean run
 
-#set the following variables for custom libraries and/or other objects
-EXTOBJS      = 
-LIBS         =
-LIBPATHS     = 
-INCLUDEPATHS = 
+all: $(PROGRAM) $(PROGRAM)-omp
 
-### End User configurable options ###
-LOOPGENFLAG= -DLOOPGEN=$(LOOPGEN)
-RADIUSFLAG  = -DRADIUS=$(RADIUS)
+$(PROGRAM): $(PROGRAM).c
+	$(CC) $(CFLAGS) $< -o $@
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) \
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)  \
-               $(LOOPGENFLAG)
-PROGRAM     = stencil
-OBJS        = $(PROGRAM).o $(COMOBJS) 
+$(PROGRAM)-omp: $(PROGRAM).c
+	$(CC) $(CFLAGS) $(OPENMPFLAG) $< -o $@
 
-include ../../common/make.common
+run: $(PROGRAM)
+	$(PROGRAM) 10 4000 32
 
-$(PROGRAM).o: loop_body_star.incl loop_body_compact.incl
+clean:
+	-rm -f *.o
+	-rm -f *.optrpt
+	-rm -f *.dwarf
+	-rm -rf *.dSYM
+	-rm -f $(PROGRAM)
+	-rm -f $(PROGRAM)-omp
 
-loop_body_star.incl:
-	@echo "#########################################################################"
-	@echo "##### No file loop_body_star.incl -- invoking loop_gen to create it #####"
-	@echo "#########################################################################"
-	../../common/Stencil/loop_gen $(RADIUS) 1
-
-loop_body_compact.incl:
-	@echo "############################################################################"
-	@echo "##### No file loop_body_compact.incl -- invoking loop_gen to create it #####"
-	@echo "############################################################################"
-	../../common/Stencil/loop_gen $(RADIUS) 0
-
-veryclean:
-	@rm -f loop_body_star.incl loop_body_compact.incl
-	make clean

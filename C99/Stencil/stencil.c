@@ -59,7 +59,7 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
   
 **********************************************************************************/
 
-#include <par-res-kern_general.h>
+#include <prk_util.h>
 
 #ifdef DOUBLE
 typedef double prk_float_t;

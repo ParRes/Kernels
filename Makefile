@@ -290,6 +290,9 @@ clean:
 	cd FORTRAN/Transpose;       $(MAKE) clean
 	cd FORTRAN/Synch_p2p;       $(MAKE) clean
 	cd FORTRAN/Stencil;         $(MAKE) clean
+	cd C99/Transpose;           $(MAKE) clean
+	cd C99/Synch_p2p;           $(MAKE) clean
+	cd C99/Stencil;             $(MAKE) clean
 	rm -f stats.json
 
 veryclean: clean

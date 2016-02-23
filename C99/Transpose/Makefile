@@ -1,32 +1,35 @@
-include ../../common/SERIAL.defs
+PROGRAM=transpose
 
-##### User configurable options #####
+include ../../common/FORTRAN.defs
+include ../../common/PRKVERSION
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
-#description: change above into something that is a decent optimization on you system
+CFLAGS  = $(DEFAULT_OPT_FLAGS)
+CFLAGS += -DPRKVERSION=$(CPRKVERSION)
+CFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
+CFLAGS += -I..
 
-#uncomment any of the following flags (and change values) to change defaults
+.PHONY: all clean run
 
-#RESTRICTFLAG = -DRESTRICT_KEYWORD
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers
+all: $(PROGRAM) $(PROGRAM)-omp
 
-#DEBUGFLAG   = -DVERBOSE
-#description: default diagnostic style is silent
+$(PROGRAM): $(PROGRAM).c
+	$(CC) $(CFLAGS) $< -o $@
 
-USERFLAGS    =
-#description: parameter to specify optional flags
+$(PROGRAM)-omp: $(PROGRAM).c
+	$(CC) $(CFLAGS) $(OPENMPFLAG) $< -o $@
 
-#set the following variables for custom libraries and/or other objects
-EXTOBJS      = 
-LIBS         =
-LIBPATHS     = 
-INCLUDEPATHS = 
+$(PROGRAM)-pretty: $(PROGRAM)-pretty.c
+	$(CC) $(CFLAGS) $< -o $@
 
-### End User configurable options ###
+run: $(PROGRAM)
+	$(PROGRAM) 10 4000 32
 
-TUNEFLAGS    = $(DEBUGFLAG) $(USERFLAGS) $(RESTRICTFLAG)
-PROGRAM      = transpose
-OBJS         = $(PROGRAM).o $(COMOBJS)
+clean:
+	-rm -f *.o
+	-rm -f *.i90
+	-rm -f *.optrpt
+	-rm -f *.dwarf
+	-rm -rf *.dSYM
+	-rm -f $(PROGRAM)
+	-rm -f $(PROGRAM)-omp
 
-include ../../common/make.common

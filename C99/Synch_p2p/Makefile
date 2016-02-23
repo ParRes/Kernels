@@ -1,28 +1,31 @@
-include ../../common/SERIAL.defs
-##### User configurable options #####
+PROGRAM=p2p
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
-#description: change above into something that is a decent optimization on you system
+include ../../common/FORTRAN.defs
+include ../../common/PRKVERSION
 
-#uncomment any of the following flags (and change values) to change defaults
+CFLAGS  = $(DEFAULT_OPT_FLAGS)
+CFLAGS += -DPRKVERSION=$(CPRKVERSION)
+CFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
+CFLAGS += -I..
 
-#DEBUGFLAG   = -DVERBOSE
-#description: default diagnostic style is silent
+.PHONY: all clean run
 
-USERFLAGS    = 
-#description: parameter to specify optional flags
+all: $(PROGRAM) $(PROGRAM)-omp
 
-#set the following variables for custom libraries and/or other objects
-EXTOBJS      = 
-LIBS         =
-LIBPATHS     = 
-INCLUDEPATHS = 
+$(PROGRAM): $(PROGRAM).c
+	$(CC) $(CFLAGS) $< -o $@
 
-### End User configurable options ###
+$(PROGRAM)-omp: $(PROGRAM).c
+	$(CC) $(CFLAGS) $(OPENMPFLAG) $< -o $@
 
-TUNEFLAGS   = $(DEBUGFLAG) $(USERFLAGS) $(MEMORY_FLAG)
-PROGRAM     = p2p
-# objects below are the default, used by "clean," if invoked
-OBJS        = $(PROGRAM).o $(COMOBJS)
+run: $(PROGRAM)
+	$(PROGRAM) 10 4000 32
 
-include ../../common/make.common
+clean:
+	-rm -f *.o
+	-rm -f *.optrpt
+	-rm -f *.dwarf
+	-rm -rf *.dSYM
+	-rm -f $(PROGRAM)
+	-rm -f $(PROGRAM)-omp
+
