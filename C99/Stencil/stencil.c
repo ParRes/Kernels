@@ -60,15 +60,17 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 **********************************************************************************/
 
 #include <prk_util.h>
+#include <prk_openmp.h>
 
 #include <tgmath.h>
 
 #ifdef DOUBLE
 typedef double prk_float_t;
-const prk_float_t epsilon = 1.0e-8;
+const double epsilon = 1.0e-8;
 #else
 typedef float prk_float_t;
-const prk_float_t epsilon = 1.0e-4f;
+/* error computed in double to avoid round-off issues in reduction */
+const double epsilon = 1.0e-4;
 #endif
 
 const int radius = RADIUS;
@@ -155,6 +157,9 @@ int main(int argc, char * argv[])
   /* interior of grid with respect to stencil */
   size_t active_points = ((size_t)(n-2*radius))*((size_t)(n-2*radius));
 
+#ifdef _OPENMP
+  printf("Number of threads     = %d\n", omp_get_max_threads());
+#endif
   printf("Grid size            = %d\n", n);
   printf("Radius of stencil    = %d\n", radius);
 #ifdef STAR
@@ -175,92 +180,120 @@ int main(int argc, char * argv[])
   }
   printf("Number of iterations = %d\n", iterations);
 
-  /* intialize the input and output arrays */
-  for (int i=0; i<n; i++) {
-    for (int j=0; j<n; j++) {
-      in[i][j] = (prk_float_t)i + (prk_float_t)j;
-    }
-  }
-  {
-    const prk_float_t zero = (prk_float_t)0;
-    for (int i=radius; i<n-radius; i++) {
-      for (int j=radius; j<n-radius; j++) {
-        out[i][j] = zero;
-      }
-    }
-  }
-
   double stencil_time = 0.0; /* silence compiler warning */
 
-  for (int iter = 0; iter<=iterations; iter++) {
-
-    /* start timer after a warmup iteration */
-    if (iter == 1)  stencil_time = wtime();
-
-    /* Apply the stencil operator */
-    if ((tilesize==1) || (tilesize==n)) {
+  OMP_PARALLEL(shared(in,out) firstprivate(weight))
+  {
+    /* initialize the input and output arrays */
+    OMP_FOR()
+    for (int i=0; i<n; i++) {
+      OMP_SIMD()
+      for (int j=0; j<n; j++) {
+        in[i][j] = (prk_float_t)i + (prk_float_t)j;
+      }
+    }
+    {
+      const prk_float_t zero = (prk_float_t)0;
+      OMP_FOR()
       for (int i=radius; i<n-radius; i++) {
+        OMP_SIMD()
         for (int j=radius; j<n-radius; j++) {
-          #ifdef STAR
-              for (int jj=-radius; jj<=radius; jj++) {
-                out[i][j] += weight[radius][radius+jj]*in[i][j+jj];
-              }
-              for (int ii=-radius; ii<0; ii++) {
-                out[i][j] += weight[radius+ii][radius]*in[i+ii][j];
-              }
-              for (int ii=1; ii<=radius; ii++) {
-                out[i][j] += weight[radius+ii][radius]*in[i+ii][j];
-              }
-          #else
-              for (int ii=-radius; ii<=radius; ii++) {
-                for (int jj=-radius; jj<=radius; jj++) {
-                  out[i][j] += weight[radius+ii][radius+jj]*in[i+ii][j+jj];
-                }
-              }
-          #endif
+          out[i][j] = zero;
         }
       }
-    } else {
-      for (int it=radius; it<n-radius; it+=tilesize) {
-        for (int jt=radius; jt<n-radius; jt+=tilesize) {
-          for (int i=it; i<MIN(n-radius,it+tilesize); i++) {
-            for (int j=jt; j<MIN(n-radius,jt+tilesize); j++) {
-              #ifdef STAR
+    }
+
+    for (int iter = 0; iter<=iterations; iter++) {
+
+      /* start timer after a warmup iteration */
+      if (iter==1) {
+        OMP_BARRIER
+        OMP_MASTER
+        { stencil_time = wtime(); }
+      }
+
+      /* Apply the stencil operator */
+      if ((tilesize==1) || (tilesize==n)) {
+        OMP_FOR()
+        for (int i=radius; i<n-radius; i++) {
+          for (int j=radius; j<n-radius; j++) {
+            #ifdef STAR
+                OMP_SIMD()
+                for (int jj=-radius; jj<=radius; jj++) {
+                  out[i][j] += weight[radius][radius+jj]*in[i][j+jj];
+                }
+                OMP_SIMD()
+                for (int ii=-radius; ii<0; ii++) {
+                  out[i][j] += weight[radius+ii][radius]*in[i+ii][j];
+                }
+                OMP_SIMD()
+                for (int ii=1; ii<=radius; ii++) {
+                  out[i][j] += weight[radius+ii][radius]*in[i+ii][j];
+                }
+            #else
+                OMP_SIMD()
+                for (int ii=-radius; ii<=radius; ii++) {
+                  OMP_SIMD()
+                  for (int jj=-radius; jj<=radius; jj++) {
+                    out[i][j] += weight[radius+ii][radius+jj]*in[i+ii][j+jj];
+                  }
+                }
+            #endif
+          }
+        }
+      } else {
+        OMP_FOR()
+        for (int it=radius; it<n-radius; it+=tilesize) {
+          for (int jt=radius; jt<n-radius; jt+=tilesize) {
+            for (int i=it; i<MIN(n-radius,it+tilesize); i++) {
+              for (int j=jt; j<MIN(n-radius,jt+tilesize); j++) {
+                #ifdef STAR
+                  OMP_SIMD()
                   for (int jj=-radius; jj<=radius; jj++) {
                     out[i][j] += weight[radius][radius+jj]*in[i][j+jj];
                   }
+                  OMP_SIMD()
                   for (int ii=-radius; ii<0; ii++) {
                     out[i][j] += weight[radius+ii][radius]*in[i+ii][j];
                   }
+                  OMP_SIMD()
                   for (int ii=1; ii<=radius; ii++) {
                     out[i][j] += weight[radius+ii][radius]*in[i+ii][j];
                   }
-              #else
+                #else
+                  OMP_SIMD()
                   for (int ii=-radius; ii<=radius; ii++) {
+                    OMP_SIMD()
                     for (int jj=-radius; jj<=radius; jj++) {
                       out[i][j] += weight[radius+ii][radius+jj]*in[i+ii][j+jj];
                     }
                   }
-              #endif
+                #endif
+              }
             }
           }
         }
       }
-    }
 
-    /* add constant to solution to force refresh of neighbor data, if any       */
-    {
-        const prk_float_t one = (prk_float_t)1;
-        for (int i=0; i<n; i++) {
-          for (int j=0; j<n; j++) {
-            in[i][j] += one;
+      /* add constant to solution to force refresh of neighbor data, if any       */
+      {
+          const prk_float_t one = (prk_float_t)1;
+          OMP_FOR()
+          for (int i=0; i<n; i++) {
+            OMP_SIMD()
+            for (int j=0; j<n; j++) {
+              in[i][j] += one;
+            }
           }
-        }
-    }
+      }
 
-  } /* end of iterations */
+    } /* end of iterations */
 
-  stencil_time = wtime() - stencil_time;
+    OMP_BARRIER
+    OMP_MASTER
+    { stencil_time = wtime() - stencil_time; }
+
+  } /* end OMP_PARALLEL */
 
   prk_free(in);
 
@@ -269,36 +302,41 @@ int main(int argc, char * argv[])
   ********************************************************************************/
 
   /* compute L1 norm in parallel */
-  prk_float_t norm = (prk_float_t)0; /* L1 norm of solution */
-  for (int i=radius; i<n-radius; i++) {
-    for (int j=radius; j<n-radius; j++) {
-      norm += (prk_float_t)fabs(out[i][j]);
+  double norm = 0.0; /* the reduction will not be accurate enough to validate
+                        if single precision is used here */
+  OMP_PARALLEL(shared(norm))
+  {
+    OMP_FOR(reduction(+:norm))
+    for (int i=radius; i<n-radius; i++) {
+      for (int j=radius; j<n-radius; j++) {
+        norm += (double)fabs(out[i][j]);
+      }
     }
-  }
+  } /* end OMP_PARALLEL */
 
   norm /= active_points;
 
   prk_free(out);
 
   /* verify correctness */
-  prk_float_t reference_norm = (prk_float_t) 2*(iterations+1);
+  double reference_norm = 2.*(iterations+1.);
   if (fabs(norm-reference_norm) > epsilon) {
     printf("ERROR: L1 norm = %lf, Reference L1 norm = %lf\n",
-           (double)norm, (double)reference_norm);
+           norm, reference_norm);
     exit(EXIT_FAILURE);
   }
   else {
     printf("Solution validates\n");
 #ifdef VERBOSE
     printf("Reference L1 norm = %lf, L1 norm = %lf\n",
-           (double)reference_norm, (double)norm);
+           reference_norm, norm);
 #endif
   }
 
   size_t flops = (2L*(size_t)stencil_size+1L) * active_points;
   double avgtime = stencil_time/iterations;
   printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
-         1.0e-6 * (double)flops/avgtime, (double)avgtime);
+         1.0e-6 * (double)flops/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 
