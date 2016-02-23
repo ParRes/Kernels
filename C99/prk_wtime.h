@@ -30,37 +30,30 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
-/* Variable length arrays (VLA) were required in C99 but made optional
- * in C11, so it is possible that a compiler does not support them,
- * although such a compiler does not support C99, which we require
- * in other ways.
- **/
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ < 199901L)
-#error You need a C99 compiler.
-#endif
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && defined(__STDC_NO_VLA__)
-#error Your C11 compiler does not support VLA.
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
 
-/* Do not include math.h here, because some PRK might want
- * to use tgmath.h instead, and the two are not compatible. */
-
-/* This is not ISO C.  It is Linux/Unix. */
-#include <unistd.h>
-
-#ifndef MIN
-#define MIN(x,y) ((x)<(y)?(x):(y))
-#endif
-#ifndef MAX
-#define MAX(x,y) ((x)>(y)?(x):(y))
+/* This was pulled in from common/wtime.c */
+#if defined(_OPENMP)
+#include <omp.h>
+#elif defined(MPI)
+#include <mpi.h>
+#else
+#include <sys/time.h>
 #endif
 
-#include <prk_openmp.h>
-#include <prk_wtime.h>
-#include <prk_malloc.h>
+static inline double wtime(void)
+{
+  double time_seconds = 0.0;
+#if defined(_OPENMP)
+  time_seconds = omp_get_wtime();
+#elif defined(MPI)
+  time_seconds = MPI_Wtime();
+#else
+  struct timeval  time_data; /* seconds since 0 GMT */
+  gettimeofday(&time_data,NULL);
+  time_seconds  = (double) time_data.tv_sec;
+  time_seconds += (double) time_data.tv_usec * 1.0e-6; /* to convert microsecs to secs */
+#endif
+  return time_seconds;
+}

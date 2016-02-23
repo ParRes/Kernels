@@ -65,18 +65,6 @@ HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 
 #include <math.h>
 
-/* Variable length arrays (VLA) were required in C99 but made optional
- * in C11, so it is possible that a compiler does not support them,
- * although such a compiler does not support C99, which we require
- * in other ways.
- **/
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ < 199900L) /* FIXME: 199900L */
-#error You need a C99 compiler.
-#endif
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && defined(__STDC_NO_VLA__)
-#error Your C11 compiler does not support VLA.
-#endif
-
 int main(int argc, char * argv[])
 {
   /*********************************************************************
