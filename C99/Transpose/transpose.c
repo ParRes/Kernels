@@ -95,8 +95,8 @@ int main(int argc, char * argv[])
     exit(EXIT_FAILURE);
   }
 
-  prk_index_t order = atol(argv[2]); /* order of a the matrix */
-  if (order < 0) {
+  prk_index_t order = atoi(argv[2]); /* order of a the matrix */
+  if (order <= 0) {
     printf("ERROR: Matrix Order must be greater than 0 : %llu \n", (long long unsigned)order);
     exit(EXIT_FAILURE);
   }

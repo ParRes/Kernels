@@ -84,8 +84,8 @@ int main(int argc, char * argv[])
     exit(EXIT_FAILURE);
   }
 
-  int order = atol(argv[2]); /* order of a the matrix */
-  if (order < 0) {
+  int order = atoi(argv[2]); /* order of a the matrix */
+  if (order <= 0) {
     printf("ERROR: Matrix Order must be greater than 0 : %d \n", order);
     exit(EXIT_FAILURE);
   }
