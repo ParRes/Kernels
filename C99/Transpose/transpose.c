@@ -65,6 +65,12 @@ HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 
 #include <math.h>
 
+#ifdef PRK_LOOP_INDEX_TYPE
+typedef PRK_LOOP_INDEX_TYPE prk_index_t;
+#else
+typedef int prk_index_t;
+#endif
+
 int main(int argc, char * argv[])
 {
   /*********************************************************************
@@ -89,13 +95,13 @@ int main(int argc, char * argv[])
     exit(EXIT_FAILURE);
   }
 
-  int order = atol(argv[2]); /* order of a the matrix */
+  prk_index_t order = atol(argv[2]); /* order of a the matrix */
   if (order < 0) {
-    printf("ERROR: Matrix Order must be greater than 0 : %d \n", order);
+    printf("ERROR: Matrix Order must be greater than 0 : %llu \n", (long long unsigned)order);
     exit(EXIT_FAILURE);
   }
 
-  int tile_size = 32; /* default tile size for tiling of local transpose */
+  prk_index_t tile_size = 32; /* default tile size for tiling of local transpose */
   if (argc == 4) {
       tile_size = atoi(argv[3]);
   }
@@ -124,9 +130,9 @@ int main(int argc, char * argv[])
 #ifdef _OPENMP
   printf("Number of threads     = %d\n", omp_get_max_threads());
 #endif
-  printf("Matrix order          = %d\n", order);
+  printf("Matrix order          = %llu\n", (long long unsigned)order);
   if (tile_size < order) {
-      printf("Tile size             = %d\n", tile_size);
+      printf("Tile size             = %llu\n", (long long unsigned)tile_size);
   } else {
       printf("Untiled\n");
   }
@@ -137,9 +143,9 @@ int main(int argc, char * argv[])
   OMP_PARALLEL(shared(A,B))
   {
       OMP_FOR()
-      for (int j=0; j<order; j++) {
+      for (prk_index_t j=0; j<order; j++) {
         OMP_SIMD()
-        for (int i=0; i<order; i++) {
+        for (prk_index_t i=0; i<order; i++) {
           const double val = (double) ((size_t)order*(size_t)j+(size_t)i);
           A[j][i] = val;
           B[j][i] = 0.0;
@@ -156,12 +162,12 @@ int main(int argc, char * argv[])
         /* transpose the  matrix */
         if (tile_size < order) {
           OMP_FOR()
-          for (int it=0; it<order; it+=tile_size) {
-            for (int jt=0; jt<order; jt+=tile_size) {
+          for (prk_index_t it=0; it<order; it+=tile_size) {
+            for (prk_index_t jt=0; jt<order; jt+=tile_size) {
               OMP_SIMD()
-              for (int i=it; i<MIN(order,it+tile_size); i++) {
+              for (prk_index_t i=it; i<MIN(order,it+tile_size); i++) {
                 OMP_SIMD()
-                for (int j=jt; j<MIN(order,jt+tile_size); j++) {
+                for (prk_index_t j=jt; j<MIN(order,jt+tile_size); j++) {
                   B[i][j] += A[j][i];
                   A[j][i] += 1.0;
                 }
@@ -170,9 +176,9 @@ int main(int argc, char * argv[])
           }
         } else {
           OMP_FOR()
-          for (int i=0;i<order; i++) {
+          for (prk_index_t i=0;i<order; i++) {
             OMP_SIMD()
-            for (int j=0;j<order;j++) {
+            for (prk_index_t j=0;j<order;j++) {
               B[i][j] += A[j][i];
               A[j][i] += 1.0;
             }
@@ -194,8 +200,8 @@ int main(int argc, char * argv[])
   OMP_PARALLEL(shared(abserr))
   {
       OMP_FOR(reduction(+:abserr))
-      for (int j=0;j<order;j++) {
-        for (int i=0;i<order; i++) {
+      for (prk_index_t j=0;j<order;j++) {
+        for (prk_index_t i=0;i<order; i++) {
           const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
           abserr += fabs(B[j][i] - ((double)offset_ij*(iterations+1.)+addit));
         }
