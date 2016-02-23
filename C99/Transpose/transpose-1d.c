@@ -64,39 +64,32 @@ HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 
 #include <math.h>
 
-/* Variable length arrays (VLA) were required in C99 but made optional
- * in C11, so it is possible that a compiler does not support them,
- * although such a compiler does not support C99, which we require
- * in other ways.
- **/
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && defined(__STDC_NO_VLA__)
-#error Your C11 compiler does not support VLA.
-#endif
-
 static inline void prk_transpose_fill(int order,
-                                      double (* const restrict A)[order],
-                                      double (* const restrict B)[order])
+                                      double * const restrict A,
+                                      double * const restrict B)
 {
   for (int j=0; j<order; j++) {
     for (int i=0; i<order; i++) {
-      const double val = (double) ((size_t)order*(size_t)j+(size_t)i);
-      A[j][i] = val;
-      B[j][i] = 0.0;
+      const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+      A[offset_ji] = (double)offset_ji;
+      B[offset_ji] = 0.0;
     }
   }
 }
 
 static inline void prk_transpose_doit(int order, int tile_size,
-                                      double (* const restrict A)[order],
-                                      double (* const restrict B)[order])
+                                      double * const restrict A,
+                                      double * const restrict B)
 {
   if (tile_size < order) {
     for (int it=0; it<order; it+=tile_size) {
       for (int jt=0; jt<order; jt+=tile_size) {
         for (int i=it; i<MIN(order,it+tile_size); i++) {
           for (int j=jt; j<MIN(order,jt+tile_size); j++) {
-            B[i][j] += A[j][i];
-            A[j][i] += 1.0;
+            const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
+            const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+            B[offset_ij] += A[offset_ji];
+            A[offset_ji] += 1.0;
           }
         }
       }
@@ -104,22 +97,25 @@ static inline void prk_transpose_doit(int order, int tile_size,
   } else {
     for (int i=0;i<order; i++) {
       for (int j=0;j<order;j++) {
-        B[i][j] += A[j][i];
-        A[j][i] += 1.0;
+        const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
+        const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+        B[offset_ij] += A[offset_ji];
+        A[offset_ji] += 1.0;
       }
     }
   }
 }
 
 static inline double prk_transpose_check(int order, int iterations,
-                                         double (* const restrict B)[order])
+                                         double * const restrict B)
 {
   double abserr = 0.0;
   const double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   for (int j=0;j<order;j++) {
     for (int i=0;i<order; i++) {
       const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
-      abserr += fabs(B[j][i] - ((double)offset_ij*(iterations+1.)+addit));
+      const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+      abserr += fabs(B[offset_ji] - ((double)offset_ij*(iterations+1.)+addit));
     }
   }
   return abserr;
@@ -166,12 +162,12 @@ int main(int argc, char ** argv)
 
   size_t bytes = (size_t)order * (size_t)order * sizeof(double);
 
-  double (* const restrict A)[order] = (double (*)[order]) prk_malloc(bytes);
+  double * const restrict A = (double *)prk_malloc(bytes);
   if (A == NULL){
     printf(" Error allocating space for transposed matrix\n");
     exit(EXIT_FAILURE);
   }
-  double (* const restrict B)[order] = (double (*)[order]) prk_malloc(bytes);
+  double * const restrict B = (double *)prk_malloc(bytes);
   if (B == NULL){
     printf(" Error allocating space for input matrix\n");
     exit(EXIT_FAILURE);

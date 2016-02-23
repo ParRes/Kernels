@@ -18,9 +18,6 @@ $(PROGRAM): $(PROGRAM).c
 $(PROGRAM)-omp: $(PROGRAM).c
 	$(CC) $(CFLAGS) $(OPENMPFLAG) $< -o $@
 
-$(PROGRAM)-pretty: $(PROGRAM)-pretty.c
-	$(CC) $(CFLAGS) $< -o $@
-
 run: $(PROGRAM)
 	$(PROGRAM) 10 4000 32
 
