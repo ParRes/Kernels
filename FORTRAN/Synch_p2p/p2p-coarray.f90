@@ -51,8 +51,9 @@
 !          functions are used in this program:
 !
 ! HISTORY: - Written by Rob Van der Wijngaart, February 2009.
-!            Converted to Fortran by Jeff Hammond, January 2015
-! *******************************************************************
+!          - Converted to Coarray Fortran
+!            by Alessandro Fanfarillo and Jeff Hammond, February 2016.
+! ********************************************************************
 
 function prk_get_wtime() result(t)
   use iso_fortran_env
