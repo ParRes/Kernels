@@ -60,12 +60,20 @@
 !
 ! *******************************************************************
 
+function prk_get_wtime() result(t)
+  use iso_fortran_env
+  real(kind=REAL64) ::  t
+  integer(kind=INT64) :: c, r
+  call system_clock(count = c, count_rate = r)
+  t = real(c,REAL64) / real(r,REAL64)
+end function prk_get_wtime
+
 program main
   use iso_fortran_env
-#ifdef _OPENMP
-  use omp_lib
-#endif
   implicit none
+  real(kind=REAL64) :: prk_get_wtime
+  integer :: me, npes
+  logical :: printer
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -89,6 +97,10 @@ program main
   real(kind=REAL64) :: t0, t1, stencil_time, avgtime    ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
 
+  me   = this_image()-1 ! use 0-based indexing of PEs
+  npes = num_images()
+  printer = (me.eq.0)
+
   ! ********************************************************************
   ! read and test input parameters
   ! ********************************************************************
@@ -97,17 +109,17 @@ program main
 #warning Your common/make.defs is missing PRKVERSION
 #define PRKVERSION "N/A"
 #endif
-  write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
-#ifdef _OPENMP
-  write(*,'(a)')   'OpenMP stencil execution on 2D grid'
-#else
-  write(*,'(a)')   'Serial stencil execution on 2D grid'
-#endif
+  if (printer) then
+    write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
+    write(*,'(a)')   'Fortran coarray stencil execution on 2D grid'
+  endif
 
   if (command_argument_count().lt.2) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',             &
-                      '<array dimension> [tile_size]'
+    if (printer) then
+      write(*,'(a,i1)') 'argument count = ', command_argument_count()
+      write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',             &
+                        '<array dimension> [tile_size]'
+    endif
     stop 1
   endif
 
@@ -115,7 +127,9 @@ program main
   call get_command_argument(1,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') iterations
   if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
+    if (printer) then
+      write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
+    endif
     stop 1
   endif
 
@@ -123,7 +137,9 @@ program main
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') n
   if (n .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: array dimension must be >= 1 : ', n
+    if (printer) then
+      write(*,'(a,i5)') 'ERROR: array dimension must be >= 1 : ', n
+    endif
     stop 1
   endif
 
@@ -137,7 +153,6 @@ program main
                              ' must be >= 1 and <= ',n
     else
       tiling = .true.
-      write(*,'(a)') 'WARNING: tiling is broken!!!!'
     endif
   endif
 
@@ -154,109 +169,85 @@ program main
 
   allocate( A(n,n), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(6,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
     stop 1
   endif
 
   allocate( B(n,n), stat=err )
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
+    write(6,'(a20,i3,a10,i5)') 'allocation of B returned ',err,' at image ',me
     stop 1
   endif
 
   norm = 0.0
   active_points = int(n-2*r,INT64)**2
 
-#ifdef _OPENMP
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
-#endif
-  write(*,'(a,i8)') 'Grid size            = ', n
-  write(*,'(a,i8)') 'Radius of stencil    = ', r
-  write(*,'(a,a)')  'Type of stencil      = ', &
+  if (printer) then
+    write(6,'(a23,i8)') 'Number of images     = ', num_images()
+    write(*,'(a,i8)') 'Grid size            = ', n
+    write(*,'(a,i8)') 'Radius of stencil    = ', r
+    write(*,'(a,a)')  'Type of stencil      = ', &
 #ifdef STAR
-                   'star'
+                      'star'
+#else
+                      'stencil'
+#endif
+    write(*,'(a)') 'Data type            = double precision'
+    write(*,'(a)') 'Compact representation of stencil loop body'
+    if (tiling) then
+        write(*,'(a,i5)') 'Tile size            = ', tile_size
+    else
+        write(*,'(a)') 'Untiled'
+    endif
+    write(*,'(a,i8)') 'Number of iterations = ', iterations
+  endif
+#ifdef STAR
   stencil_size = 4*r+1
 #else
-                   'stencil'
   stencil_size = (2*r+1)**2
 #endif
-  write(*,'(a)') 'Data type            = double precision'
-  write(*,'(a)') 'Compact representation of stencil loop body'
-  if (tiling) then
-      write(*,'(a,i5)') 'Tile size            = ', tile_size
-  else
-      write(*,'(a)') 'Untiled'
-  endif
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-
-  !$omp parallel default(none)                                        &
-  !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size)           &
-  !$omp&  private(i,j,ii,jj,it,jt,k)                                  &
-  !$omp&  reduction(+:norm)
 
   ! fill the stencil weights to reflect a discrete divergence operator
-  ! Jeff: if one does not use workshare here, the code is wrong.
-  !$omp workshare
-  W = 0.0
-  !$omp end workshare
+  W = 0
 #ifdef STAR
-  !$omp do
   do ii=1,r
-    W(0, ii) =  1.0/real(2*ii*r,REAL64)
-    W(0,-ii) = -1.0/real(2*ii*r,REAL64)
-    W( ii,0) =  1.0/real(2*ii*r,REAL64)
-    W(-ii,0) = -1.0/real(2*ii*r,REAL64)
+    W(0, ii) =  1/real(2*ii*r,REAL64)
+    W(0,-ii) = -1/real(2*ii*r,REAL64)
+    W( ii,0) =  1/real(2*ii*r,REAL64)
+    W(-ii,0) = -1/real(2*ii*r,REAL64)
   enddo
-  !$omp end do nowait
 #else
   ! Jeff: check that this is correct with the new W indexing
-  !$omp do
   do jj=1,r
     do ii=-jj+1,jj-1
-      W( ii, jj) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii,-jj) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj, ii) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj, ii) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii, jj) =  1/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii,-jj) = -1/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj, ii) =  1/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj, ii) = -1/real(4*jj*(2*jj-1)*r,REAL64)
     enddo
-    W( jj, jj)  =  1.0/real(4.0*jj*r,REAL64)
-    W(-jj,-jj)  = -1.0/real(4.0*jj*r,REAL64)
+    W( jj, jj)  =  1/real(4*jj*r,REAL64)
+    W(-jj,-jj)  = -1/real(4*jj*r,REAL64)
   enddo
-  !$omp end do nowait
 #endif
 
   ! intialize the input and output arrays
-  !$omp do !!! collapse(2)
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
     enddo
   enddo
-  !$omp end do nowait
-  !$omp do !!! collapse(2)
-  do j=r+1,n-r
-    do i=r+1,n-r
-      B(i,j) = 0.0
-    enddo
-  enddo
-  !$omp end do nowait
+  B = 0
 
   do k=0,iterations
 
     ! start timer after a warmup iteration
-    !$omp barrier
-    !$omp master
     if (k.eq.1) then
-#ifdef _OPENMP
-        t0 = omp_get_wtime()
-#else
-        call cpu_time(t0)
-#endif
+       sync all
+       t0 = prk_get_wtime()
     endif
-    !$omp end master
 
     ! Apply the stencil operator
     if (.not.tiling) then
-      !$omp do !!! collapse(2)
       do j=r,n-r-1
         do i=r,n-r-1
 #ifdef STAR
@@ -279,9 +270,7 @@ program main
 #endif
         enddo
       enddo
-      !$omp end do nowait
     else ! tiling
-      !$omp do !!! collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -307,41 +296,22 @@ program main
           enddo
         enddo
       enddo
-      !$omp end do nowait
     endif ! tiling
 
-    !$omp barrier
-
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp do !!! collapse(2)
-    do j=1,n
-      do i=1,n
-        A(i,j) = A(i,j) + 1.0
-      enddo
-    enddo
-    !$omp end do nowait
+    A = A + 1
 
   enddo ! iterations
 
-#ifdef _OPENMP
-  !$omp barrier
-  !$omp master
-  t1 = omp_get_wtime()
-  !$omp end master
-#else
-  call cpu_time(t1)
-#endif
+  sync all
+  t1 = prk_get_wtime()
 
   ! compute L1 norm in parallel
-  !$omp do !!! collapse(2)
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
-  !$omp end do nowait
-
-  !$omp end parallel
 
   stencil_time = t1 - t0
   norm = norm / real(active_points,REAL64)
