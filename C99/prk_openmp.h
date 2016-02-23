@@ -9,14 +9,18 @@
 #define PRAGMA(x) _Pragma(#x)
 
 #define OMP_PARALLEL(a) PRAGMA(omp parallel a)
-#define OMP_FOR PRAGMA(omp for schedule(static))
-#define OMP_SIMD PRAGMA(omp simd)
+#define OMP_FOR(a) PRAGMA(omp for schedule(static) a)
+#define OMP_SIMD(a) PRAGMA(omp simd a)
+#define OMP_BARRIER PRAGMA(omp barrier)
+#define OMP_MASTER PRAGMA(omp master)
 
 #else
 
-#define OMP_PARALLEL
-#define OMP_FOR
-#define OMP_SIMD
+#define OMP_PARALLEL(a)
+#define OMP_FOR(a)
+#define OMP_SIMD(a)
+#define OMP_BARRIER
+#define OMP_MASTER
 
 #endif
 

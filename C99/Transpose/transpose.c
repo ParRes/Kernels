@@ -72,7 +72,11 @@ int main(int argc, char * argv[])
   *********************************************************************/
 
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
+#ifdef _OPENMP
+  printf("OpenMP Matrix transpose: B = A^T\n");
+#else
   printf("Serial Matrix transpose: B = A^T\n");
+#endif
 
   if (argc != 4 && argc != 3) {
     printf("Usage: %s <# iterations> <matrix order> [tile size]\n", *argv);
@@ -117,6 +121,9 @@ int main(int argc, char * argv[])
     exit(EXIT_FAILURE);
   }
 
+#ifdef _OPENMP
+  printf("Number of threads     = %d\n", omp_get_max_threads());
+#endif
   printf("Matrix order          = %d\n", order);
   if (tile_size < order) {
       printf("Tile size             = %d\n", tile_size);
@@ -125,41 +132,58 @@ int main(int argc, char * argv[])
   }
   printf("Number of iterations  = %d\n", iterations);
 
-  for (int j=0; j<order; j++) {
-    for (int i=0; i<order; i++) {
-      const double val = (double) ((size_t)order*(size_t)j+(size_t)i);
-      A[j][i] = val;
-      B[j][i] = 0.0;
-    }
-  }
-
   double trans_time = 0.0;
-  for (int iter = 0; iter<=iterations; iter++) {
-    /* start timer after a warmup iteration */
-    if (iter==1) trans_time = wtime();
 
-    /* transpose the  matrix */
-    if (tile_size < order) {
-      for (int it=0; it<order; it+=tile_size) {
-        for (int jt=0; jt<order; jt+=tile_size) {
-          for (int i=it; i<MIN(order,it+tile_size); i++) {
-            for (int j=jt; j<MIN(order,jt+tile_size); j++) {
+  OMP_PARALLEL(shared(A,B))
+  {
+      OMP_FOR()
+      for (int j=0; j<order; j++) {
+        OMP_SIMD()
+        for (int i=0; i<order; i++) {
+          const double val = (double) ((size_t)order*(size_t)j+(size_t)i);
+          A[j][i] = val;
+          B[j][i] = 0.0;
+        }
+      }
+
+      for (int iter = 0; iter<=iterations; iter++) {
+        /* start timer after a warmup iteration */
+        if (iter==1) {
+            OMP_BARRIER
+            OMP_MASTER
+            { trans_time = wtime(); }
+        }
+        /* transpose the  matrix */
+        if (tile_size < order) {
+          OMP_FOR()
+          for (int it=0; it<order; it+=tile_size) {
+            for (int jt=0; jt<order; jt+=tile_size) {
+              OMP_SIMD()
+              for (int i=it; i<MIN(order,it+tile_size); i++) {
+                OMP_SIMD()
+                for (int j=jt; j<MIN(order,jt+tile_size); j++) {
+                  B[i][j] += A[j][i];
+                  A[j][i] += 1.0;
+                }
+              }
+            }
+          }
+        } else {
+          OMP_FOR()
+          for (int i=0;i<order; i++) {
+            OMP_SIMD()
+            for (int j=0;j<order;j++) {
               B[i][j] += A[j][i];
               A[j][i] += 1.0;
             }
           }
         }
       }
-    } else {
-      for (int i=0;i<order; i++) {
-        for (int j=0;j<order;j++) {
-          B[i][j] += A[j][i];
-          A[j][i] += 1.0;
-        }
-      }
-    }
-  }
-  trans_time = wtime() - trans_time;
+      OMP_BARRIER
+      OMP_MASTER
+      { trans_time = wtime() - trans_time; }
+
+  } /* end OMP_PARALLEL */
 
   /*********************************************************************
   ** Analyze and output results.
@@ -167,12 +191,16 @@ int main(int argc, char * argv[])
 
   double abserr = 0.0;
   const double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
-  for (int j=0;j<order;j++) {
-    for (int i=0;i<order; i++) {
-      const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
-      abserr += fabs(B[j][i] - ((double)offset_ij*(iterations+1.)+addit));
-    }
-  }
+  OMP_PARALLEL(shared(abserr))
+  {
+      OMP_FOR(reduction(+:abserr))
+      for (int j=0;j<order;j++) {
+        for (int i=0;i<order; i++) {
+          const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
+          abserr += fabs(B[j][i] - ((double)offset_ij*(iterations+1.)+addit));
+        }
+      }
+  } /* end OMP_PARALLEL */
 
   prk_free(B);
   prk_free(A);
