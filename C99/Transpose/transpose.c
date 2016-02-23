@@ -61,6 +61,7 @@ HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 *******************************************************************/
 
 #include <prk_util.h>
+#include <prk_openmp.h>
 
 #include <math.h>
 
@@ -69,6 +70,9 @@ HISTORY: Written by  Rob Van der Wijngaart, February 2009.
  * although such a compiler does not support C99, which we require
  * in other ways.
  **/
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ < 199900L) /* FIXME: 199900L */
+#error You need a C99 compiler.
+#endif
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && defined(__STDC_NO_VLA__)
 #error Your C11 compiler does not support VLA.
 #endif
