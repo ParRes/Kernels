@@ -155,9 +155,9 @@ int main(int argc, char * argv[])
       for (int iter = 0; iter<=iterations; iter++) {
         /* start timer after a warmup iteration */
         if (iter==1) {
-            OMP_BARRIER
-            OMP_MASTER
-            { trans_time = wtime(); }
+          OMP_BARRIER
+          OMP_MASTER
+          { trans_time = wtime(); }
         }
         /* transpose the  matrix */
         if (tile_size < order) {
