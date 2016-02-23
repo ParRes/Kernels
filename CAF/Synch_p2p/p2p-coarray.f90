@@ -85,7 +85,7 @@ program main
 #define PRKVERSION "N/A"
 #endif
      write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
-     write(*,'(a)')   'CAF pipeline execution on 2D grid'
+     write(*,'(a)')   'Fortran coarray pipeline execution on 2D grid'
 
      if (command_argument_count().lt.3) then
         write(*,'(a,i1)') 'argument count = ', command_argument_count()
