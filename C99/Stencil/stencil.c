@@ -61,6 +61,8 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 
 #include <prk_util.h>
 
+#include <tgmath.h>
+
 #ifdef DOUBLE
 typedef double prk_float_t;
 const prk_float_t epsilon = 1.0e-8;
@@ -71,7 +73,7 @@ const prk_float_t epsilon = 1.0e-4f;
 
 const int radius = RADIUS;
 
-int main(int argc, char ** argv)
+int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels Version %s\n", PRKVERSION);
   printf("Serial stencil execution on 2D grid\n");
@@ -81,18 +83,17 @@ int main(int argc, char ** argv)
   ********************************************************************************/
 
   if (argc != 3 && argc !=4){
-    printf("Usage: %s <# iterations> <array dimension> [tilesize]\n",
-           *argv);
+    printf("Usage: %s <# iterations> <array dimension> [tilesize]\n", argv[0]);
     return(EXIT_FAILURE);
   }
 
-  int iterations  = atoi(*++argv); /* number of times to run the algorithm */
+  int iterations  = atoi(argv[1]); /* number of times to run the algorithm */
   if (iterations < 1){
     printf("ERROR: iterations must be >= 1 : %d \n",iterations);
     exit(EXIT_FAILURE);
   }
 
-  int n  = atoi(*++argv); /* linear grid dimension */
+  int n  = atoi(argv[2]); /* linear grid dimension */
   if (n < 1){
     printf("ERROR: grid dimension must be positive: %d\n", n);
     exit(EXIT_FAILURE);
@@ -100,7 +101,7 @@ int main(int argc, char ** argv)
 
   int tilesize = 1; /* loop nest block factor */
   if (argc == 4) {
-    tilesize = atoi(*++argv);
+    tilesize = atoi(argv[3]);
     if (tilesize>n)  tilesize=n;
     if (tilesize<=0) tilesize=1;
   }
@@ -166,12 +167,8 @@ int main(int argc, char ** argv)
 #else
   printf("Data type            = single precision\n");
 #endif
-#if LOOPGEN
-  printf("Script used to expand stencil loop body\n");
-#else
   printf("Compact representation of stencil loop body\n");
-#endif
-  if (1<tilesize && tilesize<n) {
+  if ((1<tilesize) && (tilesize<n)) {
       printf("Tile size            = %d\n", tilesize);
   } else {
       printf("Untiled\n");
@@ -181,12 +178,15 @@ int main(int argc, char ** argv)
   /* intialize the input and output arrays */
   for (int i=0; i<n; i++) {
     for (int j=0; j<n; j++) {
-      in[i][j] = (prk_float_t)i+(prk_float_t)j;
+      in[i][j] = (prk_float_t)i + (prk_float_t)j;
     }
   }
-  for (int i=radius; i<n-radius; i++) {
-    for (int j=radius; j<n-radius; j++) {
-      out[i][j] = (prk_float_t)0;
+  {
+    const prk_float_t zero = (prk_float_t)0;
+    for (int i=radius; i<n-radius; i++) {
+      for (int j=radius; j<n-radius; j++) {
+        out[i][j] = zero;
+      }
     }
   }
 
@@ -198,7 +198,7 @@ int main(int argc, char ** argv)
     if (iter == 1)  stencil_time = wtime();
 
     /* Apply the stencil operator */
-    if (tilesize==1 || tilesize==n) {
+    if ((tilesize==1) || (tilesize==n)) {
       for (int i=radius; i<n-radius; i++) {
         for (int j=radius; j<n-radius; j++) {
           #ifdef STAR
@@ -249,10 +249,13 @@ int main(int argc, char ** argv)
     }
 
     /* add constant to solution to force refresh of neighbor data, if any       */
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        in[i][j] += (prk_float_t)1;
-      }
+    {
+        const prk_float_t one = (prk_float_t)1;
+        for (int i=0; i<n; i++) {
+          for (int j=0; j<n; j++) {
+            in[i][j] += one;
+          }
+        }
     }
 
   } /* end of iterations */
@@ -269,7 +272,7 @@ int main(int argc, char ** argv)
   prk_float_t norm = (prk_float_t)0; /* L1 norm of solution */
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
-      norm += (prk_float_t)ABS(out[i][j]);
+      norm += (prk_float_t)fabs(out[i][j]);
     }
   }
 
@@ -279,7 +282,7 @@ int main(int argc, char ** argv)
 
   /* verify correctness */
   prk_float_t reference_norm = (prk_float_t) 2*(iterations+1);
-  if (ABS(norm-reference_norm) > epsilon) {
+  if (fabs(norm-reference_norm) > epsilon) {
     printf("ERROR: L1 norm = %lf, Reference L1 norm = %lf\n",
            (double)norm, (double)reference_norm);
     exit(EXIT_FAILURE);
