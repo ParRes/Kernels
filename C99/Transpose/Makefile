@@ -10,7 +10,7 @@ CFLAGS += -I..
 
 .PHONY: all clean run
 
-all: $(PROGRAM) $(PROGRAM)-omp
+all: $(PROGRAM) $(PROGRAM)-omp $(PROGRAM)-1d
 
 $(PROGRAM): $(PROGRAM).c
 	$(CC) $(CFLAGS) $< -o $@
@@ -29,4 +29,5 @@ clean:
 	-rm -rf *.dSYM
 	-rm -f $(PROGRAM)
 	-rm -f $(PROGRAM)-omp
+	-rm -f $(PROGRAM)-1d
 

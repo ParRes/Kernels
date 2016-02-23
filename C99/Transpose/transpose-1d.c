@@ -64,63 +64,6 @@ HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 
 #include <math.h>
 
-static inline void prk_transpose_fill(int order,
-                                      double * const restrict A,
-                                      double * const restrict B)
-{
-  for (int j=0; j<order; j++) {
-    for (int i=0; i<order; i++) {
-      const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
-      A[offset_ji] = (double)offset_ji;
-      B[offset_ji] = 0.0;
-    }
-  }
-}
-
-static inline void prk_transpose_doit(int order, int tile_size,
-                                      double * const restrict A,
-                                      double * const restrict B)
-{
-  if (tile_size < order) {
-    for (int it=0; it<order; it+=tile_size) {
-      for (int jt=0; jt<order; jt+=tile_size) {
-        for (int i=it; i<MIN(order,it+tile_size); i++) {
-          for (int j=jt; j<MIN(order,jt+tile_size); j++) {
-            const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
-            const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
-            B[offset_ij] += A[offset_ji];
-            A[offset_ji] += 1.0;
-          }
-        }
-      }
-    }
-  } else {
-    for (int i=0;i<order; i++) {
-      for (int j=0;j<order;j++) {
-        const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
-        const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
-        B[offset_ij] += A[offset_ji];
-        A[offset_ji] += 1.0;
-      }
-    }
-  }
-}
-
-static inline double prk_transpose_check(int order, int iterations,
-                                         double * const restrict B)
-{
-  double abserr = 0.0;
-  const double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
-  for (int j=0;j<order;j++) {
-    for (int i=0;i<order; i++) {
-      const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
-      const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
-      abserr += fabs(B[offset_ji] - ((double)offset_ij*(iterations+1.)+addit));
-    }
-  }
-  return abserr;
-}
-
 int main(int argc, char ** argv)
 {
   /*********************************************************************
@@ -181,14 +124,44 @@ int main(int argc, char ** argv)
   }
   printf("Number of iterations  = %d\n", iterations);
 
-  prk_transpose_fill(order, A, B);
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
+      const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+      A[offset_ji] = (double)offset_ji;
+      B[offset_ji] = 0.0;
+    }
+  }
 
   double trans_time = 0.0;
+
   for (int iter = 0; iter<=iterations; iter++) {
     /* start timer after a warmup iteration */
     if (iter==1) trans_time = wtime();
-    /* Transpose the  matrix */
-    prk_transpose_doit(order, tile_size, A, B);
+
+    /* transpose the  matrix */
+    if (tile_size < order) {
+      for (int it=0; it<order; it+=tile_size) {
+        for (int jt=0; jt<order; jt+=tile_size) {
+          for (int i=it; i<MIN(order,it+tile_size); i++) {
+            for (int j=jt; j<MIN(order,jt+tile_size); j++) {
+              const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
+              const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+              B[offset_ij] += A[offset_ji];
+              A[offset_ji] += 1.0;
+            }
+          }
+        }
+      }
+    } else {
+      for (int i=0;i<order; i++) {
+        for (int j=0;j<order;j++) {
+          const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
+          const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+          B[offset_ij] += A[offset_ji];
+          A[offset_ji] += 1.0;
+        }
+      }
+    }
   }
   trans_time = wtime() - trans_time;
 
@@ -196,7 +169,15 @@ int main(int argc, char ** argv)
   ** Analyze and output results.
   *********************************************************************/
 
-  double abserr = prk_transpose_check(order, iterations, B);
+  double abserr = 0.0;
+  const double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
+  for (int j=0;j<order;j++) {
+    for (int i=0;i<order; i++) {
+      const size_t offset_ij = (size_t)i*(size_t)order+(size_t)j;
+      const size_t offset_ji = (size_t)j*(size_t)order+(size_t)i;
+      abserr += fabs(B[offset_ji] - ((double)offset_ij*(iterations+1.)+addit));
+    }
+  }
 
   prk_free(B);
   prk_free(A);
