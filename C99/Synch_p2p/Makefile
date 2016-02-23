@@ -10,7 +10,7 @@ CFLAGS += -I..
 
 .PHONY: all clean run
 
-all: $(PROGRAM) $(PROGRAM)-omp
+all: $(PROGRAM) # $(PROGRAM)-omp
 
 $(PROGRAM): $(PROGRAM).c
 	$(CC) $(CFLAGS) $< -o $@
