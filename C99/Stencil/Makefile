@@ -1,6 +1,6 @@
 PROGRAM=stencil
 
-include ../../common/FORTRAN.defs
+include ../../common/make.defs
 include ../../common/PRKVERSION
 
 ifndef RADIUS

@@ -1,6 +1,6 @@
 PROGRAM=transpose
 
-include ../../common/FORTRAN.defs
+include ../../common/make.defs
 include ../../common/PRKVERSION
 
 CFLAGS  = $(DEFAULT_OPT_FLAGS)
