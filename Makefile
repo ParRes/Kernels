@@ -71,7 +71,7 @@ help:
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
 all: alldarwin allfreaks
-alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran
+alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran allc99
 allfreaks: allcharm++ allampi allgrappa
 
 allmpi1:
@@ -175,6 +175,11 @@ allgrappa:
 	cd GRAPPA/Synch_p2p;       $(MAKE) p2p        "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+
+allc99:
+	cd C99/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd C99/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd C99/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allserial:
 	cd SERIAL/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
