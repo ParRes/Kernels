@@ -13,9 +13,13 @@ FCFLAGS  = $(DEFAULT_OPT_FLAGS)
 FCFLAGS += -DPRKVERSION=$(FPRKVERSION)
 FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
-.PHONY: all clean run
+.PHONY: all clean run serial openmp coarray
 
-all: $(PROGRAM) $(PROGRAM)-omp
+all: serial openmp coarray
+
+serial: $(PROGRAM)
+openmp: $(PROGRAM)-omp
+coarray: $(PROGRAM)-coarray
 
 $(PROGRAM): $(PROGRAM).f90
 	$(FC) $(FCFLAGS) $< -o $@

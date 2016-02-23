@@ -177,9 +177,7 @@ allgrappa:
 	cd GRAPPA/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allc99:
-	cd C99/Synch_p2p;           $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd C99/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd C99/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	make -C C99 all
 
 allserial:
 	cd SERIAL/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -195,22 +193,17 @@ allserial:
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
 
-allfortran: allfortranserial allfortranopenmp allfortrancoarray
+allfortran:
+	make -C FORTRAN all
 
 allfortranserial:
-	cd FORTRAN/Stencil;         $(MAKE) stencil
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
-	cd FORTRAN/Transpose;       $(MAKE) transpose
+	make -C FORTRAN serial
 
 allfortranopenmp:
-	cd FORTRAN/Stencil;         $(MAKE) stencil-omp
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-omp
-	cd FORTRAN/Transpose;       $(MAKE) transpose-omp
+	make -C FORTRAN openmp
 
 allfortrancoarray:
-	#cd FORTRAN/Stencil;         $(MAKE) stencil-coarray
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-coarray
-	cd FORTRAN/Transpose;       $(MAKE) transpose-coarray
+	make -C FORTRAN coarray
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
@@ -287,12 +280,8 @@ clean:
 	cd SERIAL/Synch_p2p;        $(MAKE) clean
 	cd SERIAL/Branch;           $(MAKE) clean
 	cd SERIAL/PIC;              $(MAKE) clean
-	cd FORTRAN/Transpose;       $(MAKE) clean
-	cd FORTRAN/Synch_p2p;       $(MAKE) clean
-	cd FORTRAN/Stencil;         $(MAKE) clean
-	cd C99/Transpose;           $(MAKE) clean
-	cd C99/Synch_p2p;           $(MAKE) clean
-	cd C99/Stencil;             $(MAKE) clean
+	make -C FORTRAN clean
+	make -C C99 clean
 	rm -f stats.json
 
 veryclean: clean
