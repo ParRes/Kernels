@@ -64,7 +64,7 @@ HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 
 #include <math.h>
 
-int main(int argc, char ** argv)
+int main(int argc, char * argv[])
 {
   /*********************************************************************
   ** read and test input parameters
@@ -74,7 +74,7 @@ int main(int argc, char ** argv)
   printf("Serial Matrix transpose: B = A^T\n");
 
   if (argc != 4 && argc != 3) {
-    printf("Usage: %s <# iterations> <matrix order> [tile size]\n", *argv);
+    printf("Usage: %s <# iterations> <matrix order> [tile size]\n", argv[0]);
     exit(EXIT_FAILURE);
   }
 

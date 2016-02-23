@@ -85,7 +85,7 @@ int main(int argc, char * argv[])
 #endif
 
   if (argc != 4 && argc != 3) {
-    printf("Usage: %s <# iterations> <matrix order> [tile size]\n", *argv);
+    printf("Usage: %s <# iterations> <matrix order> [tile size]\n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
