@@ -9,7 +9,7 @@ FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 .PHONY: all clean run
 
-all: $(PROGRAM) $(PROGRAM)-omp $(PROGRAM)-coarray
+all: $(PROGRAM) $(PROGRAM)-omp $(PROGRAM)-coarray $(PROGRAM)-pretty
 
 $(PROGRAM): $(PROGRAM).f90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -19,6 +19,9 @@ $(PROGRAM)-omp: $(PROGRAM).f90
 
 $(PROGRAM)-coarray: $(PROGRAM)-coarray.f90
 	$(CAFCOMPILER) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
+
+$(PROGRAM)-pretty: $(PROGRAM)-pretty.f90
+	$(FC) $(FCFLAGS) $< -o $@
 
 run: $(PROGRAM)
 	$(PROGRAM) 10 4000 32
