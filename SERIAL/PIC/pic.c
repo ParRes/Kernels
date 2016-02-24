@@ -38,7 +38,7 @@ PURPOSE: This program tests the efficiency with which a cloud of
          charged particles can be moved through a spatially fixed
          collection of charges located at the vertices of a square
          equi-spaced grid. It is a proxy for a component of a
-         particle-in-cell methjod
+         particle-in-cell meth.od
   
 USAGE:   <progname> <#simulation steps> <grid size> <#particles> \
                     <horizontal velocity> <vertical velocity>    \
