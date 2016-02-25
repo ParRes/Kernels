@@ -35,6 +35,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 #include <float.h>
 #include "legion.h"
+#include "default_mapper.h"
 #include "par-res-kern_general.h"
 using namespace LegionRuntime::HighLevel;
 using namespace LegionRuntime::Accessor;

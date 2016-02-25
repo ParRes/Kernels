@@ -15,7 +15,7 @@
 include ../../common/LEGION.defs
 LG_RT_DIR=$(LEGIONTOP)/runtime
 
-CXX=$(LEGIONCC)
+CXX=g++
 
 ifndef RADIUS
   RADIUS=2
@@ -55,4 +55,4 @@ usage:
 	@echo "            \"make clean\" to remove objects and executables"
 
 include $(LG_RT_DIR)/runtime.mk
-$(GEN_OBJS): clean
+$(GEN_OBJS): #clean

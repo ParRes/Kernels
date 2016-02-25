@@ -60,6 +60,8 @@ HISTORY: Written by Abdullah Kayi, May 2015.
 #include <sys/time.h>
 #define  USEC_TO_SEC   1.0e-6    /* to convert microsecs to secs */
 
+#define DOUBLE
+
 #ifdef DOUBLE
   #define DTYPE   double
   #define EPSILON 1.e-8
@@ -73,6 +75,74 @@ HISTORY: Written by Abdullah Kayi, May 2015.
   #define COEFY   1.0f
   #define FSTR    "%f"
 #endif
+
+class StencilMapper : public DefaultMapper
+{
+  public:
+    StencilMapper(Machine machine, HighLevelRuntime *rt, Processor local);
+    virtual bool map_must_epoch(const std::vector<Task*> &tasks,
+        const std::vector<MappingConstraint> &constraints,
+        MappingTagID tag);
+  private:
+    std::vector<Processor> all_procs_list;
+    std::map<Processor, Memory> all_sysmems;
+};
+
+StencilMapper::StencilMapper(Machine machine, HighLevelRuntime *rt, Processor local)
+  : DefaultMapper(machine, rt, local)
+{
+  std::set<Processor> all_procs;
+  machine.get_all_processors(all_procs);
+  machine_interface.filter_processors(machine, Processor::LOC_PROC, all_procs);
+
+  for (std::set<Processor>::iterator itr = all_procs.begin();
+      itr != all_procs.end(); ++itr)
+  {
+    Memory sysmem = machine_interface.find_memory_kind(*itr, Memory::SYSTEM_MEM);
+    assert(sysmem.exists());
+    all_sysmems[*itr] = sysmem;
+  }
+  all_procs_list.assign(all_procs.begin(), all_procs.end());
+}
+
+bool StencilMapper::map_must_epoch(const std::vector<Task*> &tasks,
+    const std::vector<MappingConstraint> &constraints,
+    MappingTagID tag)
+{
+  for (unsigned i = 0; i < tasks.size(); ++i)
+  {
+    Task* task = tasks[i];
+    task->target_proc = all_procs_list[task->index_point.get_index()];
+    map_task(task);
+  }
+
+  for (unsigned i = 0; i < constraints.size(); ++i)
+  {
+    const MappingConstraint& c = constraints[i];
+    if (c.t1->target_proc.address_space() ==
+        c.t2->target_proc.address_space()) continue;
+    if (c.t2->regions[c.idx2].flags & NO_ACCESS_FLAG)
+    {
+      assert((c.t1->regions[c.idx1].flags & NO_ACCESS_FLAG) == 0);
+      c.t1->regions[c.idx1].target_ranking.clear();
+      c.t1->regions[c.idx1].target_ranking.push_back(all_sysmems[c.t1->target_proc]);
+      c.t2->regions[c.idx2].target_ranking.clear();
+      c.t2->regions[c.idx2].target_ranking.push_back(all_sysmems[c.t1->target_proc]);
+    }
+    else if (c.t1->regions[c.idx1].flags & NO_ACCESS_FLAG)
+    {
+      assert((c.t2->regions[c.idx2].flags & NO_ACCESS_FLAG) == 0);
+      c.t1->regions[c.idx1].target_ranking.clear();
+      c.t1->regions[c.idx1].target_ranking.push_back(all_sysmems[c.t2->target_proc]);
+      c.t2->regions[c.idx2].target_ranking.clear();
+      c.t2->regions[c.idx2].target_ranking.push_back(all_sysmems[c.t2->target_proc]);
+    }
+    else
+      assert(0);
+  }
+
+  return false;
+}
 
 enum TaskIDs {
   TASKID_TOPLEVEL = 1,
@@ -197,7 +267,7 @@ void top_level_task(const Task *task,
   {
     FieldAllocator allocator =
       runtime->create_field_allocator(ctx, ghost_fs);
-    allocator.allocate_field(sizeof(double),FID_GHOST);
+    allocator.allocate_field(sizeof(DTYPE),FID_GHOST);
   }
 
   /* compute "processor" grid; initialize Num_procsy to avoid compiler warnings */
@@ -271,8 +341,8 @@ void top_level_task(const Task *task,
     main_fs = runtime->create_field_space(ctx);
     FieldAllocator allocator =
       runtime->create_field_allocator(ctx, main_fs);
-    allocator.allocate_field(sizeof(double),FID_VAL);
-    allocator.allocate_field(sizeof(double),FID_DERIV);
+    allocator.allocate_field(sizeof(DTYPE),FID_VAL);
+    allocator.allocate_field(sizeof(DTYPE),FID_DERIV);
     main_lr.push_back(runtime->create_logical_region(ctx, subspace, main_fs));
 
     // Make four sub-regions: LEFT,NORTH,RIGHT,SOUTH
@@ -511,12 +581,13 @@ void top_level_task(const Task *task,
 
         spmd_launcher.add_field(0, FID_DERIV);
         spmd_launcher.add_field(0, FID_VAL);
-        int ghost_count = std::count (args[color].region_idx, args[color].region_idx+4, 0);
+        unsigned ghost_count = std::count (args[color].region_idx, args[color].region_idx+4, 0);
         args[color].num_regions = (ghost_count * 2) + 1 ;
 
         for (unsigned idx = 1; idx < args[color].num_regions; idx++){
           spmd_launcher.add_field(idx, FID_GHOST);
-          spmd_launcher.region_requirements[0].flags |= NO_ACCESS_FLAG;
+          if (idx > 1 + ghost_count)
+            spmd_launcher.region_requirements[idx].flags |= NO_ACCESS_FLAG;
         }
 
         spmd_launcher.add_index_requirement(IndexSpaceRequirement(is,
@@ -644,7 +715,7 @@ std::pair<double, double> spmd_task(const Task *task,
   FieldSpace fs_weight = runtime->create_field_space(ctx);
   {
     FieldAllocator allocator = runtime->create_field_allocator(ctx, fs_weight);
-    allocator.allocate_field(sizeof(double),FID_WEIGHT);
+    allocator.allocate_field(sizeof(DTYPE),FID_WEIGHT);
   }
   LogicalRegion lr_weight = runtime->create_logical_region(ctx, is_weight, fs_weight);
 
@@ -676,11 +747,18 @@ std::pair<double, double> spmd_task(const Task *task,
     if(iter == 1)
     {
       TaskLauncher dummy_launcher(TASKID_DUMMY, TaskArgument(NULL, 0));
+      dummy_launcher.add_region_requirement(
+          RegionRequirement(local_lr, READ_ONLY, EXCLUSIVE, local_lr));
+      dummy_launcher.add_field(0, FID_DERIV);
+      dummy_launcher.add_region_requirement(
+          RegionRequirement(local_lr, READ_ONLY, EXCLUSIVE, local_lr));
+      dummy_launcher.add_field(1, FID_VAL);
       Future f = runtime->execute_task(ctx, dummy_launcher);
       f.get_void_result();
       ts_start = wtime();
     }
 
+    runtime->begin_trace(ctx, 0);
     // Issue explicit region-to-region copies
     for (unsigned idx = 0; idx < num_neighbors; idx++)
     {
@@ -711,20 +789,6 @@ std::pair<double, double> spmd_task(const Task *task,
         runtime->advance_phase_barrier(ctx, notify_ready[idx]);
     }
 
-    // Acquire coherence on our ghost regions
-    for (unsigned idx = 0; idx < num_neighbors; idx++)
-    {
-      AcquireLauncher acquire_launcher(ghost_lr[idx],
-                                       ghost_lr[idx],
-                                       ghost_pr[idx]);
-      acquire_launcher.add_field(FID_GHOST);
-      // The acquire operation needs to wait for the data to
-      // be ready to consume, so wait on the ready barrier.
-      wait_ready[idx] = runtime->advance_phase_barrier(ctx, wait_ready[idx]);
-      acquire_launcher.add_wait_barrier(wait_ready[idx]);
-      runtime->issue_acquire(ctx, acquire_launcher);
-    }
-
     // Run the stencil computation
     TaskLauncher stencil_launcher(TASKID_STENCIL,
                                   TaskArgument(args, sizeof(SPMDArgs)));
@@ -748,32 +812,30 @@ std::pair<double, double> spmd_task(const Task *task,
       ghost_req.add_field(FID_GHOST);
       stencil_launcher.add_region_requirement(ghost_req);
     }
-    runtime->execute_task(ctx, stencil_launcher);
 
-    // Release coherence on ghost regions
     for (unsigned idx = 0; idx < num_neighbors; idx++)
     {
-      ReleaseLauncher release_launcher(ghost_lr[idx],
-                                       ghost_lr[idx],
-                                       ghost_pr[idx]);
-      release_launcher.add_field(FID_GHOST);
-      // On all but the last iteration we need to signal that
-      // we have now consumed the ghost instances and it is
-      // safe to issue the next copy.
-      if (iter < (args->iterations))
-        release_launcher.add_arrival_barrier(notify_empty[idx]);
-      runtime->issue_release(ctx, release_launcher);
-      if (iter < (args->iterations))
-        notify_empty[idx] =
-          runtime->advance_phase_barrier(ctx, notify_empty[idx]);
+      wait_ready[idx] = runtime->advance_phase_barrier(ctx, wait_ready[idx]);
+      stencil_launcher.add_wait_barrier(wait_ready[idx]);
+      stencil_launcher.add_arrival_barrier(notify_empty[idx]);
+      notify_empty[idx] =
+        runtime->advance_phase_barrier(ctx, notify_empty[idx]);
     }
+    runtime->execute_task(ctx, stencil_launcher);
+    runtime->end_trace(ctx, 0);
   }
-  ts_end = wtime();
 
   //runtime->issue_execution_fence(ctx);
   TaskLauncher dummy_launcher(TASKID_DUMMY, TaskArgument(NULL, 0));
+  dummy_launcher.add_region_requirement(
+      RegionRequirement(local_lr, READ_ONLY, EXCLUSIVE, local_lr));
+  dummy_launcher.add_field(0, FID_DERIV);
+  dummy_launcher.add_region_requirement(
+      RegionRequirement(local_lr, READ_ONLY, EXCLUSIVE, local_lr));
+  dummy_launcher.add_field(1, FID_VAL);
   Future f = runtime->execute_task(ctx, dummy_launcher);
   f.get_void_result();
+  ts_end = wtime();
 
   TaskLauncher check_launcher(TASKID_CHECK, TaskArgument(args, sizeof(SPMDArgs)));
   check_launcher.add_region_requirement(
@@ -800,8 +862,8 @@ void init_weight_task(const Task *task,
   assert(task->regions.size() == 1);
   assert(task->regions[0].privilege_fields.size() == 1);
 
-  RegionAccessor<AccessorType::Generic, double> acc =
-    regions[0].get_field_accessor(FID_WEIGHT).typeify<double>();
+  RegionAccessor<AccessorType::Generic, DTYPE> acc =
+    regions[0].get_field_accessor(FID_WEIGHT).typeify<DTYPE>();
 
   Domain dom = runtime->get_index_space_domain(ctx,
       task->regions[0].region.get_index_space());
@@ -844,10 +906,10 @@ void init_field_task(const Task *task,
   assert(task->regions[0].privilege_fields.size() == 1);
   assert(task->regions[1].privilege_fields.size() == 1);
 
-  RegionAccessor<AccessorType::Generic, double> in_acc =
-    regions[0].get_field_accessor(FID_VAL).typeify<double>();
-  RegionAccessor<AccessorType::Generic, double> out_acc =
-    regions[1].get_field_accessor(FID_DERIV).typeify<double>();
+  RegionAccessor<AccessorType::Generic, DTYPE> in_acc =
+    regions[0].get_field_accessor(FID_VAL).typeify<DTYPE>();
+  RegionAccessor<AccessorType::Generic, DTYPE> out_acc =
+    regions[1].get_field_accessor(FID_DERIV).typeify<DTYPE>();
 
   Domain dom = runtime->get_index_space_domain(ctx,
       task->regions[0].region.get_index_space());
@@ -855,7 +917,7 @@ void init_field_task(const Task *task,
   
   for (GenericPointInRectIterator<2> pir(rect); pir; pir++)
   {
-      double value = COEFY*pir.p.x[1] + COEFX*pir.p.x[0];
+      DTYPE value = COEFY*pir.p.x[1] + COEFX*pir.p.x[0];
       in_acc.write(DomainPoint::from_point<2>(pir.p), value);
       out_acc.write(DomainPoint::from_point<2>(pir.p), 0.0);
   }
@@ -880,12 +942,12 @@ void stencil_field_task(const Task *task,
     ghost_fid = INT_MAX; /* silence uninitialized warning */
   }
 
-  RegionAccessor<AccessorType::Generic, double> write_acc =
-    regions[0].get_field_accessor(write_fid).typeify<double>();
-  RegionAccessor<AccessorType::Generic, double> read_acc =
-    regions[1].get_field_accessor(read_fid).typeify<double>();
-  RegionAccessor<AccessorType::Generic, double> weight_acc =
-    regions[2].get_field_accessor(weight_fid).typeify<double>();
+  RegionAccessor<AccessorType::Generic, DTYPE> write_acc =
+    regions[0].get_field_accessor(write_fid).typeify<DTYPE>();
+  RegionAccessor<AccessorType::Generic, DTYPE> read_acc =
+    regions[1].get_field_accessor(read_fid).typeify<DTYPE>();
+  RegionAccessor<AccessorType::Generic, DTYPE> weight_acc =
+    regions[2].get_field_accessor(weight_fid).typeify<DTYPE>();
 
   Domain main_dom = runtime->get_index_space_domain(ctx,
       task->regions[0].region.get_index_space());
@@ -902,13 +964,13 @@ void stencil_field_task(const Task *task,
     stencil_ghosts_lr.push_back(task->regions[3 + idx].region);
   }
 
-  double* write_ptr = 0;
-  double* read_ptr = 0;
-  double* weight_ptr = 0;
-  double* left_ptr = 0;
-  double* north_ptr = 0;
-  double* right_ptr = 0;
-  double* south_ptr = 0;
+  DTYPE* write_ptr = 0;
+  DTYPE* read_ptr = 0;
+  DTYPE* weight_ptr = 0;
+  DTYPE* left_ptr = 0;
+  DTYPE* north_ptr = 0;
+  DTYPE* right_ptr = 0;
+  DTYPE* south_ptr = 0;
 
   {
       Rect<2> subrect_a; ByteOffset offsets_a[1];
@@ -929,53 +991,57 @@ void stencil_field_task(const Task *task,
   Rect<2> north_rect;
   Rect<2> right_rect;
   Rect<2> south_rect;
-  RegionAccessor<AccessorType::Generic, double> left_ghost_acc;
-  RegionAccessor<AccessorType::Generic, double> north_ghost_acc;
-  RegionAccessor<AccessorType::Generic, double> right_ghost_acc;
-  RegionAccessor<AccessorType::Generic, double> south_ghost_acc;
+  RegionAccessor<AccessorType::Generic, DTYPE> left_ghost_acc;
+  RegionAccessor<AccessorType::Generic, DTYPE> north_ghost_acc;
+  RegionAccessor<AccessorType::Generic, DTYPE> right_ghost_acc;
+  RegionAccessor<AccessorType::Generic, DTYPE> south_ghost_acc;
 
   unsigned idx = 0;
   if (args->region_idx[GHOST_LEFT] != -1){
-      left_ghost_acc = stencil_ghosts_pr[idx].get_field_accessor(ghost_fid).typeify<double>();
+      left_ghost_acc = stencil_ghosts_pr[idx].get_field_accessor(ghost_fid).typeify<DTYPE>();
       left_dom = runtime->get_index_space_domain(ctx,
               stencil_ghosts_lr[idx].get_index_space());
       left_rect = left_dom.get_rect<2>();
 
       Rect<2> subrect_g; ByteOffset offsets_g[1];
       left_ptr = left_ghost_acc.raw_rect_ptr<2>(left_rect, subrect_g, offsets_g);
+      assert(left_ptr);
       assert(left_rect == subrect_g);
       ++idx;
   }
   if (args->region_idx[GHOST_NORTH] != -1){
-      north_ghost_acc = stencil_ghosts_pr[idx].get_field_accessor(ghost_fid).typeify<double>();
+      north_ghost_acc = stencil_ghosts_pr[idx].get_field_accessor(ghost_fid).typeify<DTYPE>();
       north_dom = runtime->get_index_space_domain(ctx,
               stencil_ghosts_lr[idx].get_index_space());
       north_rect = north_dom.get_rect<2>();
 
       Rect<2> subrect_g; ByteOffset offsets_g[1];
       north_ptr = north_ghost_acc.raw_rect_ptr<2>(north_rect, subrect_g, offsets_g);
+      assert(north_ptr);
       assert(north_rect == subrect_g);
       ++idx;
   }
   if (args->region_idx[GHOST_RIGHT] != -1){
-      right_ghost_acc = stencil_ghosts_pr[idx].get_field_accessor(ghost_fid).typeify<double>();
+      right_ghost_acc = stencil_ghosts_pr[idx].get_field_accessor(ghost_fid).typeify<DTYPE>();
       right_dom = runtime->get_index_space_domain(ctx,
               stencil_ghosts_lr[idx].get_index_space());
       right_rect = right_dom.get_rect<2>();
 
       Rect<2> subrect_g; ByteOffset offsets_g[1];
       right_ptr = right_ghost_acc.raw_rect_ptr<2>(right_rect, subrect_g, offsets_g);
+      assert(right_ptr);
       assert(right_rect == subrect_g);
       ++idx;
   }
   if (args->region_idx[GHOST_SOUTH] != -1){
-      south_ghost_acc = stencil_ghosts_pr[idx].get_field_accessor(ghost_fid).typeify<double>();
+      south_ghost_acc = stencil_ghosts_pr[idx].get_field_accessor(ghost_fid).typeify<DTYPE>();
       south_dom = runtime->get_index_space_domain(ctx,
               stencil_ghosts_lr[idx].get_index_space());
       south_rect = south_dom.get_rect<2>();
 
       Rect<2> subrect_g; ByteOffset offsets_g[1];
       south_ptr = south_ghost_acc.raw_rect_ptr<2>(south_rect, subrect_g, offsets_g);
+      assert(south_ptr);
       assert(south_rect == subrect_g);
   }
 
@@ -983,92 +1049,200 @@ void stencil_field_task(const Task *task,
   int Num_procsy = args->Num_procsy;
   int blockx = args->n / Num_procsx;
   int blocky = args->n / Num_procsy;
-  int my_IDx = args->x;
-  int my_IDy = args->y;
-  int myoffsetx = my_IDx * blockx;
-  int myoffsety = my_IDy * blocky;
-
-  int startx = 0;
-  int starty = 0;
-  int endx = blockx-1;
-  int endy = blocky-1;
-
-  if(my_IDx == 0)        startx += RADIUS;
-  if(my_IDy == 0)        starty += RADIUS;
-  if(my_IDx == Num_procsx-1) endx   -= RADIUS;
-  if(my_IDy == Num_procsy-1) endy   -= RADIUS;
-
-  int start_idx = (starty*blockx) + startx;
-  int end_idx   = (endy*blockx) + endx;
   int sizew     = 2*RADIUS+1;
 
-#define WEIGHT_X(i) weight_ptr[i+(sizew*RADIUS+RADIUS)]
-#define WEIGHT_Y(i) weight_ptr[i+(sizew-1)*(i+RADIUS+1)]
-  for(int i = start_idx; i <= end_idx; i++)
+#define IN(i, j)          read_ptr[(j) * blockx + i]
+#define OUT(i, j)         write_ptr[(j) * blockx + i]
+#define GHOST_LEFT(i, j)  left_ptr[(j) * RADIUS + i]
+#define GHOST_RIGHT(i, j) right_ptr[(j) * RADIUS + i]
+#define GHOST_NORTH(i, j) north_ptr[(j) * blockx + i]
+#define GHOST_SOUTH(i, j) south_ptr[(j) * blockx + i]
+#define WEIGHT(i, j)      weight_ptr[(j + RADIUS) * sizew + (i + RADIUS)]
+
+  // compute the interior part
   {
-      int x = i % blockx;
-      int y = i / blockx;
-      int real_x = myoffsetx + x;
-      int real_y = myoffsety + y;
-
-      int real_coords[2] = {real_x,real_y};
-      Point<2> real_pos(real_coords);
-      if(real_pos.x[0] < RADIUS || real_pos.x[1] < RADIUS)
-          continue;
-      if(real_pos.x[0] >= (args->n - RADIUS) || real_pos.x[1] >= (args->n - RADIUS))
-          continue;
-
-      double val = 0.0;
-
-      for(int xx = -RADIUS; xx <= RADIUS; xx++)
+    int startx = RADIUS; // inclusive
+    int starty = RADIUS; // inclusive
+    int endx = blockx - RADIUS; // exclusive
+    int endy = blocky - RADIUS; // exclusive
+    for (int j = starty; j < endy; ++j)
+      for (int i = startx; i < endx; ++i)
       {
-          int xcoords[2] = {xx, 0};
-          Point<2> r(xcoords);
-
-          Point<2> p2 = real_pos + r;
-
-          if (main_rect.contains(p2)){
-              val += WEIGHT_X(xx) * read_ptr[i+xx];
-          }
-          else if (args->region_idx[GHOST_LEFT] != -1 && left_rect.contains(p2)){
-              int left_idx = (x + RADIUS + xx) + y * RADIUS;
-              val += WEIGHT_X(xx) * left_ptr[left_idx];
-          }
-          else if (args->region_idx[GHOST_RIGHT] != -1 && right_rect.contains(p2)){
-              int right_idx = (x + xx - blockx) + y * RADIUS;
-              val += WEIGHT_X(xx) * right_ptr[right_idx];
-          }
-          else{
-              assert(false);
-          }
+        for (int jj = -RADIUS; jj <= RADIUS; jj++)
+          OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+        for (int ii = -RADIUS; ii < 0; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+        for (int ii = 1; ii <= RADIUS; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
       }
-
-      for(int yy = -RADIUS; yy <= RADIUS; yy++)
-      {
-          int ycoords[2] = {0, yy};
-          Point<2> r(ycoords);
-
-          Point<2> p2 = real_pos + r;
-
-          if (main_rect.contains(p2)){
-              val += WEIGHT_Y(yy) * read_ptr[i+(yy*blockx)];
-          }
-          else if (args->region_idx[GHOST_NORTH] != -1 && north_rect.contains(p2)){
-              int north_idx = x + (RADIUS + y + yy) * blockx;
-              val += WEIGHT_Y(yy) * north_ptr[north_idx];
-          }
-          else if (args->region_idx[GHOST_SOUTH] != -1 && south_rect.contains(p2)){
-              int south_idx = x + (y + yy - blocky) * blockx;
-              val += WEIGHT_Y(yy) * south_ptr[south_idx];
-          }
-          else{
-              assert(false);
-          }
-      }
-
-      write_ptr[i] += val;
   }
- 
+
+  // compute boundaries if they exist
+  if (args->region_idx[GHOST_LEFT] != -1)
+  {
+    int starty = RADIUS; // inclusive
+    int endy = blocky - RADIUS; // exclusive
+    for (int j = starty; j < endy; ++j)
+      for (int i = 0; i < RADIUS; ++i)
+      {
+        for (int jj = -RADIUS; jj <= RADIUS; jj++)
+          OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+
+        for (int ii = 1; ii <= RADIUS; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+        for (int ii = -i; ii < 0; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+        for (int ii = -RADIUS; ii < -i; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * GHOST_LEFT(i + RADIUS + ii, j);
+      }
+
+    if (args->region_idx[GHOST_NORTH] != -1)
+      for (int j = 0; j < RADIUS; ++j)
+        for (int i = 0; i < RADIUS; ++i)
+        {
+          for (int jj = -RADIUS; jj < -j; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * GHOST_NORTH(i, j + RADIUS + jj);
+          for (int jj = -j; jj < 0; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+          for (int jj = 0; jj <= RADIUS; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+
+          for (int ii = 1; ii <= RADIUS; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+          for (int ii = -i; ii < 0; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+          for (int ii = -RADIUS; ii < -i; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * GHOST_LEFT(i + RADIUS + ii, j);
+        }
+  }
+
+  if (args->region_idx[GHOST_NORTH] != -1)
+  {
+    int startx = RADIUS; // inclusive
+    int endx = blockx - RADIUS; // exclusive
+    for (int j = 0; j < RADIUS; ++j)
+      for (int i = startx; i < endx; ++i)
+      {
+        for (int jj = -RADIUS; jj < -j; jj++)
+          OUT(i, j) += WEIGHT(0, jj) * GHOST_NORTH(i, j + RADIUS + jj);
+        for (int jj = -j; jj < 0; jj++)
+          OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+        for (int jj = 0; jj <= RADIUS; jj++)
+          OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+
+        for (int ii = -RADIUS; ii < 0; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+        for (int ii = 1; ii <= RADIUS; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+      }
+
+    if (args->region_idx[GHOST_RIGHT] != -1)
+      for (int j = 0; j < RADIUS; ++j)
+        for (int i = blockx - RADIUS; i < blockx; ++i)
+        {
+          for (int jj = -RADIUS; jj < -j; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * GHOST_NORTH(i, j + RADIUS + jj);
+          for (int jj = -j; jj < 0; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+          for (int jj = 0; jj <= RADIUS; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+
+          for (int ii = -RADIUS; ii < 0; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+          int cutoff = blockx - i;
+          for (int ii = 1; ii < cutoff; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+          for (int ii = cutoff; ii <= RADIUS; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * GHOST_RIGHT(ii - cutoff, j);
+        }
+  }
+
+  if (args->region_idx[GHOST_RIGHT] != -1)
+  {
+    int starty = RADIUS; // inclusive
+    int endy = blocky - RADIUS; // exclusive
+    for (int j = starty; j < endy; ++j)
+      for (int i = blockx - RADIUS; i < blockx; ++i)
+      {
+        for (int jj = -RADIUS; jj <= RADIUS; jj++)
+          OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+
+        for (int ii = -RADIUS; ii < 0; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+        int cutoff = blockx - i;
+        for (int ii = 1; ii < cutoff; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+        for (int ii = cutoff; ii <= RADIUS; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * GHOST_RIGHT(ii - cutoff, j);
+      }
+    if (args->region_idx[GHOST_SOUTH] != -1)
+      for (int j = blocky - RADIUS; j < blocky; ++j)
+      {
+        int cutoffy = blocky - j;
+        for (int i = blockx - RADIUS; i < blockx; ++i)
+        {
+          for (int jj = -RADIUS; jj <= 0; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+          for (int jj = 1; jj < cutoffy; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+          for (int jj = cutoffy; jj <= RADIUS; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * GHOST_SOUTH(i, jj - cutoffy);
+
+          for (int ii = -RADIUS; ii < 0; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+          int cutoffx = blockx - i;
+          for (int ii = 1; ii < cutoffx; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+          for (int ii = cutoffx; ii <= RADIUS; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * GHOST_RIGHT(ii - cutoffx, j);
+        }
+      }
+  }
+  if (args->region_idx[GHOST_SOUTH] != -1)
+  {
+    int startx = RADIUS; // inclusive
+    int endx = blockx - RADIUS; // exclusive
+    for (int j = blocky - RADIUS; j < blocky; ++j)
+    {
+      int cutoff = blocky - j;
+      for (int i = startx; i < endx; ++i)
+      {
+        for (int jj = -RADIUS; jj <= 0; jj++)
+          OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+        for (int jj = 1; jj < cutoff; jj++)
+          OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+        for (int jj = cutoff; jj <= RADIUS; jj++)
+          OUT(i, j) += WEIGHT(0, jj) * GHOST_SOUTH(i, jj - cutoff);
+
+        for (int ii = -RADIUS; ii < 0; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+        for (int ii = 1; ii <= RADIUS; ii++)
+          OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+      }
+    }
+
+    if (args->region_idx[GHOST_LEFT] != -1)
+      for (int j = blocky - RADIUS; j < blocky; ++j)
+      {
+        int cutoff = blocky - j;
+        for (int i = 0; i < RADIUS; ++i)
+        {
+          for (int jj = -RADIUS; jj <= 0; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+          for (int jj = 1; jj < cutoff; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+          for (int jj = cutoff; jj <= RADIUS; jj++)
+            OUT(i, j) += WEIGHT(0, jj) * GHOST_SOUTH(i, jj - cutoff);
+
+          for (int ii = 1; ii <= RADIUS; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+          for (int ii = -i; ii < 0; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+          for (int ii = -RADIUS; ii < -i; ii++)
+            OUT(i, j) += WEIGHT(ii, 0) * GHOST_LEFT(i + RADIUS + ii, j);
+        }
+      }
+  }
 }
 
 void check_task(const Task *task,
@@ -1080,19 +1254,19 @@ void check_task(const Task *task,
 
   SPMDArgs *args = (SPMDArgs*)task->args;
 
-  RegionAccessor<AccessorType::Generic, double> acc =
-    regions[0].get_field_accessor(FID_DERIV).typeify<double>();
+  RegionAccessor<AccessorType::Generic, DTYPE> acc =
+    regions[0].get_field_accessor(FID_DERIV).typeify<DTYPE>();
 
   Domain dom = runtime->get_index_space_domain(ctx,
       task->regions[0].region.get_index_space());
   Rect<2> rect = dom.get_rect<2>();
 
-  double abserr = 0.0;
-  double norm = 0.0;
-  double value = 0.0;
-  double epsilon=1.e-8; /* error tolerance */
+  DTYPE abserr = 0.0;
+  DTYPE norm = 0.0;
+  DTYPE value = 0.0;
+  DTYPE epsilon = EPSILON; /* error tolerance */
 
-  double* acc_ptr = 0;
+  DTYPE* acc_ptr = 0;
   {
     Rect<2> subrect_a; ByteOffset offsets_a[1];
     acc_ptr =acc.raw_rect_ptr<2>(rect, subrect_a, offsets_a);
@@ -1153,6 +1327,16 @@ void check_task(const Task *task,
   }
 }
 
+static void register_mappers(Machine machine, Runtime *rt,
+                             const std::set<Processor> &local_procs)
+{
+  for (std::set<Processor>::const_iterator it = local_procs.begin();
+      it != local_procs.end(); it++)
+  {
+    rt->replace_default_mapper(new StencilMapper(machine, rt, *it), *it);
+  }
+}
+
 int main(int argc, char **argv)
 {
   HighLevelRuntime::set_top_level_task_id(TASKID_TOPLEVEL);
@@ -1178,5 +1362,6 @@ int main(int argc, char **argv)
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "check");
 
+  HighLevelRuntime::set_registration_callback(register_mappers);
   return HighLevelRuntime::start(argc, argv);
 }
