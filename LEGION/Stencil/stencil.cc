@@ -1380,7 +1380,7 @@ int main(int argc, char **argv)
       AUTO_GENERATE_ID, TaskConfigOptions(), "top_level");
   HighLevelRuntime::register_legion_task<std::pair<double,double>, spmd_task>(TASKID_SPMD,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
-      AUTO_GENERATE_ID, TaskConfigOptions(), "spmd");
+      AUTO_GENERATE_ID, TaskConfigOptions(false, true), "spmd");
   HighLevelRuntime::register_legion_task<init_weight_task>(TASKID_WEIGHT_INITIALIZE,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "init_weight");
