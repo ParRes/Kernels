@@ -56,6 +56,7 @@
 !          - RvdW: Removed unrolling pragmas for clarity;
 !            added constant to array "in" at end of each iteration to force
 !            refreshing of neighbor data in parallel versions; August 2013
+!          - Converted to Fortran by Jeff Hammond, January-February 2016.
 !
 ! *******************************************************************
 
@@ -76,7 +77,7 @@ program main
   logical ::  tiling                                    ! boolean indication loop nest blocking
   integer(kind=INT32) ::  tile_size                     ! loop nest block factor
   integer(kind=INT32), parameter :: r=RADIUS            ! radius of stencil
-  real(kind=REAL64) :: W(2*r+1,2*r+1)                   ! weights of points in the stencil
+  real(kind=REAL64) :: W(-r:r,-r:r)                     ! weights of points in the stencil
   real(kind=REAL64), allocatable :: A(:,:), B(:,:)      ! grid values
   real(kind=REAL64), parameter :: cx=1.0, cy=1.0
   ! runtime variables
@@ -163,8 +164,8 @@ program main
     stop 1
   endif
 
-  norm = 0.0;
-  active_points = int((n-2*r)*(n-2*r),INT64);
+  norm = 0.0
+  active_points = int(n-2*r,INT64)**2
 
 #ifdef _OPENMP
   write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
@@ -177,7 +178,7 @@ program main
   stencil_size = 4*r+1
 #else
                    'stencil'
-  stencil_size = (2*r+1)*(2*r+1)
+  stencil_size = (2*r+1)**2
 #endif
   write(*,'(a)') 'Data type            = double precision'
   write(*,'(a)') 'Compact representation of stencil loop body'
@@ -189,52 +190,49 @@ program main
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   !$omp parallel default(none)                                        &
-  !$omp&  shared(A,B,W,t0,t1,iterations,tiling,tile_size,stencil_time)&
-  !$omp&  firstprivate(n)                                             &
+  !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size)           &
   !$omp&  private(i,j,ii,jj,it,jt,k)                                  &
   !$omp&  reduction(+:norm)
 
   ! fill the stencil weights to reflect a discrete divergence operator
-  !$omp do collapse(2)
-  do jj=-r,r
-    do ii=-r,r
-      W(ii+r+1,jj+r+1) = 0.0
-    enddo
-  enddo
-  !$omp end do nowait
+  ! Jeff: if one does not use workshare here, the code is wrong.
+  !$omp workshare
+  W = 0.0
+  !$omp end workshare
 #ifdef STAR
   !$omp do
   do ii=1,r
-    W(r+1, ii+r+1) =  1.0/real(2*ii*r,REAL64)
-    W(r+1,-ii+r+1) = -1.0/real(2*ii*r,REAL64)
-    W( ii+r+1,r+1) =  1.0/real(2*ii*r,REAL64)
-    W(-ii+r+1,r+1) = -1.0/real(2*ii*r,REAL64)
+    W(0, ii) =  1.0/real(2*ii*r,REAL64)
+    W(0,-ii) = -1.0/real(2*ii*r,REAL64)
+    W( ii,0) =  1.0/real(2*ii*r,REAL64)
+    W(-ii,0) = -1.0/real(2*ii*r,REAL64)
   enddo
   !$omp end do nowait
 #else
-  !$omp do collapse(2)
+  ! Jeff: check that this is correct with the new W indexing
+  !$omp do
   do jj=1,r
     do ii=-jj+1,jj-1
-      W( ii+r+1, jj+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii+r+1,-jj+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj+r+1, ii+r+1) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj+r+1, ii+r+1) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii, jj) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii,-jj) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj, ii) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj, ii) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
     enddo
-    W( jj+r+1, jj+r+1)  =  1.0/real(4.0*jj*r,REAL64)
-    W(-jj+r+1,-jj+r+1)  = -1.0/real(4.0*jj*r,REAL64)
+    W( jj, jj)  =  1.0/real(4.0*jj*r,REAL64)
+    W(-jj,-jj)  = -1.0/real(4.0*jj*r,REAL64)
   enddo
   !$omp end do nowait
 #endif
 
   ! intialize the input and output arrays
-  !$omp do collapse(2)
+  !$omp do !!! collapse(2)
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
     enddo
   enddo
   !$omp end do nowait
-  !$omp do collapse(2)
+  !$omp do !!! collapse(2)
   do j=r+1,n-r
     do i=r+1,n-r
       B(i,j) = 0.0
@@ -247,10 +245,7 @@ program main
     ! start timer after a warmup iteration
     !$omp barrier
     !$omp master
-     if (k.eq.3) then
-        ! do i=1,n
-        !    write(*,'(1600F14.7)') ( b(i,j), j=n/2+1,n )
-        ! enddo
+    if (k.eq.1) then
 #ifdef _OPENMP
         t0 = omp_get_wtime()
 #else
@@ -261,24 +256,24 @@ program main
 
     ! Apply the stencil operator
     if (.not.tiling) then
-      !$omp do collapse(2)
+      !$omp do !!! collapse(2)
       do j=r,n-r-1
         do i=r,n-r-1
 #ifdef STAR
             ! do not use Intel Fortran unroll directive here (slows down)
             do jj=-r,r
-              B(i+1,j+1) = B(i+1,j+1) + W(r+1,jj+r+1) * A(i+1,j+jj+1)
+              B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
             enddo
             do ii=-r,-1
-              B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,r+1) * A(i+ii+1,j+1)
+              B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
             enddo
             do ii=1,r
-              B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,r+1) * A(i+ii+1,j+1)
+              B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
             enddo
 #else
             do jj=-r,r
               do ii=-r,r
-                B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,jj+r+1) * A(i+ii+1,j+jj+1)
+                B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
               enddo
             enddo
 #endif
@@ -286,25 +281,25 @@ program main
       enddo
       !$omp end do nowait
     else ! tiling
-      !$omp do collapse(2)
+      !$omp do !!! collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
             do i=it,min(n-r-1,it+tile_size-1)
 #ifdef STAR
                 do jj=-r,r
-                  B(i+1,j+1) = B(i+1,j+1) + W(r+1,jj+r+1) * A(i+1,j+jj+1)
+                  B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
                 enddo
                 do ii=-r,-1
-                  B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,r+1) * A(i+ii+1,j+1)
+                  B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
                 enddo
                 do ii=1,r
-                  B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,r+1) * A(i+ii+1,j+1)
+                  B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
                 enddo
 #else
                 do jj=-r,r
                   do ii=-r,r
-                    B(i+1,j+1) = B(i+1,j+1) + W(ii+r+1,jj+r+1) * A(i+ii+1,j+jj+1)
+                    B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
                   enddo
                 enddo
 #endif
@@ -318,7 +313,7 @@ program main
     !$omp barrier
 
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp do collapse(2)
+    !$omp do !!! collapse(2)
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.0
@@ -328,26 +323,27 @@ program main
 
   enddo ! iterations
 
+#ifdef _OPENMP
   !$omp barrier
   !$omp master
-#ifdef _OPENMP
   t1 = omp_get_wtime()
+  !$omp end master
 #else
   call cpu_time(t1)
 #endif
-  stencil_time = t1 - t0
-  !$omp end master
 
   ! compute L1 norm in parallel
-  !$omp do collapse(2)
+  !$omp do !!! collapse(2)
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
+  !$omp end do nowait
 
   !$omp end parallel
 
+  stencil_time = t1 - t0
   norm = norm / real(active_points,REAL64)
 
   !******************************************************************************
@@ -357,9 +353,11 @@ program main
   deallocate( B )
   deallocate( A )
 
+  ! Jeff: valgrind says that this is branching on uninitialized value (norm),
+  !       but this is nonsense since norm is initialized to 0.0 at line 167.
+
   ! verify correctness
   reference_norm = real(iterations+1,REAL64) * (cx + cy);
-  write(*,*) reference_norm
   if (abs(norm-reference_norm) .gt. epsilon) then
     write(*,'(a,f13.6,a,f13.6)') 'ERROR: L1 norm = ', norm, &
                                  ' Reference L1 norm = ', reference_norm
