@@ -152,6 +152,9 @@ program main
 
   np = num_images(); me = this_image()
 
+  call co_broadcast(n,source_image=1)
+  call co_broadcast(iterations,source_image=1)
+
   dims(1) = int(sqrt(real(np)))
   dims(2) = int(np/dims(1))
   i=1
@@ -180,8 +183,9 @@ program main
     stop 1
   endif
 
-  norm = 0.0
+  norm = 0.d0
   active_points = int(n-2*r,INT64)**2
+  coords = this_image(a)
 
   write(*,'(a,i8)') 'Number of images    = ',num_images()
   write(*,'(a,i8)') 'Grid size            = ', n
@@ -205,9 +209,6 @@ program main
 
   ! fill the stencil weights to reflect a discrete divergence operator
   ! Jeff: if one does not use workshare here, the code is wrong.
-
-  call co_broadcast(n,source_image=1)
-  call co_broadcast(iterations,source_image=1)
 
   W = 0.0
 
@@ -239,35 +240,34 @@ program main
     enddo
   enddo
 
-  do j=r,nc-r
-    do i=r+1,nr-r
+  do j=1,nc
+    do i=1,nr
       B(i,j) = 0.0
     enddo
   enddo
 
-  coords = this_image(a)
-
-  start_i = 1; end_i = nr - 1
-  start_j = 1; end_j = nc - 1
+  start_i = 0; end_i = nr - 1
+  start_j = 0; end_j = nc - 1
 
   if(coords(1) == dims(1)) end_i = nr - r - 1
   if(coords(1) == 1) start_i = r
   if(coords(2) == dims(2)) end_j = nc - r - 1
   if(coords(2) == 1) start_j = r
+  
   sync all
 
   do k=0,iterations
 
      ! exchanging data in y-direction
      !top
-     if(coords(1)>1) a(1-r:1,1:nc) = a(nr-r:nr,1:nc)[coords(1)-1,coords(2)]
+     if(coords(1)>1) a(1-r:0,1:nc) = a(nr-r+1:nr,1:nc)[coords(1)-1,coords(2)]
      !bottom
-     if(coords(1)<dims(1)) a(nr-r:nr,1:nc) = a(1:r,1:nc)[coords(1)+1,coords(2)]
+     if(coords(1)<dims(1)) a(nr+1:nr+r,1:nc) = a(1:r,1:nc)[coords(1)+1,coords(2)]
      !exchanging data in x-direction
      !left
-     if(coords(2)>1) a(1:nr,1-r:1) = a(1:nr,nc-r:nc)[coords(1),coords(2)-1]
+     if(coords(2)>1) a(1:nr,1-r:0) = a(1:nr,nc-r+1:nc)[coords(1),coords(2)-1]
      !right
-     if(coords(2)<dims(2)) a(1:nr,nc:nc+r) = a(1:nr,1-r:1)[coords(1),coords(2)+1]
+     if(coords(2)<dims(2)) a(1:nr,nc+1:nc+r) = a(1:nr,1:r)[coords(1),coords(2)+1]
 
      sync all
 
@@ -345,9 +345,18 @@ program main
 
   sync all
 
-  ! compute L1 norm in parallel
-  do j=r,nc-r
-    do i=r,nr-r
+  ! compute L1 norm
+
+  start_i = 1; end_i = nr
+  start_j = 1; end_j = nc
+
+  if(coords(1) == dims(1)) end_i = nr - r
+  if(coords(1) == 1) start_i = r
+  if(coords(2) == dims(2)) end_j = nc - r
+  if(coords(2) == 1) start_j = r
+
+  do j=start_j,end_j
+    do i=start_i,end_i
       norm = norm + abs(B(i,j))
     enddo
   enddo
