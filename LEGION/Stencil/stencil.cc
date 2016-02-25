@@ -586,7 +586,7 @@ void top_level_task(const Task *task,
 
         for (unsigned idx = 1; idx < args[color].num_regions; idx++){
           spmd_launcher.add_field(idx, FID_GHOST);
-          if (idx > 1 + ghost_count)
+          if (idx <= ghost_count)
             spmd_launcher.region_requirements[idx].flags |= NO_ACCESS_FLAG;
         }
 
@@ -906,6 +906,8 @@ void init_field_task(const Task *task,
   assert(task->regions[0].privilege_fields.size() == 1);
   assert(task->regions[1].privilege_fields.size() == 1);
 
+  SPMDArgs *args = (SPMDArgs*)task->args;
+
   RegionAccessor<AccessorType::Generic, DTYPE> in_acc =
     regions[0].get_field_accessor(FID_VAL).typeify<DTYPE>();
   RegionAccessor<AccessorType::Generic, DTYPE> out_acc =
@@ -915,11 +917,37 @@ void init_field_task(const Task *task,
       task->regions[0].region.get_index_space());
   Rect<2> rect = dom.get_rect<2>();
   
-  for (GenericPointInRectIterator<2> pir(rect); pir; pir++)
+  DTYPE* val_ptr = 0;
+  DTYPE* deriv_ptr = 0;
+
+  int Num_procsx = args->Num_procsx;
+  int Num_procsy = args->Num_procsy;
+  int blockx = args->n / Num_procsx;
+  int blocky = args->n / Num_procsy;
+  int my_IDx = args->x;
+  int my_IDy = args->y;
+  int myoffsetx = my_IDx * blockx;
+  int myoffsety = my_IDy * blocky;
+
   {
-      DTYPE value = COEFY*pir.p.x[1] + COEFX*pir.p.x[0];
-      in_acc.write(DomainPoint::from_point<2>(pir.p), value);
-      out_acc.write(DomainPoint::from_point<2>(pir.p), 0.0);
+      Rect<2> subrect; ByteOffset offsets[1];
+      val_ptr = in_acc.raw_rect_ptr<2>(rect, subrect, offsets);
+      deriv_ptr = out_acc.raw_rect_ptr<2>(rect, subrect, offsets);
+      assert(rect == subrect);
+  }
+
+#define VAL(i, j)   val_ptr[(j) * blockx + i]
+#define DERIV(i, j) deriv_ptr[(j) * blockx + i]
+  for (int j = 0; j < blocky; ++j)
+  {
+    int real_y = myoffsety + j;
+    for (int i = 0; i < blockx; ++i)
+    {
+      int real_x = myoffsetx + i;
+      DTYPE value = COEFY * real_y + COEFX * real_x;
+      VAL(i, j) = value;
+      DERIV(i, j) = (DTYPE)0.0;
+    }
   }
 }
 
