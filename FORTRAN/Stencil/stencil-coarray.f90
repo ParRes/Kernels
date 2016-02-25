@@ -82,7 +82,7 @@ program main
   integer(kind=INT32) ::  stencil_size                  ! number of points in stencil
   logical ::  tiling                                    ! boolean indication loop nest blocking
   integer(kind=INT32) ::  tile_size                     ! loop nest block factor
-  integer(kind=INT32), parameter :: r=2!RADIUS            ! radius of stencil
+  integer(kind=INT32), parameter :: r=RADIUS            ! radius of stencil
   real(kind=REAL64) :: W(-r:r,-r:r)                     ! weights of points in the stencil
   real(kind=REAL64), allocatable :: A(:,:)[:,:], B(:,:) ! grid values
   real(kind=REAL64), parameter :: cx=1.0, cy=1.0
@@ -90,7 +90,7 @@ program main
   integer(kind=INT32) :: i, j, k
   integer(kind=INT32) :: ii, jj, it, jt
   integer(kind=INT64) :: flops                          ! floating point ops per iteration
-  real(kind=REAL64) :: norm, reference_norm             ! L1 norm of solution
+  real(kind=REAL64) :: norm[*], reference_norm             ! L1 norm of solution
   integer(kind=INT64) :: active_points                  ! interior of grid with respect to stencil
   real(kind=REAL64) :: t0, t1, stencil_time, avgtime    ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
@@ -104,11 +104,7 @@ program main
 #define PRKVERSION "N/A"
 #endif
   write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
-#ifdef _OPENMP
-  write(*,'(a)')   'OpenMP stencil execution on 2D grid'
-#else
-  write(*,'(a)')   'Serial stencil execution on 2D grid'
-#endif
+  write(*,'(a)')   'CAF stencil execution on 2D grid'
 
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
@@ -160,8 +156,9 @@ program main
 
   np = num_images(); me = this_image()
 
-  call co_broadcast(n,source_image=1)
-  call co_broadcast(iterations,source_image=1)
+!  Collectives are part of Fortran 2015
+!  call co_broadcast(n,source_image=1)
+!  call co_broadcast(iterations,source_image=1)
 
   dims(1) = int(sqrt(real(np)))
   dims(2) = int(np/dims(1))
@@ -370,8 +367,15 @@ program main
   enddo
 
   stencil_time = t1 - t0
-  call co_sum(norm,result_image=1)
-  norm = norm / real(active_points,REAL64)
+!  Collectives are part of Fortran 2015
+!  call co_sum(norm,result_image=1)
+  sync all
+  if(me == 1) then
+     do i=2,np
+        norm = norm + norm[i]
+     enddo
+     norm = norm / real(active_points,REAL64)
+  endif
 
   !******************************************************************************
   !* Analyze and output results.
