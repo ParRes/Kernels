@@ -174,6 +174,7 @@ public:
   PhaseBarrier notify_empty[4];
   PhaseBarrier wait_ready[4];
   PhaseBarrier wait_empty[4];
+  PhaseBarrier global_barrier;
   int region_idx[4];
   unsigned num_regions;
   int iterations;
@@ -420,6 +421,7 @@ void top_level_task(const Task *task,
     south_ready_barriers.push_back(runtime->create_phase_barrier(ctx, 1));
     south_empty_barriers.push_back(runtime->create_phase_barrier(ctx, 1));
   }
+  PhaseBarrier global_barrier = runtime->create_phase_barrier(ctx, threads);
 
   // In order to guarantee that all of our spmd_tasks execute in parallel
   // we have to use a must epoch launcher.  This instructs the runtime
@@ -504,6 +506,7 @@ void top_level_task(const Task *task,
         args[color].y = my_IDy;
         args[color].n = n;
         args[color].my_ID = color;
+        args[color].global_barrier = global_barrier;
 
         TaskLauncher spmd_launcher(TASKID_SPMD,
             TaskArgument(&args[color], sizeof(SPMDArgs)));
@@ -738,6 +741,7 @@ std::pair<double, double> spmd_task(const Task *task,
       RegionRequirement(local_lr, WRITE_DISCARD,
                         EXCLUSIVE, local_lr));
   init_launcher.add_field(1, FID_DERIV);
+  init_launcher.add_arrival_barrier(args->global_barrier);
   runtime->execute_task(ctx, init_launcher);
 
   // Run a bunch of steps
@@ -753,6 +757,9 @@ std::pair<double, double> spmd_task(const Task *task,
       dummy_launcher.add_region_requirement(
           RegionRequirement(local_lr, READ_ONLY, EXCLUSIVE, local_lr));
       dummy_launcher.add_field(1, FID_VAL);
+      args->global_barrier =
+        runtime->advance_phase_barrier(ctx, args->global_barrier);
+      dummy_launcher.add_wait_barrier(args->global_barrier);
       Future f = runtime->execute_task(ctx, dummy_launcher);
       f.get_void_result();
       ts_start = wtime();
