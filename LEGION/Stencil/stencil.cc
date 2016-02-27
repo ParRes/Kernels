@@ -744,27 +744,27 @@ std::pair<double, double> spmd_task(const Task *task,
   init_launcher.add_arrival_barrier(args->global_barrier);
   runtime->execute_task(ctx, init_launcher);
 
+  TaskLauncher dummy_launcher(TASKID_DUMMY, TaskArgument(NULL, 0));
+  dummy_launcher.add_region_requirement(
+      RegionRequirement(local_lr, READ_ONLY, EXCLUSIVE, local_lr));
+  dummy_launcher.add_field(0, FID_DERIV);
+  dummy_launcher.add_region_requirement(
+      RegionRequirement(local_lr, READ_ONLY, EXCLUSIVE, local_lr));
+  dummy_launcher.add_field(1, FID_VAL);
+  dummy_launcher.add_region_requirement(
+      RegionRequirement(lr_weight, READ_ONLY, EXCLUSIVE, lr_weight));
+  dummy_launcher.add_field(2, FID_WEIGHT);
+  args->global_barrier =
+    runtime->advance_phase_barrier(ctx, args->global_barrier);
+  dummy_launcher.add_wait_barrier(args->global_barrier);
+  Future f = runtime->execute_task(ctx, dummy_launcher);
+  f.get_void_result();
+
   // Run a bunch of steps
   double ts_start = DBL_MAX, ts_end = DBL_MIN;
-  for (int iter = 0; iter <= args->iterations; iter++)
+  ts_start = wtime();
+  for (int iter = 0; iter < args->iterations; iter++)
   {
-    if(iter == 1)
-    {
-      TaskLauncher dummy_launcher(TASKID_DUMMY, TaskArgument(NULL, 0));
-      dummy_launcher.add_region_requirement(
-          RegionRequirement(local_lr, READ_ONLY, EXCLUSIVE, local_lr));
-      dummy_launcher.add_field(0, FID_DERIV);
-      dummy_launcher.add_region_requirement(
-          RegionRequirement(local_lr, READ_ONLY, EXCLUSIVE, local_lr));
-      dummy_launcher.add_field(1, FID_VAL);
-      args->global_barrier =
-        runtime->advance_phase_barrier(ctx, args->global_barrier);
-      dummy_launcher.add_wait_barrier(args->global_barrier);
-      Future f = runtime->execute_task(ctx, dummy_launcher);
-      f.get_void_result();
-      ts_start = wtime();
-    }
-
     runtime->begin_trace(ctx, 0);
     // Issue explicit region-to-region copies
     for (unsigned idx = 0; idx < num_neighbors; idx++)
@@ -828,19 +828,9 @@ std::pair<double, double> spmd_task(const Task *task,
       notify_empty[idx] =
         runtime->advance_phase_barrier(ctx, notify_empty[idx]);
     }
-    runtime->execute_task(ctx, stencil_launcher);
+    f = runtime->execute_task(ctx, stencil_launcher);
     runtime->end_trace(ctx, 0);
   }
-
-  //runtime->issue_execution_fence(ctx);
-  TaskLauncher dummy_launcher(TASKID_DUMMY, TaskArgument(NULL, 0));
-  dummy_launcher.add_region_requirement(
-      RegionRequirement(local_lr, READ_ONLY, EXCLUSIVE, local_lr));
-  dummy_launcher.add_field(0, FID_DERIV);
-  dummy_launcher.add_region_requirement(
-      RegionRequirement(local_lr, READ_ONLY, EXCLUSIVE, local_lr));
-  dummy_launcher.add_field(1, FID_VAL);
-  Future f = runtime->execute_task(ctx, dummy_launcher);
   f.get_void_result();
   ts_end = wtime();
 
@@ -1344,7 +1334,7 @@ void check_task(const Task *task,
     if(real_pos.x[0] >= (args->n - RADIUS) || real_pos.x[1] >= (args->n - RADIUS))
       continue;
 
-    norm = (DTYPE) (args->iterations + 1) * (COEFX + COEFY);
+    norm = (DTYPE) (args->iterations) * (COEFX + COEFY);
     value = acc_ptr[i];
     abserr += ABS(value - norm);
   }
