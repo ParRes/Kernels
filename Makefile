@@ -203,7 +203,7 @@ allfortranopenmp:
 	cd FORTRAN/Transpose;       $(MAKE) transpose-omp
 
 allfortrancoarray:
-	#cd FORTRAN/Stencil;         $(MAKE) stencil-coarray
+	cd FORTRAN/Stencil;         $(MAKE) stencil-coarray
 	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-coarray
 	cd FORTRAN/Transpose;       $(MAKE) transpose-coarray
 

@@ -86,6 +86,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/Stencil/stencil-omp         10 1000
         $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 32
         # FIXME: only testing with a single image right now.
+        $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
+        $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
         $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
         $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
         ;;
