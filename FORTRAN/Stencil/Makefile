@@ -1,6 +1,6 @@
 PROGRAM=stencil
 
-include ../../common/make.defs
+include ../../common/FORTRAN.defs
 include ../../common/PRKVERSION
 
 ifndef RADIUS
@@ -22,6 +22,9 @@ $(PROGRAM): $(PROGRAM).f90
 
 $(PROGRAM)-omp: $(PROGRAM).f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+
+$(PROGRAM)-coarray: $(PROGRAM)-coarray.f90
+	$(CAFCOMPILER) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
 
 run: $(PROGRAM)
 	$(PROGRAM) 10 4000 32

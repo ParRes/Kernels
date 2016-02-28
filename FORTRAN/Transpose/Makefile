@@ -1,6 +1,6 @@
 PROGRAM=transpose
 
-include ../../common/make.defs
+include ../../common/FORTRAN.defs
 include ../../common/PRKVERSION
 
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
@@ -9,7 +9,7 @@ FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 .PHONY: all clean run
 
-all: $(PROGRAM) $(PROGRAM)-omp $(PROGRAM)-coarray
+all: $(PROGRAM) $(PROGRAM)-omp $(PROGRAM)-coarray $(PROGRAM)-pretty
 
 $(PROGRAM): $(PROGRAM).f90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -18,10 +18,13 @@ $(PROGRAM)-omp: $(PROGRAM).f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 $(PROGRAM)-coarray: $(PROGRAM)-coarray.f90
-	$(FC) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
+	$(CAFCOMPILER) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
+
+$(PROGRAM)-pretty: $(PROGRAM)-pretty.f90
+	$(FC) $(FCFLAGS) $< -o $@
 
 run: $(PROGRAM)
-	$(PROGRAM) 10 4096 32
+	$(PROGRAM) 10 4000 32
 
 clean:
 	-rm -f *.o

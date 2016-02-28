@@ -1,0 +1,7 @@
+include ../../common/make.defs
+ifeq ($(MPIF90),)
+    CAFCOMPILER=$(FC)
+else
+    CAFCOMPILER=$(MPIF90)
+endif
+PROG_ENV=-DCAF
