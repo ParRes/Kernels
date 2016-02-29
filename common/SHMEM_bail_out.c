@@ -58,9 +58,9 @@ void bail_out (int error) {
    int i;
    global_error = prk_shmem_align(prk_get_alignment(),sizeof(long));
    local_error = prk_shmem_align(prk_get_alignment(),sizeof(long));
-   pWrk = prk_shmem_align(prk_get_alignment(),sizeof(long)*PRK_SHMEM_BCAST_SYNC_SIZE);
-   pSync_local = prk_shmem_align(prk_get_alignment(),sizeof(long)*PRK_SHMEM_BCAST_SYNC_SIZE);
-   for (i = 0; i < PRK_SHMEM_BCAST_SYNC_SIZE; i += 1) {
+   pWrk = prk_shmem_align(prk_get_alignment(),sizeof(long)*PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE);
+   pSync_local = prk_shmem_align(prk_get_alignment(),sizeof(long)*PRK_SHMEM_REDUCE_SYNC_SIZE);
+   for (i = 0; i < PRK_SHMEM_REDUCE_SYNC_SIZE; i += 1) {
     pSync_local[i] = PRK_SHMEM_SYNC_VALUE;
    }
    local_error [0] = error;
