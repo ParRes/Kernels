@@ -376,13 +376,13 @@ int computeCoulomb(double x_dist, double y_dist, double q1, double q2, double *f
 }
 
 /* Computes the total Coulomb force on a particle exerted from the charges of the corresponding cell */
-void computeTotalForce(particle_t p, int64_t my_start_gp_x, int64_t iend, int64_t my_start_gp_y, int64_t my_end_gp_y, double *grid, double *fx, double *fy)
+void computeTotalForce(particle_t p, bbox_t tile, double *grid, double *fx, double *fy)
 {
    int64_t  y, x;
    double   tmp_fx, tmp_fy, rel_y, rel_x;
    double   tmp_res_x = 0.0;
    double   tmp_res_y = 0.0;
-   int64_t  n_rows = my_end_gp_y-my_start_gp_y+1;
+   int64_t  n_rows = tile.top-tile.bottom+1;
    
    /* Coordinates of the cell containing the particle */
    y = (int64_t) floor(p.y);
@@ -391,8 +391,8 @@ void computeTotalForce(particle_t p, int64_t my_start_gp_x, int64_t iend, int64_
    rel_x = p.x - x;
    rel_y = p.y - y;
    
-   x = x - my_start_gp_x;
-   y = y - my_start_gp_y;
+   x = x - tile.left;
+   y = y - tile.bottom;
    
    computeCoulomb(rel_x, rel_y, p.q, grid[y+x*n_rows], &tmp_fx, &tmp_fy);
    
@@ -557,18 +557,16 @@ int main(int argc, char ** argv) {
   int         Num_procsx, Num_procsy; // number of ranks in each coord direction      
   int         args_used = 1;     // keeps track of # consumed arguments
   int         my_ID;             // MPI rank
-  int         my_IDx, my_IDy;    // coordinates of rank in rank grid                    */
+  int         my_IDx, my_IDy;    // coordinates of rank in rank grid                  
   int         root = 0;          // master rank
-  uint64_t    g;                 // dimension of grid in points
   uint64_t    L;                 // dimension of grid in cells
   int64_t     iterations ;       // total number of simulation steps
-  int64_t     n ;                // total number of particles in the simulation
+  int64_t     n;                 // total number of particles in the simulation
   char        *init_mode;        // particle initialization mode (char)
-  double      rho ; // rho parameter for the initial particle distribution
+  double      rho ;              // attenuation factor for geometric particle distribution
   int         k ;   // determines the speed of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
   int         m ;   // determines the speed of "vertical move" of the particle distribution -- m cells per time step
   double      *grid;             // the grid is represented as an array of charges
-  particle_t  *particles;        // the particles array
   int64_t     iter, i;
   double      fx, fy, ax, ay;    // particle forces and accelerations
   int         error=0;           // used for graceful exit after error
@@ -577,13 +575,12 @@ int main(int argc, char ** argv) {
   bbox_t      grid_patch,        // whole grid
               init_patch,        // subset of grid used for localized initialization
               my_tile;
-  particle_t  *sendbuf_init, *my_particles, *p;
+  particle_t  *my_particles, *p;
   int64_t     *cur_counts;
   int64_t     owner, ptr_my;
-  int         *counts, *displacements;
   double      pic_time, local_pic_time, avg_time;
   int64_t     my_checksum = 0, tot_checksum = 0, correctness_checksum = 0;
-  int64_t     width, height, my_width, my_height;
+  int64_t     width, height;
   int         particle_mode = -1;
   double      alpha, beta;
    
@@ -657,8 +654,8 @@ int main(int argc, char ** argv) {
   MPI_Bcast(&n,          1, MPI_INT64_T, root, MPI_COMM_WORLD);
   MPI_Bcast(&k,          1, MPI_INT,     root, MPI_COMM_WORLD);
   MPI_Bcast(&m,          1, MPI_INT,     root, MPI_COMM_WORLD);
-  g = L+1;
-  grid_patch = (bbox_t){0, g, 0, g};
+
+  grid_patch = (bbox_t){0, L+1, 0, L+1};
    
   if (my_ID==root) { // process initialization parameters
     /* Initialize particles with geometric distribution */
@@ -783,7 +780,6 @@ int main(int argc, char ** argv) {
     istart = (width+1) * ileftover + width * (my_IDx-ileftover);
     iend = istart + width;
   }
-  my_width = iend - istart;
   int icrit = (width+1) * ileftover;
 
   height = L/Num_procsy;
@@ -796,7 +792,6 @@ int main(int argc, char ** argv) {
     jstart = (height+1) * jleftover + height * (my_IDy-jleftover);
     jend = jstart + height;
   }
-  my_height = jend - jstart;
   int jcrit = (height+1) * jleftover;
 
   my_tile = (bbox_t){istart,iend,jstart,jend};
@@ -892,12 +887,11 @@ int main(int argc, char ** argv) {
       owner = find_owner(p[i], width, height, icrit, jcrit, ileftover, jleftover, Num_procsx);
       fx = 0.0;
       fy = 0.0;
-      computeTotalForce(p[i], istart, iend, jstart, jend, grid, &fx, &fy);
+      computeTotalForce(p[i], my_tile, grid, &fx, &fy);
 
       ax = fx * MASS_INV;
       ay = fy * MASS_INV;
 
-      double pxold=p[i].x, pyold=p[i].y;
       /* Update particle positions, taking into account periodic boundaries */
       p[i].x = fmod(p[i].x + p[i].v_x*DT + 0.5*ax*DT*DT + L, L);
       p[i].y = fmod(p[i].y + p[i].v_y*DT + 0.5*ay*DT*DT + L, L);
@@ -956,7 +950,6 @@ int main(int argc, char ** argv) {
     }
     MPI_Waitall(16, requests, status);
      
-    uint64_t oldcount=my_particles_count; 
     /* Attach received particles to my_particles buffer */
     attach_received_particles(&my_particles, &ptr_my, &my_particles_size, recv_buf[0], to_recv[0], recv_buf[1], to_recv[1]);
     attach_received_particles(&my_particles, &ptr_my, &my_particles_size, recv_buf[3], to_recv[3], recv_buf[2], to_recv[2]);
