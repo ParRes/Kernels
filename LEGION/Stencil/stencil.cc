@@ -315,6 +315,9 @@ void top_level_task(const Task *task,
       break;
     }
   //std::swap(Num_procsx, Num_procsy);
+  // TODO: temporary hack to circumvent the runtime issue
+  Num_procsy = num_ranks;
+  Num_procsx = 1;
 
   if (n % num_ranks != 0)
   {
