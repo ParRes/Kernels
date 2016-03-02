@@ -889,6 +889,21 @@ void stencil_field_task(const Task *task,
 #define OUT(i, j)    outputPtr[(j) * haloX + i]
 #define WEIGHT(i, j) weightPtr[(j + RADIUS) * weightBlockX + (i + RADIUS)]
 
+#ifdef LOOP_TILING
+#define TILE_SIZE 256
+  for (coord_t j = startY; j < endY; j += TILE_SIZE)
+    for (coord_t i = startX; i < endX; i += TILE_SIZE)
+      for (coord_t y = j; y < std::min(endY, j + TILE_SIZE); ++y)
+        for (coord_t x = i; x < std::min(endX, i + TILE_SIZE); ++x)
+        {
+          for (int jj = -RADIUS; jj <= RADIUS; jj++)
+            OUT(x, y) += WEIGHT(0, jj) * IN(x, y + jj);
+          for (int ii = -RADIUS; ii < 0; ii++)
+            OUT(x, y) += WEIGHT(ii, 0) * IN(x + ii, y);
+          for (int ii = 1; ii <= RADIUS; ii++)
+            OUT(x, y) += WEIGHT(ii, 0) * IN(x + ii, y);
+        }
+#else
   for (coord_t j = startY; j < endY; ++j)
     for (coord_t i = startX; i < endX; ++i)
     {
@@ -899,6 +914,7 @@ void stencil_field_task(const Task *task,
       for (int ii = 1; ii <= RADIUS; ii++)
         OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
     }
+#endif
 
 #undef IN
 #undef OUT
