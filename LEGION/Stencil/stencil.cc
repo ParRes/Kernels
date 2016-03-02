@@ -161,29 +161,48 @@ bool StencilMapper::map_must_epoch(const std::vector<Task*> &tasks,
     map_task(task);
   }
 
+  typedef std::map<LogicalRegion, Memory> Mapping;
+  Mapping mappings;
   for (unsigned i = 0; i < constraints.size(); ++i)
   {
     const MappingConstraint& c = constraints[i];
     assert(c.t1->target_proc.address_space() !=
            c.t2->target_proc.address_space());
-    if (c.t2->regions[c.idx2].flags & NO_ACCESS_FLAG)
+    if (c.idx1 == 0)
     {
-      assert((c.t1->regions[c.idx1].flags & NO_ACCESS_FLAG) == 0);
+      Memory sysmem = all_sysmems[c.t1->target_proc];
       c.t1->regions[c.idx1].target_ranking.clear();
-      c.t1->regions[c.idx1].target_ranking.push_back(all_sysmems[c.t1->target_proc]);
+      c.t1->regions[c.idx1].target_ranking.push_back(sysmem);
       c.t2->regions[c.idx2].target_ranking.clear();
-      c.t2->regions[c.idx2].target_ranking.push_back(all_sysmems[c.t1->target_proc]);
+      c.t2->regions[c.idx2].target_ranking.push_back(sysmem);
+      mappings[c.t1->regions[c.idx1].region] = sysmem;
     }
-    else if (c.t1->regions[c.idx1].flags & NO_ACCESS_FLAG)
+    else if (c.idx2 == 0)
     {
-      assert((c.t2->regions[c.idx2].flags & NO_ACCESS_FLAG) == 0);
+      Memory sysmem = all_sysmems[c.t2->target_proc];
       c.t1->regions[c.idx1].target_ranking.clear();
-      c.t1->regions[c.idx1].target_ranking.push_back(all_sysmems[c.t2->target_proc]);
+      c.t1->regions[c.idx1].target_ranking.push_back(sysmem);
       c.t2->regions[c.idx2].target_ranking.clear();
-      c.t2->regions[c.idx2].target_ranking.push_back(all_sysmems[c.t2->target_proc]);
+      c.t2->regions[c.idx2].target_ranking.push_back(sysmem);
+      mappings[c.t2->regions[c.idx2].region] = sysmem;
     }
     else
-      assert(0);
+      continue;
+  }
+
+  for (unsigned i = 0; i < constraints.size(); ++i)
+  {
+    const MappingConstraint& c = constraints[i];
+    if (c.idx1 != 0 && c.idx2 != 0)
+    {
+      Mapping::iterator it = mappings.find(c.t1->regions[c.idx1].region);
+      assert(it != mappings.end());
+      Memory regmem = it->second;
+      c.t1->regions[c.idx1].target_ranking.clear();
+      c.t1->regions[c.idx1].target_ranking.push_back(regmem);
+      c.t2->regions[c.idx2].target_ranking.clear();
+      c.t2->regions[c.idx2].target_ranking.push_back(regmem);
+    }
   }
 
   //for (unsigned i = 0; i < tasks.size(); ++i)
@@ -315,9 +334,6 @@ void top_level_task(const Task *task,
       break;
     }
   //std::swap(Num_procsx, Num_procsy);
-  // TODO: temporary hack to circumvent the runtime issue
-  Num_procsy = num_ranks;
-  Num_procsx = 1;
 
   if (n % num_ranks != 0)
   {
@@ -456,7 +472,7 @@ void top_level_task(const Task *task,
           continue;
         DomainPoint neighborPoint =
           DomainPoint::from_point<2>(Point<2>(neighborCoords));
-        RegionRequirement req(privateLrs[neighborPoint], READ_ONLY,
+        RegionRequirement req(privateLrs[neighborPoint], READ_WRITE,
             SIMULTANEOUS, privateLrs[neighborPoint]);
         req.add_field(FID_IN);
         req.add_field(FID_OUT);
