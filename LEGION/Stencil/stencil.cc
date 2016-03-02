@@ -483,7 +483,8 @@ void top_level_task(const Task *task,
   double avgTime = maxTime / iterations;
 
   int stencil_size = 4 * RADIUS + 1;
-  unsigned long long active_points = (n - 2 * RADIUS) * (n - 2 * RADIUS);
+  unsigned long active_points =
+    (unsigned long)(n - 2 * RADIUS) * (n - 2 * RADIUS);
   double flops = (DTYPE) (2 * stencil_size + 1) * active_points;
 
   printf("Rate (MFlops/s): " FSTR "  Avg time (s): %lf\n",
