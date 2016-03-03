@@ -81,7 +81,7 @@ program main
   integer(kind=INT32) :: col_per_pe                 ! columns per PE = order/npes
   integer(kind=INT32) :: col_start, row_start
   ! runtime variables
-  integer(kind=INT32) ::  i, j, k, p
+  integer(kind=INT32) ::  i, j, k, p, q
   integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp         ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
@@ -212,7 +212,12 @@ program main
       t0 = prk_get_wtime()
     endif
 
-    do p=0,npes-1
+    ! we shift the loop range from [0,npes-1] to [me,me+npes-1]
+    ! to balance communication.  if everyone starts at 0, they will
+    ! take turns blasting each image in the system with get operations.
+    ! side note: this trick is used extensively in NWChem.
+    do q=me,me+npes-1
+      p = modulo(q,npes)
       ! Step 1: Gather A tile from remote image
       row_start = me*col_per_pe
       ! * fully explicit version
