@@ -879,6 +879,34 @@ void init_field_task(const Task *task,
 #undef OUT
 }
 
+void stencil(DTYPE* RESTRICT inputPtr,
+             DTYPE* RESTRICT outputPtr,
+             DTYPE* RESTRICT weightPtr,
+             coord_t haloX, coord_t startX, coord_t endX,
+             coord_t startY, coord_t endY)
+{
+#define IN(i, j)     inputPtr[(j) * haloX + i]
+#define OUT(i, j)    outputPtr[(j) * haloX + i]
+#define WEIGHT(i, j) weightPtr[(j + RADIUS) * (2 * RADIUS + 1) + (i + RADIUS)]
+
+  coord_t i, j, ii, jj;
+
+  for (j = startY; j < endY; ++j)
+    for (i = startX; i < endX; ++i)
+    {
+      for (jj = -RADIUS; jj <= RADIUS; jj++)
+        OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
+      for (ii = -RADIUS; ii < 0; ii++)
+        OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+      for (ii = 1; ii <= RADIUS; ii++)
+        OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
+    }
+
+#undef IN
+#undef OUT
+#undef WEIGHT
+}
+
 void stencil_field_task(const Task *task,
                     const std::vector<PhysicalRegion> &regions,
                     Context ctx, HighLevelRuntime *runtime)
@@ -924,42 +952,8 @@ void stencil_field_task(const Task *task,
   if (rdY == n - 1) rdY -= RADIUS;
   coord_t endX = startX + (rdX - luX + 1);
   coord_t endY = startY + (rdY - luY + 1);
-  coord_t weightBlockX = 2 * RADIUS + 1;
 
-#define IN(i, j)     inputPtr[(j) * haloX + i]
-#define OUT(i, j)    outputPtr[(j) * haloX + i]
-#define WEIGHT(i, j) weightPtr[(j + RADIUS) * weightBlockX + (i + RADIUS)]
-
-#ifdef LOOP_TILING
-#define TILE_SIZE 256
-  for (coord_t j = startY; j < endY; j += TILE_SIZE)
-    for (coord_t i = startX; i < endX; i += TILE_SIZE)
-      for (coord_t y = j; y < std::min(endY, j + TILE_SIZE); ++y)
-        for (coord_t x = i; x < std::min(endX, i + TILE_SIZE); ++x)
-        {
-          for (int jj = -RADIUS; jj <= RADIUS; jj++)
-            OUT(x, y) += WEIGHT(0, jj) * IN(x, y + jj);
-          for (int ii = -RADIUS; ii < 0; ii++)
-            OUT(x, y) += WEIGHT(ii, 0) * IN(x + ii, y);
-          for (int ii = 1; ii <= RADIUS; ii++)
-            OUT(x, y) += WEIGHT(ii, 0) * IN(x + ii, y);
-        }
-#else
-  for (coord_t j = startY; j < endY; ++j)
-    for (coord_t i = startX; i < endX; ++i)
-    {
-      for (int jj = -RADIUS; jj <= RADIUS; jj++)
-        OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
-      for (int ii = -RADIUS; ii < 0; ii++)
-        OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
-      for (int ii = 1; ii <= RADIUS; ii++)
-        OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
-    }
-#endif
-
-#undef IN
-#undef OUT
-#undef WEIGHT
+  stencil(inputPtr, outputPtr, weightPtr, haloX, startX, endX, startY, endY);
 }
 
 double check_task(const Task *task,
