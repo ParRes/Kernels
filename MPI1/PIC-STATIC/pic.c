@@ -109,6 +109,8 @@ typedef struct particle_t {
   /* The following variables are used only for verification/debug purposes */
   double   x0;   // initial position in x
   double   y0;   // initial position in y
+  double   k;
+  double   m;
   double   ID;   // ID of particle; use double to create homogeneous type
 } particle_t;
 
@@ -139,8 +141,8 @@ double *initializeGrid(bbox_t tile)
 }
 
 /* Initializes the particles following the geometric distribution as described in the spec */
-particle_t *initializeParticlesGeometric(int64_t n_input, int64_t L, double rho, bbox_t tile,
-					 uint64_t *total_particles, uint64_t *total_size)
+particle_t *initializeParticlesGeometric(int64_t n_input, int64_t L, double rho, bbox_t tile, double k, double m,
+					 uint64_t *n_placed, uint64_t *total_size)
 {
   particle_t  *particles;
   double      A;
@@ -155,17 +157,17 @@ particle_t *initializeParticlesGeometric(int64_t n_input, int64_t L, double rho,
   /* Each cell in the i-th column of cells contains p(i) = A * rho^i particles */
   A = n_input * ((1.0-rho) / (1.0-pow(rho, L))) / (double) L;
 
-  for (*total_particles=0,x=tile.left; x<tile.right; x++) {
+  for (*n_placed=0,x=tile.left; x<tile.right; x++) {
     /* at start of each grid column we jump into sequence of random numbers */
     start_index = tile.bottom+x*L;
     LCG_jump(2*start_index, 0);
     for (y=tile.bottom; y<tile.top; y++) {
-      (*total_particles) += random_draw(A * pow(rho, x));
+      (*n_placed) += random_draw(A * pow(rho, x));
     }
   }
 
   /* use some slack in allocating memory to avoid fine-grain memory management */
-  (*total_size) = ((*total_particles)*(1+MEMORYSLACK))/MEMORYSLACK;
+  (*total_size) = ((*n_placed)*(1+MEMORYSLACK))/MEMORYSLACK;
   particles = (particle_t*) malloc((*total_size) * sizeof(particle_t));
   if (particles == NULL) return(particles);
 
@@ -178,6 +180,8 @@ particle_t *initializeParticlesGeometric(int64_t n_input, int64_t L, double rho,
       for (p=0; p<actual_particles; p++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
+        particles[pi].k = k;
+        particles[pi].m = m;
         pi++;
       }
     }
@@ -186,8 +190,8 @@ particle_t *initializeParticlesGeometric(int64_t n_input, int64_t L, double rho,
 }
 
 /* Initialize with a sinusodial particle distribution */
-particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t L, bbox_t tile,
-                                          uint64_t *total_particles, uint64_t *total_size)
+particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t L, bbox_t tile, double k, double m,
+                                          uint64_t *n_placed, uint64_t *total_size)
 {
   particle_t  *particles;
   double      step = PRK_M_PI / (L-1);
@@ -197,17 +201,17 @@ particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t L, bbox_t til
   LCG_init();
 
   /* Place number of particles to each cell to form distribution decribed in spec.         */
-  for ((*total_particles)=0,x=tile.left; x<tile.right; x++) {
+  for ((*n_placed)=0,x=tile.left; x<tile.right; x++) {
     /* at start of each grid column we jump into sequence of random numbers */
     start_index = tile.bottom+x*L;
     LCG_jump(2*start_index, 0);
     for (y=tile.bottom; y<tile.top; y++) {
-      (*total_particles) += random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L));
+      (*n_placed) += random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L));
     }
   }
    
   /* use some slack in allocating memory to avoid fine-grain memory management */
-  (*total_size) = ((*total_particles)*(1+MEMORYSLACK))/MEMORYSLACK;
+  (*total_size) = ((*n_placed)*(1+MEMORYSLACK))/MEMORYSLACK;
   particles = (particle_t*) malloc((*total_size) * sizeof(particle_t));
   if (particles == NULL) return(particles);
 
@@ -220,6 +224,8 @@ particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t L, bbox_t til
       for (p=0; p<actual_particles; p++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
+        particles[pi].k = k;
+        particles[pi].m = m;
         pi++;
       }
     }
@@ -230,8 +236,8 @@ particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t L, bbox_t til
 
 /* Initialize particles with "linearly-decreasing" distribution */
 /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
-particle_t *initializeParticlesLinear(int64_t n_input, int64_t L, double alpha, double beta, 
-				      bbox_t tile, uint64_t *total_particles, uint64_t *total_size)
+particle_t *initializeParticlesLinear(int64_t n_input, int64_t L, double alpha, double beta, bbox_t tile,
+			              double k, double m, uint64_t *n_placed, uint64_t *total_size)
 {
   particle_t  *particles;
   double      total_weight = 0.0 , step = 1.0 / (L-1), current_weight;
@@ -244,17 +250,17 @@ particle_t *initializeParticlesLinear(int64_t n_input, int64_t L, double alpha, 
   total_weight = beta*L-alpha*0.5*step*L*(L-1);
    
   /* Loop over columns of cells and assign number of particles proportional linear weight */
-  for (*total_particles=0,x=tile.left; x<tile.right; x++) {
+  for (*n_placed=0,x=tile.left; x<tile.right; x++) {
     current_weight = (beta - alpha * step * ((double) x));
     start_index = tile.bottom+x*L;
     LCG_jump(2*start_index, 0);
     for (y=tile.bottom; y<tile.top; y++) {
-      (*total_particles) += random_draw(n_input * (current_weight/total_weight) / L);
+      (*n_placed) += random_draw(n_input * (current_weight/total_weight) / L);
     }
   }
 
   /* use some slack in allocating memory to avoid fine-grain memory management */
-  (*total_size) = ((*total_particles)*(1+MEMORYSLACK))/MEMORYSLACK;
+  (*total_size) = ((*n_placed)*(1+MEMORYSLACK))/MEMORYSLACK;
   particles = (particle_t*) malloc((*total_size) * sizeof(particle_t));
   if (particles == NULL) return(particles);
 
@@ -267,6 +273,8 @@ particle_t *initializeParticlesLinear(int64_t n_input, int64_t L, double alpha, 
       for (p=0; p<actual_particles; p++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
+        particles[pi].k = k;
+        particles[pi].m = m;        
         pi++;
       }
     }
@@ -275,8 +283,8 @@ particle_t *initializeParticlesLinear(int64_t n_input, int64_t L, double alpha, 
 }
 
 /* Initialize uniformly particles within a "patch" */
-particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch, 
-				     bbox_t tile, uint64_t *total_particles, uint64_t *total_size)
+particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch, bbox_t tile, 
+				     double k, double m,uint64_t *n_placed, uint64_t *total_size)
 {
   particle_t  *particles;
   int64_t     x, y, total_cells, pi=0, i, p, actual_particles, start_index;
@@ -288,17 +296,17 @@ particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch,
   double  particles_per_cell = (double) n_input/total_cells;
    
   /* Loop over columns of cells and assign number of particles if inside patch */
-  for (*total_particles=0,x=tile.left; x<tile.right; x++) {
+  for (*n_placed=0,x=tile.left; x<tile.right; x++) {
     start_index = tile.bottom+x*L;
     LCG_jump(2*start_index, 0);
     for (y=tile.bottom; y<tile.top; y++) {
-      if (contain(x,y,patch)) (*total_particles) += random_draw(particles_per_cell);
-      else                    (*total_particles) += random_draw(0.0);
+      if (contain(x,y,patch)) (*n_placed) += random_draw(particles_per_cell);
+      else                    (*n_placed) += random_draw(0.0);
     }
   }
 
   /* use some slack in allocating memory to avoid fine-grain memory management */
-  (*total_size) = ((*total_particles)*(1+MEMORYSLACK))/MEMORYSLACK;
+  (*total_size) = ((*n_placed)*(1+MEMORYSLACK))/MEMORYSLACK;
   particles = (particle_t*) malloc((*total_size) * sizeof(particle_t));
   if (particles == NULL) return(particles);
 
@@ -311,6 +319,8 @@ particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch,
       for (p=0; p<actual_particles; p++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
+        particles[pi].k = k;
+        particles[pi].m = m;
         pi++;
       }
     }
@@ -319,7 +329,7 @@ particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch,
 }
 
 /* Completes particle distribution */
-void finish_distribution(int k, int m, uint64_t n, particle_t *particles) {
+void finish_distribution(uint64_t n, particle_t *p) {
   double x_coord, y_coord, rel_x, rel_y, cos_theta, cos_phi, r1_sq, r2_sq, base_charge, ID;
   uint64_t x, pi, cumulative_count;
 
@@ -329,8 +339,8 @@ void finish_distribution(int k, int m, uint64_t n, particle_t *particles) {
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
 
   for (pi=0; pi<n; pi++) {
-    x_coord = particles[pi].x;
-    y_coord = particles[pi].y;
+    x_coord = p[pi].x;
+    y_coord = p[pi].y;
     rel_x = fmod(x_coord,1.0);
     rel_y = fmod(y_coord,1.0);
     x = (uint64_t) x_coord;
@@ -340,13 +350,13 @@ void finish_distribution(int k, int m, uint64_t n, particle_t *particles) {
     cos_phi = (1.0-rel_x)/sqrt(r2_sq);
     base_charge = 1.0 / ((DT*DT) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
          
-    particles[pi].v_x = 0.0;
-    particles[pi].v_y = ((double) m) / DT;
+    p[pi].v_x = 0.0;
+    p[pi].v_y = ((double) p[pi].m) / DT;
     /* this particle charge assures movement in positive x-direction */
-    particles[pi].q = (x%2 == 0) ? (2*k+1) * base_charge : -1.0 * (2*k+1) * base_charge ;
-    particles[pi].x0 = x_coord;
-    particles[pi].y0 = y_coord;
-    particles[pi].ID = ID;
+    p[pi].q = (x%2 == 0) ? (2*p[pi].k+1)*base_charge : -1.0 * (2*p[pi].k+1)*base_charge ;
+    p[pi].x0 = x_coord;
+    p[pi].y0 = y_coord;
+    p[pi].ID = ID;
     ID += 1.0;
   }
 }
@@ -605,7 +615,7 @@ int main(int argc, char ** argv) {
   /* FIXME: This can be further improved */
   /* Create MPI data type for particle_t */
   MPI_Datatype PARTICLE;
-  MPI_Type_contiguous( 8, MPI_DOUBLE, &PARTICLE );
+  MPI_Type_contiguous(sizeof(particle_t)/sizeof(double), MPI_DOUBLE, &PARTICLE);
   MPI_Type_commit( &PARTICLE );
 
   if (my_ID==root) {
@@ -755,32 +765,36 @@ int main(int argc, char ** argv) {
   my_IDy = my_ID/Num_procsx;
 
   if (my_ID == root) {
-    printf("Number of ranks                = %lld\n", Num_procs);
-    printf("Load balancing                 = None\n");
-    printf("Grid size                      = %lld\n", L);
-    printf("Tiles in x/y-direction         = %d/%d\n", Num_procsx, Num_procsy);
-    printf("Number of particles requested  = %lld\n", n); 
-    printf("Number of time steps           = %lld\n", iterations);
-    printf("Initialization mode            = %s\n",   init_mode);
+    printf("Number of ranks                    = %lld\n", Num_procs);
+    printf("Load balancing                     = None\n");
+    printf("Grid size                          = %lld\n", L);
+    printf("Tiles in x/y-direction             = %d/%d\n", Num_procsx, Num_procsy);
+    printf("Number of particles requested      = %lld\n", n); 
+    printf("Number of time steps               = %lld\n", iterations);
+    printf("Initialization mode                = %s\n",   init_mode);
     switch(particle_mode) {
-    case GEOMETRIC: printf("  Attenuation factor           = %lf\n", rho);    break;
-    case SINUSOIDAL:                                                          break;
-    case LINEAR:    printf("  Negative slope               = %lf\n", alpha);
-                    printf("  Offset                       = %lf\n", beta);   break;
-    case PATCH:     printf("  Bounding box                 = %lu, %lu, %lu, %lu\n",
+    case GEOMETRIC: printf("  Attenuation factor               = %lf\n", rho);    break;
+    case SINUSOIDAL:                                                              break;
+    case LINEAR:    printf("  Negative slope                   = %lf\n", alpha);
+                    printf("  Offset                           = %lf\n", beta);   break;
+    case PATCH:     printf("  Bounding box                     = %lu, %lu, %lu, %lu\n",
                            init_patch.left, init_patch.right, 
-                           init_patch.bottom, init_patch.top);              break;
+                           init_patch.bottom, init_patch.top);                    break;
     default:        printf("ERROR: Unsupported particle initializating mode\n");
                     error = 1;
     }
-    printf("Particle charge semi-increment = %lu\n", k);
-    printf("Vertical velocity              = %lu\n", m);
+    printf("Particle charge semi-increment (k) = %lu\n", k);
+    printf("Vertical velocity              (m) = %lu\n", m);
   }
   bail_out(error);
 
   /* The processes collectively create the underlying grid following a 2D block decomposition;
      unlike in the stencil code, successive blocks share an overlap vertex                   */
   width = L/Num_procsx;
+  if (width < 2*k) {
+    if (my_ID==0) printf("k-value too large: %lld, must be no greater than %lld\n", k, width/2);
+    bail_out(1);
+  }
   ileftover = L%Num_procsx;
   if (my_IDx<ileftover) {
     istart = (width+1) * my_IDx; 
@@ -793,6 +807,11 @@ int main(int argc, char ** argv) {
   icrit = (width+1) * ileftover;
 
   height = L/Num_procsy;
+  if (height < m) {
+    if (my_ID==0) printf("m-value too large: %lld, must be no greater than %lld\n", m, height);
+    bail_out(1);
+  }
+
   jleftover = L%Num_procsy;
   if (my_IDy<jleftover) {
     jstart = (height+1) * my_IDy; 
@@ -823,19 +842,19 @@ int main(int argc, char ** argv) {
 
   switch(particle_mode){
   case GEOMETRIC: 
-    particles = initializeParticlesGeometric(n, L, rho, my_tile,
+    particles = initializeParticlesGeometric(n, L, rho, my_tile, k, m,
                                              &particles_count, &particles_size);
     break;
   case LINEAR:
-    particles = initializeParticlesLinear(n, L, alpha, beta, my_tile,
+    particles = initializeParticlesLinear(n, L, alpha, beta, my_tile, k, m, 
                                              &particles_count, &particles_size);
     break;
   case SINUSOIDAL:
-    particles = initializeParticlesSinusoidal(n, L, my_tile,
+    particles = initializeParticlesSinusoidal(n, L, my_tile, k, m, 
                                              &particles_count, &particles_size);
     break;
   case PATCH:
-    particles = initializeParticlesPatch(n, L, init_patch, my_tile,
+    particles = initializeParticlesPatch(n, L, init_patch, my_tile, k, m,
                                              &particles_count, &particles_size);
   }
 
@@ -853,13 +872,13 @@ int main(int argc, char ** argv) {
 #endif
   if (my_ID==root) {
     MPI_Reduce(&particles_count, &total_particles, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
-    printf("Number of particles placed     = %llu\n", total_particles);
+    printf("Number of particles placed         = %llu\n", total_particles);
   }
   else {
     MPI_Reduce(&particles_count, &total_particles, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
   }
 
-  finish_distribution(k, m, particles_count, particles);
+  finish_distribution(particles_count, particles);
    
   /* Allocate space for communication buffers. Adjust appropriately as the simulation proceeds */
   
