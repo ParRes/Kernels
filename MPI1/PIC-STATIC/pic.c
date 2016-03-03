@@ -435,8 +435,6 @@ int verifyParticle(particle_t p, double L, int64_t iterations, int64_t k, int64_
    y_periodic = (y_final >= 0.0) ? fmod(y_final, L) : L + fmod(y_final, L);
    
    if ( fabs(p.x - x_periodic) > epsilon || fabs(p.y - y_periodic) > epsilon) {
-     printf("(x,y)=(%lf,%lf), but should be (%lf,%lf), orig=(%lf,%lf), final=(%lf,%lf)\n", 
-	    p.x, p.y,  x_periodic, y_periodic, p.x0,p.y0, x_final, y_final);
      return(0);
    }
    return(1);
@@ -975,9 +973,9 @@ int main(int argc, char ** argv) {
    
   /* Run the verification test */
   /* First verify own particles */
-  correctness = 1;
+  correctness = 0, my_checksum;
   for (i=0; i < particles_count; i++) {
-    correctness *= verifyParticle(particles[i], (double)L, iterations, k, m);
+    correctness += verifyParticle(particles[i], (double)L, iterations, k, m);
     my_checksum += (uint64_t)particles[i].ID;
   }
 
@@ -987,12 +985,18 @@ int main(int argc, char ** argv) {
   MPI_Reduce(&correctness, &correctness_checksum, 1, MPI_INT64_T, MPI_SUM, root, MPI_COMM_WORLD);
 
   if ( my_ID == root) {
-    if (correctness_checksum != Num_procs ) {
-      printf("ERROR: Simulation is not correct -- there are miscalculated final locations\n");
+    if (correctness_checksum != total_particles ) {
+      printf("ERROR: there are %llu miscalculated locations\n", total_particles-correctness_checksum);
     }
-    if ((tot_checksum == (total_particles*(total_particles+1))/2) && (correctness_checksum == Num_procs)) {
-      avg_time = total_particles*iterations/pic_time;
-      printf("Rate (Mparticles_moved/s): %lf\n", 1.0e-6*avg_time);
+    else {
+      if (tot_checksum != (total_particles*(total_particles+1))/2) {
+        printf("ERROR: Particle checksum incorrect\n");
+      }
+      else {
+        avg_time = total_particles*iterations/pic_time;
+        printf("Solution validates\n");
+        printf("Rate (Mparticles_moved/s): %lf\n", 1.0e-6*avg_time);
+      }
     }
   }
    

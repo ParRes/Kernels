@@ -9,7 +9,7 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 
 #uncomment any of the following flags (and change values) to change defaults
 
-DEBUGFLAG    = -DVERBOSE
+#DEBUGFLAG    = -DVERBOSE
 #description: default diagnostic style is silent
 
 USERFLAGS     =
