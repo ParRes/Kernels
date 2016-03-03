@@ -193,7 +193,7 @@ particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t L, bbox_t til
                                           uint64_t *total_particles, uint64_t *total_size)
 {
   particle_t  *particles;
-  double      step = 2*M_PI / (L-1);
+  double      step = M_PI / (L-1);
   int64_t     x, y, pi=0, i, p, actual_particles, start_index;
    
   /* initialize random number generator */
@@ -287,7 +287,7 @@ particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch,
   /* initialize random number generator */
   LCG_init();  
 
-  total_cells  = (patch.right - patch.left)*(patch.top - patch.bottom);
+  total_cells  = (patch.right - patch.left+1)*(patch.top - patch.bottom+1);
   double  particles_per_cell = (double) n_input/total_cells;
    
   /* Loop over columns of cells and assign number of particles if inside patch */
@@ -296,6 +296,7 @@ particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch,
     LCG_jump(2*start_index, 0);
     for (y=tile.bottom; y<tile.top; y++) {
       if (contain(x,y,patch)) (*total_particles) += random_draw(particles_per_cell);
+      else                    (*total_particles) += random_draw(0.0);
     }
   }
 
@@ -308,13 +309,12 @@ particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch,
     start_index = tile.bottom+x*L;
     LCG_jump(2*start_index,0);
     for (y=tile.bottom; y<tile.top; y++) {
-      if (contain(x,y,patch)) {
-        actual_particles = random_draw(particles_per_cell);
-        for (p=0; p<actual_particles; p++) {
-          particles[pi].x = x + REL_X;
-          particles[pi].y = y + REL_Y;
-          pi++;
-	}
+      if (contain(x,y,patch)) actual_particles = random_draw(particles_per_cell);
+      else                    actual_particles = random_draw(0.0);
+      for (p=0; p<actual_particles; p++) {
+        particles[pi].x = x + REL_X;
+        particles[pi].y = y + REL_Y;
+        pi++;
       }
     }
   }
@@ -840,7 +840,10 @@ int main(int argc, char ** argv) {
   bail_out(error);
 
 #ifdef VERBOSE
-  printf("My particles = %llu\n", my_particles_count);
+  for (i=0; i<Num_procs; i++) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (i == my_ID)  printf("Rank %d has %lld particles\n", my_ID, my_particles_count);
+  }
 #endif
   if (my_ID==root) {
     MPI_Reduce(&my_particles_count, &total_particles, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
