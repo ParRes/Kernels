@@ -80,20 +80,17 @@ HISTORY: - Written by Evangelos Georganas, August 2015.
 #define MASS_INV 1.0
 #define Q 1.0
 #define epsilon 0.000001
-#define l 1.0
 #define DT 1.0
 #define MEMORYSLACK 10
-
-#define SUCCESS 1
 
 #define REL_X 0.5
 #define REL_Y 0.5
 
-#define GEOMETRIC  0
-#define SINUSOIDAL 1
-#define LINEAR     2
-#define PATCH      3
-#define UNDEFINED  4
+#define GEOMETRIC  10
+#define SINUSOIDAL 11
+#define LINEAR     12
+#define PATCH      13
+#define UNDEFINED  14
 
 typedef struct {
   uint64_t left;
@@ -112,7 +109,7 @@ typedef struct particle_t {
   /* The following variables are used only for verification/debug purposes */
   double   x0;   // initial position in x
   double   y0;   // initial position in y
-  int64_t  particle_ID;   // ID of particle
+  double   ID;   // ID of particle; use double to create homogeneous type
 } particle_t;
 
 /* Initializes the grid of charges */
@@ -193,7 +190,7 @@ particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t L, bbox_t til
                                           uint64_t *total_particles, uint64_t *total_size)
 {
   particle_t  *particles;
-  double      step = M_PI / (L-1);
+  double      step = PRK_M_PI / (L-1);
   int64_t     x, y, pi=0, i, p, actual_particles, start_index;
    
   /* initialize random number generator */
@@ -309,8 +306,8 @@ particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch,
     start_index = tile.bottom+x*L;
     LCG_jump(2*start_index,0);
     for (y=tile.bottom; y<tile.top; y++) {
-      if (contain(x,y,patch)) actual_particles = random_draw(particles_per_cell);
-      else                    actual_particles = random_draw(0.0);
+      actual_particles = random_draw(particles_per_cell);
+      if (!contain(x,y,patch)) actual_particles = 0;
       for (p=0; p<actual_particles; p++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
@@ -323,8 +320,13 @@ particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch,
 
 /* Completes particle distribution */
 void finish_distribution(int k, int m, uint64_t n, particle_t *particles) {
-  double x_coord, y_coord, rel_x, rel_y, cos_theta, cos_phi, r1_sq, r2_sq, base_charge;
-  uint64_t x, pi;
+  double x_coord, y_coord, rel_x, rel_y, cos_theta, cos_phi, r1_sq, r2_sq, base_charge, ID;
+  uint64_t x, pi, cumulative_count;
+
+  MPI_Scan(&n, &cumulative_count, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  ID = (double) (cumulative_count - n + 1);
+  int my_ID;
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
 
   for (pi=0; pi<n; pi++) {
     x_coord = particles[pi].x;
@@ -344,6 +346,8 @@ void finish_distribution(int k, int m, uint64_t n, particle_t *particles) {
     particles[pi].q = (x%2 == 0) ? (2*k+1) * base_charge : -1.0 * (2*k+1) * base_charge ;
     particles[pi].x0 = x_coord;
     particles[pi].y0 = y_coord;
+    particles[pi].ID = ID;
+    ID += 1.0;
   }
 }
 
@@ -424,21 +428,22 @@ int verifyParticle(particle_t p, double L, int64_t iterations, int64_t k, int64_
    int64_t  total_steps = iterations+1;
    double   x_final, y_final, x_periodic, y_periodic;
    
-   x_final = p.x0 + total_steps * (2*k+1) * l;
-   y_final = p.y0 + m * l * total_steps;
+   x_final = p.x0 + (double) total_steps * (double) (2*k+1);
+   y_final = p.y0 + (double) total_steps * (double) m;
 
    x_periodic = (x_final >= 0.0) ? fmod(x_final, L) : L + fmod(x_final, L);
    y_periodic = (y_final >= 0.0) ? fmod(y_final, L) : L + fmod(y_final, L);
    
    if ( fabs(p.x - x_periodic) > epsilon || fabs(p.y - y_periodic) > epsilon) {
-      return(EXIT_FAILURE);
+     printf("(x,y)=(%lf,%lf), but should be (%lf,%lf), orig=(%lf,%lf), final=(%lf,%lf)\n", 
+	    p.x, p.y,  x_periodic, y_periodic, p.x0,p.y0, x_final, y_final);
+     return(0);
    }
-   
-   return SUCCESS;
+   return(1);
 }
 
 /* Adds a particle to a buffer. Resizes buffer if need be. */
-void add_particle_to_buffer(particle_t p, particle_t **buffer, int64_t *position, int64_t *buffer_size)
+void add_particle_to_buffer(particle_t p, particle_t **buffer, int64_t *position, uint64_t *buffer_size)
 {
    int64_t cur_pos = (*position);
    int64_t cur_buf_size = (*buffer_size);
@@ -491,7 +496,7 @@ void attach_particles(particle_t **dst_buffer, int64_t *position, int64_t *buffe
    (*position) += n_src_particles;
 }
 
-void attach_received_particles(particle_t **dst_buffer, int64_t *position, int64_t *buffer_size, particle_t *src_buffer, int64_t n_src_particles, particle_t *src_buffer2, int64_t n_src_particles2)
+void attach_received_particles(particle_t **dst_buffer, int64_t *position, uint64_t *buffer_size, particle_t *src_buffer, uint64_t n_src_particles, particle_t *src_buffer2, int64_t n_src_particles2)
 {
    int64_t cur_pos = (*position);
    int64_t cur_buf_size = (*buffer_size);
@@ -520,7 +525,7 @@ void attach_received_particles(particle_t **dst_buffer, int64_t *position, int64
 }
 
 /* Resizes a buffer if need be */
-void resize_buffer(particle_t **buffer, int64_t *size, int64_t new_size)
+void resize_buffer(particle_t **buffer, uint64_t *size, uint64_t new_size)
 {
    int64_t cur_size = (*size);
    
@@ -554,35 +559,42 @@ int contain(uint64_t x, uint64_t y, bbox_t patch) {
 int main(int argc, char ** argv) {
    
   int         Num_procs;         // number of ranks 
-  int         Num_procsx, Num_procsy; // number of ranks in each coord direction      
+  int         Num_procsx, 
+              Num_procsy;        // number of ranks in each coord direction      
   int         args_used = 1;     // keeps track of # consumed arguments
   int         my_ID;             // MPI rank
   int         my_IDx, my_IDy;    // coordinates of rank in rank grid                  
   int         root = 0;          // master rank
   uint64_t    L;                 // dimension of grid in cells
   int64_t     iterations ;       // total number of simulation steps
-  int64_t     n;                 // total number of particles in the simulation
+  int64_t     n;                 // total number of particles requested in the simulation
+  uint64_t    actual_particles,  // actual number of particles owned by my rank
+              total_particles;   // total number of generated particles
   char        *init_mode;        // particle initialization mode (char)
   double      rho ;              // attenuation factor for geometric particle distribution
-  int         k ;   // determines the speed of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
-  int         m ;   // determines the speed of "vertical move" of the particle distribution -- m cells per time step
+  int64_t     k, m;              // determine initial horizontal and vertical velocity of 
+                                 // particles-- (2*k)+1 cells per time step 
   double      *grid;             // the grid is represented as an array of charges
-  int64_t     iter, i;
+  int64_t     iter, i;           // dummies
   double      fx, fy, ax, ay;    // particle forces and accelerations
   int         error=0;           // used for graceful exit after error
-  int64_t     correct_simulation = 1;
-  int64_t     istart, jstart, iend, jend, my_particles_size, my_particles_count;
+  int64_t     correctness = 1;   // boolean indicating correct particle displacements
+  uint64_t    istart, jstart, iend, jend, particles_size, particles_count;
   bbox_t      grid_patch,        // whole grid
               init_patch,        // subset of grid used for localized initialization
-              my_tile;
-  particle_t  *my_particles, *p;
-  int64_t     *cur_counts;
+              my_tile;           // subset of grid owner by my rank
+  particle_t  *particles, *p;    // array of particles owned by my rank
+  int64_t     *cur_counts; 
   int64_t     owner, ptr_my;
   double      pic_time, local_pic_time, avg_time;
   int64_t     my_checksum = 0, tot_checksum = 0, correctness_checksum = 0;
-  int64_t     width, height;
-  int         particle_mode = -1;
-  double      alpha, beta;
+  int64_t     width, height;      // dimenions of grid patch owned by my rank
+  int         particle_mode;      // type of initialization
+  double      alpha, beta;        // negative slope and offset for linear initialization
+  int         nbr[8];             // topological neighbor ranks
+  int         icrit, jcrit;       //
+  int         ileftover, jleftover;//
+  int64_t     to_send[8], to_recv[8];//
    
   MPI_Status  status[16];
   MPI_Request requests[16];
@@ -652,8 +664,8 @@ int main(int argc, char ** argv) {
   MPI_Bcast(&iterations, 1, MPI_INT64_T, root, MPI_COMM_WORLD);
   MPI_Bcast(&L,          1, MPI_INT64_T, root, MPI_COMM_WORLD);
   MPI_Bcast(&n,          1, MPI_INT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&k,          1, MPI_INT,     root, MPI_COMM_WORLD);
-  MPI_Bcast(&m,          1, MPI_INT,     root, MPI_COMM_WORLD);
+  MPI_Bcast(&k,          1, MPI_INT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&m,          1, MPI_INT64_T, root, MPI_COMM_WORLD);
 
   grid_patch = (bbox_t){0, L+1, 0, L+1};
    
@@ -733,8 +745,8 @@ int main(int argc, char ** argv) {
   }
    
   /* determine best way to create a 2D grid of ranks (closest to square, for 
-     best surface/volume ratio); we do this brute force for now
-  */
+     best surface/volume ratio); we do this brute force for now                        */
+
   for (Num_procsx=(int) (sqrt(Num_procs+1)); Num_procsx>0; Num_procsx--) {
     if (!(Num_procs%Num_procsx)) {
       Num_procsy = Num_procs/Num_procsx;
@@ -771,7 +783,7 @@ int main(int argc, char ** argv) {
   /* The processes collectively create the underlying grid following a 2D block decomposition;
      unlike in the stencil code, successive blocks share an overlap vertex                   */
   width = L/Num_procsx;
-  int ileftover = L%Num_procsx;
+  ileftover = L%Num_procsx;
   if (my_IDx<ileftover) {
     istart = (width+1) * my_IDx; 
     iend = istart + width + 1;
@@ -780,10 +792,10 @@ int main(int argc, char ** argv) {
     istart = (width+1) * ileftover + width * (my_IDx-ileftover);
     iend = istart + width;
   }
-  int icrit = (width+1) * ileftover;
+  icrit = (width+1) * ileftover;
 
   height = L/Num_procsy;
-  int jleftover = L%Num_procsy;
+  jleftover = L%Num_procsy;
   if (my_IDy<jleftover) {
     jstart = (height+1) * my_IDy; 
     jend = jstart + height + 1;
@@ -792,7 +804,7 @@ int main(int argc, char ** argv) {
     jstart = (height+1) * jleftover + height * (my_IDy-jleftover);
     jend = jstart + height;
   }
-  int jcrit = (height+1) * jleftover;
+  jcrit = (height+1) * jleftover;
 
   my_tile = (bbox_t){istart,iend,jstart,jend};
 
@@ -800,7 +812,6 @@ int main(int argc, char ** argv) {
                                bottom-left=4, bottom-right=5, top-left=6, top-right=7 */
 
   /* These are IDs in the global communicator */
-  int nbr[8];
   nbr[0] = (my_IDx == 0           ) ? my_ID  + Num_procsx - 1         : my_ID  - 1;
   nbr[1] = (my_IDx == Num_procsx-1) ? my_ID  - Num_procsx + 1         : my_ID  + 1;
   nbr[2] = (my_IDy == Num_procsy-1) ? my_ID  + Num_procsx - Num_procs : my_ID  + Num_procsx;
@@ -812,29 +823,26 @@ int main(int argc, char ** argv) {
 
   grid = initializeGrid(my_tile);
 
-  uint64_t actual_particles, total_particles;
   switch(particle_mode){
   case GEOMETRIC: 
-    my_particles = initializeParticlesGeometric(n, L, rho, my_tile,
-                                                 &my_particles_count, &my_particles_size);
+    particles = initializeParticlesGeometric(n, L, rho, my_tile,
+                                             &particles_count, &particles_size);
     break;
   case LINEAR:
-    my_particles = initializeParticlesLinear(n, L, alpha, beta, my_tile,
-                                                 &my_particles_count, &my_particles_size);
+    particles = initializeParticlesLinear(n, L, alpha, beta, my_tile,
+                                             &particles_count, &particles_size);
     break;
   case SINUSOIDAL:
-    my_particles = initializeParticlesSinusoidal(n, L, my_tile,
-                                                 &my_particles_count, &my_particles_size);
+    particles = initializeParticlesSinusoidal(n, L, my_tile,
+                                             &particles_count, &particles_size);
     break;
   case PATCH:
-    my_particles = initializeParticlesPatch(n, L, init_patch, my_tile,
-                                                 &my_particles_count, &my_particles_size);
-    break;
-  default: printf("No valid initializer\n");
+    particles = initializeParticlesPatch(n, L, init_patch, my_tile,
+                                             &particles_count, &particles_size);
   }
 
-  if (!my_particles) {
-    printf("ERROR: Rank %d could not allocate space for %llu particles\n", my_ID, my_particles_size);
+  if (!particles) {
+    printf("ERROR: Rank %d could not allocate space for %llu particles\n", my_ID, particles_size);
     error=1;
   }
   bail_out(error);
@@ -842,22 +850,22 @@ int main(int argc, char ** argv) {
 #ifdef VERBOSE
   for (i=0; i<Num_procs; i++) {
     MPI_Barrier(MPI_COMM_WORLD);
-    if (i == my_ID)  printf("Rank %d has %lld particles\n", my_ID, my_particles_count);
+    if (i == my_ID)  printf("Rank %d has %lld particles\n", my_ID, particles_count);
   }
 #endif
   if (my_ID==root) {
-    MPI_Reduce(&my_particles_count, &total_particles, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
-    printf("Total particles placed  = %llu\n", total_particles);
+    MPI_Reduce(&particles_count, &total_particles, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
+    printf("Number of particles placed     = %llu\n", total_particles);
   }
   else {
-    MPI_Reduce(&my_particles_count, &total_particles, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
+    MPI_Reduce(&particles_count, &total_particles, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
   }
 
-  finish_distribution(k, m, my_particles_count, my_particles);
+  finish_distribution(k, m, particles_count, particles);
    
   /* Allocate space for communication buffers. Adjust appropriately as the simulation proceeds */
   
-  int64_t sendbuf_size[8], recvbuf_size[8];
+  uint64_t sendbuf_size[8], recvbuf_size[8];
   particle_t *send_buf[8], *recv_buf[8];
   error=0;
   for (i=0; i<8; i++) {
@@ -880,13 +888,12 @@ int main(int argc, char ** argv) {
     }
 
     ptr_my = 0;
-    int64_t to_send[8], to_recv[8];
     for (i=0; i<8; i++) to_send[i]=0;
       
     /* Process own particles */
-    p = my_particles;
+    p = particles;
 
-    for (i=0; i < my_particles_count; i++) {
+    for (i=0; i < particles_count; i++) {
       owner = find_owner(p[i], width, height, icrit, jcrit, ileftover, jleftover, Num_procsx);
       fx = 0.0;
       fy = 0.0;
@@ -906,7 +913,7 @@ int main(int argc, char ** argv) {
       /* Check if particle stayed in same subdomain or moved to another */
       owner = find_owner(p[i], width, height, icrit, jcrit, ileftover, jleftover, Num_procsx);
       if (owner==my_ID) {
-        add_particle_to_buffer(p[i], &p, &ptr_my, &my_particles_size);
+        add_particle_to_buffer(p[i], &p, &ptr_my, &particles_size);
       } else if (owner == nbr[0]) {
         /* Add particle to the appropriate communication buffer */
         add_particle_to_buffer(p[i], &send_buf[0], &to_send[0], &sendbuf_size[0]);
@@ -953,13 +960,13 @@ int main(int argc, char ** argv) {
     }
     MPI_Waitall(16, requests, status);
      
-    /* Attach received particles to my_particles buffer */
-    attach_received_particles(&my_particles, &ptr_my, &my_particles_size, recv_buf[0], to_recv[0], recv_buf[1], to_recv[1]);
-    attach_received_particles(&my_particles, &ptr_my, &my_particles_size, recv_buf[3], to_recv[3], recv_buf[2], to_recv[2]);
-    attach_received_particles(&my_particles, &ptr_my, &my_particles_size, recv_buf[7], to_recv[7], recv_buf[5], to_recv[5]);
-    attach_received_particles(&my_particles, &ptr_my, &my_particles_size, recv_buf[6], to_recv[6], recv_buf[4], to_recv[4]);
+    /* Attach received particles to particles buffer */
+    attach_received_particles(&particles, &ptr_my, &particles_size, recv_buf[0], to_recv[0], recv_buf[1], to_recv[1]);
+    attach_received_particles(&particles, &ptr_my, &particles_size, recv_buf[3], to_recv[3], recv_buf[2], to_recv[2]);
+    attach_received_particles(&particles, &ptr_my, &particles_size, recv_buf[7], to_recv[7], recv_buf[5], to_recv[5]);
+    attach_received_particles(&particles, &ptr_my, &particles_size, recv_buf[6], to_recv[6], recv_buf[4], to_recv[4]);
     
-    my_particles_count = ptr_my;
+    particles_count = ptr_my;
   }
    
   local_pic_time = MPI_Wtime() - local_pic_time;
@@ -968,28 +975,23 @@ int main(int argc, char ** argv) {
    
   /* Run the verification test */
   /* First verify own particles */
-  correct_simulation = 1;
-  for (i=0; i < my_particles_count; i++) {
-    correct_simulation *= verifyParticle(my_particles[i], L, iterations, k, m);
-    my_checksum += my_particles[i].particle_ID;
+  correctness = 1;
+  for (i=0; i < particles_count; i++) {
+    correctness *= verifyParticle(particles[i], (double)L, iterations, k, m);
+    my_checksum += (uint64_t)particles[i].ID;
   }
-#if 0
+
   /* Gather total checksum of particles */
   MPI_Reduce(&my_checksum, &tot_checksum, 1, MPI_INT64_T, MPI_SUM, root, MPI_COMM_WORLD);
-  if ( my_ID == root) {
-    if (tot_checksum != (n*(n+1))/2 ) {
-      printf("ERROR: Particle checksum is not correct: %ld\n", tot_checksum);
-    }
-  }
-#endif
   /* Gather total checksum of correctness flags */
-  MPI_Reduce(&correct_simulation, &correctness_checksum, 1, MPI_INT64_T, MPI_SUM, root, MPI_COMM_WORLD);
+  MPI_Reduce(&correctness, &correctness_checksum, 1, MPI_INT64_T, MPI_SUM, root, MPI_COMM_WORLD);
+
   if ( my_ID == root) {
     if (correctness_checksum != Num_procs ) {
       printf("ERROR: Simulation is not correct -- there are miscalculated final locations\n");
     }
-    if (/*(tot_checksum == (n*(n+1))/2) &&*/ (correctness_checksum == Num_procs)) {
-      avg_time = n*iterations/pic_time;
+    if ((tot_checksum == (total_particles*(total_particles+1))/2) && (correctness_checksum == Num_procs)) {
+      avg_time = total_particles*iterations/pic_time;
       printf("Rate (Mparticles_moved/s): %lf\n", 1.0e-6*avg_time);
     }
   }
@@ -997,7 +999,7 @@ int main(int argc, char ** argv) {
 #ifdef VERBOSE
   for (i=0; i<Num_procs; i++) {
     MPI_Barrier(MPI_COMM_WORLD);
-    if (i == my_ID)  printf("Rank %d has %lld particles\n", my_ID, my_particles_count);
+    if (i == my_ID)  printf("Rank %d has %lld particles\n", my_ID, particles_count);
   }
 #endif
 

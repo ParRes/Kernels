@@ -394,9 +394,9 @@ int main(int argc, char ** argv) {
   double      *Qgrid;            // field of fixed charges
   particle_t  *particles, *p;    // the particles array
   uint64_t    iter, i;           // dummies
-  double      fx, fy, ax, ay, pic_time;
-  int         error;
-  double      avg_time;
+  double      fx, fy, ax, ay;    // forces and accelerations
+  int         error=0;           // used for graceful exit after error
+  double      avg_time, pic_time;// timing parameters
 
   printf("Parallel Research Kernels Version %s\n", PRKVERSION);
   printf("Serial Particle-in-Cell execution on 2D grid\n");
