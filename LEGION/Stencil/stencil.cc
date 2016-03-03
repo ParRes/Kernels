@@ -620,10 +620,17 @@ std::pair<double, double> spmd_task(const Task *task,
       neighborLrs[dir] = regions[idx++].get_logical_region();
 
   std::vector<LogicalRegion> ghostLrs(4);
+  std::vector<LogicalRegion> bufferLrs(4);
   for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
-    ghostLrs[dir] =
+  {
+    LogicalRegion ghostLr =
       runtime->get_logical_subregion_by_color(ctx, localLP,
           DomainPoint::from_point<1>(dir));
+    ghostLrs[dir] = ghostLr;
+    bufferLrs[dir] =
+      runtime->create_logical_region(ctx, ghostLr.get_index_space(),
+          ghostLr.get_field_space());
+  }
 
   Domain launchDomain = Domain::from_rect<2>(Rect<2>(
         make_point(tileLoc[0], numThreads * tileLoc[1]),
@@ -698,16 +705,31 @@ std::pair<double, double> spmd_task(const Task *task,
     for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
       if (hasNeighbor[dir])
       {
-        RegionRequirement srcReq(neighborLrs[dir], READ_ONLY, EXCLUSIVE,
-                                 neighborLrs[dir]);
-        srcReq.add_field(FID_IN);
-        RegionRequirement dstReq(ghostLrs[dir], READ_WRITE, EXCLUSIVE,
-                                 localLr);
-        dstReq.add_field(FID_IN);
+        {
+          RegionRequirement srcReq(neighborLrs[dir], READ_ONLY, EXCLUSIVE,
+                                   neighborLrs[dir]);
+          srcReq.add_field(FID_IN);
+          RegionRequirement dstReq(bufferLrs[dir], READ_WRITE, EXCLUSIVE,
+                                   bufferLrs[dir]);
+          dstReq.add_field(FID_IN);
 
-        CopyLauncher copyLauncher;
-        copyLauncher.add_copy_requirements(srcReq, dstReq);
-        runtime->issue_copy_operation(ctx, copyLauncher);
+          CopyLauncher copyLauncher;
+          copyLauncher.add_copy_requirements(srcReq, dstReq);
+          runtime->issue_copy_operation(ctx, copyLauncher);
+        }
+
+        {
+          RegionRequirement srcReq(bufferLrs[dir], READ_ONLY, EXCLUSIVE,
+                                   bufferLrs[dir]);
+          srcReq.add_field(FID_IN);
+          RegionRequirement dstReq(ghostLrs[dir], READ_WRITE, EXCLUSIVE,
+                                   localLr);
+          dstReq.add_field(FID_IN);
+
+          CopyLauncher copyLauncher;
+          copyLauncher.add_copy_requirements(srcReq, dstReq);
+          runtime->issue_copy_operation(ctx, copyLauncher);
+        }
       }
 
     {
