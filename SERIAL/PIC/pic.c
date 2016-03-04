@@ -179,7 +179,7 @@ particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rh
 /* Initialize particles with a sinusoidal distribution */
 particle_t *initializeParticlesSinusoidal(uint64_t n_input, uint64_t L, uint64_t *n){
   particle_t  *particles;
-  double      step = PRK_M_PI / (L-1);
+  double      step = PRK_M_PI/L;
   uint64_t    x, y, pi, i, p, actual_particles;
 
   particles = (particle_t*) prk_malloc(2*n_input * sizeof(particle_t));
