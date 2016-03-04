@@ -87,6 +87,8 @@ allmpi1:
 	cd MPI1/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                        "MATRIX_RANK         = $(matrix_rank)"        \
                                                        "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+	cd MPI1/PIC_static;          $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+
 
 allampi:
 	cd AMPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -162,8 +164,8 @@ allopenmp:
 	cd OPENMP/Sparse;           $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Synch_global;     $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd OPENMP/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
-                                                      "MATRIX_RANK         = $(matrix_rank)"        \
+	cd OPENMP/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"     \
+                                                      "MATRIX_RANK         = $(matrix_rank)"   \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
 allcharm++:
@@ -185,10 +187,10 @@ allserial:
 	cd SERIAL/Random;           $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd SERIAL/Sparse;           $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd SERIAL/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd SERIAL/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
-                                                      "MATRIX_RANK         = $(matrix_rank)"        \
+	cd SERIAL/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"     \
+                                                      "MATRIX_RANK         = $(matrix_rank)"   \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
-	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allfortran: allfortranserial allfortranopenmp allfortrancoarray
 
@@ -218,6 +220,7 @@ clean:
 	cd MPI1/Synch_global;       $(MAKE) clean
 	cd MPI1/Synch_p2p;          $(MAKE) clean
 	cd MPI1/Branch;             $(MAKE) clean
+	cd MPI1/PIC_static;         $(MAKE) clean
 	cd FG_MPI/DGEMM;            $(MAKE) clean
 	cd FG_MPI/Nstream;          $(MAKE) clean
 	cd FG_MPI/Reduce;           $(MAKE) clean
