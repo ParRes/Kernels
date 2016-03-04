@@ -478,7 +478,7 @@ void dgemm_local(int M, int N, int K, double *a, int lda, double *b,
         }
       }
     }
-    free (aa);
+    prk_free(aa);
   }
   return;
 }
