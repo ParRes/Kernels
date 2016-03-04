@@ -149,7 +149,7 @@ program main
 
   ! we reuse A here as the reference matrix, to compute the error
   A = ( transpose(reshape((/ (i, i = 0,order**2) /),(/order, order/))) &
-        * real(iterations+1,REAL64) )
+        * real(iterations+1,REAL64) ) &
       + real((iterations*(iterations+1))/2,REAL64)
   abserr = norm2(A-B)
 
