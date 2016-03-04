@@ -129,6 +129,20 @@ typedef struct particle_t {
   double   ID;   // ID of particle; use double to create homogeneous type
 } particle_t;
 
+int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
+  if (patch->left>=patch->right || patch->bottom>=patch->top) return(1);
+  if (patch_contain) {
+    if (patch->left  <patch_contain->left   || patch->right>=patch_contain->right) return(2);
+    if (patch->bottom<patch_contain->bottom || patch->top  >=patch_contain->top)   return(3);
+  }
+  return(0);
+}
+
+int contain(uint64_t x, uint64_t y, bbox_t patch) {
+  if (x<patch.left || x>patch.right || y<patch.bottom || y>patch.top) return 0;
+  return 1;
+}
+
 /* Initializes the grid of charges */
 double *initializeGrid(bbox_t tile) {
   double   *grid;
@@ -592,20 +606,6 @@ void resize_buffer(particle_t **buffer, uint64_t *size, uint64_t new_size)
 
 }
 
-int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
-  if (patch->left>=patch->right || patch->bottom>=patch->top) return(1);
-  if (patch_contain) {
-    if (patch->left  <patch_contain->left   || patch->right>=patch_contain->right) return(2);
-    if (patch->bottom<patch_contain->bottom || patch->top  >=patch_contain->top)   return(3);
-  }
-  return(0);
-}
-
-int contain(uint64_t x, uint64_t y, bbox_t patch) {
-  if (x<patch.left || x>patch.right || y<patch.bottom || y>patch.top) return 0;
-  return 1;
-}
-
 int main(int argc, char ** argv) {
    
   int             Num_procs;         // number of ranks 
@@ -1001,7 +1001,7 @@ int main(int argc, char ** argv) {
       } else if (owner == nbr[7]) {
         add_particle_to_buffer(p[i], &sendbuf[7], &to_send[7], &sendbuf_size[7]);
       } else {
-        printf("Could not find neighbor owner of particle %d in tile %llu\n", 
+        printf("Could not find neighbor owner of particle %llu in tile %llu\n", 
         i, owner);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
       }
