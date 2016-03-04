@@ -51,8 +51,23 @@ FUNCTIONS CALLED:
 
          Other than standard C functions, the following functions are used in 
          this program:
-         wtime()
+         initializeGrid() 
+         initializeParticlesGeometric()
+         initializeParticlesSinusoidal()
+         initializeParticlesLinear()
+         initializeParticlesPatch()
+         finishParticlesInitialization()
+         find_owner()
+         computeCoulomb()
+         computeTotalForce()
+         verifyParticle()
+         add_particle_to_buffer()
+         attach_particles()
+         attach_received_particles()
+         resize_buffer()
          bad_patch()
+         contain()
+         wtime()
          random_draw()
 
 HISTORY: - Written by Evangelos Georganas, August 2015.
@@ -118,10 +133,11 @@ typedef struct particle_t {
 double *initializeGrid(bbox_t tile)
 {
   double   *grid;
-  int64_t  x, y;
-  int64_t  n_columns = tile.right-tile.left+1;
-  int64_t  n_rows = tile.top-tile.bottom+1;
+  int64_t  x, y, n_columns, n_rows;
   int      error=0, my_ID;
+
+  n_columns = tile.right-tile.left+1;
+  n_rows = tile.top-tile.bottom+1;
    
   grid = (double*) malloc(n_columns*n_rows*sizeof(double));
   if (grid == NULL) {
@@ -141,12 +157,13 @@ double *initializeGrid(bbox_t tile)
 }
 
 /* Initializes the particles following the geometric distribution as described in the spec */
-particle_t *initializeParticlesGeometric(int64_t n_input, int64_t L, double rho, bbox_t tile, double k, double m,
+particle_t *initializeParticlesGeometric(int64_t n_input, int64_t L, double rho, 
+                                         bbox_t tile, double k, double m,
 					 uint64_t *n_placed, uint64_t *total_size)
 {
   particle_t  *particles;
   double      A;
-  int64_t     y, x, p, pi=0, actual_particles, start_index;
+  int64_t     y, x, p, pi, actual_particles, start_index;
 
   /* initialize random number generator */
   LCG_init();  
@@ -171,7 +188,7 @@ particle_t *initializeParticlesGeometric(int64_t n_input, int64_t L, double rho,
   particles = (particle_t*) malloc((*total_size) * sizeof(particle_t));
   if (particles == NULL) return(particles);
 
-  for (x=tile.left; x<tile.right; x++) {
+  for (pi=0,x=tile.left; x<tile.right; x++) {
     /* at start of each grid column we jump into sequence of random numbers */
     start_index = tile.bottom+x*L;
     LCG_jump(2*start_index, 0);
@@ -190,16 +207,18 @@ particle_t *initializeParticlesGeometric(int64_t n_input, int64_t L, double rho,
 }
 
 /* Initialize with a sinusodial particle distribution */
-particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t L, bbox_t tile, double k, double m,
+particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t L, 
+                                          bbox_t tile, double k, double m,
                                           uint64_t *n_placed, uint64_t *total_size)
 {
   particle_t  *particles;
-  double      step = PRK_M_PI / (L-1);
-  int64_t     x, y, pi=0, i, p, actual_particles, start_index;
+  double      step;
+  int64_t     x, y, pi, i, p, actual_particles, start_index;
    
   /* initialize random number generator */
   LCG_init();
 
+  step = PRK_M_PI/(L-1);
   /* Place number of particles to each cell to form distribution decribed in spec.         */
   for ((*n_placed)=0,x=tile.left; x<tile.right; x++) {
     /* at start of each grid column we jump into sequence of random numbers */
@@ -215,7 +234,7 @@ particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t L, bbox_t til
   particles = (particle_t*) malloc((*total_size) * sizeof(particle_t));
   if (particles == NULL) return(particles);
 
-  for (x=tile.left; x<tile.right; x++) {
+  for (pi=0,x=tile.left; x<tile.right; x++) {
     /* at start of each grid column we jump into sequence of random numbers */
     start_index = tile.bottom+x*L;
     LCG_jump(2*start_index, 0);
@@ -236,17 +255,19 @@ particle_t *initializeParticlesSinusoidal(int64_t n_input, int64_t L, bbox_t til
 
 /* Initialize particles with "linearly-decreasing" distribution */
 /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
-particle_t *initializeParticlesLinear(int64_t n_input, int64_t L, double alpha, double beta, bbox_t tile,
-			              double k, double m, uint64_t *n_placed, uint64_t *total_size)
+particle_t *initializeParticlesLinear(int64_t n_input, int64_t L, double alpha, double beta, 
+                                      bbox_t tile, double k, double m, 
+                                      uint64_t *n_placed, uint64_t *total_size)
 {
   particle_t  *particles;
-  double      total_weight = 0.0 , step = 1.0 / (L-1), current_weight;
-  int64_t     x, y, p, pi=0, actual_particles, start_index;
+  double      total_weight, step, current_weight;
+  int64_t     x, y, p, pi, actual_particles, start_index;
    
   /* initialize random number generator */
   LCG_init();  
 
   /* First, find sum of all weights in order to normalize the number of particles */
+  step         = 1.0/(L-1);
   total_weight = beta*L-alpha*0.5*step*L*(L-1);
    
   /* Loop over columns of cells and assign number of particles proportional linear weight */
@@ -264,7 +285,7 @@ particle_t *initializeParticlesLinear(int64_t n_input, int64_t L, double alpha, 
   particles = (particle_t*) malloc((*total_size) * sizeof(particle_t));
   if (particles == NULL) return(particles);
 
-  for (x=tile.left; x<tile.right; x++) {
+  for (pi=0,x=tile.left; x<tile.right; x++) {
     current_weight = (beta - alpha * step * ((double) x));
     start_index = tile.bottom+x*L;
     LCG_jump(2*start_index,0);
@@ -283,11 +304,12 @@ particle_t *initializeParticlesLinear(int64_t n_input, int64_t L, double alpha, 
 }
 
 /* Initialize uniformly particles within a "patch" */
-particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch, bbox_t tile, 
-				     double k, double m,uint64_t *n_placed, uint64_t *total_size)
+particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch, 
+                                     bbox_t tile, double k, double m,
+                                     uint64_t *n_placed, uint64_t *total_size)
 {
   particle_t  *particles;
-  int64_t     x, y, total_cells, pi=0, i, p, actual_particles, start_index;
+  int64_t     x, y, total_cells, pi, i, p, actual_particles, start_index;
    
   /* initialize random number generator */
   LCG_init();  
@@ -310,7 +332,7 @@ particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch, b
   particles = (particle_t*) malloc((*total_size) * sizeof(particle_t));
   if (particles == NULL) return(particles);
 
-  for (x=tile.left; x<tile.right; x++) {
+  for (pi=0,x=tile.left; x<tile.right; x++) {
     start_index = tile.bottom+x*L;
     LCG_jump(2*start_index,0);
     for (y=tile.bottom; y<tile.top; y++) {
@@ -329,7 +351,7 @@ particle_t *initializeParticlesPatch(int64_t n_input, int64_t L, bbox_t patch, b
 }
 
 /* Completes particle distribution */
-void finish_distribution(uint64_t n, particle_t *p) {
+void finishParticlesInitialization(uint64_t n, particle_t *p) {
   double x_coord, y_coord, rel_x, rel_y, cos_theta, cos_phi, r1_sq, r2_sq, base_charge, ID;
   uint64_t x, pi, cumulative_count;
 
@@ -361,12 +383,13 @@ void finish_distribution(uint64_t n, particle_t *p) {
   }
 }
 
-/* Finds the owner of particle (2D decomposition of processors -- numbering in row major format in the grid of processor) */
+/* Finds the owner of particle (2D decomposition of grid to ranks) */
 int find_owner(particle_t p, int width, int height, int icrit, int jcrit, int ileftover, int jleftover, int Num_procsx)
 {
-  int IDx, IDy;
-  int x = (int) floor(p.x);
-  int y = (int) floor(p.y);
+  int IDx, IDy, x, y;
+
+  x = (int) floor(p.x);
+  y = (int) floor(p.y);
   if (x<icrit) IDx = x / (width+1);
   else         IDx = ileftover + (x-icrit)/width;
   if (y<jcrit) IDy = y / (height+1);
@@ -379,9 +402,11 @@ int find_owner(particle_t p, int width, int height, int icrit, int jcrit, int il
 /* Computes the Coulomb force among two charges q1 and q2 */
 int computeCoulomb(double x_dist, double y_dist, double q1, double q2, double *fx, double *fy)
 {
-  double   r2 = x_dist * x_dist + y_dist * y_dist;
-  double   r = sqrt(r2);
-  double   f_coulomb = q1 * q2 / r2;
+  double r, r2, f_coulomb;
+
+  r2 = x_dist * x_dist + y_dist * y_dist;
+  r = sqrt(r2);
+  f_coulomb = q1 * q2 / r2;
    
   (*fx) = f_coulomb * x_dist/r; // f_coulomb * cos_theta
   (*fy) = f_coulomb * y_dist/r; // f_coulomb * sin_theta
@@ -393,10 +418,10 @@ int computeCoulomb(double x_dist, double y_dist, double q1, double q2, double *f
 void computeTotalForce(particle_t p, bbox_t tile, double *grid, double *fx, double *fy)
 {
    int64_t  y, x;
-   double   tmp_fx, tmp_fy, rel_y, rel_x;
-   double   tmp_res_x = 0.0;
-   double   tmp_res_y = 0.0;
-   int64_t  n_rows = tile.top-tile.bottom+1;
+   double   tmp_fx, tmp_fy, rel_y, rel_x, tmp_res_x, tmp_res_y;
+   int64_t  n_rows;
+
+   n_rows = tile.top-tile.bottom+1;
    
    /* Coordinates of the cell containing the particle */
    y = (int64_t) floor(p.y);
@@ -410,8 +435,8 @@ void computeTotalForce(particle_t p, bbox_t tile, double *grid, double *fx, doub
    
    computeCoulomb(rel_x, rel_y, p.q, grid[y+x*n_rows], &tmp_fx, &tmp_fy);
    
-   tmp_res_x += tmp_fx;
-   tmp_res_y += tmp_fy;
+   tmp_res_x = tmp_fx;
+   tmp_res_y = tmp_fy;
    
    /* Coulomb force from bottom-left charge */
    computeCoulomb(rel_x, 1.0-rel_y, p.q, grid[(y+1)+x*n_rows], &tmp_fx, &tmp_fy);
@@ -433,13 +458,12 @@ void computeTotalForce(particle_t p, bbox_t tile, double *grid, double *fx, doub
 }
 
 /* Verifies the final position of a particle */
-int verifyParticle(particle_t p, double L, int64_t iterations, int64_t k, int64_t m)
+int verifyParticle(particle_t p, double L, int64_t iterations)
 {
-   int64_t  total_steps = iterations+1;
    double   x_final, y_final, x_periodic, y_periodic;
    
-   x_final = p.x0 + (double) total_steps * (double) (2*k+1);
-   y_final = p.y0 + (double) total_steps * (double) m;
+   x_final = p.x0 + (double) (iterations+1) * (2.0*p.k+1);
+   y_final = p.y0 + (double) (iterations+1) * p.m;
 
    x_periodic = (x_final >= 0.0) ? fmod(x_final, L) : L + fmod(x_final, L);
    y_periodic = (y_final >= 0.0) ? fmod(y_final, L) : L + fmod(y_final, L);
@@ -878,7 +902,7 @@ int main(int argc, char ** argv) {
     MPI_Reduce(&particles_count, &total_particles, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
   }
 
-  finish_distribution(particles_count, particles);
+  finishParticlesInitialization(particles_count, particles);
    
   /* Allocate space for communication buffers. Adjust appropriately as the simulation proceeds */
   
@@ -911,7 +935,6 @@ int main(int argc, char ** argv) {
     p = particles;
 
     for (i=0; i < particles_count; i++) {
-      owner = find_owner(p[i], width, height, icrit, jcrit, ileftover, jleftover, Num_procsx);
       fx = 0.0;
       fy = 0.0;
       computeTotalForce(p[i], my_tile, grid, &fx, &fy);
@@ -994,7 +1017,7 @@ int main(int argc, char ** argv) {
   /* First verify own particles */
   correctness = 0, my_checksum;
   for (i=0; i < particles_count; i++) {
-    correctness += verifyParticle(particles[i], (double)L, iterations, k, m);
+    correctness += verifyParticle(particles[i], (double)L, iterations);
     my_checksum += (uint64_t)particles[i].ID;
   }
 
