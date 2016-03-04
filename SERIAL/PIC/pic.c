@@ -167,7 +167,6 @@ particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rh
       for (p=0; p<actual_particles; p++,pi++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
-        printf("Placed particle %lld at (%lf,%lf)\n", pi, particles[pi].x, particles[pi].y);
       }
     }
   }

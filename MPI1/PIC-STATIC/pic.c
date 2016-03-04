@@ -155,6 +155,39 @@ double *initializeGrid(bbox_t tile) {
   return grid;
 }
 
+/* Completes particle distribution */
+void finishParticlesInitialization(uint64_t n, particle_t *p) {
+  double x_coord, y_coord, rel_x, rel_y, cos_theta, cos_phi, r1_sq, r2_sq, base_charge, ID;
+  uint64_t x, pi, cumulative_count;
+
+  MPI_Scan(&n, &cumulative_count, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  ID = (double) (cumulative_count - n + 1);
+  int my_ID;
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
+
+  for (pi=0; pi<n; pi++) {
+    x_coord = p[pi].x;
+    y_coord = p[pi].y;
+    rel_x = fmod(x_coord,1.0);
+    rel_y = fmod(y_coord,1.0);
+    x = (uint64_t) x_coord;
+    r1_sq = rel_y * rel_y + rel_x * rel_x;
+    r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
+    cos_theta = rel_x/sqrt(r1_sq);
+    cos_phi = (1.0-rel_x)/sqrt(r2_sq);
+    base_charge = 1.0 / ((DT*DT) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
+         
+    p[pi].v_x = 0.0;
+    p[pi].v_y = ((double) p[pi].m) / DT;
+    /* this particle charge assures movement in positive x-direction */
+    p[pi].q = (x%2 == 0) ? (2*p[pi].k+1)*base_charge : -1.0 * (2*p[pi].k+1)*base_charge ;
+    p[pi].x0 = x_coord;
+    p[pi].y0 = y_coord;
+    p[pi].ID = ID;
+    ID += 1.0;
+  }
+}
+
 /* Initializes the particles following the geometric distribution as described in the spec */
 particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rho, 
                                          bbox_t tile, double k, double m,
@@ -201,6 +234,8 @@ particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rh
       }
     }
   }
+  finishParticlesInitialization((*n_placed), particles);
+   
   return particles;
 }
 
@@ -246,8 +281,8 @@ particle_t *initializeParticlesSinusoidal(uint64_t n_input, uint64_t L,
       }
     }
   }
-   
-   return particles;
+  finishParticlesInitialization((*n_placed), particles);   
+  return particles;
 }
 
 /* Initialize particles with "linearly-decreasing" distribution */
@@ -296,6 +331,7 @@ particle_t *initializeParticlesLinear(uint64_t n_input, uint64_t L, double alpha
       }
     }
   }
+  finishParticlesInitialization((*n_placed), particles);
   return particles;
 }
 
@@ -343,54 +379,39 @@ particle_t *initializeParticlesPatch(uint64_t n_input, uint64_t L, bbox_t patch,
       }
     }
   }
+  finishParticlesInitialization((*n_placed), particles);
   return particles;
 }
 
-/* Completes particle distribution */
-void finishParticlesInitialization(uint64_t n, particle_t *p) {
-  double x_coord, y_coord, rel_x, rel_y, cos_theta, cos_phi, r1_sq, r2_sq, base_charge, ID;
-  uint64_t x, pi, cumulative_count;
-
-  MPI_Scan(&n, &cumulative_count, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
-  ID = (double) (cumulative_count - n + 1);
-  int my_ID;
-  MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
-
-  for (pi=0; pi<n; pi++) {
-    x_coord = p[pi].x;
-    y_coord = p[pi].y;
-    rel_x = fmod(x_coord,1.0);
-    rel_y = fmod(y_coord,1.0);
-    x = (uint64_t) x_coord;
-    r1_sq = rel_y * rel_y + rel_x * rel_x;
-    r2_sq = rel_y * rel_y + (1.0-rel_x) * (1.0-rel_x);
-    cos_theta = rel_x/sqrt(r1_sq);
-    cos_phi = (1.0-rel_x)/sqrt(r2_sq);
-    base_charge = 1.0 / ((DT*DT) * Q * (cos_theta/r1_sq + cos_phi/r2_sq));
-         
-    p[pi].v_x = 0.0;
-    p[pi].v_y = ((double) p[pi].m) / DT;
-    /* this particle charge assures movement in positive x-direction */
-    p[pi].q = (x%2 == 0) ? (2*p[pi].k+1)*base_charge : -1.0 * (2*p[pi].k+1)*base_charge ;
-    p[pi].x0 = x_coord;
-    p[pi].y0 = y_coord;
-    p[pi].ID = ID;
-    ID += 1.0;
-  }
-}
+/* introduce function pointer type to be able to switch between search functions */
+typedef int (*find_owner_type)(particle_t p, int width, int height, int icrit, int jcrit, 
+                               int ileftover, int jleftover, int Num_procsx);
 
 /* Finds the owner of particle (2D decomposition of grid to ranks) */
-int find_owner(particle_t p, int width, int height, int icrit, int jcrit, int ileftover, int jleftover, 
-               int Num_procsx)
-{
+int find_owner_general(particle_t p, int width, int height, int Num_procsx, 
+                       int icrit, int jcrit, int ileftover, int jleftover) {
   int IDx, IDy, x, y;
 
   x = (int) floor(p.x);
   y = (int) floor(p.y);
-  if (x<icrit) IDx = x / (width+1);
+  if (x<icrit) IDx = x/(width+1);
   else         IDx = ileftover + (x-icrit)/width;
-  if (y<jcrit) IDy = y / (height+1);
+  if (y<jcrit) IDy = y/(height+1);
   else         IDy = jleftover + (y-jcrit)/height;
+  int proc_id = IDy * Num_procsx + IDx;
+
+  return proc_id;
+}
+
+/* Finds the owner of particle (2D decomposition of grid to ranks) */
+int find_owner_simple(particle_t p, int width, int height, int Num_procsx, 
+                       int icrit, int jcrit, int ileftover, int jleftover) {
+  int IDx, IDy, x, y;
+
+  x = (int) floor(p.x);
+  y = (int) floor(p.y);
+  IDx = x/width;
+  IDy = y/height;
   int proc_id = IDy * Num_procsx + IDx;
 
   return proc_id;
@@ -498,8 +519,8 @@ void add_particle_to_buffer(particle_t p, particle_t **buffer, uint64_t *positio
 }
 
 /* Attaches src buffer of particles to destination buffer. Resizes destination buffer if need be. */
-void attach_particles(particle_t **dst_buffer, uint64_t *position, uint64_t *buffer_size, particle_t *src_buffer, 
-                      uint64_t n_src_particles) {
+void attach_particles(particle_t **dst_buffer, uint64_t *position, uint64_t *buffer_size, 
+                      particle_t *src_buffer, uint64_t n_src_particles) {
    uint64_t cur_pos = (*position);
    uint64_t cur_buf_size = (*buffer_size);
    particle_t *cur_buffer = (*dst_buffer);
@@ -587,44 +608,45 @@ int contain(uint64_t x, uint64_t y, bbox_t patch) {
 
 int main(int argc, char ** argv) {
    
-  int         Num_procs;         // number of ranks 
-  int         Num_procsx, 
-              Num_procsy;        // number of ranks in each coord direction      
-  int         args_used = 1;     // keeps track of # consumed arguments
-  int         my_ID;             // MPI rank
-  int         my_IDx, my_IDy;    // coordinates of rank in rank grid                  
-  int         root = 0;          // master rank
-  uint64_t    L;                 // dimension of grid in cells
-  uint64_t    iterations ;       // total number of simulation steps
-  uint64_t    n;                 // total number of particles requested in the simulation
-  uint64_t    actual_particles,  // actual number of particles owned by my rank
-              total_particles;   // total number of generated particles
-  char        *init_mode;        // particle initialization mode (char)
-  double      rho ;              // attenuation factor for geometric particle distribution
-  uint64_t    k, m;              // determine initial horizontal and vertical velocity of 
+  int             Num_procs;         // number of ranks 
+  int             Num_procsx, 
+                  Num_procsy;        // number of ranks in each coord direction      
+  int             args_used = 1;     // keeps track of # consumed arguments
+  int             my_ID;             // MPI rank
+  int             my_IDx, my_IDy;    // coordinates of rank in rank grid                  
+  int             root = 0;          // master rank
+  uint64_t        L;                 // dimension of grid in cells
+  uint64_t        iterations ;       // total number of simulation steps
+  uint64_t        n;                 // total number of particles requested in the simulation
+  uint64_t        actual_particles,  // actual number of particles owned by my rank
+                  total_particles;   // total number of generated particles
+  char            *init_mode;        // particle initialization mode (char)
+  double          rho ;              // attenuation factor for geometric particle distribution
+  uint64_t        k, m;              // determine initial horizontal and vertical velocity of 
                                  // particles-- (2*k)+1 cells per time step 
-  double      *grid;             // the grid is represented as an array of charges
-  uint64_t    iter, i;           // dummies
-  double      fx, fy, ax, ay;    // particle forces and accelerations
-  int         error=0;           // used for graceful exit after error
-  uint64_t    correctness=0;     // boolean indicating correct particle displacements
-  uint64_t    istart, jstart, iend, jend, particles_size, particles_count;
-  bbox_t      grid_patch,        // whole grid
-              init_patch,        // subset of grid used for localized initialization
-              my_tile;           // subset of grid owner by my rank
-  particle_t  *particles, *p;    // array of particles owned by my rank
-  uint64_t    *cur_counts;       //
-  uint64_t    ptr_my;            //
-  uint64_t    owner;             // owner (rank) of a particular particle
-  double      pic_time, local_pic_time, avg_time;
-  uint64_t    my_checksum = 0, tot_checksum = 0, correctness_checksum = 0;
-  uint64_t    width, height;     // minimum dimensions of grid tile owned by my rank
-  int         particle_mode;     // type of initialization
-  double      alpha, beta;       // negative slope and offset for linear initialization
-  int         nbr[8];            // topological neighbor ranks
-  int         icrit, jcrit;      // global grid indices where tile size drops to minimum
-  int         ileftover, jleftover;// excess grid points divided among "fat" tiles
-  uint64_t    to_send[8], to_recv[8];// 
+  double          *grid;             // the grid is represented as an array of charges
+  uint64_t        iter, i;           // dummies
+  double          fx, fy, ax, ay;    // particle forces and accelerations
+  int             error=0;           // used for graceful exit after error
+  uint64_t        correctness=0;     // boolean indicating correct particle displacements
+  uint64_t        istart, jstart, iend, jend, particles_size, particles_count;
+  bbox_t          grid_patch,        // whole grid
+                  init_patch,        // subset of grid used for localized initialization
+                  my_tile;           // subset of grid owner by my rank
+  particle_t      *particles, *p;    // array of particles owned by my rank
+  uint64_t        *cur_counts;       //
+  uint64_t        ptr_my;            //
+  uint64_t        owner;             // owner (rank) of a particular particle
+  double          pic_time, local_pic_time, avg_time;
+  uint64_t        my_checksum = 0, tot_checksum = 0, correctness_checksum = 0;
+  uint64_t        width, height;     // minimum dimensions of grid tile owned by my rank
+  int             particle_mode;     // type of initialization
+  double          alpha, beta;       // negative slope and offset for linear initialization
+  int             nbr[8];            // topological neighbor ranks
+  int             icrit, jcrit;      // global grid indices where tile size drops to minimum
+  find_owner_type find_owner;
+  int             ileftover, jleftover;// excess grid points divided among "fat" tiles
+  uint64_t        to_send[8], to_recv[8];// 
    
   MPI_Status  status[16];
   MPI_Request requests[16];
@@ -845,6 +867,17 @@ int main(int argc, char ** argv) {
   }
   jcrit = (height+1) * jleftover;
 
+  /* if the problem can be divided evenly among ranks, use the simple owner finding function */
+  if (icrit==0 && jcrit==0) {
+    find_owner = find_owner_simple;
+    if (my_ID==root) printf("Rank search mode used              = simple\n");
+  }
+  else {
+    find_owner = find_owner_general;
+    if (my_ID==root) printf("Rank search mode used              = general\n");
+  }
+
+  /* define bounding box for tile owned by my rank for convenience */
   my_tile = (bbox_t){istart,iend,jstart,jend};
 
   /* Find neighbors. Indexing: left=0, right=1, bottom=2, top=3, 
@@ -900,8 +933,6 @@ int main(int argc, char ** argv) {
     MPI_Reduce(&particles_count, &total_particles, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
   }
 
-  finishParticlesInitialization(particles_count, particles);
-   
   /* Allocate space for communication buffers. Adjust appropriately as the simulation proceeds */
   
   uint64_t sendbuf_size[8], recvbuf_size[8];
@@ -949,11 +980,11 @@ int main(int argc, char ** argv) {
       p[i].v_y += ay * DT;
 
       /* Check if particle stayed in same subdomain or moved to another */
-      owner = find_owner(p[i], width, height, icrit, jcrit, ileftover, jleftover, Num_procsx);
+      owner = find_owner(p[i], width, height, Num_procsx, icrit, jcrit, ileftover, jleftover);
       if (owner==my_ID) {
         add_particle_to_buffer(p[i], &p, &ptr_my, &particles_size);
+      /* Add particle to the appropriate communication buffer */
       } else if (owner == nbr[0]) {
-        /* Add particle to the appropriate communication buffer */
         add_particle_to_buffer(p[i], &sendbuf[0], &to_send[0], &sendbuf_size[0]);
       } else if (owner == nbr[1]) {
         add_particle_to_buffer(p[i], &sendbuf[1], &to_send[1], &sendbuf_size[1]);
@@ -974,11 +1005,8 @@ int main(int argc, char ** argv) {
         i, owner);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
       }
-
     }
 
-    //FIXME: use only for debugging
-    MPI_Barrier(MPI_COMM_WORLD);
     /* Communicate the number of particles to be sent/received */
     for (i=0; i<8; i++) {
       MPI_Isend(&to_send[i], 1, MPI_UINT64_T, nbr[i], 0, MPI_COMM_WORLD, &requests[i]);
@@ -999,11 +1027,10 @@ int main(int argc, char ** argv) {
     MPI_Waitall(16, requests, status);
      
     /* Attach received particles to particles buffer */
-    attach_received_particles(&particles, &ptr_my, &particles_size, recvbuf[0], to_recv[0], recvbuf[1], to_recv[1]);
-    attach_received_particles(&particles, &ptr_my, &particles_size, recvbuf[3], to_recv[3], recvbuf[2], to_recv[2]);
-    attach_received_particles(&particles, &ptr_my, &particles_size, recvbuf[7], to_recv[7], recvbuf[5], to_recv[5]);
-    attach_received_particles(&particles, &ptr_my, &particles_size, recvbuf[6], to_recv[6], recvbuf[4], to_recv[4]);
-    
+    for (i=0; i<4; i++) {
+      attach_received_particles(&particles, &ptr_my, &particles_size, recvbuf[2*i], to_recv[2*i], 
+                                recvbuf[2*i+1], to_recv[2*i+1]);
+    }    
     particles_count = ptr_my;
   }
    
