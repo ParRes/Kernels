@@ -813,6 +813,7 @@ std::pair<double, double> spmd_task(const Task *task,
   fm.wait_all_results();
 
   double tsStart = DBL_MAX;
+  firstFm.wait_all_results();
   for (Domain::DomainPointIterator it(launchDomain); it; it++)
     tsStart = MIN(tsStart, firstFm.get_result<double>(it.p));
   double tsEnd = wtime();
