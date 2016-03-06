@@ -77,6 +77,8 @@ HISTORY: Written by Abdullah Kayi, May 2015.
   #define FSTR    "%f"
 #endif
 
+typedef std::pair<std::pair<double, double>, double> tuple_double;
+
 class StencilMapper : public DefaultMapper
 {
   public:
@@ -520,6 +522,7 @@ void top_level_task(const Task *task,
   FutureMap fm = runtime->execute_must_epoch(ctx, shardLauncher);
   fm.wait_all_results();
 
+  DTYPE abserr = 0.0;
 #ifdef WALL_CLOCK_TIME
   double tsStart = DBL_MAX, tsEnd = DBL_MIN;
 #else
@@ -530,20 +533,35 @@ void top_level_task(const Task *task,
     {
       DomainPoint tilePoint =
         DomainPoint::from_point<2>(make_point(tileX, tileY));
-      typedef std::pair<double, double> Doubles;
-      Doubles p = fm.get_result<Doubles>(tilePoint);
+      tuple_double p = fm.get_result<tuple_double>(tilePoint);
 #ifdef WALL_CLOCK_TIME
-      tsStart = MIN(tsStart, p.first);
-      tsEnd = MAX(tsEnd, p.second);
+      tsStart = MIN(tsStart, p.first.first);
+      tsEnd = MAX(tsEnd, p.first.second);
 #else
-      maxTime = MAX(maxTime, p.second - p.first);
+      maxTime = MAX(maxTime, p.first.second - p.first.first);
 #endif
+      abserr += p.second;
     }
 
 #ifdef WALL_CLOCK_TIME
   double maxTime = tsEnd - tsStart;
 #endif
   double avgTime = maxTime / iterations;
+
+  DTYPE epsilon = EPSILON; /* error tolerance */
+  if (abserr < epsilon)
+  {
+    printf("Solution validates\n");
+#ifdef VERBOSE
+    printf("Squared errors: %f \n", abserr);
+#endif
+  }
+  else
+  {
+    fprintf(stderr, "ERROR: Squared error %lf exceeds threshold %e\n",
+        abserr, epsilon);
+    exit(EXIT_FAILURE);
+  }
 
   int stencil_size = 4 * RADIUS + 1;
   unsigned long active_points =
@@ -612,9 +630,9 @@ static LogicalPartition createHaloPartition(LogicalRegion lr,
   return runtime->get_logical_partition(ctx, lr, ip);
 }
 
-std::pair<double, double> spmd_task(const Task *task,
-               const std::vector<PhysicalRegion> &regions,
-               Context ctx, HighLevelRuntime *runtime)
+tuple_double spmd_task(const Task *task,
+                       const std::vector<PhysicalRegion> &regions,
+                       Context ctx, HighLevelRuntime *runtime)
 {
   SPMDArgs *args = (SPMDArgs*)task->args;
   int n = args->n;
@@ -818,6 +836,7 @@ std::pair<double, double> spmd_task(const Task *task,
     tsStart = MIN(tsStart, firstFm.get_result<double>(it.p));
   double tsEnd = wtime();
 
+  DTYPE abserr = 0.0;
   {
     IndexLauncher checkLauncher(TASKID_CHECK, launchDomain, taskArg, argMap);
     RegionRequirement req(privateLp, 0, READ_ONLY, EXCLUSIVE, localLr);
@@ -826,31 +845,11 @@ std::pair<double, double> spmd_task(const Task *task,
     FutureMap fm = runtime->execute_index_space(ctx, checkLauncher);
     fm.wait_all_results();
 
-    DTYPE abserr = 0.0;
-    DTYPE epsilon = EPSILON; /* error tolerance */
-
     for (Domain::DomainPointIterator it(launchDomain); it; it++)
       abserr += fm.get_result<double>(it.p);
-
-    if (abserr < epsilon)
-    {
-      if (args->tileLoc[0] == 0 && args->tileLoc[1] == 0)
-        printf("Solution validates\n");
-#ifdef VERBOSE
-      if (args->tileLoc[0] == 0 && args->tileLoc[1] == 0)
-        printf("Squared errors: %f \n", abserr);
-#endif
-    }
-    else
-    {
-      fprintf(stderr,
-          "ERROR: Squared error %lf exceeds threshold %e (%ld, %ld)\n",
-          abserr, epsilon, args->tileLoc[0], args->tileLoc[1]);
-      exit(EXIT_FAILURE);
-    }
   }
 
-  return std::pair<double, double>(tsStart, tsEnd);
+  return std::make_pair(std::make_pair(tsStart, tsEnd), abserr);
 }
 
 void init_weight_task(const Task *task,
@@ -1106,7 +1105,7 @@ int main(int argc, char **argv)
   HighLevelRuntime::register_legion_task<top_level_task>(TASKID_TOPLEVEL,
       Processor::LOC_PROC, true/*single*/, false/*index*/,
       AUTO_GENERATE_ID, TaskConfigOptions(false, true), "top_level");
-  HighLevelRuntime::register_legion_task<std::pair<double,double>, spmd_task>(TASKID_SPMD,
+  HighLevelRuntime::register_legion_task<tuple_double, spmd_task>(TASKID_SPMD,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(false, true), "spmd");
   HighLevelRuntime::register_legion_task<init_weight_task>(TASKID_WEIGHT_INITIALIZE,
