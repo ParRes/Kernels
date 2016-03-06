@@ -795,7 +795,7 @@ tuple_double spmd_task(const Task *task,
     {
       IndexLauncher stencilLauncher(TASKID_STENCIL, launchDomain, taskArg,
           argMap);
-      RegionRequirement inputReq(localLr, 0, READ_ONLY, EXCLUSIVE, localLr);
+      RegionRequirement inputReq(localLr, READ_ONLY, EXCLUSIVE, localLr);
       inputReq.add_field(FID_IN);
       RegionRequirement outputReq(privateLp, 0, READ_WRITE, EXCLUSIVE, localLr);
       outputReq.add_field(FID_OUT);
