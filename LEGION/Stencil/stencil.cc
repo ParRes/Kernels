@@ -223,7 +223,7 @@ enum TaskIDs {
   TASKID_WEIGHT_INITIALIZE,
   TASKID_INITIALIZE,
   TASKID_STENCIL,
-  TASKID_DUMMY,
+  TASKID_INC,
   TASKID_CHECK,
 };
 
@@ -247,7 +247,10 @@ struct SPMDArgs {
   int numIterations;
   int myRank;
   Point<2> tileLoc;
-  PhaseBarrier inputReady;
+  PhaseBarrier fullInput[4];
+  PhaseBarrier fullOutput[4];
+  PhaseBarrier emptyInput[4];
+  PhaseBarrier emptyOutput[4];
 };
 
 struct StencilArgs {
@@ -438,8 +441,33 @@ void top_level_task(const Task *task,
   /*********************************************************************
   ** Launch SPMD shards
   *********************************************************************/
-  PhaseBarrier inputReady = runtime->create_phase_barrier(ctx, num_ranks);
+  // create phase barriers to synchronize shards
+  std::map<DomainPoint, std::vector<PhaseBarrier> > fullBarriers;
+  std::map<DomainPoint, std::vector<PhaseBarrier> > emptyBarriers;
+
   int offsets[][2] = { {-1, 0}, {0, -1}, {1, 0}, {0, 1} };
+#define flip(dir) (((dir) + 2) % 4)
+  for (int tileY = 0; tileY < Num_procsy; ++tileY)
+    for (int tileX = 0; tileX < Num_procsx; ++tileX)
+    {
+      DomainPoint tilePoint =
+        DomainPoint::from_point<2>(make_point(tileX, tileY));
+      fullBarriers[tilePoint].reserve(4);
+      emptyBarriers[tilePoint].reserve(4);
+      for (int dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
+      {
+        coord_t neighborX = tileX + offsets[dir][0];
+        coord_t neighborY = tileY + offsets[dir][1];
+        if (neighborX < 0 || neighborY < 0 ||
+            neighborX >= Num_procsx || neighborY >= Num_procsy)
+          continue;
+        fullBarriers[tilePoint][dir] =
+          runtime->create_phase_barrier(ctx, 1);
+        emptyBarriers[tilePoint][dir] =
+          runtime->create_phase_barrier(ctx, 1);
+      }
+    }
+
   MustEpochLauncher shardLauncher;
   std::map<DomainPoint, SPMDArgs> args;
   for (int tileY = 0; tileY < Num_procsy; ++tileY)
@@ -452,7 +480,6 @@ void top_level_task(const Task *task,
       args[tilePoint].numThreads = threads;
       args[tilePoint].numIterations = iterations;
       args[tilePoint].tileLoc = tilePoint.get_point<2>();
-      args[tilePoint].inputReady = inputReady;
 
       TaskLauncher spmdLauncher(TASKID_SPMD,
           TaskArgument(&args[tilePoint], sizeof(SPMDArgs)));
@@ -472,6 +499,13 @@ void top_level_task(const Task *task,
           continue;
         DomainPoint neighborPoint =
           DomainPoint::from_point<2>(Point<2>(neighborCoords));
+
+        args[tilePoint].fullOutput[dir] = fullBarriers[tilePoint][dir];
+        args[tilePoint].emptyOutput[dir] = emptyBarriers[tilePoint][dir];
+        args[tilePoint].fullInput[dir] = fullBarriers[neighborPoint][flip(dir)];
+        args[tilePoint].emptyInput[dir] =
+          emptyBarriers[neighborPoint][flip(dir)];
+
         RegionRequirement req(privateLrs[neighborPoint], READ_WRITE,
             SIMULTANEOUS, privateLrs[neighborPoint]);
         req.add_field(FID_IN);
@@ -586,7 +620,6 @@ std::pair<double, double> spmd_task(const Task *task,
   int n = args->n;
   int numThreads = args->numThreads;
   Point<2> tileLoc = args->tileLoc;
-  PhaseBarrier inputReady = args->inputReady;
 
   LogicalRegion localLr = regions[0].get_logical_region();
   LogicalPartition localLP = createHaloPartition(localLr, n, ctx, runtime);
@@ -618,7 +651,7 @@ std::pair<double, double> spmd_task(const Task *task,
 
   IndexPartition privateIp =
     runtime->create_index_partition(ctx, privateIs,
-        Blockify<2>(make_point(blockX, blockY / numThreads)));
+        Blockify<2>(make_point(blockX, blockY / numThreads)), DISJOINT_KIND);
   LogicalPartition privateLp =
     runtime->get_logical_partition(ctx, privateLr, privateIp);
 
@@ -662,8 +695,13 @@ std::pair<double, double> spmd_task(const Task *task,
     req.add_field(FID_IN);
     req.add_field(FID_OUT);
     initLauncher.add_region_requirement(req);
-    initLauncher.add_arrival_barrier(inputReady);
-    inputReady = runtime->advance_phase_barrier(ctx, inputReady);
+    for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
+      if (hasNeighbor[dir])
+      {
+        initLauncher.add_arrival_barrier(args->fullOutput[dir]);
+        args->fullOutput[dir] =
+          runtime->advance_phase_barrier(ctx, args->fullOutput[dir]);
+      }
     FutureMap fm = runtime->execute_index_space(ctx, initLauncher);
     fm.wait_all_results();
   }
@@ -695,21 +733,9 @@ std::pair<double, double> spmd_task(const Task *task,
     f.get_void_result();
   }
 
-  {
-    TaskLauncher dummyLauncher(TASKID_DUMMY, TaskArgument(0, 0));
-    dummyLauncher.add_region_requirement(
-        RegionRequirement(localLr, READ_ONLY, EXCLUSIVE, localLr));
-    dummyLauncher.add_field(0, FID_IN);
-    dummyLauncher.add_field(0, FID_OUT);
-    dummyLauncher.add_wait_barrier(inputReady);
-    Future f = runtime->execute_task(ctx, dummyLauncher);
-    f.get_void_result();
-  }
-
-  double tsStart = wtime();
-
   FutureMap fm;
-  for (int iter = 0; iter < stencilArgs.numIterations; iter++)
+  FutureMap firstFm;
+  for (int iter = 0; iter <= stencilArgs.numIterations; iter++)
   {
     runtime->begin_trace(ctx, 0);
     for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
@@ -725,6 +751,12 @@ std::pair<double, double> spmd_task(const Task *task,
 
           CopyLauncher copyLauncher;
           copyLauncher.add_copy_requirements(srcReq, dstReq);
+          args->fullInput[dir] =
+            runtime->advance_phase_barrier(ctx, args->fullInput[dir]);
+          copyLauncher.add_wait_barrier(args->fullInput[dir]);
+          copyLauncher.add_arrival_barrier(args->emptyOutput[dir]);
+          args->emptyOutput[dir] =
+            runtime->advance_phase_barrier(ctx, args->emptyOutput[dir]);
           runtime->issue_copy_operation(ctx, copyLauncher);
         }
 
@@ -745,23 +777,44 @@ std::pair<double, double> spmd_task(const Task *task,
     {
       IndexLauncher stencilLauncher(TASKID_STENCIL, launchDomain, taskArg,
           argMap);
-      RegionRequirement req(privateLp, 0, READ_ONLY, EXCLUSIVE, localLr);
-      req.add_field(FID_IN);
-      req.add_field(FID_OUT);
+      RegionRequirement inputReq(localLr, 0, READ_ONLY, EXCLUSIVE, localLr);
+      inputReq.add_field(FID_IN);
+      RegionRequirement outputReq(privateLp, 0, READ_WRITE, EXCLUSIVE, localLr);
+      outputReq.add_field(FID_OUT);
       RegionRequirement weightReq(weightLr, READ_ONLY, EXCLUSIVE, weightLr);
       weightReq.add_field(FID_WEIGHT);
-      // need this requirement to block copies
-      RegionRequirement dummyReq(localLr, 0, READ_ONLY, EXCLUSIVE, localLr);
-      dummyReq.add_field(FID_IN);
-      stencilLauncher.add_region_requirement(req);
+      stencilLauncher.add_region_requirement(inputReq);
+      stencilLauncher.add_region_requirement(outputReq);
       stencilLauncher.add_region_requirement(weightReq);
-      stencilLauncher.add_region_requirement(dummyReq);
-      fm = runtime->execute_index_space(ctx, stencilLauncher);
+      runtime->execute_index_space(ctx, stencilLauncher);
+    }
+
+    {
+      IndexLauncher incLauncher(TASKID_INC, launchDomain, taskArg,
+          argMap);
+      RegionRequirement req(privateLp, 0, READ_WRITE, EXCLUSIVE, localLr);
+      req.add_field(FID_IN);
+      incLauncher.add_region_requirement(req);
+      for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
+        if (hasNeighbor[dir])
+        {
+          args->emptyInput[dir] =
+            runtime->advance_phase_barrier(ctx, args->emptyInput[dir]);
+          incLauncher.add_wait_barrier(args->emptyInput[dir]);
+          incLauncher.add_arrival_barrier(args->fullOutput[dir]);
+          args->fullOutput[dir] =
+            runtime->advance_phase_barrier(ctx, args->fullOutput[dir]);
+        }
+      fm = runtime->execute_index_space(ctx, incLauncher);
     }
     runtime->end_trace(ctx, 0);
+    if (iter == 0) firstFm = fm;
   }
   fm.wait_all_results();
 
+  double tsStart = DBL_MAX;
+  for (Domain::DomainPointIterator it(launchDomain); it; it++)
+    tsStart = MIN(tsStart, firstFm.get_result<double>(it.p));
   double tsEnd = wtime();
 
   {
@@ -797,12 +850,6 @@ std::pair<double, double> spmd_task(const Task *task,
   }
 
   return std::pair<double, double>(tsStart, tsEnd);
-}
-
-void dummy_task(const Task *task,
-                     const std::vector<PhysicalRegion> &regions,
-                     Context ctx, HighLevelRuntime *runtime)
-{
 }
 
 void init_weight_task(const Task *task,
@@ -898,40 +945,36 @@ void stencil(DTYPE* RESTRICT inputPtr,
 #define IN(i, j)     inputPtr[(j) * haloX + i]
 #define OUT(i, j)    outputPtr[(j) * haloX + i]
 #define WEIGHT(i, j) weightPtr[(j + RADIUS) * (2 * RADIUS + 1) + (i + RADIUS)]
-
-  coord_t i, j, ii, jj;
-
-  for (j = startY; j < endY; ++j)
-    for (i = startX; i < endX; ++i)
+  for (coord_t j = startY; j < endY; ++j)
+    for (coord_t i = startX; i < endX; ++i)
     {
-      for (jj = -RADIUS; jj <= RADIUS; jj++)
+      for (coord_t jj = -RADIUS; jj <= RADIUS; jj++)
         OUT(i, j) += WEIGHT(0, jj) * IN(i, j + jj);
-      for (ii = -RADIUS; ii < 0; ii++)
+      for (coord_t ii = -RADIUS; ii < 0; ii++)
         OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
-      for (ii = 1; ii <= RADIUS; ii++)
+      for (coord_t ii = 1; ii <= RADIUS; ii++)
         OUT(i, j) += WEIGHT(ii, 0) * IN(i + ii, j);
     }
-
 #undef IN
 #undef OUT
 #undef WEIGHT
 }
 
 void stencil_field_task(const Task *task,
-                    const std::vector<PhysicalRegion> &regions,
-                    Context ctx, HighLevelRuntime *runtime)
+                        const std::vector<PhysicalRegion> &regions,
+                        Context ctx, HighLevelRuntime *runtime)
 {
   RegionAccessor<AccessorType::Generic, DTYPE> inputAcc =
     regions[0].get_field_accessor(FID_IN).typeify<DTYPE>();
   RegionAccessor<AccessorType::Generic, DTYPE> outputAcc =
-    regions[0].get_field_accessor(FID_OUT).typeify<DTYPE>();
+    regions[1].get_field_accessor(FID_OUT).typeify<DTYPE>();
   RegionAccessor<AccessorType::Generic, DTYPE> weightAcc =
-    regions[1].get_field_accessor(FID_WEIGHT).typeify<DTYPE>();
+    regions[2].get_field_accessor(FID_WEIGHT).typeify<DTYPE>();
 
   Domain dom = runtime->get_index_space_domain(ctx,
-      task->regions[0].region.get_index_space());
-  Domain weightDom = runtime->get_index_space_domain(ctx,
       task->regions[1].region.get_index_space());
+  Domain weightDom = runtime->get_index_space_domain(ctx,
+      task->regions[2].region.get_index_space());
   Rect<2> rect = dom.get_rect<2>();
   Rect<2> weightRect = weightDom.get_rect<2>();
 
@@ -940,10 +983,10 @@ void stencil_field_task(const Task *task,
   DTYPE* outputPtr = 0;
   DTYPE* weightPtr = 0;
   {
-      Rect<2> r; ByteOffset bo[1];
-      inputPtr = inputAcc.raw_rect_ptr<2>(rect, r, bo);
-      outputPtr = outputAcc.raw_rect_ptr<2>(rect, r, bo);
-      weightPtr = weightAcc.raw_rect_ptr<2>(weightRect, r, bo);
+    Rect<2> r; ByteOffset bo[1];
+    inputPtr = inputAcc.raw_rect_ptr<2>(rect, r, bo);
+    outputPtr = outputAcc.raw_rect_ptr<2>(rect, r, bo);
+    weightPtr = weightAcc.raw_rect_ptr<2>(weightRect, r, bo);
   }
 
   StencilArgs *args = (StencilArgs*)task->args;
@@ -964,6 +1007,38 @@ void stencil_field_task(const Task *task,
   coord_t endY = startY + (rdY - luY + 1);
 
   stencil(inputPtr, outputPtr, weightPtr, haloX, startX, endX, startY, endY);
+}
+
+double inc_field_task(const Task *task,
+                      const std::vector<PhysicalRegion> &regions,
+                      Context ctx, HighLevelRuntime *runtime)
+{
+  RegionAccessor<AccessorType::Generic, DTYPE> acc =
+    regions[0].get_field_accessor(FID_IN).typeify<DTYPE>();
+  Domain dom = runtime->get_index_space_domain(ctx,
+      task->regions[0].region.get_index_space());
+  Rect<2> rect = dom.get_rect<2>();
+  coord_t haloX = ((StencilArgs*)task->args)->haloX;
+  DTYPE* ptr = 0;
+  {
+    Rect<2> r; ByteOffset bo[1];
+    ptr = acc.raw_rect_ptr<2>(rect, r, bo);
+  }
+
+#define IN(i, j) ptr[(j) * haloX + i]
+  {
+    coord_t startX = 0;
+    coord_t startY = 0;
+    coord_t endX = rect.hi[0] - rect.lo[0] + 1;
+    coord_t endY = rect.hi[1] - rect.lo[1] + 1;
+    for (coord_t j = startY; j < endY; ++j)
+      for (coord_t i = startX; i < endX; ++i)
+        IN(i, j) += 1.0;
+  }
+#undef IN
+  // the finish timestamp of the first invocation of this task
+  // is considered as the starting timestamp
+  return wtime();
 }
 
 double check_task(const Task *task,
@@ -1004,7 +1079,7 @@ double check_task(const Task *task,
       if (realX < RADIUS || realY < RADIUS) continue;
       if (realX >= n - RADIUS || realY >= n - RADIUS) continue;
 
-      DTYPE norm = (DTYPE) (args->numIterations) * (COEFX + COEFY);
+      DTYPE norm = (DTYPE) (args->numIterations + 1) * (COEFX + COEFY);
       DTYPE value = OUT(i, j);
       abserr += ABS(value - norm);
     }
@@ -1042,9 +1117,9 @@ int main(int argc, char **argv)
   HighLevelRuntime::register_legion_task<stencil_field_task>(TASKID_STENCIL,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "stencil");
-  HighLevelRuntime::register_legion_task<dummy_task>(TASKID_DUMMY,
+  HighLevelRuntime::register_legion_task<double, inc_field_task>(TASKID_INC,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
-      AUTO_GENERATE_ID, TaskConfigOptions(true), "dummy");
+      AUTO_GENERATE_ID, TaskConfigOptions(true), "inc");
   HighLevelRuntime::register_legion_task<double, check_task>(TASKID_CHECK,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "check");
