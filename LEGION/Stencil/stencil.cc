@@ -340,11 +340,6 @@ void top_level_task(const Task *task,
     }
   //std::swap(Num_procsx, Num_procsy);
 
-  if (n % num_ranks != 0)
-  {
-    printf("n%%#ranks should be zero\n");
-    exit(EXIT_FAILURE);
-  }
   if (n % Num_procsx != 0)
   {
     printf("n%%Num_procsx should be zero\n");
@@ -369,9 +364,9 @@ void top_level_task(const Task *task,
     exit(EXIT_FAILURE);
   }
 
-  if ((n / num_ranks) % threads != 0)
+  if ((n / Num_procsy) % threads != 0)
   {
-    printf("(n / num_ranks)%%THREADS should be zero\n");
+    printf("(n / Num_procsy)%%THREADS should be zero\n");
     exit(EXIT_FAILURE);
   }
 
