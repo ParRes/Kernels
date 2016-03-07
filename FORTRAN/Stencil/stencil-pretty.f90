@@ -218,7 +218,6 @@ program main
                          + W(jj,0) * A(r+jj+1:n-r+jj,r+1:n-r)
     enddo
 #else
-    ! this has not been verified yet
     do jj=-r,r
       do ii=-r,r
         B(r+1:n-r,r+1:n-r) = B(r+1:n-r,r+1:n-r) + W(ii,jj) * A(r+ii+1:n-r+ii,r+jj+1:n-r+jj)
