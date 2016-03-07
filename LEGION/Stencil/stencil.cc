@@ -746,8 +746,8 @@ tuple_double spmd_task(const Task *task,
     f.get_void_result();
   }
 
+  double tsStart = DBL_MAX;
   FutureMap fm;
-  FutureMap firstFm;
   for (int iter = 0; iter <= stencilArgs.numIterations; iter++)
   {
     runtime->begin_trace(ctx, 0);
@@ -821,14 +821,14 @@ tuple_double spmd_task(const Task *task,
       fm = runtime->execute_index_space(ctx, incLauncher);
     }
     runtime->end_trace(ctx, 0);
-    if (iter == 0) firstFm = fm;
+    if (iter == 0)
+    {
+      fm.wait_all_results();
+      tsStart = wtime();
+    }
   }
   fm.wait_all_results();
 
-  double tsStart = DBL_MAX;
-  firstFm.wait_all_results();
-  for (Domain::DomainPointIterator it(launchDomain); it; it++)
-    tsStart = MIN(tsStart, firstFm.get_result<double>(it.p));
   double tsEnd = wtime();
 
   DTYPE abserr = 0.0;
@@ -1004,7 +1004,7 @@ void stencil_field_task(const Task *task,
   stencil(inputPtr, outputPtr, weightPtr, haloX, startX, endX, startY, endY);
 }
 
-double inc_field_task(const Task *task,
+void inc_field_task(const Task *task,
                       const std::vector<PhysicalRegion> &regions,
                       Context ctx, HighLevelRuntime *runtime)
 {
@@ -1031,9 +1031,6 @@ double inc_field_task(const Task *task,
         IN(i, j) += 1.0;
   }
 #undef IN
-  // the finish timestamp of the first invocation of this task
-  // is considered as the starting timestamp
-  return wtime();
 }
 
 double check_task(const Task *task,
@@ -1112,7 +1109,7 @@ int main(int argc, char **argv)
   HighLevelRuntime::register_legion_task<stencil_field_task>(TASKID_STENCIL,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "stencil");
-  HighLevelRuntime::register_legion_task<double, inc_field_task>(TASKID_INC,
+  HighLevelRuntime::register_legion_task<inc_field_task>(TASKID_INC,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "inc");
   HighLevelRuntime::register_legion_task<double, check_task>(TASKID_CHECK,
