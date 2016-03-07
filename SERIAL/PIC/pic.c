@@ -38,7 +38,7 @@ PURPOSE: This program tests the efficiency with which a cloud of
          charged particles can be moved through a spatially fixed
          collection of charges located at the vertices of a square
          equi-spaced grid. It is a proxy for a component of a
-         particle-in-cell methjod
+         particle-in-cell method
   
 USAGE:   <progname> <#simulation steps> <grid size> <#particles> \
                     <horizontal velocity> <vertical velocity>    \
@@ -160,7 +160,7 @@ particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rh
    
   /* Add appropriate number of particles to each cell to form distribution decribed in spec. 
      Each cell in the i-th column of cells contains p(i) = A * rho^i particles */
-  A = n_input * ((1-rho) / (1-pow(rho,L))) / (double)L;
+  A = n_input * ((1.0-rho) / (1.0-pow(rho,L))) / (double)L;
   for (pi=0,x=0; x<L; x++) {
     for (y=0; y<L; y++) {
       actual_particles = random_draw(A * pow(rho, x));
@@ -178,8 +178,8 @@ particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rh
 /* Initialize particles with a sinusoidal distribution */
 particle_t *initializeParticlesSinusoidal(uint64_t n_input, uint64_t L, uint64_t *n){
   particle_t  *particles;
-  double      step = PRK_M_PI / (L-1);
-  uint64_t     x, y, pi, i, p, actual_particles;
+  double      step = PRK_M_PI/L;
+  uint64_t    x, y, pi, i, p, actual_particles;
 
   particles = (particle_t*) prk_malloc(2*n_input * sizeof(particle_t));
   if (particles == NULL) {
@@ -235,7 +235,6 @@ particle_t *initializeParticlesLinear(uint64_t n_input, uint64_t L, double alpha
 }
 
 /* Initialize uniformly particles within a "patch" */
-
 particle_t *initializeParticlesPatch(uint64_t n_input, uint64_t L, bbox_t patch, uint64_t *n){
   particle_t  *particles;
   uint64_t     pi, p, x, y, total_cells, actual_particles;
@@ -298,7 +297,7 @@ void finish_distribution(int k, int m, uint64_t n, particle_t *particles) {
 /* Verifies the final position of a particle */
 int verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t g){
   uint64_t x, y;
-  double   x_T, y_T, x_periodic, y_periodic, L = (g-1), disp;
+  double   x_final, y_final, x_periodic, y_periodic, L = (g-1), disp;
    
   /* Coordinates of the cell containing the particle initially */
   y = (uint64_t) p.y0;
@@ -306,12 +305,12 @@ int verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t g)
    
   /* According to initial location and charge determine the direction of displacements */
   disp = (double)(iterations+1)*(2*p.k+1);
-  x_T = ( (p.q * QG(y,x,g)) > 0) ? p.x0+disp : p.x0-disp;
-  y_T = p.y0 + p.m * (double)(iterations+1);
+  x_final = ( (p.q * QG(y,x,g)) > 0) ? p.x0+disp : p.x0-disp;
+  y_final = p.y0 + p.m * (double)(iterations+1);
    
   /* apply periodicity, making sure we never mod a negative value */
-  x_periodic = fmod(x_T+(double)(iterations+1) *(2*p.k+1)*L, L);
-  y_periodic = fmod(y_T+(double)(iterations+1) *fabs(p.m)*L, L);
+  x_periodic = fmod(x_final+(double)(iterations+1) *(2*p.k+1)*L, L);
+  y_periodic = fmod(y_final+(double)(iterations+1) *fabs(p.m)*L, L);
    
   if ( fabs(p.x - x_periodic) > epsilon || fabs(p.y - y_periodic) > epsilon) {
     return FAILURE;
@@ -394,9 +393,9 @@ int main(int argc, char ** argv) {
   double      *Qgrid;            // field of fixed charges
   particle_t  *particles, *p;    // the particles array
   uint64_t    iter, i;           // dummies
-  double      fx, fy, ax, ay, simulation_time;
-  int         error;
-  double      avg_time;
+  double      fx, fy, ax, ay;    // forces and accelerations
+  int         error=0;           // used for graceful exit after error
+  double      avg_time, pic_time;// timing parameters
 
   printf("Parallel Research Kernels Version %s\n", PRKVERSION);
   printf("Serial Particle-in-Cell execution on 2D grid\n");
@@ -526,7 +525,7 @@ int main(int argc, char ** argv) {
   for (iter=0; iter<=iterations; iter++) {
     
     /* start the timer after one warm-up time step */
-    if (iter==1) simulation_time = wtime();  
+    if (iter==1) pic_time = wtime();  
  
     /* Calculate forces on particles and update positions */
     for (i=0; i<n; i++) {
@@ -547,7 +546,7 @@ int main(int argc, char ** argv) {
     }
   }
    
-  simulation_time = wtime() - simulation_time;
+  pic_time = wtime() - pic_time;
    
   /* Run the verification test */
   for (i=0; i<n; i++) {
@@ -557,10 +556,9 @@ int main(int argc, char ** argv) {
   if (correctness) {
     printf("Solution validates\n");
 #ifdef VERBOSE
-    printf("Final number of particles = %lld\n", n);
-    printf("Simulation time is %lf seconds\n", simulation_time);
+    printf("Simulation time is %lf seconds\n", pic_time);
 #endif
-    avg_time = n*iterations/simulation_time;
+    avg_time = n*iterations/pic_time;
     printf("Rate (Mparticles_moved/s): %lf\n", 1.0e-6*avg_time);
   } else {
     printf("Solution does not validate\n");
