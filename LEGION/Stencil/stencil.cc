@@ -796,9 +796,12 @@ tuple_double spmd_task(const Task *task,
       outputReq.add_field(FID_OUT);
       RegionRequirement weightReq(weightLr, READ_ONLY, EXCLUSIVE, weightLr);
       weightReq.add_field(FID_WEIGHT);
+      RegionRequirement dummyReq(privateLp, 0, READ_ONLY, EXCLUSIVE, localLr);
+      dummyReq.add_field(FID_IN);
       stencilLauncher.add_region_requirement(inputReq);
       stencilLauncher.add_region_requirement(outputReq);
       stencilLauncher.add_region_requirement(weightReq);
+      stencilLauncher.add_region_requirement(dummyReq);
       runtime->execute_index_space(ctx, stencilLauncher);
     }
 
