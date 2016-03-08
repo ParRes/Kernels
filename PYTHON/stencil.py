@@ -85,18 +85,18 @@ def main():
         sys.exit("ERROR: array dimension must be >= 1")
 
     if len(sys.argv) > 3:
-        r = int(sys.argv[3])
+        pattern = sys.argv[3]
+    else:
+        pattern = 'star'
+
+    if len(sys.argv) > 4:
+        r = int(sys.argv[4])
         if r < 1:
             sys.exit("ERROR: Stencil radius should be positive")
         if (2*r+1) > n:
             sys.exit("ERROR: Stencil radius exceeds grid size")
     else:
         r = 2 # radius=2 is what other impls use right now
-
-    if len(sys.argv) > 3:
-        pattern = sys.argv[4]
-    else:
-        pattern = 'star'
 
     print 'Grid size            = ', n
     print 'Radius of stencil    = ', r

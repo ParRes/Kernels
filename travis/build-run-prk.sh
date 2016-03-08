@@ -28,7 +28,9 @@ case "$PRK_TARGET" in
         python --version
         export PRK_TARGET_PATH=PYTHON
         python $PRK_TARGET_PATH/p2p.py             10 1024 1024
+        python $PRK_TARGET_PATH/p2p-numpy.py       10 1024 1024
         python $PRK_TARGET_PATH/stencil.py         10 1000
+        python $PRK_TARGET_PATH/stencil-numpy.py   10 1000
         python $PRK_TARGET_PATH/transpose.py       10 1024
         python $PRK_TARGET_PATH/transpose-numpy.py 10 1024
         ;;
@@ -84,6 +86,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/Stencil/stencil-omp         10 1000
         $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 32
         # FIXME: only testing with a single image right now.
+        $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
+        $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
         $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
         $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
         ;;
