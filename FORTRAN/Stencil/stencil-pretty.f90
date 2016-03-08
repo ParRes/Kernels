@@ -86,7 +86,6 @@ program main
   real(kind=REAL64), parameter :: cx=1.0, cy=1.0
   ! runtime variables
   integer(kind=INT32) :: i, j, k
-  integer(kind=INT32) :: ii, jj, it, jt
   integer(kind=INT64) :: flops                          ! floating point ops per iteration
   real(kind=REAL64) :: norm, reference_norm             ! L1 norm of solution
   integer(kind=INT64) :: active_points                  ! interior of grid with respect to stencil
@@ -170,34 +169,32 @@ program main
   ! fill the stencil weights to reflect a discrete divergence operator
   W = 0
 #ifdef STAR
-  do ii=1,r
-    W(0, ii) =  1/real(2*ii*r,REAL64)
-    W(0,-ii) = -1/real(2*ii*r,REAL64)
-    W( ii,0) =  1/real(2*ii*r,REAL64)
-    W(-ii,0) = -1/real(2*ii*r,REAL64)
+  do i=1,r
+    W(0, i) =  1/real(2*i*r,REAL64)
+    W(0,-i) = -1/real(2*i*r,REAL64)
+    W( i,0) =  1/real(2*i*r,REAL64)
+    W(-i,0) = -1/real(2*i*r,REAL64)
   enddo
 #else
   ! Jeff: check that this is correct with the new W indexing
-  do jj=1,r
-    do ii=-jj+1,jj-1
-      W( ii, jj) =  1/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii,-jj) = -1/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj, ii) =  1/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj, ii) = -1/real(4*jj*(2*jj-1)*r,REAL64)
+  do j=1,r
+    do i=-j+1,j-1
+      W( i, j) =  1/real(4*j*(2*j-1)*r,REAL64)
+      W( i,-j) = -1/real(4*j*(2*j-1)*r,REAL64)
+      W( j, i) =  1/real(4*j*(2*j-1)*r,REAL64)
+      W(-j, i) = -1/real(4*j*(2*j-1)*r,REAL64)
     enddo
-    W( jj, jj)  =  1/real(4*jj*r,REAL64)
-    W(-jj,-jj)  = -1/real(4*jj*r,REAL64)
+    W( j, j)  =  1/real(4*j*r,REAL64)
+    W(-j,-j)  = -1/real(4*j*r,REAL64)
   enddo
 #endif
 
   ! intialize the input and output arrays
-  ! make this pretty
-  do j=1,n
-    do i=1,n
-      A(i,j) = cx*i+cy*j
-    enddo
+  do concurrent (i=1:n, j=1:n)
+    A(i,j) = cx*i+cy*j
   enddo
-  B(r+1:n-r,r+1:n-r) = 0
+  !B(r+1:n-r,r+1:n-r) = 0 ! minimal
+  B = 0 ! sufficient
 
   do k=0,iterations
 
@@ -205,22 +202,19 @@ program main
     if (k.eq.1) t0 = prk_get_wtime()
 
     ! Apply the stencil operator
-    !do j=r,n-r-1
-    !  do i=r,n-r-1
 #ifdef STAR
-    B(r+1:n-r,r+1:n-r) = B(r+1:n-r,r+1:n-r) &
-                       + W(0,0) * A(r+1:n-r,r+1:n-r)
-    do jj=1,r
-      B(r+1:n-r,r+1:n-r) = B(r+1:n-r,r+1:n-r)                   &
-                         + W(0,-jj) * A(r+1:n-r,r-jj+1:n-r-jj)  &
-                         + W(0,jj) * A(r+1:n-r,r+jj+1:n-r+jj)   &
-                         + W(-jj,0) * A(r-jj+1:n-r-jj,r+1:n-r)  &
-                         + W(jj,0) * A(r+jj+1:n-r+jj,r+1:n-r)
+    B(r+1:n-r,r+1:n-r) = B(r+1:n-r,r+1:n-r) + W(0,0) * A(r+1:n-r,r+1:n-r)
+    do j=1,r
+      B(r+1:n-r,r+1:n-r) = B(r+1:n-r,r+1:n-r)                    &
+                         + W( 0,-j) * A(r+1  :n-r,  r-j+1:n-r-j) &
+                         + W( 0, j) * A(r+1  :n-r,  r+j+1:n-r+j) &
+                         + W(-j, 0) * A(r-j+1:n-r-j,r+1  :n-r  ) &
+                         + W( j, 0) * A(r+j+1:n-r+j,r+1  :n-r  )
     enddo
 #else
-    do jj=-r,r
-      do ii=-r,r
-        B(r+1:n-r,r+1:n-r) = B(r+1:n-r,r+1:n-r) + W(ii,jj) * A(r+ii+1:n-r+ii,r+jj+1:n-r+jj)
+    do j=-r,r
+      do i=-r,r
+        B(r+1:n-r,r+1:n-r) = B(r+1:n-r,r+1:n-r) + W(i,j) * A(r+i+1:n-r+i,r+j+1:n-r+j)
       enddo
     enddo
 #endif
@@ -232,12 +226,7 @@ program main
 
   t1 = prk_get_wtime()
 
-  ! make this pretty
-  do j=r,n-r
-    do i=r,n-r
-      norm = norm + abs(B(i,j))
-    enddo
-  enddo
+  norm = sum(sum(abs(B(r+1:n-r,r+1:n-r)),1))
 
   stencil_time = t1 - t0
   norm = norm / real(active_points,REAL64)
