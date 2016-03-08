@@ -338,8 +338,8 @@ int main(int argc, char ** argv) {
   total_length_out *= height[0];
   total_length_out *= sizeof(DTYPE);
  
-  in  = (DTYPE *) prk_malloc(total_length_in);
-  out = (DTYPE *) prk_malloc(total_length_out);
+  in  = (DTYPE *) prk_shmem_malloc(total_length_in);
+  out = (DTYPE *) prk_shmem_malloc(total_length_out);
   if (!in || !out) {
     printf("ERROR: rank %d could not allocate space for input/output array\n",
             my_ID);
@@ -375,7 +375,7 @@ int main(int argc, char ** argv) {
   }
 
   /* allocate communication buffers for halo values                            */
-  top_buf_out=(DTYPE*)prk_malloc(2*sizeof(DTYPE)*RADIUS*maxwidth[0]);
+  top_buf_out=(DTYPE*)prk_shmem_malloc(2*sizeof(DTYPE)*RADIUS*maxwidth[0]);
   if (!top_buf_out) {
     printf("ERROR: Rank %d could not allocate output comm buffers for y-direction\n", my_ID);
     error = 1;
@@ -395,7 +395,7 @@ int main(int argc, char ** argv) {
   bottom_buf_in[0] = top_buf_in[1]    + RADIUS*maxwidth[0];
   bottom_buf_in[1] = bottom_buf_in[0] + RADIUS*maxwidth[0];
  
-  right_buf_out=(DTYPE*)prk_malloc(2*sizeof(DTYPE)*RADIUS*maxheight[0]);
+  right_buf_out=(DTYPE*)prk_shmem_malloc(2*sizeof(DTYPE)*RADIUS*maxheight[0]);
   if (!right_buf_out) {
     printf("ERROR: Rank %d could not allocate output comm buffers for x-direction\n", my_ID);
     error = 1;
@@ -582,11 +582,11 @@ int main(int argc, char ** argv) {
            1.0E-06 * flops/avgtime, avgtime);
   }
 
-  prk_shmem_free(top_buf_in);
-  prk_shmem_free(right_buf_in);
-  free(top_buf_out);
-  free(right_buf_out);
-
+  prk_shmem_free(top_buf_in[0]);
+  prk_shmem_free(right_buf_in[0]);
+  prk_shmem_free(top_buf_out);
+  prk_shmem_free(right_buf_out);
+  
   prk_shmem_free(pSync_bcast);
   prk_shmem_free(pSync_reduce);
   prk_shmem_free(pWrk_time);
