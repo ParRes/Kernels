@@ -79,7 +79,7 @@ program main
   integer(kind=INT32), parameter :: r=RADIUS            ! radius of stencil
   real(kind=REAL64) :: W(-r:r,-r:r)                     ! weights of points in the stencil
   real(kind=REAL64), allocatable :: A(:,:), B(:,:)      ! grid values
-  real(kind=REAL64), parameter :: cx=1.0, cy=1.0
+  real(kind=REAL64), parameter :: cx=1.d0, cy=1.d0
   ! runtime variables
   integer(kind=INT32) :: i, j, k
   integer(kind=INT32) :: ii, jj, it, jt
@@ -87,7 +87,7 @@ program main
   real(kind=REAL64) :: norm, reference_norm             ! L1 norm of solution
   integer(kind=INT64) :: active_points                  ! interior of grid with respect to stencil
   real(kind=REAL64) :: t0, t1, stencil_time, avgtime    ! timing parameters
-  real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
+  real(kind=REAL64), parameter ::  epsilon=1.d-8        ! error tolerance
 
   ! ********************************************************************
   ! read and test input parameters
@@ -164,7 +164,7 @@ program main
     stop 1
   endif
 
-  norm = 0.0
+  norm = 0.d0
   active_points = int(n-2*r,INT64)**2
 
 #ifdef _OPENMP
@@ -197,15 +197,15 @@ program main
   ! fill the stencil weights to reflect a discrete divergence operator
   ! Jeff: if one does not use workshare here, the code is wrong.
   !$omp workshare
-  W = 0.0
+  W = 0.d0
   !$omp end workshare
 #ifdef STAR
   !$omp do
   do ii=1,r
-    W(0, ii) =  1.0/real(2*ii*r,REAL64)
-    W(0,-ii) = -1.0/real(2*ii*r,REAL64)
-    W( ii,0) =  1.0/real(2*ii*r,REAL64)
-    W(-ii,0) = -1.0/real(2*ii*r,REAL64)
+    W(0, ii) =  1/real(2*ii*r,REAL64)
+    W(0,-ii) = -1/real(2*ii*r,REAL64)
+    W( ii,0) =  1/real(2*ii*r,REAL64)
+    W(-ii,0) = -1/real(2*ii*r,REAL64)
   enddo
   !$omp end do nowait
 #else
@@ -213,13 +213,13 @@ program main
   !$omp do
   do jj=1,r
     do ii=-jj+1,jj-1
-      W( ii, jj) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii,-jj) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj, ii) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj, ii) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii, jj) =  1/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii,-jj) = -1/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj, ii) =  1/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj, ii) = -1/real(4*jj*(2*jj-1)*r,REAL64)
     enddo
-    W( jj, jj)  =  1.0/real(4.0*jj*r,REAL64)
-    W(-jj,-jj)  = -1.0/real(4.0*jj*r,REAL64)
+    W( jj, jj)  =  1/real(4*jj*r,REAL64)
+    W(-jj,-jj)  = -1/real(4*jj*r,REAL64)
   enddo
   !$omp end do nowait
 #endif
@@ -235,7 +235,7 @@ program main
   !$omp do !!! collapse(2)
   do j=r+1,n-r
     do i=r+1,n-r
-      B(i,j) = 0.0
+      B(i,j) = 0.d0
     enddo
   enddo
   !$omp end do nowait
@@ -316,7 +316,7 @@ program main
     !$omp do !!! collapse(2)
     do j=1,n
       do i=1,n
-        A(i,j) = A(i,j) + 1.0
+        A(i,j) = A(i,j) + 1.d0
       enddo
     enddo
     !$omp end do nowait

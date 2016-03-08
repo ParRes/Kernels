@@ -85,7 +85,7 @@ program main
   integer(kind=INT32), parameter :: r=RADIUS            ! radius of stencil
   real(kind=REAL64) :: W(-r:r,-r:r)                     ! weights of points in the stencil
   real(kind=REAL64), allocatable :: A(:,:)[:,:], B(:,:) ! grid values
-  real(kind=REAL64), parameter :: cx=1.0, cy=1.0
+  real(kind=REAL64), parameter :: cx=1.d0, cy=1.d0
   ! runtime variables
   integer(kind=INT32) :: i, j, k
   integer(kind=INT32) :: ii, jj, it, jt
@@ -215,26 +215,26 @@ program main
   ! fill the stencil weights to reflect a discrete divergence operator
   ! Jeff: if one does not use workshare here, the code is wrong.
 
-  W = 0.0
+  W = 0.d0
 
 #ifdef STAR
   do ii=1,r
-    W(0, ii) =  1.0/real(2*ii*r,REAL64)
-    W(0,-ii) = -1.0/real(2*ii*r,REAL64)
-    W( ii,0) =  1.0/real(2*ii*r,REAL64)
-    W(-ii,0) = -1.0/real(2*ii*r,REAL64)
+    W(0, ii) =  1/real(2*ii*r,REAL64)
+    W(0,-ii) = -1/real(2*ii*r,REAL64)
+    W( ii,0) =  1/real(2*ii*r,REAL64)
+    W(-ii,0) = -1/real(2*ii*r,REAL64)
   enddo
 #else
   ! Jeff: check that this is correct with the new W indexing
   do jj=1,r
     do ii=-jj+1,jj-1
-      W( ii, jj) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii,-jj) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj, ii) =  1.0/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj, ii) = -1.0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii, jj) =  1/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii,-jj) = -1/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj, ii) =  1/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj, ii) = -1/real(4*jj*(2*jj-1)*r,REAL64)
     enddo
-    W( jj, jj)  =  1.0/real(4.0*jj*r,REAL64)
-    W(-jj,-jj)  = -1.0/real(4.0*jj*r,REAL64)
+    W( jj, jj)  =  1/real(4*jj*r,REAL64)
+    W(-jj,-jj)  = -1/real(4*jj*r,REAL64)
   enddo
 #endif
 
@@ -247,7 +247,7 @@ program main
 
   do j=1,nc
     do i=1,nr
-      B(i,j) = 0.0
+      B(i,j) = 0.d0
     enddo
   enddo
 
@@ -258,7 +258,7 @@ program main
   if(coords(1) == 1) start_i = r
   if(coords(2) == dims(2)) end_j = nc - r - 1
   if(coords(2) == 1) start_j = r
-  
+
   sync all
 
   do k=0,iterations
@@ -338,7 +338,7 @@ program main
     ! add constant to solution to force refresh of neighbor data, if any
     do j=1,nc
       do i=1,nr
-        A(i,j) = A(i,j) + 1.0
+        A(i,j) = A(i,j) + 1.d0
       enddo
     enddo
 
@@ -385,7 +385,7 @@ program main
   deallocate( A )
 
   ! Jeff: valgrind says that this is branching on uninitialized value (norm),
-  !       but this is nonsense since norm is initialized to 0.0 at line 167.
+  !       but this is nonsense since norm is initialized to 0 at line 167.
 
   ! verify correctness
   if(me == 1) then
