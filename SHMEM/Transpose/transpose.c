@@ -413,7 +413,7 @@ int main(int argc, char ** argv)
       for(i=0;i<Num_procs-1;i++)
 	prk_shmem_free(Work_in_p[i]);
 
-      free(Work_in_p);
+      prk_free(Work_in_p);
     }
 
   prk_shmem_free(pSync_bcast);
