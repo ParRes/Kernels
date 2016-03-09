@@ -120,8 +120,27 @@ void StencilMapper::slice_domain(const Task *task, const Domain &domain,
 {
   std::vector<Processor>& procs =
     proc_map[task->target_proc.address_space()];
-  DefaultMapper::decompose_index_space(domain, procs,
-      1, slices);
+  int stride = procs.size() / domain.get_volume();
+  assert(stride >= 1);
+
+  std::vector<Processor>::iterator it = procs.begin();
+  for (; it != procs.end(); ++it) if (*it == task->target_proc) break;
+  std::vector<Processor> target_procs;
+  int remaining_volume = domain.get_volume();
+  while (remaining_volume > 0)
+  {
+    for (; it != procs.end() && remaining_volume > 0; ++it)
+    {
+      target_procs.push_back(*it);
+      --remaining_volume;
+      if (remaining_volume == 0) break;
+      for (int i = 1; i < stride; ++i) if (++it == procs.end()) break;
+      if (it == procs.end()) break;
+    }
+    it = procs.begin();
+  }
+
+  DefaultMapper::decompose_index_space(domain, target_procs, 1, slices);
 }
 
 void StencilMapper::select_task_options(Task *task)
@@ -156,10 +175,12 @@ bool StencilMapper::map_must_epoch(const std::vector<Task*> &tasks,
     const std::vector<MappingConstraint> &constraints,
     MappingTagID tag)
 {
+  int shards_per_node = tasks.size() / num_nodes;
   for (unsigned i = 0; i < tasks.size(); ++i)
   {
     Task* task = tasks[i];
-    task->target_proc = *proc_map[i].begin();
+    task->target_proc =
+      *(proc_map[i / shards_per_node].begin() + i % shards_per_node);
     map_task(task);
   }
 
@@ -168,8 +189,8 @@ bool StencilMapper::map_must_epoch(const std::vector<Task*> &tasks,
   for (unsigned i = 0; i < constraints.size(); ++i)
   {
     const MappingConstraint& c = constraints[i];
-    assert(c.t1->target_proc.address_space() !=
-           c.t2->target_proc.address_space());
+    //assert(c.t1->target_proc.address_space() !=
+    //       c.t2->target_proc.address_space());
     if (c.idx1 == 0)
     {
       Memory sysmem = all_sysmems[c.t1->target_proc];
@@ -289,12 +310,10 @@ void top_level_task(const Task *task,
 
   if (inputs.argc < 4)
   {
-    printf("Usage: %s <# threads> <# iterations> <array dimension>\n",
+    printf("Usage: %s <# threads> <# iterations> <array dimension> [<# numa nodes>]\n",
            *inputs.argv);
     exit(EXIT_FAILURE);
   }
-
-  num_ranks = gasnet_nodes();
 
   threads = atoi((inputs.argv[1]));
   if (threads <= 0)
@@ -317,10 +336,16 @@ void top_level_task(const Task *task,
       exit(EXIT_FAILURE);
   }
 
+  int num_numa_nodes = 1;
+  if (inputs.argc >= 4) num_numa_nodes = atoi(inputs.argv[4]);
+  num_ranks = gasnet_nodes();
+
   printf("Parallel Research Kernels Version %s\n", PRKVERSION);
   printf("Legion Stencil Execution on 2D grid\n");
+  printf("Number of ranks        = %d\n", num_ranks);
   printf("Grid size              = %d\n", n);
   printf("Number of threads      = %d\n", threads);
+  printf("Number of NUMA nodes   = %d\n", num_numa_nodes);
   printf("Radius of stencil      = %d\n", RADIUS);
 #ifdef DOUBLE
   printf("Data type              = double precision\n");
@@ -328,6 +353,8 @@ void top_level_task(const Task *task,
   printf("Data type              = single precision\n");
 #endif
   printf("Number of iterations   = %d\n", iterations);
+
+  num_ranks *= num_numa_nodes;
 
   /* compute "processor" grid; initialize Num_procsy to avoid compiler warnings */
   Num_procsy = 0;
