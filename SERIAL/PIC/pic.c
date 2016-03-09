@@ -74,7 +74,7 @@ HISTORY: - Written by Evangelos Georganas, August 2015.
 #include <stdint.h>
 #include <inttypes.h>
 
-#define QG(i,j,g) Qgrid[(j)*(g)+i]
+#define QG(i,j,L) Qgrid[(j)*(L+1)+i]
 #define MASS_INV 1.0
 #define Q 1.0
 #define epsilon 0.000001
@@ -127,20 +127,20 @@ typedef struct particle_t {
       |
    (0,0)--------------> x                           */
 
-double *initializeGrid(uint64_t g) {
+double *initializeGrid(uint64_t L) {
   double   *Qgrid;
-  uint64_t  y, x;
+  uint64_t  x, y;
    
-  Qgrid = (double*) prk_malloc(g*g*sizeof(double));
+  Qgrid = (double*) prk_malloc((L+1)*(L+1)*sizeof(double));
   if (Qgrid == NULL) {
     printf("ERROR: Could not allocate space for grid\n");
     exit(EXIT_FAILURE);
   }
    
   /* initialization with dipoles */
-  for (x=0; x<g; x++) {
-    for (y=0; y<g; y++) {
-      QG(y,x,g) = (x%2 == 0) ? Q : -Q;
+  for (x=0; x<=L; x++) {
+    for (y=0; y<=L; y++) {
+      QG(y,x,L) = (x%2 == 0) ? Q : -Q;
     }
   }
   return Qgrid;
@@ -149,7 +149,7 @@ double *initializeGrid(uint64_t g) {
 /* Initializes the particles following the geometric distribution as described in the spec */
 particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rho, uint64_t *n){
   particle_t  *particles;
-  uint64_t     y, x, p, pi, actual_particles;
+  uint64_t    x, y, p, pi, actual_particles;
   double      A;
    
   particles = (particle_t*) prk_malloc(2*n_input * sizeof(particle_t));
@@ -295,9 +295,9 @@ void finish_distribution(int k, int m, uint64_t n, particle_t *particles) {
 }
 
 /* Verifies the final position of a particle */
-int verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t g){
+int verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t L){
   uint64_t x, y;
-  double   x_final, y_final, x_periodic, y_periodic, L = (g-1), disp;
+  double   x_final, y_final, x_periodic, y_periodic, disp;
    
   /* Coordinates of the cell containing the particle initially */
   y = (uint64_t) p.y0;
@@ -305,7 +305,7 @@ int verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t g)
    
   /* According to initial location and charge determine the direction of displacements */
   disp = (double)(iterations+1)*(2*p.k+1);
-  x_final = ( (p.q * QG(y,x,g)) > 0) ? p.x0+disp : p.x0-disp;
+  x_final = ( (p.q * QG(y,x,L)) > 0) ? p.x0+disp : p.x0-disp;
   y_final = p.y0 + p.m * (double)(iterations+1);
    
   /* apply periodicity, making sure we never mod a negative value */
@@ -330,7 +330,7 @@ void computeCoulomb(double x_dist, double y_dist, double q1, double q2, double *
 }
 
 /* Computes the total Coulomb force on a particle exerted from the charges of the corresponding cell */
-void computeTotalForce(particle_t p, uint64_t g, double *Qgrid, double *fx, double *fy){
+void computeTotalForce(particle_t p, uint64_t L, double *Qgrid, double *fx, double *fy){
   uint64_t  y, x;
   double   tmp_fx, tmp_fy, rel_y, rel_x, tmp_res_x = 0.0, tmp_res_y = 0.0;
    
@@ -341,22 +341,22 @@ void computeTotalForce(particle_t p, uint64_t g, double *Qgrid, double *fx, doub
   rel_y = p.y -  y;
    
   /* Coulomb force from top-left charge */
-  computeCoulomb(rel_x, rel_y, p.q, QG(y,x,g), &tmp_fx, &tmp_fy);
+  computeCoulomb(rel_x, rel_y, p.q, QG(y,x,L), &tmp_fx, &tmp_fy);
   tmp_res_x += tmp_fx;
   tmp_res_y += tmp_fy;
    
   /* Coulomb force from bottom-left charge */
-  computeCoulomb(rel_x, 1.0-rel_y, p.q, QG(y+1,x,g), &tmp_fx, &tmp_fy);
+  computeCoulomb(rel_x, 1.0-rel_y, p.q, QG(y+1,x,L), &tmp_fx, &tmp_fy);
   tmp_res_x += tmp_fx;
   tmp_res_y -= tmp_fy;
    
   /* Coulomb force from top-right charge */
-  computeCoulomb(1.0-rel_x, rel_y, p.q, QG(y,x+1,g), &tmp_fx, &tmp_fy);
+  computeCoulomb(1.0-rel_x, rel_y, p.q, QG(y,x+1,L), &tmp_fx, &tmp_fy);
   tmp_res_x -= tmp_fx;
   tmp_res_y += tmp_fy;
    
   /* Coulomb force from bottom-right charge */
-  computeCoulomb(1.0-rel_x, 1.0-rel_y, p.q, QG(y+1,x+1,g), &tmp_fx, &tmp_fy);
+  computeCoulomb(1.0-rel_x, 1.0-rel_y, p.q, QG(y+1,x+1,L), &tmp_fx, &tmp_fy);
   tmp_res_x -= tmp_fx;
   tmp_res_y -= tmp_fy;
    
@@ -376,7 +376,6 @@ int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
 int main(int argc, char ** argv) {
 
   int         args_used = 1;     // keeps track of # consumed arguments
-  uint64_t    g;                 // dimension of grid in points
   uint64_t    L;                 // dimension of grid in cells
   uint64_t    iterations;        // total number of simulation steps
   uint64_t    n;                 // total number of particles in the simulation
@@ -425,8 +424,8 @@ int main(int argc, char ** argv) {
     printf("ERROR: Number of grid cells must be positive and even: %ld\n", L);
     exit(FAILURE);
   }
-  g = L+1;
-  grid_patch = (bbox_t){0, g, 0, g};
+
+  grid_patch = (bbox_t){0, L+1, 0, L+1};
   n = atol(*++argv);  args_used++;   
   if (n<1) {
     printf("ERROR: Number of particles must be positive: %ld\n", n);
@@ -509,7 +508,7 @@ int main(int argc, char ** argv) {
   printf("Vertical velocity              = %lu\n", m);
    
   /* Initialize grid of charges and particles */
-  Qgrid = initializeGrid(g);
+  Qgrid = initializeGrid(L);
    
   switch(particle_mode) {
   case GEOMETRIC:  particles = initializeParticlesGeometric(n, L, rho, &n);      break;
@@ -532,7 +531,7 @@ int main(int argc, char ** argv) {
       p = particles;
       fx = 0.0;
       fy = 0.0;
-      computeTotalForce(p[i], g, Qgrid, &fx, &fy);
+      computeTotalForce(p[i], L, Qgrid, &fx, &fy);
       ax = fx * MASS_INV;
       ay = fy * MASS_INV;
 
@@ -550,7 +549,7 @@ int main(int argc, char ** argv) {
    
   /* Run the verification test */
   for (i=0; i<n; i++) {
-    correctness *= verifyParticle(particles[i], iterations, Qgrid, g);
+    correctness *= verifyParticle(particles[i], iterations, Qgrid, L);
   }
    
   if (correctness) {
