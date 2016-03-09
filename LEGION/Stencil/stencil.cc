@@ -835,6 +835,7 @@ tuple_double spmd_task(const Task *task,
   double tsEnd = wtime();
 
   DTYPE abserr = 0.0;
+#ifndef NO_TASK_BODY
   {
     IndexLauncher checkLauncher(TASKID_CHECK, launchDomain, taskArg, argMap);
     RegionRequirement req(privateLp, 0, READ_ONLY, EXCLUSIVE, localLr);
@@ -846,6 +847,7 @@ tuple_double spmd_task(const Task *task,
     for (Domain::DomainPointIterator it(launchDomain); it; it++)
       abserr += fm.get_result<double>(it.p);
   }
+#endif
 
   return std::make_pair(std::make_pair(tsStart, tsEnd), abserr);
 }
@@ -854,6 +856,7 @@ void init_weight_task(const Task *task,
                      const std::vector<PhysicalRegion> &regions,
                      Context ctx, HighLevelRuntime *runtime)
 {
+#ifndef NO_TASK_BODY
   RegionAccessor<AccessorType::Generic, DTYPE> acc =
     regions[0].get_field_accessor(FID_WEIGHT).typeify<DTYPE>();
   Domain dom = runtime->get_index_space_domain(ctx,
@@ -887,12 +890,14 @@ void init_weight_task(const Task *task,
     else
       acc.write(DomainPoint::from_point<2>(pir.p), (DTYPE) 0.0);
   }
+#endif
 }
 
 void init_field_task(const Task *task,
                      const std::vector<PhysicalRegion> &regions,
                      Context ctx, HighLevelRuntime *runtime)
 {
+#ifndef NO_TASK_BODY
   RegionAccessor<AccessorType::Generic, DTYPE> inputAcc =
     regions[0].get_field_accessor(FID_IN).typeify<DTYPE>();
   RegionAccessor<AccessorType::Generic, DTYPE> outputAcc =
@@ -932,6 +937,7 @@ void init_field_task(const Task *task,
   }
 #undef IN
 #undef OUT
+#endif
 }
 
 void stencil(DTYPE* RESTRICT inputPtr,
@@ -962,6 +968,7 @@ void stencil_field_task(const Task *task,
                         const std::vector<PhysicalRegion> &regions,
                         Context ctx, HighLevelRuntime *runtime)
 {
+#ifndef NO_TASK_BODY
   RegionAccessor<AccessorType::Generic, DTYPE> inputAcc =
     regions[0].get_field_accessor(FID_IN).typeify<DTYPE>();
   RegionAccessor<AccessorType::Generic, DTYPE> outputAcc =
@@ -1005,12 +1012,14 @@ void stencil_field_task(const Task *task,
   coord_t endY = startY + (rdY - luY + 1);
 
   stencil(inputPtr, outputPtr, weightPtr, haloX, startX, endX, startY, endY);
+#endif
 }
 
 void inc_field_task(const Task *task,
                       const std::vector<PhysicalRegion> &regions,
                       Context ctx, HighLevelRuntime *runtime)
 {
+#ifndef NO_TASK_BODY
   RegionAccessor<AccessorType::Generic, DTYPE> acc =
     regions[0].get_field_accessor(FID_IN).typeify<DTYPE>();
   Domain dom = runtime->get_index_space_domain(ctx,
@@ -1034,12 +1043,14 @@ void inc_field_task(const Task *task,
         IN(i, j) += 1.0;
   }
 #undef IN
+#endif
 }
 
 double check_task(const Task *task,
                 const std::vector<PhysicalRegion> &regions,
                 Context ctx, HighLevelRuntime *runtime)
 {
+#ifndef NO_TASK_BODY
   RegionAccessor<AccessorType::Generic, DTYPE> acc =
     regions[0].get_field_accessor(FID_OUT).typeify<DTYPE>();
 
@@ -1082,6 +1093,7 @@ double check_task(const Task *task,
 #undef OUT
 
   return abserr;
+#endif
 }
 
 static void register_mappers(Machine machine, Runtime *rt,
