@@ -52,10 +52,10 @@ FUNCTIONS CALLED:
          Other than standard C functions, the following functions are used in 
          this program:
          initializeGrid() 
-         initializeParticlesGeometric()
-         initializeParticlesSinusoidal()
-         initializeParticlesLinear()
-         initializeParticlesPatch()
+         initializeGeometric()
+         initializeSinusoidal()
+         initializeLinear()
+         initializePatch()
          finishParticlesInitialization()
          find_owner()
          computeCoulomb()
@@ -203,19 +203,17 @@ void finishParticlesInitialization(uint64_t n, particle_t *p) {
 }
 
 /* Initializes the particles following the geometric distribution as described in the spec */
-particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rho, 
-                                         bbox_t tile, double k, double m,
-					 uint64_t *n_placed, uint64_t *n_size) {
+particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho, 
+                                bbox_t tile, double k, double m,
+		                uint64_t *n_placed, uint64_t *n_size) {
   particle_t  *particles;
   double      A;
-  uint64_t     x, y, p, pi, actual_particles, start_index;
+  uint64_t    x, y, p, pi, actual_particles, start_index;
 
   /* initialize random number generator */
   LCG_init();  
    
   /* first determine total number of particles, then allocate and place them               */
-
-  /* Place number of particles to each cell to form distribution decribed in spec.         */
   /* Each cell in the i-th column of cells contains p(i) = A * rho^i particles */
   A = n_input * ((1.0-rho) / (1.0-pow(rho, L))) / (double) L;
 
@@ -254,9 +252,9 @@ particle_t *initializeParticlesGeometric(uint64_t n_input, uint64_t L, double rh
 }
 
 /* Initialize with a sinusodial particle distribution */
-particle_t *initializeParticlesSinusoidal(uint64_t n_input, uint64_t L, 
-                                          bbox_t tile, double k, double m,
-                                          uint64_t *n_placed, uint64_t *n_size) {
+particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L, 
+                                 bbox_t tile, double k, double m,
+                                 uint64_t *n_placed, uint64_t *n_size) {
   particle_t  *particles;
   double      step;
   uint64_t     x, y, pi, p, actual_particles, start_index;
@@ -301,9 +299,9 @@ particle_t *initializeParticlesSinusoidal(uint64_t n_input, uint64_t L,
 
 /* Initialize particles with "linearly-decreasing" distribution */
 /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
-particle_t *initializeParticlesLinear(uint64_t n_input, uint64_t L, double alpha, double beta, 
-                                      bbox_t tile, double k, double m, 
-                                      uint64_t *n_placed, uint64_t *n_size) {
+particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double beta, 
+                             bbox_t tile, double k, double m, 
+                             uint64_t *n_placed, uint64_t *n_size) {
   particle_t  *particles;
   double      total_weight, step, current_weight;
   uint64_t     x, y, p, pi, actual_particles, start_index;
@@ -350,9 +348,9 @@ particle_t *initializeParticlesLinear(uint64_t n_input, uint64_t L, double alpha
 }
 
 /* Initialize uniformly particles within a "patch" */
-particle_t *initializeParticlesPatch(uint64_t n_input, uint64_t L, bbox_t patch, 
-                                     bbox_t tile, double k, double m,
-                                     uint64_t *n_placed, uint64_t *n_size) {
+particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch, 
+                            bbox_t tile, double k, double m,
+                            uint64_t *n_placed, uint64_t *n_size) {
   particle_t *particles;
   uint64_t   x, y, total_cells, pi, p, actual_particles, start_index;
   double     particles_per_cell;
@@ -897,20 +895,20 @@ int main(int argc, char ** argv) {
 
   switch(particle_mode){
   case GEOMETRIC: 
-    particles = initializeParticlesGeometric(n, L, rho, my_tile, k, m,
-                                             &particles_count, &particles_size);
+    particles = initializeGeometric(n, L, rho, my_tile, k, m,
+                                     &particles_count, &particles_size);
     break;
   case LINEAR:
-    particles = initializeParticlesLinear(n, L, alpha, beta, my_tile, k, m, 
-                                             &particles_count, &particles_size);
+    particles = initializeLinear(n, L, alpha, beta, my_tile, k, m, 
+                                     &particles_count, &particles_size);
     break;
   case SINUSOIDAL:
-    particles = initializeParticlesSinusoidal(n, L, my_tile, k, m, 
-                                             &particles_count, &particles_size);
+    particles = initializeSinusoidal(n, L, my_tile, k, m, 
+                                     &particles_count, &particles_size);
     break;
   case PATCH:
-    particles = initializeParticlesPatch(n, L, init_patch, my_tile, k, m,
-                                             &particles_count, &particles_size);
+    particles = initializePatch(n, L, init_patch, my_tile, k, m,
+                                     &particles_count, &particles_size);
   }
 
   if (!particles) {
