@@ -317,7 +317,7 @@ int main(int argc, char ** argv)
            1.0E-06 * 2 * ((double)((m-1)*(n-1)))/avgtime, avgtime);
   }
 
-  PRK_Win_free(&rma_win);
+  MPI_Win_free(&rma_win);
   MPI_Info_free(&rma_winfo);
 
   MPI_Finalize();

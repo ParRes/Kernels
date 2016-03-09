@@ -42,6 +42,7 @@ Functions: LCG_next:      a new pseudo-randon number
            LCG_get_chunk: return subset of an interval of natural numbers
            LCG_init:      initialize the generator
            LCG_jump:      jump ahead into a sequence of pseudo-random numbers
+           random_draw:
 
 Notes:     LCG_init must be called by each thread or rank before any jump 
            into a sequence of pseudo-random numbers is made
@@ -59,6 +60,7 @@ History:   Written by Rob Van der Wijngaart, December 2015
 #include <random_draw.h>
 
 #define NMAX 64
+
 static uint64_t  LCG_a = 6364136223846793005;
 static uint64_t  LCG_c = 1442695040888963407;
 static uint64_t  LCG_seed_init = 27182818285; //used to (re)set seed 
@@ -136,11 +138,14 @@ void LCG_init(void){
  
   int i, index, LCG_power[NMAX];
   uint64_t mm, s_part;
+
+  for (i=0; i<NMAX; i++) LCG_power[i] = 0; 
+  LCG_seed = LCG_seed_init;
   
- /* Catch two special cases */
+  /* Catch two special cases */
   switch (m) {
-    case 0: return;
-    case 1: LCG_next(bound); return;
+  case 0: return;
+  case 1: LCG_next(bound); return;
   }
  
   mm = m;
@@ -168,8 +173,8 @@ uint64_t random_draw(double mu)
   static uint64_t numerator;
   static uint64_t i0, i1;
 
-  sigma = mu*0.15;  
   if (mu>=1.0) {
+    sigma = mu*0.15;  
     u0 = LCG_next(rand_max) * rand_div;
     u1 = LCG_next(rand_max) * rand_div;
 

@@ -79,7 +79,7 @@ program main
   integer(kind=INT32), parameter :: r=RADIUS            ! radius of stencil
   real(kind=REAL64) :: W(-r:r,-r:r)                     ! weights of points in the stencil
   real(kind=REAL64), allocatable :: A(:,:), B(:,:)      ! grid values
-  real(kind=REAL64), parameter :: cx=1, cy=1
+  real(kind=REAL64), parameter :: cx=1.d0, cy=1.d0
   ! runtime variables
   integer(kind=INT32) :: i, j, k
   integer(kind=INT32) :: ii, jj, it, jt
@@ -163,7 +163,7 @@ program main
     stop 1
   endif
 
-  norm = 0.0
+  norm = 0.d0
   active_points = int(n-2*r,INT64)**2
 
 #ifdef _OPENMP
@@ -196,7 +196,7 @@ program main
   ! fill the stencil weights to reflect a discrete divergence operator
   ! Jeff: if one does not use workshare here, the code is wrong.
   !$omp workshare
-  W = 0
+  W = 0.d0
   !$omp end workshare
 #ifdef STAR
   !$omp do
@@ -234,7 +234,7 @@ program main
   !$omp do !!! collapse(2)
   do j=r+1,n-r
     do i=r+1,n-r
-      B(i,j) = 0.0
+      B(i,j) = 0.d0
     enddo
   enddo
   !$omp end do nowait
@@ -315,7 +315,7 @@ program main
     !$omp do !!! collapse(2)
     do j=1,n
       do i=1,n
-        A(i,j) = A(i,j) + 1
+        A(i,j) = A(i,j) + 1.d0
       enddo
     enddo
     !$omp end do nowait
