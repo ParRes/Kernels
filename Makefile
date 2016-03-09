@@ -192,7 +192,7 @@ allserial:
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
-allfortran: allfortranserial allfortranopenmp allfortrancoarray
+allfortran: allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
 
 allfortranserial:
 	cd FORTRAN/Stencil;         $(MAKE) stencil
@@ -208,6 +208,11 @@ allfortrancoarray:
 	cd FORTRAN/Stencil;         $(MAKE) stencil-coarray
 	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-coarray
 	cd FORTRAN/Transpose;       $(MAKE) transpose-coarray
+
+allfortranpretty:
+	cd FORTRAN/Stencil;         $(MAKE) stencil-pretty
+	#cd FORTRAN/Synch_p2p;       $(MAKE) p2p-pretty
+	cd FORTRAN/Transpose;       $(MAKE) transpose-pretty
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean

@@ -137,7 +137,6 @@ program main
                              ' must be >= 1 and <= ',n
     else
       tiling = .true.
-      write(*,'(a)') 'WARNING: tiling is broken!!!!'
     endif
   endif
 
