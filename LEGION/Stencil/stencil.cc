@@ -337,7 +337,8 @@ void top_level_task(const Task *task,
   }
 
   int num_numa_nodes = 1;
-  if (inputs.argc >= 4) num_numa_nodes = atoi(inputs.argv[4]);
+  if (inputs.argc >= 4 && '0' <= inputs.argv[4][0] && inputs.argv[4][0] <= '9')
+    num_numa_nodes = atoi(inputs.argv[4]);
   num_ranks = gasnet_nodes();
 
   printf("Parallel Research Kernels Version %s\n", PRKVERSION);
