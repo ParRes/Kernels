@@ -136,11 +136,15 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
 
+#if !STREAM
+  stream_size=0;
+#else
   stream_size = atol(*++argv);
   if (stream_size < 0) {
     printf("ERROR: private stream size %ld must be non-negative\n", stream_size);
     exit(EXIT_FAILURE);
   }
+#endif
  
   omp_set_num_threads(nthread_input);
 
@@ -291,8 +295,10 @@ int main(int argc, char ** argv)
   #endif
 #endif
 
+#if STREAM
   /* give each thread independent work to do                          */
   private_stream(a, b, c, stream_size);
+#endif
 
   #pragma omp single
   {
@@ -334,8 +340,10 @@ int main(int argc, char ** argv)
   #endif
 #endif
 
+#if STREAM
     /* give each thread some (overlappable) work to do                */
     private_stream(a, b, c, stream_size);
+#endif
   }
 
   #pragma omp single

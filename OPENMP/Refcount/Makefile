@@ -30,6 +30,11 @@ ifndef INTEGER
 endif
 #description: default counter type is floating point
 
+ifndef STREAM
+  STREAM=1
+endif
+#description: assume there will be some private work for each thread
+
 ifeq ($(DEPENDENT),1)
   override INTEGER=0
   ifeq ($(CONTENDED),1)
@@ -57,8 +62,10 @@ DEPENDENTFLAG=-DDEPENDENT=$(DEPENDENT)
 INTEGERFLAG=-DINTEGER=$(INTEGER)
 CONTENDEDFLAG=-DCONTENDED=$(CONTENDED)
 LOCKFLAG=-DLOCK=$(LOCK)
+STREAMFLAG=-DSTREAM=$(STREAM)
+
 TUNEFLAGS    = $(DEPENDENTFLAG) $(DEBUGFLAG) $(NTHREADFLAG) $(USERFLAGS)\
-               $(LOCKFLAG) $(INTEGERFLAG) $(CONTENDEDFLAG)
+               $(LOCKFLAG) $(INTEGERFLAG) $(CONTENDEDFLAG) $(STREAMFLAG)
 PROGRAM     = refcount
 # objects below are the default, used by "clean," if invoked
 OBJS        = $(PROGRAM).o $(COMOBJS)
