@@ -111,8 +111,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/Sparse/sparse            $OMP_NUM_THREADS 10 10 5
         $PRK_TARGET_PATH/DGEMM/dgemm              $OMP_NUM_THREADS 10 1024 32
         $PRK_TARGET_PATH/Synch_global/global      $OMP_NUM_THREADS 10 16384
-        $PRK_TARGET_PATH/RefCount_private/private $OMP_NUM_THREADS 16777216
-        $PRK_TARGET_PATH/RefCount_shared/shared   $OMP_NUM_THREADS 16777216 1024
+        $PRK_TARGET_PATH/Refcount/refcount        $OMP_NUM_THREADS 16777216 1024
         # random is broken right now it seems
         #$PRK_TARGET_PATH/Random/random $OMP_NUM_THREADS 10 16384 32
         ;;
