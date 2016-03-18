@@ -156,8 +156,7 @@ allopenmp:
 	cd OPENMP/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Nstream;          $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Reduce;           $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd OPENMP/RefCount_shared;  $(MAKE) shared    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd OPENMP/RefCount_private; $(MAKE) private   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Refcount;         $(MAKE) refcount  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Random;           $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -271,8 +270,7 @@ clean:
 	cd OPENMP/DGEMM;            $(MAKE) clean
 	cd OPENMP/Nstream;          $(MAKE) clean
 	cd OPENMP/Reduce;           $(MAKE) clean
-	cd OPENMP/RefCount_shared;  $(MAKE) clean
-	cd OPENMP/RefCount_private; $(MAKE) clean
+	cd OPENMP/Refcount;         $(MAKE) clean
 	cd OPENMP/Stencil;          $(MAKE) clean
 	cd OPENMP/Transpose;        $(MAKE) clean
 	cd OPENMP/Random;           $(MAKE) clean
