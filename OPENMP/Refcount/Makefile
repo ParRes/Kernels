@@ -15,26 +15,31 @@ ifndef DEPENDENT
 endif
 #description: default update of counter pair is independent
 
-ifeq ($(DEPENDENT),1)
-  override INTEGER=0
-  ifeq ($(CONTENDED),1)
-    override LOCK=1
-  endif
-else
-  ifndef INTEGER
-    INTEGER=0
-  endif
-  ifndef LOCK
-    LOCK=1
-  endif
-endif
-#description: default counter update is protected with a lock
-#description: default type is floating point
-
 ifndef CONTENDED
   CONTENDED=1
 endif
 #description: default counter access type is contended
+
+ifndef LOCK
+  LOCK=2
+endif
+#description: default counter update is protected with a lock
+
+ifndef INTEGER
+  INTEGER=0
+endif
+#description: default counter type is floating point
+
+ifeq ($(DEPENDENT),1)
+  override INTEGER=0
+  ifeq ($(CONTENDED),1)
+    override LOCK=2
+  else
+    ifeq ($(LOCK),1)
+      override LOCK=2
+    endif
+  endif
+endif
 
 #NTHREADFLAG  = -DMAXTHREADS=n
 #description: default thread limit is 256

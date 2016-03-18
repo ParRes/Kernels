@@ -196,25 +196,21 @@ int main(int argc, char ** argv)
     printf("Counter access                 = uncontended\n");
 #endif
 #if DEPENDENT
-    printf("Counter data type              = floating point\n");
-    printf("Update type                    = dependent\n");
-  #if LOCK
-    printf("Mutex type                     = locks\n");
-  #else
-    printf("Mutex type                     = none\n");
-  #endif
+    printf("Counter pair update type       = dependent\n");
 #else
-    printf("Update type                    = independent\n");
-  #if INTEGER
+    printf("Counter pair update type       = independent\n");
+#endif
+#if INTEGER
     printf("Counter data type              = integer\n");
-  #else
+#else
     printf("Counter data type              = floating point\n");
-  #endif
-  #if LOCK
-    printf("Mutex type                     = locks\n");
-  #else
-    printf("Mutex type                     = atomics\n");
-  #endif
+#endif
+#if LOCK==2
+    printf("Mutex type                     = lock\n");
+#elif LOCK==1
+    printf("Mutex type                     = atomic\n");
+#else
+    printf("Mutex type                     = none\n");
 #endif
   }
   }
@@ -259,7 +255,7 @@ int main(int argc, char ** argv)
   COUNTER2 = 0.0;
 
   /* initialize the lock on which we will be pounding */
-#if LOCK
+#if LOCK==2
   omp_init_lock(pcounter_lock);
 #endif
 
@@ -269,25 +265,28 @@ int main(int argc, char ** argv)
 
   /* do one warmup iteration outside main loop to avoid overhead      */
 #if DEPENDENT
-  #if LOCK
+  #if LOCK==2
   omp_set_lock(pcounter_lock);
   #endif
   tmp1 = COUNTER1;
   COUNTER1 = cosa*tmp1 - sina*COUNTER2;
   COUNTER2 = sina*tmp1 + cosa*COUNTER2;
-  #if LOCK
+  #if LOCK==2
   omp_unset_lock(pcounter_lock);
   #endif
 #else
-  #if LOCK
+  #if LOCK==2
     omp_set_lock(pcounter_lock);
     COUNTER1++;
     COUNTER2++;
     omp_unset_lock(pcounter_lock);
-  #else
+  #elif LOCK==1
     #pragma omp atomic
     COUNTER1++;
     #pragma omp atomic
+    COUNTER2++;
+  #else
+    COUNTER1++;
     COUNTER2++;
   #endif
 #endif
@@ -309,25 +308,28 @@ int main(int argc, char ** argv)
 #endif
 
 #if DEPENDENT
-  #if LOCK
+  #if LOCK==2
     omp_set_lock(pcounter_lock);
   #endif
     tmp1 = COUNTER1;
     COUNTER1 = cosa*tmp1 - sina*COUNTER2;
     COUNTER2 = sina*tmp1 + cosa*COUNTER2;
-  #if LOCK
+  #if LOCK==2
     omp_unset_lock(pcounter_lock);
   #endif
 #else
-  #if LOCK
+  #if LOCK==2
     omp_set_lock(pcounter_lock);
     COUNTER1++;
     COUNTER2++;
     omp_unset_lock(pcounter_lock);
-  #else
+  #elif LOCK==1
     #pragma omp atomic
     COUNTER1++;
     #pragma omp atomic
+    COUNTER2++;
+  #else
+    COUNTER1++;
     COUNTER2++;
   #endif
 #endif
