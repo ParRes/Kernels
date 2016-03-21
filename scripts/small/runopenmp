@@ -11,8 +11,7 @@ OPENMP/Random/random $NUMTHREADS 16 16 4;                                 echo $
 for ALGORITHM in linear binary-barrier binary-p2p long-optimal; do 
   OPENMP/Reduce/reduce          $NUMTHREADS $NUMITERS 2000000 $ALGORITHM; echo $SEPLINE 
 done 
-OPENMP/RefCount_shared/shared   $NUMTHREADS 2000000 100;                  echo $SEPLINE 
-OPENMP/RefCount_private/private $NUMTHREADS 2000000;                      echo $SEPLINE 
+OPENMP/Refcount/refcount        $NUMTHREADS 2000000 100;                  echo $SEPLINE 
 OPENMP/Sparse/sparse            $NUMTHREADS $NUMITERS 10 4;               echo $SEPLINE 
 OPENMP/Stencil/stencil          $NUMTHREADS $NUMITERS 1000;               echo $SEPLINE                                                                                                                                          
 OPENMP/Synch_global/global      $NUMTHREADS $NUMITERS 10000;              echo $SEPLINE 
