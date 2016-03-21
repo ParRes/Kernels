@@ -368,7 +368,7 @@ void top_level_task(const Task *task,
       Num_procsy = num_ranks / Num_procsx;
       break;
     }
-  //std::swap(Num_procsx, Num_procsy);
+  std::swap(Num_procsx, Num_procsy);
 
   if (n % Num_procsx != 0)
   {
