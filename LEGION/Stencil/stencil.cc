@@ -248,6 +248,7 @@ enum TaskIDs {
   TASKID_STENCIL,
   TASKID_INC,
   TASKID_CHECK,
+  TASKID_DUMMY,
 };
 
 enum {
@@ -274,6 +275,7 @@ struct SPMDArgs {
   PhaseBarrier fullOutput[4];
   PhaseBarrier emptyInput[4];
   PhaseBarrier emptyOutput[4];
+  PhaseBarrier analysisLock;
 };
 
 struct StencilArgs {
@@ -493,6 +495,7 @@ void top_level_task(const Task *task,
       }
     }
 
+  PhaseBarrier analysisLock = runtime->create_phase_barrier(ctx, num_ranks);
   MustEpochLauncher shardLauncher;
   std::map<DomainPoint, SPMDArgs> args;
   for (int tileY = 0; tileY < Num_procsy; ++tileY)
@@ -505,6 +508,7 @@ void top_level_task(const Task *task,
       args[tilePoint].numThreads = threads;
       args[tilePoint].numIterations = iterations;
       args[tilePoint].tileLoc = tilePoint.get_point<2>();
+      args[tilePoint].analysisLock = analysisLock;
 
       TaskLauncher spmdLauncher(TASKID_SPMD,
           TaskArgument(&args[tilePoint], sizeof(SPMDArgs)));
@@ -774,11 +778,16 @@ tuple_double spmd_task(const Task *task,
     f.get_void_result();
   }
 
+
+  PhaseBarrier analysis_lock_prev = args->analysisLock;
+  PhaseBarrier analysis_lock_next =
+    runtime->advance_phase_barrier(ctx, analysis_lock_prev);
+
   double tsStart = DBL_MAX;
   FutureMap fm;
-  for (int iter = 0; iter <= stencilArgs.numIterations; iter++)
+  for (int iter = 0; iter < stencilArgs.numIterations; iter++)
   {
-    runtime->begin_trace(ctx, 0);
+    //runtime->begin_trace(ctx, 0);
     for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
       if (hasNeighbor[dir])
       {
@@ -796,6 +805,8 @@ tuple_double spmd_task(const Task *task,
             runtime->advance_phase_barrier(ctx, args->fullInput[dir]);
           copyLauncher.add_wait_barrier(args->fullInput[dir]);
           copyLauncher.add_arrival_barrier(args->emptyOutput[dir]);
+          if (iter == 0)
+            copyLauncher.add_wait_barrier(analysis_lock_next);
           args->emptyOutput[dir] =
             runtime->advance_phase_barrier(ctx, args->emptyOutput[dir]);
           runtime->issue_copy_operation(ctx, copyLauncher);
@@ -830,6 +841,8 @@ tuple_double spmd_task(const Task *task,
       stencilLauncher.add_region_requirement(outputReq);
       stencilLauncher.add_region_requirement(weightReq);
       stencilLauncher.add_region_requirement(dummyReq);
+      if (iter == 0)
+        stencilLauncher.add_wait_barrier(analysis_lock_next);
       runtime->execute_index_space(ctx, stencilLauncher);
     }
 
@@ -851,12 +864,20 @@ tuple_double spmd_task(const Task *task,
         }
       fm = runtime->execute_index_space(ctx, incLauncher);
     }
-    runtime->end_trace(ctx, 0);
-    if (iter == 0)
-    {
-      fm.wait_all_results();
-      tsStart = wtime();
-    }
+    //runtime->end_trace(ctx, 0);
+    //if (iter == 0)
+    //{
+    //  fm.wait_all_results();
+    //  tsStart = wtime();
+    //}
+  }
+  {
+    IndexLauncher dummyLauncher(TASKID_DUMMY, launchDomain, taskArg,
+        argMap);
+    dummyLauncher.add_arrival_barrier(analysis_lock_prev);
+    FutureMap fm = runtime->execute_index_space(ctx, dummyLauncher);
+    fm.wait_all_results();
+    tsStart = wtime();
   }
   fm.wait_all_results();
 
@@ -1113,7 +1134,7 @@ double check_task(const Task *task,
       if (realX < RADIUS || realY < RADIUS) continue;
       if (realX >= n - RADIUS || realY >= n - RADIUS) continue;
 
-      DTYPE norm = (DTYPE) (args->numIterations + 1) * (COEFX + COEFY);
+      DTYPE norm = (DTYPE) args->numIterations * (COEFX + COEFY);
       DTYPE value = OUT(i, j);
       abserr += ABS(value - norm);
     }
@@ -1122,6 +1143,14 @@ double check_task(const Task *task,
 
   return abserr;
 #endif
+}
+
+void dummy_task(const Task *task,
+                const std::vector<PhysicalRegion> &regions,
+                Context ctx, HighLevelRuntime *runtime)
+{
+  fprintf(stderr, "Entered dummy! Sleep 5 seconds...\n");
+  sleep(5);
 }
 
 static void register_mappers(Machine machine, Runtime *rt,
@@ -1158,6 +1187,10 @@ int main(int argc, char **argv)
   HighLevelRuntime::register_legion_task<double, check_task>(TASKID_CHECK,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "check");
+  HighLevelRuntime::register_legion_task<dummy_task>(TASKID_DUMMY,
+      Processor::LOC_PROC, true/*single*/, true/*single*/,
+      AUTO_GENERATE_ID, TaskConfigOptions(true), "dummy");
+
 
   HighLevelRuntime::set_registration_callback(register_mappers);
   return HighLevelRuntime::start(argc, argv);
