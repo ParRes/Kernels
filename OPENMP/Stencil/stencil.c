@@ -64,7 +64,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_omp.h>
 
-#ifdef DOUBLE
+#if DOUBLE
   #define DTYPE   double
   #define EPSILON 1.e-8
   #define COEFX   1.0
@@ -164,7 +164,7 @@ int main(int argc, char ** argv) {
   /* fill the stencil weights to reflect a discrete divergence operator         */
   for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++)
     WEIGHT(ii,jj) = (DTYPE) 0.0;
-#ifdef STAR
+#if STAR
   stencil_size = 4*RADIUS+1;
   for (ii=1; ii<=RADIUS; ii++) {
     WEIGHT(0, ii) = WEIGHT( ii,0) =  (DTYPE) (1.0/(2.0*ii*RADIUS));
@@ -205,22 +205,27 @@ int main(int argc, char ** argv) {
     printf("Grid size            = %d\n", n);
     printf("Radius of stencil    = %d\n", RADIUS);
     printf("Number of iterations = %d\n", iterations);
-#ifdef STAR
+#if STAR
     printf("Type of stencil      = star\n");
 #else
     printf("Type of stencil      = compact\n");
 #endif
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type            = double precision\n");
 #else
     printf("Data type            = single precision\n");
+#endif
+#if RESTRICT_KEYWORD
+    printf("No aliasing          = on\n");
+#else
+    printf("No aliasing          = off\n");
 #endif
 #if LOOPGEN
     printf("Script used to expand stencil loop body\n");
 #else
     printf("Compact representation of stencil loop body\n");
 #endif
-#ifndef PARALLELFOR
+#if !PARALLELFOR
     printf("Parallel regions     = fused (omp for)\n");
 #else
     printf("Parallel regions     = split (omp parallel for)\n");
@@ -229,19 +234,19 @@ int main(int argc, char ** argv) {
   }
   bail_out(num_error);
 
-#ifdef PARALLELFOR
+#if PARALLELFOR
 } 
 #endif
 
   /* intialize the input and output arrays                                     */
-#ifdef PARALLELFOR
+#if PARALLELFOR
   #pragma omp parallel for private(i)
 #else
   #pragma omp for
 #endif
   for (j=0; j<n; j++) for (i=0; i<n; i++) 
     IN(i,j) = COEFX*i+COEFY*j;
-#ifdef PARALLELFOR
+#if PARALLELFOR
   #pragma omp parallel for private(i)
 #else
   #pragma omp for
@@ -253,7 +258,7 @@ int main(int argc, char ** argv) {
 
     /* start timer after a warmup iteration                                        */
     if (iter == 1) { 
-#ifndef PARALLELFOR
+#if !PARALLELFOR
       #pragma omp barrier
       #pragma omp master
 #endif
@@ -262,14 +267,14 @@ int main(int argc, char ** argv) {
       }
     }
 
-#ifdef PARALLELFOR
+#if PARALLELFOR
     #pragma omp parallel for private(i, ii, jj)
 #else
     #pragma omp for
 #endif
     for (j=RADIUS; j<n-RADIUS; j++) {
       for (i=RADIUS; i<n-RADIUS; i++) {
-        #ifdef STAR
+        #if STAR
           #if LOOPGEN
             #include "loop_body_star.incl"
           #else
@@ -290,7 +295,7 @@ int main(int argc, char ** argv) {
     }
 
     /* add constant to solution to force refresh of neighbor data, if any       */
-#ifdef PARALLELFOR
+#if PARALLELFOR
     #pragma omp parallel for private(i)
 #else
     #pragma omp for
@@ -298,7 +303,7 @@ int main(int argc, char ** argv) {
     for (j=0; j<n; j++) for (i=0; i<n; i++) IN(i,j)+= 1.0;
   } /* end of iterations                                                        */
 
-#ifndef PARALLELFOR
+#if !PARALLELFOR
   #pragma omp barrier
   #pragma omp master
 #endif
@@ -307,7 +312,7 @@ int main(int argc, char ** argv) {
   }
 
   /* compute L1 norm in parallel                                                */
-#ifdef PARALLELFOR
+#if PARALLELFOR
   #pragma omp parallel for reduction(+:norm), private (i)
 #else
   #pragma omp for reduction(+:norm)
@@ -315,7 +320,7 @@ int main(int argc, char ** argv) {
   for (j=RADIUS; j<n-RADIUS; j++) for (i=RADIUS; i<n-RADIUS; i++) {
     norm += (DTYPE)ABS(OUT(i,j));
   }
-#ifndef PARALLELFOR
+#if !PARALLELFOR
   } /* end of OPENMP parallel region                                             */
 #endif
 
@@ -337,7 +342,7 @@ int main(int argc, char ** argv) {
   }
   else {
     printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
     printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
            reference_norm, norm);
 #endif

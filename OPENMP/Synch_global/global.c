@@ -182,9 +182,9 @@ int main(int argc, char ** argv)
     printf("number of spawned threads %d\n", nthread);
   } 
   else {
-    printf("Number of threads              = %d;\n",nthread_input);
-    printf("Length of scramble string      = %ld\n", length);
-    printf("Number of iterations           = %d\n", iterations);
+    printf("Number of threads         = %d;\n",nthread_input);
+    printf("Length of scramble string = %ld\n", length);
+    printf("Number of iterations      = %d\n", iterations);
   }
   }
   bail_out(num_error);
@@ -206,7 +206,7 @@ int main(int argc, char ** argv)
     /* now all threads select different, nonoverlapping substring           */
     for (i=0; i<thread_length; i++) iterstring[i]=catstring[my_ID+i*nthread];
 
-#ifdef VERBOSE
+#if VERBOSE
     #pragma omp master
     {
     checksum=0;
@@ -233,7 +233,7 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
   else {
-#ifdef VERBOSE
+#if VERBOSE
     printf("Solution validates; Correct checksum of %d\n", checksum);
 #else
     printf("Solution validates\n");

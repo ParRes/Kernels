@@ -6,35 +6,6 @@ include ../../common/OPENMP.defs
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
 #description: change above into something that is a decent optimization on you system
 
-#RESTRICTFLAG = -DRESTRICT_KEYWORD
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers
-
-ifndef RADIUS
-  RADIUS=2
-endif
-#description: default radius of filter to be applied is 2
-
-DOUBLEFLAG = -DDOUBLE
-#description: default data type is single precision
-
-ifndef LOOPGEN
-  LOOPGEN=0
-endif
-#description: default is compact (non-expanded) form of loop body
-
-PARALLELFORFLAG = -DPARALLELFOR
-#description: default is a single parallel region for all iterations
-
-STARFLAG   = -DSTAR
-#description: default stencil is compact (dense, square)
-
-#DEBUGFLAG   = -DVERBOSE
-#description: default diagnostic style is silent
-
-#NTHREADFLAG = -DMAXTHREADS=n
-#description: default thread limit is 256
-
 USERFLAGS    = 
 #description: parameter to specify optional flags
 
@@ -45,10 +16,68 @@ LIBPATHS     =
 INCLUDEPATHS = 
 
 ### End User configurable options ###
-RADIUSFLAG  = -DRADIUS=$(RADIUS)
-LOOPGENFLAG= -DLOOPGEN=$(LOOPGEN)
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(NTHREADFLAG) $(USERFLAGS) \
+ifndef DOUBLE
+  DOUBLE=1
+endif
+#description: default data type is single precision
+
+ifndef PARALLELFOR
+  PARALLELFOR=0
+endif
+#description: default is a single parallel region for all iterations
+
+ifndef STAR
+  STAR=1
+endif
+#description: default stencil is compact (dense, square)
+
+ifndef RESTRICT_KEYWORD
+  RESTRICT_KEYWORD=0
+endif
+#description: the "restrict" keyword can be used on IA platforms to disambiguate  
+#             data accessed through pointers (requires -restrict compiler flag)
+
+ifndef RADIUS
+  RADIUS=2
+endif
+#description: default radius of filter to be applied is 2
+
+ifndef LOOPGEN
+  LOOPGEN=0
+endif
+#description: default is compact (non-expanded) form of loop body
+
+ifndef MAXTHREADS
+  MAXTHREADS=256
+endif
+#description: default thread limit is 256
+
+ifndef VERBOSE
+  VERBOSE=0
+endif
+#description: default diagnostic style is silent
+
+VERBOSEFLAG     = -DVERBOSE=$(VERBOSE)
+RESTRICTFLAG    = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
+NTHREADFLAG     = -DMAXTHREADS=$(MAXTHREADS)
+RADIUSFLAG      = -DRADIUS=$(RADIUS)
+LOOPGENFLAG     = -DLOOPGEN=$(LOOPGEN)
+DOUBLEFLAG      = -DDOUBLE=$(DOUBLE)
+PARALLELFORFLAG = -DPARALLELFOR=$(PARALLELFOR)
+STARFLAG        = -DSTAR=$(STAR)
+
+OPTIONSSTRING="Make options:\n\
+ RADIUS=?        radius of stencil                          [2]  \n\
+ LOOPGEN=0/1     compact/expanded stencil loop body         [0]  \n\
+ DOUBLE=0/1      single/double precision                    [1]  \n\
+ PARALLELFOR=0/1 fused/split parallel regions               [0]  \n\
+ RESTRICT=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
+ MAXTHREADS=?    set maximum number of OpenMP threads       [256]\n\
+ STAR=0/1        box/star shaped stencil                    [1]  \n\
+ VERBOSE=0/1     omit/include verbose run information       [0]"
+
+TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG)  $(NTHREADFLAG) $(USERFLAGS) \
                $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG) $(PARALLELFORFLAG) \
                $(LOOPGENFLAG)
 PROGRAM     = stencil

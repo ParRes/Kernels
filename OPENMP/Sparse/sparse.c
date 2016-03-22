@@ -74,7 +74,7 @@ HISTORY: Written by Rob Van der Wijngaart, August 2006.
 
 /* if the scramble flag is set, convert all (linearized) grid indices by 
    reversing their bits; if not, leave the grid indices alone                     */
-#ifdef SCRAMBLE
+#if SCRAMBLE
   #define REVERSE(a,b)  reverse((a),(b))
 #else
   #define REVERSE(a,b) (a)
@@ -229,7 +229,7 @@ int main(int argc, char **argv){
     printf("Stencil diameter      = %16d\n", 2*radius+1);
     printf("Sparsity              = %16.10lf\n", sparsity);
     printf("Number of iterations  = %16d\n", iterations);
-#ifdef SCRAMBLE
+#if SCRAMBLE
     printf("Using scrambled indexing\n");
 #else
     printf("Using canonical indexing\n");
@@ -311,7 +311,7 @@ int main(int argc, char **argv){
   }
   else {
     printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
     printf("Reference sum = %lf, vector sum = %lf\n", 
            reference_sum, vector_sum);
 #endif

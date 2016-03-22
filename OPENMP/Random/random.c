@@ -152,7 +152,7 @@ HISTORY: Written by Rob Van der Wijngaart, June 2006.
 
 /* Define constants                                                                */
 /* PERIOD = (2^63-1)/7 = 7*73*127*337*92737*649657                                 */
-#ifdef LONG_IS_64BITS 
+#if LONG_IS_64BITS 
   #define POLY               0x0000000000000007UL
   #define PERIOD             1317624576693539401L
   /* sequence number in stream of random numbers to be used as initial value       */
@@ -164,16 +164,13 @@ HISTORY: Written by Rob Van der Wijngaart, June 2006.
   #define SEQSEED            834568137686317453LL
 #endif 
 
-#ifdef HPCC
+#if HPCC
   #undef  ATOMIC
   #undef  CHUNKED
   #undef  ERRORPERCENT
   #define ERRORPERCENT 1
 #else
-  #ifndef ERRORPERCENT
-    #define ERRORPERCENT 0
-  #endif
-  #ifdef CHUNKED
+  #if CHUNKED
     #undef ATOMIC
   #endif
 #endif
@@ -193,7 +190,7 @@ int main(int argc, char **argv) {
   size_t            tablespace;  /* bytes per thread required for table            */
   u64Int            *ran;        /* vector of random numbers                       */
   s64Int            index;       /* index into Table                               */
-#ifdef VERBOSE
+#if VERBOSE
   u64Int * RESTRICT Hist;        /* histogram of # updates to table elements       */
   unsigned int      *HistHist;   /* histogram of update frequencies                */
 #endif
@@ -208,7 +205,7 @@ int main(int argc, char **argv) {
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP Random Access test\n");
 
-#ifdef LONG_IS_64BITS
+#if LONG_IS_64BITS
   if (sizeof(long) != 8) {
     printf("ERROR: Makefile says \"long\" is 8 bytes, but it is %d bytes\n",
            sizeof(long)); 
@@ -292,7 +289,7 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-#ifdef VERBOSE
+#if VERBOSE
   Hist = (u64Int *) prk_malloc(tablespace);
   HistHist = (unsigned int *) prk_malloc(tablespace);
   if (!Hist || ! HistHist) {
@@ -341,6 +338,11 @@ int main(int argc, char **argv) {
     printf("Number of updates      = "FSTR64U"\n", nupdate);
     printf("Vector length          = "FSTR64U"\n", (u64Int) nstarts);
     printf("Percent errors allowed = "FSTR64U"\n", (u64Int) ERRORPERCENT);
+#if RESTRICT_KEYWORD
+    printf("No aliasing            = on\n");
+#else
+    printf("No aliasing            = off\n");
+#endif
 #if defined(ATOMIC) && !defined(CHUNKED)
     printf("Shared table, atomic updates\n");
 #elif defined(CHUNKED)
@@ -352,7 +354,7 @@ int main(int argc, char **argv) {
   }
   bail_out(num_error);
 
-#ifdef CHUNKED
+#if CHUNKED
   /* compute upper and lower table bounds for this thread                     */
   u64Int low =  my_ID   *(tablesize/nthread);
   u64Int up  = (my_ID+1)*(tablesize/nthread);
@@ -381,7 +383,7 @@ int main(int argc, char **argv) {
 
   /* ran is privatized. Must make sure for non-chunked version that 
      we pick the right section of the originally shared ran array          */
-#ifdef CHUNKED
+#if CHUNKED
   int offset = 0;
 #else
   int offset = my_ID*my_starts;
@@ -405,11 +407,11 @@ int main(int argc, char **argv) {
         if (index >= low && index < up) {
 #endif
           Table[index] ^= ran[j];
-#ifdef VERBOSE
+#if VERBOSE
           #pragma omp atomic
           Hist[index] += 1;
 #endif
-#ifdef CHUNKED
+#if CHUNKED
         }
 #endif
       }
@@ -426,7 +428,7 @@ int main(int argc, char **argv) {
   /* verification test */
   for(i=0;i<tablesize;i++) {
     if(Table[i] != (u64Int) i) {
-#ifdef VERBOSE
+#if VERBOSE
       printf("Error Table["FSTR64U"]="FSTR64U"\n",i,Table[i]);
 #endif
       error++;
@@ -444,7 +446,7 @@ int main(int argc, char **argv) {
            1.e-9*nupdate/random_time,random_time);
   }
 
-#ifdef VERBOSE
+#if VERBOSE
   for(i=0;i<tablesize;i++) HistHist[Hist[i]]+=1;
   for(i=0;i<=tablesize;i++) if (HistHist[i] != 0)
 	printf("HistHist[%4.1d]=%9.1d\n",(int)i,HistHist[i]);

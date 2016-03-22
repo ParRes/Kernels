@@ -167,8 +167,10 @@ int main(int argc, char ** argv) {
     printf("Number of iterations  = %d\n", iterations);
     if (tiling) {
       printf("Tile size             = %d\n", Tile_order);
-#ifdef COLLAPSE
-      printf("Using loop collapse\n");
+#if COLLAPSE
+      printf("Loop collapse         = on\n");
+#else
+      printf("Loop collapse         = off\n");
 #endif
     }
     else                   
@@ -180,7 +182,7 @@ int main(int argc, char ** argv) {
   /*  Fill the original matrix, set transpose to known garbage value. */
 
   if (tiling) {
-#ifdef COLLAPSE
+#if COLLAPSE
     #pragma omp for collapse(2)
 #else
     #pragma omp for
@@ -223,7 +225,7 @@ int main(int argc, char ** argv) {
         }
     }
     else {
-#ifdef COLLAPSE
+#if COLLAPSE
       #pragma omp for collapse(2)
 #else
       #pragma omp for
@@ -261,7 +263,7 @@ int main(int argc, char ** argv) {
     avgtime = transpose_time/iterations;
     printf("Rate (MB/s): %lf Avg time (s): %lf\n",
            1.0E-06 * bytes/avgtime, avgtime);
-#ifdef VERBOSE
+#if VERBOSE
     printf("Squared errors: %f \n", abserr);
 #endif
     exit(EXIT_SUCCESS);
@@ -290,7 +292,7 @@ double test_results (size_t order, double *B, int iterations) {
     }
   }
 
-#ifdef VERBOSE
+#if VERBOSE
   #pragma omp master 
   {
   printf(" Squared sum of differences: %f\n",abserr);

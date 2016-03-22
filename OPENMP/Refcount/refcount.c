@@ -230,7 +230,7 @@ int main(int argc, char ** argv)
      the space required */
   page_fit = 1;
   store_size = (size_t) getpagesize();
-#ifdef VERBOSE
+#if VERBOSE
   printf("Page size = %d\n", getpagesize());
 #endif
 
@@ -246,7 +246,7 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
  
-#ifdef VERBOSE
+#if VERBOSE
   if (!page_fit) printf("Counters do not fit on different pages\n");      
   else           printf("Counters fit on different pages\n");      
 #endif
@@ -402,7 +402,7 @@ int main(int argc, char ** argv)
   } /* end of OpenMP parallel region */
  
   if (!error) {
-#ifdef VERBOSE
+#if VERBOSE
     printf("Solution validates; Correct counter values %13.10lf %13.10lf\n", 
            COUNTER1, COUNTER2);
 #else

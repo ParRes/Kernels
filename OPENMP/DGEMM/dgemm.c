@@ -67,17 +67,10 @@ HISTORY: Written by Rob Van der Wijngaart, September 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_omp.h>
 
-#ifdef MKL
+#if MKL
   #include <mkl_cblas.h>
 #endif
 
-#ifndef DEFAULTBLOCK
-  #define DEFAULTBLOCK 32
-#endif
-
-#ifndef BOFFSET
-  #define BOFFSET 12
-#endif
 #define AA_arr(i,j) AA[(i)+(block+BOFFSET)*(j)]
 #define BB_arr(i,j) BB[(i)+(block+BOFFSET)*(j)]
 #define CC_arr(i,j) CC[(i)+(block+BOFFSET)*(j)]
@@ -109,7 +102,7 @@ int main(int argc, char **argv){
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP Dense matrix-matrix multiplication\n");
 
-#ifndef MKL  
+#if !MKL  
   if (argc != 4 && argc != 5) {
     printf("Usage: %s <# threads> <# iterations> <matrix order> [tile size]\n",*argv);
 #else
@@ -160,7 +153,7 @@ int main(int argc, char **argv){
     C_arr(i,j) = 0.0;
   }
 
-#ifndef MKL
+#if !MKL
   if (argc == 5) {
          block = atoi(*++argv);
   } else block = DEFAULTBLOCK;
@@ -200,6 +193,11 @@ int main(int argc, char **argv){
     else
       printf("No blocking\n");
     printf("Number of iterations  = %d\n", iterations);
+#if MKL
+    printf("Using MKL library     = on\n");
+#else    
+    printf("Using MKL library     = off\n");
+#endif
     if (shortcut) 
       printf("Only doing initialization\n"); 
   }
@@ -301,7 +299,7 @@ int main(int argc, char **argv){
   }
   else {
     printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
     printf("Reference checksum = %lf, checksum = %lf\n", 
            ref_checksum, checksum);
 #endif
