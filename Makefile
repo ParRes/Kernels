@@ -87,6 +87,8 @@ allmpi1:
 	cd MPI1/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                        "MATRIX_RANK         = $(matrix_rank)"        \
                                                        "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+	cd MPI1/PIC-static;          $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+
 
 allampi:
 	cd AMPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -154,16 +156,15 @@ allopenmp:
 	cd OPENMP/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Nstream;          $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Reduce;           $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd OPENMP/RefCount_shared;  $(MAKE) shared    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd OPENMP/RefCount_private; $(MAKE) private   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Refcount;         $(MAKE) refcount  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Random;           $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Sparse;           $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Synch_global;     $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd OPENMP/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
-                                                      "MATRIX_RANK         = $(matrix_rank)"        \
+	cd OPENMP/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"     \
+                                                      "MATRIX_RANK         = $(matrix_rank)"   \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 
 allcharm++:
@@ -185,12 +186,12 @@ allserial:
 	cd SERIAL/Random;           $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd SERIAL/Sparse;           $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd SERIAL/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd SERIAL/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
-                                                      "MATRIX_RANK         = $(matrix_rank)"        \
+	cd SERIAL/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"     \
+                                                      "MATRIX_RANK         = $(matrix_rank)"   \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
-	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
-allfortran: allfortranserial allfortranopenmp allfortrancoarray
+allfortran: allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
 
 allfortranserial:
 	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
@@ -207,6 +208,11 @@ allfortrancoarray:
 	cd FORTRAN/Stencil;         $(MAKE) stencil-coarray
 	cd FORTRAN/Transpose;       $(MAKE) transpose-coarray
 
+allfortranpretty:
+	cd FORTRAN/Stencil;         $(MAKE) stencil-pretty
+	#cd FORTRAN/Synch_p2p;       $(MAKE) p2p-pretty
+	cd FORTRAN/Transpose;       $(MAKE) transpose-pretty
+
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
 	cd MPI1/Nstream;            $(MAKE) clean
@@ -218,6 +224,7 @@ clean:
 	cd MPI1/Synch_global;       $(MAKE) clean
 	cd MPI1/Synch_p2p;          $(MAKE) clean
 	cd MPI1/Branch;             $(MAKE) clean
+	cd MPI1/PIC-static;         $(MAKE) clean
 	cd FG_MPI/DGEMM;            $(MAKE) clean
 	cd FG_MPI/Nstream;          $(MAKE) clean
 	cd FG_MPI/Reduce;           $(MAKE) clean
@@ -263,8 +270,7 @@ clean:
 	cd OPENMP/DGEMM;            $(MAKE) clean
 	cd OPENMP/Nstream;          $(MAKE) clean
 	cd OPENMP/Reduce;           $(MAKE) clean
-	cd OPENMP/RefCount_shared;  $(MAKE) clean
-	cd OPENMP/RefCount_private; $(MAKE) clean
+	cd OPENMP/Refcount;         $(MAKE) clean
 	cd OPENMP/Stencil;          $(MAKE) clean
 	cd OPENMP/Transpose;        $(MAKE) clean
 	cd OPENMP/Random;           $(MAKE) clean

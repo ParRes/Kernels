@@ -80,12 +80,20 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=FORTRAN
         $PRK_TARGET_PATH/Synch_p2p/p2p               10 1024 1024
         $PRK_TARGET_PATH/Stencil/stencil             10 1000
+        $PRK_TARGET_PATH/Transpose/transpose         10 1024 1
         $PRK_TARGET_PATH/Transpose/transpose         10 1024 32
+        # pretty versions do not support tiling...
+        #$PRK_TARGET_PATH/Synch_p2p/p2p-pretty        10 1024 1024
+        $PRK_TARGET_PATH/Stencil/stencil-pretty      10 1000
+        $PRK_TARGET_PATH/Transpose/transpose-pretty  10 1024
         export OMP_NUM_THREADS=2
-        $PRK_TARGET_PATH/Synch_p2p/p2p-omp           10 1024 1024
+        $PRK_TARGET_PATH/Synch_p2p/p2p-omp           10 1024 1024 # not threaded yet
         $PRK_TARGET_PATH/Stencil/stencil-omp         10 1000
+        $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 1
         $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 32
         # FIXME: only testing with a single image right now.
+        $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
+        $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
         $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
         $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
         ;;
@@ -103,8 +111,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/Sparse/sparse            $OMP_NUM_THREADS 10 10 5
         $PRK_TARGET_PATH/DGEMM/dgemm              $OMP_NUM_THREADS 10 1024 32
         $PRK_TARGET_PATH/Synch_global/global      $OMP_NUM_THREADS 10 16384
-        $PRK_TARGET_PATH/RefCount_private/private $OMP_NUM_THREADS 16777216
-        $PRK_TARGET_PATH/RefCount_shared/shared   $OMP_NUM_THREADS 16777216 1024
+        $PRK_TARGET_PATH/Refcount/refcount        $OMP_NUM_THREADS 16777216 1024
         # random is broken right now it seems
         #$PRK_TARGET_PATH/Random/random $OMP_NUM_THREADS 10 16384 32
         ;;
@@ -124,6 +131,10 @@ case "$PRK_TARGET" in
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/DGEMM/dgemm         10 1024 32 1
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Random/random       32 20
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_global/global 10 16384
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 2 GEOMETRIC 0.99
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 0 1 SINUSOIDAL
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 LINEAR 1.0 3.0
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 PATCH 0 200 100 200 
         ;;
     allmpio*mp)
         echo "MPI+OpenMP"

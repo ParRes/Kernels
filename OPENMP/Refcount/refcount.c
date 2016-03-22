@@ -35,13 +35,13 @@ POSSIBILITY OF SUCH DAMAGE.
 NAME:    RefCount
  
 PURPOSE: This program tests the efficiency of exclusive access to a
-         pair of non-adjacent shared reference counters
+         pair of non-adjacent reference counters
   
 USAGE:   The program takes as input the total number of times the reference 
          counters are updated, and the number of threads 
          involved.
  
-               <progname>  <# threads><# iterations>
+               <progname>  <# threads><# iterations> <length of private triad vector>
   
          The output consists of diagnostics to make sure the 
          algorithm worked, and of timing statistics.
@@ -63,6 +63,7 @@ HISTORY: Written by Rob Van der Wijngaart, January 2006.
 *******************************************************************/
  
 #include <par-res-kern_general.h>
+#include <inttypes.h>
 #include <par-res-kern_omp.h>
  
 /* shouldn't need the prototype below, since it is defined in <unistd.h>. But it
@@ -71,15 +72,21 @@ HISTORY: Written by Rob Van der Wijngaart, January 2006.
 #if !defined(__USE_BSD) && !defined(__USE_XOPEN_EXTENDED)
 extern int getpagesize(void);
 #endif
-#define COUNTER1  (*pcounter1)
-#define COUNTER2  (*pcounter2)
-#define SCALAR    3.0
-#define A0        0.0
-#define B0        2.0
-#define C0        2.0
+#define COUNTER1     (*pcounter1)
+#define COUNTER2     (*pcounter2)
+#define SCALAR       3.0
+#define A0           0.0
+#define B0           2.0
+#define C0           2.0
+
+#if INTEGER
+  #define DTYPE int64_t
+#else
+  #define DTYPE double
+#endif
 
 /* declare a simple function that does some work                                */
-void private_stream(double *a, double *b, double *c, int size) {
+void private_stream(double *a, double *b, double *c, size_t size) {
   int j;
   for (j=0; j<size; j++) a[j] += b[j] + SCALAR*c[j];
   return;
@@ -87,21 +94,23 @@ void private_stream(double *a, double *b, double *c, int size) {
  
 int main(int argc, char ** argv)
 {
-  long       iterations;      /* total number of reference pair counter updates */
-  long       stream_size;     /* length of stream triad creating private work   */ 
+  size_t     iterations;      /* number of rounds of counter pair updates       */
+  size_t     stream_size;     /* length of stream triad creating private work   */ 
+  size_t     updates;         /* total number of counter pair updates           */
   int        page_fit;        /* indicates that counters fit on different pages */
   size_t     store_size;      /* amount of space reserved for counters          */
-  double     *pcounter1,     
+  DTYPE      *pcounter1,     
              *pcounter2;      /* pointers to counters                           */
   double     cosa, sina;      /* cosine and sine of rotation angle              */
-  double     *counter_space;  /* pointer to space reserved for counters         */
-  double     refcounter1,
+  DTYPE      *counter_space;  /* pointer to space reserved for counters         */
+  DTYPE      refcounter1,
              refcounter2;     /* reference values for counters                  */
   double     epsilon=1.e-7;   /* required accuracy                              */
-  omp_lock_t counter_lock;    /* lock that guards access to counters            */
+  omp_lock_t *pcounter_lock;  /* pointer to lock that guards access to counters */
   double     refcount_time;   /* timing parameter                               */
-  int        nthread_input;   /* thread parameters                              */
-  int        nthread; 
+  int        nthread_input;   /* number of threads requested                    */
+  int        nthread;         /* actual number of threads used                  */
+  int        error=0;         /* global errors                                  */
  
 /*********************************************************************
 ** process and test input parameters    
@@ -127,74 +136,51 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
 
+#if !STREAM
+  stream_size=0;
+#else
   stream_size = atol(*++argv);
   if (stream_size < 0) {
     printf("ERROR: private stream size %ld must be non-negative\n", stream_size);
     exit(EXIT_FAILURE);
   }
+#endif
  
   omp_set_num_threads(nthread_input);
-   
-  /* initialize shared counters; we put them on different pages, if possible.
-     If the page size equals the whole memory, this will fail, and we reduce
-     the space required */
-  page_fit = 1;
-  store_size = (size_t) getpagesize();
-#ifdef VERBOSE
-  printf("Page size = %d\n", getpagesize());
-#endif
-  counter_space = (double *) prk_malloc(store_size+sizeof(double));
-  while (!counter_space && store_size>2*sizeof(double)) {
-    page_fit=0;
-
-    store_size/=2;
-    counter_space = (double *) prk_malloc(store_size+sizeof(double));
-  }
-  if (!counter_space) {
-    printf("ERROR: could not allocate space for counters\n");
-    exit(EXIT_FAILURE);
-  }
- 
-#ifdef VERBOSE
-  if (!page_fit) printf("Counters do not fit on different pages\n");      
-  else           printf("Counters fit on different pages\n");      
-#endif
-   
-  pcounter1 = counter_space;
-  pcounter2 = counter_space + store_size/sizeof(double);
-
-  COUNTER1 = 1.0;
-  COUNTER2 = 0.0;
 
   cosa = cos(1.0);
   sina = sin(1.0);
  
-  /* initialize the lock on which we will be pounding */
-  omp_init_lock(&counter_lock);
- 
+#if !CONTENDED
+  #pragma omp parallel private(pcounter1,pcounter2,counter_space,\
+                               pcounter_lock, page_fit,store_size)
+#else
   #pragma omp parallel 
+#endif
   {
-  long   iter, j;   /* dummies                                        */
+  size_t   iter, j;   /* dummies                                        */
   double tmp1;      /* local copy of previous value of COUNTER1       */
   double *a, *b, *c;/* private vectors                                */
   int    num_error=0;/* errors in private stream execution            */
   double aj, bj, cj;
-  long space;
-  space = 3*sizeof(double)*stream_size;
-  a = (double *) prk_malloc(space);
-  if (!a) {
-    printf("ERROR: Could not allocate %ld words for private streams\n", 
-           space);
-    exit(EXIT_FAILURE);
+  DTYPE refcounter1, refcounter2;
+
+  if (stream_size) {
+    a = (double *) prk_malloc(3*sizeof(double)*stream_size);
+    if (!a) {
+      printf("ERROR: Could not allocate %ld words for private streams\n", 
+             3*sizeof(double)*stream_size);
+      exit(EXIT_FAILURE);
+    }
+    b = a + stream_size;
+    c = b + stream_size;
+    for (j=0; j<stream_size; j++) {
+      a[j] = A0;
+      b[j] = B0;
+      c[j] = C0;
+    }
   }
-  b = a + stream_size;
-  c = b + stream_size;
-  for (j=0; j<stream_size; j++) {
-    a[j] = A0;
-    b[j] = B0;
-    c[j] = C0;
-  }
- 
+
   #pragma omp master
   {
   nthread = omp_get_num_threads();
@@ -208,101 +194,188 @@ int main(int argc, char ** argv)
     printf("Number of threads              = %d\n",nthread_input);
     printf("Number of counter pair updates = %ld\n", iterations);
     printf("Length of private stream       = %ld\n", stream_size);
-#ifdef DEPENDENT
-    printf("Dependent counter pair update\n");
+#if CONTENDED
+    printf("Counter access                 = contended\n");
 #else
-    printf("Independent counter pair updates using");
-  #ifdef ATOMIC
-    printf(" atomic operations\n");
-  #else
-    printf(" using locks\n");
-  #endif
+    printf("Counter access                 = uncontended\n");
+#endif
+#if DEPENDENT
+    printf("Counter pair update type       = dependent\n");
+#else
+    printf("Counter pair update type       = independent\n");
+#endif
+#if INTEGER
+    printf("Counter data type              = integer\n");
+#else
+    printf("Counter data type              = floating point\n");
+#endif
+#if LOCK==2
+    printf("Mutex type                     = lock\n");
+#elif LOCK==1
+    printf("Mutex type                     = atomic\n");
+#else
+    printf("Mutex type                     = none\n");
 #endif
   }
   }
   bail_out(num_error);
+
+#if CONTENDED
+  /* we use single instead of master to force an implied barrier upon exit */
+  #pragma omp single
+  {
+#endif
+  /* initialize reference counters; we put them on different pages, if possible.
+     If the page size equals the whole memory, this will fail, and we reduce
+     the space required */
+  page_fit = 1;
+  store_size = (size_t) getpagesize();
+#ifdef VERBOSE
+  printf("Page size = %d\n", getpagesize());
+#endif
+
+  counter_space = (DTYPE *) prk_malloc(store_size+sizeof(DTYPE)+sizeof(omp_lock_t));
+  while (!counter_space && store_size>2*sizeof(DTYPE)) {
+    page_fit=0;
+
+    store_size/=2;
+    counter_space = (DTYPE *) prk_malloc(store_size+sizeof(DTYPE)+sizeof(omp_lock_t));
+  }
+  if (!counter_space) {
+    printf("ERROR: could not allocate space for counters\n");
+    exit(EXIT_FAILURE);
+  }
  
+#ifdef VERBOSE
+  if (!page_fit) printf("Counters do not fit on different pages\n");      
+  else           printf("Counters fit on different pages\n");      
+#endif
+   
+  pcounter1     = counter_space;
+  pcounter2     = counter_space + store_size/sizeof(DTYPE);
+  pcounter_lock = (omp_lock_t *)((char *)pcounter2+sizeof(DTYPE));
+
+  COUNTER1 = 1.0;
+  COUNTER2 = 0.0;
+
+  /* initialize the lock on which we will be pounding */
+#if LOCK==2
+  omp_init_lock(pcounter_lock);
+#endif
+
+#if CONTENDED
+  }
+#endif
+
   /* do one warmup iteration outside main loop to avoid overhead      */
-#ifdef DEPENDENT
-  omp_set_lock(&counter_lock);
+#if DEPENDENT
+  #if LOCK==2
+  omp_set_lock(pcounter_lock);
+  #endif
   tmp1 = COUNTER1;
   COUNTER1 = cosa*tmp1 - sina*COUNTER2;
   COUNTER2 = sina*tmp1 + cosa*COUNTER2;
-  omp_unset_lock(&counter_lock);
+  #if LOCK==2
+  omp_unset_lock(pcounter_lock);
+  #endif
 #else
-  #ifndef ATOMIC
-    omp_set_lock(&counter_lock);
-  #else
-    #pragma omp atomic
-  #endif
+  #if LOCK==2
+    omp_set_lock(pcounter_lock);
     COUNTER1++;
-  #ifdef ATOMIC
-    #pragma omp atomic
-  #endif
     COUNTER2++;
-  #ifndef ATOMIC
-    omp_unset_lock(&counter_lock);
+    omp_unset_lock(pcounter_lock);
+  #elif LOCK==1
+    #pragma omp atomic
+    COUNTER1++;
+    #pragma omp atomic
+    COUNTER2++;
+  #else
+    COUNTER1++;
+    COUNTER2++;
   #endif
 #endif
-  /* give each thread some (overlappable) work to do                */
-  private_stream(a, b, c, stream_size);
 
-  #pragma omp master
+#if STREAM
+  /* give each thread independent work to do                          */
+  private_stream(a, b, c, stream_size);
+#endif
+
+  #pragma omp single
   {
   refcount_time = wtime();
   }
- 
+
+#if CONTENDED 
   #pragma omp for
-  /* start with iteration nthread to take into account pre-loop iter  */
+  /* skip some iterations to take into account pre-loop iter  */
   for (iter=nthread; iter<=iterations; iter++) { 
-#ifdef DEPENDENT
-    omp_set_lock(&counter_lock);
+#else
+  for (iter=1; iter<=iterations; iter++) { 
+#endif
+
+#if DEPENDENT
+  #if LOCK==2
+    omp_set_lock(pcounter_lock);
+  #endif
     tmp1 = COUNTER1;
     COUNTER1 = cosa*tmp1 - sina*COUNTER2;
     COUNTER2 = sina*tmp1 + cosa*COUNTER2;
-    omp_unset_lock(&counter_lock);
+  #if LOCK==2
+    omp_unset_lock(pcounter_lock);
+  #endif
 #else
-  #ifndef ATOMIC
-    omp_set_lock(&counter_lock);
-  #else
-    #pragma omp atomic
-  #endif
+  #if LOCK==2
+    omp_set_lock(pcounter_lock);
     COUNTER1++;
-  #ifdef ATOMIC
-    #pragma omp atomic
-  #endif
     COUNTER2++;
-  #ifndef ATOMIC
-    omp_unset_lock(&counter_lock);
+    omp_unset_lock(pcounter_lock);
+  #elif LOCK==1
+    #pragma omp atomic
+    COUNTER1++;
+    #pragma omp atomic
+    COUNTER2++;
+  #else
+    COUNTER1++;
+    COUNTER2++;
   #endif
 #endif
+
+#if STREAM
     /* give each thread some (overlappable) work to do                */
     private_stream(a, b, c, stream_size);
+#endif
   }
- 
-  #pragma omp master 
+
+  #pragma omp single
   { 
   refcount_time = wtime() - refcount_time;
   }
 
   /* check whether the private work has been done correctly           */
   aj = A0; bj = B0; cj = C0;
+#if CONTENDED
   #pragma omp for
+#endif
   for (iter=0; iter<=iterations; iter++) {
     aj += bj + SCALAR*cj;
   }
+
   for (j=0; j<stream_size; j++) {
     num_error += MAX(ABS(a[j]-aj)>epsilon,num_error);
   }
+
   if (num_error>0) {
     printf("ERROR: Thread %d encountered errors in private work\n",
            omp_get_thread_num());           
   }
   bail_out(num_error);
-
-  } /* end of OpenMP parallel region */
  
-#ifdef DEPENDENT
+#if CONTENDED
+#pragma omp master
+  {
+#endif
+
+#if DEPENDENT
   refcounter1 = cos(iterations+1);
   refcounter2 = sin(iterations+1);
 #else
@@ -314,17 +387,35 @@ int main(int argc, char ** argv)
      printf("ERROR: Incorrect or inconsistent counter values %13.10lf %13.10lf; ",
             COUNTER1, COUNTER2);
      printf("should be %13.10lf, %13.10lf\n", refcounter1, refcounter2);
+     num_error = 1;
   }
-  else {
+#if !CONTENDED
+  for (int t=0; t<nthread; t++) {
+    if (omp_get_thread_num()==t) error = MAX(error,num_error);
+  }
+#else
+  error = num_error;
+#endif
+#if CONTENDED
+  }
+#endif
+  } /* end of OpenMP parallel region */
+ 
+  if (!error) {
 #ifdef VERBOSE
     printf("Solution validates; Correct counter values %13.10lf %13.10lf\n", 
            COUNTER1, COUNTER2);
 #else
     printf("Solution validates\n");
 #endif
+#if CONTENDED
+    updates=iterations;
+#else
+    updates=iterations*nthread;
+#endif
     printf("Rate (MCPUPs/s): %lf time (s): %lf\n", 
-           iterations/refcount_time*1.e-6, refcount_time);
+           updates/refcount_time*1.e-6, refcount_time);
   }
- 
-  exit(EXIT_SUCCESS);
+
+   exit(EXIT_SUCCESS);
 }

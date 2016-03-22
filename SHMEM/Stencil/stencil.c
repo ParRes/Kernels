@@ -77,10 +77,10 @@ HISTORY: - Written by Tom St. John, July 2015.
 #endif
  
 /* define shorthand for indexing multi-dimensional arrays with offsets           */
-#define INDEXIN(i,j)  (i+RADIUS+(j+RADIUS)*(width+2*RADIUS))
+#define INDEXIN(i,j)  (i+RADIUS+(j+RADIUS)*(width[0]+2*RADIUS))
 /* need to add offset of RADIUS to j to account for ghost points                 */
 #define IN(i,j)       in[INDEXIN(i-istart,j-jstart)]
-#define INDEXOUT(i,j) (i+(j)*(width))
+#define INDEXOUT(i,j) (i+(j)*(width[0]))
 #define OUT(i,j)      out[INDEXOUT(i-istart,j-jstart)]
 #define WEIGHT(ii,jj) weight[ii+RADIUS][jj+RADIUS]
 
@@ -103,7 +103,9 @@ int main(int argc, char ** argv) {
   DTYPE *left_buf_out;    /*       "         "                                   */
   DTYPE *left_buf_in[2];  /*       "         "                                   */
   int    root = 0;
-  int    n, width, height;/* linear global and local grid dimension              */
+  int    *width, *height, /* linear global and local grid dimension              */
+         *maxwidth, *maxheight;
+  int    n;
   int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
   int    jstart, jend;    /* bounds of grid tile assigned to calling rank        */
@@ -126,6 +128,7 @@ int main(int argc, char ** argv) {
   long   *pSync_reduce;   /* work space for collectives                          */
   double *pWrk_time;      /* work space for collectives                          */
   DTYPE  *pWrk_norm;      /* work space for collectives                          */
+  int    *pWrk_dim;       /* work space for collectives                          */
   int    *iterflag;       /* synchronization flags                               */
   int    sw;              /* double buffering switch                             */
   DTYPE  *local_norm, *norm; /* local and global error norms                     */
@@ -142,11 +145,17 @@ int main(int argc, char ** argv) {
   pSync_reduce       = (long *)   prk_shmem_align(prk_get_alignment(),PRK_SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
   pWrk_time          = (double *) prk_shmem_align(prk_get_alignment(),PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE*sizeof(double));
   pWrk_norm          = (DTYPE *)  prk_shmem_align(prk_get_alignment(),PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE*sizeof(DTYPE));
+  pWrk_dim           = (int *)    prk_shmem_align(prk_get_alignment(),PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE*sizeof(int));
   local_stencil_time = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double));
   stencil_time       = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double));
   local_norm         = (DTYPE *)  prk_shmem_align(prk_get_alignment(),sizeof(DTYPE));
   norm               = (DTYPE *)  prk_shmem_align(prk_get_alignment(),sizeof(DTYPE));
   iterflag           = (int *)    prk_shmem_align(prk_get_alignment(),2*sizeof(int));
+  width              = (int *)    prk_shmem_align(prk_get_alignment(),sizeof(int));
+  maxwidth           = (int *)    prk_shmem_align(prk_get_alignment(),sizeof(int));
+  height             = (int *)    prk_shmem_align(prk_get_alignment(),sizeof(int));
+  maxheight          = (int *)    prk_shmem_align(prk_get_alignment(),sizeof(int));
+
   if (!(pSync_bcast && pSync_reduce && pWrk_time && pWrk_norm && iterflag &&
 	local_stencil_time && stencil_time && local_norm && norm))
   {
@@ -278,65 +287,73 @@ int main(int argc, char ** argv) {
  
   /* compute amount of space required for input and solution arrays             */
   
-  width = n/Num_procsx;
+  width[0] = n/Num_procsx;
   leftover = n%Num_procsx;
   if (my_IDx<leftover) {
-    istart = (width+1) * my_IDx; 
-    iend = istart + width + 1;
+    istart = (width[0]+1) * my_IDx; 
+    iend = istart + width[0] + 1;
   }
   else {
-    istart = (width+1) * leftover + width * (my_IDx-leftover);
-    iend = istart + width;
+    istart = (width[0]+1) * leftover + width[0] * (my_IDx-leftover);
+    iend = istart + width[0];
   }
   
-  width = iend - istart + 1;
-  if (width == 0) {
+  width[0] = iend - istart + 1;
+  if (width[0] == 0) {
     printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
   bail_out(error);
  
-  height = n/Num_procsy;
+  height[0] = n/Num_procsy;
   leftover = n%Num_procsy;
   if (my_IDy<leftover) {
-    jstart = (height+1) * my_IDy; 
-    jend = jstart + height + 1;
+    jstart = (height[0]+1) * my_IDy; 
+    jend = jstart + height[0] + 1;
   }
   else {
-    jstart = (height+1) * leftover + height * (my_IDy-leftover);
-    jend = jstart + height;
+    jstart = (height[0]+1) * leftover + height[0] * (my_IDy-leftover);
+    jend = jstart + height[0];
   }
   
-  height = jend - jstart + 1;
+  height[0] = jend - jstart + 1;
   if (height == 0) {
     printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
   bail_out(error);
  
-  if (width < RADIUS || height < RADIUS) {
+  if (width[0] < RADIUS || height[0] < RADIUS) {
     printf("ERROR: rank %d has work tile smaller then stencil radius\n",
            my_ID);
     error = 1;
   }
   bail_out(error);
  
-  total_length_in = (width+2*RADIUS);
-  total_length_in *= (height+2*RADIUS);
+  total_length_in = (width[0]+2*RADIUS);
+  total_length_in *= (height[0]+2*RADIUS);
   total_length_in *= sizeof(DTYPE);
 
-  total_length_out = width;
-  total_length_out *= height;
+  total_length_out = width[0];
+  total_length_out *= height[0];
   total_length_out *= sizeof(DTYPE);
  
-  in  = (DTYPE *) prk_malloc(total_length_in);
-  out = (DTYPE *) prk_malloc(total_length_out);
+  in  = (DTYPE *) prk_shmem_malloc(total_length_in);
+  out = (DTYPE *) prk_shmem_malloc(total_length_out);
   if (!in || !out) {
     printf("ERROR: rank %d could not allocate space for input/output array\n",
             my_ID);
     error = 1;
   }
   bail_out(error);
+
+  shmem_barrier_all();
+
+  shmem_int_max_to_all(&maxwidth[0], &width[0], 1, 0, 0, Num_procs, pWrk_dim, pSync_reduce);
+
+  shmem_barrier_all();
+
+  shmem_int_max_to_all(&maxheight[0], &height[0], 1, 0, 0, Num_procs, pWrk_dim, pSync_reduce);
  
   /* fill the stencil weights to reflect a discrete divergence operator         */
   for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++)
@@ -358,43 +375,44 @@ int main(int argc, char ** argv) {
   }
 
   /* allocate communication buffers for halo values                            */
-  top_buf_out=(DTYPE*)prk_malloc(2*sizeof(DTYPE)*RADIUS*width);
+  top_buf_out=(DTYPE*)prk_shmem_malloc(2*sizeof(DTYPE)*RADIUS*maxwidth[0]);
   if (!top_buf_out) {
     printf("ERROR: Rank %d could not allocate output comm buffers for y-direction\n", my_ID);
     error = 1;
   }
   bail_out(error);
-  bottom_buf_out = top_buf_out+RADIUS*width;
+  bottom_buf_out = top_buf_out+RADIUS*maxwidth[0];
 
-  top_buf_in[0]=(DTYPE*)prk_shmem_align(prk_get_alignment(),4*sizeof(DTYPE)*RADIUS*width);
+  top_buf_in[0]=(DTYPE*)prk_shmem_align(prk_get_alignment(),4*sizeof(DTYPE)*RADIUS*maxwidth[0]);
   if(!top_buf_in)
   {
     printf("ERROR: Rank %d could not allocate input comm buffers for y-direction\n", my_ID);
     error=1;
   }
   bail_out(error);
-  top_buf_in[1]    = top_buf_in[0]    + RADIUS*width;
-  bottom_buf_in[0] = top_buf_in[1]    + RADIUS*width;
-  bottom_buf_in[1] = bottom_buf_in[0] + RADIUS*width;
+
+  top_buf_in[1]    = top_buf_in[0]    + RADIUS*maxwidth[0];
+  bottom_buf_in[0] = top_buf_in[1]    + RADIUS*maxwidth[0];
+  bottom_buf_in[1] = bottom_buf_in[0] + RADIUS*maxwidth[0];
  
-  right_buf_out=(DTYPE*)prk_malloc(2*sizeof(DTYPE)*RADIUS*height);
+  right_buf_out=(DTYPE*)prk_shmem_malloc(2*sizeof(DTYPE)*RADIUS*maxheight[0]);
   if (!right_buf_out) {
     printf("ERROR: Rank %d could not allocate output comm buffers for x-direction\n", my_ID);
     error = 1;
   }
   bail_out(error);
-  left_buf_out=right_buf_out+RADIUS*height;
+  left_buf_out=right_buf_out+RADIUS*maxheight[0];
 
-  right_buf_in[0]=(DTYPE*)prk_shmem_align(prk_get_alignment(),4*sizeof(DTYPE)*RADIUS*height);
+  right_buf_in[0]=(DTYPE*)prk_shmem_align(prk_get_alignment(),4*sizeof(DTYPE)*RADIUS*maxheight[0]);
   if(!right_buf_in)
   {
     printf("ERROR: Rank %d could not allocate input comm buffers for x-dimension\n", my_ID);
     error=1;
   }
   bail_out(error);
-  right_buf_in[1] = right_buf_in[0] + RADIUS*height;
-  left_buf_in[0]  = right_buf_in[1] + RADIUS*height;
-  left_buf_in[1]  = left_buf_in[0]  + RADIUS*height;
+  right_buf_in[1] = right_buf_in[0] + RADIUS*maxheight[0];
+  left_buf_in[0]  = right_buf_in[1] + RADIUS*maxheight[0];
+  left_buf_in[1]  = left_buf_in[0]  + RADIUS*maxheight[0];
 
   /* make sure all symmetric heaps are allocated before being used  */
   shmem_barrier_all();
@@ -415,7 +433,7 @@ int main(int argc, char ** argv) {
       for (kk=0,j=jend-RADIUS; j<=jend-1; j++) for (i=istart; i<=iend; i++) {
           top_buf_out[kk++]= IN(i,j);
       }
-      shmem_putmem(bottom_buf_in[sw], top_buf_out, RADIUS*width*sizeof(DTYPE), top_nbr);
+      shmem_putmem(bottom_buf_in[sw], top_buf_out, RADIUS*width[0]*sizeof(DTYPE), top_nbr);
 #if SPLITFENCE
       shmem_fence();
       shmem_int_inc(&iterflag[sw], top_nbr);
@@ -425,7 +443,7 @@ int main(int argc, char ** argv) {
       for (kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (i=istart; i<=iend; i++) {
           bottom_buf_out[kk++]= IN(i,j);
       }
-      shmem_putmem(top_buf_in[sw], bottom_buf_out, RADIUS*width*sizeof(DTYPE), bottom_nbr);
+      shmem_putmem(top_buf_in[sw], bottom_buf_out, RADIUS*width[0]*sizeof(DTYPE), bottom_nbr);
 #if SPLITFENCE
       shmem_fence();
       shmem_int_inc(&iterflag[sw], bottom_nbr);
@@ -436,7 +454,7 @@ int main(int argc, char ** argv) {
       for(kk=0,j=jstart;j<=jend;j++) for(i=iend-RADIUS;i<=iend-1;i++) {
 	right_buf_out[kk++]=IN(i,j);
       }
-      shmem_putmem(left_buf_in[sw], right_buf_out, RADIUS*height*sizeof(DTYPE), right_nbr);
+      shmem_putmem(left_buf_in[sw], right_buf_out, RADIUS*height[0]*sizeof(DTYPE), right_nbr);
 #if SPLITFENCE
       shmem_fence();
       shmem_int_inc(&iterflag[sw], right_nbr);
@@ -447,7 +465,7 @@ int main(int argc, char ** argv) {
       for(kk=0,j=jstart;j<=jend;j++) for(i=istart;i<=istart+RADIUS-1;i++) {
 	left_buf_out[kk++]=IN(i,j);
       }
-      shmem_putmem(right_buf_in[sw], left_buf_out, RADIUS*height*sizeof(DTYPE), left_nbr);
+      shmem_putmem(right_buf_in[sw], left_buf_out, RADIUS*height[0]*sizeof(DTYPE), left_nbr);
 #if SPLITFENCE
       shmem_fence();
       shmem_int_inc(&iterflag[sw], left_nbr);
@@ -563,17 +581,21 @@ int main(int argc, char ** argv) {
     printf("Rate (MFlops/s): "FSTR"  Avg time (s): %lf\n",
            1.0E-06 * flops/avgtime, avgtime);
   }
- 
 
-  prk_shmem_free(top_buf_in);
-  prk_shmem_free(right_buf_in);
-  free(top_buf_out);
-  free(right_buf_out);
-
+  prk_shmem_free(top_buf_in[0]);
+  prk_shmem_free(right_buf_in[0]);
+  prk_shmem_free(top_buf_out);
+  prk_shmem_free(right_buf_out);
+  
   prk_shmem_free(pSync_bcast);
   prk_shmem_free(pSync_reduce);
   prk_shmem_free(pWrk_time);
   prk_shmem_free(pWrk_norm);
+  prk_shmem_free(pWrk_dim);
+  prk_shmem_free(width);
+  prk_shmem_free(height);
+  prk_shmem_free(maxwidth);
+  prk_shmem_free(maxheight);
 
   prk_shmem_finalize();
 

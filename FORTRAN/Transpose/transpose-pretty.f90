@@ -72,9 +72,8 @@ program main
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
-  integer(kind=INT32) ::  i, j, k
-  integer(kind=INT32) ::  it, jt, tile_size
-  real(kind=REAL64) ::  abserr, addit, temp         ! squared error
+  integer(kind=INT32) ::  i, k
+  real(kind=REAL64) ::  abserr                      ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
 
@@ -150,7 +149,8 @@ program main
 
   ! we reuse A here as the reference matrix, to compute the error
   A = ( transpose(reshape((/ (i, i = 0,order**2) /),(/order, order/))) &
-        * real(iterations+1,REAL64) ) + (0.5*iterations) * (iterations+1.0)
+        * real(iterations+1,REAL64) ) &
+      + real((iterations*(iterations+1))/2,REAL64)
   abserr = norm2(A-B)
 
   deallocate( B )
