@@ -4,7 +4,7 @@
 
 # License
 
-See LICENSE for licensing information.
+See COPYING for licensing information.
 
 # Overview
 
@@ -58,9 +58,11 @@ The suite is currently being extended to include
 MPI+OpenMP, 
 [OpenSHMEM](http://openshmem.org/), UPC, and
 [Grappa](http://grappa.io/), 
-as well as two new variations of MPI: 
+Fortran with Co-Arrays,
+as well as three new variations of MPI: 
   1. MPI with one-sided communications (MPIRMA) 
   2. MPI with direct use of shared memory inside coherency domains (MPISHM)
+  3. MPI with OpenMP inside coherency domains (MPIOPENMP)
 These extensions are not yet complete.
 
 ## Global make
