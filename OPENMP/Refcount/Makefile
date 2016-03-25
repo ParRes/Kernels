@@ -57,28 +57,22 @@ endif
 
 ifeq ($(DEPENDENT),1)
   override INTEGER=0
-  ifeq ($(CONTENDED),1)
+endif
+#dependent updates require floating point
+
+ifeq ($(CONTENDED),1)
+  ifeq ($(DEPENDENT),1)
     override LOCK=2
   else
-    ifeq ($(LOCK),1)
-      override LOCK=2
-    endif
+    override LOCK=1
   endif
 endif
 
-<<<<<<< HEAD
 PROGRAM      = refcount
-=======
-PROGRAM     = refcount
-ifndef NAME
-  NAME=$(PROGRAM)
-endif
 
->>>>>>> 2c3aac5f500f7135827657f97bc6d9c9fac8d8fc
 DEPENDENTFLAG=-DDEPENDENT=$(DEPENDENT)
 INTEGERFLAG  =-DINTEGER=$(INTEGER)
 CONTENDEDFLAG=-DCONTENDED=$(CONTENDED)
-<<<<<<< HEAD
 LOCKFLAG     =-DLOCK=$(LOCK)
 STREAMFLAG   =-DSTREAM=$(STREAM)
 VERBOSEFLAG  =-DVERBOSE=$(VERBOSE)
@@ -92,20 +86,6 @@ OPTIONSSTRING="Make options:\n\
  STREAM=0/1     disallow/allow independent thread work       [1]  \n\
  MAXTHREADS=?   sett maximum number of OpenMP threads        [256]\n\
  VERBOSE=0/1    omit/include verbose run information         [0]"
-=======
-LOCKFLAG=-DLOCK=$(LOCK)
-STREAMFLAG=-DSTREAM=$(STREAM)
-VERBOSEFLAG=-DVERBOSE=$(VERBOSE)
-
-OPTIONSSTRING="Make options:\n\
- CONTENDED=0/1  for uncontended/contended counters               [1]\n\
- LOCK=0/1/2     for no locks/atomics/OpenMP locks                [2]\n\
- INTEGER=0/1    for counter data type integer/floating point     [0]\n\
- DEPENDENT=0/1  for independent/intertwined counter pair updates [0]\n\
- STREAM=0/1     for disallowing/allowing independent thread work [1]\n\
- NAME=name      for specifying an alternate name for executable  [$(PROGRAM)]\n\
- VERBOSE=0/1    for omitting/including verbose run information   [0]"
->>>>>>> 2c3aac5f500f7135827657f97bc6d9c9fac8d8fc
 
 TUNEFLAGS    = $(DEPENDENTFLAG) $(NTHREADFLAG) $(USERFLAGS)  $(LOCKFLAG)\
                $(INTEGERFLAG) $(CONTENDEDFLAG) $(STREAMFLAG) $(VERBOSEFLAG)

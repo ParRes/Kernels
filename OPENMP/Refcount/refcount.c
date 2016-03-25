@@ -193,7 +193,11 @@ int main(int argc, char ** argv)
   else {
     printf("Number of threads              = %d\n",nthread_input);
     printf("Number of counter pair updates = %ld\n", iterations);
+#if STREAM
     printf("Length of private stream       = %ld\n", stream_size);
+#else
+    printf("Private stream disabled\n");
+#endif
 #if CONTENDED
     printf("Counter access                 = contended\n");
 #else
