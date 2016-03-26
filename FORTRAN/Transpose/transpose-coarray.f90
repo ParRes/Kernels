@@ -119,22 +119,27 @@ program main
   iterations = 1
   call get_command_argument(1,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') iterations
-  ! disable to allow me to run "0" = 1 iteration
-  !if (iterations .lt. 1) then
-  !  write(6,'(a35,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-  !  stop 1
-  !endif
+  if (iterations .lt. 1) then
+    if (printer) then
+      write(6,'(a35,i5)') 'ERROR: iterations must be >= 1 : ', iterations
+    endif
+    stop 1
+  endif
 
   order = 1
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') order
   if (order .lt. 1) then
-    write(6,'(a30,i5)') 'ERROR: order must be >= 1 : ', order
+    if (printer) then
+      write(6,'(a30,i5)') 'ERROR: order must be >= 1 : ', order
+    endif
     stop 1
   endif
   if (modulo(order,npes).gt.0) then
-    write(6,'(a20,i5,a35,i5)') 'ERROR: matrix order ',order,&
-                      ' should be divisible by # images ',npes
+    if (printer) then
+      write(6,'(a20,i5,a35,i5)') 'ERROR: matrix order ',order,&
+                        ' should be divisible by # images ',npes
+    endif
     stop 1
   endif
   col_per_pe = order/npes

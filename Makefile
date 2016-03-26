@@ -194,18 +194,18 @@ allserial:
 allfortran: allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
 
 allfortranserial:
-	cd FORTRAN/Stencil;         $(MAKE) stencil
 	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
+	cd FORTRAN/Stencil;         $(MAKE) stencil
 	cd FORTRAN/Transpose;       $(MAKE) transpose
 
 allfortranopenmp:
-	cd FORTRAN/Stencil;         $(MAKE) stencil-omp
 	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-omp
+	cd FORTRAN/Stencil;         $(MAKE) stencil-omp
 	cd FORTRAN/Transpose;       $(MAKE) transpose-omp
 
 allfortrancoarray:
-	cd FORTRAN/Stencil;         $(MAKE) stencil-coarray
 	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-coarray
+	cd FORTRAN/Stencil;         $(MAKE) stencil-coarray
 	cd FORTRAN/Transpose;       $(MAKE) transpose-coarray
 
 allfortranpretty:
