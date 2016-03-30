@@ -113,7 +113,7 @@ o The original and transposed matrices are called A and B
 
 #define A(i,j)        A_p[(i+istart)+order*(j)]
 #define B(i,j)        B_p[(i+istart)+order*(j)]
-#define Work_in(phase, i,j)  Work_in_p[phase-1][i+Block_order*(j)]
+#define Work_in(targetBuffer, i,j)  Work_in_p[targetBuffer][i+Block_order*(j)]
 #define Work_out(i,j) Work_out_p[i+Block_order*(j)]
 
 int main(int argc, char ** argv)
@@ -125,6 +125,8 @@ int main(int argc, char ** argv)
   int tiling;              /* boolean: true if tiling is used       */
   int Num_procs;           /* number of ranks                       */
   int order;               /* order of overall matrix               */
+  int bufferCount;         /* number of input buffers               */
+  int targetBuffer;        /* buffer with which to communicate      */
   int send_to, recv_from;  /* ranks with which to communicate       */
   long bytes;              /* combined size of matrices             */
   int my_ID;               /* rank                                  */
@@ -148,7 +150,8 @@ int main(int argc, char ** argv)
          *trans_time;      /* timing parameters                     */
   double *abserr, 
          *abserr_tot;      /* local and aggregate error             */
-  int    *recv_flag;       /* synchronization flags                 */
+  int    *send_flag,
+         *recv_flag;       /* synchronization flags                 */
   int    *arguments;       /* command line arguments                */
 
 /*********************************************************************
@@ -170,7 +173,7 @@ int main(int argc, char ** argv)
   pWrk             = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double) * PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE);
   local_trans_time = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double));
   trans_time       = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double));
-  arguments        = (int *)    prk_shmem_align(prk_get_alignment(),3*sizeof(int));
+  arguments        = (int *)    prk_shmem_align(prk_get_alignment(),4*sizeof(int));
   abserr           = (double *) prk_shmem_align(prk_get_alignment(),2*sizeof(double));
   abserr_tot       = abserr + 1;
   if (!pSync_bcast || !pSync_reduce || !pWrk || !local_trans_time ||
@@ -191,8 +194,8 @@ int main(int argc, char ** argv)
 *********************************************************************/
   error = 0;
   if (my_ID == root) {
-    if (argc != 3 && argc != 4){
-      printf("Usage: %s <# iterations> <matrix order> [Tile size]\n",
+    if (argc != 4 && argc != 5){
+      printf("Usage: %s <# iterations> <matrix order> <# buffers> [Tile size]\n",
                                                                *argv);
       error = 1; goto ENDOFTESTS;
     }
@@ -217,8 +220,15 @@ int main(int argc, char ** argv)
       error = 1; goto ENDOFTESTS;
     }
 
-    if (argc == 4) Tile_order = atoi(*++argv);
-    arguments[2]=Tile_order;
+    bufferCount = atoi(*++argv);
+    arguments[2]=bufferCount;
+    if ((bufferCount < 1) || (bufferCount >= Num_procs)) {
+      printf("ERROR: bufferCount must be >= 1 and < # procs : %d\n", bufferCount);
+      error = 1; goto ENDOFTESTS;
+    }
+
+    if (argc == 5) Tile_order = atoi(*++argv);
+    arguments[3]=Tile_order;
 
     ENDOFTESTS:;
   }
@@ -228,6 +238,7 @@ int main(int argc, char ** argv)
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
     printf("Number of iterations = %d\n", iterations);
+    printf("Number of buffers    = %d\n", bufferCount);
     if ((Tile_order > 0) && (Tile_order < order))
           printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
@@ -240,7 +251,8 @@ int main(int argc, char ** argv)
 
   iterations=arguments[0];
   order=arguments[1];
-  Tile_order=arguments[2];
+  bufferCount=arguments[2];
+  Tile_order=arguments[3];
 
   shmem_barrier_all();
   prk_shmem_free(arguments);
@@ -279,16 +291,17 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (Num_procs>1) {
-    Work_in_p   = (double**)prk_malloc((Num_procs-1)*sizeof(double));
+    Work_in_p   = (double**)prk_malloc(bufferCount*sizeof(double));
 
     Work_out_p = (double *) prk_shmem_align(prk_get_alignment(),Block_size*sizeof(double));
-    recv_flag  = (int*)     prk_shmem_align(prk_get_alignment(),(Num_procs-1)*sizeof(int));
+    send_flag  = (int*)     prk_shmem_align(prk_get_alignment(),(Num_procs-1)*sizeof(int));
+    recv_flag  = (int*)     prk_shmem_align(prk_get_alignment(),bufferCount*sizeof(int));
     if ((Work_in_p == NULL)||(Work_out_p==NULL) || (recv_flag == NULL)){
       printf(" Error allocating space for work or flags on node %d\n",my_ID);
       error = 1;
     }
     bail_out(error);
-    for(i=0;i<(Num_procs-1);i++) {
+    for(i=0;i<bufferCount;i++) {
       Work_in_p[i]=(double *) prk_shmem_align(prk_get_alignment(),Block_size*sizeof(double));
       if (Work_in_p[i] == NULL) {
         printf(" Error allocating space for work on node %d\n",my_ID);
@@ -296,6 +309,9 @@ int main(int argc, char ** argv)
       }
       bail_out(error);
     }
+
+    for(i=0;i<bufferCount;i++)
+      send_flag[i]=0;
 
     for(i=0;i<Num_procs-1;i++)
       recv_flag[i]=0;
@@ -307,6 +323,13 @@ int main(int argc, char ** argv)
     for (i=0;i<order; i++)  {
       A(i,j) = (double) (order*(j+colstart) + i);
       B(i,j) = 0.0;
+  }
+
+  shmem_barrier_all();
+
+  for ( i = 0; i < bufferCount; i++) {
+    recv_from = (my_ID + i + 1)%Num_procs;
+    shmem_int_inc(&send_flag[i], recv_from);
   }
 
   shmem_barrier_all();
@@ -342,6 +365,8 @@ int main(int argc, char ** argv)
       recv_from = (my_ID + phase            )%Num_procs;
       send_to   = (my_ID - phase + Num_procs)%Num_procs;
 
+      targetBuffer = (iter * (Num_procs - 1) + (phase - 1)) % bufferCount;
+
       istart = send_to*Block_order; 
       if (!tiling) {
         for (i=0; i<Block_order; i++) 
@@ -360,17 +385,31 @@ int main(int argc, char ** argv)
 	      }
       }
 
-      shmem_double_put(&Work_in_p[phase-1][0], &Work_out_p[0], Block_size, send_to);
-      shmem_fence();
-      shmem_int_inc(&recv_flag[phase-1], send_to);
+      shmem_int_wait_until(&send_flag[phase-1], SHMEM_CMP_EQ, iter+1);
 
-      shmem_int_wait_until(&recv_flag[phase-1], SHMEM_CMP_EQ, iter+1);
+      shmem_double_put(&Work_in_p[targetBuffer][0], &Work_out_p[0], Block_size, send_to);
+      shmem_fence();
+      shmem_int_inc(&recv_flag[targetBuffer], send_to);
+
+      i = (iter * (Num_procs - 1) + phase) / bufferCount;
+
+      if ((iter * (Num_procs - 1) + phase) % bufferCount)
+	i++;
+
+      shmem_int_wait_until(&recv_flag[targetBuffer], SHMEM_CMP_EQ, i);
 
       istart = recv_from*Block_order; 
       /* scatter received block to transposed matrix; no need to tile */
       for (j=0; j<Block_order; j++)
         for (i=0; i<Block_order; i++) 
-          B(i,j) += Work_in(phase, i,j);
+          B(i,j) += Work_in(targetBuffer, i,j);
+
+      if ((phase + bufferCount) < Num_procs)
+	recv_from = (my_ID + phase + bufferCount) % Num_procs;
+      else
+	recv_from = (my_ID + phase + bufferCount + 1 - Num_procs) % Num_procs;
+
+      shmem_int_inc(&send_flag[(phase+bufferCount-1)%(Num_procs-1)], recv_from);
     }  /* end of phase loop  */
   } /* end of iterations */
 
@@ -407,14 +446,14 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   if (Num_procs>1) 
-    {
-      prk_shmem_free(recv_flag);
+  {
+    prk_shmem_free(recv_flag);
 
-      for(i=0;i<Num_procs-1;i++)
-	prk_shmem_free(Work_in_p[i]);
+    for(i=0;i<bufferCount;i++)
+      prk_shmem_free(Work_in_p[i]);
 
-      prk_free(Work_in_p);
-    }
+    prk_free(Work_in_p);
+  }
 
   prk_shmem_free(pSync_bcast);
   prk_shmem_free(pSync_reduce);
