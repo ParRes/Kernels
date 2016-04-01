@@ -954,6 +954,7 @@ tuple_double spmd_task(const Task *task,
 
   double tsStart = DBL_MAX;
   FutureMap fm;
+  FutureMap fm_first_interior;
   for (int iter = 0; iter < stencilArgs.numIterations; iter++)
   {
     {
@@ -970,7 +971,10 @@ tuple_double spmd_task(const Task *task,
       interiorLauncher.add_region_requirement(weightReq);
       if (iter == 0)
         interiorLauncher.add_wait_barrier(analysis_lock_next);
-      runtime->execute_index_space(ctx, interiorLauncher);
+      if (iter == 0)
+        fm_first_interior = runtime->execute_index_space(ctx, interiorLauncher);
+      else
+        runtime->execute_index_space(ctx, interiorLauncher);
     }
 
     //runtime->begin_trace(ctx, 0);
@@ -1068,11 +1072,12 @@ tuple_double spmd_task(const Task *task,
     dummyLauncher.add_arrival_barrier(analysis_lock_prev);
     FutureMap fm = runtime->execute_index_space(ctx, dummyLauncher);
     fm.wait_all_results();
-    tsStart = wtime();
   }
   fm.wait_all_results();
 
   double tsEnd = wtime();
+  for (Domain::DomainPointIterator it(launchDomain); it; it++)
+    tsStart = std::min(tsStart, fm_first_interior.get_result<double>(it.p));
 
   DTYPE abserr = 0.0;
 #ifndef NO_TASK_BODY
@@ -1204,10 +1209,11 @@ void stencil(DTYPE* RESTRICT inputPtr,
 #undef WEIGHT
 }
 
-void interior_task(const Task *task,
+double interior_task(const Task *task,
                    const std::vector<PhysicalRegion> &regions,
                    Context ctx, HighLevelRuntime *runtime)
 {
+  double tsStart = wtime();
 #ifndef NO_TASK_BODY
   RegionAccessor<AccessorType::Generic, DTYPE> inputAcc =
     regions[0].get_field_accessor(FID_IN).typeify<DTYPE>();
@@ -1253,6 +1259,7 @@ void interior_task(const Task *task,
 
   stencil(inputPtr, outputPtr, weightPtr, haloX, startX, endX, startY, endY);
 #endif
+  return tsStart;
 }
 
 void boundary_task(const Task *task,
@@ -1391,8 +1398,8 @@ void dummy_task(const Task *task,
                 const std::vector<PhysicalRegion> &regions,
                 Context ctx, HighLevelRuntime *runtime)
 {
-  fprintf(stderr, "Entered dummy! Sleep 2 seconds...\n");
-  sleep(2);
+  fprintf(stderr, "Entered dummy! Sleep 1 seconds...\n");
+  sleep(1);
 }
 
 static void register_mappers(Machine machine, Runtime *rt,
@@ -1420,7 +1427,7 @@ int main(int argc, char **argv)
   HighLevelRuntime::register_legion_task<init_field_task>(TASKID_INITIALIZE,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "init");
-  HighLevelRuntime::register_legion_task<interior_task>(TASKID_INTERIOR,
+  HighLevelRuntime::register_legion_task<double, interior_task>(TASKID_INTERIOR,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "stencil");
   HighLevelRuntime::register_legion_task<boundary_task>(TASKID_BOUNDARY,
