@@ -38,7 +38,7 @@ OUTFILE		?= stencil
 GEN_SRC		?= stencil.cc 					# .cc files
 
 # You can modify these variables, some will be appended to by the runtime makefile
-INC_FLAGS	?= -O3
+INC_FLAGS	?=
 CC_FLAGS	= $(RADIUSFLAG) -DPOINTS_ARE_64BIT -DRESTRICT_KEYWORD
 NVCC_FLAGS	?=
 GASNET_FLAGS	?=

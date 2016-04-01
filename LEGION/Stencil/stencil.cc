@@ -150,6 +150,9 @@ void StencilMapper::select_task_options(Task *task)
   task->map_locally = true;
   task->profile_task = false;
   task->task_priority = 0;
+
+  if (strcmp(task->get_task_name(), "boundary") == 0)
+    task->target_proc = proc_map[local_proc.address_space()].back();
 }
 
 bool StencilMapper::map_task(Task *task)
@@ -245,7 +248,8 @@ enum TaskIDs {
   TASKID_SPMD,
   TASKID_WEIGHT_INITIALIZE,
   TASKID_INITIALIZE,
-  TASKID_STENCIL,
+  TASKID_INTERIOR,
+  TASKID_BOUNDARY,
   TASKID_INC,
   TASKID_CHECK,
   TASKID_DUMMY,
@@ -257,7 +261,7 @@ enum {
   FID_WEIGHT,
 };
 
-enum Direction {
+enum GhostDirection {
   GHOST_LEFT = 0,
   GHOST_UP,
   GHOST_RIGHT,
@@ -265,12 +269,23 @@ enum Direction {
   PRIVATE,
 };
 
+enum Boundary {
+  LEFT = 0,
+  LEFT_UP,
+  UP,
+  UP_RIGHT,
+  RIGHT,
+  RIGHT_DOWN,
+  DOWN,
+  DOWN_LEFT,
+  INTERIOR,
+};
+
 struct SPMDArgs {
   int n;
   int numThreads;
   int numIterations;
   int myRank;
-  Point<2> tileLoc;
   PhaseBarrier fullInput[4];
   PhaseBarrier fullOutput[4];
   PhaseBarrier emptyInput[4];
@@ -339,7 +354,7 @@ void top_level_task(const Task *task,
   }
 
   int num_numa_nodes = 1;
-  if (inputs.argc >= 4 && '0' <= inputs.argv[4][0] && inputs.argv[4][0] <= '9')
+  if (inputs.argc > 4 && '0' <= inputs.argv[4][0] && inputs.argv[4][0] <= '9')
     num_numa_nodes = atoi(inputs.argv[4]);
   num_ranks = gasnet_nodes();
 
@@ -368,7 +383,7 @@ void top_level_task(const Task *task,
       Num_procsy = num_ranks / Num_procsx;
       break;
     }
-  std::swap(Num_procsx, Num_procsy);
+  //std::swap(Num_procsx, Num_procsy);
 
   if (n % Num_procsx != 0)
   {
@@ -391,12 +406,6 @@ void top_level_task(const Task *task,
   if (2 * RADIUS + 1 > n)
   {
     printf("Stencil radius %d exceeds grid size %d\n", RADIUS, n);
-    exit(EXIT_FAILURE);
-  }
-
-  if ((n / Num_procsy) % threads != 0)
-  {
-    printf("(n / Num_procsy)%%THREADS should be zero\n");
     exit(EXIT_FAILURE);
   }
 
@@ -507,7 +516,6 @@ void top_level_task(const Task *task,
       args[tilePoint].n = n;
       args[tilePoint].numThreads = threads;
       args[tilePoint].numIterations = iterations;
-      args[tilePoint].tileLoc = tilePoint.get_point<2>();
       args[tilePoint].analysisLock = analysisLock;
 
       TaskLauncher spmdLauncher(TASKID_SPMD,
@@ -618,7 +626,10 @@ static LogicalPartition createHaloPartition(LogicalRegion lr,
   DomainPointColoring coloring;
   std::vector<DomainPoint> colors;
   for (int color = GHOST_LEFT; color <= PRIVATE; ++color)
+  {
     colors.push_back(DomainPoint::from_point<1>(color));
+    coloring[colors[color]];
+  }
 
   if (boundingBox.lo[0] > 0)
   {
@@ -657,6 +668,165 @@ static LogicalPartition createHaloPartition(LogicalRegion lr,
   return runtime->get_logical_partition(ctx, lr, ip);
 }
 
+static LogicalPartition createBoundaryPartition(LogicalRegion lr,
+                                                int n,
+                                                Context ctx,
+                                                HighLevelRuntime *runtime,
+                                                std::vector<bool>& hasBoundary)
+{
+  IndexSpace is = lr.get_index_space();
+  Rect<2> boundingBox =
+    runtime->get_index_space_domain(ctx, is).get_rect<2>();
+
+  Domain colorSpace = Domain::from_rect<1>(Rect<1>(LEFT, INTERIOR));
+  DomainPointColoring coloring;
+  std::vector<DomainPoint> colors;
+  for (int color = LEFT; color <= INTERIOR; ++color)
+  {
+    colors.push_back(DomainPoint::from_point<1>(color));
+    coloring[colors[color]];
+  }
+
+  Rect<2> interiorBox = boundingBox;
+  for (int i = 0; i < 2; ++i)
+  {
+    if (interiorBox.lo[i] != 0) interiorBox.lo.x[i] += RADIUS;
+    if (interiorBox.hi[i] != n - 1) interiorBox.hi.x[i] -= RADIUS;
+  }
+
+  if (interiorBox.lo[0] > 0)
+  {
+    coord_t lu[] = { boundingBox.lo[0], interiorBox.lo[1] };
+    coord_t rd[] = { interiorBox.lo[0] - 1, interiorBox.hi[1] };
+    coloring[colors[LEFT]] =
+      Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
+    hasBoundary[LEFT] = true;
+
+    //printf("left: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
+
+    if (interiorBox.lo[1] > 0)
+    {
+      coord_t lu[] = { boundingBox.lo[0], boundingBox.lo[1] };
+      coord_t rd[] = { interiorBox.lo[0] - 1, interiorBox.lo[1] - 1 };
+      coloring[colors[LEFT_UP]] =
+        Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
+      hasBoundary[LEFT_UP] = true;
+      //printf("left up: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
+    }
+  }
+
+  if (interiorBox.lo[1] > 0)
+  {
+    coord_t lu[] = { interiorBox.lo[0], boundingBox.lo[1] };
+    coord_t rd[] = { interiorBox.hi[0], interiorBox.lo[1] - 1 };
+    coloring[colors[UP]] =
+      Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
+    hasBoundary[UP] = true;
+    //printf("up: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
+
+    if (interiorBox.hi[0] < n - 1)
+    {
+      coord_t lu[] = { interiorBox.hi[0] + 1, boundingBox.lo[1] };
+      coord_t rd[] = { boundingBox.hi[0], interiorBox.lo[1] - 1 };
+      coloring[colors[UP_RIGHT]] =
+        Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
+      hasBoundary[UP_RIGHT] = true;
+      //printf("up right: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
+    }
+  }
+
+  if (interiorBox.hi[0] < n - 1)
+  {
+    coord_t lu[] = { interiorBox.hi[0] + 1, interiorBox.lo[1] };
+    coord_t rd[] = { boundingBox.hi[0], interiorBox.hi[1] };
+    coloring[colors[RIGHT]] =
+      Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
+    hasBoundary[RIGHT] = true;
+    //printf("right: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
+
+    if (interiorBox.hi[1] < n - 1)
+    {
+      coord_t lu[] = { interiorBox.hi[0] + 1, interiorBox.hi[1] + 1 };
+      coord_t rd[] = { boundingBox.hi[0], boundingBox.hi[1] };
+      coloring[colors[RIGHT_DOWN]] =
+        Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
+      hasBoundary[RIGHT_DOWN] = true;
+      //printf("right down: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
+    }
+  }
+
+  if (interiorBox.hi[1] < n - 1)
+  {
+    coord_t lu[] = { interiorBox.lo[0], interiorBox.hi[1] + 1 };
+    coord_t rd[] = { interiorBox.hi[0], boundingBox.hi[1] };
+    coloring[colors[DOWN]] =
+      Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
+    hasBoundary[DOWN] = true;
+    //printf("down: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
+
+    if (interiorBox.lo[0] > 0)
+    {
+      coord_t lu[] = { boundingBox.lo[0], interiorBox.hi[1] + 1 };
+      coord_t rd[] = { interiorBox.lo[0] - 1, boundingBox.hi[1] };
+      coloring[colors[DOWN_LEFT]] =
+        Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
+      hasBoundary[DOWN_LEFT] = true;
+      //printf("down left: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
+    }
+  }
+
+  //printf("interior: (%d, %d) -- (%d, %d)\n",
+  //    interiorBox.lo[0], interiorBox.lo[1],
+  //    interiorBox.hi[0], interiorBox.hi[1]);
+  coloring[colors[INTERIOR]] = Domain::from_rect<2>(interiorBox);
+  IndexPartition ip =
+    runtime->create_index_partition(ctx, is, colorSpace, coloring,
+                                    DISJOINT_KIND);
+
+  return runtime->get_logical_partition(ctx, lr, ip);
+}
+
+static LogicalPartition createBalancedPartition(LogicalRegion lr,
+                                                int numThreads,
+                                                Context ctx,
+                                                HighLevelRuntime *runtime)
+{
+  IndexSpace is = lr.get_index_space();
+  Rect<2> rect = runtime->get_index_space_domain(ctx, is).get_rect<2>();
+  coord_t startX = rect.lo[0];
+  coord_t endX = rect.hi[0];
+  coord_t sizeY = rect.hi[1] - rect.lo[1] + 1;
+  coord_t startY = rect.lo[1];
+  coord_t offY = sizeY / numThreads;
+  coord_t remainder = sizeY % numThreads;
+
+  Domain colorSpace = Domain::from_rect<1>(Rect<1>(
+        make_point(0), make_point(numThreads - 1)));
+  std::vector<DomainPoint> colors;
+  for (int color = 0; color < numThreads; ++color)
+    colors.push_back(DomainPoint::from_point<1>(color));
+
+  DomainPointColoring coloring;
+  for (int color = 0; color < numThreads; ++color)
+  {
+    coord_t widthY = color < remainder ? offY + 1 : offY;
+    coord_t lu[] = { startX, startY };
+    coord_t rd[] = { endX, startY + widthY - 1 };
+    assert(startY < rect.hi[1]);
+    assert(startY + widthY - 1 <= rect.hi[1]);
+    //printf("thread %d: (%d, %d) -- (%d, %d)\n",
+    //    color, startX, startY, endX, startY + widthY - 1);
+    coloring[colors[color]] =
+      Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
+    startY += widthY;
+  }
+
+  IndexPartition ip =
+    runtime->create_index_partition(ctx, is, colorSpace, coloring,
+                                    DISJOINT_KIND);
+  return runtime->get_logical_partition(ctx, lr, ip);
+}
+
 tuple_double spmd_task(const Task *task,
                        const std::vector<PhysicalRegion> &regions,
                        Context ctx, HighLevelRuntime *runtime)
@@ -664,19 +834,12 @@ tuple_double spmd_task(const Task *task,
   SPMDArgs *args = (SPMDArgs*)task->args;
   int n = args->n;
   int numThreads = args->numThreads;
-  Point<2> tileLoc = args->tileLoc;
 
   LogicalRegion localLr = regions[0].get_logical_region();
   LogicalPartition localLP = createHaloPartition(localLr, n, ctx, runtime);
 
   IndexSpace is = localLr.get_index_space();
   Rect<2> haloBox = runtime->get_index_space_domain(ctx, is).get_rect<2>();
-  Rect<2> boundingBox = haloBox;
-  for (int i = 0; i < 2; ++i)
-  {
-    if (boundingBox.lo[i] != 0) boundingBox.lo.x[i] += RADIUS;
-    if (boundingBox.hi[i] != n - 1) boundingBox.hi.x[i] -= RADIUS;
-  }
 
   std::vector<bool> hasNeighbor(4);
   hasNeighbor[GHOST_LEFT] = haloBox.lo[0] != 0;
@@ -684,21 +847,28 @@ tuple_double spmd_task(const Task *task,
   hasNeighbor[GHOST_RIGHT] = haloBox.hi[0] != n - 1;
   hasNeighbor[GHOST_DOWN] = haloBox.hi[1] != n - 1;
 
-  // create local partition
+  // create boundary partition
   LogicalRegion privateLr =
       runtime->get_logical_subregion_by_color(ctx, localLP,
           DomainPoint::from_point<1>(PRIVATE));
-  // TODO: handle uneven local partition
-  IndexSpace privateIs = privateLr.get_index_space();
-  int blockX = boundingBox.hi[0] - boundingBox.lo[0] + 1;
-  int blockY = boundingBox.hi[1] - boundingBox.lo[1] + 1;
-  assert(blockY % numThreads == 0);
 
-  IndexPartition privateIp =
-    runtime->create_index_partition(ctx, privateIs,
-        Blockify<2>(make_point(blockX, blockY / numThreads)), DISJOINT_KIND);
+  std::vector<bool> hasBoundary(9, false);
+  LogicalPartition boundaryLP =
+    createBoundaryPartition(privateLr, n, ctx, runtime, hasBoundary);
+  LogicalRegion interiorLr =
+    runtime->get_logical_subregion_by_color(ctx, boundaryLP,
+        DomainPoint::from_point<1>(INTERIOR));
+  std::vector<LogicalRegion> boundaryLrs(8);
+  for (unsigned dir = LEFT; dir <= DOWN_LEFT; ++dir)
+    boundaryLrs[dir] =
+      runtime->get_logical_subregion_by_color(ctx, boundaryLP,
+          DomainPoint::from_point<1>(dir));
+
+  // create partitions for indexspace launch
   LogicalPartition privateLp =
-    runtime->get_logical_partition(ctx, privateLr, privateIp);
+    createBalancedPartition(privateLr, numThreads, ctx, runtime);
+  LogicalPartition interiorLp =
+    createBalancedPartition(interiorLr, numThreads, ctx, runtime);
 
   // get neighbors' logical region
   std::vector<LogicalRegion> neighborLrs(4);
@@ -720,9 +890,8 @@ tuple_double spmd_task(const Task *task,
           ghostLr.get_field_space());
   }
 
-  Domain launchDomain = Domain::from_rect<2>(Rect<2>(
-        make_point(tileLoc[0], numThreads * tileLoc[1]),
-        make_point(tileLoc[0], numThreads * (tileLoc[1] + 1) - 1)));
+  Domain launchDomain = Domain::from_rect<1>(Rect<1>(
+        make_point(0), make_point(numThreads - 1)));
 
   // setup arguments for the child tasks
   StencilArgs stencilArgs;
@@ -787,6 +956,23 @@ tuple_double spmd_task(const Task *task,
   FutureMap fm;
   for (int iter = 0; iter < stencilArgs.numIterations; iter++)
   {
+    {
+      IndexLauncher interiorLauncher(TASKID_INTERIOR, launchDomain, taskArg,
+          argMap);
+      RegionRequirement inputReq(privateLr, READ_ONLY, EXCLUSIVE, localLr);
+      inputReq.add_field(FID_IN);
+      RegionRequirement outputReq(interiorLp, 0, READ_WRITE, EXCLUSIVE, localLr);
+      outputReq.add_field(FID_OUT);
+      RegionRequirement weightReq(weightLr, READ_ONLY, EXCLUSIVE, weightLr);
+      weightReq.add_field(FID_WEIGHT);
+      interiorLauncher.add_region_requirement(inputReq);
+      interiorLauncher.add_region_requirement(outputReq);
+      interiorLauncher.add_region_requirement(weightReq);
+      if (iter == 0)
+        interiorLauncher.add_wait_barrier(analysis_lock_next);
+      runtime->execute_index_space(ctx, interiorLauncher);
+    }
+
     //runtime->begin_trace(ctx, 0);
     for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
       if (hasNeighbor[dir])
@@ -826,26 +1012,31 @@ tuple_double spmd_task(const Task *task,
         }
       }
 
-    {
-      IndexLauncher stencilLauncher(TASKID_STENCIL, launchDomain, taskArg,
-          argMap);
-      RegionRequirement inputReq(localLr, READ_ONLY, EXCLUSIVE, localLr);
-      inputReq.add_field(FID_IN);
-      RegionRequirement outputReq(privateLp, 0, READ_WRITE, EXCLUSIVE, localLr);
-      outputReq.add_field(FID_OUT);
-      RegionRequirement weightReq(weightLr, READ_ONLY, EXCLUSIVE, weightLr);
-      weightReq.add_field(FID_WEIGHT);
-      RegionRequirement dummyReq(privateLp, 0, READ_ONLY, EXCLUSIVE, localLr);
-      dummyReq.add_field(FID_IN);
-      stencilLauncher.add_region_requirement(inputReq);
-      stencilLauncher.add_region_requirement(outputReq);
-      stencilLauncher.add_region_requirement(weightReq);
-      stencilLauncher.add_region_requirement(dummyReq);
-      if (iter == 0)
-        stencilLauncher.add_wait_barrier(analysis_lock_next);
-      runtime->execute_index_space(ctx, stencilLauncher);
-    }
-
+    for (unsigned dir = LEFT; dir <= DOWN_LEFT; ++dir)
+      if (hasBoundary[dir])
+      {
+        TaskLauncher boundaryLauncher(TASKID_BOUNDARY, taskArg);
+        RegionRequirement outputReq(boundaryLrs[dir], READ_WRITE, EXCLUSIVE,
+            localLr);
+        outputReq.add_field(FID_OUT);
+        boundaryLauncher.add_region_requirement(outputReq);
+        RegionRequirement weightReq(weightLr, READ_ONLY, EXCLUSIVE, weightLr);
+        weightReq.add_field(FID_WEIGHT);
+        boundaryLauncher.add_region_requirement(weightReq);
+        for (unsigned idx = 0; idx <= dir % 2; ++idx)
+        {
+          RegionRequirement inputReq(ghostLrs[(dir / 2 + idx) % 4], READ_ONLY,
+              EXCLUSIVE, localLr);
+          inputReq.add_field(FID_IN);
+          boundaryLauncher.add_region_requirement(inputReq);
+        }
+        RegionRequirement inputReq(privateLr, READ_ONLY, EXCLUSIVE, localLr);
+        inputReq.add_field(FID_IN);
+        boundaryLauncher.add_region_requirement(inputReq);
+        if (iter == 0)
+          boundaryLauncher.add_wait_barrier(analysis_lock_next);
+        runtime->execute_task(ctx, boundaryLauncher);
+      }
     {
       IndexLauncher incLauncher(TASKID_INC, launchDomain, taskArg,
           argMap);
@@ -1013,9 +1204,9 @@ void stencil(DTYPE* RESTRICT inputPtr,
 #undef WEIGHT
 }
 
-void stencil_field_task(const Task *task,
-                        const std::vector<PhysicalRegion> &regions,
-                        Context ctx, HighLevelRuntime *runtime)
+void interior_task(const Task *task,
+                   const std::vector<PhysicalRegion> &regions,
+                   Context ctx, HighLevelRuntime *runtime)
 {
 #ifndef NO_TASK_BODY
   RegionAccessor<AccessorType::Generic, DTYPE> inputAcc =
@@ -1029,6 +1220,57 @@ void stencil_field_task(const Task *task,
       task->regions[1].region.get_index_space());
   Domain weightDom = runtime->get_index_space_domain(ctx,
       task->regions[2].region.get_index_space());
+  Rect<2> rect = dom.get_rect<2>();
+  Rect<2> weightRect = weightDom.get_rect<2>();
+
+  // get raw pointers
+  DTYPE* inputPtr = 0;
+  DTYPE* outputPtr = 0;
+  DTYPE* weightPtr = 0;
+  {
+    Rect<2> r; ByteOffset bo[1];
+    inputPtr = inputAcc.raw_rect_ptr<2>(rect, r, bo);
+    outputPtr = outputAcc.raw_rect_ptr<2>(rect, r, bo);
+    weightPtr = weightAcc.raw_rect_ptr<2>(weightRect, r, bo);
+  }
+
+  StencilArgs *args = (StencilArgs*)task->args;
+  int n = args->n;
+  coord_t haloX = args->haloX;
+  coord_t luX = rect.lo[0];
+  coord_t luY = rect.lo[1];
+  coord_t rdX = rect.hi[0];
+  coord_t rdY = rect.hi[1];
+  coord_t startX = 0;
+  coord_t startY = 0;
+
+  if (luX == 0) { luX += RADIUS; startX += RADIUS; }
+  if (luY == 0) { luY += RADIUS; startY += RADIUS; }
+  if (rdX == n - 1) rdX -= RADIUS;
+  if (rdY == n - 1) rdY -= RADIUS;
+  coord_t endX = startX + (rdX - luX + 1);
+  coord_t endY = startY + (rdY - luY + 1);
+
+  stencil(inputPtr, outputPtr, weightPtr, haloX, startX, endX, startY, endY);
+#endif
+}
+
+void boundary_task(const Task *task,
+                   const std::vector<PhysicalRegion> &regions,
+                   Context ctx, HighLevelRuntime *runtime)
+{
+#ifndef NO_TASK_BODY
+  RegionAccessor<AccessorType::Generic, DTYPE> outputAcc =
+    regions[0].get_field_accessor(FID_OUT).typeify<DTYPE>();
+  RegionAccessor<AccessorType::Generic, DTYPE> weightAcc =
+    regions[1].get_field_accessor(FID_WEIGHT).typeify<DTYPE>();
+  RegionAccessor<AccessorType::Generic, DTYPE> inputAcc =
+    regions[2].get_field_accessor(FID_IN).typeify<DTYPE>();
+
+  Domain dom = runtime->get_index_space_domain(ctx,
+      task->regions[0].region.get_index_space());
+  Domain weightDom = runtime->get_index_space_domain(ctx,
+      task->regions[1].region.get_index_space());
   Rect<2> rect = dom.get_rect<2>();
   Rect<2> weightRect = weightDom.get_rect<2>();
 
@@ -1149,8 +1391,8 @@ void dummy_task(const Task *task,
                 const std::vector<PhysicalRegion> &regions,
                 Context ctx, HighLevelRuntime *runtime)
 {
-  fprintf(stderr, "Entered dummy! Sleep 5 seconds...\n");
-  sleep(5);
+  fprintf(stderr, "Entered dummy! Sleep 2 seconds...\n");
+  sleep(2);
 }
 
 static void register_mappers(Machine machine, Runtime *rt,
@@ -1178,9 +1420,12 @@ int main(int argc, char **argv)
   HighLevelRuntime::register_legion_task<init_field_task>(TASKID_INITIALIZE,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "init");
-  HighLevelRuntime::register_legion_task<stencil_field_task>(TASKID_STENCIL,
+  HighLevelRuntime::register_legion_task<interior_task>(TASKID_INTERIOR,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "stencil");
+  HighLevelRuntime::register_legion_task<boundary_task>(TASKID_BOUNDARY,
+      Processor::LOC_PROC, true/*single*/, true/*single*/,
+      AUTO_GENERATE_ID, TaskConfigOptions(true), "boundary");
   HighLevelRuntime::register_legion_task<inc_field_task>(TASKID_INC,
       Processor::LOC_PROC, true/*single*/, true/*single*/,
       AUTO_GENERATE_ID, TaskConfigOptions(true), "inc");
