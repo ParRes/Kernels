@@ -222,9 +222,11 @@ int main(int argc, char ** argv)
 
     bufferCount = atoi(*++argv);
     arguments[2]=bufferCount;
-    if ((bufferCount < 1) || (bufferCount >= Num_procs)) {
-      printf("ERROR: bufferCount must be >= 1 and < # procs : %d\n", bufferCount);
-      error = 1; goto ENDOFTESTS;
+    if (Num_procs > 1) {
+      if ((bufferCount < 1) || (bufferCount >= Num_procs)) {
+        printf("ERROR: bufferCount must be >= 1 and < # procs : %d\n", bufferCount);
+        error = 1; goto ENDOFTESTS;
+      }
     }
 
     if (argc == 5) Tile_order = atoi(*++argv);
@@ -294,13 +296,23 @@ int main(int argc, char ** argv)
     Work_in_p   = (double**)prk_malloc(bufferCount*sizeof(double));
 
     Work_out_p = (double *) prk_shmem_align(prk_get_alignment(),Block_size*sizeof(double));
-    send_flag  = (int*)     prk_shmem_align(prk_get_alignment(),(Num_procs-1)*sizeof(int));
     recv_flag  = (int*)     prk_shmem_align(prk_get_alignment(),bufferCount*sizeof(int));
     if ((Work_in_p == NULL)||(Work_out_p==NULL) || (recv_flag == NULL)){
       printf(" Error allocating space for work or flags on node %d\n",my_ID);
       error = 1;
     }
+
+    if (bufferCount < (Num_procs - 1)) {
+      send_flag = (int*) prk_shmem_align(prk_get_alignment(), (Num_procs-1) * sizeof(int));
+
+      if (send_flag == NULL) {
+	printf("Error allocating space for flags on node %d\n", my_ID);
+	error = 1;
+      }
+    }
+
     bail_out(error);
+
     for(i=0;i<bufferCount;i++) {
       Work_in_p[i]=(double *) prk_shmem_align(prk_get_alignment(),Block_size*sizeof(double));
       if (Work_in_p[i] == NULL) {
@@ -310,8 +322,10 @@ int main(int argc, char ** argv)
       bail_out(error);
     }
 
-    for(i=0;i<bufferCount;i++)
-      send_flag[i]=0;
+    if (bufferCount < (Num_procs - 1)) {
+      for(i=0;i<bufferCount;i++)
+        send_flag[i]=0;
+    }
 
     for(i=0;i<Num_procs-1;i++)
       recv_flag[i]=0;
@@ -327,9 +341,13 @@ int main(int argc, char ** argv)
 
   shmem_barrier_all();
 
-  for ( i = 0; i < bufferCount; i++) {
-    recv_from = (my_ID + i + 1)%Num_procs;
-    shmem_int_inc(&send_flag[i], recv_from);
+  if (bufferCount < (Num_procs - 1)) {
+    if (Num_procs > 1) {
+      for ( i = 0; i < bufferCount; i++) {
+        recv_from = (my_ID + i + 1)%Num_procs;
+        shmem_int_inc(&send_flag[i], recv_from);
+      }
+    }
   }
 
   shmem_barrier_all();
@@ -385,7 +403,8 @@ int main(int argc, char ** argv)
 	      }
       }
 
-      shmem_int_wait_until(&send_flag[phase-1], SHMEM_CMP_EQ, iter+1);
+      if (bufferCount < (Num_procs - 1))
+        shmem_int_wait_until(&send_flag[phase-1], SHMEM_CMP_EQ, iter+1);
 
       shmem_double_put(&Work_in_p[targetBuffer][0], &Work_out_p[0], Block_size, send_to);
       shmem_fence();
@@ -404,12 +423,14 @@ int main(int argc, char ** argv)
         for (i=0; i<Block_order; i++) 
           B(i,j) += Work_in(targetBuffer, i,j);
 
-      if ((phase + bufferCount) < Num_procs)
-	recv_from = (my_ID + phase + bufferCount) % Num_procs;
-      else
-	recv_from = (my_ID + phase + bufferCount + 1 - Num_procs) % Num_procs;
+      if (bufferCount < (Num_procs - 1)) {
+        if ((phase + bufferCount) < Num_procs)
+	  recv_from = (my_ID + phase + bufferCount) % Num_procs;
+        else
+	  recv_from = (my_ID + phase + bufferCount + 1 - Num_procs) % Num_procs;
 
-      shmem_int_inc(&send_flag[(phase+bufferCount-1)%(Num_procs-1)], recv_from);
+        shmem_int_inc(&send_flag[(phase+bufferCount-1)%(Num_procs-1)], recv_from);
+      }
     }  /* end of phase loop  */
   } /* end of iterations */
 
@@ -447,7 +468,11 @@ int main(int argc, char ** argv)
 
   if (Num_procs>1) 
   {
+    if (bufferCount < (Num_procs - 1))
+      prk_shmem_free(send_flag);
+
     prk_shmem_free(recv_flag);
+    prk_shmem_free(Work_out_p);
 
     for(i=0;i<bufferCount;i++)
       prk_shmem_free(Work_in_p[i]);
