@@ -56,3 +56,6 @@ usage:
 
 include $(LG_RT_DIR)/runtime.mk
 $(GEN_OBJS): #clean
+
+stencil.o:
+	$(CXX) -o stencil.o -c stencil.cc $(CC_FLAGS) $(INC_FLAGS) -O3

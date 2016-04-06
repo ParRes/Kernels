@@ -152,7 +152,12 @@ void StencilMapper::select_task_options(Task *task)
   task->task_priority = 0;
 
   if (strcmp(task->get_task_name(), "boundary") == 0)
+  {
     task->target_proc = proc_map[local_proc.address_space()].back();
+    task->additional_procs.insert(
+        proc_map[local_proc.address_space()].begin(),
+        proc_map[local_proc.address_space()].end());
+  }
 }
 
 bool StencilMapper::map_task(Task *task)
@@ -291,6 +296,7 @@ struct SPMDArgs {
   PhaseBarrier emptyInput[4];
   PhaseBarrier emptyOutput[4];
   PhaseBarrier analysisLock;
+  PhaseBarrier stencilLock;
 };
 
 struct StencilArgs {
@@ -505,6 +511,7 @@ void top_level_task(const Task *task,
     }
 
   PhaseBarrier analysisLock = runtime->create_phase_barrier(ctx, num_ranks);
+  PhaseBarrier stencilLock = runtime->create_phase_barrier(ctx, num_ranks);
   MustEpochLauncher shardLauncher;
   std::map<DomainPoint, SPMDArgs> args;
   for (int tileY = 0; tileY < Num_procsy; ++tileY)
@@ -517,6 +524,7 @@ void top_level_task(const Task *task,
       args[tilePoint].numThreads = threads;
       args[tilePoint].numIterations = iterations;
       args[tilePoint].analysisLock = analysisLock;
+      args[tilePoint].stencilLock = stencilLock;
 
       TaskLauncher spmdLauncher(TASKID_SPMD,
           TaskArgument(&args[tilePoint], sizeof(SPMDArgs)));
@@ -952,6 +960,10 @@ tuple_double spmd_task(const Task *task,
   PhaseBarrier analysis_lock_next =
     runtime->advance_phase_barrier(ctx, analysis_lock_prev);
 
+  PhaseBarrier stencil_lock_prev = args->stencilLock;
+  PhaseBarrier stencil_lock_next =
+    runtime->advance_phase_barrier(ctx, stencil_lock_prev);
+
   double tsStart = DBL_MAX;
   FutureMap fm;
   FutureMap fm_first_interior;
@@ -1057,6 +1069,8 @@ tuple_double spmd_task(const Task *task,
           args->fullOutput[dir] =
             runtime->advance_phase_barrier(ctx, args->fullOutput[dir]);
         }
+      if (iter == stencilArgs.numIterations - 1)
+        incLauncher.add_arrival_barrier(stencil_lock_prev);
       fm = runtime->execute_index_space(ctx, incLauncher);
     }
     //runtime->end_trace(ctx, 0);
@@ -1086,6 +1100,7 @@ tuple_double spmd_task(const Task *task,
     RegionRequirement req(privateLp, 0, READ_ONLY, EXCLUSIVE, localLr);
     req.add_field(FID_OUT);
     checkLauncher.add_region_requirement(req);
+    checkLauncher.add_wait_barrier(stencil_lock_next);
     FutureMap fm = runtime->execute_index_space(ctx, checkLauncher);
     fm.wait_all_results();
 
