@@ -18,17 +18,13 @@ USERFLAGS    =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         = $(GRAPPA_LDLIBS)
+LIBS         = $(GRAPPA_LDLIBS) 
 LIBPATHS     = $(GRAPPA_LDFLAGS)
 
 ### End User configurable options ###
 
 # this is used by the C++ implicit compile rule
-<<<<<<< 3472f59a2d7d2e53cf51993eac3df6b024afc727
 CXXFLAGS= $(GRAPPA_CXXFLAGS)
-=======
-CXXFLAGS= $(GRAPPA_CXXFLAGS)  
->>>>>>> Changes to GRAPPA Makefiles and GRAPPA.defs from Jacob's pull request.
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) $(CXXFLAGS)
 PROGRAM     = p2p
