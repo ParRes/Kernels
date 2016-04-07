@@ -3,7 +3,7 @@ include ../../common/GRAPPA.defs
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -O3
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system
 
 #RESTRICTFLAG = -DRESTRICT_KEYWORD
