@@ -265,7 +265,7 @@ clean:
 	cd CHARM++/Transpose;       $(MAKE) clean
 	cd GRAPPA/Nstream;          $(MAKE) clean
 	cd GRAPPA/Random;           $(MAKE) clean
-	cd GRAPPA/Synch_global      $(MAKE) clean
+	cd GRAPPA/Synch_global;     $(MAKE) clean
 	cd GRAPPA/Synch_p2p;        $(MAKE) clean
 	cd GRAPPA/Stencil;          $(MAKE) clean
 	cd GRAPPA/Transpose;        $(MAKE) clean
