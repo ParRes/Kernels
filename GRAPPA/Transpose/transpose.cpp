@@ -335,6 +335,7 @@ int main(int argc, char * argv[]) {
 	      // ensures all async writes complete before moving to next phase
 	      Grappa::impl::local_gce.complete( completion_target );
 	      Grappa::impl::local_gce.wait();
+            }
 	  } // done with iterations
 	});
 
