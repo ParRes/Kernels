@@ -51,11 +51,12 @@ ALLOCFLAG   = -DSTATIC_ALLOCATION=$(STATIC_ALLOCATION)
 LENGTHFLAG  = -DMAXLENGTH=$(MAXLENGTH)
 
 OPTIONSSTRING="Make options:\n\
- STATIC_ALLOC=0/1 set dynamic/static memory allocation       [0]      \n\
- MAXLENGTH=?      setting maximum stream vector length       [2000000]\n\
- RESTRICT=0/1     disable/enable restrict keyword (aliasing) [0]      \n\
- MAXTHREADS=?     set maximum number of OpenMP threads       [256]    \n\
- VERBOSE=0/1      omit/include verbose run information       [0]"
+OPTION           MEANING                                  DEFAULT    \n\
+STATIC_ALLOC=0/1 set dynamic/static memory allocation       [0]      \n\
+MAXLENGTH=?      setting maximum stream vector length       [2000000]\n\
+RESTRICT=0/1     disable/enable restrict keyword (aliasing) [0]      \n\
+MAXTHREADS=?     set maximum number of OpenMP threads       [256]    \n\
+VERBOSE=0/1      omit/include verbose run information       [0]"
 
 TUNEFLAGS    = $(LENGTHFLAG) $(ALLOCFLAG) $(VERBOSEFLAG) $(NTHREADFLAG) \
                $(USERFLAGS)  $(RESTRICTFLAG)

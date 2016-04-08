@@ -51,11 +51,12 @@ OFFSETFLAG = -DBOFFSET=$(BOFFSET)
 NTHREADFLAG= -DMAXTHREADS=$(MAXTHREADS)
 
 OPTIONSSTRING="Make options:\n\
- MKL=0/1        disable/enable MKL library                              [0]  \n\
- DEFAULTBLOCK=? set tile size (non-MKL version)                         [32] \n\
- BOFFSET=?      override default first array dimension padding of tiles [12] \n\
- MAXTHREADS=?   set maximum number of OpenMP threads                    [256]\n\
- VERBOSE=0/1    omit/include verbose run information                    [0]"
+OPTION         MEANING                                              DEFAULT \n\
+MKL=0/1        disable/enable MKL library                              [0]  \n\
+DEFAULTBLOCK=? set tile size (non-MKL version)                         [32] \n\
+BOFFSET=?      override default first array dimension padding of tiles [12] \n\
+MAXTHREADS=?   set maximum number of OpenMP threads                    [256]\n\
+VERBOSE=0/1    omit/include verbose run information                    [0]"
 
 TUNEFLAGS   = $(BLOCKFLAG)   $(MKLFLAG)     $(OFFSETFLAG) \
               $(VERBOSEFLAG) $(NTHREADFLAG) $(USERFLAGS)

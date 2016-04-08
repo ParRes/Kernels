@@ -45,10 +45,11 @@ NTHREADFLAG = -DMAXTHREADS=$(MAXTHREADS)
 COLLAPSEFLAG= -DCOLLAPSE=$(COLLAPSE)
 
 OPTIONSSTRING="Make options:\n\
- COLLAPSE=0/1   disable/enable loop collapse when using tiling [0]  \n\
- RESTRICT=0/1   disable/enable restrict keyword (aliasing)     [0]  \n\
- MAXTHREADS=?   maximum number of OpenMP threads               [256]\n\
- VERBOSE=0/1    omit/include verbose run information           [0]"
+OPTION         MEANING                                      DEFAULT\n\
+COLLAPSE=0/1   disable/enable loop collapse when using tiling [0]  \n\
+RESTRICT=0/1   disable/enable restrict keyword (aliasing)     [0]  \n\
+MAXTHREADS=?   maximum number of OpenMP threads               [256]\n\
+VERBOSE=0/1    omit/include verbose run information           [0]"
 
 TUNEFLAGS    = $(VERBOSEFLAG) $(NTHREADFLAG) $(USERFLAGS) $(RESTRICTFLAG) $(COLLAPSEFLAG)
 PROGRAM      = transpose

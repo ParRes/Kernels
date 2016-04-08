@@ -624,7 +624,7 @@ int main(int argc, char ** argv) {
    
   if (correctness) {
     printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
     printf("Simulation time is %lf seconds\n", pic_time);
 #endif
     avg_time = n*iterations/pic_time;

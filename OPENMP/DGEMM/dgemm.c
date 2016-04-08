@@ -187,19 +187,16 @@ int main(int argc, char **argv){
   } 
   else {
     printf("Matrix order          = %ld\n", order);
+    if (shortcut) 
+      printf("Only doing initialization\n"); 
     printf("Number of threads     = %d\n", nthread_input);
     if (block>0)
       printf("Blocking factor       = %d\n", block);
     else
       printf("No blocking\n");
+    printf("Block offset          = %d\n", BOFFSET);
     printf("Number of iterations  = %d\n", iterations);
-#if MKL
-    printf("Using MKL library     = on\n");
-#else    
     printf("Using MKL library     = off\n");
-#endif
-    if (shortcut) 
-      printf("Only doing initialization\n"); 
   }
   }
   bail_out(num_error); 
@@ -272,7 +269,7 @@ int main(int argc, char **argv){
 
   printf("Matrix size           = %ldx%ld\n", order, order);
   printf("Number of threads     = %d\n", nthread_input);
-  printf("Using Math Kernel Library\n");
+  printf("Using MKL library     = on\n");
   printf("Number of iterations  = %d\n", iterations);
 
   for (iter=0; iter<=iterations; iter++) {

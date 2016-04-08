@@ -37,9 +37,10 @@ RESTRICTFLAG= -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
 NTHREADFLAG = -DMAXTHREADS=$(MAXTHREADS)
 
 OPTIONSSTRING="Make options:\n\
- RESTRICT=0/1   disable/enable restrict keyword (aliasing) [0]\n\
- MAXTHREADS=?   set maximum number of OpenMP threads       [256]\n\
- VERBOSE=0/1    omit/include verbose run information       [0]"
+OPTION         MEANING                                  DEFAULT\n\
+RESTRICT=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
+MAXTHREADS=?   set maximum number of OpenMP threads       [256]\n\
+VERBOSE=0/1    omit/include verbose run information       [0]"
 
 TUNEFLAGS   = $(VERBOSEFLAG) $(NTHREADFLAG) $(NTREADFLAG) $(USERFLAGS)\
               $(RESTRICTFLAG)

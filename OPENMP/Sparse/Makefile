@@ -44,10 +44,11 @@ NTHREADFLAG = -DMAXTHREADS=$(MAXTHREADS)
 SCRAMBLEFLAG= -DSCRAMBLE=$(SCRAMBLE)
 
 OPTIONSSTRING="Make options:\n\
- SCRAMBLE=0/1   regular/irregular sparsity pattern         [1]  \n\
- RESTRICT=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
- MAXTHREADS=?   set maximum number of OpenMP threads       [256]\n\
- VERBOSE=0/1    omit/include verbose run information       [0]"
+OPTION         MEANING                                  DEFAULT\n\
+SCRAMBLE=0/1   regular/irregular sparsity pattern         [1]  \n\
+RESTRICT=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
+MAXTHREADS=?   set maximum number of OpenMP threads       [256]\n\
+VERBOSE=0/1    omit/include verbose run information       [0]"
 
 TUNEFLAGS   = $(VERBOSEFLAG) $(NTHREADFLAG) $(USERFLAGS) $(SCRAMBLEFLAG) \
               $(RESTRICTFLAG)

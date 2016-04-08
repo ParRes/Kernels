@@ -2,23 +2,10 @@ include ../../common/SERIAL.defs
 
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults
-
-#RESTRICTFLAG = -DRESTRICT_KEYWORD
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers (requires -restrict compiler flag)
-
-#LENGTHFLAG   = -DMAXLENGTH=1000000000
-#description: default vector length is 2000000
-
-#ALLOCFLAG    = -DSTATIC_ALLOCATION
-#description: default memory allocation is dynamic (using prk_malloc)
-
-#DEBUGFLAG    = -DVERBOSE
-#description: default diagnostic style is silent
 
 USERFLAGS     = 
 #description: parameter to specify optional flags
@@ -31,7 +18,40 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS    = $(LENGTHFLAG) $(ALLOCFLAG) $(DEBUGFLAG) \
+ifndef MAXLENGTH
+  MAXLENGTH=2000000
+endif
+#description: default vector length (if static) is 2000000
+
+ifndef STATIC_ALLOCATION
+  STATIC_ALLOCATION=0
+endif
+#description: default memory allocation is dynamic (using prk_malloc)
+
+ifndef RESTRICT_KEYWORD
+  RESTRICT_KEYWORD=0
+endif
+#description: the "restrict" keyword can be used on IA platforms to disambiguate  
+#             data accessed through pointers (requires -restrict compiler flag)
+
+ifndef VERBOSE
+  VERBOSE=0
+endif
+#description: default diagnostic style is silent
+
+VERBOSEFLAG = -DVERBOSE=$(VERBOSE)
+RESTRICTFLAG= -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
+ALLOCFLAG   = -DSTATIC_ALLOCATION=$(STATIC_ALLOCATION)
+LENGTHFLAG  = -DMAXLENGTH=$(MAXLENGTH)
+
+OPTIONSSTRING="Make options:\n\
+OPTION           MEANING                                  DEFAULT    \n\
+STATIC_ALLOC=0/1 set dynamic/static memory allocation       [0]      \n\
+MAXLENGTH=?      setting maximum stream vector length       [2000000]\n\
+RESTRICT=0/1     disable/enable restrict keyword (aliasing) [0]      \n\
+VERBOSE=0/1      omit/include verbose run information       [0]"
+
+TUNEFLAGS    = $(LENGTHFLAG) $(ALLOCFLAG) $(VERBOSEFLAG) \
                $(USERFLAGS)  $(RESTRICTFLAG)
 PROGRAM      = nstream
 OBJS         = $(PROGRAM).o $(COMOBJS)

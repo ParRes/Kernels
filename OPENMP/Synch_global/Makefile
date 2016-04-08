@@ -31,8 +31,9 @@ VERBOSEFLAG = -DVERBOSE=$(VERBOSE)
 NTHREADFLAG = -DMAXTHREADS=$(MAXTHREADS)
 
 OPTIONSSTRING="Make options:\n\
- MAXTHREADS=?   set maximum number of OpenMP threads [256]\n\
- VERBOSE=0/1    omit/include verbose run information [0]"
+OPTION         MEANING                            DEFAULT\n\
+MAXTHREADS=?   set maximum number of OpenMP threads [256]\n\
+VERBOSE=0/1    omit/include verbose run information [0]"
 
 TUNEFLAGS   = $(VERBOSEFLAG) $(NTHREADFLAG) $(USERFLAGS) 
 PROGRAM     = global

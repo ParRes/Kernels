@@ -68,14 +68,15 @@ PARALLELFORFLAG = -DPARALLELFOR=$(PARALLELFOR)
 STARFLAG        = -DSTAR=$(STAR)
 
 OPTIONSSTRING="Make options:\n\
- RADIUS=?        radius of stencil                          [2]  \n\
- LOOPGEN=0/1     compact/expanded stencil loop body         [0]  \n\
- DOUBLE=0/1      single/double precision                    [1]  \n\
- PARALLELFOR=0/1 fused/split parallel regions               [0]  \n\
- RESTRICT=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
- MAXTHREADS=?    set maximum number of OpenMP threads       [256]\n\
- STAR=0/1        box/star shaped stencil                    [1]  \n\
- VERBOSE=0/1     omit/include verbose run information       [0]"
+OPTION          MEANING                                  DEFAULT\n\
+RADIUS=?        radius of stencil                          [2]  \n\
+LOOPGEN=0/1     compact/expanded stencil loop body         [0]  \n\
+DOUBLE=0/1      single/double precision                    [1]  \n\
+PARALLELFOR=0/1 fused/split parallel regions               [0]  \n\
+RESTRICT=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
+MAXTHREADS=?    set maximum number of OpenMP threads       [256]\n\
+STAR=0/1        box/star shaped stencil                    [1]  \n\
+VERBOSE=0/1     omit/include verbose run information       [0]"
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG)  $(NTHREADFLAG) $(USERFLAGS) \
                $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG) $(PARALLELFORFLAG) \
