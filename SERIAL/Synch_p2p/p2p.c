@@ -148,7 +148,7 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-#ifdef VERBOSE   
+#if VERBOSE   
   printf("Solution validates; verification value = %lf\n", corner_val);
 #else
   printf("Solution validates\n");

@@ -138,7 +138,7 @@ HISTORY: Written by Rob Van der Wijngaart, February 2009.
 
 /* Define constants                                                                */
 /* PERIOD = (2^63-1)/7 = 7*73*127*337*92737*649657                                 */
-#ifdef LONG_IS_64BITS 
+#if LONG_IS_64BITS 
   #define POLY               0x0000000000000007UL
   #define PERIOD             1317624576693539401L
   /* sequence number in stream of random numbers to be used as initial value       */
@@ -150,13 +150,9 @@ HISTORY: Written by Rob Van der Wijngaart, February 2009.
   #define SEQSEED            834568137686317453LL
 #endif 
 
-#ifdef HPCC
+#if HPCC
   #undef  ERRORPERCENT
   #define ERRORPERCENT 1
-#else
-  #ifndef ERRORPERCENT
-    #define ERRORPERCENT 0
-  #endif
 #endif
 
 static u64Int PRK_starts(s64Int);
@@ -173,7 +169,7 @@ int main(int argc, char **argv) {
   size_t            tablespace;  /* bytes per thread required for table            */
   u64Int            *ran;        /* vector of random numbers                       */
   s64Int            index;       /* index into Table                               */
-#ifdef VERBOSE
+#if VERBOSE
   u64Int * RESTRICT Hist;        /* histogram of # updates to table elements       */
   unsigned int      *HistHist;   /* histogram of update frequencies                */
 #endif
@@ -183,7 +179,7 @@ int main(int argc, char **argv) {
   int               log2tablesize; /* log2 of aggregate table size                 */
   int               log2update_ratio; /* log2 of update ratio                      */
 
-#ifdef LONG_IS_64BITS
+#if LONG_IS_64BITS
   if (sizeof(long) != 8) {
     printf("ERROR: Makefile says \"long\" is 8 bytes, but it is %d bytes\n",
            sizeof(long)); 
@@ -256,7 +252,7 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-#ifdef VERBOSE
+#if VERBOSE
   Hist = (u64Int *) prk_malloc(tablespace);
   HistHist = (unsigned int *) prk_malloc(tablespace);
   if (!Hist || ! HistHist) {
@@ -313,7 +309,7 @@ int main(int argc, char **argv) {
         ran[j] = (ran[j] << 1) ^ ((s64Int)ran[j] < 0? POLY: 0);
         index = ran[j] & (tablesize-1);
         Table[index] ^= ran[j];
-#ifdef VERBOSE
+#if VERBOSE
         Hist[index] += 1;
 #endif
       }
@@ -325,7 +321,7 @@ int main(int argc, char **argv) {
   /* verification test */
   for(i=0;i<tablesize;i++) {
     if(Table[i] != (u64Int) i) {
-#ifdef VERBOSE
+#if VERBOSE
       printf("Error Table["FSTR64U"]="FSTR64U"\n",i,Table[i]);
 #endif
       error++;
@@ -343,7 +339,7 @@ int main(int argc, char **argv) {
            1.e-9*nupdate/random_time,random_time);
   }
 
-#ifdef VERBOSE
+#if VERBOSE
   for(i=0;i<tablesize;i++) HistHist[Hist[i]]+=1;
   for(i=0;i<=tablesize;i++) if (HistHist[i] != 0)
 	printf("HistHist[%4.1d]=%9.1d\n",(int)i,HistHist[i]);
