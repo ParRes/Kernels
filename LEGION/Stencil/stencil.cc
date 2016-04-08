@@ -1046,7 +1046,7 @@ tuple_double spmd_task(const Task *task,
           inputReq.add_field(FID_IN);
           boundaryLauncher.add_region_requirement(inputReq);
         }
-        RegionRequirement inputReq(privateLr, READ_ONLY, EXCLUSIVE, localLr);
+        RegionRequirement inputReq(localLr, READ_ONLY, EXCLUSIVE, localLr);
         inputReq.add_field(FID_IN);
         boundaryLauncher.add_region_requirement(inputReq);
         if (iter == 0)
