@@ -231,7 +231,7 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
   /* first determine total number of particles, then allocate and place them   */   
 
   /* Loop over columns of cells and assign number of particles proportional to sinusodial weight */
-  for (pi=0,x=0; x<L; x++) {
+  for (*n_placed=0,x=0; x<L; x++) {
     for (y=0; y<L; y++) {
       (*n_placed) += random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L));
     }
