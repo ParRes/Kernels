@@ -249,7 +249,7 @@ int main(int argc, char ** argv)
   shmem_barrier_all();
 
   /*  Broadcast input data to all ranks */
-  shmem_broadcast32(&arguments[0], &arguments[0], 3, root, 0, 0, Num_procs, pSync_bcast);
+  shmem_broadcast32(&arguments[0], &arguments[0], 4, root, 0, 0, Num_procs, pSync_bcast);
 
   iterations=arguments[0];
   order=arguments[1];
