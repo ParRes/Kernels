@@ -71,7 +71,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
  
-#ifdef DOUBLE
+#if DOUBLE
   #define DTYPE     double
   #define MPI_DTYPE MPI_DOUBLE
   #define EPSILON   1.e-8
@@ -152,7 +152,7 @@ int main(int argc, char ** argv) {
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI stencil execution on 2D grid\n");
-#ifndef STAR
+#if !STAR
     printf("ERROR: Compact stencil not supported\n");
     error = 1;
     goto ENDOFTESTS;
@@ -220,7 +220,7 @@ int main(int argc, char ** argv) {
     printf("Radius of stencil      = %d\n", RADIUS);
     printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
     printf("Type of stencil        = star\n");
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
@@ -462,7 +462,7 @@ int main(int argc, char ** argv) {
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
              reference_norm, norm);
 #endif

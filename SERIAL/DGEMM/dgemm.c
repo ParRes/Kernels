@@ -83,7 +83,7 @@ int main(int argc, char **argv)
           ref_checksum;
   double  epsilon = 1.e-8;      /* error tolerance                                */
   static  
-  double *A, *B, *C;            /* input (A,B) and output (C) matrices            */
+  double RESTRICT *A, *B, *C;   /* input (A,B) and output (C) matrices            */
   long    order;                /* number of rows and columns of matrices         */
   long    block;                /* tile size of matrices                          */
   int     shortcut;             /* true if only doing initialization              */
@@ -148,7 +148,7 @@ int main(int argc, char **argv)
   }
 
 #if !MKL
-  double *AA, *BB, *CC;
+  double RESTRICT *AA, *BB, *CC;
 
   if (block > 0) {
     /* matrix blocks for local temporary copies                                     */

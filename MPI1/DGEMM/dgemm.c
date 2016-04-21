@@ -69,9 +69,6 @@ HISTORY: Written by Rob Van der Wijngaart, December 2007
 #define A(i,j) (a[(j)*lda+i])
 #define B(i,j) (b[(j)*ldb+i])
 #define C(i,j) (c[(j)*ldc+i])
-#ifndef BOFFSET
-  #define BOFFSET 12
-#endif
 #define AA(i,j) (aa[(j)*ldaa+i])
 #define BB(i,j) (bb[(j)*ldbb+i])
 #define CC(i,j) (cc[(j)*ldcc+i])
@@ -108,7 +105,7 @@ int main(int argc, char *argv[])
       iter, iterations;
   long lda, ldb, ldc,
        nb, myncols;     /* make long to avoid integer overflow     */
-  double *a, *b, *c,    /* arrays that hold local a, b, c          */
+  double RESTRICT *a, *b, *c,    /* arrays that hold local a, b, c */
       *work1, *work2,   /* work arrays to pass to dpmmmult         */
       local_dgemm_time, /* timing parameters                       */
       dgemm_time,
@@ -335,7 +332,7 @@ int main(int argc, char *argv[])
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference checksum = %lf, checksum = %lf\n", 
              ref_checksum, checksum);
 #endif
@@ -362,7 +359,7 @@ int    k,               /* global matrix dimensions                */
        mm[], nn[],      /* dimensions of blocks of A, B, C         */
        lda, ldb, ldc;   /* leading dimension of local arrays that 
                            hold local portions of matrices A, B, C */
-double *a, *b, *c,      /* arrays that hold local parts of A, B, C */
+double RESTRICT *a, *b, *c,/* arrays holding local parts of A, B, C \*/
        *work1, *work2;  /* work arrays                             */
 MPI_Comm comm_row,      /* Communicator for this row of nodes      */
        comm_col;        /* Communicator for this column of nodes   */

@@ -69,15 +69,15 @@ ERRORPERCENTFLAG = -DERRORPERCENT=$(ERRORPERCENT)
 LONG64FLAG       = -DLONG_IS_64BITS=$(LONG_IS_64BITS)
 
 OPTIONSSTRING="Make options:\n\
-OPTION         MEANING                                  DEFAULT\n\
-HPCC=0/1       do/do not impose HPCC rules                [1]  \n\
-ATOMIC=0/1     use atomic access to update table elements [0]  \n\
-CHUNKED=0/1    do/do not assign table chunks to threads   [0]  \n\
-ERRORPERCENT=? specify percentage of errors allowed            \n\
-LONG64=0/1     do/do not set long type as 64 bits         [0]  \n\
-RESTRICT=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
-MAXTHREADS=?   set maximum number of OpenMP threads       [256]\n\
-VERBOSE=0/1    omit/include verbose run information       [0]"
+OPTION                 MEANING                                  DEFAULT\n\
+HPCC=0/1               do/do not impose HPCC rules                [1]  \n\
+ATOMIC=0/1             use atomic access to update table elements [0]  \n\
+CHUNKED=0/1            do/do not assign table chunks to threads   [0]  \n\
+ERRORPERCENT=?         specify percentage of errors allowed            \n\
+LONG64=0/1             do/do not set long type as 64 bits         [0]  \n\
+RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
+MAXTHREADS=?           set maximum number of OpenMP threads       [256]\n\
+VERBOSE=0/1            omit/include verbose run information       [0]"
 
 TUNEFLAGS   = $(RESTRICTFLAG) $(LONG64FLAG) $(VERBOSEFLAG) $(NTHREADFLAG)\
               $(USERFLAGS)    $(ATOMICFLAG) $(CHUNKFLAG)   $(HPCCFLAG)   \

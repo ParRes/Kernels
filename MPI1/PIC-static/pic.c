@@ -917,7 +917,7 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
 
-#ifdef VERBOSE
+#if VERBOSE
   for (i=0; i<Num_procs; i++) {
     MPI_Barrier(MPI_COMM_WORLD);
     if (i == my_ID)  printf("Rank %d has %llu particles\n", my_ID, particles_count);
@@ -1064,7 +1064,7 @@ int main(int argc, char ** argv) {
     }
   }
    
-#ifdef VERBOSE
+#if VERBOSE
   for (i=0; i<Num_procs; i++) {
     MPI_Barrier(MPI_COMM_WORLD);
     if (i == my_ID)  printf("Rank %d has %llu particles\n", my_ID, particles_count);

@@ -27,6 +27,12 @@ ifndef VERBOSE
 endif
 #description: default diagnostic style is silent
 
+ifndef RESTRICT_KEYWORD
+  RESTRICT_KEYWORD=0
+endif
+#description: the "restrict" keyword can be used on IA platforms to disambiguate  
+#             data accessed through pointers (requires -restrict compiler flag)
+
 ifndef DEFAULTBLOCK
   DEFAULTBLOCK=32
 endif
@@ -43,22 +49,24 @@ ifndef MAXTHREADS
 endif
 #description: default thread limit is 256
 
-PROGRAM    = dgemm
-MKLFLAG    = -DMKL=$(MKL)
-VERBOSEFLAG= -DVERBOSE=$(VERBOSE)
-BLOCKFLAG  = -DDEFAULTBLOCK=$(DEFAULTBLOCK)
-OFFSETFLAG = -DBOFFSET=$(BOFFSET)
-NTHREADFLAG= -DMAXTHREADS=$(MAXTHREADS)
+PROGRAM     = dgemm
+MKLFLAG     = -DMKL=$(MKL)
+VERBOSEFLAG = -DVERBOSE=$(VERBOSE)
+RESTRICTFLAG= -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
+BLOCKFLAG   = -DDEFAULTBLOCK=$(DEFAULTBLOCK)
+OFFSETFLAG  = -DBOFFSET=$(BOFFSET)
+NTHREADFLAG = -DMAXTHREADS=$(MAXTHREADS)
 
 OPTIONSSTRING="Make options:\n\
-OPTION         MEANING                                              DEFAULT \n\
-MKL=0/1        disable/enable MKL library                              [0]  \n\
-DEFAULTBLOCK=? set tile size (non-MKL version)                         [32] \n\
-BOFFSET=?      override default first array dimension padding of tiles [12] \n\
-MAXTHREADS=?   set maximum number of OpenMP threads                    [256]\n\
-VERBOSE=0/1    omit/include verbose run information                    [0]"
+OPTION                 MEANING                                              DEFAULT \n\
+MKL=0/1                disable/enable MKL library                              [0]  \n\
+RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing)              [0]  \n\
+DEFAULTBLOCK=?         set tile size (non-MKL version)                         [32] \n\
+BOFFSET=?              override default first array dimension padding of tiles [12] \n\
+MAXTHREADS=?           set maximum number of OpenMP threads                    [256]\n\
+VERBOSE=0/1            omit/include verbose run information                    [0]"
 
-TUNEFLAGS   = $(BLOCKFLAG)   $(MKLFLAG)     $(OFFSETFLAG) \
+TUNEFLAGS   = $(BLOCKFLAG)   $(MKLFLAG)     $(OFFSETFLAG) $(RESTRICTFLAG) \
               $(VERBOSEFLAG) $(NTHREADFLAG) $(USERFLAGS)
 OBJS        = $(PROGRAM).o $(COMOBJS) 
 

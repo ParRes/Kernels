@@ -39,16 +39,13 @@ VERBOSEFLAG = -DVERBOSE=$(VERBOSE)
 RESTRICTFLAG= -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
 
 OPTIONSSTRING="Make options:\n\
-OPTION         MEANING                                  DEFAULT\n\
-RESTRICT=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
-VERBOSE=0/1    omit/include verbose run information       [0]"
+OPTION                 MEANING                                  DEFAULT\n\
+RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
+VERBOSE=0/1            omit/include verbose run information       [0]"
 
 TUNEFLAGS   = $(RESTRICTFLAG) $(VERBOSEFLAG) $(USERFLAGS)
 PROGRAM     = branch
 OBJS        = $(PROGRAM).o $(COMOBJS) func.o
-
-#default: usage
-#	@echo "            \"make veryclean\" to remove custom built files as well"
 
 include ../../common/make.common
 

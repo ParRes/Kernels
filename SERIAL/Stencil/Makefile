@@ -56,13 +56,13 @@ DOUBLEFLAG      = -DDOUBLE=$(DOUBLE)
 STARFLAG        = -DSTAR=$(STAR)
 
 OPTIONSSTRING="Make options:\n\
-OPTION          MEANING                                  DEFAULT\n\
-RADIUS=?        radius of stencil                          [2]  \n\
-LOOPGEN=0/1     compact/expanded stencil loop body         [0]  \n\
-DOUBLE=0/1      single/double precision                    [1]  \n\
-RESTRICT=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
-STAR=0/1        box/star shaped stencil                    [1]  \n\
-VERBOSE=0/1     omit/include verbose run information       [0]"
+OPTION                  MEANING                                  DEFAULT\n\
+RADIUS=?                radius of stencil                          [2]  \n\
+LOOPGEN=0/1             compact/expanded stencil loop body         [0]  \n\
+DOUBLE=0/1              single/double precision                    [1]  \n\
+RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
+STAR=0/1                box/star shaped stencil                    [1]  \n\
+VERBOSE=0/1             omit/include verbose run information       [0]"
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG) $(USERFLAGS) \
                $(DOUBLEFLAG)   $(RADIUSFLAG)  $(STARFLAG)  \

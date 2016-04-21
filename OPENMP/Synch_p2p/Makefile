@@ -44,11 +44,11 @@ NTHREADFLAG = -DMAXTHREADS=$(MAXTHREADS)
 SYNCHFLAG   = -DSYNCHRONOUS=$(SYNCHRONOUS)
 
 OPTIONSSTRING="Make options:\n\
-OPTION          MEANING                                  DEFAULT\n\
-SYNCHRONOUS=0/1 disable/enable handshake between threads   [0]  \n\
-RESTRICT=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
-MAXTHREADS=?    set maximum number of OpenMP threads       [256]\n\
-VERBOSE=0/1     omit/include verbose run information       [0]"
+OPTION                  MEANING                                  DEFAULT\n\
+SYNCHRONOUS=0/1         disable/enable handshake between threads   [0]  \n\
+RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
+MAXTHREADS=?            set maximum number of OpenMP threads       [256]\n\
+VERBOSE=0/1             omit/include verbose run information       [0]"
 
 TUNEFLAGS   = $(VERBOSEFLAG) $(NTHREADFLAG) $(USERFLAGS) $(SYNCHFLAG) \
               $(RESTRICTFLAG)

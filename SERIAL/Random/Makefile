@@ -34,16 +34,6 @@ endif
 #description: Uses HPC Challenge rules: non-atomic updates, shared table, 
 #             1% errors allowed; overrides ATOMICFLAG, CHUNKFLAG, ERRORPERCENTFLAG
 
-ifndef ATOMIC
-  ATOMIC=0
-endif
-#description: protect threads from simultaneous access to same memory location
-
-ifndef CHUNKED
-  CHUNKED=0
-endif
-#description: assign chunks of Table to different threads, so no atomic needed
-
 ifndef ERRORPERCENT
   ERRORPERCENT=1
 endif
@@ -61,12 +51,12 @@ ERRORPERCENTFLAG = -DERRORPERCENT=$(ERRORPERCENT)
 LONG64FLAG       = -DLONG_IS_64BITS=$(LONG_IS_64BITS)
 
 OPTIONSSTRING="Make options:\n\
-OPTION         MEANING                                  DEFAULT\n\
-HPCC=0/1       do/do not impose HPCC rules                [1]  \n\
-ERRORPERCENT=? specify percentage of errors allowed            \n\
-LONG64=0/1     do/do not set long type as 64 bits         [0]  \n\
-RESTRICT=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
-VERBOSE=0/1    omit/include verbose run information       [0]"
+OPTION                 MEANING                                  DEFAULT\n\
+HPCC=0/1               do/don't impose HPCC rules                 [1]  \n\
+ERRORPERCENT=?         specify percentage of errors allowed            \n\
+LONG64=0/1             do/do not set long type as 64 bits         [0]  \n\
+RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
+VERBOSE=0/1            omit/include verbose run information       [0]"
 
 TUNEFLAGS   = $(RESTRICTFLAG) $(LONG64FLAG) $(VERBOSEFLAG) \
               $(USERFLAGS)    $(HPCCFLAG)   $(ERRORPERCENTFLAG)

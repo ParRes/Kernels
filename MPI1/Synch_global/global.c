@@ -202,7 +202,7 @@ int main(int argc, char ** argv)
     /* now everybody selects a different substring */
     for (i=0; i<proc_length; i++) iterstring[i]=catstring[my_ID+i*Num_procs];
 
-#ifdef VERBOSE
+#if VERBOSE
     if (my_ID==0) {
       checksum=0;
       for (i=0; i<length+1;i++) checksum+= chartoi(catstring[i]);

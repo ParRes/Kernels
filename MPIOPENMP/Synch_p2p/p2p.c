@@ -182,7 +182,7 @@ int main(int argc, char ** argv)
     printf("Number of threads              = %d\n", omp_get_max_threads());
     printf("Grid sizes                     = %ld, %ld\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
     printf("Handshake between neighbor threads\n");
 #else
     printf("No handshake between neighbor threads\n");
@@ -280,7 +280,7 @@ int main(int argc, char ** argv)
  
   for (iter=0; iter<=iterations; iter++) {
  
-#ifndef SYNCHRONOUS
+#if !SYNCHRONOUS
     /* true and false toggle each iteration                                      */
     true = (iter+1)%2; false = !true;
 #endif
@@ -299,7 +299,7 @@ int main(int argc, char ** argv)
       while (flag(0,0) == true) {
         #pragma omp flush
       }
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
       flag(0,0)= true;
       #pragma omp flush
 #endif      
@@ -320,7 +320,7 @@ int main(int argc, char ** argv)
 	while (flag(TID-1,j) == false) {
            #pragma omp flush
         }
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
         flag(TID-1,j)= false;
         #pragma omp flush
 #endif      
@@ -332,7 +332,7 @@ int main(int argc, char ** argv)
  
       /* if not on right boundary, signal right neighbor it has new data */
       if (TID < nthread-1) {
-#ifdef SYNCHRONOUS 
+#if SYNCHRONOUS 
         while (flag(TID,j) == true) {
           #pragma omp flush
         }
@@ -361,7 +361,7 @@ int main(int argc, char ** argv)
       if (TID==nthread-1) { /* if on right boundary, copy top right corner value 
                 to bottom left corner to create dependency and signal completion  */
         ARRAY(0,0) = -ARRAY(m-1,n-1);
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
         while (flag(0,0) == false) {
           #pragma omp flush
         }
@@ -396,9 +396,9 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
  
-  if (my_ID == root) {
+  if (my_ID == final) {
     avgtime = pipeline_time/iterations;
-#ifdef VERBOSE   
+#if VERBOSE   
     printf("Solution validates; verification value = %lf\n", corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",
            ((float)((n-1)*(Num_procs-1)))/(avgtime));
