@@ -129,13 +129,13 @@ o The original and transposed matrices are called A and B
  
 int main(int argc, char ** argv)
 {
-  long Block_order;         /* number of columns owned by rank       */
-  long Block_size;          /* size of a single block                */
-  long Colblock_size;       /* size of column block                  */
+  long Block_order;        /* number of columns owned by rank       */
+  long Block_size;         /* size of a single block                */
+  long Colblock_size;      /* size of column block                  */
   int Tile_order=32;       /* default Tile order                    */
   int tiling;              /* boolean: true if tiling is used       */
   int Num_procs;           /* number of ranks                       */
-  long order;               /* order of overall matrix               */
+  long order;              /* order of overall matrix               */
   int send_to, recv_from;  /* ranks with which to communicate       */
   MPI_Status status;       
   MPI_Request send_req, recv_req;
@@ -148,10 +148,10 @@ int main(int argc, char ** argv)
   int phase;               /* phase inside staged communication     */
   int colstart;            /* starting column for owning rank       */
   int error;               /* error flag                            */
-  double *A_p;             /* original matrix column block          */
-  double *B_p;             /* transposed matrix column block        */
-  double *Work_in_p;       /* workspace for the transpose function  */
-  double *Work_out_p;      /* workspace for the transpose function  */
+  double RESTRICT *A_p;    /* original matrix column block          */
+  double RESTRICT *B_p;    /* transposed matrix column block        */
+  double RESTRICT *Work_in_p;/* workspace for transpose function    */
+  double RESTRICT *Work_out_p;/* workspace for transpose function   */
   double abserr,           /* absolute error                        */
          abserr_tot;       /* aggregate absolute error              */
   double epsilon = 1.e-8;  /* error tolerance                       */

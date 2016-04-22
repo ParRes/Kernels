@@ -62,7 +62,7 @@ HISTORY: - Written by Tom St. John, July 2015.
 #include <par-res-kern_general.h>
 #include <par-res-kern_shmem.h>
 
-#ifdef DOUBLE
+#if DOUBLE
   #define DTYPE     double
   #define EPSILON   1.e-8
   #define COEFX     1.0
@@ -177,7 +177,7 @@ int main(int argc, char ** argv) {
   ********************************************************************************/
  
   if (my_ID == root) {
-#ifndef STAR
+#if !STAR
     printf("ERROR: Compact stencil not supported\n");
     error = 1;
     goto ENDOFTESTS;
@@ -257,7 +257,7 @@ int main(int argc, char ** argv) {
     printf("Radius of stencil      = %d\n", RADIUS);
     printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
     printf("Type of stencil        = star\n");
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
@@ -539,7 +539,7 @@ int main(int argc, char ** argv) {
 
   shmem_barrier_all();
  
-#ifdef DOUBLE
+#if DOUBLE
   shmem_double_sum_to_all(&norm[0], &local_norm[0], 1, 0, 0, Num_procs, pWrk_norm, pSync_reduce);
 #else
   shmem_float_sum_to_all(&norm[0], &local_norm[0], 1, 0, 0, Num_procs, pWrk_norm, pSync_reduce);
@@ -565,7 +565,7 @@ int main(int argc, char ** argv) {
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
              reference_norm, norm[0]);
 #endif

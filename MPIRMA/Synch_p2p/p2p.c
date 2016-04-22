@@ -72,25 +72,25 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 int main(int argc, char ** argv)
 {
-  int    my_ID;         /* rank                                                  */
-  int    root=0, final; /* IDs of root rank and rank that verifies result        */
-  long   m, n;          /* grid dimensions                                       */
+  int    my_ID;           /* rank                                                */
+  int    root=0, final;   /* IDs of root rank and rank that verifies result      */
+  long   m, n;            /* grid dimensions                                     */
   double local_pipeline_time, /* timing parameters                               */
          pipeline_time,
          avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
-  double corner_val;    /* verification value at top right corner of grid        */
-  int    i, j, iter, ID;/* dummies                                               */
-  int    iterations;    /* number of times to run the pipeline algorithm         */
-  int    *start, *end;  /* starts and ends of grid slices                        */
-  long   segment_size;
-  int    error=0;       /* error flag                                            */
-  int    Num_procs;     /* Number of ranks                                       */
-  double *vector;       /* array holding grid values                             */
-  long   total_length;  /* total required length to store grid values            */
-  MPI_Status status;    /* completion status of message                          */
-  MPI_Win rma_win;       /* RMA window object */
-  MPI_Info rma_winfo;   /* info for window */
+  double corner_val;      /* verification value at top right corner of grid      */
+  int    i, j, iter, ID;  /* dummies                                             */
+  int    iterations;      /* number of times to run the pipeline algorithm       */
+  int    *start, *end;    /* starts and ends of grid slices                      */
+  long   segment_size;    /* size of x-dimension of grid owned by calling rank   */
+  int    error=0;         /* error flag                                          */
+  int    Num_procs;       /* Number of ranks                                     */
+  double RESTRICT *vector;/* array holding grid values                           */
+  long   total_length;    /* total required length to store grid values          */
+  MPI_Status status;      /* completion status of message                        */
+  MPI_Win rma_win;        /* RMA window object                                   */
+  MPI_Info rma_winfo;     /* info for window                                     */
   MPI_Group world_group, origin_group, target_group;
   int origin_ranks[1], target_ranks[1];
   int nbr_segment_size;
@@ -150,7 +150,7 @@ int main(int argc, char ** argv)
     printf("Number of ranks                = %i\n",Num_procs);
     printf("Grid sizes                     = %ld, %ld\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
-#ifdef VERBOSE
+#if VERBOSE
     printf("Synchronizations/iteration     = %d\n", (Num_procs-1)*(n-1));
 #endif
   }
@@ -306,7 +306,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == final) {
     avgtime = pipeline_time/iterations;
-#ifdef VERBOSE
+#if VERBOSE
     printf("Solution validates; verification value = %lf\n", corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",
            ((float)((n-1)*(Num_procs-1)))/(avgtime));

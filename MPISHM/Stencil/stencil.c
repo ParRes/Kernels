@@ -131,7 +131,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
  
 *********************************************************************************/
  
-#ifdef DOUBLE
+#if DOUBLE
   #define DTYPE     double
   #define MPI_DTYPE MPI_DOUBLE
   #define EPSILON   1.e-8
@@ -243,7 +243,7 @@ int main(int argc, char ** argv) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI+SHM stencil execution on 2D grid\n");
 
-#ifndef STAR
+#if !STAR
       printf("ERROR: Compact stencil not supported\n");
       error = 1;
       goto ENDOFTESTS;
@@ -331,12 +331,12 @@ int main(int argc, char ** argv) {
     printf("Tiles per shared memory domain  = %d\n", group_size);
     printf("Tiles in x/y-direction in group = %d/%d\n", group_sizex,  group_sizey);
     printf("Type of stencil                 = star\n");
-#ifdef LOCAL_BARRIER_SYNCH
+#if LOCAL_BARRIER_SYNCH
     printf("Local synchronization           = barrier\n");
 #else
     printf("Local synchronization           = point to point\n");
 #endif
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type                       = double precision\n");
 #else
     printf("Data type                       = single precision\n");
@@ -668,7 +668,7 @@ int main(int argc, char ** argv) {
     /* LOAD/STORE FENCE */
     MPI_Win_sync(shm_win_out);
 
-#ifdef LOCAL_BARRIER_SYNCH
+#if LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid writing IN while other ranks are reading it
 #else
     for (i=0; i<num_local_nbrs; i++) {
@@ -685,7 +685,7 @@ int main(int argc, char ** argv) {
     /* LOAD/STORE FENCE */
     MPI_Win_sync(shm_win_in);
 
-#ifdef LOCAL_BARRIER_SYNCH
+#if LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid reading IN while other ranks are writing it
 #else
     for (i=0; i<num_local_nbrs; i++) {
@@ -731,7 +731,7 @@ int main(int argc, char ** argv) {
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
              reference_norm, norm);
 #endif
