@@ -244,13 +244,6 @@ int main(int argc, char **argv){
   nent = nrows*stencil_size;
 
   matrix_space = nent*sizeof(double);
-  if (matrix_space/sizeof(double) != nent) {
-    printf("ERROR: rank %d cannot represent space for matrix: %zu\n",
-           my_ID, matrix_space);
-    error = 1;
-  } 
-  bail_out(error);
-
   matrix = (double *) prk_malloc(matrix_space);
   if (!matrix) {
     printf("ERROR: rank %d could not allocate space for sparse matrix: "FSTR64U"\n", 
@@ -260,13 +253,6 @@ int main(int argc, char **argv){
   bail_out(error);
 
   vector_space = (size2 + nrows)*sizeof(double);
-  if (vector_space/sizeof(double) != (size2+nrows)) {
-    printf("ERROR: rank %d Cannot represent space for vectors: %zu\n",
-           my_ID, vector_space);
-    error = 1; 
-  } 
-  bail_out(error);
-
   vector = (double *) prk_malloc(vector_space);
   if (!vector) {
     printf("ERROR: rank %d could not allocate space for vectors: %d\n", 
@@ -277,13 +263,6 @@ int main(int argc, char **argv){
   result = vector + size2;
 
   index_space = nent*sizeof(s64Int);
-  if (index_space/sizeof(s64Int) != nent) {
-    printf("ERROR: rank %d cannot represent space for column indices: %zu\n", 
-           my_ID, index_space);
-    error = 1;
-  } 
-  bail_out(error);
-
   colIndex = (s64Int *) prk_malloc(index_space);
   if (!colIndex) {
     printf("ERROR: rank %d Could not allocate space for column indices: "FSTR64U"\n",
@@ -318,10 +297,6 @@ int main(int argc, char **argv){
 #if TESTDENSE 
   /* fill dense matrix to test                                                    */
   matrix_space = size2*size2/Num_procs*sizeof(double);
-  if (matrix_space/sizeof(double) != size2*size2/Num_procs) {
-    printf("ERROR: Cannot represent space for matrix: %ul\n", matrix_space);
-    exit(EXIT_FAILURE);
-  } 
   dense = (double *) prk_malloc(matrix_space);
   if (!dense) {
     printf("ERROR: Could not allocate space for dense matrix of order: %d\n",

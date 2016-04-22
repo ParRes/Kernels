@@ -6,9 +6,32 @@ include ../../common/GRAPPA.defs
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -O3
 #description: change above into something that is a decent optimization on you system
 
-#RESTRICTFLAG = -DRESTRICT_KEYWORD
+USERFLAGS    = 
+#description: parameter to specify optional flags
+
+#set the following variables for custom libraries and/or other objects
+EXTOBJS      = 
+LIBS         = $(GRAPPA_LDLIBS)
+LIBPATHS     = $(GRAPPA_LDFLAGS)
+INCLUDEPATHS = 
+
+### End User configurable options ###
+
+ifndef DOUBLE
+  DOUBLE=1
+endif
+#description: default data type is single precision
+
+ifndef STAR
+  STAR=1
+endif
+#description: default stencil is compact (dense, square)
+
+ifndef RESTRICT_KEYWORD
+  RESTRICT_KEYWORD=0
+endif
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers
+#             data accessed through pointers (requires -restrict compiler flag)
 
 ifndef RADIUS
   RADIUS=2
@@ -20,30 +43,30 @@ ifndef LOOPGEN
 endif
 #description: default is compact (non-expanded) form of loop body
 
-STARFLAG   = -DSTAR
-#description: default stencil is compact (dense, square)
-
-#DEBUGFLAG   = -DVERBOSE
+ifndef VERBOSE
+  VERBOSE=0
+endif
 #description: default diagnostic style is silent
 
-USERFLAGS    = 
-#description: parameter to specify optional flags
-
-#set the following variables for custom libraries and/or other objects
-EXTOBJS      = 
-LIBS         = $(GRAPPA_LDLIBS)
-LIBPATHS     = $(GRAPPA_LDFLAGS)
-
-### End User configurable options ###
-RADIUSFLAG = -DRADIUS=$(RADIUS)
-LOOPGENFLAG= -DLOOPGEN=$(LOOPGEN)
+VERBOSEFLAG     = -DVERBOSE=$(VERBOSE)
+RESTRICTFLAG    = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
+RADIUSFLAG      = -DRADIUS=$(RADIUS)
+LOOPGENFLAG     = -DLOOPGEN=$(LOOPGEN)
+STARFLAG        = -DSTAR=$(STAR)
 
 # this is used by the C++ implicit compile rule
-CXXFLAGS= $(GRAPPA_CXXFLAGS)
+CXXFLAGS        = $(GRAPPA_CXXFLAGS)
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG) $(RADIUSFLAG)  \
-               $(USERFLAGS) $(CXXFLAGS) $(STARFLAG) \
-               $(LOOPGENFLAG) 
+OPTIONSSTRING="Make options:\n\
+OPTION                  MEANING                                  DEFAULT\n\
+RADIUS=?                radius of stencil                          [2]  \n\
+LOOPGEN=0/1             compact/expanded stencil loop body         [0]  \n\
+RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
+STAR=0/1                box/star shaped stencil                    [1]  \n\
+VERBOSE=0/1             omit/include verbose run information       [0]"
+
+TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG)$(USERFLAGS) $(LOOPGENFLAG)\
+               $(RADIUSFLAG)   $(STARFLAG)   $(CXXFLAGS)
 PROGRAM     = stencil
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

@@ -61,22 +61,12 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <FullEmpty.hpp>
 using namespace Grappa;
 
-#define DOUBLE
-#ifdef DOUBLE
-  #define DTYPE     double
-  #define MPI_DTYPE MPI_DOUBLE
-  #define EPSILON   1.e-8
-  #define COEFX     1.0
-  #define COEFY     1.0
-  #define FSTR      "%lf"
-#else
-  #define DTYPE     float
-  #define MPI_DTYPE MPI_FLOAT
-  #define EPSILON   0.0001f
-  #define COEFX     1.0f
-  #define COEFY     1.0f
-  #define FSTR      "%f"
-#endif
+#define DTYPE     double
+#define EPSILON   1.e-8
+#define COEFX     1.0
+#define COEFY     1.0
+#define FSTR      "%lf"
+
 #define root 0
 
 // temporary hack to allocate symmetric data with lower overhead
@@ -133,7 +123,7 @@ int main(int argc, char * argv[]) {
   /*******************************************************************************
   ** process and test input parameters   
   ********************************************************************************/
-#ifndef STAR
+#if !STAR
   if (my_ID == root)
     std::cout <<"ERROR: Compact stencil not supported"<<std::endl;
   exit(1);     
@@ -189,11 +179,8 @@ int main(int argc, char * argv[]) {
     std::cout<<"Radius of stencil      = "<<RADIUS<<std::endl;
     std::cout<<"Tiles in x/y-direction = "<<Num_procsx<<"/"<<Num_procsy<<std::endl;
     std::cout<<"Type of stencil        = star"<<std::endl;
-#ifdef DOUBLE
-      std::cout<<"Data type              = double precision"<<std::endl;
-#else
-      std::cout<<"Data type              = single precision"<<std::endl;
-#endif
+    std::cout<<"Data type              = double precision"<<std::endl;
+
 #if LOOPGEN
       std::cout<<"Script used to expand stencil loop body"<<std::endl;
 #else
