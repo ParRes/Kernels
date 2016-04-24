@@ -316,7 +316,7 @@ void top_level_task(const Task *task,
   int Num_procsx, Num_procsy, num_ranks, threads;
   int iterations;
   bool waitAnalysis = false;
-  int warmupIterations = 0;
+  int warmupIterations = 2;
 
   /*********************************************************************
   ** read and test input parameters
