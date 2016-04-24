@@ -328,7 +328,6 @@ void top_level_task(const Task *task,
   int iterations;
   bool waitAnalysis = false;
   int warmupIterations = 0;
-  int num_numa_nodes = 1;
 
   /*********************************************************************
   ** read and test input parameters
@@ -365,9 +364,7 @@ void top_level_task(const Task *task,
 
   for (int idx = 4; idx < inputs.argc; ++idx)
   {
-    if (strcmp(inputs.argv[idx], "-numa") == 0)
-      num_numa_nodes = atoi(inputs.argv[++idx]);
-    else if (strcmp(inputs.argv[idx], "-warmup") == 0)
+    if (strcmp(inputs.argv[idx], "-warmup") == 0)
       warmupIterations = atoi(inputs.argv[++idx]);
     else if (strcmp(inputs.argv[idx], "-wait") == 0)
       waitAnalysis = true;
@@ -380,7 +377,6 @@ void top_level_task(const Task *task,
   printf("Number of ranks        = %d\n", num_ranks);
   printf("Grid size              = %d\n", n);
   printf("Number of threads      = %d\n", threads);
-  printf("Number of NUMA nodes   = %d\n", num_numa_nodes);
   printf("Radius of stencil      = %d\n", RADIUS);
 #ifdef DOUBLE
   printf("Data type              = double precision\n");
@@ -388,8 +384,6 @@ void top_level_task(const Task *task,
   printf("Data type              = single precision\n");
 #endif
   printf("Number of iterations   = %d\n", iterations);
-
-  num_ranks *= num_numa_nodes;
 
   /* compute "processor" grid; initialize Num_procsy to avoid compiler warnings */
   Num_procsy = 0;
