@@ -631,10 +631,7 @@ static LogicalPartition createHaloPartition(LogicalRegion lr,
   DomainPointColoring coloring;
   std::vector<DomainPoint> colors;
   for (int color = GHOST_LEFT; color <= PRIVATE; ++color)
-  {
     colors.push_back(DomainPoint::from_point<1>(color));
-    coloring[colors[color]];
-  }
 
   if (boundingBox.lo[0] > 0)
   {
@@ -687,10 +684,7 @@ static LogicalPartition createBoundaryPartition(LogicalRegion lr,
   DomainPointColoring coloring;
   std::vector<DomainPoint> colors;
   for (int color = LEFT; color <= INTERIOR; ++color)
-  {
     colors.push_back(DomainPoint::from_point<1>(color));
-    coloring[colors[color]];
-  }
 
   Rect<2> interiorBox = boundingBox;
   for (int i = 0; i < 2; ++i)
@@ -851,9 +845,10 @@ tuple_double spmd_task(const Task *task,
         DomainPoint::from_point<1>(INTERIOR));
   std::vector<LogicalRegion> boundaryLrs(8);
   for (unsigned dir = LEFT; dir <= DOWN_LEFT; ++dir)
-    boundaryLrs[dir] =
-      runtime->get_logical_subregion_by_color(ctx, boundaryLP,
-          DomainPoint::from_point<1>(dir));
+    if (hasBoundary[dir])
+      boundaryLrs[dir] =
+        runtime->get_logical_subregion_by_color(ctx, boundaryLP,
+            DomainPoint::from_point<1>(dir));
 
   // create partitions for indexspace launch
   LogicalPartition privateLp =
