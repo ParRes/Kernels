@@ -82,7 +82,12 @@ typedef std::pair<std::pair<double, double>, double> tuple_double;
 class StencilMapper : public DefaultMapper
 {
   public:
-    StencilMapper(Machine machine, HighLevelRuntime *rt, Processor local);
+    StencilMapper(Machine machine, HighLevelRuntime *rt, Processor local,
+                  std::vector<Processor>* procs_list,
+                  std::vector<Memory>* sysmems_list,
+                  std::map<Memory, std::vector<Processor> >* sysmem_local_procs,
+                  std::map<Processor, Memory>* proc_sysmems,
+                  std::map<Processor, Memory>* proc_regmems);
     virtual void select_task_options(Task *task);
     virtual void slice_domain(const Task *task, const Domain &domain,
         std::vector<DomainSplit> &slices);
@@ -91,55 +96,33 @@ class StencilMapper : public DefaultMapper
         const std::vector<MappingConstraint> &constraints,
         MappingTagID tag);
   private:
-    std::map<AddressSpaceID, std::vector<Processor> > proc_map;
-    std::map<Processor, Memory> all_sysmems;
-    int num_nodes;
+    std::vector<Processor>& procs_list;
+    std::vector<Memory>& sysmems_list;
+    std::map<Memory, std::vector<Processor> >& sysmem_local_procs;
+    std::map<Processor, Memory>& proc_sysmems;
+    std::map<Processor, Memory>& proc_regmems;
 };
 
-StencilMapper::StencilMapper(Machine machine, HighLevelRuntime *rt, Processor local)
-  : DefaultMapper(machine, rt, local), num_nodes(0)
+StencilMapper::StencilMapper(Machine machine, HighLevelRuntime *rt, Processor local,
+                             std::vector<Processor>* _procs_list,
+                             std::vector<Memory>* _sysmems_list,
+                             std::map<Memory, std::vector<Processor> >* _sysmem_local_procs,
+                             std::map<Processor, Memory>* _proc_sysmems,
+                             std::map<Processor, Memory>* _proc_regmems)
+  : DefaultMapper(machine, rt, local),
+    procs_list(*_procs_list),
+    sysmems_list(*_sysmems_list),
+    sysmem_local_procs(*_sysmem_local_procs),
+    proc_sysmems(*_proc_sysmems),
+    proc_regmems(*_proc_regmems)
 {
-  std::set<Processor> all_procs;
-  machine.get_all_processors(all_procs);
-  machine_interface.filter_processors(machine, Processor::LOC_PROC, all_procs);
-
-  for (std::set<Processor>::iterator itr = all_procs.begin();
-      itr != all_procs.end(); ++itr)
-  {
-    int node_id = itr->address_space();
-    proc_map[node_id].push_back(*itr);
-    Memory sysmem = machine_interface.find_memory_kind(*itr, Memory::SYSTEM_MEM);
-    assert(sysmem.exists());
-    all_sysmems[*itr] = sysmem;
-    num_nodes = std::max(num_nodes, node_id + 1);
-  }
 }
 
 void StencilMapper::slice_domain(const Task *task, const Domain &domain,
                                  std::vector<DomainSplit> &slices)
 {
-  std::vector<Processor>& procs =
-    proc_map[task->target_proc.address_space()];
-  int stride = procs.size() / domain.get_volume();
-  assert(stride >= 1);
-
-  std::vector<Processor>::iterator it = procs.begin();
-  for (; it != procs.end(); ++it) if (*it == task->target_proc) break;
-  std::vector<Processor> target_procs;
-  int remaining_volume = domain.get_volume();
-  while (remaining_volume > 0)
-  {
-    for (; it != procs.end() && remaining_volume > 0; ++it)
-    {
-      target_procs.push_back(*it);
-      --remaining_volume;
-      if (remaining_volume == 0) break;
-      for (int i = 1; i < stride; ++i) if (++it == procs.end()) break;
-      if (it == procs.end()) break;
-    }
-    it = procs.begin();
-  }
-
+  std::vector<Processor>& target_procs =
+    sysmem_local_procs[proc_sysmems[task->target_proc]];
   DefaultMapper::decompose_index_space(domain, target_procs, 1, slices);
 }
 
@@ -153,16 +136,17 @@ void StencilMapper::select_task_options(Task *task)
 
   if (strcmp(task->get_task_name(), "boundary") == 0)
   {
-    task->target_proc = proc_map[local_proc.address_space()].back();
-    task->additional_procs.insert(
-        proc_map[local_proc.address_space()].begin(),
-        proc_map[local_proc.address_space()].end());
+    std::vector<Processor>& local_procs =
+      sysmem_local_procs[proc_sysmems[local_proc]];
+
+    task->target_proc = local_procs.back();
+    task->additional_procs.insert(local_procs.begin(), local_procs.end());
   }
 }
 
 bool StencilMapper::map_task(Task *task)
 {
-  Memory sysmem = all_sysmems[task->target_proc];
+  Memory sysmem = proc_sysmems[task->target_proc];
   std::vector<RegionRequirement> &regions = task->regions;
   for (unsigned idx = 0; idx < regions.size(); ++idx)
   {
@@ -182,12 +166,17 @@ bool StencilMapper::map_must_epoch(const std::vector<Task*> &tasks,
     const std::vector<MappingConstraint> &constraints,
     MappingTagID tag)
 {
-  int shards_per_node = tasks.size() / num_nodes;
+  unsigned tasks_per_sysmem =
+    (tasks.size() + sysmems_list.size() - 1) / sysmems_list.size();
   for (unsigned i = 0; i < tasks.size(); ++i)
   {
     Task* task = tasks[i];
-    task->target_proc =
-      *(proc_map[i / shards_per_node].begin() + i % shards_per_node);
+    unsigned index = i;
+    assert(index / tasks_per_sysmem < sysmems_list.size());
+    Memory sysmem = sysmems_list[index / tasks_per_sysmem];
+    unsigned subindex = index % tasks_per_sysmem;
+    assert(subindex < sysmem_local_procs[sysmem].size());
+    task->target_proc = sysmem_local_procs[sysmem][subindex];
     map_task(task);
   }
 
@@ -198,7 +187,7 @@ bool StencilMapper::map_must_epoch(const std::vector<Task*> &tasks,
     const MappingConstraint& c = constraints[i];
     if (c.idx1 == 0)
     {
-      Memory sysmem = all_sysmems[c.t1->target_proc];
+      Memory sysmem = proc_sysmems[c.t1->target_proc];
       c.t1->regions[c.idx1].target_ranking.clear();
       c.t1->regions[c.idx1].target_ranking.push_back(sysmem);
       c.t2->regions[c.idx2].target_ranking.clear();
@@ -207,7 +196,7 @@ bool StencilMapper::map_must_epoch(const std::vector<Task*> &tasks,
     }
     else if (c.idx2 == 0)
     {
-      Memory sysmem = all_sysmems[c.t2->target_proc];
+      Memory sysmem = proc_sysmems[c.t2->target_proc];
       c.t1->regions[c.idx1].target_ranking.clear();
       c.t1->regions[c.idx1].target_ranking.push_back(sysmem);
       c.t2->regions[c.idx2].target_ranking.clear();
@@ -1426,10 +1415,53 @@ void dummy_task(const Task *task,
 static void register_mappers(Machine machine, Runtime *rt,
                              const std::set<Processor> &local_procs)
 {
+  std::vector<Processor>* procs_list = new std::vector<Processor>();
+  std::vector<Memory>* sysmems_list = new std::vector<Memory>();
+  std::map<Memory, std::vector<Processor> >* sysmem_local_procs =
+    new std::map<Memory, std::vector<Processor> >();
+  std::map<Processor, Memory>* proc_sysmems = new std::map<Processor, Memory>();
+  std::map<Processor, Memory>* proc_regmems = new std::map<Processor, Memory>();
+
+  std::vector<Machine::ProcessorMemoryAffinity> proc_mem_affinities;
+  machine.get_proc_mem_affinity(proc_mem_affinities);
+
+  for (unsigned idx = 0; idx < proc_mem_affinities.size(); ++idx)
+  {
+    Machine::ProcessorMemoryAffinity& affinity = proc_mem_affinities[idx];
+    if (affinity.p.kind() == Processor::LOC_PROC)
+    {
+      if (affinity.m.kind() == Memory::SYSTEM_MEM)
+      {
+        (*proc_sysmems)[affinity.p] = affinity.m;
+        if (proc_regmems->find(affinity.p) == proc_regmems->end())
+          (*proc_regmems)[affinity.p] = affinity.m;
+      }
+      else if (affinity.m.kind() == Memory::REGDMA_MEM)
+        (*proc_regmems)[affinity.p] = affinity.m;
+    }
+  }
+
+  for (std::map<Processor, Memory>::iterator it = proc_sysmems->begin();
+       it != proc_sysmems->end(); ++it)
+  {
+    procs_list->push_back(it->first);
+    (*sysmem_local_procs)[it->second].push_back(it->first);
+  }
+
+  for (std::map<Memory, std::vector<Processor> >::iterator it =
+        sysmem_local_procs->begin(); it != sysmem_local_procs->end(); ++it)
+    sysmems_list->push_back(it->first);
+
   for (std::set<Processor>::const_iterator it = local_procs.begin();
       it != local_procs.end(); it++)
   {
-    rt->replace_default_mapper(new StencilMapper(machine, rt, *it), *it);
+    StencilMapper* mapper = new StencilMapper(machine, rt, *it,
+                                              procs_list,
+                                              sysmems_list,
+                                              sysmem_local_procs,
+                                              proc_sysmems,
+                                              proc_regmems);
+    rt->replace_default_mapper(mapper, *it);
   }
 }
 
