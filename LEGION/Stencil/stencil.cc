@@ -53,7 +53,7 @@ USAGE:   The program takes as input the linear dimension of the grid,
          transpose worked and timing statistics.
 
 HISTORY: Written by Abdullah Kayi, May 2015.
-         Completely rewritten by Wonchan Lee, Mar 2016.
+         Completely rewritten by Wonchan Lee, Apr 2016.
 
 *******************************************************************/
 #include "../../include/par-res-kern_legion.h"
@@ -168,7 +168,6 @@ bool StencilMapper::map_task(Task *task)
   {
     RegionRequirement &req = regions[idx];
 
-    // Region options:
     req.virtual_map = false;
     req.enable_WAR_optimization = false;
     req.reduction_list = false;
@@ -197,8 +196,6 @@ bool StencilMapper::map_must_epoch(const std::vector<Task*> &tasks,
   for (unsigned i = 0; i < constraints.size(); ++i)
   {
     const MappingConstraint& c = constraints[i];
-    //assert(c.t1->target_proc.address_space() !=
-    //       c.t2->target_proc.address_space());
     if (c.idx1 == 0)
     {
       Memory sysmem = all_sysmems[c.t1->target_proc];
@@ -291,15 +288,19 @@ struct SPMDArgs {
   int numThreads;
   int numIterations;
   int myRank;
+  int warmupIterations;
+  bool waitAnalysis;
   PhaseBarrier fullInput[4];
   PhaseBarrier fullOutput[4];
   PhaseBarrier emptyInput[4];
   PhaseBarrier emptyOutput[4];
   PhaseBarrier analysisLock;
   PhaseBarrier stencilLock;
+  PhaseBarrier initLock;
 };
 
 struct StencilArgs {
+  bool waitAnalysis;
   int n;
   int numIterations;
   int haloX;
@@ -325,6 +326,9 @@ void top_level_task(const Task *task,
   int n;
   int Num_procsx, Num_procsy, num_ranks, threads;
   int iterations;
+  bool waitAnalysis = false;
+  int warmupIterations = 0;
+  int num_numa_nodes = 1;
 
   /*********************************************************************
   ** read and test input parameters
@@ -333,7 +337,7 @@ void top_level_task(const Task *task,
 
   if (inputs.argc < 4)
   {
-    printf("Usage: %s <# threads> <# iterations> <array dimension> [<# numa nodes>]\n",
+    printf("Usage: %s <# threads> <# iterations> <array dimension>\n",
            *inputs.argv);
     exit(EXIT_FAILURE);
   }
@@ -359,9 +363,16 @@ void top_level_task(const Task *task,
       exit(EXIT_FAILURE);
   }
 
-  int num_numa_nodes = 1;
-  if (inputs.argc > 4 && '0' <= inputs.argv[4][0] && inputs.argv[4][0] <= '9')
-    num_numa_nodes = atoi(inputs.argv[4]);
+  for (int idx = 4; idx < inputs.argc; ++idx)
+  {
+    if (strcmp(inputs.argv[idx], "-numa") == 0)
+      num_numa_nodes = atoi(inputs.argv[++idx]);
+    else if (strcmp(inputs.argv[idx], "-warmup") == 0)
+      warmupIterations = atoi(inputs.argv[++idx]);
+    else if (strcmp(inputs.argv[idx], "-wait") == 0)
+      waitAnalysis = true;
+  }
+
   num_ranks = gasnet_nodes();
 
   printf("Parallel Research Kernels Version %s\n", PRKVERSION);
@@ -389,7 +400,6 @@ void top_level_task(const Task *task,
       Num_procsy = num_ranks / Num_procsx;
       break;
     }
-  //std::swap(Num_procsx, Num_procsy);
 
   if (n % Num_procsx != 0)
   {
@@ -512,6 +522,7 @@ void top_level_task(const Task *task,
 
   PhaseBarrier analysisLock = runtime->create_phase_barrier(ctx, num_ranks);
   PhaseBarrier stencilLock = runtime->create_phase_barrier(ctx, num_ranks);
+  PhaseBarrier initLock = runtime->create_phase_barrier(ctx, num_ranks);
   MustEpochLauncher shardLauncher;
   std::map<DomainPoint, SPMDArgs> args;
   for (int tileY = 0; tileY < Num_procsy; ++tileY)
@@ -525,6 +536,9 @@ void top_level_task(const Task *task,
       args[tilePoint].numIterations = iterations;
       args[tilePoint].analysisLock = analysisLock;
       args[tilePoint].stencilLock = stencilLock;
+      args[tilePoint].initLock = initLock;
+      args[tilePoint].warmupIterations = warmupIterations;
+      args[tilePoint].waitAnalysis = waitAnalysis;
 
       TaskLauncher spmdLauncher(TASKID_SPMD,
           TaskArgument(&args[tilePoint], sizeof(SPMDArgs)));
@@ -710,8 +724,6 @@ static LogicalPartition createBoundaryPartition(LogicalRegion lr,
       Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
     hasBoundary[LEFT] = true;
 
-    //printf("left: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
-
     if (interiorBox.lo[1] > 0)
     {
       coord_t lu[] = { boundingBox.lo[0], boundingBox.lo[1] };
@@ -719,7 +731,6 @@ static LogicalPartition createBoundaryPartition(LogicalRegion lr,
       coloring[colors[LEFT_UP]] =
         Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
       hasBoundary[LEFT_UP] = true;
-      //printf("left up: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
     }
   }
 
@@ -730,7 +741,6 @@ static LogicalPartition createBoundaryPartition(LogicalRegion lr,
     coloring[colors[UP]] =
       Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
     hasBoundary[UP] = true;
-    //printf("up: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
 
     if (interiorBox.hi[0] < n - 1)
     {
@@ -739,7 +749,6 @@ static LogicalPartition createBoundaryPartition(LogicalRegion lr,
       coloring[colors[UP_RIGHT]] =
         Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
       hasBoundary[UP_RIGHT] = true;
-      //printf("up right: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
     }
   }
 
@@ -750,7 +759,6 @@ static LogicalPartition createBoundaryPartition(LogicalRegion lr,
     coloring[colors[RIGHT]] =
       Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
     hasBoundary[RIGHT] = true;
-    //printf("right: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
 
     if (interiorBox.hi[1] < n - 1)
     {
@@ -759,7 +767,6 @@ static LogicalPartition createBoundaryPartition(LogicalRegion lr,
       coloring[colors[RIGHT_DOWN]] =
         Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
       hasBoundary[RIGHT_DOWN] = true;
-      //printf("right down: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
     }
   }
 
@@ -770,7 +777,6 @@ static LogicalPartition createBoundaryPartition(LogicalRegion lr,
     coloring[colors[DOWN]] =
       Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
     hasBoundary[DOWN] = true;
-    //printf("down: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
 
     if (interiorBox.lo[0] > 0)
     {
@@ -779,13 +785,9 @@ static LogicalPartition createBoundaryPartition(LogicalRegion lr,
       coloring[colors[DOWN_LEFT]] =
         Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
       hasBoundary[DOWN_LEFT] = true;
-      //printf("down left: (%d, %d) -- (%d, %d)\n", lu[0], lu[1], rd[0], rd[1]);
     }
   }
 
-  //printf("interior: (%d, %d) -- (%d, %d)\n",
-  //    interiorBox.lo[0], interiorBox.lo[1],
-  //    interiorBox.hi[0], interiorBox.hi[1]);
   coloring[colors[INTERIOR]] = Domain::from_rect<2>(interiorBox);
   IndexPartition ip =
     runtime->create_index_partition(ctx, is, colorSpace, coloring,
@@ -822,8 +824,6 @@ static LogicalPartition createBalancedPartition(LogicalRegion lr,
     coord_t rd[] = { endX, startY + widthY - 1 };
     assert(startY < rect.hi[1]);
     assert(startY + widthY - 1 <= rect.hi[1]);
-    //printf("thread %d: (%d, %d) -- (%d, %d)\n",
-    //    color, startX, startY, endX, startY + widthY - 1);
     coloring[colors[color]] =
       Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
     startY += widthY;
@@ -903,30 +903,12 @@ tuple_double spmd_task(const Task *task,
 
   // setup arguments for the child tasks
   StencilArgs stencilArgs;
+  stencilArgs.waitAnalysis = args->waitAnalysis;
   stencilArgs.n = n;
-  stencilArgs.numIterations = args->numIterations;
+  stencilArgs.numIterations =
+    args->numIterations + args->warmupIterations;
   stencilArgs.haloX = haloBox.hi[0] - haloBox.lo[0] + 1;
   TaskArgument taskArg(&stencilArgs, sizeof(StencilArgs));
-
-  // initialize fields
-  ArgumentMap argMap;
-  {
-    IndexLauncher initLauncher(TASKID_INITIALIZE, launchDomain,
-        taskArg, argMap);
-    RegionRequirement req(privateLp, 0, READ_WRITE, EXCLUSIVE, localLr);
-    req.add_field(FID_IN);
-    req.add_field(FID_OUT);
-    initLauncher.add_region_requirement(req);
-    for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
-      if (hasNeighbor[dir])
-      {
-        initLauncher.add_arrival_barrier(args->fullOutput[dir]);
-        args->fullOutput[dir] =
-          runtime->advance_phase_barrier(ctx, args->fullOutput[dir]);
-      }
-    FutureMap fm = runtime->execute_index_space(ctx, initLauncher);
-    fm.wait_all_results();
-  }
 
   // create a logical region for weights
   LogicalRegion weightLr;
@@ -955,6 +937,29 @@ tuple_double spmd_task(const Task *task,
     f.get_void_result();
   }
 
+  // initialize fields
+  PhaseBarrier init_lock_prev = args->initLock;
+  PhaseBarrier init_lock_next =
+    runtime->advance_phase_barrier(ctx, init_lock_prev);
+  ArgumentMap argMap;
+  {
+    IndexLauncher initLauncher(TASKID_INITIALIZE, launchDomain,
+        taskArg, argMap);
+    RegionRequirement req(privateLp, 0, READ_WRITE, EXCLUSIVE, localLr);
+    req.add_field(FID_IN);
+    req.add_field(FID_OUT);
+    initLauncher.add_region_requirement(req);
+    initLauncher.add_arrival_barrier(init_lock_prev);
+    for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
+      if (hasNeighbor[dir])
+      {
+        initLauncher.add_arrival_barrier(args->fullOutput[dir]);
+        args->fullOutput[dir] =
+          runtime->advance_phase_barrier(ctx, args->fullOutput[dir]);
+      }
+    FutureMap fm = runtime->execute_index_space(ctx, initLauncher);
+    fm.wait_all_results();
+  }
 
   PhaseBarrier analysis_lock_prev = args->analysisLock;
   PhaseBarrier analysis_lock_next =
@@ -964,11 +969,22 @@ tuple_double spmd_task(const Task *task,
   PhaseBarrier stencil_lock_next =
     runtime->advance_phase_barrier(ctx, stencil_lock_prev);
 
-  double tsStart = DBL_MAX;
+  {
+    TaskLauncher dummyLauncher(TASKID_DUMMY, taskArg);
+    RegionRequirement req(localLr, READ_WRITE, EXCLUSIVE, localLr);
+    req.add_field(FID_IN);
+    req.add_field(FID_OUT);
+    dummyLauncher.add_region_requirement(req);
+    dummyLauncher.add_wait_barrier(init_lock_next);
+    runtime->execute_task(ctx, dummyLauncher);
+  }
+
   FutureMap fm;
   FutureMap fm_first_interior;
   for (int iter = 0; iter < stencilArgs.numIterations; iter++)
   {
+    runtime->begin_trace(ctx, 0);
+
     {
       IndexLauncher interiorLauncher(TASKID_INTERIOR, launchDomain, taskArg,
           argMap);
@@ -981,15 +997,14 @@ tuple_double spmd_task(const Task *task,
       interiorLauncher.add_region_requirement(inputReq);
       interiorLauncher.add_region_requirement(outputReq);
       interiorLauncher.add_region_requirement(weightReq);
-      if (iter == 0)
+      if (args->waitAnalysis && iter == 0)
         interiorLauncher.add_wait_barrier(analysis_lock_next);
-      if (iter == 0)
+      if (iter == args->warmupIterations)
         fm_first_interior = runtime->execute_index_space(ctx, interiorLauncher);
       else
         runtime->execute_index_space(ctx, interiorLauncher);
     }
 
-    //runtime->begin_trace(ctx, 0);
     for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
       if (hasNeighbor[dir])
       {
@@ -1007,7 +1022,7 @@ tuple_double spmd_task(const Task *task,
             runtime->advance_phase_barrier(ctx, args->fullInput[dir]);
           copyLauncher.add_wait_barrier(args->fullInput[dir]);
           copyLauncher.add_arrival_barrier(args->emptyOutput[dir]);
-          if (iter == 0)
+          if (args->waitAnalysis && iter == 0)
             copyLauncher.add_wait_barrier(analysis_lock_next);
           args->emptyOutput[dir] =
             runtime->advance_phase_barrier(ctx, args->emptyOutput[dir]);
@@ -1049,7 +1064,7 @@ tuple_double spmd_task(const Task *task,
         RegionRequirement inputReq(localLr, READ_ONLY, EXCLUSIVE, localLr);
         inputReq.add_field(FID_IN);
         boundaryLauncher.add_region_requirement(inputReq);
-        if (iter == 0)
+        if (args->waitAnalysis && iter == 0)
           boundaryLauncher.add_wait_barrier(analysis_lock_next);
         runtime->execute_task(ctx, boundaryLauncher);
       }
@@ -1073,13 +1088,9 @@ tuple_double spmd_task(const Task *task,
         incLauncher.add_arrival_barrier(stencil_lock_prev);
       fm = runtime->execute_index_space(ctx, incLauncher);
     }
-    //runtime->end_trace(ctx, 0);
-    //if (iter == 0)
-    //{
-    //  fm.wait_all_results();
-    //  tsStart = wtime();
-    //}
+    runtime->end_trace(ctx, 0);
   }
+  if (args->waitAnalysis)
   {
     IndexLauncher dummyLauncher(TASKID_DUMMY, launchDomain, taskArg,
         argMap);
@@ -1090,6 +1101,7 @@ tuple_double spmd_task(const Task *task,
   fm.wait_all_results();
 
   double tsEnd = wtime();
+  double tsStart = DBL_MAX;
   for (Domain::DomainPointIterator it(launchDomain); it; it++)
     tsStart = std::min(tsStart, fm_first_interior.get_result<double>(it.p));
 
@@ -1387,6 +1399,7 @@ double check_task(const Task *task,
 
   DTYPE abserr = 0.0;
 
+  DTYPE numIterations = args->numIterations;
 #define OUT(i, j) ptr[(j) * haloX + i]
   for (coord_t j = 0; j < blockY; ++j)
   {
@@ -1398,7 +1411,7 @@ double check_task(const Task *task,
       if (realX < RADIUS || realY < RADIUS) continue;
       if (realX >= n - RADIUS || realY >= n - RADIUS) continue;
 
-      DTYPE norm = (DTYPE) args->numIterations * (COEFX + COEFY);
+      DTYPE norm = numIterations * (COEFX + COEFY);
       DTYPE value = OUT(i, j);
       abserr += ABS(value - norm);
     }
@@ -1413,8 +1426,7 @@ void dummy_task(const Task *task,
                 const std::vector<PhysicalRegion> &regions,
                 Context ctx, HighLevelRuntime *runtime)
 {
-  fprintf(stderr, "Entered dummy! Sleep 1 seconds...\n");
-  sleep(1);
+  if (((StencilArgs*)task->args)->waitAnalysis) sleep(1);
 }
 
 static void register_mappers(Machine machine, Runtime *rt,
