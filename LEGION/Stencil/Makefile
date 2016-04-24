@@ -39,7 +39,8 @@ GEN_SRC		?= stencil.cc 					# .cc files
 
 # You can modify these variables, some will be appended to by the runtime makefile
 INC_FLAGS	?=
-CC_FLAGS	= $(RADIUSFLAG) -DPOINTS_ARE_64BIT -DRESTRICT_KEYWORD
+CC_FLAGS	= $(RADIUSFLAG) -DPOINTS_ARE_64BIT -DRESTRICT_KEYWORD \
+		  -DDISABLE_BARRIER_MIGRATION # disable barrier migration temporarily
 NVCC_FLAGS	?=
 GASNET_FLAGS	?=
 LD_FLAGS	?=
