@@ -1,2 +1,1 @@
 include ../../common/make.defs
-LEGIONTOP=$(HOME)/tmp/PRK/legion
