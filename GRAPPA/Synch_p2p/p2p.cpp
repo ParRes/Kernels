@@ -216,6 +216,10 @@ int main( int argc, char * argv[] ) {
       iter_time = Grappa::reduce<double,collective_max<double>>( &timer->total );
       avgtime = iter_time/iterations;
       std::cout << "Solution validates"<<std::endl;
+#if VERBOSE
+      std::cout << "Expected/computed verification value: " << expected_corner_val << 
+	"/" << actual_corner_val<<std::endl;
+#endif
       std::cout << "Rate (MFlops/s): " << 1.0E-06*2*((double)(m-1)*(n-1))/avgtime<<
 	"  Avg time (s): "<<avgtime<<std::endl;
     }

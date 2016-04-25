@@ -439,6 +439,10 @@ int main(int argc, char * argv[]) {
       double flops = (DTYPE) (2*stencil_size+1) * f_active_points;
       double avgtime = iter_time/(double)iterations;
       std::cout << "Solution validates"<<std::endl;
+#if VERBOSE
+      std::cout << "Expected/compute solution norm: " <<reference_norm<<
+        actual_norm <<std::endl;
+#endif
       std::cout << "Rate (MFlops/s): " << 1.0E-06*flops/avgtime<<
         "  Avg time (s): "<<avgtime<<std::endl;
     }
