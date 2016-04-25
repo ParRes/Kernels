@@ -27,12 +27,6 @@ ifndef STAR
 endif
 #description: default stencil is compact (dense, square)
 
-ifndef RESTRICT_KEYWORD
-  RESTRICT_KEYWORD=0
-endif
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers (requires -restrict compiler flag)
-
 ifndef RADIUS
   RADIUS=2
 endif
@@ -49,7 +43,6 @@ endif
 #description: default diagnostic style is silent
 
 VERBOSEFLAG     = -DVERBOSE=$(VERBOSE)
-RESTRICTFLAG    = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
 RADIUSFLAG      = -DRADIUS=$(RADIUS)
 LOOPGENFLAG     = -DLOOPGEN=$(LOOPGEN)
 STARFLAG        = -DSTAR=$(STAR)
@@ -61,12 +54,11 @@ OPTIONSSTRING="Make options:\n\
 OPTION                  MEANING                                  DEFAULT\n\
 RADIUS=?                radius of stencil                          [2]  \n\
 LOOPGEN=0/1             compact/expanded stencil loop body         [0]  \n\
-RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
 STAR=0/1                box/star shaped stencil                    [1]  \n\
 VERBOSE=0/1             omit/include verbose run information       [0]"
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG)$(USERFLAGS) $(LOOPGENFLAG)\
-               $(RADIUSFLAG)   $(STARFLAG)   $(CXXFLAGS)
+TUNEFLAGS   = $(VERBOSEFLAG)  $(USERFLAGS)  $(LOOPGENFLAG)\
+              $(RADIUSFLAG)   $(STARFLAG)   $(CXXFLAGS)
 PROGRAM     = stencil
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
