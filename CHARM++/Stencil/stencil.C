@@ -107,7 +107,7 @@ public:
       CkPrintf("Grid size               = %d\n", n);
       CkPrintf("Radius of stencil       = %d\n", RADIUS);
       CkPrintf("Chares in x/y-direction = %d/%d\n", num_chare_cols, num_chare_rows);
-#ifdef STAR
+#if STAR
       CkPrintf("Type of stencil         = star\n");
 #else
       CkPrintf("Type of stencil         = compact\n");
@@ -127,7 +127,7 @@ public:
       /* fill the stencil weights to reflect a discrete divergence operator         */
       for (int j=-RADIUS; j<=RADIUS; j++) for (int i=-RADIUS; i<=RADIUS; i++)
 					      WEIGHT(i,j) = 0.0;
-      #ifdef STAR
+      #if STAR
         for (int i=1; i<=RADIUS; i++) {
           WEIGHT(0, i) = WEIGHT( i,0) =  (1.0/(2.0*i*RADIUS));
           WEIGHT(0,-i) = WEIGHT(-i,0) = -(1.0/(2.0*i*RADIUS));
@@ -160,7 +160,13 @@ public:
       diff      = ABS(result-ref_norm);
       if (diff < EPSILON) {
         CkPrintf("Solution validates\n");
-        CkPrintf("Rate (MFlops): %lf Avg time (s) %lf\n", flops/totalTime/1.e6, totalTime/maxiterations);
+#if VERBOSE
+      printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
+             ref_norm, result);
+#endif
+        
+        CkPrintf("Rate (MFlops): %lf Avg time (s) %lf\n", flops/totalTime/1.e6, 
+                 totalTime/maxiterations);
       }
       else {
         CkPrintf("Solution does not validate\n");
@@ -334,7 +340,7 @@ public:
   }
     
     void compute() {
-      double * RESTRICT in = this->in;
+      double * RESTRICT in  = this->in;
       double * RESTRICT out = this->out;
       int ii, jj;
 

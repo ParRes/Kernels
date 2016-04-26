@@ -90,7 +90,7 @@ void bail_out(char *fmt, ...){
   upc_global_exit(EXIT_FAILURE);
 }
 
-typedef shared [] DTYPE *local_shared_block;
+typedef shared [] DTYPE * RESTRICT local_shared_block;
 typedef shared [] local_shared_block *local_shared_block_ptrs;
 typedef local_shared_block *private_shared_block_ptrs;
 
