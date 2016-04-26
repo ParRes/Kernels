@@ -384,18 +384,6 @@ void top_level_task(const Task *task,
       break;
     }
 
-  if (n % Num_procsx != 0)
-  {
-    printf("n%%Num_procsx should be zero\n");
-    exit(EXIT_FAILURE);
-  }
-
-  if (n % Num_procsy != 0)
-  {
-    printf("n%%Num_procsy should be zero\n");
-    exit(EXIT_FAILURE);
-  }
-
   if (RADIUS < 1)
   {
     printf("Stencil radius %d should be positive\n", RADIUS);
@@ -426,25 +414,36 @@ void top_level_task(const Task *task,
 
   int tileSizeX = n / Num_procsx;
   int tileSizeY = n / Num_procsy;
+  int remainSizeX = n % Num_procsx;
+  int remainSizeY = n % Num_procsy;
 
   DomainPointColoring haloColoring;
 
+  int posY = 0;
   for (int tileY = 0; tileY < Num_procsy; ++tileY)
+  {
+    int sizeY = tileY < remainSizeY ? tileSizeY + 1 : tileSizeY;
+    int posX = 0;
     for (int tileX = 0; tileX < Num_procsx; ++tileX)
     {
+      int sizeX = tileX < remainSizeX ? tileSizeX + 1 : tileSizeX;
+
       DomainPoint tilePoint =
         DomainPoint::from_point<2>(make_point(tileX, tileY));
 
       Domain tileDomain = Domain::from_rect<2>(Rect<2>(
             make_point(
-              std::max(tileX * tileSizeX - RADIUS, 0),
-              std::max(tileY * tileSizeY - RADIUS, 0)),
+              std::max(posX - RADIUS, 0),
+              std::max(posY - RADIUS, 0)),
             make_point(
-              std::min((tileX + 1) * tileSizeX + RADIUS, n) - 1,
-              std::min((tileY + 1) * tileSizeY + RADIUS, n) - 1)));
+              std::min(posX + sizeX + RADIUS, n) - 1,
+              std::min(posY + sizeY + RADIUS, n) - 1)));
 
       haloColoring[tilePoint] = tileDomain;
+      posX += sizeX;
     }
+    posY += sizeY;
+  }
 
   IndexPartition haloIp =
     runtime->create_index_partition(ctx, is, colorSpace, haloColoring);
