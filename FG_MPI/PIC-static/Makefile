@@ -1,18 +1,20 @@
 include ../../common/FG_MPI.defs
+COMOBJS += random_draw.o
 
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -std=c99
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+#OPTFLAGS=-axCORE-AVX2 -O3 -restrict
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults
 
-USERFLAGS    = 
+USERFLAGS     = 
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         =
+LIBS         = -lm
 LIBPATHS     = 
 INCLUDEPATHS = 
 
@@ -24,11 +26,6 @@ endif
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers (requires -restrict compiler flag)
 
-ifndef SYNCHRONOUS
-  SYNCHRONOUS=0
-endif
-#description: turn on synchronous (blocking) communications
-
 ifndef VERBOSE
   VERBOSE=0
 endif
@@ -36,16 +33,14 @@ endif
 
 VERBOSEFLAG = -DVERBOSE=$(VERBOSE)
 RESTRICTFLAG= -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
-BLOCKFLAG   = -DSYNCHRONOUS=$(SYNCHRONOUS)
 
 OPTIONSSTRING="Make options:\n\
-OPTION                 MEANING                                      DEFAULT\n\
-RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing)     [0]  \n\
-VERBOSE=0/1            omit/include verbose run information           [0]  \n\
-SYNCHRONOUS=0/1        Use a/synchronous communications               [0]"
+OPTION                   MEANING                                  DEFAULT    \n\
+RESTRICT_KEYWORD=0/1     disable/enable restrict keyword (aliasing) [0]      \n\
+VERBOSE=0/1              omit/include verbose run information       [0]"
 
-TUNEFLAGS    = $(VERBOSEFLAG) $(USERFLAGS) $(RESTRICTFLAG) $(BLOCKFLAG)
-PROGRAM      = transpose
+TUNEFLAGS    = $(VERBOSEFLAG) $(USERFLAGS)  $(RESTRICTFLAG)
+PROGRAM      = pic
 OBJS         = $(PROGRAM).o $(COMOBJS)
 
 include ../../common/make.common

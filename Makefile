@@ -119,6 +119,7 @@ allfgmpi:
 	cd FG_MPI/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                          "MATRIX_RANK         = $(matrix_rank)"        \
                                                          "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+	cd FG_MPI/PIC-static;          $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allmpiopenmp:
 	cd MPIOPENMP/Nstream;       $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -235,6 +236,7 @@ clean:
 	cd FG_MPI/Synch_global;     $(MAKE) clean
 	cd FG_MPI/Synch_p2p;        $(MAKE) clean
 	cd FG_MPI/Branch;           $(MAKE) clean
+	cd FG_MPI/PIC-static;       $(MAKE) clean
 	cd AMPI/DGEMM;              $(MAKE) clean
 	cd AMPI/Nstream;            $(MAKE) clean
 	cd AMPI/Reduce;             $(MAKE) clean
