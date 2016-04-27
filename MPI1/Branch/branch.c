@@ -150,7 +150,6 @@ int main(int argc, char ** argv)
              total_ref;       /* computed and stored verification values         */
   int        btype;
   int        * RESTRICT vector, * RESTRICT index;
-  int        factor = -1;
 
 /*********************************************************************
 ** Initialize the MPI environment
