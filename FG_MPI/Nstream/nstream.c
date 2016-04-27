@@ -63,6 +63,9 @@ POSSIBILITY OF SUCH DAMAGE.
 /*  5. Absolutely no warranty is expressed or implied.                   */
 /*-----------------------------------------------------------------------*/
 
+
+
+
 /**********************************************************************
  
 NAME:      nstream
@@ -134,7 +137,7 @@ int main(int argc, char **argv)
            nstream_time, 
            avgtime;
   int      Num_procs,     /* number of ranks                             */
-           my_ID,         /* ID of calling rank                          */
+           my_ID,         /* rank                                        */
            root=0;        /* ID of master rank                           */
   int      error=0;       /* error flag for individual rank              */
   double * RESTRICT a;    /* main vector                                 */
@@ -142,9 +145,9 @@ int main(int argc, char **argv)
   double * RESTRICT c;    /* main vector                                 */
   int      procsize;      /* number of ranks per OS process              */
  
-/*************************************************************************
+/**********************************************************************************
 * process and test input parameters    
-**************************************************************************/
+***********************************************************************************/
  
   MPI_Init(&argc,&argv);
   MPI_Comm_size(MPI_COMM_WORLD,&Num_procs);
@@ -278,7 +281,7 @@ int checkTRIADresults (int iterations, long int length, double *a) {
   asum = 0.0;
   for (j=0; j<length; j++) asum += a[j];
  
-#ifdef VERBOSE
+#if VERBOSE
   printf ("Results Comparison: \n");
   printf ("        Expected checksum: %f\n",aj);
   printf ("        Observed checksum: %f\n",asum);
@@ -286,7 +289,7 @@ int checkTRIADresults (int iterations, long int length, double *a) {
  
   if (ABS(aj-asum)/asum > epsilon) {
     printf ("Failed Validation on output array\n");
-#ifndef VERBOSE
+#if !VERBOSE
     printf ("        Expected checksum: %f \n",aj);
     printf ("        Observed checksum: %f \n",asum);
 #endif

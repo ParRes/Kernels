@@ -45,7 +45,7 @@ LONG64FLAG       = -DLONG_IS_64BITS=$(LONG_IS_64BITS)
 
 OPTIONSSTRING="Make options:\n\
 OPTION                 MEANING                                   DEFAULT\n\
-LONG64=0/1             do/do not set long type as 64 bits         [0]   \n\
+LONG_IS_64BITS=0/1     do/do not set long type as 64 bits         [0]   \n\
 RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing) [0]   \n\
 LOOKAHEAD=?            batch factor for generating table indices  [1024]\n\
 VERBOSE=0/1            omit/include verbose run information       [0]"
