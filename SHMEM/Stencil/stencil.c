@@ -329,7 +329,7 @@ int main(int argc, char ** argv) {
     error = 1;
   }
   bail_out(error);
- 
+
   total_length_in = (width[0]+2*RADIUS);
   total_length_in *= (height[0]+2*RADIUS);
   total_length_in *= sizeof(DTYPE);
@@ -337,16 +337,17 @@ int main(int argc, char ** argv) {
   total_length_out = width[0];
   total_length_out *= height[0];
   total_length_out *= sizeof(DTYPE);
- 
-  in  = (DTYPE *) prk_shmem_malloc(total_length_in);
-  out = (DTYPE *) prk_shmem_malloc(total_length_out);
+
+  in  = (DTYPE *) prk_malloc(total_length_in);
+  out = (DTYPE *) prk_malloc(total_length_out);
   if (!in || !out) {
     printf("ERROR: rank %d could not allocate space for input/output array\n",
             my_ID);
     error = 1;
   }
-  bail_out(error);
 
+  bail_out(error);
+  
   shmem_barrier_all();
 
   shmem_int_max_to_all(&maxwidth[0], &width[0], 1, 0, 0, Num_procs, pWrk_dim, pSync_reduce);
