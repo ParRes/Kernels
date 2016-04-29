@@ -294,8 +294,7 @@ int main(int argc, char ** argv)
 
   if (Num_procs>1) {
     Work_in_p   = (double**)prk_malloc(bufferCount*sizeof(double));
-
-    Work_out_p = (double *) prk_shmem_align(prk_get_alignment(),Block_size*sizeof(double));
+    Work_out_p = (double *) prk_malloc(Block_size*sizeof(double));
     recv_flag  = (int*)     prk_shmem_align(prk_get_alignment(),bufferCount*sizeof(int));
     if ((Work_in_p == NULL)||(Work_out_p==NULL) || (recv_flag == NULL)){
       printf(" Error allocating space for work or flags on node %d\n",my_ID);
@@ -323,11 +322,11 @@ int main(int argc, char ** argv)
     }
 
     if (bufferCount < (Num_procs - 1)) {
-      for(i=0;i<bufferCount;i++)
+      for(i=0;i<(Num_procs-1);i++)
         send_flag[i]=0;
     }
 
-    for(i=0;i<Num_procs-1;i++)
+    for(i=0;i<bufferCount;i++)
       recv_flag[i]=0;
   }
   
@@ -472,7 +471,7 @@ int main(int argc, char ** argv)
       prk_shmem_free(send_flag);
 
     prk_shmem_free(recv_flag);
-    prk_shmem_free(Work_out_p);
+    prk_free(Work_out_p);
 
     for(i=0;i<bufferCount;i++)
       prk_shmem_free(Work_in_p[i]);
