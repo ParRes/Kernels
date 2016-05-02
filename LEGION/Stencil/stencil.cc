@@ -486,7 +486,11 @@ void top_level_task(const Task *task,
   FutureMap fm = runtime->execute_must_epoch(ctx, shardLauncher);
   fm.wait_all_results();
 
+#ifdef WALL_CLOCK_TIME
   double tsStart = DBL_MAX, tsEnd = DBL_MIN;
+#else
+  double maxTime = DBL_MIN;
+#endif
   for (int tileY = 0; tileY < Num_procsy; ++tileY)
     for (int tileX = 0; tileX < Num_procsx; ++tileX)
     {
@@ -494,11 +498,17 @@ void top_level_task(const Task *task,
         DomainPoint::from_point<2>(make_point(tileX, tileY));
       typedef std::pair<double, double> Doubles;
       Doubles p = fm.get_result<Doubles>(tilePoint);
+#ifdef WALL_CLOCK_TIME
       tsStart = MIN(tsStart, p.first);
       tsEnd = MAX(tsEnd, p.second);
+#else
+      maxTime = MAX(maxTime, p.second - p.first);
+#endif
     }
 
+#ifdef WALL_CLOCK_TIME
   double maxTime = tsEnd - tsStart;
+#endif
   double avgTime = maxTime / iterations;
 
   int stencil_size = 4 * RADIUS + 1;
