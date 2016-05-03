@@ -64,7 +64,8 @@ help:
 	@echo "       \"make allampi\"      (re-)builds all Adaptive MPI targets"
 	@echo "       \"make allgrappa\"    (re-)builds all Grappa targets"
 	@echo "       \"make allfortran\"   (re-)builds all Fortran targets"
-	@echo "       \"make allfreaks\"    (re-)builds the above two targets"
+	@echo "       \"make alllegion\"    (re-)builds all Legion targets"
+	@echo "       \"make allfreaks\"    (re-)builds the above four targets"
 	@echo "       optionally, specify   \"matrix_rank=<n> number_of_functions=<m>\""
 	@echo "       optionally, specify   \"default_opt_flags=<list of optimization flags>\""
 	@echo "       \"make clean\"        removes all objects and executables"
@@ -72,7 +73,7 @@ help:
 
 all: alldarwin allfreaks
 alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran
-allfreaks: allcharm++ allampi allgrappa
+allfreaks: allcharm++ allampi allgrappa alllegion
 
 allmpi1:
 	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -177,6 +178,10 @@ allgrappa:
 	cd GRAPPA/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
+alllegion:
+	cd LEGION/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd LEGION/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+
 allserial:
 	cd SERIAL/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd SERIAL/Nstream;          $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -263,6 +268,8 @@ clean:
 	cd GRAPPA/Synch_p2p;        $(MAKE) clean
 	cd GRAPPA/Stencil;          $(MAKE) clean
 	cd GRAPPA/Transpose;        $(MAKE) clean
+	cd LEGION/Stencil;          $(MAKE) clean
+	cd LEGION/Transpose;        $(MAKE) clean
 	cd MPIOPENMP/Nstream;       $(MAKE) clean
 	cd MPIOPENMP/Stencil;       $(MAKE) clean
 	cd MPIOPENMP/Transpose;     $(MAKE) clean

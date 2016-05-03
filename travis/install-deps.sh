@@ -100,4 +100,10 @@ case "$PRK_TARGET" in
         sh ./travis/install-autotools.sh $TRAVIS_ROOT
         sh ./travis/install-hpx5.sh $TRAVIS_ROOT
         ;;
+    alllegion)
+        echo "Legion"
+        # GASNet is not needed, it seems
+        #sh ./travis/install-gasnet.sh $TRAVIS_ROOT
+        sh ./travis/install-legion.sh $TRAVIS_ROOT
+        ;;
 esac
