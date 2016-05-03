@@ -808,7 +808,7 @@ tuple_double spmd_task(const Task *task,
   int numThreads = args->numThreads;
 
   LogicalRegion localLr = regions[0].get_logical_region();
-  LogicalPartition localLP = createHaloPartition(localLr, n, ctx, runtime);
+  LogicalPartition localLp = createHaloPartition(localLr, n, ctx, runtime);
 
   IndexSpace is = localLr.get_index_space();
   Rect<2> haloBox = runtime->get_index_space_domain(ctx, is).get_rect<2>();
@@ -821,20 +821,20 @@ tuple_double spmd_task(const Task *task,
 
   // create boundary partition
   LogicalRegion privateLr =
-      runtime->get_logical_subregion_by_color(ctx, localLP,
+      runtime->get_logical_subregion_by_color(ctx, localLp,
           DomainPoint::from_point<1>(PRIVATE));
 
   std::vector<bool> hasBoundary(9, false);
-  LogicalPartition boundaryLP =
+  LogicalPartition boundaryLp =
     createBoundaryPartition(privateLr, n, ctx, runtime, hasBoundary);
   LogicalRegion interiorLr =
-    runtime->get_logical_subregion_by_color(ctx, boundaryLP,
+    runtime->get_logical_subregion_by_color(ctx, boundaryLp,
         DomainPoint::from_point<1>(INTERIOR));
   std::vector<LogicalRegion> boundaryLrs(8);
   for (unsigned dir = LEFT; dir <= DOWN_LEFT; ++dir)
     if (hasBoundary[dir])
       boundaryLrs[dir] =
-        runtime->get_logical_subregion_by_color(ctx, boundaryLP,
+        runtime->get_logical_subregion_by_color(ctx, boundaryLp,
             DomainPoint::from_point<1>(dir));
 
   // create partitions for indexspace launch
@@ -855,7 +855,7 @@ tuple_double spmd_task(const Task *task,
   for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
   {
     LogicalRegion ghostLr =
-      runtime->get_logical_subregion_by_color(ctx, localLP,
+      runtime->get_logical_subregion_by_color(ctx, localLp,
           DomainPoint::from_point<1>(dir));
     ghostLrs[dir] = ghostLr;
     bufferLrs[dir] =
@@ -1078,6 +1078,29 @@ tuple_double spmd_task(const Task *task,
       abserr += fm.get_result<double>(it.p);
   }
 #endif
+
+#define DESTROY_ALL_PARTITIONS(lp) \
+  do { \
+    IndexPartition ip = lp.get_index_partition(); \
+    runtime->destroy_logical_partition(ctx, lp); \
+    runtime->destroy_index_partition(ctx, ip); \
+  } while(0) \
+
+  DESTROY_ALL_PARTITIONS(localLp);
+  DESTROY_ALL_PARTITIONS(boundaryLp);
+  DESTROY_ALL_PARTITIONS(privateLp);
+  DESTROY_ALL_PARTITIONS(interiorLp);
+
+  {
+    IndexSpace is = weightLr.get_index_space();
+    FieldSpace fs = weightLr.get_field_space();
+    runtime->destroy_logical_region(ctx, weightLr);
+    runtime->destroy_index_space(ctx, is);
+    runtime->destroy_field_space(ctx, fs);
+  }
+
+  for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
+    runtime->destroy_logical_region(ctx, bufferLrs[dir]);
 
   return std::make_pair(std::make_pair(tsStart, tsEnd), abserr);
 }
