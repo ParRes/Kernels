@@ -284,8 +284,8 @@ struct SPMDArgs {
   PhaseBarrier emptyInput[4];
   PhaseBarrier emptyOutput[4];
   PhaseBarrier analysisLock;
-  PhaseBarrier stencilLock;
   PhaseBarrier initLock;
+  PhaseBarrier finishLock;
 };
 
 struct StencilArgs {
@@ -503,8 +503,8 @@ void top_level_task(const Task *task,
     }
 
   PhaseBarrier analysisLock = runtime->create_phase_barrier(ctx, num_ranks);
-  PhaseBarrier stencilLock = runtime->create_phase_barrier(ctx, num_ranks);
   PhaseBarrier initLock = runtime->create_phase_barrier(ctx, num_ranks);
+  PhaseBarrier finishLock = runtime->create_phase_barrier(ctx, num_ranks);
   MustEpochLauncher shardLauncher;
   std::map<DomainPoint, SPMDArgs> args;
   for (int tileY = 0; tileY < Num_procsy; ++tileY)
@@ -517,8 +517,8 @@ void top_level_task(const Task *task,
       args[tilePoint].numThreads = threads;
       args[tilePoint].numIterations = iterations;
       args[tilePoint].analysisLock = analysisLock;
-      args[tilePoint].stencilLock = stencilLock;
       args[tilePoint].initLock = initLock;
+      args[tilePoint].finishLock = finishLock;
       args[tilePoint].warmupIterations = warmupIterations;
       args[tilePoint].waitAnalysis = waitAnalysis;
 
@@ -562,29 +562,17 @@ void top_level_task(const Task *task,
   fm.wait_all_results();
 
   DTYPE abserr = 0.0;
-#ifdef WALL_CLOCK_TIME
-  double tsStart = DBL_MAX, tsEnd = DBL_MIN;
-#else
   double maxTime = DBL_MIN;
-#endif
   for (int tileY = 0; tileY < Num_procsy; ++tileY)
     for (int tileX = 0; tileX < Num_procsx; ++tileX)
     {
       DomainPoint tilePoint =
         DomainPoint::from_point<2>(make_point(tileX, tileY));
       tuple_double p = fm.get_result<tuple_double>(tilePoint);
-#ifdef WALL_CLOCK_TIME
-      tsStart = MIN(tsStart, p.first.first);
-      tsEnd = MAX(tsEnd, p.first.second);
-#else
       maxTime = MAX(maxTime, p.first.second - p.first.first);
-#endif
       abserr += p.second;
     }
 
-#ifdef WALL_CLOCK_TIME
-  double maxTime = tsEnd - tsStart;
-#endif
   double avgTime = maxTime / iterations;
 
   DTYPE epsilon = EPSILON; /* error tolerance */
@@ -915,9 +903,6 @@ tuple_double spmd_task(const Task *task,
   }
 
   // initialize fields
-  PhaseBarrier init_lock_prev = args->initLock;
-  PhaseBarrier init_lock_next =
-    runtime->advance_phase_barrier(ctx, init_lock_prev);
   ArgumentMap argMap;
   {
     IndexLauncher initLauncher(TASKID_INITIALIZE, launchDomain,
@@ -926,7 +911,7 @@ tuple_double spmd_task(const Task *task,
     req.add_field(FID_IN);
     req.add_field(FID_OUT);
     initLauncher.add_region_requirement(req);
-    initLauncher.add_arrival_barrier(init_lock_prev);
+    initLauncher.add_arrival_barrier(args->initLock);
     for (unsigned dir = GHOST_LEFT; dir <= GHOST_DOWN; ++dir)
       if (hasNeighbor[dir])
       {
@@ -937,26 +922,13 @@ tuple_double spmd_task(const Task *task,
     FutureMap fm = runtime->execute_index_space(ctx, initLauncher);
     fm.wait_all_results();
   }
+  args->initLock = runtime->advance_phase_barrier(ctx, args->initLock);
+  args->initLock.wait();
 
   PhaseBarrier analysis_lock_prev = args->analysisLock;
   PhaseBarrier analysis_lock_next =
     runtime->advance_phase_barrier(ctx, analysis_lock_prev);
 
-  PhaseBarrier stencil_lock_prev = args->stencilLock;
-  PhaseBarrier stencil_lock_next =
-    runtime->advance_phase_barrier(ctx, stencil_lock_prev);
-
-  {
-    TaskLauncher dummyLauncher(TASKID_DUMMY, taskArg);
-    RegionRequirement req(localLr, READ_WRITE, EXCLUSIVE, localLr);
-    req.add_field(FID_IN);
-    req.add_field(FID_OUT);
-    dummyLauncher.add_region_requirement(req);
-    dummyLauncher.add_wait_barrier(init_lock_next);
-    runtime->execute_task(ctx, dummyLauncher);
-  }
-
-  FutureMap fm;
   FutureMap fm_first_interior;
   for (int iter = 0; iter < stencilArgs.numIterations; iter++)
   {
@@ -976,6 +948,10 @@ tuple_double spmd_task(const Task *task,
       interiorLauncher.add_region_requirement(weightReq);
       if (args->waitAnalysis && iter == 0)
         interiorLauncher.add_wait_barrier(analysis_lock_next);
+
+      if (iter == args->warmupIterations)
+        interiorLauncher.add_wait_barrier(args->initLock);
+
       if (iter == args->warmupIterations)
         fm_first_interior = runtime->execute_index_space(ctx, interiorLauncher);
       else
@@ -1061,9 +1037,14 @@ tuple_double spmd_task(const Task *task,
           args->fullOutput[dir] =
             runtime->advance_phase_barrier(ctx, args->fullOutput[dir]);
         }
-      if (iter == stencilArgs.numIterations - 1)
-        incLauncher.add_arrival_barrier(stencil_lock_prev);
-      fm = runtime->execute_index_space(ctx, incLauncher);
+      if (iter == args->warmupIterations - 1)
+      {
+        incLauncher.add_arrival_barrier(args->initLock);
+        args->initLock = runtime->advance_phase_barrier(ctx, args->initLock);
+      }
+      else if (iter == stencilArgs.numIterations - 1)
+        incLauncher.add_arrival_barrier(args->finishLock);
+      runtime->execute_index_space(ctx, incLauncher);
     }
     runtime->end_trace(ctx, 0);
   }
@@ -1075,8 +1056,8 @@ tuple_double spmd_task(const Task *task,
     FutureMap fm = runtime->execute_index_space(ctx, dummyLauncher);
     fm.wait_all_results();
   }
-  fm.wait_all_results();
-
+  args->finishLock = runtime->advance_phase_barrier(ctx, args->finishLock);
+  args->finishLock.wait();
   double tsEnd = wtime();
   double tsStart = DBL_MAX;
   for (Domain::DomainPointIterator it(launchDomain); it; it++)
@@ -1089,7 +1070,7 @@ tuple_double spmd_task(const Task *task,
     RegionRequirement req(privateLp, 0, READ_ONLY, EXCLUSIVE, localLr);
     req.add_field(FID_OUT);
     checkLauncher.add_region_requirement(req);
-    checkLauncher.add_wait_barrier(stencil_lock_next);
+    checkLauncher.add_wait_barrier(args->finishLock);
     FutureMap fm = runtime->execute_index_space(ctx, checkLauncher);
     fm.wait_all_results();
 
