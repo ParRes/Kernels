@@ -13,7 +13,9 @@
 # limitations under the License.
 #
 include ../../common/LEGION.defs
+ifneq ($(LEGIONTOP),)
 LG_RT_DIR=$(LEGIONTOP)/runtime
+endif
 
 CXX=$(LEGIONCC)
 
@@ -49,6 +51,10 @@ usage:
 	@echo "Usage: type \"make $(OUTFILE)\" to build executable"
 	@echo "            \"make clean\" to remove objects and executables"
 
+ifdef LG_RT_DIR
 include $(LG_RT_DIR)/runtime.mk
 $(GEN_OBJS): clean
+else
+clean:
+endif
 
