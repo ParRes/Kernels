@@ -78,6 +78,7 @@ int main(int argc, char ** argv) {
   size_t i, j, it, jt;  /* matrix/tile indices                             */
   int    Tile_order=32; /* default tile size for tiling of local transpose */
   int    iterations;    /* number of times to do the transpose             */
+  int    iter;          /* dummy                                           */
   int    tiling;        /* boolean: true if tiling is used                 */
   double bytes;         /* combined size of matrices                       */
   double * RESTRICT A;  /* buffer to hold original matrix                  */
@@ -150,7 +151,7 @@ int main(int argc, char ** argv) {
 
   bytes = 2.0 * sizeof(double) * order * order;
 
-#pragma omp parallel private (i, j, it, jt)
+#pragma omp parallel private (i, j, it, jt, iter)
   {  
 
   #pragma omp master
@@ -203,7 +204,7 @@ int main(int argc, char ** argv) {
       }
   }
 
-  for (int iter = 0; iter<=iterations; iter++){
+  for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration                                        */
     if (iter == 1) { 
@@ -216,9 +217,9 @@ int main(int argc, char ** argv) {
 
     /* Transpose the  matrix                                                       */
     if (!tiling) {
-      #pragma omp for
-      for (size_t i=0;i<order; i++) 
-        for (size_t j=0;j<order;j++) { 
+      #pragma omp for 
+      for (i=0;i<order; i++) 
+        for (j=0;j<order;j++) { 
           B(j,i) += A(i,j);
           A(i,j) += 1.0;
         }
