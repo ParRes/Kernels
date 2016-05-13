@@ -17,7 +17,8 @@ ifneq ($(LEGIONTOP),)
 LG_RT_DIR=$(LEGIONTOP)/runtime
 endif
 
-CXX=$(LEGIONCC)
+#CXX=$(LEGIONCC)
+CXX=g++
 
 #Flags for directing the runtime makefile what to include
 DEBUG           ?= 0		# Include debugging symbols
@@ -58,3 +59,5 @@ else
 clean:
 endif
 
+Transpose.o:
+	$(CXX) -o transpose.o -c transpose.cc $(CC_FLAGS) $(INC_FLAGS) -O3

@@ -74,7 +74,8 @@ static double test_results (size_t , double*, int);
 
 int main(int argc, char ** argv) {
 
-  size_t   order;         /* order of a the matrix                           */
+  size_t order;         /* order of a the matrix                           */
+  size_t i, j, it, jt;  /* matrix/tile indices                             */
   int    Tile_order=32; /* default tile size for tiling of local transpose */
   int    iterations;    /* number of times to do the transpose             */
   int    tiling;        /* boolean: true if tiling is used                 */
@@ -149,7 +150,7 @@ int main(int argc, char ** argv) {
 
   bytes = 2.0 * sizeof(double) * order * order;
 
-  #pragma omp parallel
+#pragma omp parallel private (i, j, it, jt)
   {  
 
   #pragma omp master
@@ -185,18 +186,18 @@ int main(int argc, char ** argv) {
 #else
     #pragma omp for
 #endif
-    for (size_t j=0; j<order; j+=Tile_order) 
-      for (size_t i=0; i<order; i+=Tile_order) 
-        for (size_t jt=j; jt<MIN(order,j+Tile_order);jt++)
-          for (size_t it=i; it<MIN(order,i+Tile_order); it++){
+    for (j=0; j<order; j+=Tile_order) 
+      for (i=0; i<order; i+=Tile_order) 
+        for (jt=j; jt<MIN(order,j+Tile_order);jt++)
+          for (it=i; it<MIN(order,i+Tile_order); it++){
             A(it,jt) = (double) (order*jt + it);
             B(it,jt) = 0.0;
           }
   }
   else {
     #pragma omp for
-    for (size_t j=0;j<order;j++) 
-      for (size_t i=0;i<order; i++) {
+    for (j=0;j<order;j++) 
+      for (i=0;i<order; i++) {
         A(i,j) = (double) (order*j + i);
         B(i,j) = 0.0;
       }
@@ -228,10 +229,10 @@ int main(int argc, char ** argv) {
 #else
       #pragma omp for
 #endif
-      for (size_t i=0; i<order; i+=Tile_order) 
-        for (size_t j=0; j<order; j+=Tile_order) 
-          for (size_t it=i; it<MIN(order,i+Tile_order); it++) 
-            for (size_t jt=j; jt<MIN(order,j+Tile_order);jt++) {
+      for (i=0; i<order; i+=Tile_order) 
+        for (j=0; j<order; j+=Tile_order) 
+          for (it=i; it<MIN(order,i+Tile_order); it++) 
+            for (jt=j; jt<MIN(order,j+Tile_order);jt++) {
               B(jt,it) += A(it,jt);
               A(it,jt) += 1.0;
             } 
@@ -281,11 +282,12 @@ int main(int argc, char ** argv) {
 double test_results (size_t order, double *B, int iterations) {
 
   double abserr=0.0;
+  size_t i, j;
 
   double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
   #pragma omp parallel for reduction(+:abserr)
-  for (size_t j=0;j<order;j++) {
-    for (size_t i=0;i<order; i++) {
+  for (j=0;j<order;j++) {
+    for (i=0;i<order; i++) {
       abserr += ABS(B(i,j) - ((i*order + j)*(iterations+1L)+addit));
     }
   }

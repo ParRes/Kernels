@@ -167,6 +167,7 @@ allopenmp:
 	cd OPENMP/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"     \
                                                       "MATRIX_RANK         = $(matrix_rank)"   \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+	cd OPENMP/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allcharm++:
 	cd CHARM++/Synch_p2p;       $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -285,6 +286,7 @@ clean:
 	cd OPENMP/Synch_global;     $(MAKE) clean
 	cd OPENMP/Synch_p2p;        $(MAKE) clean
 	cd OPENMP/Branch;           $(MAKE) clean
+	cd OPENMP/PIC;              $(MAKE) clean
 	cd SERIAL/DGEMM;            $(MAKE) clean
 	cd SERIAL/Nstream;          $(MAKE) clean
 	cd SERIAL/Reduce;           $(MAKE) clean
