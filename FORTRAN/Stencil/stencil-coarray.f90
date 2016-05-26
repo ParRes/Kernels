@@ -103,7 +103,8 @@ program main
 #warning Your common/make.defs is missing PRKVERSION
 #define PRKVERSION "N/A"
 #endif
-  np = num_images(); me = this_image()
+  np = num_images()
+  me = this_image()
   if (me == 1) then
     write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
     write(*,'(a)')   'CAF stencil execution on 2D grid'
@@ -171,6 +172,18 @@ program main
 
   dims(1) = int(sqrt(real(np)))
   dims(2) = int(np/dims(1))
+
+  if (modulo(n,np) /= 0) then
+    if (me==1) then
+      write(*,'(a,i6,a,i4)') 'dimension',n,' not evenly divisible by np',np
+    endif
+    stop
+  endif
+
+#if 0
+  ! I do not think the following code is sufficient.
+  ! We see incorrectness when dim/sqrt(np) is not integral.
+  !                     - Jeff
   i=1
   do while(dims(1)*dims(2) /= np)
      dims(1) = int(sqrt(real(np)))+i
@@ -181,6 +194,7 @@ program main
         i = i * (-1)
      endif
   enddo
+#endif
 
   nr = n/dims(1)
   nc = n/dims(2)
@@ -188,13 +202,13 @@ program main
   allocate( A(1-r:nr+r,1-r:nc+r)[dims(1),*], stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of A returned ',err
-    stop 1
+    stop
   endif
 
   allocate( B(1:nr,1:nc), stat=err )
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
+    stop
   endif
 
   norm = 0.d0
@@ -262,13 +276,15 @@ program main
     enddo
   enddo
 
-  start_i = 0; end_i = nr - 1
-  start_j = 0; end_j = nc - 1
+  start_i = 0
+  start_j = 0
+  end_i = nr - 1
+  end_j = nc - 1
 
+  if(coords(1) == 1)       start_i = r
   if(coords(1) == dims(1)) end_i = nr - r - 1
-  if(coords(1) == 1) start_i = r
+  if(coords(2) == 1)       start_j = r
   if(coords(2) == dims(2)) end_j = nc - r - 1
-  if(coords(2) == 1) start_j = r
 
   sync all
 
@@ -363,13 +379,15 @@ program main
 
   ! compute L1 norm
 
-  start_i = 1; end_i = nr
-  start_j = 1; end_j = nc
+  start_i = 1
+  start_j = 1
+  end_i = nr
+  end_j = nc
 
+  if(coords(1) == 1)       start_i = r
+  if(coords(2) == 1)       start_j = r
   if(coords(1) == dims(1)) end_i = nr - r
-  if(coords(1) == 1) start_i = r
   if(coords(2) == dims(2)) end_j = nc - r
-  if(coords(2) == 1) start_j = r
 
   do j=start_j,end_j
     do i=start_i,end_i
@@ -416,9 +434,5 @@ program main
   write(*,'(a,f13.6,a,f13.6)') 'Rate (MFlops/s): ',1.0d-6*flops/avgtime, &
                                ' Avg time (s): ',avgtime
   endif
-
-  sync all
-
-  stop
 
 end program main
