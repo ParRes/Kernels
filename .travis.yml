@@ -12,7 +12,7 @@ compiler:
   - gcc
 matrix:
   exclude:
-    # only test Clang OpenMP on Mac where we can Homebrew it
+    # only test Clang OpenMP on Mac, where we can Homebrew it
     - os: linux
       compiler: clang
       env: PRK_TARGET=allopenmp
@@ -34,23 +34,9 @@ matrix:
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
-    # BUPC on Mac is annoying
-    - os: osx
-      env: PRK_TARGET=allupc
-           UPC_IMPL=bupc
-           GASNET_CONDUIT=udp
-           PRK_FLAGS="-Wc,-O3"
-    - os: osx
-      env: PRK_TARGET=allupc
-           UPC_IMPL=bupc
-           GASNET_CONDUIT=smp
-           PRK_FLAGS="-Wc,-O3"
     # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
     - os: osx
       env: PRK_TARGET=allfgmpi
-    # Mac issue with libtoolize (see https://github.com/regrant/sandia-shmem/pull/87)
-    - os: osx
-      env: PRK_TARGET=allshmem
     # Revisit this once Grappa is working with Clang
     - compiler: gcc
       env: PRK_TARGET=allgrappa
@@ -62,12 +48,6 @@ matrix:
     - env: PRK_TARGET=allupc
            UPC_IMPL=bupc
            GASNET_CONDUIT=ofi
-           PRK_FLAGS="-Wc,-O3"
-    # UPC over MPICH on Mac hangs - may be async progress issue
-    - os: osx
-      env: PRK_TARGET=allupc
-           UPC_IMPL=bupc
-           GASNET_CONDUIT=mpi
            PRK_FLAGS="-Wc,-O3"
     # probably because of old GCC (4.6)
     - os: linux
@@ -83,10 +63,31 @@ matrix:
     - compiler: clang
       env: PRK_TARGET=allpython
   allow_failures:
-    # GUPC will fail when libnuma cannot be acquired via apt
-    - env: PRK_TARGET=allupc
     # will fail if numpy package cannot be acquired via apt
     - env: PRK_TARGET=allpython
+    # Mac issue with libtoolize (see https://github.com/regrant/sandia-shmem/pull/87)
+    - os: osx
+      env: PRK_TARGET=allshmem
+    # UPC over MPICH on Mac hangs - may be async progress issue
+    - os: osx
+      env: PRK_TARGET=allupc
+           UPC_IMPL=bupc
+           GASNET_CONDUIT=mpi
+           PRK_FLAGS="-Wc,-O3"
+    # BUPC on Mac is annoying
+    - os: osx
+      env: PRK_TARGET=allupc
+           UPC_IMPL=bupc
+           GASNET_CONDUIT=udp
+           PRK_FLAGS="-Wc,-O3"
+    - os: osx
+      env: PRK_TARGET=allupc
+           UPC_IMPL=bupc
+           GASNET_CONDUIT=smp
+           PRK_FLAGS="-Wc,-O3"
+    # GUPC will fail when libnuma cannot be acquired via apt
+    - env: PRK_TARGET=allupc
+    # we have lots of Grappa issues...
     - env: PRK_TARGET=allgrappa
 addons:
   apt:
@@ -160,15 +161,15 @@ env:
     UPC_IMPL=bupc
     GASNET_CONDUIT=udp
     PRK_FLAGS="-Wc,-O3"
-   # We do not need to test BUPC this thoroughly every time
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=mpi
-#    PRK_FLAGS="-Wc,-O3"
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=ofi
-#    PRK_FLAGS="-Wc,-O3"
+   # Optinal: We do not need to test BUPC this thoroughly every time
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=mpi
+    PRK_FLAGS="-Wc,-O3"
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=ofi
+    PRK_FLAGS="-Wc,-O3"
     # Chapel kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allchapel
 #    CHPL_COMM=none
