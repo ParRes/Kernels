@@ -103,30 +103,38 @@ program main
 #warning Your common/make.defs is missing PRKVERSION
 #define PRKVERSION "N/A"
 #endif
-  write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
-  write(*,'(a)')   'CAF stencil execution on 2D grid'
-
+  np = num_images(); me = this_image()
+  if (me == 1) then
+    write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
+    write(*,'(a)')   'CAF stencil execution on 2D grid'
+  endif
+  
   if (command_argument_count().lt.2) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',             &
-                      '<array dimension> [tile_size]'
-    stop 1
+    if (me == 1) then    
+      write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',           &
+                        '<array dimension> [tile_size]'
+    endif
+    stop 
   endif
 
   iterations = 1
   call get_command_argument(1,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') iterations
   if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
+    if (me == 1) then
+      write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
+    endif
+    stop
   endif
 
   n = 1
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') n
   if (n .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: array dimension must be >= 1 : ', n
-    stop 1
+    if (me == 1) then
+      write(*,'(a,i5)') 'ERROR: array dimension must be >= 1 : ', n
+    endif
+    stop
   endif
 
   tiling    = .false.
@@ -143,17 +151,19 @@ program main
   endif
 
   if (r .lt. 1) then
-    write(*,'(a,i5,a)') 'ERROR: Stencil radius ',r,' should be positive'
-    stop 1
+    if (me == 1) then
+      write(*,'(a,i5,a)') 'ERROR: Stencil radius ',r,' should be positive'
+    endif
+    stop 
   endif
 
   if ((2*r+1) .gt. n) then
-    write(*,'(a,i5,a,i5)') 'ERROR: Stencil radius ',r,&
-                           ' exceeds grid size ',n
-    stop 1
+    if (me == 1) then
+      write(*,'(a,i5,a,i5)') 'ERROR: Stencil radius ',r,&
+                             ' exceeds grid size ',n
+    endif
+    stop 
   endif
-
-  np = num_images(); me = this_image()
 
 !  Collectives are part of Fortran 2015
 !  call co_broadcast(n,source_image=1)
@@ -191,10 +201,11 @@ program main
   active_points = int(n-2*r,INT64)**2
   coords = this_image(a)
 
-  write(*,'(a,i8)') 'Number of images    = ',num_images()
-  write(*,'(a,i8)') 'Grid size            = ', n
-  write(*,'(a,i8)') 'Radius of stencil    = ', r
-  write(*,'(a,a)')  'Type of stencil      = ', &
+  if (me == 1) then
+    write(*,'(a,i8)') 'Number of images     = ',num_images()
+    write(*,'(a,i8)') 'Grid size            = ', n
+    write(*,'(a,i8)') 'Radius of stencil    = ', r
+    write(*,'(a,a)')  'Type of stencil      = ', &
 #ifdef STAR
                    'star'
   stencil_size = 4*r+1
@@ -202,14 +213,15 @@ program main
                    'stencil'
   stencil_size = (2*r+1)**2
 #endif
-  write(*,'(a)') 'Data type            = double precision'
-  write(*,'(a)') 'Compact representation of stencil loop body'
-  if (tiling) then
-      write(*,'(a,i5)') 'Tile size            = ', tile_size
-  else
-      write(*,'(a)') 'Untiled'
+    write(*,'(a)') 'Data type            = double precision'
+    write(*,'(a)') 'Compact representation of stencil loop body'
+    if (tiling) then
+        write(*,'(a,i5)') 'Tile size            = ', tile_size
+    else
+        write(*,'(a)') 'Untiled'
+    endif
+    write(*,'(a,i8)') 'Number of iterations = ', iterations
   endif
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   ! fill the stencil weights to reflect a discrete divergence operator
   ! Jeff: if one does not use workshare here, the code is wrong.

@@ -91,7 +91,7 @@ program main
   np = num_images()
 
   ! co_broadcast is part of Fortran 2015, so we will not assume it yet.
-  !if(me == 1) then
+  if(me == 1) then
 #ifndef PRKVERSION
 #warning Your common/make.defs is missing PRKVERSION
 #define PRKVERSION "N/A"
@@ -99,11 +99,13 @@ program main
      write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
      write(*,'(a)')   'Fortran coarray pipeline execution on 2D grid'
 
+  endif
      if (command_argument_count().lt.3) then
-        write(*,'(a,i1)') 'argument count = ', command_argument_count()
-        write(*,'(a,a)')  'Usage: ./synch_p2p <# iterations> ',             &
-             '<first array dimension> <second array dimension>'
-        stop 1
+        if(me == 1) then
+          write(*,'(a,a)')  'Usage: ./synch_p2p <# iterations> ',           &
+               '<first array dimension> <second array dimension>'
+        endif
+        stop 
      endif
 
      iterations = 1
@@ -127,11 +129,6 @@ program main
         write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
         stop 1
      endif
-
-  !endif
-  !call co_broadcast(iterations, source_image = 1)
-  !call co_broadcast(m, source_image = 1)
-  !call co_broadcast(n, source_image = 1)
 
   ! co_max is part of Fortran 2015, so we will not assume it.
   ! Instead, we will just allocate more than necessary in some cases.
