@@ -85,7 +85,7 @@ LOCK=0/1/2     no locks/atomics/OpenMP locks                [2]  \n\
 INTEGER=0/1    counter data type integer/floating point     [0]  \n\
 DEPENDENT=0/1  independent/intertwined counter pair updates [0]  \n\
 STREAM=0/1     disallow/allow independent thread work       [1]  \n\
-MAXTHREADS=?   sett maximum number of OpenMP threads        [256]\n\
+MAXTHREADS=?   set maximum number of OpenMP threads         [256]\n\
 VERBOSE=0/1    omit/include verbose run information         [0]"
 
 TUNEFLAGS    = $(DEPENDENTFLAG) $(NTHREADFLAG) $(USERFLAGS)  $(LOCKFLAG)\
