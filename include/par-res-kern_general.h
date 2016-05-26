@@ -50,7 +50,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #if RESTRICT_KEYWORD
-  #define RESTRICT restrict
+  #ifdef __GNUC__
+    #define RESTRICT __restrict__
+  #else
+    #define RESTRICT restrict
+  #endif
 #else
   #define RESTRICT
 #endif

@@ -344,4 +344,9 @@ case "$PRK_TARGET" in
     allhpx5)
         echo "Nothing to do yet"
         ;;
+    alllegion)
+        echo "Legion"
+        echo "LEGIONTOP=$TRAVIS_ROOT/legion" > common/make.defs
+        make $PRK_TARGET -k
+        ;;
 esac
