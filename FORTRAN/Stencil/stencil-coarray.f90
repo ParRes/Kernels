@@ -171,6 +171,16 @@ program main
 
   dims(1) = int(sqrt(real(np)))
   dims(2) = int(np/dims(1))
+
+  if ((dims(1)*dims(1) .ne. np).or.(dims(2)*dims(2) .ne. np)) then
+    write(*,'(a)') 'dimension not evenly divisible by sqrt(np)'
+    stop 1
+  endif
+
+#if 0
+  ! I do not think the following code is sufficient.
+  ! We see incorrectness when dim/sqrt(np) is not integral.
+  !                     - Jeff
   i=1
   do while(dims(1)*dims(2) /= np)
      dims(1) = int(sqrt(real(np)))+i
@@ -181,6 +191,7 @@ program main
         i = i * (-1)
      endif
   enddo
+#endif
 
   nr = n/dims(1)
   nc = n/dims(2)
