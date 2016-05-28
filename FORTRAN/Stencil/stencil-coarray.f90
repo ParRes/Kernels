@@ -328,14 +328,15 @@ program main
      if(coords(1)<dims(1)) then
         a(nr+1:nr+r,1:nc_b) = a(1:r,1:nc_b)[coords(1)+1,coords(2)]
      endif
+     sync all
      !exchanging data in x-direction
      !left
      if(coords(2)>1) then
-        a(1:nr_l,1-r:0) = a(1:nr_l,nc_l-r+1:nc_l)[coords(1),coords(2)-1]
+        a(1-r:nr_l+r,1-r:0) = a(1-r:nr_l+r,nc_l-r+1:nc_l)[coords(1),coords(2)-1]
      endif
      !right
      if(coords(2)<dims(2)) then
-        a(1:nr_r,nc+1:nc+r) = a(1:nr_r,1:r)[coords(1),coords(2)+1]
+        a(1-r:nr_r+r,nc+1:nc+r) = a(1-r:nr_r+r,1:r)[coords(1),coords(2)+1]
      endif
 
      sync all
