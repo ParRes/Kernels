@@ -78,7 +78,8 @@ program main
   character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
-  integer(kind=INT32) ::  n,nc,nr                       ! linear grid dimension
+  integer(kind=INT32) ::  n                             ! linear grid dimension
+  integer(kind=INT32),allocatable :: nc[:,:],nr[:,:]    ! local grid dimension
   integer(kind=INT32) ::  stencil_size                  ! number of points in stencil
   logical ::  tiling                                    ! boolean indication loop nest blocking
   integer(kind=INT32) ::  tile_size                     ! loop nest block factor
@@ -90,11 +91,12 @@ program main
   integer(kind=INT32) :: i, j, k
   integer(kind=INT32) :: ii, jj, it, jt
   integer(kind=INT64) :: flops                          ! floating point ops per iteration
-  real(kind=REAL64) :: norm[*], reference_norm             ! L1 norm of solution
+  real(kind=REAL64) :: norm[*], reference_norm          ! L1 norm of solution
   integer(kind=INT64) :: active_points                  ! interior of grid with respect to stencil
   real(kind=REAL64) :: t0, t1, stencil_time, avgtime    ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
-  integer :: me,np,dims(2),coords(2),start_i,end_i,start_j,end_j
+  integer :: me,np,dims(2),coords(2),start_i,end_i,start_j,end_j,nc_g,nr_g
+  integer :: nr_t,nc_t,nc_b,nc_l,nr_l,nr_r
   ! ********************************************************************
   ! read and test input parameters
   ! ********************************************************************
@@ -173,17 +175,6 @@ program main
   dims(1) = int(sqrt(real(np)))
   dims(2) = int(np/dims(1))
 
-  if (modulo(n,np) /= 0) then
-    if (me==1) then
-      write(*,'(a,i6,a,i4)') 'dimension',n,' not evenly divisible by np',np
-    endif
-    stop
-  endif
-
-#if 0
-  ! I do not think the following code is sufficient.
-  ! We see incorrectness when dim/sqrt(np) is not integral.
-  !                     - Jeff
   i=1
   do while(dims(1)*dims(2) /= np)
      dims(1) = int(sqrt(real(np)))+i
@@ -194,18 +185,29 @@ program main
         i = i * (-1)
      endif
   enddo
-#endif
+
+  allocate(nr[dims(1),*],nc[dims(1),*])
 
   nr = n/dims(1)
   nc = n/dims(2)
 
-  allocate( A(1-r:nr+r,1-r:nc+r)[dims(1),*], stat=err)
+  coords = this_image(nr)
+
+  nr_g = nr; nc_g = nc
+
+  if(coords(1) <= modulo(n,nr)) nr = nr + 1
+  if(coords(2) <= modulo(n,nc)) nc = nc + 1
+
+  if(modulo(n,nr) > 0) nr_g = nr_g + 1
+  if(modulo(n,nc) > 0) nc_g = nc_g + 1
+
+  allocate( A(1-r:nr_g+r,1-r:nc_g+r)[dims(1),*], stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of A returned ',err
     stop
   endif
 
-  allocate( B(1:nr,1:nc), stat=err )
+  allocate( B(1:nr_g,1:nc_g), stat=err )
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of B returned ',err
     stop
@@ -213,7 +215,6 @@ program main
 
   norm = 0.d0
   active_points = int(n-2*r,INT64)**2
-  coords = this_image(a)
 
   if (me == 1) then
     write(*,'(a,i8)') 'Number of images     = ',num_images()
@@ -263,10 +264,20 @@ program main
   enddo
 #endif
 
+  ! Getting the remote size of the upper and left images
+  ! in order to initialize correctly the local grid A. 
+  nr_g = 0; nc_g = 0
+  do k=1,coords(1)-1
+     nr_g = nr_g + nr[k,coords(2)]
+  enddo
+  do k=1,coords(2)-1
+     nc_g = nc_g + nc[coords(1),k]
+  enddo
+
   ! intialize the input and output arrays
   do j=1,nc
     do i=1,nr
-      A(i,j) = cx*(i+(coords(1)-1)*nr)+cy*(j+(coords(2)-1)*nc)
+      A(i,j) = cx*(i+nr_g)+cy*(j+nc_g)
     enddo
   enddo
 
@@ -286,20 +297,46 @@ program main
   if(coords(2) == 1)       start_j = r
   if(coords(2) == dims(2)) end_j = nc - r - 1
 
+  ! top remote dimensions
+  if(coords(1)>1) then
+     nr_t = nr[coords(1)-1,coords(2)]
+     nc_t = nc[coords(1)-1,coords(2)]
+  endif
+
+  ! bottom remote dimension
+  if(coords(1)<dims(1)) nc_b = nc[coords(1)+1,coords(2)]
+
+  ! left remote dimensions
+  if(coords(2)>1) then
+     nr_l = nr[coords(1),coords(2)-1]
+     nc_l = nc[coords(1),coords(2)-1]
+  endif
+
+  !right remote dimension
+  if(coords(2)<dims(2)) nr_r = nr[coords(1),coords(2)+1]
+
   sync all
 
   do k=0,iterations
 
      ! exchanging data in y-direction
      !top
-     if(coords(1)>1) a(1-r:0,1:nc) = a(nr-r+1:nr,1:nc)[coords(1)-1,coords(2)]
+     if(coords(1)>1) then
+        a(1-r:0,1:nc_t) = a(nr_t-r+1:nr_t,1:nc_t)[coords(1)-1,coords(2)]
+     endif
      !bottom
-     if(coords(1)<dims(1)) a(nr+1:nr+r,1:nc) = a(1:r,1:nc)[coords(1)+1,coords(2)]
+     if(coords(1)<dims(1)) then
+        a(nr+1:nr+r,1:nc_b) = a(1:r,1:nc_b)[coords(1)+1,coords(2)]
+     endif
      !exchanging data in x-direction
      !left
-     if(coords(2)>1) a(1:nr,1-r:0) = a(1:nr,nc-r+1:nc)[coords(1),coords(2)-1]
+     if(coords(2)>1) then
+        a(1:nr_l,1-r:0) = a(1:nr_l,nc_l-r+1:nc_l)[coords(1),coords(2)-1]
+     endif
      !right
-     if(coords(2)<dims(2)) a(1:nr,nc+1:nc+r) = a(1:nr,1:r)[coords(1),coords(2)+1]
+     if(coords(2)<dims(2)) then
+        a(1:nr_r,nc+1:nc+r) = a(1:nr_r,1:r)[coords(1),coords(2)+1]
+     endif
 
      sync all
 
