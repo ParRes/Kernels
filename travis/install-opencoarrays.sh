@@ -3,7 +3,6 @@ set -x
 
 os=`uname`
 TRAVIS_ROOT="$1"
-MPI_IMPL="$2"
 
 if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
     case "$os" in
