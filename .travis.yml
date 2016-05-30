@@ -71,6 +71,10 @@ matrix:
   allow_failures:
     # will fail if numpy package cannot be acquired via apt
     - env: PRK_TARGET=allpython
+    # Linux may not have GCC-6...
+    - os: linux
+      compiler: gcc
+      env: PRK_TARGET=allfortrancoarray
     # Mac issue with libtoolize (see https://github.com/regrant/sandia-shmem/pull/87)
     - os: osx
       env: PRK_TARGET=allshmem

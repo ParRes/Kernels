@@ -13,7 +13,7 @@ case "$PRK_TARGET" in
         echo "Serial"
         ;;
 
-    allfortran)
+    allfortran*)
         echo "Fortran"
         if [ "${TRAVIS_OS_NAME}" == "osx" ] ; then
             set +e
