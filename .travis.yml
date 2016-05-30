@@ -203,10 +203,10 @@ install:
   - export PATH=$TRAVIS_ROOT/bin:$PATH
   - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
   - export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
-  - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
 before_script:
   - pwd
 script:
+  - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
   - sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
 after_failure:
   - echo "Sad panda"
