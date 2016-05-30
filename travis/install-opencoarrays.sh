@@ -5,21 +5,22 @@ os=`uname`
 TRAVIS_ROOT="$1"
 
 if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
-    set +e
     case "$os" in
         Darwin)
             echo "Mac"
+            set +e
             brew update
             brew install gcc6
             brew install mpich
             brew install cmake
+            set -e
             ;;
 
         Linux)
             echo "Linux"
+            sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich
             ;;
     esac
-    set -e
 
     cd $TRAVIS_ROOT
     git clone --depth 10 https://github.com/sourceryinstitute/opencoarrays.git opencoarrays-source

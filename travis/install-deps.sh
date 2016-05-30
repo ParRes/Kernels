@@ -29,8 +29,9 @@ case "$PRK_TARGET" in
             brew list gcc
             set -e
         fi
-        # Fortran with coarrays only, obviously.
-        sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
+        if [ "${PRK_TARGET}" == "allfortrancoarray" ] ; then
+            sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
+        fi
         ;;
 
     allopenmp)

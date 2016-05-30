@@ -58,7 +58,13 @@ matrix:
       env: PRK_TARGET=allhpx3
     # LLVM Fortran is not ready.
     - compiler: clang
-      env: PRK_TARGET=allfortran
+      env: PRK_TARGET=allfortranserial
+    - compiler: clang
+      env: PRK_TARGET=allfortranopenmp
+    - compiler: clang
+      env: PRK_TARGET=allfortranpretty
+    - compiler: clang
+      env: PRK_TARGET=allfortrancoarray
     # Python does not use compiler so only test one of them per OS (GCC)
     - compiler: clang
       env: PRK_TARGET=allpython
@@ -141,7 +147,10 @@ env:
 #
 #  - PRK_TARGET=allpython
 #  - PRK_TARGET=allserial
-  - PRK_TARGET=allfortran
+  - PRK_TARGET=allfortranserial
+  - PRK_TARGET=allfortranopenmp
+  - PRK_TARGET=allfortranpretty
+  - PRK_TARGET=allfortrancoarray
   - PRK_TARGET=allopenmp
 #  - PRK_TARGET=allmpi1
 #  - PRK_TARGET=allshmem

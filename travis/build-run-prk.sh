@@ -52,7 +52,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 LINEAR 1.0 3.0
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 PATCH 0 200 100 200 
         ;;
-    allfortran)
+    allfortran*)
+        # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
         echo "Fortran"
         case "$CC" in
             gcc)
@@ -68,7 +69,6 @@ case "$PRK_TARGET" in
                     exit 9
                 fi
                 export PRK_FC="$PRK_FC -std=f2008 -cpp"
-                echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
                 ;;
             clang)
                 echo "LLVM Fortran is not supported."
@@ -76,26 +76,47 @@ case "$PRK_TARGET" in
                 echo "FC=flang" >> common/make.defs
                 ;;
         esac
+        case "$PRK_TARGET" in
+            allfortrancoarray)
+                #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
+                PRK_FC=$TRAVIS_ROOT/opencoarrays/bin/caf
+                echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=lib" >> common/make.defs
+                ;;
+            *)
+                echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp" >> common/make.defs
+                ;;
+        esac
         make $PRK_TARGET
         export PRK_TARGET_PATH=FORTRAN
-        $PRK_TARGET_PATH/Synch_p2p/p2p               10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil             10 1000
-        $PRK_TARGET_PATH/Transpose/transpose         10 1024 1
-        $PRK_TARGET_PATH/Transpose/transpose         10 1024 32
-        # pretty versions do not support tiling...
-        #$PRK_TARGET_PATH/Synch_p2p/p2p-pretty        10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil-pretty      10 1000
-        $PRK_TARGET_PATH/Transpose/transpose-pretty  10 1024
-        export OMP_NUM_THREADS=2
-        $PRK_TARGET_PATH/Synch_p2p/p2p-omp           10 1024 1024 # not threaded yet
-        $PRK_TARGET_PATH/Stencil/stencil-omp         10 1000
-        $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 1
-        $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 32
-        # FIXME: only testing with a single image right now.
-        $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
-        $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
-        $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+        case "$PRK_TARGET" in
+            allfortranserial)
+                $PRK_TARGET_PATH/Synch_p2p/p2p               10 1024 1024
+                $PRK_TARGET_PATH/Stencil/stencil             10 1000
+                $PRK_TARGET_PATH/Transpose/transpose         10 1024 1
+                $PRK_TARGET_PATH/Transpose/transpose         10 1024 32
+                ;;
+            allfortranpretty)
+                #$PRK_TARGET_PATH/Synch_p2p/p2p-pretty        10 1024 1024
+                # pretty versions do not support tiling...
+                $PRK_TARGET_PATH/Stencil/stencil-pretty      10 1000
+                $PRK_TARGET_PATH/Transpose/transpose-pretty  10 1024
+                ;;
+            allfortranopenmp)
+                export OMP_NUM_THREADS=2
+                $PRK_TARGET_PATH/Synch_p2p/p2p-omp           10 1024 1024 # not threaded yet
+                $PRK_TARGET_PATH/Stencil/stencil-omp         10 1000
+                $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 1
+                $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 32
+                ;;
+            allfortrancoarray)
+                export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
+                export PRK_MPI_PROCS=4
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+                ;;
+            esac
         ;;
     allopenmp)
         echo "OpenMP"
