@@ -24,9 +24,19 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
     cd $TRAVIS_ROOT
     git clone --depth 10 https://github.com/sourceryinstitute/opencoarrays.git opencoarrays-source
     cd opencoarrays-source
-    which yes
-    yes | ./install.sh -j 2 -i $TRAVIS_ROOT/opencoarrays
+    mkdir build
+    cd build
+    which mpifort
+    mpifort -show
+    CC=mpicc FC=mpifort cmake .. -DCMAKE_INSTALL_PREFIX=$TRAVIS_ROOT/opencoarrays \
+                                 -DMPI_C_COMPILER=mpicc -DMPI_Fortran_COMPILER=mpifort
+    make
+    ctest
+    make install
+    find $TRAVIS_ROOT -name caf
+    find $TRAVIS_ROOT -name cafrun
 else
     echo "OpenCoarrays installed..."
-    #find $TRAVIS_ROOT -name opencoarrays.mk
+    find $TRAVIS_ROOT -name caf
+    find $TRAVIS_ROOT -name cafrun
 fi
