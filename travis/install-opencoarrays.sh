@@ -27,7 +27,13 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
     cd opencoarrays-source
     mkdir build
     cd build
+    which mpicc
     which mpifort
+    mpicc -show
+    mpifort -show
+    export MPICH_CC=gcc-6
+    export MPICH_FC=gfortran-6
+    mpicc -show
     mpifort -show
     CC=mpicc FC=mpifort cmake .. -DCMAKE_INSTALL_PREFIX=$TRAVIS_ROOT/opencoarrays \
                                  -DMPI_C_COMPILER=mpicc -DMPI_Fortran_COMPILER=mpifort

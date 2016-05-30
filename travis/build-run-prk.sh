@@ -81,6 +81,9 @@ case "$PRK_TARGET" in
                 #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
                 PRK_FC=$TRAVIS_ROOT/opencoarrays/bin/caf
                 echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=lib" >> common/make.defs
+                # override whatever is used in MPI scripts
+                export MPICH_CC=gcc-6
+                export MPICH_FC=gfortran-6
                 ;;
             *)
                 echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp" >> common/make.defs
