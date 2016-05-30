@@ -12,7 +12,9 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
             brew update
             brew install gcc6
             brew install mpich
+            brew unlink cmake
             brew install cmake
+            cmake --version
             set -e
             ;;
 
