@@ -5,6 +5,7 @@ os=`uname`
 TRAVIS_ROOT="$1"
 
 if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
+    set +e
     case "$os" in
         Darwin)
             echo "Mac"
@@ -18,6 +19,7 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
             echo "Linux"
             ;;
     esac
+    set -e
 
     cd $TRAVIS_ROOT
     git clone --depth 10 https://github.com/sourceryinstitute/opencoarrays.git opencoarrays-source
