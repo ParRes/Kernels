@@ -22,7 +22,8 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
     cd $TRAVIS_ROOT
     git clone --depth 10 https://github.com/sourceryinstitute/opencoarrays.git opencoarrays-source
     cd opencoarrays-source
-    ./install.sh -j 2 -i $TRAVIS_ROOT/opencoarrays
+    which yes
+    yes | ./install.sh -j 2 -i $TRAVIS_ROOT/opencoarrays
 else
     echo "OpenCoarrays installed..."
     #find $TRAVIS_ROOT -name opencoarrays.mk
