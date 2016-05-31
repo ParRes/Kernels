@@ -68,7 +68,6 @@ case "$PRK_TARGET" in
                     echo "No Fortran compiler found!"
                     exit 9
                 fi
-                export PRK_FC="$PRK_FC -std=f2008 -cpp"
                 ;;
             clang)
                 echo "LLVM Fortran is not supported."
@@ -79,13 +78,22 @@ case "$PRK_TARGET" in
         case "$PRK_TARGET" in
             allfortrancoarray)
                 #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
-                PRK_FC=$TRAVIS_ROOT/opencoarrays/bin/caf
-                echo "FC=$PRK_FC\nCOARRAYFLAG=-cpp -std=f2008 -fcoarray=lib" >> common/make.defs
                 # override whatever is used in MPI scripts
-                export MPICH_CC=gcc-6
-                export MPICH_FC=gfortran-6
+                if [ "$PRK_FC" = "gfortran-6" ]; then
+                    export MPICH_CC=gcc-6
+                    export MPICH_FC=gfortran-6
+                elif [ "$PRK_FC" = "gfortran-5" ]; then
+                    export MPICH_CC=gcc-5
+                    export MPICH_FC=gfortran-5
+                else
+                    echo "You need at least GCC-5 and preferably GCC-6 for OpenCoarrays"
+                    exit 9
+                fi
+                export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
+                echo "FC=$PRK_CAFC\nCOARRAYFLAG=-cpp -std=f2008 -fcoarray=lib" >> common/make.defs
                 ;;
             *)
+                export PRK_FC="$PRK_FC -std=f2008 -cpp"
                 echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp" >> common/make.defs
                 ;;
         esac
