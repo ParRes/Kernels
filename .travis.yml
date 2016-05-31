@@ -155,7 +155,7 @@ env:
   - PRK_TARGET=allfortranopenmp
   - PRK_TARGET=allfortranpretty
   - PRK_TARGET=allfortrancoarray
-  - PRK_TARGET=allopenmp
+#  - PRK_TARGET=allopenmp
 #  - PRK_TARGET=allmpi1
 #  - PRK_TARGET=allshmem
 #  - PRK_TARGET=allmpirma
