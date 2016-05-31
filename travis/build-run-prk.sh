@@ -7,8 +7,6 @@ PRK_TARGET="$2"
 # Travis exports this
 PRK_COMPILER="$CC"
 
-MPI_IMPL=mpich
-
 echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 
 case "$os" in
@@ -17,7 +15,7 @@ case "$os" in
         export MPI_ROOT=/usr/local
         ;;
     Linux)
-        export MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
+        export MPI_ROOT=$TRAVIS_ROOT
         ;;
 esac
 
@@ -260,7 +258,7 @@ case "$PRK_TARGET" in
                         # see if this is causing Mac tests to hang
                         export MPICH_ASYNC_PROGRESS=1
                         # so that upcrun can find mpirun - why it doesn't cache this from build is beyond me
-                        export PATH="$TRAVIS_ROOT/$MPI_IMPL/bin:$PATH"
+                        export PATH="$MPI_ROOT/bin:$PATH"
                         export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
                         ;;
                     *)
