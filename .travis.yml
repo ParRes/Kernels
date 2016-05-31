@@ -75,9 +75,6 @@ matrix:
     - os: linux
       compiler: gcc
       env: PRK_TARGET=allfortrancoarray
-    # Mac issue with libtoolize (see https://github.com/regrant/sandia-shmem/pull/87)
-    - os: osx
-      env: PRK_TARGET=allshmem
     # UPC over MPICH on Mac hangs - may be async progress issue
     - os: osx
       env: PRK_TARGET=allupc
