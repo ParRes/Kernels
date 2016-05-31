@@ -64,7 +64,7 @@ case "$PRK_TARGET" in
                         break
                     fi
                 done
-                if [ "x$PRK_FC" == "x" ] ; then
+                if [ "x$PRK_FC" = "x" ] ; then
                     echo "No Fortran compiler found!"
                     exit 9
                 fi

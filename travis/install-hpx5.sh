@@ -6,7 +6,7 @@ TRAVIS_ROOT="$1"
 
 if [ ! -d "$TRAVIS_ROOT/hpx5" ] ; then
     cd $TRAVIS_ROOT
-    if [ "0" == "1" ] ; then
+    if [ "0" = "1" ] ; then
         wget -q --no-check-certificate http://hpx.crest.iu.edu/release/HPX_Release_v2.0.0.tar.gz
         if [ `which shasum` ] ; then
             echo "SHA-256 signature is:"

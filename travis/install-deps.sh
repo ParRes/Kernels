@@ -15,11 +15,11 @@ case "$PRK_TARGET" in
 
     allfortran*)
         echo "Fortran"
-        if [ "${TRAVIS_OS_NAME}" == "osx" ] ; then
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             set +e
             brew update
             p=gcc
-            if [ "x`brew ls --versions $p`" == "x" ] ; then
+            if [ "x`brew ls --versions $p`" = "x" ] ; then
                 echo "$p is not installed - installing it"
                 brew install $p
             else
@@ -29,7 +29,7 @@ case "$PRK_TARGET" in
             brew list gcc
             set -e
         fi
-        if [ "${PRK_TARGET}" == "allfortrancoarray" ] ; then
+        if [ "${PRK_TARGET}" = "allfortrancoarray" ] ; then
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
         fi
         ;;
