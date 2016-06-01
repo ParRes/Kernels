@@ -93,16 +93,6 @@ println("Grid sizes               = ", m, ",", n)
 println("Number of iterations     = ", iterations)
 
 grid = zeros(Float64,m,n)
-#a = collect(Float64,0:n-1)
-#b = collect(Float64,0:m-1)
-#println(grid)
-#println(a)
-#println(b)
-#println(size(grid))
-#println(size(a))
-#println(size(b))
-#println(size(grid[1,1:n]))
-#println(size(grid[1:m,1]))
 grid[1,1:n] = collect(Float64,0:n-1)
 grid[1:m,1] = collect(Float64,0:m-1)
 
@@ -125,7 +115,8 @@ for k in 1:iterations+1
 end
 
 t1 = time_ns()
-pipeline_time = t1 - t0
+# convert time from nanoseconds to seconds
+pipeline_time = (t1 - t0) * 1.e-9
 
 # ********************************************************************
 # ** Analyze and output results.
