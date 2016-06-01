@@ -82,7 +82,7 @@ case "$os" in
                     fi
                     sh $TRAVIS_HOME/travis/install-autotools.sh $TRAVIS_ROOT
                     ./autogen.sh
-                    mkdir build && cd build
+                    mkdir build ; cd build
                     ../configure CC=$PRK_CC CXX=$PRK_CXX --disable-fortran --prefix=$TRAVIS_ROOT
                     make -j4
                     make install
