@@ -21,6 +21,7 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
         Linux)
             echo "Linux"
             sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich 1
+            sh ./travis/install-cmake.sh $TRAVIS_ROOT
             ;;
     esac
 
