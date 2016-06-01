@@ -63,55 +63,53 @@
 println("Parallel Research Kernels version ") #, PRKVERSION, "\n")
 println("Python pipeline execution on 2D grid\n")
 
-#for x in ARGS
-#    println(x,",",typeof(x))
-#end
-
 if length(ARGS) != 3
     println("argument count = ", length(ARGS))
     println("Usage: ./synch_p2p <# iterations> <first array dimension> <second array dimension>")
     exit(1)
 end
 
-iterations = Int(ARGS[1])
+argv = map(x->parse(Int64,x),ARGS)
+
+iterations = argv[1]
 if iterations < 1
     println("ERROR: iterations must be >= 1")
     exit(2)
 end
 
-m = Int(ARGS[2])
+m = argv[2]
 if m < 1
     println("ERROR: array dimension must be >= 1")
     exit(3)
 end
 
-n = Int(ARGS[3])
+n = argv[3]
 if n < 1
     println("ERROR: array dimension must be >= 1")
     exit(4)
 end
 
-println("Grid sizes               = ", m, n)
+println("Grid sizes               = ", m, ",", n)
 println("Number of iterations     = ", iterations)
 
 grid = zeros([m n])
 #grid[0,:] = range(n)
 #grid[:,0] = range(m)
 
-for k in [iterations+1]
+for k in 1:iterations+1
     # start timer after a warmup iteration
     if k<1
         t0 = time_ns()
     end
 
-    for i in [1,m]
-        for j in [1,n]
-            grid[i][j] = grid[i-1][j] + grid[i][j-1] - grid[i-1][j-1]
+    for i in 1:m
+        for j in 1:n
+            grid[i,j] = grid[i-1,j] + grid[i,j-1] - grid[i-1,j-1]
         end
     end
 
     # copy top right corner value to bottom left corner to create dependency
-    grid[0,0] = -grid[m-1,n-1]
+    #grid[1,1] = -grid[m,n]
 end
 
 
