@@ -34,39 +34,48 @@ case "$os" in
         case "$CC" in
             gcc)
                 # I am sure there is a decent way to condense this...
-                if [ -f "/usr/bin/gcc-5.3" ]; then
-                    export PRK_CC=gcc-5.3
-                    export PRK_CXX=g++-5.3
-                    export PRK_FC=gfortran-5.3
-                elif [ -f "/usr/bin/gcc-5.2" ]; then
-                    export PRK_CC=gcc-5.2
-                    export PRK_CXX=g++-5.2
-                    export PRK_FC=gfortran-5.2
-                elif [ -f "/usr/bin/gcc-5.1" ]; then
-                    export PRK_CC=gcc-5.1
-                    export PRK_CXX=g++-5.1
-                    export PRK_FC=gfortran-5.1
-                elif [ -f "/usr/bin/gcc-5" ]; then
-                    export PRK_CC=gcc-5
-                    export PRK_CXX=g++-5
-                    export PRK_FC=gfortran-5
-                elif [ -f "/usr/bin/gcc-4.9" ]; then
-                    export PRK_CC=gcc-4.9
-                    export PRK_CXX=g++-4.9
-                    export PRK_FC=gfortran-4.9
-                elif [ -f "/usr/bin/gcc-4.8" ]; then
-                    export PRK_CC=gcc-4.8
-                    export PRK_CXX=g++-4.8
-                    export PRK_FC=gfortran-4.8
-                elif [ -f "/usr/bin/gcc-4.7" ]; then
-                    export PRK_CC=gcc-4.7
-                    export PRK_CXX=g++-4.7
-                    export PRK_FC=gfortran-4.7
-                else
-                    export PRK_CC=gcc
-                    export PRK_CXX=g++
-                    export PRK_FC=gfortran
-                fi
+                #if [ -f "/usr/bin/gcc-5.3" ]; then
+                #    export PRK_CC=gcc-5.3
+                #    export PRK_CXX=g++-5.3
+                #    export PRK_FC=gfortran-5.3
+                #elif [ -f "/usr/bin/gcc-5.2" ]; then
+                #    export PRK_CC=gcc-5.2
+                #    export PRK_CXX=g++-5.2
+                #    export PRK_FC=gfortran-5.2
+                #elif [ -f "/usr/bin/gcc-5.1" ]; then
+                #    export PRK_CC=gcc-5.1
+                #    export PRK_CXX=g++-5.1
+                #    export PRK_FC=gfortran-5.1
+                #elif [ -f "/usr/bin/gcc-5" ]; then
+                #    export PRK_CC=gcc-5
+                #    export PRK_CXX=g++-5
+                #    export PRK_FC=gfortran-5
+                #elif [ -f "/usr/bin/gcc-4.9" ]; then
+                #    export PRK_CC=gcc-4.9
+                #    export PRK_CXX=g++-4.9
+                #    export PRK_FC=gfortran-4.9
+                #elif [ -f "/usr/bin/gcc-4.8" ]; then
+                #    export PRK_CC=gcc-4.8
+                #    export PRK_CXX=g++-4.8
+                #    export PRK_FC=gfortran-4.8
+                #elif [ -f "/usr/bin/gcc-4.7" ]; then
+                #    export PRK_CC=gcc-4.7
+                #    export PRK_CXX=g++-4.7
+                #    export PRK_FC=gfortran-4.7
+                #else
+                #    export PRK_CC=gcc
+                #    export PRK_CXX=g++
+                #    export PRK_FC=gfortran
+                #fi
+                for gccversion in "-6" "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
+                    if [ -f "`which gcc$gccversion`" ]; then
+                        export PRK_CC="gcc$gccversion"
+                        export PRK_CXX="g++$gccversion"
+                        export PRK_FC="gfortran$gccversion"
+                        echo "Found GCC: $PRK_CC"
+                        break
+                    fi
+                done
                 ;;
             clang)
                 export PRK_CC=clang
@@ -99,7 +108,6 @@ case "$os" in
                     else
                         ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX FC=$PRK_FC
                     fi
-                    ../configure CC=$PRK_CC CXX=$PRK_CXX $FORTRAN --prefix=$TRAVIS_ROOT
                     make -j4
                     make install
                 else
