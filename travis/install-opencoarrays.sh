@@ -40,7 +40,7 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
     mpicc -show
     mpif90 -show
     CC=mpicc FC=mpif90 cmake .. -DCMAKE_INSTALL_PREFIX=$TRAVIS_ROOT/opencoarrays \
-                                -DMPI_C_COMPILER=mpicc -DMPI_Fortran_COMPILER=mpifort
+                                -DMPI_C_COMPILER=mpicc -DMPI_Fortran_COMPILER=mpif90
     make
     ctest
     make install
