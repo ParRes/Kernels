@@ -60,8 +60,8 @@
 # read and test input parameters
 # ********************************************************************
 
-println("Parallel Research Kernels version ") #, PRKVERSION, "\n")
-println("Python pipeline execution on 2D grid\n")
+println("Parallel Research Kernels version ") #, PRKVERSION)
+println("Python pipeline execution on 2D grid")
 
 if length(ARGS) != 3
     println("argument count = ", length(ARGS))
@@ -92,9 +92,21 @@ end
 println("Grid sizes               = ", m, ",", n)
 println("Number of iterations     = ", iterations)
 
-grid = zeros([m n])
-#grid[0,:] = range(n)
-#grid[:,0] = range(m)
+grid = zeros(Float64,m,n)
+#a = collect(Float64,0:n-1)
+#b = collect(Float64,0:m-1)
+#println(grid)
+#println(a)
+#println(b)
+#println(size(grid))
+#println(size(a))
+#println(size(b))
+#println(size(grid[1,1:n]))
+#println(size(grid[1:m,1]))
+grid[1,1:n] = collect(Float64,0:n-1)
+grid[1:m,1] = collect(Float64,0:m-1)
+
+t0 = time_ns()
 
 for k in 1:iterations+1
     # start timer after a warmup iteration
@@ -102,16 +114,15 @@ for k in 1:iterations+1
         t0 = time_ns()
     end
 
-    for i in 1:m
-        for j in 1:n
+    for i in 2:m
+        for j in 2:n
             grid[i,j] = grid[i-1,j] + grid[i,j-1] - grid[i-1,j-1]
         end
     end
 
     # copy top right corner value to bottom left corner to create dependency
-    #grid[1,1] = -grid[m,n]
+    grid[1,1] = -grid[m,n]
 end
-
 
 t1 = time_ns()
 pipeline_time = t1 - t0
@@ -123,13 +134,13 @@ pipeline_time = t1 - t0
 epsilon=1.e-8
 
 # verify correctness, using top right value
-corner_val = float((iterations+1)*(n+m-2))
-if (abs(grid[m-1,n-1] - corner_val)/corner_val) < epsilon
+corner_val = Float64((iterations+1)*(n+m-2))
+if (abs(grid[m,n] - corner_val)/corner_val) < epsilon
     println("Solution validates")
     avgtime = pipeline_time/iterations
-    println("Rate (MFlops/s): ",1.e-6*2*(m-1)*(n-1)/avgtime," Avg time (s): ",avgtime,"\n")
+    println("Rate (MFlops/s): ",1.e-6*2*(m)*(n)/avgtime," Avg time (s): ",avgtime)
 else
-    println("ERROR: checksum ",grid[m-1,n-1]," does not match verification value", corner_val,"\n")
+    println("ERROR: checksum ",grid[m,n]," does not match verification value", corner_val)
     exit(9)
 end
 

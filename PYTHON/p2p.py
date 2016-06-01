@@ -92,6 +92,8 @@ def main():
     for i in range(m):
         grid[i][0] = float(i)
 
+    print 'XXX',range(n)
+
     for k in range(iterations+1):
         # start timer after a warmup iteration
         if k<1:
