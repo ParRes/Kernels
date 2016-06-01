@@ -9,11 +9,8 @@ os=`uname`
 TRAVIS_ROOT="$1"
 MPI_IMPL="$2"
 
-# 0 = no, else yes
+# 1=yes, else no
 MPI_FORTRAN="$3"
-if [ "x$MPI_FORTRAN" != "x" ] ; then
-    MPI_FORTRAN=0
-fi
 
 case "$os" in
     Darwin)
@@ -89,7 +86,7 @@ case "$os" in
                     sh $TRAVIS_HOME/travis/install-autotools.sh $TRAVIS_ROOT
                     ./autogen.sh
                     mkdir build ; cd build
-                    if [ "x$MPI_FORTRAN" != "x0" ] ; then
+                    if [ "x$MPI_FORTRAN" != "x1" ] ; then
                         NO_FORTRAN=--disable-fortran
                     fi
                     ../configure CC=$PRK_CC CXX=$PRK_CXX $NO_FORTRAN --prefix=$TRAVIS_ROOT
@@ -107,7 +104,7 @@ case "$os" in
                     tar -xjf http://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.1.tar.bz2
                     cd openmpi-1.10.1
                     mkdir build && cd build
-                    if [ "x$MPI_FORTRAN" != "x0" ] ; then
+                    if [ "x$MPI_FORTRAN" != "x1" ] ; then
                         NO_FORTRAN=--enable-mpi-fortran=none
                     fi
                     ../configure CC=$PRK_CC CXX=$PRK_CXX $NO_FORTRAN --prefix=$TRAVIS_ROOT
