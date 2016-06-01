@@ -87,7 +87,7 @@ case "$PRK_TARGET" in
         echo "Grappa"
         sh ./travis/install-cmake.sh $TRAVIS_ROOT
         sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL
-        sh ./travis/install-grappa.sh $TRAVIS_ROOT $MPI_IMPL
+        sh ./travis/install-grappa.sh $TRAVIS_ROOT
         ;;
     allchapel)
         echo "Chapel"

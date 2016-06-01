@@ -3,8 +3,6 @@ set -x
 
 TRAVIS_ROOT="$1"
 
-MPI_IMPL=mpich
-
 GASNET_PREFIX=$TRAVIS_ROOT/gasnet-$GASNET_CONDUIT
 
 export GASNET_RELEASE=GASNet-1.26.3
@@ -19,7 +17,7 @@ case $os in
         ;;
     Linux)
         GASNET_NO_PTHREADS=""
-        MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
+        MPI_ROOT=$TRAVIS_ROOT
         ;;
 esac
 
