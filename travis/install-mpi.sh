@@ -76,12 +76,12 @@ case "$os" in
                              -O mpich-3.2.tar.gz
                         tar -xzf mpich-3.2.tar.gz
                         cd mpich-3.2
-                        sh $TRAVIS_HOME/travis/install-autotools.sh $TRAVIS_ROOT
-                        ./autogen.sh
                     else
                         tar -xzf mpich-3.2.tar.gz
                         cd mpich-3.2
                     fi
+                    sh $TRAVIS_HOME/travis/install-autotools.sh $TRAVIS_ROOT
+                    ./autogen.sh
                     mkdir build && cd build
                     ../configure CC=$PRK_CC CXX=$PRK_CXX --disable-fortran --prefix=$TRAVIS_ROOT
                     make -j4

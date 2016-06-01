@@ -29,16 +29,17 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
     cd opencoarrays-source
     mkdir build
     cd build
+    # mpif90 is more widely available than mpifort...
     which mpicc
-    which mpifort
+    which mpif90
     mpicc -show
-    mpifort -show
+    mpif90 -show
     export MPICH_CC=gcc-6
     export MPICH_FC=gfortran-6
     mpicc -show
-    mpifort -show
-    CC=mpicc FC=mpifort cmake .. -DCMAKE_INSTALL_PREFIX=$TRAVIS_ROOT/opencoarrays \
-                                 -DMPI_C_COMPILER=mpicc -DMPI_Fortran_COMPILER=mpifort
+    mpif90 -show
+    CC=mpicc FC=mpif90 cmake .. -DCMAKE_INSTALL_PREFIX=$TRAVIS_ROOT/opencoarrays \
+                                -DMPI_C_COMPILER=mpicc -DMPI_Fortran_COMPILER=mpifort
     make
     ctest
     make install
