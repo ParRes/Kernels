@@ -64,7 +64,7 @@ case "$os" in
         esac
         case "$MPI_IMPL" in
             mpich)
-                if [ ! -d "$TRAVIS_ROOT/mpich" ]; then
+                if [ ! -f "$TRAVIS_ROOT/bin/mpichversion" ]; then
                     set +e
                     wget --no-check-certificate -q \
                          http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz
@@ -83,28 +83,28 @@ case "$os" in
                         cd mpich-3.2
                     fi
                     mkdir build && cd build
-                    ../configure CC=$PRK_CC CXX=$PRK_CXX --disable-fortran --prefix=$TRAVIS_ROOT/mpich
+                    ../configure CC=$PRK_CC CXX=$PRK_CXX --disable-fortran --prefix=$TRAVIS_ROOT
                     make -j4
                     make install
                 else
                     echo "MPICH installed..."
-                    find $TRAVIS_ROOT/mpich -name mpiexec
-                    find $TRAVIS_ROOT/mpich -name mpicc
+                    find $TRAVIS_ROOT -name mpiexec
+                    find $TRAVIS_ROOT -name mpicc
                 fi
                 ;;
             openmpi)
-                if [ ! -d "$TRAVIS_ROOT/openmpi" ]; then
+                if [ ! -f "$TRAVIS_ROOT/bin/ompi_info" ]; then
                     wget --no-check-certificate -q http://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.1.tar.bz2
                     tar -xjf http://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.1.tar.bz2
                     cd openmpi-1.10.1
                     mkdir build && cd build
-                    ../configure CC=$PRK_CC CXX=$PRK_CXX --enable-mpi-fortran=none --prefix=$TRAVIS_ROOT/openmpi
+                    ../configure CC=$PRK_CC CXX=$PRK_CXX --enable-mpi-fortran=none --prefix=$TRAVIS_ROOT
                     make -j4
                     make install
                 else
                     echo "OpenMPI installed..."
-                    find $TRAVIS_ROOT/openmpi -name mpiexec
-                    find $TRAVIS_ROOT/openmpi -name mpicc
+                    find $TRAVIS_ROOT -name mpiexec
+                    find $TRAVIS_ROOT -name mpicc
                 fi
 
 

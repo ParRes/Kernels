@@ -58,13 +58,23 @@ matrix:
       env: PRK_TARGET=allhpx3
     # LLVM Fortran is not ready.
     - compiler: clang
-      env: PRK_TARGET=allfortran
+      env: PRK_TARGET=allfortranserial
+    - compiler: clang
+      env: PRK_TARGET=allfortranopenmp
+    - compiler: clang
+      env: PRK_TARGET=allfortranpretty
+    - compiler: clang
+      env: PRK_TARGET=allfortrancoarray
     # Python does not use compiler so only test one of them per OS (GCC)
     - compiler: clang
       env: PRK_TARGET=allpython
   allow_failures:
     # will fail if numpy package cannot be acquired via apt
     - env: PRK_TARGET=allpython
+    # Linux may not have GCC-6...
+    - os: linux
+      compiler: gcc
+      env: PRK_TARGET=allfortrancoarray
     # UPC over MPICH on Mac hangs - may be async progress issue
     - os: osx
       env: PRK_TARGET=allupc
@@ -138,7 +148,10 @@ env:
 #
   - PRK_TARGET=allpython
   - PRK_TARGET=allserial
-  - PRK_TARGET=allfortran
+  - PRK_TARGET=allfortranserial
+  - PRK_TARGET=allfortranopenmp
+  - PRK_TARGET=allfortranpretty
+  - PRK_TARGET=allfortrancoarray
   - PRK_TARGET=allopenmp
   - PRK_TARGET=allmpi1
   - PRK_TARGET=allshmem
@@ -187,13 +200,14 @@ install:
   - export PATH=$TRAVIS_ROOT/bin:$PATH
   - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
   - export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
-  - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
 before_script:
   - pwd
 script:
+  - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
   - sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
 after_failure:
   - echo "Sad panda"
+  - find . -name config.log -exec cat {} ";"
   - find . -name CMakeOutput.log -exec cat {} ";"
   - find . -name CMakeError.log -exec cat {} ";"
 notifications:

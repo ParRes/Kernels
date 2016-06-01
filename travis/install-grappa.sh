@@ -3,7 +3,6 @@ set -x
 
 os=`uname`
 TRAVIS_ROOT="$1"
-MPI_IMPL="$2"
 
 # TODO: Make compiler and MPI configurable...
 
@@ -25,14 +24,14 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     cd grappa-source
     # DEBUG
     find /usr -name gcc\* -type f
-    find $TRAVIS_ROOT/$MPI_IMPL
+    find $TRAVIS_ROOT
     # END
     # Using Grappa's configure script
     #./configure --prefix=$TRAVIS_ROOT/grappa
     #cd build/Make+Release
     # Invoking CMake directly
     mkdir build && cd build
-    export MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
+    export MPI_ROOT=$TRAVIS_ROOT
     cmake .. -DGRAPPA_INSTALL_PREFIX=$TRAVIS_ROOT/grappa \
              -DCMAKE_C_COMPILER="$MPI_ROOT/bin/mpicc" \
              -DCMAKE_CXX_COMPILER="$MPI_ROOT/bin/mpicxx" \
