@@ -37,27 +37,35 @@ case "$os" in
                 if [ -f "/usr/bin/gcc-5.3" ]; then
                     export PRK_CC=gcc-5.3
                     export PRK_CXX=g++-5.3
+                    export PRK_FC=gfortran-5.3
                 elif [ -f "/usr/bin/gcc-5.2" ]; then
                     export PRK_CC=gcc-5.2
                     export PRK_CXX=g++-5.2
+                    export PRK_FC=gfortran-5.2
                 elif [ -f "/usr/bin/gcc-5.1" ]; then
                     export PRK_CC=gcc-5.1
                     export PRK_CXX=g++-5.1
+                    export PRK_FC=gfortran-5.1
                 elif [ -f "/usr/bin/gcc-5" ]; then
                     export PRK_CC=gcc-5
                     export PRK_CXX=g++-5
+                    export PRK_FC=gfortran-5
                 elif [ -f "/usr/bin/gcc-4.9" ]; then
                     export PRK_CC=gcc-4.9
                     export PRK_CXX=g++-4.9
+                    export PRK_FC=gfortran-4.9
                 elif [ -f "/usr/bin/gcc-4.8" ]; then
                     export PRK_CC=gcc-4.8
                     export PRK_CXX=g++-4.8
+                    export PRK_FC=gfortran-4.8
                 elif [ -f "/usr/bin/gcc-4.7" ]; then
                     export PRK_CC=gcc-4.7
                     export PRK_CXX=g++-4.7
+                    export PRK_FC=gfortran-4.7
                 else
                     export PRK_CC=gcc
                     export PRK_CXX=g++
+                    export PRK_FC=gfortran
                 fi
                 ;;
             clang)
@@ -87,9 +95,11 @@ case "$os" in
                     ./autogen.sh
                     mkdir build ; cd build
                     if [ "x$MPI_FORTRAN" != "x1" ] ; then
-                        NO_FORTRAN=--disable-fortran
+                        ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX --disable-fortran
+                    else
+                        ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX FC=$PRK_FC
                     fi
-                    ../configure CC=$PRK_CC CXX=$PRK_CXX $NO_FORTRAN --prefix=$TRAVIS_ROOT
+                    ../configure CC=$PRK_CC CXX=$PRK_CXX $FORTRAN --prefix=$TRAVIS_ROOT
                     make -j4
                     make install
                 else
@@ -105,9 +115,10 @@ case "$os" in
                     cd openmpi-1.10.1
                     mkdir build && cd build
                     if [ "x$MPI_FORTRAN" != "x1" ] ; then
-                        NO_FORTRAN=--enable-mpi-fortran=none
+                        ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX --enable-mpi-fortran=none
+                    else
+                        ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX FC=$PRK_FC
                     fi
-                    ../configure CC=$PRK_CC CXX=$PRK_CXX $NO_FORTRAN --prefix=$TRAVIS_ROOT
                     make -j4
                     make install
                 else
