@@ -51,80 +51,88 @@
 #          functions are used in this program:
 #
 # HISTORY: - Written by Rob Van der Wijngaart, February 2009.
-#          - Converted to Python by Jeff Hammond, Fortran 2016.
+#          - Converted to Python by Jeff Hammond, February 2016.
+#          - Converted to Julia by Jeff Hammond, June 2016.
 #
 # *******************************************************************
 
-import sys
-import time
+# ********************************************************************
+# read and test input parameters
+# ********************************************************************
 
-def main():
+println("Parallel Research Kernels version ") #, PRKVERSION, "\n")
+println("Python pipeline execution on 2D grid\n")
 
-    # ********************************************************************
-    # read and test input parameters
-    # ********************************************************************
+#for x in ARGS
+#    println(x,",",typeof(x))
+#end
 
-    print 'Parallel Research Kernels version '#, PRKVERSION
-    print 'Python pipeline execution on 2D grid'
+if length(ARGS) != 3
+    println("argument count = ", length(ARGS))
+    println("Usage: ./synch_p2p <# iterations> <first array dimension> <second array dimension>")
+    exit(1)
+end
 
-    if len(sys.argv) != 4:
-        print 'argument count = ', len(sys.argv)
-        sys.exit("Usage: ./synch_p2p <# iterations> <first array dimension> <second array dimension>")
+iterations = Int(ARGS[1])
+if iterations < 1
+    println("ERROR: iterations must be >= 1")
+    exit(2)
+end
 
-    iterations = int(sys.argv[1])
-    if iterations < 1:
-        sys.exit("ERROR: iterations must be >= 1")
+m = Int(ARGS[2])
+if m < 1
+    println("ERROR: array dimension must be >= 1")
+    exit(3)
+end
 
-    m = int(sys.argv[2])
-    if m < 1:
-        sys.exit("ERROR: array dimension must be >= 1")
+n = Int(ARGS[3])
+if n < 1
+    println("ERROR: array dimension must be >= 1")
+    exit(4)
+end
 
-    n = int(sys.argv[2])
-    if n < 1:
-        sys.exit("ERROR: array dimension must be >= 1")
+println("Grid sizes               = ", m, n)
+println("Number of iterations     = ", iterations)
 
-    print 'Grid sizes               = ', m, n
-    print 'Number of iterations     = ', iterations
+grid = zeros([m n])
+#grid[0,:] = range(n)
+#grid[:,0] = range(m)
 
-    grid = [[0.0 for x in range(n)] for x in range(m)]
-    for j in range(n):
-        grid[0][j] = float(j)
-    for i in range(m):
-        grid[i][0] = float(i)
+for k in [iterations+1]
+    # start timer after a warmup iteration
+    if k<1
+        t0 = time_ns()
+    end
 
-    for k in range(iterations+1):
-        # start timer after a warmup iteration
-        if k<1:
-            t0 = time.clock()
+    for i in [1,m]
+        for j in [1,n]
+            grid[i][j] = grid[i-1][j] + grid[i][j-1] - grid[i-1][j-1]
+        end
+    end
 
-        for i in range(1,m):
-            for j in range(1,n):
-                grid[i][j] = grid[i-1][j] + grid[i][j-1] - grid[i-1][j-1]
-
-        # copy top right corner value to bottom left corner to create dependency
-        grid[0][0] = -grid[m-1][n-1]
-
-
-    t1 = time.clock()
-    pipeline_time = t1 - t0
-
-    # ********************************************************************
-    # ** Analyze and output results.
-    # ********************************************************************
-
-    epsilon=1.e-8
-
-    # verify correctness, using top right value
-    corner_val = float((iterations+1)*(n+m-2))
-    if (abs(grid[m-1][n-1] - corner_val)/corner_val) < epsilon:
-        print 'Solution validates'
-        avgtime = pipeline_time/iterations
-        print 'Rate (MFlops/s): ',1.e-6*2*(m-1)*(n-1)/avgtime,' Avg time (s): ',avgtime
-    else:
-        print 'ERROR: checksum ',grid[m-1][n-1],' does not match verification value', corner_val
-        sys.exit()
+    # copy top right corner value to bottom left corner to create dependency
+    grid[0,0] = -grid[m-1,n-1]
+end
 
 
-if __name__ == '__main__':
-    main()
+t1 = time_ns()
+pipeline_time = t1 - t0
+
+# ********************************************************************
+# ** Analyze and output results.
+# ********************************************************************
+
+epsilon=1.e-8
+
+# verify correctness, using top right value
+corner_val = float((iterations+1)*(n+m-2))
+if (abs(grid[m-1,n-1] - corner_val)/corner_val) < epsilon
+    println("Solution validates")
+    avgtime = pipeline_time/iterations
+    println("Rate (MFlops/s): ",1.e-6*2*(m-1)*(n-1)/avgtime," Avg time (s): ",avgtime,"\n")
+else
+    println("ERROR: checksum ",grid[m-1,n-1]," does not match verification value", corner_val,"\n")
+    exit(9)
+end
+
 

@@ -50,6 +50,7 @@
 
 import sys
 import time
+import numpy
 
 def main():
 
@@ -62,41 +63,35 @@ def main():
 
     if len(sys.argv) != 3:
         print 'argument count = ', len(sys.argv)
-        sys.exit("Usage: ./transpose <# iterations> <matrix n>")
+        sys.exit("Usage: ./transpose <# iterations> <matrix order>")
 
+    # iterations
     iterations = int(sys.argv[1])
-    if iterations < 1:
-        sys.exit("ERROR: iterations must be >= 1")
+    if iterations < 1: sys.exit("ERROR: iterations must be >= 1")
 
+    # matrix order
     order = int(sys.argv[2])
-    if order < 1:
-        sys.exit("ERROR: order must be >= 1")
+    if order < 1: sys.exit("ERROR: order must be >= 1")
+
+    print 'Matrix order         = ', order
+    print 'Number of iterations = ', iterations
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    print 'Matrix order         = ', order
-    print 'Number of iterations = ', iterations
-
-    # 0.0 is a float, which is 64b (53b of precision)
-    A = [[0.0 for x in range(order)] for x in range(order)]
-    B = [[0.0 for x in range(order)] for x in range(order)]
-
-    # this is surely not the Pythonic way of doing this
-    for i in range(order):
-        for j in range(order):
-            A[i][j] = float(i*order+j)
+    A = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
+    B = numpy.zeros((order,order))
 
     for k in range(0,iterations+1):
-        # start timer after a warmup iteration
-        if k<1:
-            t0 = time.clock()
-       
-        for i in range(order):
-            for j in range(order):
-                B[i][j] += A[j][i]
-                A[j][i] += 1.0
+        # start timer after a warmup iterationsation
+        if k<1: t0 = time.clock()
+
+        # this actually forms the transpose of A
+        # B += numpy.transpose(A)
+        # this only uses the transpose _view_ of A
+        B += A.T
+        A += 1.0
 
 
     t1 = time.clock()
@@ -106,12 +101,8 @@ def main():
     # ** Analyze and output results.
     # ********************************************************************
 
-    addit = (iterations * (iterations+1))/2
-    abserr = 0.0;
-    for i in range(order):
-        for j in range(order):
-            temp    = (order*j+i) * (iterations+1)
-            abserr += abs(B[i][j] - float(temp+addit))
+    A = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
+    abserr = numpy.linalg.norm(numpy.reshape(B-A,order*order),ord=1)
 
     epsilon=1.e-8
     nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
