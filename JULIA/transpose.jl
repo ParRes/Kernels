@@ -46,75 +46,96 @@
 #
 # HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 #          Converted to Python by Jeff Hammond, February 2016.
+#          Converted to Julia by Jeff Hammond, June 2016.
 # *******************************************************************
 
-import sys
-import time
-import numpy
+# ********************************************************************
+# read and test input parameters
+# ********************************************************************
 
-def main():
+println("Parallel Research Kernels version ") #, PRKVERSION)
+println("Julia Matrix transpose: B = A^T")
 
-    # ********************************************************************
-    # read and test input parameters
-    # ********************************************************************
+if length(ARGS) != 2
+    println("argument count = ", length(ARGS))
+    println("Usage: ./transpose <# iterations> <matrix order>")
+    exit(1)
+end
 
-    print 'Parallel Research Kernels version ' #, PRKVERSION
-    print 'Python Matrix transpose: B = A^T'
+argv = map(x->parse(Int64,x),ARGS)
 
-    if len(sys.argv) != 3:
-        print 'argument count = ', len(sys.argv)
-        sys.exit("Usage: ./transpose <# iterations> <matrix order>")
+# iterations
+iterations = argv[1]
+if iterations < 1
+    println("ERROR: iterations must be >= 1")
+    exit(2)
+end
 
-    # iterations
-    iterations = int(sys.argv[1])
-    if iterations < 1: sys.exit("ERROR: iterations must be >= 1")
+# matrix order
+order = argv[2]
+if order < 1
+    println("ERROR: order must be >= 1")
+    exit(3)
+end
 
-    # matrix order
-    order = int(sys.argv[2])
-    if order < 1: sys.exit("ERROR: order must be >= 1")
+println("Order                    = ", order)
+println("Number of iterations     = ", iterations)
 
-    print 'Matrix order         = ', order
-    print 'Number of iterations = ', iterations
+# ********************************************************************
+# ** Allocate space for the input and transpose matrix
+# ********************************************************************
 
-    # ********************************************************************
-    # ** Allocate space for the input and transpose matrix
-    # ********************************************************************
+#A = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
+#B = numpy.zeros((order,order))
 
-    A = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
-    B = numpy.zeros((order,order))
+A = zeros(Float64,order,order)
+for i in 1:order
+    for j in 1:order
+        A[i,j] = i*order+j
+    end
+end
+B = zeros(Float64,order,order)
 
-    for k in range(0,iterations+1):
-        # start timer after a warmup iterationsation
-        if k<1: t0 = time.clock()
+t0 = time_ns()
 
-        # this actually forms the transpose of A
-        # B += numpy.transpose(A)
-        # this only uses the transpose _view_ of A
-        B += A.T
-        A += 1.0
+for k in 1:iterations+1
+    # start timer after a warmup iteration
+    if k<1
+        t0 = time_ns()
+    end
 
+    for i in 1:order
+        for j in 1:order
+            B[i,j] = A[j,i]
+            A[j,i] += 1.0
+        end
+    end
+end
 
-    t1 = time.clock()
-    trans_time = t1 - t0
+t1 = time_ns()
+trans_time = (t1 - t0) * 1.e-9
 
-    # ********************************************************************
-    # ** Analyze and output results.
-    # ********************************************************************
+# ********************************************************************
+# ** Analyze and output results.
+# ********************************************************************
 
-    A = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
-    abserr = numpy.linalg.norm(numpy.reshape(B-A,order*order),ord=1)
+#A = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
+for i in 1:order
+    for j in 1:order
+        A[i,j] = ((iterations/2.0)+(order*j+i))*(iterations+1.0)
+    end
+end
+#abserr = numpy.linalg.norm(numpy.reshape(B-A,order*order),ord=1)
+C=reshape(B-A,1,order*order)
+println(C)
 
-    epsilon=1.e-8
-    nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
-    if abserr < epsilon:
-        print 'Solution validates'
-        avgtime = trans_time/iterations
-        print 'Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime
-    else:
-        print 'error ',abserr, ' exceeds threshold ',epsilon
-        sys.exit("ERROR: solution did not validate")
-
-
-if __name__ == '__main__':
-    main()
+#epsilon=1.e-8
+#nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
+#if abserr < epsilon:
+#    print 'Solution validates'
+#    avgtime = trans_time/iterations
+#    print 'Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime
+#else:
+#    print 'error ',abserr, ' exceeds threshold ',epsilon
+#    sys.exit("ERROR: solution did not validate")
 

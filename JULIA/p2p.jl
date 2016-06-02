@@ -61,7 +61,7 @@
 # ********************************************************************
 
 println("Parallel Research Kernels version ") #, PRKVERSION)
-println("Python pipeline execution on 2D grid")
+println("Julia pipeline execution on 2D grid")
 
 if length(ARGS) != 3
     println("argument count = ", length(ARGS))
