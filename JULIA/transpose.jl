@@ -126,16 +126,19 @@ for i in 1:order
     end
 end
 #abserr = numpy.linalg.norm(numpy.reshape(B-A,order*order),ord=1)
-C=reshape(B-A,1,order*order)
+C=reshape(B-A,order*order)
 println(C)
+abserr = dot(C,C)
 
-#epsilon=1.e-8
-#nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
-#if abserr < epsilon:
-#    print 'Solution validates'
-#    avgtime = trans_time/iterations
-#    print 'Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime
-#else:
-#    print 'error ',abserr, ' exceeds threshold ',epsilon
-#    sys.exit("ERROR: solution did not validate")
+epsilon=1.e-8
+nbytes = 2 * order^2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
+if abserr < epsilon
+    println("Solution validates")
+    avgtime = trans_time/iterations
+    println("Rate (MB/s): ",1.e-6*nbytes/avgtime, " Avg time (s): ", avgtime)
+else
+    println("error ",abserr, " exceeds threshold ",epsilon)
+    println("ERROR: solution did not validate")
+    exit(1)
+end
 
