@@ -71,31 +71,29 @@ println("Julia stencil execution on 2D grid")
 argc = length(ARGS)
 if argc < 2
     println("argument count = ", length(ARGS))
-    println("Usage: ./stencil <# iterations> <array dimension> [<0=star/1=stencil> <radius>]")
+    println("Usage: ./stencil <# iterations> <array dimension> [<star/stencil> <radius>]")
     exit(1)
 end
-argv = map(x->parse(Int64,x),ARGS)
 
-iterations = argv[1]
+iterations = parse(Int,ARGS[1])
 if iterations < 1
     println("ERROR: iterations must be >= 1")
     exit(2)
 end
 
-n = argv[2]
+n = parse(Int,ARGS[2])
 if n < 1
     println("ERROR: array dimension must be >= 1")
     exit(3)
 end
 
+pattern = "star"
 if argc > 2
-    pattern = argv[3]
-else
-    pattern = 0 # star
+    pattern = ARGS[3]
 end
 
 if argc > 3
-    r = argv[4]
+    r = parse(Int,ARGS[4])
     if r < 1
         println("ERROR: Stencil radius should be positive")
         exit(4)
@@ -109,7 +107,7 @@ end
 
 println("Grid size            = ", n)
 println("Radius of stencil    = ", r)
-if pattern == 0 # star
+if pattern == "star"
     println("Type of stencil      = ","star")
 else
     println("Type of stencil      = ","stencil")
@@ -123,7 +121,6 @@ W = zeros(Float64,2*r+1,2*r+1)
 if pattern == 0 # star
     stencil_size = 4*r+1
     for i=1:r
-        println(i)
         W[r+1,r+i+1] = +1./(2*i*r)
         W[r+i+1,r+1] = +1./(2*i*r)
         W[r+1,r-i+1] = -1./(2*i*r)
@@ -132,11 +129,11 @@ if pattern == 0 # star
 else
     stencil_size = (2*r+1)^2
     for j=1:r
-        for i=-j:j
-            W[r+i+1,r+j+1] = +1./(4*j*(2*j)*r)
-            W[r+i+1,r-j+1] = -1./(4*j*(2*j)*r)
-            W[r+j+1,r+i+1] = +1./(4*j*(2*j)*r)
-            W[r-j+1,r+i+1] = -1./(4*j*(2*j)*r)
+        for i=-j+1:j
+            W[r+i+1,r+j+1] = +1./(4*j*(2*j-1)*r)
+            W[r+i+1,r-j+1] = -1./(4*j*(2*j-1)*r)
+            W[r+j+1,r+i+1] = +1./(4*j*(2*j-1)*r)
+            W[r-j+1,r+i+1] = -1./(4*j*(2*j-1)*r)
         end
         W[r+j+1,r+j+1]    = +1./(4*j*r)
         W[r-j+1,r-j+1]    = -1./(4*j*r)
