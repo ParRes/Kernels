@@ -92,7 +92,7 @@ def main():
         # start timer after a warmup iteration
         if k<1:
             t0 = time.clock()
-       
+
         for i in range(order):
             for j in range(order):
                 B[i][j] += A[j][i]
