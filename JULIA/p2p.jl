@@ -96,11 +96,11 @@ grid = zeros(Float64,m,n)
 grid[1,1:n] = collect(Float64,0:n-1)
 grid[1:m,1] = collect(Float64,0:m-1)
 
-t0 = time_ns()
+t0 = 1.e18
 
 for k in 1:iterations+1
     # start timer after a warmup iteration
-    if k<1
+    if k==1
         t0 = time_ns()
     end
 

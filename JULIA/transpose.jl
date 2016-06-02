@@ -96,11 +96,11 @@ for i in 1:order
 end
 B = zeros(Float64,order,order)
 
-t0 = time_ns()
+t0 = 1.e18
 
 for k in 1:iterations+1
     # start timer after a warmup iteration
-    if k<1
+    if k==1
         t0 = time_ns()
     end
 
