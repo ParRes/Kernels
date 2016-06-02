@@ -56,143 +56,160 @@
 #          - RvdW: Removed unrolling pragmas for clarity;
 #            added constant to array "in" at end of each iteration to force
 #            refreshing of neighbor data in parallel versions; August 2013
-#          - Converted to Python by Jeff Hammond, Fortran 2016.
+#          - Converted to Python by Jeff Hammond, February 2016.
+#          - Converted to Julia by Jeff Hammond, June 2016.
 #
 # *******************************************************************
 
-import sys
-import time
-import numpy
+# ********************************************************************
+# read and test input parameters
+# ********************************************************************
 
-def main():
+println("Parallel Research Kernels version ") #, PRKVERSION
+println("Julia stencil execution on 2D grid")
 
-    # ********************************************************************
-    # read and test input parameters
-    # ********************************************************************
+argc = length(ARGS)
+if argc < 2
+    println("argument count = ", length(ARGS))
+    println("Usage: ./stencil <# iterations> <array dimension> [<0=star/1=stencil> <radius>]")
+    exit(1)
+end
+argv = map(x->parse(Int64,x),ARGS)
 
-    print 'Parallel Research Kernels version ' #, PRKVERSION
-    print 'Python stencil execution on 2D grid'
+iterations = argv[1]
+if iterations < 1
+    println("ERROR: iterations must be >= 1")
+    exit(2)
+end
 
-    if len(sys.argv) < 3:
-        print 'argument count = ', len(sys.argv)
-        sys.exit("Usage: ./stencil <# iterations> <array dimension> [<star/stencil> <radius>]")
+n = argv[2]
+if n < 1
+    println("ERROR: array dimension must be >= 1")
+    exit(3)
+end
 
-    iterations = int(sys.argv[1])
-    if iterations < 1:
-        sys.exit("ERROR: iterations must be >= 1")
+if argc > 2
+    pattern = argv[3]
+else
+    pattern = 0 # star
+end
 
-    n = int(sys.argv[2])
-    if n < 1:
-        sys.exit("ERROR: array dimension must be >= 1")
+if argc > 3
+    r = argv[4]
+    if r < 1
+        println("ERROR: Stencil radius should be positive")
+        exit(4)
+    elseif (2*r+1) > n
+        println("ERROR: Stencil radius exceeds grid size")
+        exit(5)
+    end
+else
+    r = 2 # radius=2 is what other impls use right now
+end
 
-    if len(sys.argv) > 3:
-        pattern = sys.argv[3]
-    else:
-        pattern = 'star'
+println("Grid size            = ", n)
+println("Radius of stencil    = ", r)
+if pattern == 0 # star
+    println("Type of stencil      = ","star")
+else
+    println("Type of stencil      = ","stencil")
+end
 
-    if len(sys.argv) > 4:
-        r = int(sys.argv[4])
-        if r < 1:
-            sys.exit("ERROR: Stencil radius should be positive")
-        if (2*r+1) > n:
-            sys.exit("ERROR: Stencil radius exceeds grid size")
-    else:
-        r = 2 # radius=2 is what other impls use right now
+println("Data type            = double precision")
+println("Compact representation of stencil loop body")
+println("Number of iterations = ", iterations)
 
-    print 'Grid size            = ', n
-    print 'Radius of stencil    = ', r
-    if pattern == 'star':
-        print 'Type of stencil      = ','star'
-    else:
-        print 'Type of stencil      = ','stencil'
+W = zeros(Float64,2*r+1,2*r+1)
+if pattern == 0 # star
+    stencil_size = 4*r+1
+    for i=1:r
+        println(i)
+        W[r+1,r+i+1] = +1./(2*i*r)
+        W[r+i+1,r+1] = +1./(2*i*r)
+        W[r+1,r-i+1] = -1./(2*i*r)
+        W[r-i+1,r+1] = -1./(2*i*r)
+    end
+else
+    stencil_size = (2*r+1)^2
+    for j=1:r
+        for i=-j:j
+            W[r+i+1,r+j+1] = +1./(4*j*(2*j)*r)
+            W[r+i+1,r-j+1] = -1./(4*j*(2*j)*r)
+            W[r+j+1,r+i+1] = +1./(4*j*(2*j)*r)
+            W[r-j+1,r+i+1] = -1./(4*j*(2*j)*r)
+        end
+        W[r+j+1,r+j+1]    = +1./(4*j*r)
+        W[r-j+1,r-j+1]    = -1./(4*j*r)
+    end
+end
 
-    print 'Data type            = double precision'
-    print 'Compact representation of stencil loop body'
-    print 'Number of iterations = ', iterations
+A = zeros(Float64,n,n)
+B = zeros(Float64,n,n)
+for i=1:n
+    for j=1:n
+        A[i,j] = (i-1) + (j-1)
+    end
+end
 
-    # there is certainly a more Pythonic way to initialize W,
-    # but it will have no impact on performance.
-    W = numpy.zeros(((2*r+1),(2*r+1)))
-    if pattern == 'star':
-        stencil_size = 4*r+1
-        for i in range(1,r+1):
-            W[r,r+i] = +1./(2*i*r)
-            W[r+i,r] = +1./(2*i*r)
-            W[r,r-i] = -1./(2*i*r)
-            W[r-i,r] = -1./(2*i*r)
+t0 = time_ns()
 
-    else:
-        stencil_size = (2*r+1)**2
-        for j in range(1,r+1):
-            for i in range(-j+1,j):
-                W[r+i,r+j] = +1./(4*j*(2*j-1)*r)
-                W[r+i,r-j] = -1./(4*j*(2*j-1)*r)
-                W[r+j,r+i] = +1./(4*j*(2*j-1)*r)
-                W[r-j,r+i] = -1./(4*j*(2*j-1)*r)
+for k=1:iterations
+    # start timer after a warmup iteration
+    if k==1
+        t0 = time_ns()
+    end
 
-            W[r+j,r+j]    = +1./(4*j*r)
-            W[r-j,r-j]    = -1./(4*j*r)
+    if pattern == 0 # star
+        b = n-r
+        B[r:b,r:b] += W[r,r] * A[r:b,r:b]
+        for s=1:r+1
+            #B[r:b,r:b] += W[r,r-s] * A[r:b,r-s:b-s]
+            #            + W[r,r+s] * A[r:b,r+s:b+s]
+            #            + W[r-s,r] * A[r-s:b-s,r:b]
+            #            + W[r+s,r] * A[r+s:b+s,r:b]
+        end
+    else # stencil
+        if r>0
+            b = n-r
+            #for s=-r:r+1
+            #    for t=-r:r+1
+            #        B[r:b,r:b] += W[r+t,r+s] * A[r+t:b+t,r+s:b+s]
+            #    end
+            #end
+        end
+    end
 
-    A = numpy.fromfunction(lambda i,j: i+j, (n,n), dtype=float)
-    B = numpy.zeros((n,n))
+    A += 1.0
 
-    for k in range(iterations+1):
-        # start timer after a warmup iteration
-        if k<1: t0 = time.clock()
+end
 
-        if pattern == 'star':
-            if r==2:
-                B[2:n-2,2:n-2] += W[2,2] * A[2:n-2,2:n-2] \
-                                + W[2,0] * A[2:n-2,0:n-4] \
-                                + W[2,1] * A[2:n-2,1:n-3] \
-                                + W[2,3] * A[2:n-2,3:n-1] \
-                                + W[2,4] * A[2:n-2,4:n-0] \
-                                + W[0,2] * A[0:n-4,2:n-2] \
-                                + W[1,2] * A[1:n-3,2:n-2] \
-                                + W[3,2] * A[3:n-1,2:n-2] \
-                                + W[4,2] * A[4:n-0,2:n-2]
-            else:
-                b = n-r
-                B[r:b,r:b] += W[r,r] * A[r:b,r:b]
-                for s in range(1,r+1):
-                    B[r:b,r:b] += W[r,r-s] * A[r:b,r-s:b-s] \
-                                + W[r,r+s] * A[r:b,r+s:b+s] \
-                                + W[r-s,r] * A[r-s:b-s,r:b] \
-                                + W[r+s,r] * A[r+s:b+s,r:b]
-        else: # stencil
-            if r>0:
-                b = n-r
-                for s in range(-r, r+1):
-                    for t in range(-r, r+1):
-                        B[r:b,r:b] += W[r+t,r+s] * A[r+t:b+t,r+s:b+s]
+t1 = time_ns()
+stencil_time = (t1 - t0) * 1.*e-9
 
-        A += 1.0
+#******************************************************************************
+#* Analyze and output results.
+#******************************************************************************
 
-    t1 = time.clock()
-    stencil_time = t1 - t0
+active_points = (n-2*r)^2
+norm = 0.0
+for j=r:n-r
+    for i=r:n-r
+        norm += abs(B[i,j])
+    end
+end
+norm /= active_points
 
-    #******************************************************************************
-    #* Analyze and output results.
-    #******************************************************************************
+epsilon=1.e-8
 
-    norm = numpy.linalg.norm(numpy.reshape(B,n*n),ord=1)
-    active_points = (n-2*r)**2
-    norm /= active_points
-
-    epsilon=1.e-8
-
-    # verify correctness
-    reference_norm = 2*(iterations+1)
-    if abs(norm-reference_norm) < epsilon:
-        print 'Solution validates'
-        flops = (2*stencil_size+1) * active_points
-        avgtime = stencil_time/iterations
-        print 'Rate (MFlops/s): ',1.e-6*flops/avgtime, ' Avg time (s): ',avgtime
-    else:
-        print 'ERROR: L1 norm = ', norm,' Reference L1 norm = ', reference_norm
-        sys.exit()
-
-
-if __name__ == '__main__':
-    main()
+# verify correctness
+reference_norm = 2*(iterations+1)
+if abs(norm-reference_norm) < epsilon
+    println("Solution validates")
+    flops = (2*stencil_size+1) * active_points
+    avgtime = stencil_time/iterations
+    println("Rate (MFlops/s): ",1.e-6*flops/avgtime, " Avg time (s): ",avgtime)
+else
+    println("ERROR: L1 norm = ", norm," Reference L1 norm = ", reference_norm)
+    exit(9)
+end
 
