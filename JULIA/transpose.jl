@@ -85,18 +85,16 @@ println("Number of iterations     = ", iterations)
 # ** Allocate space for the input and transpose matrix
 # ********************************************************************
 
-#A = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
-#B = numpy.zeros((order,order))
-
 A = zeros(Float64,order,order)
+B = zeros(Float64,order,order)
+# Fill the original matrix
 for i in 1:order
     for j in 1:order
-        A[i,j] = i*order+j
+        A[i,j] = order * (j-1) + (i-1)
     end
 end
-B = zeros(Float64,order,order)
 
-t0 = 1.e18
+t0 = time_ns()
 
 for k in 1:iterations+1
     # start timer after a warmup iteration
@@ -104,9 +102,9 @@ for k in 1:iterations+1
         t0 = time_ns()
     end
 
-    for i in 1:order
-        for j in 1:order
-            B[i,j] = A[j,i]
+    for j in 1:order
+        for i in 1:order
+            B[i,j] += A[j,i]
             A[j,i] += 1.0
         end
     end
@@ -119,16 +117,14 @@ trans_time = (t1 - t0) * 1.e-9
 # ** Analyze and output results.
 # ********************************************************************
 
-#A = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
+addit = (0.5*iterations) * (iterations+1)
+abserr = 0.0
 for i in 1:order
-    for j in 1:order
-        A[i,j] = ((iterations/2.0)+(order*j+i))*(iterations+1.0)
-    end
+  for j in 1:order
+    temp = (order * (i-1) + (j-1)) * (iterations+1)
+    abserr = abserr + abs(B[i,j] - (temp+addit))
+  end
 end
-#abserr = numpy.linalg.norm(numpy.reshape(B-A,order*order),ord=1)
-C=reshape(B-A,order*order)
-println(C)
-abserr = dot(C,C)
 
 epsilon=1.e-8
 nbytes = 2 * order^2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
