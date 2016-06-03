@@ -205,13 +205,13 @@ stencil_time = (t1 - t0) * 1.*e-9
 #******************************************************************************
 
 active_points = (n-2*r)^2
-norm = 0.0
+actual_norm = 0.0
 for j=r:n-r
     for i=r:n-r
-        norm += abs(B[i,j])
+        actual_norm += abs(B[i,j])
     end
 end
-norm /= active_points
+actual_norm /= active_points
 
 epsilon=1.e-8
 
