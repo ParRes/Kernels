@@ -35,13 +35,22 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
     which mpif90
     mpicc -show
     mpif90 -show
-    export MPICH_CC=gcc-6
-    export MPICH_FC=gfortran-6
+    # override whatever is used in MPI scripts
+    if [ "$PRK_FC" = "gfortran-6" ]; then
+        export MPICH_CC=gcc-6
+        export MPICH_FC=gfortran-6
+    elif [ "$PRK_FC" = "gfortran-5" ]; then
+        export MPICH_CC=gcc-5
+        export MPICH_FC=gfortran-5
+    else
+        echo "You need at least GCC-5 and preferably GCC-6 for OpenCoarrays"
+        exit 9
+    fi
     mpicc -show
     mpif90 -show
     CC=mpicc FC=mpif90 cmake .. -DCMAKE_INSTALL_PREFIX=$TRAVIS_ROOT/opencoarrays \
                                 -DMPI_C_COMPILER=mpicc -DMPI_Fortran_COMPILER=mpif90
-    make
+    make -j2
     ctest
     make install
     find $TRAVIS_ROOT -name caf
