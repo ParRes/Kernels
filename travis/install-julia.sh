@@ -28,6 +28,7 @@ case "$os" in
             cd $TRAVIS_ROOT
             wget --no-check-certificate -q https://julialang.s3.amazonaws.com/bin/linux/x64/0.4/julia-0.4.5-linux-x86_64.tar.gz
             tar -C $TRAVIS_ROOT/julia -xzvf julia-0.4.5-linux-x86_64.tar.gz
+            find $TRAVIS_ROOT -name julia
         fi
         ;;
 esac
