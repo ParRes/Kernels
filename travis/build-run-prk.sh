@@ -36,10 +36,18 @@ case "$PRK_TARGET" in
         echo "Julia"
         which julia
         julia --version
+        case "$os" in
+            Darwin)
+                export JULIA_PATH=/usr/local/bin/
+                ;;
+            Linux)
+                export JULIA_PATH=$TRAVIS_ROOT/julia/bin/
+                ;;
+        esac
         export PRK_TARGET_PATH=JULIA
-        julia $PRK_TARGET_PATH/p2p.jl             10 1024 1024
-        julia $PRK_TARGET_PATH/stencil.jl         10 1000
-        julia $PRK_TARGET_PATH/transpose.jl       10 1024
+        ${JULIA_PATH}julia $PRK_TARGET_PATH/p2p.jl             10 1024 1024
+        ${JULIA_PATH}julia $PRK_TARGET_PATH/stencil.jl         10 1000
+        ${JULIA_PATH}julia $PRK_TARGET_PATH/transpose.jl       10 1024
         ;;
     allserial)
         echo "Serial"
