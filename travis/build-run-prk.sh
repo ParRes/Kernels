@@ -46,7 +46,7 @@ case "$PRK_TARGET" in
         esac
         export PRK_TARGET_PATH=JULIA
         ${JULIA_PATH}julia $PRK_TARGET_PATH/p2p.jl             10 1024 1024
-        ${JULIA_PATH}julia $PRK_TARGET_PATH/stencil.jl         10 1000
+        #${JULIA_PATH}julia $PRK_TARGET_PATH/stencil.jl         10 1000
         ${JULIA_PATH}julia $PRK_TARGET_PATH/transpose.jl       10 1024
         ;;
     allserial)
