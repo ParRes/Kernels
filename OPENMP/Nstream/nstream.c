@@ -110,18 +110,9 @@ REVISION:  Modified by Rob Van der Wijngaart, May 2006, to introduce
 #include <par-res-kern_general.h>
 #include <par-res-kern_omp.h>
  
-#define DEFAULTMAXLENGTH 2000000
-#ifdef MAXLENGTH
-  #if MAXLENGTH > 0
-    #define N   MAXLENGTH
-  #else
-    #define N   DEFAULTMAXLENGTH
-  #endif
-#else
-  #define N   DEFAULTMAXLENGTH
-#endif
+#define N   MAXLENGTH
  
-#ifdef STATIC_ALLOCATION
+#if STATIC_ALLOCATION
   /* use static to make sure it goes on the heap, not the stack          */
   static double a[N];
 #else
@@ -188,7 +179,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-#ifdef STATIC_ALLOCATION 
+#if STATIC_ALLOCATION 
   if ((3*length + 2*offset) > N) {
     printf("ERROR: vector length/offset %ld/%ld too ", length, offset);
     printf("large; increase MAXLENGTH in Makefile or decrease vector length\n");
@@ -198,7 +189,7 @@ int main(int argc, char **argv)
  
   omp_set_num_threads(nthread_input);
  
-#ifndef STATIC_ALLOCATION
+#if !STATIC_ALLOCATION
   space = (3*length + 2*offset)*sizeof(double);
   a = (double *) prk_malloc(space);
   if (!a) {
@@ -222,10 +213,15 @@ int main(int argc, char **argv)
     printf("number of spawned threads %d\n", nthread);
   } 
   else {
-    printf("Number of threads    = %i;\n",nthread_input);
+    printf("Number of threads    = %i\n",nthread_input);
     printf("Vector length        = %ld\n", length);
     printf("Offset               = %ld\n", offset);
     printf("Number of iterations = %d\n", iterations);
+#if STATIC_ALLOCATION
+    printf("Allocation type      = static\n");
+#else
+    printf("Allocation type      = dynamic\n");
+#endif
   }
   }
   bail_out(num_error); 
@@ -309,7 +305,7 @@ int checkTRIADresults (int iterations, long int length) {
   asum = 0.0;
   for (j=0; j<length; j++) asum += a[j];
  
-#ifdef VERBOSE
+#if VERBOSE
   printf ("Results Comparison: \n");
   printf ("        Expected checksum: %f\n",aj);
   printf ("        Observed checksum: %f\n",asum);
@@ -317,7 +313,7 @@ int checkTRIADresults (int iterations, long int length) {
  
   if (ABS(aj-asum)/asum > epsilon) {
     printf ("Failed Validation on output array\n");
-#ifndef VERBOSE
+#if VERBOSE
     printf ("        Expected checksum: %f \n",aj);
     printf ("        Observed checksum: %f \n",asum);
 #endif

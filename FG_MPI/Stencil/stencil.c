@@ -116,7 +116,7 @@ int main(int argc, char ** argv) {
   DTYPE *left_buf_out;    /*       "         "                                   */
   DTYPE *left_buf_in;     /*       "         "                                   */
   int    root = 0;
-  long   n, width, height;/* linear global and local grid dimension              */
+  int    n, width, height;/* linear global and local grid dimension              */
   long   nsquare;         /* total number of grid points                         */
   int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
@@ -147,7 +147,7 @@ int main(int argc, char ** argv) {
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
- 
+
   /*******************************************************************************
   ** process, test, and broadcast input parameters    
   ********************************************************************************/
@@ -155,8 +155,7 @@ int main(int argc, char ** argv) {
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("FG_MPI stencil execution on 2D grid\n");
-
-#ifndef STAR
+#if !STAR
     printf("ERROR: Compact stencil not supported\n");
     error = 1;
     goto ENDOFTESTS;
@@ -176,11 +175,11 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;  
     }
  
-    n       = atol(*++argv); 
-    nsquare = n * n;
+    n       = atoi(*++argv); 
+    nsquare = (long) n * (long) n;
     if (nsquare < Num_procs){ 
-      printf("ERROR: grid size %d must be at least # ranks: %ld\n", 
-	     nsquare, Num_procs); 
+      printf("ERROR: grid size %ld must be at least # ranks: %d\n",
+	     nsquare, Num_procs);
       error = 1; 
       goto ENDOFTESTS; 
     }
@@ -226,7 +225,7 @@ int main(int argc, char ** argv) {
     printf("Radius of stencil        = %d\n", RADIUS);
     printf("Tiles in x/y-direction   = %d/%d\n", Num_procsx, Num_procsy);
     printf("Type of stencil          = star\n");
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type                = double precision\n");
 #else
     printf("Data type                = single precision\n");
@@ -287,15 +286,8 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
  
-  total_length_in = (width+2*RADIUS)*(height+2*RADIUS)*sizeof(DTYPE);
-  if (total_length_in/(height+2*RADIUS) != (width+2*RADIUS)*sizeof(DTYPE)) {
-    printf("ERROR: Space for %d x %d input array cannot be represented\n", 
-           width+2*RADIUS, height+2*RADIUS);
-    error = 1;
-  }
-  bail_out(error);
- 
-  total_length_out = width*height*sizeof(DTYPE);
+  total_length_in  = (long) (width+2*RADIUS)*(long) (height+2*RADIUS)*sizeof(DTYPE);
+  total_length_out = (long) width* (long) height*sizeof(DTYPE);
  
   in  = (DTYPE *) prk_malloc(total_length_in);
   out = (DTYPE *) prk_malloc(total_length_out);
@@ -323,27 +315,29 @@ int main(int argc, char ** argv) {
     IN(i,j)  = COEFX*i+COEFY*j;
     OUT(i,j) = (DTYPE)0.0;
   }
+
+  if (Num_procs > 1) { 
+    /* allocate communication buffers for halo values                          */
+    top_buf_out = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*width);
+    if (!top_buf_out) {
+      printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
+      error = 1;
+    }
+    bail_out(error);
+    top_buf_in     = top_buf_out +   RADIUS*width;
+    bottom_buf_out = top_buf_out + 2*RADIUS*width;
+    bottom_buf_in  = top_buf_out + 3*RADIUS*width;
  
-  /* allocate communication buffers for halo values                            */
-  top_buf_out = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*width);
-  if (!top_buf_out) {
-    printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
-    error = 1;
+    right_buf_out  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*height);
+    if (!right_buf_out) {
+      printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
+      error = 1;
+    }
+    bail_out(error);
+    right_buf_in   = right_buf_out +   RADIUS*height;
+    left_buf_out   = right_buf_out + 2*RADIUS*height;
+    left_buf_in    = right_buf_out + 3*RADIUS*height;
   }
-  bail_out(error);
-  top_buf_in     = top_buf_out +   RADIUS*width;
-  bottom_buf_out = top_buf_out + 2*RADIUS*width;
-  bottom_buf_in  = top_buf_out + 3*RADIUS*width;
- 
-  right_buf_out  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*height);
-  if (!right_buf_out) {
-    printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
-    error = 1;
-  }
-  bail_out(error);
-  right_buf_in   = right_buf_out +   RADIUS*height;
-  left_buf_out   = right_buf_out + 2*RADIUS*height;
-  left_buf_in    = right_buf_out + 3*RADIUS*height;
 
   for (iter = 0; iter<=iterations; iter++){
 
@@ -473,7 +467,7 @@ int main(int argc, char ** argv) {
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
              reference_norm, norm);
 #endif

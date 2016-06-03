@@ -87,41 +87,41 @@ int main(int argc, char ** argv)
   size_t Colblock_size;
   int Tile_order=32;
   int tiling;
-  int Num_procs;     /* Number of ranks                                          */
-  size_t order;      /* overall matrix order                                     */
-  int send_to, recv_from; /* communicating ranks                                 */
-  size_t bytes;      /* total amount of data to be moved                         */
-  int my_ID;         /* rank                                                     */
-  int root=0;        /* root rank of a communicator                              */
-  int iterations;    /* number of times to run the pipeline algorithm            */
+  int Num_procs;       /* Number of ranks                                        */
+  size_t order;        /* overall matrix order                                   */
+  int send_to, recv_from;/* communicating ranks                                  */
+  size_t bytes;        /* total amount of data to be moved                       */
+  int my_ID;           /* rank                                                   */
+  int root=0;          /* root rank of a communicator                            */
+  int iterations;      /* number of times to run the pipeline algorithm          */
   int i, j, it, jt, ID;/* dummies                                                */
-  int iter;          /* index of iteration                                       */
-  int phase;         /* phase in the staged communication                        */
-  size_t colstart;   /* sequence number of first column owned by calling rank    */
-  int error=0;       /* error flag                                               */
-  double *A_p;       /* original matrix column block                             */
-  double *B_p;       /* transposed matrix column block                           */
-  double *Work_in_p; /* workspace for the transpose function                     */
-  double *Work_out_p;/* workspace for the transpose function                     */
+  int iter;            /* index of iteration                                     */
+  int phase;           /* phase in the staged communication                      */
+  size_t colstart;     /* sequence number of first column owned by calling rank  */
+  int error=0;         /* error flag                                             */
+  double RESTRICT *A_p;/* original matrix column block                           */
+  double RESTRICT *B_p;/* transposed matrix column block                         */
+  double RESTRICT *Work_in_p; /* workspace for transpose function                */
+  double RESTRICT *Work_out_p;/* workspace for transpose function                */
   double abserr, abserr_tot; /* computed error                                   */
   double epsilon = 1.e-8; /* error tolerance                                     */
   double local_trans_time, /* timing parameters                                  */
          trans_time,
          avgtime;
-  MPI_Status status; /* completion status of message                             */
-  MPI_Win shm_win_A; /* Shared Memory window object                              */
-  MPI_Win shm_win_B; /* Shared Memory window object                              */
+  MPI_Status status;   /* completion status of message                           */
+  MPI_Win shm_win_A;   /* Shared Memory window object                            */
+  MPI_Win shm_win_B;   /* Shared Memory window object                            */
   MPI_Win shm_win_Work_in; /* Shared Memory window object                        */
-  MPI_Win shm_win_Work_out; /* Shared Memory window object                       */
-  MPI_Info rma_winfo;/* info for window                                          */
+  MPI_Win shm_win_Work_out;/* Shared Memory window object                        */
+  MPI_Info rma_winfo;  /* info for window                                        */
   MPI_Comm shm_comm_prep;/* Shared Memory prep Communicator                      */
-  MPI_Comm shm_comm; /* Shared Memory Communicator                               */
-  int shm_procs;     /* # of ranks in shared domain                              */
-  int shm_ID;        /* MPI rank within coherence domain                         */
-  int group_size;    /* number of ranks per shared memory group                  */
-  int Num_groups;    /* number of shared memory group                            */
-  int group_ID;      /* sequence number of shared memory group                   */
-  int size_mul;      /* size multiplier; 0 for non-root ranks in coherence domain*/
+  MPI_Comm shm_comm;   /* Shared Memory Communicator                             */
+  int shm_procs;       /* # of ranks in shared domain                            */
+  int shm_ID;          /* MPI rank within coherence domain                       */
+  int group_size;      /* number of ranks per shared memory group                */
+  int Num_groups;      /* number of shared memory group                          */
+  int group_ID;        /* sequence number of shared memory group                 */
+  int size_mul;        /* size multiplier; 0 for non-root ranks in coherence dom.*/
   size_t istart;
   MPI_Request send_req, recv_req;
 
@@ -202,7 +202,7 @@ int main(int argc, char ** argv)
     if ((Tile_order > 0) && (Tile_order < order))
        printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
-#ifndef SYNCHRONOUS
+#if !SYNCHRONOUS
     printf("Non-");
 #endif
     printf("Blocking messages\n");
@@ -387,7 +387,7 @@ int main(int argc, char ** argv)
       MPI_Win_sync(shm_win_Work_out);
       MPI_Barrier(shm_comm);
       if (shm_ID==0) {
-#ifndef SYNCHRONOUS  
+#if !SYNCHRONOUS  
         /* if we place the Irecv outside this block, it would not be
            protected by a local barrier, which creates a race                    */
         MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
@@ -437,7 +437,7 @@ int main(int argc, char ** argv)
       printf("Solution validates\n");
       avgtime = trans_time/(double)iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
-#ifdef VERBOSE
+#if VERBOSE
       printf("Summed errors: %f \n", abserr_tot);
 #endif
     }

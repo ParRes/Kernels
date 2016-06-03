@@ -40,4 +40,5 @@ clean:
 	-rm -f $(PROGRAM)
 	-rm -f $(PROGRAM)-omp
 	-rm -f $(PROGRAM)-coarray
+	-rm -f $(PROGRAM)-pretty
 

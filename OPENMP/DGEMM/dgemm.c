@@ -67,17 +67,10 @@ HISTORY: Written by Rob Van der Wijngaart, September 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_omp.h>
 
-#ifdef MKL
+#if MKL
   #include <mkl_cblas.h>
 #endif
 
-#ifndef DEFAULTBLOCK
-  #define DEFAULTBLOCK 32
-#endif
-
-#ifndef BOFFSET
-  #define BOFFSET 12
-#endif
 #define AA_arr(i,j) AA[(i)+(block+BOFFSET)*(j)]
 #define BB_arr(i,j) BB[(i)+(block+BOFFSET)*(j)]
 #define CC_arr(i,j) CC[(i)+(block+BOFFSET)*(j)]
@@ -101,7 +94,7 @@ int main(int argc, char **argv){
   int     num_error=0;          /* flag that signals that requested and 
                                    obtained numbers of threads are the same       */
   static  
-  double *A, *B, *C;            /* input (A,B) and output (C) matrices            */
+  double  RESTRICT *A, *B, *C;  /* input (A,B) and output (C) matrices            */
   long    order;                /* number of rows and columns of matrices         */
   int     block;                /* tile size of matrices                          */
   int     shortcut;             /* true if only doing initialization              */
@@ -109,7 +102,7 @@ int main(int argc, char **argv){
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP Dense matrix-matrix multiplication\n");
 
-#ifndef MKL  
+#if !MKL  
   if (argc != 4 && argc != 5) {
     printf("Usage: %s <# threads> <# iterations> <matrix order> [tile size]\n",*argv);
 #else
@@ -160,14 +153,14 @@ int main(int argc, char **argv){
     C_arr(i,j) = 0.0;
   }
 
-#ifndef MKL
+#if !MKL
   if (argc == 5) {
          block = atoi(*++argv);
   } else block = DEFAULTBLOCK;
 
   #pragma omp parallel private (i,j,k,ii,jj,kk,ig,jg,kg,iter)
   {
-  double *AA=NULL, *BB=NULL, *CC=NULL;
+  double RESTRICT *AA=NULL, *BB=NULL, *CC=NULL;
 
   if (block > 0) {
     /* matrix blocks for local temporary copies                                     */
@@ -194,14 +187,16 @@ int main(int argc, char **argv){
   } 
   else {
     printf("Matrix order          = %ld\n", order);
+    if (shortcut) 
+      printf("Only doing initialization\n"); 
     printf("Number of threads     = %d\n", nthread_input);
     if (block>0)
       printf("Blocking factor       = %d\n", block);
     else
       printf("No blocking\n");
+    printf("Block offset          = %d\n", BOFFSET);
     printf("Number of iterations  = %d\n", iterations);
-    if (shortcut) 
-      printf("Only doing initialization\n"); 
+    printf("Using MKL library     = off\n");
   }
   }
   bail_out(num_error); 
@@ -274,7 +269,7 @@ int main(int argc, char **argv){
 
   printf("Matrix size           = %ldx%ld\n", order, order);
   printf("Number of threads     = %d\n", nthread_input);
-  printf("Using Math Kernel Library\n");
+  printf("Using MKL library     = on\n");
   printf("Number of iterations  = %d\n", iterations);
 
   for (iter=0; iter<=iterations; iter++) {
@@ -301,7 +296,7 @@ int main(int argc, char **argv){
   }
   else {
     printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
     printf("Reference checksum = %lf, checksum = %lf\n", 
            ref_checksum, checksum);
 #endif

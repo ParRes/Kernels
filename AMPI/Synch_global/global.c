@@ -106,7 +106,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root){
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("Adaptive MPI global synchronization\n");
+    printf("MPI global synchronization\n");
 
     if (argc != 3){
       printf("Usage: %s <# iterations> <scramble string length>\n", *argv);
@@ -123,7 +123,7 @@ int main(int argc, char ** argv)
 
     length      = atol(*++argv);
     if (length <Num_procs || length%Num_procs !=0) {
-      printf("ERROR: length of string %d must be multiple of # ranks: %ld\n", 
+      printf("ERROR: length of string %ld must be multiple of # ranks: %d\n",
              length, Num_procs);
       error = 1;
       goto ENDOFTESTS;
@@ -157,7 +157,7 @@ int main(int argc, char ** argv)
 
   catstring=(char *) prk_malloc((length+1)*sizeof(char));
   if (catstring==NULL) {
-    printf("ERROR: Could not allocate space for concatenation string: %d\n",
+    printf("ERROR: Could not allocate space for concatenation string: %ld\n",
            length+1);
     error = 1;
   }
@@ -202,7 +202,7 @@ int main(int argc, char ** argv)
     /* now everybody selects a different substring */
     for (i=0; i<proc_length; i++) iterstring[i]=catstring[my_ID+i*Num_procs];
 
-#ifdef VERBOSE
+#if VERBOSE
     if (my_ID==0) {
       checksum=0;
       for (i=0; i<length+1;i++) checksum+= chartoi(catstring[i]);

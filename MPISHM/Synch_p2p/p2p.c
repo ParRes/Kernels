@@ -88,7 +88,7 @@ int main(int argc, char ** argv)
          nbr_segment_size;
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of ranks                                       */
-  double *vector;       /* array holding grid values                             */
+  double RESTRICT *vector;/* array holding grid values                           */
   long   total_length;  /* total required length to store grid values            */
   MPI_Status status;    /* completion status of message                          */
   MPI_Win shm_win;      /* Shared Memory window object                           */
@@ -318,7 +318,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == final) {
     avgtime = pipeline_time/iterations;
-#ifdef VERBOSE
+#if VERBOSE
     printf("Solution validates; corner value = %lf, verification value = %lf\n", 
 	   ARRAY(end[my_ID],n-1,start[my_ID],offset,width), corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",

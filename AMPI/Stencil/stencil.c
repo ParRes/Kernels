@@ -73,7 +73,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 
 #include <math.h>
  
-#ifdef DOUBLE
+#if DOUBLE
   #define DTYPE     double
   #define MPI_DTYPE MPI_DOUBLE
   #define EPSILON   1.e-8
@@ -146,21 +146,18 @@ int main(int argc, char ** argv) {
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
- 
-  if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("Adaptive MPI stencil execution on 2D grid\n");
-  }
 
   /*******************************************************************************
   ** process, test, and broadcast input parameters    
   ********************************************************************************/
  
   if (my_ID == root) {
-#ifndef STAR
-      printf("ERROR: Compact stencil not supported\n");
-      error = 1;
-      goto ENDOFTESTS;
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("Adaptive MPI stencil execution on 2D grid\n");
+#if !STAR
+    printf("ERROR: Compact stencil not supported\n");
+    error = 1;
+    goto ENDOFTESTS;
 #endif
     
     if (argc != 3){
@@ -180,8 +177,8 @@ int main(int argc, char ** argv) {
     n       = atoi(*++argv); 
     nsquare = (long) n * (long) n;
     if (nsquare < Num_procs){ 
-      printf("ERROR: grid size %d must be at least # ranks: %ld\n", 
-	     nsquare, Num_procs); 
+      printf("ERROR: grid size %ld must be at least # ranks: %d\n",
+	     nsquare, Num_procs);
       error = 1; 
       goto ENDOFTESTS; 
     }
@@ -225,10 +222,15 @@ int main(int argc, char ** argv) {
     printf("Radius of stencil      = %d\n", RADIUS);
     printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
     printf("Type of stencil        = star\n");
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
+#endif
+#if LOOPGEN
+    printf("Script used to expand stencil loop body\n");
+#else
+    printf("Compact representation of stencil loop body\n");
 #endif
     printf("Number of iterations   = %d\n", iterations);
   }
@@ -413,16 +415,13 @@ int main(int argc, char ** argv) {
     /* Apply the stencil operator */
     for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
       for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
-        for (jj=-RADIUS; jj<=RADIUS; jj++) {
-          OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-        }
-        for (ii=-RADIUS; ii<0; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-        }
-        for (ii=1; ii<=RADIUS; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
- 
-        }
+        #if LOOPGEN
+          #include "loop_body_star.incl"
+        #else
+          for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+          for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+        #endif
       }
     }
  
@@ -465,7 +464,7 @@ int main(int argc, char ** argv) {
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
              reference_norm, norm);
 #endif

@@ -97,7 +97,7 @@ void die(char *fmt, ...){
   upc_global_exit(EXIT_FAILURE);
 }
 
-typedef shared [] double *local_shared_block;
+typedef shared [] double * RESTRICT local_shared_block;
 typedef shared [] local_shared_block *local_shared_block_ptrs;
 
 shared [1] local_shared_block_ptrs in_arrays[THREADS];

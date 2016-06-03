@@ -140,7 +140,7 @@ int main(int argc, char ** argv)
   int order;               /* order of overall matrix               */
   int send_to, recv_from;  /* ranks with which to communicate       */
   MPI_Status status;       
-#ifndef SYNCHRONOUS
+#if !SYNCHRONOUS
   MPI_Request send_req;
   MPI_Request recv_req;
 #endif
@@ -242,7 +242,7 @@ int main(int argc, char ** argv)
   tiling = (Tile_order > 0) && (Tile_order < order);
   /* test whether tiling will leave threads idle. If so, turn it off */
   concurrency = ceil((double)Block_order/(double)Tile_order);
-#ifdef COLLAPSE  
+#if COLLAPSE  
   concurrency *= concurrency;
 #endif
   if (tiling && (concurrency < nthread_input)) tiling = 0;
@@ -254,12 +254,12 @@ int main(int argc, char ** argv)
     printf("Number of iterations = %d\n", iterations);
     if (tiling) {
       printf("Tile size            = %d\n", Tile_order);
-#ifdef COLLAPSE
+#if COLLAPSE
        printf("Using loop collapse\n");
-    }
 #endif
+    }
     else  printf("Untiled\n");
-#ifndef SYNCHRONOUS
+#if !SYNCHRONOUS
     printf("Non-");
 #endif
     printf("Blocking messages\n");
@@ -299,7 +299,7 @@ int main(int argc, char ** argv)
   istart = 0;  
 
   if (tiling) {
-#ifdef COLLAPSE
+#if COLLAPSE
     #pragma omp parallel for private (i,it,jt) collapse(2)
 #else
     #pragma omp parallel for private (i,it,jt)
@@ -340,7 +340,7 @@ int main(int argc, char ** argv)
 	}
     }
     else {
-#ifdef COLLAPSE
+#if COLLAPSE
       #pragma omp parallel for private (j,it,jt) collapse(2)
 #else
       #pragma omp parallel for private (j,it,jt)
@@ -358,7 +358,7 @@ int main(int argc, char ** argv)
       recv_from = (my_ID + phase            )%Num_procs;
       send_to   = (my_ID - phase + Num_procs)%Num_procs;
 
-#ifndef SYNCHRONOUS
+#if !SYNCHRONOUS
       MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE, 
                 recv_from, phase, MPI_COMM_WORLD, &recv_req);  
 #endif
@@ -373,7 +373,7 @@ int main(int argc, char ** argv)
 	  }
       }
       else {
-#ifdef COLLAPSE
+#if COLLAPSE
         #pragma omp parallel for private (j,it,jt) collapse(2)
 #else
         #pragma omp parallel for private (j,it,jt)
@@ -387,7 +387,7 @@ int main(int argc, char ** argv)
 	      }
       }
 
-#ifndef SYNCHRONOUS  
+#if !SYNCHRONOUS  
       MPI_Isend(Work_out_p, Block_size, MPI_DOUBLE, send_to,
                 phase, MPI_COMM_WORLD, &send_req);
       MPI_Wait(&recv_req, &status);
@@ -428,7 +428,7 @@ int main(int argc, char ** argv)
       printf("Solution validates\n");
       avgtime = trans_time/(double)iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
-#ifdef VERBOSE
+#if VERBOSE
       printf("Summed errors: %f \n", abserr);
 #endif
     }

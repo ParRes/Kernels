@@ -70,7 +70,7 @@ HISTORY: Written by Rob Van der Wijngaart, March 2006.
 int main(int argc, char ** argv)
 {
   int Num_procs;        /* Number of ranks                                   */
-  int my_ID;            /* rank                                              */
+  int my_ID;            /* Rank                                              */
   int root=0;
   int iterations;       /* number of times the reduction is carried out      */
   long i, iter;         /* dummies                                           */
@@ -84,6 +84,7 @@ int main(int argc, char ** argv)
   double element_value; /* verification value                                */
   int    error = 0;     /* error flag                                        */
   int    procsize;      /* number of ranks per OS process                    */
+
 
   /***************************************************************************
   ** Initialize the MPI environment
@@ -115,7 +116,7 @@ int main(int argc, char ** argv)
 
     vector_length = atol(*++argv);
     if (vector_length < 1) {
-      printf("ERROR: Vector length should be positive: %d\n", vector_length);
+      printf("ERROR: Vector length should be positive: %ld\n", vector_length);
       error = 1;
       goto ENDOFTESTS;
     }
@@ -126,11 +127,11 @@ int main(int argc, char ** argv)
 
 
   if (my_ID == root) {
-    MPIX_Get_collocated_size(&procsize);
-    printf("Number of ranks          = %d\n", Num_procs);
-    printf("Number of ranks/process  = %d\n", procsize);
-    printf("Vector length            = %ld\n", vector_length);
-    printf("Number of iterations     = %d\n", iterations);     
+    MPIX_Get_collocated_size(&procsize);    
+    printf("Number of ranks         = %d\n", Num_procs);
+    printf("Number of ranks/process = %d\n", procsize);
+    printf("Vector length           = %ld\n", vector_length);
+    printf("Number of iterations    = %d\n", iterations);     
   }
 
   /* Broadcast benchmark data to all ranks */
@@ -186,11 +187,11 @@ int main(int argc, char ** argv)
     for (i=0; i<vector_length; i++) {
       if (ABS(vector[i] - element_value) >= epsilon) {
         error = 1;
-#ifdef VERBOSE
+#if VERBOSE
         printf("ERROR at i=%d; value: %lf; reference value: %lf\n",
                i, vector[i], element_value);
 #else
-        printf("First error at i=%d; value: %lf; reference value: %lf\n",
+        printf("First error at i=%ld; value: %lf; reference value: %lf\n",
                i, vector[i], element_value);
         break;
 #endif
@@ -201,7 +202,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
     printf("Element verification value: %lf\n", element_value);
 #endif
     avgtime = reduce_time/(double)iterations;

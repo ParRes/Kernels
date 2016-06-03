@@ -1,34 +1,10 @@
 include ../../common/SERIAL.defs
 
 ##### User configurable options #####
-#uncomment any of the following flags (or change values) to change defaults
+#uncomment any of the following flags (and change values) to change defaults
 
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
-#OPTFLAGS=-axCORE-AVX2 -O3 -restrict
 #description: change above into something that is a decent optimization on you system
-
-#RESTRICTFLAG = -DRESTRICT_KEYWORD
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers
-
-ifndef RADIUS
-  RADIUS=2
-endif
-#description: default radius of filter to be applied is 2
-
-DOUBLEFLAG = -DDOUBLE
-#description: default data type is single precision
-
-ifndef LOOPGEN
-  LOOPGEN=0
-endif
-#description: default is compact (non-expanded) form of loop body
-
-STARFLAG   = -DSTAR
-#description: default stencil is compact (dense, square)
-
-#DEBUGFLAG   = -DVERBOSE
-#description: default diagnostic style is silent
 
 USERFLAGS    = 
 #description: parameter to specify optional flags
@@ -40,14 +16,59 @@ LIBPATHS     =
 INCLUDEPATHS = 
 
 ### End User configurable options ###
-LOOPGENFLAG= -DLOOPGEN=$(LOOPGEN)
-RADIUSFLAG  = -DRADIUS=$(RADIUS)
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) \
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)  \
+ifndef DOUBLE
+  DOUBLE=1
+endif
+#description: default data type is single precision
+
+ifndef STAR
+  STAR=1
+endif
+#description: default stencil is compact (dense, square)
+
+ifndef RESTRICT_KEYWORD
+  RESTRICT_KEYWORD=0
+endif
+#description: the "restrict" keyword can be used on IA platforms to disambiguate  
+#             data accessed through pointers (requires -restrict compiler flag)
+
+ifndef RADIUS
+  RADIUS=2
+endif
+#description: default radius of filter to be applied is 2
+
+ifndef LOOPGEN
+  LOOPGEN=0
+endif
+#description: default is compact (non-expanded) form of loop body
+
+ifndef VERBOSE
+  VERBOSE=0
+endif
+#description: default diagnostic style is silent
+
+VERBOSEFLAG     = -DVERBOSE=$(VERBOSE)
+RESTRICTFLAG    = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
+RADIUSFLAG      = -DRADIUS=$(RADIUS)
+LOOPGENFLAG     = -DLOOPGEN=$(LOOPGEN)
+DOUBLEFLAG      = -DDOUBLE=$(DOUBLE)
+STARFLAG        = -DSTAR=$(STAR)
+
+OPTIONSSTRING="Make options:\n\
+OPTION                  MEANING                                  DEFAULT\n\
+RADIUS=?                radius of stencil                          [2]  \n\
+LOOPGEN=0/1             compact/expanded stencil loop body         [0]  \n\
+DOUBLE=0/1              single/double precision                    [1]  \n\
+RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
+STAR=0/1                box/star shaped stencil                    [1]  \n\
+VERBOSE=0/1             omit/include verbose run information       [0]"
+
+TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG) $(USERFLAGS) \
+               $(DOUBLEFLAG)   $(RADIUSFLAG)  $(STARFLAG)  \
                $(LOOPGENFLAG)
 PROGRAM     = stencil
-OBJS        = $(PROGRAM).o $(COMOBJS) 
+OBJS        = $(PROGRAM).o $(COMOBJS)
 
 include ../../common/make.common
 
@@ -68,3 +89,4 @@ loop_body_compact.incl:
 veryclean:
 	@rm -f loop_body_star.incl loop_body_compact.incl
 	make clean
+

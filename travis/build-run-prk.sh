@@ -7,8 +7,6 @@ PRK_TARGET="$2"
 # Travis exports this
 PRK_COMPILER="$CC"
 
-MPI_IMPL=mpich
-
 echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 
 case "$os" in
@@ -17,7 +15,7 @@ case "$os" in
         export MPI_ROOT=/usr/local
         ;;
     Linux)
-        export MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
+        export MPI_ROOT=$TRAVIS_ROOT
         ;;
 esac
 
@@ -52,23 +50,22 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 LINEAR 1.0 3.0
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 PATCH 0 200 100 200
         ;;
-    allfortran)
+    allfortran*)
+        # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
         echo "Fortran"
         case "$CC" in
             gcc)
-                for gccversion in "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
+                for gccversion in "-6" "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
                     if [ -f "`which gfortran$gccversion`" ]; then
                         export PRK_FC="gfortran$gccversion"
                         echo "Found GCC Fortran: $PRK_FC"
                         break
                     fi
                 done
-                if [ "x$PRK_FC" == "x" ] ; then
+                if [ "x$PRK_FC" = "x" ] ; then
                     echo "No Fortran compiler found!"
                     exit 9
                 fi
-                export PRK_FC="$PRK_FC -std=f2008 -cpp"
-                echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
                 ;;
             clang)
                 echo "LLVM Fortran is not supported."
@@ -76,20 +73,59 @@ case "$PRK_TARGET" in
                 echo "FC=flang" >> common/make.defs
                 ;;
         esac
+        case "$PRK_TARGET" in
+            allfortrancoarray)
+                #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
+                # override whatever is used in MPI scripts
+                if [ "$PRK_FC" = "gfortran-6" ]; then
+                    export MPICH_CC=gcc-6
+                    export MPICH_FC=gfortran-6
+                elif [ "$PRK_FC" = "gfortran-5" ]; then
+                    export MPICH_CC=gcc-5
+                    export MPICH_FC=gfortran-5
+                else
+                    echo "You need at least GCC-5 and preferably GCC-6 for OpenCoarrays"
+                    exit 9
+                fi
+                export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
+                echo "FC=$PRK_CAFC\nCOARRAYFLAG=-cpp -std=f2008 -fcoarray=lib" >> common/make.defs
+                ;;
+            *)
+                export PRK_FC="$PRK_FC -std=f2008 -cpp"
+                echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp" >> common/make.defs
+                ;;
+        esac
         make $PRK_TARGET
         export PRK_TARGET_PATH=FORTRAN
-        $PRK_TARGET_PATH/Synch_p2p/p2p               10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil             10 1000
-        $PRK_TARGET_PATH/Transpose/transpose         10 1024 32
-        export OMP_NUM_THREADS=2
-        $PRK_TARGET_PATH/Synch_p2p/p2p-omp           10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil-omp         10 1000
-        $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 32
-        # FIXME: only testing with a single image right now.
-        $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
-        $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
-        $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
-        $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+        case "$PRK_TARGET" in
+            allfortranserial)
+                $PRK_TARGET_PATH/Synch_p2p/p2p               10 1024 1024
+                $PRK_TARGET_PATH/Stencil/stencil             10 1000
+                $PRK_TARGET_PATH/Transpose/transpose         10 1024 1
+                $PRK_TARGET_PATH/Transpose/transpose         10 1024 32
+                ;;
+            allfortranpretty)
+                #$PRK_TARGET_PATH/Synch_p2p/p2p-pretty        10 1024 1024
+                # pretty versions do not support tiling...
+                $PRK_TARGET_PATH/Stencil/stencil-pretty      10 1000
+                $PRK_TARGET_PATH/Transpose/transpose-pretty  10 1024
+                ;;
+            allfortranopenmp)
+                export OMP_NUM_THREADS=2
+                $PRK_TARGET_PATH/Synch_p2p/p2p-omp           10 1024 1024 # not threaded yet
+                $PRK_TARGET_PATH/Stencil/stencil-omp         10 1000
+                $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 1
+                $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 32
+                ;;
+            allfortrancoarray)
+                export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
+                export PRK_MPI_PROCS=4
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+                ;;
+            esac
         ;;
     allopenmp)
         echo "OpenMP"
@@ -105,8 +141,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/Sparse/sparse            $OMP_NUM_THREADS 10 10 5
         $PRK_TARGET_PATH/DGEMM/dgemm              $OMP_NUM_THREADS 10 1024 32
         $PRK_TARGET_PATH/Synch_global/global      $OMP_NUM_THREADS 10 16384
-        $PRK_TARGET_PATH/RefCount_private/private $OMP_NUM_THREADS 16777216
-        $PRK_TARGET_PATH/RefCount_shared/shared   $OMP_NUM_THREADS 16777216 1024
+        $PRK_TARGET_PATH/Refcount/refcount        $OMP_NUM_THREADS 16777216 1024
         # random is broken right now it seems
         #$PRK_TARGET_PATH/Random/random $OMP_NUM_THREADS 10 16384 32
         ;;
@@ -126,6 +161,10 @@ case "$PRK_TARGET" in
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/DGEMM/dgemm         10 1024 32 1
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Random/random       32 20
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_global/global 10 16384
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 2 GEOMETRIC 0.99
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 0 1 SINUSOIDAL
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 LINEAR 1.0 3.0
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 PATCH 0 200 100 200 
         ;;
     allmpio*mp)
         echo "MPI+OpenMP"
@@ -219,7 +258,7 @@ case "$PRK_TARGET" in
                         # see if this is causing Mac tests to hang
                         export MPICH_ASYNC_PROGRESS=1
                         # so that upcrun can find mpirun - why it doesn't cache this from build is beyond me
-                        export PATH="$TRAVIS_ROOT/$MPI_IMPL/bin:$PATH"
+                        export PATH="$MPI_ROOT/bin:$PATH"
                         export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
                         ;;
                     *)
@@ -334,5 +373,10 @@ case "$PRK_TARGET" in
         ;;
     allhpx5)
         echo "Nothing to do yet"
+        ;;
+    alllegion)
+        echo "Legion"
+        echo "LEGIONTOP=$TRAVIS_ROOT/legion" > common/make.defs
+        make $PRK_TARGET -k
         ;;
 esac

@@ -215,6 +215,11 @@ int main(int argc, char ** argv)
     printf("Vector length              = %d\n", vector_length);
     printf("Number of iterations       = %d\n", iterations);
     printf("Branching type             = %s\n", branch_type);
+#if RESTRICT_KEYWORD
+    printf("No aliasing                = on\n");
+#else
+    printf("No aliasing                = off\n");
+#endif
   }
   }
   bail_out(num_error);
@@ -382,7 +387,7 @@ int main(int argc, char ** argv)
            ops/(branch_time*1.e6), branch_time);
     printf("Rate (Mops/s) without branches: %lf time (s): %lf\n", 
            ops/(no_branch_time*1.e6), no_branch_time);
-#ifdef VERBOSE
+#if VERBOSE
     printf("Array sum = %d, reference value = %d\n", total, total_ref);
 #endif     
   }

@@ -5,7 +5,7 @@ SEPLINE="==============================================================="
 MPIRUN=mpiexec
 
 for type in vector_go vector_stop no_vector ins_heavy; do
-  $MPIRUN -np $NUMPROCS FG_MPI/Branch/branch           $NUMITERS 1000 $type; echo $SEPLINE
+  $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Branch/branch           $NUMITERS 1000 $type; echo $SEPLINE
 done
 $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/DGEMM/dgemm               $NUMITERS 500 32 1;   echo $SEPLINE
 $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Nstream/nstream           $NUMITERS 2000000 0;  echo $SEPLINE
@@ -16,5 +16,9 @@ $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Stencil/stencil           $NUMITER
 $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Synch_global/global       $NUMITERS 10000;      echo $SEPLINE
 $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Synch_p2p/p2p             $NUMITERS 1000 100;   echo $SEPLINE
 $MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/Transpose/transpose       $NUMITERS 2000 64;    echo $SEPLINE
+$MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/PIC-static/pic            $NUMITERS 1000 1000000 1 2 GEOMETRIC 0.99;      echo $SEPLINE
+$MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/PIC-static/pic            $NUMITERS 1000 1000000 0 1 SINUSOIDAL;          echo $SEPLINE
+$MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/PIC-static/pic            $NUMITERS 1000 1000000 1 0 LINEAR 1.0 3.0;      echo $SEPLINE
+$MPIRUN -np $NUMPROCS -nfg $NUMTHREADS FG_MPI/PIC-static/pic            $NUMITERS 1000 1000000 1 0 PATCH 0 200 100 200; echo $SEPLINE
 
 

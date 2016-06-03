@@ -19,9 +19,13 @@ all: serial openmp coarray
 
 serial: $(PROGRAM)
 openmp: $(PROGRAM)-omp
+pretty: $(PROGRAM)-pretty
 coarray: $(PROGRAM)-coarray
 
 $(PROGRAM): $(PROGRAM).f90
+	$(FC) $(FCFLAGS) $< -o $@
+
+$(PROGRAM)-pretty: $(PROGRAM)-pretty.f90
 	$(FC) $(FCFLAGS) $< -o $@
 
 $(PROGRAM)-omp: $(PROGRAM).f90
@@ -42,4 +46,5 @@ clean:
 	-rm -f $(PROGRAM)
 	-rm -f $(PROGRAM)-omp
 	-rm -f $(PROGRAM)-coarray
+	-rm -f $(PROGRAM)-pretty
 

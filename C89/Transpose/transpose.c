@@ -184,7 +184,7 @@ int main(int argc, char ** argv) {
       abserr += ABS(B(i,j) - ((double)(order*i + j)*(iterations+1)+addit));
   }
 
-#ifdef VERBOSE
+#if VERBOSE
   printf("Sum of absolute differences: %f\n",abserr);
 #endif   
 
@@ -193,7 +193,7 @@ int main(int argc, char ** argv) {
     avgtime = trans_time/iterations;
     printf("Rate (MB/s): %lf Avg time (s): %lf\n",
            1.0E-06 * bytes/avgtime, avgtime);
-#ifdef VERBOSE
+#if VERBOSE
     printf("Squared errors: %f \n", abserr);
 #endif
     exit(EXIT_SUCCESS);

@@ -182,7 +182,7 @@ int main(int argc, char ** argv)
     printf("Number of threads              = %d\n", omp_get_max_threads());
     printf("Grid sizes                     = %ld, %ld\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
     printf("Handshake between neighbor threads\n");
 #else
     printf("No handshake between neighbor threads\n");
@@ -396,9 +396,9 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
  
-  if (my_ID == root) {
+  if (my_ID == final) {
     avgtime = pipeline_time/iterations;
-#ifdef VERBOSE   
+#if VERBOSE   
     printf("Solution validates; verification value = %lf\n", corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",
            ((float)((n-1)*(Num_procs-1)))/(avgtime));

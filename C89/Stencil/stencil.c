@@ -61,7 +61,7 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 
 #include <par-res-kern_general.h>
 
-#ifdef DOUBLE
+#if DOUBLE
   #define DTYPE   double
   #define EPSILON 1.e-8
   #define COEFX   1.0
@@ -161,7 +161,7 @@ int main(int argc, char ** argv) {
           WEIGHT(ii,jj) = (DTYPE) 0.0;
       }
   }
-#ifdef STAR
+#if STAR
   stencil_size = 4*RADIUS+1;
   for (ii=1; ii<=RADIUS; ii++) {
     WEIGHT(0, ii) = WEIGHT( ii,0) =  (DTYPE) (1.0/(2.0*ii*RADIUS));
@@ -186,12 +186,12 @@ int main(int argc, char ** argv) {
 
   printf("Grid size            = %ld\n", n);
   printf("Radius of stencil    = %d\n", RADIUS);
-#ifdef STAR
+#if STAR
   printf("Type of stencil      = star\n");
 #else
   printf("Type of stencil      = compact\n");
 #endif
-#ifdef DOUBLE
+#if DOUBLE
   printf("Data type            = double precision\n");
 #else
   printf("Data type            = single precision\n");
@@ -223,7 +223,7 @@ int main(int argc, char ** argv) {
     if (!tiling) {
       for (j=RADIUS; j<n-RADIUS; j++) {
         for (i=RADIUS; i<n-RADIUS; i++) {
-          #ifdef STAR
+          #if STAR
             #if LOOPGEN
               #include "loop_body_star.incl"
             #else
@@ -248,7 +248,7 @@ int main(int argc, char ** argv) {
         for (it=RADIUS; it<n-RADIUS; it+=tile_size) {
           for (j=jt; j<MIN(n-RADIUS,jt+tile_size); j++) {
             for (i=it; i<MIN(n-RADIUS,it+tile_size); i++) {
-              #ifdef STAR
+              #if STAR
                 #if LOOPGEN
                   #include "loop_body_star.incl"
                 #else
@@ -298,7 +298,7 @@ int main(int argc, char ** argv) {
   }
   else {
     printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
     printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
            reference_norm, norm);
 #endif

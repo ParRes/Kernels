@@ -191,10 +191,10 @@ int main(int argc, char ** argv) {
     printf("Number of iterations      = %d\n", iterations);
     if (grp > 1)
     printf("Group factor              = %d (cheating!)\n", grp);
-#ifdef SYNCHRONOUS
-    printf("Handshake between neighbor threads\n");
+#if SYNCHRONOUS
+    printf("Neighbor thread handshake = on\n");
 #else
-    printf("No handshake between neighbor threads\n");
+    printf("Neighbor thread handshake = off\n");
 #endif
   }
   }
@@ -311,7 +311,7 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-#ifdef VERBOSE   
+#if VERBOSE   
   printf("Solution validates; verification value = %lf\n", corner_val);
   printf("Point-to-point synchronizations/s: %lf\n",
          ((float)((n-1)*(nthread-1)))/(avgtime));

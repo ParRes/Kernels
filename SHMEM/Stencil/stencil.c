@@ -179,7 +179,7 @@ int main(int argc, char ** argv) {
   ********************************************************************************/
  
   if (my_ID == root) {
-#ifndef STAR
+#if !STAR
     printf("ERROR: Compact stencil not supported\n");
     error = 1;
     goto ENDOFTESTS;
@@ -259,7 +259,7 @@ int main(int argc, char ** argv) {
     printf("Radius of stencil      = %d\n", RADIUS);
     printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
     printf("Type of stencil        = star\n");
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
@@ -331,7 +331,7 @@ int main(int argc, char ** argv) {
     error = 1;
   }
   bail_out(error);
- 
+
   total_length_in = (width[0]+2*RADIUS);
   total_length_in *= (height[0]+2*RADIUS);
   total_length_in *= sizeof(DTYPE);
@@ -339,7 +339,7 @@ int main(int argc, char ** argv) {
   total_length_out = width[0];
   total_length_out *= height[0];
   total_length_out *= sizeof(DTYPE);
- 
+
   in  = (DTYPE *) prk_malloc(total_length_in);
   out = (DTYPE *) prk_malloc(total_length_out);
   if (!in || !out) {
@@ -347,8 +347,9 @@ int main(int argc, char ** argv) {
             my_ID);
     error = 1;
   }
-  bail_out(error);
 
+  bail_out(error);
+  
   shmem_barrier_all();
 
   shmem_int_max_to_all(&maxwidth[0], &width[0], 1, 0, 0, Num_procs, pWrk_dim, pSync_reduce);
@@ -377,7 +378,7 @@ int main(int argc, char ** argv) {
   }
 
   /* allocate communication buffers for halo values                            */
-  top_buf_out=(DTYPE*)prk_malloc(2*sizeof(DTYPE)*RADIUS*maxwidth[0]);
+  top_buf_out=(DTYPE*)prk_shmem_malloc(2*sizeof(DTYPE)*RADIUS*maxwidth[0]);
   if (!top_buf_out) {
     printf("ERROR: Rank %d could not allocate output comm buffers for y-direction\n", my_ID);
     error = 1;
@@ -397,7 +398,7 @@ int main(int argc, char ** argv) {
   bottom_buf_in[0] = top_buf_in[1]    + RADIUS*maxwidth[0];
   bottom_buf_in[1] = bottom_buf_in[0] + RADIUS*maxwidth[0];
  
-  right_buf_out=(DTYPE*)prk_malloc(2*sizeof(DTYPE)*RADIUS*maxheight[0]);
+  right_buf_out=(DTYPE*)prk_shmem_malloc(2*sizeof(DTYPE)*RADIUS*maxheight[0]);
   if (!right_buf_out) {
     printf("ERROR: Rank %d could not allocate output comm buffers for x-direction\n", my_ID);
     error = 1;
@@ -541,7 +542,7 @@ int main(int argc, char ** argv) {
 
   shmem_barrier_all();
  
-#ifdef DOUBLE
+#if DOUBLE
   shmem_double_sum_to_all(&norm[0], &local_norm[0], 1, 0, 0, Num_procs, pWrk_norm, pSync_reduce);
 #else
   shmem_float_sum_to_all(&norm[0], &local_norm[0], 1, 0, 0, Num_procs, pWrk_norm, pSync_reduce);
@@ -567,7 +568,7 @@ int main(int argc, char ** argv) {
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
              reference_norm, norm[0]);
 #endif
@@ -584,11 +585,11 @@ int main(int argc, char ** argv) {
            1.0E-06 * flops/avgtime, avgtime);
   }
 
-  prk_shmem_free(top_buf_in);
-  prk_shmem_free(right_buf_in);
-  free(top_buf_out);
-  free(right_buf_out);
-
+  prk_shmem_free(top_buf_in[0]);
+  prk_shmem_free(right_buf_in[0]);
+  prk_shmem_free(top_buf_out);
+  prk_shmem_free(right_buf_out);
+  
   prk_shmem_free(pSync_bcast);
   prk_shmem_free(pSync_reduce);
   prk_shmem_free(pWrk_time);

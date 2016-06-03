@@ -64,7 +64,8 @@ help:
 	@echo "       \"make allampi\"      (re-)builds all Adaptive MPI targets"
 	@echo "       \"make allgrappa\"    (re-)builds all Grappa targets"
 	@echo "       \"make allfortran\"   (re-)builds all Fortran targets"
-	@echo "       \"make allfreaks\"    (re-)builds the above two targets"
+	@echo "       \"make alllegion\"    (re-)builds all Legion targets"
+	@echo "       \"make allfreaks\"    (re-)builds the above four targets"
 	@echo "       optionally, specify   \"matrix_rank=<n> number_of_functions=<m>\""
 	@echo "       optionally, specify   \"default_opt_flags=<list of optimization flags>\""
 	@echo "       \"make clean\"        removes all objects and executables"
@@ -72,7 +73,7 @@ help:
 
 all: alldarwin allfreaks
 alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran allc99
-allfreaks: allcharm++ allampi allgrappa
+allfreaks: allcharm++ allampi allgrappa alllegion
 
 allmpi1:
 	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -87,6 +88,8 @@ allmpi1:
 	cd MPI1/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                        "MATRIX_RANK         = $(matrix_rank)"        \
                                                        "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+	cd MPI1/PIC-static;          $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+
 
 allampi:
 	cd AMPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -117,6 +120,7 @@ allfgmpi:
 	cd FG_MPI/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                          "MATRIX_RANK         = $(matrix_rank)"        \
                                                          "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+	cd FG_MPI/PIC-static;          $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allmpiopenmp:
 	cd MPIOPENMP/Nstream;       $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -154,17 +158,17 @@ allopenmp:
 	cd OPENMP/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Nstream;          $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Reduce;           $(MAKE) reduce    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd OPENMP/RefCount_shared;  $(MAKE) shared    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd OPENMP/RefCount_private; $(MAKE) private   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd OPENMP/Refcount;         $(MAKE) refcount  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Stencil;          $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Transpose;        $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Random;           $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Sparse;           $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Synch_global;     $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd OPENMP/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd OPENMP/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
-                                                      "MATRIX_RANK         = $(matrix_rank)"        \
+	cd OPENMP/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"     \
+                                                      "MATRIX_RANK         = $(matrix_rank)"   \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+	cd OPENMP/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allcharm++:
 	cd CHARM++/Synch_p2p;       $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -179,6 +183,10 @@ allgrappa:
 allc99:
 	make -C C99 all
 
+alllegion:
+	cd LEGION/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd LEGION/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+
 allserial:
 	cd SERIAL/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd SERIAL/Nstream;          $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -188,10 +196,10 @@ allserial:
 	cd SERIAL/Random;           $(MAKE) random    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd SERIAL/Sparse;           $(MAKE) sparse    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd SERIAL/Synch_p2p;        $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd SERIAL/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
-                                                      "MATRIX_RANK         = $(matrix_rank)"        \
+	cd SERIAL/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"     \
+                                                      "MATRIX_RANK         = $(matrix_rank)"   \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
-	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(default_opt_flags)"
+	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allfortran:
 	make -C FORTRAN all
@@ -205,6 +213,8 @@ allfortranopenmp:
 allfortrancoarray:
 	make -C FORTRAN coarray
 
+allfortran: allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
+
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
 	cd MPI1/Nstream;            $(MAKE) clean
@@ -216,6 +226,7 @@ clean:
 	cd MPI1/Synch_global;       $(MAKE) clean
 	cd MPI1/Synch_p2p;          $(MAKE) clean
 	cd MPI1/Branch;             $(MAKE) clean
+	cd MPI1/PIC-static;         $(MAKE) clean
 	cd FG_MPI/DGEMM;            $(MAKE) clean
 	cd FG_MPI/Nstream;          $(MAKE) clean
 	cd FG_MPI/Reduce;           $(MAKE) clean
@@ -226,6 +237,7 @@ clean:
 	cd FG_MPI/Synch_global;     $(MAKE) clean
 	cd FG_MPI/Synch_p2p;        $(MAKE) clean
 	cd FG_MPI/Branch;           $(MAKE) clean
+	cd FG_MPI/PIC-static;       $(MAKE) clean
 	cd AMPI/DGEMM;              $(MAKE) clean
 	cd AMPI/Nstream;            $(MAKE) clean
 	cd AMPI/Reduce;             $(MAKE) clean
@@ -254,6 +266,8 @@ clean:
 	cd GRAPPA/Synch_p2p;        $(MAKE) clean
 	cd GRAPPA/Stencil;          $(MAKE) clean
 	cd GRAPPA/Transpose;        $(MAKE) clean
+	cd LEGION/Stencil;          $(MAKE) clean
+	cd LEGION/Transpose;        $(MAKE) clean
 	cd MPIOPENMP/Nstream;       $(MAKE) clean
 	cd MPIOPENMP/Stencil;       $(MAKE) clean
 	cd MPIOPENMP/Transpose;     $(MAKE) clean
@@ -261,8 +275,7 @@ clean:
 	cd OPENMP/DGEMM;            $(MAKE) clean
 	cd OPENMP/Nstream;          $(MAKE) clean
 	cd OPENMP/Reduce;           $(MAKE) clean
-	cd OPENMP/RefCount_shared;  $(MAKE) clean
-	cd OPENMP/RefCount_private; $(MAKE) clean
+	cd OPENMP/Refcount;         $(MAKE) clean
 	cd OPENMP/Stencil;          $(MAKE) clean
 	cd OPENMP/Transpose;        $(MAKE) clean
 	cd OPENMP/Random;           $(MAKE) clean
@@ -270,6 +283,7 @@ clean:
 	cd OPENMP/Synch_global;     $(MAKE) clean
 	cd OPENMP/Synch_p2p;        $(MAKE) clean
 	cd OPENMP/Branch;           $(MAKE) clean
+	cd OPENMP/PIC;              $(MAKE) clean
 	cd SERIAL/DGEMM;            $(MAKE) clean
 	cd SERIAL/Nstream;          $(MAKE) clean
 	cd SERIAL/Reduce;           $(MAKE) clean
@@ -300,6 +314,7 @@ veryclean: clean
 	cd CHARM++/Stencil;         $(MAKE) veryclean
 	cd UPC/Stencil;             $(MAKE) veryclean
 	cd FG_MPI/Branch;           $(MAKE) veryclean
+	cd AMPI/Stencil;            $(MAKE) veryclean
 	cd AMPI/Branch;             $(MAKE) veryclean
 	cd scripts/small;           $(MAKE) -f  Makefile_FG_MPI veryclean
 	cd scripts/wide;            $(MAKE) -f  Makefile_FG_MPI veryclean
