@@ -118,7 +118,7 @@ println("Compact representation of stencil loop body")
 println("Number of iterations = ", iterations)
 
 W = zeros(Float64,2*r+1,2*r+1)
-if pattern == 0 # star
+if pattern == "star"
     stencil_size = 4*r+1
     for i=1:r
         W[r+1,r+i+1] = +1./(2*i*r)
@@ -144,39 +144,48 @@ A = zeros(Float64,n,n)
 B = zeros(Float64,n,n)
 for i=1:n
     for j=1:n
-        A[i,j] = (i-1) + (j-1)
+        A[i,j] = i+j-2
     end
 end
 
 t0 = time_ns()
 
-for k=1:iterations
-    # start timer after a warmup iteration
-    if k==1
-        t0 = time_ns()
-    end
+println("W=\n",W)
 
-    if pattern == 0 # star
-        b = n-r
-        B[r:b,r:b] += W[r,r] * A[r:b,r:b]
-        for s=1:r+1
-            #B[r:b,r:b] += W[r,r-s] * A[r:b,r-s:b-s]
-            #            + W[r,r+s] * A[r:b,r+s:b+s]
-            #            + W[r-s,r] * A[r-s:b-s,r:b]
-            #            + W[r+s,r] * A[r+s:b+s,r:b]
-        end
-    else # stencil
-        if r>0
-            b = n-r
-            #for s=-r:r+1
-            #    for t=-r:r+1
-            #        B[r:b,r:b] += W[r+t,r+s] * A[r+t:b+t,r+s:b+s]
-            #    end
-            #end
-        end
-    end
+for k=1:iterations+1
+  # start timer after a warmup iteration
+  if k==1
+      t0 = time_ns()
+  end
 
-    A += 1.0
+  println("A=\n",A)
+  println("B=\n",B)
+
+  if pattern == "star"
+    for j=r:n-r
+      for i=r:n-r
+        B[i+1,j+1] += W[r+1,r+1] * A[i+1,j+1]
+        for jj=-r:-1
+          B[i+1,j+1] += W[r+1,r+jj+1] * A[i+1,j+jj+1]
+        end
+        for jj=1:r-1
+          B[i+1,j+1] += W[r+1,r+jj+1] * A[i+1,j+jj+1]
+        end
+        for ii=-r:-1
+          B[i+1,j+1] += W[r+ii+1,r+1] * A[i+ii+1,j+1]
+        end
+        for ii=1:r-1
+          B[i+1,j+1] += W[r+ii+1,r+1] * A[i+ii+1,j+1]
+        end
+      end
+    end
+  else # stencil
+    error("FIXME")
+    if r>0
+    end
+  end
+
+  A += 1.0
 
 end
 
