@@ -32,6 +32,15 @@ case "$PRK_TARGET" in
         python $PRK_TARGET_PATH/transpose.py       10 1024
         python $PRK_TARGET_PATH/transpose-numpy.py 10 1024
         ;;
+    alljulia)
+        echo "Julia"
+        which julia
+        julia --version
+        export PRK_TARGET_PATH=JULIA
+        julia $PRK_TARGET_PATH/p2p.jl             10 1024 1024
+        julia $PRK_TARGET_PATH/stencil.jl         10 1000
+        julia $PRK_TARGET_PATH/transpose.jl       10 1024
+        ;;
     allserial)
         echo "Serial"
         echo "CC=$PRK_COMPILER" >> common/make.defs

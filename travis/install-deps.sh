@@ -13,6 +13,11 @@ case "$PRK_TARGET" in
         echo "Serial"
         ;;
 
+    alljulia)
+        echo "Julia"
+        sh ./travis/install-julia.sh $TRAVIS_ROOT
+        ;;
+
     allfortran*)
         echo "Fortran"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
