@@ -180,8 +180,16 @@ for k=1:iterations+1
       end
     end
   else # stencil
-    error("FIXME")
     if r>0
+      for j=r:n-r
+        for i=r:n-r
+          for jj=-r:-1
+            for ii=-r:-1
+              B[i+1,j+1] += W[r+1,r+1] * A[i+1,j+1]
+            end
+          end
+        end
+      end
     end
   end
 
