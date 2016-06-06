@@ -56,16 +56,11 @@
 #
 # *******************************************************************
 
-function iterate_over_grid!(grid, m, n, iterations)
-    for k = 1:iterations+1
-        for j = 2:n
-            for i = 2:m
-                @inbounds grid[i,j] = grid[i-1,j] + grid[i,j-1] - grid[i-1,j-1]
-            end
+function iterate_over_grid!(grid, m, n)
+    for j = 2:n
+        for i = 2:m
+            @inbounds grid[i,j] = grid[i-1,j] + grid[i,j-1] - grid[i-1,j-1]
         end
-
-        # copy top right corner value to bottom left corner to create dependency
-        grid[1,1] = -grid[m,n]
     end
 end
 
@@ -114,7 +109,12 @@ function main()
     precompile(iterate_over_grid!, (Array{Float64, 2}, Int64, Int64, Int64))
 
     t0 = time_ns()
-    iterate_over_grid!(grid, m, n, iterations)
+    for k = 1:iterations+1
+        iterate_over_grid!(grid, m, n)
+
+        # copy top right corner value to bottom left corner to create dependency
+        grid[1,1] = -grid[m,n]
+    end
     t1 = time_ns()
 
     # convert time from nanoseconds to seconds
