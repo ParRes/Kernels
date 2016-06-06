@@ -53,6 +53,14 @@
 # read and test input parameters
 # ********************************************************************
 
+function do_initialize(A, order)
+    for j in 1:order
+        for i in 1:order
+            @inbounds A[i,j] = order * (j-1) + (i-1)
+        end
+    end
+end
+
 function do_transpose(A, B, order)
     for j in 1:order
         for i in 1:order
@@ -62,6 +70,17 @@ function do_transpose(A, B, order)
     end
 end
 
+function do_verify(B, order, iterations)
+    addit = (0.5*iterations) * (iterations+1)
+    abserr = 0.0
+    for j in 1:order
+        for i in 1:order
+            temp = (order * (i-1) + (j-1)) * (iterations+1)
+            @inbounds abserr = abserr + abs(B[i,j] - (temp+addit))
+        end
+    end
+    return abserr
+end
 
 function main()
     println("Parallel Research Kernels version ") #, PRKVERSION)
@@ -99,11 +118,8 @@ function main()
     A = zeros(Float64,order,order)
     B = zeros(Float64,order,order)
     # Fill the original matrix
-    for i in 1:order
-        for j in 1:order
-            A[i,j] = order * (j-1) + (i-1)
-        end
-    end
+    precompile(do_initialize, (Array{Float64,2}, Int64))
+    do_initialize(A, order)
 
     # precompile hot function to smooth performance measurement
     precompile(do_transpose, (Array{Float64,2}, Array{Float64,2}, Int64))
@@ -121,14 +137,8 @@ function main()
     # ** Analyze and output results.
     # ********************************************************************
 
-    addit = (0.5*iterations) * (iterations+1)
-    abserr = 0.0
-    for i in 1:order
-      for j in 1:order
-        temp = (order * (i-1) + (j-1)) * (iterations+1)
-        abserr = abserr + abs(B[i,j] - (temp+addit))
-      end
-    end
+    precompile(do_verify, (Array{Float64,2}, Int64, Int64))
+    abserr = do_verify(B, order, iterations)
 
     epsilon=1.e-8
     nbytes = 2 * order^2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
