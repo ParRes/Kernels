@@ -106,7 +106,7 @@ function main()
     grid[1:m,1] = collect(Float64,0:m-1)
 
     # precompile the hot function to smooth performance measurement
-    precompile(iterate_over_grid!, (Array{Float64, 2}, Int64, Int64, Int64))
+    precompile(iterate_over_grid!, (Array{Float64, 2}, Int64, Int64))
 
     t0 = time_ns()
     for k = 1:iterations+1
