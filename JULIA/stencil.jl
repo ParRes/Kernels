@@ -190,7 +190,7 @@ function main()
     end
 
     t1 = time_ns()
-    stencil_time = (t1 - t0) * 1.*e-9
+    stencil_time = (t1 - t0) * 1.e-9
 
     #******************************************************************************
     #* Analyze and output results.
