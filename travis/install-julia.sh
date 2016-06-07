@@ -28,9 +28,9 @@ case "$os" in
             cd $TRAVIS_ROOT
             wget --no-check-certificate -q https://julialang.s3.amazonaws.com/bin/linux/x64/0.4/julia-0.4.5-linux-x86_64.tar.gz
             tar -C $TRAVIS_ROOT -xzvf julia-0.4.5-linux-x86_64.tar.gz
-            ln -s $TRAVIS_ROOT/julia-2ac304dfba $TRAVIS_ROOT/julia
+            # symbolic link was not working for reasons i cannot explain
+            mv $TRAVIS_ROOT/julia-2ac304dfba $TRAVIS_ROOT/julia
             find $TRAVIS_ROOT -type f -name julia
-            find $TRAVIS_ROOT
         fi
         ;;
 esac
