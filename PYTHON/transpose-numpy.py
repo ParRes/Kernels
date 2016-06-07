@@ -84,7 +84,7 @@ def main():
     B = numpy.zeros((order,order))
 
     for k in range(0,iterations+1):
-        # start timer after a warmup iterationsation
+        # start timer after a warmup iteration
         if k<1: t0 = time.clock()
 
         # this actually forms the transpose of A

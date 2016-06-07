@@ -101,9 +101,9 @@ def main():
     print 'Grid size            = ', n
     print 'Radius of stencil    = ', r
     if pattern == 'star':
-        print 'Type of stencil      = ','star'
+        print 'Type of stencil      = star'
     else:
-        print 'Type of stencil      = ','stencil'
+        print 'Type of stencil      = stencil'
 
     print 'Data type            = double precision'
     print 'Compact representation of stencil loop body'

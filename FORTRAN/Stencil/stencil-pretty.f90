@@ -191,7 +191,7 @@ program main
 
   ! intialize the input and output arrays
   do concurrent (i=1:n, j=1:n)
-    A(i,j) = cx*i+cy*j
+    A(i,j) = cx*(i-1)+cy*(j-1)
   enddo
   !B(r+1:n-r,r+1:n-r) = 0 ! minimal
   B = 0 ! sufficient
