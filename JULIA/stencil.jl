@@ -178,6 +178,12 @@ function main()
     end
     B = zeros(Float64,n,n)
 
+    if pattern == "star"
+        precompile(do_star, (Array{Float64,2}, Array{Float64,2}, Array{Float64,2}, Int64, Int64))
+    else
+        precompile(do_stencil, (Array{Float64,2}, Array{Float64,2}, Array{Float64,2}, Int64, Int64))
+    end
+
     t0 = time_ns()
 
     for k=1:iterations+1
