@@ -45,18 +45,13 @@
 #          The output consists of diagnostics to make sure the
 #          algorithm worked, and of timing statistics.
 #
-# FUNCTIONS CALLED:
-#
-#          Other than standard C functions, the following
-#          functions are used in this program:
-#
 # HISTORY: - Written by Rob Van der Wijngaart, February 2009.
-#          - Converted to Python by Jeff Hammond, Fortran 2016.
+#          - Converted to Python by Jeff Hammond, February 2016.
 #
 # *******************************************************************
 
 import sys
-import time
+from timeit import default_timer as timer
 
 def main():
 
@@ -95,7 +90,7 @@ def main():
     for k in range(iterations+1):
         # start timer after a warmup iteration
         if k<1:
-            t0 = time.clock()
+            t0 = timer()
 
         for i in range(1,m):
             for j in range(1,n):
@@ -105,7 +100,7 @@ def main():
         grid[0][0] = -grid[m-1][n-1]
 
 
-    t1 = time.clock()
+    t1 = timer()
     pipeline_time = t1 - t0
 
     # ********************************************************************
