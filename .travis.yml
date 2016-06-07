@@ -68,9 +68,14 @@ matrix:
     # Python does not use compiler so only test one of them per OS (GCC)
     - compiler: clang
       env: PRK_TARGET=allpython
+    - compiler: clang
+      env: PRK_TARGET=alljulia
   allow_failures:
     # will fail if numpy package cannot be acquired via apt
     - env: PRK_TARGET=allpython
+    # Julia
+    - os: linux
+      env: PRK_TARGET=alljulia
     # Linux may not have GCC-6...
     - os: linux
       compiler: gcc
@@ -147,6 +152,7 @@ env:
 #    :m,n s/^/#/g
 #
   - PRK_TARGET=allpython
+  - PRK_TARGET=alljulia
   - PRK_TARGET=allserial
   - PRK_TARGET=allfortranserial
   - PRK_TARGET=allfortranopenmp
@@ -172,14 +178,14 @@ env:
     GASNET_CONDUIT=udp
     PRK_FLAGS="-Wc,-O3"
    # Optinal: We do not need to test BUPC this thoroughly every time
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=mpi
-    PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=ofi
-    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=mpi
+#    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=ofi
+#    PRK_FLAGS="-Wc,-O3"
     # Chapel kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allchapel
 #    CHPL_COMM=none

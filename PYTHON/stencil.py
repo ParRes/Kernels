@@ -101,9 +101,9 @@ def main():
     print 'Grid size            = ', n
     print 'Radius of stencil    = ', r
     if pattern == 'star':
-        print 'Type of stencil      = ','star'
+        print 'Type of stencil      = star'
     else:
-        print 'Type of stencil      = ','stencil'
+        print 'Type of stencil      = stencil'
 
     print 'Data type            = double precision'
     print 'Compact representation of stencil loop body'
@@ -140,9 +140,20 @@ def main():
         for j in range(r,n-r):
             B[i][j] = 0.0
 
+    print "W="
+    for i in range(2*r+1):
+        print W[i]
+
     for k in range(iterations+1):
         # start timer after a warmup iteration
         if k<1: t0 = time.clock()
+
+        print "A="
+        for i in range(n):
+            print A[i]
+        print "B="
+        for i in range(n):
+            print B[i]
 
         if pattern == 'star':
             for i in range(r,n-r):
