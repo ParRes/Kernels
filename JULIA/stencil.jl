@@ -61,169 +61,164 @@
 #
 # *******************************************************************
 
-# ********************************************************************
-# read and test input parameters
-# ********************************************************************
 
-println("Parallel Research Kernels version ") #, PRKVERSION
-println("Julia stencil execution on 2D grid")
-
-argc = length(ARGS)
-if argc < 2
-    println("argument count = ", length(ARGS))
-    println("Usage: ./stencil <# iterations> <array dimension> [<star/stencil> <radius>]")
-    exit(1)
-end
-
-iterations = parse(Int,ARGS[1])
-if iterations < 1
-    println("ERROR: iterations must be >= 1")
-    exit(2)
-end
-
-n = parse(Int,ARGS[2])
-if n < 1
-    println("ERROR: array dimension must be >= 1")
-    exit(3)
-end
-
-pattern = "star"
-if argc > 2
-    pattern = ARGS[3]
-end
-
-if argc > 3
-    r = parse(Int,ARGS[4])
-    if r < 1
-        println("ERROR: Stencil radius should be positive")
-        exit(4)
-    elseif (2*r+1) > n
-        println("ERROR: Stencil radius exceeds grid size")
-        exit(5)
-    end
-else
-    r = 2 # radius=2 is what other impls use right now
-end
-
-println("Grid size            = ", n)
-println("Radius of stencil    = ", r)
-if pattern == "star"
-    println("Type of stencil      = ","star")
-else
-    println("Type of stencil      = ","stencil")
-end
-
-println("Data type            = double precision")
-println("Compact representation of stencil loop body")
-println("Number of iterations = ", iterations)
-
-W = zeros(Float64,2*r+1,2*r+1)
-if pattern == "star"
-    stencil_size = 4*r+1
-    for i=1:r
-        W[r+1,r+i+1] = +1./(2*i*r)
-        W[r+i+1,r+1] = +1./(2*i*r)
-        W[r+1,r-i+1] = -1./(2*i*r)
-        W[r-i+1,r+1] = -1./(2*i*r)
-    end
-else
-    stencil_size = (2*r+1)^2
-    for j=1:r
-        for i=-j+1:j
-            W[r+i+1,r+j+1] = +1./(4*j*(2*j-1)*r)
-            W[r+i+1,r-j+1] = -1./(4*j*(2*j-1)*r)
-            W[r+j+1,r+i+1] = +1./(4*j*(2*j-1)*r)
-            W[r-j+1,r+i+1] = -1./(4*j*(2*j-1)*r)
-        end
-        W[r+j+1,r+j+1]    = +1./(4*j*r)
-        W[r-j+1,r-j+1]    = -1./(4*j*r)
-    end
-end
-
-A = zeros(Float64,n,n)
-B = zeros(Float64,n,n)
-for i=1:n
-    for j=1:n
-        A[i,j] = i+j-2
-    end
-end
-
-t0 = time_ns()
-
-println("W=\n",W)
-
-for k=1:iterations+1
-  # start timer after a warmup iteration
-  if k==1
-      t0 = time_ns()
-  end
-
-  println("A=\n",A)
-  println("B=\n",B)
-
-  if pattern == "star"
-    for j=r:n-r
-      for i=r:n-r
-        B[i+1,j+1] += W[r+1,r+1] * A[i+1,j+1]
-        for jj=-r:-1
-          B[i+1,j+1] += W[r+1,r+jj+1] * A[i+1,j+jj+1]
-        end
-        for jj=1:r-1
-          B[i+1,j+1] += W[r+1,r+jj+1] * A[i+1,j+jj+1]
-        end
-        for ii=-r:-1
-          B[i+1,j+1] += W[r+ii+1,r+1] * A[i+ii+1,j+1]
-        end
-        for ii=1:r-1
-          B[i+1,j+1] += W[r+ii+1,r+1] * A[i+ii+1,j+1]
-        end
-      end
-    end
-  else # stencil
-    if r>0
-      for j=r:n-r
-        for i=r:n-r
-          for jj=-r:-1
-            for ii=-r:-1
-              B[i+1,j+1] += W[r+1,r+1] * A[i+1,j+1]
+function do_star(A, W, B, r, n)
+    for j=r:n-r-1
+        for i=r:n-r-1
+            for jj=-r:r
+                @inbounds B[i+1,j+1] += W[r+1,r+jj+1] * A[i+1,j+jj+1]
             end
-          end
+            for ii=-r:-1
+                @inbounds B[i+1,j+1] += W[r+ii+1,r+1] * A[i+ii+1,j+1]
+            end
+            for ii=1:r
+                @inbounds B[i+1,j+1] += W[r+ii+1,r+1] * A[i+ii+1,j+1]
+            end
         end
-      end
-    end
-  end
-
-  A += 1.0
-
-end
-
-t1 = time_ns()
-stencil_time = (t1 - t0) * 1.*e-9
-
-#******************************************************************************
-#* Analyze and output results.
-#******************************************************************************
-
-active_points = (n-2*r)^2
-actual_norm = 0.0
-for j=r:n-r
-    for i=r:n-r
-        actual_norm += abs(B[i,j])
     end
 end
-actual_norm /= active_points
 
-epsilon=1.e-8
-
-# verify correctness
-reference_norm = 2*(iterations+1)
-if abs(norm-reference_norm) < epsilon
-    println("Solution validates")
-    flops = (2*stencil_size+1) * active_points
-    avgtime = stencil_time/iterations
-    println("Rate (MFlops/s): ",1.e-6*flops/avgtime, " Avg time (s): ",avgtime)
-else
-    println("ERROR: L1 norm = ", norm," Reference L1 norm = ", reference_norm)
-    exit(9)
+function do_stencil(A, W, B, r, n)
+    for j=r:n-r-1
+        for i=r:n-r-1
+            for jj=-r:r
+                for ii=-r:r
+                    @inbounds B[i+1,j+1] += W[r+ii+1,r+jj+1] * A[i+ii+1,j+jj+1]
+                end
+            end
+        end
+    end
 end
+
+function main()
+    # ********************************************************************
+    # read and test input parameters
+    # ********************************************************************
+
+    println("Parallel Research Kernels version ") #, PRKVERSION
+    println("Julia stencil execution on 2D grid")
+
+    argc = length(ARGS)
+    if argc < 2
+        println("argument count = ", length(ARGS))
+        println("Usage: ./stencil <# iterations> <array dimension> [<star/stencil> <radius>]")
+        exit(1)
+    end
+
+    iterations = parse(Int,ARGS[1])
+    if iterations < 1
+        println("ERROR: iterations must be >= 1")
+        exit(2)
+    end
+
+    n = parse(Int,ARGS[2])
+    if n < 1
+        println("ERROR: array dimension must be >= 1")
+        exit(3)
+    end
+
+    pattern = "star"
+    if argc > 2
+        pattern = ARGS[3]
+    end
+
+    if argc > 3
+        r = parse(Int,ARGS[4])
+        if r < 1
+            println("ERROR: Stencil radius should be positive")
+            exit(4)
+        elseif (2*r+1) > n
+            println("ERROR: Stencil radius exceeds grid size")
+            exit(5)
+        end
+    else
+        r = 2 # radius=2 is what other impls use right now
+    end
+
+    println("Grid size            = ", n)
+    println("Radius of stencil    = ", r)
+    if pattern == "star"
+        println("Type of stencil      = ","star")
+    else
+        println("Type of stencil      = ","stencil")
+    end
+
+    println("Data type            = double precision")
+    println("Compact representation of stencil loop body")
+    println("Number of iterations = ", iterations)
+
+    W = zeros(Float64,2*r+1,2*r+1)
+    if pattern == "star"
+        stencil_size = 4*r+1
+        for i=1:r
+            W[r+1,r+i+1] = +1./(2*i*r)
+            W[r+i+1,r+1] = +1./(2*i*r)
+            W[r+1,r-i+1] = -1./(2*i*r)
+            W[r-i+1,r+1] = -1./(2*i*r)
+        end
+    else
+        stencil_size = (2*r+1)^2
+        for j=1:r
+            for i=-j+1:j-1
+                W[r+i+1,r+j+1] = +1./(4*j*(2*j-1)*r)
+                W[r+i+1,r-j+1] = -1./(4*j*(2*j-1)*r)
+                W[r+j+1,r+i+1] = +1./(4*j*(2*j-1)*r)
+                W[r-j+1,r+i+1] = -1./(4*j*(2*j-1)*r)
+            end
+            W[r+j+1,r+j+1]    = +1./(4*j*r)
+            W[r-j+1,r-j+1]    = -1./(4*j*r)
+        end
+    end
+
+    A = zeros(Float64,n,n)
+    for i=1:n
+        for j=1:n
+            A[i,j] = i+j-2
+        end
+    end
+    B = zeros(Float64,n,n)
+
+    t0 = time_ns()
+
+    for k=1:iterations+1
+        if pattern == "star"
+            do_star(A, W, B, r, n)
+        else
+            do_stencil(A, W, B, r, n)
+        end
+        A += 1.0
+    end
+
+    t1 = time_ns()
+    stencil_time = (t1 - t0) * 1.e-9
+
+    #******************************************************************************
+    #* Analyze and output results.
+    #******************************************************************************
+
+    active_points = (n-2*r)^2
+    actual_norm = 0.0
+    for j=1:n
+        for i=1:n
+            actual_norm += abs(B[i,j])
+        end
+    end
+    actual_norm /= active_points
+
+    epsilon=1.e-8
+
+    # verify correctness
+    reference_norm = 2*(iterations+1)
+    if abs(actual_norm-reference_norm) < epsilon
+        println("Solution validates")
+        flops = (2*stencil_size+1) * active_points
+        avgtime = stencil_time/iterations
+        println("Rate (MFlops/s): ",1.e-6*flops/avgtime, " Avg time (s): ",avgtime)
+    else
+        println("ERROR: L1 norm = ", actual_norm, " Reference L1 norm = ", reference_norm)
+        exit(9)
+    end
+end
+
+main()
 
