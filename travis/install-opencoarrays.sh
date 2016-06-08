@@ -20,7 +20,8 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
 
         Linux)
             echo "Linux"
-            sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich
+            sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich 1
+            sh ./travis/install-cmake.sh $TRAVIS_ROOT
             ;;
     esac
 
@@ -29,17 +30,28 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ]; then
     cd opencoarrays-source
     mkdir build
     cd build
+    # mpif90 is more widely available than mpifort...
     which mpicc
-    which mpifort
+    which mpif90
     mpicc -show
-    mpifort -show
-    export MPICH_CC=gcc-6
-    export MPICH_FC=gfortran-6
+    mpif90 -show
+    # override whatever is used in MPI scripts
+    for gccversion in "-6" "-5" "-5.3" "-5.2" "-5.1" "" ; do
+        if [ -f "`which gfortran$gccversion`" ]; then
+            export PRK_CC="gcc$gccversion"
+            export PRK_FC="gfortran$gccversion"
+            echo "Found GCC: $PRK_FC"
+            $PRK_FC -v
+            break
+        fi
+    done
+    export MPICH_CC=$PRK_CC
+    export MPICH_FC=$PRK_FC
     mpicc -show
-    mpifort -show
-    CC=mpicc FC=mpifort cmake .. -DCMAKE_INSTALL_PREFIX=$TRAVIS_ROOT/opencoarrays \
-                                 -DMPI_C_COMPILER=mpicc -DMPI_Fortran_COMPILER=mpifort
-    make
+    mpif90 -show
+    CC=mpicc FC=mpif90 cmake .. -DCMAKE_INSTALL_PREFIX=$TRAVIS_ROOT/opencoarrays \
+                                -DMPI_C_COMPILER=mpicc -DMPI_Fortran_COMPILER=mpif90
+    make -j2
     ctest
     make install
     find $TRAVIS_ROOT -name caf

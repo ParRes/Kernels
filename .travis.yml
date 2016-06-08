@@ -68,9 +68,14 @@ matrix:
     # Python does not use compiler so only test one of them per OS (GCC)
     - compiler: clang
       env: PRK_TARGET=allpython
+    - compiler: clang
+      env: PRK_TARGET=alljulia
   allow_failures:
     # will fail if numpy package cannot be acquired via apt
     - env: PRK_TARGET=allpython
+    # Julia
+    - os: linux
+      env: PRK_TARGET=alljulia
     # Linux may not have GCC-6...
     - os: linux
       compiler: gcc
@@ -146,8 +151,9 @@ env:
 #  * comment out lines m to n by prepending #
 #    :m,n s/^/#/g
 #
-  - PRK_TARGET=allpython
   - PRK_TARGET=allserial
+  - PRK_TARGET=allpython
+  - PRK_TARGET=alljulia
   - PRK_TARGET=allfortranserial
   - PRK_TARGET=allfortranopenmp
   - PRK_TARGET=allfortranpretty

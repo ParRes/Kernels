@@ -32,6 +32,22 @@ case "$PRK_TARGET" in
         python $PRK_TARGET_PATH/transpose.py       10 1024
         python $PRK_TARGET_PATH/transpose-numpy.py 10 1024
         ;;
+    alljulia)
+        echo "Julia"
+        case "$os" in
+            Darwin)
+                export JULIA_PATH=/usr/local/bin/
+                ;;
+            Linux)
+                export JULIA_PATH=$TRAVIS_ROOT/julia/bin/
+                ;;
+        esac
+        ${JULIA_PATH}julia --version
+        export PRK_TARGET_PATH=JULIA
+        ${JULIA_PATH}julia $PRK_TARGET_PATH/p2p.jl             10 1024 1024
+        ${JULIA_PATH}julia $PRK_TARGET_PATH/stencil.jl         10 1000
+        ${JULIA_PATH}julia $PRK_TARGET_PATH/transpose.jl       10 1024
+        ;;
     allserial)
         echo "Serial"
         echo "CC=$PRK_COMPILER -std=c99" >> common/make.defs
@@ -76,17 +92,6 @@ case "$PRK_TARGET" in
         case "$PRK_TARGET" in
             allfortrancoarray)
                 #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
-                # override whatever is used in MPI scripts
-                if [ "$PRK_FC" = "gfortran-6" ]; then
-                    export MPICH_CC=gcc-6
-                    export MPICH_FC=gfortran-6
-                elif [ "$PRK_FC" = "gfortran-5" ]; then
-                    export MPICH_CC=gcc-5
-                    export MPICH_FC=gfortran-5
-                else
-                    echo "You need at least GCC-5 and preferably GCC-6 for OpenCoarrays"
-                    exit 9
-                fi
                 export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
                 echo "FC=$PRK_CAFC\nCOARRAYFLAG=-cpp -std=f2008 -fcoarray=lib" >> common/make.defs
                 ;;

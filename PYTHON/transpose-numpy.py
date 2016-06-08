@@ -49,7 +49,7 @@
 # *******************************************************************
 
 import sys
-import time
+from timeit import default_timer as timer
 import numpy
 
 def main():
@@ -84,8 +84,8 @@ def main():
     B = numpy.zeros((order,order))
 
     for k in range(0,iterations+1):
-        # start timer after a warmup iterationsation
-        if k<1: t0 = time.clock()
+        # start timer after a warmup iteration
+        if k<1: t0 = timer()
 
         # this actually forms the transpose of A
         # B += numpy.transpose(A)
@@ -94,7 +94,7 @@ def main():
         A += 1.0
 
 
-    t1 = time.clock()
+    t1 = timer()
     trans_time = t1 - t0
 
     # ********************************************************************
