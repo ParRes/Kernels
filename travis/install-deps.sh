@@ -46,7 +46,7 @@ case "$PRK_TARGET" in
     allmpi*)
         echo "Any normal MPI"
         sh ./travis/install-clang.sh $TRAVIS_ROOT omp
-        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL
+        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0
         ;;
     allshmem)
         echo "SHMEM"
@@ -69,7 +69,7 @@ case "$PRK_TARGET" in
                         sh ./travis/install-libfabric.sh $TRAVIS_ROOT
                         ;;
                     mpi)
-                        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL
+                        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0
                         ;;
                 esac
                 sh ./travis/install-berkeley-upc.sh $TRAVIS_ROOT
@@ -91,7 +91,7 @@ case "$PRK_TARGET" in
     allgrappa)
         echo "Grappa"
         sh ./travis/install-cmake.sh $TRAVIS_ROOT
-        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL
+        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0
         sh ./travis/install-grappa.sh $TRAVIS_ROOT
         ;;
     allchapel)

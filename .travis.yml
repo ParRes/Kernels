@@ -151,9 +151,9 @@ env:
 #  * comment out lines m to n by prepending #
 #    :m,n s/^/#/g
 #
+  - PRK_TARGET=allserial
   - PRK_TARGET=allpython
   - PRK_TARGET=alljulia
-  - PRK_TARGET=allserial
   - PRK_TARGET=allfortranserial
   - PRK_TARGET=allfortranopenmp
   - PRK_TARGET=allfortranpretty
@@ -178,14 +178,14 @@ env:
     GASNET_CONDUIT=udp
     PRK_FLAGS="-Wc,-O3"
    # Optinal: We do not need to test BUPC this thoroughly every time
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=mpi
-#    PRK_FLAGS="-Wc,-O3"
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=ofi
-#    PRK_FLAGS="-Wc,-O3"
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=mpi
+    PRK_FLAGS="-Wc,-O3"
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=ofi
+    PRK_FLAGS="-Wc,-O3"
     # Chapel kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allchapel
 #    CHPL_COMM=none
