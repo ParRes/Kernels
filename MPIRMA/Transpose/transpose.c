@@ -258,6 +258,11 @@ int main(int argc, char ** argv)
   Colblock_size  = order * Block_order;
   Block_size     = Block_order * Block_order;
 
+  /* debug message size effects */
+  if (my_ID == root) {
+    printf("Block_size           = %d\n", Block_size);
+  }
+
 /*********************************************************************
 ** Create the column block of the test matrix, the row block of the
 ** transposed matrix, and workspace (workspace only if #procs>1)
