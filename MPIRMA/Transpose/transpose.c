@@ -331,8 +331,7 @@ int main(int argc, char ** argv)
           A(i,j) += 1.0;
         }
       }
-    }
-    else {
+    } else {
       for (i=0; i<Block_order; i+=Tile_order) {
         for (j=0; j<Block_order; j+=Tile_order) {
           for (it=i; it<MIN(Block_order,i+Tile_order); it++) {
@@ -355,13 +354,12 @@ int main(int argc, char ** argv)
       istart = send_to*Block_order;
       if (!tiling) {
         for (i=0; i<Block_order; i++) {
-          for (j=0; j<Block_order; j++){
+          for (j=0; j<Block_order; j++) {
             Work_out(phase-1,j,i) = A(i,j);
             A(i,j) += 1.0;
           }
         }
-      }
-      else {
+      } else {
         for (i=0; i<Block_order; i+=Tile_order) {
           for (j=0; j<Block_order; j+=Tile_order) {
             for (it=i; it<MIN(Block_order,i+Tile_order); it++) {
