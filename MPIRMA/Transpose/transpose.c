@@ -340,7 +340,7 @@ int main(int argc, char ** argv)
     }
  
     if (!passive_target && Num_procs>1) {
-      MPI_Win_fence (MPI_MODE_NOPRECEDE, rma_win);
+      MPI_Win_fence(MPI_MODE_NOSTORE | MPI_MODE_NOPRECEDE, rma_win);
     }
 
     for (phase=1; phase<Num_procs; phase++){
@@ -400,7 +400,7 @@ int main(int argc, char ** argv)
 #endif
           MPI_Barrier(MPI_COMM_WORLD);
       } else {
-          MPI_Win_fence (MPI_MODE_NOSUCCEED, rma_win);
+          MPI_Win_fence(MPI_MODE_NOSTORE, rma_win);
       }
     }
  
