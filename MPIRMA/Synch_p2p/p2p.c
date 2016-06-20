@@ -88,7 +88,6 @@ int main(int argc, char ** argv)
   int    Num_procs;       /* Number of ranks                                     */
   double RESTRICT *vector;/* array holding grid values                           */
   long   total_length;    /* total required length to store grid values          */
-  MPI_Status status;      /* completion status of message                        */
   MPI_Win rma_win;        /* RMA window object                                   */
   MPI_Info rma_winfo;     /* info for window                                     */
   MPI_Group world_group, origin_group, target_group;

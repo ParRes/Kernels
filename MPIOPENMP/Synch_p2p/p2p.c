@@ -96,7 +96,6 @@ int main(int argc, char ** argv)
   int    Num_procs;     /* Number of ranks                                       */
   char  *name;          /* MPI threading mode suffix name                        */
   long   total_length;  /* total required length to store grid values            */
-  MPI_Status status;    /* completion status of message                          */
   int    provided;      /* MPI level of thread support                           */
   int    true, false;   /* toggled booleans used for synchronization             */
  
@@ -313,7 +312,7 @@ int main(int argc, char ** argv)
       if (TID==0){
         if (my_ID > 0) {
           MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
-                     MPI_COMM_WORLD, &status);
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
       }
       else {
@@ -354,7 +353,7 @@ int main(int argc, char ** argv)
         MPI_Send(&corner_val,1,MPI_DOUBLE,root,888,MPI_COMM_WORLD);
       }
       if (TID==0  && my_ID==root) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,&status);
+        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
       }
     }
     else {
