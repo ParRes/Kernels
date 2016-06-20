@@ -216,7 +216,6 @@ int main(int argc, char ** argv) {
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8]; /* requests for sends & receives in 4 coord directions */
-  MPI_Status  status[8];  /* corresponding statuses                              */
   MPI_Win shm_win_in;     /* shared memory window object for IN array            */
   MPI_Win shm_win_out;    /* shared memory window object for OUT array           */
   MPI_Comm shm_comm_prep; /* preparatory shared memory communicator              */
@@ -588,8 +587,8 @@ int main(int argc, char ** argv) {
       }
 
     if (top_nbr != -1) {
-      MPI_Wait(&(request[0]), &(status[0]));
-      MPI_Wait(&(request[1]), &(status[1]));
+      MPI_Wait(&(request[0]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[1]), MPI_STATUS_IGNORE);
       for (kk=0,j=jend_rank+1; j<=jend_rank+RADIUS; j++) 
       for (i=istart_rank; i<=iend_rank; i++) {
         IN(i,j) = top_buf_in[kk++];
@@ -597,8 +596,8 @@ int main(int argc, char ** argv) {
     }
 
     if (bottom_nbr != -1) {    
-      MPI_Wait(&(request[2]), &(status[2]));
-      MPI_Wait(&(request[3]), &(status[3]));
+      MPI_Wait(&(request[2]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[3]), MPI_STATUS_IGNORE);
       for (kk=0,j=jstart_rank-RADIUS; j<=jstart_rank-1; j++) 
       for (i=istart_rank; i<=iend_rank; i++) {
         IN(i,j) = bottom_buf_in[kk++];
@@ -632,8 +631,8 @@ int main(int argc, char ** argv) {
     }
 
     if (right_nbr != -1) {
-      MPI_Wait(&(request[0+4]), &(status[0+4]));
-      MPI_Wait(&(request[1+4]), &(status[1+4]));
+      MPI_Wait(&(request[0+4]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[1+4]), MPI_STATUS_IGNORE);
       for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
       for (i=iend_rank+1; i<=iend_rank+RADIUS; i++) {
         IN(i,j) = right_buf_in[kk++];
@@ -641,8 +640,8 @@ int main(int argc, char ** argv) {
     }
 
     if (left_nbr != -1) {
-      MPI_Wait(&(request[2+4]), &(status[2+4]));
-      MPI_Wait(&(request[3+4]), &(status[3+4]));
+      MPI_Wait(&(request[2+4]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[3+4]), MPI_STATUS_IGNORE);
       for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
       for (i=istart_rank-RADIUS; i<=istart_rank-1; i++) {
         IN(i,j) = left_buf_in[kk++];
@@ -675,7 +674,7 @@ int main(int argc, char ** argv) {
       MPI_Irecv(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm, &(request[i]));
       MPI_Send(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm);
     }
-    MPI_Waitall(num_local_nbrs, request, status);
+    MPI_Waitall(num_local_nbrs, request, MPI_STATUSES_IGNORE);
 #endif
 
     /* add constant to solution to force refresh of neighbor data, if any */
@@ -692,7 +691,7 @@ int main(int argc, char ** argv) {
       MPI_Irecv(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm, &(request[i]));
       MPI_Send(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm);
     }
-    MPI_Waitall(num_local_nbrs, request, status);
+    MPI_Waitall(num_local_nbrs, request, MPI_STATUSES_IGNORE);
 #endif
  
   } /* end of iterations                                                   */

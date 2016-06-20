@@ -496,12 +496,11 @@ void RING_Bcast(double *buf, int count, MPI_Datatype type, int root,
               MPI_Comm comm )
 {
   int my_ID, Num_procs;
-  MPI_Status status;
 
   MPI_Comm_rank( comm, &my_ID );    MPI_Comm_size( comm, &Num_procs );
   if (my_ID != root) 
     MPI_Recv(buf, count, type, (my_ID-1+Num_procs)%Num_procs, root, 
-             comm, &status);
+             comm, MPI_STATUS_IGNORE);
   if (( my_ID+1 )%Num_procs != root)
     MPI_Send(buf, count, type, (my_ID+1)%Num_procs, root, comm);
 }
