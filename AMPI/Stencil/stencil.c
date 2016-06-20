@@ -395,15 +395,15 @@ int main(int argc, char ** argv) {
                 MPI_COMM_WORLD, &(request[2+4]));
     }
     if (my_IDx < Num_procsx-1) {
-      MPI_Wait(&(request[0+4]), &(status[0+4]));
-      MPI_Wait(&(request[1+4]), &(status[1+4]));
+      MPI_Wait(&(request[0+4]), MPI_STATUSES_IGNORE);
+      MPI_Wait(&(request[1+4]), MPI_STATUSES_IGNORE);
       for (kk=0,j=jstart; j<=jend; j++) for (i=iend+1; i<=iend+RADIUS; i++) {
           IN(i,j) = right_buf_in[kk++];
       }      
     }
     if (my_IDx > 0) {
-      MPI_Wait(&(request[2+4]), &(status[2+4]));
-      MPI_Wait(&(request[3+4]), &(status[3+4]));
+      MPI_Wait(&(request[2+4]), MPI_STATUSES_IGNORE);
+      MPI_Wait(&(request[3+4]), MPI_STATUSES_IGNORE);
       for (kk=0,j=jstart; j<=jend; j++) for (i=istart-RADIUS; i<=istart-1; i++) {
           IN(i,j) = left_buf_in[kk++];
       }      

@@ -674,7 +674,7 @@ int main(int argc, char ** argv) {
       MPI_Irecv(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm, &(request[i]));
       MPI_Send(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm);
     }
-    MPI_Waitall(num_local_nbrs, request, status);
+    MPI_Waitall(num_local_nbrs, request, MPI_STATUSES_IGNORE);
 #endif
 
     /* add constant to solution to force refresh of neighbor data, if any */
@@ -691,7 +691,7 @@ int main(int argc, char ** argv) {
       MPI_Irecv(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm, &(request[i]));
       MPI_Send(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm);
     }
-    MPI_Waitall(num_local_nbrs, request, status);
+    MPI_Waitall(num_local_nbrs, request, MPI_STATUSES_IGNORE);
 #endif
  
   } /* end of iterations                                                   */
