@@ -220,9 +220,9 @@ int main(int argc, char ** argv)
   }
 
   /*  Broadcast input data to all ranks */
-  MPI_Bcast (&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
-  MPI_Bcast (&iterations, 1, MPI_INT,  root, MPI_COMM_WORLD);
-  MPI_Bcast (&Tile_order, 1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations, 1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&Tile_order, 1, MPI_INT,  root, MPI_COMM_WORLD);
 
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);

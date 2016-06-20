@@ -129,22 +129,21 @@ o The original and transposed matrices are called A and B
 
 int main(int argc, char ** argv)
 {
-  int Block_order;         /* number of columns owned by rank       */
-  int Block_size;          /* size of a single block                */
-  int Colblock_size;       /* size of column block                  */
+  long Block_order;        /* number of columns owned by rank       */
+  long Block_size;         /* size of a single block                */
+  long Colblock_size;      /* size of column block                  */
   int Tile_order=32;       /* default Tile order                    */
   int tiling;              /* boolean: true if tiling is used       */
   int Num_procs;           /* number of ranks                       */
-  int order;               /* order of overall matrix               */
+  long order;              /* order of overall matrix               */
   int send_to, recv_from;  /* ranks with which to communicate       */
-  MPI_Status status;       
 #if !SYNCHRONOUS
   MPI_Request send_req;
   MPI_Request recv_req;
 #endif
   long bytes;              /* combined size of matrices             */
   int my_ID;               /* rank                                  */
-  int root=0;              /* ID of root rank                       */
+  int root=0;              /* rank of root                          */
   int iterations;          /* number of times to do the transpose   */
   int i, j, it, jt, istart;/* dummies                               */
   int iter;                /* index of iteration                    */
@@ -154,10 +153,10 @@ int main(int argc, char ** argv)
       nthread; 
   int error;               /* error flag                            */
   int concurrency;         /* number of threads that can be active  */
-  double *A_p;             /* original matrix column block          */
-  double *B_p;             /* transposed matrix column block        */
-  double *Work_in_p;       /* workspace for the transpose function  */
-  double *Work_out_p;      /* workspace for the transpose function  */
+  double RESTRICT *A_p;    /* original matrix column block          */
+  double RESTRICT *B_p;    /* transposed matrix column block        */
+  double RESTRICT *Work_in_p;/* workspace for transpose function    */
+  double RESTRICT *Work_out_p;/* workspace for transpose function   */
   double abserr,           /* absolute error                        */
          abserr_tot;       /* aggregate absolute error              */
   double epsilon = 1.e-8;  /* error tolerance                       */
@@ -200,14 +199,14 @@ int main(int argc, char ** argv)
       error = 1; goto ENDOFTESTS;
     }
 
-    order = atoi(*++argv);
+    order = atol(*++argv);
     if (order < Num_procs) {
-      printf("ERROR: matrix order %d should at least # procs %d\n", 
+      printf("ERROR: matrix order %ld should at least # procs %d\n", 
              order, Num_procs);
       error = 1; goto ENDOFTESTS;
     }
     if (order%Num_procs) {
-      printf("ERROR: matrix order %d should be divisible by # procs %d\n",
+      printf("ERROR: matrix order %ld should be divisible by # procs %d\n",
              order, Num_procs);
       error = 1; goto ENDOFTESTS;
     }
@@ -218,9 +217,9 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
   /*  Broadcast input data to all ranks */
-  MPI_Bcast(&order,         1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&Tile_order,    1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations, 1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&Tile_order, 1, MPI_INT,  root, MPI_COMM_WORLD);
   MPI_Bcast(&nthread_input, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   omp_set_num_threads(nthread_input);
@@ -376,33 +375,32 @@ int main(int argc, char ** argv)
 #else
         #pragma omp parallel for private (j,it,jt)
 #endif
-        for (i=0; i<Block_order; i+=Tile_order) 
-          for (j=0; j<Block_order; j+=Tile_order) 
+        for (i=0; i<Block_order; i+=Tile_order)
+          for (j=0; j<Block_order; j+=Tile_order)
             for (it=i; it<MIN(Block_order,i+Tile_order); it++)
               for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-                Work_out(jt,it) = A(it,jt); 
+                Work_out(jt,it) = A(it,jt);
                 A(it,jt) += 1.0;
 	      }
       }
 
-#if !SYNCHRONOUS  
+#if !SYNCHRONOUS
       MPI_Isend(Work_out_p, Block_size, MPI_DOUBLE, send_to,
                 phase, MPI_COMM_WORLD, &send_req);
-      MPI_Wait(&recv_req, &status);
-      MPI_Wait(&send_req, &status);
+      MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+      MPI_Wait(&send_req, MPI_STATUS_IGNORE);
 #else
       MPI_Sendrecv(Work_out_p, Block_size, MPI_DOUBLE, send_to, phase,
-                   Work_in_p, Block_size, MPI_DOUBLE, 
-	           recv_from, phase, MPI_COMM_WORLD, &status);
+                   Work_in_p, Block_size, MPI_DOUBLE,
+	           recv_from, phase, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 #endif
 
-      istart = recv_from*Block_order; 
+      istart = recv_from*Block_order;
       /* scatter received block to transposed matrix; no need to tile */
       #pragma omp parallel for private (i)
       for (j=0; j<Block_order; j++)
-        for (i=0; i<Block_order; i++) {
+        for (i=0; i<Block_order; i++)
           B(i,j) += Work_in(i,j);
-        }
 
     }  /* end of phase loop  */
   } /* end of iterations */
