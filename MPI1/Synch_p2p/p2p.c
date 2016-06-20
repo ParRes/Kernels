@@ -228,7 +228,7 @@ int main(int argc, char ** argv)
          send data                                                                */
       if (my_ID > 0) {
         MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
-                                  MPI_COMM_WORLD, &MPI_STATUSES_IGNORE);
+                                  MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
       }
 
       for (i=start; i<= end; i++) {
@@ -246,7 +246,7 @@ int main(int argc, char ** argv)
       /* if I am not at the left boundary, I need to wait for my left neighbor to
          send data                                                                */
       if (my_ID > 0) {
-        MPI_Recv(inbuf, jjsize, MPI_DOUBLE, my_ID-1, j, MPI_COMM_WORLD, &MPI_STATUSES_IGNORE);
+        MPI_Recv(inbuf, jjsize, MPI_DOUBLE, my_ID-1, j, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
         for (jj=0; jj<jjsize; jj++) {
           ARRAY(start-1,jj+j) = inbuf[jj];
 	}
@@ -273,7 +273,7 @@ int main(int argc, char ** argv)
         MPI_Send(&corner_val,1,MPI_DOUBLE,root,888,MPI_COMM_WORLD);
       }
       if (my_ID==root) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,&MPI_STATUSES_IGNORE);
+        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,MPI_STATUSES_IGNORE);
       }
     }
     else ARRAY(0,0)= -ARRAY(end,n-1);
