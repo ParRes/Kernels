@@ -72,7 +72,7 @@ OBJS        = $(PROGRAM).o $(COMOBJS)
 
 include ../../common/make.common
 
-$(PROGRAM).o: loop_body_star.incl loop_body_compact.incl
+$(PROGRAM).o: loop_body_star.incl loop_body_compact.incl loop_body_star_amr.incl loop_body_compact_amr.incl
 
 loop_body_star.incl:
 	@echo "#########################################################################"
@@ -86,7 +86,19 @@ loop_body_compact.incl:
 	@echo "############################################################################"
 	../../common/Stencil/loop_gen $(RADIUS) 0
 
+loop_body_star_amr.incl:
+	@echo "#############################################################################"
+	@echo "##### No file loop_body_star_amr.incl -- invoking loop_gen to create it #####"
+	@echo "#############################################################################"
+	../../common/Stencil/loop_gen_amr $(RADIUS) 1
+
+loop_body_compact_amr.incl:
+	@echo "################################################################################"
+	@echo "##### No file loop_body_compact_amr.incl -- invoking loop_gen to create it #####"
+	@echo "################################################################################"
+	../../common/Stencil/loop_gen_amr $(RADIUS) 0
+
 veryclean:
-	@rm -f loop_body_star.incl loop_body_compact.incl
+	@rm -f loop_body_star.incl loop_body_compact.incl loop_body_star_amr.incl loop_body_compact_amr.incl
 	make clean
 

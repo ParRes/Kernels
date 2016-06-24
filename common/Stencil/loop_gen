@@ -2,16 +2,16 @@
 RADIUS=$1
 STAR=$2
 if [ $STAR -ne 0 ]; then 
-    echo "      OUT(i,j) = OUT(i,j) + WEIGHT(0,0)*IN(i,j)"                      > loop_body_star.incl
+    echo "      OUT(i,j) = OUT(i,j) + WEIGHT(0,0)*IN(i,j)"                   > loop_body_star.incl
     jj=1
     while [ $jj -le $RADIUS ]; do
       echo "        +WEIGHT(0,-$jj)*IN(i,j-$jj)+WEIGHT(0,$jj)*IN(i,j+$jj)"  >> loop_body_star.incl
       echo "        +WEIGHT(-$jj,0)*IN(i-$jj,j)+WEIGHT($jj,0)*IN(i+$jj,j)"  >> loop_body_star.incl
       jj=`expr $jj + 1`
     done
-    echo "        ;"                                                           >> loop_body_star.incl
+    echo "        ;"                                                        >> loop_body_star.incl
 else
-    echo "      OUT(i,j) = OUT(,j) +"                                           > loop_body_compact.incl
+    echo "      OUT(i,j) = OUT(,j) +"                                        > loop_body_compact.incl
     jj=`expr -1 \* $RADIUS`
     while [ $jj -le $RADIUS ]; do
       ii=`expr -1 \* $RADIUS`
@@ -26,10 +26,10 @@ else
         else
           if [ $jj -gt 0 ]; then sj=+$jj; fi
         fi
-        echo "        +WEIGHT($ii,$jj)*IN(i$si,j$sj)"                          >> loop_body_compact.incl
+        echo "        +WEIGHT($ii,$jj)*IN(i$si,j$sj)"                       >> loop_body_compact.incl
         ii=`expr $ii + 1`
       done
       jj=`expr $jj + 1`
     done
-    echo "        ;"                                                           >> loop_body_compact.incl
+    echo "        ;"                                                        >> loop_body_compact.incl
 fi
