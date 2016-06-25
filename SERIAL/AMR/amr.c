@@ -393,7 +393,6 @@ int main(int argc, char ** argv) {
             for (i=RADIUS; i<nr_true-RADIUS; i++) {
               #if STAR
                 #if LOOPGEN
-                  printf("inside loopgen\n");
                   #include "loop_body_star_amr.incl"
                 #else
                   for (jj=-RADIUS; jj<=RADIUS; jj++)  OUTR(g,i,j) += WEIGHTR(0,jj)*INR(g,i,j+jj);
@@ -403,7 +402,6 @@ int main(int argc, char ** argv) {
               #else 
                 #if LOOPGEN
                   #include "loop_body_compact_amr.incl"
-                  printf("inside loopgen\n");
                 #else
                   /* would like to be able to unroll this loop, but compiler will ignore  */
                   for (jj=-RADIUS; jj<=RADIUS; jj++) 
@@ -421,7 +419,6 @@ int main(int argc, char ** argv) {
                   #if STAR
                     #if LOOPGEN
                       #include "loop_body_star_amr.incl"
-                  printf("inside loopgen\n");
                     #else
                       for (jj=-RADIUS; jj<=RADIUS; jj++)  OUTR(g,i,j) += WEIGHTR(0,jj)*INR(g,i,j+jj);
                       for (ii=-RADIUS; ii<0; ii++)        OUTR(g,i,j) += WEIGHTR(ii,0)*INR(g,i+ii,j);
@@ -430,7 +427,6 @@ int main(int argc, char ** argv) {
                   #else 
                     #if LOOPGEN
                       #include "loop_body_compact_amr.incl"
-                  printf("inside loopgen\n");
                     #else
                       /* would like to be able to unroll this loop, but compiler will ignore  */
                       for (jj=-RADIUS; jj<=RADIUS; jj++) 

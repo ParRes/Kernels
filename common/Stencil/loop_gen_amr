@@ -11,7 +11,7 @@ if [ $STAR -ne 0 ]; then
     done
     echo "        ;"                                                                >> loop_body_star_amr.incl
 else
-    echo "      OUTR(g,i,j) = OUTR(g,,j) +"                                          > loop_body_compact_amr.incl
+    echo "      OUTR(g,i,j) = OUTR(g,i,j) +"                                          > loop_body_compact_amr.incl
     jj=`expr -1 \* $RADIUS`
     while [ $jj -le $RADIUS ]; do
       ii=`expr -1 \* $RADIUS`
