@@ -79,7 +79,7 @@ int main(int argc, char ** argv)
          avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;      /* verification value at top right corner of grid      */
-  int    i, j, jj, iter, ID;/* dummies                                           */
+  int    i, j, jj, iter;  /* dummies                                           */
   int    iterations;      /* number of times to run the pipeline algorithm       */
   long   start, end;      /* start and end of grid slice owned by calling rank   */
   long   segment_size;    /* size of x-dimension of grid owned by calling rank   */
@@ -291,7 +291,7 @@ int main(int argc, char ** argv)
   /* verify correctness, using top right value                                     */
   corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == final) {
-    if (abs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
+    if (fabs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
              ARRAY(end,n-1), corner_val);
       error = 1;
