@@ -176,8 +176,7 @@ int main(int argc, char **argv) {
   int               *senddispls; /* successive displacements in send buffer        */
   int               *recvdispls; /* successive dispalcemetns in receive buffer     */
   u64Int * RESTRICT Table;       /* (pseudo-)randomly accessed array               */
-  double            random_time, /* timing parameters                              */
-                    avgtime = 0.0;
+  double            random_time; /* timing parameters                              */
   int               Num_procs,   /* rank parameters                                */
                     my_ID,       /* rank of calling rank                           */
                     root=0;      /* ID of master rank                              */
