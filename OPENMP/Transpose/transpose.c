@@ -122,14 +122,14 @@ int main(int argc, char ** argv) {
   }
 
   order = atoi(*++argv); 
-  if (order < 0){
+  if (order <= 0){
     printf("ERROR: Matrix Order must be greater than 0 : %zu \n", order);
     exit(EXIT_FAILURE);
   }
 
   if (argc == 5) Tile_order = atoi(*++argv);
   /* a non-positive tile size means no tiling of the local transpose */
-  tiling = (Tile_order > 0) && (Tile_order < order);
+  tiling = (Tile_order > 0) && ((size_t)Tile_order < order);
   if (!tiling) Tile_order = order;
 
   /*********************************************************************
