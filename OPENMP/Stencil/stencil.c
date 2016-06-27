@@ -136,7 +136,7 @@ int main(int argc, char ** argv) {
   n  = atol(*++argv);
 
   if (n < 1){
-    printf("ERROR: grid dimension must be positive: %d\n", n);
+    printf("ERROR: grid dimension must be positive: %ld\n", n);
     exit(EXIT_FAILURE);
   }
 
@@ -146,7 +146,7 @@ int main(int argc, char ** argv) {
   }
 
   if (2*RADIUS +1 > n) {
-    printf("ERROR: Stencil radius %d exceeds grid size %d\n", RADIUS, n);
+    printf("ERROR: Stencil radius %d exceeds grid size %ld\n", RADIUS, n);
     exit(EXIT_FAILURE);
   }
 
@@ -202,7 +202,7 @@ int main(int argc, char ** argv) {
   } 
   else {
     printf("Number of threads    = %d\n",nthread_input);
-    printf("Grid size            = %d\n", n);
+    printf("Grid size            = %ld\n", n);
     printf("Radius of stencil    = %d\n", RADIUS);
     printf("Number of iterations = %d\n", iterations);
 #if STAR
