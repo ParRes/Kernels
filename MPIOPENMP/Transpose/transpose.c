@@ -247,7 +247,7 @@ int main(int argc, char ** argv)
   if (my_ID == root) {
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Number of threads    = %d\n", omp_get_max_threads());
-    printf("Matrix order         = %d\n", order);
+    printf("Matrix order         = %ld\n", order);
     printf("Number of iterations = %d\n", iterations);
     if (tiling) {
       printf("Tile size            = %d\n", Tile_order);

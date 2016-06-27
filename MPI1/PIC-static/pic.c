@@ -697,11 +697,14 @@ int main(int argc, char ** argv) {
 
     particle_mode  = UNDEFINED;
     k = atoi(*++argv);   args_used++; 
+#if 0
+    /* k is unsigned type, hence can never be negative */
     if (k<0) {
       printf("ERROR: Particle semi-charge must be non-negative: %llu\n", k);
       error = 1;
       goto ENDOFTESTS;  
     }
+#endif
     m = atoi(*++argv);   args_used++; 
     init_mode = *++argv; args_used++;  
 
@@ -806,7 +809,7 @@ int main(int argc, char ** argv) {
   my_IDy = my_ID/Num_procsx;
 
   if (my_ID == root) {
-    printf("Number of ranks                    = %llu\n", Num_procs);
+    printf("Number of ranks                    = %d\n", Num_procs);
     printf("Load balancing                     = None\n");
     printf("Grid size                          = %llu\n", L);
     printf("Tiles in x/y-direction             = %d/%d\n", Num_procsx, Num_procsy);

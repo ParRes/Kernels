@@ -148,8 +148,7 @@ int main(int argc, char **argv)
   double  local_nstream_time,/* timing parameters                       */
           nstream_time, 
           avgtime;
-  int     nthread_input,   /* thread parameters                         */
-          nthread; 
+  int     nthread_input; /* thread parameters                         */
   int     Num_procs,     /* number of ranks                             */
           my_ID,         /* rank of calling rank                        */
           root=0;        /* ID of master rank                           */

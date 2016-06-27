@@ -94,7 +94,7 @@ int main(int argc, char ** argv)
   int my_ID;           /* rank                                                   */
   int root=0;          /* root rank of a communicator                            */
   int iterations;      /* number of times to run the pipeline algorithm          */
-  int i, j, it, jt, ID;/* dummies                                                */
+  int i, j, it, jt;    /* dummies                                                */
   int iter;            /* index of iteration                                     */
   int phase;           /* phase in the staged communication                      */
   size_t colstart;     /* sequence number of first column owned by calling rank  */

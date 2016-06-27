@@ -260,7 +260,7 @@ int main(int argc, char ** argv)
 
   /* debug message size effects */
   if (my_ID == root) {
-    printf("Block_size           = %d\n", Block_size);
+    printf("Block_size           = %ld\n", Block_size);
   }
 
 /*********************************************************************
