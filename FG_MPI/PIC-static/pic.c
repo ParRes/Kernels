@@ -647,7 +647,6 @@ int main(int argc, char ** argv) {
   uint64_t        to_send[8], to_recv[8];// 
   int             procsize;          // number of ranks per OS process                      
    
-  MPI_Status  status[16];
   MPI_Request requests[16];
    
   /* Initialize the MPI environment */
@@ -1013,7 +1012,7 @@ int main(int argc, char ** argv) {
       MPI_Isend(&to_send[i], 1, MPI_UINT64_T, nbr[i], 0, MPI_COMM_WORLD, &requests[i]);
       MPI_Irecv(&to_recv[i], 1, MPI_UINT64_T, nbr[i], 0, MPI_COMM_WORLD, &requests[8+i]);
     }
-    MPI_Waitall(16, requests, status);
+    MPI_Waitall(16, requests, MPI_STATUSES_IGNORE);
       
     /* Resize receive buffers if need be */
     for (i=0; i<8; i++) {
@@ -1025,7 +1024,7 @@ int main(int argc, char ** argv) {
       MPI_Isend(sendbuf[i], to_send[i], PARTICLE, nbr[i], 0, MPI_COMM_WORLD, &requests[i]);
       MPI_Irecv(recvbuf[i], to_recv[i], PARTICLE, nbr[i], 0, MPI_COMM_WORLD, &requests[8+i]);
     }
-    MPI_Waitall(16, requests, status);
+    MPI_Waitall(16, requests, MPI_STATUSES_IGNORE);
      
     /* Attach received particles to particles buffer */
     for (i=0; i<4; i++) {

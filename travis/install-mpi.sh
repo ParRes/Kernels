@@ -9,6 +9,9 @@ os=`uname`
 TRAVIS_ROOT="$1"
 MPI_IMPL="$2"
 
+# 1=yes, else no
+MPI_FORTRAN="$3"
+
 case "$os" in
     Darwin)
         echo "Mac"
@@ -30,32 +33,15 @@ case "$os" in
         echo "Linux"
         case "$CC" in
             gcc)
-                # I am sure there is a decent way to condense this...
-                if [ -f "/usr/bin/gcc-5.3" ]; then
-                    export PRK_CC=gcc-5.3
-                    export PRK_CXX=g++-5.3
-                elif [ -f "/usr/bin/gcc-5.2" ]; then
-                    export PRK_CC=gcc-5.2
-                    export PRK_CXX=g++-5.2
-                elif [ -f "/usr/bin/gcc-5.1" ]; then
-                    export PRK_CC=gcc-5.1
-                    export PRK_CXX=g++-5.1
-                elif [ -f "/usr/bin/gcc-5" ]; then
-                    export PRK_CC=gcc-5
-                    export PRK_CXX=g++-5
-                elif [ -f "/usr/bin/gcc-4.9" ]; then
-                    export PRK_CC=gcc-4.9
-                    export PRK_CXX=g++-4.9
-                elif [ -f "/usr/bin/gcc-4.8" ]; then
-                    export PRK_CC=gcc-4.8
-                    export PRK_CXX=g++-4.8
-                elif [ -f "/usr/bin/gcc-4.7" ]; then
-                    export PRK_CC=gcc-4.7
-                    export PRK_CXX=g++-4.7
-                else
-                    export PRK_CC=gcc
-                    export PRK_CXX=g++
-                fi
+                for gccversion in "-6" "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
+                    if [ -f "`which gcc$gccversion`" ]; then
+                        export PRK_CC="gcc$gccversion"
+                        export PRK_CXX="g++$gccversion"
+                        export PRK_FC="gfortran$gccversion"
+                        echo "Found GCC: $PRK_CC"
+                        break
+                    fi
+                done
                 ;;
             clang)
                 export PRK_CC=clang
@@ -76,14 +62,18 @@ case "$os" in
                              -O mpich-3.2.tar.gz
                         tar -xzf mpich-3.2.tar.gz
                         cd mpich-3.2
-                        sh $TRAVIS_HOME/travis/install-autotools.sh $TRAVIS_ROOT
-                        ./autogen.sh
                     else
                         tar -xzf mpich-3.2.tar.gz
                         cd mpich-3.2
                     fi
-                    mkdir build && cd build
-                    ../configure CC=$PRK_CC CXX=$PRK_CXX --disable-fortran --prefix=$TRAVIS_ROOT
+                    sh $TRAVIS_HOME/travis/install-autotools.sh $TRAVIS_ROOT
+                    ./autogen.sh
+                    mkdir build ; cd build
+                    if [ "x$MPI_FORTRAN" != "x1" ] ; then
+                        ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX --disable-fortran
+                    else
+                        ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX FC=$PRK_FC
+                    fi
                     make -j4
                     make install
                 else
@@ -98,7 +88,11 @@ case "$os" in
                     tar -xjf http://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.1.tar.bz2
                     cd openmpi-1.10.1
                     mkdir build && cd build
-                    ../configure CC=$PRK_CC CXX=$PRK_CXX --enable-mpi-fortran=none --prefix=$TRAVIS_ROOT
+                    if [ "x$MPI_FORTRAN" != "x1" ] ; then
+                        ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX --enable-mpi-fortran=none
+                    else
+                        ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX FC=$PRK_FC
+                    fi
                     make -j4
                     make install
                 else

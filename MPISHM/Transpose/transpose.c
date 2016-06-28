@@ -108,7 +108,6 @@ int main(int argc, char ** argv)
   double local_trans_time, /* timing parameters                                  */
          trans_time,
          avgtime;
-  MPI_Status status;   /* completion status of message                           */
   MPI_Win shm_win_A;   /* Shared Memory window object                            */
   MPI_Win shm_win_B;   /* Shared Memory window object                            */
   MPI_Win shm_win_Work_in; /* Shared Memory window object                        */
@@ -394,12 +393,12 @@ int main(int argc, char ** argv)
                   recv_from*group_size, phase, MPI_COMM_WORLD, &recv_req);  
         MPI_Isend(Work_out_p, Block_size, MPI_DOUBLE, send_to*group_size,
                   phase, MPI_COMM_WORLD, &send_req);
-        MPI_Wait(&recv_req, &status);
-        MPI_Wait(&send_req, &status);
+        MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+        MPI_Wait(&send_req, MPI_STATUS_IGNORE);
 #else
         MPI_Sendrecv(Work_out_p, Block_size, MPI_DOUBLE, send_to*group_size, 
                      phase, Work_in_p, Block_size, MPI_DOUBLE, 
-  	             recv_from*group_size, phase, MPI_COMM_WORLD, &status);
+  	             recv_from*group_size, phase, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 #endif
       }
       /* NEED A LOAD FENCE HERE                                                  */ 

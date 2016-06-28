@@ -46,22 +46,16 @@
 #          The output consists of diagnostics to make sure the
 #          algorithm worked, and of timing statistics.
 #
-# FUNCTIONS CALLED:
-#
-#          Other than standard C functions, the following functions are used in
-#          this program:
-#          wtime()
-#
 # HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 #          - RvdW: Removed unrolling pragmas for clarity;
 #            added constant to array "in" at end of each iteration to force
 #            refreshing of neighbor data in parallel versions; August 2013
-#          - Converted to Python by Jeff Hammond, Fortran 2016.
+#          - Converted to Python by Jeff Hammond, February 2016.
 #
 # *******************************************************************
 
 import sys
-import time
+from timeit import default_timer as timer
 import numpy
 
 def main():
@@ -138,7 +132,7 @@ def main():
 
     for k in range(iterations+1):
         # start timer after a warmup iteration
-        if k<1: t0 = time.clock()
+        if k<1: t0 = timer()
 
         if pattern == 'star':
             if r==2:
@@ -168,7 +162,7 @@ def main():
 
         A += 1.0
 
-    t1 = time.clock()
+    t1 = timer()
     stencil_time = t1 - t0
 
     #******************************************************************************
