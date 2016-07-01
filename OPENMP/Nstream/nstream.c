@@ -247,7 +247,7 @@ int main(int argc, char **argv)
       }
     }
  
-    #pragma omp for simd
+    #pragma omp for /* simd */
     for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
  
   } /* end of iterations                                              */
