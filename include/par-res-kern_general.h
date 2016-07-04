@@ -49,8 +49,12 @@ POSSIBILITY OF SUCH DAMAGE.
 #define ABS(a) ((a) >= 0 ? (a) : -(a))
 #endif
 
-#ifdef RESTRICT_KEYWORD
-  #define RESTRICT restrict
+#if RESTRICT_KEYWORD
+  #ifdef __GNUC__
+    #define RESTRICT __restrict__
+  #else
+    #define RESTRICT restrict
+  #endif
 #else
   #define RESTRICT
 #endif

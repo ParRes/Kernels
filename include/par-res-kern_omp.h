@@ -73,6 +73,17 @@ int omp_test_lock(omp_lock_t * l)
 }
 #endif
 
+#if defined(_OPENMP) && (( __STDC_VERSION__ >= 199901L ) || (__cplusplus >= 201103L ))
+#  define PRAGMA(x) _Pragma(#x)
+#  if _OPENMP >= 201307
+#    define PRAGMA_OMP_FOR_SIMD PRAGMA(omp for simd)
+#  else
+#    define PRAGMA_OMP_FOR_SIMD PRAGMA(omp for)
+#  endif
+#else
+#  define PRAGMA_OMP_FOR_SIMD
+#endif
+
 #ifndef MAXTHREADS
   #define MAX_THREADS 512
 #else

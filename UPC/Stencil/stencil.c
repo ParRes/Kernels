@@ -56,7 +56,7 @@ HISTORY: Written by Abdullah Kayi, June 2015
 #include <par-res-kern_general.h>
 #include <par-res-kern_upc.h>
 
-#ifdef DOUBLE
+#if DOUBLE
   #define DTYPE   double
   #define EPSILON 1.e-8
   #define COEFX   1.0
@@ -90,7 +90,7 @@ void bail_out(char *fmt, ...){
   upc_global_exit(EXIT_FAILURE);
 }
 
-typedef shared [] DTYPE *local_shared_block;
+typedef shared [] DTYPE * RESTRICT local_shared_block;
 typedef shared [] local_shared_block *local_shared_block_ptrs;
 typedef local_shared_block *private_shared_block_ptrs;
 
@@ -340,7 +340,7 @@ int main(int argc, char ** argv) {
     printf("Grid size              = %d\n", n);
     printf("Radius of stencil      = %d\n", RADIUS);
     printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
@@ -485,7 +485,7 @@ int main(int argc, char ** argv) {
       bail_out("L1 norm = "FSTR", Reference L1 norm = "FSTR"\n", norm, reference_norm);
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n",
              reference_norm, norm);
 #endif

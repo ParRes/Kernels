@@ -14,16 +14,6 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 
 #uncomment any of the following flags (and change values) to change defaults
 
-#RESTRICTFLAG = -DRESTRICT_KEYWORD
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers (requires -restrict compiler flag)
-
-#DEBUGFLAG    = -DVERBOSE
-#description: default diagnostic style is silent
-
-#NTHREADFLAG  = -DMAXTHREADS=n
-#description: default thread limit is 256
-
 USERFLAGS     = 
 #description: parameter to specify optional flags
 
@@ -34,7 +24,33 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS   = $(RESTRICTFLAG) $(DEBUGFLAG) $(NTHREADFLAG) $(USERFLAGS)
+ifndef RESTRICT_KEYWORD
+  RESTRICT_KEYWORD=0
+endif
+#description: the "restrict" keyword can be used on IA platforms to disambiguate  
+#             data accessed through pointers (requires -restrict compiler flag)
+
+ifndef MAXTHREADS
+  MAXTHREADS=256
+endif
+#description: default thread limit is 256
+
+ifndef VERBOSE
+  VERBOSE=0
+endif
+#description: default diagnostic style is silent
+
+VERBOSEFLAG = -DVERBOSE=$(VERBOSE)
+RESTRICTFLAG= -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
+NTHREADFLAG = -DMAXTHREADS=$(MAXTHREADS)
+
+OPTIONSSTRING="Make options:\n\
+OPTION                 MEANING                                  DEFAULT\n\
+RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
+MAXTHREADS=?           set maximum number of OpenMP threads       [256]\n\
+VERBOSE=0/1            omit/include verbose run information       [0]"
+
+TUNEFLAGS   = $(RESTRICTFLAG) $(VERBOSEFLAG) $(NTHREADFLAG) $(USERFLAGS)
 PROGRAM     = branch
 OBJS        = $(PROGRAM).o $(COMOBJS) func.o
 

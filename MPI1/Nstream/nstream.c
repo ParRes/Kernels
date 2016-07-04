@@ -213,7 +213,6 @@ int main(int argc, char **argv)
     printf("Number of iterations = %d\n", iterations);
   }
 
-  #pragma vector always
   for (j=0; j<length; j++) {
     a[j] = 0.0;
     b[j] = 2.0;
@@ -232,7 +231,6 @@ int main(int argc, char **argv)
       local_nstream_time = wtime();
     }
 
-    #pragma vector always
     for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
 
   } /* end iterations */
@@ -278,7 +276,7 @@ int checkTRIADresults (int iterations, long int length, double *a) {
   asum = 0.0;
   for (j=0; j<length; j++) asum += a[j];
  
-#ifdef VERBOSE
+#if VERBOSE
   printf ("Results Comparison: \n");
   printf ("        Expected checksum: %f\n",aj);
   printf ("        Observed checksum: %f\n",asum);
@@ -286,7 +284,7 @@ int checkTRIADresults (int iterations, long int length, double *a) {
  
   if (ABS(aj-asum)/asum > epsilon) {
     printf ("Failed Validation on output array\n");
-#ifndef VERBOSE
+#if !VERBOSE
     printf ("        Expected checksum: %f \n",aj);
     printf ("        Observed checksum: %f \n",asum);
 #endif

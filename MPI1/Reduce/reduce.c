@@ -67,7 +67,6 @@ HISTORY: Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
 
-
 int main(int argc, char ** argv)
 {
   int Num_procs;        /* Number of ranks                                   */
@@ -184,7 +183,7 @@ int main(int argc, char ** argv)
     for (i=0; i<vector_length; i++) {
       if (ABS(vector[i] - element_value) >= epsilon) {
         error = 1;
-#ifdef VERBOSE
+#if VERBOSE
         printf("ERROR at i=%d; value: %lf; reference value: %lf\n",
                i, vector[i], element_value);
 #else
@@ -199,7 +198,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
     printf("Element verification value: %lf\n", element_value);
 #endif
     avgtime = reduce_time/(double)iterations;

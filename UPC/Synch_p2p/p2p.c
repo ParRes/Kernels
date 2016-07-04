@@ -96,7 +96,7 @@ void die(char *fmt, ...){
   upc_global_exit(EXIT_FAILURE);
 }
 
-typedef shared [] double *local_shared_block;
+typedef shared [] double * RESTRICT local_shared_block;
 typedef shared [] local_shared_block *local_shared_block_ptrs;
 
 shared [1] local_shared_block_ptrs in_arrays[THREADS];
@@ -143,7 +143,7 @@ double **shared_2d_array_to_private(local_shared_block_ptrs array, int sizex, in
 #define ARRAY(i,j) in_array_private[j][i]
 
 strict shared int current_max_line[THREADS];
-#ifdef USE_BUPC_EXT
+#if USE_BUPC_EXT
 bupc_sem_t * shared allflags[THREADS];
 #endif
 
@@ -196,7 +196,7 @@ int main(int argc, char ** argv) {
     printf("Number of threads         = %d\n", THREADS);
     printf("Grid sizes                = %ld, %ld\n", m, n);
     printf("Number of iterations      = %d\n", iterations);
-#ifdef USE_BUPC_EXT
+#if USE_BUPC_EXT
     printf("Using Berkeley UPC extensions\n");
 #endif
   }
@@ -204,7 +204,7 @@ int main(int argc, char ** argv) {
   /*********************************************************************
   ** Allocate memory for input and output matrices
   *********************************************************************/
-#ifdef USE_BUPC_EXT
+#if USE_BUPC_EXT
   bupc_sem_t *myflag = bupc_sem_alloc(BUPC_SEM_INTEGER | BUPC_SEM_MPRODUCER);
   upc_barrier;
   allflags[MYTHREAD] = myflag;
@@ -224,7 +224,7 @@ int main(int argc, char ** argv) {
     sizex = segment_size;
   }
 
-#ifdef USE_BUPC_EXT
+#if USE_BUPC_EXT
   if(MYTHREAD != 0){
     myoffsetx -= 1;
     sizex += 1;
@@ -280,7 +280,7 @@ int main(int argc, char ** argv) {
       in_arrays[MYTHREAD + 1][0][myoffsetx + sizex -1] = ARRAY(myoffsetx + sizex - 1, 0);
 
     for (j=1; j<n; j++) {
-#ifdef USE_BUPC_EXT
+#if USE_BUPC_EXT
       if(MYTHREAD > 0){
         bupc_sem_wait(myflag);
       }
@@ -344,12 +344,12 @@ int main(int argc, char ** argv) {
   /* verify correctness, using top right value;                                  */
   if( MYTHREAD == THREADS - 1){
     corner_val = (double)((iterations+1)*(n+m-2));
-    if (abs(ARRAY(m-1,n-1)-corner_val)/corner_val > epsilon) {
+    if (fabs(ARRAY(m-1,n-1)-corner_val)/corner_val > epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
           ARRAY(m-1, n-1), corner_val);
       exit(EXIT_FAILURE);
     }
-#ifdef VERBOSE
+#if VERBOSE
     printf("checksum %lf verification value %lf\n",
         ARRAY(m-1, n-1), corner_val);
     printf("Solution validates; verification value = %lf\n", corner_val);

@@ -373,7 +373,7 @@ int main(int argc, char ** argv)
   }
 
   printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
   printf("Element verification value: %lf\n", element_value);
 #endif
   avgtime = reduce_time/iterations;

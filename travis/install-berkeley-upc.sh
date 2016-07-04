@@ -3,8 +3,6 @@ set -x
 
 TRAVIS_ROOT="$1"
 
-MPI_IMPL=mpich
-
 # we can't handle this yet in build-run-prk.sh
 #if [ "x$GASNET_CONDUIT" -eq "x" ] ; then
 #    BUPC_PREFIX=bupc-$CC
@@ -25,7 +23,7 @@ case $os in
         ;;
     Linux)
         BUPC_NO_PTHREADS=""
-        MPI_ROOT=$TRAVIS_ROOT/$MPI_IMPL
+        MPI_ROOT=$TRAVIS_ROOT
         ;;
 esac
 

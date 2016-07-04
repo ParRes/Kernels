@@ -71,7 +71,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpiomp.h>
  
-#ifdef DOUBLE
+#if DOUBLE
   #define DTYPE     double
   #define MPI_DTYPE MPI_DOUBLE
   #define EPSILON   1.e-8
@@ -138,7 +138,6 @@ int main(int argc, char ** argv) {
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8];
-  MPI_Status  status[8];
  
   /*******************************************************************************
   ** Initialize the MPI environment
@@ -186,7 +185,7 @@ int main(int argc, char ** argv) {
     n       = atoi(*++argv); 
     nsquare = n * n;
     if (nsquare < Num_procs){ 
-      printf("ERROR: grid size %d must be at least # ranks: %ld\n", 
+      printf("ERROR: grid size %ld must be at least # ranks: %d\n", 
 	     nsquare, Num_procs); 
       error = 1; 
       goto ENDOFTESTS; 
@@ -239,7 +238,7 @@ int main(int argc, char ** argv) {
     printf("Radius of stencil      = %d\n", RADIUS);
     printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
     printf("Type of stencil        = star\n");
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
@@ -383,15 +382,15 @@ int main(int argc, char ** argv) {
                 MPI_COMM_WORLD, &(request[2]));
     }
     if (my_IDy < Num_procsy-1) {
-      MPI_Wait(&(request[0]), &(status[0]));
-      MPI_Wait(&(request[1]), &(status[1]));
+      MPI_Wait(&(request[0]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[1]), MPI_STATUS_IGNORE);
       for (kk=0,j=jend+1; j<=jend+RADIUS; j++) for (i=istart; i<=iend; i++) {
           IN(i,j) = top_buf_in[kk++];
       }      
     }
     if (my_IDy > 0) {
-      MPI_Wait(&(request[2]), &(status[2]));
-      MPI_Wait(&(request[3]), &(status[3]));
+      MPI_Wait(&(request[2]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[3]), MPI_STATUS_IGNORE);
       for (kk=0,j=jstart-RADIUS; j<=jstart-1; j++) for (i=istart; i<=iend; i++) {
           IN(i,j) = bottom_buf_in[kk++];
       }      
@@ -417,15 +416,15 @@ int main(int argc, char ** argv) {
                 MPI_COMM_WORLD, &(request[2+4]));
     }
     if (my_IDx < Num_procsx-1) {
-      MPI_Wait(&(request[0+4]), &(status[0+4]));
-      MPI_Wait(&(request[1+4]), &(status[1+4]));
+      MPI_Wait(&(request[0+4]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[1+4]), MPI_STATUS_IGNORE);
       for (kk=0,j=jstart; j<=jend; j++) for (i=iend+1; i<=iend+RADIUS; i++) {
           IN(i,j) = right_buf_in[kk++];
       }      
     }
     if (my_IDx > 0) {
-      MPI_Wait(&(request[2+4]), &(status[2+4]));
-      MPI_Wait(&(request[3+4]), &(status[3+4]));
+      MPI_Wait(&(request[2+4]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[3+4]), MPI_STATUS_IGNORE);
       for (kk=0,j=jstart; j<=jend; j++) for (i=istart-RADIUS; i<=istart-1; i++) {
           IN(i,j) = left_buf_in[kk++];
       }      
@@ -486,7 +485,7 @@ int main(int argc, char ** argv) {
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
              reference_norm, norm);
 #endif

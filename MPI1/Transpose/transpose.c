@@ -137,7 +137,7 @@ int main(int argc, char ** argv)
   int Num_procs;           /* number of ranks                       */
   long order;              /* order of overall matrix               */
   int send_to, recv_from;  /* ranks with which to communicate       */
-#ifndef SYNCHRONOUS
+#if !SYNCHRONOUS
   MPI_Request send_req;
   MPI_Request recv_req;
 #endif
@@ -150,10 +150,10 @@ int main(int argc, char ** argv)
   int phase;               /* phase inside staged communication     */
   int colstart;            /* starting column for owning rank       */
   int error;               /* error flag                            */
-  double *A_p;             /* original matrix column block          */
-  double *B_p;             /* transposed matrix column block        */
-  double *Work_in_p;       /* workspace for the transpose function  */
-  double *Work_out_p;      /* workspace for the transpose function  */
+  double RESTRICT *A_p;    /* original matrix column block          */
+  double RESTRICT *B_p;    /* transposed matrix column block        */
+  double RESTRICT *Work_in_p;/* workspace for transpose function    */
+  double RESTRICT *Work_out_p;/* workspace for transpose function   */
   double abserr,           /* absolute error                        */
          abserr_tot;       /* aggregate absolute error              */
   double epsilon = 1.e-8;  /* error tolerance                       */
@@ -213,16 +213,16 @@ int main(int argc, char ** argv)
     if ((Tile_order > 0) && (Tile_order < order))
           printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
-#ifndef SYNCHRONOUS
+#if !SYNCHRONOUS
     printf("Non-");
 #endif
     printf("Blocking messages\n");
   }
 
   /*  Broadcast input data to all ranks */
-  MPI_Bcast (&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
-  MPI_Bcast (&iterations, 1, MPI_INT,  root, MPI_COMM_WORLD);
-  MPI_Bcast (&Tile_order, 1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations, 1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&Tile_order, 1, MPI_INT,  root, MPI_COMM_WORLD);
 
   /* a non-positive tile size means no tiling of the local transpose */
   tiling = (Tile_order > 0) && (Tile_order < order);
@@ -306,7 +306,7 @@ int main(int argc, char ** argv)
       recv_from = (my_ID + phase            )%Num_procs;
       send_to   = (my_ID - phase + Num_procs)%Num_procs;
 
-#ifndef SYNCHRONOUS
+#if !SYNCHRONOUS
       MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE,
                 recv_from, phase, MPI_COMM_WORLD, &recv_req);
 #endif
@@ -329,7 +329,7 @@ int main(int argc, char ** argv)
 	      }
       }
 
-#ifndef SYNCHRONOUS
+#if !SYNCHRONOUS
       MPI_Isend(Work_out_p, Block_size, MPI_DOUBLE, send_to,
                 phase, MPI_COMM_WORLD, &send_req);
       MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
@@ -367,7 +367,7 @@ int main(int argc, char ** argv)
       printf("Solution validates\n");
       avgtime = trans_time/(double)iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
-#ifdef VERBOSE
+#if VERBOSE
       printf("Summed errors: %f \n", abserr);
 #endif
     }

@@ -4,7 +4,7 @@ set -x
 TRAVIS_ROOT="$1"
 CLANG_VERSION="$2"
 
-if [ "${CC}" == "clang" ] || [ "${CXX}" == "clang++" ] ; then
+if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
     os=`uname`
     case "$os" in
         Darwin)

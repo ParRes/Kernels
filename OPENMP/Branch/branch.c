@@ -199,7 +199,6 @@ int main(int argc, char ** argv)
   #pragma omp parallel private(i, my_ID, iter, aux, nfunc, rank) reduction(+:total)
   {
   int * RESTRICT vector; int * RESTRICT index;
-  int factor = -1;
 
   #pragma omp master
   {
@@ -215,6 +214,11 @@ int main(int argc, char ** argv)
     printf("Vector length              = %d\n", vector_length);
     printf("Number of iterations       = %d\n", iterations);
     printf("Branching type             = %s\n", branch_type);
+#if RESTRICT_KEYWORD
+    printf("No aliasing                = on\n");
+#else
+    printf("No aliasing                = off\n");
+#endif
   }
   }
   bail_out(num_error);
@@ -253,13 +257,13 @@ int main(int argc, char ** argv)
     case VECTOR_STOP:
       /* condition vector[index[i]]>0 inhibits vectorization                     */
       for (iter=0; iter<iterations; iter+=2) {
-        #pragma vector always
+        PRAGMA_OMP_FOR_SIMD
         for (i=0; i<vector_length; i++) { 
           aux = -(3 - (i&7));
           if (vector[index[i]]>0) vector[i] -= 2*vector[i];
           else                    vector[i] -= 2*aux;
         }
-        #pragma vector always
+        PRAGMA_OMP_FOR_SIMD
         for (i=0; i<vector_length; i++) { 
           aux = (3 - (i&7));
           if (vector[index[i]]>0) vector[i] -= 2*vector[i];
@@ -271,13 +275,13 @@ int main(int argc, char ** argv)
     case VECTOR_GO:
       /* condition aux>0 allows vectorization                                    */
       for (iter=0; iter<iterations; iter+=2) {
-        #pragma vector always
+        PRAGMA_OMP_FOR_SIMD
         for (i=0; i<vector_length; i++) {
           aux = -(3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[i];
           else       vector[i] -= 2*aux;
         }
-        #pragma vector always
+        PRAGMA_OMP_FOR_SIMD
         for (i=0; i<vector_length; i++) {
           aux = (3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[i];
@@ -289,13 +293,13 @@ int main(int argc, char ** argv)
     case NO_VECTOR:
       /* condition aux>0 allows vectorization, but indirect indexing inbibits it */
       for (iter=0; iter<iterations; iter+=2) {
-        #pragma vector always
+        PRAGMA_OMP_FOR_SIMD
         for (i=0; i<vector_length; i++) {
           aux = -(3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[index[i]];
           else       vector[i] -= 2*aux;
         }
-        #pragma vector always
+        PRAGMA_OMP_FOR_SIMD
         for (i=0; i<vector_length; i++) {
           aux = (3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[index[i]];
@@ -331,7 +335,7 @@ int main(int argc, char ** argv)
     case VECTOR_STOP:
     case VECTOR_GO:
       for (iter=0; iter<iterations; iter+=2) {
-        #pragma vector always
+        PRAGMA_OMP_FOR_SIMD
         for (i=0; i<vector_length; i++) { 
           aux = -(3-(i&7)); 
           vector[i] -= (vector[i] + aux);
@@ -345,12 +349,12 @@ int main(int argc, char ** argv)
 
     case NO_VECTOR:
       for (iter=0; iter<iterations; iter+=2) {
-        #pragma vector always
+        PRAGMA_OMP_FOR_SIMD
         for (i=0; i<vector_length; i++) {
           aux = -(3-(i&7));
           vector[i] -= (vector[index[i]]+aux); 
         }
-        #pragma vector always
+        PRAGMA_OMP_FOR_SIMD
         for (i=0; i<vector_length; i++) {
           aux = (3-(i&7));
           vector[i] -= (vector[index[i]]+aux); 
@@ -382,7 +386,7 @@ int main(int argc, char ** argv)
            ops/(branch_time*1.e6), branch_time);
     printf("Rate (Mops/s) without branches: %lf time (s): %lf\n", 
            ops/(no_branch_time*1.e6), no_branch_time);
-#ifdef VERBOSE
+#if VERBOSE
     printf("Array sum = %d, reference value = %d\n", total, total_ref);
 #endif     
   }

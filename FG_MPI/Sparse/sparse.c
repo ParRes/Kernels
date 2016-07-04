@@ -73,13 +73,13 @@ HISTORY: Written by Rob Van der Wijngaart, October 2006.
 /* linearize the grid index                                                       */
 #define LIN(i,j) (i+((j)<<lsize))
 
-#ifdef TESTDENSE
-#define DENSE(i,j) dense[LIN(i,j)]
+#if TESTDENSE
+  #define DENSE(i,j) dense[LIN(i,j)]
 #endif
 
 /* if the scramble flag is set, convert all (linearized) grid indices by 
    reversing their bits; if not, leave the grid indices alone                     */
-#ifdef SCRAMBLE
+#if SCRAMBLE
   #define REVERSE(a,b)  reverse((a),(b))
 #else
   #define REVERSE(a,b) (a)
@@ -93,7 +93,7 @@ static int compare(const void *el1, const void *el2);
 int main(int argc, char **argv){
 
   int               Num_procs;  /* Number of ranks                                */
-  int               my_ID;      /* rank                                           */
+  int               my_ID;      /* MPI rank                                       */
   int               root=0;
   int               iter, r;    /* dummies                                        */
   int               lsize;      /* logarithmic linear size of grid                */
@@ -121,7 +121,7 @@ int main(int argc, char **argv){
   double * RESTRICT vector;     /* vector multiplying the sparse matrix           */
   double * RESTRICT result;     /* computed matrix-vector product                 */
   double            temp;       /* temporary scalar storing reduction data        */
-#ifdef TESTDENSE
+#if TESTDENSE
   double * RESTRICT rhs;        /* known matrix-vector product                    */
   double * RESTRICT dense;      /* dense matrix equivalent of "matrix"            */
 #endif
@@ -131,7 +131,7 @@ int main(int argc, char **argv){
   double            epsilon = 1.e-8; /* error tolerance                           */
   s64Int * RESTRICT colIndex;   /* column indices of sparse matrix entries        */
   int               error=0;    /* error flag                                     */
-  size_t            vector_space, /* variables used to hold prk_malloc sizes          */
+  size_t            vector_space, /* variables used to hold prk_malloc sizes      */
                     matrix_space,
                     index_space;
   int               procsize;   /* number of ranks per OS process                 */
@@ -149,7 +149,7 @@ int main(int argc, char **argv){
 
   if (my_ID == root){
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("FG_MPI Sparse matrix-vector multiplication\n");
+    printf("FG_MPI sparse matrix-vector multiplication\n");
 
     if (argc != 4){
       printf("Usage: %s <# iterations> <2log grid size> <stencil radius>\n",*argv);
@@ -209,16 +209,21 @@ int main(int argc, char **argv){
     sparsity = (double)(4*radius+1)/(double)size2;
 
     MPIX_Get_collocated_size(&procsize);
-    printf("Number of ranks          = "FSTR64U"\n", Num_procs);
-    printf("Number of ranks/process  = "FSTR64U"\n", procsize);
-    printf("Matrix order             = "FSTR64U"\n", size2);
-    printf("Stencil diameter         = %16d\n", 2*radius+1);
-    printf("Sparsity                 = %16.10lf\n", sparsity);
-    printf("Number of iterations     = %16d\n", iterations);
-#ifdef SCRAMBLE
-    printf("Using scrambled indexing\n");
+    printf("Number of ranks         = %16d\n",Num_procs);
+    printf("Number of ranks/process = %d\n", procsize);
+    printf("Matrix order            = "FSTR64U"\n", size2);
+    printf("Stencil diameter        = %16d\n", 2*radius+1);
+    printf("Sparsity                = %16.10lf\n", sparsity);
+    printf("Number of iterations    = %16d\n", iterations);
+#if SCRAMBLE
+    printf("Indexing                = scrambled\n");
 #else
-    printf("Using canonical indexing\n");
+    printf("Indexing                = canonical\n");
+#endif
+#if TESTDENSE
+    printf("Matrix storage format   = dense\n");
+#else
+    printf("Matrix storage format   = Compressed Sparse Row\n");
 #endif
 
     ENDOFTESTS:;
@@ -242,13 +247,6 @@ int main(int argc, char **argv){
   nent = nrows*stencil_size;
 
   matrix_space = nent*sizeof(double);
-  if (matrix_space/sizeof(double) != nent) {
-    printf("ERROR: rank %d cannot represent space for matrix: %ul\n", 
-           my_ID, matrix_space);
-    error = 1;
-  } 
-  bail_out(error);
-
   matrix = (double *) prk_malloc(matrix_space);
   if (!matrix) {
     printf("ERROR: rank %d could not allocate space for sparse matrix: "FSTR64U"\n", 
@@ -258,13 +256,6 @@ int main(int argc, char **argv){
   bail_out(error);
 
   vector_space = (size2 + nrows)*sizeof(double);
-  if (vector_space/sizeof(double) != (size2+nrows)) {
-    printf("ERROR: rank %d Cannot represent space for vectors: %ul\n", 
-           my_ID, vector_space);
-    error = 1; 
-  } 
-  bail_out(error);
-
   vector = (double *) prk_malloc(vector_space);
   if (!vector) {
     printf("ERROR: rank %d could not allocate space for vectors: %d\n", 
@@ -275,13 +266,6 @@ int main(int argc, char **argv){
   result = vector + size2;
 
   index_space = nent*sizeof(s64Int);
-  if (index_space/sizeof(s64Int) != nent) {
-    printf("ERROR: rank %d cannot represent space for column indices: %ul\n", 
-           my_ID, index_space);
-    error = 1;
-  } 
-  bail_out(error);
-
   colIndex = (s64Int *) prk_malloc(index_space);
   if (!colIndex) {
     printf("ERROR: rank %d Could not allocate space for column indices: "FSTR64U"\n",
@@ -313,13 +297,9 @@ int main(int argc, char **argv){
       matrix[elm] = 1.0/(double)(colIndex[elm]+1);   
   }
 
-#if defined(TESTDENSE) && defined(VERBOSE)
+#if TESTDENSE 
   /* fill dense matrix to test                                                    */
   matrix_space = size2*size2/Num_procs*sizeof(double);
-  if (matrix_space/sizeof(double) != size2*size2/Num_procs) {
-    printf("ERROR: Cannot represent space for matrix: %ul\n", matrix_space);
-    exit(EXIT_FAILURE);
-  } 
   dense = (double *) prk_malloc(matrix_space);
   if (!dense) {
     printf("ERROR: Could not allocate space for dense matrix of order: %d\n",
@@ -354,7 +334,7 @@ int main(int argc, char **argv){
     row_offset = nrows*my_ID;
     for (row=row_offset; row<nrows+row_offset; row++) vector[row] += (double) (row+1);
 
-    /* replicate vector on all rankors                                         */
+    /* replicate vector on all ranks                                              */
     MPI_Allgather(MPI_IN_PLACE, nrows, MPI_DOUBLE, vector, nrows, MPI_DOUBLE,
                   MPI_COMM_WORLD);
 
@@ -374,7 +354,7 @@ int main(int argc, char **argv){
              MPI_COMM_WORLD);
 
 
-#if defined(TESTDENSE) && defined(VERBOSE)
+#if TESTDENSE && VERBOSE
   /* print matrix, vector, rhs, plus computed solution                            */
   for (row=0; row<nrows; row++) {
     printf("( ");
@@ -401,7 +381,7 @@ int main(int argc, char **argv){
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference sum = %lf, check sum = %lf\n", 
              reference_sum, check_sum);
 #endif
@@ -419,7 +399,7 @@ int main(int argc, char **argv){
 
 /* Code below reverses bits in unsigned integer stored in a 64-bit word.
    Bit reversal is with respect to the largest integer that is going to be
-   processed for the particular run of the code, to make sure the reversal
+   ranked for the particular run of the code, to make sure the reversal
    constitutes a true permutation. Hence, the final result needs to be shifted 
    to the right.
    Example: if largest integer being processed is 0x000000ff = 255 = 

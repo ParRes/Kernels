@@ -150,7 +150,6 @@ int main(int argc, char ** argv)
              total_ref;       /* computed and stored verification values         */
   int        btype;
   int        * RESTRICT vector, * RESTRICT index;
-  int        factor = -1;
 
 /*********************************************************************
 ** Initialize the MPI environment
@@ -239,13 +238,11 @@ int main(int argc, char ** argv)
 
     case VECTOR_STOP:
       for (iter=0; iter<iterations; iter+=2) {
-        #pragma vector always
         for (i=0; i<vector_length; i++) { 
           aux = -(3 - (i&7));
           if (vector[index[i]]>0) vector[i] -= 2*vector[i];
           else                    vector[i] -= 2*aux;
         }
-        #pragma vector always
         for (i=0; i<vector_length; i++) { 
           aux = (3 - (i&7));
           if (vector[index[i]]>0) vector[i] -= 2*vector[i];
@@ -256,13 +253,11 @@ int main(int argc, char ** argv)
 
     case VECTOR_GO:
       for (iter=0; iter<iterations; iter+=2) {
-        #pragma vector always
         for (i=0; i<vector_length; i++) {
           aux = -(3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[i];
           else       vector[i] -= 2*aux;
         }
-        #pragma vector always
         for (i=0; i<vector_length; i++) {
           aux = (3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[i];
@@ -273,13 +268,11 @@ int main(int argc, char ** argv)
 
     case NO_VECTOR:
       for (iter=0; iter<iterations; iter+=2) {
-        #pragma vector always
         for (i=0; i<vector_length; i++) {
           aux = -(3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[index[i]];
           else       vector[i] -= 2*aux;
         }
-        #pragma vector always
         for (i=0; i<vector_length; i++) {
           aux = (3 - (i&7));
           if (aux>0) vector[i] -= 2*vector[index[i]];
@@ -311,7 +304,6 @@ int main(int argc, char ** argv)
   case VECTOR_STOP:
   case VECTOR_GO:
     for (iter=0; iter<iterations; iter+=2) {
-      #pragma vector always
       for (i=0; i<vector_length; i++) { 
         aux = -(3-(i&7)); 
         vector[i] -= (vector[i] + aux);
@@ -325,12 +317,10 @@ int main(int argc, char ** argv)
 
   case NO_VECTOR:
     for (iter=0; iter<iterations; iter+=2) {
-      #pragma vector always
       for (i=0; i<vector_length; i++) {
         aux = -(3-(i&7));
         vector[i] -= (vector[index[i]]+aux); 
       }
-      #pragma vector always
       for (i=0; i<vector_length; i++) {
         aux = (3-(i&7));
         vector[i] -= (vector[index[i]]+aux); 
@@ -362,7 +352,7 @@ int main(int argc, char ** argv)
              ops/(branch_time*1.e6), branch_time);
       printf("Rate (Mops/s) without branches: %lf time (s): %lf\n", 
              ops/(no_branch_time*1.e6), no_branch_time);
-#ifdef VERBOSE
+#if VERBOSE
       printf("Array sum = %d, reference value = %d\n", total_sum, total_ref);
 #endif     
     }

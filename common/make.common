@@ -5,6 +5,7 @@ COMMON=../../common
 usage:
 	@echo "Usage: type \"make $(PROGRAM)\" to build executable"
 	@echo "            \"make clean\" to remove objects and executables"
+	@echo -e $(OPTIONSSTRING)
 
  
 ifeq ($(PROG_ENV),-DCHARMXX)

@@ -142,7 +142,7 @@ HISTORY: Written by Rob Van der Wijngaart, December 2007.
 
 /* Define 64-bit types and corresponding format strings for printf() and constants */
 /* PERIOD = (2^63-1)/7 = 7*73*127*337*92737*649657                                 */
-#ifdef LONG_IS_64BITS 
+#if LONG_IS_64BITS 
   #define POLY               0x0000000000000007UL
   #define PERIOD             1317624576693539401L
   /* sequence number in series of random numbers to be used as initial value       */
@@ -153,10 +153,6 @@ HISTORY: Written by Rob Van der Wijngaart, December 2007.
   /* sequence number in series of random numbers to be used as initial value       */
   #define SEQSEED            834568137686317453LL
 #endif 
-
-#ifndef LOOKAHEAD
-#define LOOKAHEAD            1024
-#endif
 
 static u64Int PRK_starts(s64Int);
 static int    poweroftwo(int);
@@ -193,7 +189,7 @@ int main(int argc, char **argv) {
   int               log2update_ratio; /* log2 of update ratio                      */
   int               procsize;    /* number of ranks per OS rank                    */
 
-#ifdef LONG_IS_64BITS
+#if LONG_IS_64BITS
   if (sizeof(long) != 8) {
     printf("ERROR: Makefile says \"long\" is 8 bytes, but it is %d bytes\n",
            sizeof(long)); 
@@ -431,10 +427,6 @@ int main(int argc, char **argv) {
       /* do the actual table updates. Because the receive buckets are contiguous, 
          we can view them as a single large bucket.                                */
       sizeRecvTotal = recvdispls[Num_procs-1]+sizeRecvBucket[Num_procs-1];
-      /* uncomment the following two pragmas if your compiler allows you to produce 
-         incorrect vector code, and you do not care if the results are incorrect   */
-      /*  #pragma ivdep */
-      /*  #pragma vector always */
       for (j=0; j<sizeRecvTotal; j++) {
         index = ranRecvBucket[0][j] & (loctablesize-1);
         Table[index] ^= ranRecvBucket[0][j];
@@ -447,7 +439,7 @@ int main(int argc, char **argv) {
   /* verification test */
   for(i=0;i<loctablesize;i++) {
     if(Table[i] != (u64Int) (i + loctablesize*my_ID)) {
-#ifdef VERBOSE
+#if VERBOSE
       printf("ERROR: Table["FSTR64U"]="FSTR64U" on rank %d\n",i,Table[i],my_ID);
 #endif
       error++;

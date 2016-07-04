@@ -71,26 +71,25 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 int main(int argc, char ** argv)
 {
-  int    my_ID;         /* MPI rank                                              */
-  int    root=0, final; /* IDs of root rank and rank that verifies result        */
-  long   m, n;          /* grid dimensions                                       */
+  int    my_ID;           /* MPI rank                                            */
+  int    root=0, final;   /* IDs of root rank and rank that verifies result      */
+  long   m, n;            /* grid dimensions                                     */
   double local_pipeline_time, /* timing parameters                               */
          pipeline_time,
          avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
-  double corner_val;    /* verification value at top right corner of grid        */
+  double corner_val;      /* verification value at top right corner of grid      */
   int    i, j, jj, iter, ID;/* dummies                                           */
-  int    iterations;    /* number of times to run the pipeline algorithm         */
-  long   start, end;    /* start and end of grid slice owned by calling rank     */
-  long   segment_size;  /* size of x-dimension of grid owned by calling rank     */
-  int    error=0;       /* error flag                                            */
-  int    Num_procs;     /* Number of ranks                                       */
-  int    grp;           /* grid line aggregation factor                          */
-  int    jjsize;        /* actual line group size                                */
-  double *vector;       /* array holding grid values                             */
+  int    iterations;      /* number of times to run the pipeline algorithm       */
+  long   start, end;      /* start and end of grid slice owned by calling rank   */
+  long   segment_size;    /* size of x-dimension of grid owned by calling rank   */
+  int    error=0;         /* error flag                                          */
+  int    Num_procs;       /* Number of ranks                                     */
+  int    grp;             /* grid line aggregation factor                        */
+  int    jjsize;          /* actual line group size                              */
+  double RESTRICT *vector;/* array holding grid values                           */
   double *inbuf, *outbuf; /* communication buffers used when aggregating         */
-  long   total_length;  /* total required length to store grid values            */
-  MPI_Status status;    /* completion status of message                          */
+  long   total_length;    /* total required length to store grid values          */
 
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -99,7 +98,7 @@ int main(int argc, char ** argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
-  /* set final equal to highest rank, because it computes verification value       */
+  /* set final equal to highest rank, because it computes verification value     */
   final = Num_procs-1;
 
 /*********************************************************************
@@ -133,7 +132,7 @@ int main(int argc, char ** argv)
     }
 
     if (m<=Num_procs) {
-      printf("ERROR: First grid dimension %d must be >= number of ranks %d\n", 
+      printf("ERROR: First grid dimension %ld must be >= number of ranks %d\n", 
              m, Num_procs);
       error = 1;
       goto ENDOFTESTS;
@@ -152,7 +151,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     printf("Number of ranks                = %d\n",Num_procs);
-    printf("Grid sizes                     = %d, %d\n", m, n);
+    printf("Grid sizes                     = %ld, %ld\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
     if (grp > 1)
     printf("Group factor                   = %d (cheating!)\n", grp);
@@ -183,7 +182,7 @@ int main(int argc, char ** argv)
   total_length = ((end-start+1)+1)*n;
   vector = (double *) prk_malloc(total_length*sizeof(double));
   if (vector == NULL) {
-    printf("Could not allocate space for grid slice of %d by %d points", 
+    printf("Could not allocate space for grid slice of %ld by %ld points",
            segment_size, n);
     printf(" on rank %d\n", my_ID);
     error = 1;
@@ -229,7 +228,7 @@ int main(int argc, char ** argv)
          send data                                                                */
       if (my_ID > 0) {
         MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
-                                  MPI_COMM_WORLD, &status);
+                                  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       }
 
       for (i=start; i<= end; i++) {
@@ -247,7 +246,7 @@ int main(int argc, char ** argv)
       /* if I am not at the left boundary, I need to wait for my left neighbor to
          send data                                                                */
       if (my_ID > 0) {
-        MPI_Recv(inbuf, jjsize, MPI_DOUBLE, my_ID-1, j, MPI_COMM_WORLD, &status);
+        MPI_Recv(inbuf, jjsize, MPI_DOUBLE, my_ID-1, j, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         for (jj=0; jj<jjsize; jj++) {
           ARRAY(start-1,jj+j) = inbuf[jj];
 	}
@@ -274,7 +273,7 @@ int main(int argc, char ** argv)
         MPI_Send(&corner_val,1,MPI_DOUBLE,root,888,MPI_COMM_WORLD);
       }
       if (my_ID==root) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,&status);
+        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
       }
     }
     else ARRAY(0,0)= -ARRAY(end,n-1);
@@ -292,7 +291,7 @@ int main(int argc, char ** argv)
   /* verify correctness, using top right value                                     */
   corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == final) {
-    if (abs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
+    if (fabs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
              ARRAY(end,n-1), corner_val);
       error = 1;
@@ -304,7 +303,7 @@ int main(int argc, char ** argv)
     avgtime = pipeline_time/iterations;
     /* flip the sign of the execution time to indicate cheating                    */
     if (grp>1) avgtime *= -1.0;
-#ifdef VERBOSE   
+#if VERBOSE   
     printf("Solution validates; verification value = %lf\n", corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",
            ((float)((n-1)*(Num_procs-1)))/(avgtime));

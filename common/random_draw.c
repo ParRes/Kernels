@@ -76,7 +76,7 @@ void LCG_get_chunk(uint64_t *start, uint64_t *end, int tid, int nthreads, uint64
     chunk = size/nthreads;
     remainder = size - chunk*nthreads;
  
-    if (tid < remainder) {
+    if ((uint64_t)tid < remainder) {
       *start = tid*(chunk+1);
       *end   = *start + chunk;
     }

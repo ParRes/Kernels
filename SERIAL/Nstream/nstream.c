@@ -114,18 +114,9 @@ HISTORY:   This code is loosely based on the Stream benchmark by John
  
 #include <par-res-kern_general.h>
  
-#define DEFAULTMAXLENGTH 2000000
-#ifdef MAXLENGTH
-  #if MAXLENGTH > 0
-    #define N   MAXLENGTH
-  #else
-    #define N   DEFAULTMAXLENGTH
-  #endif
-#else
-  #define N   DEFAULTMAXLENGTH
-#endif
+#define N   MAXLENGTH
  
-#ifdef STATIC_ALLOCATION
+#if STATIC_ALLOCATION
   /* use static to make sure it goes on the heap, not the stack          */
   static double a[N];
 #else
@@ -182,7 +173,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-#ifdef STATIC_ALLOCATION 
+#if STATIC_ALLOCATION 
   if ((3*length + 2*offset) > N) {
     printf("ERROR: vector length/offset %ld/%ld too ", length, offset);
     printf("large; increase MAXLENGTH in Makefile or decrease vector length\n");
@@ -190,7 +181,7 @@ int main(int argc, char **argv)
   }
 #endif
  
-#ifndef STATIC_ALLOCATION
+#if !STATIC_ALLOCATION
   space = (3*length + 2*offset)*sizeof(double);
   a = (double *) prk_malloc(space);
   if (!a) {
@@ -206,9 +197,6 @@ int main(int argc, char **argv)
   printf("Offset               = %ld\n", offset);
   printf("Number of iterations = %d\n", iterations);
 
-#ifdef __INTEL_COMPILER
-  #pragma vector always
-#endif
   for (j=0; j<length; j++) {
     a[j] = 0.0;
     b[j] = 2.0;
@@ -226,9 +214,6 @@ int main(int argc, char **argv)
     /* start timer after a warmup iteration */
     if (iter == 1) nstream_time = wtime();
  
-#ifdef __INTEL_COMPILER
-    #pragma vector always
-#endif
     for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
  
   }
@@ -269,7 +254,7 @@ int checkTRIADresults (int iterations, long int length) {
   asum = 0.0;
   for (j=0; j<length; j++) asum += a[j];
  
-#ifdef VERBOSE
+#if VERBOSE
   printf ("Results Comparison: \n");
   printf ("        Expected checksum: %f\n",aj);
   printf ("        Observed checksum: %f\n",asum);
@@ -277,7 +262,7 @@ int checkTRIADresults (int iterations, long int length) {
  
   if (ABS(aj-asum)/asum > epsilon) {
     printf ("Failed Validation on output array\n");
-#ifndef VERBOSE
+#if !VERBOSE
     printf ("        Expected checksum: %f \n",aj);
     printf ("        Observed checksum: %f \n",asum);
 #endif

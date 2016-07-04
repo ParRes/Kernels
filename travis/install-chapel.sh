@@ -3,7 +3,7 @@ set -x
 
 TRAVIS_ROOT="$1"
 
-if [ "${TRAVIS_OS_NAME}" == "osx" ] || [ "${CHPL_COMM}" == "none" ] ; then
+if [ "${TRAVIS_OS_NAME}" = "osx" ] || [ "${CHPL_COMM}" = "none" ] ; then
     echo "Mac single-locale"
     brew update
     brew install chapel
@@ -11,7 +11,7 @@ if [ "${TRAVIS_OS_NAME}" == "osx" ] || [ "${CHPL_COMM}" == "none" ] ; then
 else
     # We could test Clang via the C back-end as well, but it seems silly.
     # Let GCC exercise C back-end and test the LLVM back-end for Clang.
-    if [ "${CC}" == "clang" ] || [ "${CXX}" == "clang++" ] ; then
+    if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
         CHPL_LLVM=llvm
     fi
     cd $TRAVIS_ROOT

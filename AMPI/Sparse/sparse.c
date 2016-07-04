@@ -73,13 +73,13 @@ HISTORY: Written by Rob Van der Wijngaart, October 2006.
 /* linearize the grid index                                                       */
 #define LIN(i,j) (i+((j)<<lsize))
 
-#ifdef TESTDENSE
-#define DENSE(i,j) dense[LIN(i,j)]
+#if TESTDENSE
+  #define DENSE(i,j) dense[LIN(i,j)]
 #endif
 
 /* if the scramble flag is set, convert all (linearized) grid indices by 
    reversing their bits; if not, leave the grid indices alone                     */
-#ifdef SCRAMBLE
+#if SCRAMBLE
   #define REVERSE(a,b)  reverse((a),(b))
 #else
   #define REVERSE(a,b) (a)
@@ -122,7 +122,7 @@ int main(int argc, char **argv){
   double * RESTRICT vector_local;/* part of vector filled by calling rank         */
   double * RESTRICT result;     /* computed matrix-vector product                 */
   double            temp;       /* temporary scalar storing reduction data        */
-#ifdef TESTDENSE
+#if TESTDENSE
   double * RESTRICT rhs;        /* known matrix-vector product                    */
   double * RESTRICT dense;      /* dense matrix equivalent of "matrix"            */
 #endif
@@ -150,6 +150,7 @@ int main(int argc, char **argv){
   if (my_ID == root){
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("Adaptive MPI sparse matrix-vector multiplication\n");
+
     if (argc != 4){
       printf("Usage: %s <# iterations> <2log grid size> <stencil radius>\n",*argv);
       error = 1;
@@ -212,10 +213,15 @@ int main(int argc, char **argv){
     printf("Stencil diameter      = %16d\n", 2*radius+1);
     printf("Sparsity              = %16.10lf\n", sparsity);
     printf("Number of iterations  = %16d\n", iterations);
-#ifdef SCRAMBLE
-    printf("Using scrambled indexing\n");
+#if SCRAMBLE
+    printf("Indexing              = scrambled\n");
 #else
-    printf("Using canonical indexing\n");
+    printf("Indexing              = canonical\n");
+#endif
+#if TESTDENSE
+    printf("Matrix storage format = dense\n");
+#else
+    printf("Matrix storage format = Compressed Sparse Row\n");
 #endif
 
     ENDOFTESTS:;
@@ -239,13 +245,6 @@ int main(int argc, char **argv){
   nent = nrows*stencil_size;
 
   matrix_space = nent*sizeof(double);
-  if (matrix_space/sizeof(double) != nent) {
-    printf("ERROR: rank %d cannot represent space for matrix: %ul\n", 
-           my_ID, matrix_space);
-    error = 1;
-  } 
-  bail_out(error);
-
   matrix = (double *) prk_malloc(matrix_space);
   if (!matrix) {
     printf("ERROR: rank %d could not allocate space for sparse matrix: "FSTR64U"\n", 
@@ -266,13 +265,6 @@ int main(int argc, char **argv){
   vector_local = result + nrows;
 
   index_space = nent*sizeof(s64Int);
-  if (index_space/sizeof(s64Int) != nent) {
-    printf("ERROR: rank %d cannot represent space for column indices: %ul\n", 
-           my_ID, index_space);
-    error = 1;
-  } 
-  bail_out(error);
-
   colIndex = (s64Int *) prk_malloc(index_space);
   if (!colIndex) {
     printf("ERROR: rank %d Could not allocate space for column indices: "FSTR64U"\n",
@@ -304,13 +296,9 @@ int main(int argc, char **argv){
       matrix[elm] = 1.0/(double)(colIndex[elm]+1);   
   }
 
-#if defined(TESTDENSE) && defined(VERBOSE)
+#if TESTDENSE
   /* fill dense matrix to test                                                    */
   matrix_space = size2*size2/Num_procs*sizeof(double);
-  if (matrix_space/sizeof(double) != size2*size2/Num_procs) {
-    printf("ERROR: Cannot represent space for matrix: %ul\n", matrix_space);
-    exit(EXIT_FAILURE);
-  } 
   dense = (double *) prk_malloc(matrix_space);
   if (!dense) {
     printf("ERROR: Could not allocate space for dense matrix of order: %d\n",
@@ -367,7 +355,7 @@ int main(int argc, char **argv){
              MPI_COMM_WORLD);
 
 
-#if defined(TESTDENSE) && defined(VERBOSE)
+#if TESTDENSE && VERBOSE
   /* print matrix, vector, rhs, plus computed solution                            */
   for (row=0; row<nrows; row++) {
     printf("( ");
@@ -394,7 +382,7 @@ int main(int argc, char **argv){
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference sum = %lf, check sum = %lf\n", 
              reference_sum, check_sum);
 #endif

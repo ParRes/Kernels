@@ -87,7 +87,7 @@ extern int getpagesize(void);
 
 /* declare a simple function that does some work                                */
 void private_stream(double *a, double *b, double *c, size_t size) {
-  int j;
+  size_t j;
   for (j=0; j<size; j++) a[j] += b[j] + SCALAR*c[j];
   return;
 }
@@ -103,8 +103,10 @@ int main(int argc, char ** argv)
              *pcounter2;      /* pointers to counters                           */
   double     cosa, sina;      /* cosine and sine of rotation angle              */
   DTYPE      *counter_space;  /* pointer to space reserved for counters         */
+#if UNUSED
   DTYPE      refcounter1,
              refcounter2;     /* reference values for counters                  */
+#endif
   double     epsilon=1.e-7;   /* required accuracy                              */
   omp_lock_t *pcounter_lock;  /* pointer to lock that guards access to counters */
   double     refcount_time;   /* timing parameter                               */
@@ -132,7 +134,7 @@ int main(int argc, char ** argv)
  
   iterations  = atol(*++argv);
   if (iterations < 1){
-    printf("ERROR: iterations must be >= 1 : %d \n",iterations);
+    printf("ERROR: iterations must be >= 1 : %zu \n",iterations);
     exit(EXIT_FAILURE);
   }
 
@@ -140,8 +142,8 @@ int main(int argc, char ** argv)
   stream_size=0;
 #else
   stream_size = atol(*++argv);
-  if (stream_size < 0) {
-    printf("ERROR: private stream size %ld must be non-negative\n", stream_size);
+  if (stream_size <= 0) {
+    printf("ERROR: private stream size %zu must be non-negative\n", stream_size);
     exit(EXIT_FAILURE);
   }
 #endif
@@ -159,7 +161,9 @@ int main(int argc, char ** argv)
 #endif
   {
   size_t   iter, j;   /* dummies                                        */
+#if UNUSED
   double tmp1;      /* local copy of previous value of COUNTER1       */
+#endif
   double *a, *b, *c;/* private vectors                                */
   int    num_error=0;/* errors in private stream execution            */
   double aj, bj, cj;
@@ -193,7 +197,11 @@ int main(int argc, char ** argv)
   else {
     printf("Number of threads              = %d\n",nthread_input);
     printf("Number of counter pair updates = %ld\n", iterations);
+#if STREAM
     printf("Length of private stream       = %ld\n", stream_size);
+#else
+    printf("Private stream disabled\n");
+#endif
 #if CONTENDED
     printf("Counter access                 = contended\n");
 #else
@@ -230,7 +238,7 @@ int main(int argc, char ** argv)
      the space required */
   page_fit = 1;
   store_size = (size_t) getpagesize();
-#ifdef VERBOSE
+#if VERBOSE
   printf("Page size = %d\n", getpagesize());
 #endif
 
@@ -246,7 +254,7 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }
  
-#ifdef VERBOSE
+#if VERBOSE
   if (!page_fit) printf("Counters do not fit on different pages\n");      
   else           printf("Counters fit on different pages\n");      
 #endif
@@ -402,7 +410,7 @@ int main(int argc, char ** argv)
   } /* end of OpenMP parallel region */
  
   if (!error) {
-#ifdef VERBOSE
+#if VERBOSE
     printf("Solution validates; Correct counter values %13.10lf %13.10lf\n", 
            COUNTER1, COUNTER2);
 #else

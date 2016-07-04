@@ -48,3 +48,6 @@ FGMPITOP=
 
 #location where OpenCoarrays is installed, e.g. $(HOME)/opencoarrays
 OCAS=
+
+#location where Legion is installed, e.g. $(HOME)/legion
+LEGIONTOP=

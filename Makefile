@@ -64,7 +64,8 @@ help:
 	@echo "       \"make allampi\"      (re-)builds all Adaptive MPI targets"
 	@echo "       \"make allgrappa\"    (re-)builds all Grappa targets"
 	@echo "       \"make allfortran\"   (re-)builds all Fortran targets"
-	@echo "       \"make allfreaks\"    (re-)builds the above two targets"
+	@echo "       \"make alllegion\"    (re-)builds all Legion targets"
+	@echo "       \"make allfreaks\"    (re-)builds the above four targets"
 	@echo "       optionally, specify   \"matrix_rank=<n> number_of_functions=<m>\""
 	@echo "       optionally, specify   \"default_opt_flags=<list of optimization flags>\""
 	@echo "       \"make clean\"        removes all objects and executables"
@@ -72,7 +73,7 @@ help:
 
 all: alldarwin allfreaks
 alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran
-allfreaks: allcharm++ allampi allgrappa
+allfreaks: allcharm++ allampi allgrappa alllegion
 
 allmpi1:
 	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -119,6 +120,7 @@ allfgmpi:
 	cd FG_MPI/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                          "MATRIX_RANK         = $(matrix_rank)"        \
                                                          "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+	cd FG_MPI/PIC-static;          $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allmpiopenmp:
 	cd MPIOPENMP/Nstream;       $(MAKE) nstream   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -166,6 +168,7 @@ allopenmp:
 	cd OPENMP/Branch;           $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"     \
                                                       "MATRIX_RANK         = $(matrix_rank)"   \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+	cd OPENMP/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allcharm++:
 	cd CHARM++/Synch_p2p;       $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -179,6 +182,10 @@ allgrappa:
 	cd GRAPPA/Synch_p2p;       $(MAKE) p2p        "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+
+alllegion:
+	cd LEGION/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd LEGION/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allserial:
 	cd SERIAL/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -238,6 +245,7 @@ clean:
 	cd FG_MPI/Synch_global;     $(MAKE) clean
 	cd FG_MPI/Synch_p2p;        $(MAKE) clean
 	cd FG_MPI/Branch;           $(MAKE) clean
+	cd FG_MPI/PIC-static;       $(MAKE) clean
 	cd AMPI/DGEMM;              $(MAKE) clean
 	cd AMPI/Nstream;            $(MAKE) clean
 	cd AMPI/Reduce;             $(MAKE) clean
@@ -269,6 +277,8 @@ clean:
 	cd GRAPPA/Synch_p2p;        $(MAKE) clean
 	cd GRAPPA/Stencil;          $(MAKE) clean
 	cd GRAPPA/Transpose;        $(MAKE) clean
+	cd LEGION/Stencil;          $(MAKE) clean
+	cd LEGION/Transpose;        $(MAKE) clean
 	cd MPIOPENMP/Nstream;       $(MAKE) clean
 	cd MPIOPENMP/Stencil;       $(MAKE) clean
 	cd MPIOPENMP/Transpose;     $(MAKE) clean
@@ -284,6 +294,7 @@ clean:
 	cd OPENMP/Synch_global;     $(MAKE) clean
 	cd OPENMP/Synch_p2p;        $(MAKE) clean
 	cd OPENMP/Branch;           $(MAKE) clean
+	cd OPENMP/PIC;              $(MAKE) clean
 	cd SERIAL/DGEMM;            $(MAKE) clean
 	cd SERIAL/Nstream;          $(MAKE) clean
 	cd SERIAL/Reduce;           $(MAKE) clean
@@ -315,6 +326,7 @@ veryclean: clean
 	cd CHARM++/Stencil;         $(MAKE) veryclean
 	cd UPC/Stencil;             $(MAKE) veryclean
 	cd FG_MPI/Branch;           $(MAKE) veryclean
+	cd AMPI/Stencil;            $(MAKE) veryclean
 	cd AMPI/Branch;             $(MAKE) veryclean
 	cd scripts/small;           $(MAKE) -f  Makefile_FG_MPI veryclean
 	cd scripts/wide;            $(MAKE) -f  Makefile_FG_MPI veryclean

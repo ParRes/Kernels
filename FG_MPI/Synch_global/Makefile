@@ -6,14 +6,10 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 
 #uncomment any of the following flags (and change values) to change defaults
 
-#DEBUGFLAG    = -DVERBOSE
-#description: default diagnostic style is silent
-
-USERFLAGS     = 
+USERFLAGS    = 
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
-
 EXTOBJS      = 
 LIBS         =
 LIBPATHS     = 
@@ -21,7 +17,18 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS   = $(DEBUGFLAG) $(USERFLAGS)
+ifndef VERBOSE
+  VERBOSE=0
+endif
+#description: default diagnostic style is silent
+
+VERBOSEFLAG = -DVERBOSE=$(VERBOSE)
+
+OPTIONSSTRING="Make options:\n\
+OPTION         MEANING                            DEFAULT\n\
+VERBOSE=0/1    omit/include verbose run information [0]"
+
+TUNEFLAGS   = $(VERBOSEFLAG) $(USERFLAGS) 
 PROGRAM     = global
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

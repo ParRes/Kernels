@@ -60,17 +60,10 @@ HISTORY: Written by Rob Van der Wijngaart, February 2009.
 
 #include <par-res-kern_general.h>
 
-#ifdef MKL
+#if MKL
   #include <mkl_cblas.h>
 #endif
 
-#ifndef DEFAULTBLOCK
-  #define DEFAULTBLOCK 32
-#endif
-
-#ifndef BOFFSET
-  #define BOFFSET 12
-#endif
 #define AA_arr(i,j) AA[(i)+(block+BOFFSET)*(j)]
 #define BB_arr(i,j) BB[(i)+(block+BOFFSET)*(j)]
 #define CC_arr(i,j) CC[(i)+(block+BOFFSET)*(j)]
@@ -90,7 +83,7 @@ int main(int argc, char **argv)
           ref_checksum;
   double  epsilon = 1.e-8;      /* error tolerance                                */
   static  
-  double *A, *B, *C;            /* input (A,B) and output (C) matrices            */
+  double RESTRICT *A, *B, *C;   /* input (A,B) and output (C) matrices            */
   long    order;                /* number of rows and columns of matrices         */
   long    block;                /* tile size of matrices                          */
   int     shortcut;             /* true if only doing initialization              */
@@ -98,7 +91,7 @@ int main(int argc, char **argv)
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial Dense matrix-matrix multiplication: C = A x B\n");
 
-#ifndef MKL  
+#if !MKL  
   if (argc != 4 && argc != 3) {
     printf("Usage: %s <# iterations> <matrix order> [tile size]\n",*argv);
 #else
@@ -114,7 +107,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-  order = atoi(*++argv);
+  order = atol(*++argv);
   if (order < 0) {
     shortcut = 1;
     order    = -order;
@@ -124,7 +117,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-#ifndef MKL
+#if !MKL
   if (argc == 4) {
          block = atoi(*++argv);
   } else block = DEFAULTBLOCK;
@@ -137,8 +130,9 @@ int main(int argc, char **argv)
     printf("Blocking factor       = %ld\n", block);
   else
     printf("No blocking\n");
+  printf("Block offset          = %d\n", BOFFSET);
   printf("Number of iterations  = %d\n", iterations);
-
+  printf("Using MKL library     = off\n");
 
   A = (double *) prk_malloc(order*order*sizeof(double));
   B = (double *) prk_malloc(order*order*sizeof(double));
@@ -153,8 +147,8 @@ int main(int argc, char **argv)
     C_arr(i,j) = 0.0;
   }
 
-#ifndef MKL
-  double *AA, *BB, *CC;
+#if !MKL
+  double RESTRICT *AA, *BB, *CC;
 
   if (block > 0) {
     /* matrix blocks for local temporary copies                                     */
@@ -216,7 +210,7 @@ int main(int argc, char **argv)
 #else
 
   printf("Matrix size           = %dx%d\n", order, order);
-  printf("Using Math Kernel Library\n");
+  printf("Using MKL library     = on\n");
   printf("Number of iterations  = %d\n", iterations);
 
   for (iter=0; iter<=iterations; iter++) {
@@ -246,7 +240,7 @@ int main(int argc, char **argv)
   }
   else {
     printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
     printf("Reference checksum = %lf, checksum = %lf\n", 
            ref_checksum, checksum);
 #endif

@@ -69,9 +69,6 @@ HISTORY: Written by Rob Van der Wijngaart, December 2007
 #define A(i,j) (a[(j)*lda+i])
 #define B(i,j) (b[(j)*ldb+i])
 #define C(i,j) (c[(j)*ldc+i])
-#ifndef BOFFSET
-  #define BOFFSET 12
-#endif
 #define AA(i,j) (aa[(j)*ldaa+i])
 #define BB(i,j) (bb[(j)*ldbb+i])
 #define CC(i,j) (cc[(j)*ldcc+i])
@@ -108,7 +105,7 @@ int main(int argc, char *argv[])
       iter, iterations;
   long lda, ldb, ldc,
        nb, myncols;     /* make long to avoid integer overflow     */
-  double *a, *b, *c,    /* arrays that hold local a, b, c          */
+  double RESTRICT *a, *b, *c,    /* arrays that hold local a, b, c */
       *work1, *work2,   /* work arrays to pass to dpmmmult         */
       local_dgemm_time, /* timing parameters                       */
       dgemm_time,
@@ -129,16 +126,14 @@ int main(int argc, char *argv[])
   MPI_Comm_rank( MPI_COMM_WORLD, &my_ID );
   MPI_Comm_size( MPI_COMM_WORLD, &Num_procs );
 
-  if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("Adaptive MPI Dense matrix-matrix multiplication: C = A x B\n");
-  }
-
 /*********************************************************************
 ** process, test and broadcast input parameters
 *********************************************************************/
 
   if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("Adaptive MPI Dense matrix-matrix multiplication: C = A x B\n");
+
     if (argc != 5) {
       printf("Usage: %s <# iterations> <matrix order> <outer block size> ",
                                                                *argv);
@@ -192,7 +187,7 @@ int main(int argc, char *argv[])
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Rank grid            = %d rows x %d columns\n", nprow, npcol); 
     printf("Matrix order         = %d\n", order);
-    printf("Outer block size     = %d\n", nb);
+    printf("Outer block size     = %ld\n", nb);
     printf("Number of iterations = %d\n", iterations);
     if (inner_block_flag)
       printf("Using local dgemm blocking\n");
@@ -201,7 +196,6 @@ int main(int argc, char *argv[])
     if (shortcut) 
       printf("Only doing initialization\n"); 
   }
-  bail_out(error);
 
   /* set up row and column communicators                           */
 
@@ -226,7 +220,6 @@ int main(int argc, char *argv[])
   MPI_Group_incl( world_group, npcol, ranks, &temp_group );
   MPI_Comm_create( MPI_COMM_WORLD, temp_group, &comm_row );
 
-
   /* 3. create list of all ranks in same column of rank grid       */
   ranks[0] = my_ID%npcol;
   for (i=1; i<nprow; i++) ranks[i] = ranks[i-1] + npcol;
@@ -234,7 +227,6 @@ int main(int argc, char *argv[])
   /* create column group and communicator                          */
   MPI_Group_incl( world_group, nprow, ranks, &temp_group );
   MPI_Comm_create( MPI_COMM_WORLD, temp_group, &comm_col );
-
 
   /* extract this node's row and column index                      */
   MPI_Comm_rank( comm_row, &mycol );
@@ -340,7 +332,7 @@ int main(int argc, char *argv[])
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference checksum = %lf, checksum = %lf\n", 
              ref_checksum, checksum);
 #endif
@@ -367,7 +359,7 @@ int    k,               /* global matrix dimensions                */
        mm[], nn[],      /* dimensions of blocks of A, B, C         */
        lda, ldb, ldc;   /* leading dimension of local arrays that 
                            hold local portions of matrices A, B, C */
-double *a, *b, *c,      /* arrays that hold local parts of A, B, C */
+double RESTRICT *a, *b, *c,/* arrays holding local parts of A, B, C \*/
        *work1, *work2;  /* work arrays                             */
 MPI_Comm comm_row,      /* Communicator for this row of nodes      */
        comm_col;        /* Communicator for this column of nodes   */
@@ -483,7 +475,7 @@ void dgemm_local(int M, int N, int K, double *a, int lda, double *b,
         }
       }
     }
-    free (aa);
+    prk_free(aa);
   }
   return;
 }
@@ -501,12 +493,11 @@ void RING_Bcast(double *buf, int count, MPI_Datatype type, int root,
               MPI_Comm comm )
 {
   int my_ID, Num_procs;
-  MPI_Status status;
 
   MPI_Comm_rank( comm, &my_ID );    MPI_Comm_size( comm, &Num_procs );
   if (my_ID != root) 
     MPI_Recv(buf, count, type, (my_ID-1+Num_procs)%Num_procs, root, 
-             comm, &status);
+             comm, MPI_STATUS_IGNORE);
   if (( my_ID+1 )%Num_procs != root)
     MPI_Send(buf, count, type, (my_ID+1)%Num_procs, root, comm);
 }

@@ -1,17 +1,8 @@
 include ../../common/GRAPPA.defs
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -O3
 #description: change above into something that is a decent optimization on you system
-
-#uncomment any of the following flags (and change values) to change defaults
-
-#RESTRICTFLAG = -DRESTRICT_KEYWORD
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
-#             data accessed through pointers
-
-#DEBUGFLAG   = -DVERBOSE
-#description: default diagnostic style is silent
 
 USERFLAGS    = 
 #description: parameter to specify optional flags
@@ -20,13 +11,25 @@ USERFLAGS    =
 EXTOBJS      = 
 LIBS         = $(GRAPPA_LDLIBS)
 LIBPATHS     = $(GRAPPA_LDFLAGS)
+INCLUDEPATHS = 
 
 ### End User configurable options ###
 
-# this is used by the C++ implicit compile rule
-CXXFLAGS= $(GRAPPA_CXXFLAGS)
+ifndef VERBOSE
+  VERBOSE=0
+endif
+#description: default diagnostic style is silent
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) $(CXXFLAGS)
+VERBOSEFLAG     = -DVERBOSE=$(VERBOSE)
+
+# this is used by the C++ implicit compile rule
+CXXFLAGS        = $(GRAPPA_CXXFLAGS)
+
+OPTIONSSTRING="Make options:\n\
+OPTION                  MEANING                                  DEFAULT\n\
+VERBOSE=0/1             omit/include verbose run information       [0]"
+
+TUNEFLAGS   = $(VERBOSEFLAG)  $(USERFLAGS) $(CXXFLAGS)
 PROGRAM     = p2p
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

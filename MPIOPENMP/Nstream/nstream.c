@@ -119,18 +119,9 @@ REVISION:  Modified by Rob Van der Wijngaart, November 2014, replaced
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpiomp.h>
  
-#define DEFAULTMAXLENGTH 2000000
-#ifdef MAXLENGTH
-  #if MAXLENGTH > 0
-    #define N   MAXLENGTH
-  #else
-    #define N   DEFAULTMAXLENGTH
-  #endif
-#else
-  #define N   DEFAULTMAXLENGTH
-#endif
+#define N   MAXLENGTH
  
-#ifdef STATIC_ALLOCATION
+#if STATIC_ALLOCATION
   /* use static to make sure it goes on the heap, not the stack          */
   static double a[N];
 #else
@@ -157,8 +148,7 @@ int main(int argc, char **argv)
   double  local_nstream_time,/* timing parameters                       */
           nstream_time, 
           avgtime;
-  int     nthread_input,   /* thread parameters                         */
-          nthread; 
+  int     nthread_input; /* thread parameters                         */
   int     Num_procs,     /* number of ranks                             */
           my_ID,         /* rank of calling rank                        */
           root=0;        /* ID of master rank                           */
@@ -210,7 +200,7 @@ int main(int argc, char **argv)
       error = 1;
       goto ENDOFTESTS;
     }
-#ifdef STATIC_ALLOCATION 
+#if STATIC_ALLOCATION 
     if ((3*length + 2*offset) > N) {
       printf("ERROR: vector length/offset %ld/%ld too ", total_length, offset);
       printf("large; increase MAXLENGTH in Makefile or decrease vector length\n");
@@ -230,7 +220,7 @@ int main(int argc, char **argv)
 
   omp_set_num_threads(nthread_input);
 
-#ifndef STATIC_ALLOCATION
+#if !STATIC_ALLOCATION
   space = (3*length + 2*offset)*sizeof(double);
   a = (double *) prk_malloc(space);
   if (!a && my_ID == root) {
@@ -252,8 +242,7 @@ int main(int argc, char **argv)
     printf("Number of iterations = %d\n", iterations);
   }
 
-  #pragma omp parallel for
-  #pragma vector always
+  #pragma omp parallel for simd
   for (j=0; j<length; j++) {
     a[j] = 0.0;
     b[j] = 2.0;
@@ -272,8 +261,7 @@ int main(int argc, char **argv)
       local_nstream_time = wtime();
     }
 
-    #pragma omp parallel for
-    #pragma vector always
+    #pragma omp parallel for simd
     for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
 
   } /* end iterations */
@@ -317,10 +305,10 @@ int checkTRIADresults (int iterations, long int length) {
   aj = aj * (double) (length);
  
   asum = 0.0;
-  #pragma omp parallel for reduction(+:asum)
+  #pragma omp parallel for simd reduction(+:asum)
   for (j=0; j<length; j++) asum += a[j];
  
-#ifdef VERBOSE
+#if VERBOSE
   printf ("Results Comparison: \n");
   printf ("        Expected checksum: %f\n",aj);
   printf ("        Observed checksum: %f\n",asum);
@@ -328,7 +316,7 @@ int checkTRIADresults (int iterations, long int length) {
  
   if (ABS(aj-asum)/asum > epsilon) {
     printf ("Failed Validation on output array\n");
-#ifndef VERBOSE
+#if !VERBOSE
     printf ("        Expected checksum: %f \n",aj);
     printf ("        Observed checksum: %f \n",asum);
 #endif

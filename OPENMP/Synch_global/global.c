@@ -128,7 +128,7 @@ int main(int argc, char ** argv)
 
   length = atol(*++argv);
   if (length <nthread_input || length%nthread_input !=0) {
-    printf("ERROR: length of string %d must be multiple of # threads: %d\n", 
+    printf("ERROR: length of string %ld must be multiple of # threads: %d\n", 
            length, nthread_input);
     exit(EXIT_FAILURE);
   }
@@ -147,7 +147,7 @@ int main(int argc, char ** argv)
 
   catstring=(char *) prk_malloc((length+1)*sizeof(char));
   if (catstring==NULL) {
-    printf("ERROR: Could not allocate space for concatenation string: %d\n",
+    printf("ERROR: Could not allocate space for concatenation string: %ld\n",
            length+1);
     exit(EXIT_FAILURE);
   }
@@ -182,9 +182,9 @@ int main(int argc, char ** argv)
     printf("number of spawned threads %d\n", nthread);
   } 
   else {
-    printf("Number of threads              = %d;\n",nthread_input);
-    printf("Length of scramble string      = %ld\n", length);
-    printf("Number of iterations           = %d\n", iterations);
+    printf("Number of threads         = %d;\n",nthread_input);
+    printf("Length of scramble string = %ld\n", length);
+    printf("Number of iterations      = %d\n", iterations);
   }
   }
   bail_out(num_error);
@@ -206,7 +206,7 @@ int main(int argc, char ** argv)
     /* now all threads select different, nonoverlapping substring           */
     for (i=0; i<thread_length; i++) iterstring[i]=catstring[my_ID+i*nthread];
 
-#ifdef VERBOSE
+#if VERBOSE
     #pragma omp master
     {
     checksum=0;
@@ -227,13 +227,16 @@ int main(int argc, char ** argv)
   basesum=0;
   for (i=0; i<thread_length; i++) basesum += chartoi(basestring[i]);
   checksum=0;
-  for (i=0; i<strlen(catstring);i++) checksum += chartoi(catstring[i]);
+  {
+      size_t ist;
+      for (ist=0; ist<strlen(catstring);ist++) checksum += chartoi(catstring[ist]);
+  }
   if (checksum != basesum*nthread) {
     printf("Incorrect checksum: %d instead of %d\n", checksum, basesum*nthread);
     exit(EXIT_FAILURE);
   }
   else {
-#ifdef VERBOSE
+#if VERBOSE
     printf("Solution validates; Correct checksum of %d\n", checksum);
 #else
     printf("Solution validates\n");

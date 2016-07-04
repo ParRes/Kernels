@@ -131,7 +131,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
  
 *********************************************************************************/
  
-#ifdef DOUBLE
+#if DOUBLE
   #define DTYPE     double
   #define MPI_DTYPE MPI_DOUBLE
   #define EPSILON   1.e-8
@@ -192,7 +192,7 @@ int main(int argc, char ** argv) {
   long   n, width, height;/* linear global and block grid dimension              */
   int    width_rank, 
          height_rank;     /* linear local dimension                              */
-  int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
+  int    iter, leftover;  /* dummies                   */
   int    istart_rank, 
          iend_rank;       /* bounds of grid tile assigned to calling rank        */
   int    jstart_rank, 
@@ -216,7 +216,6 @@ int main(int argc, char ** argv) {
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8]; /* requests for sends & receives in 4 coord directions */
-  MPI_Status  status[8];  /* corresponding statuses                              */
   MPI_Win shm_win_in;     /* shared memory window object for IN array            */
   MPI_Win shm_win_out;    /* shared memory window object for OUT array           */
   MPI_Comm shm_comm_prep; /* preparatory shared memory communicator              */
@@ -243,7 +242,7 @@ int main(int argc, char ** argv) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI+SHM stencil execution on 2D grid\n");
 
-#ifndef STAR
+#if !STAR
       printf("ERROR: Compact stencil not supported\n");
       error = 1;
       goto ENDOFTESTS;
@@ -331,12 +330,12 @@ int main(int argc, char ** argv) {
     printf("Tiles per shared memory domain  = %d\n", group_size);
     printf("Tiles in x/y-direction in group = %d/%d\n", group_sizex,  group_sizey);
     printf("Type of stencil                 = star\n");
-#ifdef LOCAL_BARRIER_SYNCH
+#if LOCAL_BARRIER_SYNCH
     printf("Local synchronization           = barrier\n");
 #else
     printf("Local synchronization           = point to point\n");
 #endif
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type                       = double precision\n");
 #else
     printf("Data type                       = single precision\n");
@@ -535,10 +534,10 @@ int main(int argc, char ** argv) {
   left_buf_in    = right_buf_out + 3*RADIUS*height_rank;
 
     /* fill the stencil weights to reflect a discrete divergence operator         */
-  for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++)
+  for (int jj=-RADIUS; jj<=RADIUS; jj++) for (int ii=-RADIUS; ii<=RADIUS; ii++)
     WEIGHT(ii,jj) = (DTYPE) 0.0;
   stencil_size = 4*RADIUS+1;
-  for (ii=1; ii<=RADIUS; ii++) {
+  for (int ii=1; ii<=RADIUS; ii++) {
     WEIGHT(0, ii) = WEIGHT( ii,0) =  (DTYPE) (1.0/(2.0*ii*RADIUS));
     WEIGHT(0,-ii) = WEIGHT(-ii,0) = -(DTYPE) (1.0/(2.0*ii*RADIUS));
   }
@@ -546,7 +545,7 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
   /* intialize the input and output arrays                                     */
-  for (j=jstart_rank; j<=jend_rank; j++) for (i=istart_rank; i<=iend_rank; i++) {
+  for (int j=jstart_rank; j<=jend_rank; j++) for (int i=istart_rank; i<=iend_rank; i++) {
     IN(i,j)  = COEFX*i+COEFY*j;
     OUT(i,j) = (DTYPE)0.0;
   }
@@ -568,8 +567,8 @@ int main(int argc, char ** argv) {
     if (top_nbr != -1) {
       MPI_Irecv(top_buf_in, RADIUS*width_rank, MPI_DTYPE, top_nbr, 101,
                 MPI_COMM_WORLD, &(request[1]));
-      for (kk=0,j=jend_rank-RADIUS+1; j<=jend_rank; j++) 
-      for (i=istart_rank; i<=iend_rank; i++) {
+      for (int kk=0,j=jend_rank-RADIUS+1; j<=jend_rank; j++) 
+      for (int i=istart_rank; i<=iend_rank; i++) {
         top_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(top_buf_out, RADIUS*width_rank,MPI_DTYPE, top_nbr, 99, 
@@ -579,8 +578,8 @@ int main(int argc, char ** argv) {
     if (bottom_nbr != -1) {
       MPI_Irecv(bottom_buf_in,RADIUS*width_rank, MPI_DTYPE, bottom_nbr, 99, 
                 MPI_COMM_WORLD, &(request[3]));
-      for (kk=0,j=jstart_rank; j<=jstart_rank+RADIUS-1; j++) 
-      for (i=istart_rank; i<=iend_rank; i++) {
+      for (int kk=0,j=jstart_rank; j<=jstart_rank+RADIUS-1; j++) 
+      for (int i=istart_rank; i<=iend_rank; i++) {
         bottom_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(bottom_buf_out, RADIUS*width_rank,MPI_DTYPE, bottom_nbr, 101,
@@ -588,19 +587,19 @@ int main(int argc, char ** argv) {
       }
 
     if (top_nbr != -1) {
-      MPI_Wait(&(request[0]), &(status[0]));
-      MPI_Wait(&(request[1]), &(status[1]));
-      for (kk=0,j=jend_rank+1; j<=jend_rank+RADIUS; j++) 
-      for (i=istart_rank; i<=iend_rank; i++) {
+      MPI_Wait(&(request[0]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[1]), MPI_STATUS_IGNORE);
+      for (int kk=0,j=jend_rank+1; j<=jend_rank+RADIUS; j++) 
+      for (int i=istart_rank; i<=iend_rank; i++) {
         IN(i,j) = top_buf_in[kk++];
       }
     }
 
     if (bottom_nbr != -1) {    
-      MPI_Wait(&(request[2]), &(status[2]));
-      MPI_Wait(&(request[3]), &(status[3]));
-      for (kk=0,j=jstart_rank-RADIUS; j<=jstart_rank-1; j++) 
-      for (i=istart_rank; i<=iend_rank; i++) {
+      MPI_Wait(&(request[2]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[3]), MPI_STATUS_IGNORE);
+      for (int kk=0,j=jstart_rank-RADIUS; j<=jstart_rank-1; j++) 
+      for (int i=istart_rank; i<=iend_rank; i++) {
         IN(i,j) = bottom_buf_in[kk++];
       }
     }
@@ -612,8 +611,8 @@ int main(int argc, char ** argv) {
     if (right_nbr != -1) {
       MPI_Irecv(right_buf_in, RADIUS*height_rank, MPI_DTYPE, right_nbr, 1010,
                 MPI_COMM_WORLD, &(request[1+4]));
-      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
-      for (i=iend_rank-RADIUS+1; i<=iend_rank; i++) {
+      for (int kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (int i=iend_rank-RADIUS+1; i<=iend_rank; i++) {
         right_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(right_buf_out, RADIUS*height_rank, MPI_DTYPE, right_nbr, 990, 
@@ -623,8 +622,8 @@ int main(int argc, char ** argv) {
     if (left_nbr != -1) {
       MPI_Irecv(left_buf_in, RADIUS*height_rank, MPI_DTYPE, left_nbr, 990, 
                 MPI_COMM_WORLD, &(request[3+4]));
-      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
-      for (i=istart_rank; i<=istart_rank+RADIUS-1; i++) {
+      for (int kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (int i=istart_rank; i<=istart_rank+RADIUS-1; i++) {
         left_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(left_buf_out, RADIUS*height_rank, MPI_DTYPE, left_nbr, 1010,
@@ -632,19 +631,19 @@ int main(int argc, char ** argv) {
     }
 
     if (right_nbr != -1) {
-      MPI_Wait(&(request[0+4]), &(status[0+4]));
-      MPI_Wait(&(request[1+4]), &(status[1+4]));
-      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
-      for (i=iend_rank+1; i<=iend_rank+RADIUS; i++) {
+      MPI_Wait(&(request[0+4]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[1+4]), MPI_STATUS_IGNORE);
+      for (int kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (int i=iend_rank+1; i<=iend_rank+RADIUS; i++) {
         IN(i,j) = right_buf_in[kk++];
       }
     }
 
     if (left_nbr != -1) {
-      MPI_Wait(&(request[2+4]), &(status[2+4]));
-      MPI_Wait(&(request[3+4]), &(status[3+4]));
-      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
-      for (i=istart_rank-RADIUS; i<=istart_rank-1; i++) {
+      MPI_Wait(&(request[2+4]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[3+4]), MPI_STATUS_IGNORE);
+      for (int kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (int i=istart_rank-RADIUS; i<=istart_rank-1; i++) {
         IN(i,j) = left_buf_in[kk++];
       }
     }
@@ -653,14 +652,14 @@ int main(int argc, char ** argv) {
     MPI_Win_sync(shm_win_in);
 
     /* Apply the stencil operator */
-    for (j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
-      for (i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
+    for (int j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
+      for (int i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
         #if LOOPGEN
           #include "loop_body_star.incl"
         #else
-          for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-          for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-          for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (int jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+          for (int ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (int ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
         #endif
       }
     }
@@ -668,31 +667,31 @@ int main(int argc, char ** argv) {
     /* LOAD/STORE FENCE */
     MPI_Win_sync(shm_win_out);
 
-#ifdef LOCAL_BARRIER_SYNCH
+#if LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid writing IN while other ranks are reading it
 #else
-    for (i=0; i<num_local_nbrs; i++) {
+    for (int i=0; i<num_local_nbrs; i++) {
       MPI_Irecv(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm, &(request[i]));
       MPI_Send(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm);
     }
-    MPI_Waitall(num_local_nbrs, request, status);
+    MPI_Waitall(num_local_nbrs, request, MPI_STATUSES_IGNORE);
 #endif
 
     /* add constant to solution to force refresh of neighbor data, if any */
-    for (j=jstart_rank; j<=jend_rank; j++) 
-    for (i=istart_rank; i<=iend_rank; i++) IN(i,j)+= 1.0;
+    for (int j=jstart_rank; j<=jend_rank; j++) 
+    for (int i=istart_rank; i<=iend_rank; i++) IN(i,j)+= 1.0;
 
     /* LOAD/STORE FENCE */
     MPI_Win_sync(shm_win_in);
 
-#ifdef LOCAL_BARRIER_SYNCH
+#if LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid reading IN while other ranks are writing it
 #else
-    for (i=0; i<num_local_nbrs; i++) {
+    for (int i=0; i<num_local_nbrs; i++) {
       MPI_Irecv(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm, &(request[i]));
       MPI_Send(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm);
     }
-    MPI_Waitall(num_local_nbrs, request, status);
+    MPI_Waitall(num_local_nbrs, request, MPI_STATUSES_IGNORE);
 #endif
  
   } /* end of iterations                                                   */
@@ -703,8 +702,8 @@ int main(int argc, char ** argv) {
   
   /* compute L1 norm in parallel                                                */
   local_norm = (DTYPE) 0.0;
-  for (j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
-    for (i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
+  for (int j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
+    for (int i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
       local_norm += (DTYPE)ABS(OUT(i,j));
     }
   }
@@ -731,7 +730,7 @@ int main(int argc, char ** argv) {
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
              reference_norm, norm);
 #endif

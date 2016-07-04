@@ -94,9 +94,7 @@ int main(int argc, char ** argv)
   int    nthread;       /* number of threads                                     */
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of ranks                                       */
-  char  *name;          /* MPI threading mode suffix name                        */
   long   total_length;  /* total required length to store grid values            */
-  MPI_Status status;    /* completion status of message                          */
   int    provided;      /* MPI level of thread support                           */
   int    true, false;   /* toggled booleans used for synchronization             */
  
@@ -113,7 +111,7 @@ int main(int argc, char ** argv)
   }
 
   if (requested<provided) {
-    if (my_ID==0) printf("ERROR: requested=%d less than provided=%s\n",
+    if (my_ID==0) printf("ERROR: requested=%s less than provided=%s\n",
                          PRK_MPI_THREAD_STRING(requested),PRK_MPI_THREAD_STRING(provided));
     bail_out(requested-provided);
   }
@@ -153,13 +151,13 @@ int main(int argc, char ** argv)
     m = atol(*++argv);
     n = atol(*++argv);
     if (m < 1 || n < 1){
-      printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
+      printf("ERROR: grid dimensions must be positive: %ld, %ld \n", m, n);
       error = 1;
       goto ENDOFTESTS;
     }
  
     if (m<Num_procs) {
-      printf("ERROR: First grid dimension %d smaller than number of ranks %d\n", 
+      printf("ERROR: First grid dimension %ld smaller than number of ranks %d\n", 
              m, Num_procs);
       error = 1;
       goto ENDOFTESTS;
@@ -182,7 +180,7 @@ int main(int argc, char ** argv)
     printf("Number of threads              = %d\n", omp_get_max_threads());
     printf("Grid sizes                     = %ld, %ld\n", m, n);
     printf("Number of iterations           = %d\n", iterations);
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
     printf("Handshake between neighbor threads\n");
 #else
     printf("No handshake between neighbor threads\n");
@@ -208,7 +206,7 @@ int main(int argc, char ** argv)
   total_length = ((end-start+1)+1)*n;
   vector = (double *) prk_malloc(sizeof(double)*total_length);
   if (vector == NULL) {
-    printf("Could not allocate space for grid slice of %d by %d points", 
+    printf("Could not allocate space for grid slice of %ld by %ld points", 
            segment_size, n);
     printf(" on rank %d\n", my_ID);
     error = 1;
@@ -280,7 +278,7 @@ int main(int argc, char ** argv)
  
   for (iter=0; iter<=iterations; iter++) {
  
-#ifndef SYNCHRONOUS
+#if !SYNCHRONOUS
     /* true and false toggle each iteration                                      */
     true = (iter+1)%2; false = !true;
 #endif
@@ -299,7 +297,7 @@ int main(int argc, char ** argv)
       while (flag(0,0) == true) {
         #pragma omp flush
       }
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
       flag(0,0)= true;
       #pragma omp flush
 #endif      
@@ -313,14 +311,14 @@ int main(int argc, char ** argv)
       if (TID==0){
         if (my_ID > 0) {
           MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
-                     MPI_COMM_WORLD, &status);
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
       }
       else {
 	while (flag(TID-1,j) == false) {
            #pragma omp flush
         }
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
         flag(TID-1,j)= false;
         #pragma omp flush
 #endif      
@@ -332,7 +330,7 @@ int main(int argc, char ** argv)
  
       /* if not on right boundary, signal right neighbor it has new data */
       if (TID < nthread-1) {
-#ifdef SYNCHRONOUS 
+#if SYNCHRONOUS 
         while (flag(TID,j) == true) {
           #pragma omp flush
         }
@@ -354,14 +352,14 @@ int main(int argc, char ** argv)
         MPI_Send(&corner_val,1,MPI_DOUBLE,root,888,MPI_COMM_WORLD);
       }
       if (TID==0  && my_ID==root) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,&status);
+        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
       }
     }
     else {
       if (TID==nthread-1) { /* if on right boundary, copy top right corner value 
                 to bottom left corner to create dependency and signal completion  */
         ARRAY(0,0) = -ARRAY(m-1,n-1);
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
         while (flag(0,0) == false) {
           #pragma omp flush
         }
@@ -388,7 +386,7 @@ int main(int argc, char ** argv)
   /* verify correctness, using top right value                                     */
   corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == final) {
-    if (abs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
+    if (fabs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
              ARRAY(end,n-1), corner_val);
       error = 1;
@@ -396,9 +394,9 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
  
-  if (my_ID == root) {
+  if (my_ID == final) {
     avgtime = pipeline_time/iterations;
-#ifdef VERBOSE   
+#if VERBOSE   
     printf("Solution validates; verification value = %lf\n", corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",
            ((float)((n-1)*(Num_procs-1)))/(avgtime));

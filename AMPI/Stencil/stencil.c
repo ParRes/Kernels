@@ -71,7 +71,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
  
-#ifdef DOUBLE
+#if DOUBLE
   #define DTYPE     double
   #define MPI_DTYPE MPI_DOUBLE
   #define EPSILON   1.e-8
@@ -136,7 +136,6 @@ int main(int argc, char ** argv) {
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8];
-  MPI_Status  status[8];
  
   /*******************************************************************************
   ** Initialize the MPI environment
@@ -144,21 +143,18 @@ int main(int argc, char ** argv) {
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
- 
-  if (my_ID == root) {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("Adaptive MPI stencil execution on 2D grid\n");
-  }
 
   /*******************************************************************************
   ** process, test, and broadcast input parameters    
   ********************************************************************************/
  
   if (my_ID == root) {
-#ifndef STAR
-      printf("ERROR: Compact stencil not supported\n");
-      error = 1;
-      goto ENDOFTESTS;
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("Adaptive MPI stencil execution on 2D grid\n");
+#if !STAR
+    printf("ERROR: Compact stencil not supported\n");
+    error = 1;
+    goto ENDOFTESTS;
 #endif
     
     if (argc != 3){
@@ -178,8 +174,8 @@ int main(int argc, char ** argv) {
     n       = atoi(*++argv); 
     nsquare = (long) n * (long) n;
     if (nsquare < Num_procs){ 
-      printf("ERROR: grid size %d must be at least # ranks: %ld\n", 
-	     nsquare, Num_procs); 
+      printf("ERROR: grid size %ld must be at least # ranks: %d\n",
+	     nsquare, Num_procs);
       error = 1; 
       goto ENDOFTESTS; 
     }
@@ -223,10 +219,15 @@ int main(int argc, char ** argv) {
     printf("Radius of stencil      = %d\n", RADIUS);
     printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
     printf("Type of stencil        = star\n");
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type              = double precision\n");
 #else
     printf("Data type              = single precision\n");
+#endif
+#if LOOPGEN
+    printf("Script used to expand stencil loop body\n");
+#else
+    printf("Compact representation of stencil loop body\n");
 #endif
     printf("Number of iterations   = %d\n", iterations);
   }
@@ -360,15 +361,15 @@ int main(int argc, char ** argv) {
                 MPI_COMM_WORLD, &(request[2]));
     }
     if (my_IDy < Num_procsy-1) {
-      MPI_Wait(&(request[0]), &(status[0]));
-      MPI_Wait(&(request[1]), &(status[1]));
+      MPI_Wait(&(request[0]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[1]), MPI_STATUS_IGNORE);
       for (kk=0,j=jend+1; j<=jend+RADIUS; j++) for (i=istart; i<=iend; i++) {
           IN(i,j) = top_buf_in[kk++];
       }      
     }
     if (my_IDy > 0) {
-      MPI_Wait(&(request[2]), &(status[2]));
-      MPI_Wait(&(request[3]), &(status[3]));
+      MPI_Wait(&(request[2]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[3]), MPI_STATUS_IGNORE);
       for (kk=0,j=jstart-RADIUS; j<=jstart-1; j++) for (i=istart; i<=iend; i++) {
           IN(i,j) = bottom_buf_in[kk++];
       }      
@@ -394,15 +395,15 @@ int main(int argc, char ** argv) {
                 MPI_COMM_WORLD, &(request[2+4]));
     }
     if (my_IDx < Num_procsx-1) {
-      MPI_Wait(&(request[0+4]), &(status[0+4]));
-      MPI_Wait(&(request[1+4]), &(status[1+4]));
+      MPI_Wait(&(request[0+4]), MPI_STATUSES_IGNORE);
+      MPI_Wait(&(request[1+4]), MPI_STATUSES_IGNORE);
       for (kk=0,j=jstart; j<=jend; j++) for (i=iend+1; i<=iend+RADIUS; i++) {
           IN(i,j) = right_buf_in[kk++];
       }      
     }
     if (my_IDx > 0) {
-      MPI_Wait(&(request[2+4]), &(status[2+4]));
-      MPI_Wait(&(request[3+4]), &(status[3+4]));
+      MPI_Wait(&(request[2+4]), MPI_STATUSES_IGNORE);
+      MPI_Wait(&(request[3+4]), MPI_STATUSES_IGNORE);
       for (kk=0,j=jstart; j<=jend; j++) for (i=istart-RADIUS; i<=istart-1; i++) {
           IN(i,j) = left_buf_in[kk++];
       }      
@@ -411,16 +412,13 @@ int main(int argc, char ** argv) {
     /* Apply the stencil operator */
     for (j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
       for (i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
-        for (jj=-RADIUS; jj<=RADIUS; jj++) {
-          OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-        }
-        for (ii=-RADIUS; ii<0; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-        }
-        for (ii=1; ii<=RADIUS; ii++) {
-          OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
- 
-        }
+        #if LOOPGEN
+          #include "loop_body_star.incl"
+        #else
+          for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+          for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+        #endif
       }
     }
  
@@ -463,7 +461,7 @@ int main(int argc, char ** argv) {
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
              reference_norm, norm);
 #endif

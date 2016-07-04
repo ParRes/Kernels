@@ -49,7 +49,7 @@
 # *******************************************************************
 
 import sys
-import time
+from timeit import default_timer as timer
 
 def main():
 
@@ -91,15 +91,15 @@ def main():
     for k in range(0,iterations+1):
         # start timer after a warmup iteration
         if k<1:
-            t0 = time.clock()
-       
+            t0 = timer()
+
         for i in range(order):
             for j in range(order):
                 B[i][j] += A[j][i]
                 A[j][i] += 1.0
 
 
-    t1 = time.clock()
+    t1 = timer()
     trans_time = t1 - t0
 
     # ********************************************************************

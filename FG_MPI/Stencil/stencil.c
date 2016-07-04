@@ -71,7 +71,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_fg-mpi.h>
  
-#ifdef DOUBLE
+#if DOUBLE
   #define DTYPE     double
   #define MPI_DTYPE MPI_DOUBLE
   #define EPSILON   1.e-8
@@ -114,7 +114,7 @@ int main(int argc, char ** argv) {
   DTYPE *left_buf_out;    /*       "         "                                   */
   DTYPE *left_buf_in;     /*       "         "                                   */
   int    root = 0;
-  long   n, width, height;/* linear global and local grid dimension              */
+  int    n, width, height;/* linear global and local grid dimension              */
   long   nsquare;         /* total number of grid points                         */
   int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
@@ -136,7 +136,6 @@ int main(int argc, char ** argv) {
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8];
-  MPI_Status  status[8];
   int     procsize;       /* number of ranks per OS process                      */
  
   /*******************************************************************************
@@ -145,7 +144,7 @@ int main(int argc, char ** argv) {
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
- 
+
   /*******************************************************************************
   ** process, test, and broadcast input parameters    
   ********************************************************************************/
@@ -153,8 +152,7 @@ int main(int argc, char ** argv) {
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("FG_MPI stencil execution on 2D grid\n");
-
-#ifndef STAR
+#if !STAR
     printf("ERROR: Compact stencil not supported\n");
     error = 1;
     goto ENDOFTESTS;
@@ -174,11 +172,11 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;  
     }
  
-    n       = atol(*++argv); 
-    nsquare = n * n;
+    n       = atoi(*++argv); 
+    nsquare = (long) n * (long) n;
     if (nsquare < Num_procs){ 
-      printf("ERROR: grid size %d must be at least # ranks: %ld\n", 
-	     nsquare, Num_procs); 
+      printf("ERROR: grid size %ld must be at least # ranks: %d\n",
+	     nsquare, Num_procs);
       error = 1; 
       goto ENDOFTESTS; 
     }
@@ -224,7 +222,7 @@ int main(int argc, char ** argv) {
     printf("Radius of stencil        = %d\n", RADIUS);
     printf("Tiles in x/y-direction   = %d/%d\n", Num_procsx, Num_procsy);
     printf("Type of stencil          = star\n");
-#ifdef DOUBLE
+#if DOUBLE
     printf("Data type                = double precision\n");
 #else
     printf("Data type                = single precision\n");
@@ -285,15 +283,8 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
  
-  total_length_in = (width+2*RADIUS)*(height+2*RADIUS)*sizeof(DTYPE);
-  if (total_length_in/(height+2*RADIUS) != (width+2*RADIUS)*sizeof(DTYPE)) {
-    printf("ERROR: Space for %d x %d input array cannot be represented\n", 
-           width+2*RADIUS, height+2*RADIUS);
-    error = 1;
-  }
-  bail_out(error);
- 
-  total_length_out = width*height*sizeof(DTYPE);
+  total_length_in  = (long) (width+2*RADIUS)*(long) (height+2*RADIUS)*sizeof(DTYPE);
+  total_length_out = (long) width* (long) height*sizeof(DTYPE);
  
   in  = (DTYPE *) prk_malloc(total_length_in);
   out = (DTYPE *) prk_malloc(total_length_out);
@@ -321,27 +312,29 @@ int main(int argc, char ** argv) {
     IN(i,j)  = COEFX*i+COEFY*j;
     OUT(i,j) = (DTYPE)0.0;
   }
+
+  if (Num_procs > 1) { 
+    /* allocate communication buffers for halo values                          */
+    top_buf_out = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*width);
+    if (!top_buf_out) {
+      printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
+      error = 1;
+    }
+    bail_out(error);
+    top_buf_in     = top_buf_out +   RADIUS*width;
+    bottom_buf_out = top_buf_out + 2*RADIUS*width;
+    bottom_buf_in  = top_buf_out + 3*RADIUS*width;
  
-  /* allocate communication buffers for halo values                            */
-  top_buf_out = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*width);
-  if (!top_buf_out) {
-    printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
-    error = 1;
+    right_buf_out  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*height);
+    if (!right_buf_out) {
+      printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
+      error = 1;
+    }
+    bail_out(error);
+    right_buf_in   = right_buf_out +   RADIUS*height;
+    left_buf_out   = right_buf_out + 2*RADIUS*height;
+    left_buf_in    = right_buf_out + 3*RADIUS*height;
   }
-  bail_out(error);
-  top_buf_in     = top_buf_out +   RADIUS*width;
-  bottom_buf_out = top_buf_out + 2*RADIUS*width;
-  bottom_buf_in  = top_buf_out + 3*RADIUS*width;
- 
-  right_buf_out  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*height);
-  if (!right_buf_out) {
-    printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
-    error = 1;
-  }
-  bail_out(error);
-  right_buf_in   = right_buf_out +   RADIUS*height;
-  left_buf_out   = right_buf_out + 2*RADIUS*height;
-  left_buf_in    = right_buf_out + 3*RADIUS*height;
 
   for (iter = 0; iter<=iterations; iter++){
 
@@ -371,15 +364,15 @@ int main(int argc, char ** argv) {
                 MPI_COMM_WORLD, &(request[2]));
     }
     if (my_IDy < Num_procsy-1) {
-      MPI_Wait(&(request[0]), &(status[0]));
-      MPI_Wait(&(request[1]), &(status[1]));
+      MPI_Wait(&(request[0]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[1]), MPI_STATUS_IGNORE);
       for (kk=0,j=jend+1; j<=jend+RADIUS; j++) for (i=istart; i<=iend; i++) {
           IN(i,j) = top_buf_in[kk++];
       }      
     }
     if (my_IDy > 0) {
-      MPI_Wait(&(request[2]), &(status[2]));
-      MPI_Wait(&(request[3]), &(status[3]));
+      MPI_Wait(&(request[2]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[3]), MPI_STATUS_IGNORE);
       for (kk=0,j=jstart-RADIUS; j<=jstart-1; j++) for (i=istart; i<=iend; i++) {
           IN(i,j) = bottom_buf_in[kk++];
       }      
@@ -405,15 +398,15 @@ int main(int argc, char ** argv) {
                 MPI_COMM_WORLD, &(request[2+4]));
     }
     if (my_IDx < Num_procsx-1) {
-      MPI_Wait(&(request[0+4]), &(status[0+4]));
-      MPI_Wait(&(request[1+4]), &(status[1+4]));
+      MPI_Wait(&(request[0+4]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[1+4]), MPI_STATUS_IGNORE);
       for (kk=0,j=jstart; j<=jend; j++) for (i=iend+1; i<=iend+RADIUS; i++) {
           IN(i,j) = right_buf_in[kk++];
       }      
     }
     if (my_IDx > 0) {
-      MPI_Wait(&(request[2+4]), &(status[2+4]));
-      MPI_Wait(&(request[3+4]), &(status[3+4]));
+      MPI_Wait(&(request[2+4]), MPI_STATUS_IGNORE);
+      MPI_Wait(&(request[3+4]), MPI_STATUS_IGNORE);
       for (kk=0,j=jstart; j<=jend; j++) for (i=istart-RADIUS; i<=istart-1; i++) {
           IN(i,j) = left_buf_in[kk++];
       }      
@@ -471,7 +464,7 @@ int main(int argc, char ** argv) {
     }
     else {
       printf("Solution validates\n");
-#ifdef VERBOSE
+#if VERBOSE
       printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
              reference_norm, norm);
 #endif

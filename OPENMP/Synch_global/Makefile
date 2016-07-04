@@ -6,12 +6,6 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 
 #uncomment any of the following flags (and change values) to change defaults
 
-#DEBUGFLAG   = -DVERBOSE
-#description: default diagnostic style is silent
-
-#NTHREADFLAG = -DMAXTHREADS=n
-#description: default thread limit is 256
-
 USERFLAGS    = 
 #description: parameter to specify optional flags
 
@@ -23,7 +17,25 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS   = $(DEBUGFLAG) $(NTHREADFLAG) $(USERFLAGS) 
+ifndef MAXTHREADS
+  MAXTHREADS=256
+endif
+#description: default thread limit is 256
+
+ifndef VERBOSE
+  VERBOSE=0
+endif
+#description: default diagnostic style is silent
+
+VERBOSEFLAG = -DVERBOSE=$(VERBOSE)
+NTHREADFLAG = -DMAXTHREADS=$(MAXTHREADS)
+
+OPTIONSSTRING="Make options:\n\
+OPTION         MEANING                            DEFAULT\n\
+MAXTHREADS=?   set maximum number of OpenMP threads [256]\n\
+VERBOSE=0/1    omit/include verbose run information [0]"
+
+TUNEFLAGS   = $(VERBOSEFLAG) $(NTHREADFLAG) $(USERFLAGS) 
 PROGRAM     = global
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
