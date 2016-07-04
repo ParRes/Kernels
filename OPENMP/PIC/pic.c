@@ -382,7 +382,7 @@ int verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t L)
    
   /* apply periodicity, making sure we never mod a negative value */
   x_periodic = fmod(x_final+(double)(iterations+1) *(2*p.k+1)*L, L);
-  y_periodic = fmod(y_final+(double)(iterations+1) *fabs(p.m)*L, L);
+  y_periodic = fmod(y_final+(double)(iterations+1) *llabs(p.m)*L, L);
    
   if ( fabs(p.x - x_periodic) > epsilon || fabs(p.y - y_periodic) > epsilon) {
     return FAILURE;
@@ -459,13 +459,15 @@ int main(int argc, char ** argv) {
   double      alpha, beta;       // slope and offset values for linear particle distribution
   bbox_t      grid_patch,        // whole grid
               init_patch;        // subset of grid used for localized initialization
-  int         particles_per_cell;// number of particles per cell to be injected
   int         correctness = 1;   // determines whether simulation was correct
   double      *Qgrid;            // field of fixed charges
   particle_t  *particles, *p;    // the particles array
   uint64_t    iter, i;           // dummies
   double      fx, fy, ax, ay;    // forces and accelerations
+#if UNUSED
+  int         particles_per_cell;// number of particles per cell to be injected
   int         error=0;           // used for graceful exit after error
+#endif
   double      avg_time, pic_time;// timing parameters
   int         nthread_input,     // thread parameters                                   
               nthread; 
@@ -502,26 +504,26 @@ int main(int argc, char ** argv) {
 
   iterations = atol(*++argv);  args_used++;   
   if (iterations<1) {
-    printf("ERROR: Number of time steps must be positive: %ld\n", iterations);
+    printf("ERROR: Number of time steps must be positive: %" PRIu64 "\n", iterations);
     exit(FAILURE);
   }
   L = atol(*++argv);  args_used++;   
   if (L<1 || L%2) {
-    printf("ERROR: Number of grid cells must be positive and even: %ld\n", L);
+    printf("ERROR: Number of grid cells must be positive and even: %" PRIu64 "\n", L);
     exit(FAILURE);
   }
 
   grid_patch = (bbox_t){0, L+1, 0, L+1};
   n = atol(*++argv);  args_used++;   
   if (n<1) {
-    printf("ERROR: Number of particles must be positive: %ld\n", n);
+    printf("ERROR: Number of particles must be positive: %" PRIu64 "\n", n);
     exit(FAILURE);
   }
 
   particle_mode  = UNDEFINED;
   k = atoi(*++argv);   args_used++; 
   if (k<0) {
-    printf("ERROR: Particle semi-charge must be non-negative: %lu\n", k);
+    printf("ERROR: Particle semi-charge must be non-negative: %" PRIu64 "\n", k);
     exit(FAILURE);
   }
   m = atoi(*++argv);   args_used++; 
@@ -600,14 +602,14 @@ int main(int argc, char ** argv) {
     case SINUSOIDAL:                                                          break;
     case LINEAR:    printf("  Negative slope               = %lf\n", alpha);
                     printf("  Offset                       = %lf\n", beta);   break;
-    case PATCH:     printf("  Bounding box                 = %lu, %lu, %lu, %lu\n",
+    case PATCH:     printf("  Bounding box                 = %" PRIu64 "%" PRIu64 "%" PRIu64 "%" PRIu64 "\n",
                            init_patch.left, init_patch.right, 
                            init_patch.bottom, init_patch.top);                break;
     default:        printf("ERROR: Unsupported particle initializating mode\n");
                      exit(FAILURE);
     }
-    printf("Particle charge semi-increment = %lu\n", k);
-    printf("Vertical velocity              = %lu\n", m);
+    printf("Particle charge semi-increment = %"PRIu64"\n", k);
+    printf("Vertical velocity              = %"PRIu64"\n", m);
    
     /* Initialize grid of charges and particles */
     Qgrid = initializeGrid(L);

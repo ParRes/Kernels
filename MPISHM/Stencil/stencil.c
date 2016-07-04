@@ -192,7 +192,7 @@ int main(int argc, char ** argv) {
   long   n, width, height;/* linear global and block grid dimension              */
   int    width_rank, 
          height_rank;     /* linear local dimension                              */
-  int    i, j, ii, jj, kk, it, jt, iter, leftover;  /* dummies                   */
+  int    iter, leftover;  /* dummies                   */
   int    istart_rank, 
          iend_rank;       /* bounds of grid tile assigned to calling rank        */
   int    jstart_rank, 
@@ -534,10 +534,10 @@ int main(int argc, char ** argv) {
   left_buf_in    = right_buf_out + 3*RADIUS*height_rank;
 
     /* fill the stencil weights to reflect a discrete divergence operator         */
-  for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++)
+  for (int jj=-RADIUS; jj<=RADIUS; jj++) for (int ii=-RADIUS; ii<=RADIUS; ii++)
     WEIGHT(ii,jj) = (DTYPE) 0.0;
   stencil_size = 4*RADIUS+1;
-  for (ii=1; ii<=RADIUS; ii++) {
+  for (int ii=1; ii<=RADIUS; ii++) {
     WEIGHT(0, ii) = WEIGHT( ii,0) =  (DTYPE) (1.0/(2.0*ii*RADIUS));
     WEIGHT(0,-ii) = WEIGHT(-ii,0) = -(DTYPE) (1.0/(2.0*ii*RADIUS));
   }
@@ -545,7 +545,7 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
   /* intialize the input and output arrays                                     */
-  for (j=jstart_rank; j<=jend_rank; j++) for (i=istart_rank; i<=iend_rank; i++) {
+  for (int j=jstart_rank; j<=jend_rank; j++) for (int i=istart_rank; i<=iend_rank; i++) {
     IN(i,j)  = COEFX*i+COEFY*j;
     OUT(i,j) = (DTYPE)0.0;
   }
@@ -567,8 +567,8 @@ int main(int argc, char ** argv) {
     if (top_nbr != -1) {
       MPI_Irecv(top_buf_in, RADIUS*width_rank, MPI_DTYPE, top_nbr, 101,
                 MPI_COMM_WORLD, &(request[1]));
-      for (kk=0,j=jend_rank-RADIUS+1; j<=jend_rank; j++) 
-      for (i=istart_rank; i<=iend_rank; i++) {
+      for (int kk=0,j=jend_rank-RADIUS+1; j<=jend_rank; j++) 
+      for (int i=istart_rank; i<=iend_rank; i++) {
         top_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(top_buf_out, RADIUS*width_rank,MPI_DTYPE, top_nbr, 99, 
@@ -578,8 +578,8 @@ int main(int argc, char ** argv) {
     if (bottom_nbr != -1) {
       MPI_Irecv(bottom_buf_in,RADIUS*width_rank, MPI_DTYPE, bottom_nbr, 99, 
                 MPI_COMM_WORLD, &(request[3]));
-      for (kk=0,j=jstart_rank; j<=jstart_rank+RADIUS-1; j++) 
-      for (i=istart_rank; i<=iend_rank; i++) {
+      for (int kk=0,j=jstart_rank; j<=jstart_rank+RADIUS-1; j++) 
+      for (int i=istart_rank; i<=iend_rank; i++) {
         bottom_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(bottom_buf_out, RADIUS*width_rank,MPI_DTYPE, bottom_nbr, 101,
@@ -589,8 +589,8 @@ int main(int argc, char ** argv) {
     if (top_nbr != -1) {
       MPI_Wait(&(request[0]), MPI_STATUS_IGNORE);
       MPI_Wait(&(request[1]), MPI_STATUS_IGNORE);
-      for (kk=0,j=jend_rank+1; j<=jend_rank+RADIUS; j++) 
-      for (i=istart_rank; i<=iend_rank; i++) {
+      for (int kk=0,j=jend_rank+1; j<=jend_rank+RADIUS; j++) 
+      for (int i=istart_rank; i<=iend_rank; i++) {
         IN(i,j) = top_buf_in[kk++];
       }
     }
@@ -598,8 +598,8 @@ int main(int argc, char ** argv) {
     if (bottom_nbr != -1) {    
       MPI_Wait(&(request[2]), MPI_STATUS_IGNORE);
       MPI_Wait(&(request[3]), MPI_STATUS_IGNORE);
-      for (kk=0,j=jstart_rank-RADIUS; j<=jstart_rank-1; j++) 
-      for (i=istart_rank; i<=iend_rank; i++) {
+      for (int kk=0,j=jstart_rank-RADIUS; j<=jstart_rank-1; j++) 
+      for (int i=istart_rank; i<=iend_rank; i++) {
         IN(i,j) = bottom_buf_in[kk++];
       }
     }
@@ -611,8 +611,8 @@ int main(int argc, char ** argv) {
     if (right_nbr != -1) {
       MPI_Irecv(right_buf_in, RADIUS*height_rank, MPI_DTYPE, right_nbr, 1010,
                 MPI_COMM_WORLD, &(request[1+4]));
-      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
-      for (i=iend_rank-RADIUS+1; i<=iend_rank; i++) {
+      for (int kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (int i=iend_rank-RADIUS+1; i<=iend_rank; i++) {
         right_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(right_buf_out, RADIUS*height_rank, MPI_DTYPE, right_nbr, 990, 
@@ -622,8 +622,8 @@ int main(int argc, char ** argv) {
     if (left_nbr != -1) {
       MPI_Irecv(left_buf_in, RADIUS*height_rank, MPI_DTYPE, left_nbr, 990, 
                 MPI_COMM_WORLD, &(request[3+4]));
-      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
-      for (i=istart_rank; i<=istart_rank+RADIUS-1; i++) {
+      for (int kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (int i=istart_rank; i<=istart_rank+RADIUS-1; i++) {
         left_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(left_buf_out, RADIUS*height_rank, MPI_DTYPE, left_nbr, 1010,
@@ -633,8 +633,8 @@ int main(int argc, char ** argv) {
     if (right_nbr != -1) {
       MPI_Wait(&(request[0+4]), MPI_STATUS_IGNORE);
       MPI_Wait(&(request[1+4]), MPI_STATUS_IGNORE);
-      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
-      for (i=iend_rank+1; i<=iend_rank+RADIUS; i++) {
+      for (int kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (int i=iend_rank+1; i<=iend_rank+RADIUS; i++) {
         IN(i,j) = right_buf_in[kk++];
       }
     }
@@ -642,8 +642,8 @@ int main(int argc, char ** argv) {
     if (left_nbr != -1) {
       MPI_Wait(&(request[2+4]), MPI_STATUS_IGNORE);
       MPI_Wait(&(request[3+4]), MPI_STATUS_IGNORE);
-      for (kk=0,j=jstart_rank; j<=jend_rank; j++) 
-      for (i=istart_rank-RADIUS; i<=istart_rank-1; i++) {
+      for (int kk=0,j=jstart_rank; j<=jend_rank; j++) 
+      for (int i=istart_rank-RADIUS; i<=istart_rank-1; i++) {
         IN(i,j) = left_buf_in[kk++];
       }
     }
@@ -652,14 +652,14 @@ int main(int argc, char ** argv) {
     MPI_Win_sync(shm_win_in);
 
     /* Apply the stencil operator */
-    for (j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
-      for (i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
+    for (int j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
+      for (int i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
         #if LOOPGEN
           #include "loop_body_star.incl"
         #else
-          for (jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-          for (ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-          for (ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (int jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+          for (int ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          for (int ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
         #endif
       }
     }
@@ -670,7 +670,7 @@ int main(int argc, char ** argv) {
 #if LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid writing IN while other ranks are reading it
 #else
-    for (i=0; i<num_local_nbrs; i++) {
+    for (int i=0; i<num_local_nbrs; i++) {
       MPI_Irecv(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm, &(request[i]));
       MPI_Send(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm);
     }
@@ -678,8 +678,8 @@ int main(int argc, char ** argv) {
 #endif
 
     /* add constant to solution to force refresh of neighbor data, if any */
-    for (j=jstart_rank; j<=jend_rank; j++) 
-    for (i=istart_rank; i<=iend_rank; i++) IN(i,j)+= 1.0;
+    for (int j=jstart_rank; j<=jend_rank; j++) 
+    for (int i=istart_rank; i<=iend_rank; i++) IN(i,j)+= 1.0;
 
     /* LOAD/STORE FENCE */
     MPI_Win_sync(shm_win_in);
@@ -687,7 +687,7 @@ int main(int argc, char ** argv) {
 #if LOCAL_BARRIER_SYNCH
     MPI_Barrier(shm_comm); // needed to avoid reading IN while other ranks are writing it
 #else
-    for (i=0; i<num_local_nbrs; i++) {
+    for (int i=0; i<num_local_nbrs; i++) {
       MPI_Irecv(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm, &(request[i]));
       MPI_Send(&dummy, 0, MPI_INT, local_nbr[i], 666, shm_comm);
     }
@@ -702,8 +702,8 @@ int main(int argc, char ** argv) {
   
   /* compute L1 norm in parallel                                                */
   local_norm = (DTYPE) 0.0;
-  for (j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
-    for (i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
+  for (int j=MAX(jstart_rank,RADIUS); j<=MIN(n-RADIUS-1,jend_rank); j++) {
+    for (int i=MAX(istart_rank,RADIUS); i<=MIN(n-RADIUS-1,iend_rank); i++) {
       local_norm += (DTYPE)ABS(OUT(i,j));
     }
   }

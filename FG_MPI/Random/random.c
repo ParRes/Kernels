@@ -427,10 +427,6 @@ int main(int argc, char **argv) {
       /* do the actual table updates. Because the receive buckets are contiguous, 
          we can view them as a single large bucket.                                */
       sizeRecvTotal = recvdispls[Num_procs-1]+sizeRecvBucket[Num_procs-1];
-      /* uncomment the following two pragmas if your compiler allows you to produce 
-         incorrect vector code, and you do not care if the results are incorrect   */
-      /*  #pragma ivdep */
-      /*  #pragma vector always */
       for (j=0; j<sizeRecvTotal; j++) {
         index = ranRecvBucket[0][j] & (loctablesize-1);
         Table[index] ^= ranRecvBucket[0][j];

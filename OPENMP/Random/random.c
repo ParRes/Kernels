@@ -176,7 +176,9 @@ HISTORY: Written by Rob Van der Wijngaart, June 2006.
 #endif
 
 static u64Int PRK_starts(s64Int);
+#if UNUSED
 static int    poweroftwo(int);
+#endif
 
 int main(int argc, char **argv) {
 
@@ -492,6 +494,7 @@ u64Int PRK_starts(s64Int n)
   return ran; 
 } 
 
+#if UNUSED
 /* utility routine that tests whether an integer is a power of two         */
 int poweroftwo(int n) {
   int log2n = 0;
@@ -500,3 +503,4 @@ int poweroftwo(int n) {
   if (1<<log2n != n) return (-1);
   else               return (log2n);
 }
+#endif
