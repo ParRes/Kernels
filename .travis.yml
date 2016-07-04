@@ -38,8 +38,8 @@ matrix:
     - os: osx
       env: PRK_TARGET=allfgmpi
     # Revisit this once Grappa is working with Clang
-    - compiler: gcc
-      env: PRK_TARGET=allgrappa
+    #- compiler: gcc
+    #  env: PRK_TARGET=allgrappa
     # Mac + Chapel + GASNet does not work and I do not care
     - os: osx
       env: PRK_TARGET=allchapel
@@ -106,9 +106,9 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     #  Boost is for Grappa and HPX
-    #- boost-latest
+    - boost-latest
     # clang-3.8 comes from this
-    #- llvm-toolchain-precise
+    - llvm-toolchain-precise
     packages:
     # Python Numpy only
     - python-numpy
@@ -116,31 +116,31 @@ addons:
     - libnuma-dev
     # Grappa and HPX use CMake
     - cmake
-    - gcc-4.8
-    - g++-4.8
-    - gfortran-4.8
-    - gcc-4.9
-    - g++-4.9
-    - gfortran-4.9
+    #- gcc-4.8
+    #- g++-4.8
+    #- gfortran-4.8
+    #- gcc-4.9
+    #- g++-4.9
+    #- gfortran-4.9
     - gcc-5
     - g++-5
     - gfortran-5
     # This should provide OpenMP
-    #- clang-3.8
+    - clang-3.8
     # Boost is for Grappa and HPX-3 - reactivate with them
     # Grappa needs these (according to their .travis.yml)
-    #- libboost-date-time1.55-dev
-    #- libboost-exception1.55-dev
-    #- libboost-filesystem1.55-dev
-    #- libboost-iostreams1.55-dev
-    #- libboost-math1.55-dev
-    #- libboost-random1.55-dev
-    #- libboost-regex1.55-dev
-    #- libboost-serialization1.55-dev
-    #- libboost-signals1.55-dev
-    #- libboost-system1.55-dev
-    #- libboost-test1.55-dev
-    #- libboost-timer1.55-dev
+    - libboost-date-time1.55-dev
+    - libboost-exception1.55-dev
+    - libboost-filesystem1.55-dev
+    - libboost-iostreams1.55-dev
+    - libboost-math1.55-dev
+    - libboost-random1.55-dev
+    - libboost-regex1.55-dev
+    - libboost-serialization1.55-dev
+    - libboost-signals1.55-dev
+    - libboost-system1.55-dev
+    - libboost-test1.55-dev
+    - libboost-timer1.55-dev
     # HPX-3 needs these - not whitelisted yet
     #- libboost_chrono1.55-dev
     #- libboost_program_options1.55-dev
