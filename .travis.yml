@@ -186,6 +186,8 @@ env:
     UPC_IMPL=bupc
     GASNET_CONDUIT=ofi
     PRK_FLAGS="-Wc,-O3"
+   # Grappa is a problem.
+  - PRK_TARGET=allgrappa
     # Chapel kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allchapel
 #    CHPL_COMM=none
@@ -195,8 +197,6 @@ env:
 #  - PRK_TARGET=allhpx3
    # HPX-5 kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allhpx5
-   # Grappa is a problem.  No reason to test it every time.
-#  - PRK_TARGET=allgrappa
 before_install:
   - pwd
   - export TRAVIS_HOME=$PWD
