@@ -44,8 +44,14 @@ case "$os" in
                 done
                 ;;
             clang)
-                export PRK_CC=clang
-                export PRK_CXX=clang++
+                for clangversion in "-omp" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "-3.5" "-3.4" "" ; do
+                    if [ -f "`which clang$clangversion`" ]; then
+                        export PRK_CC="clang$clangversion"
+                        export PRK_CXX="clang++$clangversion"
+                        echo "Found GCC: $PRK_CC"
+                        break
+                    fi
+                done
                 ;;
         esac
         case "$MPI_IMPL" in
