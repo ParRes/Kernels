@@ -38,8 +38,8 @@ matrix:
     - os: osx
       env: PRK_TARGET=allfgmpi
     # Revisit this once Grappa is working with Clang
-    #- compiler: gcc
-    #  env: PRK_TARGET=allgrappa
+    - os: osx
+      env: PRK_TARGET=allgrappa
     # Mac + Chapel + GASNet does not work and I do not care
     - os: osx
       env: PRK_TARGET=allchapel
