@@ -39,7 +39,7 @@ ifndef matrix_rank
 endif
 
 ifndef PRK_FLAGS
-  PRK_FLAGS=-O3 -g3
+  PRK_FLAGS=-O3 -Wno-pointer-bool-conversion
 endif
 
 default: allserial allopenmp allmpi
