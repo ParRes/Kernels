@@ -22,10 +22,17 @@ if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
                     ln -s `which clang-omp`   $TRAVIS_ROOT/bin/clang
                     ln -s `which clang-omp++` $TRAVIS_ROOT/bin/clang++
                     ;;
+                36)
+                    brew install llvm$CLANG_VERSION --with-clang --with-compiler-rt --with-libcxx --with-lld --without-assertions
+                    brew test llvm$CLANG_VERSION
+                    ;;
                 37)
                     brew install llvm$CLANG_VERSION --with-clang --with-compiler-rt --with-libcxx --with-lld --without-assertions
                     brew test llvm$CLANG_VERSION
                     ;;
+                38)
+                    brew install llvm$CLANG_VERSION --with-clang --with-compiler-rt --with-libcxx --with-lld --without-assertions
+                    brew test llvm$CLANG_VERSION
                 *)
                     echo "Unsupported version of Clang"
                     echo "Travis will continue and use the system default"
