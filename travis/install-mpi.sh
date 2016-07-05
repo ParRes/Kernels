@@ -45,6 +45,7 @@ case "$os" in
                 ;;
             clang)
                 for clangversion in "-omp" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "-3.5" "-3.4" "" ; do
+                    find /usr/local -name clang$clangversion
                     if [ -f "`which clang$clangversion`" ]; then
                         export PRK_CC="clang$clangversion"
                         export PRK_CXX="clang++$clangversion"
