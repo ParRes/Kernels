@@ -37,7 +37,8 @@ matrix:
     # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
     - os: osx
       env: PRK_TARGET=allfgmpi
-    # Revisit this once Grappa is working with Clang
+    # Grappa does not support OSX:
+    # https://github.com/uwsampa/grappa/issues/285#issuecomment-230360533
     - os: osx
       env: PRK_TARGET=allgrappa
     # Mac + Chapel + GASNet does not work and I do not care
@@ -99,8 +100,13 @@ matrix:
            PRK_FLAGS="-Wc,-O3"
     # GUPC will fail when libnuma cannot be acquired via apt
     - env: PRK_TARGET=allupc
+           UPC_IMPL=gupc
     # we have lots of Grappa issues...
     - env: PRK_TARGET=allgrappa
+    # Grappa will not compile with Clang 3.5 or older
+    # because of https://github.com/philsquared/Catch/issues/334
+    - compiler: clang
+      env: PRK_TARGET=allgrappa
 addons:
   apt:
     sources:
