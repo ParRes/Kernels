@@ -33,6 +33,7 @@ if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
                 38)
                     brew install llvm$CLANG_VERSION --with-clang --with-compiler-rt --with-libcxx --with-lld --without-assertions
                     brew test llvm$CLANG_VERSION
+                    ;;
                 *)
                     echo "Unsupported version of Clang"
                     echo "Travis will continue and use the system default"

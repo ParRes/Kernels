@@ -135,7 +135,8 @@ addons:
     - clang-3.6
     - clang-3.7
     - clang-3.8
-    - clang-3.9
+    # Clang 3.9 caused regressions e.g. https://travis-ci.org/jeffhammond/PRK/jobs/142623827
+    #- clang-3.9
     # Boost is for Grappa and HPX-3 - reactivate with them
     # Grappa needs these (according to their .travis.yml)
     - libboost-date-time1.55-dev
@@ -160,41 +161,41 @@ env:
 #  * comment out lines m to n by prepending #
 #    :m,n s/^/#/g
 #
-#  - PRK_TARGET=allserial
-#  - PRK_TARGET=allpython
-#  - PRK_TARGET=alljulia
-#  - PRK_TARGET=allfortranserial
-#  - PRK_TARGET=allfortranopenmp
-#  - PRK_TARGET=allfortranpretty
-#  - PRK_TARGET=allfortrancoarray
-#  - PRK_TARGET=allopenmp
-#  - PRK_TARGET=allmpi1
-#  - PRK_TARGET=allshmem
-#  - PRK_TARGET=allmpirma
-#  - PRK_TARGET=allmpishm
-#  - PRK_TARGET=allmpiomp
-#  - PRK_TARGET=allampi
-#  - PRK_TARGET=allfgmpi
-#  - PRK_TARGET=allcharm++
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=gupc
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=smp
-#    PRK_FLAGS="-Wc,-O3"
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=udp
-#    PRK_FLAGS="-Wc,-O3"
-#   # Optinal: We do not need to test BUPC this thoroughly every time
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=mpi
-#    PRK_FLAGS="-Wc,-O3"
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=ofi
-#    PRK_FLAGS="-Wc,-O3"
+  - PRK_TARGET=allserial
+  - PRK_TARGET=allpython
+  - PRK_TARGET=alljulia
+  - PRK_TARGET=allfortranserial
+  - PRK_TARGET=allfortranopenmp
+  - PRK_TARGET=allfortranpretty
+  - PRK_TARGET=allfortrancoarray
+  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allshmem
+  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpiomp
+  - PRK_TARGET=allampi
+  - PRK_TARGET=allfgmpi
+  - PRK_TARGET=allcharm++
+  - PRK_TARGET=allupc
+    UPC_IMPL=gupc
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=smp
+    PRK_FLAGS="-Wc,-O3"
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=udp
+    PRK_FLAGS="-Wc,-O3"
+   # Optinal: We do not need to test BUPC this thoroughly every time
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=mpi
+    PRK_FLAGS="-Wc,-O3"
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=ofi
+    PRK_FLAGS="-Wc,-O3"
    # Grappa is a problem.
   - PRK_TARGET=allgrappa
     # Chapel kernels are not merged yet.  Activate these when they are.
