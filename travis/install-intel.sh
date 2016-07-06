@@ -6,7 +6,7 @@ os=`uname`
 TRAVIS_ROOT="$1" # unused for now
 PRK_TARGET="$2"
 
-if [ "${CC}" = "cc" ] ; then
+if [ "${PRK_CC}" = "icc" ] ; then
     case "$os" in
         Darwin)
             echo "Intel tools in Mac Travis is on the TODO list..."

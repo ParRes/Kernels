@@ -31,7 +31,7 @@ case "$os" in
         ;;
     Linux)
         echo "Linux"
-        case "$CC" in
+        case "$TRAVIS_CC" in
             gcc)
                 for gccversion in "-6" "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
                     if [ -f "`which gcc$gccversion`" ]; then
@@ -47,7 +47,7 @@ case "$os" in
                 export PRK_CC=clang
                 export PRK_CXX=clang++
                 ;;
-            cc) # HACK - should be icc
+            icc)
                 export PRK_CC=icc
                 export PRK_CXX=icpc
                 export PRK_FC=ifort

@@ -12,14 +12,23 @@ os:
   - osx
 # Travis will export CC=$compiler
 compiler:
-#  - clang
-#  - gcc
-  - cc
+  - clang
+    TRAVIS_CC=clang
+    TRAVIS_CXX=clang++
+    TRAVIS_FC=false
+  - gcc
+    TRAVIS_CC=gcc
+    TRAVIS_CXX=g++
+    TRAVIS_FC=gfortran
+  - gcc
+    TRAVIS_CC=icc
+    TRAVIS_CXX=icpc
+    TRAVIS_FC=ifort
 matrix:
   exclude:
     # Intel for Mac not implemented yet...
-    - os: osx
-      compiler: cc
+    ##- os: osx
+    ##  compiler: cc
     # only test Clang OpenMP on Mac, where we can Homebrew it
     - os: linux
       compiler: clang
@@ -38,17 +47,17 @@ matrix:
     - compiler: clang
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
-    - compiler: cc
-      env: PRK_TARGET=allupc
-           UPC_IMPL=gupc
+    ##- compiler: cc
+    ##  env: PRK_TARGET=allupc
+    ##       UPC_IMPL=gupc
     # no binary install yet, source build impossible (too much time+stdout)
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
     # GUPC only makes sense with CC=gcc
-    - compiler: cc
-      env: PRK_TARGET=allupc
-           UPC_IMPL=gupc
+    ##- compiler: cc
+    ##  env: PRK_TARGET=allupc
+    ##       UPC_IMPL=gupc
     - compiler: clang
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
@@ -83,14 +92,10 @@ matrix:
       env: PRK_TARGET=allfortranpretty
     - compiler: clang
       env: PRK_TARGET=allfortrancoarray
-    # Python does not use compiler so only test one of them per OS (GCC)
-    - compiler: clang
+    # Python does not use compiler so only test one of them per OS (Clang)
+    - compiler: gcc
       env: PRK_TARGET=allpython
-    - compiler: clang
-      env: PRK_TARGET=alljulia
-    - compiler: cc
-      env: PRK_TARGET=allpython
-    - compiler: cc
+    - compiler: gcc
       env: PRK_TARGET=alljulia
   allow_failures:
     # will fail if numpy package cannot be acquired via apt
@@ -125,22 +130,22 @@ matrix:
     # we have lots of Grappa issues...
     - env: PRK_TARGET=allgrappa
     # Jeff does not expect these to work yet
-    - compiler: cc
-      env: PRK_TARGET=allfgmpi
-    - compiler: cc
-      env: PRK_TARGET=allampi
-    - compiler: cc
-      env: PRK_TARGET=allcharm++
-    - compiler: cc
-      env: PRK_TARGET=allupc
-    - compiler: cc
-      env: PRK_TARGET=allhpx3
-    - compiler: cc
-      env: PRK_TARGET=allhpx5
-    - compiler: cc
-      env: PRK_TARGET=allchapel
-    - compiler: cc
-      env: PRK_TARGET=alllegion
+    ##- compiler: cc
+    ##  env: PRK_TARGET=allfgmpi
+    ##- compiler: cc
+    ##  env: PRK_TARGET=allampi
+    ##- compiler: cc
+    ##  env: PRK_TARGET=allcharm++
+    ##- compiler: cc
+    ##  env: PRK_TARGET=allupc
+    ##- compiler: cc
+    ##  env: PRK_TARGET=allhpx3
+    ##- compiler: cc
+    ##  env: PRK_TARGET=allhpx5
+    ##- compiler: cc
+    ##  env: PRK_TARGET=allchapel
+    ##- compiler: cc
+    ##  env: PRK_TARGET=alllegion
 addons:
   apt:
     sources:
@@ -192,40 +197,40 @@ env:
 #    :m,n s/^/#/g
 #
   - PRK_TARGET=allserial
-  - PRK_TARGET=allpython
-  - PRK_TARGET=alljulia
-  - PRK_TARGET=allfortranserial
-  - PRK_TARGET=allfortranopenmp
-  - PRK_TARGET=allfortranpretty
-  - PRK_TARGET=allfortrancoarray
-  - PRK_TARGET=allopenmp
-  - PRK_TARGET=allmpi1
-  - PRK_TARGET=allshmem
-  - PRK_TARGET=allmpirma
-  - PRK_TARGET=allmpishm
-  - PRK_TARGET=allmpiomp
-  - PRK_TARGET=allampi
-  - PRK_TARGET=allfgmpi
-  - PRK_TARGET=allcharm++
-  - PRK_TARGET=allupc
-    UPC_IMPL=gupc
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=smp
-    PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=udp
-    PRK_FLAGS="-Wc,-O3"
-   # Optinal: We do not need to test BUPC this thoroughly every time
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=mpi
-    PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=ofi
-    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allpython
+#  - PRK_TARGET=alljulia
+#  - PRK_TARGET=allfortranserial
+#  - PRK_TARGET=allfortranopenmp
+#  - PRK_TARGET=allfortranpretty
+#  - PRK_TARGET=allfortrancoarray
+#  - PRK_TARGET=allopenmp
+#  - PRK_TARGET=allmpi1
+#  - PRK_TARGET=allshmem
+#  - PRK_TARGET=allmpirma
+#  - PRK_TARGET=allmpishm
+#  - PRK_TARGET=allmpiomp
+#  - PRK_TARGET=allampi
+#  - PRK_TARGET=allfgmpi
+#  - PRK_TARGET=allcharm++
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=gupc
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=smp
+#    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=udp
+#    PRK_FLAGS="-Wc,-O3"
+#   # Optinal: We do not need to test BUPC this thoroughly every time
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=mpi
+#    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=ofi
+#    PRK_FLAGS="-Wc,-O3"
     # Chapel kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allchapel
 #    CHPL_COMM=none
