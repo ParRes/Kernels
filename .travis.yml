@@ -14,12 +14,12 @@ os:
 compiler:
 #  - clang
 #  - gcc
-  - icc
+  - cc
 matrix:
   exclude:
     # Intel for Mac not implemented yet...
     - os: osx
-      compiler: icc
+      compiler: cc
     # only test Clang OpenMP on Mac, where we can Homebrew it
     - os: linux
       compiler: clang
@@ -38,7 +38,7 @@ matrix:
     - compiler: clang
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
     # no binary install yet, source build impossible (too much time+stdout)
@@ -46,7 +46,7 @@ matrix:
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
     # GUPC only makes sense with CC=gcc
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
     - compiler: clang
@@ -88,9 +88,9 @@ matrix:
       env: PRK_TARGET=allpython
     - compiler: clang
       env: PRK_TARGET=alljulia
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=allpython
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=alljulia
   allow_failures:
     # will fail if numpy package cannot be acquired via apt
@@ -125,21 +125,21 @@ matrix:
     # we have lots of Grappa issues...
     - env: PRK_TARGET=allgrappa
     # Jeff does not expect these to work yet
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=allfgmpi
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=allampi
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=allcharm++
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=allupc
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=allhpx3
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=allhpx5
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=allchapel
-    - compiler: icc
+    - compiler: cc
       env: PRK_TARGET=alllegion
 addons:
   apt:

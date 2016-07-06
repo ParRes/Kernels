@@ -47,6 +47,10 @@ case "$os" in
                 export PRK_CC=clang
                 export PRK_CXX=clang++
                 ;;
+            cc) # HACK - should be icc
+                export PRK_CC=icc
+                export PRK_CXX=icpc
+                export PRK_FC=ifort
         esac
         case "$MPI_IMPL" in
             mpich)
