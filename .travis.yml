@@ -1,5 +1,9 @@
 sudo: false
 language: cpp
+env:
+  global:
+    # Intel license key relative for jeffhammond/PRK
+    - secure: "TKJR7ijqNQr6yaJIqYGbV1pd0TVw+i6Vwhw8DwX+rGLDG/W6gF7nFRIQwnaSEeE/NU9uHYZuf2I0nwxeBSMJncGVdsKVOClqmDzSmj+PFkzNt/0iw8DSdAN0dhwK8RJ1eUoOQ9SaEKw/OITo3wJOp10Sb/dtlsZLIx88oDV+jEcWJLdSzSixQuzPpJDcsMxhIcCJ7al2lGnb5puS0MxXgnuFJ3yw4Tc7UeYjszwZhV7ID0x2JFCQYw007r+UsbtUVwIrdJF7rszTeMIAsQfjdzJYjFBsN9v7v7nqD4PKyRP8I4AAUPTSyDZR35phRM/40rk+hFvyXcyZQuZlrlZl1wIgUE53xoJEQjwx6+Vl82CdGPu7oDoyhiWSR1VhcRjyizs5mhWmWj7oMml4LgsG+OwBtwoKNBTZwrWKxR8/gS0ooEuF3UT9wnQBukuSHmssJbDoDxHBV1pfo/N3YZPkARqueM+V31ZaN4dY7GEW/OevyOq14plxDuRBwQsRa32IfCDSg1eu74sNXloHonTw7gtlBzCiOwzoDyYUX9xjeRLxURl8JO5gwWJlJpF6uYxfVKbpG/s83t6GYCRQUya4AtzR1j765SBposobOMENtt5ZcPth2aHal9I7NbF4UlhoMDc6zWZN3gpx6shtqgEbZ9f9QVuoGazkXlyXNh0QwZw="
 # this is for Python, per http://danielnouri.org/notes/2012/11/23/use-apt-get-to-install-python-dependencies-for-travis-ci/
 virtualenv:
   system_site_packages: true
@@ -10,8 +14,12 @@ os:
 compiler:
   - clang
   - gcc
+  - icc
 matrix:
   exclude:
+    # Intel for Mac not implemented yet...
+    - os: osx
+      compiler: icc
     # only test Clang OpenMP on Mac, where we can Homebrew it
     - os: linux
       compiler: clang
@@ -30,8 +38,18 @@ matrix:
     - compiler: clang
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
+    - compiler: icc
+      env: PRK_TARGET=allupc
+           UPC_IMPL=gupc
     # no binary install yet, source build impossible (too much time+stdout)
     - os: osx
+      env: PRK_TARGET=allupc
+           UPC_IMPL=gupc
+    # GUPC only makes sense with CC=gcc
+    - compiler: icc
+      env: PRK_TARGET=allupc
+           UPC_IMPL=gupc
+    - compiler: clang
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
     # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
@@ -70,6 +88,10 @@ matrix:
       env: PRK_TARGET=allpython
     - compiler: clang
       env: PRK_TARGET=alljulia
+    - compiler: icc
+      env: PRK_TARGET=allpython
+    - compiler: icc
+      env: PRK_TARGET=alljulia
   allow_failures:
     # will fail if numpy package cannot be acquired via apt
     - env: PRK_TARGET=allpython
@@ -99,8 +121,26 @@ matrix:
            PRK_FLAGS="-Wc,-O3"
     # GUPC will fail when libnuma cannot be acquired via apt
     - env: PRK_TARGET=allupc
+           UPC_IMPL=gupc
     # we have lots of Grappa issues...
     - env: PRK_TARGET=allgrappa
+    # Jeff does not expect these to work yet
+    - compiler: icc
+      env: PRK_TARGET=allfgmpi
+    - compiler: icc
+      env: PRK_TARGET=allampi
+    - compiler: icc
+      env: PRK_TARGET=allcharm++
+    - compiler: icc
+      env: PRK_TARGET=allupc
+    - compiler: icc
+      env: PRK_TARGET=allhpx3
+    - compiler: icc
+      env: PRK_TARGET=allhpx5
+    - compiler: icc
+      env: PRK_TARGET=allchapel
+    - compiler: icc
+      env: PRK_TARGET=alllegion
 addons:
   apt:
     sources:
@@ -202,6 +242,8 @@ before_install:
   - export TRAVIS_HOME=$PWD
   - export TRAVIS_ROOT=$TRAVIS_HOME/PRK-deps
   - mkdir -p $TRAVIS_ROOT
+  - sh ./travis/install-intel.sh $TRAVIS_ROOT $PRK_TARGET
+  - source ~/.bashrc # updated by install-intel.sh
 install:
   - export PATH=$TRAVIS_ROOT/bin:$PATH
   - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
