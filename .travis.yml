@@ -18,8 +18,8 @@ compiler:
 matrix:
   exclude:
     # Intel for Mac not implemented yet...
-    ##- os: osx
-    ##  compiler: cc
+    - os: osx
+      compiler: touch ~/icc ; gcc
     # only test Clang OpenMP on Mac, where we can Homebrew it
     - os: linux
       compiler: clang
