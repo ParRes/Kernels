@@ -4,8 +4,11 @@ set -x
 os=`uname`
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
-# Travis exports this
-PRK_COMPILER="$CC"
+
+echo "Compilers:"
+echo "CC=$CC"
+echo "CXX=$CXX"
+echo "FC=$FC"
 
 echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 
@@ -50,7 +53,7 @@ case "$PRK_TARGET" in
         ;;
     allserial)
         echo "Serial"
-        echo "CC=$PRK_COMPILER -std=c99" >> common/make.defs
+        echo "CC=$CC -std=c99" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=SERIAL
         $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
@@ -70,6 +73,9 @@ case "$PRK_TARGET" in
         # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
         echo "Fortran"
         case "$CC" in
+            icc)
+                echo "FC=ifort" >> common/make.defs
+                ;;
             gcc)
                 for gccversion in "-6" "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
                     if [ -f "`which gfortran$gccversion`" ]; then
@@ -152,7 +158,7 @@ case "$PRK_TARGET" in
         ;;
     allopenmp)
         echo "OpenMP"
-        echo "CC=$PRK_COMPILER -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
+        echo "CC=$CC -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=OPENMP
         export OMP_NUM_THREADS=4
