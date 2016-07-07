@@ -90,6 +90,7 @@ case "$PRK_TARGET" in
                 ;;
         esac
         case "$PRK_TARGET" in
+            # FIXME: ifort flags
             allfortrancoarray)
                 #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
                 export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
