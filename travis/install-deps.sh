@@ -20,7 +20,7 @@ case "$PRK_TARGET" in
 
     allfortran*)
         echo "Fortran"
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+        if [ "${TRAVIS_OS_NAME}" = "osx" && "${CC}" = "gcc" ] ; then
             set +e
             brew update
             p=gcc
@@ -34,14 +34,16 @@ case "$PRK_TARGET" in
             brew list gcc
             set -e
         fi
-        if [ "${PRK_TARGET}" = "allfortrancoarray" ] ; then
+        if [ "${PRK_TARGET}" = "allfortrancoarray" && "${CC}" = "gcc" ] ; then
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
         fi
         ;;
 
     allopenmp)
         echo "OpenMP"
-        sh ./travis/install-clang.sh $TRAVIS_ROOT omp
+        if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
+            sh ./travis/install-clang.sh $TRAVIS_ROOT omp
+        fi
         ;;
     allmpi*)
         echo "Any normal MPI"
