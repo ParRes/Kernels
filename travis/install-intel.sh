@@ -29,8 +29,8 @@ if [ -f ~/use-intel-compilers ] ; then
                     ./travis/install-icc.sh --components icc,mpi
                     ;;
                 allupc)
-                    if [ "${UPC_IMPL}" == "bupc" ] ; then
-                        if [ "${GASNET_CONDUIT}" == "mpi" ] ; then
+                    if [ "${UPC_IMPL}" = "bupc" ] ; then
+                        if [ "${GASNET_CONDUIT}" = "mpi" ] ; then
                             ./travis/install-icc.sh --components icc,mpi
                         else
                             ./travis/install-icc.sh --components icc
