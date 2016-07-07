@@ -10,7 +10,7 @@ virtualenv:
 os:
   - linux
   - osx
-# Travis will export CC=$compiler
+# Travis will export touch /use-intel-compilers ; gcc=$compiler
 compiler:
   - clang
   - gcc
@@ -38,17 +38,14 @@ matrix:
     - compiler: clang
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
-    ##- compiler: cc
-    ##  env: PRK_TARGET=allupc
-    ##       UPC_IMPL=gupc
+    # GUPC only makes sense with touch /use-intel-compilers ; gcc=gcc
+    - compiler: touch ~/use-intel-compilers ; gcc
+      env: PRK_TARGET=allupc
+           UPC_IMPL=gupc
     # no binary install yet, source build impossible (too much time+stdout)
     - os: osx
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
-    # GUPC only makes sense with CC=gcc
-    ##- compiler: cc
-    ##  env: PRK_TARGET=allupc
-    ##       UPC_IMPL=gupc
     - compiler: clang
       env: PRK_TARGET=allupc
            UPC_IMPL=gupc
@@ -121,22 +118,22 @@ matrix:
     # we have lots of Grappa issues...
     - env: PRK_TARGET=allgrappa
     # Jeff does not expect these to work yet
-    ##- compiler: cc
-    ##  env: PRK_TARGET=allfgmpi
-    ##- compiler: cc
-    ##  env: PRK_TARGET=allampi
-    ##- compiler: cc
-    ##  env: PRK_TARGET=allcharm++
-    ##- compiler: cc
-    ##  env: PRK_TARGET=allupc
-    ##- compiler: cc
-    ##  env: PRK_TARGET=allhpx3
-    ##- compiler: cc
-    ##  env: PRK_TARGET=allhpx5
-    ##- compiler: cc
-    ##  env: PRK_TARGET=allchapel
-    ##- compiler: cc
-    ##  env: PRK_TARGET=alllegion
+    - compiler: touch /use-intel-compilers ; gcc
+      env: PRK_TARGET=allfgmpi
+    - compiler: touch /use-intel-compilers ; gcc
+      env: PRK_TARGET=allampi
+    - compiler: touch /use-intel-compilers ; gcc
+      env: PRK_TARGET=allcharm++
+    - compiler: touch /use-intel-compilers ; gcc
+      env: PRK_TARGET=allupc
+    - compiler: touch /use-intel-compilers ; gcc
+      env: PRK_TARGET=allhpx3
+    - compiler: touch /use-intel-compilers ; gcc
+      env: PRK_TARGET=allhpx5
+    - compiler: touch /use-intel-compilers ; gcc
+      env: PRK_TARGET=allchapel
+    - compiler: touch /use-intel-compilers ; gcc
+      env: PRK_TARGET=alllegion
 addons:
   apt:
     sources:
@@ -188,40 +185,40 @@ env:
 #    :m,n s/^/#/g
 #
   - PRK_TARGET=allserial
-#  - PRK_TARGET=allpython
-#  - PRK_TARGET=alljulia
-#  - PRK_TARGET=allfortranserial
-#  - PRK_TARGET=allfortranopenmp
-#  - PRK_TARGET=allfortranpretty
-#  - PRK_TARGET=allfortrancoarray
-#  - PRK_TARGET=allopenmp
-#  - PRK_TARGET=allmpi1
-#  - PRK_TARGET=allshmem
-#  - PRK_TARGET=allmpirma
-#  - PRK_TARGET=allmpishm
-#  - PRK_TARGET=allmpiomp
-#  - PRK_TARGET=allampi
-#  - PRK_TARGET=allfgmpi
-#  - PRK_TARGET=allcharm++
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=gupc
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=smp
-#    PRK_FLAGS="-Wc,-O3"
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=udp
-#    PRK_FLAGS="-Wc,-O3"
-#   # Optinal: We do not need to test BUPC this thoroughly every time
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=mpi
-#    PRK_FLAGS="-Wc,-O3"
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=bupc
-#    GASNET_CONDUIT=ofi
-#    PRK_FLAGS="-Wc,-O3"
+  - PRK_TARGET=allpython
+  - PRK_TARGET=alljulia
+  - PRK_TARGET=allfortranserial
+  - PRK_TARGET=allfortranopenmp
+  - PRK_TARGET=allfortranpretty
+  - PRK_TARGET=allfortrancoarray
+  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allshmem
+  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpiomp
+  - PRK_TARGET=allampi
+  - PRK_TARGET=allfgmpi
+  - PRK_TARGET=allcharm++
+  - PRK_TARGET=allupc
+    UPC_IMPL=gupc
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=smp
+    PRK_FLAGS="-Wc,-O3"
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=udp
+    PRK_FLAGS="-Wc,-O3"
+   # Optinal: We do not need to test BUPC this thoroughly every time
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=mpi
+    PRK_FLAGS="-Wc,-O3"
+  - PRK_TARGET=allupc
+    UPC_IMPL=bupc
+    GASNET_CONDUIT=ofi
+    PRK_FLAGS="-Wc,-O3"
     # Chapel kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allchapel
 #    CHPL_COMM=none
