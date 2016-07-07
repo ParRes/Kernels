@@ -14,12 +14,12 @@ os:
 compiler:
   - clang
   - gcc
-  - touch ~/icc ; gcc
+  - touch ~/use-intel-compilers ; gcc
 matrix:
   exclude:
     # Intel for Mac not implemented yet...
     - os: osx
-      compiler: touch ~/icc ; gcc
+      compiler: touch ~/use-intel-compilers ; gcc
     # only test Clang OpenMP on Mac, where we can Homebrew it
     - os: linux
       compiler: clang

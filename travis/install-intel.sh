@@ -6,7 +6,7 @@ os=`uname`
 TRAVIS_ROOT="$1" # unused for now
 PRK_TARGET="$2"
 
-if [ -f ~/icc ] ; then
+if [ -f ~/use-intel-compilers ] ; then
     case "$os" in
         Darwin)
             echo "Intel tools in Mac Travis is on the TODO list..."
