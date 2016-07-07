@@ -90,15 +90,24 @@ case "$PRK_TARGET" in
                 ;;
         esac
         case "$PRK_TARGET" in
-            # FIXME: ifort flags
             allfortrancoarray)
-                #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
-                export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
-                echo "FC=$PRK_CAFC\nCOARRAYFLAG=-cpp -std=f2008 -fcoarray=lib" >> common/make.defs
+                if [ "${CC}" = "gcc" ] ; then
+                    #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
+                    export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
+                    echo "FC=$PRK_CAFC\nCOARRAYFLAG=-cpp -std=f2008 -fcoarray=lib" >> common/make.defs
+                elif [ "${CC}" = "icc" ] ; then
+                    export PRK_CAFC="ifort"
+                    echo "FC=$PRK_CAFC\nCOARRAYFLAG=-fpp -std08 -coarray" >> common/make.defs
+                fi
                 ;;
             *)
-                export PRK_FC="$PRK_FC -std=f2008 -cpp"
-                echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp" >> common/make.defs
+                if [ "${CC}" = "gcc" ] ; then
+                    export PRK_FC="$PRK_FC -std=f2008 -cpp"
+                    echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp" >> common/make.defs
+                elif [ "${CC}" = "icc" ] ; then
+                    export PRK_FC="ifort -fpp -std08"
+                    echo "FC=$PRK_FC\nOPENMPFLAG=-qopenmp" >> common/make.defs
+                fi
                 ;;
         esac
         make $PRK_TARGET
@@ -124,12 +133,20 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 32
                 ;;
             allfortrancoarray)
-                export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
                 export PRK_MPI_PROCS=4
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+                if [ "${CC}" = "gcc" ] ; then
+                    export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+                elif [ "${CC}" = "icc" ] ; then
+                    export FOR_COARRAY_NUM_IMAGES=$PRK_MPI_PROCS
+                    $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
+                    $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
+                    $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
+                    $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+                fi
                 ;;
             esac
         ;;
