@@ -5,7 +5,7 @@ os=`uname`
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 # Travis exports this
-PRK_COMPILER="$TRAVIS_CC"
+PRK_COMPILER="$CC"
 
 echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 
