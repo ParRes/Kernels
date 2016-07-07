@@ -15,29 +15,43 @@ if [ -f ~/use-intel-compilers ] ; then
         Linux)
             echo "Linux"
             case "$PRK_TARGET" in
-                allserial)
-                    ./travis/install-icc.sh --components icc
-                    ;;
                 allfortran*)
                     ./travis/install-icc.sh --components fortran,openmp
+                    export FC=ifort
                     ;;
                 allopenmp)
                     ./travis/install-icc.sh --components icc,openmp
                     ;;
-                allmpiopenmp)
+                allmpiopenmp) # must come before allmpi*
                     ./travis/install-icc.sh --components icc,mpi,openmp
                     ;;
                 allmpi*)
                     ./travis/install-icc.sh --components icc,mpi
                     ;;
+                allupc)
+                    if [ "${UPC_IMPL}" == "bupc" ] ; then
+                        if [ "${GASNET_CONDUIT}" == "mpi" ] ; then
+                            ./travis/install-icc.sh --components icc,mpi
+                        else
+                            ./travis/install-icc.sh --components icc
+                        fi
+                    else
+                        echo "Intel compilers do not make sense with Intrepid GCC/Clang UPC"
+                        exit 11
+                    fi
+                    ;;
+                allpython)
+                    echo "TODO: Install Intel Python here"
+                    ;;
+                alljulia)
+                    echo "TODO: Install Intel Julia here (if it exists)"
+                    ;;
                 *)
-                    echo "Intel tools do not support PRK_TARGET=${PRK_TARGET}"
-                    exit 10
+                    ./travis/install-icc.sh --components icc
                     ;;
             esac
             export CC=icc
             export CXX=icpc
-            export FC=ifort
             ;;
     esac
 fi
