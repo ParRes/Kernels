@@ -16,7 +16,7 @@ if [ -f ~/use-intel-compilers ] ; then
             echo "Linux"
             case "$PRK_TARGET" in
                 allfortran*)
-                    ./travis/install-icc.sh --components fortran,openmp
+                    ./travis/install-icc.sh --components ifort,openmp
                     export FC=ifort
                     ;;
                 allopenmp)
