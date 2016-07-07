@@ -13,17 +13,8 @@ os:
 # Travis will export CC=$compiler
 compiler:
   - clang
-    TRAVIS_CC=clang
-    TRAVIS_CXX=clang++
-    TRAVIS_FC=false
   - gcc
-    TRAVIS_CC=gcc
-    TRAVIS_CXX=g++
-    TRAVIS_FC=gfortran
-  - gcc
-    TRAVIS_CC=icc
-    TRAVIS_CXX=icpc
-    TRAVIS_FC=ifort
+  - touch ~/icc ; gcc
 matrix:
   exclude:
     # Intel for Mac not implemented yet...
