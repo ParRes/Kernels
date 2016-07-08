@@ -152,23 +152,24 @@ addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
-    #  Boost is for Grappa and HPX
-    #- boost-latest
     # clang-3.8 comes from this
     - llvm-toolchain-precise
+    #  Boost is for Grappa and HPX
+    #- boost-latest
     packages:
     - python-numpy
-    # Required by GUPC
-    - libnuma-dev
-    # Grappa and HPX use CMake
-    - cmake
     - gcc-4.9
     - g++-4.9
+    - gfortran-4.9
     - gcc-5
     - g++-5
     - gfortran-5
+    # Required by GUPC
+    - libnuma-dev
     # This should provide OpenMP
     - clang-3.8
+    # Grappa and HPX use CMake
+    - cmake
     # Boost is for Grappa and HPX-3 - reactivate with them
     # Grappa needs these (according to their .travis.yml)
     #- libboost-date-time1.55-dev
