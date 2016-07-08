@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set -x
-
 # Install Intel Parallel Studio on Travis CI
 # https://github.com/nemequ/icc-travis
 #
