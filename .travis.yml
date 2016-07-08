@@ -155,7 +155,7 @@ addons:
     #  Boost is for Grappa and HPX
     #- boost-latest
     # clang-3.8 comes from this
-    #- llvm-toolchain-precise
+    - llvm-toolchain-precise
     packages:
     - python-numpy
     # Required by GUPC
@@ -168,7 +168,7 @@ addons:
     - g++-5
     - gfortran-5
     # This should provide OpenMP
-    #- clang-3.8
+    - clang-3.8
     # Boost is for Grappa and HPX-3 - reactivate with them
     # Grappa needs these (according to their .travis.yml)
     #- libboost-date-time1.55-dev
