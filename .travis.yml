@@ -2,18 +2,17 @@ sudo: false
 language: cpp
 env:
   global:
-    # Intel license key relative for jeffhammond/PRK
-    - secure: "d6MGxZ6mA4obk8zJACPcmxO0+h78raC2YwHTD4ujNXVBEIAftAq9bVt3V5toCtaOUmzJqjQAdP674cLiU0ELaWTMzsPoFx4zEYKR1goCkrTrTAq1qn1qHXvvkc8GdOo2CM+sX4wlfMM+0zgAdejOGXfLIJvk3sfwPJ6a8dT6xbKIw67ZVi3Ts2UHxE/gZXisnaf5OLR4d5XlTZWg8oy2B3i9qKJwHqauTCDdPIaKxuecZqYuWJ7yvygqD+OR6LCAcNiLztS7WcKsZL5G/LrfyBaUYu6J625bJhZ3QFzI7Ed/CtK9x/0g5ZQuzBR3EU39KgsDazS5yQ4vDGlgndY2APsLw3K2/It9JkOV50+YXYS4UVX8A8jbwGKXfJ+ETKnZ1ISN8Eh8A2pqjBBji2QCLHGOwl1qIAhLPunBs7VglDNBWt9Gr8ZqZaZ6lXv+hXUqJAZ/r3ebGkroueNVevTcgSfcuoClixpg/wthoFMdg+cT+AEWjv8oOdC46hcDCr8FOGJRLvNJh1L4HuTK++EMWl5nXiSJX+Gwo6gUL3RMBf5K9AtMIPAUpMOKpddZsxJ1RB4U4uZj+0T61N6hw2Ie/4BjMasW+iXyXikdaXT/fA/1XHVb9Y2tBgJjxaHclo8BGNp2pstFoGj2JGC+EbSxrr0SEcFi5CKKebvoc7BPIhc="
+    - secure: "WdmAC7f36ftu8qd4QFGRuD9KOnek1Pf+ri8hOgblH7pVRsGBatEIcDwde7KCM49SyXuxPnyJ6Ey3p7kZNFOYzx5hhyvoHQ5S9ibXqJQ9iEfzGwdjxxkz3B6Eu9TOd0YWUnYKIO0gtvdREJSeQJAdccK+uvsPK3KqfxsaayrU1aEfd5Bm8KvS4IBIfi/eYVqmASRz6PQbMPSLFwyhIRFk1uEjhVoPJQkdPt5Q4jjatYQe9vL6WmZS2h1lkov4PKRfs87R7NBWIzQ+cjnum/FHmbFNwmD8RSGeqNqfVgBaiErERehd4yQpe+K+D70sb25n+No9NN45UOnXEJRLuziIu0bYtjFDyELjRXXUqTlzDydzl+URxxOWR0xtFmaS/Qo/71dn7TkNoQnQrHw45M3T0tQkRqRHUkCyODlqHPR+SXp8X2wRuiKzsdI8b2WdtcnHHr+0ii6sgOepg/av9r7D7JmJG1aG8MacTWYDKReqH0jb9GaraFvMFg/21FlYx64KDfmLDwmPv1TXn2tURQmbhWxAOFBAYJ5uoqDVlLuWDBPbtQbCj6qrexHyJI/HZztqiQexrw7C+kmPd95p6F/ty/wsrgerafGvjlrgOvWxtJnlqfxF4dJlNxQF4I7mRyuihzBjFhxSMkgJmX4atQZUaUsAA2OleZEPRd/1v29+zsU="
 # this is for Python, per http://danielnouri.org/notes/2012/11/23/use-apt-get-to-install-python-dependencies-for-travis-ci/
 virtualenv:
   system_site_packages: true
 os:
   - linux
-  - osx
+#  - osx
 # Travis will export touch /use-intel-compilers ; gcc=$compiler
 compiler:
   - clang
-  - gcc
+#  - gcc
   - touch ~/use-intel-compilers ; gcc
 matrix:
   exclude:
@@ -185,8 +184,8 @@ env:
 #    :m,n s/^/#/g
 #
   - PRK_TARGET=allserial
-  - PRK_TARGET=allpython
-  - PRK_TARGET=alljulia
+#  - PRK_TARGET=allpython
+#  - PRK_TARGET=alljulia
   - PRK_TARGET=allfortranserial
   - PRK_TARGET=allfortranopenmp
   - PRK_TARGET=allfortranpretty
@@ -194,31 +193,31 @@ env:
   - PRK_TARGET=allopenmp
   - PRK_TARGET=allmpi1
   - PRK_TARGET=allshmem
-  - PRK_TARGET=allmpirma
-  - PRK_TARGET=allmpishm
-  - PRK_TARGET=allmpiomp
-  - PRK_TARGET=allampi
-  - PRK_TARGET=allfgmpi
-  - PRK_TARGET=allcharm++
-  - PRK_TARGET=allupc
-    UPC_IMPL=gupc
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=smp
-    PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=udp
-    PRK_FLAGS="-Wc,-O3"
-   # Optinal: We do not need to test BUPC this thoroughly every time
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=mpi
-    PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allupc
-    UPC_IMPL=bupc
-    GASNET_CONDUIT=ofi
-    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allmpirma
+#  - PRK_TARGET=allmpishm
+#  - PRK_TARGET=allmpiomp
+#  - PRK_TARGET=allampi
+#  - PRK_TARGET=allfgmpi
+#  - PRK_TARGET=allcharm++
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=gupc
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=smp
+#    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=udp
+#    PRK_FLAGS="-Wc,-O3"
+#   # Optinal: We do not need to test BUPC this thoroughly every time
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=mpi
+#    PRK_FLAGS="-Wc,-O3"
+#  - PRK_TARGET=allupc
+#    UPC_IMPL=bupc
+#    GASNET_CONDUIT=ofi
+#    PRK_FLAGS="-Wc,-O3"
     # Chapel kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allchapel
 #    CHPL_COMM=none
