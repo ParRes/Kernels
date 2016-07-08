@@ -161,6 +161,8 @@ if [ "x" != "x${INTEL_SERIAL_NUMBER}" ]; then
     echo "ACTIVATION_TYPE=serial_number" >> "${SILENT_CFG}"
 else
     echo "ACTIVATION_TYPE=trial_lic" >> "${SILENT_CFG}"
+    echo "INTEL_SERIAL_NUMBER not found :-("
+    exit 911
 fi
 
 ("${INSTALLER}" \
