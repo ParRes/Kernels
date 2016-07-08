@@ -104,7 +104,7 @@ case "$PRK_TARGET" in
                     echo "FC=$PRK_CAFC\nCOARRAYFLAG=-cpp -std=f2008 -fcoarray=lib" >> common/make.defs
                 elif [ "${CC}" = "icc" ] ; then
                     export PRK_CAFC="ifort"
-                    echo "FC=$PRK_CAFC\nCOARRAYFLAG=-fpp -std08 -coarray" >> common/make.defs
+                    echo "FC=$PRK_CAFC\nCOARRAYFLAG=-fpp -std08 -traceback -coarray" >> common/make.defs
                 fi
                 ;;
             *)
@@ -112,7 +112,8 @@ case "$PRK_TARGET" in
                     export PRK_FC="$PRK_FC -std=f2008 -cpp"
                     echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp" >> common/make.defs
                 elif [ "${CC}" = "icc" ] ; then
-                    export PRK_FC="ifort -fpp -std08"
+                    # -heap-arrays prevents SEGV in transpose-pretty (?)
+                    export PRK_FC="ifort -fpp -std08 -traceback -heap-arrays"
                     echo "FC=$PRK_FC\nOPENMPFLAG=-qopenmp" >> common/make.defs
                 fi
                 ;;
