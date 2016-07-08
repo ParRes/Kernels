@@ -178,7 +178,7 @@ case "$PRK_TARGET" in
         ;;
     allmpi1)
         echo "MPI-1"
-        echo "MPICC=$MPI_ROOT/bin/mpicc" >> common/make.defs
+        echo "MPICC=$MPI_ROOT/bin/mpicc -std=c99" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPI1
         export PRK_MPI_PROCS=4
@@ -199,7 +199,7 @@ case "$PRK_TARGET" in
         ;;
     allmpio*mp)
         echo "MPI+OpenMP"
-        echo "MPICC=$MPI_ROOT/bin/mpicc\nOPENMPFLAG=-fopenmp" >> common/make.defs
+        echo "MPICC=$MPI_ROOT/bin/mpicc -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIOPENMP
         export PRK_MPI_PROCS=2
@@ -212,7 +212,7 @@ case "$PRK_TARGET" in
         ;;
     allmpirma)
         echo "MPI-RMA"
-        echo "MPICC=$MPI_ROOT/bin/mpicc" >> common/make.defs
+        echo "MPICC=$MPI_ROOT/bin/mpicc -std=c99" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIRMA
         export PRK_MPI_PROCS=4
@@ -223,7 +223,7 @@ case "$PRK_TARGET" in
         ;;
     allmpishm)
         echo "MPI+MPI"
-        echo "MPICC=$MPI_ROOT/bin/mpicc" >> common/make.defs
+        echo "MPICC=$MPI_ROOT/bin/mpicc -std=c99" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPISHM
         export PRK_MPI_PROCS=4
@@ -362,7 +362,7 @@ case "$PRK_TARGET" in
     allfgmpi)
         echo "Fine-Grain MPI (FG-MPI)"
         export FGMPI_ROOT=$TRAVIS_ROOT/fgmpi
-        echo "FGMPITOP=$FGMPI_ROOT\nFGMPICC=$FGMPI_ROOT/bin/mpicc" >> common/make.defs
+        echo "FGMPITOP=$FGMPI_ROOT\nFGMPICC=$FGMPI_ROOT/bin/mpicc -std=c99" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=FG_MPI
         export PRK_MPI_PROCS=2
