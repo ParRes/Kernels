@@ -52,7 +52,6 @@ if [ -f ~/use-intel-compilers ] ; then
             esac
             export CC=icc
             export CXX=icpc
-            find ~/intel
             ;;
     esac
 fi
