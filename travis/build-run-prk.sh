@@ -5,10 +5,11 @@ os=`uname`
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 
-echo "Compilers:"
-echo "CC=$CC"
-echo "CXX=$CXX"
-echo "FC=$FC"
+if [ -f ~/use-intel-compilers ] ; then
+    export CC=icc
+    export CXX=icpc
+    export FC=ifort
+fi
 
 echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 

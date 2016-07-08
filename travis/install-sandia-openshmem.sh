@@ -1,6 +1,12 @@
 set -e
 set -x
 
+if [ -f ~/use-intel-compilers ] ; then
+    export CC=icc
+    export CXX=icpc
+    export FC=ifort
+fi
+
 TRAVIS_ROOT="$1"
 SHMEM_ROOT=$TRAVIS_ROOT/sandia-openshmem
 
