@@ -1,8 +1,15 @@
+#!/bin/sh
+
 set -e
 set -x
 
-TRAVIS_ROOT="$1"
+if [ -f ~/use-intel-compilers ] ; then
+    export CC=icc
+    export CXX=icpc
+    export FC=ifort
+fi
 
+TRAVIS_ROOT="$1"
 
 if [ ! -d "$TRAVIS_ROOT/hpx5" ] ; then
     cd $TRAVIS_ROOT

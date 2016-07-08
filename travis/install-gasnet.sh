@@ -1,3 +1,5 @@
+#!/bin/sh
+
 set -e
 set -x
 
@@ -12,7 +14,7 @@ export GASNET_RELEASE=GASNet-1.26.3
 os=`uname`
 case $os in
     Darwin)
-        GASNET_NO_PTHREADS="--disable-par" # --enable-pshm # configure test fails
+        GASNET_NO_PTHREADS="--disable-par" # --enable-pshm # configure CC=cc test fails
         MPI_ROOT=/usr/local
         ;;
     Linux)
@@ -29,28 +31,28 @@ if [ ! -d "$GASNET_PREFIX" ]; then
     # disable IBV just in case Linux has headers for it
     case "$GASNET_CONDUIT" in
         smp)
-            ../configure --prefix=$GASNET_PREFIX --disable-aligned-segments $GASNET_NO_PTHREADS \
-                         --enable-$GASNET_CONDUIT --disable-auto-conduit-detect
+            ../configure CC=cc --prefix=$GASNET_PREFIX  --disable-aligned-segments $GASNET_NO_PTHREADS \
+                               --enable-$GASNET_CONDUIT --disable-auto-conduit-detect
             ;;
         udp)
-            ../configure --prefix=$GASNET_PREFIX --disable-aligned-segments $GASNET_NO_PTHREADS \
-                         --enable-$GASNET_CONDUIT --disable-auto-conduit-detect
+            ../configure CC=cc --prefix=$GASNET_PREFIX  --disable-aligned-segments $GASNET_NO_PTHREADS \
+                               --enable-$GASNET_CONDUIT --disable-auto-conduit-detect
             ;;
         ofi)
             # TODO factor Hydra out of Sandia OpenSHMEM install so it can be used as spawner here
-            ../configure --prefix=$GASNET_PREFIX --disable-aligned-segments $GASNET_NO_PTHREADS \
-                         --enable-$GASNET_CONDUIT --with-ofihome=$TRAVIS_ROOT/libfabric \
-                         --with-ofi-spawner=pmi --with-pmi=$TRAVIS_ROOT/hydra \
-                         --disable-auto-conduit-detect
+            ../configure CC=cc --prefix=$GASNET_PREFIX  --disable-aligned-segments $GASNET_NO_PTHREADS \
+                               --enable-$GASNET_CONDUIT --with-ofihome=$TRAVIS_ROOT/libfabric \
+                               --with-ofi-spawner=pmi   --with-pmi=$TRAVIS_ROOT/hydra \
+                               --disable-auto-conduit-detect
             ;;
         mpi)
-            ../configure --prefix=$GASNET_PREFIX --disable-aligned-segments $GASNET_NO_PTHREADS \
-                         --enable-$GASNET_CONDUIT --with-mpi-cc=$MPI_ROOT/bin/mpicc \
-                         --disable-auto-conduit-detect
+            ../configure CC=cc --prefix=$GASNET_PREFIX  --disable-aligned-segments $GASNET_NO_PTHREADS \
+                               --enable-$GASNET_CONDUIT --with-mpi-cc=$MPI_ROOT/bin/mpicc \
+                               --disable-auto-conduit-detect
             ;;
         *)
-            echo "GASNet conduit not specified - configure will guess."
-            ../configure --prefix=$GASNET_PREFIX --disable-aligned-segments
+            echo "GASNet conduit not specified - configure CC=cc will guess."
+            ../configure CC=cc --prefix=$GASNET_PREFIX --disable-aligned-segments
             ;;
     esac
     make -j2

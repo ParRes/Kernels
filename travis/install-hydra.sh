@@ -1,3 +1,5 @@
+#!/bin/sh
+
 set -e
 set -x
 
@@ -9,7 +11,7 @@ if [ ! -d "$HYDRA_ROOT" ]; then
     wget --no-check-certificate -q http://www.mpich.org/static/downloads/3.2/hydra-3.2.tar.gz
     tar -xzf hydra-3.2.tar.gz
     cd hydra-3.2
-    ./configure --prefix=$HYDRA_ROOT
+    ./configure CC=cc --prefix=$HYDRA_ROOT
     make && make install
 else
     echo "MPICH Hydra installed..."
