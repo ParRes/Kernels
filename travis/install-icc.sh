@@ -207,5 +207,8 @@ ln -s "${DESTINATION}"/licenses ~/Licenses
 echo ". \"${DESTINATION}/bin/compilervars.sh\" intel64" >> ~/.bashrc-intel
 echo "export LD_LIBRARY_PATH=\"${DESTINATION}/ism/bin/intel64:${DESTINATION}/lib/intel64_lin:\$LD_LIBRARY_PATH\"" >> ~/.bashrc-intel
 echo "export PATH=\"${DESTINATION}/bin:\$PATH\"" >> ~/.bashrc-intel
+echo "export CC=icc"
+echo "export CXX=icpc"
+echo "export FC=ifort"
 cat ~/.bashrc >> ~/.bashrc-intel
 mv ~/.bashrc-intel ~/.bashrc

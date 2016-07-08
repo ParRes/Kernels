@@ -235,7 +235,7 @@ before_install:
   - export TRAVIS_HOME=$PWD
   - export TRAVIS_ROOT=$TRAVIS_HOME/PRK-deps
   - mkdir -p $TRAVIS_ROOT
-  - sh ./travis/install-intel.sh $TRAVIS_ROOT $PRK_TARGET
+  - ./travis/install-intel.sh $TRAVIS_ROOT $PRK_TARGET
   - source ~/.bashrc # updated by install-intel.sh
 install:
   - export PATH=$TRAVIS_ROOT/bin:$PATH
