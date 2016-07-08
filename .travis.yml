@@ -55,7 +55,7 @@ virtualenv:
   system_site_packages: true
 os:
 - linux
-- mac
+- osx
 # Travis will export CC=$compiler
 compiler:
 - gcc
