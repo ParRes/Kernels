@@ -1,3 +1,5 @@
+#!/bin/sh
+
 set -e
 set -x
 
@@ -9,7 +11,7 @@ if [ ! -d "$TRAVIS_ROOT/libfabric" ]; then
     git clone -b 'v1.3.0' --depth 10 https://github.com/ofiwg/libfabric.git libfabric-source
     cd libfabric-source
     ./autogen.sh
-    ./configure --prefix=$TRAVIS_ROOT/libfabric
+    ./configure CC=cc --prefix=$TRAVIS_ROOT/libfabric
     make
     make install
     export FI_LOG_LEVEL=error

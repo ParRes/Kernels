@@ -1,5 +1,13 @@
+#!/bin/sh
+
 set -e
 set -x
+
+if [ -f ~/use-intel-compilers ] ; then
+    export CC=icc
+    export CXX=icpc
+    export FC=ifort
+fi
 
 os=`uname`
 TRAVIS_ROOT="$1"
@@ -22,23 +30,32 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     cd $TRAVIS_ROOT
     git clone --depth 10 https://github.com/uwsampa/grappa.git grappa-source
     cd grappa-source
-    # Using Grappa's configure script
-    #./configure --prefix=$TRAVIS_ROOT/grappa
-    #cd build/Make+Release
+    # DEBUG
+    #find /usr -name gcc\* -type f
+    #find $TRAVIS_ROOT
+    # END
     # Invoking CMake directly
     mkdir build && cd build
     export MPI_ROOT=$TRAVIS_ROOT
-    cmake .. -DGRAPPA_INSTALL_PREFIX=$TRAVIS_ROOT/grappa \
-             -DCMAKE_C_COMPILER="$MPI_ROOT/bin/mpicc" \
-             -DCMAKE_CXX_COMPILER="$MPI_ROOT/bin/mpicxx" \
-             -DMPI_C_COMPILER="$MPI_ROOT/bin/mpicc" \
-             -DMPI_CXX_COMPILER="$MPI_ROOT/bin/mpicxx"
-             #-DMPI_C_LINK_FLAGS="-L$MPI_ROOT/lib" \
-             #-DMPI_C_LIBRARIES="-lmpi" \
-             #-DMPI_C_INCLUDE_PATH="$MPI_ROOT/include" \
-             #-DMPI_CXX_LINK_FLAGS="-L$MPI_ROOT/lib" \
-             #-DMPI_CXX_LIBRARIES="-lmpicxx -lmpi" \
-             #-DMPI_CXX_INCLUDE_PATH="$MPI_ROOT/include" \
+    if [ -f ~/use-intel-compilers ] ; then
+        cmake .. -DGRAPPA_INSTALL_PREFIX=$TRAVIS_ROOT/grappa \
+                 -DCMAKE_C_COMPILER="mpiicc" \
+                 -DCMAKE_CXX_COMPILER="mpiicpc" \
+                 -DMPI_C_COMPILER="mpiicc" \
+                 -DMPI_CXX_COMPILER="mpiicpc"
+     else
+        cmake .. -DGRAPPA_INSTALL_PREFIX=$TRAVIS_ROOT/grappa \
+                 -DCMAKE_C_COMPILER="$MPI_ROOT/bin/mpicc" \
+                 -DCMAKE_CXX_COMPILER="$MPI_ROOT/bin/mpicxx" \
+                 -DMPI_C_COMPILER="$MPI_ROOT/bin/mpicc" \
+                 -DMPI_CXX_COMPILER="$MPI_ROOT/bin/mpicxx"
+                 #-DMPI_C_LINK_FLAGS="-L$MPI_ROOT/lib" \
+                 #-DMPI_C_LIBRARIES="-lmpi" \
+                 #-DMPI_C_INCLUDE_PATH="$MPI_ROOT/include" \
+                 #-DMPI_CXX_LINK_FLAGS="-L$MPI_ROOT/lib" \
+                 #-DMPI_CXX_LIBRARIES="-lmpicxx -lmpi" \
+                 #-DMPI_CXX_INCLUDE_PATH="$MPI_ROOT/include" \
+    fi
     make -j4
     make install
 else

@@ -39,7 +39,7 @@ ifndef matrix_rank
 endif
 
 ifndef PRK_FLAGS
-  PRK_FLAGS=-O3 -Wno-pointer-bool-conversion
+  PRK_FLAGS=-O3
 endif
 
 default: allserial allopenmp allmpi
@@ -176,9 +176,6 @@ allcharm++:
 	cd CHARM++/Transpose;       $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allgrappa:
-	cd GRAPPA/Nstream;         $(MAKE) nstream    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd GRAPPA/Random;          $(MAKE) random     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
-	cd GRAPPA/Synch_global;    $(MAKE) global     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Synch_p2p;       $(MAKE) p2p        "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -271,9 +268,6 @@ clean:
 	cd CHARM++/Stencil;         $(MAKE) clean
 	cd CHARM++/Synch_p2p;       $(MAKE) clean
 	cd CHARM++/Transpose;       $(MAKE) clean
-	cd GRAPPA/Nstream;          $(MAKE) clean
-	cd GRAPPA/Random;           $(MAKE) clean
-	cd GRAPPA/Synch_global;     $(MAKE) clean
 	cd GRAPPA/Synch_p2p;        $(MAKE) clean
 	cd GRAPPA/Stencil;          $(MAKE) clean
 	cd GRAPPA/Transpose;        $(MAKE) clean

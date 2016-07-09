@@ -5,6 +5,12 @@
 set -e
 set -x
 
+if [ -f ~/use-intel-compilers ] ; then
+    export CC=icc
+    export CXX=icpc
+    export FC=ifort
+fi
+
 os=`uname`
 TRAVIS_ROOT="$1"
 MPI_IMPL="$2"
@@ -54,6 +60,10 @@ case "$os" in
                     fi
                 done
                 ;;
+            icc)
+                export PRK_CC=icc
+                export PRK_CXX=icpc
+                export PRK_FC=ifort
         esac
         case "$MPI_IMPL" in
             mpich)

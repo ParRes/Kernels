@@ -1,5 +1,13 @@
+#!/bin/sh
+
 set -e
 set -x
+
+if [ -f ~/use-intel-compilers ] ; then
+    export CC=icc
+    export CXX=icpc
+    export FC=ifort
+fi
 
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
@@ -20,7 +28,7 @@ case "$PRK_TARGET" in
 
     allfortran*)
         echo "Fortran"
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
             set +e
             brew update
             p=gcc
@@ -34,19 +42,27 @@ case "$PRK_TARGET" in
             brew list gcc
             set -e
         fi
-        if [ "${PRK_TARGET}" = "allfortrancoarray" ] ; then
+        if [ "${PRK_TARGET}" = "allfortrancoarray" ] && [ "${CC}" = "gcc" ] ; then
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
         fi
         ;;
 
     allopenmp)
         echo "OpenMP"
-        sh ./travis/install-clang.sh $TRAVIS_ROOT omp
+        if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
+            sh ./travis/install-clang.sh $TRAVIS_ROOT omp
+        fi
         ;;
     allmpi*)
         echo "Any normal MPI"
-        sh ./travis/install-clang.sh $TRAVIS_ROOT omp
-        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0
+        # only install clang-omp when necessary
+        if [ "${PRK_TARGET}" = "allmpiomp" ] ; then
+            sh ./travis/install-clang.sh $TRAVIS_ROOT omp
+        fi
+        # install except when Intel MPI used
+        if [ ! -f ~/use-intel-compilers ] ; then
+            sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0
+        fi
         ;;
     allshmem)
         echo "SHMEM"
@@ -69,7 +85,9 @@ case "$PRK_TARGET" in
                         sh ./travis/install-libfabric.sh $TRAVIS_ROOT
                         ;;
                     mpi)
-                        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0
+                        if [ ! -f ~/use-intel-compilers ] ; then
+                            sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0
+                        fi
                         ;;
                 esac
                 sh ./travis/install-berkeley-upc.sh $TRAVIS_ROOT
@@ -91,7 +109,9 @@ case "$PRK_TARGET" in
     allgrappa)
         echo "Grappa"
         sh ./travis/install-cmake.sh $TRAVIS_ROOT
-        sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0
+        if [ ! -f ~/use-intel-compilers ] ; then
+            sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0
+        fi
         sh ./travis/install-grappa.sh $TRAVIS_ROOT
         ;;
     allchapel)
