@@ -407,7 +407,7 @@ int main(int argc, char * argv[]) {
 	} // end of iterations                                                   */
       } );
       } );       
-    
+
  
     symmetric DTYPE local_norm;
     

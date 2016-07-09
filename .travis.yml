@@ -37,8 +37,9 @@ matrix:
     # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
     - os: osx
       env: PRK_TARGET=allfgmpi
-    # Revisit this once Grappa is working with Clang
-    - compiler: gcc
+    # Grappa does not support OSX:
+    # https://github.com/uwsampa/grappa/issues/285#issuecomment-230360533
+    - os: osx
       env: PRK_TARGET=allgrappa
     # Mac + Chapel + GASNet does not work and I do not care
     - os: osx
@@ -99,16 +100,21 @@ matrix:
            PRK_FLAGS="-Wc,-O3"
     # GUPC will fail when libnuma cannot be acquired via apt
     - env: PRK_TARGET=allupc
+           UPC_IMPL=gupc
     # we have lots of Grappa issues...
     - env: PRK_TARGET=allgrappa
+    # Grappa will not compile with Clang 3.5 or older
+    # because of https://github.com/philsquared/Catch/issues/334
+    - compiler: clang
+      env: PRK_TARGET=allgrappa
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
     #  Boost is for Grappa and HPX
-    #- boost-latest
+    - boost-latest
     # clang-3.8 comes from this
-    #- llvm-toolchain-precise
+    - llvm-toolchain-precise
     packages:
     # Python Numpy only
     - python-numpy
@@ -116,31 +122,35 @@ addons:
     - libnuma-dev
     # Grappa and HPX use CMake
     - cmake
-    - gcc-4.8
-    - g++-4.8
-    - gfortran-4.8
-    - gcc-4.9
-    - g++-4.9
-    - gfortran-4.9
+    #- gcc-4.8
+    #- g++-4.8
+    #- gfortran-4.8
+    #- gcc-4.9
+    #- g++-4.9
+    #- gfortran-4.9
     - gcc-5
     - g++-5
     - gfortran-5
     # This should provide OpenMP
-    #- clang-3.8
+    - clang-3.6
+    - clang-3.7
+    - clang-3.8
+    # Clang 3.9 caused regressions e.g. https://travis-ci.org/jeffhammond/PRK/jobs/142623827
+    #- clang-3.9
     # Boost is for Grappa and HPX-3 - reactivate with them
     # Grappa needs these (according to their .travis.yml)
-    #- libboost-date-time1.55-dev
-    #- libboost-exception1.55-dev
-    #- libboost-filesystem1.55-dev
-    #- libboost-iostreams1.55-dev
-    #- libboost-math1.55-dev
-    #- libboost-random1.55-dev
-    #- libboost-regex1.55-dev
-    #- libboost-serialization1.55-dev
-    #- libboost-signals1.55-dev
-    #- libboost-system1.55-dev
-    #- libboost-test1.55-dev
-    #- libboost-timer1.55-dev
+    - libboost-date-time1.55-dev
+    - libboost-exception1.55-dev
+    - libboost-filesystem1.55-dev
+    - libboost-iostreams1.55-dev
+    - libboost-math1.55-dev
+    - libboost-random1.55-dev
+    - libboost-regex1.55-dev
+    - libboost-serialization1.55-dev
+    - libboost-signals1.55-dev
+    - libboost-system1.55-dev
+    - libboost-test1.55-dev
+    - libboost-timer1.55-dev
     # HPX-3 needs these - not whitelisted yet
     #- libboost_chrono1.55-dev
     #- libboost_program_options1.55-dev
@@ -186,6 +196,8 @@ env:
     UPC_IMPL=bupc
     GASNET_CONDUIT=ofi
     PRK_FLAGS="-Wc,-O3"
+   # Grappa is a problem.
+  - PRK_TARGET=allgrappa
     # Chapel kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allchapel
 #    CHPL_COMM=none
@@ -195,8 +207,6 @@ env:
 #  - PRK_TARGET=allhpx3
    # HPX-5 kernels are not merged yet.  Activate these when they are.
 #  - PRK_TARGET=allhpx5
-   # Grappa is a problem.  No reason to test it every time.
-#  - PRK_TARGET=allgrappa
 before_install:
   - pwd
   - export TRAVIS_HOME=$PWD

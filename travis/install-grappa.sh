@@ -22,10 +22,6 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     cd $TRAVIS_ROOT
     git clone --depth 10 https://github.com/uwsampa/grappa.git grappa-source
     cd grappa-source
-    # DEBUG
-    find /usr -name gcc\* -type f
-    find $TRAVIS_ROOT
-    # END
     # Using Grappa's configure script
     #./configure --prefix=$TRAVIS_ROOT/grappa
     #cd build/Make+Release
@@ -43,7 +39,6 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
              #-DMPI_CXX_LINK_FLAGS="-L$MPI_ROOT/lib" \
              #-DMPI_CXX_LIBRARIES="-lmpicxx -lmpi" \
              #-DMPI_CXX_INCLUDE_PATH="$MPI_ROOT/include" \
-    # END
     make -j4
     make install
 else

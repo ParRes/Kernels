@@ -1,7 +1,7 @@
 include ../../common/GRAPPA.defs
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -O3
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system
 
 USERFLAGS    = 
