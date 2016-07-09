@@ -55,7 +55,11 @@ case "$PRK_TARGET" in
         ;;
     allmpi*)
         echo "Any normal MPI"
-        sh ./travis/install-clang.sh $TRAVIS_ROOT omp
+        # only install clang-omp when necessary
+        if [ "${PRK_TARGET}" = "allmpiomp" ] ; then
+            sh ./travis/install-clang.sh $TRAVIS_ROOT omp
+        fi
+        # install except when Intel MPI used
         if [ ! -f ~/use-intel-compilers ] ; then
             sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0
         fi

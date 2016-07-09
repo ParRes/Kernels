@@ -169,7 +169,12 @@ case "$PRK_TARGET" in
         ;;
     allopenmp)
         echo "OpenMP"
-        echo "CC=$CC -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+            which clang-omp
+            echo "CC=clang-omp -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
+        else
+            echo "CC=$CC -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
+        fi
         make $PRK_TARGET
         export PRK_TARGET_PATH=OPENMP
         export OMP_NUM_THREADS=4
@@ -207,6 +212,10 @@ case "$PRK_TARGET" in
         ;;
     allmpio*mp)
         echo "MPI+OpenMP"
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+            # Mac Clang does not support OpenMP but we should have installed clang-omp via Brew.
+            export PRK_MPICC="${PRK_MPICC} -cc=clang-omp"
+        fi
         echo "MPICC=$PRK_MPICC\nOPENMPFLAG=-fopenmp" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIOPENMP

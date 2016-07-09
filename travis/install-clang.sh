@@ -21,10 +21,11 @@ if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
                     if [ ! -d "$TRAVIS_ROOT/bin" ]; then
                         mkdir -p $TRAVIS_ROOT/bin
                     fi
-                    ln -s `which clang-omp`   $TRAVIS_ROOT/bin/clang
-                    ln -s `which clang-omp++` $TRAVIS_ROOT/bin/clang++
+                    # we should refer to clang-omp* explicitly so know it exists and works
+                    #ln -s `which clang-omp`   $TRAVIS_ROOT/bin/clang
+                    #ln -s `which clang-omp++` $TRAVIS_ROOT/bin/clang++
                     ;;
-                37)
+                3*)
                     brew install llvm$CLANG_VERSION --with-clang --with-compiler-rt --with-libcxx --with-lld --without-assertions
                     brew test llvm$CLANG_VERSION
                     ;;
@@ -35,6 +36,8 @@ if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
             esac
             ;;
         Linux)
+            echo "Linux Clang/LLVM builds not supported!"
+            exit 18
         ;;
     esac
 fi
