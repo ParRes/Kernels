@@ -5,17 +5,11 @@ os=`uname`
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 
-PRK_MPICC="$MPI_ROOT/bin/mpicc -std=c99"
-
 if [ -f ~/use-intel-compilers ] ; then
     export CC=icc
     export CXX=icpc
     export FC=ifort
-    # use Intel MPI
-    export PRK_MPICC="mpiicc -std=c99"
 fi
-
-echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 
 case "$os" in
     Darwin)
@@ -26,6 +20,14 @@ case "$os" in
         export MPI_ROOT=$TRAVIS_ROOT
         ;;
 esac
+if [ -f ~/use-intel-compilers ] ; then
+    # use Intel MPI
+    export PRK_MPICC="mpiicc -std=c99"
+else
+    export PRK_MPICC="$MPI_ROOT/bin/mpicc -std=c99"
+fi
+
+echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 
 case "$PRK_TARGET" in
     allpython)
