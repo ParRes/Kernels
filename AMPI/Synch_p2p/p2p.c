@@ -90,7 +90,6 @@ int main(int argc, char ** argv)
   double RESTRICT *vector;/* array holding grid values                           */
   double *inbuf, *outbuf; /* communication buffers used when aggregating         */
   long   total_length;    /* total required length to store grid values          */
-  MPI_Status status;      /* completion status of message                        */
 
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -229,7 +228,7 @@ int main(int argc, char ** argv)
          send data                                                                */
       if (my_ID > 0) {
         MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
-                                  MPI_COMM_WORLD, &status);
+                                  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       }
 
       for (i=start; i<= end; i++) {
@@ -247,7 +246,7 @@ int main(int argc, char ** argv)
       /* if I am not at the left boundary, I need to wait for my left neighbor to
          send data                                                                */
       if (my_ID > 0) {
-        MPI_Recv(inbuf, jjsize, MPI_DOUBLE, my_ID-1, j, MPI_COMM_WORLD, &status);
+        MPI_Recv(inbuf, jjsize, MPI_DOUBLE, my_ID-1, j, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         for (jj=0; jj<jjsize; jj++) {
           ARRAY(start-1,jj+j) = inbuf[jj];
 	}
@@ -274,7 +273,7 @@ int main(int argc, char ** argv)
         MPI_Send(&corner_val,1,MPI_DOUBLE,root,888,MPI_COMM_WORLD);
       }
       if (my_ID==root) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,&status);
+        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
       }
     }
     else ARRAY(0,0)= -ARRAY(end,n-1);
@@ -292,7 +291,7 @@ int main(int argc, char ** argv)
   /* verify correctness, using top right value                                     */
   corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == final) {
-    if (abs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
+    if (fabs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
              ARRAY(end,n-1), corner_val);
       error = 1;

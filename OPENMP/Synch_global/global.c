@@ -128,7 +128,7 @@ int main(int argc, char ** argv)
 
   length = atol(*++argv);
   if (length <nthread_input || length%nthread_input !=0) {
-    printf("ERROR: length of string %d must be multiple of # threads: %d\n", 
+    printf("ERROR: length of string %ld must be multiple of # threads: %d\n", 
            length, nthread_input);
     exit(EXIT_FAILURE);
   }
@@ -147,7 +147,7 @@ int main(int argc, char ** argv)
 
   catstring=(char *) prk_malloc((length+1)*sizeof(char));
   if (catstring==NULL) {
-    printf("ERROR: Could not allocate space for concatenation string: %d\n",
+    printf("ERROR: Could not allocate space for concatenation string: %ld\n",
            length+1);
     exit(EXIT_FAILURE);
   }
@@ -227,7 +227,10 @@ int main(int argc, char ** argv)
   basesum=0;
   for (i=0; i<thread_length; i++) basesum += chartoi(basestring[i]);
   checksum=0;
-  for (i=0; i<strlen(catstring);i++) checksum += chartoi(catstring[i]);
+  {
+      size_t ist;
+      for (ist=0; ist<strlen(catstring);ist++) checksum += chartoi(catstring[ist]);
+  }
   if (checksum != basesum*nthread) {
     printf("Incorrect checksum: %d instead of %d\n", checksum, basesum*nthread);
     exit(EXIT_FAILURE);

@@ -94,9 +94,7 @@ int main(int argc, char ** argv)
   int    nthread;       /* number of threads                                     */
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of ranks                                       */
-  char  *name;          /* MPI threading mode suffix name                        */
   long   total_length;  /* total required length to store grid values            */
-  MPI_Status status;    /* completion status of message                          */
   int    provided;      /* MPI level of thread support                           */
   int    sync_true, sync_false;   /* toggled booleans used for synchronization             */
  
@@ -113,7 +111,7 @@ int main(int argc, char ** argv)
   }
 
   if (requested<provided) {
-    if (my_ID==0) printf("ERROR: requested=%d less than provided=%s\n",
+    if (my_ID==0) printf("ERROR: requested=%s less than provided=%s\n",
                          PRK_MPI_THREAD_STRING(requested),PRK_MPI_THREAD_STRING(provided));
     bail_out(requested-provided);
   }
@@ -153,13 +151,13 @@ int main(int argc, char ** argv)
     m = atol(*++argv);
     n = atol(*++argv);
     if (m < 1 || n < 1){
-      printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
+      printf("ERROR: grid dimensions must be positive: %ld, %ld \n", m, n);
       error = 1;
       goto ENDOFTESTS;
     }
  
     if (m<Num_procs) {
-      printf("ERROR: First grid dimension %d smaller than number of ranks %d\n", 
+      printf("ERROR: First grid dimension %ld smaller than number of ranks %d\n", 
              m, Num_procs);
       error = 1;
       goto ENDOFTESTS;
@@ -208,7 +206,7 @@ int main(int argc, char ** argv)
   total_length = ((end-start+1)+1)*n;
   vector = (double *) prk_malloc(sizeof(double)*total_length);
   if (vector == NULL) {
-    printf("Could not allocate space for grid slice of %d by %d points", 
+    printf("Could not allocate space for grid slice of %ld by %ld points", 
            segment_size, n);
     printf(" on rank %d\n", my_ID);
     error = 1;
@@ -313,7 +311,7 @@ int main(int argc, char ** argv)
       if (TID==0){
         if (my_ID > 0) {
           MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
-                     MPI_COMM_WORLD, &status);
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
       }
       else {
@@ -354,7 +352,7 @@ int main(int argc, char ** argv)
         MPI_Send(&corner_val,1,MPI_DOUBLE,root,888,MPI_COMM_WORLD);
       }
       if (TID==0  && my_ID==root) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,&status);
+        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
       }
     }
     else {
@@ -388,7 +386,7 @@ int main(int argc, char ** argv)
   /* verify correctness, using top right value                                     */
   corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == final) {
-    if (abs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
+    if (fabs(ARRAY(end,n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
              ARRAY(end,n-1), corner_val);
       error = 1;

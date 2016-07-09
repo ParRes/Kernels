@@ -47,7 +47,7 @@ case "$os" in
           echo ${BIN} already exists! Skipping build.
         else
           cd ${TRAVIS_ROOT}/${TDIR}
-          ./configure --prefix=${TRAVIS_ROOT} && make -j ${MAKE_JNUM} && make install
+          ./configure CC=cc --prefix=${TRAVIS_ROOT} && make -j ${MAKE_JNUM} && make install
           if [ "x$?" != "x0" ] ; then
             echo FAILURE 1
             exit
@@ -74,7 +74,7 @@ case "$os" in
           echo ${BIN} already exists! Skipping build.
         else
           cd ${TRAVIS_ROOT}/${TDIR}
-          ./configure --prefix=${TRAVIS_ROOT} M4=${TRAVIS_ROOT}/bin/m4 && make -j ${MAKE_JNUM} && make install
+          ./configure CC=cc --prefix=${TRAVIS_ROOT} M4=${TRAVIS_ROOT}/bin/m4 && make -j ${MAKE_JNUM} && make install
           if [ "x$?" != "x0" ] ; then
             echo FAILURE 2
             exit
@@ -101,7 +101,7 @@ case "$os" in
           echo ${BIN} already exists! Skipping build.
         else
           cd ${TRAVIS_ROOT}/${TDIR}
-          ./configure --prefix=${TRAVIS_ROOT} M4=${TRAVIS_ROOT}/bin/m4 && make -j ${MAKE_JNUM} && make install
+          ./configure CC=cc --prefix=${TRAVIS_ROOT} M4=${TRAVIS_ROOT}/bin/m4 && make -j ${MAKE_JNUM} && make install
           if [ "x$?" != "x0" ] ; then
             echo FAILURE 3
             exit
@@ -128,7 +128,7 @@ case "$os" in
           echo ${BIN} already exists! Skipping build.
         else
           cd ${TRAVIS_ROOT}/${TDIR}
-          ./configure --prefix=${TRAVIS_ROOT} M4=${TRAVIS_ROOT}/bin/m4 && make -j ${MAKE_JNUM} && make install
+          ./configure CC=cc --prefix=${TRAVIS_ROOT} M4=${TRAVIS_ROOT}/bin/m4 && make -j ${MAKE_JNUM} && make install
           if [ "x$?" != "x0" ] ; then
             echo FAILURE 4
             exit

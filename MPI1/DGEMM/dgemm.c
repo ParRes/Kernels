@@ -103,7 +103,6 @@ int main(int argc, char *argv[])
       error=0,          /* error flag                              */
       *ranks,           /* work array for row and column ranks     */
     /*lda, ldb, ldc,*/  /* leading array dimensions of a, b, and c */
-      i, j, ii, jj,     /* dummy variables                         */
       iter, iterations;
   long lda, ldb, ldc,
        nb, myncols;     /* make long to avoid integer overflow     */
@@ -216,7 +215,7 @@ int main(int argc, char *argv[])
 
   /* 2. create list of all ranks in same row of rank grid          */
   ranks[0] = my_ID/npcol * npcol;
-  for (i=1; i<npcol; i++) ranks[i] = ranks[i-1] + 1;
+  for (int i=1; i<npcol; i++) ranks[i] = ranks[i-1] + 1;
 
   /* create row group and communicator                             */
   MPI_Group_incl( world_group, npcol, ranks, &temp_group );
@@ -224,7 +223,7 @@ int main(int argc, char *argv[])
 
   /* 3. create list of all ranks in same column of rank grid       */
   ranks[0] = my_ID%npcol;
-  for (i=1; i<nprow; i++) ranks[i] = ranks[i-1] + npcol;
+  for (int i=1; i<nprow; i++) ranks[i] = ranks[i-1] + npcol;
 
   /* create column group and communicator                          */
   MPI_Group_incl( world_group, nprow, ranks, &temp_group );
@@ -272,20 +271,22 @@ int main(int argc, char *argv[])
   MPI_Allgather( &mynrows, 1, MPI_INT, mm, 1, MPI_INT, comm_col );
 
   /* myfrow = first row on my node                                 */
-  for (myfrow=1,i=0; i<myrow; i++) myfrow += mm[i];
+  myfrow=1;
+  for (int i=0; i<myrow; i++) myfrow += mm[i];
   mylrow = myfrow+mynrows-1;
 
   /* collect array that holds myncols from all nodes in my column 
      of the rank grid (array of all n_j)                           */
   MPI_Allgather( &myncols, 1, MPI_INT, nn, 1, MPI_INT, comm_row );
   /* myfcol = first col on my node                                 */
-  for (myfcol=1,i=0; i<mycol; i++) myfcol += nn[i];
+  myfcol=1;
+  for (int i=0; i<mycol; i++) myfcol += nn[i];
   mylcol = myfcol+myncols-1;
 
   /* initialize matrices A, B, and C                               */
   ldc = ldb = lda;
-  for (jj=0, j=myfcol; j<=mylcol; j++,jj++ ) 
-  for (ii=0, i=myfrow; i<=mylrow; i++, ii++ ) {
+  for (int jj=0, j=myfcol; j<=mylcol; j++,jj++ ) 
+  for (int ii=0, i=myfrow; i<=mylrow; i++, ii++ ) {
     A(ii,jj) = (double) (j-1); 
     B(ii,jj) = (double) (j-1); 
     C(ii,jj) = 0.0;
@@ -315,8 +316,8 @@ int main(int argc, char *argv[])
              MPI_COMM_WORLD);
 
   /* verification test                                             */
-  for (jj=0, j=myfcol; j<=mylcol; j++, jj++) 
-  for (ii=0, i=myfrow; i<=mylrow; i++, ii++)
+  for (int jj=0, j=myfcol; j<=mylcol; j++, jj++) 
+  for (int ii=0, i=myfrow; i<=mylrow; i++, ii++)
     checksum_local += C(ii,jj);
 
   MPI_Reduce(&checksum_local, &checksum, 1, MPI_DOUBLE, MPI_SUM, 
@@ -367,12 +368,9 @@ MPI_Comm comm_row,      /* Communicator for this row of nodes      */
        comm_col;        /* Communicator for this column of nodes   */
 {
   int myrow, mycol,     /* my  row and column index                */
-      nprow, npcol,     /* number of node rows and columns         */
-      i, j, kk, updt,   /* misc. index variables                   */
-      currow, curcol,   /* index of row and column that hold current 
+      updt,             /* misc. index variables                   */
+      currow, curcol;   /* index of row and column that hold current 
                            row and column, resp., for rank-1 update*/
-      ii, jj;           /* local index (on currow and curcol, resp.)
-                           of row and column for rank-updt update  */
   int my_ID;
 
   /* get row, column, and global MPI rank                          */
@@ -393,10 +391,11 @@ MPI_Comm comm_row,      /* Communicator for this row of nodes      */
      has been exhausted, we move to the next row or column (increment
      currow or curcol) and reset ii or jj to zero                  */
 
-  currow = curcol = ii = jj = 0;
+  currow = curcol = 0;
+  int ii = 0, jj = 0;
   updt = nb;
 
-  for ( kk=0; kk<k; kk+=updt) {
+  for (int kk=0; kk<k; kk+=updt) {
     updt = MIN(updt,mm[currow]-ii);
     updt = MIN(updt,nn[curcol]-jj);
 
@@ -426,14 +425,13 @@ MPI_Comm comm_row,      /* Communicator for this row of nodes      */
 void dgemm_local(int M, int N, int K, double *a, int lda, double *b,
            int ldb, double *c, int ldc, int nb, int inner_block_flag) {
 
-  int m, n, k, mg, ng, kg, mm, nn, kk;
   long ldaa, ldbb, ldcc;
   double *aa, *bb, *cc;
 
   if (nb >= MAX(M,MAX(N,K)) || !inner_block_flag) {
-    for (m=0; m<M; m++) 
-    for (n=0; n<N; n++)
-    for (k=0; k<K; k++)
+    for (int m=0; m<M; m++) 
+    for (int n=0; n<N; n++)
+    for (int k=0; k<K; k++)
       C(m,n) += A(m,k)*B(k,n);
   }
   else {
@@ -449,30 +447,30 @@ void dgemm_local(int M, int N, int K, double *a, int lda, double *b,
     ldaa = MIN(M,(nb+BOFFSET));
     ldbb = MIN(N,(nb+BOFFSET));
     ldcc = MIN(M,(nb+BOFFSET));
-    for(nn = 0; nn < N; nn+=nb){
-      for(kk = 0; kk < K; kk+=nb) {
+    for(int nn = 0; nn < N; nn+=nb){
+      for(int kk = 0; kk < K; kk+=nb) {
 
-        for (ng=nn,n=0; ng<MIN(nn+nb,N); n++,ng++) 
-        for (kg=kk,k=0; kg<MIN(kk+nb,K); k++,kg++) 
+        for (int ng=nn,n=0; ng<MIN(nn+nb,N); n++,ng++) 
+        for (int kg=kk,k=0; kg<MIN(kk+nb,K); k++,kg++) 
           BB(n,k) =  B(kg,ng);
 
-        for(mm = 0; mm < M; mm+=nb){
+        for(int mm = 0; mm < M; mm+=nb){
 
-          for (kg=kk,k=0; kg<MIN(kk+nb,K); k++,kg++)
-          for (mg=mm,m=0; mg<MIN(mm+nb,M); m++,mg++)
+          for (int kg=kk,k=0; kg<MIN(kk+nb,K); k++,kg++)
+          for (int mg=mm,m=0; mg<MIN(mm+nb,M); m++,mg++)
             AA(m,k) = A(mg,kg);
 
-          for (ng=nn,n=0; ng<MIN(nn+nb,N); n++,ng++) 
-          for (mg=mm,m=0; mg<MIN(mm+nb,M); m++,mg++)
+          for (int ng=nn,n=0; ng<MIN(nn+nb,N); n++,ng++) 
+          for (int mg=mm,m=0; mg<MIN(mm+nb,M); m++,mg++)
             CC(m,n) = 0.0;
        
-          for (kg=kk,k=0; kg<MIN(kk+nb,K); k++,kg++)
-          for (ng=nn,n=0; ng<MIN(nn+nb,N); n++,ng++) 
-          for (mg=mm,m=0; mg<MIN(mm+nb,M); m++,mg++)
+          for (int kg=kk,k=0; kg<MIN(kk+nb,K); k++,kg++)
+          for (int ng=nn,n=0; ng<MIN(nn+nb,N); n++,ng++) 
+          for (int mg=mm,m=0; mg<MIN(mm+nb,M); m++,mg++)
             CC(m,n) += AA(m,k)*BB(n,k);
 
-          for (ng=nn,n=0; ng<MIN(nn+nb,N); n++,ng++) 
-          for (mg=mm,m=0; mg<MIN(mm+nb,M); m++,mg++)
+          for (int ng=nn,n=0; ng<MIN(nn+nb,N); n++,ng++) 
+          for (int mg=mm,m=0; mg<MIN(mm+nb,M); m++,mg++)
             C(mg,ng) += CC(m,n);
         }
       }
@@ -484,8 +482,7 @@ void dgemm_local(int M, int N, int K, double *a, int lda, double *b,
 
 void dlacpy(int m, int n, double *a, int lda, double *b, int ldb ) {
 
-  int i, j;
-  for (j=0; j<n; j++) for (i=0; i<m; i++)
+  for (int j=0; j<n; j++) for (int i=0; i<m; i++)
     B(i,j) = A(i,j);
 
   return;
@@ -495,12 +492,11 @@ void RING_Bcast(double *buf, int count, MPI_Datatype type, int root,
               MPI_Comm comm )
 {
   int my_ID, Num_procs;
-  MPI_Status status;
 
   MPI_Comm_rank( comm, &my_ID );    MPI_Comm_size( comm, &Num_procs );
   if (my_ID != root) 
     MPI_Recv(buf, count, type, (my_ID-1+Num_procs)%Num_procs, root, 
-             comm, &status);
+             comm, MPI_STATUS_IGNORE);
   if (( my_ID+1 )%Num_procs != root)
     MPI_Send(buf, count, type, (my_ID+1)%Num_procs, root, comm);
 }

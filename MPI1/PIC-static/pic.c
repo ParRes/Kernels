@@ -646,7 +646,6 @@ int main(int argc, char ** argv) {
   int             ileftover, jleftover;// excess grid points divided among "fat" tiles
   uint64_t        to_send[8], to_recv[8];// 
    
-  MPI_Status  status[16];
   MPI_Request requests[16];
    
   /* Initialize the MPI environment */
@@ -698,11 +697,14 @@ int main(int argc, char ** argv) {
 
     particle_mode  = UNDEFINED;
     k = atoi(*++argv);   args_used++; 
+#if 0
+    /* k is unsigned type, hence can never be negative */
     if (k<0) {
       printf("ERROR: Particle semi-charge must be non-negative: %llu\n", k);
       error = 1;
       goto ENDOFTESTS;  
     }
+#endif
     m = atoi(*++argv);   args_used++; 
     init_mode = *++argv; args_used++;  
 
@@ -807,7 +809,7 @@ int main(int argc, char ** argv) {
   my_IDy = my_ID/Num_procsx;
 
   if (my_ID == root) {
-    printf("Number of ranks                    = %llu\n", Num_procs);
+    printf("Number of ranks                    = %d\n", Num_procs);
     printf("Load balancing                     = None\n");
     printf("Grid size                          = %llu\n", L);
     printf("Tiles in x/y-direction             = %d/%d\n", Num_procsx, Num_procsy);
@@ -1010,7 +1012,7 @@ int main(int argc, char ** argv) {
       MPI_Isend(&to_send[i], 1, MPI_UINT64_T, nbr[i], 0, MPI_COMM_WORLD, &requests[i]);
       MPI_Irecv(&to_recv[i], 1, MPI_UINT64_T, nbr[i], 0, MPI_COMM_WORLD, &requests[8+i]);
     }
-    MPI_Waitall(16, requests, status);
+    MPI_Waitall(16, requests, MPI_STATUSES_IGNORE);
       
     /* Resize receive buffers if need be */
     for (i=0; i<8; i++) {
@@ -1022,7 +1024,7 @@ int main(int argc, char ** argv) {
       MPI_Isend(sendbuf[i], to_send[i], PARTICLE, nbr[i], 0, MPI_COMM_WORLD, &requests[i]);
       MPI_Irecv(recvbuf[i], to_recv[i], PARTICLE, nbr[i], 0, MPI_COMM_WORLD, &requests[8+i]);
     }
-    MPI_Waitall(16, requests, status);
+    MPI_Waitall(16, requests, MPI_STATUSES_IGNORE);
      
     /* Attach received particles to particles buffer */
     for (i=0; i<4; i++) {

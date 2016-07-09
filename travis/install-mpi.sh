@@ -5,6 +5,12 @@
 set -e
 set -x
 
+if [ -f ~/use-intel-compilers ] ; then
+    export CC=icc
+    export CXX=icpc
+    export FC=ifort
+fi
+
 os=`uname`
 TRAVIS_ROOT="$1"
 MPI_IMPL="$2"
@@ -44,9 +50,20 @@ case "$os" in
                 done
                 ;;
             clang)
-                export PRK_CC=clang
-                export PRK_CXX=clang++
+                for clangversion in "-omp" "-3.9" "-3.8" "-3.7" "-3.6" "-3.5" "-3.4" "" ; do
+                    find /usr/local -name clang$clangversion
+                    if [ -f "`which clang$clangversion`" ]; then
+                        export PRK_CC="clang$clangversion"
+                        export PRK_CXX="clang++$clangversion"
+                        echo "Found GCC: $PRK_CC"
+                        break
+                    fi
+                done
                 ;;
+            icc)
+                export PRK_CC=icc
+                export PRK_CXX=icpc
+                export PRK_FC=ifort
         esac
         case "$MPI_IMPL" in
             mpich)

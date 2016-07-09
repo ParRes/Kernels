@@ -4,10 +4,12 @@ set -x
 os=`uname`
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
-# Travis exports this
-PRK_COMPILER="$CC"
 
-echo "PRKVERSION=\"'2.16'\"" > common/make.defs
+if [ -f ~/use-intel-compilers ] ; then
+    export CC=icc
+    export CXX=icpc
+    export FC=ifort
+fi
 
 case "$os" in
     Darwin)
@@ -18,6 +20,17 @@ case "$os" in
         export MPI_ROOT=$TRAVIS_ROOT
         ;;
 esac
+# default to mpirun but override later when necessary
+if [ -f ~/use-intel-compilers ] ; then
+    # use Intel MPI
+    export PRK_MPICC="mpiicc -std=c99"
+    export PRK_LAUNCHER=mpirun
+else
+    export PRK_MPICC="$MPI_ROOT/bin/mpicc -std=c99"
+    export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
+fi
+
+echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 
 case "$PRK_TARGET" in
     allpython)
@@ -50,7 +63,11 @@ case "$PRK_TARGET" in
         ;;
     allserial)
         echo "Serial"
+<<<<<<< HEAD
         echo "CC=$PRK_COMPILER -std=c99" >> common/make.defs
+=======
+        echo "CC=$CC -std=c99" >> common/make.defs
+>>>>>>> master
         make $PRK_TARGET
         export PRK_TARGET_PATH=SERIAL
         $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
@@ -70,6 +87,9 @@ case "$PRK_TARGET" in
         # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
         echo "Fortran"
         case "$CC" in
+            icc)
+                echo "FC=ifort" >> common/make.defs
+                ;;
             gcc)
                 for gccversion in "-6" "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
                     if [ -f "`which gfortran$gccversion`" ]; then
@@ -91,13 +111,24 @@ case "$PRK_TARGET" in
         esac
         case "$PRK_TARGET" in
             allfortrancoarray)
-                #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
-                export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
-                echo "FC=$PRK_CAFC\nCOARRAYFLAG=-cpp -std=f2008 -fcoarray=lib" >> common/make.defs
+                if [ "${CC}" = "gcc" ] ; then
+                    #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
+                    export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
+                    echo "FC=$PRK_CAFC\nCOARRAYFLAG=-cpp -std=f2008 -fcoarray=lib" >> common/make.defs
+                elif [ "${CC}" = "icc" ] ; then
+                    export PRK_CAFC="ifort"
+                    echo "FC=$PRK_CAFC\nCOARRAYFLAG=-fpp -std08 -traceback -coarray" >> common/make.defs
+                fi
                 ;;
             *)
-                export PRK_FC="$PRK_FC -std=f2008 -cpp"
-                echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp" >> common/make.defs
+                if [ "${CC}" = "gcc" ] ; then
+                    export PRK_FC="$PRK_FC -std=f2008 -cpp"
+                    echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp" >> common/make.defs
+                elif [ "${CC}" = "icc" ] ; then
+                    # -heap-arrays prevents SEGV in transpose-pretty (?)
+                    export PRK_FC="ifort -fpp -std08 -traceback -heap-arrays"
+                    echo "FC=$PRK_FC\nOPENMPFLAG=-qopenmp" >> common/make.defs
+                fi
                 ;;
         esac
         make $PRK_TARGET
@@ -123,18 +154,31 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 32
                 ;;
             allfortrancoarray)
-                export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
                 export PRK_MPI_PROCS=4
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+                if [ "${CC}" = "gcc" ] ; then
+                    export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+                elif [ "${CC}" = "icc" ] ; then
+                    export FOR_COARRAY_NUM_IMAGES=$PRK_MPI_PROCS
+                    $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
+                    $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
+                    $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
+                    $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+                fi
                 ;;
             esac
         ;;
     allopenmp)
         echo "OpenMP"
-        echo "CC=$PRK_COMPILER -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+            which clang-omp
+            echo "CC=clang-omp -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
+        else
+            echo "CC=$CC -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
+        fi
         make $PRK_TARGET
         export PRK_TARGET_PATH=OPENMP
         export OMP_NUM_THREADS=4
@@ -152,11 +196,10 @@ case "$PRK_TARGET" in
         ;;
     allmpi1)
         echo "MPI-1"
-        echo "MPICC=$MPI_ROOT/bin/mpicc" >> common/make.defs
+        echo "MPICC=$PRK_MPICC" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPI1
         export PRK_MPI_PROCS=4
-        export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
@@ -173,12 +216,15 @@ case "$PRK_TARGET" in
         ;;
     allmpio*mp)
         echo "MPI+OpenMP"
-        echo "MPICC=$MPI_ROOT/bin/mpicc\nOPENMPFLAG=-fopenmp" >> common/make.defs
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+            # Mac Clang does not support OpenMP but we should have installed clang-omp via Brew.
+            export PRK_MPICC="${PRK_MPICC} -cc=clang-omp"
+        fi
+        echo "MPICC=$PRK_MPICC\nOPENMPFLAG=-fopenmp" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIOPENMP
         export PRK_MPI_PROCS=2
         export OMP_NUM_THREADS=2
-        export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       $OMP_NUM_THREADS 10 1024 1024
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     $OMP_NUM_THREADS 10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose $OMP_NUM_THREADS 10 1024 32
@@ -186,23 +232,21 @@ case "$PRK_TARGET" in
         ;;
     allmpirma)
         echo "MPI-RMA"
-        echo "MPICC=$MPI_ROOT/bin/mpicc" >> common/make.defs
+        echo "MPICC=$PRK_MPICC" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIRMA
         export PRK_MPI_PROCS=4
-        export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
         ;;
     allmpishm)
         echo "MPI+MPI"
-        echo "MPICC=$MPI_ROOT/bin/mpicc" >> common/make.defs
+        echo "MPICC=$PRK_MPICC" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPISHM
         export PRK_MPI_PROCS=4
         export PRK_MPISHM_RANKS=$(($PRK_MPI_PROCS/2))
-        export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p                         10 1024 1024
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     $PRK_MPISHM_RANKS 10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose $PRK_MPISHM_RANKS 10 1024 32
@@ -272,6 +316,10 @@ case "$PRK_TARGET" in
                 esac
                 make $PRK_TARGET default_opt_flags="-Wc,-O3"
                 ;;
+            *)
+                echo "Invalid value of UPC_IMPL ($UPC_IMPL)"
+                exit 7
+                ;;
         esac
         export PRK_TARGET_PATH=UPC
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       $PRK_LAUNCHER_ARGS 10 1024 1024
@@ -336,7 +384,7 @@ case "$PRK_TARGET" in
     allfgmpi)
         echo "Fine-Grain MPI (FG-MPI)"
         export FGMPI_ROOT=$TRAVIS_ROOT/fgmpi
-        echo "FGMPITOP=$FGMPI_ROOT\nFGMPICC=$FGMPI_ROOT/bin/mpicc" >> common/make.defs
+        echo "FGMPITOP=$FGMPI_ROOT\nFGMPICC=$FGMPI_ROOT/bin/mpicc -std=c99" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=FG_MPI
         export PRK_MPI_PROCS=2

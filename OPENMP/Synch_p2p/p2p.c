@@ -148,7 +148,7 @@ int main(int argc, char ** argv) {
   }
 
   if (m<nthread_input) {
-    printf("First grid dimension %d smaller than number of threads requested: %d\n", 
+    printf("First grid dimension %ld smaller than number of threads requested: %d\n", 
            m, nthread_input);
     exit(EXIT_FAILURE);
   }
@@ -305,7 +305,7 @@ int main(int argc, char ** argv) {
 
   /* verify correctness, using top right value;                                  */
   corner_val = (double)((iterations+1)*(n+m-2));
-  if (abs(ARRAY(m-1,n-1)-corner_val)/corner_val > epsilon) {
+  if (fabs(ARRAY(m-1,n-1)-corner_val)/corner_val > epsilon) {
     printf("ERROR: checksum %lf does not match verification value %lf\n",
            ARRAY(m-1,n-1), corner_val);
     exit(EXIT_FAILURE);

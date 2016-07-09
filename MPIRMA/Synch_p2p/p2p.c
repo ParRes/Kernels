@@ -88,7 +88,6 @@ int main(int argc, char ** argv)
   int    Num_procs;       /* Number of ranks                                     */
   double RESTRICT *vector;/* array holding grid values                           */
   long   total_length;    /* total required length to store grid values          */
-  MPI_Status status;      /* completion status of message                        */
   MPI_Win rma_win;        /* RMA window object                                   */
   MPI_Info rma_winfo;     /* info for window                                     */
   MPI_Group world_group, origin_group, target_group;
@@ -296,7 +295,7 @@ int main(int argc, char ** argv)
   /* verify correctness, using top right value                                     */
   corner_val = (double) ((iterations+1)*(m+n-2));
   if (my_ID == final) {
-    if (abs(ARRAY(end[my_ID],n-1)-corner_val)/corner_val >= epsilon) {
+    if (fabs(ARRAY(end[my_ID],n-1)-corner_val)/corner_val >= epsilon) {
       printf("ERROR: checksum %lf does not match verification value %lf\n",
              ARRAY(end[my_ID],n-1), corner_val);
       error = 1;

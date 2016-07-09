@@ -148,8 +148,7 @@ int main(int argc, char **argv)
   double  local_nstream_time,/* timing parameters                       */
           nstream_time, 
           avgtime;
-  int     nthread_input,   /* thread parameters                         */
-          nthread; 
+  int     nthread_input; /* thread parameters                         */
   int     Num_procs,     /* number of ranks                             */
           my_ID,         /* rank of calling rank                        */
           root=0;        /* ID of master rank                           */
@@ -243,8 +242,7 @@ int main(int argc, char **argv)
     printf("Number of iterations = %d\n", iterations);
   }
 
-  #pragma omp parallel for
-  #pragma vector always
+  #pragma omp parallel for simd
   for (j=0; j<length; j++) {
     a[j] = 0.0;
     b[j] = 2.0;
@@ -263,8 +261,7 @@ int main(int argc, char **argv)
       local_nstream_time = wtime();
     }
 
-    #pragma omp parallel for
-    #pragma vector always
+    #pragma omp parallel for simd
     for (j=0; j<length; j++) a[j] += b[j]+scalar*c[j];
 
   } /* end iterations */
@@ -308,7 +305,7 @@ int checkTRIADresults (int iterations, long int length) {
   aj = aj * (double) (length);
  
   asum = 0.0;
-  #pragma omp parallel for reduction(+:asum)
+  #pragma omp parallel for simd reduction(+:asum)
   for (j=0; j<length; j++) asum += a[j];
  
 #if VERBOSE

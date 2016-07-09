@@ -103,7 +103,6 @@ int main(int argc, char **argv){
   int               radius,     /* stencil parameters                             */
                     stencil_size; 
   s64Int            row, col, first, last; /* dummies                             */
-  u64Int            i, j;       /* dummies                                        */
   int               iterations; /* number of times the multiplication is done     */
 
   s64Int            elm;        /* sequence number of matrix nonzero              */
@@ -246,7 +245,7 @@ int main(int argc, char **argv){
   matrix_space = nent*sizeof(double);
   matrix = (double *) prk_malloc(matrix_space);
   if (!matrix) {
-    printf("ERROR: rank %d could not allocate space for sparse matrix: "FSTR64U"\n", 
+    printf("ERROR: rank %d could not allocate space for sparse matrix: %zu\n", 
            my_ID, matrix_space);
     error = 1;
   } 
@@ -277,21 +276,22 @@ int main(int argc, char **argv){
   jstart = (size/Num_procs)*my_ID;
   jend   = (size/Num_procs)*(my_ID+1);
 
-  for (j=jstart; j<jend; j++) for (i=0; i<size; i++) {
-    elm_start = (i+(j-jstart)*size)*stencil_size;
-    elm = elm_start;
-    colIndex[elm] = REVERSE(LIN(i,j),lsize2);
-    for (r=1; r<=radius; r++, elm+=4) {
-      colIndex[elm+1] = REVERSE(LIN((i+r)%size,j),lsize2);
-      colIndex[elm+2] = REVERSE(LIN((i-r+size)%size,j),lsize2);
-      colIndex[elm+3] = REVERSE(LIN(i,(j+r)%size),lsize2);
-      colIndex[elm+4] = REVERSE(LIN(i,(j-r+size)%size),lsize2);
-    }
-    /* sort colIndex to make sure the compressed row accesses
-       vector elements in increasing order                                        */
-    qsort(&(colIndex[elm_start]), stencil_size, sizeof(s64Int), compare);
-    for (elm=elm_start; elm<elm_start+stencil_size; elm++) 
-      matrix[elm] = 1.0/(double)(colIndex[elm]+1);   
+  for (int j=jstart; j<jend; j++)
+    for (int i=0; i<size; i++) {
+      elm_start = (i+(j-jstart)*size)*stencil_size;
+      elm = elm_start;
+      colIndex[elm] = REVERSE(LIN(i,j),lsize2);
+      for (r=1; r<=radius; r++, elm+=4) {
+        colIndex[elm+1] = REVERSE(LIN((i+r)%size,j),lsize2);
+        colIndex[elm+2] = REVERSE(LIN((i-r+size)%size,j),lsize2);
+        colIndex[elm+3] = REVERSE(LIN(i,(j+r)%size),lsize2);
+        colIndex[elm+4] = REVERSE(LIN(i,(j-r+size)%size),lsize2);
+      }
+      /* sort colIndex to make sure the compressed row accesses
+         vector elements in increasing order                                        */
+      qsort(&(colIndex[elm_start]), stencil_size, sizeof(s64Int), compare);
+      for (elm=elm_start; elm<elm_start+stencil_size; elm++) 
+        matrix[elm] = 1.0/(double)(colIndex[elm]+1);   
   }
 
 #if TESTDENSE 
@@ -338,7 +338,6 @@ int main(int argc, char **argv){
     /* do the actual matrix multiplication                                        */
     for (row=0; row<nrows; row++) {
       first = stencil_size*row; last = first+stencil_size-1;
-      #pragma simd reduction(+:temp) 
       for (temp=0.0,col=first; col<=last; col++) {
         temp += matrix[col]*vector[colIndex[col]];
       }
