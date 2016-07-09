@@ -8,11 +8,10 @@ env:
   - PRK_TARGET=allfortranopenmp
   - PRK_TARGET=allfortranpretty
   - PRK_TARGET=allfortrancoarray
-  # Reduce optimization to understand ICC+MPI Transpose hang.
-  - PRK_TARGET=allmpi1   PRK_FLAGS="-g3 -O1"
-  - PRK_TARGET=allmpirma PRK_FLAGS="-g3 -O1"
-  - PRK_TARGET=allmpishm PRK_FLAGS="-g3 -O1"
-  - PRK_TARGET=allmpiomp PRK_FLAGS="-g3 -O1"
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpiomp
   - PRK_TARGET=allshmem
   - PRK_TARGET=allampi
   - PRK_TARGET=allfgmpi
