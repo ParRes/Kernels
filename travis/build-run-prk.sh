@@ -5,10 +5,14 @@ os=`uname`
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 
+PRK_MPICC="$MPI_ROOT/bin/mpicc -std=c99"
+
 if [ -f ~/use-intel-compilers ] ; then
     export CC=icc
     export CXX=icpc
     export FC=ifort
+    # use Intel MPI
+    export PRK_MPICC="mpiicc -std=c99"
 fi
 
 echo "PRKVERSION=\"'2.16'\"" > common/make.defs
@@ -178,7 +182,7 @@ case "$PRK_TARGET" in
         ;;
     allmpi1)
         echo "MPI-1"
-        echo "MPICC=$MPI_ROOT/bin/mpicc -std=c99" >> common/make.defs
+        echo "MPICC=$PRK_MPICC" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPI1
         export PRK_MPI_PROCS=4
@@ -199,7 +203,7 @@ case "$PRK_TARGET" in
         ;;
     allmpio*mp)
         echo "MPI+OpenMP"
-        echo "MPICC=$MPI_ROOT/bin/mpicc -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
+        echo "MPICC=$PRK_MPICC\nOPENMPFLAG=-fopenmp" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIOPENMP
         export PRK_MPI_PROCS=2
@@ -212,7 +216,7 @@ case "$PRK_TARGET" in
         ;;
     allmpirma)
         echo "MPI-RMA"
-        echo "MPICC=$MPI_ROOT/bin/mpicc -std=c99" >> common/make.defs
+        echo "MPICC=$PRK_MPICC" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIRMA
         export PRK_MPI_PROCS=4
@@ -223,7 +227,7 @@ case "$PRK_TARGET" in
         ;;
     allmpishm)
         echo "MPI+MPI"
-        echo "MPICC=$MPI_ROOT/bin/mpicc -std=c99" >> common/make.defs
+        echo "MPICC=$PRK_MPICC" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPISHM
         export PRK_MPI_PROCS=4

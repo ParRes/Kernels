@@ -46,6 +46,9 @@ if [ -f ~/use-intel-compilers ] ; then
                 alljulia)
                     echo "TODO: Install Intel Julia here (if it exists)"
                     ;;
+                allgrappa)
+                    ./travis/install-icc.sh --components icc,mpi
+                    ;;
                 *)
                     ./travis/install-icc.sh --components icc
                     ;;
