@@ -123,10 +123,10 @@ matrix:
     env: PRK_TARGET=allpython
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=alljulia
-  allow_failures:
   # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
   - os: osx
     env: PRK_TARGET=allfgmpi
+  allow_failures:
   # will fail if numpy package cannot be acquired via apt
   - env: PRK_TARGET=allpython
   - os: linux
@@ -147,6 +147,13 @@ matrix:
   - env: PRK_TARGET=allupc UPC_IMPL=gupc
   # we have lots of Grappa issues...
   - env: PRK_TARGET=allgrappa
+  # MPI implementations of Transpose hand with Intel compilers (why?!?!)
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allmpi1
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allmpiomp
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allmpishm
 addons:
   apt:
     sources:
