@@ -20,7 +20,6 @@ env:
   - PRK_TARGET=allpython
   - PRK_TARGET=alljulia
   - PRK_TARGET=allupc
-  - PRK_TARGET=allupc
     UPC_IMPL=gupc
   - PRK_TARGET=allupc
     UPC_IMPL=bupc

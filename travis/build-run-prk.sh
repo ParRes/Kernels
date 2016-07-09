@@ -302,6 +302,10 @@ case "$PRK_TARGET" in
                 esac
                 make $PRK_TARGET default_opt_flags="-Wc,-O3"
                 ;;
+            *)
+                echo "Invalid value of UPC_IMPL ($UPC_IMPL)"
+                exit 7
+                ;;
         esac
         export PRK_TARGET_PATH=UPC
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       $PRK_LAUNCHER_ARGS 10 1024 1024
