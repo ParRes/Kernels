@@ -22,8 +22,8 @@ if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
                         mkdir -p $TRAVIS_ROOT/bin
                     fi
                     # we should refer to clang-omp* explicitly so know it exists and works
-                    #ln -s `which clang-omp`   $TRAVIS_ROOT/bin/clang
-                    #ln -s `which clang-omp++` $TRAVIS_ROOT/bin/clang++
+                    ln -s `which clang-omp`   $TRAVIS_ROOT/bin/clang
+                    ln -s `which clang-omp++` $TRAVIS_ROOT/bin/clang++
                     ;;
                 3*)
                     brew install llvm$CLANG_VERSION --with-clang --with-compiler-rt --with-libcxx --with-lld --without-assertions
