@@ -20,11 +20,14 @@ case "$os" in
         export MPI_ROOT=$TRAVIS_ROOT
         ;;
 esac
+# default to mpirun but override later when necessary
 if [ -f ~/use-intel-compilers ] ; then
     # use Intel MPI
     export PRK_MPICC="mpiicc -std=c99"
+    export PRK_LAUNCHER=mpirun
 else
     export PRK_MPICC="$MPI_ROOT/bin/mpicc -std=c99"
+    export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
 fi
 
 echo "PRKVERSION=\"'2.16'\"" > common/make.defs
@@ -188,7 +191,6 @@ case "$PRK_TARGET" in
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPI1
         export PRK_MPI_PROCS=4
-        export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
@@ -210,7 +212,6 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=MPIOPENMP
         export PRK_MPI_PROCS=2
         export OMP_NUM_THREADS=2
-        export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       $OMP_NUM_THREADS 10 1024 1024
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     $OMP_NUM_THREADS 10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose $OMP_NUM_THREADS 10 1024 32
@@ -222,7 +223,6 @@ case "$PRK_TARGET" in
         make $PRK_TARGET
         export PRK_TARGET_PATH=MPIRMA
         export PRK_MPI_PROCS=4
-        export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
@@ -234,7 +234,6 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=MPISHM
         export PRK_MPI_PROCS=4
         export PRK_MPISHM_RANKS=$(($PRK_MPI_PROCS/2))
-        export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p                         10 1024 1024
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     $PRK_MPISHM_RANKS 10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose $PRK_MPISHM_RANKS 10 1024 32
