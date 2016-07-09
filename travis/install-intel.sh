@@ -1,5 +1,15 @@
 #!/bin/bash
 
+if [ "${TRAVIS_REPO_SLUG}" = "jeffhammond/PRK" ] ; then
+    export INTEL_SERIAL_NUMBER=${JEFFHAMMOND_PRK_INTEL_SERIAL_NUMBER}
+elif [ "${TRAVIS_REPO_SLUG}" = "ParRes/Kernels" ] ; then
+    export INTEL_SERIAL_NUMBER=${PARRES_KERNELS_INTEL_SERIAL_NUMBER}
+else
+    echo "Cannot install the Intel compiler"
+    rm ~/use-intel-compilers
+    exit 0
+fi
+
 set -x
 
 os=`uname`
