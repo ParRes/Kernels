@@ -18,16 +18,16 @@ USERFLAGS    =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         = $(GRAPPA_LDLIBS)
+LIBS         = $(GRAPPA_LDLIBS) 
 LIBPATHS     = $(GRAPPA_LDFLAGS)
 
 ### End User configurable options ###
 
 # this is used by the C++ implicit compile rule
-CXXFLAGS= $(GRAPPA_CXXFLAGS)
+CXXFLAGS= $(GRAPPA_CXXFLAGS)  
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) $(CXXFLAGS)
-PROGRAM     = p2p
+PROGRAM     = global
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
 include ../../common/make.common
