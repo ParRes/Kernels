@@ -213,6 +213,9 @@ allfortranopenmp:
 allfortrancoarray:
 	make -C FORTRAN coarray
 
+allfortranpretty:
+	make -C FORTRAN pretty
+
 allfortran: allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
 
 clean:
