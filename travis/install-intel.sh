@@ -2,8 +2,10 @@
 
 echo "TRAVIS_REPO_SLUG=${TRAVIS_REPO_SLUG}"
 if [ "${TRAVIS_REPO_SLUG}" = "jeffhammond/PRK" ] ; then
+    echo "Using JEFFHAMMOND_PRK_INTEL_SERIAL_NUMBER"
     export INTEL_SERIAL_NUMBER=${JEFFHAMMOND_PRK_INTEL_SERIAL_NUMBER}
 elif [ "${TRAVIS_REPO_SLUG}" = "ParRes/Kernels" ] ; then
+    echo "Using PARRES_KERNELS_INTEL_SERIAL_NUMBER"
     export INTEL_SERIAL_NUMBER=${PARRES_KERNELS_INTEL_SERIAL_NUMBER}
 else
     echo "Cannot install the Intel compiler"
