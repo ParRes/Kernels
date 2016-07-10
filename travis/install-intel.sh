@@ -1,5 +1,6 @@
 #!/bin/bash
 
+echo "TRAVIS_REPO_SLUG=${TRAVIS_REPO_SLUG}"
 if [ "${TRAVIS_REPO_SLUG}" = "jeffhammond/PRK" ] ; then
     export INTEL_SERIAL_NUMBER=${JEFFHAMMOND_PRK_INTEL_SERIAL_NUMBER}
 elif [ "${TRAVIS_REPO_SLUG}" = "ParRes/Kernels" ] ; then
@@ -7,7 +8,7 @@ elif [ "${TRAVIS_REPO_SLUG}" = "ParRes/Kernels" ] ; then
 else
     echo "Cannot install the Intel compiler"
     rm ~/use-intel-compilers
-    exit 0
+    exit 9
 fi
 
 set -x
