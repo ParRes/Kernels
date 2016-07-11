@@ -3,26 +3,26 @@ language: cpp
 env:
   matrix:
   - PRK_TARGET=allserial
-#  - PRK_TARGET=allopenmp
-#  - PRK_TARGET=allfortranserial
-#  - PRK_TARGET=allfortranopenmp
-#  - PRK_TARGET=allfortranpretty
-#  - PRK_TARGET=allfortrancoarray
-#  - PRK_TARGET=allmpi1
-#  - PRK_TARGET=allmpirma
-#  - PRK_TARGET=allmpishm
-#  - PRK_TARGET=allmpiomp
-#  - PRK_TARGET=allshmem
-#  - PRK_TARGET=allampi
-#  - PRK_TARGET=allfgmpi
-#  - PRK_TARGET=allcharm++
-#  - PRK_TARGET=allgrappa
-#  - PRK_TARGET=allpython
-#  - PRK_TARGET=alljulia
-#  - PRK_TARGET=allupc
-#    UPC_IMPL=gupc
-#  - PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
-#  - PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
+  - PRK_TARGET=allpython
+  - PRK_TARGET=alljulia
+  - PRK_TARGET=allopenmp
+  - PRK_TARGET=allfortranserial
+  - PRK_TARGET=allfortranopenmp
+  - PRK_TARGET=allfortranpretty
+  - PRK_TARGET=allfortrancoarray
+  - PRK_TARGET=allmpi1
+  - PRK_TARGET=allmpirma
+  - PRK_TARGET=allmpishm
+  - PRK_TARGET=allmpiomp
+  - PRK_TARGET=allshmem
+  - PRK_TARGET=allampi
+  - PRK_TARGET=allfgmpi
+  - PRK_TARGET=allcharm++
+  - PRK_TARGET=allgrappa
+  - PRK_TARGET=allupc UPC_IMPL=gupc
+  - PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
+  # This works but we don't need to test it.
+  #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
   # Optional: We do not need to test BUPC this thoroughly every time
   #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
   #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=ofi PRK_FLAGS="-Wc,-O3"
@@ -42,11 +42,10 @@ virtualenv:
 os:
 - linux
 - osx
-# Travis will export CC=$compiler
 compiler:
 - gcc
 - clang
-- touch ~/use-intel-compilers ; gcc
+#- touch ~/use-intel-compilers ; gcc
 matrix:
   exclude:
   # Intel for Mac not setup yet
@@ -113,11 +112,13 @@ matrix:
   # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
   - os: osx
     env: PRK_TARGET=allfgmpi
-  allow_failures:
-  # will fail if numpy package cannot be acquired via apt
-  - env: PRK_TARGET=allpython
-  - os: linux
-    env: PRK_TARGET=alljulia
+  # MPI implementations of Transpose hand with Intel compilers (why?!?!)
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allmpi1
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allmpiomp
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allmpishm
   # Linux may not have GCC-6...
   - os: linux
     compiler: gcc
@@ -130,17 +131,18 @@ matrix:
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
-  # GUPC will fail when libnuma cannot be acquired via apt
-  - env: PRK_TARGET=allupc UPC_IMPL=gupc
+  # Grappa with Intel unlikely to succeed, especially if Clang doesn't.
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allgrappa
+  allow_failures:
+  ## will fail if numpy package cannot be acquired via apt
+  #- env: PRK_TARGET=allpython
+  #- os: linux
+  #  env: PRK_TARGET=alljulia
+  ## GUPC will fail when libnuma cannot be acquired via apt
+  #- env: PRK_TARGET=allupc UPC_IMPL=gupc
   # we have lots of Grappa issues...
   - env: PRK_TARGET=allgrappa
-  # MPI implementations of Transpose hand with Intel compilers (why?!?!)
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpi1
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpiomp
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpishm
 addons:
   apt:
     sources:
