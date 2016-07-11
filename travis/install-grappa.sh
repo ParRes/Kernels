@@ -20,10 +20,13 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
             echo "Mac"
             #brew update
             #brew install ruby boost
+            # Homebrew location
+            export MPI_ROOT=/usr/local
             ;;
 
         Linux)
             echo "Linux"
+            export MPI_ROOT=$TRAVIS_ROOT
             ;;
     esac
 
@@ -36,7 +39,6 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     # END
     # Invoking CMake directly
     mkdir build && cd build
-    export MPI_ROOT=$TRAVIS_ROOT
     if [ -f ~/use-intel-compilers ] ; then
         cmake .. -DGRAPPA_INSTALL_PREFIX=$TRAVIS_ROOT/grappa \
                  -DCMAKE_C_COMPILER="mpiicc" \

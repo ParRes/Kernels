@@ -3,6 +3,8 @@ language: cpp
 env:
   matrix:
   - PRK_TARGET=allserial
+  - PRK_TARGET=allpython
+  - PRK_TARGET=alljulia
   - PRK_TARGET=allopenmp
   - PRK_TARGET=allfortranserial
   - PRK_TARGET=allfortranopenmp
@@ -17,12 +19,10 @@ env:
   - PRK_TARGET=allfgmpi
   - PRK_TARGET=allcharm++
   - PRK_TARGET=allgrappa
-  - PRK_TARGET=allpython
-  - PRK_TARGET=alljulia
-  - PRK_TARGET=allupc
-    UPC_IMPL=gupc
+  - PRK_TARGET=allupc UPC_IMPL=gupc
   - PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
+  # This works but we don't need to test it.
+  #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
   # Optional: We do not need to test BUPC this thoroughly every time
   #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
   #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=ofi PRK_FLAGS="-Wc,-O3"
@@ -34,18 +34,18 @@ env:
   # HPX-5 kernels are not merged yet.  Activate these when they are.
   #- PRK_TARGET=allhpx5
   global:
-    secure: Dzsj5Tedmm3AswWKQ+nSbXXzPZjlIF7vNRCsAIESAFvMu4re0Boj5+YnWox54SEQ63P+lOZakJYu2TFLMsLyadxDL9T+Vy/p8smZpGnf5KrqMhjW5+SFokUAwSUCAteTaUdH+DiofFpbfaUD9sUK0phxAvx/mMwqe4JTxAjrEepz7tbmWZw82FTh2SfWYpX0ikewyPm7XY1kgaeEvK5vCjBiW10kcpd/V+fDeDB2W6YcT328OhjL2hIOb5t50Ss24PVZ+NpMNneyMdZdDhFCC+e3rPAyfu3FVIp7AIBIqee8Br0+LTMe36CBj/tOLWblK4GzPjPdaf1JibMwjiBQ9gJN8o05ge05I0H3Yj1OtFRZ4eideXVBjX9VUyJSM1YMgP4z51MZ+tHUhjyN93HONUExHUQPHcOyQCdKCoTKN1qr4vPHEaMt/Fy8oateQQH13Tiqz2y++7qhluVHgbiU/kOVhBOTiryW68UKh6OfAEAcLYpT0MbfEgjUbLIVQxRNY1ZrSGmJNW3294URcFUjbaLpgp60j3qnKz5eEISBwaBvibgO4CMOKDCRoJBHdMQ/liE5Bp96itB5scBd++fR2tfoEoLAOROeKHcY3A+uVfi0AxcDuLj9RZ5bBR0F4H5K3dyB2rI+p6UZxGiWxsEPVybgfEEzma2OGi/wCQXOKj8=
+  - secure: "oLiTOLZlbVt0CbaPao3CaVoEGTtOPCQ6cfU98AOR616i6IuZCW13K8OIstD5GbvO6AHCVTH1jonJZ7bBCTF5C0gTWLTNbwMNMKAbsdedieSlLkTcAQkpJzYBuUfL8IXhm6VivguAewD8axzWMUXUbKJBUYEftOHtN6SFu/M7OnLrWWim5hgFnUakrq+hjVmIsMX9rKaARLCRsrN/M0GQ8/BhFHDl++1oLPc3loaieLsDC4riMZE8wxp/6U5peN5iosxwJhsDtYo/GGPv5oivvcSFErAkM9PrIhoNn7DiHfxrx331V0ukf8zDP93pxDx/9L2yERoTUdw5fk6NG6LX6r2WT2iR+JuR4ZdyCdbUaGyWY0VMwXLIholHQU0d2tI2S5rHue/btFRrHJbhOyujX9rJhPx407aZU7ZOZYfy9OPo3r8ekzlDJRfSceykFeIg97HdJ+sqguSs1ZYHbQAQGoPyxcVhw/+Fz//k+hndyGui1AaOLnihaY4KQwoMijJsa3+7X6RS9supSKzlk5JWzF9lLbNOoPO04VGGnLdfqhHNImQWZNsYoP0E4VnKcMXKulyF0bDsoCDookQzTJwYgi+F/drZjKDw9iyMvT1gWM+T0uAo7fHUnomTgEUIYeJppkETKuZEg3aZ+rUekcygYvrEVf5/2sgrRMBxXzE1U9I="
+  - secure: "j2SveaWkbcxRTK3c27qkdD7o0GvCrIMjx2GcVa4YOKtkKWiE5CdocPugDKdPzBhoehVKqD7u3w6ZFep1lm3+VSHwxuKC2I28fTFmGmxQUUEcXAlAc3HfcdOctqOjPL0w8oLRduGiN4fc1D7KEW7uqwT7kTYIm9qXCr2lDyigUjLrulnt5N/o64Xr8j9yKE1s3JNcuibvkTGYoMISJ8i271XjWEewzY8lJziWYqVSv2MsKr1Epl7TDNCLVhHbFq+DAJfCFilvNDngFXOzNfuYYoKCzxaDOk6dWtjCH70D0YZfOtJJJjFOzAG8Q14IklWQlcm69pFQCoveEUOaUULBDJ1B9O+wdmj56dm592+QdUI7onefqcrTFcQ/O3q18EgtKRjPt5Y52iaOBzW8gF+570G1MSX69KpazmEbeEzefPewIi9adwduBhnzdy27hFzPocA+1xrzjSSTFFfAPl0/boJlhOyUtY25VquqIUqUPLbkMWe2hX2FDr8G9O9mJ4jsvTYBNXhW95cELxepJ9zok7XUTB64e8ElTTOjcUk39cejIT2tF2/fur8Ld9HpXtFgUarq+RgDLG3QOOgeu93DiyYhKIgxfSntnAc4/4ACI2PPBju0wXYBpIEBIykCFNRTuoVMGt4r2FQcSztHQs6rj7SCXHFzAxmBcEbLd4GvTJE="
 # this is for Python, per http://danielnouri.org/notes/2012/11/23/use-apt-get-to-install-python-dependencies-for-travis-ci/
 virtualenv:
   system_site_packages: true
 os:
 - linux
 - osx
-# Travis will export CC=$compiler
 compiler:
 - gcc
 - clang
-- touch ~/use-intel-compilers ; gcc
+#- touch ~/use-intel-compilers ; gcc
 matrix:
   exclude:
   # Intel for Mac not setup yet
@@ -112,11 +112,13 @@ matrix:
   # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
   - os: osx
     env: PRK_TARGET=allfgmpi
-  allow_failures:
-  # will fail if numpy package cannot be acquired via apt
-  - env: PRK_TARGET=allpython
-  - os: linux
-    env: PRK_TARGET=alljulia
+  # MPI implementations of Transpose hand with Intel compilers (why?!?!)
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allmpi1
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allmpiomp
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allmpishm
   # Linux may not have GCC-6...
   - os: linux
     compiler: gcc
@@ -129,17 +131,18 @@ matrix:
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
-  # GUPC will fail when libnuma cannot be acquired via apt
-  - env: PRK_TARGET=allupc UPC_IMPL=gupc
+  # Grappa with Intel unlikely to succeed, especially if Clang doesn't.
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allgrappa
+  allow_failures:
+  ## will fail if numpy package cannot be acquired via apt
+  #- env: PRK_TARGET=allpython
+  #- os: linux
+  #  env: PRK_TARGET=alljulia
+  ## GUPC will fail when libnuma cannot be acquired via apt
+  #- env: PRK_TARGET=allupc UPC_IMPL=gupc
   # we have lots of Grappa issues...
   - env: PRK_TARGET=allgrappa
-  # MPI implementations of Transpose hand with Intel compilers (why?!?!)
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpi1
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpiomp
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpishm
 addons:
   apt:
     sources:
