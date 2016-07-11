@@ -293,7 +293,7 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  abserr = 0.0;
+  abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
 #ifdef _OPENMP

@@ -90,7 +90,6 @@ int main(int argc, char ** argv)
   int    Num_procs;     /* Number of ranks                                       */
   double RESTRICT *vector;/* array holding grid values                           */
   long   total_length;  /* total required length to store grid values            */
-  MPI_Status status;    /* completion status of message                          */
   MPI_Win shm_win;      /* Shared Memory window object                           */
   MPI_Info rma_winfo;   /* info for window                                       */
   MPI_Comm shm_comm;    /* Shared Memory Communicator                            */
@@ -249,10 +248,10 @@ int main(int argc, char ** argv)
          send data                                                                */
       if (my_ID > 0) {
 	if (shm_ID > 0) {
-	  MPI_Recv(&p2pbuf, 0, MPI_INT, shm_ID-1, 1, shm_comm, &status);
+	  MPI_Recv(&p2pbuf, 0, MPI_INT, shm_ID-1, 1, shm_comm, MPI_STATUS_IGNORE);
 	} else {
 	  MPI_Recv(&(ARRAY(start[my_ID]-1,j,start[my_ID],offset,width)), 1, MPI_DOUBLE,
-		   my_ID-1, j, MPI_COMM_WORLD, &status);
+		   my_ID-1, j, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	}
       }
 
@@ -290,7 +289,7 @@ int main(int argc, char ** argv)
         MPI_Send(&corner_val,1,MPI_DOUBLE,root,888,MPI_COMM_WORLD);
       }
       if (my_ID==root) {
-        MPI_Recv(&(ARRAY(0,0,start[my_ID],offset,width)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,&status);
+        MPI_Recv(&(ARRAY(0,0,start[my_ID],offset,width)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
       }
     }
     else ARRAY(0,0,start[my_ID],offset,width)= -ARRAY(end[my_ID],n-1,start[my_ID],offset,width);

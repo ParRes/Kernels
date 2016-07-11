@@ -46,84 +46,112 @@
 #
 # HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 #          Converted to Python by Jeff Hammond, February 2016.
+#          Converted to Julia by Jeff Hammond, June 2016.
 # *******************************************************************
 
-import sys
-from timeit import default_timer as timer
+# ********************************************************************
+# read and test input parameters
+# ********************************************************************
 
-def main():
+function do_initialize(A, order)
+    for j in 1:order
+        for i in 1:order
+            @inbounds A[i,j] = order * (j-1) + (i-1)
+        end
+    end
+end
 
-    # ********************************************************************
-    # read and test input parameters
-    # ********************************************************************
+function do_transpose(A, B, order)
+    for j in 1:order
+        for i in 1:order
+            @inbounds B[i,j] += A[j,i]
+            @inbounds A[j,i] += 1.0
+        end
+    end
+end
 
-    print 'Parallel Research Kernels version ' #, PRKVERSION
-    print 'Python Matrix transpose: B = A^T'
+function do_verify(B, order, iterations)
+    addit = (0.5*iterations) * (iterations+1)
+    abserr = 0.0
+    for j in 1:order
+        for i in 1:order
+            temp = (order * (i-1) + (j-1)) * (iterations+1)
+            @inbounds abserr = abserr + abs(B[i,j] - (temp+addit))
+        end
+    end
+    return abserr
+end
 
-    if len(sys.argv) != 3:
-        print 'argument count = ', len(sys.argv)
-        sys.exit("Usage: ./transpose <# iterations> <matrix n>")
+function main()
+    println("Parallel Research Kernels version ") #, PRKVERSION)
+    println("Julia Matrix transpose: B = A^T")
 
-    iterations = int(sys.argv[1])
-    if iterations < 1:
-        sys.exit("ERROR: iterations must be >= 1")
+    if length(ARGS) != 2
+        println("argument count = ", length(ARGS))
+        println("Usage: ./transpose <# iterations> <matrix order>")
+        exit(1)
+    end
 
-    order = int(sys.argv[2])
-    if order < 1:
-        sys.exit("ERROR: order must be >= 1")
+    argv = map(x->parse(Int64,x),ARGS)
+
+    # iterations
+    iterations = argv[1]
+    if iterations < 1
+        println("ERROR: iterations must be >= 1")
+        exit(2)
+    end
+
+    # matrix order
+    order = argv[2]
+    if order < 1
+        println("ERROR: order must be >= 1")
+        exit(3)
+    end
+
+    println("Order                    = ", order)
+    println("Number of iterations     = ", iterations)
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    print 'Matrix order         = ', order
-    print 'Number of iterations = ', iterations
+    A = zeros(Float64,order,order)
+    B = zeros(Float64,order,order)
+    # Fill the original matrix
+    precompile(do_initialize, (Array{Float64,2}, Int64))
+    do_initialize(A, order)
 
-    # 0.0 is a float, which is 64b (53b of precision)
-    A = [[0.0 for x in range(order)] for x in range(order)]
-    B = [[0.0 for x in range(order)] for x in range(order)]
+    # precompile hot function to smooth performance measurement
+    precompile(do_transpose, (Array{Float64,2}, Array{Float64,2}, Int64))
 
-    # this is surely not the Pythonic way of doing this
-    for i in range(order):
-        for j in range(order):
-            A[i][j] = float(i*order+j)
+    t0 = time_ns()
 
-    for k in range(0,iterations+1):
-        # start timer after a warmup iteration
-        if k<1:
-            t0 = timer()
+    for k in 1:iterations+1
+        do_transpose(A, B, order)
+    end
 
-        for i in range(order):
-            for j in range(order):
-                B[i][j] += A[j][i]
-                A[j][i] += 1.0
-
-
-    t1 = timer()
-    trans_time = t1 - t0
+    t1 = time_ns()
+    trans_time = (t1 - t0) * 1.e-9
 
     # ********************************************************************
     # ** Analyze and output results.
     # ********************************************************************
 
-    addit = (iterations * (iterations+1))/2
-    abserr = 0.0;
-    for i in range(order):
-        for j in range(order):
-            temp    = (order*j+i) * (iterations+1)
-            abserr += abs(B[i][j] - float(temp+addit))
+    precompile(do_verify, (Array{Float64,2}, Int64, Int64))
+    abserr = do_verify(B, order, iterations)
 
     epsilon=1.e-8
-    nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
-    if abserr < epsilon:
-        print 'Solution validates'
+    nbytes = 2 * order^2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
+    if abserr < epsilon
+        println("Solution validates")
         avgtime = trans_time/iterations
-        print 'Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime
-    else:
-        print 'error ',abserr, ' exceeds threshold ',epsilon
-        sys.exit("ERROR: solution did not validate")
+        println("Rate (MB/s): ",1.e-6*nbytes/avgtime, " Avg time (s): ", avgtime)
+    else
+        println("error ",abserr, " exceeds threshold ",epsilon)
+        println("ERROR: solution did not validate")
+        exit(1)
+    end
+end
 
-
-if __name__ == '__main__':
-    main()
+main()
 
