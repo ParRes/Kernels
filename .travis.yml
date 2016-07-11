@@ -3,6 +3,8 @@ language: cpp
 env:
   matrix:
   - PRK_TARGET=allserial
+  - PRK_TARGET=allpython
+  - PRK_TARGET=alljulia
   - PRK_TARGET=allopenmp
   - PRK_TARGET=allfortranserial
   - PRK_TARGET=allfortranopenmp
@@ -17,12 +19,10 @@ env:
   - PRK_TARGET=allfgmpi
   - PRK_TARGET=allcharm++
   - PRK_TARGET=allgrappa
-  - PRK_TARGET=allpython
-  - PRK_TARGET=alljulia
-  - PRK_TARGET=allupc
-    UPC_IMPL=gupc
+  - PRK_TARGET=allupc UPC_IMPL=gupc
   - PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
-  - PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
+  # This works but we don't need to test it.
+  #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
   # Optional: We do not need to test BUPC this thoroughly every time
   #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
   #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=ofi PRK_FLAGS="-Wc,-O3"
@@ -41,7 +41,6 @@ virtualenv:
 os:
 - linux
 - osx
-# Travis will export CC=$compiler
 compiler:
 - gcc
 - clang
@@ -135,12 +134,12 @@ matrix:
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allgrappa
   allow_failures:
-  # will fail if numpy package cannot be acquired via apt
-  - env: PRK_TARGET=allpython
-  - os: linux
-    env: PRK_TARGET=alljulia
-  # GUPC will fail when libnuma cannot be acquired via apt
-  - env: PRK_TARGET=allupc UPC_IMPL=gupc
+  ## will fail if numpy package cannot be acquired via apt
+  #- env: PRK_TARGET=allpython
+  #- os: linux
+  #  env: PRK_TARGET=alljulia
+  ## GUPC will fail when libnuma cannot be acquired via apt
+  #- env: PRK_TARGET=allupc UPC_IMPL=gupc
   # we have lots of Grappa issues...
   - env: PRK_TARGET=allgrappa
 addons:
