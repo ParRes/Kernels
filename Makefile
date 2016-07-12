@@ -200,6 +200,7 @@ allserial:
                                                       "MATRIX_RANK         = $(matrix_rank)"   \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SERIAL/AMR;              $(MAKE) amr       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allfortran: allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
 
@@ -302,6 +303,7 @@ clean:
 	cd SERIAL/Synch_p2p;        $(MAKE) clean
 	cd SERIAL/Branch;           $(MAKE) clean
 	cd SERIAL/PIC;              $(MAKE) clean
+	cd SERIAL/AMR;              $(MAKE) clean
 	cd FORTRAN/Transpose;       $(MAKE) clean
 	cd FORTRAN/Synch_p2p;       $(MAKE) clean
 	cd FORTRAN/Stencil;         $(MAKE) clean
@@ -314,6 +316,7 @@ veryclean: clean
 	cd MPI1/Stencil;            $(MAKE) veryclean
 	cd OPENMP/Stencil;          $(MAKE) veryclean
 	cd SERIAL/Stencil;          $(MAKE) veryclean
+	cd SERIAL/AMR;              $(MAKE) veryclean
 	cd MPIRMA/Stencil;          $(MAKE) veryclean
 	cd MPISHM/Stencil;          $(MAKE) veryclean
 	cd SHMEM/Stencil;           $(MAKE) veryclean

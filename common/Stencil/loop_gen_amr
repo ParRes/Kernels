@@ -1,0 +1,35 @@
+#!/bin/sh
+RADIUS=$1
+STAR=$2
+if [ $STAR -ne 0 ]; then 
+    echo "      OUTR(g,i,j) = OUTR(g,i,j) + WEIGHTR(0,0)*INR(g,i,j)"                 > loop_body_star_amr.incl
+    jj=1
+    while [ $jj -le $RADIUS ]; do
+      echo "        +WEIGHTR(0,-$jj)*INR(g,i,j-$jj)+WEIGHTR(0,$jj)*INR(g,i,j+$jj)"  >> loop_body_star_amr.incl
+      echo "        +WEIGHTR(-$jj,0)*INR(g,i-$jj,j)+WEIGHTR($jj,0)*INR(g,i+$jj,j)"  >> loop_body_star_amr.incl
+      jj=`expr $jj + 1`
+    done
+    echo "        ;"                                                                >> loop_body_star_amr.incl
+else
+    echo "      OUTR(g,i,j) = OUTR(g,i,j) +"                                          > loop_body_compact_amr.incl
+    jj=`expr -1 \* $RADIUS`
+    while [ $jj -le $RADIUS ]; do
+      ii=`expr -1 \* $RADIUS`
+      while [ $ii -le $RADIUS ]; do
+        si=''
+        if [ $ii -lt 0 ]; then si=$ii
+        else
+          if [ $ii -gt 0 ]; then si=+$ii; fi
+        fi
+        sj=''
+        if [ $jj -lt 0 ]; then sj=$jj
+        else
+          if [ $jj -gt 0 ]; then sj=+$jj; fi
+        fi
+        echo "        +WEIGHTR($ii,$jj)*INR(g,i$si,j$sj)"                           >> loop_body_compact_amr.incl
+        ii=`expr $ii + 1`
+      done
+      jj=`expr $jj + 1`
+    done
+    echo "        ;"                                                                >> loop_body_compact_amr.incl
+fi
