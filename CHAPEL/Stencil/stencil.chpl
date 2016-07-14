@@ -27,9 +27,9 @@ config param R = 2,
              /* No domain mapping, if neither is selected (shared) */
 
 /* Number of iterations to execute (0th iteration is untimed) */
-config const iterations: int = 10,
+config const iterations: int = 0,
              /* Input/Output matrix dimensions are 'order' x 'order' */
-             order: int = 1000,
+             order: int = 0,
              /* Enable debug output, including chplvis data */
              debug: bool = false,
              /* Only print result of validation - used in correctness tests*/
@@ -62,6 +62,12 @@ proc main() {
   //
   // Process and test input configs
   //
+  if ( (iterations == 0) && (order==0) ) {
+    writeln("Usage: ./stencil --iterations=<# iterations> --order=<matrix order> [--tileSize=<tile_size>]");
+    // None of these work...
+    //writeln("          [--compact=<boolean>] [--useBlockDist=<boolean>] [--useStencilDist=<boolean>]");
+    exit(1);
+  }
   if (iterations < 1) {
     writeln("ERROR: iterations must be >= 1: ", iterations);
     exit(1);

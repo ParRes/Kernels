@@ -5,8 +5,8 @@ use Time;
 
 param PRKVERSION = "2.15";
 
-config const iterations : int = 100,
-             order : int = 100,
+config const iterations : int = 0,
+             order : int = 0,
              debug: bool = false,
              validate: bool = false;
 
@@ -15,6 +15,10 @@ config var tileSize: int = 0;
 //
 // Process and test input configs
 //
+if ( (iterations == 0) && (order==0) ) {
+  writeln("Usage: ./transpose --iterations=<# iterations> --order=<matrix order> [--tileSize=<tile_size>]");
+  exit(1);
+}
 if (iterations < 1) {
   writeln("ERROR: iterations must be >= 1: ", iterations);
   exit(1);

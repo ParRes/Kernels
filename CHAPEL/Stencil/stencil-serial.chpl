@@ -7,8 +7,8 @@ param PRKVERSION = "2.15";
 
 config var tileSize: int = 0;
 
-config const iterations: int = 10,
-             order: int = 1000,
+config const iterations: int = 0,
+             order: int = 0,
              debug: bool = false,
              validate: bool = false;
 
@@ -32,6 +32,12 @@ var timer: Timer;
 //
 // Process and test input configs
 //
+if ( (iterations == 0) && (order==0) ) {
+  writeln("Usage: ./stencil --iterations=<# iterations> --order=<matrix order> [--tileSize=<tile_size>]");
+  // None of these work...
+  //writeln("          [--compact=<boolean>] [--useBlockDist=<boolean>] [--useStencilDist=<boolean>]");
+  exit(1);
+}
 if (iterations < 1) {
   writeln("ERROR: iterations must be >= 1: ", iterations);
   exit(1);
@@ -92,7 +98,7 @@ if (!validate) {
   if compact then writeln("Type of stencil      = compact");
   else              writeln("Type of stencil      = star");
   writeln("Data type            = ", dtype:string);
-  if tiling then writeln("Tile size             = ", tileSize);
+  if tiling then writeln("Tile size            = ", tileSize);
   else             writeln("Untiled");
   writeln("Number of iterations = ", iterations);
 }
