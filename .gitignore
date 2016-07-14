@@ -54,6 +54,21 @@ MPI1/AMR/loop_body_star.incl
 MPI1/AMR/loop_body_star_amr.incl
 MPI1/Branch/branch
 MPI1/Branch/func.c
+
+# auto-generated files
+func.c
+*.incl
+
+# scripts
+common/make.defs
+scripts/small/runfgmpi
+scripts/wide/runfgmpi
+
+# binaries
+CHAPEL/Stencil/stencil
+CHAPEL/Synch_p2p/p2p
+CHAPEL/Transpose/transpose
+MPI1/Branch/branch
 MPI1/DGEMM/dgemm
 MPI1/Nstream/nstream
 MPI1/PIC-static/pic
@@ -79,6 +94,12 @@ MPIRMA/Synch_p2p/p2p
 MPIRMA/Transpose/transpose
 MPISHM/Stencil/loop_body_compact.incl
 MPISHM/Stencil/loop_body_star.incl
+MPIOPENMP/Stencil/stencil
+MPIOPENMP/Synch_p2p/p2p
+MPIOPENMP/Transpose/transpose
+MPIRMA/Stencil/stencil
+MPIRMA/Synch_p2p/p2p
+MPIRMA/Transpose/transpose
 MPISHM/Stencil/stencil
 MPISHM/Synch_p2p/p2p
 MPISHM/Transpose/transpose
@@ -104,6 +125,7 @@ SERIAL/AMR/loop_body_star.incl
 SERIAL/AMR/loop_body_star_amr.incl
 SERIAL/Branch/branch
 SERIAL/Branch/func.c
+SERIAL/Branch/branch
 SERIAL/DGEMM/dgemm
 SERIAL/Nstream/nstream
 SERIAL/PIC/pic
@@ -164,4 +186,3 @@ FORTRAN/transpose-coarray
 FORTRAN/transpose-openmp
 FORTRAN/transpose-openmp-target
 FORTRAN/transpose-pretty
-
