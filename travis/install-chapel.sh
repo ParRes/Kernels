@@ -30,13 +30,15 @@ case "$CC" in
     icc)
         export PRK_CC=icc
         export PRK_CXX=icpc
-        export PRK_FC=ifort
+        ;;
 esac
 
 if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CHPL_COMM}" = "none" ] ; then
     echo "Mac single-locale"
     brew update
     brew install chapel || brew upgrade chapel
+    # Chapel PRK depend upon recent features
+    #brew install chapel --HEAD
     brew test chapel
 else
     # We could test Clang via the C back-end as well, but it seems silly.
