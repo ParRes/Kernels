@@ -72,108 +72,117 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
   #define FSTR    "%lf"
 #else
   #define DTYPE   float
-  #define EPSILON 0.001f
+  #define EPSILON 0.0001f
   #define COEFX   1.0f
   #define COEFY   1.0f
   #define FSTR    "%f"
 #endif
 
-/* define shorthand for indexing multi-dimensional arrays                        */
-#define IN(i,j)        in[i+(j)*(n)]
-#define OUT(i,j)       out[i+(j)*(n)]
-#define INR(g,i,j)     inr[g][i+(j)*(nr_true)]
-#define INRG(i,j)      inrg[i+(j)*(nr_true)]
-#define OUTR(g,i,j)    outr[g][i+(j)*(nr_true)]
-#define WEIGHT(ii,jj)  weight[ii+RADIUS][jj+RADIUS]
-#define WEIGHTR(ii,jj) weight_r[ii+RADIUS][jj+RADIUS]
+/* define shorthand for indexing multi-dimensional arrays                       */
+#define IN(i,j)         in[i+(j)*(n)]
+#define OUT(i,j)        out[i+(j)*(n)]
+#define IN_R(g,i,j)     in_r[g][i+(j)*(n_r_true)]
+#define ING_R(i,j)      ing_r[i+(j)*(n_r_true)]
+#define OUT_R(g,i,j)    out_r[g][i+(j)*(n_r_true)]
+#define WEIGHT(ii,jj)   weight[ii+RADIUS][jj+RADIUS]
+#define WEIGHT_R(ii,jj) weight_r[ii+RADIUS][jj+RADIUS]
 
-/* using bi-linear interpolation                                                 */
-void interpolate(DTYPE *inrg, DTYPE *in, long n, long nr_true, 
-                 long rstarti, long rstartj, long expand,
-                 DTYPE hr) {
-  long ir, jr, ib, jrb, jrb1, jb, rendi, rendj;
+/* use two-stage, bi-linear interpolation from background grid to refinement    */
+void interpolate(DTYPE *ing_r, DTYPE *in, long n, long n_r_true, 
+                 long istart_r, long jstart_r, long expand,
+                 DTYPE h_r) {
+  long ir, jr, ib, jrb, jrb1, jb, iend_r, jend_r;
   DTYPE xr, xb, yr, yb;
 
-  if (hr==(DTYPE)1.0) {
-    for (jr=0; jr<nr_true; jr++) for (ir=0; ir<nr_true; ir++)
-      INRG(ir,jr) = IN(ir+rstarti,jr+rstartj);
+  if (expand==1){
+    /* simply copy background grid values to refinement if same resolution      */
+    for (jr=0; jr<n_r_true; jr++) for (ir=0; ir<n_r_true; ir++)
+      ING_R(ir,jr) = IN(ir+istart_r,jr+jstart_r);
   } 
   else {
-    rendi = rstarti+(nr_true-1)/expand;
-    rendj = rstartj+(nr_true-1)/expand;
+    iend_r = istart_r+(n_r_true-1)/expand;
+    jend_r = jstart_r+(n_r_true-1)/expand;
     /* First, interpolate in x-direction                                        */
-    for (jr=0,jb=rstartj; jr<nr_true; jr+=expand,jb++) {
-      for (ir=0; ir<nr_true-1; ir++) {
-        xr = rstarti+hr*(DTYPE)ir;
+    for (jr=0,jb=jstart_r; jr<n_r_true; jr+=expand,jb++) {
+      for (ir=0; ir<n_r_true-1; ir++) {
+        xr = istart_r+h_r*(DTYPE)ir;
         ib = (long)xr;
         xb = (DTYPE)ib;
-        INRG(ir,jr) = IN(ib+1,jb)*(xr-xb) + IN(ib,jb)*(xb+(DTYPE)1.0-xr);
+        ING_R(ir,jr) = IN(ib+1,jb)*(xr-xb) + IN(ib,jb)*(xb+(DTYPE)1.0-xr);
       }
-      INRG(nr_true-1,jr) = IN(rendi,jb);
+      ING_R(n_r_true-1,jr) = IN(iend_r,jb);
     }
 
     /* Next, interpolate in y-direction                                         */
-    for (jr=0; jr<nr_true-1; jr++) {
-      yr = hr*(DTYPE)jr;
+    for (jr=0; jr<n_r_true-1; jr++) {
+      yr = h_r*(DTYPE)jr;
       jb = (long)yr;
       jrb = jb*expand;
       jrb1 = (jb+1)*expand;
-      yb = floor(yr);
-      for (ir=0; ir<nr_true; ir++) {
-        INRG(ir,jr) = INRG(ir,jrb1)*(yr-yb) + INRG(ir,jrb)*(yb+(DTYPE)1.0-yr);
+      yb = (DTYPE)jb;
+      for (ir=0; ir<n_r_true; ir++) {
+        ING_R(ir,jr) = ING_R(ir,jrb1)*(yr-yb) + ING_R(ir,jrb)*(yb+(DTYPE)1.0-yr);
       }
+      /* note that (yr-yb) and (yb+(DTYPE)1.0-yr) can be hoisted out of the loop,
+         so in the performance computation we assign 3 flops per point           */
     }
   }
 }
 
 int main(int argc, char ** argv) {
 
-  long   n;                 /* linear grid dimension                             */
-  int    r_level;           /* refinement level                                  */
-  long   rstarti[4];        /* left boundary of refinements                      */
-  long   rstartj[4];        /* bottom boundary of refinements                    */
-  int    g;                 /* refinement grid index                             */
-  long   nr;                /* linear refinement size in bg grid units           */
-  long   nr_true;           /* linear refinement size                            */
-  long   expand;            /* number of refinement cells per background cell    */
-  int    period;            /* refinement period                                 */
-  int    duration;          /* lifetime of a refinement                          */
-  int    sub_iterations;    /* number of sub-iterations on refinement            */
-  int    tile_size;         /* loop nest block factor                            */
-  int    tiling=0;          /* boolean indication loop nest blocking             */
-  long   i, j, ii, jj, it, jt, iter, l, sub_iter;  /* dummies                    */
-  DTYPE  norm,              /* L1 norm of solution on background grid            */
+  long   n;                 /* linear grid dimension                               */
+  int    refine_level;      /* refinement level                                    */
+  long   istart_r[4];       /* left boundary of refinements                        */
+  long   jstart_r[4];       /* bottom boundary of refinements                      */
+  int    g;                 /* refinement grid index                               */
+  long   n_r;               /* linear refinement size in bg grid units             */
+  long   n_r_true;          /* linear refinement size                              */
+  long   expand;            /* number of refinement cells per background cell      */
+  int    period;            /* refinement period                                   */
+  int    duration;          /* lifetime of a refinement                            */
+  int    sub_iterations;    /* number of sub-iterations on refinement              */
+  int    tile_size;         /* loop nest block factor                              */
+  int    tiling=0;          /* boolean indication loop nest blocking               */
+  long   i, j, ii, jj, it, jt, iter, l, sub_iter;  /* dummies                      */
+  DTYPE  norm,              /* L1 norm of solution on background grid              */
          reference_norm;
-  DTYPE  norm_r[4],         /* L1 norm of solution on refinements                */
+  DTYPE  norm_in,           /* L1 norm of input field on background grid           */
+         reference_norm_in;
+  DTYPE  norm_r[4],         /* L1 norm of solution on refinements                  */
          reference_norm_r[4];
-  DTYPE  hr;                /* mesh spacing of refinement                        */
-  DTYPE  f_active_points;   /* interior of grid with respect to stencil          */
-  DTYPE  f_active_points_r; /* interior of refinement with respect to stencil    */
-  DTYPE  flops;             /* floating point ops per iteration                  */
-  int    iterations;        /* number of times to run the algorithm              */
-  int    iterations_r[4];   /* number of iterations on each refinement           */
-  int    full_cycles;       /* number of full cycles all refinement grids appear */
-  int    leftover_iterations;/* number of iterations in last partial AMR cycle   */
-  int    num_interpolations;/* total number of timed interpolations              */
-  double stencil_time,      /* timing parameters                                 */
+  DTYPE  norm_in_r[4],      /* L1 norm of input field on refinements               */
+         reference_norm_in_r[4];
+  DTYPE  h_r;               /* mesh spacing of refinement                          */
+  DTYPE  f_active_points;   /* interior of grid with respect to stencil            */
+  DTYPE  f_active_points_r; /* interior of refinement with respect to stencil      */
+  DTYPE  flops;             /* floating point ops per iteration                    */
+  int    iterations;        /* number of times to run the algorithm                */
+  int    iterations_r[4];   /* number of iterations on each refinement             */
+  int    full_cycles;       /* number of full cycles all refinement grids appear   */
+  int    leftover_iterations;/* number of iterations in last partial AMR cycle     */
+  int    num_interpolations;/* total number of timed interpolations                */
+  int    bg_updates;        /* # background grid updates before last interpolation */
+  int    r_updates;         /* # refinement updates since last interpolation       */ 
+  double stencil_time,      /* timing parameters                                   */
          avgtime;
-  int    stencil_size;      /* number of points in stencil                       */
-  DTYPE  * RESTRICT in;     /* background grid input values                      */
-  DTYPE  * RESTRICT out;    /* background grid output values                     */
-  DTYPE  * RESTRICT inr[4]; /* refinement grid input values                      */
-  DTYPE  * RESTRICT outr[4];/* refinement grid output values                     */
-  long   total_length;      /* total required length to store bg grid values     */
-  long   total_lengthr;     /* total required length to store refinement values  */
-  DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
-  DTYPE  weight_r[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil   */
-  int    validate=1;        /* tracks correct solution on all grids              */
+  int    stencil_size;      /* number of points in stencil                         */
+  DTYPE  * RESTRICT in;     /* background grid input values                        */
+  DTYPE  * RESTRICT out;    /* background grid output values                       */
+  DTYPE  * RESTRICT in_r[4];/* refinement grid input values                        */
+  DTYPE  * RESTRICT out_r[4];/* refinement grid output values                      */
+  long   total_length;      /* total required length to store bg grid values       */
+  long   total_length_r;    /* total required length to store refinement values    */
+  DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil       */
+  DTYPE  weight_r[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
+  int    validate=1;        /* tracks correct solution on all grids                */
 
   printf("Parallel Research Kernels Version %s\n", PRKVERSION);
   printf("Serial AMR stencil execution on 2D grid\n");
 
-  /*******************************************************************************
+  /*********************************************************************************
   ** process and test input parameters    
-  ********************************************************************************/
+  **********************************************************************************/
 
   if (argc != 8 && argc !=9){
     printf("Usage: %s <# iterations> <background grid size> <refinement size>\n",
@@ -196,26 +205,26 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  nr = atol(*++argv);
-  if (nr < 1) {
-    printf("ERROR: refinements must have at least one cell: %ld\n", n);
+  n_r = atol(*++argv);
+  if (n_r < 1) {
+    printf("ERROR: refinements must have at least one cell: %ld\n", n_r);
     exit(EXIT_FAILURE);
   }
-  if (nr>=n) {
-    printf("ERROR: refinements must be contained in background grid: %ld\n", nr);
+  if (n_r>=n) {
+    printf("ERROR: refinements must be contained in background grid: %ld\n", n_r);
     exit(EXIT_FAILURE);
   }
 
-  r_level = atoi(*++argv);
-  if (r_level < 0) {
-    printf("ERROR: refinement levels must be >= 0 : %d\n", r_level);
+  refine_level = atoi(*++argv);
+  if (refine_level < 0) {
+    printf("ERROR: refinement levels must be >= 0 : %d\n", refine_level);
     exit(EXIT_FAILURE);
   }
 
   /* calculate refinement mesh spacing plus ratio of mesh spacings */
-  hr = (DTYPE)1.0; expand = 1;
-  for (l=0; l<r_level; l++) {
-    hr /= (DTYPE)2.0;
+  h_r = (DTYPE)1.0; expand = 1;
+  for (l=0; l<refine_level; l++) {
+    h_r /= (DTYPE)2.0;
     expand *= 2;
   }
 
@@ -254,9 +263,9 @@ int main(int argc, char ** argv) {
     exit(EXIT_FAILURE);
   }
 
-  nr_true = nr*expand+1;
-  if (2*RADIUS+1 > nr_true) {
-    printf("ERROR: Stencil radius %d exceeds refinement size %ld\n", RADIUS, nr_true);
+  n_r_true = n_r*expand+1;
+  if (2*RADIUS+1 > n_r_true) {
+    printf("ERROR: Stencil radius %d exceeds refinement size %ld\n", RADIUS, n_r_true);
     exit(EXIT_FAILURE);
   }
 
@@ -270,16 +279,16 @@ int main(int argc, char ** argv) {
   }
 
   /* reserve space for refinement input/output fields                       */
-  total_lengthr = 4*nr_true*nr_true*sizeof(DTYPE);
-  inr[0]  = (DTYPE *) prk_malloc(total_lengthr);
-  outr[0] = (DTYPE *) prk_malloc(total_lengthr);
-  if (!inr[0] || !outr[0]) {
+  total_length_r = 4*n_r_true*n_r_true*sizeof(DTYPE);
+  in_r[0]  = (DTYPE *) prk_malloc(total_length_r);
+  out_r[0] = (DTYPE *) prk_malloc(total_length_r);
+  if (!in_r[0] || !out_r[0]) {
     printf("ERROR: could not allocate space for refinement input or output arrays\n");
     exit(EXIT_FAILURE);
   }
   for (g=1; g<4; g++) {
-    inr[g]  = inr[g-1]  +  nr_true*nr_true;
-    outr[g] = outr[g-1] +  nr_true*nr_true;
+    in_r[g]  = in_r[g-1]  +  n_r_true*n_r_true;
+    out_r[g] = out_r[g-1] +  n_r_true*n_r_true;
   }
 
   /* fill the stencil weights to reflect a discrete divergence operator     */
@@ -311,12 +320,12 @@ int main(int argc, char ** argv) {
   /* weights for the refinement have to be scaled with the mesh spacing   */
   for (jj=-RADIUS; jj<=RADIUS; jj++) {
     for (ii=-RADIUS; ii<=RADIUS; ii++) {
-      WEIGHTR(ii,jj) = WEIGHT(ii,jj)*(DTYPE)expand;
+      WEIGHT_R(ii,jj) = WEIGHT(ii,jj)*(DTYPE)expand;
     }
   }
   
   f_active_points   = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
-  f_active_points_r = (DTYPE) (nr_true-2*RADIUS)*(DTYPE) (nr_true-2*RADIUS);
+  f_active_points_r = (DTYPE) (n_r_true-2*RADIUS)*(DTYPE) (n_r_true-2*RADIUS);
 
   printf("Background grid size = %ld\n", n);
   printf("Radius of stencil    = %d\n", RADIUS);
@@ -339,11 +348,11 @@ int main(int argc, char ** argv) {
   else        printf("Untiled\n");
   printf("Number of iterations = %d\n", iterations);
   printf("Refinements:\n");
-  printf("   Coarse grid cells = %ld\n", nr);
-  printf("   Grid size         = %ld\n", nr_true);
+  printf("   Coarse grid cells = %ld\n", n_r);
+  printf("   Grid size         = %ld\n", n_r_true);
   printf("   Period            = %d\n", period);
   printf("   Duration          = %d\n", duration);
-  printf("   Level             = %d\n", r_level);
+  printf("   Level             = %d\n", refine_level);
   printf("   Sub-iterations    = %d\n", sub_iterations);
 
   /* intialize the input and output arrays                                     */
@@ -352,18 +361,18 @@ int main(int argc, char ** argv) {
   for (j=RADIUS; j<n-RADIUS; j++) for (i=RADIUS; i<n-RADIUS; i++) 
     OUT(i,j) = (DTYPE)0.0;
 
-  /* compute layout of refinements (bottom left bg grid coordinate             */
-  rstarti[0] = rstarti[2] = 0;
-  rstarti[1] = rstarti[3] = n-nr-1;
-  rstartj[0] = rstartj[3] = 0;
-  rstartj[1] = rstartj[2] = n-nr-1;
+  /* compute layout of refinements (bottom left background grid coordinate     */
+  istart_r[0] = istart_r[2] = 0;
+  istart_r[1] = istart_r[3] = n-n_r-1;
+  jstart_r[0] = jstart_r[3] = 0;
+  jstart_r[1] = jstart_r[2] = n-n_r-1;
 
   /* intialize the refinement arrays                                           */
   for (g=0; g<4; g++) {
-    for (j=0; j<nr_true; j++) for (i=0; i<nr_true; i++) 
-      INR(g,i,j)  = (DTYPE)0.0;
-    for (j=RADIUS; j<nr_true-RADIUS; j++) for (i=RADIUS; i<nr_true-RADIUS; i++) 
-      OUTR(g,i,j) = (DTYPE)0.0;
+    for (j=0; j<n_r_true; j++) for (i=0; i<n_r_true; i++) 
+      IN_R(g,i,j)  = (DTYPE)0.0;
+    for (j=RADIUS; j<n_r_true-RADIUS; j++) for (i=RADIUS; i<n_r_true-RADIUS; i++) 
+      OUT_R(g,i,j) = (DTYPE)0.0;
   }
   stencil_time = 0.0; /* silence compiler warning */
 
@@ -378,46 +387,46 @@ int main(int argc, char ** argv) {
       /* a specific refinement has come to life                                */
       g=(iter/period)%4;
       num_interpolations++;
-      interpolate(inr[g], in, n, nr_true, rstarti[g], rstartj[g], expand, hr);
+      interpolate(in_r[g], in, n, n_r_true, istart_r[g], jstart_r[g], expand, h_r);
     }
 
     if ((iter%period) < duration) {
       for (sub_iter=0; sub_iter<sub_iterations; sub_iter++) {
         if (!tiling) {
-          for (j=RADIUS; j<nr_true-RADIUS; j++) {
-            for (i=RADIUS; i<nr_true-RADIUS; i++) {
+          for (j=RADIUS; j<n_r_true-RADIUS; j++) {
+            for (i=RADIUS; i<n_r_true-RADIUS; i++) {
               #if STAR
                 #if LOOPGEN
                   #include "loop_body_star_amr.incl"
                 #else
-                  for (jj=-RADIUS; jj<=RADIUS; jj++)  OUTR(g,i,j) += WEIGHTR(0,jj)*INR(g,i,j+jj);
-                  for (ii=-RADIUS; ii<0; ii++)        OUTR(g,i,j) += WEIGHTR(ii,0)*INR(g,i+ii,j);
-                  for (ii=1; ii<=RADIUS; ii++)        OUTR(g,i,j) += WEIGHTR(ii,0)*INR(g,i+ii,j);
+                  for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT_R(g,i,j) += WEIGHT_R(0,jj)*IN_R(g,i,j+jj);
+                  for (ii=-RADIUS; ii<0; ii++)        OUT_R(g,i,j) += WEIGHT_R(ii,0)*IN_R(g,i+ii,j);
+                  for (ii=1; ii<=RADIUS; ii++)        OUT_R(g,i,j) += WEIGHT_R(ii,0)*IN_R(g,i+ii,j);
                 #endif
               #else 
                 #if LOOPGEN
                   #include "loop_body_compact_amr.incl"
                 #else
-                  /* would like to be able to unroll this loop, but compiler will ignore  */
+                  /* would like to be able to un_roll this loop, but compiler will ignore  */
                   for (jj=-RADIUS; jj<=RADIUS; jj++) 
-		    for (ii=-RADIUS; ii<=RADIUS; ii++)  OUTR(g,i,j) += WEIGHTR(ii,jj)*INR(g,i+ii,j+jj);
+		    for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT_R(g,i,j) += WEIGHT_R(ii,jj)*IN_R(g,i+ii,j+jj);
                 #endif
               #endif
             }
           }
         }
         else {
-          for (jt=RADIUS; jt<nr_true-RADIUS; jt+=tile_size) {
-            for (it=RADIUS; it<nr_true-RADIUS; it+=tile_size) {
-              for (j=jt; j<MIN(nr_true-RADIUS,jt+tile_size); j++) {
-                for (i=it; i<MIN(nr_true-RADIUS,it+tile_size); i++) {
+          for (jt=RADIUS; jt<n_r_true-RADIUS; jt+=tile_size) {
+            for (it=RADIUS; it<n_r_true-RADIUS; it+=tile_size) {
+              for (j=jt; j<MIN(n_r_true-RADIUS,jt+tile_size); j++) {
+                for (i=it; i<MIN(n_r_true-RADIUS,it+tile_size); i++) {
                   #if STAR
                     #if LOOPGEN
                       #include "loop_body_star_amr.incl"
                     #else
-                      for (jj=-RADIUS; jj<=RADIUS; jj++)  OUTR(g,i,j) += WEIGHTR(0,jj)*INR(g,i,j+jj);
-                      for (ii=-RADIUS; ii<0; ii++)        OUTR(g,i,j) += WEIGHTR(ii,0)*INR(g,i+ii,j);
-                      for (ii=1; ii<=RADIUS; ii++)        OUTR(g,i,j) += WEIGHTR(ii,0)*INR(g,i+ii,j);
+                      for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT_R(g,i,j) += WEIGHT_R(0,jj)*IN_R(g,i,j+jj);
+                      for (ii=-RADIUS; ii<0; ii++)        OUT_R(g,i,j) += WEIGHT_R(ii,0)*IN_R(g,i+ii,j);
+                      for (ii=1; ii<=RADIUS; ii++)        OUT_R(g,i,j) += WEIGHT_R(ii,0)*IN_R(g,i+ii,j);
                     #endif
                   #else 
                     #if LOOPGEN
@@ -425,7 +434,7 @@ int main(int argc, char ** argv) {
                     #else
                       /* would like to be able to unroll this loop, but compiler will ignore  */
                       for (jj=-RADIUS; jj<=RADIUS; jj++) 
-			for (ii=-RADIUS; ii<=RADIUS; ii++)  OUTR(g,i,j) += WEIGHTR(ii,jj)*INR(g,i+ii,j+jj);
+			for (ii=-RADIUS; ii<=RADIUS; ii++)  OUT_R(g,i,j) += WEIGHT_R(ii,jj)*IN_R(g,i+ii,j+jj);
                     #endif
                   #endif
                 }
@@ -433,9 +442,9 @@ int main(int argc, char ** argv) {
             }
           }
         }
+        /* add constant to solution to force refresh of neighbor data, if any        */
+        for (j=0; j<n_r_true; j++) for (i=0; i<n_r_true; i++) IN_R(g,i,j)+= (DTYPE)1.0;
       }
-      /* add constant to solution to force refresh of neighbor data, if any        */
-      for (j=0; j<nr_true; j++) for (i=0; i<nr_true; i++) INR(g,i,j)+= (DTYPE)1.0;
     }
 
     /* Apply the stencil operator to background grid                           */
@@ -498,29 +507,41 @@ int main(int argc, char ** argv) {
 
   stencil_time = wtime() - stencil_time;
 
-  /* compute L1 norm on background grid                                          */
-  norm = (DTYPE) 0.0;
+  /* compute normalized L1 solution norm on background grid                      */
+  norm = norm_in = (DTYPE) 0.0;
   for (j=RADIUS; j<n-RADIUS; j++) for (i=RADIUS; i<n-RADIUS; i++) {
     norm += (DTYPE)ABS(OUT(i,j));
   }
   norm /= f_active_points;
+
+  /* compute normalized L1 input field norm on background grid                   */
+  for (j=0; j<n; j++) for (i=0; i<n; i++) {
+    norm_in += (DTYPE)ABS(IN(i,j));
+  }
+  norm_in /= n*n;
   
-  /* compute L1 norm on refinements                                              */
   for (g=0; g<4; g++) {
-    norm_r[g] = (DTYPE) 0.0;
-    for (j=RADIUS; j<nr_true-RADIUS; j++) for (i=RADIUS; i<nr_true-RADIUS; i++) {
-      norm_r[g] += (DTYPE)ABS(OUTR(g,i,j));
-      //      printf("g=%d, OUTR(%d,%d)=%lf\n", g, i, j, OUTR(g,i,j));
+    norm_r[g] = norm_in_r[g] = (DTYPE) 0.0;
+    /* compute normalized L1 solution norm on refinements                        */
+    for (j=RADIUS; j<n_r_true-RADIUS; j++) for (i=RADIUS; i<n_r_true-RADIUS; i++) {
+      norm_r[g] += (DTYPE)ABS(OUT_R(g,i,j));
     }
     norm_r[g] /= f_active_points_r;
+
+    /* compute normalized L1 input field norms on refinements                    */
+    for (j=0; j<n_r_true; j++) for (i=0; i<n_r_true; i++) {
+      norm_in_r[g] += (DTYPE)ABS(IN_R(g,i,j));
+    }
+    norm_in_r[g] /=  n_r_true*n_r_true;
   }
 
   /*******************************************************************************
   ** Analyze and output results.
   ********************************************************************************/
 
-/* verify correctness of background grid solution                                */
+/* verify correctness of background grid solution and input field                */
   reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
+  reference_norm_in = (COEFX+COEFY)*(DTYPE)((n-1)/2.0+iterations+1);
   if (ABS(norm-reference_norm) > EPSILON) {
     printf("ERROR: L1 norm = "FSTR", Reference L1 norm = "FSTR"\n",
            norm, reference_norm);
@@ -530,16 +551,44 @@ int main(int argc, char ** argv) {
 #if VERBOSE
     printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
            reference_norm, norm);
+    printf("Reference L1 input norm = "FSTR", L1 input norm = "FSTR"\n", 
+           reference_norm_in, norm_in);
 #endif
   }
 
-/* verify correctness of refinement grid solutions                               */
+/* verify correctness of refinement grid solutions and input fields             */
+  full_cycles = ((iterations+1)/(period*4));
+  leftover_iterations = (iterations+1)%(period*4);
   for (g=0; g<4; g++) {
-    full_cycles = ((iterations+1)/(period*4));
-    leftover_iterations = (iterations+1)%(period*4);
     iterations_r[g] = sub_iterations*(full_cycles*duration+
                       MIN(MAX(0,leftover_iterations-g*period),duration));
     reference_norm_r[g] = (DTYPE) (iterations_r[g]) * (COEFX + COEFY);
+    if (iterations_r[g]==0) {
+      reference_norm_in_r[g] = 0;
+    }
+    else {
+      bg_updates = (full_cycles*4 + g)*period;
+      r_updates  = MIN(MAX(0,leftover_iterations-g*period),duration) *
+                       sub_iterations;
+      if (bg_updates > iterations) {
+        /* if this refinement not active in last AMR cycle, it completed the
+           previous one completely                                              */
+        bg_updates -= 4*period;
+        r_updates = sub_iterations*duration;
+      }
+      reference_norm_in_r[g] = 
+        /* initial input field value at bottom left corner of refinement        */
+        (COEFX*istart_r[g] + COEFY*jstart_r[g]) +
+        /* variable part                                                        */
+	//        (COEFX+COEFY)*h_r*(DTYPE)((n_r_true-1)/2.0) +
+        (COEFX+COEFY)*n_r/2.0 +
+        /* number of times unity was added to background grid input field 
+           before interpolation onto this refinement                            */
+        (DTYPE) bg_updates +
+        /* number of actual updates on this refinement since interpolation      */
+        (DTYPE) r_updates;
+    }
+
     if (ABS(norm_r[g]-reference_norm_r[g]) > EPSILON) {
       printf("ERROR: L1 norm %d = "FSTR", Reference L1 norm = "FSTR"\n",
              g, norm_r[g], reference_norm_r[g]);
@@ -547,8 +596,20 @@ int main(int argc, char ** argv) {
     }
     else {
 #if VERBOSE
-      printf("Reference L1 norm %d = "FSTR", L1 norm = "FSTR"\n", 
+      printf("Reference L1 norm %d = "FSTR", L1 norm = "FSTR"\n", g,
              reference_norm_r[g], norm_r[g]);
+#endif
+    }
+
+    if (ABS(norm_in_r[g]-reference_norm_in_r[g]) > EPSILON) {
+      printf("ERROR: L1 input norm %d = "FSTR", Reference L1 input norm = "FSTR"\n",
+             g, norm_in_r[g], reference_norm_in_r[g]);
+      validate = 0;
+    }
+    else {
+#if VERBOSE
+      printf("Reference L1 input norm %d = "FSTR", L1 input norm = "FSTR"\n", 
+             g, reference_norm_in_r[g], norm_in_r[g]);
 #endif
     }
   }
@@ -566,10 +627,10 @@ int main(int argc, char ** argv) {
   for (g=0; g<4; g++) flops += f_active_points_r * iterations_r[g];
   flops *= (DTYPE) (2*stencil_size+1);
   /* add interpolation flops, if applicable                                      */
-  if (r_level>0) {
+  if (refine_level>0) {
     /* subtract one interpolation (not timed)                                      */
     num_interpolations--;
-    flops += nr_true*(num_interpolations)*3*(nr_true+nr);
+    flops += n_r_true*(num_interpolations)*3*(n_r_true+n_r);
   }
   avgtime = stencil_time/iterations;
   printf("Rate (MFlops/s): "FSTR"  Avg time (s): %lf\n",
