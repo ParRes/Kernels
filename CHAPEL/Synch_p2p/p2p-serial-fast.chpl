@@ -5,15 +5,19 @@ use Time;
 
 param PRKVERSION = "2.15";
 
-config const iterations = 10,
-             m = 1000,
-             n = 100,
+config const iterations = 0,
+             m = 0,
+             n = 0,
              debug: bool = false,
              validate: bool = false;
 
 //
 // Process and test input configs
 //
+if ( (iterations == 0) && (m == 0) && (n == 0) ) {
+  writeln("Usage: ./p2p --iterations=<# iterations> --m=<X dimension> --n=<Y dimension>");
+  exit(1);
+}
 if (iterations < 1) {
   writeln("ERROR: iterations must be >= 1 : ", iterations);
   exit(1);
