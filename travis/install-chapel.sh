@@ -23,5 +23,6 @@ else
     git clone --depth 10 https://github.com/chapel-lang/chapel.git
     cd chapel
     make -j2
-    ln -s `find $PWD -type f -name chpl` $TRAVIS_HOME/bin/chpl
+    mkdir -p $TRAVIS_ROOT/bin
+    ln -s `find $PWD -type f -name chpl` $TRAVIS_ROOT/bin/chpl
 fi
