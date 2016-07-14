@@ -579,7 +579,12 @@ case "$PRK_TARGET" in
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_global/global 10 16384
         ;;
     allchapel)
-        echo "Nothing to do yet"
+        echo "Chapel"
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=CHAPEL
+        $PRK_TARGET_PATH/Synch_p2p/p2p       --iterations=10 --m=1024 --n=1024
+        $PRK_TARGET_PATH/Stencil/stencil     --iterations=10 --order=1000
+        $PRK_TARGET_PATH/Transpose/transpose --iterations=10 --order=1024 --tileSize=32
         ;;
     allhpx3)
         echo "Nothing to do yet"

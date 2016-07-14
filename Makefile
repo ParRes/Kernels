@@ -61,14 +61,15 @@ help:
 	@echo "       \"make allshmem\"     (re-)builds all SHMEM targets"
 	@echo "       \"make allmpishm\"    (re-)builds all MPI-3 shared memory segments targets"
 	@echo "       \"make allupc\"       (re-)builds all UPC targets"
-	@echo "       \"make allpgas\"      (re-)builds all PGAS (UPC, SHMEM, MPI-3 RMA) targets"
+	@echo "       \"make allfortran\"   (re-)builds all Fortran targets"
+	@echo "       \"make allpgas\"      (re-)builds all PGAS (UPC, SHMEM, MPI-3 RMA, CAF) targets"
 	@echo "       \"make alldarwin\"    (re-)builds all of the above targets"
 	@echo "       \"make allcharm++\"   (re-)builds all Charm++ targets"
 	@echo "       \"make allampi\"      (re-)builds all Adaptive MPI targets"
 	@echo "       \"make allgrappa\"    (re-)builds all Grappa targets"
-	@echo "       \"make allfortran\"   (re-)builds all Fortran targets"
 	@echo "       \"make alllegion\"    (re-)builds all Legion targets"
-	@echo "       \"make allfreaks\"    (re-)builds the above four targets"
+	@echo "       \"make allchapel\"    (re-)builds all Chapel targets"
+	@echo "       \"make allfreaks\"    (re-)builds the above five targets"
 	@echo "       optionally, specify   \"matrix_rank=<n> number_of_functions=<m>\""
 	@echo "       optionally, specify   \"default_opt_flags=<list of optimization flags>\""
 	@echo "       \"make clean\"        removes all objects and executables"
@@ -76,7 +77,7 @@ help:
 
 all: alldarwin allfreaks
 alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran allfenix
-allfreaks: allcharm++ allampi allgrappa alllegion
+allfreaks: allcharm++ allampi allgrappa alllegion allchapel
 
 allmpi1:
 	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -164,7 +165,7 @@ allupc:
 	cd UPC/Stencil;             $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd UPC/Transpose;           $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
-allpgas: allshmem allupc allmpirma
+allpgas: allshmem allupc allmpirma allfortrancoarray
 
 allopenmp:
 	cd OPENMP/DGEMM;            $(MAKE) dgemm     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -237,6 +238,11 @@ allcxx:
 
 allrust:
 	$(MAKE) -C RUST
+
+allchapel:
+	cd CHAPEL/Synch_p2p;        $(MAKE) p2p
+	cd CHAPEL/Stencil;          $(MAKE) stencil
+	cd CHAPEL/Transpose;        $(MAKE) transpose
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
