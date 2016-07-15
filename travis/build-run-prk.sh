@@ -583,9 +583,9 @@ case "$PRK_TARGET" in
         make $PRK_TARGET
         export PRK_TARGET_PATH=CHAPEL
         if [ "$CHPL_COMM" = "none" ] ; then
-            NL = 1
+            NL=1
         else
-            NL = 2
+            NL=2
         fi
         $PRK_TARGET_PATH/Synch_p2p/p2p       --numLocales=$NL --iterations=10 --m=1024 --n=1024
         $PRK_TARGET_PATH/Stencil/stencil                      --iterations=10 --order=1000
