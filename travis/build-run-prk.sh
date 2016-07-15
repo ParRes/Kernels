@@ -586,6 +586,8 @@ case "$PRK_TARGET" in
             NL=1
         else
             NL=2
+            export SSH_SERVERS="localhost"
+            export GASNET_SSH_SERVERS=${SSH_SERVERS}
         fi
         $PRK_TARGET_PATH/Synch_p2p/p2p       --numLocales=$NL --iterations=10 --m=1024 --n=1024
         $PRK_TARGET_PATH/Stencil/stencil                      --iterations=10 --order=1000
