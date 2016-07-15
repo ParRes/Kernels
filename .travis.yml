@@ -93,8 +93,8 @@ matrix:
   # Chapel + GASNet does not work in Travis
   - os: osx
     env: PRK_TARGET=allchapel CHPL_COMM=gasnet
-  - os: linux
-    env: PRK_TARGET=allchapel CHPL_COMM=gasnet
+  #- os: linux
+  #  env: PRK_TARGET=allchapel CHPL_COMM=gasnet
   # Linux Clang/GCC too old ("no member named 'max_align_t' in the global namespace")
   - os: linux
     compiler: clang
