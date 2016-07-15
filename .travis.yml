@@ -90,8 +90,10 @@ matrix:
   # Revisit this once Grappa is working with Clang
   - compiler: gcc
     env: PRK_TARGET=allgrappa
-  # Mac + Chapel + GASNet does not work and I do not care
+  # Chapel + GASNet does not work in Travis
   - os: osx
+    env: PRK_TARGET=allchapel CHPL_COMM=gasnet
+  - os: linux
     env: PRK_TARGET=allchapel CHPL_COMM=gasnet
   # Linux Clang/GCC too old ("no member named 'max_align_t' in the global namespace")
   - os: linux
