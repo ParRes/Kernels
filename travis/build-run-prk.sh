@@ -591,8 +591,8 @@ case "$PRK_TARGET" in
             export GASNET_SPAWNFN=L
         fi
         $PRK_TARGET_PATH/Synch_p2p/p2p       --numLocales=$NL --iterations=10 --m=1024 --n=1024
-        $PRK_TARGET_PATH/Stencil/stencil                      --iterations=10 --order=1000
-        $PRK_TARGET_PATH/Transpose/transpose                  --iterations=10 --order=1024 --tileSize=32
+        $PRK_TARGET_PATH/Stencil/stencil     --numLocales=$NL --iterations=10 --order=1000
+        $PRK_TARGET_PATH/Transpose/transpose --numLocales=$NL --iterations=10 --order=1024 --tileSize=32
         ;;
     allhpx3)
         echo "Nothing to do yet"
