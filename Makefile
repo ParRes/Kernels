@@ -176,6 +176,9 @@ allcharm++:
 	cd CHARM++/Transpose;       $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allgrappa:
+	cd GRAPPA/Nstream;         $(MAKE) nstream    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd GRAPPA/Random;          $(MAKE) random     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd GRAPPA/Synch_global;    $(MAKE) global     "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Synch_p2p;       $(MAKE) p2p        "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -200,6 +203,7 @@ allserial:
                                                       "MATRIX_RANK         = $(matrix_rank)"   \
                                                       "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd SERIAL/AMR;              $(MAKE) amr       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allfortran:
 	make -C FORTRAN all
@@ -297,6 +301,7 @@ clean:
 	cd SERIAL/Synch_p2p;        $(MAKE) clean
 	cd SERIAL/Branch;           $(MAKE) clean
 	cd SERIAL/PIC;              $(MAKE) clean
+	cd SERIAL/AMR;              $(MAKE) clean
 	make -C FORTRAN clean
 	make -C C99 clean
 	rm -f stats.json
@@ -308,6 +313,7 @@ veryclean: clean
 	cd MPI1/Stencil;            $(MAKE) veryclean
 	cd OPENMP/Stencil;          $(MAKE) veryclean
 	cd SERIAL/Stencil;          $(MAKE) veryclean
+	cd SERIAL/AMR;              $(MAKE) veryclean
 	cd MPIRMA/Stencil;          $(MAKE) veryclean
 	cd MPISHM/Stencil;          $(MAKE) veryclean
 	cd SHMEM/Stencil;           $(MAKE) veryclean

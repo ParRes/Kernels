@@ -50,7 +50,7 @@ typedef int prkbool;
 /* This is not ISO C.  It is Linux/Unix. */
 #include <unistd.h>
 
-#define PRKVERSION "2.16"
+#define PRKVERSION "2.17"
 #ifndef MIN
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #endif

@@ -55,8 +55,6 @@ FUNCTIONS CALLED:
          Other than MPI or standard C functions, the following 
          functions are used in this program:
 
-          wtime()           Portable wall-timer interface.
-          bail_out()        Determine global error and exit if nonzero.
 
 HISTORY: Written by Tim Mattson, April 1999.  
          Updated by Rob Van der Wijngaart, December 2005.
@@ -122,7 +120,6 @@ o The original and transposed matrices are called A and B
 
 #include <par-res-kern_general.h>
 #include <Grappa.hpp>
-#include <FullEmpty.hpp>
 
 using namespace Grappa;
 
@@ -141,9 +138,6 @@ struct AbsErr {
 #define root 0
 
 #define symmetric static
-
-const int CHUNK_LENGTH = 16;
-typedef double row_t[CHUNK_LENGTH];
 
 int main(int argc, char * argv[]) {
   Grappa::init( &argc, &argv );
@@ -192,12 +186,6 @@ int main(int argc, char * argv[]) {
 
       int Tile_order = 32; /* default tile size for tiling of local transpose */
       if (argc == 4) Tile_order = atoi(argv[3]);
-      if (Tile_order%CHUNK_LENGTH != 0){
-	std::cout<<"ERROR: Tile Order: "<<Tile_order
-		 <<" must be a multiple of const CHUNK_LENGTH "
-		 <<CHUNK_LENGTH<<std::endl;
-	exit(1);
-      }
 
       int64_t tiling = (Tile_order > 0) && (Tile_order < order);
       if (!tiling) Tile_order = order;
@@ -206,7 +194,6 @@ int main(int argc, char * argv[]) {
       Grappa::on_all_cores( [=] {
 	  my_ID = Grappa::mycore();
 	  int64_t i, j, istart; // dummies 
-
 /*********************************************************************
 ** The matrix is broken up into column blocks that are mapped one to a 
 ** rank.  Each column block is made up of Num_procs smaller square 
@@ -243,20 +230,18 @@ int main(int argc, char * argv[]) {
 	  for (j = 0; j < Block_order; j++)
 	    for (i = 0; i < order; i++) {
 	      A(i,j) = (double)(order * (j+colstart) + i);
-	      B(i,j) = -1.0;
+	      B(i,j) = 0.0;
 	    }
 
 	});
 
-      // TODO: get rid of this restriction
-      tiling = tiling && (Block_order%CHUNK_LENGTH == 0);
-
+      std::cout<<"Parallel Research Kernels version "<<PRKVERSION<<std::endl;
+      std::cout << "Grappa matrix transpose: B = A^T" << std::endl;
       std::cout << "Number of cores         = " << Num_procs << std::endl;
       std::cout << "Matrix order            = " << order << std::endl;
       std::cout << "Number of iterations    = " << iterations << std::endl;
       if (tiling) std::cout << "Tile size               = " << Tile_order << std::endl;
-      else        std::cout << "Untiled" << std::endl;
-      std::cout << "Implementation DEPRECATED: result accumulation not yet implemented" << std::endl;
+      else std::cout << "Untiled" << std::endl;
 
       GlobalAddress<Timer> timer = Grappa::symmetric_global_alloc<Timer>();
 
@@ -269,7 +254,7 @@ int main(int argc, char * argv[]) {
 	  double val;
 	  int target;
 
-	  for ( iter = 0; iter < iterations; iter++) {
+	  for ( iter = 0; iter <= iterations; iter++) {
 	    
 	    // start timer after warmup iteration
 	    if (iter == 1) timer->start = Grappa::walltime();
@@ -281,14 +266,17 @@ int main(int argc, char * argv[]) {
 	    if (!tiling) {
 	      for (i=0; i<Block_order; i++)
 		for (j=0; j<Block_order; j++) {
-		  B(j,i) = A(i,j);
+		  B(j,i) += A(i,j);
+		  A(i,j) += 1.0;
 		}
 	    } else {
 	      for (i=0; i<Block_order; i+=Tile_order) 
 		for (j=0; j<Block_order; j+=Tile_order) 
 		  for (it=i; it<MIN(Block_order,i+Tile_order); it++)
-		    for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
-		      B(jt,it) = A(it,jt); 
+		    for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+		      B(jt,it) += A(it,jt);
+		      A(it,jt) += 1.0;
+		    }
 	    }
 
 	    for (phase=1; phase<Num_procs; phase++) {
@@ -301,6 +289,7 @@ int main(int argc, char * argv[]) {
 		for (i=0; i<Block_order; i++) 
 		  for (j=0; j<Block_order; j++){
 		    Work_out(j,i) = A(i,j);
+		    A(i,j) += 1.0;
 		  }
 	      }
 	      else {
@@ -309,39 +298,43 @@ int main(int argc, char * argv[]) {
 		    for (it=i; it<MIN(Block_order,i+Tile_order); it++)
 		      for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
 			Work_out(jt,it) = A(it,jt);
+			A(it,jt) += 1,0;
 		      }
 	      }
 
 	      istart = my_ID * Block_order;
 	      // write local buffer to transposed matrix
 	      if (!tiling) {
-		for (i=0; i<Block_order; i++) 
-		  for (j=0; j<Block_order; j++) {
+		for (j=0; i<Block_order; i++) 
+		  for (i=0; j<Block_order; j++) {
 		    target = i+istart+(order*j);
 		    val = Work_out(i,j);
 		    Grappa::delegate::call<async>(send_to, [val,target] {
-			B_p[target] = val;
+			B_p[target] += val;
 		      });
 		  }
 	      }
 	      else {
-		for (i=0; i<Block_order; i+=Tile_order) 
-		  for (j=0; j<Block_order; j+=Tile_order) 
-		    for (it=i; it<MIN(Block_order,i+Tile_order); it+=CHUNK_LENGTH)
-		      for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
+		for (j=0; j<Block_order; j+=Tile_order) 
+		  for (i=0; i<Block_order; i+=Tile_order) 
+		    for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++)
+		      for (it=i; it<MIN(Block_order,i+Tile_order); it++) {
 			target = it+istart+(order*jt);
-			row_t& row = *reinterpret_cast<row_t*>(&Work_out(it,jt));
-			Grappa::delegate::call<async>(send_to, [row,target] {
-			    memcpy(&B_p[target], &row, sizeof(row_t));
+			val = Work_out(it,jt);
+			Grappa::delegate::call<async>(send_to, [val,target] {
+			    B_p[target] += val;
 			  });
 		      }
 	      }	       
 
-	    } // end of phase loop
-
-	      // ensures all async writes complete before moving to next iteration
+	      // ensures all async writes complete before moving to next phase
 	      Grappa::impl::local_gce.complete( completion_target );
 	      Grappa::impl::local_gce.wait();
+	    }
+	    
+	      // wait for everyone to finish and prepare for next iteration.
+	      local_gce.complete( completion_target );
+	      local_gce.wait();
 
 	  } // done with iterations
 	});
@@ -355,12 +348,13 @@ int main(int argc, char * argv[]) {
       Grappa::on_all_cores( [=] {
 	  int64_t i,j;
 	  int64_t istart = 0;
+	  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
 	  ae->abserr = 0;
 	  for (j=0;j<Block_order;j++) for (i=0;i<order;i++) {
-	      ae->abserr += ABS(B(i,j) - (double)(order*i + j+colstart));
-	      if (B(i,j) != order*i+j+colstart){
-	      	LOG(INFO)<<"Expected: "<<order*i+j+colstart<<"  Observed: "
-	      		 <<B(i,j)<<" at ("<<i<<","<<j<<")";
+	      ae->abserr += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
+	      if (B(i,j) != (order*i+j+colstart)*(iterations+1)+addit){
+	      	// LOG(INFO)<<"Expected: "<<(double)((order*i+j+colstart)*(iterations+1)+addit)<<"  Observed: "
+	      	// 	 <<B(i,j)<<" at ("<<i<<","<<j<<")";
 	      }
 	    }
 	});
@@ -370,8 +364,9 @@ int main(int argc, char * argv[]) {
       if (abserr_tot < epsilon) {
 	std::cout << "Solution validates" << std::endl;
 	avgtime = trans_time/(double)iterations;
-	std::cout << "Rate (MB/s): " << -1.0E-06*bytes/avgtime
+	std::cout << "Rate (MB/s): " << 1.0E-06*bytes/avgtime
 		  << " Avg time (s): " << avgtime << std::endl;
+	std::cout << "Summed errors: " << abserr_tot << std::endl;
       } else {
 	std::cout << "ERROR: Aggregate squared error " << abserr_tot
 		  << " exceeds threshold " << epsilon << std::endl;
