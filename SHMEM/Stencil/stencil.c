@@ -275,9 +275,8 @@ int main(int argc, char ** argv) {
     printf("Number of iterations   = %d\n", iterations);
   }
 
-  shmem_barrier_all();
- 
   shmem_broadcast32(&arguments[0], &arguments[0], 2, root, 0, 0, Num_procs, pSync_bcast);
+  shmem_barrier_all();
 
   iterations=arguments[0];
   n=arguments[1];
