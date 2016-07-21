@@ -232,11 +232,10 @@ int main(int argc, char ** argv)
           printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
   }
-  
-  shmem_barrier_all();
 
   /*  Broadcast input data to all ranks */
   shmem_broadcast32(&arguments[0], &arguments[0], 3, root, 0, 0, Num_procs, pSync_bcast);
+  shmem_barrier_all();
 
   iterations=arguments[0];
   order=arguments[1];
