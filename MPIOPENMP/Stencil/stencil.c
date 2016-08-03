@@ -183,7 +183,7 @@ int main(int argc, char ** argv) {
     }
  
     n       = atoi(*++argv); 
-    nsquare = n * n;
+    nsquare = (long) n * (long) n;
     if (nsquare < Num_procs){ 
       printf("ERROR: grid size %ld must be at least # ranks: %d\n", 
 	     nsquare, Num_procs); 
