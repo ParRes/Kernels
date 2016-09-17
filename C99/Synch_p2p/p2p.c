@@ -81,15 +81,15 @@ int main(int argc, char ** argv)
   }
 
   /* number of times to run the pipeline algorithm */
-  int iterations  = atoi(*++argv);
+  int iterations  = atoi(argv[1]);
   if (iterations < 1){
     printf("ERROR: iterations must be >= 1 : %d \n",iterations);
     exit(EXIT_FAILURE);
   }
 
   /* grid dimensions */
-  int m  = atol(*++argv);
-  int n  = atol(*++argv);
+  int m  = atol(argv[2]);
+  int n  = atol(argv[3]);
 
   if (m < 1 || n < 1){
     printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
@@ -165,7 +165,7 @@ int main(int argc, char ** argv)
 #endif
   double avgtime = pipeline_time/iterations;
   printf("Rate (MFlops/s): %lf Avg time (s): %lf\n",
-         1.0e-6 * 2 * ((double)((size_t)(m-1)*(size_t)(n-1)))/avgtime, avgtime);
+         2.0e-6 * ((double)((size_t)(m-1)*(size_t)(n-1)))/avgtime, avgtime);
 
   exit(EXIT_SUCCESS);
 
