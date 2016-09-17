@@ -32,59 +32,10 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 
-/* Do not include math.h here, because some PRK might want
- * to use tgmath.h instead, and the two are not compatible. */
-
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
-#include <stdbool.h>
-typedef _Bool prkbool;
-#else
-typedef int prkbool;
-#define false 0
-#define true  1
-#endif
-
 /* This is not ISO C.  It is Linux/Unix. */
-#include <unistd.h>
-
-#define PRKVERSION "2.17"
-#ifndef MIN
-#define MIN(x,y) ((x)<(y)?(x):(y))
-#endif
-#ifndef MAX
-#define MAX(x,y) ((x)>(y)?(x):(y))
-#endif
-#ifndef ABS
-#define ABS(a) ((a) >= 0 ? (a) : -(a))
-#endif
-
-#if RESTRICT_KEYWORD
-  #ifdef __GNUC__
-    #define RESTRICT __restrict__
-  #else
-    #define RESTRICT restrict
-  #endif
-#else
-  #define RESTRICT
-#endif
-
-/* Define 64-bit types and corresponding format strings for printf() */
-#ifdef LONG_IS_64BITS
-  typedef unsigned long      u64Int;
-  typedef long               s64Int;
-  #define FSTR64             "%16ld"
-  #define FSTR64U            "%16lu"
-#else
-  typedef unsigned long long u64Int;
-  typedef long long          s64Int;
-  #define FSTR64             "%16ll"
-  #define FSTR64U            "%16llu"
-#endif
-
-extern double wtime(void);
+//#include <unistd.h>
 
 /*  We cannot use C11 aligned_alloc because of this GCC 5.3.0 bug:
  *  https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69680 */
@@ -157,4 +108,3 @@ static inline void prk_free(void* p)
     free(p);
 #endif
 }
-

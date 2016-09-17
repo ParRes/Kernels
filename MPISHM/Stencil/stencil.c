@@ -71,6 +71,8 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
 
+#include <math.h>
+
 /**********************************************************************************
  Strategy for hierarchical decomposition of grid.
  Give a total number of Num_procs ranks and coherence domains of group_size ranks. 

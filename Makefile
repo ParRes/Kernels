@@ -72,7 +72,7 @@ help:
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
 all: alldarwin allfreaks
-alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran
+alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran allc99
 allfreaks: allcharm++ allampi allgrappa alllegion
 
 allmpi1:
@@ -183,6 +183,9 @@ allgrappa:
 	cd GRAPPA/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd GRAPPA/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
+allc99:
+	make -C C99 all
+
 alllegion:
 	cd LEGION/Stencil;         $(MAKE) stencil    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd LEGION/Transpose;       $(MAKE) transpose  "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -202,27 +205,22 @@ allserial:
 	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd SERIAL/AMR;              $(MAKE) amr       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
-allfortran: allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
+allfortran:
+	make -C FORTRAN all
 
 allfortranserial:
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
-	cd FORTRAN/Stencil;         $(MAKE) stencil
-	cd FORTRAN/Transpose;       $(MAKE) transpose
+	make -C FORTRAN serial
 
 allfortranopenmp:
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-omp
-	cd FORTRAN/Stencil;         $(MAKE) stencil-omp
-	cd FORTRAN/Transpose;       $(MAKE) transpose-omp
+	make -C FORTRAN openmp
 
 allfortrancoarray:
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-coarray
-	cd FORTRAN/Stencil;         $(MAKE) stencil-coarray
-	cd FORTRAN/Transpose;       $(MAKE) transpose-coarray
+	make -C FORTRAN coarray
 
 allfortranpretty:
-	cd FORTRAN/Stencil;         $(MAKE) stencil-pretty
-	#cd FORTRAN/Synch_p2p;       $(MAKE) p2p-pretty
-	cd FORTRAN/Transpose;       $(MAKE) transpose-pretty
+	make -C FORTRAN pretty
+
+allfortran: allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
@@ -304,9 +302,8 @@ clean:
 	cd SERIAL/Branch;           $(MAKE) clean
 	cd SERIAL/PIC;              $(MAKE) clean
 	cd SERIAL/AMR;              $(MAKE) clean
-	cd FORTRAN/Transpose;       $(MAKE) clean
-	cd FORTRAN/Synch_p2p;       $(MAKE) clean
-	cd FORTRAN/Stencil;         $(MAKE) clean
+	make -C FORTRAN clean
+	make -C C99 clean
 	rm -f stats.json
 
 veryclean: clean

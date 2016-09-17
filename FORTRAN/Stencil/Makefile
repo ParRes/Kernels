@@ -10,12 +10,17 @@ endif
 STARFLAG   = -DSTAR
 
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
-FCFLAGS += -DPRKVERSION=$(PRKVERSION)
+FCFLAGS += -DPRKVERSION=$(FPRKVERSION)
 FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
-.PHONY: all clean run
+.PHONY: all clean run serial openmp coarray
 
-all: $(PROGRAM) $(PROGRAM)-omp $(PROGRAM)-pretty $(PROGRAM)-coarray
+all: serial openmp coarray
+
+serial: $(PROGRAM)
+openmp: $(PROGRAM)-omp
+pretty: $(PROGRAM)-pretty
+coarray: $(PROGRAM)-coarray
 
 $(PROGRAM): $(PROGRAM).f90
 	$(FC) $(FCFLAGS) $< -o $@

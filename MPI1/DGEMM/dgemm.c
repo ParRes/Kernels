@@ -66,6 +66,8 @@ HISTORY: Written by Rob Van der Wijngaart, December 2007
 #include "par-res-kern_general.h"
 #include "par-res-kern_mpi.h"
 
+#include <math.h>
+
 #define A(i,j) (a[(j)*lda+i])
 #define B(i,j) (b[(j)*ldb+i])
 #define C(i,j) (c[(j)*ldc+i])

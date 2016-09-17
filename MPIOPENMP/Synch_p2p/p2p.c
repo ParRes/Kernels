@@ -96,7 +96,7 @@ int main(int argc, char ** argv)
   int    Num_procs;     /* Number of ranks                                       */
   long   total_length;  /* total required length to store grid values            */
   int    provided;      /* MPI level of thread support                           */
-  int    true, false;   /* toggled booleans used for synchronization             */
+  int    sync_true, sync_false;   /* toggled booleans used for synchronization             */
  
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -236,7 +236,7 @@ int main(int argc, char ** argv)
     exit(EXIT_FAILURE);
   }  
  
-#pragma omp parallel private(i, j, iter, true, false)
+#pragma omp parallel private(i, j, iter, sync_true, sync_false)
   {
   int TID = omp_get_thread_num();
  
@@ -269,7 +269,7 @@ int main(int argc, char ** argv)
   }
 
   /* set flags to zero to indicate no data is available yet                       */
-  true = 1; false = !true;
+  sync_true = 1; sync_false = !sync_true;
   for (j=0; j<n; j++) flag(TID,j) = 0;
 
   /* need barrier after setting flags, to make sure each is visible to all threads 
@@ -278,9 +278,9 @@ int main(int argc, char ** argv)
  
   for (iter=0; iter<=iterations; iter++) {
  
-#if !SYNCHRONOUS
-    /* true and false toggle each iteration                                      */
-    true = (iter+1)%2; false = !true;
+#ifndef SYNCHRONOUS
+    /* sync_true and sync_false toggle each iteration                                      */
+    sync_true = (iter+1)%2; sync_false = !sync_true;
 #endif
 
     /* start timer after a warmup iteration */
@@ -294,11 +294,11 @@ int main(int argc, char ** argv)
     }
 
     if ((Num_procs==1) && (TID==0)) { /* first thread waits for corner value       */
-      while (flag(0,0) == true) {
+      while (flag(0,0) == sync_true) {
         #pragma omp flush
       }
-#if SYNCHRONOUS
-      flag(0,0)= true;
+#ifdef SYNCHRONOUS
+      flag(0,0)= sync_true;
       #pragma omp flush
 #endif      
     }
@@ -315,11 +315,11 @@ int main(int argc, char ** argv)
         }
       }
       else {
-	while (flag(TID-1,j) == false) {
+	while (flag(TID-1,j) == sync_false) {
            #pragma omp flush
         }
-#if SYNCHRONOUS
-        flag(TID-1,j)= false;
+#ifdef SYNCHRONOUS
+        flag(TID-1,j)= sync_false;
         #pragma omp flush
 #endif      
       }
@@ -330,12 +330,12 @@ int main(int argc, char ** argv)
  
       /* if not on right boundary, signal right neighbor it has new data */
       if (TID < nthread-1) {
-#if SYNCHRONOUS 
-        while (flag(TID,j) == true) {
+#ifdef SYNCHRONOUS 
+        while (flag(TID,j) == sync_true) {
           #pragma omp flush
         }
 #endif 
-        flag(TID,j) = true;
+        flag(TID,j) = sync_true;
         #pragma omp flush
       }
       else { /* if not on the right boundary, send data to my right neighbor      */  
@@ -359,14 +359,14 @@ int main(int argc, char ** argv)
       if (TID==nthread-1) { /* if on right boundary, copy top right corner value 
                 to bottom left corner to create dependency and signal completion  */
         ARRAY(0,0) = -ARRAY(m-1,n-1);
-#if SYNCHRONOUS
-        while (flag(0,0) == false) {
+#ifdef SYNCHRONOUS
+        while (flag(0,0) == sync_false) {
           #pragma omp flush
         }
-        flag(0,0) = false;
+        flag(0,0) = sync_false;
 #else
         #pragma omp flush
-        flag(0,0) = true;
+        flag(0,0) = sync_true;
 #endif
         #pragma omp flush
       }

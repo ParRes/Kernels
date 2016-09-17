@@ -56,7 +56,9 @@ HISTORY: Written by Abdullah Kayi, June 2015
 #include <par-res-kern_general.h>
 #include <par-res-kern_upc.h>
 
-#if DOUBLE
+#include <math.h>
+
+#ifdef DOUBLE
   #define DTYPE   double
   #define EPSILON 1.e-8
   #define COEFX   1.0

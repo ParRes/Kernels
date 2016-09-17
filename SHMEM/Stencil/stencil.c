@@ -62,7 +62,9 @@ HISTORY: - Written by Tom St. John, July 2015.
 #include <par-res-kern_general.h>
 #include <par-res-kern_shmem.h>
 
-#if DOUBLE
+#include <math.h>
+
+#ifdef DOUBLE
   #define DTYPE     double
   #define EPSILON   1.e-8
   #define COEFX     1.0

@@ -65,6 +65,8 @@ HISTORY: Written by Rob Van der Wijngaart, January 2006.
 #include <par-res-kern_general.h>
 #include <inttypes.h>
 #include <par-res-kern_omp.h>
+
+#include <math.h> /* sin, cos */
  
 /* shouldn't need the prototype below, since it is defined in <unistd.h>. But it
    depends on the existence of symbols __USE_BSD or _USE_XOPEN_EXTENDED, neither

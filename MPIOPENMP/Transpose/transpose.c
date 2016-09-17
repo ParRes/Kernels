@@ -122,6 +122,8 @@ o The original and transposed matrices are called A and B
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpiomp.h>
 
+#include <math.h>
+
 #define A(i,j)        A_p[(i+istart)+order*(j)]
 #define B(i,j)        B_p[(i+istart)+order*(j)]
 #define Work_in(i,j)  Work_in_p[i+Block_order*(j)]
