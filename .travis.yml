@@ -58,6 +58,13 @@ matrix:
   - os: linux
     compiler: clang
     env: PRK_TARGET=allmpiomp
+  # Mac/Clang OpenMP broken because Brew no longer supports "clang-omp"
+  - os: osx
+    compiler: clang
+    env: PRK_TARGET=allopenmp
+  - os: osx
+    compiler: clang
+    env: PRK_TARGET=allmpiomp
   # dealing with broken GCC on Mac not worth it here
   - os: osx
     compiler: gcc
