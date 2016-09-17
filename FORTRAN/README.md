@@ -47,6 +47,22 @@ Please use the former.
 
 See [Tutorial: Using Coarray Fortran](https://software.intel.com/en-us/compiler_15.0_coa_f) for details.
 
+####  Debugging
+
+When developing, it is useful to build with the Intel Fortran compiler using
+```sh
+FLAGS="-O0 -g3 -warn all -traceback -check bounds"
+```
+where `FLAGS` is `PRK_FLAGS` when building in the top directory and `DEFAULT_OPT_FLAGS` in a specific subdirectory.
+
+#### Coarray images
+
+Intel compiler:
+```sh
+export FOR_COARRAY_NUM_IMAGES=32
+```
+[Documentation](https://software.intel.com/en-us/node/532830)
+
 ### GCC
 
 Purpose|Compiler|Library
@@ -56,49 +72,11 @@ Parallel|`-fcoarray=lib`|`-lcaf_mpi`
 
 See [OpenCoarrays Getting Started](https://github.com/sourceryinstitute/opencoarrays/blob/master/GETTING_STARTED.md) for details.
 
-### IBM XLF
-
-Disclaimer: The basis for these comments is the IBM Blue Gene/Q compiler (version 14), which does not support Fortran 2008 coarrays.
-
-The IBM compiler will not preprocess files with a lower-case "f" suffix.  Until we rename the files, you need to rename or symlink them yourself to `*.F90` instead of `*.f90`.
-
-The IBM compiler does not directly support the C preprocessor.  You need to substitute `-DFOO=BAR` for `-WF,-DFOO=BAR` manually.
-
-For example, the PRK build system will generate a build command like this:
-```sh
-bgxlf2008_r -O3 -DPRKVERSION="'2.16'" -DRADIUS=2 -DSTAR stencil.f90 -o stencil
-bgxlf2008_r -O3 -DPRKVERSION="'2.16'" -DRADIUS=2 -DSTAR -qsmp=omp stencil.f90 -o stencil-omp
-```
-
-You need to manually convert it to this:
-```sh
-bgxlf2008_r -O3  -WF,-DPRKVERSION="'2.16'" -WF,-DRADIUS=2 -qfree=f90 stencil.F90 -o stencil
-bgxlf2008_r -O3  -WF,-DPRKVERSION="'2.16'" -WF,-DRADIUS=2 -qfree=f90 -qsmp=omp stencil.F90 -o stencil-omp
-```
-
-##  Debugging
-
-When developing, it is useful to build with the Intel Fortran compiler using
-```sh
-FLAGS="-O0 -g3 -warn all -traceback -check bounds"
-```
-where `FLAGS` is `PRK_FLAGS` when building in the top directory and `DEFAULT_OPT_FLAGS` in a specific subdirectory.
-
-## Coarray images
-
-Intel compiler:
-```sh
-export FOR_COARRAY_NUM_IMAGES=32
-```
-[Documentation](https://software.intel.com/en-us/node/532830)
-
-# Using OpenCoarrays
+#### Installing OpenCoarrays
 
 This is working now.  See our Travis scripts for details.
 
 https://gcc.gnu.org/wiki/Coarray may be useful.
-
-## Installing
 
 ```sh
 # MPICH_* override because MPICH was built against GCC-5
@@ -117,7 +95,7 @@ make install
 export CAFC=$MPI_DIR/bin/mpifort
 ```
 
-# Cray Fortran
+### Cray
 
 You need to set `XT_SYMMETRIC_HEAP_SIZE` to something much larger than the default to run nontrivial problems across more than one node (with one node, this setting does not matter).  This is no different from SHMEM or UPC programs on Cray systems.
 
@@ -168,4 +146,24 @@ srun: Terminating job step 568052.39
 slurmstepd: *** STEP 568052.39 ON nid00292 CANCELLED AT 2016-06-16T16:21:01 ***
 srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
 srun: error: nid00292: tasks 0-23: Segmentation fault
+```
+
+### IBM XLF
+
+Disclaimer: The basis for these comments is the IBM Blue Gene/Q compiler (version 14), which does not support Fortran 2008 coarrays.
+
+The IBM compiler will not preprocess files with a lower-case "f" suffix.  Until we rename the files, you need to rename or symlink them yourself to `*.F90` instead of `*.f90`.
+
+The IBM compiler does not directly support the C preprocessor.  You need to substitute `-DFOO=BAR` for `-WF,-DFOO=BAR` manually.
+
+For example, the PRK build system will generate a build command like this:
+```sh
+bgxlf2008_r -O3 -DPRKVERSION="'2.16'" -DRADIUS=2 -DSTAR stencil.f90 -o stencil
+bgxlf2008_r -O3 -DPRKVERSION="'2.16'" -DRADIUS=2 -DSTAR -qsmp=omp stencil.f90 -o stencil-omp
+```
+
+You need to manually convert it to this:
+```sh
+bgxlf2008_r -O3  -WF,-DPRKVERSION="'2.16'" -WF,-DRADIUS=2 -qfree=f90 stencil.F90 -o stencil
+bgxlf2008_r -O3  -WF,-DPRKVERSION="'2.16'" -WF,-DRADIUS=2 -qfree=f90 -qsmp=omp stencil.F90 -o stencil-omp
 ```
