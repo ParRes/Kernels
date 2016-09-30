@@ -1,32 +1,32 @@
 /*
 Copyright (c) 2013, Intel Corporation
 
-Redistribution and use in source and binary forms, with or without 
-modification, are permitted provided that the following conditions 
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
 are met:
 
-* Redistributions of source code must retain the above copyright 
+* Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
-* Redistributions in binary form must reproduce the above 
-      copyright notice, this list of conditions and the following 
-      disclaimer in the documentation and/or other materials provided 
+* Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
       with the distribution.
-* Neither the name of Intel Corporation nor the names of its 
-      contributors may be used to endorse or promote products 
-      derived from this software without specific prior written 
+* Neither the name of Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products
+      derived from this software without specific prior written
       permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
-FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
-ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
@@ -36,34 +36,34 @@ NAME:    sparse
 
 PURPOSE: This program tests the efficiency with which a sparse matrix
          vector multiplication is carried out
-  
+
 USAGE:   The program takes as input the number of threads, the 2log of the linear
          size of the 2D grid (equalling the 2log of the square root of the order
-         of the sparse matrix), the radius of the difference stencil, and the number 
+         of the sparse matrix), the radius of the difference stencil, and the number
          of times the matrix-vector multiplication is carried out.
 
-         <progname> <# threads> <# iterations> <2log root-of-matrix-order> <radius> 
-  
-         The output consists of diagnostics to make sure the 
+         <progname> <# threads> <# iterations> <2log root-of-matrix-order> <radius>
+
+         The output consists of diagnostics to make sure the
          algorithm worked, and of timing statistics.
 
 FUNCTIONS CALLED:
 
-         Other than OpenMP or standard C functions, the following 
+         Other than OpenMP or standard C functions, the following
          functions are used in this program:
 
          wtime()
          bail_out()
          reverse()
 
-NOTES:   
+NOTES:
 
 HISTORY: Written by Rob Van der Wijngaart, August 2006.
          Updated by RvdW to parallelize matrix generation, March 2007.
          Updated by RvdW to fix verification bug, February 2013
          Updated by RvdW to sort matrix elements to reflect traditional CSR storage,
          August 2013
-  
+
 ***********************************************************************************/
 
 #include <par-res-kern_general.h>
@@ -72,7 +72,7 @@ HISTORY: Written by Rob Van der Wijngaart, August 2006.
 /* linearize the grid index                                                       */
 #define LIN(i,j) (i+((j)<<lsize))
 
-/* if the scramble flag is set, convert all (linearized) grid indices by 
+/* if the scramble flag is set, convert all (linearized) grid indices by
    reversing their bits; if not, leave the grid indices alone                     */
 #if SCRAMBLE
   #define REVERSE(a,b)  reverse((a),(b))
@@ -93,7 +93,7 @@ int main(int argc, char **argv){
   int               size;       /* linear size of grid                            */
   s64Int            size2;      /* matrix order (=total # points in grid)         */
   int               radius,     /* stencil parameters                             */
-                    stencil_size; 
+                    stencil_size;
   s64Int            row, col, first, last; /* dummies                             */
   s64Int            i, j;       /* dummies                                        */
   int               iterations; /* number of times the multiplication is done     */
@@ -111,8 +111,8 @@ int main(int argc, char **argv){
   double            epsilon = 1.e-8; /* error tolerance                           */
   s64Int * RESTRICT colIndex;   /* column indices of sparse matrix entries        */
   int               nthread_input,  /* thread parameters                          */
-                    nthread;   
-  int               num_error=0; /* flag that signals that requested and 
+                    nthread;
+  int               num_error=0; /* flag that signals that requested and
                                    obtained numbers of threads are the same       */
   size_t            vector_space, /* variables used to hold prk_malloc sizes          */
                     matrix_space,
@@ -127,7 +127,7 @@ int main(int argc, char **argv){
   }
 
   /* Take number of threads to request from command line                          */
-  nthread_input = atoi(*++argv); 
+  nthread_input = atoi(*++argv);
 
   if ((nthread_input < 1) || (nthread_input > MAX_THREADS)) {
     printf("ERROR: Invalid number of threads: %d\n", nthread_input);
@@ -135,7 +135,7 @@ int main(int argc, char **argv){
   }
 
   omp_set_num_threads(nthread_input);
- 
+
   iterations = atoi(*++argv);
   if (iterations < 1){
     printf("ERROR: Iterations must be positive : %d \n", iterations);
@@ -146,7 +146,7 @@ int main(int argc, char **argv){
   lsize2 = 2*lsize;
   size = 1<<lsize;
   if (lsize <0) {
-    printf("ERROR: Log of grid size must be greater than or equal to zero: %d\n", 
+    printf("ERROR: Log of grid size must be greater than or equal to zero: %d\n",
            (int) lsize);
     exit(EXIT_FAILURE);
   }
@@ -165,7 +165,7 @@ int main(int argc, char **argv){
            size, radius, radius*2+1);
     exit(EXIT_FAILURE);
   }
- 
+
   /* compute total size of star stencil in 2D                                     */
   stencil_size = 4*radius+1;
   /* sparsity follows from number of non-zeroes per row                           */
@@ -178,19 +178,19 @@ int main(int argc, char **argv){
   if (matrix_space/sizeof(double) != nent) {
     printf("ERROR: Cannot represent space for matrix: %zu\n", matrix_space);
     exit(EXIT_FAILURE);
-  } 
+  }
 
   matrix = (double *) prk_malloc(matrix_space);
   if (!matrix) {
     printf("ERROR: Could not allocate space for sparse matrix: "FSTR64U"\n", nent);
     exit(EXIT_FAILURE);
-  } 
+  }
 
   vector_space = 2*size2*sizeof(double);
   if (vector_space/sizeof(double) != 2*size2) {
     printf("ERROR: Cannot represent space for vectors: %zu\n", vector_space);
     exit(EXIT_FAILURE);
-  } 
+  }
 
   vector = (double *) prk_malloc(vector_space);
   if (!vector) {
@@ -203,18 +203,18 @@ int main(int argc, char **argv){
   if (index_space/sizeof(s64Int) != nent) {
     printf("ERROR: Cannot represent space for column indices: %zu\n", index_space);
     exit(EXIT_FAILURE);
-  } 
+  }
   colIndex = (s64Int *) prk_malloc(index_space);
   if (!colIndex) {
     printf("ERROR: Could not allocate space for column indices: "FSTR64U"\n",
            nent*sizeof(s64Int));
     exit(EXIT_FAILURE);
-  } 
+  }
 
   #pragma omp parallel private (row, col, elm, first, last, iter)
   {
 
-  #pragma omp master 
+  #pragma omp master
   {
   nthread = omp_get_num_threads();
   if (nthread != nthread_input) {
@@ -222,7 +222,7 @@ int main(int argc, char **argv){
     printf("ERROR: number of requested threads %d does not equal ",
            nthread_input);
     printf("number of spawned threads %d\n", nthread);
-  } 
+  }
   else {
     printf("Number of threads     = %16d\n",nthread_input);
     printf("Matrix order          = "FSTR64U"\n", size2);
@@ -242,7 +242,7 @@ int main(int argc, char **argv){
   #pragma omp for
   for (row=0; row<size2; row++) result[row] = vector[row] = 0.0;
 
-  /* fill matrix with nonzeroes corresponding to difference stencil. We use the 
+  /* fill matrix with nonzeroes corresponding to difference stencil. We use the
      scrambling for reordering the points in the grid.                            */
 
   #pragma omp for private (i,j,r)
@@ -266,16 +266,16 @@ int main(int argc, char **argv){
   for (iter=0; iter<=iterations; iter++) {
 
     /* start timer after a warmup iteration                                        */
-    if (iter == 1) { 
+    if (iter == 1) {
       #pragma omp barrier
       #pragma omp master
-      {   
+      {
         sparse_time = wtime();
       }
     }
 
     /* fill vector                                                                */
-    #pragma omp for 
+    #pragma omp for
     for (row=0; row<size2; row++) vector[row] += (double) (row+1);
 
     /* do the actual matrix-vector multiplication                                 */
@@ -300,7 +300,7 @@ int main(int argc, char **argv){
   } /* end of parallel region                                                     */
 
   /* verification test                                                            */
-  reference_sum = 0.5 * (double) nent * (double) (iterations+1) * 
+  reference_sum = 0.5 * (double) nent * (double) (iterations+1) *
                         (double) (iterations +2);
 
   vector_sum = 0.0;
@@ -313,7 +313,7 @@ int main(int argc, char **argv){
   else {
     printf("Solution validates\n");
 #if VERBOSE
-    printf("Reference sum = %lf, vector sum = %lf\n", 
+    printf("Reference sum = %lf, vector sum = %lf\n",
            reference_sum, vector_sum);
 #endif
   }
@@ -328,15 +328,15 @@ int main(int argc, char **argv){
 /* Code below reverses bits in unsigned integer stored in a 64-bit word.
    Bit reversal is with respect to the largest integer that is going to be
    processed for the particular run of the code, to make sure the reversal
-   constitutes a true permutation. Hence, the final result needs to be shifted 
+   constitutes a true permutation. Hence, the final result needs to be shifted
    to the right.
-   Example: if largest integer being processed is 0x000000ff = 255 = 
+   Example: if largest integer being processed is 0x000000ff = 255 =
    0000...0011111111 (binary), then the unshifted reversal of 0x00000006 = 6 =
-   0000...0000000110 (binary) would be 011000000...0000 = 3*2^61, which is 
+   0000...0000000110 (binary) would be 011000000...0000 = 3*2^61, which is
    outside the range of the original sequence 0-255. Setting shift_in_bits to
    2log(256) = 8, the final result is shifted the the right by 64-8=56 bits,
    so we get 000...0001100000 (binary) = 96, which is within the proper range */
-u64Int reverse(register u64Int x, int shift_in_bits){ 
+u64Int reverse(register u64Int x, int shift_in_bits){
   x = ((x >> 1)  & 0x5555555555555555) | ((x << 1)  & 0xaaaaaaaaaaaaaaaa);
   x = ((x >> 2)  & 0x3333333333333333) | ((x << 2)  & 0xcccccccccccccccc);
   x = ((x >> 4)  & 0x0f0f0f0f0f0f0f0f) | ((x << 4)  & 0xf0f0f0f0f0f0f0f0);
@@ -347,7 +347,7 @@ u64Int reverse(register u64Int x, int shift_in_bits){
 }
 
 int compare(const void *el1, const void *el2) {
-  s64Int v1 = *(s64Int *)el1;  
+  s64Int v1 = *(s64Int *)el1;
   s64Int v2 = *(s64Int *)el2;
   return (v1<v2) ? -1 : (v1>v2) ? 1 : 0;
 }
