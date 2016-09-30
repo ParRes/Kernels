@@ -1,32 +1,32 @@
 /*
 Copyright (c) 2013, Intel Corporation
 
-Redistribution and use in source and binary forms, with or without 
-modification, are permitted provided that the following conditions 
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
 are met:
 
-* Redistributions of source code must retain the above copyright 
+* Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
-* Redistributions in binary form must reproduce the above 
-      copyright notice, this list of conditions and the following 
-      disclaimer in the documentation and/or other materials provided 
+* Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
       with the distribution.
-* Neither the name of Intel Corporation nor the names of its 
-      contributors may be used to endorse or promote products 
-      derived from this software without specific prior written 
+* Neither the name of Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products
+      derived from this software without specific prior written
       permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
-FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
-ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
@@ -36,20 +36,20 @@ NAME:    sparse
 
 PURPOSE: This program tests the efficiency with which a sparse matrix
          vector multiplication is carried out
-  
-USAGE:   The program takes as input the 2log of the linear size of the 2D grid 
-         (equalling the 2log of the square root of the order of the sparse matrix), 
-         the radius of the difference stencil, and the number of times the 
+
+USAGE:   The program takes as input the 2log of the linear size of the 2D grid
+         (equalling the 2log of the square root of the order of the sparse matrix),
+         the radius of the difference stencil, and the number of times the
          matrix-vector multiplication is carried out.
 
          <progname> <# iterations> <2log root-of-matrix-order> <radius>
-  
-         The output consists of diagnostics to make sure the 
+
+         The output consists of diagnostics to make sure the
          algorithm worked, and of timing statistics.
 
 FUNCTIONS CALLED:
 
-         Other than MPI or standard C functions, the following 
+         Other than MPI or standard C functions, the following
          functions are used in this program:
 
          wtime()
@@ -58,13 +58,13 @@ FUNCTIONS CALLED:
          qsort()
          compare
 
-NOTES:   
+NOTES:
 
 HISTORY: Written by Rob Van der Wijngaart, October 2006.
          Updated by RvdW to fix verification bug, February 2013
          Updated by RvdW to sort matrix elements to reflect traditional CSR storage,
          August 2013
-  
+
 ***********************************************************************************/
 
 #include <par-res-kern_general.h>
@@ -77,7 +77,7 @@ HISTORY: Written by Rob Van der Wijngaart, October 2006.
   #define DENSE(i,j) dense[LIN(i,j)]
 #endif
 
-/* if the scramble flag is set, convert all (linearized) grid indices by 
+/* if the scramble flag is set, convert all (linearized) grid indices by
    reversing their bits; if not, leave the grid indices alone                     */
 #if SCRAMBLE
   #define REVERSE(a,b)  reverse((a),(b))
@@ -101,7 +101,7 @@ int main(int argc, char **argv){
   int               size;       /* linear size of grid                            */
   s64Int            size2;      /* matrix order (=total # points in grid)         */
   int               radius,     /* stencil parameters                             */
-                    stencil_size; 
+                    stencil_size;
   s64Int            row, col, first, last; /* dummies                             */
   int               iterations; /* number of times the multiplication is done     */
 
@@ -114,7 +114,7 @@ int main(int argc, char **argv){
   s64Int            nent;       /* number of nonzero entries                      */
   double            sparsity;   /* fraction of non-zeroes in matrix               */
   double            local_sparse_time,/* timing parameters                        */
-                    sparse_time, 
+                    sparse_time,
                     avgtime;
   double * RESTRICT matrix;     /* sparse matrix entries                          */
   double * RESTRICT vector;     /* vector multiplying the sparse matrix           */
@@ -164,7 +164,7 @@ int main(int argc, char **argv){
 
     lsize = atoi(*++argv);
     if (lsize <0) {
-      printf("ERROR: Log of grid size must be non-negative: %d\n", 
+      printf("ERROR: Log of grid size must be non-negative: %d\n",
            (int) lsize);
       error = 1;
       goto ENDOFTESTS;
@@ -179,11 +179,11 @@ int main(int argc, char **argv){
     }
 
     if ((int)(size%Num_procs)) {
-      printf("ERROR: Grid size %d must be multiple of # procs %d\n", 
+      printf("ERROR: Grid size %d must be multiple of # procs %d\n",
              (int) size, Num_procs);
       error = 1;
       goto ENDOFTESTS;
-    } 
+    }
 
     /* compute number of points in the grid                                         */
     size2 = size*size;
@@ -202,7 +202,7 @@ int main(int argc, char **argv){
       error = 1;
       goto ENDOFTESTS;
     }
- 
+
     /* sparsity follows from number of non-zeroes per row                           */
     sparsity = (double)(4*radius+1)/(double)size2;
 
@@ -245,16 +245,16 @@ int main(int argc, char **argv){
   matrix_space = nent*sizeof(double);
   matrix = (double *) prk_malloc(matrix_space);
   if (!matrix) {
-    printf("ERROR: rank %d could not allocate space for sparse matrix: %zu\n", 
+    printf("ERROR: rank %d could not allocate space for sparse matrix: %zu\n",
            my_ID, matrix_space);
     error = 1;
-  } 
+  }
   bail_out(error);
 
   vector_space = (size2 + nrows)*sizeof(double);
   vector = (double *) prk_malloc(vector_space);
   if (!vector) {
-    printf("ERROR: rank %d could not allocate space for vectors: %d\n", 
+    printf("ERROR: rank %d could not allocate space for vectors: %d\n",
            my_ID, (int)(2*nrows));
     error = 1;
   }
@@ -267,10 +267,10 @@ int main(int argc, char **argv){
     printf("ERROR: rank %d Could not allocate space for column indices: "FSTR64U"\n",
            my_ID, nent*sizeof(s64Int));
     error = 1;
-  } 
+  }
   bail_out(error);
 
-  /* fill matrix with nonzeroes corresponding to difference stencil. We use the 
+  /* fill matrix with nonzeroes corresponding to difference stencil. We use the
      scrambling for reordering the points in the grid.                            */
 
   jstart = (size/Num_procs)*my_ID;
@@ -290,11 +290,11 @@ int main(int argc, char **argv){
       /* sort colIndex to make sure the compressed row accesses
          vector elements in increasing order                                        */
       qsort(&(colIndex[elm_start]), stencil_size, sizeof(s64Int), compare);
-      for (elm=elm_start; elm<elm_start+stencil_size; elm++) 
-        matrix[elm] = 1.0/(double)(colIndex[elm]+1);   
+      for (elm=elm_start; elm<elm_start+stencil_size; elm++)
+        matrix[elm] = 1.0/(double)(colIndex[elm]+1);
   }
 
-#if TESTDENSE 
+#if TESTDENSE
   /* fill dense matrix to test                                                    */
   matrix_space = size2*size2/Num_procs*sizeof(double);
   dense = (double *) prk_malloc(matrix_space);
@@ -322,7 +322,7 @@ int main(int argc, char **argv){
   for (iter=0; iter<=iterations; iter++) {
 
     /* start timer after a warmup iteration */
-    if (iter == 1) { 
+    if (iter == 1) {
       MPI_Barrier(MPI_COMM_WORLD);
       local_sparse_time = wtime();
     }
@@ -355,13 +355,13 @@ int main(int argc, char **argv){
   for (row=0; row<nrows; row++) {
     printf("( ");
     for (col=0; col<size2; col++) printf("%1.3lf  ", DENSE(col,row));
-    printf(" ) ( %1.3lf ) = ( %1.3lf ) | ( %1.3lf )\n", 
+    printf(" ) ( %1.3lf ) = ( %1.3lf ) | ( %1.3lf )\n",
            vector[row], result[row], rhs[row]);
   }
 #endif
 
   /* verification test                                                            */
-  reference_sum = 0.5 * (double) size2 * (double) stencil_size * 
+  reference_sum = 0.5 * (double) size2 * (double) stencil_size *
     (double) (iterations+1) * (double) (iterations + 2);
 
   vector_sum = 0.0;
@@ -378,7 +378,7 @@ int main(int argc, char **argv){
     else {
       printf("Solution validates\n");
 #if VERBOSE
-      printf("Reference sum = %lf, check sum = %lf\n", 
+      printf("Reference sum = %lf, check sum = %lf\n",
              reference_sum, check_sum);
 #endif
     }
@@ -396,15 +396,15 @@ int main(int argc, char **argv){
 /* Code below reverses bits in unsigned integer stored in a 64-bit word.
    Bit reversal is with respect to the largest integer that is going to be
    ranked for the particular run of the code, to make sure the reversal
-   constitutes a true permutation. Hence, the final result needs to be shifted 
+   constitutes a true permutation. Hence, the final result needs to be shifted
    to the right.
-   Example: if largest integer being processed is 0x000000ff = 255 = 
+   Example: if largest integer being processed is 0x000000ff = 255 =
    0000...0011111111 (binary), then the unshifted reversal of 0x00000006 = 6 =
-   0000...0000000110 (binary) would be 011000000...0000 = 3*2^61, which is 
+   0000...0000000110 (binary) would be 011000000...0000 = 3*2^61, which is
    outside the range of the original sequence 0-255. Setting shift_in_bits to
    2log(256) = 8, the final result is shifted the the right by 64-8=56 bits,
    so we get 000...0001100000 (binary) = 96, which is within the proper range */
-u64Int reverse(register u64Int x, int shift_in_bits){ 
+u64Int reverse(register u64Int x, int shift_in_bits){
   x = ((x >> 1)  & 0x5555555555555555) | ((x << 1)  & 0xaaaaaaaaaaaaaaaa);
   x = ((x >> 2)  & 0x3333333333333333) | ((x << 2)  & 0xcccccccccccccccc);
   x = ((x >> 4)  & 0x0f0f0f0f0f0f0f0f) | ((x << 4)  & 0xf0f0f0f0f0f0f0f0);
@@ -415,8 +415,7 @@ u64Int reverse(register u64Int x, int shift_in_bits){
 }
 
 int compare(const void *el1, const void *el2) {
-  s64Int v1 = *(s64Int *)el1;  
+  s64Int v1 = *(s64Int *)el1;
   s64Int v2 = *(s64Int *)el2;
   return (v1<v2) ? -1 : (v1>v2) ? 1 : 0;
 }
-
