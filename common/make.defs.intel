@@ -1,0 +1,46 @@
+#
+# This file shows the Intel toolchain options for PRKs using
+# OpenMP, MPI and/or Fortran coarrays only.
+#
+# Base compilers and language options
+#
+# We assume you have Intel MPI and have setup your environment with e.g.
+# .  /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+# in your .bashrc.
+#
+# C99 is required in some implementations.
+CC=icc -std=c99
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+FC=ifort -std08 -fpp
+# C++11 may not be required but does no harm here.
+CXX=icpc -std=c++11
+#
+# Compiler flags
+#
+# -xHOST is appropriate for most cases.
+DEFAULT_OPT_FLAGS=-g -O3 -xHOST
+# If you are compiling for KNL on a Xeon login node, use the following:
+# DEFAULT_OPT_FLAGS=-g -O3 -xMIC-AVX512
+#
+# OpenMP flags
+#
+# You can also use -qopenmp.  -openmp is deprecated.
+OPENMPFLAG=-fopenmp
+#
+# MPI
+#
+# We assume you have Intel MPI and have setup your environment with e.g.
+# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
+# in your .bashrc.
+#
+# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
+MPICC=mpiicc
+#
+# Fortran 2008 coarrays
+#
+# see https://github.com/ParRes/Kernels/blob/master/FORTRAN/README.md for details
+# single-node
+COARRAYFLAG=-coarray
+# multi-node
+# COARRAYFLAG=-coarray=distributed
+
