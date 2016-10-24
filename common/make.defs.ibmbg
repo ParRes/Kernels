@@ -1,0 +1,26 @@
+#
+# This file shows the IBM Blue Gene/Q toolchain options for PRKs using
+# OpenMP, MPI and/or Fortran (sans coarrays) only.
+#
+# Base compilers and language options
+#
+# C99 is required in some implementations.
+CC=bgxlc_r -qlanglvl=stdc99
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+# You might need to modify the build system for the preprocessor options to work.
+FC=bgxlf_r
+# C++11 may not be required but does no harm here.
+CXX=bgxlcxx_r
+#
+# Compiler flags
+#
+DEFAULT_OPT_FLAGS=-O3
+#
+# OpenMP flags
+#
+# You can also use -qopenmp.  -openmp is deprecated.
+OPENMPFLAG=-qsmp=omp
+#
+# MPI
+#
+MPICC=mpixlc_r

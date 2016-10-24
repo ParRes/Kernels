@@ -1,0 +1,40 @@
+#
+# This file shows the Cray toolchain options for PRKs using
+# OpenMP, MPI, Fortran coarrays, UPC and SHMEM only.
+#
+# Base compilers and language options
+#
+# C99 is required in some implementations.
+CC=cc -h c99
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+FC=ftn -e F
+# C++11 may not be required but does no harm here.
+CXX=CC -h c++11
+#
+# Compiler flags
+#
+DEFAULT_OPT_FLAGS=-O2
+#
+# OpenMP flags
+#
+OPENMPFLAG=-h omp
+#
+# MPI
+#
+# cc wraps gcc, icc or craycc, depending on your PrgEng module.
+MPICC=cc
+#
+# Fortran 2008 coarrays
+#
+# see https://github.com/ParRes/Kernels/blob/master/FORTRAN/README.md for details
+COARRAYFLAG=-h caf
+#
+# UPC
+#
+UPCC=cc
+UPCFLAG=-h upc
+#
+# SHMEM
+#
+# You may need to load a module such as cray-shmem
+SHMEMCC=cc
