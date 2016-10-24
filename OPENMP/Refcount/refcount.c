@@ -41,7 +41,7 @@ USAGE:   The program takes as input the total number of times the reference
          counters are updated, and the number of threads 
          involved.
  
-               <progname>  <# threads><# iterations> <length of private triad vector>
+               <progname>  <# threads><# iterations> <length of private triad vector> [lock hint]
   
          The output consists of diagnostics to make sure the 
          algorithm worked, and of timing statistics.
@@ -112,6 +112,7 @@ int main(int argc, char ** argv)
   double     refcount_time;   /* timing parameter                               */
   int        nthread_input;   /* number of threads requested                    */
   int        nthread;         /* actual number of threads used                  */
+  int        lock_hint;       /* indicated type of lock hint (if using locks)   */
   int        error=0;         /* global errors                                  */
  
 /*********************************************************************
@@ -121,8 +122,10 @@ int main(int argc, char ** argv)
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP exclusive access test RefCount, shared counters\n");
  
-  if (argc != 4){
-    printf("Usage: %s <# threads> <# counter pair updates> <# private stream size>\n", *argv);
+  if (argc != 4 && argc != 5){
+    printf("Usage: %s <# threads> <# counter pair updates> <private stream size> [lock hint]\n", *argv);
+    printf("    lock hint=0:  If using locks, OpenMP assumes queuing lock (default)\n");
+    printf("    lock hint!=0: If using locks, OpenMP assumes uncontended lock\n");
     return(1);
   }
  
@@ -142,11 +145,14 @@ int main(int argc, char ** argv)
   stream_size=0;
 #else
   stream_size = atol(*++argv);
-  if (stream_size <= 0) {
+  if (stream_size < 0) {
     printf("ERROR: private stream size %zu must be non-negative\n", stream_size);
     exit(EXIT_FAILURE);
   }
 #endif
+
+  if (argc == 5) lock_hint = atoi(*++argv);
+  else           lock_hint = 0;
  
   omp_set_num_threads(nthread_input);
 
@@ -161,7 +167,7 @@ int main(int argc, char ** argv)
 #endif
   {
   size_t   iter, j;   /* dummies                                        */
-#if UNUSED
+#if DEPENDENT
   double tmp1;      /* local copy of previous value of COUNTER1       */
 #endif
   double *a, *b, *c;/* private vectors                                */
@@ -219,6 +225,10 @@ int main(int argc, char ** argv)
 #endif
 #if LOCK==2
     printf("Mutex type                     = lock\n");
+    if (lock_hint)
+      printf("Lock type                      = uncontended\n");
+    else
+      printf("Lock type                      = queueing\n");
 #elif LOCK==1
     printf("Mutex type                     = atomic\n");
 #else
@@ -268,7 +278,10 @@ int main(int argc, char ** argv)
 
   /* initialize the lock on which we will be pounding */
 #if LOCK==2
-  omp_init_lock(pcounter_lock);
+  if (lock_hint)
+    omp_init_lock_with_hint(pcounter_lock,omp_lock_hint_uncontended);
+  else
+    omp_init_lock_with_hint(pcounter_lock,omp_lock_hint_contended);
 #endif
 
 #if CONTENDED

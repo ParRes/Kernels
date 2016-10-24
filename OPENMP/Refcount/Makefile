@@ -63,8 +63,6 @@ endif
 ifeq ($(CONTENDED),1)
   ifeq ($(DEPENDENT),1)
     override LOCK=2
-  else
-    override LOCK=1
   endif
 endif
 
@@ -82,7 +80,7 @@ OPTIONSSTRING="Make options:\n\
 OPTION         MEANING                                    DEFAULT\n\
 CONTENDED=0/1  uncontended/contended counters               [1]  \n\
 LOCK=0/1/2     no locks/atomics/OpenMP locks                [2]  \n\
-INTEGER=0/1    counter data type integer/floating point     [0]  \n\
+INTEGER=0/1    counter data type integer/floating point     [1]  \n\
 DEPENDENT=0/1  independent/intertwined counter pair updates [0]  \n\
 STREAM=0/1     disallow/allow independent thread work       [1]  \n\
 MAXTHREADS=?   set maximum number of OpenMP threads         [256]\n\
