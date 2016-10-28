@@ -26,7 +26,7 @@ The [GCC Wiki](https://gcc.gnu.org/wiki/GFortranStandards) has an excellent coll
 In `common/make.defs`, use the following to get the right language support.  In particular, one must explicitly preprocess Stencil.
 
 Compiler|`FC`|`COARRAYFLAG`|`OPENMPFLAG`
----|---|---
+---|---|---|---
 Intel|`ifort -std08 -fpp`|see below|`-qopenmp` or `-fopenmp`
 GCC|`gfortran-5 -std=f2008 -cpp`|see below|`-fopenmp`
 Cray|`ftn -e F`|`-h caf`|`-h omp`
