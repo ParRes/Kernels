@@ -2,7 +2,8 @@ include ../../common/UPC.defs
 
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+#OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+OPTFLAGS    = -O3
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults

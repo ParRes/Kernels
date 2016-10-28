@@ -2,7 +2,7 @@ include ../../common/SERIAL.defs
  
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -std=c99
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults
@@ -37,7 +37,7 @@ OPTION                 MEANING                                      DEFAULT\n\
 RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing)     [0]  \n\
 VERBOSE=0/1            omit/include verbose run information           [0]"
 
-TUNEFLAGS    = $(VERBOSEFLAG) $(USERFLAGS) $(RESTRICTFLAG)
+TUNEFLAGS    = $(VERBOSEFLAG) $(USERFLAGS) $(RESTRICTFLAG) $(OPTFLAGS)
 PROGRAM      = transpose
 OBJS         = $(PROGRAM).o $(COMOBJS)
 
