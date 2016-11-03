@@ -55,10 +55,7 @@ FUNCTIONS CALLED:
          this program:
          wtime()
 
-HISTORY: - Written by Rob Van der Wijngaart, February 2009.
-         - RvdW: Removed unrolling pragmas for clarity;
-           added constant to array "in" at end of each iteration to force 
-           refreshing of neighbor data in parallel versions; August 2013
+HISTORY: - Written by Rob Van der Wijngaart, July 2016
   
 **********************************************************************************/
 
@@ -541,7 +538,7 @@ int main(int argc, char ** argv) {
 
 /* verify correctness of background grid solution and input field                */
   reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
-  reference_norm_in = (COEFX+COEFY)*(DTYPE)((n-1)/2.0+iterations+1);
+  reference_norm_in = (COEFX+COEFY)*(DTYPE)((n-1)/2.0)+iterations+1;
   if (ABS(norm-reference_norm) > EPSILON) {
     printf("ERROR: L1 norm = "FSTR", Reference L1 norm = "FSTR"\n",
            norm, reference_norm);
@@ -551,6 +548,16 @@ int main(int argc, char ** argv) {
 #if VERBOSE
     printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
            reference_norm, norm);
+#endif
+  }
+
+  if (ABS(norm_in-reference_norm_in) > EPSILON) {
+    printf("ERROR: L1 input norm = "FSTR", Reference L1 input norm = "FSTR"\n",
+           norm_in, reference_norm_in);
+    validate = 0;
+  }
+  else {
+#if VERBOSE
     printf("Reference L1 input norm = "FSTR", L1 input norm = "FSTR"\n", 
            reference_norm_in, norm_in);
 #endif
@@ -580,7 +587,6 @@ int main(int argc, char ** argv) {
         /* initial input field value at bottom left corner of refinement        */
         (COEFX*istart_r[g] + COEFY*jstart_r[g]) +
         /* variable part                                                        */
-	//        (COEFX+COEFY)*h_r*(DTYPE)((n_r_true-1)/2.0) +
         (COEFX+COEFY)*n_r/2.0 +
         /* number of times unity was added to background grid input field 
            before interpolation onto this refinement                            */
