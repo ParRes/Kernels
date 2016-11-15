@@ -72,14 +72,14 @@ HISTORY: - Written by Rob Van der Wijngaart, February September 2016.
   #define EPSILON   1.e-8
   #define COEFX     1.0
   #define COEFY     1.0
-  #define FSTR      "%lf"
+  #define FSTR      "%7.4lf"
 #else
   #define DTYPE     float
   #define MPI_DTYPE MPI_FLOAT
   #define EPSILON   0.0001f
   #define COEFX     1.0f
   #define COEFY     1.0f
-  #define FSTR      "%f"
+  #define FSTR      "%7.4f"
 #endif
 
 /* define shorthand for indexing multi-dimensional arrays                       */
@@ -97,11 +97,11 @@ HISTORY: - Written by Rob Van der Wijngaart, February September 2016.
 #define WEIGHT(ii,jj)    weight[ii+RADIUS][jj+RADIUS]
 #define WEIGHT_R(ii,jj)  weight_r[ii+RADIUS][jj+RADIUS]
 
-#define UNDEFINED            1111
-#define FINE_GRAIN           9797
-#define NO_TALK              1212
-#define HIGH_WATER           3232
-#define AMNESIA              4377
+#define undefined        1111
+#define fine_grain       9797
+#define no_talk          1212
+#define high_water       3232
+#define amnesia          4377
 
 /* before interpolating from the background grid, we need to gather that BG data
    from wherever it resides and copy it to the right locations of the refinement */
@@ -119,8 +119,8 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
   int *recv_offset, *recv_count, *send_offset, *send_count, error=0;
   DTYPE *recv_buf, *send_buf;
   
-  /* in case of NO_TALK we just copy the in-rank data from BG to refinement     */
-  if (load_balance == NO_TALK) {
+  /* in case of no_talk we just copy the in-rank data from BG to refinement     */
+  if (load_balance == no_talk) {
     
   }
   else {
@@ -137,7 +137,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
     bail_out(error);
     
     /* ask all other ranks what chunk of BG they have, and what chunk of the 
-       refinement (one of the two will be nil for HIGH_WATER)                     */
+       refinement (one of the two will be nil for high_water)                     */
     send_vec[0] = L_istart_bg;
     send_vec[1] = L_iend_bg;
     send_vec[2] = L_jstart_bg;
@@ -405,10 +405,10 @@ int main(int argc, char ** argv) {
              *argv);
       printf("       <refinement level> <refinement period>  <refinement duration>\n");
       printf("       <refinement sub-iterations> <load balancer> \n");
-      printf("       load balancer: fine_grain\n");
-      printf("                      no_talk\n");
-      printf("                      high_water\n");
-      printf("                      amnesia\n");
+      printf("       load balancer: FINE_GRAIN\n");
+      printf("                      NO_TALK\n");
+      printf("                      HIGH_WATER\n");
+      printf("                      AMNESIA\n");
       error = 1;
       goto ENDOFINPUTTESTS;
     }
@@ -470,13 +470,13 @@ int main(int argc, char ** argv) {
     }
 
     c_load_balance = *++argv;
-    if      (!strcmp("fine_grain", c_load_balance)) load_balance=FINE_GRAIN;
-    //    else if (!strcmp("no_talk",    c_load_balance)) load_balance=NO_TALK;
-    //    else if (!strcmp("high_water", c_load_balance)) load_balance=HIGH_WATER;
-    //    else if (!strcmp("amnesia",    c_load_balance)) load_balance=AMNESIA;
-    else                                            load_balance=UNDEFINED;
-    if (load_balance==UNDEFINED) {
-      printf("ERROR: invalid load balancer %s, only \"fine_grain\" available\n", c_load_balance);
+    if      (!strcmp("FINE_GRAIN", c_load_balance)) load_balance=fine_grain;
+    //    else if (!strcmp("NO_TALK",    c_load_balance)) load_balance=no_talk;
+    //    else if (!strcmp("HIGH_WATER", c_load_balance)) load_balance=high_water;
+    //    else if (!strcmp("AMNESIA",    c_load_balance)) load_balance=amnesia;
+    else                                            load_balance=undefined;
+    if (load_balance==undefined) {
+      printf("ERROR: invalid load balancer %s, only FINE_GRAIN available\n", c_load_balance);
       error = 1;
       goto ENDOFINPUTTESTS;
     }
@@ -527,20 +527,20 @@ int main(int argc, char ** argv) {
   float bg_size, total_size, Frac_procs_bg; // used for HIGH_WATER
                    
   switch (load_balance) {
-  case FINE_GRAIN: Num_procs_bg = Num_procs;
+  case fine_grain: Num_procs_bg = Num_procs;
                    my_ID_bg = my_ID;
                    for (g=0; g<4; g++) {
                      Num_procs_r[g] = Num_procs;
                      my_ID_r[g] = my_ID; 
                    }
                    break;
-  case NO_TALK:    Num_procs_bg = Num_procs;
+  case no_talk:    Num_procs_bg = Num_procs;
                    my_ID_bg = my_ID;
                    for (g=0; g<4; g++) {
                      my_ID_r[g] = my_ID;
                    }
                    break;
-  case HIGH_WATER: bg_size=n*n; 
+  case high_water: bg_size=n*n; 
                    total_size = n*n+n_r_true*n_r_true;
                    Frac_procs_bg;
                    Frac_procs_bg = (float) Num_procs * bg_size/total_size;
@@ -551,8 +551,8 @@ int main(int argc, char ** argv) {
                    }
                    if (my_ID>=Num_procs_bg) my_ID_bg = -1;
                    break;
-  case AMNESIA:    /* we need to maintain two different decompositions, one with
-                      and one without refinement (union of FINE_GRAIN & HIGH_WATER) */
+  case amnesia:    /* we need to maintain two different decompositions, one with
+                      and one without refinement (union of fine_grain & high_water) */
                    bg_size=n*n; 
                    total_size = n*n+n_r_true*n_r_true;
                    Frac_procs_bg;
@@ -587,15 +587,15 @@ int main(int argc, char ** argv) {
 
   /* compute tiling of refinements                                             */
   switch(load_balance) {
-  case NO_TALK:    // this balancer does not use a process grid for refinements
+  case no_talk:    // this balancer does not use a process grid for refinements
                    break;
-  case FINE_GRAIN: // refinements are partitioned exactly like BG
+  case fine_grain: // refinements are partitioned exactly like BG
                    for (g=0; g<4; g++) {
                      Num_procs_rx[g] = Num_procs_bgx;
                      Num_procs_ry[g] = Num_procs_bgy;
                    }
                    break;
-  case HIGH_WATER: // refinements are partitioned independently, but similar to BG
+  case high_water: // refinements are partitioned independently, but similar to BG
                    for (g=0; g<4; g++) {
                      Num_procs_rx[g] = Num_procs_ry[g] = 0;
                      for (Num_procs_rx[g]=(int) (sqrt(Num_procs_r[g]+1)); 
@@ -607,6 +607,7 @@ int main(int argc, char ** argv) {
                      }
 		   }
                    break;
+  case amnesia:    break;
   }
 
   /* communication neighbors on BG are computed for all who own part of it    */
@@ -625,7 +626,7 @@ int main(int argc, char ** argv) {
   }
 
   /* for refinements comm neighbors depend on balancer                        */
-  if (load_balance==FINE_GRAIN || load_balance==NO_TALK) for (g=0; g<4; g++) {
+  if (load_balance==fine_grain || load_balance==no_talk) for (g=0; g<4; g++) {
     my_ID_rx[g]    = my_ID_bgx;
     my_ID_ry[g]    = my_ID_bgy;
     right_nbr_r[g]  = right_nbr_bg;
@@ -634,7 +635,7 @@ int main(int argc, char ** argv) {
     bottom_nbr_r[g] = bottom_nbr_bg;
   }
   else {
-    /* for HIGH_WATER comm neighbors are taken from a smaller subset          */
+    /* for high_water comm neighbors are taken from a smaller subset          */
     for (g=0; g<4; g++) {
       if (my_ID_r[g]<0) {
         my_ID_rx[g]    = my_ID_ry[g] = -1;
@@ -756,11 +757,11 @@ int main(int argc, char ** argv) {
   /* reserve space for refinement input/output fields; first compute extents */
 
   /* we partition the refinement in terms of BG indices, so that we know 
-     for the FINE_GRAIN balancer that a rank's refinement partitition does 
+     for the fine_grain balancer that a rank's refinement partitition does 
      not need BG data beyond the boundary of the refinement as input to the 
      interpolation                                                           */
   for (g=0; g<4; g++) if (my_ID_r[g]>=0) {
-    if (load_balance==FINE_GRAIN || load_balance==HIGH_WATER) {
+    if (load_balance==fine_grain || load_balance==high_water) {
 
       L_width_r[g] = n_r/Num_procs_rx[g];
       leftover =   n_r%Num_procs_rx[g];
@@ -863,7 +864,7 @@ int main(int argc, char ** argv) {
       skip_r[g] = 1;
     }
 
-    /* FIX THIS; don't want to bail out, just because one rank doesn't have a large
+    /* FIX THIS; don't want to bail out, just because a rank doesn't have a large
        enough refinement tile to work with. Can merge until tile is large enough */
     if (!skip_r[g] &&(L_width_r_true[g] < RADIUS || L_height_r_true[g] < RADIUS)) {
       printf("ERROR: rank %d's work tile %d smaller than stencil radius: %d\n", 
@@ -872,15 +873,13 @@ int main(int argc, char ** argv) {
     }
     bail_out(error);
 
-#define BLOAT 1
-
     if (!skip_r[g]) {
       total_length_in_r[g]  = (long) ((L_width_r_gross[g] -1)*expand+1+2*RADIUS)*
                               (long) ((L_height_r_gross[g]-1)*expand+1+2*RADIUS);
       total_length_out_r[g] = (long) ((L_width_r_gross[g] -1)*expand+1)*
                               (long) ((L_height_r_gross[g]-1)*expand+1);
-      in_r[g]  = (DTYPE *) prk_malloc(BLOAT*sizeof(DTYPE)*total_length_in_r[g]);
-      out_r[g] = (DTYPE *) prk_malloc(BLOAT*sizeof(DTYPE)*total_length_out_r[g]);
+      in_r[g]  = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_in_r[g]);
+      out_r[g] = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_out_r[g]);
       if (!in_r[g] || !out_r[g]) {
         printf("ERROR: could not allocate space for refinement input or output arrays\n");
         exit(EXIT_FAILURE);
@@ -947,26 +946,26 @@ int main(int argc, char ** argv) {
   
   for (g=0; g<4; g++) if (!skip_r[g]) {
     /* allocate communication buffers for halo values                          */
-    top_buf_out_r[g] = (DTYPE *) prk_malloc(4*BLOAT*sizeof(DTYPE)*RADIUS*L_width_r_true[g]);
+    top_buf_out_r[g] = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*L_width_r_true[g]);
     if (!top_buf_out_r[g]) {
       printf("ERROR: Rank %d could not allocate comm buffers for y-direction for r=%d\n", 
              my_ID, g);
       error = 1;
     }
     bail_out(error);
-    top_buf_in_r[g]     = top_buf_out_r[g] +   BLOAT*RADIUS*L_width_r_true[g];
-    bottom_buf_out_r[g] = top_buf_out_r[g] + 2*BLOAT*RADIUS*L_width_r_true[g];
-    bottom_buf_in_r[g]  = top_buf_out_r[g] + 3*BLOAT*RADIUS*L_width_r_true[g];
+    top_buf_in_r[g]     = top_buf_out_r[g] +   RADIUS*L_width_r_true[g];
+    bottom_buf_out_r[g] = top_buf_out_r[g] + 2*RADIUS*L_width_r_true[g];
+    bottom_buf_in_r[g]  = top_buf_out_r[g] + 3*RADIUS*L_width_r_true[g];
 
-    right_buf_out_r[g]  = (DTYPE *) prk_malloc(4*BLOAT*sizeof(DTYPE)*RADIUS*L_height_r_true[g]);
+    right_buf_out_r[g]  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*L_height_r_true[g]);
     if (!right_buf_out_r[g]) {
       printf("ERROR: Rank %d could not allocate comm buffers for x-direction for r=%d\n", my_ID, g);
       error = 1;
     }
     bail_out(error);
-    right_buf_in_r[g]   = right_buf_out_r[g] +   BLOAT*RADIUS*L_height_r_true[g];
-    left_buf_out_r[g]   = right_buf_out_r[g] + 2*BLOAT*RADIUS*L_height_r_true[g];
-    left_buf_in_r[g]    = right_buf_out_r[g] + 3*BLOAT*RADIUS*L_height_r_true[g];
+    right_buf_in_r[g]   = right_buf_out_r[g] +   RADIUS*L_height_r_true[g];
+    left_buf_out_r[g]   = right_buf_out_r[g] + 2*RADIUS*L_height_r_true[g];
+    left_buf_in_r[g]    = right_buf_out_r[g] + 3*RADIUS*L_height_r_true[g];
   }
 
   local_stencil_time = 0.0; /* silence compiler warning */
@@ -1064,15 +1063,6 @@ int main(int argc, char ** argv) {
       g=(iter/period)%4;
       num_interpolations++;
 
-#if 0
-      // intialize using bad value
-      for (j=L_jstart_r_true[g]-RADIUS; j<=L_jend_r_true[g]+RADIUS; j++) {
-        for (i=L_istart_r_true[g]-RADIUS; i<=L_iend_r_true[g]+RADIUS; i++) {
-          IN_R(g,i,j) = 99.0;
-        }
-      }
-#endif
-
       get_BG_data(load_balance, in_bg, in_r[g], my_ID, expand, Num_procs, 
                   L_width_bg, L_istart_bg, L_iend_bg, L_jstart_bg, L_jend_bg,
                   L_istart_r[g], L_iend_r[g], L_jstart_r[g], L_jend_r[g],
@@ -1151,80 +1141,38 @@ int main(int argc, char ** argv) {
                   990, MPI_COMM_WORLD, &(request_r[g][0+4]));
 	}
 
-	//        for (int rank=0; rank<Num_procs; rank++) {
-	//	  MPI_Barrier(MPI_COMM_WORLD);
-	//          if (my_ID==rank) {
         if (left_nbr_r[g] != -1) {
-	  //          printf("Rank %d filling input buffer for left nbr %d in tile %d\n", my_ID, left_nbr_r[g], g);
           MPI_Irecv(left_buf_in_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, left_nbr_r[g], 
                     990, MPI_COMM_WORLD, &(request_r[g][3+4]));
           for (int kk=0,j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) {
-	    //	    printf("j=%d:", j);
-          for (int i=L_istart_r_true[g]; i<=L_istart_r_true[g]+RADIUS-1; i++) {
-	    left_buf_out_r[g][kk++]= IN_R(g,i,j);
-	    //            printf("%lf ",IN_R(g,i,j));
-          }
-	  //	  printf("\n");
+            for (int i=L_istart_r_true[g]; i<=L_istart_r_true[g]+RADIUS-1; i++) {
+              left_buf_out_r[g][kk++]= IN_R(g,i,j);
+            }
 	  }
           MPI_Isend(left_buf_out_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, left_nbr_r[g], 
                     1010, MPI_COMM_WORLD, &(request_r[g][2+4]));
 	}
-	//	  }
-	//        }
 
-	//        for (int rank=0; rank<Num_procs; rank++) {
-	//	  MPI_Barrier(MPI_COMM_WORLD);
-	//          if (my_ID==rank) {
         if (right_nbr_r[g] != -1) {
-	  //          printf("Rank %d draining input buffer from right nbr %d in tile %d\n", my_ID, right_nbr_r[g], g);
           MPI_Wait(&(request_r[g][0+4]), MPI_STATUS_IGNORE);
           MPI_Wait(&(request_r[g][1+4]), MPI_STATUS_IGNORE);
           for (int kk=0,j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) {
-	    //	    printf("j=%d:", j);
-          for (int i=L_iend_r_true[g]+1; i<=L_iend_r_true[g]+RADIUS; i++) {
-	    IN_R(g,i,j) = right_buf_in_r[g][kk++];
-	    //            printf("%lf ",IN_R(g,i,j));
-          }
-	  //	  printf("\n");
-	  //        }
-	  //	}
+            for (int i=L_iend_r_true[g]+1; i<=L_iend_r_true[g]+RADIUS; i++) {
+              IN_R(g,i,j) = right_buf_in_r[g][kk++];
+            }
 	  }
 	}
 
-	//        for (int rank=0; rank<Num_procs; rank++) {
-	//	  MPI_Barrier(MPI_COMM_WORLD);
-	//          if (my_ID==rank) {
         if (left_nbr_r[g] != -1) {
-	  //          printf("Rank %d draining input buffer from left nbr %d in tile %d\n", my_ID, left_nbr_r[g], g);
           MPI_Wait(&(request_r[g][2+4]), MPI_STATUS_IGNORE);
           MPI_Wait(&(request_r[g][3+4]), MPI_STATUS_IGNORE);
           for (int kk=0,j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) {
-	    //	    printf("j=%d:", j);
-          for (int i=L_istart_r_true[g]-RADIUS; i<=L_istart_r_true[g]-1; i++) {
-	    IN_R(g,i,j) = left_buf_in_r[g][kk++];
-	    //            printf("%lf ",IN_R(g,i,j));
+            for (int i=L_istart_r_true[g]-RADIUS; i<=L_istart_r_true[g]-1; i++) {
+	      IN_R(g,i,j) = left_buf_in_r[g][kk++];
+            }
           }
-	  //	  printf("\n");
-	  //	  }
-	  //	  }
-	}
         }
 
-#if 0
-        for (int rank=0; rank<Num_procs; rank++) {
-	  MPI_Barrier(MPI_COMM_WORLD);
-          if (my_ID==rank) {
-            printf("expanded input tile %d for rank %d\n", g, rank);
-	    for (j=L_jstart_r_true[g]-RADIUS; j<=L_jend_r_true[g]+RADIUS; j++) {
-              printf("j=%d: ", j);
-              for (i=L_istart_r_true[g]-RADIUS; i<=L_iend_r_true[g]+RADIUS; i++) {
-		printf("%lf ", IN_R(g,i,j));
-              }
-              printf("\n");
-	    }
-	  }
-	}
-#endif
         for (j=MAX(RADIUS,L_jstart_r_true[g]); j<=MIN(n_r_true-RADIUS-1,L_jend_r_true[g]); j++) {
           for (i=MAX(RADIUS,L_istart_r_true[g]); i<=MIN(n_r_true-RADIUS-1,L_iend_r_true[g]); i++) {
             #if LOOPGEN
@@ -1236,22 +1184,6 @@ int main(int argc, char ** argv) {
             #endif
           }
         }
-
-#if 0
-        for (int rank=0; rank<Num_procs; rank++) {
-	  MPI_Barrier(MPI_COMM_WORLD);
-          if (my_ID==rank) {
-            printf("out tile %d for rank %d\n", g, rank);
-        for (j=MAX(RADIUS,L_jstart_r_true[g]); j<=MIN(n_r_true-RADIUS-1,L_jend_r_true[g]); j++) {
-              printf("j=%d: ", j);
-          for (i=MAX(RADIUS,L_istart_r_true[g]); i<=MIN(n_r_true-RADIUS-1,L_iend_r_true[g]); i++) {
-		printf("%lf ", OUT_R(g,i,j));
-              }
-              printf("\n");
-	    }
-	  }
-	}
-#endif
 
         /* add constant to solution to force refresh of neighbor data, if any        */
         for (j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) 
@@ -1300,8 +1232,6 @@ int main(int argc, char ** argv) {
   MPI_Reduce(&local_norm_in, &norm_in, 1, MPI_DTYPE, MPI_SUM, root, MPI_COMM_WORLD);
   if (my_ID == root) norm_in /= n*n;
   
-
-  //ALL FOLLOWING COMPUTATIONS ON REFINEMENTS NEED TO BE DONE WITH "_true" boundaries
   for (g=0; g<4; g++) {
     local_norm_r[g] = local_norm_in_r[g] = (DTYPE) 0.0;
     /* compute normalized L1 solution norm on refinements                        */
@@ -1312,14 +1242,12 @@ int main(int argc, char ** argv) {
     MPI_Reduce(&local_norm_r[g], &norm_r[g], 1, MPI_DTYPE, MPI_SUM, root, MPI_COMM_WORLD);
     if (my_ID == root) norm_r[g] /= f_active_points_r;
 
-    int num_points=0;
     /* compute normalized L1 input field norms on refinements                    */
-    for (j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) for (i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
-	local_norm_in_r[g] += (DTYPE)ABS(IN_R(g,i,j)); num_points++;
+    for (j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) 
+      for (i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
+	local_norm_in_r[g] += (DTYPE)ABS(IN_R(g,i,j)); 
     }
-
     MPI_Reduce(&local_norm_in_r[g], &norm_in_r[g], 1, MPI_DTYPE, MPI_SUM, root, MPI_COMM_WORLD);
-
     if (my_ID == root) norm_in_r[g] /=  n_r_true*n_r_true;
   }
 
@@ -1338,13 +1266,24 @@ int main(int argc, char ** argv) {
     }
     else {
 #if VERBOSE
-      printf("SUCCESS: Reference L1 norm = "FSTR", L1 norm = "FSTR"\n", 
+      printf("SUCCESS: Reference L1 norm         = "FSTR", L1 norm         = "FSTR"\n", 
              reference_norm, norm);
-      printf("Reference L1 input norm = "FSTR", L1 input norm = "FSTR"\n", 
+#endif
+    }
+ 
+    if (ABS(norm_in-reference_norm_in) > EPSILON) {
+      printf("ERROR: L1 input norm         = "FSTR", Reference L1 input norm = "FSTR"\n",
+             norm_in, reference_norm_in);
+      validate = 0;
+    }
+    else {
+#if VERBOSE
+      printf("SUCCESS: Reference L1 input norm   = "FSTR", L1 input norm   = "FSTR"\n", 
              reference_norm_in, norm_in);
 #endif
     }
-
+ 
+    
     /* verify correctness of refinement grid solutions and input fields          */
     full_cycles = ((iterations+1)/(period*4));
     leftover_iterations = (iterations+1)%(period*4);
@@ -1376,38 +1315,38 @@ int main(int argc, char ** argv) {
           /* number of actual updates on this refinement since interpolation    */
           (DTYPE) r_updates;
       }
-
+ 
       if (ABS(norm_r[g]-reference_norm_r[g]) > EPSILON) {
-        printf("ERROR: L1 norm %d = "FSTR", Reference L1 norm = "FSTR"\n",
-               g, norm_r[g], reference_norm_r[g]);
+        printf("ERROR: L1 norm %d       = "FSTR", Reference L1 norm %d = "FSTR"\n",
+               g, norm_r[g], g, reference_norm_r[g]);
         validate = 0;
       }
       else {
 #if VERBOSE
-        printf("Reference L1 norm %d = "FSTR", L1 norm = "FSTR"\n", g,
+        printf("SUCCESS: Reference L1 norm %d       = "FSTR", L1 norm         = "FSTR"\n", g,
                reference_norm_r[g], norm_r[g]);
 #endif
       }
-
+      
       if (ABS(norm_in_r[g]-reference_norm_in_r[g]) > EPSILON) {
-        printf("ERROR: L1 input norm %d = "FSTR", Reference L1 input norm = "FSTR"\n",
-               g, norm_in_r[g], reference_norm_in_r[g]);
+        printf("ERROR: L1 input norm %d = "FSTR", Reference L1 input norm %d = "FSTR"\n",
+               g, norm_in_r[g], g, reference_norm_in_r[g]);
         validate = 0;
       }
       else {
 #if VERBOSE
-        printf("Reference L1 input norm %d = "FSTR", L1 input norm = "FSTR"\n", 
-               g, reference_norm_in_r[g], norm_in_r[g]);
+        printf("SUCCESS: Reference L1 input norm %d = "FSTR", L1 input norm %d = "FSTR"\n", 
+               g, reference_norm_in_r[g], g, norm_in_r[g]);
 #endif
       }
     }
-
+ 
     if (!validate) {
       printf("Solution does not validate\n");
-    } 
+    }
     else {
       printf("Solution validates\n");
-
+ 
       flops = f_active_points_bg * iterations;
       /* subtract one untimed iteration from refinement 0                          */
       iterations_r[0]--;
@@ -1424,6 +1363,7 @@ int main(int argc, char ** argv) {
              1.0E-06 * flops/stencil_time, avgtime);
     }
   }
+ 
   MPI_Finalize();
-  exit(MPI_SUCCESS);
+  return(MPI_SUCCESS);
 }
