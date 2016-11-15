@@ -136,7 +136,7 @@ int main(int argc, char ** argv)
   n = atol(*++argv);
   if (m < 1 || n < 1){
     if (my_ID == root)
-      printf("ERROR: grid dimensions must be positive: %d, %d \n", m, n);
+      printf("ERROR: grid dimensions must be positive: %ld, %ld \n", m, n);
     error = 1;
     goto ENDOFTESTS;
   }
@@ -155,7 +155,7 @@ int main(int argc, char ** argv)
 
   if (m<=Num_procs) {
     if (my_ID == root)
-      printf("ERROR: First grid dimension %d must be > #ranks %ld\n", m, Num_procs);
+      printf("ERROR: First grid dimension %ld must be > #ranks %d\n", m, Num_procs);
     error = 1;
   }
   ENDOFTESTS:;

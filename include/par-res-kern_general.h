@@ -132,7 +132,9 @@ static inline void* prk_malloc(size_t bytes)
     return prk_malloc(bytes);
 #else /* if defined(PRK_USE_POSIX_MEMALIGN) */
     void * ptr = NULL;
-    posix_memalign(&ptr,alignment,bytes);
+    int ret;
+    ret = posix_memalign(&ptr,alignment,bytes);
+    if (ret) ptr = NULL;
     return ptr;
 #endif
 }
