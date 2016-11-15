@@ -39,7 +39,7 @@ ifndef matrix_rank
 endif
 
 ifndef PRK_FLAGS
-  PRK_FLAGS=-O3
+  PRK_FLAGS=-O3 -std=c99
 endif
 
 default: allserial allopenmp allmpi
@@ -89,6 +89,7 @@ allmpi1:
                                                        "MATRIX_RANK         = $(matrix_rank)"        \
                                                        "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
 	cd MPI1/PIC-static;          $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd MPI1/AMR;                 $(MAKE) amr       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 
 allampi:
@@ -236,6 +237,7 @@ clean:
 	cd MPI1/Synch_p2p;          $(MAKE) clean
 	cd MPI1/Branch;             $(MAKE) clean
 	cd MPI1/PIC-static;         $(MAKE) clean
+	cd MPI1/AMR;                $(MAKE) clean
 	cd FG_MPI/DGEMM;            $(MAKE) clean
 	cd FG_MPI/Nstream;          $(MAKE) clean
 	cd FG_MPI/Reduce;           $(MAKE) clean
@@ -314,6 +316,7 @@ veryclean: clean
 	cd OPENMP/Branch;           $(MAKE) veryclean
 	cd SERIAL/Branch;           $(MAKE) veryclean
 	cd MPI1/Stencil;            $(MAKE) veryclean
+	cd MPI1/AMR;                $(MAKE) veryclean
 	cd OPENMP/Stencil;          $(MAKE) veryclean
 	cd SERIAL/Stencil;          $(MAKE) veryclean
 	cd SERIAL/AMR;              $(MAKE) veryclean
