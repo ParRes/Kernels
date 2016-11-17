@@ -109,16 +109,16 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
                  int Num_procs, long L_width_bg, 
                  long L_istart_bg, long L_iend_bg, long L_jstart_bg, long L_jend_bg,
                  long L_istart_r, long L_iend_r, long L_jstart_r, long L_jend_r,
-                 long G_istart_r, long G_jstart_r,
+                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, MPI_Comm comm_r,
                  long L_istart_r_gross, long L_iend_r_gross, 
                  long L_jstart_r_gross, long L_jend_r_gross, 
                  long L_width_r_true_gross, long L_istart_r_true_gross,
-                 long L_jstart_r_true_gross) {
+                 long L_jstart_r_true_gross, int g) {
 
-  long send_vec[8], *recv_vec, offset, i, j, p;
+  long send_vec[8], *recv_vec, offset, i, j, p, acc_send, acc_recv;
   int *recv_offset, *recv_count, *send_offset, *send_count, error=0;
   DTYPE *recv_buf, *send_buf;
-  
+
   /* in case of no_talk we just copy the in-rank data from BG to refinement     */
   if (load_balance == no_talk) {
     
@@ -129,19 +129,20 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
     recv_offset = (int *)   prk_malloc(sizeof(int)*Num_procs);
     send_count  = (int *)   prk_malloc(sizeof(int)*Num_procs);
     send_offset = (int *)   prk_malloc(sizeof(int)*Num_procs);
-  
-    if (!recv_vec || !recv_count || !send_count || !recv_offset || !send_offset){
+    if (!recv_vec || !recv_count || !recv_offset || !send_count || !send_offset){
       printf("ERROR: Could not allocate space for Allgather on rank %d\n", my_ID);
       error = 1;
     }
     bail_out(error);
-    
+
     /* ask all other ranks what chunk of BG they have, and what chunk of the 
        refinement (one of the two will be nil for high_water)                     */
+    
     send_vec[0] = L_istart_bg;
     send_vec[1] = L_iend_bg;
     send_vec[2] = L_jstart_bg;
     send_vec[3] = L_jend_bg;
+    
     send_vec[4] = L_istart_r_gross;
     send_vec[5] = L_iend_r_gross;
     send_vec[6] = L_jstart_r_gross;
@@ -149,8 +150,8 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
     
     MPI_Allgather(send_vec, 8, MPI_LONG, recv_vec, 8, MPI_LONG, MPI_COMM_WORLD);
 
-    int acc_send = 0; int acc_recv = 0;
-    for (p=0; p<Num_procs; p++) {
+    acc_recv = 0;
+    for (acc_recv=0,p=0; p<Num_procs; p++) {
       /* Compute intersection of calling rank's gross refinement patch with each remote
          BG chunk,  which is the data they need to receive                        */
       recv_vec[p*8+0] = MAX(recv_vec[p*8+0], L_istart_r_gross); 
@@ -160,6 +161,18 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
       /* now they determine how much data they are going to receive from each rank*/
       recv_count[p] = MAX(0,(recv_vec[p*8+1]-recv_vec[p*8+0]+1)) *
                       MAX(0,(recv_vec[p*8+3]-recv_vec[p*8+2]+1));
+      acc_recv += recv_count[p];
+    }
+    if (acc_recv) {
+      recv_buf = (DTYPE *) prk_malloc(sizeof(DTYPE)*acc_recv);
+      if (!recv_buf) {
+        printf("ERROR: Could not allocate space for recv_buf on rank %d\n", my_ID);
+        error = 1;
+      }
+    }
+    bail_out(error);
+      
+    for (acc_send=0,p=0; p<Num_procs; p++) {
       /* compute intersection of calling rank BG with each refinement chunk, which 
          is the data they need to send                                            */
       recv_vec[p*8+4] = MAX(recv_vec[p*8+4], L_istart_bg);
@@ -169,17 +182,8 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
       /* now they determine how much data they are going to send to each rank     */
       send_count[p] = MAX(0,(recv_vec[p*8+5]-recv_vec[p*8+4]+1)) *
                       MAX(0,(recv_vec[p*8+7]-recv_vec[p*8+6]+1));
-      acc_send += send_count[p]; acc_recv += recv_count[p];
+      acc_send += send_count[p]; 
     }
-
-    if (acc_recv) {
-      recv_buf    = (DTYPE *) prk_malloc(sizeof(DTYPE)*acc_recv);
-      if (!recv_buf) {
-        printf("ERROR: Could not allocate space for recv_buf on rank %d\n", my_ID);
-        error = 1;
-      }
-    }
-    bail_out(error);
     if (acc_send) {
       send_buf    = (DTYPE *) prk_malloc(sizeof(DTYPE)*acc_send);
       if (!send_buf) {
@@ -188,6 +192,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
       }
     }
     bail_out(error);
+
     recv_offset[0] =  send_offset[0] = 0;
     for (p=1; p<Num_procs; p++) {
       recv_offset[p] = recv_offset[p-1]+recv_count[p-1];
@@ -195,7 +200,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
     }
     /* fill send buffer with BG data to all other ranks who need it               */
     offset = 0;
-    for (p=0; p<Num_procs; p++) {
+    if (comm_bg != MPI_COMM_NULL) for (p=0; p<Num_procs; p++) {
       for (j=recv_vec[p*8+6]; j<=recv_vec[p*8+7]; j++) {
         for (i=recv_vec[p*8+4]; i<=recv_vec[p*8+5]; i++){
           send_buf[offset++] = IN(i,j);
@@ -208,7 +213,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
 
     /* drain receive buffer with BG data from all other ranks who supplied it     */
     offset = 0;
-    for (p=0; p<Num_procs; p++) {      
+    if (comm_r != MPI_COMM_NULL) for (p=0; p<Num_procs; p++) {      
       for (j=recv_vec[p*8+2]-G_jstart_r; j<=recv_vec[p*8+3]-G_jstart_r; j++) {
 	for (i=recv_vec[p*8+0]-G_istart_r; i<=recv_vec[p*8+1]-G_istart_r; i++) {
           ING_R(i*expand,j*expand) = recv_buf[offset++];
@@ -229,11 +234,7 @@ void interpolate(DTYPE *ing_r, long L_width_r_true_gross,
 
   long ir, jr, ib, jrb, jrb1, jb;
   DTYPE xr, xb, yr, yb;
-  int my_ID, Num_procs;
 
-  MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
-  
   if (expand==1) return; /* nothing to do anymore                               */
 
   /* First, interpolate in x-direction                                          */
@@ -281,53 +282,47 @@ int main(int argc, char ** argv) {
   int    left_nbr_r[4];     /* global rank of left neighboring ref tile            */
   int    top_nbr_r[4];      /* global rank of top neighboring ref tile             */
   int    bottom_nbr_r[4];   /* global rank of bottom neighboring ref tile          */
-  DTYPE  *top_buf_out_bg;   /* communication buffer                                */
-  DTYPE  *top_buf_in_bg;    /*       "         "                                   */
-  DTYPE  *bottom_buf_out_bg;/*       "         "                                   */
-  DTYPE  *bottom_buf_in_bg; /*       "         "                                   */
-  DTYPE  *right_buf_out_bg; /*       "         "                                   */
-  DTYPE  *right_buf_in_bg;  /*       "         "                                   */
-  DTYPE  *left_buf_out_bg;  /*       "         "                                   */
-  DTYPE  *left_buf_in_bg;   /*       "         "                                   */
-  DTYPE  *top_buf_out_r[4]; /* communication buffer                                */
-  DTYPE  *top_buf_in_r[4];  /*       "         "                                   */
-  DTYPE  *bottom_buf_out_r[4];/*     "         "                                   */
-  DTYPE  *bottom_buf_in_r[4];/*      "         "                                   */
-  DTYPE  *right_buf_out_r[4];/*      "         "                                   */
-  DTYPE  *right_buf_in_r[4];/*       "         "                                   */
-  DTYPE  *left_buf_out_r[4];/*       "         "                                   */
-  DTYPE  *left_buf_in_r[4]; /*       "         "                                   */
+  DTYPE  *top_buf_out_bg;   /* BG communication buffer                             */
+  DTYPE  *top_buf_in_bg;    /* "     "         "                                   */
+  DTYPE  *bottom_buf_out_bg;/* "     "         "                                   */
+  DTYPE  *bottom_buf_in_bg; /* "     "         "                                   */
+  DTYPE  *right_buf_out_bg; /* "     "         "                                   */
+  DTYPE  *right_buf_in_bg;  /* "     "         "                                   */
+  DTYPE  *left_buf_out_bg;  /* "     "         "                                   */
+  DTYPE  *left_buf_in_bg;   /* "     "         "                                   */
+  DTYPE  *top_buf_out_r[4]; /* refinement communication buffer                     */
+  DTYPE  *top_buf_in_r[4];  /*       "         "          "                        */
+  DTYPE  *bottom_buf_out_r[4];/*     "         "          "                        */
+  DTYPE  *bottom_buf_in_r[4];/*      "         "          "                        */
+  DTYPE  *right_buf_out_r[4];/*      "         "          "                        */
+  DTYPE  *right_buf_in_r[4];/*       "         "          "                        */
+  DTYPE  *left_buf_out_r[4];/*       "         "          "                        */
+  DTYPE  *left_buf_in_r[4]; /*       "         "          "                        */
   int    root = 0;
   long   n;                 /* linear grid dimension                               */
   long   n2, nr2, n_total;  /* #points in BG, in each refinement, and in total     */
   int    refine_level;      /* refinement level                                    */
-  long   G_istart_r[4];     /* left boundaries of refinements                      */
-  long   G_iend_r[4];       /* right boundaries of refinements                     */
-  long   G_jstart_r[4];     /* bottom boundaries of refinements                    */
-  long   G_jend_r[4];       /* top boundaries of refinements                       */
+  long   G_istart_r[4];     /* global left boundaries of refinements               */
+  long   G_iend_r[4];       /* global right boundaries of refinements              */
+  long   G_jstart_r[4];     /* global bottom boundaries of refinements             */
+  long   G_jend_r[4];       /* global top boundaries of refinements                */
   long   L_istart_bg, L_iend_bg;/* bounds of BG tile assigned to calling rank      */
   long   L_jstart_bg, L_jend_bg;/* bounds of BG tile assigned to calling rank      */
   long   L_width_bg, L_height_bg;/* local BG dimensions                            */
   long   L_istart_r[4], L_iend_r[4];/* bounds of refinement tile for calling rank  */
   long   L_jstart_r[4], L_jend_r[4];/* bounds of refinement tile for calling rank  */
-  long   L_istart_r_gross[4],
-         L_iend_r_gross[4];  /* TBD                                                */
-  long   L_jstart_r_gross[4],
-         L_jend_r_gross[4];  /* TBD                                                */
-  long   L_istart_r_true_gross[4],
-         L_iend_r_true_gross[4];  /* TBD                                           */
-  long   L_jstart_r_true_gross[4],
-         L_jend_r_true_gross[4];  /* TBD                                           */
-  long   L_istart_r_true[4],
-         L_iend_r_true[4];  /* TBD                                                 */
-  long   L_jstart_r_true[4],
-         L_jend_r_true[4];  /* TBD                                                 */
+  long   L_istart_r_gross[4], L_iend_r_gross[4]; /* see implemenation_details.md   */
+  long   L_jstart_r_gross[4], L_jend_r_gross[4]; /*             "                  */
+  long   L_istart_r_true_gross[4], L_iend_r_true_gross[4]; /*   "                  */
+  long   L_jstart_r_true_gross[4], L_jend_r_true_gross[4]; /*   "                  */
+  long   L_istart_r_true[4], L_iend_r_true[4]; /*               "                  */
+  long   L_jstart_r_true[4], L_jend_r_true[4]; /*               "                  */
   long   L_width_r[4], L_height_r[4]; /* local refinement dimensions               */
   long   L_width_r_gross[4], L_height_r_gross[4]; /* local refinement dimensions   */
   long   L_width_r_true_gross[4], L_height_r_true_gross[4];/* "            "       */
   long   L_width_r_true[4], L_height_r_true[4];/*             "            "       */
   int    g;                 /* refinement grid index                               */
-  long   n_r;               /* linear refinement size in bg grid units             */
+  long   n_r;               /* linear refinement size in bg grid points            */
   long   n_r_true;          /* linear refinement size                              */
   long   expand;            /* number of refinement cells per background cell      */
   int    period;            /* refinement period                                   */
@@ -378,6 +373,10 @@ int main(int argc, char ** argv) {
   int    skip_r[4];         /* calling rank has no work to do on refinements       */
   MPI_Request request_bg[8];
   MPI_Request request_r[4][8];
+  MPI_Comm comm_r[4];       /* communicators for refinements                       */
+  MPI_Comm comm_bg;         /* communicator for BG                                 */
+  int    color_r;           /* color used to create refinement communicators       */
+  int    color_bg;          /* color used to create BG communicator                */
 
   /*******************************************************************************
   ** Initialize the MPI environment
@@ -472,11 +471,11 @@ int main(int argc, char ** argv) {
     c_load_balance = *++argv;
     if      (!strcmp("FINE_GRAIN", c_load_balance)) load_balance=fine_grain;
     //    else if (!strcmp("NO_TALK",    c_load_balance)) load_balance=no_talk;
-    //    else if (!strcmp("HIGH_WATER", c_load_balance)) load_balance=high_water;
+    else if (!strcmp("HIGH_WATER", c_load_balance)) load_balance=high_water;
     //    else if (!strcmp("AMNESIA",    c_load_balance)) load_balance=amnesia;
     else                                            load_balance=undefined;
     if (load_balance==undefined) {
-      printf("ERROR: invalid load balancer %s, only FINE_GRAIN available\n", c_load_balance);
+      printf("ERROR: invalid load balancer %s, only FINE_GRAIN and HIGH_WATER available\n", c_load_balance);
       error = 1;
       goto ENDOFINPUTTESTS;
     }
@@ -527,7 +526,9 @@ int main(int argc, char ** argv) {
   float bg_size, total_size, Frac_procs_bg; // used for HIGH_WATER
                    
   switch (load_balance) {
-  case fine_grain: Num_procs_bg = Num_procs;
+  case fine_grain: for (g=0; g<4; g++) MPI_Comm_dup(MPI_COMM_WORLD, &comm_r[g]);
+                   MPI_Comm_dup(MPI_COMM_WORLD, &comm_bg);
+                   Num_procs_bg = Num_procs;
                    my_ID_bg = my_ID;
                    for (g=0; g<4; g++) {
                      Num_procs_r[g] = Num_procs;
@@ -545,45 +546,38 @@ int main(int argc, char ** argv) {
                    Frac_procs_bg;
                    Frac_procs_bg = (float) Num_procs * bg_size/total_size;
                    Num_procs_bg = MIN(Num_procs-1,MAX(1,ceil(Frac_procs_bg)));
+                   if (my_ID>=Num_procs_bg) {color_bg = MPI_UNDEFINED; color_r = 1;}
+                   else                     {color_bg = 1; color_r = MPI_UNDEFINED;}
+                   MPI_Comm_split(MPI_COMM_WORLD, color_bg, my_ID, &comm_bg);
+		   if (comm_bg != MPI_COMM_NULL) {
+                     MPI_Comm_size(comm_bg, &Num_procs_bg);
+                     MPI_Comm_rank(comm_bg, &my_ID_bg);
+		   }
                    for (g=0; g<4; g++) {
-                     Num_procs_r[g] = Num_procs - Num_procs_bg;
-                     my_ID_r[g] = my_ID - Num_procs_bg; //negative for ranks in BG
+                     MPI_Comm_split(MPI_COMM_WORLD, color_r, my_ID, &comm_r[g]);
+		     if (comm_r[g] != MPI_COMM_NULL) {
+                       MPI_Comm_size(comm_r[g], &Num_procs_r[g]);
+                       MPI_Comm_rank(comm_r[g], &my_ID_r[g]);
+		     } else Num_procs_r[g] = Num_procs - Num_procs_bg;
                    }
-                   if (my_ID>=Num_procs_bg) my_ID_bg = -1;
+		   if (comm_bg == MPI_COMM_NULL) Num_procs_bg = Num_procs - Num_procs_r[0];
                    break;
-  case amnesia:    /* we need to maintain two different decompositions, one with
-                      and one without refinement (union of fine_grain & high_water) */
-                   bg_size=n*n; 
-                   total_size = n*n+n_r_true*n_r_true;
-                   Frac_procs_bg;
-                   Frac_procs_bg = (float) Num_procs * bg_size/total_size;
-                   Num_procs_bg = MIN(Num_procs-1,MAX(1,ceil(Frac_procs_bg)));
-                   for (g=0; g<4; g++) {
-                     Num_procs_r[g] = Num_procs - Num_procs_bg;
-                     my_ID_r[g] = my_ID - Num_procs_bg; //negative for ranks in BG
-                   }
-                   if (my_ID>=Num_procs_bg) my_ID_bg = -1;
-                   /* now the decomposition without refinement                      */
-                   // INCOMPLETE!!!!!!!!!!!!!!!!!!!!
-		   //                   Num_procs_bg2 = Num_procs;
-		   //                   my_ID_bg2 = my_ID;
-                   for (g=0; g<4; g++) {
-                     Num_procs_r[g] = Num_procs;
-                     my_ID_r[g] = my_ID; 
-                   }
-                   break;                   
+  case amnesia:    break;                   
   }
 
-  /* determine best way to create a 2D grid of ranks (closest to square, for 
-     best surface/volume ratio); we do this brute force for now
-  */
-  Num_procs_bgx = Num_procs_bgy = 0;
-  for (Num_procs_bgx=(int) (sqrt(Num_procs_bg+1)); Num_procs_bgx>0; Num_procs_bgx--) {
-    if (!(Num_procs_bg%Num_procs_bgx)) {
-      Num_procs_bgy = Num_procs_bg/Num_procs_bgx;
-      break;
-    }
-  }   
+  /* compute size of communicator for BG (applies only to those ranks in it)        */  
+  if (comm_bg) {
+    /* determine best way to create a 2D grid of ranks (closest to square, for 
+       best surface/volume ratio) for BG; we do this brute force for now            */
+    Num_procs_bgx = Num_procs_bgy = 0;
+    for (Num_procs_bgx=(int) (sqrt(Num_procs_bg+1)); Num_procs_bgx>0; Num_procs_bgx--) {
+      if (!(Num_procs_bg%Num_procs_bgx)) {
+        Num_procs_bgy = Num_procs_bg/Num_procs_bgx;
+        break;
+      }
+    }   
+  }
+
 
   /* compute tiling of refinements                                             */
   switch(load_balance) {
@@ -597,59 +591,43 @@ int main(int argc, char ** argv) {
                    break;
   case high_water: // refinements are partitioned independently, but similar to BG
                    for (g=0; g<4; g++) {
-                     Num_procs_rx[g] = Num_procs_ry[g] = 0;
-                     for (Num_procs_rx[g]=(int) (sqrt(Num_procs_r[g]+1)); 
-                       Num_procs_rx[g]>0; Num_procs_rx[g]--) {
-                       if (!(Num_procs_r[g]%Num_procs_rx[g])) {
-                         Num_procs_ry[g] = Num_procs_r[g]/Num_procs_rx[g];
-                         break;
+  if (comm_r[g] != MPI_COMM_NULL) {
+                       Num_procs_rx[g] = Num_procs_ry[g] = 0;
+                       for (Num_procs_rx[g]=(int) (sqrt(Num_procs_r[g]+1)); 
+                         Num_procs_rx[g]>0; Num_procs_rx[g]--) {
+                         if (!(Num_procs_r[g]%Num_procs_rx[g])) {
+                           Num_procs_ry[g] = Num_procs_r[g]/Num_procs_rx[g];
+                           break;
+                         }
                        }
-                     }
+		     }
 		   }
                    break;
   case amnesia:    break;
   }
 
   /* communication neighbors on BG are computed for all who own part of it    */
-  if (my_ID_bg>=0) {
+  if (comm_bg != MPI_COMM_NULL) {
     my_ID_bgx = my_ID_bg%Num_procs_bgx;
     my_ID_bgy = my_ID_bg/Num_procs_bgx;
     /* compute neighbors; catch dropping off edges of grid                    */
+    right_nbr_bg = left_nbr_bg = top_nbr_bg = bottom_nbr_bg = -1;
     if (my_ID_bgx < Num_procs_bgx-1) right_nbr_bg  = my_ID+1;
-    else                             right_nbr_bg  = -1;
     if (my_ID_bgx > 0)               left_nbr_bg   = my_ID-1;
-    else                             left_nbr_bg   = -1;
     if (my_ID_bgy < Num_procs_bgy-1) top_nbr_bg    = my_ID+Num_procs_bgx;
-    else                             top_nbr_bg    = -1;
     if (my_ID_bgy > 0)               bottom_nbr_bg = my_ID-Num_procs_bgx;
-    else                             bottom_nbr_bg = -1;
   }
 
-  /* for refinements comm neighbors depend on balancer                        */
-  if (load_balance==fine_grain || load_balance==no_talk) for (g=0; g<4; g++) {
-    my_ID_rx[g]    = my_ID_bgx;
-    my_ID_ry[g]    = my_ID_bgy;
-    right_nbr_r[g]  = right_nbr_bg;
-    left_nbr_r[g]   = left_nbr_bg;
-    top_nbr_r[g]    = top_nbr_bg;
-    bottom_nbr_r[g] = bottom_nbr_bg;
-  }
-  else {
-    /* for high_water comm neighbors are taken from a smaller subset          */
-    for (g=0; g<4; g++) {
-      if (my_ID_r[g]<0) {
-        my_ID_rx[g]    = my_ID_ry[g] = -1;
-      }
-      else {
-        my_ID_rx[g] = my_ID_r[g]%Num_procs_r[g];
-        my_ID_ry[g] = my_ID_r[g]/Num_procs_r[g];
-      }
-      /* compute neighbors; don't worry about dropping off edges of grid      */    
-      right_nbr_r[g]  = my_ID+1;
-      left_nbr_r[g]   = my_ID-1;
-      top_nbr_r[g]    = my_ID+Num_procs_rx[g];
-      bottom_nbr_r[g] = my_ID-Num_procs_rx[g];
-    }
+  /* same for communication neighbors on refinements                          */
+  for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
+    my_ID_rx[g] = my_ID_r[g]%Num_procs_rx[g];
+    my_ID_ry[g] = my_ID_r[g]/Num_procs_rx[g];
+    /* compute neighbors; catch dropping off edges of grid                    */
+    right_nbr_r[g] = left_nbr_r[g] = top_nbr_r[g] = bottom_nbr_r[g] = -1;
+    if (my_ID_rx[g] < Num_procs_rx[g]-1) right_nbr_r[g]  = my_ID_r[g]+1;
+    if (my_ID_rx[g] > 0)                 left_nbr_r[g]   = my_ID_r[g]-1;
+    if (my_ID_ry[g] < Num_procs_ry[g]-1) top_nbr_r[g]    = my_ID_r[g]+Num_procs_rx[g];
+    if (my_ID_ry[g] > 0)                 bottom_nbr_r[g] = my_ID_r[g]-Num_procs_rx[g];
   }
 
   if (my_ID == root) {
@@ -690,9 +668,9 @@ int main(int argc, char ** argv) {
   G_jend_r[0]   = G_jend_r[3]   = n_r-1;
   G_jstart_r[1] = G_jstart_r[2] = n-n_r;
   G_jend_r[1]   = G_jend_r[2]   = n-1;
-
+  
   /* reserve space for background input/output fields                       */
-  if (my_ID_bg != -1) {
+  if (comm_bg != MPI_COMM_NULL) {
 
     L_width_bg = n/Num_procs_bgx;
     leftover = n%Num_procs_bgx;
@@ -752,15 +730,22 @@ int main(int argc, char ** argv) {
     }
     ENDOFBG:;
   }
+  else {
+    L_istart_bg =  0;
+    L_iend_bg   = -1;
+    L_jstart_bg =  0;;
+    L_jend_bg   = -1;
+  }
+  
   bail_out(error);
-
+  
   /* reserve space for refinement input/output fields; first compute extents */
 
   /* we partition the refinement in terms of BG indices, so that we know 
      for the fine_grain balancer that a rank's refinement partitition does 
      not need BG data beyond the boundary of the refinement as input to the 
      interpolation                                                           */
-  for (g=0; g<4; g++) if (my_ID_r[g]>=0) {
+  for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
     if (load_balance==fine_grain || load_balance==high_water) {
 
       L_width_r[g] = n_r/Num_procs_rx[g];
@@ -871,7 +856,6 @@ int main(int argc, char ** argv) {
 	     my_ID, g, MIN(L_width_r_true[g],L_height_r_true[g]));
       error = 1;
     }
-    bail_out(error);
 
     if (!skip_r[g]) {
       total_length_in_r[g]  = (long) ((L_width_r_gross[g] -1)*expand+1+2*RADIUS)*
@@ -882,10 +866,17 @@ int main(int argc, char ** argv) {
       out_r[g] = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_out_r[g]);
       if (!in_r[g] || !out_r[g]) {
         printf("ERROR: could not allocate space for refinement input or output arrays\n");
-        exit(EXIT_FAILURE);
+        error=1;
       }
     }
   }
+  else {//bogus patch
+    L_istart_r_gross[g] =  0;
+    L_iend_r_gross[g]   = -1;
+    L_jstart_r_gross[g] =  0;
+    L_jend_r_gross[g]   = -1;
+  }
+  bail_out(error);
 
   /* fill the stencil weights to reflect a discrete divergence operator     */
   for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++) 
@@ -905,19 +896,19 @@ int main(int argc, char ** argv) {
   f_active_points_r  = (DTYPE) (n_r_true-2*RADIUS)*(DTYPE) (n_r_true-2*RADIUS);
 
   /* intialize the input and output arrays                                     */
+  if (comm_bg != MPI_COMM_NULL)
   for (j=L_jstart_bg; j<=L_jend_bg; j++) for (i=L_istart_bg; i<=L_iend_bg; i++) {
     IN(i,j)  = COEFX*i+COEFY*j;
     OUT(i,j) = (DTYPE)0.0;
   }
 
-  if (Num_procs_bg > 1 && !skip_bg) {
+  if (comm_bg != MPI_COMM_NULL) {
     /* allocate communication buffers for halo values                          */
     top_buf_out_bg = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*L_width_bg);
     if (!top_buf_out_bg) {
       printf("ERROR: Rank %d could not allocate comm buffers for y-direction\n", my_ID);
       error = 1;
     } 
-    bail_out(error);
     top_buf_in_bg     = top_buf_out_bg +   RADIUS*L_width_bg;
     bottom_buf_out_bg = top_buf_out_bg + 2*RADIUS*L_width_bg;
     bottom_buf_in_bg  = top_buf_out_bg + 3*RADIUS*L_width_bg;
@@ -927,15 +918,14 @@ int main(int argc, char ** argv) {
       printf("ERROR: Rank %d could not allocate comm buffers for x-direction\n", my_ID);
       error = 1;
     }
-    bail_out(error);
     right_buf_in_bg   = right_buf_out_bg +   RADIUS*L_height_bg;
     left_buf_out_bg   = right_buf_out_bg + 2*RADIUS*L_height_bg;
     left_buf_in_bg    = right_buf_out_bg + 3*RADIUS*L_height_bg;
   }
-
+  bail_out(error);
 
   /* intialize the refinement arrays                                           */
-  for (g=0; g<4; g++) if (!skip_r[g]) {
+  for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
     for (j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) 
     for (i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
       IN_R(g,i,j)  = (DTYPE)0.0;
@@ -943,8 +933,7 @@ int main(int argc, char ** argv) {
     }
   }
 
-  
-  for (g=0; g<4; g++) if (!skip_r[g]) {
+  for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
     /* allocate communication buffers for halo values                          */
     top_buf_out_r[g] = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*L_width_r_true[g]);
     if (!top_buf_out_r[g]) {
@@ -952,7 +941,6 @@ int main(int argc, char ** argv) {
              my_ID, g);
       error = 1;
     }
-    bail_out(error);
     top_buf_in_r[g]     = top_buf_out_r[g] +   RADIUS*L_width_r_true[g];
     bottom_buf_out_r[g] = top_buf_out_r[g] + 2*RADIUS*L_width_r_true[g];
     bottom_buf_in_r[g]  = top_buf_out_r[g] + 3*RADIUS*L_width_r_true[g];
@@ -962,16 +950,16 @@ int main(int argc, char ** argv) {
       printf("ERROR: Rank %d could not allocate comm buffers for x-direction for r=%d\n", my_ID, g);
       error = 1;
     }
-    bail_out(error);
     right_buf_in_r[g]   = right_buf_out_r[g] +   RADIUS*L_height_r_true[g];
     left_buf_out_r[g]   = right_buf_out_r[g] + 2*RADIUS*L_height_r_true[g];
     left_buf_in_r[g]    = right_buf_out_r[g] + 3*RADIUS*L_height_r_true[g];
   }
+  bail_out(error);
 
   local_stencil_time = 0.0; /* silence compiler warning */
 
   num_interpolations = 0;
-
+  
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration */
@@ -979,109 +967,114 @@ int main(int argc, char ** argv) {
       MPI_Barrier(MPI_COMM_WORLD);
       local_stencil_time = wtime();
     }
-
     /* first complete communication on background grid to help no_talk balancer     */
 
-    /* need to fetch ghost point data from neighbors in y-direction                 */
-    if (my_ID_bgy < Num_procs_bgy-1) {
-      MPI_Irecv(top_buf_in_bg, RADIUS*L_width_bg, MPI_DTYPE, top_nbr_bg, 101,
-                MPI_COMM_WORLD, &(request_bg[1]));
-      for (int kk=0,j=L_jend_bg-RADIUS+1; j<=L_jend_bg; j++) 
-      for (int i=L_istart_bg; i<=L_iend_bg; i++) {
-          top_buf_out_bg[kk++]= IN(i,j);
+    if (comm_bg != MPI_COMM_NULL) {
+      /* need to fetch ghost point data from neighbors in y-direction                 */
+      if (my_ID_bgy < Num_procs_bgy-1) {
+        MPI_Irecv(top_buf_in_bg, RADIUS*L_width_bg, MPI_DTYPE, top_nbr_bg, 101,
+                  comm_bg, &(request_bg[1]));
+        for (int kk=0,j=L_jend_bg-RADIUS+1; j<=L_jend_bg; j++) 
+        for (int i=L_istart_bg; i<=L_iend_bg; i++) {
+            top_buf_out_bg[kk++]= IN(i,j);
+        }
+        MPI_Isend(top_buf_out_bg, RADIUS*L_width_bg,MPI_DTYPE, top_nbr_bg, 99,
+                  comm_bg, &(request_bg[0]));
       }
-      MPI_Isend(top_buf_out_bg, RADIUS*L_width_bg,MPI_DTYPE, top_nbr_bg, 99,
-                MPI_COMM_WORLD, &(request_bg[0]));
-    }
-    if (my_ID_bgy > 0) {
-      MPI_Irecv(bottom_buf_in_bg,RADIUS*L_width_bg, MPI_DTYPE, bottom_nbr_bg, 99,
-                MPI_COMM_WORLD, &(request_bg[3]));
-      for (int kk=0,j=L_jstart_bg; j<=L_jstart_bg+RADIUS-1; j++) 
-      for (int i=L_istart_bg; i<=L_iend_bg; i++) {
-          bottom_buf_out_bg[kk++]= IN(i,j);
+      if (my_ID_bgy > 0) {
+        MPI_Irecv(bottom_buf_in_bg,RADIUS*L_width_bg, MPI_DTYPE, bottom_nbr_bg, 99,
+                  comm_bg, &(request_bg[3]));
+        for (int kk=0,j=L_jstart_bg; j<=L_jstart_bg+RADIUS-1; j++) 
+        for (int i=L_istart_bg; i<=L_iend_bg; i++) {
+            bottom_buf_out_bg[kk++]= IN(i,j);
+        }
+        MPI_Isend(bottom_buf_out_bg, RADIUS*L_width_bg,MPI_DTYPE, bottom_nbr_bg, 101,
+                  comm_bg, &(request_bg[2]));
       }
-      MPI_Isend(bottom_buf_out_bg, RADIUS*L_width_bg,MPI_DTYPE, bottom_nbr_bg, 101,
-                MPI_COMM_WORLD, &(request_bg[2]));
-    }
-    if (my_ID_bgy < Num_procs_bgy-1) {
-      MPI_Wait(&(request_bg[0]), MPI_STATUS_IGNORE);
-      MPI_Wait(&(request_bg[1]), MPI_STATUS_IGNORE);
-      for (int kk=0,j=L_jend_bg+1; j<=L_jend_bg+RADIUS; j++) 
-      for (int i=L_istart_bg; i<=L_iend_bg; i++) {
-          IN(i,j) = top_buf_in_bg[kk++];
+      if (my_ID_bgy < Num_procs_bgy-1) {
+        MPI_Wait(&(request_bg[0]), MPI_STATUS_IGNORE);
+        MPI_Wait(&(request_bg[1]), MPI_STATUS_IGNORE);
+        for (int kk=0,j=L_jend_bg+1; j<=L_jend_bg+RADIUS; j++) 
+        for (int i=L_istart_bg; i<=L_iend_bg; i++) {
+            IN(i,j) = top_buf_in_bg[kk++];
+        }
       }
-    }
-    if (my_ID_bgy > 0) {
-      MPI_Wait(&(request_bg[2]), MPI_STATUS_IGNORE);
-      MPI_Wait(&(request_bg[3]), MPI_STATUS_IGNORE);
-      for (int kk=0,j=L_jstart_bg-RADIUS; j<=L_jstart_bg-1; j++) 
-      for (int i=L_istart_bg; i<=L_iend_bg; i++) {
-          IN(i,j) = bottom_buf_in_bg[kk++];
+      if (my_ID_bgy > 0) {
+        MPI_Wait(&(request_bg[2]), MPI_STATUS_IGNORE);
+        MPI_Wait(&(request_bg[3]), MPI_STATUS_IGNORE);
+        for (int kk=0,j=L_jstart_bg-RADIUS; j<=L_jstart_bg-1; j++) 
+        for (int i=L_istart_bg; i<=L_iend_bg; i++) {
+            IN(i,j) = bottom_buf_in_bg[kk++];
+        }
       }
-    }
 
-    /* need to fetch ghost point data from neighbors in x-direction                 */
-    if (my_ID_bgx < Num_procs_bgx-1) {
-      MPI_Irecv(right_buf_in_bg, RADIUS*L_height_bg, MPI_DTYPE, right_nbr_bg, 1010,
-                MPI_COMM_WORLD, &(request_bg[1+4]));
-      for (int kk=0,j=L_jstart_bg; j<=L_jend_bg; j++) 
-      for (int i=L_iend_bg-RADIUS+1; i<=L_iend_bg; i++) {
-          right_buf_out_bg[kk++]= IN(i,j);
+      /* need to fetch ghost point data from neighbors in x-direction                 */
+      if (my_ID_bgx < Num_procs_bgx-1) {
+        MPI_Irecv(right_buf_in_bg, RADIUS*L_height_bg, MPI_DTYPE, right_nbr_bg, 1010,
+                  comm_bg, &(request_bg[1+4]));
+        for (int kk=0,j=L_jstart_bg; j<=L_jend_bg; j++) 
+        for (int i=L_iend_bg-RADIUS+1; i<=L_iend_bg; i++) {
+            right_buf_out_bg[kk++]= IN(i,j);
+        }
+        MPI_Isend(right_buf_out_bg, RADIUS*L_height_bg, MPI_DTYPE, right_nbr_bg, 990,
+                comm_bg, &(request_bg[0+4]));
       }
-      MPI_Isend(right_buf_out_bg, RADIUS*L_height_bg, MPI_DTYPE, right_nbr_bg, 990,
-              MPI_COMM_WORLD, &(request_bg[0+4]));
-    }
-    if (my_ID_bgx > 0) {
-      MPI_Irecv(left_buf_in_bg, RADIUS*L_height_bg, MPI_DTYPE, left_nbr_bg, 990,
-                MPI_COMM_WORLD, &(request_bg[3+4]));
-      for (int kk=0,j=L_jstart_bg; j<=L_jend_bg; j++) 
-      for (int i=L_istart_bg; i<=L_istart_bg+RADIUS-1; i++) {
-          left_buf_out_bg[kk++]= IN(i,j);
+      if (my_ID_bgx > 0) {
+        MPI_Irecv(left_buf_in_bg, RADIUS*L_height_bg, MPI_DTYPE, left_nbr_bg, 990,
+                  comm_bg, &(request_bg[3+4]));
+        for (int kk=0,j=L_jstart_bg; j<=L_jend_bg; j++) 
+        for (int i=L_istart_bg; i<=L_istart_bg+RADIUS-1; i++) {
+            left_buf_out_bg[kk++]= IN(i,j);
+        }
+        MPI_Isend(left_buf_out_bg, RADIUS*L_height_bg, MPI_DTYPE, left_nbr_bg, 1010,
+                  comm_bg, &(request_bg[2+4]));
       }
-      MPI_Isend(left_buf_out_bg, RADIUS*L_height_bg, MPI_DTYPE, left_nbr_bg, 1010,
-                MPI_COMM_WORLD, &(request_bg[2+4]));
-    }
-    if (my_ID_bgx < Num_procs_bgx-1) {
-      MPI_Wait(&(request_bg[0+4]), MPI_STATUS_IGNORE);
-      MPI_Wait(&(request_bg[1+4]), MPI_STATUS_IGNORE);
-      for (int kk=0,j=L_jstart_bg; j<=L_jend_bg; j++) 
-      for (int i=L_iend_bg+1; i<=L_iend_bg+RADIUS; i++) {
-          IN(i,j) = right_buf_in_bg[kk++];
+      if (my_ID_bgx < Num_procs_bgx-1) {
+        MPI_Wait(&(request_bg[0+4]), MPI_STATUS_IGNORE);
+        MPI_Wait(&(request_bg[1+4]), MPI_STATUS_IGNORE);
+        for (int kk=0,j=L_jstart_bg; j<=L_jend_bg; j++) 
+        for (int i=L_iend_bg+1; i<=L_iend_bg+RADIUS; i++) {
+            IN(i,j) = right_buf_in_bg[kk++];
+        }
       }
-    }
-    if (my_ID_bgx > 0) {
-      MPI_Wait(&(request_bg[2+4]), MPI_STATUS_IGNORE);
-      MPI_Wait(&(request_bg[3+4]), MPI_STATUS_IGNORE);
-      for (int kk=0,j=L_jstart_bg; j<=L_jend_bg; j++) 
-      for (int i=L_istart_bg-RADIUS; i<=L_istart_bg-1; i++) {
-          IN(i,j) = left_buf_in_bg[kk++];
+      if (my_ID_bgx > 0) {
+        MPI_Wait(&(request_bg[2+4]), MPI_STATUS_IGNORE);
+        MPI_Wait(&(request_bg[3+4]), MPI_STATUS_IGNORE);
+        for (int kk=0,j=L_jstart_bg; j<=L_jend_bg; j++) 
+        for (int i=L_istart_bg-RADIUS; i<=L_istart_bg-1; i++) {
+            IN(i,j) = left_buf_in_bg[kk++];
+        }
       }
     }
-
+    
     if (!(iter%period)) {
       /* a specific refinement has come to life                                */
       g=(iter/period)%4;
-      num_interpolations++;
 
-      get_BG_data(load_balance, in_bg, in_r[g], my_ID, expand, Num_procs, 
+      get_BG_data(load_balance, in_bg, in_r[g], my_ID, expand, Num_procs,
                   L_width_bg, L_istart_bg, L_iend_bg, L_jstart_bg, L_jend_bg,
                   L_istart_r[g], L_iend_r[g], L_jstart_r[g], L_jend_r[g],
-                  G_istart_r[g], G_jstart_r[g],
+                  G_istart_r[g], G_jstart_r[g], comm_bg, comm_r[g],
                   L_istart_r_gross[g], L_iend_r_gross[g], 
                   L_jstart_r_gross[g], L_jend_r_gross[g], 
                   L_width_r_true_gross[g], L_istart_r_true_gross[g], 
-                  L_jstart_r_true_gross[g]);
+                  L_jstart_r_true_gross[g], g);
 
-      interpolate(in_r[g], L_width_r_true_gross[g], 
-                  L_istart_r_true_gross[g], L_iend_r_true_gross[g],
-                  L_jstart_r_true_gross[g], L_jend_r_true_gross[g], 
-                  L_istart_r_true[g], L_iend_r_true[g],
-                  L_jstart_r_true[g], L_jend_r_true[g], 
-                  expand, h_r);
+      
+      if (comm_r[g] != MPI_COMM_NULL) {
+        interpolate(in_r[g], L_width_r_true_gross[g], 
+                    L_istart_r_true_gross[g], L_iend_r_true_gross[g],
+                    L_jstart_r_true_gross[g], L_jend_r_true_gross[g], 
+                    L_istart_r_true[g], L_iend_r_true[g],
+                    L_jstart_r_true[g], L_jend_r_true[g], 
+                    expand, h_r);
+      }
+      /* even though this rank may not interpolate, some just did, so we keep track   */
+      num_interpolations++;
 
     }
 
-    if ((iter%period) < duration) {
+    if (comm_r[g] != MPI_COMM_NULL) if ((iter%period) < duration) {
 
       /* if within an active refinement epoch, first communicate within refinement    */
 
@@ -1092,24 +1085,24 @@ int main(int argc, char ** argv) {
         /* need to fetch ghost point data from neighbors in y-direction               */
         if (top_nbr_r[g] != -1) {
           MPI_Irecv(top_buf_in_r[g], RADIUS*L_width_r_true[g], MPI_DTYPE, top_nbr_r[g], 
-                    101, MPI_COMM_WORLD, &(request_r[g][1]));
+                    101, comm_r[g], &(request_r[g][1]));
           for (int kk=0,j=L_jend_r_true[g]-RADIUS+1; j<=L_jend_r_true[g]; j++) 
           for (int i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
 	    top_buf_out_r[g][kk++]= IN_R(g,i,j);
           }
           MPI_Isend(top_buf_out_r[g], RADIUS*L_width_r_true[g],MPI_DTYPE, top_nbr_r[g], 
-                    99, MPI_COMM_WORLD, &(request_r[g][0]));
+                    99, comm_r[g], &(request_r[g][0]));
         }
 
         if (bottom_nbr_r[g] != -1) {
           MPI_Irecv(bottom_buf_in_r[g],RADIUS*L_width_r_true[g], MPI_DTYPE, bottom_nbr_r[g], 
-                    99, MPI_COMM_WORLD, &(request_r[g][3]));
+                    99, comm_r[g], &(request_r[g][3]));
           for (int kk=0,j=L_jstart_r_true[g]; j<=L_jstart_r_true[g]+RADIUS-1; j++) 
           for (int i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
 	    bottom_buf_out_r[g][kk++]= IN_R(g,i,j);
           }
           MPI_Isend(bottom_buf_out_r[g], RADIUS*L_width_r_true[g],MPI_DTYPE, bottom_nbr_r[g], 
-                    101, MPI_COMM_WORLD, &(request_r[g][2]));
+                    101, comm_r[g], &(request_r[g][2]));
         }
         if (top_nbr_r[g] != -1) {
           MPI_Wait(&(request_r[g][0]), MPI_STATUS_IGNORE);
@@ -1131,26 +1124,26 @@ int main(int argc, char ** argv) {
         /* need to fetch ghost point data from neighbors in x-direction                 */
         if (right_nbr_r[g] != -1) {
           MPI_Irecv(right_buf_in_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, right_nbr_r[g], 
-                    1010, MPI_COMM_WORLD, &(request_r[g][1+4]));
+                    1010, comm_r[g], &(request_r[g][1+4]));
           for (int kk=0,j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) {
           for (int i=L_iend_r_true[g]-RADIUS+1; i<=L_iend_r_true[g]; i++) {
 	    right_buf_out_r[g][kk++]= IN_R(g,i,j);
           }
 	  }
           MPI_Isend(right_buf_out_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, right_nbr_r[g], 
-                  990, MPI_COMM_WORLD, &(request_r[g][0+4]));
+                  990, comm_r[g], &(request_r[g][0+4]));
 	}
 
         if (left_nbr_r[g] != -1) {
           MPI_Irecv(left_buf_in_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, left_nbr_r[g], 
-                    990, MPI_COMM_WORLD, &(request_r[g][3+4]));
+                    990, comm_r[g], &(request_r[g][3+4]));
           for (int kk=0,j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) {
             for (int i=L_istart_r_true[g]; i<=L_istart_r_true[g]+RADIUS-1; i++) {
               left_buf_out_r[g][kk++]= IN_R(g,i,j);
             }
 	  }
           MPI_Isend(left_buf_out_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, left_nbr_r[g], 
-                    1010, MPI_COMM_WORLD, &(request_r[g][2+4]));
+                    1010, comm_r[g], &(request_r[g][2+4]));
 	}
 
         if (right_nbr_r[g] != -1) {
@@ -1192,20 +1185,23 @@ int main(int argc, char ** argv) {
     }
 
     /* Apply the stencil operator to background grid                                 */
-    for (int j=MAX(L_jstart_bg,RADIUS); j<=MIN(n-RADIUS-1,L_jend_bg); j++) {
-      for (int i=MAX(L_istart_bg,RADIUS); i<=MIN(n-RADIUS-1,L_iend_bg); i++) {
-        #if LOOPGEN
-          #include "loop_body_star.incl"
-        #else
-          for (int jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-          for (int ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-          for (int ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-        #endif
+    if (comm_bg != MPI_COMM_NULL) {
+      for (int j=MAX(L_jstart_bg,RADIUS); j<=MIN(n-RADIUS-1,L_jend_bg); j++) {
+        for (int i=MAX(L_istart_bg,RADIUS); i<=MIN(n-RADIUS-1,L_iend_bg); i++) {
+          #if LOOPGEN
+            #include "loop_body_star.incl"
+          #else
+            for (int jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
+            for (int ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+            for (int ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
+          #endif
+        }
       }
-    }
 
-    /* add constant to solution to force refresh of neighbor data, if any */
-    for (int j=L_jstart_bg; j<=L_jend_bg; j++) for (int i=L_istart_bg; i<=L_iend_bg; i++) IN(i,j)+= 1.0;
+      /* add constant to solution to force refresh of neighbor data, if any */
+      for (int j=L_jstart_bg; j<=L_jend_bg; j++)
+      for (int i=L_istart_bg; i<=L_iend_bg; i++) IN(i,j)+= 1.0;
+    }
 
   } /* end of iterations                                                         */
 
@@ -1215,6 +1211,7 @@ int main(int argc, char ** argv) {
 
   /* compute normalized L1 solution norm on background grid                      */
   local_norm = (DTYPE) 0.0;
+  if (comm_bg != MPI_COMM_NULL) 
   for (int j=MAX(L_jstart_bg,RADIUS); j<=MIN(n-RADIUS-1,L_jend_bg); j++) {
     for (int i=MAX(L_istart_bg,RADIUS); i<=MIN(n-RADIUS-1,L_iend_bg); i++) {
       local_norm += (DTYPE)ABS(OUT(i,j));
@@ -1226,6 +1223,7 @@ int main(int argc, char ** argv) {
 
   /* compute normalized L1 input field norm on background grid                   */
   local_norm_in = (DTYPE) 0.0;
+  if (comm_bg != MPI_COMM_NULL) 
   for (j=L_jstart_bg; j<=L_jend_bg; j++) for (i=L_istart_bg; i<=L_iend_bg; i++) {
     local_norm_in += (DTYPE)ABS(IN(i,j));
   }
@@ -1235,6 +1233,7 @@ int main(int argc, char ** argv) {
   for (g=0; g<4; g++) {
     local_norm_r[g] = local_norm_in_r[g] = (DTYPE) 0.0;
     /* compute normalized L1 solution norm on refinements                        */
+    if (comm_r[g] != MPI_COMM_NULL)
     for (j=MAX(L_jstart_r_true[g],RADIUS); j<=MIN(n_r_true-RADIUS-1,L_jend_r_true[g]); j++) 
       for (i=MAX(L_istart_r_true[g],RADIUS); i<=MIN(n_r_true-RADIUS-1,L_iend_r_true[g]); i++) {
         local_norm_r[g] += (DTYPE)ABS(OUT_R(g,i,j));
@@ -1243,6 +1242,7 @@ int main(int argc, char ** argv) {
     if (my_ID == root) norm_r[g] /= f_active_points_r;
 
     /* compute normalized L1 input field norms on refinements                    */
+    if (comm_r[g] != MPI_COMM_NULL)
     for (j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) 
       for (i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
 	local_norm_in_r[g] += (DTYPE)ABS(IN_R(g,i,j)); 
@@ -1282,7 +1282,6 @@ int main(int argc, char ** argv) {
              reference_norm_in, norm_in);
 #endif
     }
- 
     
     /* verify correctness of refinement grid solutions and input fields          */
     full_cycles = ((iterations+1)/(period*4));
@@ -1306,7 +1305,7 @@ int main(int argc, char ** argv) {
         }
         reference_norm_in_r[g] = 
           /* initial input field value at bottom left corner of refinement      */
-          (COEFX*L_istart_r[g] + COEFY*L_jstart_r[g]) +
+          (COEFX*G_istart_r[g] + COEFY*G_jstart_r[g]) +
           /* variable part                                                      */
           (COEFX+COEFY)*(n_r-1)/2.0 +
           /* number of times unity was added to background grid input field 
