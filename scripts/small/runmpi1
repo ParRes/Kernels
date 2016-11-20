@@ -19,5 +19,6 @@ $MPIRUN -np $NUMPROCS MPI1/PIC-static/pic       $NUMITERS 1000 1000000 1 2 GEOME
 $MPIRUN -np $NUMPROCS MPI1/PIC-static/pic       $NUMITERS 1000 1000000 0 1 SINUSOIDAL;          echo $SEPLINE
 $MPIRUN -np $NUMPROCS MPI1/PIC-static/pic       $NUMITERS 1000 1000000 1 0 LINEAR 1.0 3.0;      echo $SEPLINE
 $MPIRUN -np $NUMPROCS MPI1/PIC-static/pic       $NUMITERS 1000 1000000 1 0 PATCH 0 200 100 200; echo $SEPLINE
-$MPIRUN -np $NUMPROCS MPI1/AMR/amr              $NUMITERS 1000 100 3 2 1 5 FINE_GRAIN;           echo $SEPLINE            
-$MPIRUN -np $NUMPROCS MPI1/AMR/amr              $NUMITERS 1000 100 3 2 1 5 HIGH_WATER;           echo $SEPLINE            
+$MPIRUN -np $NUMPROCS MPI1/AMR/amr              $NUMITERS 1000 100 3 2 1 5 FINE_GRAIN;          echo $SEPLINE            
+$MPIRUN -np $NUMPROCS MPI1/AMR/amr              $NUMITERS 1000 100 3 2 1 5 HIGH_WATER;          echo $SEPLINE            
+$MPIRUN -np $NUMPROCS MPI1/AMR/amr              $NUMITERS 1000 100 3 2 1 5 NO_TALK;             echo $SEPLINE            

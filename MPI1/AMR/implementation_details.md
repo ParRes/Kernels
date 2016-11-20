@@ -61,7 +61,10 @@ Steps:
    This is ambiguous for NO_TALK if TRUE_REF, because a small shift in 
    patch boundaries would still not require communications. We use the
    following disambiguation. Partition BG points of the refinement patch 
-   in the same way as the BG itself. Add to each refinement partition
+   in the same way as the BG itself. Place true refinement boundaries
+   in the middle between BG points. This creates the best load balance,
+   and also avoids as much as possible very small refinement patch slivers
+   that could create problems with ghost point acquisition.
    one point to the left and/or bottom, unless the partition already 
    borders on the respective edge of the partition; this creates a 
    one-point BG overlap between adjacent refinement partitions. All 
@@ -70,11 +73,11 @@ Steps:
    boundary, are assigned to the rank that owns the augmented partition. 
    NO_TALK
    BG:          |       X       X       X       X       X       |
-                a       a       b       b       b       c       c
+   assignment   a       a       b       b       b       c       c
    refinement   |.......x.......x.......x.......x.......x.......| 
-                aaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbcccccccccccccccc
-   allocation   aaaaaaaaa
-                        bbbbbbbbbbbbbbbbbbbbbbbbb
+   assignment   aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbccccccccccccc
+   allocation   aaaaaaaaaaaaaaaaa
+                        bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
                                                 ccccccccccccccccc
 
    Legend: |   = refinement patch boundary point
@@ -91,7 +94,7 @@ Steps:
    FINE_GRAIN (assuming a total of 4 ranks in the horizontal direction)
               Sets {a,b,c} and {p,q,r,s} generally overlap.
    BG:          |       X       X       X       X       X       |
-                a       a       b       b       b       c       c
+   assignment   a       a       b       b       b       c       c
    refinement   |.......x.......x.......x.......x.......x.......| 
    assignment   pppppppppppppqqqqqqqqqqqqrrrrrrrrrrrrssssssssssss
    allocation   ppppppppppppppppp
