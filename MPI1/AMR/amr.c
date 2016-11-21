@@ -101,7 +101,6 @@ HISTORY: - Written by Rob Van der Wijngaart, February September 2016.
 #define fine_grain       9797
 #define no_talk          1212
 #define high_water       3232
-#define amnesia          4377
 
 /* before interpolating from the background grid, we need to gather that BG data
    from wherever it resides and copy it to the right locations of the refinement */
@@ -116,7 +115,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
                  long L_jstart_r_true_gross, long L_jend_r_true_gross, int g) {
 
   long send_vec[8], *recv_vec, offset, i, j, p, acc_send, acc_recv;
-  int *recv_offset, *recv_count, *send_offset, *send_count, error=0;
+  int *recv_offset, *recv_count, *send_offset, *send_count;
   DTYPE *recv_buf, *send_buf;
 
   if (load_balance == no_talk) {
@@ -137,9 +136,8 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
     send_offset = (int *)   prk_malloc(sizeof(int)*Num_procs);
     if (!recv_vec || !recv_count || !recv_offset || !send_count || !send_offset){
       printf("ERROR: Could not allocate space for Allgather on rank %d\n", my_ID);
-      error = 1;
+      MPI_Abort(MPI_COMM_WORLD, 66); // no graceful exit in timed code
     }
-    bail_out(error);
 
     /* ask all other ranks what chunk of BG they have, and what chunk of the 
        refinement (one of the two will be nil for high_water)                     */
@@ -173,10 +171,9 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
       recv_buf = (DTYPE *) prk_malloc(sizeof(DTYPE)*acc_recv);
       if (!recv_buf) {
         printf("ERROR: Could not allocate space for recv_buf on rank %d\n", my_ID);
-        error = 1;
+        MPI_Abort(MPI_COMM_WORLD, 66); // no graceful exit in timed code
       }
     }
-    bail_out(error);
       
     for (acc_send=0,p=0; p<Num_procs; p++) {
       /* compute intersection of calling rank BG with each refinement chunk, which 
@@ -194,10 +191,9 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
       send_buf    = (DTYPE *) prk_malloc(sizeof(DTYPE)*acc_send);
       if (!send_buf) {
         printf("ERROR: Could not allocate space for send_buf on rank %d\n", my_ID);
-        error = 1;
+        MPI_Abort(MPI_COMM_WORLD, 66); // no graceful exit in timed code
       }
     }
-    bail_out(error);
 
     recv_offset[0] =  send_offset[0] = 0;
     for (p=1; p<Num_procs; p++) {
@@ -245,19 +241,20 @@ void interpolate(DTYPE *ing_r, long L_width_r_true_gross,
   long ir, jr, ib, jrb, jrb1, jb;
   DTYPE xr, xb, yr, yb;
 
-  if (expand==1) return; /* nothing to do anymore                               */
+  if (expand==1) return; /* nothing to do anymore                                  */
 
-  /* First, interpolate in x-direction                                          */
+  /* First, interpolate in x-direction                                             */
   for (jr=L_jstart_r_true_gross; jr<=L_jend_r_true_gross; jr+=expand) {
     for (ir=L_istart_r_true_gross; ir<L_iend_r_true_gross; ir++) {
       xr = h_r*(DTYPE)ir;
       ib = (long)xr;
       xb = (DTYPE)ib;
-      ING_R(ir,jr) = ING_R((ib+1)*expand,jr)*(xr-xb) + ING_R(ib*expand,jr)*(xb+(DTYPE)1.0-xr);
+      ING_R(ir,jr) = ING_R((ib+1)*expand,jr)*(xr-xb) +
+	             ING_R(ib*expand,jr)*(xb+(DTYPE)1.0-xr);
     }
   }
 
-  /* Next, interpolate in y-direction                                           */
+  /* Next, interpolate in y-direction                                              */
   for (jr=L_jstart_r_true; jr<=L_jend_r_true; jr++) {
     yr = h_r*(DTYPE)jr;
     jb = (long)yr;
@@ -268,16 +265,16 @@ void interpolate(DTYPE *ing_r, long L_width_r_true_gross,
       ING_R(ir,jr) = ING_R(ir,jrb1)*(yr-yb) + ING_R(ir,jrb)*(yb+(DTYPE)1.0-yr);
     }
     /* note that (yr-yb) and (yb+(DTYPE)1.0-yr) can be hoisted out of the loop,
-       so in the performance computation we assign 3 flops per point            */
+       so in the performance computation we assign 3 flops per point               */
   }
 }
 
 int main(int argc, char ** argv) {
 
   int    Num_procs;         /* number of ranks                                     */
+  int    Num_procs_bg;      /* number of ranks in BG                               */
   int    Num_procs_bgx, Num_procs_bgy; /* number of ranks in each coord direction  */
-  int    Num_procs_bg;
-  int    Num_procs_r[4];
+  int    Num_procs_r[4];    /* number of ranks in refinements                      */
   int    Num_procs_rx[4], Num_procs_ry[4];
   int    my_ID;             /* MPI rank                                            */
   int    my_ID_bg;          /* MPI rank on BG grid (-1 if not present)             */
@@ -353,7 +350,7 @@ int main(int argc, char ** argv) {
   DTYPE  h_r;               /* mesh spacing of refinement                          */
   DTYPE  f_active_points_bg;/* interior of grid with respect to stencil            */
   DTYPE  f_active_points_r; /* interior of refinement with respect to stencil      */
-  DTYPE  flops;             /* floating point ops per iteration                    */
+  DTYPE  flops;             /* total floating point ops       `                    */
   int    iterations;        /* number of times to run the algorithm                */
   int    iterations_r[4];   /* number of iterations on each refinement             */
   int    full_cycles;       /* number of full cycles all refinement grids appear   */
@@ -379,25 +376,25 @@ int main(int argc, char ** argv) {
   int    validate=1;        /* tracks correct solution on all grids                */
   char   *c_load_balance;   /* input string defining load balancing                */
   int    load_balance;      /* integer defining load balancing                     */
-  int    skip_bg=0;         /* calling rank has no work to do on BG                */
-  int    skip_r[4];         /* calling rank has no work to do on refinements       */
+  int    skip_r[4];         /* calling rank has no work to do on refinement        */
   MPI_Request request_bg[8];
   MPI_Request request_r[4][8];
   MPI_Comm comm_r[4];       /* communicators for refinements                       */
   MPI_Comm comm_bg;         /* communicator for BG                                 */
   int    color_r;           /* color used to create refinement communicators       */
   int    color_bg;          /* color used to create BG communicator                */
+  int    rank_spread;       /* number of ranks for refinement in fine_grain        */
 
-  /*******************************************************************************
+  /*********************************************************************************
   ** Initialize the MPI environment
-  ********************************************************************************/
+  **********************************************************************************/
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
-  /*******************************************************************************
+  /*********************************************************************************
   ** process, test, and broadcast input parameters    
-  ********************************************************************************/
+  **********************************************************************************/
  
   if (my_ID == root) {
     printf("Parallel Research Kernels Version %s\n", PRKVERSION);
@@ -409,15 +406,14 @@ int main(int argc, char ** argv) {
     goto ENDOFINPUTTESTS;
 #endif
 
-    if (argc != 9){
+    if (argc != 9 && argc != 10){
       printf("Usage: %s <# iterations> <background grid size> <refinement size>\n",
              *argv);
       printf("       <refinement level> <refinement period>  <refinement duration>\n");
       printf("       <refinement sub-iterations> <load balancer> \n");
-      printf("       load balancer: FINE_GRAIN\n");
+      printf("       load balancer: FINE_GRAIN [refinement rank spread]\n");
       printf("                      NO_TALK\n");
       printf("                      HIGH_WATER\n");
-      printf("                      AMNESIA\n");
       error = 1;
       goto ENDOFINPUTTESTS;
     }
@@ -482,7 +478,6 @@ int main(int argc, char ** argv) {
     if      (!strcmp("FINE_GRAIN", c_load_balance)) load_balance=fine_grain;
     else if (!strcmp("NO_TALK",    c_load_balance)) load_balance=no_talk;
     else if (!strcmp("HIGH_WATER", c_load_balance)) load_balance=high_water;
-    //    else if (!strcmp("AMNESIA",    c_load_balance)) load_balance=amnesia;
     else                                            load_balance=undefined;
     if (load_balance==undefined) {
       printf("ERROR: invalid load balancer %s\n", c_load_balance);
@@ -494,6 +489,14 @@ int main(int argc, char ** argv) {
       error = 1;
       goto ENDOFINPUTTESTS;
     }
+    if (load_balance==fine_grain && argc==10) {
+      rank_spread = atoi(*++argv);
+      if (rank_spread<1 || rank_spread>Num_procs) {
+	printf("ERROR: Invalid number of ranks to spread refinement work: %d\n", rank_spread);
+	error = 1;
+	goto ENDOFINPUTTESTS;
+      }
+    } else rank_spread = Num_procs;
 
     if (RADIUS < 1) {
       printf("ERROR: Stencil radius %d should be positive\n", RADIUS);
@@ -534,6 +537,7 @@ int main(int argc, char ** argv) {
   MPI_Bcast(&iterations,     1, MPI_INT,   root, MPI_COMM_WORLD);
   MPI_Bcast(&sub_iterations, 1, MPI_INT,   root, MPI_COMM_WORLD);
   MPI_Bcast(&load_balance,   1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&rank_spread,    1, MPI_INT,   root, MPI_COMM_WORLD);
   MPI_Bcast(&expand,         1, MPI_LONG,  root, MPI_COMM_WORLD);
 
   /* depending on the load balancing strategy chosen, we determine the 
@@ -545,9 +549,13 @@ int main(int argc, char ** argv) {
                    Num_procs_bg = Num_procs;
                    my_ID_bg = my_ID;
                    for (g=0; g<4; g++) {
-		     MPI_Comm_dup(MPI_COMM_WORLD, &comm_r[g]);
-                     Num_procs_r[g] = Num_procs;
-                     my_ID_r[g] = my_ID; 
+                     if (my_ID < rank_spread) color_r = 1;
+                     else                     color_r = MPI_UNDEFINED;
+                     MPI_Comm_split(MPI_COMM_WORLD, color_r, my_ID, &comm_r[g]);
+                     if (comm_r[g] != MPI_COMM_NULL) {
+                       MPI_Comm_size(comm_r[g], &Num_procs_r[g]);
+                       MPI_Comm_rank(comm_r[g], &my_ID_r[g]);
+		     }
                    }
                    break;
   case no_talk:    MPI_Comm_dup(MPI_COMM_WORLD, &comm_bg);
@@ -575,7 +583,6 @@ int main(int argc, char ** argv) {
                    }
 		   if (comm_bg == MPI_COMM_NULL) Num_procs_bg = Num_procs - Num_procs_r[0];
                    break;
-  case amnesia:    break;                   
   }
 
   /* do bookkeeping for background grid                                       */
@@ -701,12 +708,7 @@ int main(int argc, char ** argv) {
 		     };
 		   }
                    break;
-  case fine_grain: // refinements are partitioned exactly like BG
-                   for (g=0; g<4; g++) {
-                     Num_procs_rx[g] = Num_procs_bgx;
-                     Num_procs_ry[g] = Num_procs_bgy;
-                   }
-                   break;
+  case fine_grain: 
   case high_water: // refinements are partitioned independently, but similar to BG
                    for (g=0; g<4; g++) {
                      if (comm_r[g] != MPI_COMM_NULL) {
@@ -720,7 +722,6 @@ int main(int argc, char ** argv) {
 		     }
 		   }
                    break;
-  case amnesia:    break;
   }
 
   /* compute communication neighbors on refinements                           */
@@ -763,6 +764,8 @@ int main(int argc, char ** argv) {
 #endif
     printf("Number of iterations            = %d\n", iterations);
     printf("Load balancer                   = %s\n", c_load_balance);
+    if (load_balance==fine_grain)
+      printf("Refinement rank spread          = %d\n", rank_spread);
     printf("Refinements:\n");
     printf("   Background grid points       = %ld\n", n_r);
     printf("   Grid size                    = %ld\n", n_r_true);
