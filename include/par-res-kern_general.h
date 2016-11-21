@@ -147,3 +147,14 @@ static inline void prk_free(void* p)
     free(p);
 #endif
 }
+
+/* dt is the time interval in seconds that you want to waste */
+static inline void prk_pause(double dt)
+{
+  double t0 = wtime();
+  while (1) {
+    double t1 = wtime();
+    if ((t1-t0)>dt) return;
+  }
+  return;
+}

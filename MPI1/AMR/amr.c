@@ -747,7 +747,8 @@ int main(int argc, char ** argv) {
     MPI_Barrier(MPI_COMM_WORLD);
     if ((comm_r[g] != MPI_COMM_NULL) && (my_ID_r[g]==root))
       printf("Tiles in x/y-direction on ref %d = %d/%d\n",
-	     g, Num_procs_rx[g], Num_procs_ry[g]); usleep(1000);
+	     g, Num_procs_rx[g], Num_procs_ry[g]);
+    prk_pause(0.001); // wait for a short while to ensure proper I/O ordering
   }
   MPI_Barrier(MPI_COMM_WORLD);
   if (my_ID == root) {

@@ -571,7 +571,7 @@ int main(int argc, char ** argv) {
   case SINUSOIDAL:                                                          break;
   case LINEAR:    printf("  Negative slope               = %lf\n", alpha);
                   printf("  Offset                       = %lf\n", beta);   break;
-  case PATCH:     printf("  Bounding box                 = %" PRIu64 "%" PRIu64 "%" PRIu64 "%" PRIu64 "\n",
+  case PATCH:     printf("  Bounding box                 = %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n",
                          init_patch.left, init_patch.right,
                          init_patch.bottom, init_patch.top);                break;
   default:        printf("ERROR: Unsupported particle initializating mode\n");
