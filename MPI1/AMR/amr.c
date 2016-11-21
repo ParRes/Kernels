@@ -122,10 +122,6 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
   if (load_balance == no_talk) {
     /* in case of no_talk we just copy the in-rank data from BG to refinement     */
     if (comm_r != MPI_COMM_NULL) {
-      for (j=L_jstart_r_true_gross; j<=L_jend_r_true_gross; j++) 
-      for (i=L_istart_r_true_gross; i<=L_iend_r_true_gross; i++) {
-	ING_R(i,j)=0.0;
-      }
       for (j=L_jstart_r_gross; j<=L_jend_r_gross; j++) 
       for (i=L_istart_r_gross; i<=L_iend_r_gross; i++) {
 	int ir = i-G_istart_r, jr = j-G_jstart_r;
