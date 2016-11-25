@@ -226,6 +226,13 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
 	}
       }
     }
+    prk_free(recv_vec);
+    prk_free(recv_count);
+    prk_free(recv_offset);
+    prk_free(send_count);
+    prk_free(send_offset);
+    if (acc_recv) prk_free(recv_buf);
+    if (acc_send) prk_free(send_buf);
   }
 }
 
