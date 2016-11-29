@@ -658,11 +658,11 @@ int main(int argc, char ** argv) {
       goto ENDOFBG;
     }
 
-    total_length_in  = (long) (L_width_bg+2*RADIUS)*(long) (L_height_bg+2*RADIUS)*sizeof(DTYPE);
-    total_length_out = (long) L_width_bg* (long) L_height_bg*sizeof(DTYPE);
+    total_length_in  = (long) (L_width_bg+2*RADIUS)*(long) (L_height_bg+2*RADIUS);
+    total_length_out = (long) L_width_bg* (long) L_height_bg;
 
-    in_bg  = (DTYPE *) prk_malloc(total_length_in);
-    out_bg = (DTYPE *) prk_malloc(total_length_out);
+    in_bg  = (DTYPE *) prk_malloc(total_length_in*sizeof(DTYPE));
+    out_bg = (DTYPE *) prk_malloc(total_length_out*sizeof(DTYPE));
     if (!in_bg || !out_bg) {
       printf("ERROR: rank %d could not allocate space for input/output array\n",
               my_ID);
