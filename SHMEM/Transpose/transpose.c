@@ -148,7 +148,8 @@ int main(int argc, char ** argv)
          *trans_time;      /* timing parameters                     */
   double *abserr, 
          *abserr_tot;      /* local and aggregate error             */
-  int    *recv_flag;       /* synchronization flags                 */
+  int    *recv_flag;       /* synchronization flags: data received  */
+  int    *send_flag;       /* synchronization flags: receiver ready */
   int    *arguments;       /* command line arguments                */
 
 /*********************************************************************
@@ -282,6 +283,7 @@ int main(int argc, char ** argv)
 
     Work_out_p = (double *) prk_shmem_align(prk_get_alignment(),Block_size*sizeof(double));
     recv_flag  = (int*)     prk_shmem_align(prk_get_alignment(),(Num_procs-1)*sizeof(int));
+    send_flag  = (int*)     prk_shmem_align(prk_get_alignment(),Num_procs*sizeof(int));
     if ((Work_in_p == NULL)||(Work_out_p==NULL) || (recv_flag == NULL)){
       printf(" Error allocating space for work or flags on node %d\n",my_ID);
       error = 1;
@@ -298,6 +300,9 @@ int main(int argc, char ** argv)
 
     for(i=0;i<Num_procs-1;i++)
       recv_flag[i]=0;
+
+    for(i=0;i<Num_procs; i++)
+      send_flag[i]=1;
   }
   
   /* Fill the original column matrices                                              */
@@ -359,6 +364,9 @@ int main(int argc, char ** argv)
 	      }
       }
 
+      shmem_int_wait_until(&send_flag[send_to], SHMEM_CMP_EQ, 1);
+      send_flag[send_to] = 0;
+
       shmem_double_put(&Work_in_p[phase-1][0], &Work_out_p[0], Block_size, send_to);
       shmem_fence();
       shmem_int_inc(&recv_flag[phase-1], send_to);
@@ -370,6 +378,9 @@ int main(int argc, char ** argv)
       for (j=0; j<Block_order; j++)
         for (i=0; i<Block_order; i++) 
           B(i,j) += Work_in(phase, i,j);
+
+      /* Tell sender that we are ready to for the next iteration */
+      shmem_int_inc(&send_flag[my_ID], recv_from);
     }  /* end of phase loop  */
   } /* end of iterations */
 
@@ -408,6 +419,7 @@ int main(int argc, char ** argv)
   if (Num_procs>1) 
     {
       prk_shmem_free(recv_flag);
+      prk_shmem_free(send_flag);
 
       for(i=0;i<Num_procs-1;i++)
 	prk_shmem_free(Work_in_p[i]);
