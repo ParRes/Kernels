@@ -314,7 +314,6 @@ int main(int argc, char ** argv) {
   DTYPE  *left_buf_in_r[4]; /*       "         "          "                        */
   int    root = 0;
   long   n;                 /* linear grid dimension                               */
-  long   n2, nr2, n_total;  /* #points in BG, in each refinement, and in total     */
   int    refine_level;      /* refinement level                                    */
   long   G_istart_r[4];     /* global left boundaries of refinements               */
   long   G_iend_r[4];       /* global right boundaries of refinements              */
