@@ -419,8 +419,8 @@ void dchunkpup(pup_er p,dchunk *c){
        c->left_buf_in_bg    = c->right_buf_out_bg + 3*RADIUS*(c->L_height_bg+2);
        c->in_bg             = (DTYPE *) prk_malloc(sizeof(DTYPE)*c->total_length_in);
        c->out_bg            = (DTYPE *) prk_malloc(sizeof(DTYPE)*c->total_length_out);
-       if (!c->top_buf_out_bg || !c->right_buf_out_bg || !c->in_bg || !c->out_bg) printf("Could not allocate BG arrays\n");
-	   
+       if (!c->top_buf_out_bg || !c->right_buf_out_bg || !c->in_bg ||
+	   !c->out_bg) printf("Could not allocate BG arrays\n");
     }
 
     for (int g=0; g<4; g++) if (!c->skip_r[g]) {
@@ -445,7 +445,9 @@ void dchunkpup(pup_er p,dchunk *c){
   }
 
   for (int g=0; g<4; g++) if (!c->skip_r[g]) {
+#if CHECK_INPUTS      
     pup_bytes(p,(void*)c->in_r[g],  sizeof(DTYPE)*c->total_length_in_r[g]);
+#endif
     pup_bytes(p,(void*)c->out_r[g], sizeof(DTYPE)*c->total_length_out_r[g]);
   }
 
@@ -1158,6 +1160,9 @@ int main(int argc, char ** argv) {
     printf("Load balancer                   = %s\n", c_load_balance);
     if (load_balance==fine_grain)
       printf("Refinement rank spread          = %d\n", rank_spread);
+#if USE_PUPER
+    printf("Using explicit Pack/Unpack\n");
+#endif
     printf("Refinements:\n");
     printf("   Background grid points       = %ld\n", n_r);
     printf("   Grid size                    = %ld\n", n_r_true);
@@ -1796,7 +1801,8 @@ int main(int argc, char ** argv) {
                reference_norm_r[g], norm_r[g]);
 #endif
       }
-      
+
+#if CHECK_INPUTS      
       if (ABS(norm_in_r[g]-reference_norm_in_r[g]) > EPSILON) {
         printf("ERROR: L1 input norm %d = "FSTR", Reference L1 input norm %d = "FSTR"\n",
                g, norm_in_r[g], g, reference_norm_in_r[g]);
@@ -1808,6 +1814,7 @@ int main(int argc, char ** argv) {
                g, reference_norm_in_r[g], g, norm_in_r[g]);
 #endif
       }
+#endif      
     }
  
     if (!validate) {
