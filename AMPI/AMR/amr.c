@@ -1156,13 +1156,20 @@ int main(int argc, char ** argv) {
 #else
     printf("Compact representation of stencil loop body\n");
 #endif
+#if USE_PUPER
+    printf("Using explicit Pack/Unpack\n");
+#else
+    printf("Not using explicit Pack/Unpack\n");
+#endif
+#if CHECK_INPUTS
+    printf("Migrating and checking refinement input arrays\n");
+#else
+    printf("Not migrating nor checking refinement input arrays\n");
+#endif  
     printf("Number of iterations            = %d\n", iterations);
     printf("Load balancer                   = %s\n", c_load_balance);
     if (load_balance==fine_grain)
       printf("Refinement rank spread          = %d\n", rank_spread);
-#if USE_PUPER
-    printf("Using explicit Pack/Unpack\n");
-#endif
     printf("Refinements:\n");
     printf("   Background grid points       = %ld\n", n_r);
     printf("   Grid size                    = %ld\n", n_r_true);

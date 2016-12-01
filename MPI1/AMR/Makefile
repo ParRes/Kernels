@@ -48,12 +48,12 @@ ifndef VERBOSE
 endif
 #description: default diagnostic style is silent
 
-VERBOSEFLAG     = -DVERBOSE=$(VERBOSE)
-RESTRICTFLAG    = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
-RADIUSFLAG      = -DRADIUS=$(RADIUS)
-LOOPGENFLAG     = -DLOOPGEN=$(LOOPGEN)
-DOUBLEFLAG      = -DDOUBLE=$(DOUBLE)
-STARFLAG        = -DSTAR=$(STAR)
+VERBOSEFLAG      = -DVERBOSE=$(VERBOSE)
+RESTRICTFLAG     = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
+RADIUSFLAG       = -DRADIUS=$(RADIUS)
+LOOPGENFLAG      = -DLOOPGEN=$(LOOPGEN)
+DOUBLEFLAG       = -DDOUBLE=$(DOUBLE)
+STARFLAG         = -DSTAR=$(STAR)
 
 OPTIONSSTRING="Make options:\n\
 OPTION                  MEANING                                  DEFAULT\n\
@@ -66,7 +66,7 @@ VERBOSE=0/1             omit/include verbose run information       [0]"
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG) $(USERFLAGS) \
                $(DOUBLEFLAG)   $(RADIUSFLAG)  $(STARFLAG)  \
-               $(LOOPGENFLAG)
+               $(LOOPGENFLAG) 
 PROGRAM     = amr
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
