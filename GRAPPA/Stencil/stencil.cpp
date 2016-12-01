@@ -169,14 +169,10 @@ int main(int argc, char * argv[]) {
       std::cout<<"ERROR: Stencil radius "<<RADIUS<<" exceeds grid size "<<n<<std::endl;
       exit(1);
     }
-    // determine best way to create a 2D grid of ranks (closest to square, for
-    // best surface/volume ratio); we do this brute force for now
-    for (Num_procsx=(int) (sqrt(Num_procs+1)); Num_procsx>0; Num_procsx--) {
-      if (!(Num_procs%Num_procsx)) {
-        Num_procsy = Num_procs/Num_procsx;
-        break;
-      }
-    }     
+
+    // determine best way to create a 2D grid of ranks (closest to square)     
+    factor(Num_procs, &Num_procsx, &Num_procsy);
+
     symmetric int my_IDx;
     symmetric int my_IDy;
     on_all_cores( [Num_procsx] {

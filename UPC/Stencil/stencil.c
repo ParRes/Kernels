@@ -214,12 +214,7 @@ int main(int argc, char ** argv) {
 
   /* Num_procsx=0 refers to automated calculation of division on each coordinates like MPI code */
   if(Num_procsx == 0){
-    for (Num_procsx=(int) (sqrt(THREADS+1)); Num_procsx>0; Num_procsx--) {
-      if (!(THREADS%Num_procsx)) {
-        Num_procsy = THREADS/Num_procsx;
-        break;
-      }
-    }
+    factor(THREADS, &Num_procsx, &Num_procsy);
   }
   else {
     Num_procsy = THREADS / Num_procsx;

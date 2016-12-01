@@ -573,6 +573,11 @@ int main(int argc, char ** argv) {
                    Frac_procs_bg;
                    Frac_procs_bg = (float) Num_procs * bg_size/total_size;
                    Num_procs_bg = MIN(Num_procs-1,MAX(1,ceil(Frac_procs_bg)));
+
+		   /* Adjust number of BG procs to avoid pathological aspect ratios */
+		   int Num_procs_R = Num_procs-Num_procs_bg;
+		   optimize_split(&Num_procs_bg, &Num_procs_R, 3);
+
                    if (my_ID>=Num_procs_bg) {color_bg = MPI_UNDEFINED; color_r = 1;}
                    else                     {color_bg = 1; color_r = MPI_UNDEFINED;}
                    MPI_Comm_split(MPI_COMM_WORLD, color_bg, my_ID, &comm_bg);
@@ -593,14 +598,9 @@ int main(int argc, char ** argv) {
 
   /* do bookkeeping for background grid                                       */
   if (comm_bg != MPI_COMM_NULL) {
-    /* determine best way to create a 2D grid of ranks (closest to square, for 
-       best surface/volume ratio) for BG; we do this brute force for now      */
-    for (Num_procs_bgx=(int) (sqrt(Num_procs_bg+1)); Num_procs_bgx>0; Num_procs_bgx--) {
-      if (!(Num_procs_bg%Num_procs_bgx)) {
-        Num_procs_bgy = Num_procs_bg/Num_procs_bgx;
-        break;
-      }
-    }   
+    /* determine best way to create a 2D grid of ranks (closest to square)    */
+    factor(Num_procs_bg, &Num_procs_bgx, &Num_procs_bgy);
+
     /* communication neighbors on BG are computed for all who own part of it  */
     my_ID_bgx = my_ID_bg%Num_procs_bgx;
     my_ID_bgy = my_ID_bg/Num_procs_bgx;
@@ -716,16 +716,8 @@ int main(int argc, char ** argv) {
                    break;
   case fine_grain: 
   case high_water: // refinements are partitioned independently, but similar to BG
-                   for (g=0; g<4; g++) {
-                     if (comm_r[g] != MPI_COMM_NULL) {
-                       for (Num_procs_rx[g]=(int) (sqrt(Num_procs_r[g]+1)); 
-                         Num_procs_rx[g]>0; Num_procs_rx[g]--) {
-                         if (!(Num_procs_r[g]%Num_procs_rx[g])) {
-                           Num_procs_ry[g] = Num_procs_r[g]/Num_procs_rx[g];
-                           break;
-                         }
-                       }
-		     }
+                   for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
+		     factor(Num_procs_r[g], &Num_procs_rx[g], &Num_procs_ry[g]);
 		   }
                    break;
   }
