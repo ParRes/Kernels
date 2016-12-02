@@ -851,10 +851,10 @@ int main(int argc, char ** argv) {
     }
 
     /* make sure that the gross boundaries of the patch coincide with BG points           */
-    L_istart_r_true_gross[g] =  (L_istart_r_true[g]/expand)*expand;
-    L_iend_r_true_gross[g]   = ((L_iend_r_true[g]+expand-1)/expand)*expand;
-    L_jstart_r_true_gross[g] =  (L_jstart_r_true[g]/expand)*expand;
-    L_jend_r_true_gross[g]   = ((L_jend_r_true[g]+expand-1)/expand)*expand;
+    L_istart_r_true_gross[g] = (L_istart_r_true[g]/expand)*expand;
+    L_iend_r_true_gross[g]   = (L_iend_r_true[g]/expand+1)*expand;
+    L_jstart_r_true_gross[g] = (L_jstart_r_true[g]/expand)*expand;
+    L_jend_r_true_gross[g]   = (L_jend_r_true[g]/expand+1)*expand;
     L_istart_r_gross[g]      = L_istart_r_true_gross[g]/expand;
     L_iend_r_gross[g]        = L_iend_r_true_gross[g]/expand;
     L_jstart_r_gross[g]      = L_jstart_r_true_gross[g]/expand;
