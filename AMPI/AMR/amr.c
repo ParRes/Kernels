@@ -129,8 +129,7 @@ typedef struct dchunk{
         L_iend_r_gross[4], L_jstart_r_gross[4], L_jend_r_gross[4], 
         L_istart_r_true_gross[4], L_iend_r_true_gross[4], L_jstart_r_true_gross[4],
         L_jend_r_true_gross[4], L_istart_r_true[4], L_iend_r_true[4], L_jstart_r_true[4],
-        L_jend_r_true[4], L_width_r[4], L_height_r[4], L_width_r_gross[4], 
-        L_height_r_gross[4], L_width_r_true_gross[4], L_height_r_true_gross[4],
+        L_jend_r_true[4], L_width_r[4], L_height_r[4], L_width_r_true_gross[4], L_height_r_true_gross[4],
         L_width_r_true[4], L_height_r_true[4], total_length_in_r[4], total_length_out_r[4];
   MPI_Comm comm_r[4];
 }dchunk;
@@ -149,8 +148,7 @@ void fill_my_heap_ds(dchunk *my_heap_ds, int Num_procs_bg, int Num_procs_bgx, in
       long L_jend_r_gross[4], long L_istart_r_true_gross[4], long L_iend_r_true_gross[4], 
       long L_jstart_r_true_gross[4], long L_jend_r_true_gross[4], long L_istart_r_true[4],
       long L_iend_r_true[4], long L_jstart_r_true[4], long L_jend_r_true[4], long L_width_r[4],
-      long L_height_r[4], long L_width_r_gross[4], long L_height_r_gross[4],
-      long L_width_r_true_gross[4], long L_height_r_true_gross[4], long L_width_r_true[4], 
+      long L_height_r[4], long L_width_r_true_gross[4], long L_height_r_true_gross[4], long L_width_r_true[4], 
       long L_height_r_true[4], long total_length_in_r[4], long total_length_out_r[4], MPI_Comm comm_r[4],
       DTYPE *in_r[4], DTYPE *out_r[4], DTYPE *top_buf_out_r[4], DTYPE *top_buf_in_r[4], 
       DTYPE *bottom_buf_out_r[4], DTYPE *bottom_buf_in_r[4], DTYPE *right_buf_out_r[4], 
@@ -219,8 +217,6 @@ void fill_my_heap_ds(dchunk *my_heap_ds, int Num_procs_bg, int Num_procs_bgx, in
         my_heap_ds->L_jend_r_true[g] = L_jend_r_true[g];
         my_heap_ds->L_width_r[g] = L_width_r[g];
         my_heap_ds->L_height_r[g] = L_height_r[g];
-        my_heap_ds->L_width_r_gross[g] = L_width_r_gross[g];
-        my_heap_ds->L_height_r_gross[g] = L_height_r_gross[g];
         my_heap_ds->L_width_r_true_gross[g] = L_width_r_true_gross[g];
         my_heap_ds->L_height_r_true_gross[g] = L_height_r_true_gross[g];
         my_heap_ds->L_width_r_true[g] = L_width_r_true[g];
@@ -257,8 +253,7 @@ void drain_my_heap_ds(dchunk *my_heap_ds, int *Num_procs_bg, int *Num_procs_bgx,
       long L_jend_r_gross[], long L_istart_r_true_gross[], long L_iend_r_true_gross[],
       long L_jstart_r_true_gross[], long L_jend_r_true_gross[], long L_istart_r_true[],
       long L_iend_r_true[], long L_jstart_r_true[], long L_jend_r_true[], long L_width_r[],
-      long L_height_r[], long L_width_r_gross[], long L_height_r_gross[],
-      long L_width_r_true_gross[], long L_height_r_true_gross[], long L_width_r_true[],
+      long L_height_r[], long L_width_r_true_gross[], long L_height_r_true_gross[], long L_width_r_true[],
       long L_height_r_true[], long total_length_in_r[], long total_length_out_r[], MPI_Comm comm_r[],
       DTYPE *in_r[], DTYPE *out_r[], DTYPE *top_buf_out_r[], DTYPE *top_buf_in_r[],
       DTYPE *bottom_buf_out_r[], DTYPE *bottom_buf_in_r[], DTYPE *right_buf_out_r[],
@@ -327,8 +322,6 @@ void drain_my_heap_ds(dchunk *my_heap_ds, int *Num_procs_bg, int *Num_procs_bgx,
         L_jend_r_true[g] = my_heap_ds->L_jend_r_true[g];
         L_width_r[g] = my_heap_ds->L_width_r[g];
         L_height_r[g] = my_heap_ds->L_height_r[g];
-        L_width_r_gross[g] = my_heap_ds->L_width_r_gross[g];
-        L_height_r_gross[g] = my_heap_ds->L_height_r_gross[g];
         L_width_r_true_gross[g] = my_heap_ds->L_width_r_true_gross[g];
         L_height_r_true_gross[g] = my_heap_ds->L_height_r_true_gross[g];
         L_width_r_true[g] = my_heap_ds->L_width_r_true[g];
@@ -407,8 +400,6 @@ void dchunkpup(pup_er p,dchunk *c){
   pup_longs(p,c->L_jend_r_true,4);
   pup_longs(p,c->L_width_r,4);
   pup_longs(p,c->L_height_r,4);
-  pup_longs(p,c->L_width_r_gross,4);
-  pup_longs(p,c->L_height_r_gross,4);
   pup_longs(p,c->L_width_r_true_gross,4);
   pup_longs(p,c->L_height_r_true_gross,4);
   pup_longs(p,c->L_width_r_true,4);
@@ -710,7 +701,6 @@ int main(int argc, char ** argv) {
   long   L_istart_r_true[4], L_iend_r_true[4]; /*               "                  */
   long   L_jstart_r_true[4], L_jend_r_true[4]; /*               "                  */
   long   L_width_r[4], L_height_r[4]; /* local refinement dimensions               */
-  long   L_width_r_gross[4], L_height_r_gross[4]; /* local refinement dimensions   */
   long   L_width_r_true_gross[4], L_height_r_true_gross[4];/* "            "       */
   long   L_width_r_true[4], L_height_r_true[4];/*             "            "       */
   int    g;                 /* refinement grid index                               */
@@ -1277,8 +1267,6 @@ int main(int argc, char ** argv) {
 
     L_height_r[g]            = L_jend_r[g] -            L_jstart_r[g] + 1;
     L_width_r[g]             = L_iend_r[g] -            L_istart_r[g] + 1;
-    L_height_r_gross[g]      = L_jend_r_gross[g] -      L_jstart_r_gross[g] + 1;
-    L_width_r_gross[g]       = L_iend_r_gross[g] -      L_istart_r_gross[g] + 1;
     L_height_r_true_gross[g] = L_jend_r_true_gross[g] - L_jstart_r_true_gross[g] + 1;
     L_width_r_true_gross[g]  = L_iend_r_true_gross[g] - L_istart_r_true_gross[g] + 1;
     L_height_r_true[g]       = L_jend_r_true[g] -       L_jstart_r_true[g] + 1;
@@ -1659,7 +1647,7 @@ int main(int argc, char ** argv) {
 	  L_jend_r, L_istart_r_gross, L_iend_r_gross, L_jstart_r_gross, L_jend_r_gross, 
 	  L_istart_r_true_gross, L_iend_r_true_gross, L_jstart_r_true_gross,
           L_jend_r_true_gross, L_istart_r_true, L_iend_r_true, L_jstart_r_true, 
-	  L_jend_r_true, L_width_r, L_height_r, L_width_r_gross, L_height_r_gross, 
+	  L_jend_r_true, L_width_r, L_height_r, 
 	  L_width_r_true_gross, L_height_r_true_gross, L_width_r_true, L_height_r_true,
           total_length_in_r, total_length_out_r, comm_r, in_r, out_r, top_buf_out_r, top_buf_in_r,
 	  bottom_buf_out_r, bottom_buf_in_r, right_buf_out_r, right_buf_in_r,
@@ -1681,7 +1669,7 @@ int main(int argc, char ** argv) {
 	  L_jend_r, L_istart_r_gross, L_iend_r_gross, L_jstart_r_gross, L_jend_r_gross, 
 	  L_istart_r_true_gross, L_iend_r_true_gross, L_jstart_r_true_gross, 
 	  L_jend_r_true_gross, L_istart_r_true, L_iend_r_true, L_jstart_r_true, L_jend_r_true, 
-	  L_width_r, L_height_r, L_width_r_gross, L_height_r_gross, L_width_r_true_gross, 
+	  L_width_r, L_height_r, L_width_r_true_gross, 
 	  L_height_r_true_gross, L_width_r_true, L_height_r_true, total_length_in_r,
           total_length_out_r, comm_r, in_r, out_r, top_buf_out_r, top_buf_in_r, bottom_buf_out_r, 
 	  bottom_buf_in_r, right_buf_out_r, right_buf_in_r, left_buf_out_r, left_buf_in_r);
