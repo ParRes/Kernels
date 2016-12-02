@@ -331,7 +331,6 @@ int main(int argc, char ** argv) {
   long   L_istart_r_true[4], L_iend_r_true[4]; /*               "                  */
   long   L_jstart_r_true[4], L_jend_r_true[4]; /*               "                  */
   long   L_width_r[4], L_height_r[4]; /* local refinement dimensions               */
-  long   L_width_r_gross[4], L_height_r_gross[4]; /* local refinement dimensions   */
   long   L_width_r_true_gross[4], L_height_r_true_gross[4];/* "            "       */
   long   L_width_r_true[4], L_height_r_true[4];/*             "            "       */
   int    g;                 /* refinement grid index                               */
@@ -866,8 +865,6 @@ int main(int argc, char ** argv) {
 
     L_height_r[g]            = L_jend_r[g] -            L_jstart_r[g] + 1;
     L_width_r[g]             = L_iend_r[g] -            L_istart_r[g] + 1;
-    L_height_r_gross[g]      = L_jend_r_gross[g] -      L_jstart_r_gross[g] + 1;
-    L_width_r_gross[g]       = L_iend_r_gross[g] -      L_istart_r_gross[g] + 1;
     L_height_r_true_gross[g] = L_jend_r_true_gross[g] - L_jstart_r_true_gross[g] + 1;
     L_width_r_true_gross[g]  = L_iend_r_true_gross[g] - L_istart_r_true_gross[g] + 1;
     L_height_r_true[g]       = L_jend_r_true[g] -       L_jstart_r_true[g] + 1;
