@@ -708,6 +708,7 @@ int main(int argc, char ** argv) {
   long   n_r_true;          /* linear refinement size                              */
   long   expand;            /* number of refinement cells per background cell      */
   int    period;            /* refinement period                                   */
+  int    migration_delay;   /* number of time steps between load chg and migration */
   int    duration;          /* lifetime of a refinement                            */
   int    sub_iterations;    /* number of sub-iterations on refinement              */
   long   i, j, ii, jj, it, jt, l, leftover;  /* dummies                            */
@@ -798,11 +799,11 @@ int main(int argc, char ** argv) {
     goto ENDOFINPUTTESTS;
 #endif
 
-    if (argc != 9 && argc != 10){
+    if (argc != 10 && argc != 11){
       printf("Usage: %s <# iterations> <background grid size> <refinement size>\n",
              *argv);
       printf("       <refinement level> <refinement period>  <refinement duration>\n");
-      printf("       <refinement sub-iterations> <load balancer> \n");
+      printf("       <refinement sub-iterations> <migration delay> <load balancer> \n");
       printf("       load balancer: FINE_GRAIN [refinement rank spread]\n");
       printf("                      NO_TALK\n");
       printf("                      HIGH_WATER\n");
@@ -866,6 +867,13 @@ int main(int argc, char ** argv) {
       goto ENDOFINPUTTESTS;
     }
 
+    migration_delay = atoi(*++argv);
+    if (migration_delay < 0 || migration_delay >= duration || migration_delay >= period - duration) {
+      printf("ERROR: invalid migration delay: %d\n", migration_delay);
+      error = 1;
+      goto ENDOFINPUTTESTS;
+    }
+
     c_load_balance = *++argv;
     if      (!strcmp("FINE_GRAIN", c_load_balance)) load_balance=fine_grain;
     else if (!strcmp("NO_TALK",    c_load_balance)) load_balance=no_talk;
@@ -919,18 +927,19 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
 
-  MPI_Bcast(&n,              1, MPI_LONG,  root, MPI_COMM_WORLD);
-  MPI_Bcast(&n_r,            1, MPI_LONG,  root, MPI_COMM_WORLD);
-  MPI_Bcast(&h_r,            1, MPI_DTYPE, root, MPI_COMM_WORLD);
-  MPI_Bcast(&n_r_true,       1, MPI_LONG,  root, MPI_COMM_WORLD);
-  MPI_Bcast(&period,         1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&duration,       1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&refine_level,   1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations,     1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&sub_iterations, 1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&load_balance,   1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&rank_spread,    1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&expand,         1, MPI_LONG,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&n,               1, MPI_LONG,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&n_r,             1, MPI_LONG,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&h_r,             1, MPI_DTYPE, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n_r_true,        1, MPI_LONG,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&period,          1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&duration,        1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&refine_level,    1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations,      1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&sub_iterations,  1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&load_balance,    1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&rank_spread,     1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&expand,          1, MPI_LONG,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&migration_delay, 1, MPI_INT,   root, MPI_COMM_WORLD);
 
   /* depending on the load balancing strategy chosen, we determine the 
      partitions of BG (background grid) and the refinements                  */
@@ -1163,6 +1172,7 @@ int main(int argc, char ** argv) {
     printf("Load balancer                   = %s\n", c_load_balance);
     if (load_balance==fine_grain)
       printf("Refinement rank spread          = %d\n", rank_spread);
+    printf("Migration delay                 = %d\n", migration_delay);
     printf("Refinements:\n");
     printf("   Background grid points       = %ld\n", n_r);
     printf("   Grid size                    = %ld\n", n_r_true);
@@ -1632,7 +1642,7 @@ int main(int argc, char ** argv) {
 
     /* we only migrate at the start or end of a refinement period, but never if
        there is no intervening time when no refinements are present              */
-    if (period != duration && (!(iter%period) || iter%period==duration)) {
+    if ((iter%period == migration_delay) || (iter%period == duration + migration_delay)) {
 
 #if USE_PUPER
       /* Copy pointers to data structure since migration is following*/
@@ -1674,7 +1684,7 @@ int main(int argc, char ** argv) {
           total_length_out_r, comm_r, in_r, out_r, top_buf_out_r, top_buf_in_r, bottom_buf_out_r, 
 	  bottom_buf_in_r, right_buf_out_r, right_buf_in_r, left_buf_out_r, left_buf_in_r);
 #endif
-    }
+    } 
   } /* end of iterations                                                         */
 
   local_stencil_time = wtime() - local_stencil_time;
