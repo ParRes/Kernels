@@ -889,7 +889,7 @@ int main(int argc, char ** argv) {
       error = 1;
       goto ENDOFINPUTTESTS;
     }
-    if (load_balance==fine_grain && argc==10) {
+    if (load_balance==fine_grain && argc==11) {
       rank_spread = atoi(*++argv);
       if (rank_spread<1 || rank_spread>Num_procs) {
 	printf("ERROR: Invalid number of ranks to spread refinement work: %d\n", rank_spread);
@@ -1183,7 +1183,6 @@ int main(int argc, char ** argv) {
   }
 
   /* reserve space for refinement input/output fields; first compute extents */
-
 
   /* if rank is in refinement communicator, don't skip, in principle         */
   for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) 
@@ -1516,7 +1515,6 @@ int main(int argc, char ** argv) {
       /* if within an active refinement epoch, first communicate within refinement    */
 
       for (sub_iter=0; sub_iter<sub_iterations; sub_iter++) {
-
         /* need to communicate within each sub-iteration                              */
 
         /* need to fetch ghost point data from neighbors in y-direction               */
