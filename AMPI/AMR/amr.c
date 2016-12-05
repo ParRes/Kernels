@@ -1158,21 +1158,27 @@ int main(int argc, char ** argv) {
 #else
     printf("Compact representation of stencil loop body\n");
 #endif
-#if USE_PUPER
-    printf("Using explicit Pack/Unpack\n");
+#if NO_MIGRATE
+    printf("Rank migration and load balance monitoring disabled\n");
 #else
-    printf("Not using explicit Pack/Unpack\n");
+  #if USE_PUPER
+      printf("Using explicit Pack/Unpack\n");
+  #else
+      printf("Not using explicit Pack/Unpack\n");
+  #endif
+  #if CHECK_INPUTS
+      printf("Migrating and checking refinement input arrays\n");
+  #else
+      printf("Not migrating nor checking refinement input arrays\n");
+  #endif
 #endif
-#if CHECK_INPUTS
-    printf("Migrating and checking refinement input arrays\n");
-#else
-    printf("Not migrating nor checking refinement input arrays\n");
-#endif  
     printf("Number of iterations            = %d\n", iterations);
     printf("Load balancer                   = %s\n", c_load_balance);
     if (load_balance==fine_grain)
       printf("Refinement rank spread          = %d\n", rank_spread);
+#if !NO_MIGRATE
     printf("Migration delay                 = %d\n", migration_delay);
+#endif
     printf("Refinements:\n");
     printf("   Background grid points       = %ld\n", n_r);
     printf("   Grid size                    = %ld\n", n_r_true);
@@ -1638,6 +1644,7 @@ int main(int argc, char ** argv) {
       for (int i=L_istart_bg; i<=L_iend_bg; i++) IN(i,j)+= 1.0;
     }
 
+#if !NO_MIGRATE    
     /* we only migrate at the start or end of a refinement period, but never if
        there is no intervening time when no refinements are present              */
     if ((iter%period == migration_delay) || (iter%period == duration + migration_delay)) {
@@ -1682,7 +1689,8 @@ int main(int argc, char ** argv) {
           total_length_out_r, comm_r, in_r, out_r, top_buf_out_r, top_buf_in_r, bottom_buf_out_r, 
 	  bottom_buf_in_r, right_buf_out_r, right_buf_in_r, left_buf_out_r, left_buf_in_r);
 #endif
-    } 
+    }
+#endif
   } /* end of iterations                                                         */
 
   local_stencil_time = wtime() - local_stencil_time;
