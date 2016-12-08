@@ -779,6 +779,8 @@ int main(int argc, char ** argv) {
   MPI_Info_create(&hints);
   MPI_Info_set(hints, "ampi_load_balance", "sync");
 
+  /* initially we turn off collecting load balancing information */
+  AMPI_Load_stop_measure();
 #if USE_PUPER
   int pup_index;
   AMPI_Register_pup((MPI_PupFn) dchunkpup, (void*)&my_heap_ds, &pup_index);
@@ -791,7 +793,7 @@ int main(int argc, char ** argv) {
  
   if (my_ID == root) {
     printf("Parallel Research Kernels Version %s\n", PRKVERSION);
-    printf("MPI AMR stencil execution on 2D grid\n");
+    printf("Adaptive MPI AMR stencil execution on 2D grid\n");
 
 #if !STAR
     printf("ERROR: Compact stencil not supported\n");
@@ -1641,7 +1643,8 @@ int main(int argc, char ** argv) {
     /* we only migrate at the start or end of a refinement period, but never if
        there is no intervening time when no refinements are present              */
     if ((iter%period == migration_delay) || (iter%period == duration + migration_delay)) {
-
+      if (iter%period == migration_delay)            AMPI_Load_start_measure();
+      if (iter%period == duration + migration_delay) AMPI_Load_stop_measure();
 #if USE_PUPER
       /* Copy pointers to data structure since migration is following*/
       fill_my_heap_ds(&my_heap_ds, Num_procs_bg, Num_procs_bgx, Num_procs_bgy, my_ID, g,
