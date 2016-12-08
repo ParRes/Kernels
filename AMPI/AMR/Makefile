@@ -3,7 +3,7 @@ include ../../common/AMPI.defs
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS)  -restrict
 #description: change above into something that is a decent optimization on you system
 
 USERFLAGS    = 
@@ -17,6 +17,11 @@ LIBPATHS     =
 INCLUDEPATHS = 
 
 ### End User configurable options ###
+
+ifndef NO_MIGRATE
+  NO_MIGRATE=0
+endif
+#description: by default we allow migration, but can turn if off
 
 ifndef USE_PUPER
   USE_PUPER=1
@@ -67,6 +72,7 @@ DOUBLEFLAG       = -DDOUBLE=$(DOUBLE)
 STARFLAG         = -DSTAR=$(STAR)
 USE_PUPERFLAG    = -DUSE_PUPER=$(USE_PUPER)
 CHECK_INPUTSFLAG = -DCHECK_INPUTS=$(CHECK_INPUTS)
+NO_MIGRATEFLAG   = -DNO_MIGRATE=$(NO_MIGRATE)
 
 OPTIONSSTRING="Make options:\n\
 OPTION                  MEANING                                  DEFAULT\n\
@@ -75,13 +81,15 @@ LOOPGEN=0/1             compact/expanded stencil loop body         [0]  \n\
 DOUBLE=0/1              single/double precision                    [1]  \n\
 RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
 STAR=0/1                box/star shaped stencil                    [1]  \n\
+NO_MIGRATE=0/1          no rank migration, no stats collecting     [0]  \n\
 USE_PUPER=0/1           use PUP routines for migration             [1]  \n\
 CHECK_INPUTS=0/1        check if input arrays are correct          [1]  \n\
 VERBOSE=0/1             omit/include verbose run information       [0]"
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG)   $(USERFLAGS) \
-               $(DOUBLEFLAG)   $(RADIUSFLAG)    $(STARFLAG)  \
-               $(LOOPGENFLAG)  $(USE_PUPERFLAG) $(CHECK_INPUTSFLAG)
+TUNEFLAGS    = $(RESTRICTFLAG)   $(VERBOSEFLAG)   $(USERFLAGS)        \
+               $(DOUBLEFLAG)     $(RADIUSFLAG)    $(STARFLAG)         \
+               $(LOOPGENFLAG)    $(USE_PUPERFLAG) $(CHECK_INPUTSFLAG) \
+               $(NO_MIGRATEFLAG)
 PROGRAM     = amr
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
