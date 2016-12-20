@@ -148,8 +148,10 @@ int main(int argc, char ** argv)
          *trans_time;      /* timing parameters                     */
   double *abserr, 
          *abserr_tot;      /* local and aggregate error             */
+#if !BARRIER_SYNCH
   int    *recv_flag;       /* synchronization flags: data received  */
   int    *send_flag;       /* synchronization flags: receiver ready */
+#endif
   int    *arguments;       /* command line arguments                */
 
 /*********************************************************************
@@ -229,6 +231,11 @@ int main(int argc, char ** argv)
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %d\n", order);
     printf("Number of iterations = %d\n", iterations);
+#if BARRIER_SYNCH
+    printf("Synchronization      = barrier\n");
+#else
+    printf("Synchronization      = flags\n");
+#endif
     if ((Tile_order > 0) && (Tile_order < order))
           printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
@@ -282,10 +289,16 @@ int main(int argc, char ** argv)
     Work_in_p   = (double**)prk_malloc((Num_procs-1)*sizeof(double));
 
     Work_out_p = (double *) prk_shmem_align(prk_get_alignment(),Block_size*sizeof(double));
+#if !BARRIER_SYNCH
     recv_flag  = (int*)     prk_shmem_align(prk_get_alignment(),(Num_procs-1)*sizeof(int));
     send_flag  = (int*)     prk_shmem_align(prk_get_alignment(),Num_procs*sizeof(int));
-    if ((Work_in_p == NULL)||(Work_out_p==NULL) || (recv_flag == NULL)){
-      printf(" Error allocating space for work or flags on node %d\n",my_ID);
+    if ((recv_flag == NULL) || (send_flag==NULL)){
+      printf(" Error allocating space for flags on node %d\n",my_ID);
+      error = 1;
+    }
+#endif
+    if ((Work_in_p == NULL)||(Work_out_p==NULL)){
+      printf(" Error allocating space for work on node %d\n",my_ID);
       error = 1;
     }
     bail_out(error);
@@ -298,11 +311,13 @@ int main(int argc, char ** argv)
       bail_out(error);
     }
 
-    for(i=0;i<Num_procs-1;i++)
+#if !BARRIER_SYNCH
+    for(i=0;i<Num_procs-1;i++) 
       recv_flag[i]=0;
 
     for(i=0;i<Num_procs; i++)
       send_flag[i]=1;
+#endif
   }
   
   /* Fill the original column matrices                                              */
@@ -364,14 +379,22 @@ int main(int argc, char ** argv)
 	      }
       }
 
+#if !BARRIER_SYNCH
       shmem_int_wait_until(&send_flag[send_to], SHMEM_CMP_EQ, 1);
       send_flag[send_to] = 0;
+#else
+      shmem_barrier_all();
+#endif
 
       shmem_double_put(&Work_in_p[phase-1][0], &Work_out_p[0], Block_size, send_to);
       shmem_fence();
-      shmem_int_inc(&recv_flag[phase-1], send_to);
 
+#if !BARRIER_SYNCH
+      shmem_int_inc(&recv_flag[phase-1], send_to);
       shmem_int_wait_until(&recv_flag[phase-1], SHMEM_CMP_EQ, iter+1);
+#else
+    shmem_barrier_all();
+#endif
 
       istart = recv_from*Block_order; 
       /* scatter received block to transposed matrix; no need to tile */
@@ -379,9 +402,12 @@ int main(int argc, char ** argv)
         for (i=0; i<Block_order; i++) 
           B(i,j) += Work_in(phase, i,j);
 
+#if !BARRIER_SYNCH
       /* Tell sender that we are ready to for the next iteration */
       shmem_int_p(&send_flag[my_ID], 1, recv_from);
+#endif
     }  /* end of phase loop  */
+
   } /* end of iterations */
 
   local_trans_time[0] = wtime() - local_trans_time[0];
@@ -404,7 +430,7 @@ int main(int argc, char ** argv)
       printf("Solution validates\n");
       avgtime = trans_time[0]/(double)iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
-#ifdef VERBOSE
+#if VERBOSE
       printf("Summed errors: %f \n", abserr[0]);
 #endif
     }
@@ -418,8 +444,10 @@ int main(int argc, char ** argv)
 
   if (Num_procs>1) 
     {
+#if !BARRIER_SYNCH
       prk_shmem_free(recv_flag);
       prk_shmem_free(send_flag);
+#endif
 
       for(i=0;i<Num_procs-1;i++)
 	prk_shmem_free(Work_in_p[i]);
