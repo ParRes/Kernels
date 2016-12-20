@@ -380,7 +380,7 @@ int main(int argc, char ** argv)
           B(i,j) += Work_in(phase, i,j);
 
       /* Tell sender that we are ready to for the next iteration */
-      shmem_int_inc(&send_flag[my_ID], recv_from);
+      shmem_int_p(&send_flag[my_ID], 1, recv_from);
     }  /* end of phase loop  */
   } /* end of iterations */
 
