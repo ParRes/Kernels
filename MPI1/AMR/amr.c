@@ -1387,7 +1387,19 @@ int main(int argc, char ** argv) {
              1.0E-06 * flops/stencil_time, avgtime);
     }
   }
- 
+
+  if (comm_bg != MPI_COMM_NULL) {
+    prk_free(in_bg); 
+    prk_free(out_bg);
+    prk_free(top_buf_out_bg);
+    prk_free(right_buf_out_bg);
+  }
+  for (int g=0; g<4; g++) if (!skip_r[g]) {
+    prk_free(in_r[g]); 
+    prk_free(out_r[g]);
+    prk_free(top_buf_out_r[g]);
+    prk_free(right_buf_out_r[g]);    
+  }
   MPI_Finalize();
   return(MPI_SUCCESS);
 }
