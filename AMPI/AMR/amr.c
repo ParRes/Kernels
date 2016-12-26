@@ -32,23 +32,14 @@ POSSIBILITY OF SUCH DAMAGE.
 
 /*******************************************************************
 
-NAME:    Stencil
+NAME:    AMR
 
 PURPOSE: This program tests the efficiency with which a space-invariant,
          linear, symmetric filter (stencil) can be applied to a square
          grid or image, with periodic introduction and removal of
          subgrids.
   
-USAGE:   The program takes as input the linear
-         dimension of the grid, and the number of iterations on the grid
-
-               <progname> <iterations> <background grid size> <refinement level>
-                          <refinement size> <refinement period> 
-                          <refinement duration> <refinement sub-iterations>
-                          <load balancer> [tile size]
-  
-         The output consists of diagnostics to make sure the 
-         algorithm worked, and of timing statistics.
+USAGE:   Type ./amr for list of parameters
 
 FUNCTIONS CALLED:
 
@@ -111,7 +102,7 @@ typedef struct dchunk{
   int   my_ID, g, iter;
   //background grid    
   int   Num_procs_bg, Num_procs_bgx, Num_procs_bgy, my_ID_bg, my_ID_bgx, my_ID_bgy,
-        right_nbr_bg, left_nbr_bg, top_nbr_bg, bottom_nbr_bg, skip_bg;
+        right_nbr_bg, left_nbr_bg, top_nbr_bg, bottom_nbr_bg;
   DTYPE *top_buf_out_bg, *top_buf_in_bg, *bottom_buf_out_bg, *bottom_buf_in_bg,
         *right_buf_out_bg, *right_buf_in_bg, *left_buf_out_bg, *left_buf_in_bg,
         *in_bg, *out_bg;
@@ -120,8 +111,7 @@ typedef struct dchunk{
   MPI_Comm comm_bg;
   //refinements
   int   Num_procs_r[4], Num_procs_rx[4], Num_procs_ry[4], my_ID_r[4], my_ID_rx[4],
-        my_ID_ry[4], right_nbr_r[4], left_nbr_r[4], top_nbr_r[4], bottom_nbr_r[4],
-        skip_r[4];
+        my_ID_ry[4], right_nbr_r[4], left_nbr_r[4], top_nbr_r[4], bottom_nbr_r[4];
   DTYPE *top_buf_out_r[4], *top_buf_in_r[4], *bottom_buf_out_r[4], *bottom_buf_in_r[4],
         *right_buf_out_r[4], *right_buf_in_r[4], *left_buf_out_r[4], *left_buf_in_r[4],
         *in_r[4], *out_r[4];
@@ -136,14 +126,14 @@ typedef struct dchunk{
 
 void fill_my_heap_ds(dchunk *my_heap_ds, int Num_procs_bg, int Num_procs_bgx, int Num_procs_bgy,
       int my_ID, int g, int my_ID_bg, int my_ID_bgx, int my_ID_bgy, int right_nbr_bg, int left_nbr_bg, 
-      int top_nbr_bg, int bottom_nbr_bg, int iter, int skip_bg, long L_istart_bg, long L_iend_bg,
+      int top_nbr_bg, int bottom_nbr_bg, int iter, long L_istart_bg, long L_iend_bg,
       long L_jstart_bg, long L_jend_bg, long L_width_bg, long L_height_bg, long total_length_in,
       long total_length_out, MPI_Comm comm_bg, DTYPE *in_bg, DTYPE *out_bg, DTYPE *top_buf_out_bg,
       DTYPE *top_buf_in_bg, DTYPE *bottom_buf_out_bg, DTYPE *bottom_buf_in_bg, 
       DTYPE *right_buf_out_bg, DTYPE *right_buf_in_bg, DTYPE *left_buf_out_bg, DTYPE *left_buf_in_bg,
       int Num_procs_r[4], int Num_procs_rx[4], int Num_procs_ry[4], int my_ID_r[4], int my_ID_rx[4],
       int my_ID_ry[4], int right_nbr_r[4], int left_nbr_r[4], int top_nbr_r[4], int bottom_nbr_r[4],
-      int skip_r[4], long L_istart_r[4], long L_iend_r[4], long L_jstart_r[4], 
+      long L_istart_r[4], long L_iend_r[4], long L_jstart_r[4], 
       long L_jend_r[4], long L_istart_r_gross[4], long L_iend_r_gross[4], long L_jstart_r_gross[4], 
       long L_jend_r_gross[4], long L_istart_r_true_gross[4], long L_iend_r_true_gross[4], 
       long L_jstart_r_true_gross[4], long L_jend_r_true_gross[4], long L_istart_r_true[4],
@@ -167,7 +157,6 @@ void fill_my_heap_ds(dchunk *my_heap_ds, int Num_procs_bg, int Num_procs_bgx, in
       my_heap_ds->top_nbr_bg = top_nbr_bg;
       my_heap_ds->bottom_nbr_bg = bottom_nbr_bg;
       my_heap_ds->iter = iter;
-      my_heap_ds->skip_bg = skip_bg;
       my_heap_ds->L_istart_bg = L_istart_bg;
       my_heap_ds->L_iend_bg = L_iend_bg;
       my_heap_ds->L_jstart_bg = L_jstart_bg;
@@ -198,7 +187,6 @@ void fill_my_heap_ds(dchunk *my_heap_ds, int Num_procs_bg, int Num_procs_bgx, in
         my_heap_ds->left_nbr_r[g] = left_nbr_r[g];
         my_heap_ds->top_nbr_r[g] = top_nbr_r[g];
         my_heap_ds->bottom_nbr_r[g] = bottom_nbr_r[g];
-        my_heap_ds->skip_r[g] = skip_r[g];
         my_heap_ds->L_istart_r[g] = L_istart_r[g];
         my_heap_ds->L_iend_r[g] = L_iend_r[g];
         my_heap_ds->L_jstart_r[g] = L_jstart_r[g];
@@ -240,14 +228,14 @@ void fill_my_heap_ds(dchunk *my_heap_ds, int Num_procs_bg, int Num_procs_bgx, in
 void drain_my_heap_ds(dchunk *my_heap_ds, int *Num_procs_bg, int *Num_procs_bgx,
       int *Num_procs_bgy, int *my_ID, int *g, int *my_ID_bg, int *my_ID_bgx, int *my_ID_bgy,
       int *right_nbr_bg, int *left_nbr_bg, int *top_nbr_bg, int *bottom_nbr_bg,
-      int *iter, int *skip_bg, long *L_istart_bg, long *L_iend_bg, long *L_jstart_bg,
+      int *iter, long *L_istart_bg, long *L_iend_bg, long *L_jstart_bg,
       long *L_jend_bg, long *L_width_bg, long *L_height_bg, long *total_length_in,
       long *total_length_out, MPI_Comm *comm_bg, DTYPE **in_bg, DTYPE **out_bg, DTYPE **top_buf_out_bg,
       DTYPE **top_buf_in_bg, DTYPE **bottom_buf_out_bg, DTYPE **bottom_buf_in_bg,
       DTYPE **right_buf_out_bg, DTYPE **right_buf_in_bg, DTYPE **left_buf_out_bg,
       DTYPE **left_buf_in_bg, int Num_procs_r[], int Num_procs_rx[], int Num_procs_ry[],
       int my_ID_r[], int my_ID_rx[], int my_ID_ry[], int right_nbr_r[], int left_nbr_r[], 
-      int top_nbr_r[], int bottom_nbr_r[], int skip_r[],
+      int top_nbr_r[], int bottom_nbr_r[], 
       long L_istart_r[], long L_iend_r[], long L_jstart_r[], long L_jend_r[],
       long L_istart_r_gross[], long L_iend_r_gross[], long L_jstart_r_gross[],
       long L_jend_r_gross[], long L_istart_r_true_gross[], long L_iend_r_true_gross[],
@@ -272,7 +260,6 @@ void drain_my_heap_ds(dchunk *my_heap_ds, int *Num_procs_bg, int *Num_procs_bgx,
       *top_nbr_bg = my_heap_ds->top_nbr_bg;
       *bottom_nbr_bg = my_heap_ds->bottom_nbr_bg;
       *iter = my_heap_ds->iter;
-      *skip_bg = my_heap_ds->skip_bg;
       *L_istart_bg = my_heap_ds->L_istart_bg;
       *L_iend_bg = my_heap_ds->L_iend_bg;
       *L_jstart_bg = my_heap_ds->L_jstart_bg;
@@ -303,7 +290,6 @@ void drain_my_heap_ds(dchunk *my_heap_ds, int *Num_procs_bg, int *Num_procs_bgx,
         left_nbr_r[g] = my_heap_ds->left_nbr_r[g];
         top_nbr_r[g] = my_heap_ds->top_nbr_r[g];
         bottom_nbr_r[g] = my_heap_ds->bottom_nbr_r[g];
-        skip_r[g] = my_heap_ds->skip_r[g];
         L_istart_r[g] = my_heap_ds->L_istart_r[g];
         L_iend_r[g] = my_heap_ds->L_iend_r[g];
         L_jstart_r[g] = my_heap_ds->L_jstart_r[g];
@@ -360,7 +346,6 @@ void dchunkpup(pup_er p,dchunk *c){
   pup_int(p,&c->left_nbr_bg);
   pup_int(p,&c->top_nbr_bg);
   pup_int(p,&c->bottom_nbr_bg);
-  pup_int(p,&c->skip_bg);
   pup_long(p,&c->L_istart_bg);
   pup_long(p,&c->L_iend_bg);
   pup_long(p,&c->L_jstart_bg);
@@ -381,7 +366,6 @@ void dchunkpup(pup_er p,dchunk *c){
   pup_ints(p,c->left_nbr_r,4);
   pup_ints(p,c->top_nbr_r,4);
   pup_ints(p,c->bottom_nbr_r,4);
-  pup_ints(p,c->skip_r,4);
   pup_longs(p,c->L_istart_r,4);
   pup_longs(p,c->L_iend_r,4);
   pup_longs(p,c->L_jstart_r,4);
@@ -409,8 +393,8 @@ void dchunkpup(pup_er p,dchunk *c){
   pup_bytes(p,c->comm_r, 4*sizeof(MPI_Comm));
 
   /* Allocate space for all heap-allocated buffers */
-  if (pup_isUnpacking(p)){
-    if (!c->skip_bg) {
+  if (pup_isUnpacking(p)) {
+    if (c->comm_bg != MPI_COMM_NULL) {
        c->top_buf_out_bg    = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*c->L_width_bg);
        c->top_buf_in_bg     = c->top_buf_out_bg   + 1*RADIUS*c->L_width_bg;
        c->bottom_buf_out_bg = c->top_buf_out_bg   + 2*RADIUS*c->L_width_bg;
@@ -425,7 +409,7 @@ void dchunkpup(pup_er p,dchunk *c){
 	   !c->out_bg) printf("Could not allocate BG arrays\n");
     }
 
-    for (int g=0; g<4; g++) if (!c->skip_r[g]) {
+    for (int g=0; g<4; g++) if (c->comm_r[g] != MPI_COMM_NULL) {
       c->top_buf_out_r[g]    = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*c->L_width_r_true[g]*RADIUS);
       c->top_buf_in_r[g]     = c->top_buf_out_r[g]   + 1*c->L_width_r_true[g]*RADIUS;
       c->bottom_buf_out_r[g] = c->top_buf_out_r[g]   + 2*c->L_width_r_true[g]*RADIUS;
@@ -441,28 +425,26 @@ void dchunkpup(pup_er p,dchunk *c){
   }
   
   /* Copy contents only for field arrays. Initializing comm. buffers with garbage is fine. */
-  if (!c->skip_bg) {
+  if (c->comm_bg != MPI_COMM_NULL) {
     pup_bytes(p,(void*)c->in_bg, sizeof(DTYPE)*c->total_length_in);
     pup_bytes(p,(void*)c->out_bg,sizeof(DTYPE)*c->total_length_out);
   }
 
-  for (int g=0; g<4; g++) if (!c->skip_r[g]) {
-#if CHECK_INPUTS      
+  for (int g=0; g<4; g++) if (c->comm_r[g] != MPI_COMM_NULL) {
     pup_bytes(p,(void*)c->in_r[g],  sizeof(DTYPE)*c->total_length_in_r[g]);
-#endif
     pup_bytes(p,(void*)c->out_r[g], sizeof(DTYPE)*c->total_length_out_r[g]);
   }
 
   /* Free buffers if packing */
   if(pup_isPacking(p)){
-    if (!c->skip_bg) {
+    if (c->comm_bg != MPI_COMM_NULL) {
       prk_free(c->top_buf_out_bg);
       prk_free(c->right_buf_out_bg);  
       prk_free(c->in_bg);             
       prk_free(c->out_bg);
     }
 
-    for (int g=0; g<4; g++) if (!c->skip_r[g]) {
+    for (int g=0; g<4; g++) if (c->comm_r[g] != MPI_COMM_NULL) {
       prk_free(c->top_buf_out_r[g]);
       prk_free(c->right_buf_out_r[g]);
       prk_free(c->in_r[g]);            
@@ -478,7 +460,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
                  int Num_procs, long L_width_bg, 
                  long L_istart_bg, long L_iend_bg, long L_jstart_bg, long L_jend_bg,
                  long L_istart_r, long L_iend_r, long L_jstart_r, long L_jend_r,
-                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, MPI_Comm comm_r,
+                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, int comm_r,
                  long L_istart_r_gross, long L_iend_r_gross, 
                  long L_jstart_r_gross, long L_jend_r_gross, 
                  long L_width_r_true_gross, long L_istart_r_true_gross, long L_iend_r_true_gross,
@@ -711,7 +693,7 @@ int main(int argc, char ** argv) {
   int    migration_delay;   /* number of time steps between load chg and migration */
   int    duration;          /* lifetime of a refinement                            */
   int    sub_iterations;    /* number of sub-iterations on refinement              */
-  long   i, j, ii, jj, it, jt, l, leftover;  /* dummies                            */
+  long   i, j, ii, jj, it, jt, l, leftover; /* dummies                             */
   int    iter, sub_iter;    /* dummies                                             */
   DTYPE  norm, local_norm,  /* L1 norm of solution on background grid              */
          reference_norm;
@@ -753,8 +735,6 @@ int main(int argc, char ** argv) {
   int    validate=1;        /* tracks correct solution on all grids                */
   char   *c_load_balance;   /* input string defining load balancing                */
   int    load_balance;      /* integer defining load balancing                     */
-  int    skip_bg;           /* calling rank has no work to do on BG                */
-  int    skip_r[4];         /* calling rank has no work to do on refinement        */
   MPI_Request request_bg[8];
   MPI_Request request_r[4][8];
   MPI_Comm comm_r[4];       /* communicators for refinements                       */
@@ -774,7 +754,9 @@ int main(int argc, char ** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
-  // Setup for dynamic load balancing
+  /*********************************************************************************
+  **  Setup for dynamic load balancing
+  **********************************************************************************/
   MPI_Info hints;
   MPI_Info_create(&hints);
   MPI_Info_set(hints, "ampi_load_balance", "sync");
@@ -886,11 +868,13 @@ int main(int argc, char ** argv) {
       error = 1;
       goto ENDOFINPUTTESTS;
     }
+
     if (load_balance == high_water && Num_procs==1) {
       printf("ERROR: Load balancer HIGH_WATER requires more than one rank\n");
       error = 1;
       goto ENDOFINPUTTESTS;
     }
+
     if (load_balance==fine_grain && argc==11) {
       rank_spread = atoi(*++argv);
       if (rank_spread<1 || rank_spread>Num_procs) {
@@ -929,18 +913,18 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
 
-  MPI_Bcast(&n,               1, MPI_LONG,  root, MPI_COMM_WORLD);
-  MPI_Bcast(&n_r,             1, MPI_LONG,  root, MPI_COMM_WORLD);
-  MPI_Bcast(&h_r,             1, MPI_DTYPE, root, MPI_COMM_WORLD);
-  MPI_Bcast(&n_r_true,        1, MPI_LONG,  root, MPI_COMM_WORLD);
-  MPI_Bcast(&period,          1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&duration,        1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&refine_level,    1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations,      1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&sub_iterations,  1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&load_balance,    1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&rank_spread,     1, MPI_INT,   root, MPI_COMM_WORLD);
-  MPI_Bcast(&expand,          1, MPI_LONG,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&n,              1, MPI_LONG,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&n_r,            1, MPI_LONG,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&h_r,            1, MPI_DTYPE, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n_r_true,       1, MPI_LONG,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&period,         1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&duration,       1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&refine_level,   1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations,     1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&sub_iterations, 1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&load_balance,   1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&rank_spread,    1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&expand,         1, MPI_LONG,  root, MPI_COMM_WORLD);
   MPI_Bcast(&migration_delay, 1, MPI_INT,   root, MPI_COMM_WORLD);
 
   /* depending on the load balancing strategy chosen, we determine the 
@@ -951,7 +935,6 @@ int main(int argc, char ** argv) {
   case fine_grain: MPI_Comm_dup(MPI_COMM_WORLD, &comm_bg);
                    Num_procs_bg = Num_procs;
                    my_ID_bg = my_ID;
-		   skip_bg = 0;
                    for (g=0; g<4; g++) {
                      if (my_ID < rank_spread) color_r = 1;
                      else                     color_r = MPI_UNDEFINED;
@@ -965,7 +948,6 @@ int main(int argc, char ** argv) {
   case no_talk:    MPI_Comm_dup(MPI_COMM_WORLD, &comm_bg);
                    Num_procs_bg = Num_procs;
                    my_ID_bg = my_ID;
-		   skip_bg = 0;
                    break;
   case high_water: bg_size=n*n; 
                    total_size = n*n+n_r_true*n_r_true;
@@ -983,13 +965,16 @@ int main(int argc, char ** argv) {
 		   if (comm_bg != MPI_COMM_NULL) {
                      MPI_Comm_size(comm_bg, &Num_procs_bg);
                      MPI_Comm_rank(comm_bg, &my_ID_bg);
-		   } else skip_bg = 1;
+		   }
                    for (g=0; g<4; g++) {
                      MPI_Comm_split(MPI_COMM_WORLD, color_r, my_ID, &comm_r[g]);
 		     if (comm_r[g] != MPI_COMM_NULL) {
                        MPI_Comm_size(comm_r[g], &Num_procs_r[g]);
                        MPI_Comm_rank(comm_r[g], &my_ID_r[g]);
-		     } else Num_procs_r[g] = Num_procs - Num_procs_bg;
+		     } 
+                     else {
+                       Num_procs_r[g] = Num_procs - Num_procs_bg;
+                     }
                    }
 		   if (comm_bg == MPI_COMM_NULL) Num_procs_bg = Num_procs - Num_procs_r[0];
                    break;
@@ -1110,7 +1095,7 @@ int main(int argc, char ** argv) {
                        MPI_Allreduce(&my_ID_bgy,&jhigh,1,MPI_LONG,MPI_MAX,comm_r[g]);
 		       Num_procs_rx[g] = ihigh-ilow+1;
 		       Num_procs_ry[g] = jhigh-jlow+1;
-		     };
+		     }
 		   }
                    break;
   case fine_grain: 
@@ -1168,11 +1153,6 @@ int main(int argc, char ** argv) {
   #else
       printf("Not using explicit Pack/Unpack\n");
   #endif
-  #if CHECK_INPUTS
-      printf("Migrating and checking refinement input arrays\n");
-  #else
-      printf("Not migrating nor checking refinement input arrays\n");
-  #endif
 #endif
     printf("Number of iterations            = %d\n", iterations);
     printf("Load balancer                   = %s\n", c_load_balance);
@@ -1192,11 +1172,6 @@ int main(int argc, char ** argv) {
 
   /* reserve space for refinement input/output fields; first compute extents */
 
-  /* if rank is in refinement communicator, don't skip, in principle         */
-  for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) 
-       skip_r[g] = 0;
-  else skip_r[g] = 1;
-  
   /* we partition the refinement in terms of BG indices, so that we know 
      for the fine_grain balancer that a rank's refinement partitition does 
      not need BG data beyond the boundary of the refinement as input to the 
@@ -1289,39 +1264,36 @@ int main(int argc, char ** argv) {
     L_height_r_true[g]       = L_jend_r_true[g] -       L_jstart_r_true[g] + 1;
     L_width_r_true[g]        = L_iend_r_true[g] -       L_istart_r_true[g] + 1;
 
-    if ( !skip_r[g] && (L_height_r_true[g] == 0 || L_width_r_true[g] == 0))  {
-      printf("WARNING: rank %d has no work to do on refinement %d\n", my_ID, g);
-      skip_r[g] = 1;
+    if (L_height_r_true[g] == 0 || L_width_r_true[g] == 0)  {
+      printf("ERROR: rank %d has no work to do on refinement %d\n", my_ID, g);
+      error = 1;
     }
 
     /* FIX THIS; don't want to bail out, just because a rank doesn't have a large
        enough refinement tile to work with. Can merge until tile is large enough */
-    if (!skip_r[g] &&(L_width_r_true[g] < RADIUS || L_height_r_true[g] < RADIUS)) {
+    if (L_width_r_true[g] < RADIUS || L_height_r_true[g] < RADIUS) {
       printf("ERROR: rank %d's work tile %d smaller than stencil radius: %d\n", 
 	     my_ID, g, MIN(L_width_r_true[g],L_height_r_true[g]));
       error = 1;
     }
 
-    if (!skip_r[g]) {
-      total_length_in_r[g]  = (L_width_r_true_gross[g]+2*RADIUS)*
-                              (L_height_r_true_gross[g]+2*RADIUS);
-      total_length_out_r[g] = L_width_r_true_gross[g] * L_height_r_true_gross[g];
-      in_r[g]  = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_in_r[g]);
-      out_r[g] = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_out_r[g]);
-      if (!in_r[g] || !out_r[g]) {
-        printf("ERROR: could not allocate space for refinement input or output arrays\n");
-        error=1;
-      }
+    total_length_in_r[g]  = (L_width_r_true_gross[g]+2*RADIUS)*
+                            (L_height_r_true_gross[g]+2*RADIUS);
+    total_length_out_r[g] = L_width_r_true_gross[g] * L_height_r_true_gross[g];
+    in_r[g]  = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_in_r[g]);
+    out_r[g] = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_out_r[g]);
+    if (!in_r[g] || !out_r[g]) {
+      printf("ERROR: could not allocate space for refinement input or output arrays\n");
+      error=1;
     }
   }
-  bail_out(error);
-
-  for (g=0; g<4; g++) if (skip_r[g]) {//Bogus patch
+  else {//Bogus patch
     L_istart_r_gross[g] =  0;
     L_iend_r_gross[g]   = -1;
     L_jstart_r_gross[g] =  0;
     L_jend_r_gross[g]   = -1;
   }
+  bail_out(error);
 
   /* fill the stencil weights to reflect a discrete divergence operator     */
   for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++) 
@@ -1358,6 +1330,8 @@ int main(int argc, char ** argv) {
     bottom_buf_out_bg = top_buf_out_bg + 2*RADIUS*L_width_bg;
     bottom_buf_in_bg  = top_buf_out_bg + 3*RADIUS*L_width_bg;
 
+    /* add 1 on each side of the ghost point buffers for communication in the
+       horizontal direction, to enable the NO_TALK scenario. See implementation details */
     right_buf_out_bg  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*(L_height_bg+2));
     if (!right_buf_out_bg) {
       printf("ERROR: Rank %d could not allocate comm buffers for x-direction\n", my_ID);
@@ -1412,7 +1386,6 @@ int main(int argc, char ** argv) {
       MPI_Barrier(MPI_COMM_WORLD);
       local_stencil_time = wtime();
     }
-
     /* first complete communication on background grid to help no_talk balancer     */
     if (comm_bg != MPI_COMM_NULL) {
       /* need to fetch ghost point data from neighbors in y-direction                 */
@@ -1492,7 +1465,7 @@ int main(int argc, char ** argv) {
         }
       }
     }
-
+    
     if (!(iter%period)) {
       /* a specific refinement has come to life                                */
       g=(iter/period)%4;
@@ -1506,6 +1479,7 @@ int main(int argc, char ** argv) {
                   L_width_r_true_gross[g], L_istart_r_true_gross[g], L_iend_r_true_gross[g],
                   L_jstart_r_true_gross[g], L_jend_r_true_gross[g], g);
 
+      
       if (comm_r[g] != MPI_COMM_NULL) {
         interpolate(in_r[g], L_width_r_true_gross[g], 
                     L_istart_r_true_gross[g], L_iend_r_true_gross[g],
@@ -1516,13 +1490,15 @@ int main(int argc, char ** argv) {
       }
       /* even though this rank may not interpolate, some just did, so we keep track   */
       num_interpolations++;
-    }
+
+    } // end of initialization of refinement g
 
     if (comm_r[g] != MPI_COMM_NULL) if ((iter%period) < duration) {
 
       /* if within an active refinement epoch, first communicate within refinement    */
 
       for (sub_iter=0; sub_iter<sub_iterations; sub_iter++) {
+
         /* need to communicate within each sub-iteration                              */
 
         /* need to fetch ghost point data from neighbors in y-direction               */
@@ -1577,16 +1553,6 @@ int main(int argc, char ** argv) {
                   990, comm_r[g], &(request_r[g][0+4]));
 	}
 
-        if (right_nbr_r[g] != -1) {
-          MPI_Wait(&(request_r[g][0+4]), MPI_STATUS_IGNORE);
-          MPI_Wait(&(request_r[g][1+4]), MPI_STATUS_IGNORE);
-          for (int kk=0,j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) {
-            for (int i=L_iend_r_true[g]+1; i<=L_iend_r_true[g]+RADIUS; i++) {
-              IN_R(g,i,j) = right_buf_in_r[g][kk++];
-            }
-	  }
-	}
-
         if (left_nbr_r[g] != -1) {
           MPI_Irecv(left_buf_in_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, left_nbr_r[g], 
                     990, comm_r[g], &(request_r[g][3+4]));
@@ -1597,6 +1563,16 @@ int main(int argc, char ** argv) {
 	  }
           MPI_Isend(left_buf_out_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, left_nbr_r[g], 
                     1010, comm_r[g], &(request_r[g][2+4]));
+	}
+
+        if (right_nbr_r[g] != -1) {
+          MPI_Wait(&(request_r[g][0+4]), MPI_STATUS_IGNORE);
+          MPI_Wait(&(request_r[g][1+4]), MPI_STATUS_IGNORE);
+          for (int kk=0,j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) {
+            for (int i=L_iend_r_true[g]+1; i<=L_iend_r_true[g]+RADIUS; i++) {
+              IN_R(g,i,j) = right_buf_in_r[g][kk++];
+            }
+	  }
 	}
 
         if (left_nbr_r[g] != -1) {
@@ -1656,12 +1632,12 @@ int main(int argc, char ** argv) {
       /* Copy pointers to data structure since migration is following*/
       fill_my_heap_ds(&my_heap_ds, Num_procs_bg, Num_procs_bgx, Num_procs_bgy, my_ID, g,
 	  my_ID_bg, my_ID_bgx, my_ID_bgy, right_nbr_bg, left_nbr_bg, top_nbr_bg, 
-	  bottom_nbr_bg, iter, skip_bg, L_istart_bg, L_iend_bg, L_jstart_bg, L_jend_bg,
+	  bottom_nbr_bg, iter, L_istart_bg, L_iend_bg, L_jstart_bg, L_jend_bg,
           L_width_bg, L_height_bg, total_length_in, total_length_out, comm_bg, in_bg, out_bg,
 	  top_buf_out_bg, top_buf_in_bg, bottom_buf_out_bg, bottom_buf_in_bg,
 	  right_buf_out_bg, right_buf_in_bg, left_buf_out_bg, left_buf_in_bg, Num_procs_r,
 	  Num_procs_rx, Num_procs_ry, my_ID_r, my_ID_rx, my_ID_ry, right_nbr_r, left_nbr_r,
-	  top_nbr_r, bottom_nbr_r, skip_r, L_istart_r, L_iend_r, L_jstart_r, 
+	  top_nbr_r, bottom_nbr_r, L_istart_r, L_iend_r, L_jstart_r, 
 	  L_jend_r, L_istart_r_gross, L_iend_r_gross, L_jstart_r_gross, L_jend_r_gross, 
 	  L_istart_r_true_gross, L_iend_r_true_gross, L_jstart_r_true_gross,
           L_jend_r_true_gross, L_istart_r_true, L_iend_r_true, L_jstart_r_true, 
@@ -1678,12 +1654,12 @@ int main(int argc, char ** argv) {
       /* Copy back pointers as they may have been changed due to migration */
       drain_my_heap_ds(&my_heap_ds, &Num_procs_bg, &Num_procs_bgx, &Num_procs_bgy, &my_ID, &g,
 	  &my_ID_bg, &my_ID_bgx, &my_ID_bgy, &right_nbr_bg, &left_nbr_bg, &top_nbr_bg, 
-	  &bottom_nbr_bg, &iter, &skip_bg, &L_istart_bg, &L_iend_bg, &L_jstart_bg, &L_jend_bg,
+	  &bottom_nbr_bg, &iter, &L_istart_bg, &L_iend_bg, &L_jstart_bg, &L_jend_bg,
           &L_width_bg, &L_height_bg, &total_length_in, &total_length_out, &comm_bg, &in_bg, 
 	  &out_bg, &top_buf_out_bg, &top_buf_in_bg, &bottom_buf_out_bg, &bottom_buf_in_bg,
 	  &right_buf_out_bg, &right_buf_in_bg, &left_buf_out_bg, &left_buf_in_bg, Num_procs_r,
 	  Num_procs_rx, Num_procs_ry, my_ID_r, my_ID_rx, my_ID_ry, right_nbr_r, left_nbr_r,
-	  top_nbr_r, bottom_nbr_r, skip_r, L_istart_r, L_iend_r, L_jstart_r, 
+	  top_nbr_r, bottom_nbr_r, L_istart_r, L_iend_r, L_jstart_r, 
 	  L_jend_r, L_istart_r_gross, L_iend_r_gross, L_jstart_r_gross, L_jend_r_gross, 
 	  L_istart_r_true_gross, L_iend_r_true_gross, L_jstart_r_true_gross, 
 	  L_jend_r_true_gross, L_istart_r_true, L_iend_r_true, L_jstart_r_true, L_jend_r_true, 
@@ -1741,6 +1717,7 @@ int main(int argc, char ** argv) {
     MPI_Reduce(&local_norm_in_r[g], &norm_in_r[g], 1, MPI_DTYPE, MPI_SUM, root, MPI_COMM_WORLD);
     if (my_ID == root) norm_in_r[g] /=  n_r_true*n_r_true;
   }
+
 
   /*******************************************************************************
   ** Analyze and output results.
@@ -1818,7 +1795,6 @@ int main(int argc, char ** argv) {
 #endif
       }
 
-#if CHECK_INPUTS      
       if (ABS(norm_in_r[g]-reference_norm_in_r[g]) > EPSILON) {
         printf("ERROR: L1 input norm %d = "FSTR", Reference L1 input norm %d = "FSTR"\n",
                g, norm_in_r[g], g, reference_norm_in_r[g]);
@@ -1830,7 +1806,6 @@ int main(int argc, char ** argv) {
                g, reference_norm_in_r[g], g, norm_in_r[g]);
 #endif
       }
-#endif      
     }
  
     if (!validate) {
@@ -1855,7 +1830,19 @@ int main(int argc, char ** argv) {
              1.0E-06 * flops/stencil_time, avgtime);
     }
   }
- 
+
+  if (comm_bg != MPI_COMM_NULL) {
+    prk_free(in_bg); 
+    prk_free(out_bg);
+    prk_free(top_buf_out_bg);
+    prk_free(right_buf_out_bg);
+  }
+  for (int g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
+    prk_free(in_r[g]); 
+    prk_free(out_r[g]);
+    prk_free(top_buf_out_r[g]);
+    prk_free(right_buf_out_r[g]);    
+  }
   MPI_Finalize();
   return(MPI_SUCCESS);
 }

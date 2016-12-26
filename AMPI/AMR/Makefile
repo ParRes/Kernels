@@ -28,11 +28,6 @@ ifndef USE_PUPER
 endif
 #description: use PUP routines for migration by default
 
-ifndef CHECK_INPUTS
-  CHECK_INPUTS=1
-endif
-#description: if inputs not checked, can speed up rank migration
-
 ifndef DOUBLE
   DOUBLE=1
 endif
@@ -71,7 +66,6 @@ LOOPGENFLAG      = -DLOOPGEN=$(LOOPGEN)
 DOUBLEFLAG       = -DDOUBLE=$(DOUBLE)
 STARFLAG         = -DSTAR=$(STAR)
 USE_PUPERFLAG    = -DUSE_PUPER=$(USE_PUPER)
-CHECK_INPUTSFLAG = -DCHECK_INPUTS=$(CHECK_INPUTS)
 NO_MIGRATEFLAG   = -DNO_MIGRATE=$(NO_MIGRATE)
 
 OPTIONSSTRING="Make options:\n\
@@ -83,13 +77,11 @@ RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
 STAR=0/1                box/star shaped stencil                    [1]  \n\
 NO_MIGRATE=0/1          no rank migration, no stats collecting     [0]  \n\
 USE_PUPER=0/1           use PUP routines for migration             [1]  \n\
-CHECK_INPUTS=0/1        check if input arrays are correct          [1]  \n\
 VERBOSE=0/1             omit/include verbose run information       [0]"
 
 TUNEFLAGS    = $(RESTRICTFLAG)   $(VERBOSEFLAG)   $(USERFLAGS)        \
                $(DOUBLEFLAG)     $(RADIUSFLAG)    $(STARFLAG)         \
-               $(LOOPGENFLAG)    $(USE_PUPERFLAG) $(CHECK_INPUTSFLAG) \
-               $(NO_MIGRATEFLAG)
+               $(LOOPGENFLAG)    $(USE_PUPERFLAG) $(NO_MIGRATEFLAG)
 PROGRAM     = amr
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
