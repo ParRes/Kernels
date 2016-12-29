@@ -88,6 +88,10 @@ class StencilMapper : public DefaultMapper
                   std::vector<Memory>* sysmems_list,
                   std::map<Memory, std::vector<Processor> >* sysmem_local_procs,
                   std::map<Processor, Memory>* proc_sysmems);
+   virtual void slice_task(const MapperContext    ctx,
+                           const Task&            task,
+                           const SliceTaskInput&  input,
+                                 SliceTaskOutput& output);
     virtual void map_must_epoch(const MapperContext           ctx,
                                 const MapMustEpochInput&      input,
                                       MapMustEpochOutput&     output);
@@ -118,6 +122,29 @@ Memory StencilMapper::default_policy_select_target_memory(MapperContext ctx,
                                                          Processor target_proc)
 {
   return proc_sysmems[target_proc];
+}
+
+void StencilMapper::slice_task(const MapperContext    ctx,
+                               const Task&            task,
+                               const SliceTaskInput&  input,
+                                     SliceTaskOutput& output)
+{
+  // Before we do anything else, see if it is in the cache
+  std::map<Domain,std::vector<TaskSlice> >::const_iterator finder =
+    cpu_slices_cache.find(input.domain);
+  if (finder != cpu_slices_cache.end()) {
+    output.slices = finder->second;
+    return;
+  }
+
+  std::vector<Processor>& procs =
+    sysmem_local_procs[proc_sysmems[task.parent_task->current_proc]];
+  assert(input.domain.get_dim() == 1);
+  Rect<1> point_rect = input.domain.get_rect<1>();
+  Point<1> num_blocks(procs.size());
+  default_decompose_points<1>(point_rect, procs,
+      num_blocks, false, stealing_enabled, output.slices);
+  cpu_slices_cache[input.domain] = output.slices;
 }
 
 void StencilMapper::map_must_epoch(const MapperContext           ctx,
