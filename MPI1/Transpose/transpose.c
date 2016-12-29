@@ -150,16 +150,21 @@ int main(int argc, char ** argv)
   int phase;               /* phase inside staged communication     */
   int colstart;            /* starting column for owning rank       */
   int error;               /* error flag                            */
-  double RESTRICT *A_p;    /* original matrix column block          */
-  double RESTRICT *B_p;    /* transposed matrix column block        */
-  double RESTRICT *Work_in_p;/* workspace for transpose function    */
-  double RESTRICT *Work_out_p;/* workspace for transpose function   */
+  double *A_p;             /* original matrix column block          */
+  double *B_p;             /* transposed matrix column block        */
+  double *Work_in_p;       /* workspace for the transpose function  */
+  double *Work_out_p;      /* workspace for the transpose function  */
   double abserr,           /* absolute error                        */
          abserr_tot;       /* aggregate absolute error              */
   double epsilon = 1.e-8;  /* error tolerance                       */
   double local_trans_time, /* timing parameters                     */
          trans_time,
          avgtime;
+
+#if DERIVED_DATATYPES
+  MPI_Datatype ddt_col_type, ddt_type;
+  int pack_pos, ddt_typesize=0;
+#endif
 
 /*********************************************************************
 ** Initialize the MPI environment
@@ -210,9 +215,15 @@ int main(int argc, char ** argv)
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %ld\n", order);
     printf("Number of iterations = %d\n", iterations);
+#if DERIVED_DATATYPES
+    printf("Tiling ignored for derived datatypes\n");
+    printf("Datatype             = derived\n");
+#else
     if ((Tile_order > 0) && (Tile_order < order))
           printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
+    printf("Datatype             = primitive\n");
+#endif
 #if !SYNCHRONOUS
     printf("Non-");
 #endif
@@ -220,12 +231,16 @@ int main(int argc, char ** argv)
   }
 
   /*  Broadcast input data to all ranks */
-  MPI_Bcast(&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations, 1, MPI_INT,  root, MPI_COMM_WORLD);
-  MPI_Bcast(&Tile_order, 1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast (&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Bcast (&iterations, 1, MPI_INT,  root, MPI_COMM_WORLD);
+  MPI_Bcast (&Tile_order, 1, MPI_INT,  root, MPI_COMM_WORLD);
 
   /* a non-positive tile size means no tiling of the local transpose */
+#if DERIVED_DATATYPES
+  tiling = 0;
+#else
   tiling = (Tile_order > 0) && (Tile_order < order);
+#endif
   bytes = 2 * sizeof(double) * order * order;
 
 /*********************************************************************
@@ -267,6 +282,14 @@ int main(int argc, char ** argv)
     Work_out_p = Work_in_p + Block_size;
   }
 
+#if DERIVED_DATATYPES
+  MPI_Type_vector(Block_order, 1, Num_procs*Block_order, MPI_DOUBLE, &ddt_col_type);
+  MPI_Type_commit(&ddt_col_type);
+  MPI_Type_hvector(Block_order, 1, sizeof(double), ddt_col_type, &ddt_type);
+  MPI_Type_commit(&ddt_type);
+  MPI_Type_size(ddt_type, &ddt_typesize);
+#endif
+
   /* Fill the original column matrix                                                */
   istart = 0;
   for (j=0;j<Block_order;j++)
@@ -274,7 +297,6 @@ int main(int argc, char ** argv)
       A(i,j) = (double) (order*(j+colstart) + i);
       B(i,j) = 0.0;
   }
-
   for (iter = 0; iter<=iterations; iter++){
 
     /* start timer after a warmup iteration                                        */
@@ -312,12 +334,19 @@ int main(int argc, char ** argv)
 #endif
 
       istart = send_to*Block_order;
+#if DERIVED_DATATYPES
+      pack_pos=0;
+      MPI_Pack(&A(0,0), 1, ddt_type, Work_out_p, ddt_typesize, &pack_pos, MPI_COMM_WORLD);
+      for (i=0; i<Block_order; i++)
+        for (j=0; j<Block_order; j++)
+          A(i,j) += 1.0;
+#else
       if (!tiling) {
         for (i=0; i<Block_order; i++)
           for (j=0; j<Block_order; j++){
-	    Work_out(j,i) = A(i,j);
+            Work_out(j,i) = A(i,j);
             A(i,j) += 1.0;
-	  }
+          }
       }
       else {
         for (i=0; i<Block_order; i+=Tile_order)
@@ -328,8 +357,9 @@ int main(int argc, char ** argv)
                 A(it,jt) += 1.0;
 	      }
       }
+#endif
 
-#if !SYNCHRONOUS
+#if  !SYNCHRONOUS
       MPI_Isend(Work_out_p, Block_size, MPI_DOUBLE, send_to,
                 phase, MPI_COMM_WORLD, &send_req);
       MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
@@ -352,7 +382,6 @@ int main(int argc, char ** argv)
   local_trans_time = wtime() - local_trans_time;
   MPI_Reduce(&local_trans_time, &trans_time, 1, MPI_DOUBLE, MPI_MAX, root,
              MPI_COMM_WORLD);
-
   abserr = 0.0;
   istart = 0;
   double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
@@ -366,7 +395,7 @@ int main(int argc, char ** argv)
     if (abserr_tot < epsilon) {
       printf("Solution validates\n");
       avgtime = trans_time/(double)iterations;
-      printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
+      printf("Rate (MB/s): %lf Avg time (s): %lf \n",1.0E-06*bytes/avgtime, avgtime );
 #if VERBOSE
       printf("Summed errors: %f \n", abserr);
 #endif
