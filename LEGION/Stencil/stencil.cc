@@ -546,7 +546,13 @@ static LogicalPartition createHaloPartition(LogicalRegion lr,
   DomainPointColoring coloring;
   std::vector<DomainPoint> colors;
   for (int color = GHOST_LEFT; color <= PRIVATE; ++color)
+  {
+    coord_t lu[] = { 1, 1 };
+    coord_t rd[] = { 0, 0 };
     colors.push_back(DomainPoint::from_point<1>(color));
+    coloring[colors[color]] =
+      Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
+  }
 
   if (boundingBox.lo[0] > 0)
   {
@@ -599,7 +605,13 @@ static LogicalPartition createBoundaryPartition(LogicalRegion lr,
   DomainPointColoring coloring;
   std::vector<DomainPoint> colors;
   for (int color = LEFT; color <= INTERIOR; ++color)
+  {
+    coord_t lu[] = { 1, 1 };
+    coord_t rd[] = { 0, 0 };
     colors.push_back(DomainPoint::from_point<1>(color));
+    coloring[colors[color]] =
+      Domain::from_rect<2>(Rect<2>(Point<2>(lu), Point<2>(rd)));
+  }
 
   Rect<2> interiorBox = boundingBox;
   for (int i = 0; i < 2; ++i)
