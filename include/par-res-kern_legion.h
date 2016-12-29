@@ -37,7 +37,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "legion.h"
 #include "default_mapper.h"
 #include "par-res-kern_general.h"
-using namespace LegionRuntime::HighLevel;
+using namespace Legion;
+using namespace Legion::Mapping;
 using namespace LegionRuntime::Accessor;
 using namespace LegionRuntime::Arrays;
-

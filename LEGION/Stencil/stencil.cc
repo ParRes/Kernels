@@ -82,156 +82,89 @@ typedef std::pair<std::pair<double, double>, double> tuple_double;
 class StencilMapper : public DefaultMapper
 {
   public:
-    StencilMapper(Machine machine, HighLevelRuntime *rt, Processor local,
+    StencilMapper(MapperRuntime *rt, Machine machine, Processor local,
+                  const char *mapper_name,
                   std::vector<Processor>* procs_list,
                   std::vector<Memory>* sysmems_list,
                   std::map<Memory, std::vector<Processor> >* sysmem_local_procs,
-                  std::map<Processor, Memory>* proc_sysmems,
-                  std::map<Processor, Memory>* proc_regmems);
-    virtual void select_task_options(Task *task);
-    virtual void slice_domain(const Task *task, const Domain &domain,
-        std::vector<DomainSplit> &slices);
-    virtual bool map_task(Task* task);
-    virtual bool map_must_epoch(const std::vector<Task*> &tasks,
-        const std::vector<MappingConstraint> &constraints,
-        MappingTagID tag);
+                  std::map<Processor, Memory>* proc_sysmems);
+    virtual void map_must_epoch(const MapperContext           ctx,
+                                const MapMustEpochInput&      input,
+                                      MapMustEpochOutput&     output);
+    virtual Memory default_policy_select_target_memory(MapperContext ctx,
+                                            Processor target_proc);
   private:
     std::vector<Processor>& procs_list;
     std::vector<Memory>& sysmems_list;
     std::map<Memory, std::vector<Processor> >& sysmem_local_procs;
     std::map<Processor, Memory>& proc_sysmems;
-    std::map<Processor, Memory>& proc_regmems;
 };
 
-StencilMapper::StencilMapper(Machine machine, HighLevelRuntime *rt, Processor local,
+StencilMapper::StencilMapper(MapperRuntime *rt, Machine machine, Processor local,
+                             const char *mapper_name,
                              std::vector<Processor>* _procs_list,
                              std::vector<Memory>* _sysmems_list,
                              std::map<Memory, std::vector<Processor> >* _sysmem_local_procs,
-                             std::map<Processor, Memory>* _proc_sysmems,
-                             std::map<Processor, Memory>* _proc_regmems)
-  : DefaultMapper(machine, rt, local),
+                             std::map<Processor, Memory>* _proc_sysmems)
+  : DefaultMapper(rt, machine, local, mapper_name),
     procs_list(*_procs_list),
     sysmems_list(*_sysmems_list),
     sysmem_local_procs(*_sysmem_local_procs),
-    proc_sysmems(*_proc_sysmems),
-    proc_regmems(*_proc_regmems)
+    proc_sysmems(*_proc_sysmems)
 {
 }
 
-void StencilMapper::slice_domain(const Task *task, const Domain &domain,
-                                 std::vector<DomainSplit> &slices)
+Memory StencilMapper::default_policy_select_target_memory(MapperContext ctx,
+                                                         Processor target_proc)
 {
-  std::vector<Processor>& target_procs =
-    sysmem_local_procs[proc_sysmems[task->target_proc]];
-  DefaultMapper::decompose_index_space(domain, target_procs, 1, slices);
+  return proc_sysmems[target_proc];
 }
 
-void StencilMapper::select_task_options(Task *task)
+void StencilMapper::map_must_epoch(const MapperContext           ctx,
+                                   const MapMustEpochInput&      input,
+                                         MapMustEpochOutput&     output)
 {
-  task->inline_task = false;
-  task->spawn_task = false;
-  task->map_locally = true;
-  task->profile_task = false;
-  task->task_priority = 0;
-
-  if (strcmp(task->get_task_name(), "boundary") == 0)
-  {
-    std::vector<Processor>& local_procs =
-      sysmem_local_procs[proc_sysmems[local_proc]];
-
-    task->target_proc = local_procs.back();
-    task->additional_procs.insert(local_procs.begin(), local_procs.end());
-  }
-}
-
-bool StencilMapper::map_task(Task *task)
-{
-  Memory sysmem = proc_sysmems[task->target_proc];
-  std::vector<RegionRequirement> &regions = task->regions;
-  for (unsigned idx = 0; idx < regions.size(); ++idx)
-  {
-    RegionRequirement &req = regions[idx];
-
-    req.virtual_map = false;
-    req.enable_WAR_optimization = false;
-    req.reduction_list = false;
-
-    req.blocking_factor = req.max_blocking_factor;
-    req.target_ranking.push_back(sysmem);
-  }
-  return false;
-}
-
-bool StencilMapper::map_must_epoch(const std::vector<Task*> &tasks,
-    const std::vector<MappingConstraint> &constraints,
-    MappingTagID tag)
-{
-  unsigned tasks_per_sysmem =
-    (tasks.size() + sysmems_list.size() - 1) / sysmems_list.size();
-  for (unsigned i = 0; i < tasks.size(); ++i)
-  {
-    Task* task = tasks[i];
-    unsigned index = i;
-    assert(index / tasks_per_sysmem < sysmems_list.size());
-    Memory sysmem = sysmems_list[index / tasks_per_sysmem];
-    unsigned subindex = index % tasks_per_sysmem;
-    assert(subindex < sysmem_local_procs[sysmem].size());
-    task->target_proc = sysmem_local_procs[sysmem][subindex];
-    map_task(task);
-  }
-
   typedef std::map<LogicalRegion, Memory> Mapping;
   Mapping mappings;
-  for (unsigned i = 0; i < constraints.size(); ++i)
-  {
-    const MappingConstraint& c = constraints[i];
-    if (c.idx1 == 0)
-    {
-      Memory sysmem = proc_sysmems[c.t1->target_proc];
-      c.t1->regions[c.idx1].target_ranking.clear();
-      c.t1->regions[c.idx1].target_ranking.push_back(sysmem);
-      c.t2->regions[c.idx2].target_ranking.clear();
-      c.t2->regions[c.idx2].target_ranking.push_back(sysmem);
-      mappings[c.t1->regions[c.idx1].region] = sysmem;
-    }
-    else if (c.idx2 == 0)
-    {
-      Memory sysmem = proc_sysmems[c.t2->target_proc];
-      c.t1->regions[c.idx1].target_ranking.clear();
-      c.t1->regions[c.idx1].target_ranking.push_back(sysmem);
-      c.t2->regions[c.idx2].target_ranking.clear();
-      c.t2->regions[c.idx2].target_ranking.push_back(sysmem);
-      mappings[c.t2->regions[c.idx2].region] = sysmem;
-    }
+
+  if (input.tasks.size() > sysmems_list.size())
+    assert(false);
+
+  std::map<const Task*, size_t> task_indices;
+  for (size_t idx = 0; idx < input.tasks.size(); ++idx) {
+    output.task_processors[idx] = sysmem_local_procs[sysmems_list[idx]][0];
+    task_indices[input.tasks[idx]] = idx;
+  }
+
+  for (size_t idx = 0; idx < input.constraints.size(); ++idx) {
+    const MappingConstraint& constraint = input.constraints[idx];
+
+    const Task* task1 = constraint.constrained_tasks[0];
+    const RegionRequirement& req1 =
+      task1->regions[constraint.requirement_indexes[0]];
+    const Task* task2 = constraint.constrained_tasks[1];
+    const RegionRequirement& req2 =
+      task2->regions[constraint.requirement_indexes[1]];
+
+    assert(req1.region == req2.region);
+    Memory target_memory;
+    if (req2.is_no_access())
+      target_memory = sysmems_list[task_indices[task1]];
     else
-      continue;
+      target_memory = sysmems_list[task_indices[task2]];
+
+    LayoutConstraintSet layout_constraints;
+    layout_constraints.add_constraint(
+      FieldConstraint(req1.privilege_fields, false /*!contiguous*/));
+
+	  PhysicalInstance inst;
+    bool created;
+    bool ok = runtime->find_or_create_physical_instance(ctx, target_memory,
+        layout_constraints, std::vector<LogicalRegion>(1, req1.region),
+        inst, created, true /*acquire*/);
+    assert(ok);
+    output.constraint_mappings[idx].push_back(inst);
   }
-
-  for (unsigned i = 0; i < constraints.size(); ++i)
-  {
-    const MappingConstraint& c = constraints[i];
-    if (c.idx1 != 0 && c.idx2 != 0)
-    {
-      Mapping::iterator it = mappings.find(c.t1->regions[c.idx1].region);
-      assert(it != mappings.end());
-      Memory regmem = it->second;
-      c.t1->regions[c.idx1].target_ranking.clear();
-      c.t1->regions[c.idx1].target_ranking.push_back(regmem);
-      c.t2->regions[c.idx2].target_ranking.clear();
-      c.t2->regions[c.idx2].target_ranking.push_back(regmem);
-    }
-  }
-
-  //for (unsigned i = 0; i < tasks.size(); ++i)
-  //{
-  //  Task* task = tasks[i];
-  //  printf("processor " IDFMT "\n", task->target_proc);
-  //  for (unsigned j = 0; j < task->regions.size(); ++j)
-  //    printf("  region %d memory " IDFMT "\n",
-  //        j, task->regions[j].target_ranking.begin()->id);
-  //}
-
-  return false;
 }
 
 enum TaskIDs {
@@ -377,7 +310,7 @@ void top_level_task(const Task *task,
   /* compute "processor" grid; initialize Num_procsy to avoid compiler warnings */
   Num_procsy = 0;
   /* determine best way to create a 2D grid of ranks (closest to square)        */
-  factor(Num_procs, &Num_procsx, &Num_procsy);
+  factor(num_ranks, &Num_procsx, &Num_procsy);
 
   if (RADIUS < 1)
   {
@@ -1405,7 +1338,7 @@ void dummy_task(const Task *task,
   if (((StencilArgs*)task->args)->waitAnalysis) sleep(1);
 }
 
-static void register_mappers(Machine machine, Runtime *rt,
+static void register_mappers(Machine machine, Runtime *runtime,
                              const std::set<Processor> &local_procs)
 {
   std::vector<Processor>* procs_list = new std::vector<Processor>();
@@ -1413,30 +1346,21 @@ static void register_mappers(Machine machine, Runtime *rt,
   std::map<Memory, std::vector<Processor> >* sysmem_local_procs =
     new std::map<Memory, std::vector<Processor> >();
   std::map<Processor, Memory>* proc_sysmems = new std::map<Processor, Memory>();
-  std::map<Processor, Memory>* proc_regmems = new std::map<Processor, Memory>();
 
   std::vector<Machine::ProcessorMemoryAffinity> proc_mem_affinities;
   machine.get_proc_mem_affinity(proc_mem_affinities);
 
-  for (unsigned idx = 0; idx < proc_mem_affinities.size(); ++idx)
-  {
+  for (unsigned idx = 0; idx < proc_mem_affinities.size(); ++idx) {
     Machine::ProcessorMemoryAffinity& affinity = proc_mem_affinities[idx];
-    if (affinity.p.kind() == Processor::LOC_PROC)
-    {
-      if (affinity.m.kind() == Memory::SYSTEM_MEM)
-      {
+    if (affinity.p.kind() == Processor::LOC_PROC) {
+      if (affinity.m.kind() == Memory::SYSTEM_MEM) {
         (*proc_sysmems)[affinity.p] = affinity.m;
-        if (proc_regmems->find(affinity.p) == proc_regmems->end())
-          (*proc_regmems)[affinity.p] = affinity.m;
       }
-      else if (affinity.m.kind() == Memory::REGDMA_MEM)
-        (*proc_regmems)[affinity.p] = affinity.m;
     }
   }
 
   for (std::map<Processor, Memory>::iterator it = proc_sysmems->begin();
-       it != proc_sysmems->end(); ++it)
-  {
+       it != proc_sysmems->end(); ++it) {
     procs_list->push_back(it->first);
     (*sysmem_local_procs)[it->second].push_back(it->first);
   }
@@ -1446,15 +1370,15 @@ static void register_mappers(Machine machine, Runtime *rt,
     sysmems_list->push_back(it->first);
 
   for (std::set<Processor>::const_iterator it = local_procs.begin();
-      it != local_procs.end(); it++)
+        it != local_procs.end(); it++)
   {
-    StencilMapper* mapper = new StencilMapper(machine, rt, *it,
+    StencilMapper* mapper = new StencilMapper(runtime->get_mapper_runtime(),
+                                              machine, *it, "stencil_mapper",
                                               procs_list,
                                               sysmems_list,
                                               sysmem_local_procs,
-                                              proc_sysmems,
-                                              proc_regmems);
-    rt->replace_default_mapper(mapper, *it);
+                                              proc_sysmems);
+    runtime->replace_default_mapper(mapper, *it);
   }
 }
 
