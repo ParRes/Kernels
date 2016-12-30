@@ -27,6 +27,11 @@ ifndef STAR
 endif
 #description: default stencil is compact (dense, square)
 
+ifndef DERIVED_DATATYPES
+  DERIVED_DATATYPES=0
+endif
+#description: if nonzero, use MPI derived datatypes and MPI_PACK to pack data before sending
+
 ifndef RESTRICT_KEYWORD
   RESTRICT_KEYWORD=0
 endif
@@ -48,24 +53,26 @@ ifndef VERBOSE
 endif
 #description: default diagnostic style is silent
 
-VERBOSEFLAG     = -DVERBOSE=$(VERBOSE)
-RESTRICTFLAG    = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
-RADIUSFLAG      = -DRADIUS=$(RADIUS)
-LOOPGENFLAG     = -DLOOPGEN=$(LOOPGEN)
-DOUBLEFLAG      = -DDOUBLE=$(DOUBLE)
-STARFLAG        = -DSTAR=$(STAR)
+VERBOSEFLAG   = -DVERBOSE=$(VERBOSE)
+RESTRICTFLAG  = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
+RADIUSFLAG    = -DRADIUS=$(RADIUS)
+LOOPGENFLAG   = -DLOOPGEN=$(LOOPGEN)
+DOUBLEFLAG    = -DDOUBLE=$(DOUBLE)
+STARFLAG      = -DSTAR=$(STAR)
+DERIVEDFLAG   = -DDERIVED_DATATYPES=$(DERIVED_DATATYPES)
 
 OPTIONSSTRING="Make options:\n\
 OPTION                  MEANING                                  DEFAULT\n\
 RADIUS=?                radius of stencil                          [2]  \n\
 LOOPGEN=0/1             compact/expanded stencil loop body         [0]  \n\
 DOUBLE=0/1              single/double precision                    [1]  \n\
+DERIVED_DATATYPES=0/1  Use primitive/derived data types            [0]  \n\
 RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
 STAR=0/1                box/star shaped stencil                    [1]  \n\
 VERBOSE=0/1             omit/include verbose run information       [0]"
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG)$(USERFLAGS) $(LOOPGENFLAG)\
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG) 
+               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)  $(DERIVEDFLAG)
 PROGRAM     = stencil
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

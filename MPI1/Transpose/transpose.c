@@ -217,12 +217,12 @@ int main(int argc, char ** argv)
     printf("Number of iterations = %d\n", iterations);
 #if DERIVED_DATATYPES
     printf("Tiling ignored for derived datatypes\n");
-    printf("Datatype             = derived\n");
+    printf("MPI datatypes        = derived\n");
 #else
     if ((Tile_order > 0) && (Tile_order < order))
           printf("Tile size            = %d\n", Tile_order);
     else  printf("Untiled\n");
-    printf("Datatype             = primitive\n");
+    printf("MPI datatypes        = primitive\n");
 #endif
 #if !SYNCHRONOUS
     printf("Non-");
