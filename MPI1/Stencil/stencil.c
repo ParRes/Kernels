@@ -159,7 +159,7 @@ int main(int argc, char ** argv) {
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI stencil execution on 2D grid\n");
-#ifndef STAR
+#if !STAR
     printf("ERROR: Compact stencil not supported\n");
     error = 1;
     goto ENDOFTESTS;
@@ -299,7 +299,6 @@ int main(int argc, char ** argv) {
   in  = (DTYPE *) prk_malloc(total_length_in);
   out = (DTYPE *) prk_malloc(total_length_out);
 
-//  posix_memalign((void **)&u, 4096, 1UL*1024*1024*1024);
   if (!in || !out) {
     printf("ERROR: rank %d could not allocate space for input/output array\n",
             my_ID);
