@@ -621,7 +621,7 @@ int main(int argc, char ** argv) {
   char            *init_mode;        // particle initialization mode (char)
   double          rho ;              // attenuation factor for geometric particle distribution
   uint64_t        k, m;              // determine initial horizontal and vertical velocity of
-                                 // particles-- (2*k)+1 cells per time step
+                                     // particles-- (2*k)+1 cells per time step
   double          *grid;             // the grid is represented as an array of charges
   uint64_t        iter, i;           // dummies
   double          fx, fy, ax, ay;    // particle forces and accelerations
@@ -632,7 +632,8 @@ int main(int argc, char ** argv) {
                   init_patch,        // subset of grid used for localized initialization
                   my_tile;           // subset of grid owner by my rank
   particle_t      *particles, *p;    // array of particles owned by my rank
-  uint64_t        *cur_counts;       //
+  uint64_t        sendbuf_size[8], recvbuf_size[8];
+  particle_t      *sendbuf[8], *recvbuf[8]; // particle communication buffers
   uint64_t        ptr_my;            //
   uint64_t        owner;             // owner (rank) of a particular particle
   double          pic_time, local_pic_time, avg_time;
@@ -935,8 +936,6 @@ int main(int argc, char ** argv) {
 
   /* Allocate space for communication buffers. Adjust appropriately as the simulation proceeds */
 
-  uint64_t sendbuf_size[8], recvbuf_size[8];
-  particle_t *sendbuf[8], *recvbuf[8];
   error=0;
   for (i=0; i<8; i++) {
     sendbuf_size[i] = MAX(1,n/(MEMORYSLACK*Num_procs));
