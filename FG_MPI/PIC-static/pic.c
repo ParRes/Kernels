@@ -205,13 +205,14 @@ void finishParticlesInitialization(uint64_t n, particle_t *p) {
 /* Initializes the particles following the geometric distribution as described in the spec */
 particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
                                 bbox_t tile, double k, double m,
-		                uint64_t *n_placed, uint64_t *n_size) {
+		                uint64_t *n_placed, uint64_t *n_size,
+                                random_draw_t *parm) {
   particle_t  *particles;
   double      A;
   uint64_t    x, y, p, pi, actual_particles, start_index;
 
   /* initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   /* first determine total number of particles, then allocate and place them               */
   /* Each cell in the i-th column of cells contains p(i) = A * rho^i particles */
@@ -220,9 +221,9 @@ particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
   for (*n_placed=0,x=tile.left; x<tile.right; x++) {
     /* at start of each grid column we jump into sequence of random numbers */
     start_index = tile.bottom+x*L;
-    LCG_jump(2*start_index, 0);
+    LCG_jump(2*start_index, 0, parm);
     for (y=tile.bottom; y<tile.top; y++) {
-      (*n_placed) += random_draw(A * pow(rho, x));
+      (*n_placed) += random_draw(A * pow(rho, x), parm);
     }
   }
 
@@ -234,9 +235,9 @@ particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
   for (pi=0,x=tile.left; x<tile.right; x++) {
     /* at start of each grid column we jump into sequence of random numbers */
     start_index = tile.bottom+x*L;
-    LCG_jump(2*start_index, 0);
+    LCG_jump(2*start_index, 0, parm);
     for (y=tile.bottom; y<tile.top; y++) {
-      actual_particles = random_draw(A * pow(rho, x));
+      actual_particles = random_draw(A * pow(rho, x), parm);
       for (p=0; p<actual_particles; p++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
@@ -254,22 +255,23 @@ particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
 /* Initialize with a sinusodial particle distribution */
 particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
                                  bbox_t tile, double k, double m,
-                                 uint64_t *n_placed, uint64_t *n_size) {
+                                 uint64_t *n_placed, uint64_t *n_size,
+                                 random_draw_t *parm) {
   particle_t  *particles;
   double      step;
   uint64_t     x, y, pi, p, actual_particles, start_index;
 
   /* initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   step = PRK_M_PI/L;
   /* Place number of particles to each cell to form distribution decribed in spec.         */
   for ((*n_placed)=0,x=tile.left; x<tile.right; x++) {
     /* at start of each grid column we jump into sequence of random numbers */
     start_index = tile.bottom+x*L;
-    LCG_jump(2*start_index, 0);
+    LCG_jump(2*start_index, 0, parm);
     for (y=tile.bottom; y<tile.top; y++) {
-      (*n_placed) += random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L));
+      (*n_placed) += random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L), parm);
     }
   }
 
@@ -281,9 +283,9 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
   for (pi=0,x=tile.left; x<tile.right; x++) {
     /* at start of each grid column we jump into sequence of random numbers */
     start_index = tile.bottom+x*L;
-    LCG_jump(2*start_index, 0);
+    LCG_jump(2*start_index, 0, parm);
     for (y=tile.bottom; y<tile.top; y++) {
-      actual_particles = random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L));
+      actual_particles = random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L), parm);
       for (p=0; p<actual_particles; p++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
@@ -301,13 +303,14 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
 /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
 particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double beta,
                              bbox_t tile, double k, double m,
-                             uint64_t *n_placed, uint64_t *n_size) {
+                             uint64_t *n_placed, uint64_t *n_size,
+                             random_draw_t *parm) {
   particle_t  *particles;
   double      total_weight, step, current_weight;
   uint64_t     x, y, p, pi, actual_particles, start_index;
 
   /* initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   /* First, find sum of all weights in order to normalize the number of particles */
   step         = 1.0/(L-1);
@@ -317,9 +320,9 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
   for (*n_placed=0,x=tile.left; x<tile.right; x++) {
     current_weight = (beta - alpha * step * ((double) x));
     start_index = tile.bottom+x*L;
-    LCG_jump(2*start_index, 0);
+    LCG_jump(2*start_index, 0, parm);
     for (y=tile.bottom; y<tile.top; y++) {
-      (*n_placed) += random_draw(n_input * (current_weight/total_weight) / L);
+      (*n_placed) += random_draw(n_input*(current_weight/total_weight)/L, parm);
     }
   }
 
@@ -331,9 +334,9 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
   for (pi=0,x=tile.left; x<tile.right; x++) {
     current_weight = (beta - alpha * step * ((double) x));
     start_index = tile.bottom+x*L;
-    LCG_jump(2*start_index,0);
+    LCG_jump(2*start_index,0, parm);
     for (y=tile.bottom; y<tile.top; y++) {
-      actual_particles = random_draw(n_input * (current_weight/total_weight) / L);
+      actual_particles = random_draw(n_input*(current_weight/total_weight)/L, parm);
       for (p=0; p<actual_particles; p++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
@@ -350,13 +353,14 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
 /* Initialize uniformly particles within a "patch" */
 particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
                             bbox_t tile, double k, double m,
-                            uint64_t *n_placed, uint64_t *n_size) {
+                            uint64_t *n_placed, uint64_t *n_size,
+                            random_draw_t *parm) {
   particle_t *particles;
   uint64_t   x, y, total_cells, pi, p, actual_particles, start_index;
   double     particles_per_cell;
 
   /* initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   total_cells  = (patch.right - patch.left+1)*(patch.top - patch.bottom+1);
   particles_per_cell = (double) n_input/total_cells;
@@ -364,10 +368,10 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
   /* Loop over columns of cells and assign number of particles if inside patch */
   for (*n_placed=0,x=tile.left; x<tile.right; x++) {
     start_index = tile.bottom+x*L;
-    LCG_jump(2*start_index, 0);
+    LCG_jump(2*start_index, 0, parm);
     for (y=tile.bottom; y<tile.top; y++) {
-      if (contain(x,y,patch)) (*n_placed) += random_draw(particles_per_cell);
-      else                    (*n_placed) += random_draw(0.0);
+      if (contain(x,y,patch)) (*n_placed) += random_draw(particles_per_cell, parm);
+      else                    (*n_placed) += random_draw(0.0, parm);
     }
   }
 
@@ -378,9 +382,9 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
 
   for (pi=0,x=tile.left; x<tile.right; x++) {
     start_index = tile.bottom+x*L;
-    LCG_jump(2*start_index,0);
+    LCG_jump(2*start_index,0, parm);
     for (y=tile.bottom; y<tile.top; y++) {
-      actual_particles = random_draw(particles_per_cell);
+      actual_particles = random_draw(particles_per_cell, parm);
       if (!contain(x,y,patch)) actual_particles = 0;
       for (p=0; p<actual_particles; p++) {
         particles[pi].x = x + REL_X;
@@ -621,7 +625,7 @@ int main(int argc, char ** argv) {
   char            *init_mode;        // particle initialization mode (char)
   double          rho ;              // attenuation factor for geometric particle distribution
   uint64_t        k, m;              // determine initial horizontal and vertical velocity of
-                                 // particles-- (2*k)+1 cells per time step
+                                     // particles-- (2*k)+1 cells per time step
   double          *grid;             // the grid is represented as an array of charges
   uint64_t        iter, i;           // dummies
   double          fx, fy, ax, ay;    // particle forces and accelerations
@@ -632,7 +636,8 @@ int main(int argc, char ** argv) {
                   init_patch,        // subset of grid used for localized initialization
                   my_tile;           // subset of grid owner by my rank
   particle_t      *particles, *p;    // array of particles owned by my rank
-  uint64_t        *cur_counts;       //
+  uint64_t        sendbuf_size[8], recvbuf_size[8];
+  particle_t      *sendbuf[8], *recvbuf[8]; // particle communication buffers
   uint64_t        ptr_my;            //
   uint64_t        owner;             // owner (rank) of a particular particle
   double          pic_time, local_pic_time, avg_time;
@@ -645,9 +650,9 @@ int main(int argc, char ** argv) {
   find_owner_type find_owner;
   int             ileftover, jleftover;// excess grid points divided among "fat" tiles
   uint64_t        to_send[8], to_recv[8];//
-  int             procsize;          // number of ranks per OS process
-
   MPI_Request requests[16];
+  int             procsize;          // number of ranks per OS process
+  random_draw_t   dice;
 
   /* Initialize the MPI environment */
   MPI_Init(&argc,&argv);
@@ -662,7 +667,7 @@ int main(int argc, char ** argv) {
 
   if (my_ID==root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("FG_MPI Particle-in-Cell execution on 2D grid\n");
+    printf("MPI Particle-in-Cell execution on 2D grid\n");
 
     if (argc<6) {
       printf("Usage: %s <#simulation steps> <grid size> <#particles> <k (particle charge semi-increment)> ", argv[0]);
@@ -698,11 +703,6 @@ int main(int argc, char ** argv) {
 
     particle_mode  = UNDEFINED;
     k = atoi(*++argv);   args_used++;
-    if (k<0) {
-      printf("ERROR: Particle semi-charge must be non-negative: %llu\n", k);
-      error = 1;
-      goto ENDOFTESTS;
-    }
     m = atoi(*++argv);   args_used++;
     init_mode = *++argv; args_used++;
 
@@ -808,7 +808,7 @@ int main(int argc, char ** argv) {
 
   if (my_ID == root) {
     MPIX_Get_collocated_size(&procsize);
-    printf("Number of ranks                    = %llu\n", Num_procs);
+    printf("Number of ranks                    = %d\n", Num_procs);
     printf("Number of ranks/process            = %d\n", procsize);
     printf("Load balancing                     = None\n");
     printf("Grid size                          = %llu\n", L);
@@ -895,22 +895,23 @@ int main(int argc, char ** argv) {
 
   grid = initializeGrid(my_tile);
 
+  LCG_init(&dice);
   switch(particle_mode){
   case GEOMETRIC:
     particles = initializeGeometric(n, L, rho, my_tile, k, m,
-                                     &particles_count, &particles_size);
+				    &particles_count, &particles_size, &dice);
     break;
   case LINEAR:
     particles = initializeLinear(n, L, alpha, beta, my_tile, k, m,
-                                     &particles_count, &particles_size);
+                                    &particles_count, &particles_size, &dice);
     break;
   case SINUSOIDAL:
     particles = initializeSinusoidal(n, L, my_tile, k, m,
-                                     &particles_count, &particles_size);
+                                    &particles_count, &particles_size, &dice);
     break;
   case PATCH:
     particles = initializePatch(n, L, init_patch, my_tile, k, m,
-                                     &particles_count, &particles_size);
+                                    &particles_count, &particles_size, &dice);
   }
 
   if (!particles) {
@@ -935,8 +936,6 @@ int main(int argc, char ** argv) {
 
   /* Allocate space for communication buffers. Adjust appropriately as the simulation proceeds */
 
-  uint64_t sendbuf_size[8], recvbuf_size[8];
-  particle_t *sendbuf[8], *recvbuf[8];
   error=0;
   for (i=0; i<8; i++) {
     sendbuf_size[i] = MAX(1,n/(MEMORYSLACK*Num_procs));
@@ -1032,9 +1031,9 @@ int main(int argc, char ** argv) {
                                 recvbuf[2*i+1], to_recv[2*i+1]);
     }
     particles_count = ptr_my;
-  }
+  } // end of iterations
 
-  local_pic_time = MPI_Wtime() - local_pic_time;
+  local_pic_time = wtime() - local_pic_time;
   MPI_Reduce(&local_pic_time, &pic_time, 1, MPI_DOUBLE, MPI_MAX, root,
              MPI_COMM_WORLD);
 
