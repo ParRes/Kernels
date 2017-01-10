@@ -78,7 +78,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 0 1 SINUSOIDAL
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 LINEAR 1.0 3.0
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 PATCH 0 200 100 200 
-        $PRK_TARGET_PATH/AMR/amr             10 1000 10 3 2 1 5
+        $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5
         ;;
     allfortran*)
         # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
@@ -188,6 +188,10 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/DGEMM/dgemm              $OMP_NUM_THREADS 10 1024 32
         $PRK_TARGET_PATH/Synch_global/global      $OMP_NUM_THREADS 10 16384
         $PRK_TARGET_PATH/Refcount/refcount        $OMP_NUM_THREADS 16777216 1024
+        $PRK_TARGET_PATH/PIC/pic                  $OMP_NUM_THREADS 10 1000 1000000 1 2 GEOMETRIC 0.99
+        $PRK_TARGET_PATH/PIC/pic                  $OMP_NUM_THREADS 10 1000 1000000 0 1 SINUSOIDAL
+        $PRK_TARGET_PATH/PIC/pic                  $OMP_NUM_THREADS 10 1000 1000000 1 0 LINEAR 1.0 3.0
+        $PRK_TARGET_PATH/PIC/pic                  $OMP_NUM_THREADS 10 1000 1000000 1 0 PATCH 0 200 100 200
         # random is broken right now it seems
         #$PRK_TARGET_PATH/Random/random $OMP_NUM_THREADS 10 16384 32
         ;;
@@ -210,6 +214,9 @@ case "$PRK_TARGET" in
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 0 1 SINUSOIDAL
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 LINEAR 1.0 3.0
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 PATCH 0 200 100 200 
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 FINE_GRAIN 2
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 HIGH_WATER 
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 NO_TALK
         ;;
     allmpio*mp)
         echo "MPI+OpenMP"
@@ -366,6 +373,7 @@ case "$PRK_TARGET" in
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
         export PRK_LAUNCHER_ARGS="+p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS +isomalloc_sync ++local"
+        export PRK_LOAD_BALANCER_ARGS="+balancer RefineLB"
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       $PRK_LAUNCHER_ARGS 10 1024 1024
         $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     $PRK_LAUNCHER_ARGS 10 1000
         $PRK_LAUNCHER $PRK_TARGET_PATH/Transpose/transpose $PRK_LAUNCHER_ARGS 10 1024 32
@@ -377,6 +385,13 @@ case "$PRK_TARGET" in
         # FIXME This one hangs - bug in AMPI?
         #$PRK_LAUNCHER $PRK_TARGET_PATH/Random/random       $PRK_LAUNCHER_ARGS 32 20
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_global/global $PRK_LAUNCHER_ARGS 10 16384
+        $PRK_LAUNCHER $PRK_TARGET_PATH/PIC/pic             $PRK_LAUNCHER_ARGS $PRK_LOAD_BALANCER_ARGS 10 1000 1000000 1 2 GEOMETRIC 0.99
+        $PRK_LAUNCHER $PRK_TARGET_PATH/PIC/pic             $PRK_LAUNCHER_ARGS $PRK_LOAD_BALANCER_ARGS 10 1000 1000000 0 1 SINUSOIDAL
+        $PRK_LAUNCHER $PRK_TARGET_PATH/PIC/pic             $PRK_LAUNCHER_ARGS $PRK_LOAD_BALANCER_ARGS 10 1000 1000000 1 0 LINEAR 1.0 3.0
+        $PRK_LAUNCHER $PRK_TARGET_PATH/PIC/pic             $PRK_LAUNCHER_ARGS $PRK_LOAD_BALANCER_ARGS 10 1000 1000000 1 0 PATCH 0 200 100 200
+        $PRK_LAUNCHER $PRK_TARGET_PATH/AMR/amr             $PRK_LAUNCHER_ARGS $PRK_LOAD_BALANCER_ARGS 10 1000 100 2 2 1 5 FINE_GRAIN
+        $PRK_LAUNCHER $PRK_TARGET_PATH/AMR/amr             $PRK_LAUNCHER_ARGS $PRK_LOAD_BALANCER_ARGS 10 1000 100 2 2 1 5 HIGH_WATER
+        $PRK_LAUNCHER $PRK_TARGET_PATH/AMR/amr             $PRK_LAUNCHER_ARGS $PRK_LOAD_BALANCER_ARGS 10 1000 100 2 2 1 5 NO_TALK
         ;;
     allfgmpi)
         echo "Fine-Grain MPI (FG-MPI)"
@@ -388,9 +403,7 @@ case "$PRK_TARGET" in
         export PRK_FGMPI_THREADS=2
         export PRK_LAUNCHER=$FGMPI_ROOT/bin/mpiexec
         $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        # FIXME Fails with:
-        # ERROR: rank 2 has work tile smaller then stencil radius
-        #$PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Stencil/stencil     10 1000
+        $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
         $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Reduce/reduce       10 16777216
         $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Nstream/nstream     10 16777216 32
@@ -398,6 +411,10 @@ case "$PRK_TARGET" in
         $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/DGEMM/dgemm         10 1024 32 1
         $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Random/random       32 20
         $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/Synch_global/global 10 16384
+        $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 2 GEOMETRIC 0.99
+        $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 0 1 SINUSOIDAL
+        $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 LINEAR 1.0 3.0
+        $PRK_LAUNCHER -np $PRK_MPI_PROCS -nfg $PRK_FGMPI_THREADS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 PATCH 0 200 100 200
         ;;
     allgrappa)
         echo "Grappa"
