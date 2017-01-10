@@ -129,6 +129,83 @@ typedef struct particle_t {
   double   ID;   // ID of particle; use double to create homogeneous type
 } particle_t;
 
+#if USE_PUPER
+/* Data structure for heap allocated data and PUPer functions */
+typedef struct dchunk{
+  int sendbuf_size[8], recvbuf_size[8];
+  uint64_t n_size;
+  bbox_t tile;
+  particle_t  *particles, *sendbuf[8], *recvbuf[8];
+  double *grid;
+}dchunk;
+
+/* PUPer routine */
+void dchunkpup(pup_er p,dchunk *c){
+  uint64_t n_columns, n_rows;
+
+  pup_long(p,&c->n_size);
+  pup_bytes(p,&c->tile,sizeof(bbox_t));
+  n_columns = c->tile.right-c->tile.left+1;
+  n_rows = c->tile.top-c->tile.bottom+1;
+  pup_ints(p,c->sendbuf_size,8);
+  pup_ints(p,c->recvbuf_size,8);
+   
+  /* Allocate space for all heap-allocated buffers */
+  if(pup_isUnpacking(p)){
+    c->particles = (particle_t *) prk_malloc(sizeof(particle_t) * c->n_size);
+    c->grid = (double*) malloc(sizeof(double) * n_columns * n_rows);
+    for (int i=0; i<8; i++) {
+      c->sendbuf[i] = prk_malloc(c->sendbuf_size[i]*sizeof(double));
+      c->sendbuf[i] = prk_malloc(c->sendbuf_size[i]*sizeof(double));
+    }
+  }
+   
+  /* Copy the contents only for the particles array and the grid. Initializing communication buffers with garbage is fine. */
+  pup_bytes(p,(void*)c->particles,c->n_size*sizeof(particle_t));
+  pup_doubles(p,c->grid,n_columns*n_rows);
+   
+  /* Free buffers if unpacking */
+  if(pup_isPacking(p)){
+    prk_free(c->particles);
+    prk_free(c->grid);
+    for (int i=0; i<8; i++) {
+      prk_free(c->sendbuf[i]);
+      prk_free(c->recvbuf[i]);
+    }
+  }
+}
+
+void fill_my_heap_ds(dchunk *my_heap_ds, particle_t *particles, double *grid, particle_t *sendbuf[8], 
+                     particle_t *recvbuf[8], uint64_t sendbuf_size[8], uint64_t recvbuf_size[8], uint64_t n_size,
+                     bbox_t tile) {
+  my_heap_ds->particles = particles;
+  my_heap_ds->grid = grid;
+  my_heap_ds->n_size = n_size;
+  my_heap_ds->tile = tile;
+  for (int i=0; i<8; i++) {
+    my_heap_ds->sendbuf[i] = sendbuf[i];
+    my_heap_ds->recvbuf[i] = recvbuf[i];
+    my_heap_ds->sendbuf_size[i] = sendbuf_size[i];
+    my_heap_ds->recvbuf_size[i] = recvbuf_size[i];
+  }
+}
+
+void drain_my_heap_ds(dchunk *my_heap_ds, particle_t **particles, double **grid, particle_t *sendbuf[], 
+                     particle_t *recvbuf[], uint64_t sendbuf_size[], uint64_t recvbuf_size[], uint64_t *n_size,
+                     bbox_t *tile) {
+  *particles = my_heap_ds->particles;
+  *grid = my_heap_ds->grid;
+  *n_size = my_heap_ds->n_size;
+  *tile = my_heap_ds->tile;
+  for (int i=0; i<8; i++) {
+    sendbuf[i] = my_heap_ds->sendbuf[i];
+    recvbuf[i] = my_heap_ds->recvbuf[i];
+    sendbuf_size[i] = my_heap_ds->sendbuf_size[i];
+    recvbuf_size[i] = my_heap_ds->recvbuf_size[i];
+  }
+}
+#endif
+
 int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
   if (patch->left>=patch->right || patch->bottom>=patch->top) return(1);
   if (patch_contain) {
@@ -648,10 +725,29 @@ int main(int argc, char ** argv) {
   uint64_t        to_send[8], to_recv[8];//
   MPI_Request requests[16];
 
+#if USE_PUPER
+  dchunk my_heap_ds;
+#endif
+
   /* Initialize the MPI environment */
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+  /*********************************************************************************
+  **  Setup for dynamic load balancing
+  **********************************************************************************/
+  MPI_Info hints;
+  MPI_Info_create(&hints);
+  MPI_Info_set(hints, "ampi_load_balance", "sync");
+
+  /* initially we turn off collecting load balancing information */
+  //  AMPI_Load_stop_measure();
+#if USE_PUPER
+  int pup_index;
+  AMPI_Register_pup((MPI_PupFn) dchunkpup, (void*)&my_heap_ds, &pup_index);
+  if (my_ID==root) printf("registered dchunkpup\n");
+#endif
 
   /* FIXME: This can be further improved */
   /* Create MPI data type for particle_t */
@@ -802,11 +898,19 @@ int main(int argc, char ** argv) {
 
   if (my_ID == root) {
     printf("Number of ranks                    = %d\n", Num_procs);
-    printf("Load balancing                     = None\n");
     printf("Grid size                          = %llu\n", L);
     printf("Tiles in x/y-direction             = %d/%d\n", Num_procsx, Num_procsy);
     printf("Number of particles requested      = %llu\n", n);
     printf("Number of time steps               = %llu\n", iterations);
+#if NO_MIGRATE
+    printf("Rank migration and load balance monitoring disabled\n");
+#else
+  #if USE_PUPER
+      printf("Using explicit Pack/Unpack\n");
+  #else
+      printf("Not using explicit Pack/Unpack\n");
+  #endif
+#endif
     printf("Initialization mode                = %s\n",   init_mode);
     switch(particle_mode) {
     case GEOMETRIC: printf("  Attenuation factor               = %lf\n", rho);    break;
@@ -1022,6 +1126,25 @@ int main(int argc, char ** argv) {
                                 recvbuf[2*i+1], to_recv[2*i+1]);
     }
     particles_count = ptr_my;
+
+#if !NO_MIGRATE    
+
+#if USE_PUPER
+    /* Copy pointers to data structure since migration is following*/
+    fill_my_heap_ds(&my_heap_ds, particles, grid, sendbuf, recvbuf, sendbuf_size,
+                    recvbuf_size, particles_size, my_tile);
+#endif
+    printf("Rank %d about to call migrate\n", my_ID);
+      AMPI_Migrate(hints);
+
+#if USE_PUPER
+      /* Copy back pointers as they may have been changed due to migration */
+      drain_my_heap_ds(&my_heap_ds, &particles, &grid, sendbuf, recvbuf, sendbuf_size,
+                    recvbuf_size, &particles_size, &my_tile);
+#endif
+
+#endif
+
   } // end of iterations
 
   local_pic_time = wtime() - local_pic_time;

@@ -766,7 +766,7 @@ int main(int argc, char ** argv) {
 #if USE_PUPER
   int pup_index;
   AMPI_Register_pup((MPI_PupFn) dchunkpup, (void*)&my_heap_ds, &pup_index);
-  if (my_ID==root) printf("registered dchunkpupn\n");
+  if (my_ID==root) printf("registered dchunkpup\n");
 #endif
 
   /*********************************************************************************
