@@ -11,7 +11,6 @@ USERFLAGS    =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-#LIBS         = -lm -module CommonLBs -memory isomalloc
 LIBS         = -lm -module CommonLBs 
 LIBPATHS     = 
 INCLUDEPATHS = 
