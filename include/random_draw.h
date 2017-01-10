@@ -36,11 +36,18 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <inttypes.h>
 #include <math.h>
+
+#define NMAX 64
+
+typedef struct {
+  uint64_t  LCG_seed;
+  uint64_t  LCG_A[NMAX];
+} random_draw_t;
  
-extern void     LCG_init(void);
-extern uint64_t LCG_next(uint64_t);
+extern void     LCG_init(random_draw_t *);
+extern uint64_t LCG_next(uint64_t, random_draw_t *);
 extern void     LCG_get_chunk(uint64_t *, uint64_t *, int, int, uint64_t);
-extern void     LCG_jump(uint64_t, uint64_t);
-extern uint64_t random_draw(double);
+extern void     LCG_jump(uint64_t, uint64_t, random_draw_t *);
+extern uint64_t random_draw(double, random_draw_t *);
 
 #endif
