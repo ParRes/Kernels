@@ -174,13 +174,14 @@ void finish_distribution(uint64_t n, particle_t *p) {
 
 /* Initializes  particles with geometric distribution */
 particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
-                                double k, double m, uint64_t *n_placed){
+                                double k, double m, uint64_t *n_placed, 
+                                random_draw_t *parm){
   particle_t  *particles;
   uint64_t    x, y, p, pi, actual_particles;
   double      A;
 
   /* initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   /* first determine total number of particles, then allocate and place them   */
 
@@ -188,7 +189,7 @@ particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
   A = n_input * ((1.0-rho) / (1.0-pow(rho,L))) / (double)L;
   for (*n_placed=0,x=0; x<L; x++) {
     for (y=0; y<L; y++) {
-      (*n_placed) += random_draw(A * pow(rho, x));
+      (*n_placed) += random_draw(A * pow(rho, x), parm);
     }
   }
 
@@ -199,12 +200,12 @@ particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
   }
 
   /* Re-initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   A = n_input * ((1.0-rho) / (1.0-pow(rho,L))) / (double)L;
   for (pi=0,x=0; x<L; x++) {
     for (y=0; y<L; y++) {
-      actual_particles = random_draw(A * pow(rho, x));
+      actual_particles = random_draw(A * pow(rho, x), parm);
       for (p=0; p<actual_particles; p++,pi++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
@@ -220,20 +221,21 @@ particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
 
 /* Initialize particles with a sinusoidal distribution */
 particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
-                                 double k, double m, uint64_t *n_placed){
+                                 double k, double m, uint64_t *n_placed,
+                                 random_draw_t *parm){
   particle_t  *particles;
   double      step = PRK_M_PI/L;
   uint64_t    x, y, p, pi, actual_particles;
 
   /* initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   /* first determine total number of particles, then allocate and place them   */
 
   /* Loop over columns of cells and assign number of particles proportional to sinusodial weight */
   for (*n_placed=0,x=0; x<L; x++) {
     for (y=0; y<L; y++) {
-      (*n_placed) += random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L));
+      (*n_placed) += random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L), parm);
     }
   }
 
@@ -244,11 +246,11 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
   }
 
   /* Re-initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   for (pi=0,x=0; x<L; x++) {
     for (y=0; y<L; y++) {
-      actual_particles = random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L));
+      actual_particles = random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L), parm);
       for (p=0; p<actual_particles; p++,pi++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
@@ -265,13 +267,13 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
 /* Initialize particles with linearly decreasing distribution */
 /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
 particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double beta,
-                             double k, double m, uint64_t *n_placed){
+                             double k, double m, uint64_t *n_placed, random_draw_t *parm){
   particle_t  *particles;
   uint64_t    x, y, p, pi, actual_particles;
   double      total_weight, step = 1.0/L, current_weight;
 
   /* initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   /* first determine total number of particles, then allocate and place them   */
 
@@ -282,7 +284,7 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
   for ((*n_placed)=0,x=0; x<L; x++) {
     current_weight = (beta - alpha * step * ((double) x));
     for (y=0; y<L; y++) {
-      (*n_placed) += random_draw(n_input * (current_weight/total_weight)/L);
+      (*n_placed) += random_draw(n_input * (current_weight/total_weight)/L, parm);
     }
   }
 
@@ -293,13 +295,13 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
   }
 
   /* Re-initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   /* Loop over columns of cells and assign number of particles proportional linear weight */
   for (pi=0,x=0; x<L; x++) {
     current_weight = (beta - alpha * step * ((double) x));
     for (y=0; y<L; y++) {
-      actual_particles = random_draw(n_input * (current_weight/total_weight)/L);
+      actual_particles = random_draw(n_input * (current_weight/total_weight)/L, parm);
       for (p=0; p<actual_particles; p++,pi++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
@@ -315,13 +317,14 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
 
 /* Initialize uniformly particles within a "patch" */
 particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
-                            double k, double m, uint64_t *n_placed){
+                            double k, double m, uint64_t *n_placed,
+                            random_draw_t *parm){
   particle_t  *particles;
   uint64_t    x, y, p, pi, total_cells, actual_particles;
   double      particles_per_cell;
 
   /* initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   /* first determine total number of particles, then allocate and place them   */
   total_cells  = (patch.right - patch.left+1)*(patch.top - patch.bottom+1);
@@ -330,7 +333,7 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
   /* Iterate over the columns of cells and assign uniform number of particles */
   for ((*n_placed)=0,x=0; x<L; x++) {
     for (y=0; y<L; y++) {
-      actual_particles = random_draw(particles_per_cell);
+      actual_particles = random_draw(particles_per_cell, parm);
       if (x<patch.left || x>patch.right || y<patch.bottom || y>patch.top)
         actual_particles = 0;
       (*n_placed) += actual_particles;
@@ -344,12 +347,12 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
   }
 
   /* Re-initialize random number generator */
-  LCG_init();
+  LCG_init(parm);
 
   /* Iterate over the columns of cells and assign uniform number of particles */
   for (pi=0,x=0; x<L; x++) {
     for (y=0; y<L; y++) {
-      actual_particles = random_draw(particles_per_cell);
+      actual_particles = random_draw(particles_per_cell, parm);
       if (x<patch.left || x>patch.right || y<patch.bottom || y>patch.top)
         actual_particles = 0;
       for (p=0; p<actual_particles; p++,pi++) {
@@ -468,6 +471,7 @@ int main(int argc, char ** argv) {
   int         error=0;           // used for graceful exit after error
 #endif
   double      avg_time, pic_time;// timing parameters
+  random_draw_t dice;
 
   printf("Parallel Research Kernels Version %s\n", PRKVERSION);
   printf("Serial Particle-in-Cell execution on 2D grid\n");
@@ -583,11 +587,12 @@ int main(int argc, char ** argv) {
   /* Initialize grid of charges and particles */
   Qgrid = initializeGrid(L);
 
+  LCG_init(&dice);
   switch(particle_mode) {
-  case GEOMETRIC:  particles = initializeGeometric(n, L, rho, k, m, &n);      break;
-  case SINUSOIDAL: particles = initializeSinusoidal(n, L, k, m, &n);          break;
-  case LINEAR:     particles = initializeLinear(n, L, alpha, beta, k, m, &n); break;
-  case PATCH:      particles = initializePatch(n, L, init_patch, k, m, &n);   break;
+  case GEOMETRIC:  particles = initializeGeometric(n, L, rho, k, m, &n, &dice);      break;
+  case SINUSOIDAL: particles = initializeSinusoidal(n, L, k, m, &n, &dice);          break;
+  case LINEAR:     particles = initializeLinear(n, L, alpha, beta, k, m, &n, &dice); break;
+  case PATCH:      particles = initializePatch(n, L, init_patch, k, m, &n, &dice);   break;
   default:         printf("ERROR: Unsupported particle distribution\n");  exit(FAILURE);
   }
 
