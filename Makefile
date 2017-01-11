@@ -105,6 +105,8 @@ allampi:
 	cd AMPI/Branch;              $(MAKE) branch    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"  \
                                                        "MATRIX_RANK         = $(matrix_rank)"        \
                                                        "NUMBER_OF_FUNCTIONS = $(number_of_functions)"
+	cd AMPI/PIC;                 $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd AMPI/AMR;                 $(MAKE) amr       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allfgmpi:
 	cd scripts/small;              $(MAKE) -f  Makefile_FG_MPI runfgmpi
@@ -259,6 +261,8 @@ clean:
 	cd AMPI/Synch_global;       $(MAKE) clean
 	cd AMPI/Synch_p2p;          $(MAKE) clean
 	cd AMPI/Branch;             $(MAKE) clean
+	cd AMPI/PIC;                $(MAKE) clean
+	cd AMPI/AMR;                $(MAKE) clean
 	cd MPIRMA/Stencil;          $(MAKE) clean
 	cd MPIRMA/Synch_p2p;        $(MAKE) clean
 	cd MPIRMA/Transpose;        $(MAKE) clean
@@ -331,6 +335,7 @@ veryclean: clean
 	cd FG_MPI/Branch;           $(MAKE) veryclean
 	cd AMPI/Stencil;            $(MAKE) veryclean
 	cd AMPI/Branch;             $(MAKE) veryclean
+	cd AMPI/AMR;                $(MAKE) veryclean
 	cd scripts/small;           $(MAKE) -f  Makefile_FG_MPI veryclean
 	cd scripts/wide;            $(MAKE) -f  Makefile_FG_MPI veryclean
 	cd common; rm -f make.defs
