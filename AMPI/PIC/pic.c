@@ -132,7 +132,7 @@ typedef struct particle_t {
 #if USE_PUPER
 /* Data structure for heap allocated data and PUPer functions */
 typedef struct dchunk{
-  int sendbuf_size[8], recvbuf_size[8];
+  uint64_t sendbuf_size[8], recvbuf_size[8];
   uint64_t n_size;
   bbox_t tile;
   particle_t  *particles, *sendbuf[8], *recvbuf[8];
@@ -143,20 +143,22 @@ typedef struct dchunk{
 void dchunkpup(pup_er p,dchunk *c){
   uint64_t n_columns, n_rows;
 
-  pup_long(p,&c->n_size);
+  pup_bytes(p,&c->n_size,sizeof(uint64_t));
   pup_bytes(p,&c->tile,sizeof(bbox_t));
   n_columns = c->tile.right-c->tile.left+1;
   n_rows = c->tile.top-c->tile.bottom+1;
-  pup_ints(p,c->sendbuf_size,8);
-  pup_ints(p,c->recvbuf_size,8);
+  pup_bytes(p,c->sendbuf_size,8*sizeof(uint64_t));
+  pup_bytes(p,c->recvbuf_size,8*sizeof(uint64_t));
    
   /* Allocate space for all heap-allocated buffers */
   if(pup_isUnpacking(p)){
     c->particles = (particle_t *) prk_malloc(sizeof(particle_t) * c->n_size);
-    c->grid = (double*) malloc(sizeof(double) * n_columns * n_rows);
+    c->grid = (double*) prk_malloc(sizeof(double) * n_columns * n_rows);
+    if (!c->particles || !c->grid) printf("Could not allocate particles or grid arrays\n");
     for (int i=0; i<8; i++) {
-      c->sendbuf[i] = prk_malloc(c->sendbuf_size[i]*sizeof(double));
-      c->sendbuf[i] = prk_malloc(c->sendbuf_size[i]*sizeof(double));
+      c->sendbuf[i] = prk_malloc(c->sendbuf_size[i]*sizeof(particle_t));
+      c->recvbuf[i] = prk_malloc(c->recvbuf_size[i]*sizeof(particle_t));
+      if (!c->sendbuf[i] || !c->recvbuf[i]) printf("Could not allocate communications buffers %d\n", i);
     }
   }
    
@@ -696,6 +698,8 @@ int main(int argc, char ** argv) {
   int             root = 0;          // master rank
   uint64_t        L;                 // dimension of grid in cells
   uint64_t        iterations ;       // total number of simulation steps
+  uint64_t        period;            // 1/load_balancing_frequency
+  uint64_t        migration_delay;   // load monitoring time in iterations
   uint64_t        n;                 // total number of particles requested in the simulation
   uint64_t        actual_particles,  // actual number of particles owned by my rank
                   total_particles;   // total number of generated particles
@@ -747,7 +751,7 @@ int main(int argc, char ** argv) {
   MPI_Info_set(hints, "ampi_load_balance", "sync");
 
   /* initially we turn off collecting load balancing information */
-  //  AMPI_Load_stop_measure();
+  AMPI_Load_stop_measure();
 #if USE_PUPER
   int pup_index;
   AMPI_Register_pup((MPI_PupFn) dchunkpup, (void*)&my_heap_ds, &pup_index);
@@ -764,10 +768,10 @@ int main(int argc, char ** argv) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI Particle-in-Cell execution on 2D grid\n");
 
-    if (argc<6) {
-      printf("Usage: %s <#simulation steps> <grid size> <#particles> <k (particle charge semi-increment)> ", argv[0]);
-      printf("<m (vertical particle velocity)>\n");
-      printf("          <init mode> <init parameters>]\n");
+    if (argc<8) {
+      printf("Usage: %s <#simulation steps> <grid size> <#particles> ", argv[0]);
+      printf(" <k (particle charge semi-increment)> <m (vertical particle velocity)>\n");
+      printf("             <period> <migration_delay> <init mode> <init parameters>]\n");
       printf("   init mode \"GEOMETRIC\"  parameters: <attenuation factor>\n");
       printf("             \"SINUSOIDAL\" parameters: none\n");
       printf("             \"LINEAR\"     parameters: <negative slope> <constant offset>\n");
@@ -799,6 +803,15 @@ int main(int argc, char ** argv) {
     particle_mode  = UNDEFINED;
     k = atoi(*++argv);   args_used++;
     m = atoi(*++argv);   args_used++;
+
+    period = atol(*++argv);
+    migration_delay = atol(*++argv);
+    if (period <1 || migration_delay<0 || migration_delay >= period) {
+      printf("ERROR: Violated 0<period<migration_delay: period=%ld, migration_delay=%ld\n",
+             period, migration_delay);
+      error = 1;
+      goto ENDOFTESTS;
+    }
     init_mode = *++argv; args_used++;
 
     ENDOFTESTS:;
@@ -806,11 +819,13 @@ int main(int argc, char ** argv) {
   } // done with standard initialization parameters
   bail_out(error);
 
-  MPI_Bcast(&iterations, 1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&L,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&n,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&k,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&m,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations,      1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&period,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&migration_delay, 1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&L,               1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n,               1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&k,               1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&m,               1, MPI_UINT64_T, root, MPI_COMM_WORLD);
 
   grid_patch = (bbox_t){0, L+1, 0, L+1};
 
@@ -915,6 +930,8 @@ int main(int argc, char ** argv) {
   #else
       printf("Not using explicit Pack/Unpack\n");
   #endif
+      printf("Period between migrations           = %llu\n", period);
+      printf("Migration delay                     = %llu\n", migration_delay);
 #endif
     printf("Initialization mode                = %s\n",   init_mode);
     switch(particle_mode) {
@@ -1134,20 +1151,25 @@ int main(int argc, char ** argv) {
     particles_count = ptr_my;
 
 #if !NO_MIGRATE    
+    /* start measuring load at the end of a period                          */
+    if (iter != 0 && iter%period == 0) AMPI_Load_start_measure();
+    /* migrate ranks and stop measuring load some iterations later          */
+    if (iter != migration_delay && iter%period == migration_delay) {
 
 #if USE_PUPER
-    /* Copy pointers to data structure since migration is following*/
-    fill_my_heap_ds(&my_heap_ds, particles, grid, sendbuf, recvbuf, sendbuf_size,
+      /* Copy pointers to data structure since migration is following*/
+      fill_my_heap_ds(&my_heap_ds, particles, grid, sendbuf, recvbuf, sendbuf_size,
                     recvbuf_size, particles_size, my_tile);
 #endif
       AMPI_Migrate(hints);
+      AMPI_Load_stop_measure();
 
 #if USE_PUPER
       /* Copy back pointers as they may have been changed due to migration */
       drain_my_heap_ds(&my_heap_ds, &particles, &grid, sendbuf, recvbuf, sendbuf_size,
                     recvbuf_size, &particles_size, &my_tile);
 #endif
-
+    }
 #endif
 
   } // end of iterations
