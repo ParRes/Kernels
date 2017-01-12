@@ -1032,7 +1032,7 @@ tuple_double spmd_task(const Task *task,
 #ifndef NO_TASK_BODY
   {
     IndexLauncher checkLauncher(TASKID_CHECK, launchDomain, taskArg, argMap);
-    RegionRequirement req(privateLp, 0, READ_ONLY, EXCLUSIVE, localLr);
+    RegionRequirement req(interiorLp, 0, READ_ONLY, EXCLUSIVE, localLr);
     req.add_field(FID_OUT);
     checkLauncher.add_region_requirement(req);
     checkLauncher.add_wait_barrier(args->finishLock);
