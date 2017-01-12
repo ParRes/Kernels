@@ -1135,7 +1135,7 @@ void init_field_task(const Task *task,
   DTYPE* inPtr = 0;
   DTYPE* outPtr = 0;
   {
-    Rect<2> s; ByteOffset bo[1];
+    Rect<2> s; ByteOffset bo[2];
     inPtr = inputAcc.raw_rect_ptr<2>(rect, s, bo);
     outPtr = outputAcc.raw_rect_ptr<2>(rect, s, bo);
   }
@@ -1207,7 +1207,7 @@ double interior_task(const Task *task,
   DTYPE* outputPtr = 0;
   DTYPE* weightPtr = 0;
   {
-    Rect<2> r; ByteOffset bo[1];
+    Rect<2> r; ByteOffset bo[2];
     inputPtr = inputAcc.raw_rect_ptr<2>(rect, r, bo);
     outputPtr = outputAcc.raw_rect_ptr<2>(rect, r, bo);
     weightPtr = weightAcc.raw_rect_ptr<2>(weightRect, r, bo);
@@ -1259,7 +1259,7 @@ void boundary_task(const Task *task,
   DTYPE* outputPtr = 0;
   DTYPE* weightPtr = 0;
   {
-    Rect<2> r; ByteOffset bo[1];
+    Rect<2> r; ByteOffset bo[2];
     inputPtr = inputAcc.raw_rect_ptr<2>(rect, r, bo);
     outputPtr = outputAcc.raw_rect_ptr<2>(rect, r, bo);
     weightPtr = weightAcc.raw_rect_ptr<2>(weightRect, r, bo);
@@ -1299,7 +1299,7 @@ void inc_field_task(const Task *task,
   coord_t haloX = ((StencilArgs*)task->args)->haloX;
   DTYPE* ptr = 0;
   {
-    Rect<2> r; ByteOffset bo[1];
+    Rect<2> r; ByteOffset bo[2];
     ptr = acc.raw_rect_ptr<2>(rect, r, bo);
   }
 
@@ -1339,7 +1339,7 @@ double check_task(const Task *task,
 
   DTYPE* ptr = 0;
   {
-    Rect<2> s; ByteOffset bo[1];
+    Rect<2> s; ByteOffset bo[2];
     ptr = acc.raw_rect_ptr<2>(rect, s, bo);
   }
 
