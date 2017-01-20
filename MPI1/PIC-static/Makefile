@@ -4,7 +4,6 @@ COMOBJS += random_draw.o
 ##### User configurable options #####
 
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
-#OPTFLAGS=-axCORE-AVX2 -O3 -restrict
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults

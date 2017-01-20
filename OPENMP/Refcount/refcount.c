@@ -124,8 +124,8 @@ int main(int argc, char ** argv)
  
   if (argc != 4 && argc != 5){
     printf("Usage: %s <# threads> <# counter pair updates> <private stream size> [lock hint]\n", *argv);
-    printf("    lock hint=0:  If using locks, OpenMP assumes queuing lock (default)\n");
-    printf("    lock hint!=0: If using locks, OpenMP assumes uncontended lock\n");
+    printf("    lock hint=0:  If using locks, OpenMP assumes queuing lock (default) [Intel compiler only]\n");
+    printf("    lock hint!=0: If using locks, OpenMP assumes uncontended lock [Intel compiler only]\n");
     return(1);
   }
  
@@ -225,10 +225,12 @@ int main(int argc, char ** argv)
 #endif
 #if LOCK==2
     printf("Mutex type                     = lock\n");
+  #if LOCK_HINT
     if (lock_hint)
-      printf("Lock type                      = uncontended\n");
+      printf("Lock hint                      = uncontended\n");
     else
-      printf("Lock type                      = queueing\n");
+      printf("Lock hint                      = queueing\n");
+  #endif
 #elif LOCK==1
     printf("Mutex type                     = atomic\n");
 #else
@@ -278,15 +280,20 @@ int main(int argc, char ** argv)
 
   /* initialize the lock on which we will be pounding */
 #if LOCK==2
-  if (lock_hint)
-    omp_init_lock_with_hint(pcounter_lock,omp_lock_hint_uncontended);
-  else
-    omp_init_lock_with_hint(pcounter_lock,omp_lock_hint_contended);
+  #if LOCK_HINT
+    if (lock_hint)
+      omp_init_lock_with_hint(pcounter_lock,omp_lock_hint_uncontended);
+    else
+      omp_init_lock_with_hint(pcounter_lock,omp_lock_hint_contended);
+  #else
+    omp_init_lock(pcounter_lock);
+  #endif
 #endif
 
 #if CONTENDED
   }
 #endif
+
 
   /* do one warmup iteration outside main loop to avoid overhead      */
 #if DEPENDENT
