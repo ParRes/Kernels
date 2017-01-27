@@ -335,11 +335,11 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
                 #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-linux-x86_64-smp
                 #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
                 ;;
         esac
@@ -359,11 +359,11 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
                 #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-linux-x86_64-smp
                 #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
                 ;;
         esac
