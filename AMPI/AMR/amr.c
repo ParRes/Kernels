@@ -101,8 +101,7 @@ typedef struct dchunk{
   //global stuff
   int   my_ID, g, iter;
   //background grid    
-  int   Num_procs_bg, Num_procs_bgx, Num_procs_bgy, my_ID_bg, my_ID_bgx, my_ID_bgy,
-        right_nbr_bg, left_nbr_bg, top_nbr_bg, bottom_nbr_bg;
+  int   right_nbr_bg, left_nbr_bg, top_nbr_bg, bottom_nbr_bg;
   DTYPE *top_buf_out_bg, *top_buf_in_bg, *bottom_buf_out_bg, *bottom_buf_in_bg,
         *right_buf_out_bg, *right_buf_in_bg, *left_buf_out_bg, *left_buf_in_bg,
         *in_bg, *out_bg;
@@ -110,8 +109,7 @@ typedef struct dchunk{
         total_length_in, total_length_out;
   MPI_Comm comm_bg;
   //refinements
-  int   Num_procs_r[4], Num_procs_rx[4], Num_procs_ry[4], my_ID_r[4], my_ID_rx[4],
-        my_ID_ry[4], right_nbr_r[4], left_nbr_r[4], top_nbr_r[4], bottom_nbr_r[4];
+  int   right_nbr_r[4], left_nbr_r[4], top_nbr_r[4], bottom_nbr_r[4];
   DTYPE *top_buf_out_r[4], *top_buf_in_r[4], *bottom_buf_out_r[4], *bottom_buf_in_r[4],
         *right_buf_out_r[4], *right_buf_in_r[4], *left_buf_out_r[4], *left_buf_in_r[4],
         *in_r[4], *out_r[4];
@@ -124,43 +122,16 @@ typedef struct dchunk{
   MPI_Comm comm_r[4];
 }dchunk;
 
-void fill_my_heap_ds(dchunk *my_heap_ds, int Num_procs_bg, int Num_procs_bgx, int Num_procs_bgy,
-      int my_ID, int g, int my_ID_bg, int my_ID_bgx, int my_ID_bgy, int right_nbr_bg, int left_nbr_bg, 
-      int top_nbr_bg, int bottom_nbr_bg, int iter, long L_istart_bg, long L_iend_bg,
-      long L_jstart_bg, long L_jend_bg, long L_width_bg, long L_height_bg, long total_length_in,
+void fill_my_heap_ds(dchunk *my_heap_ds, long L_width_bg, long L_height_bg, long total_length_in,
       long total_length_out, MPI_Comm comm_bg, DTYPE *in_bg, DTYPE *out_bg, DTYPE *top_buf_out_bg,
       DTYPE *top_buf_in_bg, DTYPE *bottom_buf_out_bg, DTYPE *bottom_buf_in_bg, 
       DTYPE *right_buf_out_bg, DTYPE *right_buf_in_bg, DTYPE *left_buf_out_bg, DTYPE *left_buf_in_bg,
-      int Num_procs_r[4], int Num_procs_rx[4], int Num_procs_ry[4], int my_ID_r[4], int my_ID_rx[4],
-      int my_ID_ry[4], int right_nbr_r[4], int left_nbr_r[4], int top_nbr_r[4], int bottom_nbr_r[4],
-      long L_istart_r[4], long L_iend_r[4], long L_jstart_r[4], 
-      long L_jend_r[4], long L_istart_r_gross[4], long L_iend_r_gross[4], long L_jstart_r_gross[4], 
-      long L_jend_r_gross[4], long L_istart_r_true_gross[4], long L_iend_r_true_gross[4], 
-      long L_jstart_r_true_gross[4], long L_jend_r_true_gross[4], long L_istart_r_true[4],
-      long L_iend_r_true[4], long L_jstart_r_true[4], long L_jend_r_true[4], long L_width_r[4],
-      long L_height_r[4], long L_width_r_true_gross[4], long L_height_r_true_gross[4], long L_width_r_true[4], 
-      long L_height_r_true[4], long total_length_in_r[4], long total_length_out_r[4], MPI_Comm comm_r[4],
+      long L_width_r_true[4], long L_height_r_true[4], long total_length_in_r[4], 
+      long total_length_out_r[4], MPI_Comm comm_r[4],
       DTYPE *in_r[4], DTYPE *out_r[4], DTYPE *top_buf_out_r[4], DTYPE *top_buf_in_r[4], 
       DTYPE *bottom_buf_out_r[4], DTYPE *bottom_buf_in_r[4], DTYPE *right_buf_out_r[4], 
       DTYPE *right_buf_in_r[4], DTYPE *left_buf_out_r[4], DTYPE *left_buf_in_r[4]){
 
-      my_heap_ds->Num_procs_bg = Num_procs_bg;
-      my_heap_ds->Num_procs_bgx = Num_procs_bgx;
-      my_heap_ds->Num_procs_bgy = Num_procs_bgy;
-      my_heap_ds->my_ID = my_ID;
-      my_heap_ds->g = g;
-      my_heap_ds->my_ID_bg = my_ID_bg;
-      my_heap_ds->my_ID_bgx = my_ID_bgx;
-      my_heap_ds->my_ID_bgy = my_ID_bgy;
-      my_heap_ds->right_nbr_bg = right_nbr_bg;
-      my_heap_ds->left_nbr_bg = left_nbr_bg;
-      my_heap_ds->top_nbr_bg = top_nbr_bg;
-      my_heap_ds->bottom_nbr_bg = bottom_nbr_bg;
-      my_heap_ds->iter = iter;
-      my_heap_ds->L_istart_bg = L_istart_bg;
-      my_heap_ds->L_iend_bg = L_iend_bg;
-      my_heap_ds->L_jstart_bg = L_jstart_bg;
-      my_heap_ds->L_jend_bg = L_jend_bg;
       my_heap_ds->L_width_bg = L_width_bg;
       my_heap_ds->L_height_bg = L_height_bg;
       my_heap_ds->total_length_in = total_length_in;
@@ -177,36 +148,6 @@ void fill_my_heap_ds(dchunk *my_heap_ds, int Num_procs_bg, int Num_procs_bgx, in
       my_heap_ds->left_buf_out_bg = left_buf_out_bg;
       my_heap_ds->left_buf_in_bg = left_buf_in_bg;
       for (int g=0; g<4; g++) {
-        my_heap_ds->Num_procs_r[g] = Num_procs_r[g];
-        my_heap_ds->Num_procs_rx[g] = Num_procs_rx[g];
-        my_heap_ds->Num_procs_ry[g] = Num_procs_ry[g];
-        my_heap_ds->my_ID_r[g] = my_ID_r[g];
-        my_heap_ds->my_ID_rx[g] = my_ID_rx[g];
-        my_heap_ds->my_ID_ry[g] = my_ID_ry[g];
-        my_heap_ds->right_nbr_r[g] = right_nbr_r[g];
-        my_heap_ds->left_nbr_r[g] = left_nbr_r[g];
-        my_heap_ds->top_nbr_r[g] = top_nbr_r[g];
-        my_heap_ds->bottom_nbr_r[g] = bottom_nbr_r[g];
-        my_heap_ds->L_istart_r[g] = L_istart_r[g];
-        my_heap_ds->L_iend_r[g] = L_iend_r[g];
-        my_heap_ds->L_jstart_r[g] = L_jstart_r[g];
-        my_heap_ds->L_jend_r[g] = L_jend_r[g];
-        my_heap_ds->L_istart_r_gross[g] = L_istart_r_gross[g];
-        my_heap_ds->L_iend_r_gross[g] = L_iend_r_gross[g];
-        my_heap_ds->L_jstart_r_gross[g] = L_jstart_r_gross[g];
-        my_heap_ds->L_jend_r_gross[g] = L_jend_r_gross[g];
-        my_heap_ds->L_istart_r_true_gross[g] = L_istart_r_true_gross[g];
-        my_heap_ds->L_iend_r_true_gross[g] = L_iend_r_true_gross[g];
-        my_heap_ds->L_jstart_r_true_gross[g] = L_jstart_r_true_gross[g];
-        my_heap_ds->L_jend_r_true_gross[g] = L_jend_r_true_gross[g];
-        my_heap_ds->L_istart_r_true[g] = L_istart_r_true[g];
-        my_heap_ds->L_iend_r_true[g] = L_iend_r_true[g];
-        my_heap_ds->L_jstart_r_true[g] = L_jstart_r_true[g];
-        my_heap_ds->L_jend_r_true[g] = L_jend_r_true[g];
-        my_heap_ds->L_width_r[g] = L_width_r[g];
-        my_heap_ds->L_height_r[g] = L_height_r[g];
-        my_heap_ds->L_width_r_true_gross[g] = L_width_r_true_gross[g];
-        my_heap_ds->L_height_r_true_gross[g] = L_height_r_true_gross[g];
         my_heap_ds->L_width_r_true[g] = L_width_r_true[g];
         my_heap_ds->L_height_r_true[g] = L_height_r_true[g];
         my_heap_ds->total_length_in_r[g] = total_length_in_r[g];
@@ -225,45 +166,16 @@ void fill_my_heap_ds(dchunk *my_heap_ds, int Num_procs_bg, int Num_procs_bgx, in
       }
 }
 
-void drain_my_heap_ds(dchunk *my_heap_ds, int *Num_procs_bg, int *Num_procs_bgx,
-      int *Num_procs_bgy, int *my_ID, int *g, int *my_ID_bg, int *my_ID_bgx, int *my_ID_bgy,
-      int *right_nbr_bg, int *left_nbr_bg, int *top_nbr_bg, int *bottom_nbr_bg,
-      int *iter, long *L_istart_bg, long *L_iend_bg, long *L_jstart_bg,
-      long *L_jend_bg, long *L_width_bg, long *L_height_bg, long *total_length_in,
+void drain_my_heap_ds(dchunk *my_heap_ds, long *L_width_bg, long *L_height_bg, long *total_length_in,
       long *total_length_out, MPI_Comm *comm_bg, DTYPE **in_bg, DTYPE **out_bg, DTYPE **top_buf_out_bg,
       DTYPE **top_buf_in_bg, DTYPE **bottom_buf_out_bg, DTYPE **bottom_buf_in_bg,
       DTYPE **right_buf_out_bg, DTYPE **right_buf_in_bg, DTYPE **left_buf_out_bg,
-      DTYPE **left_buf_in_bg, int Num_procs_r[], int Num_procs_rx[], int Num_procs_ry[],
-      int my_ID_r[], int my_ID_rx[], int my_ID_ry[], int right_nbr_r[], int left_nbr_r[], 
-      int top_nbr_r[], int bottom_nbr_r[], 
-      long L_istart_r[], long L_iend_r[], long L_jstart_r[], long L_jend_r[],
-      long L_istart_r_gross[], long L_iend_r_gross[], long L_jstart_r_gross[],
-      long L_jend_r_gross[], long L_istart_r_true_gross[], long L_iend_r_true_gross[],
-      long L_jstart_r_true_gross[], long L_jend_r_true_gross[], long L_istart_r_true[],
-      long L_iend_r_true[], long L_jstart_r_true[], long L_jend_r_true[], long L_width_r[],
-      long L_height_r[], long L_width_r_true_gross[], long L_height_r_true_gross[], long L_width_r_true[],
-      long L_height_r_true[], long total_length_in_r[], long total_length_out_r[], MPI_Comm comm_r[],
+      DTYPE **left_buf_in_bg, long L_width_r_true[], long L_height_r_true[], long total_length_in_r[], 
+      long total_length_out_r[], MPI_Comm comm_r[],
       DTYPE *in_r[], DTYPE *out_r[], DTYPE *top_buf_out_r[], DTYPE *top_buf_in_r[],
       DTYPE *bottom_buf_out_r[], DTYPE *bottom_buf_in_r[], DTYPE *right_buf_out_r[],
       DTYPE *right_buf_in_r[], DTYPE *left_buf_out_r[], DTYPE *left_buf_in_r[]){
 
-      *Num_procs_bg = my_heap_ds->Num_procs_bg;
-      *Num_procs_bgx = my_heap_ds->Num_procs_bgx;
-      *Num_procs_bgy = my_heap_ds->Num_procs_bgy;
-      *my_ID = my_heap_ds->my_ID;
-      *g = my_heap_ds->g;
-      *my_ID_bg = my_heap_ds->my_ID_bg;
-      *my_ID_bgx = my_heap_ds->my_ID_bgx;
-      *my_ID_bgy = my_heap_ds->my_ID_bgy;
-      *right_nbr_bg = my_heap_ds->right_nbr_bg;
-      *left_nbr_bg = my_heap_ds->left_nbr_bg;
-      *top_nbr_bg = my_heap_ds->top_nbr_bg;
-      *bottom_nbr_bg = my_heap_ds->bottom_nbr_bg;
-      *iter = my_heap_ds->iter;
-      *L_istart_bg = my_heap_ds->L_istart_bg;
-      *L_iend_bg = my_heap_ds->L_iend_bg;
-      *L_jstart_bg = my_heap_ds->L_jstart_bg;
-      *L_jend_bg = my_heap_ds->L_jend_bg;
       *L_width_bg = my_heap_ds->L_width_bg;
       *L_height_bg = my_heap_ds->L_height_bg;
       *total_length_in = my_heap_ds->total_length_in;
@@ -280,36 +192,6 @@ void drain_my_heap_ds(dchunk *my_heap_ds, int *Num_procs_bg, int *Num_procs_bgx,
       *left_buf_out_bg = my_heap_ds->left_buf_out_bg;
       *left_buf_in_bg = my_heap_ds->left_buf_in_bg;
       for (int g=0; g<4; g++) {
-        Num_procs_r[g] = my_heap_ds->Num_procs_r[g];
-        Num_procs_rx[g] = my_heap_ds->Num_procs_rx[g];
-        Num_procs_ry[g] = my_heap_ds->Num_procs_ry[g];
-        my_ID_r[g] = my_heap_ds->my_ID_r[g];
-        my_ID_rx[g] = my_heap_ds->my_ID_rx[g];
-        my_ID_ry[g] = my_heap_ds->my_ID_ry[g];
-        right_nbr_r[g] = my_heap_ds->right_nbr_r[g];
-        left_nbr_r[g] = my_heap_ds->left_nbr_r[g];
-        top_nbr_r[g] = my_heap_ds->top_nbr_r[g];
-        bottom_nbr_r[g] = my_heap_ds->bottom_nbr_r[g];
-        L_istart_r[g] = my_heap_ds->L_istart_r[g];
-        L_iend_r[g] = my_heap_ds->L_iend_r[g];
-        L_jstart_r[g] = my_heap_ds->L_jstart_r[g];
-        L_jend_r[g] = my_heap_ds->L_jend_r[g];
-        L_istart_r_gross[g] = my_heap_ds->L_istart_r_gross[g];
-        L_iend_r_gross[g] = my_heap_ds->L_iend_r_gross[g];
-        L_jstart_r_gross[g] = my_heap_ds->L_jstart_r_gross[g];
-        L_jend_r_gross[g] = my_heap_ds->L_jend_r_gross[g];
-        L_istart_r_true_gross[g] = my_heap_ds->L_istart_r_true_gross[g];
-        L_iend_r_true_gross[g] = my_heap_ds->L_iend_r_true_gross[g];
-        L_jstart_r_true_gross[g] = my_heap_ds->L_jstart_r_true_gross[g];
-        L_jend_r_true_gross[g] = my_heap_ds->L_jend_r_true_gross[g];
-        L_istart_r_true[g] = my_heap_ds->L_istart_r_true[g];
-        L_iend_r_true[g] = my_heap_ds->L_iend_r_true[g];
-        L_jstart_r_true[g] = my_heap_ds->L_jstart_r_true[g];
-        L_jend_r_true[g] = my_heap_ds->L_jend_r_true[g];
-        L_width_r[g] = my_heap_ds->L_width_r[g];
-        L_height_r[g] = my_heap_ds->L_height_r[g];
-        L_width_r_true_gross[g] = my_heap_ds->L_width_r_true_gross[g];
-        L_height_r_true_gross[g] = my_heap_ds->L_height_r_true_gross[g];
         L_width_r_true[g] = my_heap_ds->L_width_r_true[g];
         L_height_r_true[g] = my_heap_ds->L_height_r_true[g];
         total_length_in_r[g] = my_heap_ds->total_length_in_r[g];
@@ -331,61 +213,13 @@ void drain_my_heap_ds(dchunk *my_heap_ds, int *Num_procs_bg, int *Num_procs_bgx,
 /* PUPer routine */
 void dchunkpup(pup_er p,dchunk *c){
 
-  // global information (known to all ranks, regardless of work assignment)
-  pup_int(p,&c->my_ID);
-  pup_int(p,&c->g);
-  pup_int(p,&c->iter);
   // background grid
-  pup_int(p,&c->Num_procs_bg);
-  pup_int(p,&c->Num_procs_bgx);
-  pup_int(p,&c->Num_procs_bgy);
-  pup_int(p,&c->my_ID_bg);
-  pup_int(p,&c->my_ID_bgx);
-  pup_int(p,&c->my_ID_bgy);
-  pup_int(p,&c->right_nbr_bg);
-  pup_int(p,&c->left_nbr_bg);
-  pup_int(p,&c->top_nbr_bg);
-  pup_int(p,&c->bottom_nbr_bg);
-  pup_long(p,&c->L_istart_bg);
-  pup_long(p,&c->L_iend_bg);
-  pup_long(p,&c->L_jstart_bg);
-  pup_long(p,&c->L_jend_bg);
   pup_long(p,&c->L_width_bg);
   pup_long(p,&c->L_height_bg);
   pup_long(p,&c->total_length_in);
   pup_long(p,&c->total_length_out);
   pup_bytes(p,&c->comm_bg, sizeof(MPI_Comm));
   //refinements
-  pup_ints(p,c->Num_procs_r,4);
-  pup_ints(p,c->Num_procs_rx,4);
-  pup_ints(p,c->Num_procs_ry,4);
-  pup_ints(p,c->my_ID_r,4);
-  pup_ints(p,c->my_ID_rx,4);
-  pup_ints(p,c->my_ID_ry,4);
-  pup_ints(p,c->right_nbr_r,4);
-  pup_ints(p,c->left_nbr_r,4);
-  pup_ints(p,c->top_nbr_r,4);
-  pup_ints(p,c->bottom_nbr_r,4);
-  pup_longs(p,c->L_istart_r,4);
-  pup_longs(p,c->L_iend_r,4);
-  pup_longs(p,c->L_jstart_r,4);
-  pup_longs(p,c->L_jend_r,4);
-  pup_longs(p,c->L_istart_r_gross,4);
-  pup_longs(p,c->L_iend_r_gross,4);
-  pup_longs(p,c->L_jstart_r_gross,4);
-  pup_longs(p,c->L_jend_r_gross,4);
-  pup_longs(p,c->L_istart_r_true_gross,4);
-  pup_longs(p,c->L_iend_r_true_gross,4);
-  pup_longs(p,c->L_jstart_r_true_gross,4);
-  pup_longs(p,c->L_jend_r_true_gross,4);
-  pup_longs(p,c->L_istart_r_true,4);
-  pup_longs(p,c->L_iend_r_true,4);
-  pup_longs(p,c->L_jstart_r_true,4);
-  pup_longs(p,c->L_jend_r_true,4);
-  pup_longs(p,c->L_width_r,4);
-  pup_longs(p,c->L_height_r,4);
-  pup_longs(p,c->L_width_r_true_gross,4);
-  pup_longs(p,c->L_height_r_true_gross,4);
   pup_longs(p,c->L_width_r_true,4);
   pup_longs(p,c->L_height_r_true,4);
   pup_longs(p,c->total_length_in_r,4);
@@ -766,7 +600,7 @@ int main(int argc, char ** argv) {
 #if USE_PUPER
   int pup_index;
   AMPI_Register_pup((MPI_PupFn) dchunkpup, (void*)&my_heap_ds, &pup_index);
-  if (my_ID==root) printf("registered dchunkpupn\n");
+  if (my_ID==root) printf("registered dchunkpup\n");
 #endif
 
   /*********************************************************************************
@@ -1630,21 +1464,11 @@ int main(int argc, char ** argv) {
       if (iter%period == duration + migration_delay) AMPI_Load_stop_measure();
 #if USE_PUPER
       /* Copy pointers to data structure since migration is following*/
-      fill_my_heap_ds(&my_heap_ds, Num_procs_bg, Num_procs_bgx, Num_procs_bgy, my_ID, g,
-	  my_ID_bg, my_ID_bgx, my_ID_bgy, right_nbr_bg, left_nbr_bg, top_nbr_bg, 
-	  bottom_nbr_bg, iter, L_istart_bg, L_iend_bg, L_jstart_bg, L_jend_bg,
-          L_width_bg, L_height_bg, total_length_in, total_length_out, comm_bg, in_bg, out_bg,
-	  top_buf_out_bg, top_buf_in_bg, bottom_buf_out_bg, bottom_buf_in_bg,
-	  right_buf_out_bg, right_buf_in_bg, left_buf_out_bg, left_buf_in_bg, Num_procs_r,
-	  Num_procs_rx, Num_procs_ry, my_ID_r, my_ID_rx, my_ID_ry, right_nbr_r, left_nbr_r,
-	  top_nbr_r, bottom_nbr_r, L_istart_r, L_iend_r, L_jstart_r, 
-	  L_jend_r, L_istart_r_gross, L_iend_r_gross, L_jstart_r_gross, L_jend_r_gross, 
-	  L_istart_r_true_gross, L_iend_r_true_gross, L_jstart_r_true_gross,
-          L_jend_r_true_gross, L_istart_r_true, L_iend_r_true, L_jstart_r_true, 
-	  L_jend_r_true, L_width_r, L_height_r, 
-	  L_width_r_true_gross, L_height_r_true_gross, L_width_r_true, L_height_r_true,
-          total_length_in_r, total_length_out_r, comm_r, in_r, out_r, top_buf_out_r, top_buf_in_r,
-	  bottom_buf_out_r, bottom_buf_in_r, right_buf_out_r, right_buf_in_r,
+      fill_my_heap_ds(&my_heap_ds, L_width_bg, L_height_bg, total_length_in, total_length_out, 
+          comm_bg, in_bg, out_bg, top_buf_out_bg, top_buf_in_bg, bottom_buf_out_bg, bottom_buf_in_bg,
+	  right_buf_out_bg, right_buf_in_bg, left_buf_out_bg, left_buf_in_bg, L_width_r_true, 
+          L_height_r_true, total_length_in_r, total_length_out_r, comm_r, in_r, out_r, top_buf_out_r, 
+          top_buf_in_r, bottom_buf_out_r, bottom_buf_in_r, right_buf_out_r, right_buf_in_r,
 	  left_buf_out_r, left_buf_in_r);
 #endif
 
@@ -1652,21 +1476,12 @@ int main(int argc, char ** argv) {
 
 #if USE_PUPER
       /* Copy back pointers as they may have been changed due to migration */
-      drain_my_heap_ds(&my_heap_ds, &Num_procs_bg, &Num_procs_bgx, &Num_procs_bgy, &my_ID, &g,
-	  &my_ID_bg, &my_ID_bgx, &my_ID_bgy, &right_nbr_bg, &left_nbr_bg, &top_nbr_bg, 
-	  &bottom_nbr_bg, &iter, &L_istart_bg, &L_iend_bg, &L_jstart_bg, &L_jend_bg,
-          &L_width_bg, &L_height_bg, &total_length_in, &total_length_out, &comm_bg, &in_bg, 
-	  &out_bg, &top_buf_out_bg, &top_buf_in_bg, &bottom_buf_out_bg, &bottom_buf_in_bg,
-	  &right_buf_out_bg, &right_buf_in_bg, &left_buf_out_bg, &left_buf_in_bg, Num_procs_r,
-	  Num_procs_rx, Num_procs_ry, my_ID_r, my_ID_rx, my_ID_ry, right_nbr_r, left_nbr_r,
-	  top_nbr_r, bottom_nbr_r, L_istart_r, L_iend_r, L_jstart_r, 
-	  L_jend_r, L_istart_r_gross, L_iend_r_gross, L_jstart_r_gross, L_jend_r_gross, 
-	  L_istart_r_true_gross, L_iend_r_true_gross, L_jstart_r_true_gross, 
-	  L_jend_r_true_gross, L_istart_r_true, L_iend_r_true, L_jstart_r_true, L_jend_r_true, 
-	  L_width_r, L_height_r, L_width_r_true_gross, 
-	  L_height_r_true_gross, L_width_r_true, L_height_r_true, total_length_in_r,
-          total_length_out_r, comm_r, in_r, out_r, top_buf_out_r, top_buf_in_r, bottom_buf_out_r, 
-	  bottom_buf_in_r, right_buf_out_r, right_buf_in_r, left_buf_out_r, left_buf_in_r);
+      drain_my_heap_ds(&my_heap_ds, &L_width_bg, &L_height_bg, &total_length_in, &total_length_out, 
+          &comm_bg, &in_bg, &out_bg, &top_buf_out_bg, &top_buf_in_bg, &bottom_buf_out_bg, &bottom_buf_in_bg,
+	  &right_buf_out_bg, &right_buf_in_bg, &left_buf_out_bg, &left_buf_in_bg, L_width_r_true, 
+          L_height_r_true, total_length_in_r, total_length_out_r, comm_r, in_r, out_r, top_buf_out_r, 
+          top_buf_in_r, bottom_buf_out_r, bottom_buf_in_r, right_buf_out_r, right_buf_in_r, 
+          left_buf_out_r, left_buf_in_r);
 #endif
     }
 #endif

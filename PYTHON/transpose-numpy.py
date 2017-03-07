@@ -58,11 +58,11 @@ def main():
     # read and test input parameters
     # ********************************************************************
 
-    print 'Parallel Research Kernels version ' #, PRKVERSION
-    print 'Python Matrix transpose: B = A^T'
+    print('Parallel Research Kernels version ') #, PRKVERSION
+    print('Python Matrix transpose: B = A^T')
 
     if len(sys.argv) != 3:
-        print 'argument count = ', len(sys.argv)
+        print('argument count = ', len(sys.argv))
         sys.exit("Usage: ./transpose <# iterations> <matrix order>")
 
     # iterations
@@ -73,8 +73,8 @@ def main():
     order = int(sys.argv[2])
     if order < 1: sys.exit("ERROR: order must be >= 1")
 
-    print 'Matrix order         = ', order
-    print 'Number of iterations = ', iterations
+    print('Matrix order         = ', order)
+    print('Number of iterations = ', iterations)
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
@@ -107,11 +107,11 @@ def main():
     epsilon=1.e-8
     nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
     if abserr < epsilon:
-        print 'Solution validates'
+        print('Solution validates')
         avgtime = trans_time/iterations
-        print 'Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime
+        print('Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime)
     else:
-        print 'error ',abserr, ' exceeds threshold ',epsilon
+        print('error ',abserr, ' exceeds threshold ',epsilon)
         sys.exit("ERROR: solution did not validate")
 
 

@@ -75,7 +75,7 @@ HISTORY: - Written by Evangelos Georganas, August 2015.
 
 **********************************************************************************/
 #include <par-res-kern_general.h>
-#include <par-res-kern_fg-mpi.h>
+#include <par-res-kern_mpi.h>
 #include <random_draw.h>
 
 /* M_PI is not defined in strict C99 */
@@ -128,6 +128,85 @@ typedef struct particle_t {
   double   m;
   double   ID;   // ID of particle; use double to create homogeneous type
 } particle_t;
+
+#if USE_PUPER
+/* Data structure for heap allocated data and PUPer functions */
+typedef struct dchunk{
+  uint64_t sendbuf_size[8], recvbuf_size[8];
+  uint64_t n_size;
+  bbox_t tile;
+  particle_t  *particles, *sendbuf[8], *recvbuf[8];
+  double *grid;
+}dchunk;
+
+/* PUPer routine */
+void dchunkpup(pup_er p,dchunk *c){
+  uint64_t n_columns, n_rows;
+
+  pup_bytes(p,&c->n_size,sizeof(uint64_t));
+  pup_bytes(p,&c->tile,sizeof(bbox_t));
+  n_columns = c->tile.right-c->tile.left+1;
+  n_rows = c->tile.top-c->tile.bottom+1;
+  pup_bytes(p,c->sendbuf_size,8*sizeof(uint64_t));
+  pup_bytes(p,c->recvbuf_size,8*sizeof(uint64_t));
+   
+  /* Allocate space for all heap-allocated buffers */
+  if(pup_isUnpacking(p)){
+    c->particles = (particle_t *) prk_malloc(sizeof(particle_t) * c->n_size);
+    c->grid = (double*) prk_malloc(sizeof(double) * n_columns * n_rows);
+    if (!c->particles || !c->grid) printf("Could not allocate particles or grid arrays\n");
+    for (int i=0; i<8; i++) {
+      c->sendbuf[i] = prk_malloc(c->sendbuf_size[i]*sizeof(particle_t));
+      c->recvbuf[i] = prk_malloc(c->recvbuf_size[i]*sizeof(particle_t));
+      if (!c->sendbuf[i] || !c->recvbuf[i]) printf("Could not allocate communications buffers %d\n", i);
+    }
+  }
+   
+  /* Copy the contents only for the particles array and the grid. Initializing communication buffers with garbage is fine. */
+  pup_bytes(p,(void*)c->particles,c->n_size*sizeof(particle_t));
+  pup_doubles(p,c->grid,n_columns*n_rows);
+   
+  /* Free buffers if unpacking */
+  if(pup_isPacking(p)){
+    prk_free(c->particles);
+    prk_free(c->grid);
+    for (int i=0; i<8; i++) {
+      prk_free(c->sendbuf[i]);
+      prk_free(c->recvbuf[i]);
+    }
+  }
+}
+
+void fill_my_heap_ds(dchunk *my_heap_ds, particle_t *particles, double *grid, particle_t *sendbuf[8], 
+                     particle_t *recvbuf[8], uint64_t sendbuf_size[8], uint64_t recvbuf_size[8], uint64_t n_size,
+                     bbox_t tile) {
+  my_heap_ds->particles = particles;
+  my_heap_ds->grid = grid;
+  my_heap_ds->n_size = n_size;
+  my_heap_ds->tile = tile;
+  for (int i=0; i<8; i++) {
+    my_heap_ds->sendbuf[i] = sendbuf[i];
+    my_heap_ds->recvbuf[i] = recvbuf[i];
+    my_heap_ds->sendbuf_size[i] = sendbuf_size[i];
+    my_heap_ds->recvbuf_size[i] = recvbuf_size[i];
+  }
+}
+
+void drain_my_heap_ds(dchunk *my_heap_ds, particle_t **particles, double **grid, particle_t *sendbuf[], 
+                     particle_t *recvbuf[], uint64_t sendbuf_size[], uint64_t recvbuf_size[], uint64_t *n_size,
+                     bbox_t *tile) {
+  *particles = my_heap_ds->particles;
+  *grid = my_heap_ds->grid;
+  *n_size = my_heap_ds->n_size;
+  *tile = my_heap_ds->tile;
+  for (int i=0; i<8; i++) {
+    sendbuf[i] = my_heap_ds->sendbuf[i];
+    recvbuf[i] = my_heap_ds->recvbuf[i];
+    sendbuf_size[i] = my_heap_ds->sendbuf_size[i];
+    recvbuf_size[i] = my_heap_ds->recvbuf_size[i];
+  }
+}
+#endif
 
 int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
   if (patch->left>=patch->right || patch->bottom>=patch->top) return(1);
@@ -303,7 +382,7 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
 /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
 particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double beta,
                              bbox_t tile, double k, double m,
-                             uint64_t *n_placed, uint64_t *n_size,
+                             uint64_t *n_placed, uint64_t *n_size, 
                              random_draw_t *parm) {
   particle_t  *particles;
   double      total_weight, step, current_weight;
@@ -382,7 +461,7 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
 
   for (pi=0,x=tile.left; x<tile.right; x++) {
     start_index = tile.bottom+x*L;
-    LCG_jump(2*start_index,0, parm);
+    LCG_jump(2*start_index, 0, parm);
     for (y=tile.bottom; y<tile.top; y++) {
       actual_particles = random_draw(particles_per_cell, parm);
       if (!contain(x,y,patch)) actual_particles = 0;
@@ -619,6 +698,8 @@ int main(int argc, char ** argv) {
   int             root = 0;          // master rank
   uint64_t        L;                 // dimension of grid in cells
   uint64_t        iterations ;       // total number of simulation steps
+  uint64_t        period;            // 1/load_balancing_frequency
+  uint64_t        migration_delay;   // load monitoring time in iterations
   uint64_t        n;                 // total number of particles requested in the simulation
   uint64_t        actual_particles,  // actual number of particles owned by my rank
                   total_particles;   // total number of generated particles
@@ -651,13 +732,30 @@ int main(int argc, char ** argv) {
   int             ileftover, jleftover;// excess grid points divided among "fat" tiles
   uint64_t        to_send[8], to_recv[8];//
   MPI_Request requests[16];
-  int             procsize;          // number of ranks per OS process
   random_draw_t   dice;
+
+#if USE_PUPER
+  dchunk my_heap_ds;
+#endif
 
   /* Initialize the MPI environment */
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+  /*********************************************************************************
+  **  Setup for dynamic load balancing
+  **********************************************************************************/
+  MPI_Info hints;
+  MPI_Info_create(&hints);
+  MPI_Info_set(hints, "ampi_load_balance", "sync");
+
+  /* initially we turn off collecting load balancing information */
+  AMPI_Load_stop_measure();
+#if USE_PUPER
+  int pup_index;
+  AMPI_Register_pup((MPI_PupFn) dchunkpup, (void*)&my_heap_ds, &pup_index);
+#endif
 
   /* FIXME: This can be further improved */
   /* Create MPI data type for particle_t */
@@ -667,12 +765,12 @@ int main(int argc, char ** argv) {
 
   if (my_ID==root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("FG_MPI Particle-in-Cell execution on 2D grid\n");
+    printf("MPI Particle-in-Cell execution on 2D grid\n");
 
-    if (argc<6) {
-      printf("Usage: %s <#simulation steps> <grid size> <#particles> <k (particle charge semi-increment)> ", argv[0]);
-      printf("<m (vertical particle velocity)>\n");
-      printf("          <init mode> <init parameters>]\n");
+    if (argc<8) {
+      printf("Usage: %s <#simulation steps> <grid size> <#particles> ", argv[0]);
+      printf(" <k (particle charge semi-increment)> <m (vertical particle velocity)>\n");
+      printf("             <period> <migration_delay> <init mode> <init parameters>]\n");
       printf("   init mode \"GEOMETRIC\"  parameters: <attenuation factor>\n");
       printf("             \"SINUSOIDAL\" parameters: none\n");
       printf("             \"LINEAR\"     parameters: <negative slope> <constant offset>\n");
@@ -681,20 +779,20 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;
     }
 
-    iterations = atol(*++argv);  args_used++;
+    iterations = atol(*++argv);       args_used++;
     if (iterations<1) {
       printf("ERROR: Number of time steps must be positive: %llu\n", iterations);
       error = 1;
       goto ENDOFTESTS;
     }
 
-    L = atol(*++argv);  args_used++;
+    L = atol(*++argv);                args_used++;
     if (L<1 || L%2) {
       printf("ERROR: Number of grid cells must be positive and even: %llu\n", L);
       error = 1;
       goto ENDOFTESTS;
     }
-    n = atol(*++argv);  args_used++;
+    n = atol(*++argv);                args_used++;
     if (n<1) {
       printf("ERROR: Number of particles must be positive: %llu\n", n);
       error = 1;
@@ -702,20 +800,31 @@ int main(int argc, char ** argv) {
     }
 
     particle_mode  = UNDEFINED;
-    k = atoi(*++argv);   args_used++;
-    m = atoi(*++argv);   args_used++;
-    init_mode = *++argv; args_used++;
+    k = atoi(*++argv);                args_used++;
+    m = atoi(*++argv);                args_used++;
+
+    period = atol(*++argv);           args_used++;
+    migration_delay = atol(*++argv);  args_used++;
+    if (period <1 || migration_delay<0 || migration_delay >= period) {
+      printf("ERROR: Violated 0<period<migration_delay: period=%ld, migration_delay=%ld\n",
+             period, migration_delay);
+      error = 1;
+      goto ENDOFTESTS;
+    }
+    init_mode = *++argv;              args_used++;
 
     ENDOFTESTS:;
 
   } // done with standard initialization parameters
   bail_out(error);
 
-  MPI_Bcast(&iterations, 1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&L,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&n,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&k,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&m,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations,      1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&period,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&migration_delay, 1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&L,               1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n,               1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&k,               1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&m,               1, MPI_UINT64_T, root, MPI_COMM_WORLD);
 
   grid_patch = (bbox_t){0, L+1, 0, L+1};
 
@@ -807,14 +916,22 @@ int main(int argc, char ** argv) {
   my_IDy = my_ID/Num_procsx;
 
   if (my_ID == root) {
-    MPIX_Get_collocated_size(&procsize);
     printf("Number of ranks                    = %d\n", Num_procs);
-    printf("Number of ranks/process            = %d\n", procsize);
-    printf("Load balancing                     = None\n");
     printf("Grid size                          = %llu\n", L);
     printf("Tiles in x/y-direction             = %d/%d\n", Num_procsx, Num_procsy);
     printf("Number of particles requested      = %llu\n", n);
     printf("Number of time steps               = %llu\n", iterations);
+#if NO_MIGRATE
+    printf("Rank migration and load balance monitoring disabled\n");
+#else
+  #if USE_PUPER
+      printf("Using explicit Pack/Unpack\n");
+  #else
+      printf("Not using explicit Pack/Unpack\n");
+  #endif
+      printf("Period between migrations           = %llu\n", period);
+      printf("Migration delay                     = %llu\n", migration_delay);
+#endif
     printf("Initialization mode                = %s\n",   init_mode);
     switch(particle_mode) {
     case GEOMETRIC: printf("  Attenuation factor               = %lf\n", rho);    break;
@@ -935,6 +1052,7 @@ int main(int argc, char ** argv) {
   }
 
   /* Allocate space for communication buffers. Adjust appropriately as the simulation proceeds */
+
   error=0;
   for (i=0; i<8; i++) {
     sendbuf_size[i] = MAX(1,n/(MEMORYSLACK*Num_procs));
@@ -1030,10 +1148,32 @@ int main(int argc, char ** argv) {
                                 recvbuf[2*i+1], to_recv[2*i+1]);
     }
     particles_count = ptr_my;
+
+#if !NO_MIGRATE    
+    /* start measuring load at the end of a period                          */
+    if (iter != 0 && iter%period == 0) AMPI_Load_start_measure();
+    /* migrate ranks and stop measuring load some iterations later          */
+    if (iter != migration_delay && iter%period == migration_delay) {
+
+#if USE_PUPER
+      /* Copy pointers to data structure since migration is following*/
+      fill_my_heap_ds(&my_heap_ds, particles, grid, sendbuf, recvbuf, sendbuf_size,
+                    recvbuf_size, particles_size, my_tile);
+#endif
+      AMPI_Migrate(hints);
+      AMPI_Load_stop_measure();
+
+#if USE_PUPER
+      /* Copy back pointers as they may have been changed due to migration */
+      drain_my_heap_ds(&my_heap_ds, &particles, &grid, sendbuf, recvbuf, sendbuf_size,
+                    recvbuf_size, &particles_size, &my_tile);
+#endif
+    }
+#endif
+
   } // end of iterations
 
   local_pic_time = wtime() - local_pic_time;
-
   MPI_Reduce(&local_pic_time, &pic_time, 1, MPI_DOUBLE, MPI_MAX, root,
              MPI_COMM_WORLD);
 

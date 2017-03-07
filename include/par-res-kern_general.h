@@ -142,7 +142,7 @@ static inline void* prk_malloc(size_t bytes)
 
 static inline void prk_free(void* p)
 {
-#if defined(__INTEL_COMPILER) && !defined(PRK_USE_POSIX_MEMALIGN)
+#if !defined(__UPC__) && defined(__INTEL_COMPILER) && !defined(PRK_USE_POSIX_MEMALIGN)
     _mm_free(p);
 #else
     free(p);
