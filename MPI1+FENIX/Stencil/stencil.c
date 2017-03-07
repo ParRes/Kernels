@@ -140,10 +140,9 @@ int main(int argc, char ** argv) {
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8];
   int    spare_ranks; 
-  FILE*  kill_file;
   int    data_recovery_mode;
   int    fenix_status;
-  MPI_COMM new_comm;
+  MPI_Comm new_comm;
 
   /*******************************************************************************
   ** Initialize the MPI environment
@@ -166,7 +165,7 @@ int main(int argc, char ** argv) {
 #endif
 
     if (argc != 6){
-      printf("Usage: %s <# iterations> <array dimension> <spare ranks> <kill_file> <data_recovery_mode>\n",
+      printf("Usage: %s <# iterations> <array dimension> <spare ranks> <data_recovery_mode>\n",
              *argv);
       error = 1;
       goto ENDOFTESTS;
@@ -207,7 +206,6 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;
     }
 
-    kill_file_name = *++argv;
     data_recovery_mode  = atoi(*++argv);
 
     ENDOFTESTS:;
