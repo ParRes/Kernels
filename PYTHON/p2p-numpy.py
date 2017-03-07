@@ -60,11 +60,11 @@ def main():
     # read and test input parameters
     # ********************************************************************
 
-    print 'Parallel Research Kernels version '#, PRKVERSION
-    print 'Python pipeline execution on 2D grid'
+    print('Parallel Research Kernels version ')#, PRKVERSION
+    print('Python pipeline execution on 2D grid')
 
     if len(sys.argv) != 4:
-        print 'argument count = ', len(sys.argv)
+        print('argument count = ', len(sys.argv))
         sys.exit("Usage: ./synch_p2p <# iterations> <first array dimension> <second array dimension>")
 
     iterations = int(sys.argv[1])
@@ -79,12 +79,12 @@ def main():
     if n < 1:
         sys.exit("ERROR: array dimension must be >= 1")
 
-    print 'Grid sizes               = ', m, n
-    print 'Number of iterations     = ', iterations
+    print('Grid sizes               = ', m, n)
+    print('Number of iterations     = ', iterations)
 
     grid = numpy.zeros((m,n))
-    grid[0,:] = range(n)
-    grid[:,0] = range(m)
+    grid[0,:] = list(range(n))
+    grid[:,0] = list(range(m))
 
     for k in range(iterations+1):
         # start timer after a warmup iteration
@@ -111,11 +111,11 @@ def main():
     # verify correctness, using top right value
     corner_val = float((iterations+1)*(n+m-2))
     if (abs(grid[m-1,n-1] - corner_val)/corner_val) < epsilon:
-        print 'Solution validates'
+        print('Solution validates')
         avgtime = pipeline_time/iterations
-        print 'Rate (MFlops/s): ',1.e-6*2*(m-1)*(n-1)/avgtime,' Avg time (s): ',avgtime
+        print('Rate (MFlops/s): ',1.e-6*2*(m-1)*(n-1)/avgtime,' Avg time (s): ',avgtime)
     else:
-        print 'ERROR: checksum ',grid[m-1,n-1],' does not match verification value', corner_val
+        print('ERROR: checksum ',grid[m-1,n-1],' does not match verification value', corner_val)
         sys.exit()
 
 
