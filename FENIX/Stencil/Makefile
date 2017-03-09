@@ -1,4 +1,4 @@
-include ../../common/MPI.defs
+include ../../common/FENIX.defs
 
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults
@@ -11,9 +11,9 @@ USERFLAGS    =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         = -lm
-LIBPATHS     = 
-INCLUDEPATHS = 
+LIBS         = -lm -lfenix
+LIBPATHS     = -L$(FENIXTOP)/lib
+INCLUDEPATHS = -I$(FENIXTOP)/include
 
 ### End User configurable options ###
 

@@ -2,4 +2,4 @@ include ../../common/make.defs
 CCOMPILER=${ULFMTOP}/bin/mpicc
 CLINKER=$(CCOMPILER)
 COMOBJS=MPI_bail_out.o wtime.o
-PROG_ENV=-DMPI+FENIX
+PROG_ENV=-DFENIX

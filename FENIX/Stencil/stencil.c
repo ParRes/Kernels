@@ -32,11 +32,11 @@ POSSIBILITY OF SUCH DAMAGE.
 
 /*******************************************************************
 
-NAME:    Stencil
+NAME:    Stencil_FT
 
 PURPOSE: This program tests the efficiency with which a space-invariant,
          linear, symmetric filter (stencil) can be applied to a square
-         grid or image.
+         grid or image, with Fenix fault tolerance added
 
 USAGE:   The program takes as input the linear dimension of the grid,
          the number of iterations on the grid, the number of spare ranks,
@@ -44,7 +44,7 @@ USAGE:   The program takes as input the linear dimension of the grid,
          times, and a flag indicating how data recovery should take place.
 
                <progname> <# iterations> <grid size> <spare ranks> \
-                          <kill_fill> <data recovery mode>
+                          <kill set size> <kill period> <checkpointing>
 
          The output consists of diagnostics to make sure the
          algorithm worked, and of timing statistics.
@@ -59,7 +59,7 @@ FUNCTIONS CALLED:
 
 HISTORY: - Written by Rob Van der Wijngaart, November 2006.
          - RvdW, August 2013: Removed unrolling pragmas for clarity;
-           fixed bug in compuation of width of strip assigned to
+           fixed bug in computation of width of strip assigned to
            each rank;
          - RvdW, August 2013: added constant to array "in" at end of
            each iteration to force refreshing of neighbor data in
@@ -72,7 +72,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 *********************************************************************************/
 
 #include <par-res-kern_general.h>
-#include <par-res-kern_mpi.h>
+#include <par-res-kern_fenix.h>
 
 #if DOUBLE
   #define DTYPE     double
@@ -139,8 +139,12 @@ int main(int argc, char ** argv) {
   int    error=0;         /* error flag                                          */
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8];
-  int    spare_ranks; 
-  int    data_recovery_mode;
+  int    spare_ranks;     /* number of ranks to keep in reserve                  */
+  int    kill_ranks;      /* number of ranks that die with each failure          */
+  int    *kill_set;       /* instance of set of ranks to be killed               */
+  int    kill_period;     /* average number of iterations between failures       */
+  int    checkpointing;   /* indicates if data is restored using Fenix or
+                             analytically                                        */
   int    fenix_status;
   MPI_Comm new_comm;
 
@@ -157,7 +161,7 @@ int main(int argc, char ** argv) {
 
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI stencil execution on 2D grid\n");
+    printf("MPI stencil execution on 2D grid with Fenix fault tolerance\n");
 #if !STAR
     printf("ERROR: Compact stencil not supported\n");
     error = 1;
@@ -203,36 +207,40 @@ int main(int argc, char ** argv) {
     if (spare_ranks < 0 || spare_ranks >= Num_procs){
       printf("ERROR: Illegal number of spare ranks : %d \n", spare_ranks);
       error = 1;
-      goto ENDOFTESTS;
+      goto ENDOFTESTS;     
     }
 
-    data_recovery_mode  = atoi(*++argv);
+    kill_ranks = atoi(*++argv);
+    if (kill_ranks < 0 || kill_ranks > spare_ranks) {
+      printf("ERROR: Number of ranks in kill set invalid: %d\n", kill_ranks);
+      error = 1;
+      goto ENDOFTESTS;     
+    }
+
+    kill_period = atoi(*++argv);
+    if (kill_period < 1) {
+      printf("ERROR: rank kill period must be positive: %d\n", kill_period);
+      error = 1;
+      goto ENDOFTESTS;     
+    }
+
+    checkpointing = atoi(*++argv);
 
     ENDOFTESTS:;
   }
   bail_out(error);
 
-  /* before calling Fenit_Init, all ranks need to know how many spare ranks 
+  /* before calling Fenix_Init, all ranks need to know how many spare ranks 
      to reserve                                                              */
-  MPI_Bcast(&spare_ranks, 1, MPI_INT, root, MPI_COMM_WORLD);
-
-  Fenix_Init(&fenix_status, MPI_COMM_WORLD, &new_comm, &argc, &argv, spare_ranks, 
-             0, MPI_INFO_NULL, &error);
-
-  /* recover data analytically                                               */
-  if (data_recovery_mode) {
-    
+  MPI_Bcast(&n,             1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&spare_ranks,   1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&kill_ranks,    1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&kill_period,   1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Bcast(&checkpointing, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   /* determine best way to create a 2D grid of ranks (closest to square)     */
-  factor(Num_procs, &Num_procsx, &Num_procsy);
-
-  my_IDx = my_ID%Num_procsx;
-  my_IDy = my_ID/Num_procsx;
-  /* compute neighbors; don't worry about dropping off the edges of the grid */
-  right_nbr  = my_ID+1;
-  left_nbr   = my_ID-1;
-  top_nbr    = my_ID+Num_procsx;
-  bottom_nbr = my_ID-Num_procsx;
+  factor(Num_procs-spare_ranks, &Num_procsx, &Num_procsy);
 
   if (my_ID == root) {
     printf("Number of ranks        = %d\n", Num_procs);
@@ -251,10 +259,28 @@ int main(int argc, char ** argv) {
     printf("Compact representation of stencil loop body\n");
 #endif
     printf("Number of iterations   = %d\n", iterations);
+    printf("Spare ranks            = %d\n", spare_ranks);
+    printf("Kill set size          = %d\n", kill_ranks);
+    printf("Fault period           = %d\n", kill_period);
+    if (checkpointing)
+      printf("Using Fenix for checkpointing\n");
+    else
+      printf("Restoring data analytically\n");
   }
 
-  MPI_Bcast(&n,          1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations, 1, MPI_INT, root, MPI_COMM_WORLD);
+  Fenix_Init(&fenix_status, MPI_COMM_WORLD, &new_comm, &argc, &argv, spare_ranks, 
+             0, MPI_INFO_NULL, &error);
+
+  MPI_Comm_rank(new_comm, &my_ID);
+  MPI_Comm_size(new_comm, &Num_procs);
+
+  my_IDx = my_ID%Num_procsx;
+  my_IDy = my_ID/Num_procsx;
+  /* compute neighbors; don't worry about dropping off the edges of the grid */
+  right_nbr  = my_ID+1;
+  left_nbr   = my_ID-1;
+  top_nbr    = my_ID+Num_procsx;
+  bottom_nbr = my_ID-Num_procsx;
 
   /* compute amount of space required for input and solution arrays             */
 
