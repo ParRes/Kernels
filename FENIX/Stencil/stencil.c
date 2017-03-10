@@ -225,13 +225,19 @@ int main(int argc, char ** argv) {
     }
 
     checkpointing = atoi(*++argv);
+    if (checkpointing) {
+      printf("ERROR: Fenix checkpointing not yet implemented\n");
+      error = 1;
+      goto ENDOFTESTS;     
+    }
 
     ENDOFTESTS:;
   }
-  bail_out(error);
+  bail_out(error, MPI_COMM_WORLD);
+  MPI_Finalize(); exit(0);
 
   /* before calling Fenix_Init, all ranks need to know how many spare ranks 
-     to reserve                                                              */
+     to reserve; broadcast other parameters as well                          */
   MPI_Bcast(&n,             1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&spare_ranks,   1, MPI_INT, root, MPI_COMM_WORLD);
@@ -268,7 +274,7 @@ int main(int argc, char ** argv) {
       printf("Restoring data analytically\n");
   }
 
-  Fenix_Init(&fenix_status, MPI_COMM_WORLD, &new_comm, &argc, &argv, spare_ranks, 
+  Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
              0, MPI_INFO_NULL, &error);
 
   MPI_Comm_rank(new_comm, &my_ID);
@@ -300,7 +306,7 @@ int main(int argc, char ** argv) {
     printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
-  bail_out(error);
+  bail_out(error, MPI_COMM_WORLD);
 
   height = n/Num_procsy;
   leftover = n%Num_procsy;
@@ -318,14 +324,14 @@ int main(int argc, char ** argv) {
     printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
-  bail_out(error);
+  bail_out(error, MPI_COMM_WORLD);
 
   if (width < RADIUS || height < RADIUS) {
     printf("ERROR: rank %d has work tile smaller then stencil radius\n",
            my_ID);
     error = 1;
   }
-  bail_out(error);
+  bail_out(error, MPI_COMM_WORLD);
 
   total_length_in  = (long) (width+2*RADIUS)*(long) (height+2*RADIUS)*sizeof(DTYPE);
   total_length_out = (long) width* (long) height*sizeof(DTYPE);
@@ -337,7 +343,7 @@ int main(int argc, char ** argv) {
             my_ID);
     error = 1;
   }
-  bail_out(error);
+  bail_out(error, MPI_COMM_WORLD);
 
   /* fill the stencil weights to reflect a discrete divergence operator         */
   for (int jj=-RADIUS; jj<=RADIUS; jj++) for (int ii=-RADIUS; ii<=RADIUS; ii++)
@@ -364,7 +370,7 @@ int main(int argc, char ** argv) {
       printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
       error = 1;
     }
-    bail_out(error);
+    bail_out(error, MPI_COMM_WORLD);
     top_buf_in     = top_buf_out +   RADIUS*width;
     bottom_buf_out = top_buf_out + 2*RADIUS*width;
     bottom_buf_in  = top_buf_out + 3*RADIUS*width;
@@ -374,7 +380,7 @@ int main(int argc, char ** argv) {
       printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
       error = 1;
     }
-    bail_out(error);
+    bail_out(error, MPI_COMM_WORLD);
     right_buf_in   = right_buf_out +   RADIUS*height;
     left_buf_out   = right_buf_out + 2*RADIUS*height;
     left_buf_in    = right_buf_out + 3*RADIUS*height;
@@ -514,7 +520,7 @@ int main(int argc, char ** argv) {
 #endif
     }
   }
-  bail_out(error);
+  bail_out(error, MPI_COMM_WORLD);
 
   if (my_ID == root) {
     /* flops/stencil: 2 flops (fma) for each point in the stencil,
