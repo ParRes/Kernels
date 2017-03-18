@@ -71,8 +71,12 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 
 *********************************************************************************/
 
+#include <signal.h>
+#include <sys/types.h>
 #include <par-res-kern_general.h>
 #include <par-res-kern_fenix.h>
+#include <random_draw.h>
+#include <unistd.h>
 
 #if DOUBLE
   #define DTYPE     double
@@ -119,7 +123,7 @@ int main(int argc, char ** argv) {
   int    root = 0;
   int    n, width, height;/* linear global and local grid dimension              */
   long   nsquare;         /* total number of grid points                         */
-  int    iter, leftover;  /* dummies                   */
+  int    iter, iter_init, leftover;  /* dummies                                        */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
   int    jstart, jend;    /* bounds of grid tile assigned to calling rank        */
   DTYPE  norm,            /* L1 norm of solution                                 */
@@ -143,10 +147,14 @@ int main(int argc, char ** argv) {
   int    kill_ranks;      /* number of ranks that die with each failure          */
   int    *kill_set;       /* instance of set of ranks to be killed               */
   int    kill_period;     /* average number of iterations between failures       */
+  int    *fail_iter;      /* list of iterations when a failure will be triggered */
+  int    fail_iter_s=0;   /* latest  */
   int    checkpointing;   /* indicates if data is restored using Fenix or
                              analytically                                        */
+  int    num_fenix_init=1;/* number of times Fenix_Init is called                */
+  int    num_fenix_init_loc;/* number of times Fenix_Init was called             */
   int    fenix_status;
-  MPI_Comm new_comm;
+  random_draw_t dice;
 
   /*******************************************************************************
   ** Initialize the MPI environment
@@ -168,21 +176,22 @@ int main(int argc, char ** argv) {
     goto ENDOFTESTS;
 #endif
 
-    if (argc != 6){
-      printf("Usage: %s <# iterations> <array dimension> <spare ranks> <data_recovery_mode>\n",
+    if (argc != 7){
+      printf("Usage: %s <# iterations> <array dimension> <spare ranks> <kill set size> ",
              *argv);
+      printf("<kill period> <checkpointing>\n");
       error = 1;
       goto ENDOFTESTS;
     }
 
-    iterations  = atoi(*++argv);
+    iterations  = atoi(argv[1]);
     if (iterations < 1){
       printf("ERROR: iterations must be >= 1 : %d \n",iterations);
       error = 1;
       goto ENDOFTESTS;
     }
 
-    n       = atoi(*++argv);
+    n       = atoi(argv[2]);
     nsquare = (long) n * (long) n;
     if (nsquare < Num_procs){
       printf("ERROR: grid size %ld must be at least # ranks: %d\n",
@@ -203,28 +212,28 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;
     }
 
-    spare_ranks  = atoi(*++argv);
+    spare_ranks  = atoi(argv[3]);
     if (spare_ranks < 0 || spare_ranks >= Num_procs){
       printf("ERROR: Illegal number of spare ranks : %d \n", spare_ranks);
       error = 1;
       goto ENDOFTESTS;     
     }
 
-    kill_ranks = atoi(*++argv);
+    kill_ranks = atoi(argv[4]);
     if (kill_ranks < 0 || kill_ranks > spare_ranks) {
       printf("ERROR: Number of ranks in kill set invalid: %d\n", kill_ranks);
       error = 1;
       goto ENDOFTESTS;     
     }
 
-    kill_period = atoi(*++argv);
+    kill_period = atoi(argv[5]);
     if (kill_period < 1) {
       printf("ERROR: rank kill period must be positive: %d\n", kill_period);
       error = 1;
       goto ENDOFTESTS;     
     }
 
-    checkpointing = atoi(*++argv);
+    checkpointing = atoi(argv[6]);
     if (checkpointing) {
       printf("ERROR: Fenix checkpointing not yet implemented\n");
       error = 1;
@@ -234,7 +243,6 @@ int main(int argc, char ** argv) {
     ENDOFTESTS:;
   }
   bail_out(error, MPI_COMM_WORLD);
-  MPI_Finalize(); exit(0);
 
   /* before calling Fenix_Init, all ranks need to know how many spare ranks 
      to reserve; broadcast other parameters as well                          */
@@ -274,15 +282,57 @@ int main(int argc, char ** argv) {
       printf("Restoring data analytically\n");
   }
 
+  /* initialize the random number generator for each rank; we do that before
+     starting Fenix, so that all ranks, including spares, are initialized      */
+  LCG_init(&dice);
+  /* compute the iterations during which errors will be incurred               */
+  for (iter=0; iter<iterations; iter++) {
+    fail_iter_s += random_draw(kill_period, &dice);
+    num_fenix_init++;
+    if (fail_iter_s >= iterations) break;
+  }
+  printf("Total number of failures to be injected: %d\n", num_fenix_init-1);
+  fail_iter = (int *) prk_malloc(sizeof(int)*num_fenix_init);
+  if (!fail_iter) {
+    printf("ERROR: Rank %d could not allocate space for array fail_iter\n", my_ID);
+    error = 1;
+  }
+  bail_out(error, MPI_COMM_WORLD);
+  /* now record the actual failure iterations                                  */
+  for (fail_iter_s=iter=0; iter<num_fenix_init; iter++) {
+    fail_iter_s += random_draw(kill_period, &dice);
+    fail_iter[iter] = fail_iter_s;
+  }
+
+  /* start timer for all ranks, including spares                               */
+  MPI_Barrier(MPI_COMM_WORLD);
+  local_stencil_time = wtime();
+
+  /* Here is where we initialize Fenix and mark the return point after failure */
   Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
              0, MPI_INFO_NULL, &error);
+  if (error==FENIX_WARNING_SPARE_RANKS_DEPLETED) 
+    printf("ERROR: Rank %d: Cannot reconsitute original communicator\n", my_ID);
+  bail_out(error, MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
+  MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
-  MPI_Comm_rank(new_comm, &my_ID);
-  MPI_Comm_size(new_comm, &Num_procs);
+  /* if rank is recovered, set iter to a negative number, to be increased
+     to the actual value corresponding to the current iter value among
+     survivor ranks; handle number of Fenix_Init calls similarly               */
+  switch (fenix_status){
+    case FENIX_ROLE_INITIAL_RANK:   iter_init = num_fenix_init_loc = 0;    break;
+    case FENIX_ROLE_RECOVERED_RANK: iter_init = num_fenix_init_loc = -1;   break;
+    case FENIX_ROLE_SURVIVOR_RANK:  iter_init = iter;  num_fenix_init_loc++;
+  }
+  MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  printf("iter_init=%d, iter=%d, num_fenix_init_loc=%d, num_fenix_init=%d\n",
+         iter_init, iter, num_fenix_init_loc, num_fenix_init);
 
   my_IDx = my_ID%Num_procsx;
   my_IDy = my_ID/Num_procsx;
-  /* compute neighbors; don't worry about dropping off the edges of the grid */
+  /* compute neighbors; don't worry about dropping off the edges of the grid   */
   right_nbr  = my_ID+1;
   left_nbr   = my_ID-1;
   top_nbr    = my_ID+Num_procsx;
@@ -386,14 +436,17 @@ int main(int argc, char ** argv) {
     left_buf_in    = right_buf_out + 3*RADIUS*height;
   }
 
-  for (iter = 0; iter<=iterations; iter++){
+  for (; iter<=iterations; iter++){
 
-    /* start timer after a warmup iteration */
-    if (iter == 1) {
-      MPI_Barrier(MPI_COMM_WORLD);
-      local_stencil_time = wtime();
+    /* inject failure if appropriate                                                */
+    if (iter == fail_iter[num_fenix_init]) {
+      if (my_ID < kill_ranks) {
+        printf("Rank %d commits suicide in iter %d\n", my_ID, iter);
+        pid_t pid = getpid();
+        kill(pid, SIGKILL);
+      }
+      else printf("Rank %d becomes a survivor rank in iter %d\n", my_ID, iter);
     }
-
     /* need to fetch ghost point data from neighbors in y-direction                 */
     if (my_IDy < Num_procsy-1) {
       MPI_Irecv(top_buf_in, RADIUS*width, MPI_DTYPE, top_nbr, 101,
@@ -526,11 +579,12 @@ int main(int argc, char ** argv) {
     /* flops/stencil: 2 flops (fma) for each point in the stencil,
        plus one flop for the update of the input of the array        */
     flops = (DTYPE) (2*stencil_size+1) * f_active_points;
-    avgtime = stencil_time/iterations;
+    avgtime = stencil_time/(iterations+1);
     printf("Rate (MFlops/s): "FSTR"  Avg time (s): %lf\n",
            1.0E-06 * flops/avgtime, avgtime);
   }
 
+  Fenix_Finalize();
   MPI_Finalize();
   exit(EXIT_SUCCESS);
 }

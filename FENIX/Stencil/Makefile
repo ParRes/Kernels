@@ -1,4 +1,5 @@
 include ../../common/FENIX.defs
+COMOBJS += random_draw.o
 
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults
@@ -11,8 +12,8 @@ USERFLAGS    =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         = -lm -lfenix
-LIBPATHS     = -L$(FENIXTOP)/lib
+LIBS         = -lm -lfenix -lmpi
+LIBPATHS     = -L$(FENIXTOP)/lib -L$(ULFMTOP)/lib
 INCLUDEPATHS = -I$(FENIXTOP)/include
 
 ### End User configurable options ###
