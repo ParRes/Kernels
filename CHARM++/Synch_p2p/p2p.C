@@ -134,7 +134,7 @@ public:
   double result;
   int    offset, istart, iend, j; // global grid indices of strip
   long   width; 
-  double *vector;
+  double * RESTRICT vector;
 
   // Constructor, initialize values
   P2p() {

@@ -117,7 +117,7 @@ public:
   int iter, phase, colstart;
   double result, local_error;
   int send_to, recv_from;
-  double *A_p, *B_p, *Work_in_p, *Work_out_p;
+  double * RESTRICT A_p, * RESTRICT B_p, * RESTRICT Work_in_p, * RESTRICT Work_out_p;
   double startTime, endTime;
   // Constructor, initialize values
   Transpose() {
