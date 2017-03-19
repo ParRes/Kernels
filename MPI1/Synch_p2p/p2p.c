@@ -79,7 +79,7 @@ int main(int argc, char ** argv)
          avgtime;
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;      /* verification value at top right corner of grid      */
-  int    i, j, jj, iter;  /* dummies                                           */
+  int    i, j, jj, iter;  /* dummies                                             */
   int    iterations;      /* number of times to run the pipeline algorithm       */
   long   start, end;      /* start and end of grid slice owned by calling rank   */
   long   segment_size;    /* size of x-dimension of grid owned by calling rank   */
@@ -87,7 +87,7 @@ int main(int argc, char ** argv)
   int    Num_procs;       /* Number of ranks                                     */
   int    grp;             /* grid line aggregation factor                        */
   int    jjsize;          /* actual line group size                              */
-  double RESTRICT *vector;/* array holding grid values                           */
+  double * RESTRICT vector;/* array holding grid values                          */
   double *inbuf, *outbuf; /* communication buffers used when aggregating         */
   long   total_length;    /* total required length to store grid values          */
 
