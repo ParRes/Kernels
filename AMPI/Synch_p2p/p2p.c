@@ -87,7 +87,7 @@ int main(int argc, char ** argv)
   int    Num_procs;       /* Number of ranks                                     */
   int    grp;             /* grid line aggregation factor                        */
   int    jjsize;          /* actual line group size                              */
-  double RESTRICT *vector;/* array holding grid values                           */
+  double * RESTRICT vector;/* array holding grid values                          */
   double *inbuf, *outbuf; /* communication buffers used when aggregating         */
   long   total_length;    /* total required length to store grid values          */
 
