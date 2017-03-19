@@ -172,19 +172,19 @@ static inline void factor(int r, int *fac1, int *fac2) {
    is as close as possible to an input pair, but whose two-term factorizations have 
    minimal maximum aspect ratios                                                         */
 static inline void optimize_split(int *r_in0, int *r_in1, float lb_weight){
-  int r[2], fac[2][2], delta, r_opt[2];
+  int r[2], fac[2][2], delta, r_opt[2], i;
   float max_aspect, imbalance, cost, cost_opt;
     
   cost_opt=INT_MAX;
   for (delta=-MIN((*r_in0),(*r_in1))+1; delta<MIN((*r_in0),(*r_in1)); delta++) {
     r[0]=(*r_in0-delta); r[1] = (*r_in1)+delta;
-    for (int i=0; i<2; i++) factor(r[i], &fac[i][0], &fac[i][1]);
+    for (i=0; i<2; i++) factor(r[i], &fac[i][0], &fac[i][1]);
     max_aspect=1.0-1.0/MAX((float)fac[0][1]/(float)fac[0][0],(float)fac[1][1]/(float)fac[1][0]);
     imbalance=MAX(1.0-(float)r[1]/(float)(*r_in1),1.0-(float)r[0]/(float)(*r_in0));
     cost = imbalance*lb_weight + max_aspect;
     if (cost<cost_opt) {
       cost_opt = cost;
-      for (int i=0; i<2; i++) r_opt[i] = r[i];
+      for (i=0; i<2; i++) r_opt[i] = r[i];
     }
   }
   *r_in0 = r_opt[0];

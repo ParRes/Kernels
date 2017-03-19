@@ -377,7 +377,7 @@ void top_level_task(const Task *task,
   /* compute "processor" grid; initialize Num_procsy to avoid compiler warnings */
   Num_procsy = 0;
   /* determine best way to create a 2D grid of ranks (closest to square)        */
-  factor(Num_procs, &Num_procsx, &Num_procsy);
+  factor(num_ranks, &Num_procsx, &Num_procsy);
 
   if (RADIUS < 1)
   {
