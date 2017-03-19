@@ -21,7 +21,7 @@ INCLUDEPATHS =
 ifndef DOUBLE
   DOUBLE=1
 endif
-#description: default data type is single precision
+#description: default data type is double precision
 
 ifndef STAR
   STAR=1
