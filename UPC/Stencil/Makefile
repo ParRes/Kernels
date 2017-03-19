@@ -26,7 +26,7 @@ endif
 ifndef STAR
   STAR=1
 endif
-#description: default stencil is compact (dense, square)
+#description: default stencil is star-shaped
 
 ifndef RESTRICT_KEYWORD
   RESTRICT_KEYWORD=0

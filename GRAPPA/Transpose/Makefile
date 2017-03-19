@@ -10,15 +10,6 @@ OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers
 
-RADIUSFLAG  = -DRADIUS=2
-#description: default radius of filter to be applied is 2
-
-DOUBLEFLAG = -DDOUBLE
-#description: default data type is single precision
-
-STARFLAG   = -DSTAR
-#description: default stencil is compact (dense, square)
-
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
@@ -35,7 +26,7 @@ LIBPATHS     = $(GRAPPA_LDFLAGS)
 # this is used by the C++ implicit compile rule
 CXXFLAGS= $(GRAPPA_CXXFLAGS)  
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG) $(RADIUSFLAG)  $(USERFLAGS) $(CXXFLAGS)
+TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG) $(USERFLAGS) $(CXXFLAGS)
 PROGRAM      = transpose
 OBJS         = $(PROGRAM).o $(COMOBJS)
 

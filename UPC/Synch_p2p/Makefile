@@ -18,16 +18,6 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-ifndef DOUBLE
-  DOUBLE=1
-endif
-#description: default data type is single precision
-
-ifndef STAR
-  STAR=1
-endif
-#description: default stencil is compact (dense, square)
-
 ifndef RESTRICT_KEYWORD
   RESTRICT_KEYWORD=0
 endif
