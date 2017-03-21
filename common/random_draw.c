@@ -171,6 +171,7 @@ uint64_t random_draw(double mu, random_draw_t *parm)
   static uint64_t i0, i1;
 
   if (mu>=1.0) {
+    /* set std dev equal to 15% of average; ensures result will never be negative       */
     sigma = mu*0.15;  
     u0 = LCG_next(rand_max, parm) * rand_div;
     u1 = LCG_next(rand_max, parm) * rand_div;
@@ -182,7 +183,7 @@ uint64_t random_draw(double mu, random_draw_t *parm)
   else {
     /* we need to pick two integers whose quotient approximates mu; set one to UINT_MAX */
     numerator = (uint32_t) (mu*(double)denominator);
-    i0 = LCG_next(denominator, parm); /* don't use this value, but must call LCG_next twice   */
+    i0 = LCG_next(denominator, parm); /* don't use value, but must call LCG_next twice  */
     i1 = LCG_next(denominator, parm);
     return ((uint64_t)(i1<=numerator));
   }

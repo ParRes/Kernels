@@ -149,6 +149,7 @@ int main(int argc, char ** argv) {
   int    kill_period;     /* average number of iterations between failures       */
   int    *fail_iter;      /* list of iterations when a failure will be triggered */
   int    fail_iter_s=0;   /* latest  */
+  DTYPE  init_add;        /* used to offset initial solutions                    */
   int    checkpointing;   /* indicates if data is restored using Fenix or
                              analytically                                        */
   int    num_fenix_init=1;/* number of times Fenix_Init is called                */
@@ -257,29 +258,29 @@ int main(int argc, char ** argv) {
   factor(Num_procs-spare_ranks, &Num_procsx, &Num_procsy);
 
   if (my_ID == root) {
-    printf("Number of ranks        = %d\n", Num_procs);
-    printf("Grid size              = %d\n", n);
-    printf("Radius of stencil      = %d\n", RADIUS);
-    printf("Tiles in x/y-direction = %d/%d\n", Num_procsx, Num_procsy);
-    printf("Type of stencil        = star\n");
+    printf("Number of ranks          = %d\n", Num_procs);
+    printf("Grid size                = %d\n", n);
+    printf("Radius of stencil        = %d\n", RADIUS);
+    printf("Tiles in x/y-direction   = %d/%d\n", Num_procsx, Num_procsy);
+    printf("Type of stencil          = star\n");
 #if DOUBLE
-    printf("Data type              = double precision\n");
+    printf("Data type                = double precision\n");
 #else
-    printf("Data type              = single precision\n");
+    printf("Data type                = single precision\n");
 #endif
 #if LOOPGEN
-    printf("Script used to expand stencil loop body\n");
+    printf("Loop body representation = expanded by script\n");
 #else
-    printf("Compact representation of stencil loop body\n");
+    printf("Loop body representation = compact\n");
 #endif
-    printf("Number of iterations   = %d\n", iterations);
-    printf("Spare ranks            = %d\n", spare_ranks);
-    printf("Kill set size          = %d\n", kill_ranks);
-    printf("Fault period           = %d\n", kill_period);
+    printf("Number of iterations     = %d\n", iterations);
+    printf("Spare ranks              = %d\n", spare_ranks);
+    printf("Kill set size            = %d\n", kill_ranks);
+    printf("Fault period             = %d\n", kill_period);
     if (checkpointing)
-      printf("Using Fenix for checkpointing\n");
+      printf("Data recovery            = Fenix checkpointing\n");
     else
-      printf("Restoring data analytically\n");
+      printf("Data recovery            = analytical\n");
   }
 
   /* initialize the random number generator for each rank; we do that before
@@ -288,10 +289,18 @@ int main(int argc, char ** argv) {
   /* compute the iterations during which errors will be incurred               */
   for (iter=0; iter<iterations; iter++) {
     fail_iter_s += random_draw(kill_period, &dice);
-    num_fenix_init++;
     if (fail_iter_s >= iterations) break;
+    num_fenix_init++;
   }
-  printf("Total number of failures to be injected: %d\n", num_fenix_init-1);
+  if ((num_fenix_init-1)*kill_ranks>spare_ranks) {
+    if (my_ID==0) printf("ERROR: number of injected errors %d exceeds spare ranks %d\n",
+                         (num_fenix_init-1)*kill_ranks, spare_ranks);
+    error = 1;
+  }
+  else if(my_ID==0) printf("Total injected failures  = %d*%d\n", 
+                           num_fenix_init-1, kill_ranks);
+  bail_out(error, MPI_COMM_WORLD);
+
   fail_iter = (int *) prk_malloc(sizeof(int)*num_fenix_init);
   if (!fail_iter) {
     printf("ERROR: Rank %d could not allocate space for array fail_iter\n", my_ID);
@@ -327,8 +336,6 @@ int main(int argc, char ** argv) {
   }
   MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  printf("iter_init=%d, iter=%d, num_fenix_init_loc=%d, num_fenix_init=%d\n",
-         iter_init, iter, num_fenix_init_loc, num_fenix_init);
 
   my_IDx = my_ID%Num_procsx;
   my_IDy = my_ID/Num_procsx;
@@ -386,12 +393,14 @@ int main(int argc, char ** argv) {
   total_length_in  = (long) (width+2*RADIUS)*(long) (height+2*RADIUS)*sizeof(DTYPE);
   total_length_out = (long) width* (long) height*sizeof(DTYPE);
 
-  in  = (DTYPE *) prk_malloc(total_length_in);
-  out = (DTYPE *) prk_malloc(total_length_out);
-  if (!in || !out) {
-    printf("ERROR: rank %d could not allocate space for input/output array\n",
-            my_ID);
-    error = 1;
+  if (fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
+    in  = (DTYPE *) prk_malloc(total_length_in);
+    out = (DTYPE *) prk_malloc(total_length_out);
+    if (!in || !out) {
+      printf("ERROR: rank %d could not allocate space for input/output array\n",
+              my_ID);
+      error = 1;
+    }
   }
   bail_out(error, MPI_COMM_WORLD);
 
@@ -408,32 +417,38 @@ int main(int argc, char ** argv) {
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
   /* intialize the input and output arrays                                     */
+  if (checkpointing) init_add = 0.0;
+  else               init_add = (DTYPE) iter;
   for (int j=jstart; j<=jend; j++) for (int i=istart; i<=iend; i++) {
-    IN(i,j)  = COEFX*i+COEFY*j;
-    OUT(i,j) = (DTYPE)0.0;
+    IN(i,j)  = COEFX*i+COEFY*j+init_add;
+    OUT(i,j) = (COEFX+COEFY)*init_add;;
   }
 
   if (Num_procs > 1) {
-    /* allocate communication buffers for halo values                          */
-    top_buf_out = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*width);
-    if (!top_buf_out) {
-      printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
-      error = 1;
+    if (fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
+      /* allocate communication buffers for halo values                        */
+      top_buf_out = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*width);
+      if (!top_buf_out) {
+        printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
+        error = 1;
+      }
+      top_buf_in     = top_buf_out +   RADIUS*width;
+      bottom_buf_out = top_buf_out + 2*RADIUS*width;
+      bottom_buf_in  = top_buf_out + 3*RADIUS*width;
     }
     bail_out(error, MPI_COMM_WORLD);
-    top_buf_in     = top_buf_out +   RADIUS*width;
-    bottom_buf_out = top_buf_out + 2*RADIUS*width;
-    bottom_buf_in  = top_buf_out + 3*RADIUS*width;
 
-    right_buf_out  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*height);
-    if (!right_buf_out) {
-      printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
-      error = 1;
+    if (fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
+      right_buf_out  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*height);
+      if (!right_buf_out) {
+        printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
+        error = 1;
+      }
+      right_buf_in   = right_buf_out +   RADIUS*height;
+      left_buf_out   = right_buf_out + 2*RADIUS*height;
+      left_buf_in    = right_buf_out + 3*RADIUS*height;
     }
     bail_out(error, MPI_COMM_WORLD);
-    right_buf_in   = right_buf_out +   RADIUS*height;
-    left_buf_out   = right_buf_out + 2*RADIUS*height;
-    left_buf_in    = right_buf_out + 3*RADIUS*height;
   }
 
   for (; iter<=iterations; iter++){
@@ -441,11 +456,15 @@ int main(int argc, char ** argv) {
     /* inject failure if appropriate                                                */
     if (iter == fail_iter[num_fenix_init]) {
       if (my_ID < kill_ranks) {
+#if VERBOSE
         printf("Rank %d commits suicide in iter %d\n", my_ID, iter);
+#endif
         pid_t pid = getpid();
         kill(pid, SIGKILL);
       }
-      else printf("Rank %d becomes a survivor rank in iter %d\n", my_ID, iter);
+#if VERBOSE
+      else printf("Rank %d is survivor rank in iter %d\n", my_ID, iter);
+#endif
     }
     /* need to fetch ghost point data from neighbors in y-direction                 */
     if (my_IDy < Num_procsy-1) {
@@ -554,12 +573,8 @@ int main(int argc, char ** argv) {
 /* verify correctness                                                            */
   if (my_ID == root) {
     norm /= f_active_points;
-    if (RADIUS > 0) {
-      reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
-    }
-    else {
-      reference_norm = (DTYPE) 0.0;
-    }
+    reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
+
     if (ABS(norm-reference_norm) > EPSILON) {
       printf("ERROR: L1 norm = "FSTR", Reference L1 norm = "FSTR"\n",
              norm, reference_norm);
