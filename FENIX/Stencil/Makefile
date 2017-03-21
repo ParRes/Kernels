@@ -2,7 +2,6 @@ include ../../common/FENIX.defs
 COMOBJS += random_draw.o
 
 ##### User configurable options #####
-#uncomment any of the following flags (and change values) to change defaults
 
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
 #description: change above into something that is a decent optimization on you system
@@ -21,12 +20,12 @@ INCLUDEPATHS = -I$(FENIXTOP)/include
 ifndef DOUBLE
   DOUBLE=1
 endif
-#description: default data type is single precision
+#description: default data type is double precision
 
 ifndef STAR
   STAR=1
 endif
-#description: default stencil is compact (dense, square)
+#description: default stencil is star-shaped
 
 ifndef RESTRICT_KEYWORD
   RESTRICT_KEYWORD=0

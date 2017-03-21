@@ -51,3 +51,9 @@ OCAS=
 
 #location where Legion is installed, e.g. $(HOME)/legion
 LEGIONTOP=
+
+#location where ULFM-enabled MPI is installed
+ULFMTOP=
+ 
+#location where Fenix is installed
+FENIXTOP=

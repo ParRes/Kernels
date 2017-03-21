@@ -49,6 +49,7 @@ help:
 	@echo "       \"make allserial\"    (re-)builds all serial targets"
 	@echo "       \"make allopenmp\"    (re-)builds all OpenMP targets"
 	@echo "       \"make allmpi1\"      (re-)builds all conventional MPI targets"
+	@echo "       \"make allfenix\"     (re-)builds all conventional MPI targets with Fenix fault tolerance"
 	@echo "       \"make allfgmpi\"     (re-)builds all Fine-Grain MPI targets"
 	@echo "       \"make allmpiopenmp\" (re-)builds all MPI + OpenMP targets"
 	@echo "       \"make allmpiomp\"    (re-)builds all MPI + OpenMP targets"
@@ -72,7 +73,7 @@ help:
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
 all: alldarwin allfreaks
-alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran
+alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran allfenix
 allfreaks: allcharm++ allampi allgrappa alllegion
 
 allmpi1:
@@ -91,6 +92,9 @@ allmpi1:
 	cd MPI1/PIC-static;          $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd MPI1/AMR;                 $(MAKE) amr       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
+allfenix:
+	cd scripts/small;            $(MAKE) -f  Makefile_FENIX runfenix
+	cd FENIX/Stencil;            $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allampi:
 	cd AMPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -240,6 +244,7 @@ clean:
 	cd MPI1/Branch;             $(MAKE) clean
 	cd MPI1/PIC-static;         $(MAKE) clean
 	cd MPI1/AMR;                $(MAKE) clean
+	cd FENIX/Stencil;           $(MAKE) clean
 	cd FG_MPI/DGEMM;            $(MAKE) clean
 	cd FG_MPI/Nstream;          $(MAKE) clean
 	cd FG_MPI/Reduce;           $(MAKE) clean
@@ -321,6 +326,7 @@ veryclean: clean
 	cd SERIAL/Branch;           $(MAKE) veryclean
 	cd MPI1/Stencil;            $(MAKE) veryclean
 	cd MPI1/AMR;                $(MAKE) veryclean
+	cd FENIX/Stencil;           $(MAKE) veryclean
 	cd OPENMP/Stencil;          $(MAKE) veryclean
 	cd SERIAL/Stencil;          $(MAKE) veryclean
 	cd SERIAL/AMR;              $(MAKE) veryclean
@@ -337,5 +343,6 @@ veryclean: clean
 	cd AMPI/Branch;             $(MAKE) veryclean
 	cd AMPI/AMR;                $(MAKE) veryclean
 	cd scripts/small;           $(MAKE) -f  Makefile_FG_MPI veryclean
+	cd scripts/small;           $(MAKE) -f  Makefile_FENIX  veryclean
 	cd scripts/wide;            $(MAKE) -f  Makefile_FG_MPI veryclean
 	cd common; rm -f make.defs
