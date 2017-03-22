@@ -54,8 +54,12 @@ HISTORY: - Written by Rob Van der Wijngaart, February September 2016.
   
 **********************************************************************************/
 
+#include <signal.h>
+#include <sys/types.h>
 #include <par-res-kern_general.h>
-#include <par-res-kern_mpi.h>
+#include <par-res-kern_fenix.h>
+#include <random_draw.h>
+#include <unistd.h>
 
 #if DOUBLE
   #define DTYPE     double
@@ -380,6 +384,19 @@ int main(int argc, char ** argv) {
   int    color_r;           /* color used to create refinement communicators       */
   int    color_bg;          /* color used to create BG communicator                */
   int    rank_spread;       /* number of ranks for refinement in fine_grain        */
+  int    spare_ranks;       /* number of ranks to keep in reserve                  */
+  int    kill_ranks;        /* number of ranks that die with each failure          */
+  int    *kill_set;         /* instance of set of ranks to be killed               */
+  int    kill_period;       /* average number of iterations between failures       */
+  int    *fail_iter;        /* list of iterations when a failure will be triggered */
+  int    fail_iter_s=0;     /* latest  */
+  DTYPE  init_add;          /* used to offset initial solutions                    */
+  int    checkpointing;     /* indicates if data is restored using Fenix or
+                               analytically                                        */
+  int    num_fenix_init=1;  /* number of times Fenix_Init is called                */
+  int    num_fenix_init_loc;/* number of times Fenix_Init was called               */
+  int    fenix_status;
+  random_draw_t dice;
 
   /*********************************************************************************
   ** Initialize the MPI environment
@@ -394,7 +411,7 @@ int main(int argc, char ** argv) {
  
   if (my_ID == root) {
     printf("Parallel Research Kernels Version %s\n", PRKVERSION);
-    printf("MPI AMR stencil execution on 2D grid\n");
+    printf("MPI AMR stencil execution on 2D grid with Fenix fault tolerance\n");
 
 #if !STAR
     printf("ERROR: Compact stencil not supported\n");
@@ -402,11 +419,12 @@ int main(int argc, char ** argv) {
     goto ENDOFINPUTTESTS;
 #endif
 
-    if (argc != 9 && argc != 10){
+    if (argc != 13 && argc != 14){
       printf("Usage: %s <# iterations> <background grid size> <refinement size>\n",
              *argv);
       printf("       <refinement level> <refinement period> <refinement duration>\n");
-      printf("       <refinement sub-iterations> <load balancer> \n");
+      printf("       <refinement sub-iterations> <spare ranks> <kill set size>\n");
+      printf("       <kill period> <checkpointing> <load balancer>\n");
       printf("       load balancer: FINE_GRAIN [refinement rank spread]\n");
       printf("                      NO_TALK\n");
       printf("                      HIGH_WATER\n");
@@ -414,14 +432,14 @@ int main(int argc, char ** argv) {
       goto ENDOFINPUTTESTS;
     }
 
-    iterations  = atoi(*++argv); 
+    iterations  = atoi(argv[1]); 
     if (iterations < 1){
       printf("ERROR: iterations must be >= 1 : %d \n",iterations);
       error = 1;
       goto ENDOFINPUTTESTS;
     }
 
-    n  = atol(*++argv);
+    n  = atol(argv[2]);
 
     if (n < 2){
       printf("ERROR: grid must have at least one cell: %ld\n", n);
@@ -429,7 +447,7 @@ int main(int argc, char ** argv) {
       goto ENDOFINPUTTESTS;
     }
 
-    n_r = atol(*++argv);
+    n_r = atol(argv[3]);
     if (n_r < 2) {
       printf("ERROR: refinements must have at least one cell: %ld\n", n_r);
       error = 1;
@@ -441,21 +459,21 @@ int main(int argc, char ** argv) {
       goto ENDOFINPUTTESTS;
     }
 
-    refine_level = atoi(*++argv);
+    refine_level = atoi(argv[4]);
     if (refine_level < 0) {
       printf("ERROR: refinement levels must be >= 0 : %d\n", refine_level);
       error = 1;
       goto ENDOFINPUTTESTS;
     }
 
-    period = atoi(*++argv);
+    period = atoi(argv[5]);
     if (period < 1) {
       printf("ERROR: refinement period must be at least one: %d\n", period);
       error = 1;
       goto ENDOFINPUTTESTS;
     }
   
-    duration = atoi(*++argv);
+    duration = atoi(argv[6]);
     if (duration < 1 || duration > period) {
       printf("ERROR: refinement duration must be positive, no greater than period: %d\n",
              duration);
@@ -463,14 +481,42 @@ int main(int argc, char ** argv) {
       goto ENDOFINPUTTESTS;
     }
  
-    sub_iterations = atoi(*++argv);
+    sub_iterations = atoi(argv[7]);
     if (sub_iterations < 1) {
       printf("ERROR: refinement sub-iterations must be positive: %d\n", sub_iterations);
       error = 1;
       goto ENDOFINPUTTESTS;
     }
 
-    c_load_balance = *++argv;
+    spare_ranks  = atoi(argv[8]);
+    if (spare_ranks < 0 || spare_ranks >= Num_procs){
+      printf("ERROR: Illegal number of spare ranks : %d \n", spare_ranks);
+      error = 1;
+      goto ENDOFINPUTSTESTS;     
+    }
+
+    kill_ranks = atoi(argv[9]);
+    if (kill_ranks < 0 || kill_ranks > spare_ranks) {
+      printf("ERROR: Number of ranks in kill set invalid: %d\n", kill_ranks);
+      error = 1;
+      goto ENDOFINPUTS;     
+    }
+
+    kill_period = atoi(argv[10]);
+    if (kill_period < 1) {
+      printf("ERROR: rank kill period must be positive: %d\n", kill_period);
+      error = 1;
+      goto ENDOFINPUTSTESTS;     
+    }
+
+    checkpointing = atoi(argv[11]);
+    if (checkpointing) {
+      printf("ERROR: Fenix checkpointing not yet implemented\n");
+      error = 1;
+      goto ENDOFINPUTSTESTS;     
+    }
+
+    c_load_balance = argv[12];
     if      (!strcmp("FINE_GRAIN", c_load_balance)) load_balance=fine_grain;
     else if (!strcmp("NO_TALK",    c_load_balance)) load_balance=no_talk;
     else if (!strcmp("HIGH_WATER", c_load_balance)) load_balance=high_water;
@@ -487,8 +533,8 @@ int main(int argc, char ** argv) {
       goto ENDOFINPUTTESTS;
     }
 
-    if (load_balance==fine_grain && argc==10) {
-      rank_spread = atoi(*++argv);
+    if (load_balance==fine_grain && argc==14) {
+      rank_spread = atoi(argv[13]);
       if (rank_spread<1 || rank_spread>Num_procs) {
 	printf("ERROR: Invalid number of ranks to spread refinement work: %d\n", rank_spread);
 	error = 1;
@@ -523,8 +569,10 @@ int main(int argc, char ** argv) {
 
     ENDOFINPUTTESTS:;  
   }
-  bail_out(error);
+  bail_out(error, MPI_COMM_WORLD);
 
+  /* before calling Fenix_Init, all ranks need to know how many spare ranks 
+     to reserve; broadcast other parameters as well                          */
   MPI_Bcast(&n,              1, MPI_LONG,  root, MPI_COMM_WORLD);
   MPI_Bcast(&n_r,            1, MPI_LONG,  root, MPI_COMM_WORLD);
   MPI_Bcast(&h_r,            1, MPI_DTYPE, root, MPI_COMM_WORLD);
@@ -537,6 +585,10 @@ int main(int argc, char ** argv) {
   MPI_Bcast(&load_balance,   1, MPI_INT,   root, MPI_COMM_WORLD);
   MPI_Bcast(&rank_spread,    1, MPI_INT,   root, MPI_COMM_WORLD);
   MPI_Bcast(&expand,         1, MPI_LONG,  root, MPI_COMM_WORLD);
+  MPI_Bcast(&spare_ranks,    1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&kill_ranks,     1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&kill_period,    1, MPI_INT,   root, MPI_COMM_WORLD);
+  MPI_Bcast(&checkpointing,  1, MPI_INT,   root, MPI_COMM_WORLD);
 
   /* depending on the load balancing strategy chosen, we determine the 
      partitions of BG (background grid) and the refinements                  */
@@ -671,7 +723,7 @@ int main(int argc, char ** argv) {
     L_jstart_bg =  0;;
     L_jend_bg   = -1;
   }
-  bail_out(error);
+  bail_out(error, MPI_COMM_WORLD);
   
   /* compute global layout of refinements                                      */
   G_istart_r[0] = G_istart_r[2] = 0;
@@ -892,7 +944,7 @@ int main(int argc, char ** argv) {
     L_jstart_r_gross[g] =  0;
     L_jend_r_gross[g]   = -1;
   }
-  bail_out(error);
+  bail_out(error, MPI_COMM_WORLD);
 
   /* fill the stencil weights to reflect a discrete divergence operator     */
   for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++) 
@@ -940,7 +992,7 @@ int main(int argc, char ** argv) {
     left_buf_out_bg   = right_buf_out_bg + 2*RADIUS*(L_height_bg+2);
     left_buf_in_bg    = right_buf_out_bg + 3*RADIUS*(L_height_bg+2);
   }
-  bail_out(error);
+  bail_out(error, MPI_COMM_WORLD);
 
   /* intialize the refinement arrays                                           */
   for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
@@ -972,7 +1024,7 @@ int main(int argc, char ** argv) {
     left_buf_out_r[g]   = right_buf_out_r[g] + 2*RADIUS*L_height_r_true[g];
     left_buf_in_r[g]    = right_buf_out_r[g] + 3*RADIUS*L_height_r_true[g];
   }
-  bail_out(error);
+  bail_out(error, MPI_COMM_WORLD);
 
   local_stencil_time = 0.0; /* silence compiler warning */
 

@@ -1,4 +1,5 @@
-include ../../common/MPI.defs
+include ../../common/FENIX.defs
+COMOBJS += random_draw.o
 
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults
@@ -11,21 +12,21 @@ USERFLAGS    =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         = -lm
-LIBPATHS     = 
-INCLUDEPATHS = 
+LIBS         = -lm -lfenix -lmpi
+LIBPATHS     = -L$(FENIXTOP)/lib -L$(ULFMTOP)/lib
+INCLUDEPATHS = -I$(FENIXTOP)/include
 
 ### End User configurable options ###
 
 ifndef DOUBLE
   DOUBLE=1
 endif
-#description: default data type is single precision
+#description: default data type is double precision
 
 ifndef STAR
   STAR=1
 endif
-#description: default stencil is compact (dense, square)
+#description: default stencil is star-shaped
 
 ifndef RESTRICT_KEYWORD
   RESTRICT_KEYWORD=0
