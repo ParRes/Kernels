@@ -49,6 +49,8 @@
 !
 ! HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 !          Converted to Fortran by Jeff Hammond, January 2015
+!          Small fixes to work around OpenCoarrays `stop` issue by
+!          Izaak "Zaak" Beekman
 ! *******************************************************************
 
 function prk_get_wtime() result(t)
@@ -108,7 +110,7 @@ program main
     if (printer) then
       write(6,'(a60)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
     endif
-    stop
+    error stop
   endif
 
   ! Fortran 2008 has no broadcast functionality, so for now,
@@ -122,7 +124,7 @@ program main
     if (printer) then
       write(6,'(a35,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     endif
-    stop
+    erro stop
   endif
 
   order = 1
@@ -132,14 +134,14 @@ program main
     if (printer) then
       write(6,'(a30,i5)') 'ERROR: order must be >= 1 : ', order
     endif
-    stop
+    error stop
   endif
   if (modulo(order,npes).gt.0) then
     if (printer) then
       write(6,'(a20,i5,a35,i5)') 'ERROR: matrix order ',order,&
                         ' should be divisible by # images ',npes
     endif
-    stop
+    error stop
   endif
   col_per_pe = order/npes
 
@@ -162,19 +164,19 @@ program main
   allocate( A(order,col_per_pe)[*], stat=err)
   if (err .ne. 0) then
     write(6,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
-    stop
+    error stop
   endif
 
   allocate( B(order,col_per_pe)[*], stat=err )
   if (err .ne. 0) then
     write(6,'(a20,i3,a10,i5)') 'allocation of B returned ',err,' at image ',me
-    stop
+    error stop
   endif
 
   allocate( T(col_per_pe,col_per_pe), stat=err )
   if (err .ne. 0) then
     write(6,'(a20,i3,a10,i5)') 'allocation of T returned ',err,' at image ',me
-    stop
+    error stop
   endif
 
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
@@ -315,7 +317,7 @@ program main
       write(6,'(a30,f13.6,a18,f13.6)') 'ERROR: Aggregate squared error ', &
               abserr,' exceeds threshold ',(epsilon/npes)
     endif
-    stop 1
+    error stop 1
   endif
 
 end program main
