@@ -124,7 +124,7 @@ program main
     if (printer) then
       write(6,'(a35,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     endif
-    erro stop
+    error stop
   endif
 
   order = 1
