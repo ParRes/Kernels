@@ -103,7 +103,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
                  int Num_procs, long L_width_bg, 
                  long L_istart_bg, long L_iend_bg, long L_jstart_bg, long L_jend_bg,
                  long L_istart_r, long L_iend_r, long L_jstart_r, long L_jend_r,
-                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, int comm_r,
+                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, MPI_Comm comm_r,
                  long L_istart_r_gross, long L_iend_r_gross, 
                  long L_jstart_r_gross, long L_jend_r_gross, 
                  long L_width_r_true_gross, long L_istart_r_true_gross, long L_iend_r_true_gross,
@@ -492,28 +492,28 @@ int main(int argc, char ** argv) {
     if (spare_ranks < 0 || spare_ranks >= Num_procs){
       printf("ERROR: Illegal number of spare ranks : %d \n", spare_ranks);
       error = 1;
-      goto ENDOFINPUTSTESTS;     
+      goto ENDOFINPUTTESTS;     
     }
 
     kill_ranks = atoi(argv[9]);
     if (kill_ranks < 0 || kill_ranks > spare_ranks) {
       printf("ERROR: Number of ranks in kill set invalid: %d\n", kill_ranks);
       error = 1;
-      goto ENDOFINPUTS;     
+      goto ENDOFINPUTTESTS;     
     }
 
     kill_period = atoi(argv[10]);
     if (kill_period < 1) {
       printf("ERROR: rank kill period must be positive: %d\n", kill_period);
       error = 1;
-      goto ENDOFINPUTSTESTS;     
+      goto ENDOFINPUTTESTS;     
     }
 
     checkpointing = atoi(argv[11]);
     if (checkpointing) {
       printf("ERROR: Fenix checkpointing not yet implemented\n");
       error = 1;
-      goto ENDOFINPUTSTESTS;     
+      goto ENDOFINPUTTESTS;     
     }
 
     c_load_balance = argv[12];
