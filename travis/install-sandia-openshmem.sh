@@ -24,8 +24,7 @@ if [ ! -d "$SHMEM_ROOT" ]; then
     ./autogen.sh
     mkdir build
     cd build
-    ../configure --with-ofi=$TRAVIS_ROOT/libfabric \
-                 --with-libfabric=$TRAVIS_ROOT/libfabric \
+    ../configure --with-libfabric=$TRAVIS_ROOT/libfabric \
                  --disable-fortran \
                  --enable-error-checking \
                  --enable-remote-virtual-addressing \
