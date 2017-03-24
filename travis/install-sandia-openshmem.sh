@@ -30,7 +30,9 @@ if [ ! -d "$SHMEM_ROOT" ]; then
                  --enable-remote-virtual-addressing \
                  --enable-pmi-simple  \
                  --prefix=$SHMEM_ROOT
-    make && make install
+    make
+    make check | true
+    make install
 else
     echo "Sandia OpenSHMEM installed..."
     find $SHMEM_ROOT -name shmem.h
