@@ -373,6 +373,4 @@ program main
   write(*,'(a,f13.6,a,f13.6)') 'Rate (MFlops/s): ',1.0d-6*flops/avgtime, &
                                ' Avg time (s): ',avgtime
 
-  stop
-
 end program main
