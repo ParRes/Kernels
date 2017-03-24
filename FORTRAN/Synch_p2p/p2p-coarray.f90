@@ -234,5 +234,4 @@ program main
   ! error stop ! Use error stop instead of stop due to
                ! https://github.com/sourceryinstitute/OpenCoarrays/issues/309
 
-
 end program

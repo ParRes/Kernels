@@ -214,6 +214,4 @@ program main
 
   deallocate( grid )
 
-  stop
-
 end program
