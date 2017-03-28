@@ -30,6 +30,10 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PRK_MPIOMP_H
+#define PRK_MPIOMP_H
+
 #include <par-res-kern_omp.h>
 #include <par-res-kern_mpi.h>
 
+#endif /* PRK_MPIOMP_H */

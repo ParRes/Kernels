@@ -30,6 +30,9 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PRK_MPI_H
+#define PRK_MPI_H
+
 #include <mpi.h>
 
 #ifdef AMPI
@@ -137,3 +140,5 @@ int PRK_Win_free(MPI_Win * win)
 }
 
 extern void bail_out(int);
+
+#endif /* PRK_MPI_H */
