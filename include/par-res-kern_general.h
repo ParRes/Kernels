@@ -31,7 +31,16 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <stdio.h>
+
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE (200112L)
+/* #define _POSIX_C_SOURCE (200809L) */
+#endif
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600
+#endif
 #include <stdlib.h>
+
 #include <string.h>
 #include <math.h>
 #include <assert.h>
