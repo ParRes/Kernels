@@ -33,9 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef RANDOM_DRAW_H
 #define RANDOM_DRAW_H
 
-#include <stdint.h>
-#include <inttypes.h>
-#include <math.h>
+#include "par-res-kern_general.h"
 
 #define NMAX 64
 
@@ -50,4 +48,4 @@ extern void     LCG_get_chunk(uint64_t *, uint64_t *, int, int, uint64_t);
 extern void     LCG_jump(uint64_t, uint64_t, random_draw_t *);
 extern uint64_t random_draw(double, random_draw_t *);
 
-#endif
+#endif /* RANDOM_DRAW_H */

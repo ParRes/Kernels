@@ -30,6 +30,9 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PRK_GENERAL_H
+#define PRK_GENERAL_H
+
 #include <stdio.h>
 
 #ifndef _POSIX_C_SOURCE
@@ -45,6 +48,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <math.h>
 #include <assert.h>
 #include <limits.h>
+
+#include <stdint.h>
+#include <inttypes.h>
 
 #include <unistd.h>
 
@@ -200,3 +206,4 @@ static inline void optimize_split(int *r_in0, int *r_in1, float lb_weight){
   *r_in1 = r_opt[1];
 }
   
+#endif /* PRK_GENERAL_H */
