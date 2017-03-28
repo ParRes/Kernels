@@ -58,6 +58,8 @@
 !            refreshing of neighbor data in parallel versions; August 2013
 !          - Converted to Fortran by Jeff Hammond, January-February 2016.
 !          - Converted to CAF by Alessandro Fanfarillo, February 2016.
+!          - Small fixes for OpenCoarrays `stop` issue work around by
+!            Izaak "Zaak" Beekman, March 2017
 ! *************************************************************************
 
 function prk_get_wtime() result(t)
@@ -117,7 +119,7 @@ program main
       write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',           &
                         '<array dimension> [tile_size]'
     endif
-    stop 
+    error stop
   endif
 
   iterations = 1
@@ -127,7 +129,7 @@ program main
     if (me == 1) then
       write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     endif
-    stop
+    error stop
   endif
 
   n = 1
@@ -137,7 +139,7 @@ program main
     if (me == 1) then
       write(*,'(a,i5)') 'ERROR: array dimension must be >= 1 : ', n
     endif
-    stop
+    error stop
   endif
 
   tiling    = .false.
@@ -157,7 +159,7 @@ program main
     if (me == 1) then
       write(*,'(a,i5,a)') 'ERROR: Stencil radius ',r,' should be positive'
     endif
-    stop 
+    error stop
   endif
 
   if ((2*r+1) .gt. n) then
@@ -165,7 +167,7 @@ program main
       write(*,'(a,i5,a,i5)') 'ERROR: Stencil radius ',r,&
                              ' exceeds grid size ',n
     endif
-    stop 
+    error stop
   endif
 
 !  Collectives are part of Fortran 2015
@@ -204,13 +206,13 @@ program main
   allocate( A(1-r:nr_g+r,1-r:nc_g+r)[dims(1),*], stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of A returned ',err
-    stop
+    error stop
   endif
 
   allocate( B(1:nr_g,1:nc_g), stat=err )
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of B returned ',err
-    stop
+    error stop
   endif
 
   norm = 0.d0

@@ -53,7 +53,7 @@ elif [ ! -d "$TRAVIS_ROOT/opencoarrays" ] ; then
     export MPICH_FC=$PRK_FC
     mpicc -show
     mpif90 -show
-    CC=mpicc FC=mpif90 cmake .. -DCMAKE_INSTALL_PREFIX=$TRAVIS_ROOT/opencoarrays \
+    CC=$PRK_CC FC=$PRK_FC cmake .. -DCMAKE_INSTALL_PREFIX=$TRAVIS_ROOT/opencoarrays \
                                 -DMPI_C_COMPILER=mpicc -DMPI_Fortran_COMPILER=mpif90
     make -j2
     ctest
