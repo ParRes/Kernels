@@ -209,7 +209,7 @@ program main
 
   write(*,'(a)') 'Solution validates'
   avgtime = pipeline_time/iterations
-  write(*,'(a,f13.6,a,f10.6)') 'Rate (MFlop/s): ',1.e-6*2*real((m-1)*(n-1),INT64)/avgtime, &
+  write(*,'(a,f13.6,a,f10.6)') 'Rate (MFlop/s): ',2.d-6*real((m-1)*(n-1),INT64)/avgtime, &
          ' Avg time (s): ', avgtime
 
   deallocate( grid )
