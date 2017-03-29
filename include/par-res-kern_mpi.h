@@ -30,7 +30,19 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PRK_MPI_H
+#define PRK_MPI_H
+
 #include <mpi.h>
+
+#ifdef AMPI
+#ifndef MPI_INT64_T
+#define MPI_INT64_T MPI_LONG_LONG
+#endif /* MPI_INT64_T */
+#ifndef MPI_UINT64_T
+#define MPI_UINT64_T MPI_UNSIGNED_LONG_LONG
+#endif /* MPI_UINT64_T */
+#endif /* AMPI */
 
 /* This code appears in MADNESS, which is GPL, but it was
  * written by Jeff Hammond and contributed to multiple projects
@@ -128,3 +140,5 @@ int PRK_Win_free(MPI_Win * win)
 }
 
 extern void bail_out(int);
+
+#endif /* PRK_MPI_H */

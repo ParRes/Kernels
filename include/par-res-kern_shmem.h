@@ -30,6 +30,11 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PRK_SHMEM_H
+#define PRK_SHMEM_H
+
+#include "par-res-kern_general.h"
+
 #include <shmem.h>
 
 extern void bail_out(int);
@@ -128,3 +133,5 @@ static void prk_shmem_free(void * ptr) {
 #  define PRK_SHMEM_SYNC_VALUE _SHMEM_SYNC_VALUE
 #  define PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE _SHMEM_REDUCE_MIN_WRKDATA_SIZE
 #endif
+
+#endif /* PRK_SHMEM_H */
