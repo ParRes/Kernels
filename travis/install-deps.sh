@@ -66,7 +66,7 @@ case "$PRK_TARGET" in
         ;;
     allshmem)
         echo "SHMEM"
-        sh ./travis/install-hydra.sh $TRAVIS_ROOT
+        #sh ./travis/install-hydra.sh $TRAVIS_ROOT
         sh ./travis/install-libfabric.sh $TRAVIS_ROOT
         sh ./travis/install-sandia-openshmem.sh $TRAVIS_ROOT
         ;;
