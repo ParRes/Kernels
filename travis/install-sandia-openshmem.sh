@@ -25,11 +25,12 @@ if [ ! -d "$SHMEM_ROOT" ]; then
     ./autogen.sh
     mkdir build
     cd build
+    # Removed # --with-pmi=$TRAVIS_ROOT/hydra per Jim
     ../configure --with-libfabric=$TRAVIS_ROOT/libfabric \
                  --disable-fortran \
                  --enable-error-checking \
                  --enable-remote-virtual-addressing \
-                 --enable-pmi-simple --with-pmi=$TRAVIS_ROOT/hydra \
+                 --enable-pmi-simple \
                  --prefix=$SHMEM_ROOT
     make
     make check | true
