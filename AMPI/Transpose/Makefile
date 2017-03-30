@@ -2,26 +2,26 @@ include ../../common/AMPI.defs
 
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) -std=c++11
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults
 
-USERFLAGS    = 
+USERFLAGS    =
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
-EXTOBJS      = 
+EXTOBJS      =
 LIBS         =
-LIBPATHS     = 
-INCLUDEPATHS = 
+LIBPATHS     =
+INCLUDEPATHS =
 
 ### End User configurable options ###
 
 ifndef RESTRICT_KEYWORD
   RESTRICT_KEYWORD=0
 endif
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
+#description: the "restrict" keyword can be used on IA platforms to disambiguate
 #             data accessed through pointers (requires -restrict compiler flag)
 
 ifndef SYNCHRONOUS

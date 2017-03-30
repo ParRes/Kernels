@@ -787,10 +787,10 @@ int main(int argc, char ** argv) {
   case LINEAR:     MPI_Bcast(&alpha,             1, MPI_DOUBLE,  root, MPI_COMM_WORLD);
                    MPI_Bcast(&beta,              1, MPI_DOUBLE,  root, MPI_COMM_WORLD);
                    break;
-  case PATCH:      MPI_Bcast(&init_patch.left,   1, MPI_INT64_T, root, MPI_COMM_WORLD);
-                   MPI_Bcast(&init_patch.right,  1, MPI_INT64_T, root, MPI_COMM_WORLD);
-                   MPI_Bcast(&init_patch.bottom, 1, MPI_INT64_T, root, MPI_COMM_WORLD);
-                   MPI_Bcast(&init_patch.top,    1, MPI_INT64_T, root, MPI_COMM_WORLD);
+  case PATCH:      MPI_Bcast(&init_patch.left,   1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+                   MPI_Bcast(&init_patch.right,  1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+                   MPI_Bcast(&init_patch.bottom, 1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+                   MPI_Bcast(&init_patch.top,    1, MPI_UINT64_T, root, MPI_COMM_WORLD);
                    break;
   }
 
