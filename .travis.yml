@@ -146,6 +146,8 @@ matrix:
   # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
   - os: osx
     env: PRK_TARGET=allfgmpi
+  - os: linux
+    env: PRK_TARGET=allfgmpi
   # Linux may not have GCC-6...
   - os: linux
     compiler: gcc
