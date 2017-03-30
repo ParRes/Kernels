@@ -344,7 +344,7 @@ case "$PRK_TARGET" in
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
-        make $PRK_TARGET
+        make $PRK_TARGET PRK_FLAGS=-O3
         export PRK_TARGET_PATH=CHARM++
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
@@ -368,7 +368,7 @@ case "$PRK_TARGET" in
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
-        make $PRK_TARGET
+        make $PRK_TARGET PRK_FLAGS=-O3
         export PRK_TARGET_PATH=AMPI
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
