@@ -318,7 +318,7 @@ case "$PRK_TARGET" in
                         export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
                         ;;
                 esac
-                make $PRK_TARGET default_opt_flags="-Wc,-O3"
+                make $PRK_TARGET PRK_FLAGS="-Wc,-O3"
                 ;;
             *)
                 echo "Invalid value of UPC_IMPL ($UPC_IMPL)"
