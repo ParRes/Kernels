@@ -147,16 +147,16 @@ matrix:
   - os: osx
     env: PRK_TARGET=allfgmpi
   # Linux may not have GCC-6...
-  - os: linux
-    compiler: gcc
-    env: PRK_TARGET=allfortrancoarray
+  #- os: linux
+  #  compiler: gcc
+  #  env: PRK_TARGET=allfortrancoarray
   # BUPC has trouble with flags
-  - os: linux
-    env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
-  - os: linux
-    env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
-  - os: linux
-    env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
   # Travis tests failing due to runtime problems
   - os: osx
     env: PRK_TARGET=allampi
