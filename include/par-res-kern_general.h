@@ -33,15 +33,12 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef PRK_GENERAL_H
 #define PRK_GENERAL_H
 
-#include <stdio.h>
-
-#ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE (200112L)
-/* #define _POSIX_C_SOURCE (200809L) */
-#endif
-#ifndef _XOPEN_SOURCE
+/* All of this is to get posix_memalign defined... */
+/* #define _POSIX_C_SOURCE (200112L) */
+#define _POSIX_C_SOURCE (200809L)
 #define _XOPEN_SOURCE 600
-#endif
+
+#include <stdio.h>
 #include <stdlib.h>
 
 #include <string.h>
