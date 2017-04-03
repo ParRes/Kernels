@@ -336,7 +336,7 @@ int main(int argc, char ** argv) {
   int    duration;          /* lifetime of a refinement                            */
   int    sub_iterations;    /* number of sub-iterations on refinement              */
   long   i, j, ii, jj, it, jt, l, leftover; /* dummies                             */
-  int    iter, sub_iter;    /* dummies                                             */
+  int    iter, iter_init, sub_iter;/* dummies                                      */
   DTYPE  norm, local_norm,  /* L1 norm of solution on background grid              */
          reference_norm;
   DTYPE  norm_in,           /* L1 norm of input field on background grid           */
@@ -540,7 +540,7 @@ int main(int argc, char ** argv) {
 	error = 1;
 	goto ENDOFINPUTTESTS;
       }
-    } else rank_spread = Num_procs;
+    } else rank_spread = Num_procs-spare_ranks;
 
     if (RADIUS < 1) {
       printf("ERROR: Stencil radius %d should be positive\n", RADIUS);
@@ -590,10 +590,66 @@ int main(int argc, char ** argv) {
   MPI_Bcast(&kill_period,    1, MPI_INT,   root, MPI_COMM_WORLD);
   MPI_Bcast(&checkpointing,  1, MPI_INT,   root, MPI_COMM_WORLD);
 
+  /* initialize the random number generator for each rank; we do that before
+     starting Fenix, so that all ranks, including spares, are initialized      */
+  LCG_init(&dice);
+  /* compute the iterations during which errors will be incurred               */
+  for (iter=0; iter<iterations; iter++) {
+    fail_iter_s += random_draw(kill_period, &dice);
+    if (fail_iter_s >= iterations) break;
+    num_fenix_init++;
+  }
+  if ((num_fenix_init-1)*kill_ranks>spare_ranks) {
+    if (my_ID==0) printf("ERROR: number of injected errors %d exceeds spare ranks %d\n",
+                         (num_fenix_init-1)*kill_ranks, spare_ranks);
+    error = 1;
+  }
+  else if(my_ID==0) printf("Total injected failures  = %d*%d\n", 
+                           num_fenix_init-1, kill_ranks);
+  bail_out(error, MPI_COMM_WORLD);
+
+  fail_iter = (int *) prk_malloc(sizeof(int)*num_fenix_init);
+  if (!fail_iter) {
+    printf("ERROR: Rank %d could not allocate space for array fail_iter\n", my_ID);
+    error = 1;
+  }
+  bail_out(error, MPI_COMM_WORLD);
+  /* now record the actual failure iterations                                  */
+  for (fail_iter_s=iter=0; iter<num_fenix_init; iter++) {
+    fail_iter_s += random_draw(kill_period, &dice);
+    fail_iter[iter] = fail_iter_s;
+  }
+
+  /* start timer for all ranks, including spares                               */
+  MPI_Barrier(MPI_COMM_WORLD);
+  local_stencil_time = wtime();
+
+  /* Here is where we initialize Fenix and mark the return point after failure */
+  Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
+             0, MPI_INFO_NULL, &error);
+  printf("Rank %d got this far\n", my_ID);
+  if (error==FENIX_WARNING_SPARE_RANKS_DEPLETED) 
+    printf("ERROR: Rank %d: Cannot reconsitute original communicator\n", my_ID);
+  bail_out(error, MPI_COMM_WORLD);
+  printf("Rank %d got this far2\n", my_ID);
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
+  MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+  /* if rank is recovered, set iter to a negative number, to be increased
+     to the actual value corresponding to the current iter value among
+     survivor ranks; handle number of Fenix_Init calls similarly               */
+  switch (fenix_status){
+    case FENIX_ROLE_INITIAL_RANK:   iter_init = num_fenix_init_loc = 0;    break;
+    case FENIX_ROLE_RECOVERED_RANK: iter_init = num_fenix_init_loc = -1;   break;
+    case FENIX_ROLE_SURVIVOR_RANK:  iter_init = iter;  num_fenix_init_loc++;
+  }
+  MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
   /* depending on the load balancing strategy chosen, we determine the 
      partitions of BG (background grid) and the refinements                  */
   float bg_size, total_size, Frac_procs_bg; // used for HIGH_WATER
-                   
+
   switch (load_balance) {
   case fine_grain: MPI_Comm_dup(MPI_COMM_WORLD, &comm_bg);
                    Num_procs_bg = Num_procs;
@@ -707,13 +763,15 @@ int main(int argc, char ** argv) {
     total_length_in  = (long) (L_width_bg+2*RADIUS)*(long) (L_height_bg+2*RADIUS);
     total_length_out = (long) L_width_bg* (long) L_height_bg;
 
-    in_bg  = (DTYPE *) prk_malloc(total_length_in*sizeof(DTYPE));
-    out_bg = (DTYPE *) prk_malloc(total_length_out*sizeof(DTYPE));
-    if (!in_bg || !out_bg) {
-      printf("ERROR: rank %d could not allocate space for input/output array\n",
-              my_ID);
-      error = 1;
-      goto ENDOFBG;
+    if (fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
+      in_bg  = (DTYPE *) prk_malloc(total_length_in*sizeof(DTYPE));
+      out_bg = (DTYPE *) prk_malloc(total_length_out*sizeof(DTYPE));
+      if (!in_bg || !out_bg) {
+        printf("ERROR: rank %d could not allocate space for input/output array\n",
+                my_ID);
+        error = 1;
+        goto ENDOFBG;
+      }
     }
     ENDOFBG:;
   }
@@ -782,7 +840,7 @@ int main(int argc, char ** argv) {
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
-  if (my_ID == root) {
+  if (my_ID == root && fenix_status == FENIX_ROLE_INITIAL_RANK) {
     printf("Number of ranks                 = %d\n", Num_procs);
     printf("Background grid size            = %ld\n", n);
     printf("Radius of stencil               = %d\n", RADIUS);
@@ -790,13 +848,14 @@ int main(int argc, char ** argv) {
   }
   for (g=0; g<4; g++) {
     MPI_Barrier(MPI_COMM_WORLD);
-    if ((comm_r[g] != MPI_COMM_NULL) && (my_ID_r[g]==root))
+    if ((comm_r[g] != MPI_COMM_NULL) && (my_ID_r[g]==root) &&
+        fenix_status == FENIX_ROLE_INITIAL_RANK)
       printf("Tiles in x/y-direction on ref %d = %d/%d\n",
 	     g, Num_procs_rx[g], Num_procs_ry[g]);
     prk_pause(0.001); // wait for a short while to ensure proper I/O ordering
   }
   MPI_Barrier(MPI_COMM_WORLD);
-  if (my_ID == root) {
+  if (my_ID == root && fenix_status == FENIX_ROLE_INITIAL_RANK) {
     printf("Type of stencil                 = star\n");
 #if DOUBLE
     printf("Data type                       = double precision\n");
@@ -819,6 +878,13 @@ int main(int argc, char ** argv) {
     printf("   Period                       = %d\n", period);
     printf("   Duration                     = %d\n", duration);
     printf("   Sub-iterations               = %d\n", sub_iterations);
+    printf("Spare ranks                     = %d\n", spare_ranks);
+    printf("Kill set size                   = %d\n", kill_ranks);
+    printf("Fault period                    = %d\n", kill_period);
+    if (checkpointing)
+      printf("Data recovery                   = Fenix checkpointing\n");
+    else
+      printf("Data recovery                   = analytical\n");
   }
 
   /* reserve space for refinement input/output fields; first compute extents */
@@ -931,11 +997,13 @@ int main(int argc, char ** argv) {
     total_length_in_r[g]  = (L_width_r_true_gross[g]+2*RADIUS)*
                             (L_height_r_true_gross[g]+2*RADIUS);
     total_length_out_r[g] = L_width_r_true_gross[g] * L_height_r_true_gross[g];
-    in_r[g]  = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_in_r[g]);
-    out_r[g] = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_out_r[g]);
-    if (!in_r[g] || !out_r[g]) {
-      printf("ERROR: could not allocate space for refinement input or output arrays\n");
-      error=1;
+    if (fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
+      in_r[g]  = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_in_r[g]);
+      out_r[g] = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_out_r[g]);
+      if (!in_r[g] || !out_r[g]) {
+        printf("ERROR: could not allocate space for refinement input or output arrays\n");
+        error=1;
+      }
     }
   }
   else {//Bogus patch
@@ -965,12 +1033,14 @@ int main(int argc, char ** argv) {
 
   /* intialize the input and output arrays                                     */
   if (comm_bg != MPI_COMM_NULL)
+  if (checkpointing) init_add = 0.0;
+  else               init_add = (DTYPE) iter;
   for (j=L_jstart_bg; j<=L_jend_bg; j++) for (i=L_istart_bg; i<=L_iend_bg; i++) {
-    IN(i,j)  = COEFX*i+COEFY*j;
-    OUT(i,j) = (DTYPE)0.0;
+    IN(i,j)  = COEFX*i+COEFY*j+init_add;
+    OUT(i,j) = (COEFX+COEFY)*init_add;
   }
 
-  if (comm_bg != MPI_COMM_NULL) {
+  if (comm_bg != MPI_COMM_NULL && fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
     /* allocate communication buffers for halo values                          */
     top_buf_out_bg = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*L_width_bg);
     if (!top_buf_out_bg) {
@@ -1003,7 +1073,8 @@ int main(int argc, char ** argv) {
     }
   }
 
-  for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
+  for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL &&
+       fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
     /* allocate communication buffers for halo values                          */
     top_buf_out_r[g] = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*L_width_r_true[g]);
     if (!top_buf_out_r[g]) {
@@ -1026,17 +1097,24 @@ int main(int argc, char ** argv) {
   }
   bail_out(error, MPI_COMM_WORLD);
 
-  local_stencil_time = 0.0; /* silence compiler warning */
-
   num_interpolations = 0;
   
-  for (iter = 0; iter<=iterations; iter++){
-
-    /* start timer after a warmup iteration */
-    if (iter == 1) {
-      MPI_Barrier(MPI_COMM_WORLD);
-      local_stencil_time = wtime();
+  for (; iter<=iterations; iter++){
+    printf("Iter %d on rank %d\n", iter, my_ID);
+    /* inject failure if appropriate                                                */
+    if (iter == fail_iter[num_fenix_init]) {
+      if (my_ID < kill_ranks) {
+#if VERBOSE
+        printf("Rank %d commits suicide in iter %d\n", my_ID, iter);
+#endif
+        pid_t pid = getpid();
+        kill(pid, SIGKILL);
+      }
+#if VERBOSE
+      else printf("Rank %d is survivor rank in iter %d\n", my_ID, iter);
+#endif
     }
+
     /* first complete communication on background grid to help no_talk balancer     */
     if (comm_bg != MPI_COMM_NULL) {
       /* need to fetch ghost point data from neighbors in y-direction                 */
@@ -1067,7 +1145,10 @@ int main(int argc, char ** argv) {
         for (int i=L_istart_bg; i<=L_iend_bg; i++) {
             IN(i,j) = top_buf_in_bg[kk++];
         }
+        printf("Rank %d, iter %d: Finished communications 1 on BG\n", my_ID, iter);          
       }
+      else printf("Rank %d, iter %d: No communications 1 on BG\n", my_ID, iter);          
+
       if (my_ID_bgy > 0) {
         MPI_Wait(&(request_bg[2]), MPI_STATUS_IGNORE);
         MPI_Wait(&(request_bg[3]), MPI_STATUS_IGNORE);
@@ -1075,7 +1156,9 @@ int main(int argc, char ** argv) {
         for (int i=L_istart_bg; i<=L_iend_bg; i++) {
             IN(i,j) = bottom_buf_in_bg[kk++];
         }
+        printf("Rank %d, iter %d: Finished communications 2 on BG\n", my_ID, iter);          
       }
+      else printf("Rank %d, iter %d: No communications 2 on BG\n", my_ID, iter);          
 
       /* need to fetch ghost point data from neighbors in x-direction; take into account
          the load balancer; NO_TALK needs wider copy                                    */
@@ -1106,7 +1189,10 @@ int main(int argc, char ** argv) {
         for (int i=L_iend_bg+1; i<=L_iend_bg+RADIUS; i++) {
             IN(i,j) = right_buf_in_bg[kk++];
         }
+        printf("Rank %d, iter %d: Finished communications 3 on BG\n", my_ID, iter);       
       }
+      else printf("Rank %d, iter %d: No communications 3 on BG\n", my_ID, iter);          
+  
       if (my_ID_bgx > 0) {
         MPI_Wait(&(request_bg[2+4]), MPI_STATUS_IGNORE);
         MPI_Wait(&(request_bg[3+4]), MPI_STATUS_IGNORE);
@@ -1114,9 +1200,12 @@ int main(int argc, char ** argv) {
         for (int i=L_istart_bg-RADIUS; i<=L_istart_bg-1; i++) {
             IN(i,j) = left_buf_in_bg[kk++];
         }
+        printf("Rank %d, iter %d: Finished communications 4 on BG\n", my_ID, iter);       
       }
+      else printf("Rank %d, iter %d: No communications 3 on BG\n", my_ID, iter);             
+      printf("Finished communications on BG on rank %d\n", my_ID);    
     }
-    
+#if 0
     if (!(iter%period)) {
       /* a specific refinement has come to life                                */
       g=(iter/period)%4;
@@ -1252,7 +1341,8 @@ int main(int argc, char ** argv) {
 	for (j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) 
 	  for (i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) IN_R(g,i,j)+= (DTYPE)1.0;
       }
-    }
+      }
+#endif
 
     /* Apply the stencil operator to background grid                                 */
     if (comm_bg != MPI_COMM_NULL) {

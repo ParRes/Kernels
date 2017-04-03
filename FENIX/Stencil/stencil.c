@@ -323,8 +323,14 @@ int main(int argc, char ** argv) {
   if (error==FENIX_WARNING_SPARE_RANKS_DEPLETED) 
     printf("ERROR: Rank %d: Cannot reconsitute original communicator\n", my_ID);
   bail_out(error, MPI_COMM_WORLD);
-  MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
-  MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+  MPI_Comm newcomm;
+  MPI_Comm_dup(MPI_COMM_WORLD, &newcomm);
+
+  MPI_Comm_size(newcomm, &Num_procs);
+  MPI_Comm_rank(newcomm, &my_ID);
+
+
 
   /* if rank is recovered, set iter to a negative number, to be increased
      to the actual value corresponding to the current iter value among
@@ -334,8 +340,9 @@ int main(int argc, char ** argv) {
     case FENIX_ROLE_RECOVERED_RANK: iter_init = num_fenix_init_loc = -1;   break;
     case FENIX_ROLE_SURVIVOR_RANK:  iter_init = iter;  num_fenix_init_loc++;
   }
-  MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+  MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, newcomm);
+  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, newcomm);
 
   my_IDx = my_ID%Num_procsx;
   my_IDy = my_ID/Num_procsx;
@@ -363,7 +370,7 @@ int main(int argc, char ** argv) {
     printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error, newcomm);
 
   height = n/Num_procsy;
   leftover = n%Num_procsy;
@@ -381,14 +388,14 @@ int main(int argc, char ** argv) {
     printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error, newcomm);
 
   if (width < RADIUS || height < RADIUS) {
     printf("ERROR: rank %d has work tile smaller then stencil radius\n",
            my_ID);
     error = 1;
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error, newcomm);
 
   total_length_in  = (long) (width+2*RADIUS)*(long) (height+2*RADIUS)*sizeof(DTYPE);
   total_length_out = (long) width* (long) height*sizeof(DTYPE);
@@ -402,7 +409,7 @@ int main(int argc, char ** argv) {
       error = 1;
     }
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error, newcomm);
 
   /* fill the stencil weights to reflect a discrete divergence operator         */
   for (int jj=-RADIUS; jj<=RADIUS; jj++) for (int ii=-RADIUS; ii<=RADIUS; ii++)
@@ -421,7 +428,7 @@ int main(int argc, char ** argv) {
   else               init_add = (DTYPE) iter;
   for (int j=jstart; j<=jend; j++) for (int i=istart; i<=iend; i++) {
     IN(i,j)  = COEFX*i+COEFY*j+init_add;
-    OUT(i,j) = (COEFX+COEFY)*init_add;;
+    OUT(i,j) = (COEFX+COEFY)*init_add;
   }
 
   if (Num_procs > 1) {
@@ -436,7 +443,7 @@ int main(int argc, char ** argv) {
       bottom_buf_out = top_buf_out + 2*RADIUS*width;
       bottom_buf_in  = top_buf_out + 3*RADIUS*width;
     }
-    bail_out(error, MPI_COMM_WORLD);
+    bail_out(error, newcomm);
 
     if (fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
       right_buf_out  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*height);
@@ -448,7 +455,7 @@ int main(int argc, char ** argv) {
       left_buf_out   = right_buf_out + 2*RADIUS*height;
       left_buf_in    = right_buf_out + 3*RADIUS*height;
     }
-    bail_out(error, MPI_COMM_WORLD);
+    bail_out(error, newcomm);
   }
 
   for (; iter<=iterations; iter++){
@@ -466,24 +473,25 @@ int main(int argc, char ** argv) {
       else printf("Rank %d is survivor rank in iter %d\n", my_ID, iter);
 #endif
     }
+
     /* need to fetch ghost point data from neighbors in y-direction                 */
     if (my_IDy < Num_procsy-1) {
       MPI_Irecv(top_buf_in, RADIUS*width, MPI_DTYPE, top_nbr, 101,
-                MPI_COMM_WORLD, &(request[1]));
+                newcomm, &(request[1]));
       for (int kk=0,j=jend-RADIUS+1; j<=jend; j++) for (int i=istart; i<=iend; i++) {
           top_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(top_buf_out, RADIUS*width,MPI_DTYPE, top_nbr, 99,
-                MPI_COMM_WORLD, &(request[0]));
+                newcomm, &(request[0]));
     }
     if (my_IDy > 0) {
       MPI_Irecv(bottom_buf_in,RADIUS*width, MPI_DTYPE, bottom_nbr, 99,
-                MPI_COMM_WORLD, &(request[3]));
+                newcomm, &(request[3]));
       for (int kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (int i=istart; i<=iend; i++) {
           bottom_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(bottom_buf_out, RADIUS*width,MPI_DTYPE, bottom_nbr, 101,
-                MPI_COMM_WORLD, &(request[2]));
+                newcomm, &(request[2]));
     }
     if (my_IDy < Num_procsy-1) {
       MPI_Wait(&(request[0]), MPI_STATUS_IGNORE);
@@ -503,21 +511,21 @@ int main(int argc, char ** argv) {
     /* need to fetch ghost point data from neighbors in x-direction                 */
     if (my_IDx < Num_procsx-1) {
       MPI_Irecv(right_buf_in, RADIUS*height, MPI_DTYPE, right_nbr, 1010,
-                MPI_COMM_WORLD, &(request[1+4]));
+                newcomm, &(request[1+4]));
       for (int kk=0,j=jstart; j<=jend; j++) for (int i=iend-RADIUS+1; i<=iend; i++) {
           right_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(right_buf_out, RADIUS*height, MPI_DTYPE, right_nbr, 990,
-              MPI_COMM_WORLD, &(request[0+4]));
+              newcomm, &(request[0+4]));
     }
     if (my_IDx > 0) {
       MPI_Irecv(left_buf_in, RADIUS*height, MPI_DTYPE, left_nbr, 990,
-                MPI_COMM_WORLD, &(request[3+4]));
+                newcomm, &(request[3+4]));
       for (int kk=0,j=jstart; j<=jend; j++) for (int i=istart; i<=istart+RADIUS-1; i++) {
           left_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(left_buf_out, RADIUS*height, MPI_DTYPE, left_nbr, 1010,
-                MPI_COMM_WORLD, &(request[2+4]));
+                newcomm, &(request[2+4]));
     }
     if (my_IDx < Num_procsx-1) {
       MPI_Wait(&(request[0+4]), MPI_STATUS_IGNORE);
@@ -554,7 +562,7 @@ int main(int argc, char ** argv) {
 
   local_stencil_time = wtime() - local_stencil_time;
   MPI_Reduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, root,
-             MPI_COMM_WORLD);
+             newcomm);
 
   /* compute L1 norm in parallel                                                */
   local_norm = (DTYPE) 0.0;
@@ -564,7 +572,7 @@ int main(int argc, char ** argv) {
     }
   }
 
-  MPI_Reduce(&local_norm, &norm, 1, MPI_DTYPE, MPI_SUM, root, MPI_COMM_WORLD);
+  MPI_Reduce(&local_norm, &norm, 1, MPI_DTYPE, MPI_SUM, root, newcomm);
 
   /*******************************************************************************
   ** Analyze and output results.
@@ -588,7 +596,7 @@ int main(int argc, char ** argv) {
 #endif
     }
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error, newcomm);
 
   if (my_ID == root) {
     /* flops/stencil: 2 flops (fma) for each point in the stencil,
