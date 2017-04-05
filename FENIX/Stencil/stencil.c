@@ -324,12 +324,14 @@ int main(int argc, char ** argv) {
     printf("ERROR: Rank %d: Cannot reconsitute original communicator\n", my_ID);
   bail_out(error, MPI_COMM_WORLD);
 
-  MPI_Comm newcomm;
+  MPI_Comm newcomm, newcomm2, newcomm3;
   MPI_Comm_dup(MPI_COMM_WORLD, &newcomm);
+  MPI_Comm_dup(MPI_COMM_WORLD, &newcomm3);
 
   MPI_Comm_size(newcomm, &Num_procs);
   MPI_Comm_rank(newcomm, &my_ID);
 
+  MPI_Comm_split(newcomm, 1, my_ID, &newcomm2);
 
 
   /* if rank is recovered, set iter to a negative number, to be increased
@@ -342,7 +344,7 @@ int main(int argc, char ** argv) {
   }
 
   MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, newcomm);
-  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, newcomm);
+  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, newcomm2);
 
   my_IDx = my_ID%Num_procsx;
   my_IDy = my_ID/Num_procsx;
@@ -477,21 +479,21 @@ int main(int argc, char ** argv) {
     /* need to fetch ghost point data from neighbors in y-direction                 */
     if (my_IDy < Num_procsy-1) {
       MPI_Irecv(top_buf_in, RADIUS*width, MPI_DTYPE, top_nbr, 101,
-                newcomm, &(request[1]));
+                newcomm2, &(request[1]));
       for (int kk=0,j=jend-RADIUS+1; j<=jend; j++) for (int i=istart; i<=iend; i++) {
           top_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(top_buf_out, RADIUS*width,MPI_DTYPE, top_nbr, 99,
-                newcomm, &(request[0]));
+                newcomm2, &(request[0]));
     }
     if (my_IDy > 0) {
       MPI_Irecv(bottom_buf_in,RADIUS*width, MPI_DTYPE, bottom_nbr, 99,
-                newcomm, &(request[3]));
+                newcomm2, &(request[3]));
       for (int kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (int i=istart; i<=iend; i++) {
           bottom_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(bottom_buf_out, RADIUS*width,MPI_DTYPE, bottom_nbr, 101,
-                newcomm, &(request[2]));
+                newcomm2, &(request[2]));
     }
     if (my_IDy < Num_procsy-1) {
       MPI_Wait(&(request[0]), MPI_STATUS_IGNORE);

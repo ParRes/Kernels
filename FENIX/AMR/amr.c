@@ -328,7 +328,7 @@ int main(int argc, char ** argv) {
   long   L_width_r[4], L_height_r[4]; /* local refinement dimensions               */
   long   L_width_r_true_gross[4], L_height_r_true_gross[4];/* "            "       */
   long   L_width_r_true[4], L_height_r_true[4];/*             "            "       */
-  int    g;                 /* refinement grid index                               */
+  int    g, g_loc;          /* refinement grid index                               */
   long   n_r;               /* linear refinement size in bg grid points            */
   long   n_r_true;          /* linear refinement size                              */
   long   expand;            /* number of refinement cells per background cell      */
@@ -627,11 +627,11 @@ int main(int argc, char ** argv) {
   /* Here is where we initialize Fenix and mark the return point after failure */
   Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
              0, MPI_INFO_NULL, &error);
-  printf("Rank %d got this far\n", my_ID);
+
   if (error==FENIX_WARNING_SPARE_RANKS_DEPLETED) 
-    printf("ERROR: Rank %d: Cannot reconsitute original communicator\n", my_ID);
+    printf("ERROR: Rank %d: Cannot reconstitute original communicator\n", my_ID);
   bail_out(error, MPI_COMM_WORLD);
-  printf("Rank %d got this far2\n", my_ID);
+
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
@@ -846,6 +846,7 @@ int main(int argc, char ** argv) {
     printf("Radius of stencil               = %d\n", RADIUS);
     printf("Tiles in x/y-direction on BG    = %d/%d\n", Num_procs_bgx, Num_procs_bgy);
   }
+
   for (g=0; g<4; g++) {
     MPI_Barrier(MPI_COMM_WORLD);
     if ((comm_r[g] != MPI_COMM_NULL) && (my_ID_r[g]==root) &&
@@ -855,6 +856,7 @@ int main(int argc, char ** argv) {
     prk_pause(0.001); // wait for a short while to ensure proper I/O ordering
   }
   MPI_Barrier(MPI_COMM_WORLD);
+
   if (my_ID == root && fenix_status == FENIX_ROLE_INITIAL_RANK) {
     printf("Type of stencil                 = star\n");
 #if DOUBLE
@@ -1100,7 +1102,7 @@ int main(int argc, char ** argv) {
   num_interpolations = 0;
   
   for (; iter<=iterations; iter++){
-    printf("Iter %d on rank %d\n", iter, my_ID);
+
     /* inject failure if appropriate                                                */
     if (iter == fail_iter[num_fenix_init]) {
       if (my_ID < kill_ranks) {
@@ -1145,9 +1147,7 @@ int main(int argc, char ** argv) {
         for (int i=L_istart_bg; i<=L_iend_bg; i++) {
             IN(i,j) = top_buf_in_bg[kk++];
         }
-        printf("Rank %d, iter %d: Finished communications 1 on BG\n", my_ID, iter);          
       }
-      else printf("Rank %d, iter %d: No communications 1 on BG\n", my_ID, iter);          
 
       if (my_ID_bgy > 0) {
         MPI_Wait(&(request_bg[2]), MPI_STATUS_IGNORE);
@@ -1156,9 +1156,7 @@ int main(int argc, char ** argv) {
         for (int i=L_istart_bg; i<=L_iend_bg; i++) {
             IN(i,j) = bottom_buf_in_bg[kk++];
         }
-        printf("Rank %d, iter %d: Finished communications 2 on BG\n", my_ID, iter);          
       }
-      else printf("Rank %d, iter %d: No communications 2 on BG\n", my_ID, iter);          
 
       /* need to fetch ghost point data from neighbors in x-direction; take into account
          the load balancer; NO_TALK needs wider copy                                    */
@@ -1189,9 +1187,7 @@ int main(int argc, char ** argv) {
         for (int i=L_iend_bg+1; i<=L_iend_bg+RADIUS; i++) {
             IN(i,j) = right_buf_in_bg[kk++];
         }
-        printf("Rank %d, iter %d: Finished communications 3 on BG\n", my_ID, iter);       
       }
-      else printf("Rank %d, iter %d: No communications 3 on BG\n", my_ID, iter);          
   
       if (my_ID_bgx > 0) {
         MPI_Wait(&(request_bg[2+4]), MPI_STATUS_IGNORE);
@@ -1200,12 +1196,9 @@ int main(int argc, char ** argv) {
         for (int i=L_istart_bg-RADIUS; i<=L_istart_bg-1; i++) {
             IN(i,j) = left_buf_in_bg[kk++];
         }
-        printf("Rank %d, iter %d: Finished communications 4 on BG\n", my_ID, iter);       
       }
-      else printf("Rank %d, iter %d: No communications 3 on BG\n", my_ID, iter);             
-      printf("Finished communications on BG on rank %d\n", my_ID);    
     }
-#if 0
+
     if (!(iter%period)) {
       /* a specific refinement has come to life                                */
       g=(iter/period)%4;
@@ -1233,36 +1226,39 @@ int main(int argc, char ** argv) {
 
     } // end of initialization of refinement g
 
+    /* if we have recovered from a failure and we aren't at a RG activation point,
+       RG index g must be set to the same value as that of the survivor ranks         */
+    g=(iter/period)%4;
+
     if (comm_r[g] != MPI_COMM_NULL) if ((iter%period) < duration) {
 
       /* if within an active refinement epoch, first communicate within refinement    */
 
       for (sub_iter=0; sub_iter<sub_iterations; sub_iter++) {
-
         /* need to communicate within each sub-iteration                              */
-
         /* need to fetch ghost point data from neighbors in y-direction               */
         if (top_nbr_r[g] != -1) {
-          MPI_Irecv(top_buf_in_r[g], RADIUS*L_width_r_true[g], MPI_DTYPE, top_nbr_r[g], 
+          MPI_Irecv(top_buf_in_r[g], RADIUS*L_width_r_true[g]*0, MPI_DTYPE, top_nbr_r[g], 
                     101, comm_r[g], &(request_r[g][1]));
           for (int kk=0,j=L_jend_r_true[g]-RADIUS+1; j<=L_jend_r_true[g]; j++) 
           for (int i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
 	    top_buf_out_r[g][kk++]= IN_R(g,i,j);
           }
-          MPI_Isend(top_buf_out_r[g], RADIUS*L_width_r_true[g],MPI_DTYPE, top_nbr_r[g], 
+          MPI_Isend(top_buf_out_r[g], RADIUS*L_width_r_true[g]*0,MPI_DTYPE, top_nbr_r[g], 
                     99, comm_r[g], &(request_r[g][0]));
         }
 
         if (bottom_nbr_r[g] != -1) {
-          MPI_Irecv(bottom_buf_in_r[g],RADIUS*L_width_r_true[g], MPI_DTYPE, bottom_nbr_r[g], 
+          MPI_Irecv(bottom_buf_in_r[g], RADIUS*L_width_r_true[g]*0, MPI_DTYPE, bottom_nbr_r[g], 
                     99, comm_r[g], &(request_r[g][3]));
           for (int kk=0,j=L_jstart_r_true[g]; j<=L_jstart_r_true[g]+RADIUS-1; j++) 
           for (int i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
 	    bottom_buf_out_r[g][kk++]= IN_R(g,i,j);
           }
-          MPI_Isend(bottom_buf_out_r[g], RADIUS*L_width_r_true[g],MPI_DTYPE, bottom_nbr_r[g], 
+          MPI_Isend(bottom_buf_out_r[g], RADIUS*L_width_r_true[g]*0,MPI_DTYPE, bottom_nbr_r[g], 
                     101, comm_r[g], &(request_r[g][2]));
         }
+
         if (top_nbr_r[g] != -1) {
           MPI_Wait(&(request_r[g][0]), MPI_STATUS_IGNORE);
           MPI_Wait(&(request_r[g][1]), MPI_STATUS_IGNORE);
@@ -1271,6 +1267,7 @@ int main(int argc, char ** argv) {
 	    IN_R(g,i,j) = top_buf_in_r[g][kk++];
           }
         }
+
         if (bottom_nbr_r[g] != -1) {
           MPI_Wait(&(request_r[g][2]), MPI_STATUS_IGNORE);
           MPI_Wait(&(request_r[g][3]), MPI_STATUS_IGNORE);
@@ -1342,7 +1339,6 @@ int main(int argc, char ** argv) {
 	  for (i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) IN_R(g,i,j)+= (DTYPE)1.0;
       }
       }
-#endif
 
     /* Apply the stencil operator to background grid                                 */
     if (comm_bg != MPI_COMM_NULL) {
@@ -1536,6 +1532,7 @@ int main(int argc, char ** argv) {
     prk_free(top_buf_out_r[g]);
     prk_free(right_buf_out_r[g]);    
   }
+  Fenix_Finalize();
   MPI_Finalize();
   return(MPI_SUCCESS);
 }
