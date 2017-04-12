@@ -1,0 +1,63 @@
+#name of MPI C compiler, e.g. mpiicc, mpicc 
+MPICC=mpiicc
+
+#name of C compiler, e.g. icc, xlc, gcc
+CC=icc
+
+#name of MPI Fortran compiler, e.g. mpifort, mpif90
+MPIF90=mpiifort -fpp -std08
+
+#name of Fortran compiler, e.g. ifort, xlf_r, gfortran
+FC=ifort -fpp -std08
+
+#name of compile line flag enabling OpenMP, e.g. -openmp, -qopenmp, -fopenmp
+OPENMPFLAG=-qopenmp
+
+#default compiler optimization flags
+DEFAULT_OPT_FLAGS=-O3 -std=c99
+
+############################   OPTIONAL #########################
+
+# Fortran 2008 coarrays flag, *including any library*
+# ifort: -coarray=distributed, gfortran: -fcoarray(=single) or -fcoarray=lib -lcaf_mpi, crayftn: -h caf
+COARRAYFLAG=-coarray=distributed
+
+#name of C++ compiler (to be used in MPI context for Grappa), e.g. mpigxx, mpiicpc
+CXX=mpigxx
+
+#name of UPC compiler, e.g. gupc, cc, upcc
+UPCC=/opt/upc/gupc-5.2.0.1/bin/gupc
+
+#name of compile line flag enabling UPC if necessary, e.g. -h upc
+UPCFLAG=
+
+#name of MPI C compiler (to be used in Fine-Grain MPI context), e.g. mpicc
+FGMPICC=/opt/fgmpi/fgmpi-2.0-intel/bin/mpicc -static
+
+#location where SHMEM is installed, e.g. $(HOME)/oshmpi-install
+SHMEMTOP=/opt/shmem/sandia/intel/bin
+
+#name of C compiler (to be used in MPI context of OpenSHMEM), e.g. $(MPICC)
+SHMEMCC=/opt/shmem/sandia/intel/bin/oshcc
+
+#location where Charm++ is installed, e.g. $(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
+#CHARMTOP=$(HOME)/charm.6.6.1/mpi-linux-x86_64-ifort-smp-mpicxx
+CHARMTOP=$(HOME)/charm/multicore-linux64-icc
+
+#location where Grappa is installed, e.g. $(GRAPPA_PREFIX)
+GRAPPATOP=$(GRAPPA_PREFIX)
+
+#location where Fine-Grain MPI is installed, e.g. $(HOME)/fgmpi-install
+FGMPITOP=$(HOME)/fgmpi-2.0-install
+
+#location where the Legion runtime is installed, e.g. $(HOME)/legion
+LEGIONTOP=$(HOME)/legion
+
+#name of compiler to be used for Legion codes, e.g. /usr/bin/g++
+LEGIONCC=/usr/bin/g++
+
+#location where ULFM-enabled MPI is installed
+ULFMTOP=$(HOME)/ulfm
+
+#location where Fenix is installed
+FENIXTOP=$(HOME)/Fenix

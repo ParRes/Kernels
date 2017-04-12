@@ -45,16 +45,18 @@ History:   Written by Rob Van der Wijngaart, January 2006
 **********************************************************************/
 
 #include <mpi.h>
+#include <fenix.h>
 #include <par-res-kern_general.h>
 
 void bail_out(int error, MPI_Comm comm) {
 
   int error_tot;
-  MPI_Allreduce(&error, &error_tot, 1, MPI_INT, MPI_SUM, comm);
-  if (error_tot != 0) {
+  //  MPI_Allreduce(&error, &error_tot, 1, MPI_INT, MPI_SUM, comm);
+  if (error != 0) {
 #if VERBOSE
     printf("Exiting via bail_out\n");
 #endif
+    Fenix_Finalize();
     MPI_Finalize();
     exit(EXIT_FAILURE);
   }

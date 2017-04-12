@@ -645,6 +645,7 @@ int main(int argc, char ** argv) {
   }
   MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  printf("Rank %d got this far in iter %d\n", my_ID, iter);
 
   /* depending on the load balancing strategy chosen, we determine the 
      partitions of BG (background grid) and the refinements                  */
@@ -1045,7 +1046,7 @@ int main(int argc, char ** argv) {
   if (comm_bg != MPI_COMM_NULL && fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
     /* allocate communication buffers for halo values                          */
     top_buf_out_bg = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*L_width_bg);
-    if (!top_buf_out_bg) {
+     if (!top_buf_out_bg) {
       printf("ERROR: Rank %d could not allocate comm buffers for y-direction\n", my_ID);
       error = 1;
     } 
@@ -1067,7 +1068,21 @@ int main(int argc, char ** argv) {
   bail_out(error, MPI_COMM_WORLD);
 
   /* intialize the refinement arrays                                           */
-  for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
+  if (!checkpointing) {
+    full_cycles = iter/(period*4);
+    leftover_iterations = iter%(period*4);
+    for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
+      iterations_r[g] = sub_iterations*(full_cycles*duration+
+                        MIN(MAX(0,leftover_iterations-g*period),duration));
+      for (j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) 
+      for (i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
+        OUT_R(g,i,j) = (DTYPE) iterations_r[g] * (COEFX + COEFY) * h_r;
+        /* the following is incorrect in general                               */
+        IN_R(g,i,j)  = (DTYPE)0.0;
+      }
+    }
+  }
+  else for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
     for (j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) 
     for (i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
       IN_R(g,i,j)  = (DTYPE)0.0;
