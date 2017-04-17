@@ -397,6 +397,8 @@ int main(int argc, char ** argv) {
   int    num_fenix_init_loc;/* number of times Fenix_Init was called               */
   int    fenix_status;
   random_draw_t dice;
+  int    first_through;     /* if true, IN_R field must be interpolated from BG IN 
+                               field, even if not at refinement activation point   */
 
   /*********************************************************************************
   ** Initialize the MPI environment
@@ -638,10 +640,11 @@ int main(int argc, char ** argv) {
   /* if rank is recovered, set iter to a negative number, to be increased
      to the actual value corresponding to the current iter value among
      survivor ranks; handle number of Fenix_Init calls similarly               */
+
   switch (fenix_status){
-    case FENIX_ROLE_INITIAL_RANK:   iter_init = num_fenix_init_loc = 0;    break;
-    case FENIX_ROLE_RECOVERED_RANK: iter_init = num_fenix_init_loc = -1;   break;
-    case FENIX_ROLE_SURVIVOR_RANK:  iter_init = iter;  num_fenix_init_loc++;
+  case FENIX_ROLE_INITIAL_RANK:   first_through = 0; iter_init = num_fenix_init_loc =  0;    break;
+  case FENIX_ROLE_RECOVERED_RANK: first_through = 1; iter_init = num_fenix_init_loc = -1;   break;
+  case FENIX_ROLE_SURVIVOR_RANK:  first_through = 1; iter_init = iter; num_fenix_init_loc++;
   }
   MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
@@ -699,6 +702,8 @@ int main(int argc, char ** argv) {
 		   if (comm_bg == MPI_COMM_NULL) Num_procs_bg = Num_procs - Num_procs_r[0];
                    break;
   }
+
+  printf("Rank %d got this far 2 in iter %d\n", my_ID, iter);
 
   /* do bookkeeping for background grid                                       */
   if (comm_bg != MPI_COMM_NULL) {
@@ -783,6 +788,8 @@ int main(int argc, char ** argv) {
     L_jend_bg   = -1;
   }
   bail_out(error, MPI_COMM_WORLD);
+
+  printf("Rank %d got this far 3 in iter %d\n", my_ID, iter);
   
   /* compute global layout of refinements                                      */
   G_istart_r[0] = G_istart_r[2] = 0;
@@ -847,6 +854,8 @@ int main(int argc, char ** argv) {
     printf("Radius of stencil               = %d\n", RADIUS);
     printf("Tiles in x/y-direction on BG    = %d/%d\n", Num_procs_bgx, Num_procs_bgy);
   }
+
+  printf("Rank %d got this far 4 in iter %d\n", my_ID, iter);
 
   for (g=0; g<4; g++) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1043,6 +1052,8 @@ int main(int argc, char ** argv) {
     OUT(i,j) = (COEFX+COEFY)*init_add;
   }
 
+  printf("Rank %d got this far 5 in iter %d\n", my_ID, iter);
+
   if (comm_bg != MPI_COMM_NULL && fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
     /* allocate communication buffers for halo values                          */
     top_buf_out_bg = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*L_width_bg);
@@ -1214,9 +1225,9 @@ int main(int argc, char ** argv) {
       }
     }
 
-    if (!(iter%period)) {
+    if (!(iter%period) || first_through) {
       /* a specific refinement has come to life                                */
-      g=(iter/period)%4;
+      g=(iter/period)%4; first_through=0;
 
       get_BG_data(load_balance, in_bg, in_r[g], my_ID, expand, Num_procs,
                   L_width_bg, L_istart_bg, L_iend_bg, L_jstart_bg, L_jend_bg,
