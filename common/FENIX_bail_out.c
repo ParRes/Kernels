@@ -50,13 +50,14 @@ History:   Written by Rob Van der Wijngaart, January 2006
 
 void bail_out(int error, MPI_Comm comm) {
 
-  int error_tot;
+  int error_tot, flag=0;
   MPI_Allreduce(&error, &error_tot, 1, MPI_INT, MPI_SUM, comm);
   if (error_tot != 0) {
 #if VERBOSE
     printf("Exiting via bail_out\n");
 #endif
-    Fenix_Finalize();
+    Fenix_Initialized(&flag);
+    if (flag) Fenix_Finalize();
     MPI_Finalize();
     exit(EXIT_FAILURE);
   }

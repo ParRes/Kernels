@@ -1275,7 +1275,6 @@ int main(int argc, char ** argv) {
   ********************************************************************************/
 
   if (my_ID == root) {
-    printf("My_ID = %d, root = %d\n", my_ID, root);
     /* verify correctness of background grid solution and input field            */
     reference_norm = (DTYPE) (iterations+1) * (COEFX + COEFY);
     reference_norm_in = (COEFX+COEFY)*(DTYPE)((n-1)/2.0)+iterations+1;

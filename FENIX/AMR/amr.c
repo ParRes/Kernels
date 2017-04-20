@@ -206,7 +206,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
 	}
       }
     }
-
+    for (p=100000000; p<Num_procs; p++) {send_count[p]=recv_count[p]=send_offset[p]=recv_offset[p]=0;}
     MPI_Alltoallv(send_buf, send_count, send_offset, MPI_DTYPE, 
                   recv_buf, recv_count, recv_offset, MPI_DTYPE, MPI_COMM_WORLD);
 
@@ -221,6 +221,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
 	}
       }
     }
+
     prk_free(recv_vec);
     prk_free(recv_count);
     prk_free(recv_offset);
@@ -395,6 +396,7 @@ int main(int argc, char ** argv) {
                                analytically                                        */
   int    num_fenix_init=1;  /* number of times Fenix_Init is called                */
   int    num_fenix_init_loc;/* number of times Fenix_Init was called               */
+  int    num_failures;      /* total number of times failures were injected        */
   int    fenix_status;
   random_draw_t dice;
   int    first_through;     /* if true, IN_R field must be interpolated from BG IN 
@@ -606,8 +608,7 @@ int main(int argc, char ** argv) {
                          (num_fenix_init-1)*kill_ranks, spare_ranks);
     error = 1;
   }
-  else if(my_ID==0) printf("Total injected failures  = %d*%d\n", 
-                           num_fenix_init-1, kill_ranks);
+  else num_failures = num_fenix_init-1;
   bail_out(error, MPI_COMM_WORLD);
 
   fail_iter = (int *) prk_malloc(sizeof(int)*num_fenix_init);
@@ -616,6 +617,9 @@ int main(int argc, char ** argv) {
     error = 1;
   }
   bail_out(error, MPI_COMM_WORLD);
+
+  /* reinitialize random number generator to obtain identical error series     */
+  LCG_init(&dice);
   /* now record the actual failure iterations                                  */
   for (fail_iter_s=iter=0; iter<num_fenix_init; iter++) {
     fail_iter_s += random_draw(kill_period, &dice);
@@ -637,18 +641,28 @@ int main(int argc, char ** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
-  /* if rank is recovered, set iter to a negative number, to be increased
+  /* if rank is recovered, set iter to a large value, to be reduced
      to the actual value corresponding to the current iter value among
      survivor ranks; handle number of Fenix_Init calls similarly               */
 
   switch (fenix_status){
-  case FENIX_ROLE_INITIAL_RANK:   first_through = 0; iter_init = num_fenix_init_loc =  0;    break;
-  case FENIX_ROLE_RECOVERED_RANK: first_through = 1; iter_init = num_fenix_init_loc = -1;   break;
-  case FENIX_ROLE_SURVIVOR_RANK:  first_through = 1; iter_init = iter; num_fenix_init_loc++;
+  case FENIX_ROLE_INITIAL_RANK:   
+    first_through = iter_init = 0;
+    num_fenix_init_loc =  0;    
+    break;
+  case FENIX_ROLE_RECOVERED_RANK: 
+    first_through = 1; 
+    iter_init     = iterations + 1;
+    num_fenix_init_loc = -1;
+    break;
+  case FENIX_ROLE_SURVIVOR_RANK:  
+    first_through = 1; 
+    iter_init = iter; 
+    num_fenix_init_loc++;
   }
-  MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+  MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  printf("Rank %d got this far in iter %d\n", my_ID, iter);
 
   /* depending on the load balancing strategy chosen, we determine the 
      partitions of BG (background grid) and the refinements                  */
@@ -702,8 +716,6 @@ int main(int argc, char ** argv) {
 		   if (comm_bg == MPI_COMM_NULL) Num_procs_bg = Num_procs - Num_procs_r[0];
                    break;
   }
-
-  printf("Rank %d got this far 2 in iter %d\n", my_ID, iter);
 
   /* do bookkeeping for background grid                                       */
   if (comm_bg != MPI_COMM_NULL) {
@@ -789,8 +801,6 @@ int main(int argc, char ** argv) {
   }
   bail_out(error, MPI_COMM_WORLD);
 
-  printf("Rank %d got this far 3 in iter %d\n", my_ID, iter);
-  
   /* compute global layout of refinements                                      */
   G_istart_r[0] = G_istart_r[2] = 0;
   G_iend_r[0]   = G_iend_r[2]   = n_r-1;
@@ -800,7 +810,7 @@ int main(int argc, char ** argv) {
   G_jend_r[0]   = G_jend_r[3]   = n_r-1;
   G_jstart_r[1] = G_jstart_r[2] = n-n_r;
   G_jend_r[1]   = G_jend_r[2]   = n-1;
-  
+
   /* compute tiling of refinements                                             */
   switch(load_balance) {
   case no_talk:    // check if calling rank's BG patch overlaps with refinement*/
@@ -855,8 +865,6 @@ int main(int argc, char ** argv) {
     printf("Tiles in x/y-direction on BG    = %d/%d\n", Num_procs_bgx, Num_procs_bgy);
   }
 
-  printf("Rank %d got this far 4 in iter %d\n", my_ID, iter);
-
   for (g=0; g<4; g++) {
     MPI_Barrier(MPI_COMM_WORLD);
     if ((comm_r[g] != MPI_COMM_NULL) && (my_ID_r[g]==root) &&
@@ -893,6 +901,8 @@ int main(int argc, char ** argv) {
     printf("Spare ranks                     = %d\n", spare_ranks);
     printf("Kill set size                   = %d\n", kill_ranks);
     printf("Fault period                    = %d\n", kill_period);
+    printf("Total injected failures         = %d times %d errors\n", 
+                           num_failures, kill_ranks);
     if (checkpointing)
       printf("Data recovery                   = Fenix checkpointing\n");
     else
@@ -1052,8 +1062,6 @@ int main(int argc, char ** argv) {
     OUT(i,j) = (COEFX+COEFY)*init_add;
   }
 
-  printf("Rank %d got this far 5 in iter %d\n", my_ID, iter);
-
   if (comm_bg != MPI_COMM_NULL && fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
     /* allocate communication buffers for halo values                          */
     top_buf_out_bg = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*L_width_bg);
@@ -1141,7 +1149,7 @@ int main(int argc, char ** argv) {
 #if VERBOSE
       else printf("Rank %d is survivor rank in iter %d\n", my_ID, iter);
 #endif
-    }
+    }  
 
     /* first complete communication on background grid to help no_talk balancer     */
     if (comm_bg != MPI_COMM_NULL) {
@@ -1264,24 +1272,24 @@ int main(int argc, char ** argv) {
         /* need to communicate within each sub-iteration                              */
         /* need to fetch ghost point data from neighbors in y-direction               */
         if (top_nbr_r[g] != -1) {
-          MPI_Irecv(top_buf_in_r[g], RADIUS*L_width_r_true[g]*0, MPI_DTYPE, top_nbr_r[g], 
+          MPI_Irecv(top_buf_in_r[g], RADIUS*L_width_r_true[g], MPI_DTYPE, top_nbr_r[g], 
                     101, comm_r[g], &(request_r[g][1]));
           for (int kk=0,j=L_jend_r_true[g]-RADIUS+1; j<=L_jend_r_true[g]; j++) 
           for (int i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
 	    top_buf_out_r[g][kk++]= IN_R(g,i,j);
           }
-          MPI_Isend(top_buf_out_r[g], RADIUS*L_width_r_true[g]*0,MPI_DTYPE, top_nbr_r[g], 
+          MPI_Isend(top_buf_out_r[g], RADIUS*L_width_r_true[g],MPI_DTYPE, top_nbr_r[g], 
                     99, comm_r[g], &(request_r[g][0]));
         }
 
         if (bottom_nbr_r[g] != -1) {
-          MPI_Irecv(bottom_buf_in_r[g], RADIUS*L_width_r_true[g]*0, MPI_DTYPE, bottom_nbr_r[g], 
+          MPI_Irecv(bottom_buf_in_r[g], RADIUS*L_width_r_true[g], MPI_DTYPE, bottom_nbr_r[g], 
                     99, comm_r[g], &(request_r[g][3]));
           for (int kk=0,j=L_jstart_r_true[g]; j<=L_jstart_r_true[g]+RADIUS-1; j++) 
           for (int i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
 	    bottom_buf_out_r[g][kk++]= IN_R(g,i,j);
           }
-          MPI_Isend(bottom_buf_out_r[g], RADIUS*L_width_r_true[g]*0,MPI_DTYPE, bottom_nbr_r[g], 
+          MPI_Isend(bottom_buf_out_r[g], RADIUS*L_width_r_true[g],MPI_DTYPE, bottom_nbr_r[g], 
                     101, comm_r[g], &(request_r[g][2]));
         }
 
@@ -1358,7 +1366,7 @@ int main(int argc, char ** argv) {
               for (ii=1; ii<=RADIUS; ii++)        OUT_R(g,i,j) += WEIGHT_R(ii,0)*IN_R(g,i+ii,j);
             #endif
           }
-        }
+	}
 
         /* add constant to solution to force refresh of neighbor data, if any        */
 	for (j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) 
@@ -1499,8 +1507,8 @@ int main(int argc, char ** argv) {
       }
  
       if (ABS(norm_r[g]-reference_norm_r[g]) > EPSILON) {
-        printf("ERROR: L1 norm %d       = "FSTR", Reference L1 norm %d = "FSTR"\n",
-               g, norm_r[g], g, reference_norm_r[g]);
+        printf("ERROR:   Reference L1 norm %d       = "FSTR", L1 norm         = "FSTR"\n",
+               g, reference_norm_r[g], norm_r[g]);
         validate = 0;
       }
       else {
@@ -1513,8 +1521,8 @@ int main(int argc, char ** argv) {
       /* we skip checking for input values for now, it's too convoluted */
 #if 0
       if (ABS(norm_in_r[g]-reference_norm_in_r[g]) > EPSILON) {
-        printf("ERROR: L1 input norm %d = "FSTR", Reference L1 input norm %d = "FSTR"\n",
-               g, norm_in_r[g], g, reference_norm_in_r[g]);
+        printf("ERROR:   Reference L1 input norm %d = "FSTR", L1 input norm %d = "FSTR"\n",
+               g, g, reference_norm_in_r[g], norm_in_r[g]);
         validate = 0;
       }
       else {
