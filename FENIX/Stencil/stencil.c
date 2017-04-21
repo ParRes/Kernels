@@ -564,8 +564,6 @@ int main(int argc, char ** argv) {
 
   local_stencil_time = wtime() - local_stencil_time;
 
-  pid_t pid = getpid();
-  printf("local time for rank %d, pid %d = %lf\n", my_ID, pid, local_stencil_time);
   MPI_Reduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, root,
              MPI_COMM_WORLD);
 
