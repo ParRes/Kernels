@@ -134,6 +134,8 @@ int main(int argc, char ** argv) {
   int    iterations;      /* number of times to run the algorithm                */
   double local_stencil_time,/* timing parameters                                 */
          stencil_time,
+         time_stamp,
+         aggregate_stencil_time=0.0,
          avgtime;
   int    stencil_size;    /* number of points in stencil                         */
   DTYPE  * RESTRICT in;   /* input grid values                                   */
@@ -313,10 +315,6 @@ int main(int argc, char ** argv) {
     fail_iter[iter] = fail_iter_s;
   }
 
-  /* start timer for all ranks, including spares                               */
-  MPI_Barrier(MPI_COMM_WORLD);
-  local_stencil_time = wtime();
-
   /* Here is where we initialize Fenix and mark the return point after failure */
   Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
              0, MPI_INFO_NULL, &error);
@@ -324,15 +322,26 @@ int main(int argc, char ** argv) {
     printf("ERROR: Rank %d: Cannot reconsitute original communicator\n", my_ID);
   bail_out(error, MPI_COMM_WORLD);
 
-  MPI_Comm newcomm, newcomm2, newcomm3;
-  MPI_Comm_dup(MPI_COMM_WORLD, &newcomm);
-  MPI_Comm_dup(MPI_COMM_WORLD, &newcomm3);
+  /* (re)initialize the timer                                                  */
+  time_stamp = wtime();
 
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
 
-  MPI_Comm_split(newcomm, 1, my_ID, &newcomm2);
-
+  /* only record true elapsed time for survivor ranks                          */  
+  if (fenix_status == FENIX_ROLE_SURVIVOR_RANK) 
+    local_stencil_time = time_stamp - local_stencil_time;
+  else 
+    local_stencil_time = 0.0;
+  /* everybody receives the maximum elapsed time (= stencil_time)              */
+  MPI_Allreduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  /* add elapsed time to prior total                                           */
+  aggregate_stencil_time += stencil_time;
+  /* now take the max over all aggregate times; we need to do that because the 
+     recovered ranks skipped all previous accumulations into the total time    */
+  MPI_Allreduce(&aggregate_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  aggregate_stencil_time = stencil_time;
+  local_stencil_time = time_stamp;
 
   /* if rank is recovered, set iter to a negative number, to be increased
      to the actual value corresponding to the current iter value among
@@ -343,8 +352,8 @@ int main(int argc, char ** argv) {
     case FENIX_ROLE_SURVIVOR_RANK:  iter_init = iter;  num_fenix_init_loc++;
   }
 
-  MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, newcomm);
-  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, newcomm);
+  MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
   my_IDx = my_ID%Num_procsx;
   my_IDy = my_ID/Num_procsx;
@@ -479,21 +488,21 @@ int main(int argc, char ** argv) {
     /* need to fetch ghost point data from neighbors in y-direction                 */
     if (my_IDy < Num_procsy-1) {
       MPI_Irecv(top_buf_in, RADIUS*width, MPI_DTYPE, top_nbr, 101,
-                newcomm, &(request[1]));
+                MPI_COMM_WORLD, &(request[1]));
       for (int kk=0,j=jend-RADIUS+1; j<=jend; j++) for (int i=istart; i<=iend; i++) {
           top_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(top_buf_out, RADIUS*width,MPI_DTYPE, top_nbr, 99,
-                newcomm, &(request[0]));
+                MPI_COMM_WORLD, &(request[0]));
     }
     if (my_IDy > 0) {
       MPI_Irecv(bottom_buf_in,RADIUS*width, MPI_DTYPE, bottom_nbr, 99,
-                newcomm, &(request[3]));
+                MPI_COMM_WORLD, &(request[3]));
       for (int kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (int i=istart; i<=iend; i++) {
           bottom_buf_out[kk++]= IN(i,j);
       }
       MPI_Isend(bottom_buf_out, RADIUS*width,MPI_DTYPE, bottom_nbr, 101,
-                newcomm, &(request[2]));
+                MPI_COMM_WORLD, &(request[2]));
     }
     if (my_IDy < Num_procsy-1) {
       MPI_Wait(&(request[0]), MPI_STATUS_IGNORE);
@@ -562,10 +571,10 @@ int main(int argc, char ** argv) {
 
   } /* end of iterations                                                   */
 
-  local_stencil_time = wtime() - local_stencil_time;
+  local_stencil_time = wtime() - time_stamp;
 
-  MPI_Reduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, root,
-             MPI_COMM_WORLD);
+  MPI_Allreduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  stencil_time += aggregate_stencil_time;
 
   /* compute L1 norm in parallel                                                */
   local_norm = (DTYPE) 0.0;
