@@ -276,7 +276,7 @@ int main(int argc, char ** argv) {
     printf("Loop body representation = compact\n");
 #endif
     printf("Number of iterations     = %d\n", iterations);
-    printf("Spare ranks              = %d\n", spare_ranks);
+    printf("Number of spare ranks    = %d\n", spare_ranks);
     printf("Kill set size            = %d\n", kill_ranks);
     printf("Fault period             = %d\n", kill_period);
     if (checkpointing)
@@ -299,7 +299,7 @@ int main(int argc, char ** argv) {
                          (num_fenix_init-1)*kill_ranks, spare_ranks);
     error = 1;
   }
-  else if(my_ID==0) printf("Total injected failures  = %d*%d\n", 
+  else if(my_ID==0) printf("Total injected failures  = %d times %d errors\n", 
                            num_fenix_init-1, kill_ranks);
   bail_out(error, MPI_COMM_WORLD);
 
@@ -325,8 +325,8 @@ int main(int argc, char ** argv) {
   /* (re)initialize the timer                                                  */
   time_stamp = wtime();
 
-  MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
+  MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
   /* only record true elapsed time for survivor ranks                          */  
   if (fenix_status == FENIX_ROLE_SURVIVOR_RANK) 
@@ -572,7 +572,6 @@ int main(int argc, char ** argv) {
   } /* end of iterations                                                   */
 
   local_stencil_time = wtime() - time_stamp;
-
   MPI_Allreduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   stencil_time += aggregate_stencil_time;
 
@@ -603,7 +602,7 @@ int main(int argc, char ** argv) {
     else {
       printf("Solution validates\n");
 #if VERBOSE
-      printf("Reference L1 norm = "FSTR", L1 norm = "FSTR"\n",
+      printf("SUCCESS: Reference L1 norm = "FSTR", L1 norm = "FSTR"\n",
              reference_norm, norm);
 #endif
     }

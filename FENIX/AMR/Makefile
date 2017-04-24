@@ -5,7 +5,7 @@ COMOBJS += random_draw.o get_BG_data.o
 #uncomment any of the following flags (and change values) to change defaults
 
 #OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
-OPTFLAGS    = -std=c99 -O0
+OPTFLAGS    = -std=c99 -O3
 #description: change above into something that is a decent optimization on you system
 
 USERFLAGS    = 
