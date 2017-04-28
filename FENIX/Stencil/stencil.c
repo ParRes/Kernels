@@ -311,7 +311,7 @@ int main(int argc, char ** argv) {
     error = 1;
   }
   else if(my_ID==0) printf("Total injected failures  = %d times %d errors\n", 
-                           num_fenix_init-1, kill_ranks);
+                           num_fenix_init, kill_ranks);
   bail_out_light(error, MPI_COMM_WORLD);
 
   fail_iter = (int *) prk_malloc(sizeof(int)*num_fenix_init);
@@ -495,7 +495,8 @@ int main(int argc, char ** argv) {
 
   etime[4] = wtime();
 
-  printf("Rank %d, overhead = %lf, dt1=%lf, dt2=%lf, dt3=%lf, dt4=%lf\n", my_ID,
+  if (fenix_status != FENIX_ROLE_INITIAL_RANK)
+    printf("Rank %d, overhead = %lf, dt1=%lf, dt2=%lf, dt3=%lf, dt4=%lf\n", my_ID, 
          etime[4]-etime[0],etime[1]-etime[0],etime[2]-etime[1], etime[3]-etime[2], etime[4]-etime[3]);
 
   for (; iter<=iterations; iter++){
