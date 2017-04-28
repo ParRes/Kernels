@@ -508,6 +508,7 @@ int main(int argc, char ** argv) {
   /* Here is where we initialize Fenix and mark the return point after failure */
   Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
              0, MPI_INFO_NULL, &error);
+  double overlap0 = wtime();
   if (error==FENIX_WARNING_SPARE_RANKS_DEPLETED) 
     printf("ERROR: Rank %d: Cannot reconstitute original communicator\n", my_ID);
   bail_out(error, MPI_COMM_WORLD);
@@ -556,6 +557,8 @@ int main(int argc, char ** argv) {
   MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
+  double overlap = wtime();
+  printf("Overlap 0 = %lf\n", overlap-overlap0);
   /* depending on the load balancing strategy chosen, we determine the 
      partitions of BG (background grid) and the refinements                  */
   float bg_size, total_size, Frac_procs_bg; // used for HIGH_WATER
@@ -978,6 +981,7 @@ int main(int argc, char ** argv) {
   }
   bail_out(error, MPI_COMM_WORLD);
 
+  printf("Overlap for rank %d = %lf\n", my_ID, wtime()-overlap);
   /* intialize the refinement arrays                                           */
   if (!checkpointing) {
     full_cycles = iter/(period*4);
@@ -1031,15 +1035,15 @@ int main(int argc, char ** argv) {
 
     /* inject failure if appropriate                                                */
     if (iter == fail_iter[num_fenix_init]) {
+      pid_t pid = getpid();
       if (my_ID < kill_ranks) {
 #if VERBOSE
-        printf("Rank %d commits suicide in iter %d\n", my_ID, iter);
+        printf("Rank %d, pid %d commits suicide in iter %d\n", my_ID, pid, iter);
 #endif
-        pid_t pid = getpid();
         kill(pid, SIGKILL);
       }
 #if VERBOSE
-      else printf("Rank %d is survivor rank in iter %d\n", my_ID, iter);
+      else printf("Rank %d, pid %d is survivor rank in iter %d\n", my_ID, pid, iter);
 #endif
     }  
 

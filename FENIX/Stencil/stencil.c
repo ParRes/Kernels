@@ -102,6 +102,16 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #define OUT(i,j)      out[INDEXOUT(i-istart,j-jstart)]
 #define WEIGHT(ii,jj) weight[ii+RADIUS][jj+RADIUS]
 
+void bail_out_light(int error, MPI_Comm comm) {
+  if (error) {
+#if VERBOSE
+    printf("exiting with error code %d\n", error);
+#endif
+    MPI_Finalize();
+    exit(1);
+  }
+}
+
 int main(int argc, char ** argv) {
 
   int    Num_procs;       /* number of ranks                                     */
@@ -137,6 +147,7 @@ int main(int argc, char ** argv) {
          time_stamp,
          aggregate_stencil_time=0.0,
          avgtime;
+  double etime[10];
   int    stencil_size;    /* number of points in stencil                         */
   DTYPE  * RESTRICT in;   /* input grid values                                   */
   DTYPE  * RESTRICT out;  /* output grid values                                  */
@@ -245,7 +256,7 @@ int main(int argc, char ** argv) {
 
     ENDOFTESTS:;
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out_light(error, MPI_COMM_WORLD);
 
   /* before calling Fenix_Init, all ranks need to know how many spare ranks 
      to reserve; broadcast other parameters as well                          */
@@ -301,14 +312,17 @@ int main(int argc, char ** argv) {
   }
   else if(my_ID==0) printf("Total injected failures  = %d times %d errors\n", 
                            num_fenix_init-1, kill_ranks);
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out_light(error, MPI_COMM_WORLD);
 
   fail_iter = (int *) prk_malloc(sizeof(int)*num_fenix_init);
   if (!fail_iter) {
     printf("ERROR: Rank %d could not allocate space for array fail_iter\n", my_ID);
     error = 1;
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out_light(error, MPI_COMM_WORLD);
+
+  /* reinitialize random number generator to obtain identical error series     */
+  LCG_init(&dice);
   /* now record the actual failure iterations                                  */
   for (fail_iter_s=iter=0; iter<num_fenix_init; iter++) {
     fail_iter_s += random_draw(kill_period, &dice);
@@ -318,9 +332,10 @@ int main(int argc, char ** argv) {
   /* Here is where we initialize Fenix and mark the return point after failure */
   Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
              0, MPI_INFO_NULL, &error);
+  etime[0] = wtime();
   if (error==FENIX_WARNING_SPARE_RANKS_DEPLETED) 
     printf("ERROR: Rank %d: Cannot reconsitute original communicator\n", my_ID);
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out_light(error, MPI_COMM_WORLD);
 
   /* (re)initialize the timer                                                  */
   time_stamp = wtime();
@@ -355,6 +370,8 @@ int main(int argc, char ** argv) {
   MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
+  etime[1] = wtime();
+
   my_IDx = my_ID%Num_procsx;
   my_IDy = my_ID/Num_procsx;
   /* compute neighbors; don't worry about dropping off the edges of the grid   */
@@ -381,7 +398,7 @@ int main(int argc, char ** argv) {
     printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out_light(error, MPI_COMM_WORLD);
 
   height = n/Num_procsy;
   leftover = n%Num_procsy;
@@ -399,14 +416,14 @@ int main(int argc, char ** argv) {
     printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out_light(error, MPI_COMM_WORLD);
 
   if (width < RADIUS || height < RADIUS) {
     printf("ERROR: rank %d has work tile smaller then stencil radius\n",
            my_ID);
     error = 1;
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out_light(error, MPI_COMM_WORLD);
 
   total_length_in  = (long) (width+2*RADIUS)*(long) (height+2*RADIUS)*sizeof(DTYPE);
   total_length_out = (long) width* (long) height*sizeof(DTYPE);
@@ -420,7 +437,9 @@ int main(int argc, char ** argv) {
       error = 1;
     }
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out_light(error, MPI_COMM_WORLD);
+
+  etime[2] = wtime();
 
   /* fill the stencil weights to reflect a discrete divergence operator         */
   for (int jj=-RADIUS; jj<=RADIUS; jj++) for (int ii=-RADIUS; ii<=RADIUS; ii++)
@@ -442,6 +461,8 @@ int main(int argc, char ** argv) {
     OUT(i,j) = (COEFX+COEFY)*init_add;
   }
 
+  etime[3] = wtime();
+
   if (Num_procs > 1) {
     if (fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
       /* allocate communication buffers for halo values                        */
@@ -450,11 +471,12 @@ int main(int argc, char ** argv) {
         printf("ERROR: Rank %d could not allocated comm buffers for y-direction\n", my_ID);
         error = 1;
       }
-      top_buf_in     = top_buf_out +   RADIUS*width;
-      bottom_buf_out = top_buf_out + 2*RADIUS*width;
-      bottom_buf_in  = top_buf_out + 3*RADIUS*width;
+      else {
+        top_buf_in     = top_buf_out +   RADIUS*width;
+        bottom_buf_out = top_buf_out + 2*RADIUS*width;
+        bottom_buf_in  = top_buf_out + 3*RADIUS*width;
+      }
     }
-    bail_out(error, MPI_COMM_WORLD);
 
     if (fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
       right_buf_out  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*height);
@@ -462,12 +484,19 @@ int main(int argc, char ** argv) {
         printf("ERROR: Rank %d could not allocated comm buffers for x-direction\n", my_ID);
         error = 1;
       }
-      right_buf_in   = right_buf_out +   RADIUS*height;
-      left_buf_out   = right_buf_out + 2*RADIUS*height;
-      left_buf_in    = right_buf_out + 3*RADIUS*height;
+      else {
+        right_buf_in   = right_buf_out +   RADIUS*height;
+        left_buf_out   = right_buf_out + 2*RADIUS*height;
+        left_buf_in    = right_buf_out + 3*RADIUS*height;
+      }
     }
-    bail_out(error, MPI_COMM_WORLD);
+    bail_out_light(error, MPI_COMM_WORLD);
   }
+
+  etime[4] = wtime();
+
+  printf("Rank %d, overhead = %lf, dt1=%lf, dt2=%lf, dt3=%lf, dt4=%lf\n", my_ID,
+         etime[4]-etime[0],etime[1]-etime[0],etime[2]-etime[1], etime[3]-etime[2], etime[4]-etime[3]);
 
   for (; iter<=iterations; iter++){
 
