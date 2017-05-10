@@ -102,16 +102,6 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #define OUT(i,j)      out[INDEXOUT(i-istart,j-jstart)]
 #define WEIGHT(ii,jj) weight[ii+RADIUS][jj+RADIUS]
 
-void bail_out_light(int error, MPI_Comm comm) {
-  if (error) {
-#if VERBOSE
-    printf("exiting with error code %d\n", error);
-#endif
-    MPI_Finalize();
-    exit(1);
-  }
-}
-
 int main(int argc, char ** argv) {
 
   int    Num_procs;       /* number of ranks                                     */
@@ -130,10 +120,10 @@ int main(int argc, char ** argv) {
   DTYPE *right_buf_in;    /*       "         "                                   */
   DTYPE *left_buf_out;    /*       "         "                                   */
   DTYPE *left_buf_in;     /*       "         "                                   */
-  int    root = 0;
+  int    root=0;
   int    n, width, height;/* linear global and local grid dimension              */
   long   nsquare;         /* total number of grid points                         */
-  int    iter, iter_init, leftover;  /* dummies                                        */
+  int    iter, iter_init, leftover;  /* dummies                                  */
   int    istart, iend;    /* bounds of grid tile assigned to calling rank        */
   int    jstart, jend;    /* bounds of grid tile assigned to calling rank        */
   DTYPE  norm,            /* L1 norm of solution                                 */
@@ -142,12 +132,8 @@ int main(int argc, char ** argv) {
   DTYPE  f_active_points; /* interior of grid with respect to stencil            */
   DTYPE  flops;           /* floating point ops per iteration                    */
   int    iterations;      /* number of times to run the algorithm                */
-  double local_stencil_time,/* timing parameters                                 */
-         stencil_time,
-         time_stamp,
-         aggregate_stencil_time=0.0,
+  double stencil_time,    /* timing parameters                                   */
          avgtime;
-  double etime[10];
   int    stencil_size;    /* number of points in stencil                         */
   DTYPE  * RESTRICT in;   /* input grid values                                   */
   DTYPE  * RESTRICT out;  /* output grid values                                  */
@@ -256,7 +242,7 @@ int main(int argc, char ** argv) {
 
     ENDOFTESTS:;
   }
-  bail_out_light(error, MPI_COMM_WORLD);
+  bail_out(error);
 
   /* before calling Fenix_Init, all ranks need to know how many spare ranks 
      to reserve; broadcast other parameters as well                          */
@@ -300,9 +286,9 @@ int main(int argc, char ** argv) {
      starting Fenix, so that all ranks, including spares, are initialized      */
   LCG_init(&dice);
   /* compute the iterations during which errors will be incurred               */
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
     fail_iter_s += random_draw(kill_period, &dice);
-    if (fail_iter_s >= iterations) break;
+    if (fail_iter_s > iterations) break;
     num_fenix_init++;
   }
   if ((num_fenix_init-1)*kill_ranks>spare_ranks) {
@@ -310,16 +296,18 @@ int main(int argc, char ** argv) {
                          (num_fenix_init-1)*kill_ranks, spare_ranks);
     error = 1;
   }
-  else if(my_ID==0) printf("Total injected failures  = %d times %d errors\n", 
-                           num_fenix_init, kill_ranks);
-  bail_out_light(error, MPI_COMM_WORLD);
+  else if(my_ID==root) printf("Total injected failures  = %d times %d errors\n", 
+                           num_fenix_init-1, kill_ranks);
+  bail_out(error);
+  if ((num_fenix_init-1)*kill_ranks>=Num_procs-spare_ranks) if (my_ID==root)
+  printf("WARNING: All active ranks will be replaced by recovered ranks; timings not valid\n");
 
   fail_iter = (int *) prk_malloc(sizeof(int)*num_fenix_init);
   if (!fail_iter) {
     printf("ERROR: Rank %d could not allocate space for array fail_iter\n", my_ID);
     error = 1;
   }
-  bail_out_light(error, MPI_COMM_WORLD);
+  bail_out(error);
 
   /* reinitialize random number generator to obtain identical error series     */
   LCG_init(&dice);
@@ -332,45 +320,25 @@ int main(int argc, char ** argv) {
   /* Here is where we initialize Fenix and mark the return point after failure */
   Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
              0, MPI_INFO_NULL, &error);
-  etime[0] = wtime();
+
   if (error==FENIX_WARNING_SPARE_RANKS_DEPLETED) 
     printf("ERROR: Rank %d: Cannot reconsitute original communicator\n", my_ID);
-  bail_out_light(error, MPI_COMM_WORLD);
-
-  /* (re)initialize the timer                                                  */
-  time_stamp = wtime();
+  bail_out(error);
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
-
-  /* only record true elapsed time for survivor ranks                          */  
-  if (fenix_status == FENIX_ROLE_SURVIVOR_RANK) 
-    local_stencil_time = time_stamp - local_stencil_time;
-  else 
-    local_stencil_time = 0.0;
-  /* everybody receives the maximum elapsed time (= stencil_time)              */
-  MPI_Allreduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-  /* add elapsed time to prior total                                           */
-  aggregate_stencil_time += stencil_time;
-  /* now take the max over all aggregate times; we need to do that because the 
-     recovered ranks skipped all previous accumulations into the total time    */
-  MPI_Allreduce(&aggregate_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-  aggregate_stencil_time = stencil_time;
-  local_stencil_time = time_stamp;
 
   /* if rank is recovered, set iter to a negative number, to be increased
      to the actual value corresponding to the current iter value among
      survivor ranks; handle number of Fenix_Init calls similarly               */
   switch (fenix_status){
     case FENIX_ROLE_INITIAL_RANK:   iter_init = num_fenix_init_loc = 0;    break;
-    case FENIX_ROLE_RECOVERED_RANK: iter_init = num_fenix_init_loc = -1;   break;
+    case FENIX_ROLE_RECOVERED_RANK: iter_init = num_fenix_init_loc = iterations+1;   break;
     case FENIX_ROLE_SURVIVOR_RANK:  iter_init = iter;  num_fenix_init_loc++;
   }
 
-  MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-
-  etime[1] = wtime();
+  MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
 
   my_IDx = my_ID%Num_procsx;
   my_IDy = my_ID/Num_procsx;
@@ -398,7 +366,7 @@ int main(int argc, char ** argv) {
     printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
-  bail_out_light(error, MPI_COMM_WORLD);
+  bail_out(error);
 
   height = n/Num_procsy;
   leftover = n%Num_procsy;
@@ -416,14 +384,14 @@ int main(int argc, char ** argv) {
     printf("ERROR: rank %d has no work to do\n", my_ID);
     error = 1;
   }
-  bail_out_light(error, MPI_COMM_WORLD);
+  bail_out(error);
 
   if (width < RADIUS || height < RADIUS) {
     printf("ERROR: rank %d has work tile smaller then stencil radius\n",
            my_ID);
     error = 1;
   }
-  bail_out_light(error, MPI_COMM_WORLD);
+  bail_out(error);
 
   total_length_in  = (long) (width+2*RADIUS)*(long) (height+2*RADIUS)*sizeof(DTYPE);
   total_length_out = (long) width* (long) height*sizeof(DTYPE);
@@ -437,9 +405,7 @@ int main(int argc, char ** argv) {
       error = 1;
     }
   }
-  bail_out_light(error, MPI_COMM_WORLD);
-
-  etime[2] = wtime();
+  bail_out(error);
 
   /* fill the stencil weights to reflect a discrete divergence operator         */
   for (int jj=-RADIUS; jj<=RADIUS; jj++) for (int ii=-RADIUS; ii<=RADIUS; ii++)
@@ -453,15 +419,18 @@ int main(int argc, char ** argv) {
 
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
-  /* intialize the input and output arrays                                     */
+  /* intialize the input and output arrays, note that if we use the analytical
+     solution to initialize, one might be tempted to skip this step for survivor
+     ranks, because they already have the correct (interim) values. That would
+     be wrong for two reasons: It is possible for ranks to be in different time
+     steps at the same time, and it is possible that error signal delivery to
+     a rank is delayed                                                         */
   if (checkpointing) init_add = 0.0;
   else               init_add = (DTYPE) iter;
   for (int j=jstart; j<=jend; j++) for (int i=istart; i<=iend; i++) {
     IN(i,j)  = COEFX*i+COEFY*j+init_add;
     OUT(i,j) = (COEFX+COEFY)*init_add;
   }
-
-  etime[3] = wtime();
 
   if (Num_procs > 1) {
     if (fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
@@ -490,16 +459,16 @@ int main(int argc, char ** argv) {
         left_buf_in    = right_buf_out + 3*RADIUS*height;
       }
     }
-    bail_out_light(error, MPI_COMM_WORLD);
+    bail_out(error);
   }
 
-  etime[4] = wtime();
-
-  if (fenix_status != FENIX_ROLE_INITIAL_RANK)
-    printf("Rank %d, overhead = %lf, dt1=%lf, dt2=%lf, dt3=%lf, dt4=%lf\n", my_ID, 
-         etime[4]-etime[0],etime[1]-etime[0],etime[2]-etime[1], etime[3]-etime[2], etime[4]-etime[3]);
-
   for (; iter<=iterations; iter++){
+
+    /* start timer after a warmup iteration */
+    if (iter == 1) {
+      MPI_Barrier(MPI_COMM_WORLD);
+      stencil_time = wtime();
+    }
 
     /* inject failure if appropriate                                                */
     if (iter == fail_iter[num_fenix_init]) {
@@ -601,9 +570,8 @@ int main(int argc, char ** argv) {
 
   } /* end of iterations                                                   */
 
-  local_stencil_time = wtime() - time_stamp;
-  MPI_Allreduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-  stencil_time += aggregate_stencil_time;
+  MPI_Barrier(MPI_COMM_WORLD);
+  stencil_time = wtime() - stencil_time;;
 
   /* compute L1 norm in parallel                                                */
   local_norm = (DTYPE) 0.0;
@@ -612,7 +580,7 @@ int main(int argc, char ** argv) {
       local_norm += (DTYPE)ABS(OUT(i,j));
     }
   }
-
+  root = Num_procs-1;
   MPI_Reduce(&local_norm, &norm, 1, MPI_DTYPE, MPI_SUM, root, MPI_COMM_WORLD);
 
   /*******************************************************************************
@@ -637,13 +605,13 @@ int main(int argc, char ** argv) {
 #endif
     }
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error);
 
   if (my_ID == root) {
     /* flops/stencil: 2 flops (fma) for each point in the stencil,
        plus one flop for the update of the input of the array        */
     flops = (DTYPE) (2*stencil_size+1) * f_active_points;
-    avgtime = stencil_time/(iterations+1);
+    avgtime = stencil_time/iterations;
     printf("Rate (MFlops/s): "FSTR"  Avg time (s): %lf\n",
            1.0E-06 * flops/avgtime, avgtime);
   }

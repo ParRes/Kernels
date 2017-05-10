@@ -34,7 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 Name:      bail_out
 
-Purpose:   Exit gracefully when an MPI process has encountered an error
+Purpose:   Exit  when an MPI process has encountered an error
 
 Arguments: error code (zero for no error).
 
@@ -48,17 +48,13 @@ History:   Written by Rob Van der Wijngaart, January 2006
 #include <fenix.h>
 #include <par-res-kern_general.h>
 
-void bail_out(int error, MPI_Comm comm) {
+/* we don't want to exit gracefully, because that requires an allreduce in a timed section */
+void bail_out(int error) {
 
-  int error_tot, flag=0;
-  MPI_Allreduce(&error, &error_tot, 1, MPI_INT, MPI_SUM, comm);
-  if (error_tot != 0) {
+  if (error != 0) {
 #if VERBOSE
     printf("Exiting via bail_out\n");
 #endif
-    Fenix_Initialized(&flag);
-    if (flag) Fenix_Finalize();
-    MPI_Finalize();
-    exit(EXIT_FAILURE);
+    MPI_Abort(MPI_COMM_WORLD, error);
   }
 }

@@ -128,4 +128,4 @@ static inline int PRK_Win_free(MPI_Win * win)
 #endif
 }
 
-extern void bail_out(int, MPI_Comm);
+extern void bail_out(int);

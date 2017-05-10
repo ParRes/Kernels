@@ -238,9 +238,6 @@ int main(int argc, char ** argv) {
   int    bg_updates;        /* # background grid updates before last interpolation */
   int    r_updates;         /* # refinement updates since last interpolation       */ 
   double stencil_time,      /* timing parameters                                   */
-         local_stencil_time,
-         time_stamp,
-         aggregate_stencil_time=0.0,
          avgtime;
   int    stencil_size;      /* number of points in stencil                         */
   DTYPE  * RESTRICT in_bg;  /* background grid input values                        */
@@ -452,7 +449,7 @@ int main(int argc, char ** argv) {
 
     ENDOFINPUTTESTS:;  
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error);
 
   /* before calling Fenix_Init, all ranks need to know how many spare ranks 
      to reserve; broadcast other parameters as well                          */
@@ -477,9 +474,9 @@ int main(int argc, char ** argv) {
      starting Fenix, so that all ranks, including spares, are initialized      */
   LCG_init(&dice);
   /* compute the iterations during which errors will be incurred               */
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
     fail_iter_s += random_draw(kill_period, &dice);
-    if (fail_iter_s >= iterations) break;
+    if (fail_iter_s > iterations) break;
     num_fenix_init++;
   }
   if ((num_fenix_init-1)*kill_ranks>spare_ranks) {
@@ -488,14 +485,17 @@ int main(int argc, char ** argv) {
     error = 1;
   }
   else num_failures = num_fenix_init-1;
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error);
+
+  if ((num_fenix_init-1)*kill_ranks>=Num_procs-spare_ranks) if (my_ID==root)
+  printf("WARNING: All active ranks will be replaced by recovered ranks; timings not valid\n");
 
   fail_iter = (int *) prk_malloc(sizeof(int)*num_fenix_init);
   if (!fail_iter) {
     printf("ERROR: Rank %d could not allocate space for array fail_iter\n", my_ID);
     error = 1;
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error);
 
   /* reinitialize random number generator to obtain identical error series     */
   LCG_init(&dice);
@@ -508,31 +508,13 @@ int main(int argc, char ** argv) {
   /* Here is where we initialize Fenix and mark the return point after failure */
   Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
              0, MPI_INFO_NULL, &error);
-  double overlap0 = wtime();
+
   if (error==FENIX_WARNING_SPARE_RANKS_DEPLETED) 
     printf("ERROR: Rank %d: Cannot reconstitute original communicator\n", my_ID);
-  bail_out(error, MPI_COMM_WORLD);
-
-/* (re)initialize the timer                                                  */
-  time_stamp = wtime();
+  bail_out(error);
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
-
-  /* only record true elapsed time for survivor ranks                          */  
-  if (fenix_status == FENIX_ROLE_SURVIVOR_RANK) 
-    local_stencil_time = time_stamp - local_stencil_time;
-  else 
-    local_stencil_time = 0.0;
-  /* everybody receives the maximum elapsed time (= stencil_time)              */
-  MPI_Allreduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-  /* add elapsed time to prior total                                           */
-  aggregate_stencil_time += stencil_time;
-  /* now take the max over all aggregate times; we need to do that because the 
-     recovered ranks skipped all previous accumulations into the total time    */
-  MPI_Allreduce(&aggregate_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-  aggregate_stencil_time = stencil_time;
-  local_stencil_time = time_stamp;
 
   /* if rank is recovered, set iter to a large value, to be reduced
      to the actual value corresponding to the current iter value among
@@ -546,7 +528,7 @@ int main(int argc, char ** argv) {
   case FENIX_ROLE_RECOVERED_RANK: 
     first_through = 1; 
     iter_init     = iterations + 1;
-    num_fenix_init_loc = -1;
+    num_fenix_init_loc = iterations + 1;
     break;
   case FENIX_ROLE_SURVIVOR_RANK:  
     first_through = 1; 
@@ -555,10 +537,8 @@ int main(int argc, char ** argv) {
   }
 
   MPI_Allreduce(&iter_init, &iter, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
-  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&num_fenix_init_loc, &num_fenix_init, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
 
-  double overlap = wtime();
-  printf("Overlap 0 = %lf\n", overlap-overlap0);
   /* depending on the load balancing strategy chosen, we determine the 
      partitions of BG (background grid) and the refinements                  */
   float bg_size, total_size, Frac_procs_bg; // used for HIGH_WATER
@@ -694,7 +674,7 @@ int main(int argc, char ** argv) {
     L_jstart_bg =  0;;
     L_jend_bg   = -1;
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error);
 
   /* compute global layout of refinements                                      */
   G_istart_r[0] = G_istart_r[2] = 0;
@@ -797,7 +777,7 @@ int main(int argc, char ** argv) {
     printf("Kill set size                   = %d\n", kill_ranks);
     printf("Fault period                    = %d\n", kill_period);
     printf("Total injected failures         = %d times %d errors\n", 
-                           num_failures, kill_ranks);
+                                              num_failures, kill_ranks);
     if (checkpointing)
       printf("Data recovery                   = Fenix checkpointing\n");
     else
@@ -929,7 +909,7 @@ int main(int argc, char ** argv) {
     L_jstart_r_gross[g] =  0;
     L_jend_r_gross[g]   = -1;
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error);
 
   /* fill the stencil weights to reflect a discrete divergence operator     */
   for (jj=-RADIUS; jj<=RADIUS; jj++) for (ii=-RADIUS; ii<=RADIUS; ii++) 
@@ -979,9 +959,8 @@ int main(int argc, char ** argv) {
     left_buf_out_bg   = right_buf_out_bg + 2*RADIUS*(L_height_bg+2);
     left_buf_in_bg    = right_buf_out_bg + 3*RADIUS*(L_height_bg+2);
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error);
 
-  printf("Overlap for rank %d = %lf\n", my_ID, wtime()-overlap);
   /* intialize the refinement arrays                                           */
   if (!checkpointing) {
     full_cycles = iter/(period*4);
@@ -1027,11 +1006,17 @@ int main(int argc, char ** argv) {
     left_buf_out_r[g]   = right_buf_out_r[g] + 2*RADIUS*L_height_r_true[g];
     left_buf_in_r[g]    = right_buf_out_r[g] + 3*RADIUS*L_height_r_true[g];
   }
-  bail_out(error, MPI_COMM_WORLD);
+  bail_out(error);
 
   num_interpolations = 0;
   
   for (; iter<=iterations; iter++){
+
+    /* start timer after a warmup iteration */
+    if (iter == 1) {
+      MPI_Barrier(MPI_COMM_WORLD);
+      stencil_time = wtime();
+    }
 
     /* inject failure if appropriate                                                */
     if (iter == fail_iter[num_fenix_init]) {
@@ -1291,9 +1276,8 @@ int main(int argc, char ** argv) {
 
   } /* end of iterations                                                         */
 
-  local_stencil_time = wtime() - time_stamp;
-  MPI_Allreduce(&local_stencil_time, &stencil_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-  stencil_time += aggregate_stencil_time;
+  MPI_Barrier(MPI_COMM_WORLD);
+  stencil_time = wtime() - stencil_time;
 
   /* compute normalized L1 solution norm on background grid                      */
   local_norm = (DTYPE) 0.0;
@@ -1304,6 +1288,7 @@ int main(int argc, char ** argv) {
     }
   }
 
+  root = Num_procs-1;
   MPI_Reduce(&local_norm, &norm, 1, MPI_DTYPE, MPI_SUM, root, MPI_COMM_WORLD);
   if (my_ID == root) norm /= f_active_points_bg;
 
@@ -1447,7 +1432,7 @@ int main(int argc, char ** argv) {
         num_interpolations--;
         flops += n_r_true*(num_interpolations)*3*(n_r_true+n_r);
       }
-      avgtime = stencil_time/(iterations+1);
+      avgtime = stencil_time/iterations;
       /* Note that we need to compute performance differently from that of Stencil.
          We compute flops over all iterations, so also need to divide by total 
          time, not average time per iteration                                      */
