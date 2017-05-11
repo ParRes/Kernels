@@ -1,4 +1,5 @@
-include ../../common/MPI.defs
+include ../../common/FENIX.defs
+COMOBJS += random_draw.o
 
 ##### User configurable options #####
 
@@ -12,9 +13,9 @@ USERFLAGS    =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         =
-LIBPATHS     = 
-INCLUDEPATHS = 
+LIBS         = -lm -lfenix -lmpi
+LIBPATHS     = -L$(FENIXTOP)/lib -L$(ULFMTOP)/lib
+INCLUDEPATHS = -I$(FENIXTOP)/include
 
 ### End User configurable options ###
 
