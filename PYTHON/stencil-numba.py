@@ -56,8 +56,37 @@
 
 import sys
 from timeit import default_timer as timer
-import numba
+from numba import jit
 import numpy
+
+@jit
+def stencil(n,r,W,A,B):
+    if r>0:
+        b = n-r
+        for s in range(-r, r+1):
+            for t in range(-r, r+1):
+                B[r:b,r:b] += W[r+t,r+s] * A[r+t:b+t,r+s:b+s]
+
+@jit
+def star(n,r,W,A,B):
+    if r==2:
+        B[2:n-2,2:n-2] += W[2,2] * A[2:n-2,2:n-2] \
+                        + W[2,0] * A[2:n-2,0:n-4] \
+                        + W[2,1] * A[2:n-2,1:n-3] \
+                        + W[2,3] * A[2:n-2,3:n-1] \
+                        + W[2,4] * A[2:n-2,4:n-0] \
+                        + W[0,2] * A[0:n-4,2:n-2] \
+                        + W[1,2] * A[1:n-3,2:n-2] \
+                        + W[3,2] * A[3:n-1,2:n-2] \
+                        + W[4,2] * A[4:n-0,2:n-2]
+    else:
+        b = n-r
+        B[r:b,r:b] += W[r,r] * A[r:b,r:b]
+        for s in range(1,r+1):
+            B[r:b,r:b] += W[r,r-s] * A[r:b,r-s:b-s] \
+                        + W[r,r+s] * A[r:b,r+s:b+s] \
+                        + W[r-s,r] * A[r-s:b-s,r:b] \
+                        + W[r+s,r] * A[r+s:b+s,r:b]
 
 def main():
 
@@ -136,31 +165,9 @@ def main():
         if k<1: t0 = timer()
 
         if pattern == 'star':
-            if r==2:
-                B[2:n-2,2:n-2] += W[2,2] * A[2:n-2,2:n-2] \
-                                + W[2,0] * A[2:n-2,0:n-4] \
-                                + W[2,1] * A[2:n-2,1:n-3] \
-                                + W[2,3] * A[2:n-2,3:n-1] \
-                                + W[2,4] * A[2:n-2,4:n-0] \
-                                + W[0,2] * A[0:n-4,2:n-2] \
-                                + W[1,2] * A[1:n-3,2:n-2] \
-                                + W[3,2] * A[3:n-1,2:n-2] \
-                                + W[4,2] * A[4:n-0,2:n-2]
-            else:
-                b = n-r
-                B[r:b,r:b] += W[r,r] * A[r:b,r:b]
-                for s in range(1,r+1):
-                    B[r:b,r:b] += W[r,r-s] * A[r:b,r-s:b-s] \
-                                + W[r,r+s] * A[r:b,r+s:b+s] \
-                                + W[r-s,r] * A[r-s:b-s,r:b] \
-                                + W[r+s,r] * A[r+s:b+s,r:b]
+            star(n,r,W,A,B)
         else: # stencil
-            if r>0:
-                b = n-r
-                for s in range(-r, r+1):
-                    for t in range(-r, r+1):
-                        B[r:b,r:b] += W[r+t,r+s] * A[r+t:b+t,r+s:b+s]
-
+            stencil(n,r,W,A,B)
         A += 1.0
 
     t1 = timer()
