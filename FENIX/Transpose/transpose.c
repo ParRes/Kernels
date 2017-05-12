@@ -321,7 +321,7 @@ int main(int argc, char ** argv)
              0, MPI_INFO_NULL, &error);
 
   if (error==FENIX_WARNING_SPARE_RANKS_DEPLETED) 
-    printf("ERROR: Rank %d: Cannot reconsitute original communicator\n", my_ID);
+    printf("ERROR: Rank %d: Cannot reconstitute original communicator\n", my_ID);
   bail_out(error);
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
@@ -364,8 +364,8 @@ int main(int argc, char ** argv)
       printf(" Error allocating space for original matrix on node %d\n",my_ID);
       error = 1;
     }
-    bail_out(error);
   }
+  bail_out(error);
 
   if (fenix_status != FENIX_ROLE_SURVIVOR_RANK) {
     B_p = (double *)prk_malloc(Colblock_size*sizeof(double));

@@ -322,7 +322,7 @@ int main(int argc, char ** argv) {
              0, MPI_INFO_NULL, &error);
 
   if (error==FENIX_WARNING_SPARE_RANKS_DEPLETED) 
-    printf("ERROR: Rank %d: Cannot reconsitute original communicator\n", my_ID);
+    printf("ERROR: Rank %d: Cannot reconstitute original communicator\n", my_ID);
   bail_out(error);
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
