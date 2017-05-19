@@ -57,7 +57,7 @@ LEGIONTOP=$(HOME)/legion
 LEGIONCC=/usr/bin/g++
 
 #location where ULFM-enabled MPI is installed
-ULFMTOP=$(HOME)/ulfm
+ULFMTOP=$(HOME)/ulfm-install
 
 #location where Fenix is installed
 FENIXTOP=$(HOME)/Fenix

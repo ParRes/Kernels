@@ -3,7 +3,7 @@ COMOBJS += random_draw.o
 
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system
 
 USERFLAGS    = 

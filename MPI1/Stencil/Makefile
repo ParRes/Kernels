@@ -3,7 +3,7 @@ include ../../common/MPI.defs
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system
 
 USERFLAGS    = 
