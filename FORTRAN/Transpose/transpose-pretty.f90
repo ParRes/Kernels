@@ -72,7 +72,7 @@ program main
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
-  integer(kind=INT32) ::  i, k
+  integer(kind=INT32) ::  i, j, k
   real(kind=REAL64) ::  abserr                      ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
@@ -151,7 +151,24 @@ program main
   A = ( transpose(reshape((/ (i, i = 0,order**2) /),(/order, order/))) &
         * real(iterations+1,REAL64) ) &
       + real((iterations*(iterations+1))/2,REAL64)
+#if 0
+  ! PGI generates a segfault here...
+  abserr = 0.0d0
+  forall (j=1:order,i=1:order)
+      abserr = abserr + (B(i,j) - A(i,j))**2
+  endforall
+  abserr = sqrt(abserr)
+#elif defined(__PGI)
+  abserr = 0.0d0
+  do j=1,order
+    do i=1,order
+      abserr = abserr + (B(i,j) - A(i,j))**2
+    enddo
+  enddo
+  abserr = sqrt(abserr)
+#else
   abserr = norm2(A-B)
+#endif
 
   deallocate( B )
   deallocate( A )
