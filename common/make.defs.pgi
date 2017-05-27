@@ -4,12 +4,12 @@
 # Base compilers and language options
 #
 # C99 is required in some implementations.
-CC=/opt/pgi/linux86-64/2017/bin/pgcc -c11
+CC=pgcc -c11
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=/opt/pgi/linux86-64/2017/bin/pgfortran -Mpreprocess
+FC=pgfortran -Mpreprocess
 #FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Wl,-rpath=/opt/llvm/pgi-flang/lib
 # C++11 may not be required but does no harm here.
-CXX=/opt/pgi/linux86-64/2017/bin/pgc++ --c++11
+CXX=pgc++ --c++11
 #
 # Compiler flags
 #
