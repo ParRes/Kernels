@@ -167,7 +167,7 @@ program main
 
   ! Fill the original matrix, set transpose to known garbage value.
   if (tile_size.lt.order) then
-#ifdef _OPENMP
+#if defined(_OPENMP)
 #if defined(__INTEL_COMPILER) && defined(__INTEL_COMPILER_BUILD_DATE) \
  && (__INTEL_COMPILER==1600) && (__INTEL_COMPILER_BUILD_DATE<20160101)
 #warning Disabling collapse because of IPS6000153696
@@ -175,6 +175,10 @@ program main
 #else
     !$omp do collapse(2)
 #endif
+    do jt=1,order,tile_size
+      do it=1,order,tile_size
+#elif defined(__PGI) || defined(__llvm__)
+    ! PGI does not support DO CONCURRENT.
     do jt=1,order,tile_size
       do it=1,order,tile_size
 #else
@@ -193,11 +197,15 @@ program main
     !$omp end do nowait
 #endif
   else
-#ifdef _OPENMP
+#if defined(_OPENMP)
     !$omp do collapse(2)
     do j=1,order
       do i=1,order
+#elif defined(__PGI) || defined(__llvm__)
+    do j=1,order
+      do i=1,order
 #else
+    ! PGI does not support DO CONCURRENT.
     do concurrent (j=1:order)
       do concurrent (i=1:order)
 #endif
@@ -230,13 +238,16 @@ program main
 
     ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
-#ifdef _OPENMP
+#if defined(_OPENMP)
 #if defined(__INTEL_COMPILER) && defined(__INTEL_COMPILER_BUILD_DATE) \
  && (__INTEL_COMPILER==1600) && (__INTEL_COMPILER_BUILD_DATE<20160101)
       !$omp do
 #else
       !$omp do collapse(2)
 #endif
+      do jt=1,order,tile_size
+        do it=1,order,tile_size
+#elif defined(__PGI) || defined(__llvm__)
       do jt=1,order,tile_size
         do it=1,order,tile_size
 #else
@@ -255,8 +266,11 @@ program main
       !$omp end do nowait
 #endif
     else
-#ifdef _OPENMP
+#if defined(_OPENMP)
       !$omp do collapse(2)
+      do j=1,order
+        do i=1,order
+#elif defined(__PGI) || defined(__llvm__)
       do j=1,order
         do i=1,order
 #else
@@ -296,13 +310,17 @@ program main
   abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
-#ifdef _OPENMP
+#if defined(_OPENMP) && !(defined(__PGI) || defined(__llvm__))
   !$omp parallel default(none)                                        &
   !$omp&  shared(B)                                                   &
   !$omp&  firstprivate(order,iterations,addit)                        &
   !$omp&  private(i,j,temp)                                           &
   !$omp&  reduction(+:abserr)
   !$omp do collapse(2)
+  do j=1,order
+    do i=1,order
+#elif defined(__PGI) || defined(__llvm__)
+  ! OpenMP reductions busted in Flang (https://github.com/flang-compiler/flang/issues/56)
   do j=1,order
     do i=1,order
 #else
@@ -314,7 +332,7 @@ program main
       abserr = abserr + abs(B(i,j) - (temp+addit))
     enddo
   enddo
-#ifdef _OPENMP
+#if defined(_OPENMP) && !(defined(__PGI) || defined(__llvm__))
   !$omp end do nowait
   !$omp end parallel
 #endif
