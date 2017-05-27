@@ -1,5 +1,6 @@
 include ../../common/FENIX.defs
 COMOBJS += random_draw.o
+COMOBJS += timestep.o
 
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system

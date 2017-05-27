@@ -1,5 +1,5 @@
 #name of MPI C compiler, e.g. mpiicc, mpicc 
-MPICC=mpiicc
+MPICC=/home/rfvander/ompi-install/bin/mpicc
 
 #name of C compiler, e.g. icc, xlc, gcc
 CC=icc
@@ -57,7 +57,7 @@ LEGIONTOP=$(HOME)/legion
 LEGIONCC=/usr/bin/g++
 
 #location where ULFM-enabled MPI is installed
-ULFMTOP=$(HOME)/ulfm-install
+ULFMTOP=$(HOME)/ompi+ulfm-install
 
 #location where Fenix is installed
 FENIXTOP=$(HOME)/Fenix

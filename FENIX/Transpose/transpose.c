@@ -131,6 +131,20 @@ o The original and transposed matrices are called A and B
 #define Work_in(i,j)  Work_in_p[i+Block_order*(j)]
 #define Work_out(i,j) Work_out_p[i+Block_order*(j)]
 
+void time_step(long Block_order,
+	       long Block_size,
+	       long Colblock_size,
+	       int Tile_order,
+	       int tiling,
+	       int Num_procs,
+	       long order,
+	       int my_ID,
+	       int colstart,
+	       double * RESTRICT A_p,
+	       double * RESTRICT B_p,
+	       double * RESTRICT Work_in_p,
+	       double * RESTRICT Work_out_p);
+
 int main(int argc, char ** argv)
 {
   long Block_order;        /* number of columns owned by rank       */
@@ -154,26 +168,26 @@ int main(int argc, char ** argv)
   int phase;               /* phase inside staged communication     */
   int colstart;            /* starting column for owning rank       */
   int error;               /* error flag                            */
-  double RESTRICT *A_p;    /* original matrix column block          */
-  double RESTRICT *B_p;    /* transposed matrix column block        */
-  double RESTRICT *Work_in_p;/* workspace for transpose function    */
-  double RESTRICT *Work_out_p;/* workspace for transpose function   */
+  double * RESTRICT A_p;   /* original matrix column block          */
+  double * RESTRICT B_p;   /* transposed matrix column block        */
+  double * RESTRICT Work_in_p;/* workspace for transpose function   */
+  double * RESTRICT Work_out_p;/* workspace for transpose function  */
   double abserr,           /* absolute error                        */
          abserr_tot;       /* aggregate absolute error              */
   double epsilon = 1.e-8;  /* error tolerance                       */
-  double transpose_time,       /* timing parameters                     */
+  double transpose_time,   /* timing parameters                     */
          avgtime;
-  int    spare_ranks;     /* number of ranks to keep in reserve                  */
-  int    kill_ranks;      /* number of ranks that die with each failure          */
-  int    *kill_set;       /* instance of set of ranks to be killed               */
-  int    kill_period;     /* average number of iterations between failures       */
-  int    *fail_iter;      /* list of iterations when a failure will be triggered */
-  int    fail_iter_s=0;   /* latest  */
-  double init_add, addit; /* used to offset initial solutions                    */
-  int    checkpointing;   /* indicates if data is restored using Fenix or
-                             analytically                                        */
-  int    num_fenix_init=1;/* number of times Fenix_Init is called                */
-  int    num_fenix_init_loc;/* number of times Fenix_Init was called             */
+  int    spare_ranks;      /* number of ranks to keep in reserve                  */
+  int    kill_ranks;       /* number of ranks that die with each failure          */
+  int    *kill_set;        /* instance of set of ranks to be killed        */
+  int    kill_period;      /* average number of iterations between failures       */
+  int    *fail_iter;       /* list of iterations when a failure will be triggered */
+  int    fail_iter_s=0;    /* latest  */
+  double init_add, addit;  /* used to offset initial solutions       */
+  int    checkpointing;    /* indicates if data is restored using Fenix or
+                             analytically                            */
+  int    num_fenix_init=1; /* number of times Fenix_Init is called   */
+  int    num_fenix_init_loc;/* number of times Fenix_Init was called */
   int    fenix_status;
   random_draw_t dice;
 
@@ -430,70 +444,9 @@ int main(int argc, char ** argv)
 #endif
     }
 
-    /* do the local transpose                                                     */
-    istart = colstart;
-    if (!tiling) {
-      for (i=0; i<Block_order; i++)
-        for (j=0; j<Block_order; j++) {
-          B(j,i) += A(i,j);
-          A(i,j) += 1.0;
-	}
-    }
-    else {
-      for (i=0; i<Block_order; i+=Tile_order)
-        for (j=0; j<Block_order; j+=Tile_order)
-          for (it=i; it<MIN(Block_order,i+Tile_order); it++)
-            for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-              B(jt,it) += A(it,jt);
-              A(it,jt) += 1.0;
-	    }
-    }
+    time_step(Block_order, Block_size, Colblock_size, Tile_order, tiling,
+              Num_procs, order, my_ID, colstart, A_p, B_p, Work_in_p, Work_out_p);
 
-    for (phase=1; phase<Num_procs; phase++){
-      recv_from = (my_ID + phase            )%Num_procs;
-      send_to   = (my_ID - phase + Num_procs)%Num_procs;
-
-#if !SYNCHRONOUS
-      MPI_Irecv(Work_in_p, Block_size, MPI_DOUBLE,
-                recv_from, phase, MPI_COMM_WORLD, &recv_req);
-#endif
-
-      istart = send_to*Block_order;
-      if (!tiling) {
-        for (i=0; i<Block_order; i++)
-          for (j=0; j<Block_order; j++){
-	    Work_out(j,i) = A(i,j);
-            A(i,j) += 1.0;
-	  }
-      }
-      else {
-        for (i=0; i<Block_order; i+=Tile_order)
-          for (j=0; j<Block_order; j+=Tile_order)
-            for (it=i; it<MIN(Block_order,i+Tile_order); it++)
-              for (jt=j; jt<MIN(Block_order,j+Tile_order);jt++) {
-                Work_out(jt,it) = A(it,jt);
-                A(it,jt) += 1.0;
-	      }
-      }
-
-#if !SYNCHRONOUS
-      MPI_Isend(Work_out_p, Block_size, MPI_DOUBLE, send_to,
-                phase, MPI_COMM_WORLD, &send_req);
-      MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
-      MPI_Wait(&send_req, MPI_STATUS_IGNORE);
-#else
-      MPI_Sendrecv(Work_out_p, Block_size, MPI_DOUBLE, send_to, phase,
-                   Work_in_p, Block_size, MPI_DOUBLE,
-	           recv_from, phase, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-#endif
-
-      istart = recv_from*Block_order;
-      /* scatter received block to transposed matrix; no need to tile */
-      for (j=0; j<Block_order; j++)
-        for (i=0; i<Block_order; i++)
-          B(i,j) += Work_in(i,j);
-
-    }  /* end of phase loop  */
   } /* end of iterations */
 
   MPI_Barrier(MPI_COMM_WORLD);

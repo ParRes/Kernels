@@ -1,5 +1,6 @@
 include ../../common/FENIX.defs
 COMOBJS += random_draw.o
+COMOBJS += timestep.o
 
 ##### User configurable options #####
 

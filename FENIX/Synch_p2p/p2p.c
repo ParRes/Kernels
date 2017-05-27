@@ -74,6 +74,16 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
 
+void time_step(int    my_ID,
+               int    root, int final,
+               long   m, long n,
+               long   start, long end,
+               long   segment_size,
+               int    Num_procs,
+               int    grp,
+               double * RESTRICT vector,
+               double *inbuf, double *outbuf);
+
 int main(int argc, char ** argv)
 {
   int    my_ID;           /* MPI rank                                            */
@@ -91,7 +101,7 @@ int main(int argc, char ** argv)
   int    Num_procs;       /* Number of ranks                                     */
   int    grp;             /* grid line aggregation factor                        */
   int    jjsize;          /* actual line group size                              */
-  double RESTRICT *vector;/* array holding grid values                           */
+  double * RESTRICT vector;/* array holding grid values                          */
   double *inbuf, *outbuf; /* communication buffers used when aggregating         */
   long   total_length;    /* total required length to store grid values          */
   int    spare_ranks;     /* number of ranks to keep in reserve                  */
@@ -335,10 +345,14 @@ int main(int argc, char ** argv)
     ARRAY(0,0) = (double)(-(m+n-2)*iter);
   }
 
-  /* redefine start and end for calling rank to reflect local indices               */
+  /* redefine start and end for calling rank to reflect local indices             */
   if (my_ID==0) start = 1; 
   else          start = 0;
   end = segment_size-1;
+
+  /* set final equal to highest rank, because it computes verification value      */
+  final = Num_procs-1;
+
 
   for (; iter<=iterations; iter++) {
 
@@ -362,66 +376,8 @@ int main(int argc, char ** argv)
 #endif
     }
 
-    /* execute pipeline algorithm for grid lines 1 through n-1 (skip bottom line) */
-    if (grp==1) for (j=1; j<n; j++) { /* special case for no grouping             */
-
-      /* if I am not at the left boundary, I need to wait for my left neighbor to
-         send data                                                                */
-      if (my_ID > 0) {
-        MPI_Recv(&(ARRAY(start-1,j)), 1, MPI_DOUBLE, my_ID-1, j, 
-                                  MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-      }
-
-      for (i=start; i<= end; i++) {
-        ARRAY(i,j) = ARRAY(i-1,j) + ARRAY(i,j-1) - ARRAY(i-1,j-1);
-      }
-
-      /* if I am not on the right boundary, send data to my right neighbor        */  
-      if (my_ID < Num_procs-1) {
-        MPI_Send(&(ARRAY(end,j)), 1, MPI_DOUBLE, my_ID+1, j, MPI_COMM_WORLD);
-      }
-    }
-    else for (j=1; j<n; j+=grp) { /* apply grouping                               */
-
-      jjsize = MIN(grp, n-j);
-      /* if I am not at the left boundary, I need to wait for my left neighbor to
-         send data                                                                */
-      if (my_ID > 0) {
-        MPI_Recv(inbuf, jjsize, MPI_DOUBLE, my_ID-1, j, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-        for (jj=0; jj<jjsize; jj++) {
-          ARRAY(start-1,jj+j) = inbuf[jj];
-	}
-      }
-
-      for (jj=0; jj<jjsize; jj++) for (i=start; i<= end; i++) {
-        ARRAY(i,jj+j) = ARRAY(i-1,jj+j) + ARRAY(i,jj+j-1) - ARRAY(i-1,jj+j-1);
-      }
-
-      /* if I am not on the right boundary, send data to my right neighbor        */  
-      if (my_ID < Num_procs-1) {
-        for (jj=0; jj<jjsize; jj++) {
-          outbuf[jj] = ARRAY(end,jj+j);
-        }
-        MPI_Send(outbuf, jjsize, MPI_DOUBLE, my_ID+1, j, MPI_COMM_WORLD);
-      }
-
-    }
-
-    /* set final equal to highest rank, because it computes verification value     */
-    final = Num_procs-1;
-
-    /* copy top right corner value to bottom left corner to create dependency     */
-    if (Num_procs >1) {
-      if (my_ID==final) {
-        corner_val = -ARRAY(end,n-1);
-        MPI_Send(&corner_val,1,MPI_DOUBLE,root,888,MPI_COMM_WORLD);
-      }
-      if (my_ID==root) {
-        MPI_Recv(&(ARRAY(0,0)),1,MPI_DOUBLE,final,888,MPI_COMM_WORLD,MPI_STATUSES_IGNORE);
-      }
-    }
-    else ARRAY(0,0)= -ARRAY(end,n-1);
-
+    time_step(my_ID, root, final, m, n, start, end, segment_size,
+              Num_procs, grp, vector, inbuf, outbuf);
   }
 
   MPI_Barrier(MPI_COMM_WORLD);

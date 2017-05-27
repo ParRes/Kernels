@@ -1,5 +1,6 @@
 include ../../common/FENIX.defs
 COMOBJS += random_draw.o get_BG_data.o
+COMOBJS += timestep.o
 
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults

@@ -102,6 +102,29 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #define OUT(i,j)      out[INDEXOUT(i-istart,j-jstart)]
 #define WEIGHT(ii,jj) weight[ii+RADIUS][jj+RADIUS]
 
+void time_step(int    Num_procsx, int Num_procsy,
+	       int    my_IDx, int my_IDy,
+	       int    right_nbr,
+	       int    left_nbr,
+	       int    top_nbr,
+	       int    bottom_nbr,
+	       DTYPE *top_buf_out,
+	       DTYPE *top_buf_in,
+	       DTYPE *bottom_buf_out,
+	       DTYPE *bottom_buf_in,
+	       DTYPE *right_buf_out,
+	       DTYPE *right_buf_in,
+	       DTYPE *left_buf_out,
+	       DTYPE *left_buf_in,
+	       int    n, int width, int height,
+	       int    istart, int iend,
+	       int    jstart, int jend,
+	       DTYPE  * RESTRICT in,
+	       DTYPE  * RESTRICT out,
+	       DTYPE  weight[2*RADIUS+1][2*RADIUS+1],
+	       MPI_Request request[8]);
+
+
 int main(int argc, char ** argv) {
 
   int    Num_procs;       /* number of ranks                                     */
@@ -484,89 +507,14 @@ int main(int argc, char ** argv) {
 #endif
     }
 
-    /* need to fetch ghost point data from neighbors in y-direction                 */
-    if (my_IDy < Num_procsy-1) {
-      MPI_Irecv(top_buf_in, RADIUS*width, MPI_DTYPE, top_nbr, 101,
-                MPI_COMM_WORLD, &(request[1]));
-      for (int kk=0,j=jend-RADIUS+1; j<=jend; j++) for (int i=istart; i<=iend; i++) {
-          top_buf_out[kk++]= IN(i,j);
-      }
-      MPI_Isend(top_buf_out, RADIUS*width,MPI_DTYPE, top_nbr, 99,
-                MPI_COMM_WORLD, &(request[0]));
-    }
-    if (my_IDy > 0) {
-      MPI_Irecv(bottom_buf_in,RADIUS*width, MPI_DTYPE, bottom_nbr, 99,
-                MPI_COMM_WORLD, &(request[3]));
-      for (int kk=0,j=jstart; j<=jstart+RADIUS-1; j++) for (int i=istart; i<=iend; i++) {
-          bottom_buf_out[kk++]= IN(i,j);
-      }
-      MPI_Isend(bottom_buf_out, RADIUS*width,MPI_DTYPE, bottom_nbr, 101,
-                MPI_COMM_WORLD, &(request[2]));
-    }
-    if (my_IDy < Num_procsy-1) {
-      MPI_Wait(&(request[0]), MPI_STATUS_IGNORE);
-      MPI_Wait(&(request[1]), MPI_STATUS_IGNORE);
-      for (int kk=0,j=jend+1; j<=jend+RADIUS; j++) for (int i=istart; i<=iend; i++) {
-          IN(i,j) = top_buf_in[kk++];
-      }
-    }
-    if (my_IDy > 0) {
-      MPI_Wait(&(request[2]), MPI_STATUS_IGNORE);
-      MPI_Wait(&(request[3]), MPI_STATUS_IGNORE);
-      for (int kk=0,j=jstart-RADIUS; j<=jstart-1; j++) for (int i=istart; i<=iend; i++) {
-          IN(i,j) = bottom_buf_in[kk++];
-      }
-    }
-
-    /* need to fetch ghost point data from neighbors in x-direction                 */
-    if (my_IDx < Num_procsx-1) {
-      MPI_Irecv(right_buf_in, RADIUS*height, MPI_DTYPE, right_nbr, 1010,
-                MPI_COMM_WORLD, &(request[1+4]));
-      for (int kk=0,j=jstart; j<=jend; j++) for (int i=iend-RADIUS+1; i<=iend; i++) {
-          right_buf_out[kk++]= IN(i,j);
-      }
-      MPI_Isend(right_buf_out, RADIUS*height, MPI_DTYPE, right_nbr, 990,
-              MPI_COMM_WORLD, &(request[0+4]));
-    }
-    if (my_IDx > 0) {
-      MPI_Irecv(left_buf_in, RADIUS*height, MPI_DTYPE, left_nbr, 990,
-                MPI_COMM_WORLD, &(request[3+4]));
-      for (int kk=0,j=jstart; j<=jend; j++) for (int i=istart; i<=istart+RADIUS-1; i++) {
-          left_buf_out[kk++]= IN(i,j);
-      }
-      MPI_Isend(left_buf_out, RADIUS*height, MPI_DTYPE, left_nbr, 1010,
-                MPI_COMM_WORLD, &(request[2+4]));
-    }
-    if (my_IDx < Num_procsx-1) {
-      MPI_Wait(&(request[0+4]), MPI_STATUS_IGNORE);
-      MPI_Wait(&(request[1+4]), MPI_STATUS_IGNORE);
-      for (int kk=0,j=jstart; j<=jend; j++) for (int i=iend+1; i<=iend+RADIUS; i++) {
-          IN(i,j) = right_buf_in[kk++];
-      }
-    }
-    if (my_IDx > 0) {
-      MPI_Wait(&(request[2+4]), MPI_STATUS_IGNORE);
-      MPI_Wait(&(request[3+4]), MPI_STATUS_IGNORE);
-      for (int kk=0,j=jstart; j<=jend; j++) for (int i=istart-RADIUS; i<=istart-1; i++) {
-          IN(i,j) = left_buf_in[kk++];
-      }
-    }
-
-    /* Apply the stencil operator */
-    for (int j=MAX(jstart,RADIUS); j<=MIN(n-RADIUS-1,jend); j++) {
-      for (int i=MAX(istart,RADIUS); i<=MIN(n-RADIUS-1,iend); i++) {
-        #if LOOPGEN
-          #include "loop_body_star.incl"
-        #else
-          for (int jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-          for (int ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-          for (int ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-        #endif
-      }
-    }
-
-    /* add constant to solution to force refresh of neighbor data, if any */
-    for (int j=jstart; j<=jend; j++) for (int i=istart; i<=iend; i++) IN(i,j)+= 1.0;
+    time_step(Num_procsx, Num_procsy, my_IDx, my_IDy,
+	     right_nbr, left_nbr, top_nbr, bottom_nbr,
+	     top_buf_out, top_buf_in, bottom_buf_out, bottom_buf_in,
+	     right_buf_out, right_buf_in, left_buf_out, left_buf_in,
+             n, width, height, istart, iend, jstart, jend,
+	     in, out,
+	     weight,
+	     request);
 
   } /* end of iterations                                                   */
 

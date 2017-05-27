@@ -86,7 +86,7 @@ int main(int argc, char ** argv)
   long   segment_size;    /* size of x-dimension of grid owned by calling rank   */
   int    error=0;         /* error flag                                          */
   int    Num_procs;       /* Number of ranks                                     */
-  double RESTRICT *vector;/* array holding grid values                           */
+  double * RESTRICT vector;/* array holding grid values                          */
   long   total_length;    /* total required length to store grid values          */
   MPI_Win rma_win;        /* RMA window object                                   */
   MPI_Info rma_winfo;     /* info for window                                     */
