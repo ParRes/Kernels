@@ -53,6 +53,15 @@
 !          Izaak "Zaak" Beekman
 ! *******************************************************************
 
+#if defined(__PGI) || defined(__llvm__)
+
+program main
+    print*,'PGI does not support Fortran 2008'
+    stop 1
+end program main
+
+#else
+
 function prk_get_wtime() result(t)
   use iso_fortran_env
   real(kind=REAL64) ::  t
@@ -322,3 +331,4 @@ program main
 
 end program main
 
+#endif
