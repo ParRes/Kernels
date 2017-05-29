@@ -50,7 +50,7 @@ case "$PRK_TARGET" in
         which octave
         octave --version
         export PRK_TARGET_PATH=OCTAVE
-        #./$PRK_TARGET_PATH/p2p.m               10 1024 1024
+        ./$PRK_TARGET_PATH/p2p.m               10 100 100
         ./$PRK_TARGET_PATH/stencil.m           10 100
         ./$PRK_TARGET_PATH/stencil-pretty.m    10 1000
         ./$PRK_TARGET_PATH/transpose.m         10 100
