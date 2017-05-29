@@ -76,7 +76,7 @@ if iterations < 1
     exit(2);
 end
 
-% matrix d
+% matrix order
 d = str2num(args{2});
 if d < 1
     printf("ERROR: d must be >= 1\n");
