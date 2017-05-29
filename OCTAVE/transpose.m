@@ -90,8 +90,8 @@ printf("Number of iterations     = %d\n", iterations);
 % ** Allocate space for the input and transpose matrix
 % ********************************************************************
 
-A = zeros(d,d);
-B = zeros(d,d);
+A = zeros(d,d,'double');
+B = zeros(d,d,'double');
 % Fill the original matrix
 for j=1:d
     for i=1:d
