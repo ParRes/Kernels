@@ -160,14 +160,12 @@ for k=1:iterations+1
     if pattern == "star"
         for j=r:n-r-1
             for i=r:n-r-1
-                for jj=-r:r
-                    B(i+1,j+1) += W(r+1,r+jj+1) * A(i+1,j+jj+1);
-                end
-                for ii=-r:-1
-                    B(i+1,j+1) += W(r+ii+1,r+1) * A(i+ii+1,j+1);
-                end
-                for ii=1:r
-                    B(i+1,j+1) += W(r+ii+1,r+1) * A(i+ii+1,j+1);
+                B(i+1,j+1) += W(r+1,r+1) * A(i+1,j+1);
+                for s=1:r
+                    B(i+1,j+1) += W(r+1,r-s+1) * A(i+1,j-s+1);
+                    B(i+1,j+1) += W(r+1,r+s+1) * A(i+1,j+s+1);
+                    B(i+1,j+1) += W(r-s+1,r+1) * A(i-s+1,j+1);
+                    B(i+1,j+1) += W(r+s+1,r+1) * A(i+s+1,j+1);
                 end
             end
         end
