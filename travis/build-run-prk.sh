@@ -45,6 +45,15 @@ case "$PRK_TARGET" in
         python $PRK_TARGET_PATH/transpose.py       10 1024
         python $PRK_TARGET_PATH/transpose-numpy.py 10 1024
         ;;
+    alloctave)
+        echo "Octave"
+        which octave
+        octave --version
+        export PRK_TARGET_PATH=OCTAVE
+        #./$PRK_TARGET_PATH/p2p.m             10 1024 1024
+        #./$PRK_TARGET_PATH/stencil.m         10 1000
+        ./$PRK_TARGET_PATH/transpose.m       10 1024
+        ;;
     alljulia)
         echo "Julia"
         case "$os" in
