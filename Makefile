@@ -47,6 +47,7 @@ default: allserial allopenmp allmpi
 help:
 	@echo "Usage: \"make all\"          (re-)builds all targets"
 	@echo "       \"make allserial\"    (re-)builds all serial targets"
+	@echo "       \"make allcxx\"       (re-)builds all C++ targets"
 	@echo "       \"make allopenmp\"    (re-)builds all OpenMP targets"
 	@echo "       \"make allmpi1\"      (re-)builds all conventional MPI targets"
 	@echo "       \"make allfgmpi\"     (re-)builds all Fine-Grain MPI targets"
@@ -227,6 +228,11 @@ allfortranpretty:
 	#cd FORTRAN/Synch_p2p;       $(MAKE) p2p-pretty
 	cd FORTRAN/Transpose;       $(MAKE) transpose-pretty
 
+allcxx:
+	cd Cxx11;         $(MAKE) p2p
+	cd Cxx11;         $(MAKE) stencil
+	cd Cxx11;         $(MAKE) transpose
+
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
 	cd MPI1/Nstream;            $(MAKE) clean
@@ -313,6 +319,7 @@ clean:
 	cd FORTRAN/Transpose;       $(MAKE) clean
 	cd FORTRAN/Synch_p2p;       $(MAKE) clean
 	cd FORTRAN/Stencil;         $(MAKE) clean
+	cd Cxx11;                   $(MAKE) clean
 	rm -f stats.json
 
 veryclean: clean
