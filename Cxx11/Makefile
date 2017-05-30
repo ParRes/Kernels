@@ -13,9 +13,11 @@ CXXFLAGS += -DPRKVERSION=$(PRKVERSION)
 CXXFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
 CXXFLAGS += -I.
 
-.PHONY: all clean run
+.PHONY: all clean run vector valarray
 
-all: p2p stencil transpose
+vector: p2p-vector stencil-vector transpose-vector
+valarray: transpose-valarray
+all: vector valarray
 
 %: %.cc
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -26,6 +28,6 @@ clean:
 	-rm -f *.dwarf
 	-rm -rf *.dSYM
 	-rm -f p2p
-	-rm -f stencil
-	-rm -f transpose
+	-rm -f *-vector
+	-rm -f *-valarray
 

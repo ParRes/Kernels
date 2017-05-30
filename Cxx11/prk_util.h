@@ -39,6 +39,15 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <iomanip> // std::setprecision
 #include <exception>
 #include <chrono>
+#include <random>
+
+#include <list>
+#include <vector>
+#include <valarray>
+#include <array>
+
+#include <numeric>
+#include <algorithm>
 
 #if !(defined(__cplusplus) && (__cplusplus >= 201103L))
 #error You need a C++11 compiler.
