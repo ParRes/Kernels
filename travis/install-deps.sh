@@ -21,6 +21,11 @@ case "$PRK_TARGET" in
         echo "Serial"
         ;;
 
+    alloctave)
+        echo "Octave"
+        sh ./travis/install-octave.sh $TRAVIS_ROOT
+        ;;
+
     alljulia)
         echo "Julia"
         sh ./travis/install-julia.sh $TRAVIS_ROOT

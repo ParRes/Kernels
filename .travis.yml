@@ -113,6 +113,8 @@ matrix:
     env: PRK_TARGET=allpython
   - compiler: gcc
     env: PRK_TARGET=alloctave
+  - os: linux
+    env: PRK_TARGET=alloctave
   - compiler: gcc
     env: PRK_TARGET=alljulia
   - compiler: touch ~/use-intel-compilers ; gcc
