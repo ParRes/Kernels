@@ -59,61 +59,80 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include "prk_util.h"
+use std::env;
+use std::time::Instant;
 
-int main(int argc, char* argv[])
+fn help() {
+  println!("Usage: <# iterations> <matrix order> [tile size]");
+}
+
+fn main()
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "Serial pipeline execution on 2D grid" << std::endl;
+  println!("Parallel Research Kernels version");
+  println!("Rust pipeline execution on 2D grid");
 
   //////////////////////////////////////////////////////////////////////
-  /// process and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc != 4){
-    std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> <second array dimension>" << std::endl;
-    return(EXIT_FAILURE);
+  let args : Vec<String> = env::args().collect();
+
+  let iterations : u32;
+  let m : usize;
+  let n : usize;
+
+  if args.len() == 4 {
+    iterations = match args[1].parse() {
+      Ok(n) => { n },
+      Err(_) => { help(); return; },
+    };
+    m = match args[2].parse() {
+      Ok(n) => { n },
+      Err(_) => { help(); return; },
+    };
+    n = match args[3].parse() {
+      Ok(n) => { n },
+      Err(_) => { help(); return; },
+    };
+  } else {
+      help();
+      return;
   }
 
-  // number of times to run the pipeline algorithm
-  int iterations  = std::atoi(argv[1]);
-  if (iterations < 1){
-    std::cout << "ERROR: iterations must be >= 1 : " << iterations << std::endl;
-    exit(EXIT_FAILURE);
+  if iterations < 1 {
+    println!("ERROR: iterations must be >= 1");
+  }
+  if m < 1 || n < 1 {
+    println!("ERROR: tilesize cannot be > order");
+    println!("ERROR: grid dimensions must be positive: {}, {}", m, n);
   }
 
-  // grid dimensions
-  size_t m = atol(argv[2]);
-  size_t n = atol(argv[3]);
-  if (m < 1 || n < 1) {
-    std::cout << "ERROR: grid dimensions must be positive: " << m <<  n << std::endl;
-    exit(EXIT_FAILURE);
-  }
+  println!("Grid sizes                = {}, {}", m, n);
+  println!("Number of iterations      = {}", iterations);
 
-  // working set
-  std::vector<double> vector;
-  vector.resize(m*n,0.0);
+  //////////////////////////////////////////////////////////////////////
+  // Allocate space for the input and do the work
+  //////////////////////////////////////////////////////////////////////
 
-  std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
-  std::cout << "Number of iterations      = " << iterations << std::endl;
+  let nelems : usize = m*n;
+  let mut vector : Vec<f64> = vec![0.0; nelems];
 
   // set boundary values (bottom and left side of grid)
-  for (auto j=0; j<n; j++) {
-    vector[0*n+j] = static_cast<double>(j);
+  for j in 0..n {
+    vector[0*n+j] = j as f64;
   }
-  for (auto i=0; i<m; i++) {
-    vector[i*n+0] = static_cast<double>(i);
+  for i in 0..m {
+    vector[i*n+0] = i as f64;
   }
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  let mut t0 = Instant::now();
 
-  for (auto iter = 0; iter<=iterations; iter++){
+  for k in 0..iterations+1 {
 
-    // start timer after a warmup iteration
-    if (iter == 1) pipeline_time = prk::wtime();
+    if k == 1 { t0 = Instant::now(); }
 
-    for (auto i=1; i<m; i++) {
-      for (auto j=1; j<n; j++) {
+    for i in 1..m {
+      for j in 1..n {
         vector[i*n+j] = vector[(i-1)*n+j] + vector[i*n+(j-1)] - vector[(i-1)*n+(j-1)];
       }
     }
@@ -122,34 +141,32 @@ int main(int argc, char* argv[])
     // need a barrier to make sure the latest value is used. This also guarantees
     // that the flags for the next iteration (if any) are not getting clobbered
     vector[0*n+0] = -vector[(m-1)*n+(n-1)];
-  }
 
-  pipeline_time = prk::wtime() - pipeline_time;
+  }
+  let t1 = Instant::now();
+  let pipeline_time = t1 - t0;
 
   //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results.
+  // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
   // error tolerance
-  const double epsilon = 1.e-8;
+  let epsilon : f64 = 0.000000001;
 
   // verify correctness, using top right value
-  auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(vector[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
-    std::cout << "ERROR: checksum " << vector[(m-1)*n+(n-1)]
-              << " does not match verification value" << corner_val << std::endl;
-    exit(EXIT_FAILURE);
+  let corner_val : f64 = (((iterations+1) as usize)*(n + m as usize - 2 as usize)) as f64;
+  if ( (vector[(m-1)*n+(n-1)] - corner_val).abs() / corner_val) > epsilon {
+    println!("ERROR: checksum {} does not match verification value {} ", vector[(m-1)*n+(n-1)], corner_val);
+    return;
   }
 
-#ifdef VERBOSE
-  std::cout << "Solution validates; verification value = " << corner_val << std::endl;
-#else
-  std::cout << "Solution validates" << std::endl;
-#endif
-  auto avgtime = pipeline_time/iterations;
-  std::cout << "Rate (MFlops/s): "
-            << 1.0e-6 * 2. * ( static_cast<size_t>(m-1)*static_cast<size_t>(n-1) )/avgtime
-            << " Avg time (s): " << avgtime << std::endl;
+  if cfg!(VERBOSE) {
+    println!("Solution validates; verification value = {}", corner_val);
+  } else {
+    println!("Solution validates");
+  }
 
-  return 0;
+  let avgtime : f64 = (pipeline_time.as_secs() as f64) / (iterations as f64);
+  let bytes : usize = 2 * (m-1) * (n-1);
+  println!("Rate (MB/s): {:10.3} Avg time (s): {:10.3}", (0.000001 as f64) * (bytes as f64) / avgtime, avgtime);
 }

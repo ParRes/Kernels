@@ -19,7 +19,7 @@ RCFLAGS  = -g
 .PHONY: all clean run
 
 #all: p2p stencil transpose
-all: transpose
+all: p2p transpose
 
 %: %.rs
 	$(RUSTC) $(RCFLAGS) $< -o $@
