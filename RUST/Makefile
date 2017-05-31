@@ -5,21 +5,21 @@ ifndef RADIUS
   RADIUS=2
 endif
 
-STARFLAG = -DSTAR
-
 RUSTC    = rustc
 RCFLAGS  = -g
 
 # Enable verbose printing
-#RCFLAGS += --cfg=VERBOSE
+#RCFLAGS += --cfg "VERBOSE"
 
-# Port these over to cfg
-#RCFLAGS += #-DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
+# Stencil radius
+RCFLAGS += --cfg radius="$(RADIUS)"
+
+# Stencil shape: star is default, uncomment to switch to grid
+#RCFLAGS += --cfg grid
 
 .PHONY: all clean run
 
-#all: p2p stencil transpose
-all: p2p transpose
+all: p2p stencil transpose
 
 %: %.rs
 	$(RUSTC) $(RCFLAGS) $< -o $@

@@ -54,8 +54,9 @@
 ///          wtime()
 ///
 /// HISTORY: - Written by Rob Van der Wijngaart, February 2009.
-///            C99-ification by Jeff Hammond, February 2016.
-///            C++11-ification by Jeff Hammond, May 2017.
+///          - C99-ification by Jeff Hammond, February 2016.
+///          - C++11-ification by Jeff Hammond, May 2017.
+///          - Rust port by Jeff Hammond, May 2017.
 ///
 //////////////////////////////////////////////////////////////////////
 
@@ -95,15 +96,14 @@ fn main()
       Err(_) => { help(); return; },
     };
   } else {
-      help();
-      return;
+    help();
+    return;
   }
 
   if iterations < 1 {
     println!("ERROR: iterations must be >= 1");
   }
   if m < 1 || n < 1 {
-    println!("ERROR: tilesize cannot be > order");
     println!("ERROR: grid dimensions must be positive: {}, {}", m, n);
   }
 
