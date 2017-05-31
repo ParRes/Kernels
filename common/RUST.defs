@@ -1,0 +1,2 @@
+include ../common/make.defs
+include ../common/PRKVERSION
