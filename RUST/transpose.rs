@@ -157,7 +157,6 @@ fn main()
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
   let addit : usize = (iterations as usize + 1) * (iterations as usize / 2);
   let mut abserr : f64 = 0.0;
   for i in 0..order {
