@@ -20,17 +20,25 @@ case "$PRK_TARGET" in
     allserial)
         echo "Serial"
         ;;
-
     alloctave)
         echo "Octave"
         sh ./travis/install-octave.sh $TRAVIS_ROOT
         ;;
-
     alljulia)
         echo "Julia"
         sh ./travis/install-julia.sh $TRAVIS_ROOT
         ;;
-
+    allcxx)
+        echo "C++11"
+        #case "$CXX" in
+        #    g++)
+        #        sh ./travis/install-gcc.sh $TRAVIS_ROOT
+        #        ;;
+        #    clang++)
+        #        sh ./travis/install-clang.sh $TRAVIS_ROOT
+        #        ;;
+        #esac
+        ;;
     allfortran*)
         echo "Fortran"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
@@ -51,7 +59,6 @@ case "$PRK_TARGET" in
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
         fi
         ;;
-
     allopenmp)
         echo "OpenMP"
         if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then

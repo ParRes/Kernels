@@ -57,11 +57,11 @@
 int main(int argc, char * argv[])
 {
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "Serial Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
 
   int iterations;
   size_t order;
@@ -103,7 +103,7 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations  = " << iterations << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
   std::valarray<double> A(0.0,order*order);
@@ -144,7 +144,7 @@ int main(int argc, char * argv[])
   trans_time = prk::wtime() - trans_time;
 
   //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
+  // Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
   // TODO: replace with std::generate, std::accumulate, or similar

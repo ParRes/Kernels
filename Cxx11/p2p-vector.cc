@@ -64,10 +64,10 @@
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "Serial pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11 pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// process and test input parameters
+  // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   if (argc != 4){
@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
   pipeline_time = prk::wtime() - pipeline_time;
 
   //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results.
+  // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
   // error tolerance
