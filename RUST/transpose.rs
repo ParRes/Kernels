@@ -52,132 +52,91 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include "prk_util.h"
+use std::env;
 
-int main(int argc, char * argv[])
+fn help() {
+  println!("Usage: <# iterations> <matrix order> [tile size]");
+}
+
+fn main()
 {
+  println!("Parallel Research Kernels");
+  println!("Rust Matrix transpose: B = A^T");
+
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "Serial Matrix transpose: B = A^T" << std::endl;
+  let args : Vec<String> = env::args().collect();
 
-  int iterations;
-  size_t order;
-  size_t tile_size;
-  try {
-      if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [tile size]";
-      }
+  let iterations : u32;
+  let order      : usize;
+  let tilesize   : usize;
 
-      // number of times to do the transpose
-      iterations  = std::atoi(argv[1]);
-      if (iterations < 1) {
-        throw "ERROR: iterations must be >= 1";
-      }
-
-      // order of a the matrix
-      order = std::atol(argv[2]);
-      if (order <= 0) {
-        throw "ERROR: Matrix Order must be greater than 0";
-      }
-
-      // default tile size for tiling of local transpose
-      tile_size = (argc>4) ? std::atol(argv[3]) : 32;
-      // a negative tile size means no tiling of the local transpose
-      if (tile_size <= 0) tile_size = order;
-
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-    return 1;
-  }
-
-  std::cout << "Matrix order          = " << order << std::endl;
-  if (tile_size < order) {
-      std::cout << "Tile size             = " << tile_size << std::endl;
-  } else {
-      std::cout << "Untiled" << std::endl;
-  }
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-
-  //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
-  //////////////////////////////////////////////////////////////////////
-
-  std::vector<double> A;
-  std::vector<double> B;
-  B.resize(order*order,0.0);
-  A.resize(order*order);
-  // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(A.begin(), A.end(), 0.0);
-
-  auto trans_time = 0.0;
-
-  for (auto iter = 0; iter<=iterations; iter++) {
-
-    // start timer after a warmup iteration
-    if (iter==1) trans_time = prk::wtime();
-
-    // transpose the  matrix
-    if (tile_size < order) {
-      for (auto it=0; it<order; it+=tile_size) {
-        for (auto jt=0; jt<order; jt+=tile_size) {
-          for (auto i=it; i<std::min(order,it+tile_size); i++) {
-            for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
-              B[i*order+j] += A[j*order+i];
-            }
-          }
-        }
-      }
-    } else {
-      for (auto i=0;i<order; i++) {
-        for (auto j=0;j<order;j++) {
-          B[i*order+j] += A[j*order+i];
-        }
-      }
-    }
-
-    // A += 1.0
-    std::transform(A.begin(), A.end(), A.begin(), [](double c) { return c+=1.0; });
-  }
-  trans_time = prk::wtime() - trans_time;
-
-  //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
-  //////////////////////////////////////////////////////////////////////
-
-  // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
-      const size_t ij = i*order+j;
-      const size_t ji = j*order+i;
-      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+  match args.len() {
+    3 => {
+      iterations = match args[1].parse() {
+        Ok(n) => { n },
+        Err(_) => { help(); return; },
+      };
+      order = match args[2].parse() {
+        Ok(n) => { n },
+        Err(_) => { help(); return; },
+      };
+      tilesize = 32;
+    },
+    4 => {
+      iterations = match args[1].parse() {
+        Ok(n) => { n },
+        Err(_) => { help(); return; },
+      };
+      order = match args[2].parse() {
+        Ok(n) => { n },
+        Err(_) => { help(); return; },
+      };
+      tilesize = match args[3].parse() {
+        Ok(n) => { n },
+        Err(_) => { help(); return; },
+      };
+    },
+    _ => {
+      help();
+      return;
     }
   }
 
-#ifdef VERBOSE
-  std::cout << "Sum of absolute differences: " << abserr << std::endl;
-#endif
-
-  const auto epsilon = 1.0e-8;
-  if (abserr < epsilon) {
-    std::cout << "Solution validates" << std::endl;
-    auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
-  } else {
-    std::cout << "ERROR: Aggregate squared error " << abserr
-              << " exceeds threshold " << epsilon << std::endl;
-    return 1;
+  if iterations < 1 {
+    println!("ERROR: iterations must be >= 1");
+  }
+  if tilesize > order {
+    println!("ERROR: tilesize cannot be > order");
   }
 
-  return 0;
+  println!("Matrix order          = {}", order);
+  if tilesize < order {
+      println!("Tile size             = {}", tilesize);
+  } else {
+      println!("Untiled");
+  }
+  println!("Number of iterations  = {}", iterations);
+
+  //////////////////////////////////////////////////////////////////////
+  // Allocate space for the input and transpose matrix
+  //////////////////////////////////////////////////////////////////////
+
+  let nelems : usize = order*order;
+/*
+  let mut a: Vec<f64> = (0..nelems).map(|n| n as f64).collect();
+  let mut b: Vec<f64> = (0..nelems).map(|n| n as f64).collect();
+*/
+  let mut a : Vec<f64> = vec![0.0; nelems];
+  let mut b : Vec<f64> = vec![0.0; nelems];
+
+  for i in 0..order {
+    for j in 0..order {
+      println!("{} {} {}", i, j, a[i*order+j]);
+      a[i*order+j] = (i*order+j) as f64;
+      b[i*order+j] = 0.0;
+    }
+  }
 }
-
-

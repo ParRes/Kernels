@@ -8,14 +8,14 @@ endif
 STARFLAG = -DSTAR
 
 RUSTC    = rustc
-RCFLAGS  = $(DEFAULT_OPT_FLAGS)
-RCFLAGS += -DPRKVERSION=$(PRKVERSION)
-RCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
-RCFLAGS += -I.
+RCFLAGS  = -g
+RCFLAGS += #-DPRKVERSION=$(PRKVERSION)
+RCFLAGS += #-DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
 
 .PHONY: all clean run
 
-all: p2p stencil transpose
+#all: p2p stencil transpose
+all: transpose
 
 %: %.rs
 	$(RUSTC) $(RCFLAGS) $< -o $@
