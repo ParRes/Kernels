@@ -80,7 +80,7 @@ fn main()
   let args : Vec<String> = env::args().collect();
 
   let iterations : u32;
-  let n : usize;
+  let n : u32;
 
   if args.len() == 3 {
     iterations = match args[1].parse() {
@@ -104,7 +104,7 @@ fn main()
   }
 
   // this is disgusting - surely there is a better way...
-  let r : i32 =
+  let r : u32 =
       if cfg!(radius = "1") { 1 } else
       if cfg!(radius = "2") { 2 } else
       if cfg!(radius = "3") { 3 } else
@@ -124,55 +124,61 @@ fn main()
     return;
   }
 
-  let nelems : isize = n*n;
+  println!("Grid size            = {}", n);
+  println!("Radius of stencil    = {}", r);
+  if grid {
+    println!("Type of stencil      = grid");
+  } else {
+    println!("Type of stencil      = star");
+  }
+  println!("Data type            = double precision");
+  println!("Compact representation of stencil loop body");
+  println!("Number of iterations = {}",iterations);
+
+  //////////////////////////////////////////////////////////////////////
+  // Allocate space for the input and do the work
+  //////////////////////////////////////////////////////////////////////
+
+  let nelems : usize = (n as usize)*(n as usize);
   let mut a : Vec<f64> = vec![0.0; nelems as usize];
   let mut b : Vec<f64> = vec![0.0; nelems as usize];
 
-  // weights of points in the stencil
-  let wdim : isize = (2 * r) + 1;
-  let welems : usize = (wdim as usize)*(wdim as usize);
-  let mut w : Vec<f64> = vec![0.0; welems];
-  for jj in -r..r+1 {
-    for ii in -r..r+1 {
-      w[(ii+r)*welems+jj+r] = 0.0;
+  // ws of points in the stencil
+  let wdim : u32 = (2 * r as u32) + 1;
+  let welems : u32 = wdim*wdim;
+  let mut w : Vec<f64> = vec![0.0; welems as usize];
+  for jj in 0..r+1 {
+    for ii in 0..r+1 {
+      let offset : usize = (ii as usize) * (welems as usize) + (jj as usize);
+      w[offset] = 0.0;
+    }
+  }
+
+  // fill the stencil ws to reflect a discrete divergence operator
+  let stencil_size : u32;
+  if grid {
+    stencil_size = 4*r+1;
+    for ii in 1..r+1 {
+      w[r][r+ii] = w[r+ii][r] =  1./(2*ii*r);
+      w[r][r-ii] = w[r-ii][r] = -1./(2*ii*r);
+    }
+  } else {
+    stencil_size = (2*r+1)*(2*r+1);
+    for jj in 1..r+1 {
+      for ii in -jj+1..jj {
+        w[r+ii][r+jj] =  1./(4*jj*(2*jj-1)*r);
+        w[r+ii][r-jj] = -1./(4*jj*(2*jj-1)*r);
+        w[r+jj][r+ii] =  1./(4*jj*(2*jj-1)*r);
+        w[r-jj][r+ii] = -1./(4*jj*(2*jj-1)*r);
+      }
+      w[r+jj][r+jj]   =  1./(4*jj*r);
+      w[r-jj][r-jj]   = -1./(4*jj*r);
     }
   }
 
 /*
-  // fill the stencil weights to reflect a discrete divergence operator
-#ifdef STAR
-  const int stencil_size = 4*r+1;
-  for (auto ii=1; ii<=r; ii++) {
-    weight[r][r+ii] = weight[r+ii][r] = +1./(2*ii*r);
-    weight[r][r-ii] = weight[r-ii][r] = -1./(2*ii*r);
-  }
-#else
-  const int stencil_size = (2*r+1)*(2*r+1);
-  for (auto jj=1; jj<=r; jj++) {
-    for (auto ii=-jj+1; ii<jj; ii++) {
-      weight[r+ii][r+jj] = +1./(4*jj*(2*jj-1)*r);
-      weight[r+ii][r-jj] = -1./(4*jj*(2*jj-1)*r);
-      weight[r+jj][r+ii] = +1./(4*jj*(2*jj-1)*r);
-      weight[r-jj][r+ii] = -1./(4*jj*(2*jj-1)*r);
-    }
-    weight[r+jj][r+jj]   = +1./(4*jj*r);
-    weight[r-jj][r-jj]   = -1./(4*jj*r);
-  }
-#endif
-
   // interior of grid with respect to stencil
   size_t active_points = static_cast<size_t>(n-2*r)*static_cast<size_t>(n-2*r);
-
-  println!("Grid size            = "n);
-  println!("r of stencil    = "r);
-#ifdef STAR
-  println!("Type of stencil      = star");
-#else
-  println!("Type of stencil      = compact");
-#endif
-  println!("Data type            = double precision");
-  println!("Compact representation of stencil loop body");
-  println!("Number of iterations = "iterations);
 
   // initialize the input and output arrays
   for (auto i=0; i<n; i++) {
@@ -198,18 +204,18 @@ fn main()
       for (auto j=r; j<n-r; j++) {
         #ifdef STAR
             for (auto jj=-r; jj<=r; jj++) {
-              out[i*n+j] += weight[r][r+jj]*in[i*n+j+jj];
+              out[i*n+j] += w[r][r+jj]*in[i*n+j+jj];
             }
             for (auto ii=-r; ii<0; ii++) {
-              out[i*n+j] += weight[r+ii][r]*in[(i+ii)*n+j];
+              out[i*n+j] += w[r+ii][r]*in[(i+ii)*n+j];
             }
             for (auto ii=1; ii<=r; ii++) {
-              out[i*n+j] += weight[r+ii][r]*in[(i+ii)*n+j];
+              out[i*n+j] += w[r+ii][r]*in[(i+ii)*n+j];
             }
         #else
             for (auto ii=-r; ii<=r; ii++) {
               for (auto jj=-r; jj<=r; jj++) {
-                out[i*n+j] += weight[r+ii][r+jj]*in[(i+ii)*n+j+jj];
+                out[i*n+j] += w[r+ii][r+jj]*in[(i+ii)*n+j+jj];
               }
             }
         #endif
