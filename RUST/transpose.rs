@@ -53,6 +53,8 @@
 //////////////////////////////////////////////////////////////////////
 
 use std::env;
+use std::mem;
+use std::time::Instant;
 
 fn help() {
   println!("Usage: <# iterations> <matrix order> [tile size]");
@@ -125,18 +127,62 @@ fn main()
   //////////////////////////////////////////////////////////////////////
 
   let nelems : usize = order*order;
-/*
-  let mut a: Vec<f64> = (0..nelems).map(|n| n as f64).collect();
-  let mut b: Vec<f64> = (0..nelems).map(|n| n as f64).collect();
-*/
   let mut a : Vec<f64> = vec![0.0; nelems];
   let mut b : Vec<f64> = vec![0.0; nelems];
 
   for i in 0..order {
     for j in 0..order {
-      println!("{} {} {}", i, j, a[i*order+j]);
       a[i*order+j] = (i*order+j) as f64;
-      b[i*order+j] = 0.0;
     }
   }
+
+  let mut t0 = Instant::now();
+
+  for k in 0..iterations+1 {
+
+    if k == 1 { t0 = Instant::now(); }
+
+    for i in 0..order {
+      for j in 0..order {
+        b[j*order+i] += a[i*order+j];
+        a[i*order+j] += 1.0;
+      }
+    }
+
+  }
+  let t1 = Instant::now();
+  let trans_time = t1 - t0;
+
+  //////////////////////////////////////////////////////////////////////
+  /// Analyze and output results
+  //////////////////////////////////////////////////////////////////////
+
+  // TODO: replace with std::generate, std::accumulate, or similar
+  let addit : usize = (iterations as usize + 1) * (iterations as usize / 2);
+  let mut abserr : f64 = 0.0;
+  for i in 0..order {
+    for j in 0..order {
+      let ij = i*order+j;
+      let ji = j*order+i;
+      let reference : f64 = (ij*(1+iterations as usize)+addit) as f64;
+      abserr += (b[ji] - reference).abs();
+    }
+  }
+
+  if cfg!(VERBOSE) {
+    println!("Sum of absolute differences: {:30.15}", abserr);
+  }
+
+  let epsilon : f64 = 0.000000001;
+  if abserr < epsilon {
+    println!("Solution validates");
+    let avgtime : f64 = (trans_time.as_secs() as f64) / (iterations as f64);
+    let bytes : usize = 2 * nelems * mem::size_of::<f64>();
+    println!("Rate (MB/s): {:10.3} Avg time (s): {:10.3}", (0.000001 as f64) * (bytes as f64) / avgtime, avgtime);
+  } else {
+    println!("ERROR: Aggregate squared error {:30.15} exceeds threshold {:30.15}", abserr, epsilon);
+    return;
+  }
 }
+
+

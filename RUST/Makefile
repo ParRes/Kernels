@@ -9,8 +9,12 @@ STARFLAG = -DSTAR
 
 RUSTC    = rustc
 RCFLAGS  = -g
-RCFLAGS += #-DPRKVERSION=$(PRKVERSION)
-RCFLAGS += #-DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
+
+# Enable verbose printing
+#RCFLAGS += --cfg=VERBOSE
+
+# Port these over to cfg
+#RCFLAGS += #-DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
 
 .PHONY: all clean run
 
