@@ -91,6 +91,15 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 PATCH 0 200 100 200 
         $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5
         ;;
+    allcxx)
+        echo "C++11"
+        echo "CXX=$CXX -std=c++11" >> common/make.defs
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=Cxx11
+        $PRK_TARGET_PATH/p2p       10 1024 1024
+        $PRK_TARGET_PATH/stencil   10 1000
+        $PRK_TARGET_PATH/transpose 10 1024 32
+        ;;
     allfortran*)
         # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
         echo "Fortran"
