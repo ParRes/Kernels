@@ -92,7 +92,7 @@ int main(int argc, char * argv[])
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
-  } 
+  }
 
   std::cout << "Matrix order          = " << order << std::endl;
   if (tile_size < order) {
@@ -113,25 +113,24 @@ int main(int argc, char * argv[])
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 
-  double trans_time = 0.0;
-  {
-      for (auto iter = 0; iter<=iterations; iter++) {
+  auto trans_time = 0.0;
 
-        /// start timer after a warmup iteration
-        if (iter==1) trans_time = prk::wtime();
+  for (auto iter = 0; iter<=iterations; iter++) {
 
-        /// transpose the  matrix
-        for (auto i=0;i<order; i++) {
-          for (auto j=0;j<order;j++) {
-            B[i*order+j] += A[j*order+i];
-          }
-        }
+    // start timer after a warmup iteration
+    if (iter==1) trans_time = prk::wtime();
 
-        /// A += 1.0
-        std::transform(A.begin(), A.end(), A.begin(), [](double c) { return c+=1.0; });
+    // transpose the  matrix
+    for (auto i=0;i<order; i++) {
+      for (auto j=0;j<order;j++) {
+        B[i*order+j] += A[j*order+i];
       }
-      trans_time = prk::wtime() - trans_time;
+    }
+
+    // A += 1.0
+    std::transform(A.begin(), A.end(), A.begin(), [](double c) { return c+=1.0; });
   }
+  trans_time = prk::wtime() - trans_time;
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
