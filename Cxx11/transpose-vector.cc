@@ -121,9 +121,21 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     // transpose the  matrix
-    for (auto i=0;i<order; i++) {
-      for (auto j=0;j<order;j++) {
-        B[i*order+j] += A[j*order+i];
+    if (tile_size < order) {
+      for (auto it=0; it<order; it+=tile_size) {
+        for (auto jt=0; jt<order; jt+=tile_size) {
+          for (auto i=it; i<std::min(order,it+tile_size); i++) {
+            for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
+              B[i*order+j] += A[j*order+i];
+            }
+          }
+        }
+      }
+    } else {
+      for (auto i=0;i<order; i++) {
+        for (auto j=0;j<order;j++) {
+          B[i*order+j] += A[j*order+i];
+        }
       }
     }
 

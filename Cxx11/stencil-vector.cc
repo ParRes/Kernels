@@ -66,8 +66,8 @@ const int radius = RADIUS;
 
 int main(int argc, char * argv[])
 {
-    std::cout << "Parallel Research Kernels Version " << PRKVERSION << std::endl;
-    std::cout << "Serial stencil execution on 2D grid" << std::endl;
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Serial stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // process and test input parameters

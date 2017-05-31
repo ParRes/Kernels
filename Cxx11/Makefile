@@ -15,9 +15,9 @@ CXXFLAGS += -I.
 
 .PHONY: all clean run vector valarray
 
+all: vector valarray
 vector: p2p-vector stencil-vector transpose-vector
 valarray: transpose-valarray
-all: vector valarray
 
 %: %.cc
 	$(CXX) $(CXXFLAGS) $< -o $@

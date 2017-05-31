@@ -63,12 +63,12 @@
 
 int main(int argc, char* argv[])
 {
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Serial pipeline execution on 2D grid" << std::endl;
+
   //////////////////////////////////////////////////////////////////////
   /// process and test input parameters
   //////////////////////////////////////////////////////////////////////
-
-  std::cout << "Parallel Research Kernels version" << PRKVERSION << std::endl;
-  std::cout << "Serial pipeline execution on 2D grid" << std::endl;
 
   if (argc != 4){
     std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> <second array dimension>" << std::endl;
