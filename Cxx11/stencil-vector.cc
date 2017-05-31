@@ -64,6 +64,34 @@
 
 const int radius = RADIUS;
 
+#define RESTRICT __restrict__
+
+template <int radius, bool star>
+void do_stencil(int n, double weight[2*radius+1][2*radius+1], std::vector<double> & in, std::vector<double> & out)
+{
+    for (auto i=radius; i<n-radius; i++) {
+      for (auto j=radius; j<n-radius; j++) {
+        if (star) {
+          for (auto jj=-radius; jj<=radius; jj++) {
+            out[i*n+j] += weight[radius][radius+jj]*in[i*n+j+jj];
+          }
+          for (auto ii=-radius; ii<0; ii++) {
+            out[i*n+j] += weight[radius+ii][radius]*in[(i+ii)*n+j];
+          }
+          for (auto ii=1; ii<=radius; ii++) {
+            out[i*n+j] += weight[radius+ii][radius]*in[(i+ii)*n+j];
+          }
+        } else {
+          for (auto ii=-radius; ii<=radius; ii++) {
+            for (auto jj=-radius; jj<=radius; jj++) {
+              out[i*n+j] += weight[radius+ii][radius+jj]*in[(i+ii)*n+j+jj];
+            }
+          }
+        }
+      }
+    }
+}
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -106,7 +134,8 @@ int main(int argc, char * argv[])
   out.resize(n*n,0.0);
 
   // weights of points in the stencil
-  std::array< std::array<double,2*radius+1>, 2*radius+1> weight;
+  //std::array< std::array<double,2*radius+1>, 2*radius+1> weight;
+  double weight[2*radius+1][2*radius+1];
   for (auto jj=-radius; jj<=radius; jj++) {
     for (auto ii=-radius; ii<=radius; ii++) {
       weight[ii+radius][jj+radius] = 0.0;
@@ -168,6 +197,7 @@ int main(int argc, char * argv[])
     if (iter==1) stencil_time = prk::wtime();
 
     // Apply the stencil operator
+#if 0
     for (auto i=radius; i<n-radius; i++) {
       for (auto j=radius; j<n-radius; j++) {
         #ifdef STAR
@@ -189,7 +219,13 @@ int main(int argc, char * argv[])
         #endif
       }
     }
-
+#else
+#ifdef STAR
+    do_stencil<RADIUS,true>(n, weight, in, out);
+#else
+    do_stencil<RADIUS,false>(n, weight, in, out);
+#endif
+#endif
     // add constant to solution to force refresh of neighbor data, if any
     std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
 
