@@ -326,6 +326,8 @@ program main
   !right remote dimension
   if(coords(2)<dims(2)) nr_r = nr[coords(1),coords(2)+1]
 
+  t0 = 0
+
   sync all
 
   do k=0,iterations

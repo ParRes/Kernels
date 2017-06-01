@@ -204,6 +204,8 @@ program main
   !B(r+1:n-r,r+1:n-r) = 0 ! minimal
   B = 0 ! sufficient
 
+  t0 = 0
+
   do k=0,iterations
 
     ! start timer after a warmup iteration

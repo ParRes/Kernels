@@ -158,6 +158,8 @@ program main
   write(*,'(a,i8)') 'Tile size            = ', tile_size
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
+  t0 = 0
+
 #ifdef _OPENMP
   !$omp parallel default(none)                     &
   !$omp&  shared(A,B,t0,t1)                        &

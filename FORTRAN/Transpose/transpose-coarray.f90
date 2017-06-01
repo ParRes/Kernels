@@ -220,6 +220,8 @@ program main
   endif
   sync all ! barrier to ensure initialization is finished at all PEs
 
+  t0 = 0
+
   do k=0,iterations
 
     if (k.eq.1) then
@@ -319,7 +321,7 @@ program main
       write(6,'(a)') 'Solution validates'
       avgtime = trans_time/iterations
       write(6,'(a12,f13.6,a17,f10.6)') 'Rate (MB/s): ',&
-              1.e-6*bytes/avgtime,' Avg time (s): ', avgtime
+              (1.d-6*bytes/avgtime),' Avg time (s): ', avgtime
     endif
   else
     if (printer) then
