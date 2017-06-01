@@ -47,6 +47,7 @@ default: allserial allopenmp allmpi
 help:
 	@echo "Usage: \"make all\"          (re-)builds all targets"
 	@echo "       \"make allserial\"    (re-)builds all serial targets"
+	@echo "       \"make allcxx\"       (re-)builds all C++ targets"
 	@echo "       \"make allopenmp\"    (re-)builds all OpenMP targets"
 	@echo "       \"make allmpi1\"      (re-)builds all conventional MPI targets"
 	@echo "       \"make allfgmpi\"     (re-)builds all Fine-Grain MPI targets"
@@ -205,27 +206,33 @@ allserial:
 	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd SERIAL/AMR;              $(MAKE) amr       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
-allfortran: allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
+allfortran: #allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
+	$(MAKE) -C FORTRAN/Synch_p2p
+	$(MAKE) -C FORTRAN/Stencil
+	$(MAKE) -C FORTRAN/Transpose
 
 allfortranserial:
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p
-	cd FORTRAN/Stencil;         $(MAKE) stencil
-	cd FORTRAN/Transpose;       $(MAKE) transpose
+	$(MAKE) -C FORTRAN/Synch_p2p p2p
+	$(MAKE) -C FORTRAN/Stencil   stencil
+	$(MAKE) -C FORTRAN/Transpose transpose
 
 allfortranopenmp:
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-omp
-	cd FORTRAN/Stencil;         $(MAKE) stencil-omp
-	cd FORTRAN/Transpose;       $(MAKE) transpose-omp
+	$(MAKE) -C FORTRAN/Synch_p2p p2p-omp
+	$(MAKE) -C FORTRAN/Stencil   stencil-omp
+	$(MAKE) -C FORTRAN/Transpose transpose-omp
 
 allfortrancoarray:
-	cd FORTRAN/Synch_p2p;       $(MAKE) p2p-coarray
-	cd FORTRAN/Stencil;         $(MAKE) stencil-coarray
-	cd FORTRAN/Transpose;       $(MAKE) transpose-coarray
+	$(MAKE) -C FORTRAN/Synch_p2p p2p-coarray
+	$(MAKE) -C FORTRAN/Stencil   stencil-coarray
+	$(MAKE) -C FORTRAN/Transpose transpose-coarray
 
 allfortranpretty:
-	cd FORTRAN/Stencil;         $(MAKE) stencil-pretty
-	#cd FORTRAN/Synch_p2p;       $(MAKE) p2p-pretty
-	cd FORTRAN/Transpose;       $(MAKE) transpose-pretty
+	#$(MAKE) -C FORTRAN/Synch_p2p  p2p-pretty
+	$(MAKE) -C FORTRAN/Stencil    stencil-pretty
+	$(MAKE) -C FORTRAN/Transpose  transpose-pretty
+
+allcxx:
+	$(MAKE) -C Cxx11
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
@@ -313,6 +320,7 @@ clean:
 	cd FORTRAN/Transpose;       $(MAKE) clean
 	cd FORTRAN/Synch_p2p;       $(MAKE) clean
 	cd FORTRAN/Stencil;         $(MAKE) clean
+	cd Cxx11;                   $(MAKE) clean
 	rm -f stats.json
 
 veryclean: clean

@@ -3,6 +3,7 @@ language: cpp
 env:
   matrix:
   - PRK_TARGET=allserial
+  - PRK_TARGET=allcxx
   - PRK_TARGET=allpython
   - PRK_TARGET=alloctave
   - PRK_TARGET=alljulia
@@ -186,12 +187,12 @@ addons:
     #- boost-latest
     packages:
     - python-numpy
-    - gcc-4.9
-    - g++-4.9
-    - gfortran-4.9
     - gcc-5
     - g++-5
     - gfortran-5
+    - gcc-6
+    - g++-6
+    - gfortran-6
     # Required by GUPC
     - libnuma-dev
     # This should provide OpenMP

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -e
 set -x
 
@@ -88,8 +89,30 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 2 GEOMETRIC 0.99
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 0 1 SINUSOIDAL
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 LINEAR 1.0 3.0
-        $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 PATCH 0 200 100 200 
+        $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 PATCH 0 200 100 200
         $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5
+        ;;
+    allcxx)
+        echo "C++11"
+        for major in "-9" "-8" "-7" "-6" "-5" "-4" "-3" "-2" "-1" "" ; do
+          if [ -f "`which ${CXX}${major}`" ]; then
+              export PRK_CXX="${CXX}${major}"
+              echo "Found C++: $PRK_CXX"
+              break
+          fi
+        done
+        if [ "x$PRK_CXX" = "x" ] ; then
+            echo "No C++ compiler found!"
+            exit 9
+        fi
+        ${PRK_CXX} -v
+        echo "CXX=${PRK_CXX} -std=c++11" >> common/make.defs
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=Cxx11
+        $PRK_TARGET_PATH/p2p-vector         10 1024 1024
+        $PRK_TARGET_PATH/stencil-vector     10 1000
+        $PRK_TARGET_PATH/transpose-vector   10 1024 32
+        $PRK_TARGET_PATH/transpose-valarray 10 1024 32
         ;;
     allfortran*)
         # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
@@ -99,9 +122,9 @@ case "$PRK_TARGET" in
                 echo "FC=ifort" >> common/make.defs
                 ;;
             gcc)
-                for gccversion in "-6" "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
-                    if [ -f "`which gfortran$gccversion`" ]; then
-                        export PRK_FC="gfortran$gccversion"
+                for major in "-9" "-8" "-7" "-6" "-5" "-4" "-3" "-2" "-1" "" ; do
+                    if [ -f "`which gfortran$major`" ]; then
+                        export PRK_FC="gfortran$major"
                         echo "Found GCC Fortran: $PRK_FC"
                         break
                     fi
