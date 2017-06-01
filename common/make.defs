@@ -1,5 +1,5 @@
 #name of MPI C compiler, e.g. mpiicc, mpicc 
-MPICC=/home/rfvander/ompi-install/bin/mpicc
+MPICC=mpiicc
 
 #name of C compiler, e.g. icc, xlc, gcc
 CC=icc
