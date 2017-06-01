@@ -7,6 +7,7 @@ env:
   - PRK_TARGET=allpython
   - PRK_TARGET=alloctave
   - PRK_TARGET=alljulia
+  - PRK_TARGET=allrust
   - PRK_TARGET=allopenmp
   - PRK_TARGET=allfortranserial
   - PRK_TARGET=allfortranopenmp
@@ -109,21 +110,30 @@ matrix:
     env: PRK_TARGET=allfortranpretty
   - compiler: clang
     env: PRK_TARGET=allfortrancoarray
-  # Python/Julia/Octave does not use compiler so only test one of them per OS (Clang)
-  - compiler: gcc
-    env: PRK_TARGET=allpython
-  - compiler: gcc
-    env: PRK_TARGET=alloctave
+  # Skip Linux because we rely on Homebrew for these
   - os: linux
     env: PRK_TARGET=alloctave
+  - os: linux
+    env: PRK_TARGET=allrust
+  # Python/Julia/Octave does not use compiler so only test one of them per OS (Clang)
+  # GCC
+  - compiler: gcc
+    env: PRK_TARGET=allpython
+  - compiler: gcc
+    env: PRK_TARGET=alloctave
   - compiler: gcc
     env: PRK_TARGET=alljulia
+  - compiler: gcc
+    env: PRK_TARGET=allrust
+  # ICC
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allpython
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=alloctave
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=alljulia
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allrust
   # MPI implementations of Transpose hang with Intel compilers (why?!?!)
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allmpi1

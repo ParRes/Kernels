@@ -57,6 +57,15 @@ case "$PRK_TARGET" in
         ./$PRK_TARGET_PATH/transpose.m         10 100
         ./$PRK_TARGET_PATH/transpose-pretty.m  10 1024
         ;;
+    allrust)
+        echo "Rust"
+        which rustc
+        rustc --version
+        export PRK_TARGET_PATH=RUST
+        ./$PRK_TARGET_PATH/p2p.rs               10 100 100
+        #./$PRK_TARGET_PATH/stencil.rs           10 100
+        ./$PRK_TARGET_PATH/transpose.rs         10 100
+        ;;
     alljulia)
         echo "Julia"
         case "$os" in
