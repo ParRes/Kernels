@@ -54,10 +54,10 @@
 ///
 /// HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 ///          - RvdW: Removed unrolling pragmas for clarity;
-///            added constant to array "in" at end of each iteration to force
+///            added constant to array "a" at end of each iteration to force
 ///            refreshing of neighbor data in parallel versions; August 2013
 ///          - C++11-ification by Jeff Hammond, May 2017.
-///          - radiust port by Jeff Hammond, May 2017.
+///          - Rust port by Jeff Hammond, May 2017.
 ///
 //////////////////////////////////////////////////////////////////////
 
@@ -71,7 +71,7 @@ fn help() {
 fn main()
 {
   println!("Parallel Research Kernels");
-  println!("radiust stencil execution on 2D grid");
+  println!("Rust stencil execution on 2D grid");
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -79,8 +79,8 @@ fn main()
 
   let args : Vec<String> = env::args().collect();
 
-  let iterations : u32;
-  let n : u32;
+  let iterations : usize;
+  let n : usize;
 
   if args.len() == 3 {
     iterations = match args[1].parse() {
@@ -104,14 +104,14 @@ fn main()
   }
 
   // this is disgusting - surely there is a better way...
-  let r : u32 =
+  let r : usize =
       if cfg!(radius = "1") { 1 } else
       if cfg!(radius = "2") { 2 } else
       if cfg!(radius = "3") { 3 } else
       if cfg!(radius = "4") { 4 } else
       if cfg!(radius = "5") { 5 } else
       if cfg!(radius = "6") { 6 } else
-      { 0 };
+      { 2 };
 
   // grid stencil (star is the default)
   let grid : bool = if cfg!(grid) { true } else { false };
@@ -143,119 +143,155 @@ fn main()
   let mut a : Vec<f64> = vec![0.0; nelems as usize];
   let mut b : Vec<f64> = vec![0.0; nelems as usize];
 
-  // ws of points in the stencil
-  let wdim : u32 = (2 * r as u32) + 1;
-  let welems : u32 = wdim*wdim;
+  // ws of points a the stencil
+  let wdim : usize = (2 * r as usize) + 1;
+  let welems : usize = wdim*wdim;
   let mut w : Vec<f64> = vec![0.0; welems as usize];
   for jj in 0..r+1 {
     for ii in 0..r+1 {
-      let offset : usize = (ii as usize) * (welems as usize) + (jj as usize);
+      let offset : usize = (ii as usize) * (welems as usize) + (jj as usize) as usize;
       w[offset] = 0.0;
     }
   }
 
   // fill the stencil ws to reflect a discrete divergence operator
-  let stencil_size : u32;
+  let stencil_size : usize;
   if grid {
-    stencil_size = 4*r+1;
-    for ii in 1..r+1 {
-      w[r][r+ii] = w[r+ii][r] =  1./(2*ii*r);
-      w[r][r-ii] = w[r-ii][r] = -1./(2*ii*r);
-    }
-  } else {
+    // THIS IS BUSTED
     stencil_size = (2*r+1)*(2*r+1);
     for jj in 1..r+1 {
-      for ii in -jj+1..jj {
-        w[r+ii][r+jj] =  1./(4*jj*(2*jj-1)*r);
-        w[r+ii][r-jj] = -1./(4*jj*(2*jj-1)*r);
-        w[r+jj][r+ii] =  1./(4*jj*(2*jj-1)*r);
-        w[r-jj][r+ii] = -1./(4*jj*(2*jj-1)*r);
+      for ii in 1-jj..jj {
+        let denom : f64 = (4*jj*(2*jj-1)*r) as f64;
+        //w[r+ii][r+jj] =  1./denom;
+        let offset : usize = ((r+ii) * wdim) + (r+jj);
+        w[offset] =  1./denom;
+        //w[r+ii][r-jj] = -1./denom;
+        let offset : usize = ((r+ii) * wdim) + (r-jj);
+        w[offset] = -1./denom;
+        //w[r+jj][r+ii] =  1./denom;
+        let offset : usize = ((r+jj) * wdim) + (r+ii);
+        w[offset] =  1./denom;
+        //w[r-jj][r+ii] = -1./denom;
+        let offset : usize = ((r-jj) * wdim) + (r+ii);
+        w[offset] = -1./denom;
       }
-      w[r+jj][r+jj]   =  1./(4*jj*r);
-      w[r-jj][r-jj]   = -1./(4*jj*r);
+      let denom : f64 = (4*jj*r) as f64;
+      //w[r+jj][r+jj]   =  1./denom;
+      let offset : usize = (((r+jj) * wdim) + (r+jj)) as usize;
+      w[offset] = -1./denom;
+      //w[r-jj][r-jj]   = -1./denom;
+      let offset : usize = (((r-jj) * wdim) + (r-jj)) as usize;
+      w[offset] = -1./denom;
+    }
+  }  else /* star */ {
+    stencil_size = 4*r+1;
+    for ii in 1..r+1 {
+      let denom : f64 = (2 * ii * r) as f64;
+      //w[r][r+ii] =  1./denom;
+      let offset : usize = ((r) * wdim) + (r+ii);
+      w[offset] =  1./denom;
+      //w[r][r-ii] = -1./denom;
+      let offset : usize = ((r) * wdim) + (r-ii);
+      w[offset] = -1./denom;
+      //w[r+ii][r] =  1./denom;
+      let offset : usize = ((r+ii) * wdim) + (r+ii);
+      w[offset] =  1./denom;
+      //w[r-ii][r] = -1./denom;
+      let offset : usize = ((r-ii) * wdim) + (r+ii);
+      w[offset] = -1./denom;
     }
   }
 
-/*
   // interior of grid with respect to stencil
-  size_t active_points = static_cast<size_t>(n-2*r)*static_cast<size_t>(n-2*r);
+  let active_points : usize = (n-2*r)*(n-2*r);
 
   // initialize the input and output arrays
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
-      in[i*n+j] = static_cast<double>(i+j);
-    }
-  }
-  for (auto i=r; i<n-r; i++) {
-    for (auto j=r; j<n-r; j++) {
-      out[i*n+j] = 0.0;
+  for j in 0..n {
+    for i in 0..n {
+      a[i*n+j] = (i+j) as f64;
+      b[i*n+j] = 0.0;
     }
   }
 
-  auto stencil_time = 0.0;
+  let mut t0 = Instant::now();
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for k in 0..iterations+1 {
 
     // start timer after a warmup iteration
-    if (iter==1) stencil_time = prk::wtime();
+    if k == 1 { t0 = Instant::now(); }
 
     // Apply the stencil operator
-    for (auto i=r; i<n-r; i++) {
-      for (auto j=r; j<n-r; j++) {
-        #ifdef STAR
-            for (auto jj=-r; jj<=r; jj++) {
-              out[i*n+j] += w[r][r+jj]*in[i*n+j+jj];
+    for i in r..n-r {
+      for j in r..n-r {
+        if grid {
+          for ii in 0-r..r+1 {
+            for jj in 0-r..r+1 {
+              let offset : usize = ((r+ii) * wdim) + (r+jj);
+              b[i*n+j] += w[offset]*a[(i+ii)*n+j+jj];
             }
-            for (auto ii=-r; ii<0; ii++) {
-              out[i*n+j] += w[r+ii][r]*in[(i+ii)*n+j];
-            }
-            for (auto ii=1; ii<=r; ii++) {
-              out[i*n+j] += w[r+ii][r]*in[(i+ii)*n+j];
-            }
-        #else
-            for (auto ii=-r; ii<=r; ii++) {
-              for (auto jj=-r; jj<=r; jj++) {
-                out[i*n+j] += w[r+ii][r+jj]*in[(i+ii)*n+j+jj];
-              }
-            }
-        #endif
+          }
+        } else {
+          let offset : usize = ((r) * wdim) + (r);
+          b[i*n+j] += w[offset]*a[i*n+j];
+          for jj in r..0 {
+            let offset : usize = ((r) * wdim) + (r-jj);
+            b[i*n+j] += w[offset]*a[i*n+j-jj];
+          }
+          for jj in 1..r+1 {
+            let offset : usize = ((r) * wdim) + (r+jj);
+            b[i*n+j] += w[offset]*a[i*n+j+jj];
+          }
+          for ii in r..0 {
+            let offset : usize = ((r-ii) * wdim) + (r);
+            b[i*n+j] += w[offset]*a[(i-ii)*n+j];
+          }
+          for ii in 1..r+1 {
+            let offset : usize = ((r+ii) * wdim) + (r);
+            b[i*n+j] += w[offset]*a[(i+ii)*n+j];
+          }
+        }
       }
     }
 
     // add constant to solution to force refresh of neighbor data, if any
-    std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
-
+    for j in 0..n {
+      for i in 0..n {
+        a[i*n+j] += 1.0;
+      }
+    }
   }
-  stencil_time = prk::wtime() - stencil_time;
+  let t1 = Instant::now();
+  let stencil_time = t1 - t0;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
-  // compute L1 norm in parallel
-  double norm = 0.0;
-  for (auto i=r; i<n-r; i++) {
-    for (auto j=r; j<n-r; j++) {
-      norm += std::fabs(out[i*n+j]);
+  // error tolerance
+  let epsilon : f64 = 0.000000001;
+
+  // compute L1 norm a parallel
+  let mut norm : f64 = 0.0;
+  for i in r..n-r+1 {
+    for j in r..n-r+1 {
+      norm += (b[i*n+j]).abs();
     }
   }
-  norm /= active_points;
+  norm /= active_points as f64;
 
   // verify correctness
-  const double epsilon = 1.0e-8;
-  double reference_norm = 2.*(iterations+1.);
-  if (std::fabs(norm-reference_norm) > epsilon) {
+  let reference_norm : f64 = 2.*(iterations as f64 + 1.);
+  if (norm-reference_norm).abs() > epsilon {
     println!("ERROR: L1 norm = {} Reference L1 norm = {}", norm, reference_norm);
-    return 1;
+    return;
   } else {
     println!("Solution validates");
     if cfg!(VERBOSE) {
       println!("L1 norm = {} Reference L1 norm = {}", norm, reference_norm);
     }
-    size_t flops = (2L*(size_t)stencil_size+1L) * active_points;
-    auto avgtime = stencil_time/iterations;
-    println!("Rate (MFlops/s): {} Avg time (s): {}", 1.0e-6 * static_cast<double>(flops)/avgtime, avgtime);
+    let flops : usize = (2*stencil_size+1) * active_points;
+    let avgtime : f64 = (stencil_time.as_secs() as f64) / (iterations as f64);
+    println!("Rate (MFlops/s): {:10.3} Avg time (s): {:10.3}", (0.000001 as f64) * (flops as f64) / avgtime, avgtime);
   }
 
-*/
 }
