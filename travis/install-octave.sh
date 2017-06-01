@@ -26,6 +26,5 @@ case "$os" in
 
     Linux)
         echo "Linux not supported"
-        exit -1
     ;;
 esac
