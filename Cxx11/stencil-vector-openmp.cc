@@ -64,8 +64,6 @@
 
 const int radius = RADIUS;
 
-#define RESTRICT __restrict__
-
 template <int radius, bool star>
 void do_stencil(int n, double weight[2*radius+1][2*radius+1], std::vector<double> & in, std::vector<double> & out)
 {

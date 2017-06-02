@@ -64,9 +64,11 @@
 
 const int radius = RADIUS;
 
+_Pragma("omp declare target")
 template <int radius, bool star>
-void do_stencil(int n, double weight[2*radius+1][2*radius+1], std::vector<double> & in, std::vector<double> & out)
+void do_stencil(int n, double weight[2*radius+1][2*radius+1], double * RESTRICT in, double * RESTRICT out)
 {
+    _Pragma("omp for")
     for (auto i=radius; i<n-radius; i++) {
       for (auto j=radius; j<n-radius; j++) {
         if (star) {
@@ -89,6 +91,7 @@ void do_stencil(int n, double weight[2*radius+1][2*radius+1], std::vector<double
       }
     }
 }
+_Pragma("omp end declare target")
 
 int main(int argc, char * argv[])
 {
@@ -174,42 +177,79 @@ int main(int argc, char * argv[])
   // interior of grid with respect to stencil
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
+#if 0
+  // How to map STL containers for target data?
   std::vector<double> in;
   std::vector<double> out;
   in.resize(n*n);
-  out.resize(n*n,0.0);
+  out.resize(n*n);
+#else
+  double * RESTRICT in  = new double[n*n];
+  double * RESTRICT out = new double[n*n];
+#endif
 
   auto stencil_time = 0.0;
 
-  // initialize the input array
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
-      in[i*n+j] = static_cast<double>(i+j);
+  // HOST
+  // initialize the input and output arrays
+  _Pragma("omp parallel")
+  {
+    _Pragma("omp for")
+    for (auto i=0; i<n; i++) {
+      for (auto j=0; j<n; j++) {
+        in[i*n+j] = static_cast<double>(i+j);
+        out[i*n+j] = 0.0;
+      }
     }
   }
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  // DEVICE
+  _Pragma("omp target map(tofrom: in[0:n*n], out[0:n*n]) map(to:weight[0:2*radius+1][0:2*radius+1]) map(from:stencil_time)")
+  _Pragma("omp parallel")
+  {
+    for (auto iter = 0; iter<=iterations; iter++) {
 
-    if (iter==1) stencil_time = prk::wtime();
+      if (iter==1) {
+          _Pragma("omp barrier")
+          _Pragma("omp master")
+          stencil_time = prk::wtime();
+      }
 
-    // Apply the stencil operator
+      // Apply the stencil operator
 #ifdef STAR
-    do_stencil<RADIUS,true>(n, weight, in, out);
+      do_stencil<RADIUS,true>(n, weight, in, out);
 #else
-    do_stencil<RADIUS,false>(n, weight, in, out);
+      do_stencil<RADIUS,false>(n, weight, in, out);
 #endif
-    // add constant to solution to force refresh of neighbor data, if any
-    std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
 
+      // add constant to solution to force refresh of neighbor data, if any
+#if 0
+      _Pragma("omp single")
+      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
+#else
+      _Pragma("omp for")
+      for (auto i=0; i<n; i++) {
+        for (auto j=0; j<n; j++) {
+          in[i*n+j] += 1.0;
+        }
+      }
+#endif
+    }
+    {
+        _Pragma("omp barrier")
+        _Pragma("omp master")
+        stencil_time = prk::wtime() - stencil_time;
+    }
   }
-  stencil_time = prk::wtime() - stencil_time;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
+  // HOST
   // compute L1 norm in parallel
   double norm = 0.0;
+  _Pragma("omp parallel for reduction(+:norm)")
   for (auto i=radius; i<n-radius; i++) {
     for (auto j=radius; j<n-radius; j++) {
       norm += std::fabs(out[i*n+j]);

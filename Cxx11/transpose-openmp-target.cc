@@ -106,13 +106,20 @@ int main(int argc, char * argv[])
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
+#if 0
+  // How to map STL containers for target data?
   std::vector<double> A;
   std::vector<double> B;
   A.resize(order*order);
   B.resize(order*order);
+#else
+  double * RESTRICT A = new double[order*order];
+  double * RESTRICT B = new double[order*order];
+#endif
 
   auto trans_time = 0.0;
 
+  // HOST
   _Pragma("omp parallel")
   {
     _Pragma("omp for")
@@ -122,7 +129,12 @@ int main(int argc, char * argv[])
         B[i*order+j] = 0.0;
       }
     }
+  }
 
+  // DEVICE
+  _Pragma("omp target map(tofrom: A[0:order*order], B[0:order*order]) map(from:trans_time)")
+  _Pragma("omp parallel")
+  {
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
@@ -165,6 +177,7 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
+  // HOST
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
   _Pragma("omp parallel for reduction(+:abserr)")
