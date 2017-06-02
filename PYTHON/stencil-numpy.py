@@ -64,11 +64,11 @@ def main():
     # read and test input parameters
     # ********************************************************************
 
-    print 'Parallel Research Kernels version ' #, PRKVERSION
-    print 'Python stencil execution on 2D grid'
+    print('Parallel Research Kernels version ') #, PRKVERSION
+    print('Python stencil execution on 2D grid')
 
     if len(sys.argv) < 3:
-        print 'argument count = ', len(sys.argv)
+        print('argument count = ', len(sys.argv))
         sys.exit("Usage: ./stencil <# iterations> <array dimension> [<star/stencil> <radius>]")
 
     iterations = int(sys.argv[1])
@@ -93,16 +93,16 @@ def main():
     else:
         r = 2 # radius=2 is what other impls use right now
 
-    print 'Grid size            = ', n
-    print 'Radius of stencil    = ', r
+    print('Grid size            = ', n)
+    print('Radius of stencil    = ', r)
     if pattern == 'star':
-        print 'Type of stencil      = ','star'
+        print('Type of stencil      = ','star')
     else:
-        print 'Type of stencil      = ','stencil'
+        print('Type of stencil      = ','stencil')
 
-    print 'Data type            = double precision'
-    print 'Compact representation of stencil loop body'
-    print 'Number of iterations = ', iterations
+    print('Data type            = double precision')
+    print('Compact representation of stencil loop body')
+    print('Number of iterations = ', iterations)
 
     # there is certainly a more Pythonic way to initialize W,
     # but it will have no impact on performance.
@@ -178,12 +178,12 @@ def main():
     # verify correctness
     reference_norm = 2*(iterations+1)
     if abs(norm-reference_norm) < epsilon:
-        print 'Solution validates'
+        print('Solution validates')
         flops = (2*stencil_size+1) * active_points
         avgtime = stencil_time/iterations
-        print 'Rate (MFlops/s): ',1.e-6*flops/avgtime, ' Avg time (s): ',avgtime
+        print('Rate (MFlops/s): ',1.e-6*flops/avgtime, ' Avg time (s): ',avgtime)
     else:
-        print 'ERROR: L1 norm = ', norm,' Reference L1 norm = ', reference_norm
+        print('ERROR: L1 norm = ', norm,' Reference L1 norm = ', reference_norm)
         sys.exit()
 
 

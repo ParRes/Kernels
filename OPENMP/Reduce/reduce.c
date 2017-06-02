@@ -114,7 +114,7 @@ int main(int argc, char ** argv)
   int    my_donor, my_segment;
   int    nthread_input,   /* thread parameters                               */
          nthread;   
-  double RESTRICT *vector;/* vector pair to be reduced                       */
+  double * RESTRICT vector;/* vector pair to be reduced                      */
   int    num_error=0;     /* flag that signals that requested and obtained
                              numbers of threads are the same                 */
 

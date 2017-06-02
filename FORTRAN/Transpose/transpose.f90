@@ -325,7 +325,7 @@ program main
   if (abserr .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
     avgtime = trans_time/iterations
-    write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',1.e-6*bytes/avgtime, &
+    write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',(1.d-6*bytes)/avgtime, &
            ' Avg time (s): ', avgtime
   else
     write(*,'(a,f30.15,a,f30.15)') 'ERROR: Aggregate squared error ',abserr, &

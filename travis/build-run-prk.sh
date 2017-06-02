@@ -318,7 +318,7 @@ case "$PRK_TARGET" in
                         export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
                         ;;
                 esac
-                make $PRK_TARGET default_opt_flags="-Wc,-O3"
+                make $PRK_TARGET PRK_FLAGS="-Wc,-O3"
                 ;;
             *)
                 echo "Invalid value of UPC_IMPL ($UPC_IMPL)"
@@ -335,16 +335,16 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
                 #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-linux-x86_64-smp
                 #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
-        make $PRK_TARGET
+        make $PRK_TARGET PRK_FLAGS=-O3
         export PRK_TARGET_PATH=CHARM++
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
@@ -359,16 +359,16 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
                 #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-linux-x86_64-smp
                 #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
-        make $PRK_TARGET
+        make $PRK_TARGET PRK_FLAGS=-O3
         export PRK_TARGET_PATH=AMPI
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun

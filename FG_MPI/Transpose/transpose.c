@@ -150,10 +150,10 @@ int main(int argc, char ** argv)
   int phase;               /* phase inside staged communication     */
   int colstart;            /* starting column for owning rank       */
   int error;               /* error flag                            */
-  double RESTRICT *A_p;    /* original matrix column block          */
-  double RESTRICT *B_p;    /* transposed matrix column block        */
-  double RESTRICT *Work_in_p;/* workspace for transpose function    */
-  double RESTRICT *Work_out_p;/* workspace for transpose function   */
+  double * RESTRICT A_p;   /* original matrix column block          */
+  double * RESTRICT B_p;   /* transposed matrix column block        */
+  double * RESTRICT Work_in_p;/* workspace for transpose function   */
+  double * RESTRICT Work_out_p;/* workspace for transpose function  */
   double abserr,           /* absolute error                        */
          abserr_tot;       /* aggregate absolute error              */
   double epsilon = 1.e-8;  /* error tolerance                       */

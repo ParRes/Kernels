@@ -30,5 +30,12 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PRK_UPC_H
+#define PRK_UPC_H
+
+#include "par-res-kern_general.h"
+
 #include <upc_relaxed.h>
 #include <stdarg.h>
+
+#endif /* PRK_UPC_H */

@@ -755,7 +755,6 @@ int main(int argc, char ** argv) {
 #if USE_PUPER
   int pup_index;
   AMPI_Register_pup((MPI_PupFn) dchunkpup, (void*)&my_heap_ds, &pup_index);
-  if (my_ID==root) printf("registered dchunkpup\n");
 #endif
 
   /* FIXME: This can be further improved */
@@ -780,20 +779,20 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;
     }
 
-    iterations = atol(*++argv);  args_used++;
+    iterations = atol(*++argv);       args_used++;
     if (iterations<1) {
       printf("ERROR: Number of time steps must be positive: %llu\n", iterations);
       error = 1;
       goto ENDOFTESTS;
     }
 
-    L = atol(*++argv);  args_used++;
+    L = atol(*++argv);                args_used++;
     if (L<1 || L%2) {
       printf("ERROR: Number of grid cells must be positive and even: %llu\n", L);
       error = 1;
       goto ENDOFTESTS;
     }
-    n = atol(*++argv);  args_used++;
+    n = atol(*++argv);                args_used++;
     if (n<1) {
       printf("ERROR: Number of particles must be positive: %llu\n", n);
       error = 1;
@@ -801,18 +800,18 @@ int main(int argc, char ** argv) {
     }
 
     particle_mode  = UNDEFINED;
-    k = atoi(*++argv);   args_used++;
-    m = atoi(*++argv);   args_used++;
+    k = atoi(*++argv);                args_used++;
+    m = atoi(*++argv);                args_used++;
 
-    period = atol(*++argv);
-    migration_delay = atol(*++argv);
+    period = atol(*++argv);           args_used++;
+    migration_delay = atol(*++argv);  args_used++;
     if (period <1 || migration_delay<0 || migration_delay >= period) {
       printf("ERROR: Violated 0<period<migration_delay: period=%ld, migration_delay=%ld\n",
              period, migration_delay);
       error = 1;
       goto ENDOFTESTS;
     }
-    init_mode = *++argv; args_used++;
+    init_mode = *++argv;              args_used++;
 
     ENDOFTESTS:;
 
@@ -897,10 +896,10 @@ int main(int argc, char ** argv) {
   case LINEAR:     MPI_Bcast(&alpha,             1, MPI_DOUBLE,  root, MPI_COMM_WORLD);
                    MPI_Bcast(&beta,              1, MPI_DOUBLE,  root, MPI_COMM_WORLD);
                    break;
-  case PATCH:      MPI_Bcast(&init_patch.left,   1, MPI_INT64_T, root, MPI_COMM_WORLD);
-                   MPI_Bcast(&init_patch.right,  1, MPI_INT64_T, root, MPI_COMM_WORLD);
-                   MPI_Bcast(&init_patch.bottom, 1, MPI_INT64_T, root, MPI_COMM_WORLD);
-                   MPI_Bcast(&init_patch.top,    1, MPI_INT64_T, root, MPI_COMM_WORLD);
+  case PATCH:      MPI_Bcast(&init_patch.left,   1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+                   MPI_Bcast(&init_patch.right,  1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+                   MPI_Bcast(&init_patch.bottom, 1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+                   MPI_Bcast(&init_patch.top,    1, MPI_UINT64_T, root, MPI_COMM_WORLD);
                    break;
   }
 

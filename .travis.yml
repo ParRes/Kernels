@@ -116,20 +116,13 @@ matrix:
     env: PRK_TARGET=allpython
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=alljulia
-  # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
-  - os: osx
-    env: PRK_TARGET=allfgmpi
-  # MPI implementations of Transpose hand with Intel compilers (why?!?!)
+  # MPI implementations of Transpose hang with Intel compilers (why?!?!)
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allmpi1
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allmpiomp
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allmpishm
-  # Linux may not have GCC-6...
-  - os: linux
-    compiler: gcc
-    env: PRK_TARGET=allfortrancoarray
   # UPC over MPICH on Mac hangs - may be async progress issue
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
@@ -150,6 +143,32 @@ matrix:
   #- env: PRK_TARGET=allupc UPC_IMPL=gupc
   # we have lots of Grappa issues...
   - env: PRK_TARGET=allgrappa
+  # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
+  - os: osx
+    env: PRK_TARGET=allfgmpi
+  - os: linux
+    env: PRK_TARGET=allfgmpi
+  # Linux may not have GCC-6...
+  #- os: linux
+  #  compiler: gcc
+  #  env: PRK_TARGET=allfortrancoarray
+  # BUPC has trouble with flags
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
+  # Travis tests failing due to runtime problems
+  - os: osx
+    env: PRK_TARGET=allampi
+  - os: linux
+    env: PRK_TARGET=allampi
+  - os: osx
+    env: PRK_TARGET=allcharm++
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allampi
 addons:
   apt:
     sources:

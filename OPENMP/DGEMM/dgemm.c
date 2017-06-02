@@ -94,7 +94,9 @@ int main(int argc, char **argv){
   int     num_error=0;          /* flag that signals that requested and 
                                    obtained numbers of threads are the same       */
   static  
-  double  RESTRICT *A, *B, *C;  /* input (A,B) and output (C) matrices            */
+  double  * RESTRICT A,         /* input (A,B) and output (C) matrices            */
+          * RESTRICT B,      
+          * RESTRICT C;
   long    order;                /* number of rows and columns of matrices         */
   int     block;                /* tile size of matrices                          */
   int     shortcut;             /* true if only doing initialization              */
@@ -160,7 +162,7 @@ int main(int argc, char **argv){
 
   #pragma omp parallel private (i,j,k,ii,jj,kk,ig,jg,kg,iter)
   {
-  double RESTRICT *AA=NULL, *BB=NULL, *CC=NULL;
+  double * RESTRICT AA, * RESTRICT BB, * RESTRICT CC;
 
   if (block > 0) {
     /* matrix blocks for local temporary copies                                     */
