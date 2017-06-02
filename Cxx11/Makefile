@@ -14,16 +14,22 @@ CXXFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
 CXXFLAGS += -I.
 
 OMPFLAGS = $(OPENMPFLAG)
+TARGETFLAGS = $(OFFLOADFLAG)
 
-.PHONY: all clean run vector valarray openmp
+.PHONY: all clean run vector valarray openmp target
 
-all: vector valarray openmp
+all: vector valarray openmp target
 
 vector: p2p-vector stencil-vector transpose-vector
 
 valarray: transpose-valarray
 
 openmp: stencil-vector-openmp transpose-vector-openmp
+
+target: transpose-vector-openmp-target
+
+%-target: %-target.cc
+	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $(TARGETFLAGS) $< -o $@
 
 %-openmp: %-openmp.cc
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $< -o $@
