@@ -65,7 +65,7 @@ use std::env;
 use std::time::Instant;
 
 fn help() {
-  println!("Usage: <# iterations> <grid dimension> <radius>");
+  println!("Usage: <# iterations> <grid size>");
 }
 
 fn main()
@@ -81,25 +81,8 @@ fn main()
 
   let iterations : usize;
   let n : usize;
-  let r : usize;
 
-  // This is a compile-time setting.
-  // grid stencil (star is the default)
-  let grid : bool = if cfg!(grid) { true } else { false };
-
-  // I have failed to make this a compile-time setting.
-  /*
-  let r : usize =
-      if cfg!(radius = "1") { 1 } else
-      if cfg!(radius = "2") { 2 } else
-      if cfg!(radius = "3") { 3 } else
-      if cfg!(radius = "4") { 4 } else
-      if cfg!(radius = "5") { 5 } else
-      if cfg!(radius = "6") { 6 } else
-      { println!("FAIL"); 0 };
-  */
-
-  if args.len() == 4 {
+  if args.len() == 3 {
     iterations = match args[1].parse() {
       Ok(n) => { n },
       Err(_) => { help(); return; },
@@ -107,10 +90,6 @@ fn main()
     n = match args[2].parse() {
       Ok(n) => { n },
       Err(_) => { help(); return; },
-    };
-    r = match args[3].parse() {
-      Ok(n) => { n },
-      Err(_) => { 2 },
     };
   } else {
     help();
@@ -123,6 +102,19 @@ fn main()
   if n < 1 {
     println!("ERROR: grid dimension must be positive: {}", n);
   }
+
+  // this is disgusting - surely there is a better way...
+  let r : usize =
+      if cfg!(radius = "1") { 1 } else
+      if cfg!(radius = "2") { 2 } else
+      if cfg!(radius = "3") { 3 } else
+      if cfg!(radius = "4") { 4 } else
+      if cfg!(radius = "5") { 5 } else
+      if cfg!(radius = "6") { 6 } else
+      { 2 };
+
+  // grid stencil (star is the default)
+  let grid : bool = if cfg!(grid) { true } else { false };
 
   if r < 1 {
     println!("ERROR: Stencil radius {} should be positive ", r);
@@ -153,10 +145,12 @@ fn main()
 
   // ws of points a the stencil
   let wdim : usize = 2 * r + 1;
-  let mut w : Vec<Vec<f64>> = vec![vec![0.0; wdim]; wdim];
-  for ii in 0..wdim {
-    for jj in 0..wdim {
-      w[ii][jj] = 0.0;
+  let welems : usize = wdim*wdim;
+  let mut w : Vec<f64> = vec![0.0; welems];
+  for jj in 0..wdim {
+    for ii in 0..wdim {
+      let offset : usize = ii * wdim + jj;
+      w[offset] = 0.0;
     }
   }
 
@@ -168,23 +162,43 @@ fn main()
     for jj in 1..r+1 {
       for ii in 1-jj..jj {
         let denom : f64 = (4*jj*(2*jj-1)*r) as f64;
-        w[r+ii][r+jj] =  1./denom;
-        w[r+ii][r-jj] = -1./denom;
-        w[r+jj][r+ii] =  1./denom;
-        w[r-jj][r+ii] = -1./denom;
+        //w[r+ii][r+jj] =  1./denom;
+        let offset : usize = ((r+ii) * wdim) + (r+jj);
+        w[offset] =  1./denom;
+        //w[r+ii][r-jj] = -1./denom;
+        let offset : usize = ((r+ii) * wdim) + (r-jj);
+        w[offset] = -1./denom;
+        //w[r+jj][r+ii] =  1./denom;
+        let offset : usize = ((r+jj) * wdim) + (r+ii);
+        w[offset] =  1./denom;
+        //w[r-jj][r+ii] = -1./denom;
+        let offset : usize = ((r-jj) * wdim) + (r+ii);
+        w[offset] = -1./denom;
       }
       let denom : f64 = (4*jj*r) as f64;
-      w[r+jj][r+jj]   =  1./denom;
-      w[r-jj][r-jj]   = -1./denom;
+      //w[r+jj][r+jj]   =  1./denom;
+      let offset : usize = (r+jj) * wdim + (r+jj);
+      w[offset] = -1./denom;
+      //w[r-jj][r-jj]   = -1./denom;
+      let offset : usize = (r-jj) * wdim + (r-jj);
+      w[offset] = -1./denom;
     }
   }  else /* star */ {
     stencil_size = 4*r+1;
     for ii in 1..r+1 {
       let denom : f64 = (2 * ii * r) as f64;
-      w[r][r+ii] =  1./denom;
-      w[r][r-ii] = -1./denom;
-      w[r+ii][r] =  1./denom;
-      w[r-ii][r] = -1./denom;
+      //w[r][r+ii] =  1./denom;
+      let offset : usize = ((r) * wdim) + (r+ii);
+      w[offset] =  1./denom;
+      //w[r][r-ii] = -1./denom;
+      let offset : usize = ((r) * wdim) + (r-ii);
+      w[offset] = -1./denom;
+      //w[r+ii][r] =  1./denom;
+      let offset : usize = ((r+ii) * wdim) + (r+ii);
+      w[offset] =  1./denom;
+      //w[r-ii][r] = -1./denom;
+      let offset : usize = ((r-ii) * wdim) + (r+ii);
+      w[offset] = -1./denom;
     }
   }
 
@@ -212,22 +226,28 @@ fn main()
         if grid {
           for ii in 0-r..r+1 {
             for jj in 0-r..r+1 {
-              b[i*n+j] += w[r+ii][r+jj]*a[(i+ii)*n+j+jj];
+              let offset : usize = ((r+ii) * wdim) + (r+jj);
+              b[i*n+j] += w[offset]*a[(i+ii)*n+j+jj];
             }
           }
         } else {
-          b[i*n+j] += w[r][r]*a[i*n+j];
+          let offset : usize = ((r) * wdim) + (r);
+          b[i*n+j] += w[offset]*a[i*n+j];
           for jj in r..0 {
-            b[i*n+j] += w[r][r-jj]*a[i*n+j-jj];
+            let offset : usize = ((r) * wdim) + (r-jj);
+            b[i*n+j] += w[offset]*a[i*n+j-jj];
           }
           for jj in 1..r+1 {
-            b[i*n+j] += w[r][r+jj]*a[i*n+j+jj];
+            let offset : usize = ((r) * wdim) + (r+jj);
+            b[i*n+j] += w[offset]*a[i*n+j+jj];
           }
           for ii in r..0 {
-            b[i*n+j] += w[r-ii][r]*a[(i-ii)*n+j];
+            let offset : usize = ((r-ii) * wdim) + (r);
+            b[i*n+j] += w[offset]*a[(i-ii)*n+j];
           }
           for ii in 1..r+1 {
-            b[i*n+j] += w[r+ii][r]*a[(i+ii)*n+j];
+            let offset : usize = ((r+ii) * wdim) + (r);
+            b[i*n+j] += w[offset]*a[(i+ii)*n+j];
           }
         }
       }
