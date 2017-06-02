@@ -12,6 +12,7 @@ FC=
 
 #name of compile line flag enabling OpenMP, e.g. -openmp, -qopenmp, -fopenmp
 OPENMPFLAG=
+OFFLOADFLAG=
 
 #default compiler optimization flags
 DEFAULT_OPT_FLAGS:=

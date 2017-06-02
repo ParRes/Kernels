@@ -13,11 +13,20 @@ CXXFLAGS += -DPRKVERSION=$(PRKVERSION)
 CXXFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
 CXXFLAGS += -I.
 
-.PHONY: all clean run vector valarray
+OMPFLAGS = $(OPENMPFLAG)
 
-all: vector valarray
+.PHONY: all clean run vector valarray openmp
+
+all: vector valarray openmp
+
 vector: p2p-vector stencil-vector transpose-vector
+
 valarray: transpose-valarray
+
+openmp: transpose-vector-openmp
+
+%-openmp: %-openmp.cc
+	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $< -o $@
 
 %: %.cc
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -30,4 +39,5 @@ clean:
 	-rm -f p2p
 	-rm -f *-vector
 	-rm -f *-valarray
+	-rm -f *-openmp
 
