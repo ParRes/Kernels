@@ -15,10 +15,11 @@ CXXFLAGS += -I.
 
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
+OCLFLAGS = $(OPENCLFLAG)
 
-.PHONY: all clean run vector valarray openmp target
+.PHONY: all clean run vector valarray openmp target opencl
 
-all: vector valarray openmp target
+all: vector valarray openmp target opencl
 
 vector: p2p-vector stencil-vector transpose-vector
 
@@ -27,6 +28,11 @@ valarray: transpose-valarray
 openmp: stencil-vector-openmp transpose-vector-openmp
 
 target: stencil-openmp-target transpose-openmp-target
+
+opencl: stencil-opencl transpose-opencl
+
+%-opencl: %-opencl.cc %-opencl.cl
+	$(CXX) $(CXXFLAGS) $(OCLFLAGS) $< -o $@
 
 %-target: %-target.cc
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $(TARGETFLAGS) $< -o $@
@@ -42,9 +48,9 @@ clean:
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM
-	-rm -f p2p
 	-rm -f *-vector
 	-rm -f *-valarray
 	-rm -f *-openmp
 	-rm -f *-target
+	-rm -f *-opencl
 
