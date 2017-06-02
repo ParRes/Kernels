@@ -168,6 +168,7 @@ int main(int argc, char * argv[])
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
+  _Pragma("omp parallel for reduction(+:abserr)")
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const size_t ij = i*order+j;
