@@ -61,7 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 use std::env;
-use std::time::Instant;
+use std::time::{Instant,Duration};
 
 fn help() {
   println!("Usage: <# iterations> <matrix order> [tile size]");
@@ -125,11 +125,12 @@ fn main()
     vector[i*n+0] = i as f64;
   }
 
-  let mut t0 = Instant::now();
+  let timer = Instant::now();
+  let mut t0 : Duration = timer.elapsed();
 
   for k in 0..iterations+1 {
 
-    if k == 1 { t0 = Instant::now(); }
+    if k == 1 { t0 = timer.elapsed(); }
 
     for i in 1..m {
       for j in 1..n {
@@ -143,15 +144,17 @@ fn main()
     vector[0*n+0] = -vector[(m-1)*n+(n-1)];
 
   }
-  let t1 = Instant::now();
-  let pipeline_time = t1 - t0;
+  let t1 = timer.elapsed();
+  let dt = (t1.checked_sub(t0)).unwrap();
+  let dtt : u64 = dt.as_secs() * 1_000_000_000 + dt.subsec_nanos() as u64;
+  let pipeline_time : f64 = dtt as f64 / 1.0e9_f64 as f64;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
   // error tolerance
-  let epsilon : f64 = 0.000000001;
+  let epsilon : f64 = 1.0e-8;
 
   // verify correctness, using top right value
   let corner_val : f64 = (((iterations+1) as usize)*(n + m as usize - 2 as usize)) as f64;
@@ -166,7 +169,7 @@ fn main()
     println!("Solution validates");
   }
 
-  let avgtime : f64 = (pipeline_time.as_secs() as f64) / (iterations as f64);
+  let avgtime : f64 = (pipeline_time as f64) / (iterations as f64);
   let bytes : usize = 2 * (m-1) * (n-1);
-  println!("Rate (MB/s): {:10.3} Avg time (s): {:10.3}", (0.000001 as f64) * (bytes as f64) / avgtime, avgtime);
+  println!("Rate (MB/s): {:10.3} Avg time (s): {:10.3}", (1.0e-6_f64) * (bytes as f64) / avgtime, avgtime);
 }

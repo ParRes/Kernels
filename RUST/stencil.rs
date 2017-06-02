@@ -62,7 +62,7 @@
 //////////////////////////////////////////////////////////////////////
 
 use std::env;
-use std::time::Instant;
+use std::time::{Instant,Duration};
 
 fn help() {
   println!("Usage: <# iterations> <grid dimension> <radius>");
@@ -193,12 +193,12 @@ fn main()
     }
   }
 
-  let mut t0 = Instant::now();
+  let timer = Instant::now();
+  let mut t0 : Duration = timer.elapsed();
 
   for k in 0..iterations+1 {
 
-    // start timer after a warmup iteration
-    if k == 1 { t0 = Instant::now(); }
+    if k == 1 { t0 = timer.elapsed(); }
 
     // Apply the stencil operator
     for i in r..n-r {
@@ -234,15 +234,17 @@ fn main()
       }
     }
   }
-  let t1 = Instant::now();
-  let stencil_time = t1 - t0;
+  let t1 = timer.elapsed();
+  let dt = (t1.checked_sub(t0)).unwrap();
+  let dtt : u64 = dt.as_secs() * 1_000_000_000 + dt.subsec_nanos() as u64;
+  let stencil_time : f64 = dtt as f64 / 1.0e9_f64 as f64;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
   // error tolerance
-  let epsilon : f64 = 0.000000001;
+  let epsilon : f64 = 1.0e-8;
 
   // compute L1 norm a parallel
   let mut norm : f64 = 0.0;
@@ -264,8 +266,8 @@ fn main()
       println!("L1 norm = {} Reference L1 norm = {}", norm, reference_norm);
     }
     let flops : usize = (2*stencil_size+1) * active_points;
-    let avgtime : f64 = (stencil_time.as_secs() as f64) / (iterations as f64);
-    println!("Rate (MFlops/s): {:10.3} Avg time (s): {:10.3}", (0.000001 as f64) * (flops as f64) / avgtime, avgtime);
+    let avgtime : f64 = (stencil_time as f64) / (iterations as f64);
+    println!("Rate (MFlops/s): {:10.3} Avg time (s): {:10.3}", (1.0e-6_f64) * (flops as f64) / avgtime, avgtime);
   }
 
 }
