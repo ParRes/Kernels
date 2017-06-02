@@ -26,7 +26,7 @@ valarray: transpose-valarray
 
 openmp: stencil-vector-openmp transpose-vector-openmp
 
-target: transpose-vector-openmp-target
+target: stencil-openmp-target transpose-openmp-target
 
 %-target: %-target.cc
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $(TARGETFLAGS) $< -o $@
@@ -46,4 +46,5 @@ clean:
 	-rm -f *-vector
 	-rm -f *-valarray
 	-rm -f *-openmp
+	-rm -f *-target
 
