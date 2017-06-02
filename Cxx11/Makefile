@@ -23,7 +23,7 @@ vector: p2p-vector stencil-vector transpose-vector
 
 valarray: transpose-valarray
 
-openmp: transpose-vector-openmp
+openmp: stencil-vector-openmp transpose-vector-openmp
 
 %-openmp: %-openmp.cc
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $< -o $@
