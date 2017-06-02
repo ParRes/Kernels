@@ -25,6 +25,11 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
 OPENMPFLAG=-fopenmp
 OFFLOADFLAG=-foffload="-O3 -v"
 #
+# OpenCL flags
+#
+# MacOS
+OPENCLFLAG=-framework OpenCL
+#
 # MPI
 #
 # We assume you have installed an implementation of MPI-3 that is in your path.
