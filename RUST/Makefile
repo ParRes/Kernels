@@ -11,8 +11,9 @@ RCFLAGS  = -g
 # Enable verbose printing
 #RCFLAGS += --cfg "VERBOSE"
 
+# This is now a runtime option
 # Stencil radius
-RCFLAGS += --cfg radius="$(RADIUS)"
+#RCFLAGS += --cfg radius="$(RADIUS)"
 
 # Stencil shape: star is default, uncomment to switch to grid
 #RCFLAGS += --cfg grid
