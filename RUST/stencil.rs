@@ -147,44 +147,38 @@ fn main()
   // Allocate space for the input and do the work
   //////////////////////////////////////////////////////////////////////
 
-  let nelems : usize = n*n;
-  let mut a : Vec<f64> = vec![0.0; nelems];
-  let mut b : Vec<f64> = vec![0.0; nelems];
+  // input and output arrays
+  let mut a : Vec<Vec<f64>> = vec![vec![0.0; n]; n];
+  let mut b : Vec<Vec<f64>> = vec![vec![0.0; n]; n];
 
-  // ws of points a the stencil
+  // weights of points a the stencil
   let wdim : usize = 2 * r + 1;
   let mut w : Vec<Vec<f64>> = vec![vec![0.0; wdim]; wdim];
-  for ii in 0..wdim {
-    for jj in 0..wdim {
-      w[ii][jj] = 0.0;
-    }
-  }
 
   // fill the stencil ws to reflect a discrete divergence operator
   let stencil_size : usize;
   if grid {
-    // THIS IS BUSTED
     stencil_size = (2*r+1)*(2*r+1);
-    for jj in 1..r+1 {
-      for ii in 1-jj..jj {
-        let denom : f64 = (4*jj*(2*jj-1)*r) as f64;
-        w[r+ii][r+jj] =  1./denom;
-        w[r+ii][r-jj] = -1./denom;
-        w[r+jj][r+ii] =  1./denom;
-        w[r-jj][r+ii] = -1./denom;
+    for j in 1..r+1 {
+      for i in 1-j..j {
+        let denom : f64 = (4*j*(2*j-1)*r) as f64;
+        w[r+i][r+j] =  1./denom;
+        w[r+i][r-j] = -1./denom;
+        w[r+j][r+i] =  1./denom;
+        w[r-j][r+i] = -1./denom;
       }
-      let denom : f64 = (4*jj*r) as f64;
-      w[r+jj][r+jj]   =  1./denom;
-      w[r-jj][r-jj]   = -1./denom;
+      let denom : f64 = (4*j*r) as f64;
+      w[r+j][r+j]   =  1./denom;
+      w[r-j][r-j]   = -1./denom;
     }
   }  else /* star */ {
     stencil_size = 4*r+1;
-    for ii in 1..r+1 {
-      let denom : f64 = (2 * ii * r) as f64;
-      w[r][r+ii] =  1./denom;
-      w[r][r-ii] = -1./denom;
-      w[r+ii][r] =  1./denom;
-      w[r-ii][r] = -1./denom;
+    for i in 1..r+1 {
+      let denom : f64 = (2 * i * r) as f64;
+      w[r][r+i] =  1./denom;
+      w[r][r-i] = -1./denom;
+      w[r+i][r] =  1./denom;
+      w[r-i][r] = -1./denom;
     }
   }
 
@@ -194,8 +188,8 @@ fn main()
   // initialize the input and output arrays
   for j in 0..n {
     for i in 0..n {
-      a[i*n+j] = (i+j) as f64;
-      b[i*n+j] = 0.0;
+      a[i][j] = (i+j) as f64;
+      b[i][j] = 0.0;
     }
   }
 
@@ -212,22 +206,22 @@ fn main()
         if grid {
           for ii in 0-r..r+1 {
             for jj in 0-r..r+1 {
-              b[i*n+j] += w[r+ii][r+jj]*a[(i+ii)*n+j+jj];
+              b[i][j] += w[r+ii][r+jj]*a[i+ii][j+jj];
             }
           }
         } else {
-          b[i*n+j] += w[r][r]*a[i*n+j];
+          b[i][j] += w[r][r]*a[i][j];
           for jj in r..0 {
-            b[i*n+j] += w[r][r-jj]*a[i*n+j-jj];
+            b[i][j] += w[r][r-jj]*a[i][j-jj];
           }
           for jj in 1..r+1 {
-            b[i*n+j] += w[r][r+jj]*a[i*n+j+jj];
+            b[i][j] += w[r][r+jj]*a[i][j+jj];
           }
           for ii in r..0 {
-            b[i*n+j] += w[r-ii][r]*a[(i-ii)*n+j];
+            b[i][j] += w[r-ii][r]*a[i-ii][j];
           }
           for ii in 1..r+1 {
-            b[i*n+j] += w[r+ii][r]*a[(i+ii)*n+j];
+            b[i][j] += w[r+ii][r]*a[i+ii][j];
           }
         }
       }
@@ -236,7 +230,7 @@ fn main()
     // add constant to solution to force refresh of neighbor data, if any
     for j in 0..n {
       for i in 0..n {
-        a[i*n+j] += 1.0;
+        a[i][j] += 1.0;
       }
     }
   }
@@ -254,7 +248,7 @@ fn main()
   let mut norm : f64 = 0.0;
   for i in r..n-r+1 {
     for j in r..n-r+1 {
-      norm += (b[i*n+j]).abs();
+      norm += (b[i][j]).abs();
     }
   }
   norm /= active_points as f64;
