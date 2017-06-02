@@ -118,7 +118,6 @@ int main(int argc, char * argv[])
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
-    // start timer after a warmup iteration
     if (iter==1) trans_time = prk::wtime();
 
     // transpose the  matrix
