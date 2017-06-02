@@ -94,7 +94,7 @@ void do_stencil(int n, double weight[2*radius+1][2*radius+1], std::vector<double
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/OpenMP Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // process and test input parameters
