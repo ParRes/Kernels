@@ -61,7 +61,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "Serial Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
 
   int iterations;
   size_t order;
