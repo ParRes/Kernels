@@ -62,9 +62,9 @@ case "$PRK_TARGET" in
         which rustc
         rustc --version
         export PRK_TARGET_PATH=RUST
-        ./$PRK_TARGET_PATH/p2p.rs               10 100 100
-        #./$PRK_TARGET_PATH/stencil.rs           10 100
-        ./$PRK_TARGET_PATH/transpose.rs         10 100
+        ./$PRK_TARGET_PATH/p2p               10 100 100
+        ./$PRK_TARGET_PATH/stencil           10 100
+        ./$PRK_TARGET_PATH/transpose         10 100
         ;;
     alljulia)
         echo "Julia"
