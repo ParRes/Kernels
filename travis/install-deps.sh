@@ -28,6 +28,10 @@ case "$PRK_TARGET" in
         echo "Julia"
         sh ./travis/install-julia.sh $TRAVIS_ROOT
         ;;
+    allrust)
+        echo "Rust"
+        sh ./travis/install-rust.sh $TRAVIS_ROOT
+        ;;
     allcxx)
         echo "C++11"
         #case "$CXX" in

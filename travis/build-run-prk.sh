@@ -39,11 +39,11 @@ case "$PRK_TARGET" in
         which python
         python --version
         export PRK_TARGET_PATH=PYTHON
-        python $PRK_TARGET_PATH/p2p.py             10 1024 1024
+        python $PRK_TARGET_PATH/p2p.py             10 100 100
         python $PRK_TARGET_PATH/p2p-numpy.py       10 1024 1024
-        python $PRK_TARGET_PATH/stencil.py         10 1000
+        python $PRK_TARGET_PATH/stencil.py         10 100
         python $PRK_TARGET_PATH/stencil-numpy.py   10 1000
-        python $PRK_TARGET_PATH/transpose.py       10 1024
+        python $PRK_TARGET_PATH/transpose.py       10 100
         python $PRK_TARGET_PATH/transpose-numpy.py 10 1024
         ;;
     alloctave)
@@ -91,6 +91,16 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 LINEAR 1.0 3.0
         $PRK_TARGET_PATH/PIC/pic             10 1000 1000000 1 0 PATCH 0 200 100 200
         $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5
+        ;;
+    allrust)
+        echo "Rust"
+        which rustc
+        rustc --version
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=RUST
+        ./$PRK_TARGET_PATH/p2p               10 100 100
+        ./$PRK_TARGET_PATH/stencil           10 100
+        ./$PRK_TARGET_PATH/transpose         10 100
         ;;
     allcxx)
         echo "C++11"

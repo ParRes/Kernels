@@ -11,8 +11,8 @@ case "$os" in
         echo "Mac"
         set +e
         brew update
-        brew tap homebrew/science
-        for p in octave ; do
+        brew tap homebrew/core
+        for p in rust ; do
             if [ "x`brew ls --versions $p`" = "x" ] ; then
                 echo "$p is not installed - installing it"
                 brew install $p

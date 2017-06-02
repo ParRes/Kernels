@@ -48,6 +48,7 @@ help:
 	@echo "Usage: \"make all\"          (re-)builds all targets"
 	@echo "       \"make allserial\"    (re-)builds all serial targets"
 	@echo "       \"make allcxx\"       (re-)builds all C++ targets"
+	@echo "       \"make allrust\"      (re-)builds all Rust targets"
 	@echo "       \"make allopenmp\"    (re-)builds all OpenMP targets"
 	@echo "       \"make allmpi1\"      (re-)builds all conventional MPI targets"
 	@echo "       \"make allfgmpi\"     (re-)builds all Fine-Grain MPI targets"
@@ -233,6 +234,9 @@ allfortranpretty:
 
 allcxx:
 	$(MAKE) -C Cxx11
+
+allrust:
+	$(MAKE) -C RUST
 
 clean:
 	cd MPI1/DGEMM;              $(MAKE) clean
