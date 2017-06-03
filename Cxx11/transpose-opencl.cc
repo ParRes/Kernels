@@ -53,7 +53,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "cl.hpp"
+#include "prk_opencl.hpp"
 
 int main(int argc, char * argv[])
 {
@@ -65,11 +65,10 @@ int main(int argc, char * argv[])
   std::cout << "C++11/OpenCL Matrix transpose: B = A^T" << std::endl;
 
   int iterations;
-  size_t order;
-  size_t tile_size;
+  int order;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [tile size]";
+        throw "Usage: <# iterations> <matrix order>";
       }
 
       // number of times to do the transpose
@@ -83,12 +82,6 @@ int main(int argc, char * argv[])
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
       }
-
-      // default tile size for tiling of local transpose
-      tile_size = (argc>4) ? std::atol(argv[3]) : 32;
-      // a negative tile size means no tiling of the local transpose
-      if (tile_size <= 0) tile_size = order;
-
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -96,87 +89,71 @@ int main(int argc, char * argv[])
   }
 
   std::cout << "Matrix order          = " << order << std::endl;
-  if (tile_size < order) {
-      std::cout << "Tile size             = " << tile_size << std::endl;
-  } else {
-      std::cout << "Untiled" << std::endl;
-  }
   std::cout << "Number of iterations  = " << iterations << std::endl;
+
+  //////////////////////////////////////////////////////////////////////
+  /// Setup OpenCL environment
+  //////////////////////////////////////////////////////////////////////
+
+  // FIXME: allow other options here
+  cl::Context context(CL_DEVICE_TYPE_DEFAULT);
+
+  cl::Program program(context, prk::loadProgram("transpose.cl"), true);
+
+  cl::CommandQueue queue(context);
+
+  auto kernel = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program, "transpose");
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-#if 0
-  // How to map STL containers for target data?
-  std::vector<double> A;
-  std::vector<double> B;
-  A.resize(order*order);
-  B.resize(order*order);
-#else
-  double * RESTRICT A = new double[order*order];
-  double * RESTRICT B = new double[order*order];
-#endif
+  std::vector<float> h_a;
+  std::vector<float> h_b;
+  size_t nelems = (size_t)order * (size_t)order;
+  h_a.resize(nelems);
+  h_b.resize(nelems,0.0);
+  // fill A with the sequence 0 to order^2-1 as floats
+  std::iota(h_a.begin(), h_a.end(), 0.0);
+
+  // copy input from host to device
+  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);
+  cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), true);
 
   auto trans_time = 0.0;
 
-  // HOST
-  {
-    for (auto i=0;i<order; i++) {
-      for (auto j=0;j<order;j++) {
-        A[i*order+j] = static_cast<double>(i*order+j);
-        B[i*order+j] = 0.0;
-      }
-    }
+  for (auto iter = 0; iter<=iterations; iter++) {
+
+    if (iter==1) trans_time = prk::wtime();
+
+    // transpose the  matrix
+    kernel(cl::EnqueueArgs(queue, cl::NDRange(order,order)), order, d_a, d_b);
+    queue.finish();
+
   }
+  trans_time = prk::wtime() - trans_time;
 
-  // DEVICE
-  {
-    for (auto iter = 0; iter<=iterations; iter++) {
+  // copy output back to host
+  cl::copy(queue, d_b, begin(h_b), end(h_b));
 
-      if (iter==1) {
-          trans_time = prk::wtime();
-      }
-
-      // transpose the  matrix
-      if (tile_size < order) {
-        for (auto it=0; it<order; it+=tile_size) {
-          for (auto jt=0; jt<order; jt+=tile_size) {
-            for (auto i=it; i<std::min(order,it+tile_size); i++) {
-              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
-                B[i*order+j] += A[j*order+i];
-                A[j*order+i] += 1.0;
-              }
-            }
-          }
-        }
-      } else {
-        for (auto i=0;i<order; i++) {
-          for (auto j=0;j<order;j++) {
-            B[i*order+j] += A[j*order+i];
-            A[j*order+i] += 1.0;
-          }
-        }
-      }
-    }
-    {
-      trans_time = prk::wtime() - trans_time;
-    }
-  }
+#ifdef VERBOSE
+  // copy input back to host - debug only
+  cl::copy(queue, d_a, begin(h_a), end(h_a));
+#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // HOST
+  // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      const size_t ij = i*order+j;
-      const size_t ji = j*order+i;
-      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      const size_t ij = (size_t)i*(size_t)order+(size_t)j;
+      const size_t ji = (size_t)j*(size_t)order+(size_t)i;
+      const float reference = static_cast<float>(ij)*(1.+iterations)+addit;
+      abserr += std::fabs(h_b[ji] - reference);
     }
   }
 
@@ -188,10 +165,17 @@ int main(int argc, char * argv[])
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(double);
+    auto bytes = (size_t)order * (size_t)order * sizeof(float);
     std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
+#ifdef VERBOSE
+    for (auto i=0; i<order; i++) {
+      for (auto j=0; j<order; j++) {
+        std::cout << "(" << i << "," << j << ") = " << h_a[i*order+j] << ", " << h_b[i*order+j] << "\n";
+      }
+    }
+#endif
     std::cout << "ERROR: Aggregate squared error " << abserr
               << " exceeds threshold " << epsilon << std::endl;
     return 1;

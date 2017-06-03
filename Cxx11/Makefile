@@ -31,7 +31,7 @@ target: stencil-openmp-target transpose-openmp-target
 
 opencl: stencil-opencl transpose-opencl
 
-%-opencl: %-opencl.cc %-opencl.cl
+%-opencl: %-opencl.cc %.cl
 	$(CXX) $(CXXFLAGS) $(OCLFLAGS) $< -o $@
 
 %-target: %-target.cc
