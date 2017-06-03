@@ -1,9 +1,12 @@
-include ../../common/MPI.defs
+include ../../common/FENIX.defs
+COMOBJS += random_draw.o get_BG_data.o
+COMOBJS += timestep.o
 
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
+#OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
+OPTFLAGS    = -std=c99 -O3
 #description: change above into something that is a decent optimization on you system
 
 USERFLAGS    = 
@@ -11,9 +14,9 @@ USERFLAGS    =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         = -lm
-LIBPATHS     = 
-INCLUDEPATHS = 
+LIBS         = -lm -lfenix -lmpi
+LIBPATHS     = -L$(FENIXTOP)/lib -L$(ULFMTOP)/lib
+INCLUDEPATHS = -I$(FENIXTOP)/include
 
 ### End User configurable options ###
 
@@ -48,12 +51,12 @@ ifndef VERBOSE
 endif
 #description: default diagnostic style is silent
 
-VERBOSEFLAG     = -DVERBOSE=$(VERBOSE)
-RESTRICTFLAG    = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
-RADIUSFLAG      = -DRADIUS=$(RADIUS)
-LOOPGENFLAG     = -DLOOPGEN=$(LOOPGEN)
-DOUBLEFLAG      = -DDOUBLE=$(DOUBLE)
-STARFLAG        = -DSTAR=$(STAR)
+VERBOSEFLAG      = -DVERBOSE=$(VERBOSE)
+RESTRICTFLAG     = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
+RADIUSFLAG       = -DRADIUS=$(RADIUS)
+LOOPGENFLAG      = -DLOOPGEN=$(LOOPGEN)
+DOUBLEFLAG       = -DDOUBLE=$(DOUBLE)
+STARFLAG         = -DSTAR=$(STAR)
 
 OPTIONSSTRING="Make options:\n\
 OPTION                  MEANING                                  DEFAULT\n\
@@ -64,14 +67,15 @@ RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
 STAR=0/1                box/star shaped stencil                    [1]  \n\
 VERBOSE=0/1             omit/include verbose run information       [0]"
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG)$(USERFLAGS) $(LOOPGENFLAG)\
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG) 
-PROGRAM     = stencil
+TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG) $(USERFLAGS) \
+               $(DOUBLEFLAG)   $(RADIUSFLAG)  $(STARFLAG)  \
+               $(LOOPGENFLAG) 
+PROGRAM     = amr
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
 include ../../common/make.common
 
-$(PROGRAM).o: loop_body_star.incl loop_body_compact.incl
+$(PROGRAM).o: loop_body_star.incl loop_body_compact.incl loop_body_star_amr.incl loop_body_compact_amr.incl
 
 loop_body_star.incl:
 	@echo "#########################################################################"
@@ -85,6 +89,19 @@ loop_body_compact.incl:
 	@echo "############################################################################"
 	../../common/Stencil/loop_gen $(RADIUS) 0
 
+loop_body_star_amr.incl:
+	@echo "#############################################################################"
+	@echo "##### No file loop_body_star_amr.incl -- invoking loop_gen to create it #####"
+	@echo "#############################################################################"
+	../../common/Stencil/loop_gen_amr $(RADIUS) 1
+
+loop_body_compact_amr.incl:
+	@echo "################################################################################"
+	@echo "##### No file loop_body_compact_amr.incl -- invoking loop_gen to create it #####"
+	@echo "################################################################################"
+	../../common/Stencil/loop_gen_amr $(RADIUS) 0
+
 veryclean:
-	@rm -f loop_body_star.incl loop_body_compact.incl
+	@rm -f loop_body_star.incl loop_body_compact.incl loop_body_star_amr.incl loop_body_compact_amr.incl
 	make clean
+

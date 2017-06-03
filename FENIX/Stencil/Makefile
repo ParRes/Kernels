@@ -1,7 +1,8 @@
-include ../../common/MPI.defs
+include ../../common/FENIX.defs
+COMOBJS += random_draw.o
+COMOBJS += timestep.o
 
 ##### User configurable options #####
-#uncomment any of the following flags (and change values) to change defaults
 
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system
@@ -11,9 +12,9 @@ USERFLAGS    =
 
 #set the following variables for custom libraries and/or other objects
 EXTOBJS      = 
-LIBS         = -lm
-LIBPATHS     = 
-INCLUDEPATHS = 
+LIBS         = -lm -lfenix -lmpi
+LIBPATHS     = -L$(FENIXTOP)/lib -L$(ULFMTOP)/lib
+INCLUDEPATHS = -I$(FENIXTOP)/include
 
 ### End User configurable options ###
 
