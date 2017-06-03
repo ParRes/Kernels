@@ -95,6 +95,9 @@ allmpi1:
 allfenix:
 	cd scripts/small;            $(MAKE) -f  Makefile_FENIX runfenix
 	cd FENIX/Stencil;            $(MAKE) stencil   "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FENIX/AMR;                $(MAKE) amr       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FENIX/Synch_p2p;          $(MAKE) p2p       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
+	cd FENIX/Transpose;          $(MAKE) transpose "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allampi:
 	cd AMPI/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
