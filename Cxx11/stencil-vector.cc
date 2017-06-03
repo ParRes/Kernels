@@ -62,10 +62,8 @@
 
 #include "prk_util.h"
 
-const int radius = RADIUS;
-
 template <int radius, bool star>
-void do_stencil(int n, double weight[2*radius+1][2*radius+1], std::vector<double> & in, std::vector<double> & out)
+void do_stencil(int n, std::vector<std::vector<double>> weight, std::vector<double> & in, std::vector<double> & out)
 {
     for (auto i=radius; i<n-radius; i++) {
       for (auto j=radius; j<n-radius; j++) {
@@ -99,8 +97,8 @@ int main(int argc, char * argv[])
   // process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc != 3 && argc !=4){
-    std::cout << "Usage: " << argv[0] << " <# iterations> <array dimension>" << std::endl;
+  if (argc < 3){
+    std::cout << "Usage: " << argv[0] << " <# iterations> <array dimension> [<star/grid> <radius>]" << std::endl;
     return(EXIT_FAILURE);
   }
 
@@ -118,6 +116,20 @@ int main(int argc, char * argv[])
     exit(EXIT_FAILURE);
   }
 
+  // stencil pattern
+  bool star = true;
+  if (argc >= 4) {
+      auto stencil = std::string(argv[3]);
+      auto grid = std::string("grid");
+      star = (stencil == grid) ? false : true;
+  }
+
+  // stencil radius
+  int radius = 2;
+  if (argc >= 5) {
+      radius = std::atoi(argv[4]);
+  }
+
   if (radius < 1) {
     std::cout << "ERROR: Stencil radius " << radius << " should be positive " << std::endl;
     exit(EXIT_FAILURE);
@@ -128,11 +140,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Grid size            = " << n << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
-#ifdef STAR
-  std::cout << "Type of stencil      = star" << std::endl;
-#else
-  std::cout << "Type of stencil      = compact" << std::endl;
-#endif
+  std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Data type            = double precision" << std::endl;
   std::cout << "Compact representation of stencil loop body" << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
@@ -141,42 +149,38 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  // weights of points in the stencil
-  //std::array< std::array<double,2*radius+1>, 2*radius+1> weight;
-  double weight[2*radius+1][2*radius+1];
-  for (auto jj=-radius; jj<=radius; jj++) {
-    for (auto ii=-radius; ii<=radius; ii++) {
-      weight[ii+radius][jj+radius] = 0.0;
-    }
+  std::vector<std::vector<double>> weight;
+  weight.resize(2*radius+1);
+  for (auto i=0; i<2*radius+1; i++) {
+    weight[i].resize(2*radius+1, 0.0);
   }
 
   // fill the stencil weights to reflect a discrete divergence operator
-#ifdef STAR
-  const int stencil_size = 4*radius+1;
-  for (auto ii=1; ii<=radius; ii++) {
-    weight[radius][radius+ii] = weight[radius+ii][radius] = +1./(2*ii*radius);
-    weight[radius][radius-ii] = weight[radius-ii][radius] = -1./(2*ii*radius);
-  }
-#else
-  const int stencil_size = (2*radius+1)*(2*radius+1);
-  for (auto jj=1; jj<=radius; jj++) {
-    for (auto ii=-jj+1; ii<jj; ii++) {
-      weight[radius+ii][radius+jj] = +1./(4*jj*(2*jj-1)*radius);
-      weight[radius+ii][radius-jj] = -1./(4*jj*(2*jj-1)*radius);
-      weight[radius+jj][radius+ii] = +1./(4*jj*(2*jj-1)*radius);
-      weight[radius-jj][radius+ii] = -1./(4*jj*(2*jj-1)*radius);
+  const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
+  if (star) {
+    for (auto ii=1; ii<=radius; ii++) {
+      weight[radius][radius+ii] = weight[radius+ii][radius] = +1./(2*ii*radius);
+      weight[radius][radius-ii] = weight[radius-ii][radius] = -1./(2*ii*radius);
     }
-    weight[radius+jj][radius+jj]   = +1./(4*jj*radius);
-    weight[radius-jj][radius-jj]   = -1./(4*jj*radius);
+  } else {
+    for (auto jj=1; jj<=radius; jj++) {
+      for (auto ii=-jj+1; ii<jj; ii++) {
+        weight[radius+ii][radius+jj] = +1./(4*jj*(2*jj-1)*radius);
+        weight[radius+ii][radius-jj] = -1./(4*jj*(2*jj-1)*radius);
+        weight[radius+jj][radius+ii] = +1./(4*jj*(2*jj-1)*radius);
+        weight[radius-jj][radius+ii] = -1./(4*jj*(2*jj-1)*radius);
+      }
+      weight[radius+jj][radius+jj]   = +1./(4*jj*radius);
+      weight[radius-jj][radius-jj]   = -1./(4*jj*radius);
+    }
   }
-#endif
 
   // interior of grid with respect to stencil
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
   std::vector<double> in;
   std::vector<double> out;
-  in.resize(n*n);
+  in.resize(n*n,0.0);
   out.resize(n*n,0.0);
 
   auto stencil_time = 0.0;
@@ -193,11 +197,33 @@ int main(int argc, char * argv[])
     if (iter==1) stencil_time = prk::wtime();
 
     // Apply the stencil operator
-#ifdef STAR
-    do_stencil<RADIUS,true>(n, weight, in, out);
-#else
-    do_stencil<RADIUS,false>(n, weight, in, out);
-#endif
+    if (star) {
+        switch (radius) {
+            case 1: do_stencil<1,true>(n, weight, in, out); break;
+            case 2: do_stencil<2,true>(n, weight, in, out); break;
+            case 3: do_stencil<3,true>(n, weight, in, out); break;
+            case 4: do_stencil<4,true>(n, weight, in, out); break;
+            case 5: do_stencil<5,true>(n, weight, in, out); break;
+            case 6: do_stencil<6,true>(n, weight, in, out); break;
+            case 7: do_stencil<7,true>(n, weight, in, out); break;
+            case 8: do_stencil<8,true>(n, weight, in, out); break;
+            case 9: do_stencil<9,true>(n, weight, in, out); break;
+            default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
+        }
+    } else {
+        switch (radius) {
+            case 1: do_stencil<1,false>(n, weight, in, out); break;
+            case 2: do_stencil<2,false>(n, weight, in, out); break;
+            case 3: do_stencil<3,false>(n, weight, in, out); break;
+            case 4: do_stencil<4,false>(n, weight, in, out); break;
+            case 5: do_stencil<5,false>(n, weight, in, out); break;
+            case 6: do_stencil<6,false>(n, weight, in, out); break;
+            case 7: do_stencil<7,false>(n, weight, in, out); break;
+            case 8: do_stencil<8,false>(n, weight, in, out); break;
+            case 9: do_stencil<9,false>(n, weight, in, out); break;
+            default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
+        }
+    }
     // add constant to solution to force refresh of neighbor data, if any
     std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
 
