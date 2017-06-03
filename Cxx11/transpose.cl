@@ -5,6 +5,10 @@
 // - https://developer.apple.com/library/content/samplecode/OpenCL_Matrix_Transpose_Example/Introduction/Intro.html
 // - https://github.com/sschaetz/nvidia-opencl-examples/blob/master/OpenCL/src/oclTranspose/transpose.cl
 //
+
+// To enable double precision, use this:
+//#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+
 __kernel void transpose(const int order,
                         __global float * a,
                         __global float * b)
