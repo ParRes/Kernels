@@ -23,7 +23,7 @@ openmp: p2p-openmp stencil-openmp transpose-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
-target: transpose-target
+target: stencil-target transpose-target
 
 %: %.f90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -50,3 +50,4 @@ clean:
 	-rm -f p2p-pretty  stencil-pretty  transpose-pretty
 	-rm -f p2p-openmp  stencil-openmp  transpose-openmp
 	-rm -f p2p-coarray stencil-coarray transpose-coarray
+	-rm -f p2p-target stencil-target transpose-target

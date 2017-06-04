@@ -60,19 +60,9 @@
 !
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 program main
   use iso_fortran_env
-#ifdef _OPENMP
   use omp_lib
-#endif
   implicit none
   ! for argument parsing
   integer :: err
@@ -101,16 +91,8 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-#ifndef PRKVERSION
-#warning Your common/make.defs is missing PRKVERSION
-#define PRKVERSION "N/A"
-#endif
-  write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
-#ifdef _OPENMP
+  write(*,'(a,a)') 'Parallel Research Kernels'
   write(*,'(a)')   'Fortran OpenMP Stencil execution on 2D grid'
-#else
-  write(*,'(a)')   'Fortran Stencil execution on 2D grid'
-#endif
 
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
@@ -174,9 +156,7 @@ program main
   norm = 0.d0
   active_points = int(n-2*r,INT64)**2
 
-#ifdef _OPENMP
   write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
-#endif
   write(*,'(a,i8)') 'Grid size            = ', n
   write(*,'(a,i8)') 'Radius of stencil    = ', r
   write(*,'(a,a)')  'Type of stencil      = ', &
@@ -252,13 +232,7 @@ program main
     ! start timer after a warmup iteration
     !$omp barrier
     !$omp master
-    if (k.eq.1) then
-#ifdef _OPENMP
-        t0 = omp_get_wtime()
-#else
-        call cpu_time(t0)
-#endif
-    endif
+    if (k.eq.1) t0 = omp_get_wtime()
     !$omp end master
 
     ! Apply the stencil operator
@@ -330,14 +304,10 @@ program main
 
   enddo ! iterations
 
-#ifdef _OPENMP
   !$omp barrier
   !$omp master
   t1 = omp_get_wtime()
   !$omp end master
-#else
-  call cpu_time(t1)
-#endif
 
   ! compute L1 norm in parallel
   !$omp do !!! collapse(2)
