@@ -11,11 +11,11 @@ FCFLAGS  = $(DEFAULT_OPT_FLAGS)
 FCFLAGS += -DPRKVERSION=$(PRKVERSION)
 FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
-.PHONY: all clean plain pretty openmp coarray
+.PHONY: all clean serial pretty openmp coarray
 
-all: plain pretty openmp coarray target
+all: serial pretty openmp coarray target
 
-plain: p2p stencil transpose
+serial: p2p stencil transpose
 
 pretty: stencil-pretty transpose-pretty
 
