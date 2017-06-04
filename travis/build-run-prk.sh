@@ -140,8 +140,8 @@ case "$PRK_TARGET" in
                 # Offload
                 echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
                 make -C $PRK_TARGET_PATH target
-                $PRK_TARGET_PATH/stencil-vector-openmp-target     10 1000
-                $PRK_TARGET_PATH/transpose-vector-openmp-target   10 1024 32
+                $PRK_TARGET_PATH/stencil-openmp-target     10 1000
+                $PRK_TARGET_PATH/transpose-openmp-target   10 1024 32
                 ;;
             clang)
                 # Host
