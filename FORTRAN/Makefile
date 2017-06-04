@@ -13,7 +13,7 @@ FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 .PHONY: all clean plain pretty openmp coarray
 
-all: plain pretty openmp coarray
+all: plain pretty openmp coarray target
 
 plain: p2p stencil transpose
 
@@ -22,6 +22,8 @@ pretty: stencil-pretty transpose-pretty
 openmp: p2p-openmp stencil-openmp transpose-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
+
+target: transpose-target
 
 %: %.f90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -34,6 +36,9 @@ coarray: p2p-coarray stencil-coarray transpose-coarray
 
 %-coarray: %-coarray.f90
 	$(CAFCOMPILER) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
+
+%-target: %-target.f90
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< -o $@
 
 clean:
 	-rm -f *.o
