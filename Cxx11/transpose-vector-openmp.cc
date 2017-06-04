@@ -61,7 +61,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/OpenMP Matrix transpose: B = A^T" << std::endl;
 
   int iterations;
   size_t order;
@@ -108,48 +108,66 @@ int main(int argc, char * argv[])
 
   std::vector<double> A;
   std::vector<double> B;
-  B.resize(order*order,0.0);
   A.resize(order*order);
-  // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(A.begin(), A.end(), 0.0);
+  B.resize(order*order);
 
   auto trans_time = 0.0;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
-
-    if (iter==1) trans_time = prk::wtime();
-
-    // transpose the  matrix
-    if (tile_size < order) {
-      for (auto it=0; it<order; it+=tile_size) {
-        for (auto jt=0; jt<order; jt+=tile_size) {
-          for (auto i=it; i<std::min(order,it+tile_size); i++) {
-            for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
-              B[i*order+j] += A[j*order+i];
-            }
-          }
-        }
-      }
-    } else {
-      for (auto i=0;i<order; i++) {
-        for (auto j=0;j<order;j++) {
-          B[i*order+j] += A[j*order+i];
-        }
+  _Pragma("omp parallel")
+  {
+    _Pragma("omp for")
+    for (auto i=0;i<order; i++) {
+      for (auto j=0;j<order;j++) {
+        A[i*order+j] = static_cast<double>(i*order+j);
+        B[i*order+j] = 0.0;
       }
     }
 
-    // A += 1.0
-    std::transform(A.begin(), A.end(), A.begin(), [](double c) { return c+=1.0; });
+    for (auto iter = 0; iter<=iterations; iter++) {
+
+      if (iter==1) {
+          _Pragma("omp barrier")
+          _Pragma("omp master")
+          trans_time = prk::wtime();
+      }
+
+      // transpose the  matrix
+      if (tile_size < order) {
+        _Pragma("omp for")
+        for (auto it=0; it<order; it+=tile_size) {
+          for (auto jt=0; jt<order; jt+=tile_size) {
+            for (auto i=it; i<std::min(order,it+tile_size); i++) {
+              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
+                B[i*order+j] += A[j*order+i];
+                A[j*order+i] += 1.0;
+              }
+            }
+          }
+        }
+      } else {
+        _Pragma("omp for")
+        for (auto i=0;i<order; i++) {
+          for (auto j=0;j<order;j++) {
+            B[i*order+j] += A[j*order+i];
+            A[j*order+i] += 1.0;
+          }
+        }
+      }
+    }
+    {
+      _Pragma("omp barrier")
+      _Pragma("omp master")
+      trans_time = prk::wtime() - trans_time;
+    }
   }
-  trans_time = prk::wtime() - trans_time;
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
+  _Pragma("omp parallel for reduction(+:abserr)")
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const size_t ij = i*order+j;

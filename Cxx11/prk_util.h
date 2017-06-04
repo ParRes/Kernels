@@ -52,6 +52,8 @@
 #error You need a C++11 compiler.
 #endif
 
+#define RESTRICT __restrict__
+
 namespace prk {
 
     static inline double wtime(void)

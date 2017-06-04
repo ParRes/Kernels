@@ -25,7 +25,8 @@ DEFAULT_OPT_FLAGS=-g -O3 -xHOST
 # OpenMP flags
 #
 # You can also use -qopenmp.  -openmp is deprecated.
-OPENMPFLAG=-fopenmp
+OPENMPFLAG=-qopenmp
+OFFLOADFLAG=-qopenmp-offload=host
 #
 # MPI
 #
