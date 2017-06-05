@@ -205,7 +205,6 @@ program main
   real(kind=REAL64), parameter :: cx=1.d0, cy=1.d0
   ! runtime variables
   integer(kind=INT32) :: i, j, k
-  integer(kind=INT32) :: ii, jj, it, jt
   integer(kind=INT64) :: flops                          ! floating point ops per iteration
   real(kind=REAL64) :: norm, reference_norm             ! L1 norm of solution
   integer(kind=INT64) :: active_points                  ! interior of grid with respect to stencil
@@ -321,7 +320,7 @@ program main
 
   !$omp parallel default(none)                                        &
   !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size,is_star)   &
-  !$omp&  private(i,j,ii,jj,it,jt,k)                                  &
+  !$omp&  private(i,j,k)                                  &
   !$omp&  reduction(+:norm)
 
   ! intialize the input and output arrays
@@ -340,13 +339,15 @@ program main
   enddo
   !$omp end do nowait
 
+  t0 = 0
+
   do k=0,iterations
 
     ! start timer after a warmup iteration
     !$omp barrier
     !$omp master
     if (k.eq.1) then
-        t0 = prk_get_wtime()
+       t0 = prk_get_wtime()
     endif
     !$omp end master
 
