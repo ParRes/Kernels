@@ -1,5 +1,4 @@
 include ../common/FORTRAN.defs
-include ../common/PRKVERSION
 
 ifndef RADIUS
   RADIUS=2
@@ -8,7 +7,6 @@ endif
 STARFLAG   = -DSTAR
 
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
-FCFLAGS += -DPRKVERSION=$(PRKVERSION)
 FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 .PHONY: all clean serial pretty openmp coarray

@@ -83,11 +83,7 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-#ifndef PRKVERSION
-#warning Your common/make.defs is missing PRKVERSION
-#define PRKVERSION "N/A"
-#endif
-  write(*,'(a34,a10)') 'Parallel Research Kernels version ', PRKVERSION
+  write(*,'(a34,a10)') 'Parallel Research Kernels'
   write(*,'(a34)')   'Pretty Fortran Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then

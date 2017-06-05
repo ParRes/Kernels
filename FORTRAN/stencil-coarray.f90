@@ -226,14 +226,10 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-#ifndef PRKVERSION
-#warning Your common/make.defs is missing PRKVERSION
-#define PRKVERSION "N/A"
-#endif
   np = num_images()
   me = this_image()
   if (me == 1) then
-    write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
+    write(*,'(a,a)') 'Parallel Research Kernels'
     write(*,'(a)')   'CAF stencil execution on 2D grid'
   endif
   

@@ -107,12 +107,8 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-#ifndef PRKVERSION
-#warning Your common/make.defs is missing PRKVERSION
-#define PRKVERSION "N/A"
-#endif
   if (printer) then
-    write(6,'(a34,a8)') 'Parallel Research Kernels version ', PRKVERSION
+    write(6,'(a34,a8)') 'Parallel Research Kernels'
     write(6,'(a41)')    'Fortran coarray Matrix transpose: B = A^T'
   endif
 

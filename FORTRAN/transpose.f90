@@ -89,11 +89,7 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-#ifndef PRKVERSION
-#warning Your common/make.defs is missing PRKVERSION
-#define PRKVERSION "N/A"
-#endif
-  write(*,'(a34,a10)') 'Parallel Research Kernels version ', PRKVERSION
+  write(*,'(a34,a10)') 'Parallel Research Kernels'
 #ifdef _OPENMP
   write(*,'(a40)')   'Fortran OpenMP Matrix transpose: B = A^T'
 #else

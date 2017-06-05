@@ -85,11 +85,7 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-#ifndef PRKVERSION
-#warning Your common/make.defs is missing PRKVERSION
-#define PRKVERSION "N/A"
-#endif
-  write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
+  write(*,'(a,a)') 'Parallel Research Kernels'
   write(*,'(a)')   'Serial pipeline execution on 2D grid'
 
   if (command_argument_count().lt.3) then

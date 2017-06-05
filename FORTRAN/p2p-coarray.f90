@@ -103,11 +103,7 @@ program main
 
   ! co_broadcast is part of Fortran 2015, so we will not assume it yet.
   if(me == 1) then
-#ifndef PRKVERSION
-#warning Your common/make.defs is missing PRKVERSION
-#define PRKVERSION "N/A"
-#endif
-     write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
+     write(*,'(a,a)') 'Parallel Research Kernels'
      write(*,'(a)')   'Fortran coarray pipeline execution on 2D grid'
 
   endif
