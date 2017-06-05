@@ -2,7 +2,7 @@
 MPICC=mpiicc
 
 #name of C compiler, e.g. icc, xlc, gcc
-CC=icc
+CC=icc -std=c99
 
 #name of MPI Fortran compiler, e.g. mpifort, mpif90
 MPIF90=mpiifort -fpp -std08
@@ -14,7 +14,7 @@ FC=ifort -fpp -std08
 OPENMPFLAG=-qopenmp
 
 #default compiler optimization flags
-DEFAULT_OPT_FLAGS=-O3 -std=c99
+DEFAULT_OPT_FLAGS=-O3
 
 ############################   OPTIONAL #########################
 
