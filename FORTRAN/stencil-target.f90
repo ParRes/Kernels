@@ -60,6 +60,36 @@
 !
 ! *******************************************************************
 
+subroutine initialize_w(W)
+  use iso_fortran_env
+  implicit none
+  integer(kind=INT32) :: ii, jj
+  integer(kind=INT32), parameter :: r=RADIUS            ! radius of stencil
+  real(kind=REAL64) :: W(-r:r,-r:r)                     ! weights of points in the stencil
+  ! fill the stencil weights to reflect a discrete divergence operator
+  W = 0.0d0
+#ifdef STAR
+  do ii=1,r
+    W(0, ii) =  1.0d0/real(2*ii*r,REAL64)
+    W(0,-ii) = -1.0d0/real(2*ii*r,REAL64)
+    W( ii,0) =  1.0d0/real(2*ii*r,REAL64)
+    W(-ii,0) = -1.0d0/real(2*ii*r,REAL64)
+  enddo
+#else
+  ! Jeff: check that this is correct with the new W indexing
+  do jj=1,r
+    do ii=-jj+1,jj-1
+      W( ii, jj) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii,-jj) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj, ii) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj, ii) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+    enddo
+    W( jj, jj)  =  1.0d0/real(4*jj*r,REAL64)
+    W(-jj,-jj)  = -1.0d0/real(4*jj*r,REAL64)
+  enddo
+#endif
+end subroutine initialize_w
+
 program main
   use iso_fortran_env
   use omp_lib
@@ -176,40 +206,12 @@ program main
   endif
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
+  call initialize_w(W)
+
   !$omp parallel default(none)                                        &
   !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size)           &
   !$omp&  private(i,j,ii,jj,it,jt,k)                                  &
   !$omp&  reduction(+:norm)
-
-  ! fill the stencil weights to reflect a discrete divergence operator
-  ! Jeff: if one does not use workshare here, the code is wrong.
-  !$omp workshare
-  W = 0.d0
-  !$omp end workshare
-#ifdef STAR
-  !$omp do
-  do ii=1,r
-    W(0, ii) =  1/real(2*ii*r,REAL64)
-    W(0,-ii) = -1/real(2*ii*r,REAL64)
-    W( ii,0) =  1/real(2*ii*r,REAL64)
-    W(-ii,0) = -1/real(2*ii*r,REAL64)
-  enddo
-  !$omp end do nowait
-#else
-  ! Jeff: check that this is correct with the new W indexing
-  !$omp do
-  do jj=1,r
-    do ii=-jj+1,jj-1
-      W( ii, jj) =  1/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii,-jj) = -1/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj, ii) =  1/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj, ii) = -1/real(4*jj*(2*jj-1)*r,REAL64)
-    enddo
-    W( jj, jj)  =  1/real(4*jj*r,REAL64)
-    W(-jj,-jj)  = -1/real(4*jj*r,REAL64)
-  enddo
-  !$omp end do nowait
-#endif
 
   ! intialize the input and output arrays
   !$omp do !!! collapse(2)

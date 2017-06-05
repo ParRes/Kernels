@@ -79,6 +79,36 @@ function prk_get_wtime() result(t)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
 
+subroutine initialize_w(W)
+  use iso_fortran_env
+  implicit none
+  integer(kind=INT32) :: ii, jj
+  integer(kind=INT32), parameter :: r=RADIUS            ! radius of stencil
+  real(kind=REAL64) :: W(-r:r,-r:r)                     ! weights of points in the stencil
+  ! fill the stencil weights to reflect a discrete divergence operator
+  W = 0.0d0
+#ifdef STAR
+  do ii=1,r
+    W(0, ii) =  1.0d0/real(2*ii*r,REAL64)
+    W(0,-ii) = -1.0d0/real(2*ii*r,REAL64)
+    W( ii,0) =  1.0d0/real(2*ii*r,REAL64)
+    W(-ii,0) = -1.0d0/real(2*ii*r,REAL64)
+  enddo
+#else
+  ! Jeff: check that this is correct with the new W indexing
+  do jj=1,r
+    do ii=-jj+1,jj-1
+      W( ii, jj) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii,-jj) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj, ii) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj, ii) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+    enddo
+    W( jj, jj)  =  1.0d0/real(4*jj*r,REAL64)
+    W(-jj,-jj)  = -1.0d0/real(4*jj*r,REAL64)
+  enddo
+#endif
+end subroutine initialize_w
+
 program main
   use iso_fortran_env
   implicit none
@@ -249,31 +279,7 @@ program main
     write(*,'(a,i8)') 'Number of iterations = ', iterations
   endif
 
-  ! fill the stencil weights to reflect a discrete divergence operator
-  ! Jeff: if one does not use workshare here, the code is wrong.
-
-  W = 0.d0
-
-#ifdef STAR
-  do ii=1,r
-    W(0, ii) =  1/real(2*ii*r,REAL64)
-    W(0,-ii) = -1/real(2*ii*r,REAL64)
-    W( ii,0) =  1/real(2*ii*r,REAL64)
-    W(-ii,0) = -1/real(2*ii*r,REAL64)
-  enddo
-#else
-  ! Jeff: check that this is correct with the new W indexing
-  do jj=1,r
-    do ii=-jj+1,jj-1
-      W( ii, jj) =  1/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii,-jj) = -1/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj, ii) =  1/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj, ii) = -1/real(4*jj*(2*jj-1)*r,REAL64)
-    enddo
-    W( jj, jj)  =  1/real(4*jj*r,REAL64)
-    W(-jj,-jj)  = -1/real(4*jj*r,REAL64)
-  enddo
-#endif
+  call initialize_w(W)
 
   ! Getting the remote size of the upper and left images
   ! in order to initialize correctly the local grid A. 
