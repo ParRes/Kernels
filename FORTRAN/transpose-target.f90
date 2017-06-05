@@ -168,7 +168,7 @@ program main
 
   t0 = 0
 
-  !$omp target map(tofrom: A, B) map(from:trans_time)
+  !$omp target map(to: A) map(tofrom: B) map(from:trans_time)
   !$omp parallel default(none)                         &
   !$omp&  shared(A,B,t0,t1,trans_time)                 &
   !$omp&  firstprivate(order,iterations,tile_size)     &

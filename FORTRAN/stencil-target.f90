@@ -305,11 +305,8 @@ program main
 
   call initialize_w(is_star,r,W)
 
-  !$omp parallel default(none)                                        &
-  !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size,is_star)   &
-  !$omp&  private(i,j,k)                                  &
-  !$omp&  reduction(+:norm)
-
+  ! HOST
+  !$omp parallel default(none) shared(n,A,B) private(i,j)
   ! intialize the input and output arrays
   !$omp do
   do j=1,n
@@ -325,8 +322,15 @@ program main
     enddo
   enddo
   !$omp end do nowait
+  !$omp end parallel
 
-  t0 = 0
+  ! DEVICE
+  !$omp target map(to:W, A) map(tofrom: B) map(from:stencil_time)
+  !$omp parallel default(none) &
+  !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size,is_star)   &
+  !$omp&  shared(stencil_time) private(i,j,k)
+
+  t0 = 0.0d0
 
   do k=0,iterations
 
@@ -355,9 +359,16 @@ program main
   !$omp barrier
   !$omp master
   t1 = omp_get_wtime()
+  stencil_time = t1 - t0
   !$omp end master
 
+  !$omp end parallel
+  !$omp end target
+
+  ! HOST
   ! compute L1 norm in parallel
+  !$omp parallel default(none) shared(n,B) private(i,j) &
+  !$omp&  reduction(+:norm)
   !$omp do
   do j=r,n-r
     do i=r,n-r
@@ -365,10 +376,7 @@ program main
     enddo
   enddo
   !$omp end do nowait
-
   !$omp end parallel
-
-  stencil_time = t1 - t0
   norm = norm / real(active_points,REAL64)
 
   !******************************************************************************
