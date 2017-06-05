@@ -56,6 +56,7 @@
 
 function prk_get_wtime() result(t)
   use iso_fortran_env
+  implicit none
   real(kind=REAL64) ::  t
   integer(kind=INT64) :: c, r
   call system_clock(count = c, count_rate = r)
@@ -168,11 +169,7 @@ program main
     !$omp barrier
     !$omp master
     if (k.eq.1) then
-#ifdef _OPENMP
-        t0 = omp_get_wtime()
-#else
-        call cpu_time(t0)
-#endif
+        t0 = prk_get_wtime()
     endif
     !$omp end master
 
@@ -194,11 +191,7 @@ program main
 
   !$omp barrier
   !$omp master
-#ifdef _OPENMP
-  t1 = omp_get_wtime()
-#else
-  call cpu_time(t1)
-#endif
+  t1 = prk_get_wtime()
   pipeline_time = t1 - t0
   !$omp end master
 
