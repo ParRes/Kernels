@@ -44,11 +44,13 @@ p2p-openmp: p2p-openmp.f90
 clean:
 	-rm -f *.o
 	-rm -f *.i90
+	-rm -f *__genmod.f90 # Intel Fortran
+	-rm -f *__genmod.mod # Intel Fortran
 	-rm -f *.optrpt
 	-rm -f *.dwarf
-	-rm -rf *.dSYM
+	-rm -rf *.dSYM # Mac
 	-rm -f p2p         stencil         transpose
 	-rm -f p2p-pretty  stencil-pretty  transpose-pretty
 	-rm -f p2p-openmp  stencil-openmp  transpose-openmp
 	-rm -f p2p-coarray stencil-coarray transpose-coarray
-	-rm -f p2p-target stencil-target transpose-target
+	-rm -f p2p-target  stencil-target  transpose-target
