@@ -145,10 +145,11 @@ case "$PRK_TARGET" in
                 ;;
             clang)
                 # Host
-                echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                make -C $PRK_TARGET_PATH openmp
-                $PRK_TARGET_PATH/stencil-vector-openmp     10 1000
-                $PRK_TARGET_PATH/transpose-vector-openmp   10 1024 32
+                echo "Skipping MacOS Clang since OpenMP missing in default compiler"
+                #echo "OPENMPFLAG=-fopenmp" >> common/make.defs
+                #make -C $PRK_TARGET_PATH openmp
+                #$PRK_TARGET_PATH/stencil-vector-openmp     10 1000
+                #$PRK_TARGET_PATH/transpose-vector-openmp   10 1024 32
                 ;;
             *)
                 echo "Figure out your OpenMP flags..."
