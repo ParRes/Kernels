@@ -196,50 +196,43 @@ program main
   endif
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
+  ! fill the stencil weights to reflect a discrete divergence operator
+  W = 0.0d0
+#ifdef STAR
+  do ii=1,r
+    W(0, ii) =  1.0d0/real(2*ii*r,REAL64)
+    W(0,-ii) = -1.0d0/real(2*ii*r,REAL64)
+    W( ii,0) =  1.0d0/real(2*ii*r,REAL64)
+    W(-ii,0) = -1.0d0/real(2*ii*r,REAL64)
+  enddo
+#else
+  ! Jeff: check that this is correct with the new W indexing
+  do jj=1,r
+    do ii=-jj+1,jj-1
+      W( ii, jj) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii,-jj) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj, ii) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj, ii) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+    enddo
+    W( jj, jj)  =  1.0d0/real(4*jj*r,REAL64)
+    W(-jj,-jj)  = -1.0d0/real(4*jj*r,REAL64)
+  enddo
+#endif
+
   !$omp parallel default(none)                                        &
   !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size)           &
   !$omp&  private(i,j,ii,jj,it,jt,k)                                  &
   !$omp&  reduction(+:norm)
 
-  ! fill the stencil weights to reflect a discrete divergence operator
-  ! Jeff: if one does not use workshare here, the code is wrong.
-  !$omp workshare
-  W = 0.d0
-  !$omp end workshare
-#ifdef STAR
-  !$omp do
-  do ii=1,r
-    W(0, ii) =  1/real(2*ii*r,REAL64)
-    W(0,-ii) = -1/real(2*ii*r,REAL64)
-    W( ii,0) =  1/real(2*ii*r,REAL64)
-    W(-ii,0) = -1/real(2*ii*r,REAL64)
-  enddo
-  !$omp end do nowait
-#else
-  ! Jeff: check that this is correct with the new W indexing
-  !$omp do
-  do jj=1,r
-    do ii=-jj+1,jj-1
-      W( ii, jj) =  1/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii,-jj) = -1/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj, ii) =  1/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj, ii) = -1/real(4*jj*(2*jj-1)*r,REAL64)
-    enddo
-    W( jj, jj)  =  1/real(4*jj*r,REAL64)
-    W(-jj,-jj)  = -1/real(4*jj*r,REAL64)
-  enddo
-  !$omp end do nowait
-#endif
-
   ! intialize the input and output arrays
-  !$omp do !!! collapse(2)
+  !$omp do
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
     enddo
   enddo
   !$omp end do nowait
-  !$omp do !!! collapse(2)
+  !$omp do
   do j=r+1,n-r
     do i=r+1,n-r
       B(i,j) = 0.d0
@@ -253,17 +246,13 @@ program main
     !$omp barrier
     !$omp master
     if (k.eq.1) then
-#ifdef _OPENMP
-        t0 = omp_get_wtime()
-#else
-        call cpu_time(t0)
-#endif
+        t0 = prk_get_wtime()
     endif
     !$omp end master
 
     ! Apply the stencil operator
     if (.not.tiling) then
-      !$omp do !!! collapse(2)
+      !$omp do
       do j=r,n-r-1
         do i=r,n-r-1
 #ifdef STAR
@@ -288,7 +277,7 @@ program main
       enddo
       !$omp end do nowait
     else ! tiling
-      !$omp do !!! collapse(2)
+      !$omp do
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -320,7 +309,7 @@ program main
     !$omp barrier
 
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp do !!! collapse(2)
+    !$omp do
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.d0
@@ -330,17 +319,13 @@ program main
 
   enddo ! iterations
 
-#ifdef _OPENMP
   !$omp barrier
   !$omp master
-  t1 = omp_get_wtime()
+  t1 = prk_get_wtime()
   !$omp end master
-#else
-  call cpu_time(t1)
-#endif
 
   ! compute L1 norm in parallel
-  !$omp do !!! collapse(2)
+  !$omp do
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
@@ -359,9 +344,6 @@ program main
 
   deallocate( B )
   deallocate( A )
-
-  ! Jeff: valgrind says that this is branching on uninitialized value (norm),
-  !       but this is nonsense since norm is initialized to 0.0 at line 167.
 
   ! verify correctness
   reference_norm = real(iterations+1,REAL64) * (cx + cy);
