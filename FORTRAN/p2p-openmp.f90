@@ -65,6 +65,7 @@ end function prk_get_wtime
 
 program main
   use iso_fortran_env
+  use omp_lib
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -90,7 +91,7 @@ program main
 #define PRKVERSION "N/A"
 #endif
   write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
-  write(*,'(a)')   'Serial pipeline execution on 2D grid'
+  write(*,'(a)')   'OpenMP pipeline execution on 2D grid'
 
   if (command_argument_count().lt.3) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
@@ -127,33 +128,48 @@ program main
     stop 1
   endif
 
+  write(*,'(a,i8)')    'Number of threads        = ',omp_get_max_threads()
   write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
 
+  !$omp parallel default(none)                                        &
+  !$omp&  shared(grid,t0,t1,iterations,pipeline_time)                 &
+  !$omp&  firstprivate(m,n)                                           &
+  !$omp&  private(i,j,k)
+
+  !$omp do collapse(2)
   do j=1,n
     do i=1,m
       grid(i,j) = 0.0d0
     enddo
   enddo
+  !$omp end do nowait
+  !$omp do
   do j=1,n
     grid(1,j) = real(j-1,REAL64)
   enddo
+  !$omp end do nowait
+  !$omp do
   do i=1,m
     grid(i,1) = real(i-1,REAL64)
   enddo
+  !$omp end do nowait
 
   do k=0,iterations
 
     !  start timer after a warmup iteration
-    if (k.eq.1) then
-        t0 = prk_get_wtime()
-    endif
+    !$omp barrier
+    !$omp master
+    if (k.eq.1) t0 = prk_get_wtime()
+    !$omp end master
 
+    !$omp master
     do j=2,n
       do i=2,m
         grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
       enddo
     enddo
+    !$omp end master
 
     ! copy top right corner value to bottom left corner to create dependency; we
     ! need a barrier to make sure the latest value is used. This also guarantees
@@ -162,8 +178,13 @@ program main
 
   enddo ! iterations
 
+  !$omp barrier
+  !$omp master
   t1 = prk_get_wtime()
   pipeline_time = t1 - t0
+  !$omp end master
+
+  !$omp end parallel
 
   ! ********************************************************************
   ! ** Analyze and output results.

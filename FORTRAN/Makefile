@@ -31,6 +31,9 @@ target: stencil-target transpose-target
 %-pretty: %-pretty.f90
 	$(FC) $(FCFLAGS) $< -o $@
 
+p2p-openmp: p2p-openmp.f90
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+
 %-openmp: %.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
