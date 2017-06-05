@@ -14,7 +14,7 @@ if [ "${CC}" = "gcc" ] || [ "${CXX}" = "g++" ] ; then
             # this is 5.3.0 or later
             brew install gcc --without-multilib
             ;;
-        Linux)
+        DisableLinux)
             echo "Linux"
             if [ ! -d "$TRAVIS_ROOT/gcc" ]; then
                 cd $TRAVIS_ROOT
