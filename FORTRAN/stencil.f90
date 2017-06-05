@@ -62,11 +62,42 @@
 
 function prk_get_wtime() result(t)
   use iso_fortran_env
+  implicit none
   real(kind=REAL64) ::  t
   integer(kind=INT64) :: c, r
   call system_clock(count = c, count_rate = r)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
+
+subroutine initialize_w(W)
+  use iso_fortran_env
+  implicit none
+  integer(kind=INT32) :: ii, jj
+  integer(kind=INT32), parameter :: r=RADIUS            ! radius of stencil
+  real(kind=REAL64) :: W(-r:r,-r:r)                     ! weights of points in the stencil
+  ! fill the stencil weights to reflect a discrete divergence operator
+  W = 0.0d0
+#ifdef STAR
+  do ii=1,r
+    W(0, ii) =  1.0d0/real(2*ii*r,REAL64)
+    W(0,-ii) = -1.0d0/real(2*ii*r,REAL64)
+    W( ii,0) =  1.0d0/real(2*ii*r,REAL64)
+    W(-ii,0) = -1.0d0/real(2*ii*r,REAL64)
+  enddo
+#else
+  ! Jeff: check that this is correct with the new W indexing
+  do jj=1,r
+    do ii=-jj+1,jj-1
+      W( ii, jj) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( ii,-jj) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W( jj, ii) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+      W(-jj, ii) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
+    enddo
+    W( jj, jj)  =  1.0d0/real(4*jj*r,REAL64)
+    W(-jj,-jj)  = -1.0d0/real(4*jj*r,REAL64)
+  enddo
+#endif
+end subroutine initialize_w
 
 program main
   use iso_fortran_env
@@ -74,6 +105,7 @@ program main
   use omp_lib
 #endif
   implicit none
+  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -196,28 +228,7 @@ program main
   endif
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
-  ! fill the stencil weights to reflect a discrete divergence operator
-  W = 0.0d0
-#ifdef STAR
-  do ii=1,r
-    W(0, ii) =  1.0d0/real(2*ii*r,REAL64)
-    W(0,-ii) = -1.0d0/real(2*ii*r,REAL64)
-    W( ii,0) =  1.0d0/real(2*ii*r,REAL64)
-    W(-ii,0) = -1.0d0/real(2*ii*r,REAL64)
-  enddo
-#else
-  ! Jeff: check that this is correct with the new W indexing
-  do jj=1,r
-    do ii=-jj+1,jj-1
-      W( ii, jj) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( ii,-jj) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-      W( jj, ii) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-      W(-jj, ii) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-    enddo
-    W( jj, jj)  =  1.0d0/real(4*jj*r,REAL64)
-    W(-jj,-jj)  = -1.0d0/real(4*jj*r,REAL64)
-  enddo
-#endif
+  call initialize_w(W)
 
   !$omp parallel default(none)                                        &
   !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size)           &

@@ -68,6 +68,7 @@ program main
   use omp_lib
 #endif
   implicit none
+  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
