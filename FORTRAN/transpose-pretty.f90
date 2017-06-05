@@ -83,8 +83,8 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a34,a10)') 'Parallel Research Kernels'
-  write(*,'(a34)')   'Pretty Fortran Matrix transpose: B = A^T'
+  write(*,'(a40)') 'Parallel Research Kernels'
+  write(*,'(a40)') 'Fortran Pretty Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()

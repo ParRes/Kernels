@@ -86,13 +86,13 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a,a)') 'Parallel Research Kernels'
-  write(*,'(a)')   'OpenMP pipeline execution on 2D grid'
+  write(*,'(a40)') 'Parallel Research Kernels'
+  write(*,'(a40)') 'Fortran OpenMP pipeline execution on 2D grid'
 
   if (command_argument_count().lt.3) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a,a)')  'Usage: ./synch_p2p <# iterations> ',             &
-                      '<first array dimension> <second array dimension>'
+    write(*,'(a20,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a35,a50)')  'Usage: ./synch_p2p <# iterations> ',  &
+                          '<array x-dimension> <array y-dimension>'
     stop 1
   endif
 

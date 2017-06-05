@@ -89,11 +89,11 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a34,a10)') 'Parallel Research Kernels'
+  write(*,'(a40)') 'Parallel Research Kernels'
 #ifdef _OPENMP
-  write(*,'(a40)')   'Fortran OpenMP Matrix transpose: B = A^T'
+  write(*,'(a40)') 'Fortran OpenMP Matrix transpose: B = A^T'
 #else
-  write(*,'(a34)')   'Fortran Matrix transpose: B = A^T'
+  write(*,'(a40)') 'Fortran Matrix transpose: B = A^T'
 #endif
 
   if (command_argument_count().lt.2) then

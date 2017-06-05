@@ -229,12 +229,12 @@ program main
   np = num_images()
   me = this_image()
   if (me == 1) then
-    write(*,'(a,a)') 'Parallel Research Kernels'
-    write(*,'(a)')   'CAF stencil execution on 2D grid'
+    write(*,'(a40)') 'Parallel Research Kernels'
+    write(*,'(a40)') 'Fortran coarray stencil execution on 2D grid'
   endif
-  
+
   if (command_argument_count().lt.2) then
-    if (me == 1) then    
+    if (me == 1) then
       write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',           &
                         '<array dimension> [tile_size]'
     endif

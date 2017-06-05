@@ -103,8 +103,8 @@ program main
 
   ! co_broadcast is part of Fortran 2015, so we will not assume it yet.
   if(me == 1) then
-     write(*,'(a,a)') 'Parallel Research Kernels'
-     write(*,'(a)')   'Fortran coarray pipeline execution on 2D grid'
+     write(*,'(a40)') 'Parallel Research Kernels'
+     write(*,'(a40)') 'Fortran coarray pipeline execution on 2D grid'
 
   endif
      if (command_argument_count().lt.3) then

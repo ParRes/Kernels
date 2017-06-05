@@ -108,8 +108,8 @@ program main
   ! ********************************************************************
 
   if (printer) then
-    write(6,'(a34,a8)') 'Parallel Research Kernels'
-    write(6,'(a41)')    'Fortran coarray Matrix transpose: B = A^T'
+    write(6,'(a40)') 'Parallel Research Kernels'
+    write(6,'(a40)') 'Fortran coarray Matrix transpose: B = A^T'
   endif
 
   if (command_argument_count().lt.2) then

@@ -77,7 +77,7 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a34)') 'Parallel Research Kernels'
+  write(*,'(a40)') 'Parallel Research Kernels'
   write(*,'(a40)') 'Fortran OpenMP Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then

@@ -215,11 +215,11 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a,a)') 'Parallel Research Kernels'
+  write(*,'(a40)') 'Parallel Research Kernels'
 #ifdef _OPENMP
-  write(*,'(a)')   'Fortran OpenMP Stencil execution on 2D grid'
+  write(*,'(a40)') 'Fortran OpenMP Stencil execution on 2D grid'
 #else
-  write(*,'(a)')   'Fortran Stencil execution on 2D grid'
+  write(*,'(a40)') 'Fortran Serial Stencil execution on 2D grid'
 #endif
 
   if (command_argument_count().lt.2) then
