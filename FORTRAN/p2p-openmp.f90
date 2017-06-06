@@ -63,6 +63,21 @@ function prk_get_wtime() result(t)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
 
+subroutine sweep_tile(startm,endm,startn,endn,m,n,grid)
+  use iso_fortran_env
+  implicit none
+  integer(kind=INT32), intent(in) :: m,n
+  integer(kind=INT32), intent(in) :: startm,endm
+  integer(kind=INT32), intent(in) :: startn,endn
+  real(kind=REAL64), intent(inout) ::  grid(m,n)
+  integer(kind=INT32) :: i,j
+  do j=startn,endn
+    do i=startm,endm
+      grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+    enddo
+  enddo
+end subroutine
+
 program main
   use iso_fortran_env
   use omp_lib
@@ -77,15 +92,13 @@ program main
   integer(kind=INT32) :: m, n
   real(kind=REAL64) :: corner_val                       ! verification value at top right corner of grid
   real(kind=REAL64), allocatable :: grid(:,:)           ! array holding grid values
-  integer(kind=INT32), allocatable :: flags(:)          ! array holding flags for synchronization
-  real(kind=INT32) :: copy                              ! copy of flags() element for atomic update
   ! runtime variables
   integer(kind=INT32) :: i, j, k
-  integer(kind=INT32) :: lo, up, chunk
-  integer ::  me, nt, prev, next
+  integer(kind=INT32) :: ic, mc                         ! ic = chunking index, mc = chunking dimension
+  integer(kind=INT32) :: jc, nc                         ! jc = chunking index, nc = chunking dimension
+  integer ::  me, nt
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
-  logical :: loop
 
   ! ********************************************************************
   ! read and test input parameters
@@ -113,6 +126,14 @@ program main
   call get_command_argument(3,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') n
 
+  mc = m
+  call get_command_argument(4,argtmp,arglen,err)
+  if (err.eq.0) read(argtmp,'(i32)') mc
+
+  nc = n
+  call get_command_argument(5,argtmp,arglen,err)
+  if (err.eq.0) read(argtmp,'(i32)') nc
+
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
@@ -123,46 +144,28 @@ program main
     stop 1
   endif
 
+  if (((mc.lt.1).or.(mc.gt.m)).or.((mc.lt.1).or.(mc.gt.m))) then
+    write(*,'(a,i5)') 'WARNING: chunking invalid - ignoring'
+    mc = int(m/omp_get_max_threads())
+    nc = int(n/omp_get_max_threads())
+  endif
+
+  write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
+  write(*,'(a,i8)')    'Number of iterations     = ', iterations
+  write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
+  write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
+
   allocate( grid(m,n), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of grid returned ',err
     stop 1
   endif
 
-  allocate( flags(omp_get_max_threads()), stat=err)
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of flags returned ',err
-    stop 1
-  endif
-  flags = 0
-  !$omp barrier
+  !$omp parallel default(none)                                  &
+  !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
+  !$omp&  firstprivate(m,n,mc,nc)                               &
+  !$omp&  private(i,j,k,corner_val)
 
-  write(*,'(a,i8)')    'Number of threads        = ',omp_get_max_threads()
-  write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
-  write(*,'(a,i8)')    'Number of iterations     = ', iterations
-
-  !$omp parallel default(none)                                        &
-  !$omp&  shared(grid,flags,t0,t1,iterations,pipeline_time)           &
-  !$omp&  firstprivate(m,n)                                           &
-  !$omp&  private(i,j,k,me,nt,next,prev,copy,corner_val,loop,lo,up,chunk)
-
-  ! use 1-based indexing to match coarray version
-  me = omp_get_thread_num()+1
-  nt = omp_get_num_threads()+1
-
-  prev = me - 1
-  next = me + 1
-
-  chunk = int(m/(nt-1))
-  lo = 2 + (me-1) * chunk
-  up = min( m, me * chunk )
-  !$omp critical
-  print*,me,' chunk = ',chunk
-  print*,me,' lo = ',lo
-  print*,me,' up = ',up
-  !$omp end critical
-
-  ! FIXME - initialize with same locality as timed part
   !$omp do collapse(2)
   do j=1,n
     do i=1,m
@@ -190,36 +193,26 @@ program main
     if (k.eq.1) t0 = prk_get_wtime()
     !$omp end master
 
-    do j=2,n
-      !write(*,'(a3,i3,a3,i5)') 'me=',me,' j=',j
-      if (me > 1) then
-        loop = .true.
-        do while (loop)
-          !$omp flush
-!          write(*,'(a3,i3,a12,i3,a2,i5,a2,i5,a1)') 'me=',me, &
-!     &            ' read flags(', prev, ')=', flags(prev), &
-!     &            ' [',(j-1)*(k+1),']'
-          !$omp atomic read
-          copy = flags(prev)
-          if ( copy >= (j-1)*(k+1) ) loop = .false.
-        enddo
-      endif
-      ! FIXME: adjust loop bounds for decomposition across threads
-      do i=lo,up
-        grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+    !$omp single
+
+    do ic=2,m,mc
+      do jc=2,n,nc
+        !$omp task depend(in:grid(ic,jc))                             &
+        !$omp&     depend(out:grid(min(m,ic+mc-1),min(n,jc+nc-1)))
+        call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
+        !$omp end task
       enddo
-      if (me < nt) then
-        !$omp flush
-        !$omp atomic update
-        flags(me) = flags(me) + 1
-!        write(*,'(a3,i3,a13,i3,a2,i5)') 'me=',me,' wrote flags(', me, ')=', flags(me) + 1
-      endif
     enddo
 
-    ! copy top right corner value to bottom left corner to create dependency; we
-    ! need a barrier to make sure the latest value is used. This also guarantees
-    ! that the flags for the next iteration (if any) are not getting clobbered
+    !$omp end single
+
+    !$omp barrier
+
+    !$omp master
+    !!!$omp task depend(in:grid(m,n))
     grid(1,1) = -grid(m,n)
+    !!!$omp end task
+    !$omp end master
 
   enddo ! iterations
 
