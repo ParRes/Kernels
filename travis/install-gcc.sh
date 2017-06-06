@@ -12,9 +12,9 @@ if [ "${CC}" = "gcc" ] || [ "${CXX}" = "g++" ] ; then
             echo "Mac"
             brew update
             # this is 5.3.0 or later
-            brew install gcc --without-multilib
+            brew install gcc --force-bottle
             ;;
-        Linux)
+        DisableLinux)
             echo "Linux"
             if [ ! -d "$TRAVIS_ROOT/gcc" ]; then
                 cd $TRAVIS_ROOT

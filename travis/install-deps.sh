@@ -34,14 +34,12 @@ case "$PRK_TARGET" in
         ;;
     allcxx)
         echo "C++11"
-        #case "$CXX" in
-        #    g++)
-        #        sh ./travis/install-gcc.sh $TRAVIS_ROOT
-        #        ;;
-        #    clang++)
-        #        sh ./travis/install-clang.sh $TRAVIS_ROOT
-        #        ;;
-        #esac
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
+            sh ./travis/install-gcc.sh $TRAVIS_ROOT
+        fi
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+            sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
+        fi
         ;;
     allfortran*)
         echo "Fortran"
