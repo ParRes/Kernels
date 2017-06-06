@@ -104,6 +104,7 @@ case "$PRK_TARGET" in
         ;;
     allcxx)
         echo "C++11"
+        export PRK_TARGET_PATH=Cxx11
         for major in "-9" "-8" "-7" "-6" "-5" "-4" "-3" "-2" "-1" "" ; do
           if [ -f "`which ${CXX}${major}`" ]; then
               export PRK_CXX="${CXX}${major}"
@@ -117,12 +118,54 @@ case "$PRK_TARGET" in
         fi
         ${PRK_CXX} -v
         echo "CXX=${PRK_CXX} -std=c++11" >> common/make.defs
-        make $PRK_TARGET
-        export PRK_TARGET_PATH=Cxx11
+
+        # C++11 without external parallelism
+        make -C $PRK_TARGET_PATH valarray
+        $PRK_TARGET_PATH/transpose-valarray 10 1024 32
+
+        # C++11 without external parallelism
+        make -C $PRK_TARGET_PATH vector
         $PRK_TARGET_PATH/p2p-vector         10 1024 1024
         $PRK_TARGET_PATH/stencil-vector     10 1000
         $PRK_TARGET_PATH/transpose-vector   10 1024 32
-        $PRK_TARGET_PATH/transpose-valarray 10 1024 32
+
+        # C++11 with OpenMP
+        case "$CC" in
+            gcc)
+                # Host
+                echo "OPENMPFLAG=-fopenmp" >> common/make.defs
+                make -C $PRK_TARGET_PATH openmp
+                $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
+                $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
+                # Offload
+                echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
+                make -C $PRK_TARGET_PATH target
+                $PRK_TARGET_PATH/stencil-openmp-target     10 1000
+                $PRK_TARGET_PATH/transpose-openmp-target   10 1024 32
+                ;;
+            clang)
+                # Host
+                echo "Skipping MacOS Clang since OpenMP missing in default compiler"
+                #echo "OPENMPFLAG=-fopenmp" >> common/make.defs
+                #make -C $PRK_TARGET_PATH openmp
+                #$PRK_TARGET_PATH/stencil-vector-openmp     10 1000
+                #$PRK_TARGET_PATH/transpose-vector-openmp   10 1024 32
+                ;;
+            *)
+                echo "Figure out your OpenMP flags..."
+                ;;
+        esac
+
+        # C++11 with OpenCL
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            echo "OPENCLFLAG=-framework OpenCL" >> common/make.defs
+            make -C $PRK_TARGET_PATH opencl
+            # must run programs in same directory as OpenCL source files...
+            cd $PRK_TARGET_PATH
+            ./stencil-opencl     10 1000
+            ./transpose-opencl   10 1024 32
+            cd ..
+        fi
         ;;
     allfortran*)
         # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty allfortrantarget
