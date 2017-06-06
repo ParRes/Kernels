@@ -196,24 +196,14 @@ program main
     endif
 
     !$omp single
-
     do ic=2,m,mc
       do jc=2,n,nc
-        !$omp task depend(in:grid(ic-1,jc-1))
         call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
-        !$omp end task
       enddo
     enddo
 
-    !$omp end single
-
-    !$omp taskwait
-
-    !$omp master
-    !!!$omp task depend(in:grid(m,n))
     grid(1,1) = -grid(m,n)
-    !!!$omp end task
-    !$omp end master
+    !$omp end single
 
     !$omp barrier
 
