@@ -92,7 +92,7 @@ program main
   real(kind=REAL64) :: corner_val                       ! verification value at top right corner of grid
   real(kind=REAL64), allocatable :: grid(:,:)           ! array holding grid values
   ! runtime variables
-  integer(kind=INT32) ::  i, j, k
+  integer(kind=INT32) :: i, j, k
   integer(kind=INT32) :: ic, mc                         ! ic = chunking index, mc = chunking dimension
   logical :: chunk                                      ! to chunk or not
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
@@ -106,9 +106,9 @@ program main
   write(*,'(a40)') 'Fortran Serial pipeline execution on 2D grid'
 
   if (command_argument_count().lt.3) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a,a)')  'Usage: ./synch_p2p <# iterations> ',             &
-                      '<first array dimension> <second array dimension>'
+    write(*,'(a20,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a35,a50)')  'Usage: ./synch_p2p <# iterations> ',  &
+                          '<array x-dimension> <array y-dimension>'
     stop 1
   endif
 
@@ -174,9 +174,7 @@ program main
   do k=0,iterations
 
     !  start timer after a warmup iteration
-    if (k.eq.1) then
-        t0 = prk_get_wtime()
-    endif
+    if (k.eq.1) t0 = prk_get_wtime()
 
     if (chunk) then
       do ic=2,m,mc
