@@ -126,7 +126,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
             enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     else ! tiling
       !$omp do
       do jt=r,n-r-1,tile_size
@@ -146,7 +146,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     endif ! tiling
   else ! grid
     if (.not.tiling) then
@@ -160,7 +160,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     else ! tiling
       !$omp do
       do jt=r,n-r-1,tile_size
@@ -176,7 +176,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     endif ! tiling
   endif ! star
 end subroutine apply_stencil
@@ -312,16 +312,21 @@ program main
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
+#if 1
+      B(i,j) = 0.d0
+#endif
     enddo
   enddo
-  !$omp end do nowait
+  !$omp end do
+#if 0
   !$omp do
   do j=r+1,n-r
     do i=r+1,n-r
       B(i,j) = 0.d0
     enddo
   enddo
-  !$omp end do nowait
+  !$omp end do
+#endif
   !$omp end parallel
 
   ! DEVICE
@@ -335,15 +340,15 @@ program main
   do k=0,iterations
 
     ! start timer after a warmup iteration
-    !$omp barrier
-    !$omp master
-    if (k.eq.1) t0 = omp_get_wtime()
-    !$omp end master
+    if (k.eq.1) then
+        !$omp barrier
+        !$omp master
+        t0 = omp_get_wtime()
+        !$omp end master
+    endif
 
     ! Apply the stencil operator
     call apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
-
-    !$omp barrier
 
     ! add constant to solution to force refresh of neighbor data, if any
     !$omp do
@@ -352,7 +357,7 @@ program main
         A(i,j) = A(i,j) + 1.d0
       enddo
     enddo
-    !$omp end do nowait
+    !$omp end do
 
   enddo ! iterations
 
@@ -367,16 +372,15 @@ program main
 
   ! HOST
   ! compute L1 norm in parallel
-  !$omp parallel default(none) shared(n,B) private(i,j) &
-  !$omp&  reduction(+:norm)
-  !$omp do
+  !$omp parallel do                                 &
+  !$omp& default(none) shared(n,B) private(i,j)     &
+  !$omp& reduction(+:norm)
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
-  !$omp end do nowait
-  !$omp end parallel
+  !$omp end parallel do
   norm = norm / real(active_points,REAL64)
 
   !******************************************************************************

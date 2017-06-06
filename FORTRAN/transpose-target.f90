@@ -153,7 +153,7 @@ program main
         enddo
       enddo
     enddo
-    !$omp end do nowait
+    !$omp end do
   else
     !$omp do collapse(2)
     do j=1,order
@@ -162,7 +162,7 @@ program main
         B(i,j) = 0.0
       enddo
     enddo
-    !$omp end do nowait
+    !$omp end do
   endif
   !$omp end parallel
 
@@ -226,12 +226,12 @@ program main
   abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
-  !$omp parallel default(none)                                        &
+  !$omp parallel do collapse(2)                                       &
+  !$omp&  default(none)                                               &
   !$omp&  shared(B)                                                   &
   !$omp&  firstprivate(order,iterations,addit)                        &
   !$omp&  private(i,j,temp)                                           &
   !$omp&  reduction(+:abserr)
-  !$omp do collapse(2)
   do j=1,order
     do i=1,order
       temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
@@ -239,8 +239,7 @@ program main
       abserr = abserr + abs(B(i,j) - (temp+addit))
     enddo
   enddo
-  !$omp end do nowait
-  !$omp end parallel
+  !$omp end parallel do
 
   deallocate( B )
   deallocate( A )

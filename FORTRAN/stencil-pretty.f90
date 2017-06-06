@@ -126,7 +126,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
             enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     else ! tiling
       !$omp do
       do jt=r,n-r-1,tile_size
@@ -146,7 +146,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     endif ! tiling
   else ! grid
     if (.not.tiling) then
@@ -160,7 +160,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     else ! tiling
       !$omp do
       do jt=r,n-r-1,tile_size
@@ -176,7 +176,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     endif ! tiling
   endif ! star
 end subroutine apply_stencil

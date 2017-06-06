@@ -126,7 +126,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
             enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     else ! tiling
       !$omp do
       do jt=r,n-r-1,tile_size
@@ -146,7 +146,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     endif ! tiling
   else ! grid
     if (.not.tiling) then
@@ -160,7 +160,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     else ! tiling
       !$omp do
       do jt=r,n-r-1,tile_size
@@ -176,7 +176,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do nowait
+      !$omp end do
     endif ! tiling
   endif ! star
 end subroutine apply_stencil
@@ -324,16 +324,21 @@ program main
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
+#if 1
+      B(i,j) = 0.d0
+#endif
     enddo
   enddo
-  !$omp end do nowait
+  !$omp end do
+#if 0
   !$omp do
   do j=r+1,n-r
     do i=r+1,n-r
       B(i,j) = 0.d0
     enddo
   enddo
-  !$omp end do nowait
+  !$omp end do
+#endif
 
   t0 = 0
 
@@ -350,8 +355,6 @@ program main
     ! Apply the stencil operator
     call apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
 
-    !$omp barrier
-
     ! add constant to solution to force refresh of neighbor data, if any
     !$omp do
     do j=1,n
@@ -359,7 +362,7 @@ program main
         A(i,j) = A(i,j) + 1.d0
       enddo
     enddo
-    !$omp end do nowait
+    !$omp end do
 
   enddo ! iterations
 
@@ -375,7 +378,7 @@ program main
       norm = norm + abs(B(i,j))
     enddo
   enddo
-  !$omp end do nowait
+  !$omp end do
 
   !$omp end parallel
 

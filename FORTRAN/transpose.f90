@@ -193,7 +193,7 @@ program main
       enddo
     enddo
 #ifdef _OPENMP
-    !$omp end do nowait
+    !$omp end do
 #endif
   else
 #if defined(_OPENMP)
@@ -213,7 +213,7 @@ program main
       enddo
     enddo
 #ifdef _OPENMP
-    !$omp end do nowait
+    !$omp end do
 #endif
   endif
 
@@ -262,7 +262,7 @@ program main
         enddo
       enddo
 #ifdef _OPENMP
-      !$omp end do nowait
+      !$omp end do
 #endif
     else
 #if defined(_OPENMP)
@@ -281,7 +281,7 @@ program main
         enddo
       enddo
 #ifdef _OPENMP
-      !$omp end do nowait
+      !$omp end do
 #endif
     endif
 
@@ -310,12 +310,12 @@ program main
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
 #if defined(_OPENMP) && !(defined(__PGI) || defined(__llvm__))
-  !$omp parallel default(none)                                        &
+  !$omp parallel do collapse(2)                                       &
+  !$omp& default(none)                                                &
   !$omp&  shared(B)                                                   &
   !$omp&  firstprivate(order,iterations,addit)                        &
   !$omp&  private(i,j,temp)                                           &
   !$omp&  reduction(+:abserr)
-  !$omp do collapse(2)
   do j=1,order
     do i=1,order
 #elif defined(__PGI) || defined(__llvm__)
@@ -332,8 +332,7 @@ program main
     enddo
   enddo
 #if defined(_OPENMP) && !(defined(__PGI) || defined(__llvm__))
-  !$omp end do nowait
-  !$omp end parallel
+  !$omp end parallel do
 #endif
 
   deallocate( B )
