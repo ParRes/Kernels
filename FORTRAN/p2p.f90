@@ -63,6 +63,21 @@ function prk_get_wtime() result(t)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
 
+subroutine sweep_tile(startm,endm,startn,endn,m,n,grid)
+  use iso_fortran_env
+  implicit none
+  integer(kind=INT32), intent(in) :: m,n
+  integer(kind=INT32), intent(in) :: startm,endm
+  integer(kind=INT32), intent(in) :: startn,endn
+  real(kind=REAL64), intent(inout) ::  grid(m,n)
+  integer(kind=INT32) :: i,j
+  do j=startn,endn
+    do i=startm,endm
+      grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+    enddo
+  enddo
+end subroutine
+
 program main
   use iso_fortran_env
   implicit none
@@ -112,7 +127,6 @@ program main
   mc = m
   call get_command_argument(4,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') mc
-  chunk = (mc /= m)
 
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
@@ -125,9 +139,10 @@ program main
   endif
 
   if ((mc .lt. 1).or.(mc .gt. m)) then
-    write(*,'(a,i5)') 'ERROR: chunking should be >1 and <=m: ', mc
-    stop 1
+    write(*,'(a,i5)') 'WARNING: chunking invalid - ignoring'
+    mc = m
   endif
+  chunk = (mc /= m)
 
   write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
@@ -165,18 +180,20 @@ program main
 
     if (chunk) then
       do ic=2,m,mc
-        do j=2,n
-          do i=ic,min(m,ic+mc-1)
-            grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
-          enddo
-        enddo
+        !do j=2,n
+        !  do i=ic,min(m,ic+mc-1)
+        !    grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+        !  enddo
+        !enddo
+        call sweep_tile(ic,min(m,ic+mc-1),2,n,m,n,grid)
       enddo
     else
-      do j=2,n
-        do i=2,m
-          grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
-        enddo
-      enddo
+      !do j=2,n
+      !  do i=2,m
+      !    grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+      !  enddo
+      !enddo
+      call sweep_tile(2,m,2,n,m,n,grid)
     endif
 
     ! copy top right corner value to bottom left corner to create dependency; we
