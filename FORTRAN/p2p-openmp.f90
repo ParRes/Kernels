@@ -193,6 +193,7 @@ program main
           if ( copy >= (j-1)*(k+1) ) loop = .false.
         enddo
       endif
+      ! FIXME: adjust loop bounds for decomposition across threads
       do i=2,m
         grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
       enddo
