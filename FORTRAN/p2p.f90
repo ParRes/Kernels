@@ -78,6 +78,8 @@ program main
   real(kind=REAL64), allocatable :: grid(:,:)           ! array holding grid values
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
+  integer(kind=INT32) :: ic, mc                         ! ic = chunking index, mc = chunking dimension
+  logical :: chunk                                      ! to chunk or not
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
 
@@ -107,6 +109,11 @@ program main
   call get_command_argument(3,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') n
 
+  mc = m
+  call get_command_argument(4,argtmp,arglen,err)
+  if (err.eq.0) read(argtmp,'(i32)') mc
+  chunk = (mc /= m)
+
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
@@ -117,14 +124,25 @@ program main
     stop 1
   endif
 
-  allocate( grid(m,n), stat=err)
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of grid returned ',err
+  if ((mc .lt. 1).or.(mc .gt. m)) then
+    write(*,'(a,i5)') 'ERROR: chunking should be >1 and <=m: ', mc
     stop 1
   endif
 
   write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
+  if (chunk) then
+      write(*,'(a,i8)') 'Size of chunking         = ', mc
+      if (mc==1) write(*,'(a)') '> traverse linearly in the n dimension'
+  else
+      if (mc==m) write(*,'(a)') '> traverse linearly in the m dimension'
+  endif
+
+  allocate( grid(m,n), stat=err)
+  if (err .ne. 0) then
+    write(*,'(a,i3)') 'allocation of grid returned ',err
+    stop 1
+  endif
 
   do j=1,n
     do i=1,m
@@ -145,11 +163,21 @@ program main
         t0 = prk_get_wtime()
     endif
 
-    do j=2,n
-      do i=2,m
-        grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+    if (chunk) then
+      do ic=2,m,mc
+        do j=2,n
+          do i=ic,min(m,ic+mc-1)
+            grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+          enddo
+        enddo
       enddo
-    enddo
+    else
+      do j=2,n
+        do i=2,m
+          grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+        enddo
+      enddo
+    endif
 
     ! copy top right corner value to bottom left corner to create dependency; we
     ! need a barrier to make sure the latest value is used. This also guarantees
