@@ -160,8 +160,11 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             echo "OPENCLFLAG=-framework OpenCL" >> common/make.defs
             make -C $PRK_TARGET_PATH opencl
-            cd $PRK_TARGET_PATH && ./stencil-opencl     10 1000
-            cd $PRK_TARGET_PATH && ./transpose-opencl   10 1024 32
+            # must run programs in same directory as OpenCL source files...
+            cd $PRK_TARGET_PATH
+            ./stencil-opencl     10 1000
+            ./transpose-opencl   10 1024 32
+            cd ..
         fi
         ;;
     allfortran*)
