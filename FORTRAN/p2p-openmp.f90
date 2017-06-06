@@ -80,7 +80,8 @@ program main
   integer(kind=INT32), allocatable :: flags(:)          ! array holding flags for synchronization
   real(kind=INT32) :: copy                              ! copy of flags() element for atomic update
   ! runtime variables
-  integer(kind=INT32) ::  i, j, k
+  integer(kind=INT32) :: i, j, k
+  integer(kind=INT32) :: lo, up, chunk
   integer ::  me, nt, prev, next
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
@@ -143,7 +144,7 @@ program main
   !$omp parallel default(none)                                        &
   !$omp&  shared(grid,flags,t0,t1,iterations,pipeline_time)           &
   !$omp&  firstprivate(m,n)                                           &
-  !$omp&  private(i,j,k,me,nt,next,prev,copy,corner_val,loop)
+  !$omp&  private(i,j,k,me,nt,next,prev,copy,corner_val,loop,lo,up,chunk)
 
   ! use 1-based indexing to match coarray version
   me = omp_get_thread_num()+1
@@ -151,6 +152,16 @@ program main
 
   prev = me - 1
   next = me + 1
+
+  chunk = int(m/(nt-1))
+  lo = 2 + (me-1) * chunk
+  up = min( m, me * chunk )
+  !$omp critical
+  print*,me,' chunk = ',chunk
+  print*,me,' lo = ',lo
+  print*,me,' up = ',up
+  !$omp end critical
+
   ! FIXME - initialize with same locality as timed part
   !$omp do collapse(2)
   do j=1,n
@@ -194,7 +205,7 @@ program main
         enddo
       endif
       ! FIXME: adjust loop bounds for decomposition across threads
-      do i=2,m
+      do i=lo,up
         grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
       enddo
       if (me < nt) then
