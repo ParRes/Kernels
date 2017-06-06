@@ -94,6 +94,7 @@ program main
   ! runtime variables
   integer(kind=INT32) :: i, j, k
   integer(kind=INT32) :: ic, mc                         ! ic = chunking index, mc = chunking dimension
+  integer(kind=INT32) :: jc, nc                         ! jc = chunking index, nc = chunking dimension
   logical :: chunk                                      ! to chunk or not
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
@@ -128,6 +129,10 @@ program main
   call get_command_argument(4,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') mc
 
+  nc = n
+  call get_command_argument(5,argtmp,arglen,err)
+  if (err.eq.0) read(argtmp,'(i32)') nc
+
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
@@ -138,19 +143,20 @@ program main
     stop 1
   endif
 
-  if ((mc .lt. 1).or.(mc .gt. m)) then
+  if (((mc.lt.1).or.(mc.gt.m)).or.((mc.lt.1).or.(mc.gt.m))) then
     write(*,'(a,i5)') 'WARNING: chunking invalid - ignoring'
     mc = m
+    nc = n
   endif
-  chunk = (mc /= m)
+  chunk = ((mc/=m).or.(nc/=n))
 
-  write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
+  write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
   if (chunk) then
-      write(*,'(a,i8)') 'Size of chunking         = ', mc
-      if (mc==1) write(*,'(a)') '> traverse linearly in the n dimension'
+      write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
+      if (mc==1) write(*,'(a)') '> traverse in the n dimension'
   else
-      if (mc==m) write(*,'(a)') '> traverse linearly in the m dimension'
+      if (mc==m) write(*,'(a)') '> traverse in the m dimension'
   endif
 
   allocate( grid(m,n), stat=err)
@@ -178,20 +184,17 @@ program main
 
     if (chunk) then
       do ic=2,m,mc
-        !do j=2,n
-        !  do i=ic,min(m,ic+mc-1)
-        !    grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
-        !  enddo
-        !enddo
-        call sweep_tile(ic,min(m,ic+mc-1),2,n,m,n,grid)
+        do jc=2,n,nc
+          call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
+        enddo
       enddo
     else
-      !do j=2,n
-      !  do i=2,m
-      !    grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
-      !  enddo
-      !enddo
-      call sweep_tile(2,m,2,n,m,n,grid)
+      do j=2,n
+        do i=2,m
+          grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+        enddo
+      enddo
+      !call sweep_tile(2,m,2,n,m,n,grid)
     endif
 
     ! copy top right corner value to bottom left corner to create dependency; we
