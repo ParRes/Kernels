@@ -172,33 +172,34 @@ program main
       grid(i,j) = 0.0d0
     enddo
   enddo
-  !$omp end do nowait
+  !$omp end do
   ! it is debatable whether these loops should be parallel
   !$omp do
   do j=1,n
     grid(1,j) = real(j-1,REAL64)
   enddo
-  !$omp end do nowait
+  !$omp end do
   !$omp do
   do i=1,m
     grid(i,1) = real(i-1,REAL64)
   enddo
-  !$omp end do nowait
+  !$omp end do
 
   do k=0,iterations
 
     !  start timer after a warmup iteration
-    !$omp barrier
-    !$omp master
-    if (k.eq.1) t0 = prk_get_wtime()
-    !$omp end master
+    if (k.eq.1) then
+      !$omp barrier
+      !$omp master
+      t0 = prk_get_wtime()
+      !$omp end master
+    endif
 
     !$omp single
 
     do ic=2,m,mc
       do jc=2,n,nc
-        !$omp task depend(in:grid(ic,jc))                             &
-        !$omp&     depend(out:grid(min(m,ic+mc-1),min(n,jc+nc-1)))
+        !$omp task depend(in:grid(ic-1,jc-1))
         call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
         !$omp end task
       enddo
@@ -206,13 +207,15 @@ program main
 
     !$omp end single
 
-    !$omp barrier
+    !$omp taskwait
 
     !$omp master
     !!!$omp task depend(in:grid(m,n))
     grid(1,1) = -grid(m,n)
     !!!$omp end task
     !$omp end master
+
+    !$omp barrier
 
   enddo ! iterations
 
