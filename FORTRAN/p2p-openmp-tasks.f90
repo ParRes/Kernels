@@ -147,11 +147,12 @@ program main
 
   ! mc=m or nc=n disables chunking in that dimension, which means
   ! there is no task parallelism to exploit
-  if (((mc.lt.1).or.(mc.ge.m)).or.((nc.lt.1).or.(nc.ge.n))) then
-    write(*,'(a,i5)') 'WARNING: chunking invalid'
+  if (((mc.lt.1).or.(mc.gt.m)).or.((nc.lt.1).or.(nc.gt.n))) then
     mc = int(m/omp_get_max_threads())
     nc = int(n/omp_get_max_threads())
   endif
+  mc = max(1,mc)
+  nc = max(1,nc)
 
   write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
@@ -169,7 +170,7 @@ program main
 
   !$omp parallel default(none)                                  &
   !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
-  !$omp&  firstprivate(m,n,mc,nc,lic,ljc)                       &
+  !$omp&  firstprivate(m,n,mc,nc,ic,jc,lic,ljc)                 &
   !$omp&  private(i,j,k,corner_val)
 
   !$omp do collapse(2)
@@ -204,12 +205,12 @@ program main
     !$omp master
     do ic=2,m,mc
       do jc=2,n,nc
-        !$omp task depend(in:grid(ic-mc,jc-nc),grid(ic-mc,jc),grid(ic,jc-nc)) depend(out:grid(ic,jc))
+        !$omp task depend(in:grid(1,1),grid(ic-mc,jc-nc),grid(ic-mc,jc),grid(ic,jc-nc)) depend(out:grid(ic,jc))
         call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
         !$omp end task
       enddo
     enddo
-    !$omp task depend(in:grid(lic,ljc)) depend(out:grid(2-mc,2-nc))
+    !$omp task depend(in:grid(lic,ljc)) depend(out:grid(1,1))
     grid(1,1) = -grid(m,n)
     !$omp end task
     !$omp end master
