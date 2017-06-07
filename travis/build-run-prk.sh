@@ -245,7 +245,7 @@ case "$PRK_TARGET" in
                 ;;
             allfortranopenmp)
                 export OMP_NUM_THREADS=2
-                $PRK_TARGET_PATH/p2p-openmp           10 1024 1024 # not threaded yet
+                $PRK_TARGET_PATH/p2p-openmp-tasks     10 1024 1024
                 $PRK_TARGET_PATH/stencil-openmp       10 1000
                 $PRK_TARGET_PATH/transpose-openmp     10 1024 1
                 $PRK_TARGET_PATH/transpose-openmp     10 1024 32
