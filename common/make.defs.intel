@@ -24,8 +24,8 @@ DEFAULT_OPT_FLAGS=-g -O3 -xHOST
 #
 # OpenMP flags
 #
-OPENMPFLAG=-fopenmp
-OFFLOADFLAG=-foffload="-O3 -v"
+OPENMPFLAG=-qopenmp
+OFFLOADFLAG=-qopenmp-offload=host
 #
 # OpenCL flags
 #
