@@ -94,8 +94,6 @@ program main
   real(kind=REAL64), allocatable :: grid(:,:)           ! array holding grid values
   ! runtime variables
   integer(kind=INT32) :: i, j, k
-  integer(kind=INT32) :: ic, mc                         ! ic = chunking index, mc = chunking dimension
-  integer(kind=INT32) :: jc, nc                         ! jc = chunking index, nc = chunking dimension
   integer ::  me, nt
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
@@ -126,14 +124,6 @@ program main
   call get_command_argument(3,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') n
 
-  mc = m
-  call get_command_argument(4,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') mc
-
-  nc = n
-  call get_command_argument(5,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') nc
-
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
@@ -144,16 +134,9 @@ program main
     stop 1
   endif
 
-  if (((mc.lt.1).or.(mc.gt.m)).or.((mc.lt.1).or.(mc.gt.m))) then
-    write(*,'(a,i5)') 'WARNING: chunking invalid - ignoring'
-    mc = int(m/omp_get_max_threads())
-    nc = int(n/omp_get_max_threads())
-  endif
-
   write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
   write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
-  write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
 
   allocate( grid(m,n), stat=err)
   if (err .ne. 0) then
@@ -163,7 +146,7 @@ program main
 
   !$omp parallel default(none)                                  &
   !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
-  !$omp&  firstprivate(m,n,mc,nc)                               &
+  !$omp&  firstprivate(m,n)                                     &
   !$omp&  private(i,j,k,corner_val)
 
   !$omp do collapse(2)
@@ -195,15 +178,18 @@ program main
       !$omp end master
     endif
 
-    !$omp single
-    do ic=2,m,mc
-      do jc=2,n,nc
-        call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
+    !$omp do ordered(2) collapse(2)
+    do j=2,n
+      do i=2,m
+        !$omp ordered depend(sink:i-1,j) depend(sink:i,j-1) &
+        !$omp&        depend(sink:i-1,j-1)
+        grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+        !$omp ordered depend(source)
       enddo
     enddo
+    !$omp end do
 
     grid(1,1) = -grid(m,n)
-    !$omp end single
 
     !$omp barrier
 
