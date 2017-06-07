@@ -19,13 +19,20 @@ OCLFLAGS = $(OPENCLFLAG)
 
 .PHONY: all clean run vector valarray openmp target opencl
 
-all: vector valarray openmp target opencl
+ifeq ($(shell uname -s),Darwin)
+    ifneq ($(CXX),icpc)
+	TARGET = target
+    endif
+else
+    TARGET = target
+endif
+all: vector valarray openmp opencl $(TARGET)
 
 vector: p2p-vector stencil-vector transpose-vector
 
 valarray: transpose-valarray
 
-openmp: stencil-vector-openmp transpose-vector-openmp
+openmp: p2p-vector-doacross-openmp stencil-vector-openmp transpose-vector-openmp
 
 target: stencil-openmp-target transpose-openmp-target
 

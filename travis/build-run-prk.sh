@@ -140,15 +140,16 @@ case "$PRK_TARGET" in
                 # Offload
                 echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
                 make -C $PRK_TARGET_PATH target
-                $PRK_TARGET_PATH/stencil-vector-openmp-target     10 1000
-                $PRK_TARGET_PATH/transpose-vector-openmp-target   10 1024 32
+                $PRK_TARGET_PATH/stencil-openmp-target     10 1000
+                $PRK_TARGET_PATH/transpose-openmp-target   10 1024 32
                 ;;
             clang)
                 # Host
-                echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                make -C $PRK_TARGET_PATH openmp
-                $PRK_TARGET_PATH/stencil-vector-openmp     10 1000
-                $PRK_TARGET_PATH/transpose-vector-openmp   10 1024 32
+                echo "Skipping MacOS Clang since OpenMP missing in default compiler"
+                #echo "OPENMPFLAG=-fopenmp" >> common/make.defs
+                #make -C $PRK_TARGET_PATH openmp
+                #$PRK_TARGET_PATH/stencil-vector-openmp     10 1000
+                #$PRK_TARGET_PATH/transpose-vector-openmp   10 1024 32
                 ;;
             *)
                 echo "Figure out your OpenMP flags..."
@@ -159,8 +160,11 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             echo "OPENCLFLAG=-framework OpenCL" >> common/make.defs
             make -C $PRK_TARGET_PATH opencl
-            $PRK_TARGET_PATH/stencil-opencl     10 1000
-            $PRK_TARGET_PATH/transpose-opencl   10 1024 32
+            # must run programs in same directory as OpenCL source files...
+            cd $PRK_TARGET_PATH
+            ./stencil-opencl     10 1000
+            ./transpose-opencl   10 1024 32
+            cd ..
         fi
         ;;
     allfortran*)
