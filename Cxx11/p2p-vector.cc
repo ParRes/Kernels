@@ -90,12 +90,15 @@ int main(int argc, char* argv[])
     exit(EXIT_FAILURE);
   }
 
+  std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
+  std::cout << "Number of iterations      = " << iterations << std::endl;
+
+  auto pipeline_time = 0.0; // silence compiler warning
+
   // working set
   std::vector<double> vector;
   vector.resize(m*n,0.0);
 
-  std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
-  std::cout << "Number of iterations      = " << iterations << std::endl;
 
   // set boundary values (bottom and left side of grid)
   for (auto j=0; j<n; j++) {
@@ -104,8 +107,6 @@ int main(int argc, char* argv[])
   for (auto i=0; i<m; i++) {
     vector[i*n+0] = static_cast<double>(i);
   }
-
-  auto pipeline_time = 0.0; // silence compiler warning
 
   for (auto iter = 0; iter<=iterations; iter++){
 
