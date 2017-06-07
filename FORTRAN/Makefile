@@ -17,7 +17,9 @@ serial: p2p stencil transpose
 
 pretty: stencil-pretty transpose-pretty
 
-openmp: p2p-openmp-tasks p2p-openmp-doacross stencil-openmp transpose-openmp
+# doacross is busted right now
+#openmp: p2p-openmp-tasks p2p-openmp-doacross stencil-openmp transpose-openmp
+openmp: p2p-openmp-tasks stencil-openmp transpose-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
