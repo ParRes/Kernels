@@ -21,6 +21,9 @@ $(PROGRAM).decl.h: $(PROGRAM).ci
 		   $(CITRANSLATOR) $(PROGRAM).ci
 endif
 
+timestep.o: timestep.c
+	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
+
 wtime.o:$(COMMON)/wtime.c
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
  
@@ -28,6 +31,9 @@ random_draw.o:$(COMMON)/random_draw.c
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
 
 MPI_bail_out.o:$(COMMON)/MPI_bail_out.c
+	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
+
+FENIX_bail_out.o:$(COMMON)/FENIX_bail_out.c
 	$(CCOMPILER) $(CFLAGS) $(TUNEFLAGS) $(INCLUDEPATHSPLUS) -c $<
  
 SHMEM_bail_out.o:$(COMMON)/SHMEM_bail_out.c
