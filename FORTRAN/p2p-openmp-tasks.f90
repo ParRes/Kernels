@@ -96,6 +96,7 @@ program main
   integer(kind=INT32) :: i, j, k
   integer(kind=INT32) :: ic, mc                         ! ic = chunking index, mc = chunking dimension
   integer(kind=INT32) :: jc, nc                         ! jc = chunking index, nc = chunking dimension
+  logical :: chunk                                      ! to chunk or not
   integer ::  me, nt
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
@@ -126,11 +127,11 @@ program main
   call get_command_argument(3,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') n
 
-  mc = m
+  mc = -1
   call get_command_argument(4,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') mc
 
-  nc = n
+  nc = -1
   call get_command_argument(5,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') nc
 
@@ -145,15 +146,22 @@ program main
   endif
 
   if (((mc.lt.1).or.(mc.gt.m)).or.((mc.lt.1).or.(mc.gt.m))) then
-    write(*,'(a,i5)') 'WARNING: chunking invalid - ignoring'
-    mc = int(m/omp_get_max_threads())
-    nc = int(n/omp_get_max_threads())
+    write(*,'(a,i5)') 'WARNING: chunking invalid'
+    mc = m/omp_get_max_threads()
+    nc = n/omp_get_max_threads()
   endif
+  chunk = ((mc/=m).or.(nc/=n))
 
   write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
   write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
-  write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
+  if (chunk) then
+      write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
+      if (mc==1) write(*,'(a)') '> traverse in the n dimension'
+  else
+      write(*,'(a)') 'Chunking DISABLED => sequential execution'
+      if (mc==m) write(*,'(a)') '> traverse in the m dimension'
+  endif
 
   allocate( grid(m,n), stat=err)
   if (err .ne. 0) then
@@ -162,7 +170,7 @@ program main
   endif
 
   !$omp parallel default(none)                                  &
-  !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
+  !$omp&  shared(grid,t0,t1,iterations,pipeline_time,chunk)     &
   !$omp&  firstprivate(m,n,mc,nc)                               &
   !$omp&  private(i,j,k,corner_val)
 
@@ -195,16 +203,28 @@ program main
       !$omp end master
     endif
 
-    !$omp single
-    do ic=2,m,mc
-      do jc=2,n,nc
-        call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
+    if (chunk) then
+      !$omp single
+      do ic=2,m,mc
+        do jc=2,n,nc
+          !$omp task depend(in:grid(ic-mc,jc-nc),grid(ic-mc,jc),grid(ic,jc-nc)) depend(out:grid(ic,jc))
+          call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
+          !$omp end task
+        enddo
       enddo
-    enddo
-
+      !$omp end single
+    else
+      !$omp master
+      do j=2,n
+        do i=2,m
+          grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+        enddo
+      enddo
+      !$omp end master
+    endif
+    !$omp master
     grid(1,1) = -grid(m,n)
-    !$omp end single
-
+    !$omp end master
     !$omp barrier
 
   enddo ! iterations
