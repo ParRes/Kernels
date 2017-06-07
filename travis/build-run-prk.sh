@@ -168,7 +168,7 @@ case "$PRK_TARGET" in
         fi
         ;;
     allfortran*)
-        # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
+        # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty allfortrantarget
         echo "Fortran"
         case "$CC" in
             icc)
@@ -204,6 +204,19 @@ case "$PRK_TARGET" in
                     echo "FC=$PRK_CAFC\nCOARRAYFLAG=-fpp -std08 -traceback -coarray" >> common/make.defs
                 fi
                 ;;
+            allfortrantarget)
+                if [ "${CC}" = "gcc" ] ; then
+                    export PRK_FC="$PRK_FC -std=f2008 -cpp"
+                    echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp\nOFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
+                elif [ "${CC}" = "icc" ] ; then
+                    if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+                        echo "ICC does not support OpenMP target on MacOS yet..."
+                        exit 7
+                    fi
+                    export PRK_FC="ifort -fpp -std08"
+                    echo "FC=$PRK_FC\nOPENMPFLAG=-qopenmp\nOFFLOADFLAG=-qopenmp-offload=host" >> common/make.defs
+                fi
+                ;;
             *)
                 if [ "${CC}" = "gcc" ] ; then
                     export PRK_FC="$PRK_FC -std=f2008 -cpp"
@@ -219,32 +232,39 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=FORTRAN
         case "$PRK_TARGET" in
             allfortranserial)
-                $PRK_TARGET_PATH/Synch_p2p/p2p               10 1024 1024
-                $PRK_TARGET_PATH/Stencil/stencil             10 1000
-                $PRK_TARGET_PATH/Transpose/transpose         10 1024 1
-                $PRK_TARGET_PATH/Transpose/transpose         10 1024 32
+                $PRK_TARGET_PATH/p2p               10 1024 1024
+                $PRK_TARGET_PATH/stencil           10 1000
+                $PRK_TARGET_PATH/transpose         10 1024 1
+                $PRK_TARGET_PATH/transpose         10 1024 32
                 ;;
             allfortranpretty)
-                #$PRK_TARGET_PATH/Synch_p2p/p2p-pretty        10 1024 1024
+                #$PRK_TARGET_PATH/p2p-pretty          10 1024 1024
                 # pretty versions do not support tiling...
-                $PRK_TARGET_PATH/Stencil/stencil-pretty      10 1000
-                $PRK_TARGET_PATH/Transpose/transpose-pretty  10 1024
+                $PRK_TARGET_PATH/stencil-pretty      10 1000
+                $PRK_TARGET_PATH/transpose-pretty    10 1024
                 ;;
             allfortranopenmp)
                 export OMP_NUM_THREADS=2
-                $PRK_TARGET_PATH/Synch_p2p/p2p-omp           10 1024 1024 # not threaded yet
-                $PRK_TARGET_PATH/Stencil/stencil-omp         10 1000
-                $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 1
-                $PRK_TARGET_PATH/Transpose/transpose-omp     10 1024 32
+                $PRK_TARGET_PATH/p2p-openmp-tasks     10 1024 1024
+                $PRK_TARGET_PATH/stencil-openmp       10 1000
+                $PRK_TARGET_PATH/transpose-openmp     10 1024 1
+                $PRK_TARGET_PATH/transpose-openmp     10 1024 32
+                ;;
+            allfortrantarget)
+                export OMP_NUM_THREADS=2
+                #$PRK_TARGET_PATH/p2p-target           10 1024 1024 # not threaded yet
+                $PRK_TARGET_PATH/stencil-target       10 1000
+                $PRK_TARGET_PATH/transpose-target     10 1024 1
+                $PRK_TARGET_PATH/transpose-target     10 1024 32
                 ;;
             allfortrancoarray)
                 export PRK_MPI_PROCS=4
                 if [ "${CC}" = "gcc" ] ; then
                     export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
-                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
-                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
-                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
-                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/p2p-coarray       10 1024 1024
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/stencil-coarray   10 1000
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/transpose-coarray 10 1024 1
+                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/transpose-coarray 10 1024 32
                 elif [ "${CC}" = "icc" ] ; then
                     export FOR_COARRAY_NUM_IMAGES=$PRK_MPI_PROCS
                     $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024

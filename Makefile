@@ -214,30 +214,23 @@ allserial:
 	cd SERIAL/PIC;              $(MAKE) pic       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 	cd SERIAL/AMR;              $(MAKE) amr       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
-allfortran: #allfortranserial allfortranopenmp allfortrancoarray allfortranpretty
-	$(MAKE) -C FORTRAN/Synch_p2p
-	$(MAKE) -C FORTRAN/Stencil
-	$(MAKE) -C FORTRAN/Transpose
+allfortran:
+	$(MAKE) -C FORTRAN
 
 allfortranserial:
-	$(MAKE) -C FORTRAN/Synch_p2p p2p
-	$(MAKE) -C FORTRAN/Stencil   stencil
-	$(MAKE) -C FORTRAN/Transpose transpose
-
-allfortranopenmp:
-	$(MAKE) -C FORTRAN/Synch_p2p p2p-omp
-	$(MAKE) -C FORTRAN/Stencil   stencil-omp
-	$(MAKE) -C FORTRAN/Transpose transpose-omp
-
-allfortrancoarray:
-	$(MAKE) -C FORTRAN/Synch_p2p p2p-coarray
-	$(MAKE) -C FORTRAN/Stencil   stencil-coarray
-	$(MAKE) -C FORTRAN/Transpose transpose-coarray
+	$(MAKE) -C FORTRAN serial
 
 allfortranpretty:
-	#$(MAKE) -C FORTRAN/Synch_p2p  p2p-pretty
-	$(MAKE) -C FORTRAN/Stencil    stencil-pretty
-	$(MAKE) -C FORTRAN/Transpose  transpose-pretty
+	$(MAKE) -C FORTRAN pretty
+
+allfortranopenmp:
+	$(MAKE) -C FORTRAN openmp
+
+allfortrantarget:
+	$(MAKE) -C FORTRAN target
+
+allfortrancoarray:
+	$(MAKE) -C FORTRAN coarray
 
 allcxx:
 	$(MAKE) -C Cxx11

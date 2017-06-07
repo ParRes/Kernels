@@ -50,6 +50,7 @@
 
 function prk_get_wtime() result(t)
   use iso_fortran_env
+  implicit none
   real(kind=REAL64) ::  t
   integer(kind=INT64) :: c, r
   call system_clock(count = c, count_rate = r)
@@ -66,14 +67,14 @@ program main
   character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
-  integer(kind=INT64) ::  order                     ! order of a the matrix
+  integer(kind=INT32) ::  order                     ! order of a the matrix
   !dec$ attributes align:64 :: A, B
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
-  integer(kind=INT64) ::  i                         ! needs to be same width as order
-  integer(kind=INT32) ::  k
+  integer(kind=INT32) :: i, k
+  integer(kind=INT64) :: j, o2                      ! for loop over order**2
   real(kind=REAL64) ::  abserr                      ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
@@ -82,12 +83,8 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-#ifndef PRKVERSION
-#warning Your common/make.defs is missing PRKVERSION
-#define PRKVERSION "N/A"
-#endif
-  write(*,'(a34,a10)') 'Parallel Research Kernels version ', PRKVERSION
-  write(*,'(a34)')   'Pretty Fortran Matrix transpose: B = A^T'
+  write(*,'(a40)') 'Parallel Research Kernels'
+  write(*,'(a40)') 'Fortran Pretty Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
@@ -131,7 +128,8 @@ program main
   endif
 
   ! Fill the original matrix
-  A = reshape((/ (i, i = 0,order**2) /),(/order, order/))
+  o2 = int(order,INT64)**2
+  A = reshape((/ (j, j = 0,o2) /),(/order, order/))
   B = 0
 
   t0 = 0
@@ -151,7 +149,7 @@ program main
   ! ********************************************************************
 
   ! we reuse A here as the reference matrix, to compute the error
-  A = ( transpose(reshape((/ (i, i = 0,order**2) /),(/order, order/))) &
+  A = ( transpose(reshape((/ (j, j = 0,o2) /),(/order, order/))) &
         * real(iterations+1,REAL64) ) &
       + real((iterations*(iterations+1))/2,REAL64)
 #if 0

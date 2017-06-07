@@ -67,6 +67,7 @@ end program main
 
 function prk_get_wtime() result(t)
   use iso_fortran_env
+  implicit none
   real(kind=REAL64) ::  t
   integer(kind=INT64) :: c, r
   call system_clock(count = c, count_rate = r)
@@ -102,12 +103,8 @@ program main
 
   ! co_broadcast is part of Fortran 2015, so we will not assume it yet.
   if(me == 1) then
-#ifndef PRKVERSION
-#warning Your common/make.defs is missing PRKVERSION
-#define PRKVERSION "N/A"
-#endif
-     write(*,'(a,a)') 'Parallel Research Kernels version ', PRKVERSION
-     write(*,'(a)')   'Fortran coarray pipeline execution on 2D grid'
+     write(*,'(a40)') 'Parallel Research Kernels'
+     write(*,'(a40)') 'Fortran coarray pipeline execution on 2D grid'
 
   endif
      if (command_argument_count().lt.3) then
