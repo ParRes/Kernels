@@ -194,12 +194,7 @@ program main
           grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
         enddo
       enddo
-      !call sweep_tile(2,m,2,n,m,n,grid)
     endif
-
-    ! copy top right corner value to bottom left corner to create dependency; we
-    ! need a barrier to make sure the latest value is used. This also guarantees
-    ! that the flags for the next iteration (if any) are not getting clobbered
     grid(1,1) = -grid(m,n)
 
   enddo ! iterations
