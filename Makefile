@@ -322,10 +322,8 @@ clean:
 	cd SERIAL/Branch;           $(MAKE) clean
 	cd SERIAL/PIC;              $(MAKE) clean
 	cd SERIAL/AMR;              $(MAKE) clean
-	cd FORTRAN/Transpose;       $(MAKE) clean
-	cd FORTRAN/Synch_p2p;       $(MAKE) clean
-	cd FORTRAN/Stencil;         $(MAKE) clean
-	cd Cxx11;                   $(MAKE) clean
+	make -C FORTRAN clean
+	make -C Cxx11 clean
 	rm -f stats.json
 
 veryclean: clean
