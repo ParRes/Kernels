@@ -63,6 +63,20 @@
 
 #include "prk_util.h"
 
+inline void sweep_tile(size_t startm, size_t endm,
+                       size_t startn, size_t endn,
+                       size_t m,      size_t n,
+                       std::vector<double> & grid)
+{
+  //_Pragma("omp critical")
+  //std::cout << startm << "," << endm << "," << startn << "," << endn << "," << m << "," << n << std::endl;
+  for (auto i=startm; i<endm; i++) {
+    for (auto j=startn; j<endn; j++) {
+      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+    }
+  }
+}
+
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -72,7 +86,7 @@ int main(int argc, char* argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc != 4){
+  if (argc < 4){
     std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> <second array dimension>" << std::endl;
     return(EXIT_FAILURE);
   }
@@ -85,28 +99,40 @@ int main(int argc, char* argv[])
   }
 
   // grid dimensions
-  size_t m = atol(argv[2]);
-  size_t n = atol(argv[3]);
+  size_t m = std::atol(argv[2]);
+  size_t n = std::atol(argv[3]);
   if (m < 1 || n < 1) {
     std::cout << "ERROR: grid dimensions must be positive: " << m <<  n << std::endl;
     exit(EXIT_FAILURE);
   }
 
-  std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
+  // grid chunk dimensions
+  size_t mc = (argc > 4) ? std::atol(argv[4]) : m;
+  size_t nc = (argc > 5) ? std::atol(argv[5]) : n;
+  if (mc < 1 || mc > m || nc < 1 || nc > n) {
+    std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
+    mc = m;
+    nc = n;
+  }
+
   std::cout << "Number of iterations      = " << iterations << std::endl;
+  std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
+  if (mc!=m || nc!=n) {
+      std::cout << "Grid chunk sizes          = " << mc << ", " << nc << std::endl;
+  }
 
   auto pipeline_time = 0.0; // silence compiler warning
 
   // working set
-  std::vector<double> vector;
-  vector.resize(m*n);
+  std::vector<double> grid;
+  grid.resize(m*n,0.0);
 
   _Pragma("omp parallel")
   {
     _Pragma("omp for")
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
-        vector[i*n+j] = 0.0;
+        grid[i*n+j] = 0.0;
       }
     }
 
@@ -114,10 +140,10 @@ int main(int argc, char* argv[])
     _Pragma("omp master")
     {
       for (auto j=0; j<n; j++) {
-        vector[0*n+j] = static_cast<double>(j);
+        grid[0*n+j] = static_cast<double>(j);
       }
       for (auto i=0; i<m; i++) {
-        vector[i*n+0] = static_cast<double>(i);
+        grid[i*n+0] = static_cast<double>(i);
       }
     }
     _Pragma("omp barrier")
@@ -130,12 +156,39 @@ int main(int argc, char* argv[])
           pipeline_time = prk::wtime();
       }
 
-      _Pragma("omp for collapse(2) ordered(2)")
       for (auto i=1; i<m; i++) {
         for (auto j=1; j<n; j++) {
-          _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1)")
-          vector[i*n+j] = vector[(i-1)*n+j] + vector[i*n+(j-1)] - vector[(i-1)*n+(j-1)];
-          _Pragma("omp ordered depend (source)")
+          grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+        }
+      }
+      if (mc==m && nc==n) {
+        _Pragma("omp for collapse(2) ordered(2)")
+        for (auto i=1; i<m; i++) {
+          for (auto j=1; j<n; j++) {
+            _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1)")
+            grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+            _Pragma("omp ordered depend (source)")
+          }
+        }
+      } else /* chunking */ {
+        size_t nbi = static_cast<size_t>(std::ceil(static_cast<double>(m)/mc));
+        size_t nbj = static_cast<size_t>(std::ceil(static_cast<double>(n)/nc));
+        //_Pragma("omp critical")
+        //std::cout << "nbi,nbj=" << nbi << "," << nbj << std::endl;
+        _Pragma("omp for collapse(2) ordered(2)")
+        for (auto i=1; i<nbi; i++) {
+          for (auto j=1; j<nbj; j++) {
+            size_t ilo = 1+(i-1)*mc;
+            size_t ihi = std::min(m,i*mc);
+            size_t jlo = 1+(j-1)*nc;
+            size_t jhi = std::min(n,j*nc);
+            //_Pragma("omp critical") {
+            //  std::cout << "ilo,ihi,jlo,jhi=" << ilo << "," << ihi << "," << jlo << "," << jhi << std::endl;
+            //}
+            _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1)")
+            sweep_tile(ilo, ihi, jlo, jhi, m, n, grid);
+            _Pragma("omp ordered depend (source)")
+          }
         }
       }
 
@@ -143,7 +196,7 @@ int main(int argc, char* argv[])
       // need a barrier to make sure the latest value is used. This also guarantees
       // that the flags for the next iteration (if any) are not getting clobbered
       _Pragma("omp master")
-      vector[0*n+0] = -vector[(m-1)*n+(n-1)];
+      grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
 
     _Pragma("omp barrier")
@@ -160,9 +213,9 @@ int main(int argc, char* argv[])
 
   // verify correctness, using top right value
   auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(vector[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
-    std::cout << "ERROR: checksum " << vector[(m-1)*n+(n-1)]
-              << " does not match verification value" << corner_val << std::endl;
+  if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+    std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
+              << " does not match verification value " << corner_val << std::endl;
     exit(EXIT_FAILURE);
   }
 
