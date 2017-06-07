@@ -145,7 +145,7 @@ case "$PRK_TARGET" in
                 ;;
             clang)
                 # Host
-                echo "Skipping MacOS Clang since OpenMP missing in default compiler"
+                echo "Skipping Clang since OpenMP support probably missing"
                 #echo "OPENMPFLAG=-fopenmp" >> common/make.defs
                 #make -C $PRK_TARGET_PATH openmp
                 #$PRK_TARGET_PATH/stencil-vector-openmp     10 1000
