@@ -22,8 +22,8 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
 #
 # OpenMP flags
 #
-OPENMPFLAG=-fopenmp
-OFFLOADFLAG=-fopenmp
+OPENMPFLAG=-fopenmp -L/usr/local/Cellar/llvm/4.0.0_1/lib
+OFFLOADFLAG=-fopenmp -L/usr/local/Cellar/llvm/4.0.0_1/lib
 #
 # OpenCL flags
 #
