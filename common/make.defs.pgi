@@ -13,12 +13,13 @@ CXX=pgc++ --c++11
 #
 # Compiler flags
 #
-DEFAULT_OPT_FLAGS=-O2
+DEFAULT_OPT_FLAGS=-O2 -tp=haswell
 #
 # OpenMP flags
 #
-OPENMPFLAG=-mp
-OFFLOADFLAG=-mp
+OPENMPFLAG=-mp #-Minfo=mp,vect
+OFFLOADFLAG=-mp #-Minfo=mp,vect
+ORNLACCFLAG=-acc -ta=multicore #-Minfo=accel
 #
 # OpenCL flags
 #
