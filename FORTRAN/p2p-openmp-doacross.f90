@@ -166,8 +166,7 @@ program main
     !$omp do ordered(2) collapse(2)
     do j=2,n
       do i=2,m
-        !$omp ordered depend(sink:i-1,j) depend(sink:i,j-1) &
-        !$omp&        depend(sink:i-1,j-1)
+        !$omp ordered depend(sink:j,i-1) depend(sink:j-1,i) depend(sink:j-1,i-1)
         grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
         !$omp ordered depend(source)
       enddo
