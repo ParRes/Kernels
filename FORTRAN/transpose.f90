@@ -146,8 +146,6 @@ program main
     stop 1
   endif
 
-  bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
-
 #ifdef _OPENMP
   write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
 #endif
@@ -312,10 +310,10 @@ program main
 #if defined(_OPENMP) && !(defined(__PGI) || defined(__llvm__))
   !$omp parallel do collapse(2)                                       &
   !$omp& default(none)                                                &
-  !$omp&  shared(B)                                                   &
-  !$omp&  firstprivate(order,iterations,addit)                        &
-  !$omp&  private(i,j,temp)                                           &
-  !$omp&  reduction(+:abserr)
+  !$omp& shared(B)                                                   &
+  !$omp& firstprivate(order,iterations,addit)                        &
+  !$omp& private(i,j,temp)                                           &
+  !$omp& reduction(+:abserr)
   do j=1,order
     do i=1,order
 #elif defined(__PGI) || defined(__llvm__)
@@ -341,6 +339,7 @@ program main
   if (abserr .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
     avgtime = trans_time/iterations
+    bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
     write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',(1.d-6*bytes)/avgtime, &
            ' Avg time (s): ', avgtime
   else
