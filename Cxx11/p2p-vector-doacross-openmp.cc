@@ -63,20 +63,6 @@
 
 #include "prk_util.h"
 
-inline void sweep_tile(size_t startm, size_t endm,
-                       size_t startn, size_t endn,
-                       size_t m,      size_t n,
-                       std::vector<double> & grid)
-{
-  //_Pragma("omp critical")
-  //std::cout << startm << "," << endm << "," << startn << "," << endn << "," << m << "," << n << std::endl;
-  for (auto i=startm; i<endm; i++) {
-    for (auto j=startn; j<endn; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
-
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;

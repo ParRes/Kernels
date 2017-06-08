@@ -63,21 +63,6 @@ function prk_get_wtime() result(t)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
 
-subroutine sweep_tile(startm,endm,startn,endn,m,n,grid)
-  use iso_fortran_env
-  implicit none
-  integer(kind=INT32), intent(in) :: m,n
-  integer(kind=INT32), intent(in) :: startm,endm
-  integer(kind=INT32), intent(in) :: startn,endn
-  real(kind=REAL64), intent(inout) ::  grid(m,n)
-  integer(kind=INT32) :: i,j
-  do j=startn,endn
-    do i=startm,endm
-      grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
-    enddo
-  enddo
-end subroutine
-
 program main
   use iso_fortran_env
   use omp_lib
@@ -181,15 +166,16 @@ program main
     !$omp do ordered(2) collapse(2)
     do j=2,n
       do i=2,m
-        !$omp ordered depend(sink:i-1,j) depend(sink:i,j-1) &
-        !$omp&        depend(sink:i-1,j-1)
+        !$omp ordered depend(sink:j,i-1) depend(sink:j-1,i) depend(sink:j-1,i-1)
         grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
         !$omp ordered depend(source)
       enddo
     enddo
     !$omp end do
 
+    !$omp master
     grid(1,1) = -grid(m,n)
+    !$omp end master
 
     !$omp barrier
 
