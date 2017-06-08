@@ -60,6 +60,15 @@
 !
 ! *******************************************************************
 
+function prk_get_wtime() result(t)
+  use iso_fortran_env
+  implicit none
+  real(kind=REAL64) ::  t
+  integer(kind=INT64) :: c, r
+  call system_clock(count = c, count_rate = r)
+  t = real(c,REAL64) / real(r,REAL64)
+end function prk_get_wtime
+
 subroutine initialize_w(is_star,r,W)
   use iso_fortran_env
   implicit none
@@ -91,92 +100,10 @@ subroutine initialize_w(is_star,r,W)
   endif
 end subroutine initialize_w
 
-subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
-  use iso_fortran_env
-  implicit none
-  !$omp declare target
-  logical, intent(in) :: is_star, tiling
-  integer(kind=INT32), intent(in) :: tile_size, r, n
-  real(kind=REAL64), intent(in) :: W(-r:r,-r:r)
-  real(kind=REAL64), intent(in) :: A(n,n)
-  real(kind=REAL64), intent(inout) :: B(n,n)
-  integer(kind=INT32) :: i, j, ii, jj, it, jt
-  if (is_star) then
-    if (.not.tiling) then
-      !$omp do
-      do j=r,n-r-1
-        do i=r,n-r-1
-            ! do not use Intel Fortran unroll directive here (slows down)
-            do jj=-r,r
-              B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
-            enddo
-            do ii=-r,-1
-              B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-            enddo
-            do ii=1,r
-              B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-            enddo
-        enddo
-      enddo
-      !$omp end do
-    else ! tiling
-      !$omp do collapse(2)
-      do jt=r,n-r-1,tile_size
-        do it=r,n-r-1,tile_size
-          do j=jt,min(n-r-1,jt+tile_size-1)
-            do i=it,min(n-r-1,it+tile_size-1)
-              do jj=-r,r
-                B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
-              enddo
-              do ii=-r,-1
-                B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-              enddo
-              do ii=1,r
-                B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
-      !$omp end do
-    endif ! tiling
-  else ! grid
-    if (.not.tiling) then
-      !$omp do
-      do j=r,n-r-1
-        do i=r,n-r-1
-          do jj=-r,r
-            do ii=-r,r
-              B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
-            enddo
-          enddo
-        enddo
-      enddo
-      !$omp end do
-    else ! tiling
-      !$omp do collapse(2)
-      do jt=r,n-r-1,tile_size
-        do it=r,n-r-1,tile_size
-          do j=jt,min(n-r-1,jt+tile_size-1)
-            do i=it,min(n-r-1,it+tile_size-1)
-              do jj=-r,r
-                do ii=-r,r
-                  B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
-                enddo
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
-      !$omp end do
-    endif ! tiling
-  endif ! star
-end subroutine apply_stencil
-
 program main
   use iso_fortran_env
-  use omp_lib
   implicit none
+  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -194,6 +121,7 @@ program main
   real(kind=REAL64), parameter :: cx=1.d0, cy=1.d0
   ! runtime variables
   integer(kind=INT32) :: i, j, k
+  integer(kind=INT32) :: ii, jj, it, jt
   integer(kind=INT64) :: flops                          ! floating point ops per iteration
   real(kind=REAL64) :: norm, reference_norm             ! L1 norm of solution
   integer(kind=INT64) :: active_points                  ! interior of grid with respect to stencil
@@ -205,7 +133,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a40)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran OpenMP Stencil execution on 2D grid'
+  write(*,'(a40)') 'Fortran ORNL-ACC Stencil execution on 2D grid'
 
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
@@ -276,7 +204,6 @@ program main
   norm = 0.d0
   active_points = int(n-2*r,INT64)**2
 
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
   write(*,'(a,i8)') 'Grid size            = ', n
   write(*,'(a,i8)') 'Radius of stencil    = ', r
   if (is_star) then
@@ -298,81 +225,114 @@ program main
   call initialize_w(is_star,r,W)
 
   ! HOST
-  !$omp parallel default(none) shared(n,A,B) private(i,j)
-  ! intialize the input and output arrays
-  !$omp do
+  !$acc parallel loop gang
   do j=1,n
+    !$acc loop vector
     do i=1,n
       A(i,j) = cx*i+cy*j
-#if 1
-      B(i,j) = 0.d0
-#endif
-    enddo
-  enddo
-  !$omp end do
-#if 0
-  !$omp do
-  do j=r+1,n-r
-    do i=r+1,n-r
       B(i,j) = 0.d0
     enddo
   enddo
-  !$omp end do
-#endif
-  !$omp end parallel
-
-  ! DEVICE
-  !$omp target map(to:W, A) map(tofrom: B) map(from:stencil_time)
-  !$omp parallel default(none) &
-  !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size,is_star)   &
-  !$omp&  shared(stencil_time) private(i,j,k)
 
   t0 = 0.0d0
 
+  !$acc data pcopyin(W,A) pcopy(B)
+
   do k=0,iterations
-
-    ! start timer after a warmup iteration
-    if (k.eq.1) then
-        !$omp barrier
-        !$omp master
-        t0 = omp_get_wtime()
-        !$omp end master
-    endif
-
-    ! Apply the stencil operator
-    call apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
-
-    ! add constant to solution to force refresh of neighbor data, if any
-    !$omp do
+    if (k.eq.1) t0 = prk_get_wtime()
+    !call apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
+    if (is_star) then
+      if (.not.tiling) then
+        !$acc parallel loop gang collapse(2)
+        do j=r,n-r-1
+          do i=r,n-r-1
+            !$acc loop vector
+            do jj=-r,r
+              B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
+            enddo
+            !$acc loop vector
+            do ii=-r,-1
+              B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
+            enddo
+            !$acc loop vector
+            do ii=1,r
+              B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
+            enddo
+          enddo
+        enddo
+      else ! tiling
+        !$acc parallel loop gang ! collapse(2) leads to incorrect results
+        do jt=r,n-r-1,tile_size
+          do it=r,n-r-1,tile_size
+            !$acc loop vector collapse(3)
+            do j=jt,min(n-r-1,jt+tile_size-1)
+              do i=it,min(n-r-1,it+tile_size-1)
+                do jj=-r,r
+                  B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
+                enddo
+                do ii=-r,-1
+                  B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
+                enddo
+                do ii=1,r
+                  B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
+                enddo
+              enddo
+            enddo
+          enddo
+        enddo
+      endif ! tiling
+    else ! grid
+      if (.not.tiling) then
+        !$acc parallel loop gang ! collapse(2) leads to incorrect results
+        do j=r,n-r-1
+          do i=r,n-r-1
+            !$acc loop vector collapse(2)
+            do jj=-r,r
+              do ii=-r,r
+                B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
+              enddo
+            enddo
+          enddo
+        enddo
+      else ! tiling
+        !$acc parallel loop gang collapse(2)
+        do jt=r,n-r-1,tile_size
+          do it=r,n-r-1,tile_size
+            !$acc loop vector collapse(4)
+            do j=jt,min(n-r-1,jt+tile_size-1)
+              do i=it,min(n-r-1,it+tile_size-1)
+                do jj=-r,r
+                  do ii=-r,r
+                    B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
+                  enddo
+                enddo
+              enddo
+            enddo
+          enddo
+        enddo
+      endif ! tiling
+    endif ! star
+    !$acc parallel loop gang
     do j=1,n
+      !$acc loop vector
       do i=1,n
         A(i,j) = A(i,j) + 1.d0
       enddo
     enddo
-    !$omp end do
+  enddo
 
-  enddo ! iterations
-
-  !$omp barrier
-  !$omp master
-  t1 = omp_get_wtime()
+  t1 = prk_get_wtime()
   stencil_time = t1 - t0
-  !$omp end master
 
-  !$omp end parallel
-  !$omp end target
+  !$acc end data
 
-  ! HOST
-  ! compute L1 norm in parallel
-  !$omp parallel do                                 &
-  !$omp& default(none) shared(n,B) private(i,j)     &
-  !$omp& reduction(+:norm)
+  !$acc parallel loop reduction(+:norm)
   do j=r,n-r
+    !$acc loop reduction(+:norm)
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
-  !$omp end parallel do
   norm = norm / real(active_points,REAL64)
 
   !******************************************************************************

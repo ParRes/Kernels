@@ -25,6 +25,8 @@ coarray: p2p-coarray stencil-coarray transpose-coarray
 
 target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
+ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc
+
 %: %.f90
 	$(FC) $(FCFLAGS) $< -o $@
 
@@ -46,6 +48,9 @@ p2p-openmp-doacross: p2p-openmp-doacross.f90
 %-target: %-target.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< -o $@
 
+%-ornlacc: %-ornlacc.f90
+	$(FC) $(FCFLAGS) $(ORNLACCFLAG) $< -o $@
+
 clean:
 	-rm -f *.o
 	-rm -f *.i90
@@ -60,3 +65,4 @@ clean:
 	-rm -f p2p-openmp-target stencil-openmp-target transpose-openmp-target
 	-rm -f p2p-openmp-tasks  p2p-openmp-doacross
 	-rm -f stencil-openmp    transpose-openmp
+	-rm -f p2p-ornlacc stencil-ornlacc transpose-ornlacc
