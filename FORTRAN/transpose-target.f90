@@ -135,6 +135,8 @@ program main
   write(*,'(a,i8)') 'Tile size            = ', tile_size
   write(*,'(a,i8)') 'Number of iterations = ', iterations
 
+  t0 = 0
+
   !$omp parallel default(none)          &
   !$omp&  shared(A,B)                   &
   !$omp&  firstprivate(order,tile_size) &
@@ -166,7 +168,6 @@ program main
   endif
   !$omp end parallel
 
-  t0 = 0
 
   !$omp target map(to: A) map(tofrom: B) map(from:trans_time)
   !$omp parallel default(none)                         &
@@ -227,11 +228,11 @@ program main
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
   !$omp parallel do collapse(2)                                       &
-  !$omp&  default(none)                                               &
-  !$omp&  shared(B)                                                   &
-  !$omp&  firstprivate(order,iterations,addit)                        &
-  !$omp&  private(i,j,temp)                                           &
-  !$omp&  reduction(+:abserr)
+  !$omp& default(none)                                               &
+  !$omp& shared(B)                                                   &
+  !$omp& firstprivate(order,iterations,addit)                        &
+  !$omp& private(i,j,temp)                                           &
+  !$omp& reduction(+:abserr)
   do j=1,order
     do i=1,order
       temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
