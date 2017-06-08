@@ -80,7 +80,7 @@ inline void sweep_tile(size_t startm, size_t endm,
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/OpenMP DOACROSS pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -106,20 +106,8 @@ int main(int argc, char* argv[])
     exit(EXIT_FAILURE);
   }
 
-  // grid chunk dimensions
-  size_t mc = (argc > 4) ? std::atol(argv[4]) : m;
-  size_t nc = (argc > 5) ? std::atol(argv[5]) : n;
-  if (mc < 1 || mc > m || nc < 1 || nc > n) {
-    std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
-    mc = m;
-    nc = n;
-  }
-
   std::cout << "Number of iterations      = " << iterations << std::endl;
   std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
-  if (mc!=m || nc!=n) {
-      std::cout << "Grid chunk sizes          = " << mc << ", " << nc << std::endl;
-  }
 
   auto pipeline_time = 0.0; // silence compiler warning
 
@@ -156,33 +144,12 @@ int main(int argc, char* argv[])
           pipeline_time = prk::wtime();
       }
 
+      _Pragma("omp for collapse(2) ordered(2)")
       for (auto i=1; i<m; i++) {
         for (auto j=1; j<n; j++) {
+          _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1) depend(sink: i-1,j-1)")
           grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-        }
-      }
-      if (mc==m && nc==n) {
-        _Pragma("omp for collapse(2) ordered(2)")
-        for (auto i=1; i<m; i++) {
-          for (auto j=1; j<n; j++) {
-            _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1)")
-            grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-            _Pragma("omp ordered depend (source)")
-          }
-        }
-      } else /* chunking */ {
-        _Pragma("omp for collapse(2) ordered(2)")
-        for (auto i=1; i<m; i+=mc) {
-          for (auto j=1; j<n; j+=nc) {
-            //_Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1)")
-            //_Pragma("omp ordered depend(sink:(i-mc)*n+j) depend(sink:(i*n+(j-nc))) depend(sink:((i-mc)*n+(j-nc)))")
-            _Pragma("omp ordered depend(sink:i-mc,j) depend(sink:i,j-nc) depend(sink:i-mc,j-nc))")
-            //_Pragma("omp ordered depend(sink:i-mc,j) depend(sink:i,j-nc))")
-            sweep_tile(i, std::min(m,i+mc),
-                       j, std::min(n,j+nc),
-                       m, n, grid);
-            _Pragma("omp ordered depend(source)")
-          }
+          _Pragma("omp ordered depend (source)")
         }
       }
 
