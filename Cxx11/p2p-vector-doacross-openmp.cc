@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
 
   // working set
   std::vector<double> grid;
-  grid.resize(m*n,0.0);
+  grid.resize(m*n);
 
   _Pragma("omp parallel")
   {
@@ -171,30 +171,21 @@ int main(int argc, char* argv[])
           }
         }
       } else /* chunking */ {
-        size_t nbi = static_cast<size_t>(std::ceil(static_cast<double>(m)/mc));
-        size_t nbj = static_cast<size_t>(std::ceil(static_cast<double>(n)/nc));
-        //_Pragma("omp critical")
-        //std::cout << "nbi,nbj=" << nbi << "," << nbj << std::endl;
         _Pragma("omp for collapse(2) ordered(2)")
-        for (auto i=1; i<nbi; i++) {
-          for (auto j=1; j<nbj; j++) {
-            size_t ilo = 1+(i-1)*mc;
-            size_t ihi = std::min(m,i*mc);
-            size_t jlo = 1+(j-1)*nc;
-            size_t jhi = std::min(n,j*nc);
-            //_Pragma("omp critical") {
-            //  std::cout << "ilo,ihi,jlo,jhi=" << ilo << "," << ihi << "," << jlo << "," << jhi << std::endl;
-            //}
-            _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1)")
-            sweep_tile(ilo, ihi, jlo, jhi, m, n, grid);
-            _Pragma("omp ordered depend (source)")
+        for (auto i=1; i<m; i+=mc) {
+          for (auto j=1; j<n; j+=nc) {
+            //_Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1)")
+            //_Pragma("omp ordered depend(sink:(i-mc)*n+j) depend(sink:(i*n+(j-nc))) depend(sink:((i-mc)*n+(j-nc)))")
+            _Pragma("omp ordered depend(sink:i-mc,j) depend(sink:i,j-nc) depend(sink:i-mc,j-nc))")
+            //_Pragma("omp ordered depend(sink:i-mc,j) depend(sink:i,j-nc))")
+            sweep_tile(i, std::min(m,i+mc),
+                       j, std::min(n,j+nc),
+                       m, n, grid);
+            _Pragma("omp ordered depend(source)")
           }
         }
       }
 
-      // copy top right corner value to bottom left corner to create dependency; we
-      // need a barrier to make sure the latest value is used. This also guarantees
-      // that the flags for the next iteration (if any) are not getting clobbered
       _Pragma("omp master")
       grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
