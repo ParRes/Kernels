@@ -123,7 +123,6 @@ int main(int argc, char* argv[])
   std::vector<double> grid;
   grid.resize(m*n,0.0);
 
-
   // set boundary values (bottom and left side of grid)
   for (auto j=0; j<n; j++) {
     grid[0*n+j] = static_cast<double>(j);
