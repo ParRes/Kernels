@@ -20,11 +20,11 @@ OCLFLAGS = $(OPENCLFLAG)
 .PHONY: all clean run vector valarray openmp target opencl
 
 ifeq ($(shell uname -s),Darwin)
-    ifneq ($(CXX),icpc)
-	TARGET = target
-    endif
+ifneq ($(CXX),icpc)
+TARGET = target
+endif
 else
-    TARGET = target
+TARGET = target
 endif
 all: vector valarray openmp opencl $(TARGET)
 
