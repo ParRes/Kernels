@@ -36,6 +36,7 @@
 #include <cmath>   // fabs
 #include <cassert>
 
+#include <string>
 #include <iostream>
 #include <iomanip> // std::setprecision
 #include <exception>

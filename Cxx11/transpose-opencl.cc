@@ -53,7 +53,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_opencl.hpp"
+#include "prk_opencl.h"
 
 int main(int argc, char * argv[])
 {
@@ -100,9 +100,9 @@ int main(int argc, char * argv[])
 
   cl::Program program(context, prk::loadProgram("transpose.cl"), true);
 
-  cl::CommandQueue queue(context);
-
   auto kernel = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program, "transpose");
+
+  cl::CommandQueue queue(context);
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
