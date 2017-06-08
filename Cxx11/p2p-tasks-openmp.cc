@@ -66,7 +66,7 @@
 inline void sweep_tile(size_t startm, size_t endm,
                        size_t startn, size_t endn,
                        size_t m,      size_t n,
-                       std::vector<double> & grid)
+                       double grid[])
 {
   //_Pragma("omp critical")
   //std::cout << startm << "," << endm << "," << startn << "," << endn << "," << m << "," << n << std::endl;
@@ -87,7 +87,8 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   if (argc < 4){
-    std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> <second array dimension>" << std::endl;
+    std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> <second array dimension>"
+                                      << " [<first chunk dimension> <second chunk dimension>]" << std::endl;
     return(EXIT_FAILURE);
   }
 
@@ -111,24 +112,27 @@ int main(int argc, char* argv[])
   size_t nc = (argc > 5) ? std::atol(argv[5]) : n;
   if (mc < 1 || mc > m || nc < 1 || nc > n) {
     std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
-    mc = m;
-    nc = n;
+    mc = m/omp_get_max_threads();
+    nc = n/omp_get_max_threads();
   }
+  size_t one = 1;
+  mc = std::max(mc,one);
+  nc = std::max(nc,one);
 
   std::cout << "Number of iterations      = " << iterations << std::endl;
   std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
-  if (mc!=m || nc!=n) {
-      std::cout << "Grid chunk sizes          = " << mc << ", " << nc << std::endl;
-  }
+  std::cout << "Grid chunk sizes          = " << mc << ", " << nc << std::endl;
 
   auto pipeline_time = 0.0; // silence compiler warning
 
   // working set
-  std::vector<double> grid;
-  grid.resize(m*n);
+  double * grid = new double[m*n];
 
   _Pragma("omp parallel")
   {
+    size_t lic = (m/mc-1) * mc + 1;
+    size_t ljc = (n/nc-1) * nc + 1;
+
     _Pragma("omp for")
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
@@ -156,38 +160,19 @@ int main(int argc, char* argv[])
           pipeline_time = prk::wtime();
       }
 
-      for (auto i=1; i<m; i++) {
-        for (auto j=1; j<n; j++) {
-          grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-        }
-      }
-      if (mc==m && nc==n) {
-        _Pragma("omp for collapse(2) ordered(2)")
-        for (auto i=1; i<m; i++) {
-          for (auto j=1; j<n; j++) {
-            _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1)")
-            grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-            _Pragma("omp ordered depend (source)")
-          }
-        }
-      } else /* chunking */ {
-        _Pragma("omp for collapse(2) ordered(2)")
+      _Pragma("omp master")
+      {
         for (auto i=1; i<m; i+=mc) {
           for (auto j=1; j<n; j+=nc) {
-            //_Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1)")
-            //_Pragma("omp ordered depend(sink:(i-mc)*n+j) depend(sink:(i*n+(j-nc))) depend(sink:((i-mc)*n+(j-nc)))")
-            _Pragma("omp ordered depend(sink:i-mc,j) depend(sink:i,j-nc) depend(sink:i-mc,j-nc))")
-            //_Pragma("omp ordered depend(sink:i-mc,j) depend(sink:i,j-nc))")
+            _Pragma("omp task depend(in:grid[0],grid[(i-mc)*n+j],grid[i*n+(j-nc)],grid[(i-mc)*n+(j-nc)]) depend(out:grid[i*n+j])")
             sweep_tile(i, std::min(m,i+mc),
                        j, std::min(n,j+nc),
                        m, n, grid);
-            _Pragma("omp ordered depend(source)")
           }
         }
+        _Pragma("omp task depend(in:grid[(lic-1)*n+(ljc)]) depend(out:grid[0])")
+        grid[0*n+0] = -grid[(m-1)*n+(n-1)];
       }
-
-      _Pragma("omp master")
-      grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
 
     _Pragma("omp barrier")

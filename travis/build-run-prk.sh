@@ -126,6 +126,7 @@ case "$PRK_TARGET" in
         # C++11 without external parallelism
         make -C $PRK_TARGET_PATH vector
         $PRK_TARGET_PATH/p2p-vector         10 1024 1024
+        $PRK_TARGET_PATH/p2p-vector         10 1024 1024 100 100
         $PRK_TARGET_PATH/stencil-vector     10 1000
         $PRK_TARGET_PATH/transpose-vector   10 1024 32
 
@@ -135,6 +136,7 @@ case "$PRK_TARGET" in
                 # Host
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
                 make -C $PRK_TARGET_PATH openmp
+                $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
                 $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
                 $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
                 # Offload
@@ -148,8 +150,9 @@ case "$PRK_TARGET" in
                 echo "Skipping Clang since OpenMP support probably missing"
                 #echo "OPENMPFLAG=-fopenmp" >> common/make.defs
                 #make -C $PRK_TARGET_PATH openmp
-                #$PRK_TARGET_PATH/stencil-vector-openmp     10 1000
-                #$PRK_TARGET_PATH/transpose-vector-openmp   10 1024 32
+                #$PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
+                #$PRK_TARGET_PATH/stencil-vector-openmp            10 1000
+                #$PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
                 ;;
             *)
                 echo "Figure out your OpenMP flags..."
