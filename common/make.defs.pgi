@@ -18,6 +18,15 @@ DEFAULT_OPT_FLAGS=-O2
 # OpenMP flags
 #
 OPENMPFLAG=-mp
+OFFLOADFLAG=-mp
+#
+# OpenCL flags
+#
+# MacOS
+#OPENCLFLAG=-framework OpenCL
+# Linux
+OPENCLDIR=/etc/alternatives/opencl-intel-tools
+OPENCLFLAG=-I$OPENCLDIR -L$OPENCLDIR/lib64 -lOpenCL
 #
 # MPI
 #
