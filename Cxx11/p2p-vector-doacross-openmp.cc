@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
         _Pragma("omp for collapse(2) ordered(2)")
         for (auto i=1; i<m; i++) {
           for (auto j=1; j<n; j++) {
-            _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1)")
+            _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1) depend(sink: i-1,j-1)")
             grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
             _Pragma("omp ordered depend (source)")
           }
