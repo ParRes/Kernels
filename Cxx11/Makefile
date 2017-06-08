@@ -35,7 +35,7 @@ valarray: transpose-valarray
 #openmp: p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
 openmp: p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
 
-target: stencil-openmp-target transpose-openmp-target
+target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
 opencl: stencil-opencl transpose-opencl
 
