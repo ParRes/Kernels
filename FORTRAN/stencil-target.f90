@@ -129,7 +129,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
       enddo
       !$omp end do
     else ! tiling
-      !$omp do
+      !$omp do collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -163,7 +163,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
       enddo
       !$omp end do
     else ! tiling
-      !$omp do
+      !$omp do collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
