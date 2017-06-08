@@ -31,6 +31,8 @@
 
 #include <cstdio>  // atoi
 #include <cstdlib> // getenv
+#include <cstdint>
+#include <climits>
 #include <cmath>   // fabs
 #include <cassert>
 
