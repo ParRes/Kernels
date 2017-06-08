@@ -129,33 +129,33 @@ program main
     stop 1
   endif
 
-  !$omp parallel default(none)                                  &
-  !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
-  !$omp&  firstprivate(m,n)                                     &
-  !$omp&  private(i,j,k,corner_val)
-
-  !$omp do collapse(2)
+  ! HOST
+  !$omp parallel do collapse(2)  &
+  !$omp&  default(none)          &
+  !$omp&  shared(grid)           &
+  !$omp&  firstprivate(m,n)      &
+  !$omp&  private(i,j)
   do j=1,n
     do i=1,m
       grid(i,j) = 0.0d0
     enddo
   enddo
-  !$omp end do
-  ! it is debatable whether these loops should be parallel
-  !$omp do
+  !$omp end parallel do
   do j=1,n
     grid(1,j) = real(j-1,REAL64)
   enddo
-  !$omp end do
-  !$omp do
   do i=1,m
     grid(i,1) = real(i-1,REAL64)
   enddo
-  !$omp end do
 
+  ! DEVICE
+  !$omp target map(tofrom: grid) map(from:pipeline_time)
+  !$omp parallel default(none)                            &
+  !$omp&  shared(grid,t0,t1,iterations,pipeline_time)     &
+  !$omp&  firstprivate(m,n)                               &
+  !$omp&  private(i,j,k,corner_val)
   do k=0,iterations
 
-    !  start timer after a warmup iteration
     if (k.eq.1) then
       !$omp barrier
       !$omp master
@@ -188,6 +188,7 @@ program main
   !$omp end master
 
   !$omp end parallel
+  !$omp end target
 
   ! ********************************************************************
   ! ** Analyze and output results.
