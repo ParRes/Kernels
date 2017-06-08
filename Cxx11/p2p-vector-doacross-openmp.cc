@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
   size_t mc = (argc > 4) ? std::atol(argv[4]) : m;
   size_t nc = (argc > 5) ? std::atol(argv[5]) : n;
   if (mc < 1 || mc > m || nc < 1 || nc > n) {
-    std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
+    std::cout << "WARNING: grid chunk dimensions invalid: " << mc << ", " << nc << " (ignoring)" << std::endl;
     mc = m;
     nc = n;
   }
@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
         _Pragma("omp for collapse(2) ordered(2)")
         for (auto ic=0; ic<nmc; ic++) {
           for (auto jc=0; jc<nnc; jc++) {
-            _Pragma("omp ordered depend(sink: ic-1,jc) depend(sink: ic,jc-1)")
+            _Pragma("omp ordered depend(sink: ic-1,jc) depend(sink: ic,jc-1) depend(sink: ic-1,jc-1)")
             sweep_tile(1+ic*mc, std::min(m,(ic+1)*mc),
                        1+jc*nc, std::min(n,(jc+1)*nc),
                        m, n, grid);
