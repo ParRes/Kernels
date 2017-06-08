@@ -177,9 +177,6 @@ int main(int argc, char * argv[])
   }
 #endif
 
-  // interior of grid with respect to stencil
-  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
-
   double * RESTRICT in  = new double[n*n];
   double * RESTRICT out = new double[n*n];
 
@@ -235,6 +232,9 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
+
+  // interior of grid with respect to stencil
+  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
   // HOST
   // compute L1 norm in parallel

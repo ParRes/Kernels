@@ -121,7 +121,7 @@ int main(int argc, char * argv[])
       }
 
       // stencil pattern
-      if (argc >= 3) {
+      if (argc > 3) {
           auto stencil = std::string(argv[3]);
           auto grid = std::string("grid");
           star = (stencil == grid) ? false : true;
@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
 
       // stencil radius
       radius = 2;
-      if (argc >= 4) {
+      if (argc > 4) {
           radius = std::atoi(argv[4]);
       }
 

@@ -120,7 +120,7 @@ int main(int argc, char * argv[])
       }
 
       // stencil pattern
-      if (argc >= 3) {
+      if (argc > 3) {
           auto stencil = std::string(argv[3]);
           auto grid = std::string("grid");
           star = (stencil == grid) ? false : true;
@@ -128,7 +128,7 @@ int main(int argc, char * argv[])
 
       // stencil radius
       radius = 2;
-      if (argc >= 4) {
+      if (argc > 4) {
           radius = std::atoi(argv[4]);
       }
 
@@ -158,7 +158,6 @@ int main(int argc, char * argv[])
   }
 
   // fill the stencil weights to reflect a discrete divergence operator
-  const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
   if (star) {
     for (auto ii=1; ii<=radius; ii++) {
       weight[radius][radius+ii] = weight[radius+ii][radius] = +1./(2*ii*radius);
@@ -258,6 +257,7 @@ int main(int argc, char * argv[])
     std::cout << "L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
 #endif
+    const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
     size_t flops = (2L*(size_t)stencil_size+1L) * active_points;
     auto avgtime = stencil_time/iterations;
     std::cout << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
