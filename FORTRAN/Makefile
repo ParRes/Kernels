@@ -23,7 +23,7 @@ openmp: p2p-openmp-tasks stencil-openmp transpose-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
-target: stencil-target transpose-target
+target: stencil-openmp-target transpose-openmp-target
 
 %: %.f90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -54,9 +54,9 @@ clean:
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
-	-rm -f p2p              stencil             transpose
-	-rm -f p2p-pretty       stencil-pretty      transpose-pretty
-	-rm -f p2p-coarray      stencil-coarray     transpose-coarray
-	-rm -f p2p-target       stencil-target      transpose-target
-	-rm -f p2p-openmp-tasks p2p-openmp-doacross
-	-rm -f stencil-openmp   transpose-openmp
+	-rm -f p2p               stencil               transpose
+	-rm -f p2p-pretty        stencil-pretty        transpose-pretty
+	-rm -f p2p-coarray       stencil-coarray       transpose-coarray
+	-rm -f p2p-openmp-target stencil-openmp-target transpose-openmp-target
+	-rm -f p2p-openmp-tasks  p2p-openmp-doacross
+	-rm -f stencil-openmp    transpose-openmp
