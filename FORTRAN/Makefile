@@ -23,7 +23,7 @@ openmp: p2p-openmp-tasks stencil-openmp transpose-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
-target: stencil-openmp-target transpose-openmp-target
+target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
 %: %.f90
 	$(FC) $(FCFLAGS) $< -o $@
