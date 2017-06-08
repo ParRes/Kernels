@@ -62,10 +62,8 @@
 
 #include "prk_util.h"
 
-const int radius = RADIUS;
-
 template <int radius, bool star>
-void do_stencil(int n, double weight[2*radius+1][2*radius+1], std::vector<double> & in, std::vector<double> & out)
+void do_stencil(int n, std::vector<std::vector<double>> weight, std::vector<double> & in, std::vector<double> & out)
 {
     _Pragma("omp for")
     for (auto i=radius; i<n-radius; i++) {
@@ -100,44 +98,54 @@ int main(int argc, char * argv[])
   // process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc != 3 && argc !=4){
-    std::cout << "Usage: " << argv[0] << " <# iterations> <array dimension>" << std::endl;
-    return(EXIT_FAILURE);
-  }
+  int iterations;
+  int n, radius;
+  bool star = true;
+  try {
+      if (argc < 3){
+        throw "Usage: <# iterations> <array dimension> [<star/grid> <radius>]";
+      }
 
-  // number of times to run the algorithm
-  int iterations  = std::atoi(argv[1]);
-  if (iterations < 1){
-    std::cout << "ERROR: iterations must be >= 1" << iterations << std::endl;
-    exit(EXIT_FAILURE);
-  }
+      // number of times to run the algorithm
+      iterations  = std::atoi(argv[1]);
+      if (iterations < 1) {
+        throw "ERROR: iterations must be >= 1";
+      }
 
-  // linear grid dimension
-  int n  = std::atoi(argv[2]);
-  if (n < 1){
-    std::cout << "ERROR: grid dimension must be positive: " << n << std::endl;
-    exit(EXIT_FAILURE);
-  } else if (n > std::floor(std::sqrt(INT_MAX))) {
-    std::cout << "ERROR: grid dimension too large - overflow risk: " << n << std::endl;
-    exit(EXIT_FAILURE);
-  }
+      // linear grid dimension
+      n  = std::atoi(argv[2]);
+      if (n < 1) {
+        throw "ERROR: grid dimension must be positive";
+      } else if (n > std::floor(std::sqrt(INT_MAX))) {
+        throw "ERROR: grid dimension too large - overflow risk";
+      }
 
-  if (radius < 1) {
-    std::cout << "ERROR: Stencil radius " << radius << " should be positive " << std::endl;
-    exit(EXIT_FAILURE);
-  } else if (2*radius+1 > n) {
-    std::cout << "ERROR: Stencil radius " << radius << " exceeds grid size " << n << std::endl;
-    exit(EXIT_FAILURE);
+      // stencil pattern
+      if (argc >= 3) {
+          auto stencil = std::string(argv[3]);
+          auto grid = std::string("grid");
+          star = (stencil == grid) ? false : true;
+      }
+
+      // stencil radius
+      radius = 2;
+      if (argc >= 4) {
+          radius = std::atoi(argv[4]);
+      }
+
+      if ( (radius < 1) || (2*radius+1 > n) ) {
+        throw "ERROR: Stencil radius negative or too large";
+      }
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return 1;
   }
 
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
-#ifdef STAR
-  std::cout << "Type of stencil      = star" << std::endl;
-#else
-  std::cout << "Type of stencil      = compact" << std::endl;
-#endif
+  std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
   std::cout << "Compact representation of stencil loop body" << std::endl;
 
@@ -145,35 +153,31 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  // weights of points in the stencil
-  //std::array< std::array<double,2*radius+1>, 2*radius+1> weight;
-  double weight[2*radius+1][2*radius+1];
-  for (auto jj=-radius; jj<=radius; jj++) {
-    for (auto ii=-radius; ii<=radius; ii++) {
-      weight[ii+radius][jj+radius] = 0.0;
-    }
+  std::vector<std::vector<double>> weight;
+  weight.resize(2*radius+1);
+  for (auto i=0; i<2*radius+1; i++) {
+    weight[i].resize(2*radius+1, 0.0);
   }
 
   // fill the stencil weights to reflect a discrete divergence operator
-#ifdef STAR
-  const int stencil_size = 4*radius+1;
-  for (auto ii=1; ii<=radius; ii++) {
-    weight[radius][radius+ii] = weight[radius+ii][radius] = +1./(2*ii*radius);
-    weight[radius][radius-ii] = weight[radius-ii][radius] = -1./(2*ii*radius);
-  }
-#else
-  const int stencil_size = (2*radius+1)*(2*radius+1);
-  for (auto jj=1; jj<=radius; jj++) {
-    for (auto ii=-jj+1; ii<jj; ii++) {
-      weight[radius+ii][radius+jj] = +1./(4*jj*(2*jj-1)*radius);
-      weight[radius+ii][radius-jj] = -1./(4*jj*(2*jj-1)*radius);
-      weight[radius+jj][radius+ii] = +1./(4*jj*(2*jj-1)*radius);
-      weight[radius-jj][radius+ii] = -1./(4*jj*(2*jj-1)*radius);
+  const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
+  if (star) {
+    for (auto ii=1; ii<=radius; ii++) {
+      weight[radius][radius+ii] = weight[radius+ii][radius] = +1./(2*ii*radius);
+      weight[radius][radius-ii] = weight[radius-ii][radius] = -1./(2*ii*radius);
     }
-    weight[radius+jj][radius+jj]   = +1./(4*jj*radius);
-    weight[radius-jj][radius-jj]   = -1./(4*jj*radius);
+  } else {
+    for (auto jj=1; jj<=radius; jj++) {
+      for (auto ii=-jj+1; ii<jj; ii++) {
+        weight[radius+ii][radius+jj] = +1./(4*jj*(2*jj-1)*radius);
+        weight[radius+ii][radius-jj] = -1./(4*jj*(2*jj-1)*radius);
+        weight[radius+jj][radius+ii] = +1./(4*jj*(2*jj-1)*radius);
+        weight[radius-jj][radius+ii] = -1./(4*jj*(2*jj-1)*radius);
+      }
+      weight[radius+jj][radius+jj]   = +1./(4*jj*radius);
+      weight[radius-jj][radius-jj]   = -1./(4*jj*radius);
+    }
   }
-#endif
 
   // interior of grid with respect to stencil
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
@@ -204,13 +208,34 @@ int main(int argc, char * argv[])
           stencil_time = prk::wtime();
       }
 
-      // Apply the stencil operator
-#ifdef STAR
-      do_stencil<RADIUS,true>(n, weight, in, out);
-#else
-      do_stencil<RADIUS,false>(n, weight, in, out);
-#endif
-
+    // Apply the stencil operator
+    if (star) {
+        switch (radius) {
+            case 1: do_stencil<1,true>(n, weight, in, out); break;
+            case 2: do_stencil<2,true>(n, weight, in, out); break;
+            case 3: do_stencil<3,true>(n, weight, in, out); break;
+            case 4: do_stencil<4,true>(n, weight, in, out); break;
+            case 5: do_stencil<5,true>(n, weight, in, out); break;
+            case 6: do_stencil<6,true>(n, weight, in, out); break;
+            case 7: do_stencil<7,true>(n, weight, in, out); break;
+            case 8: do_stencil<8,true>(n, weight, in, out); break;
+            case 9: do_stencil<9,true>(n, weight, in, out); break;
+            default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
+        }
+    } else {
+        switch (radius) {
+            case 1: do_stencil<1,false>(n, weight, in, out); break;
+            case 2: do_stencil<2,false>(n, weight, in, out); break;
+            case 3: do_stencil<3,false>(n, weight, in, out); break;
+            case 4: do_stencil<4,false>(n, weight, in, out); break;
+            case 5: do_stencil<5,false>(n, weight, in, out); break;
+            case 6: do_stencil<6,false>(n, weight, in, out); break;
+            case 7: do_stencil<7,false>(n, weight, in, out); break;
+            case 8: do_stencil<8,false>(n, weight, in, out); break;
+            case 9: do_stencil<9,false>(n, weight, in, out); break;
+            default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
+        }
+    }
       // add constant to solution to force refresh of neighbor data, if any
       _Pragma("omp for")
       for (auto i=0; i<n; i++) {
