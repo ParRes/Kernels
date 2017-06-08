@@ -106,16 +106,8 @@ int main(int argc, char * argv[])
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-#if 0
-  // How to map STL containers for target data?
-  std::vector<double> A;
-  std::vector<double> B;
-  A.resize(order*order);
-  B.resize(order*order);
-#else
   double * RESTRICT A = new double[order*order];
   double * RESTRICT B = new double[order*order];
-#endif
 
   auto trans_time = 0.0;
 

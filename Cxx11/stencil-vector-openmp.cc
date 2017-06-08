@@ -117,6 +117,9 @@ int main(int argc, char * argv[])
   if (n < 1){
     std::cout << "ERROR: grid dimension must be positive: " << n << std::endl;
     exit(EXIT_FAILURE);
+  } else if (n > std::floor(std::sqrt(INT_MAX))) {
+    std::cout << "ERROR: grid dimension too large - overflow risk: " << n << std::endl;
+    exit(EXIT_FAILURE);
   }
 
   if (radius < 1) {
@@ -209,17 +212,12 @@ int main(int argc, char * argv[])
 #endif
 
       // add constant to solution to force refresh of neighbor data, if any
-#if 0
-      _Pragma("omp single")
-      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
-#else
       _Pragma("omp for")
       for (auto i=0; i<n; i++) {
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
-#endif
     }
     {
         _Pragma("omp barrier")
