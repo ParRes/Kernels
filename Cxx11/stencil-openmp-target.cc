@@ -96,7 +96,7 @@ _Pragma("omp end declare target")
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/OpenMP TARGET Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // process and test input parameters
@@ -118,6 +118,9 @@ int main(int argc, char * argv[])
   int n  = std::atoi(argv[2]);
   if (n < 1){
     std::cout << "ERROR: grid dimension must be positive: " << n << std::endl;
+    exit(EXIT_FAILURE);
+  } else if (n > std::floor(std::sqrt(INT_MAX))) {
+    std::cout << "ERROR: grid dimension too large - overflow risk: " << n << std::endl;
     exit(EXIT_FAILURE);
   }
 

@@ -117,6 +117,9 @@ int main(int argc, char * argv[])
   if (n < 1){
     std::cout << "ERROR: grid dimension must be positive: " << n << std::endl;
     exit(EXIT_FAILURE);
+  } else if (n > std::floor(std::sqrt(INT_MAX))) {
+    std::cout << "ERROR: grid dimension too large - overflow risk: " << n << std::endl;
+    exit(EXIT_FAILURE);
   }
 
   if (radius < 1) {

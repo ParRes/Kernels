@@ -130,16 +130,16 @@ int main(int argc, char * argv[])
     exit(EXIT_FAILURE);
   }
 
+  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
-  std::cout << "Radius of stencil    = " << radius << std::endl;
 #ifdef STAR
   std::cout << "Type of stencil      = star" << std::endl;
 #else
   std::cout << "Type of stencil      = compact" << std::endl;
 #endif
-  std::cout << "Data type            = double precision" << std::endl;
+  std::cout << "Radius of stencil    = " << radius << std::endl;
   std::cout << "Compact representation of stencil loop body" << std::endl;
-  std::cout << "Number of iterations = " << iterations << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
