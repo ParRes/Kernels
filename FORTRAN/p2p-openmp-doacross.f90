@@ -174,7 +174,9 @@ program main
     enddo
     !$omp end do
 
+    !$omp master
     grid(1,1) = -grid(m,n)
+    !$omp end master
 
     !$omp barrier
 
