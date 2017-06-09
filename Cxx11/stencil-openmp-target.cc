@@ -96,7 +96,7 @@ _Pragma("omp end declare target")
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/OpenMP TARGET Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // process and test input parameters
@@ -118,6 +118,9 @@ int main(int argc, char * argv[])
   int n  = std::atoi(argv[2]);
   if (n < 1){
     std::cout << "ERROR: grid dimension must be positive: " << n << std::endl;
+    exit(EXIT_FAILURE);
+  } else if (n > std::floor(std::sqrt(INT_MAX))) {
+    std::cout << "ERROR: grid dimension too large - overflow risk: " << n << std::endl;
     exit(EXIT_FAILURE);
   }
 
@@ -174,19 +177,8 @@ int main(int argc, char * argv[])
   }
 #endif
 
-  // interior of grid with respect to stencil
-  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
-
-#if 0
-  // How to map STL containers for target data?
-  std::vector<double> in;
-  std::vector<double> out;
-  in.resize(n*n);
-  out.resize(n*n);
-#else
   double * RESTRICT in  = new double[n*n];
   double * RESTRICT out = new double[n*n];
-#endif
 
   auto stencil_time = 0.0;
 
@@ -223,17 +215,12 @@ int main(int argc, char * argv[])
 #endif
 
       // add constant to solution to force refresh of neighbor data, if any
-#if 0
-      _Pragma("omp single")
-      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
-#else
       _Pragma("omp for")
       for (auto i=0; i<n; i++) {
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
-#endif
     }
     {
         _Pragma("omp barrier")
@@ -245,6 +232,9 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
+
+  // interior of grid with respect to stencil
+  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
   // HOST
   // compute L1 norm in parallel

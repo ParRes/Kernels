@@ -13,6 +13,9 @@ CXXFLAGS += -DPRKVERSION=$(PRKVERSION)
 CXXFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
 CXXFLAGS += -I.
 
+# debugging
+#CXXFLAGS += -DVERBOSE
+
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
 OCLFLAGS = $(OPENCLFLAG)
@@ -20,11 +23,11 @@ OCLFLAGS = $(OPENCLFLAG)
 .PHONY: all clean run vector valarray openmp target opencl
 
 ifeq ($(shell uname -s),Darwin)
-    ifneq ($(CXX),icpc)
-	TARGET = target
-    endif
+ifneq ($(CXX),icpc)
+TARGET = target
+endif
 else
-    TARGET = target
+TARGET = target
 endif
 all: vector valarray openmp opencl $(TARGET)
 
@@ -38,16 +41,16 @@ target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
 opencl: stencil-opencl transpose-opencl
 
-%-opencl: %-opencl.cc %.cl
+%-opencl: %-opencl.cc %.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $(OCLFLAGS) $< -o $@
 
-%-target: %-target.cc
+%-target: %-target.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $(TARGETFLAGS) $< -o $@
 
-%-openmp: %-openmp.cc
+%-openmp: %-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $< -o $@
 
-%: %.cc
+%: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
 clean:

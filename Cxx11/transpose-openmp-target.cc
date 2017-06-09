@@ -61,7 +61,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/OpenMP TARGET Matrix transpose: B = A^T" << std::endl;
 
   int iterations;
   size_t order;
@@ -106,16 +106,8 @@ int main(int argc, char * argv[])
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-#if 0
-  // How to map STL containers for target data?
-  std::vector<double> A;
-  std::vector<double> B;
-  A.resize(order*order);
-  B.resize(order*order);
-#else
   double * RESTRICT A = new double[order*order];
   double * RESTRICT B = new double[order*order];
-#endif
 
   auto trans_time = 0.0;
 

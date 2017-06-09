@@ -92,6 +92,7 @@ int main(int argc, char* argv[])
     exit(EXIT_FAILURE);
   }
 
+  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations      = " << iterations << std::endl;
   std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
 

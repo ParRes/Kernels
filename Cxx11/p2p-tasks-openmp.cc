@@ -80,7 +80,7 @@ inline void sweep_tile(size_t startm, size_t endm,
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/OpenMP TASKS pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -119,6 +119,7 @@ int main(int argc, char* argv[])
   mc = std::max(mc,one);
   nc = std::max(nc,one);
 
+  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations      = " << iterations << std::endl;
   std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
   std::cout << "Grid chunk sizes          = " << mc << ", " << nc << std::endl;
