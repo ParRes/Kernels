@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 import sys
+import fileinput
+import string
+import os
 
 def main():
 
@@ -47,10 +50,26 @@ def main():
             W[r+j][r+j]    = +1./(4*j*r)
             W[r-j][r-j]    = -1./(4*j*r)
 
+    src = open(pattern+str(r)+'.cl','w')
+    src.write('__kernel void '+pattern+str(r)+'(const int n, __global const float * in, __global float * out)\n')
+    src.write('{\n')
+    src.write('    const int i = get_global_id(0);\n')
+    src.write('    const int j = get_global_id(1);\n')
+    src.write('    if ( ('+str(r)+' <= i) && (i < n-'+str(r)+') && ('+str(r)+' <= j) && (j < n-'+str(r)+') ) {\n')
+    src.write('        out[i*n+j] += ')
+    k = 0
+    kmax = stencil_size-1;
     for j in range(0,2*r+1):
         for i in range(0,2*r+1):
             if ( W[j][i] != 0.0):
+                k+=1
                 print(j-r,i-r,W[j][i])
+                src.write('in[(i+'+str(j-r)+')*n+(j+'+str(i-r)+')] * '+str(W[j][i])+'f')
+                if (k==kmax): src.write(';\n')
+                else: src.write('\n')
+                if (k>0 and k<kmax): src.write('                    + ')
+    src.write('    }\n')
+    src.write('}\n')
 
 if __name__ == '__main__':
     main()
