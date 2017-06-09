@@ -167,6 +167,12 @@ case "$PRK_TARGET" in
             cd $PRK_TARGET_PATH
             ./stencil-opencl     10 1000
             ./transpose-opencl   10 1024 32
+            echo "Test stencil code generator"
+            for s in star grid ; do
+                for r in 1 2 3 4 5 6 7 8 9 ; do
+                    ./stencil-opencl 10 200 $s $r
+                done
+            done
             cd ..
         fi
         ;;
