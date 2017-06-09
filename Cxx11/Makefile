@@ -64,3 +64,6 @@ clean:
 	-rm -f *-target
 	-rm -f *-opencl
 
+cleancl:
+	-rm -f star[123456789].cl
+	-rm -f grid[123456789].cl
