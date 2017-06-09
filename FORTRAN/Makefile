@@ -13,13 +13,13 @@ FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 all: serial pretty openmp coarray target
 
-serial: p2p stencil transpose
+serial: p2p p2p-dp stencil transpose
 
 pretty: stencil-pretty transpose-pretty
 
 # doacross is busted right now
 #openmp: p2p-openmp-tasks p2p-openmp-doacross stencil-openmp transpose-openmp
-openmp: p2p-openmp-tasks stencil-openmp transpose-openmp
+openmp: p2p-openmp-tasks p2p-openmp-datapar stencil-openmp transpose-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
@@ -37,6 +37,9 @@ p2p-openmp-tasks: p2p-openmp-tasks.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 p2p-openmp-doacross: p2p-openmp-doacross.f90
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+
+p2p-openmp-datapar: p2p-openmp-datapar.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 %-openmp: %.f90
@@ -66,3 +69,4 @@ clean:
 	-rm -f p2p-openmp-tasks  p2p-openmp-doacross
 	-rm -f stencil-openmp    transpose-openmp
 	-rm -f p2p-ornlacc stencil-ornlacc transpose-ornlacc
+	-rm -f p2p-openmp-datapar
