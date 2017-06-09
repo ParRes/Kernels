@@ -83,7 +83,8 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   if (argc < 4){
-    std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> <second array dimension>" << std::endl;
+    std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> <second array dimension>"
+                                      << " [<first chunk dimension> <second chunk dimension>]" << std::endl;
     return(EXIT_FAILURE);
   }
 
@@ -105,7 +106,7 @@ int main(int argc, char* argv[])
   // grid chunk dimensions
   size_t mc = (argc > 4) ? std::atol(argv[4]) : m;
   size_t nc = (argc > 5) ? std::atol(argv[5]) : n;
-  if (mc < 1 || mc>m || nc < 1 || nc>n) {
+  if (mc < 1 || mc > m || nc < 1 || nc > n) {
     std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
     mc = m;
     nc = n;
@@ -131,10 +132,9 @@ int main(int argc, char* argv[])
     grid[i*n+0] = static_cast<double>(i);
   }
 
-  for (auto iter = 0; iter<=iterations; iter++){
+  for (auto iter = 0; iter<=iterations; iter++) {
 
-    // start timer after a warmup iteration
-    if (iter == 1) pipeline_time = prk::wtime();
+    if (iter==1) pipeline_time = prk::wtime();
 
     if (mc==m && nc==n) {
       for (auto i=1; i<m; i++) {
@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
   auto corner_val = ((iterations+1.)*(n+m-2.));
   if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
-              << " does not match verification value" << corner_val << std::endl;
+              << " does not match verification value " << corner_val << std::endl;
     exit(EXIT_FAILURE);
   }
 
