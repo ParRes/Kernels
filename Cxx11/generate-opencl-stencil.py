@@ -64,10 +64,10 @@ def main():
             if ( W[j][i] != 0.0):
                 k+=1
                 #print(j-r,i-r,W[j][i])
-                src.write('in[(i+'+str(j-r)+')*n+(j+'+str(i-r)+')] * '+str(W[j][i])+'f')
-                if (k==kmax): src.write(';\n')
-                else: src.write('\n')
-                if (k>0 and k<kmax): src.write('                    + ')
+                src.write('+in[(i+'+str(j-r)+')*n+(j+'+str(i-r)+')] * '+str(W[j][i])+'f')
+                if (k<kmax): src.write('\n')
+                if (k>0 and k<kmax): src.write('                      ')
+    src.write('    ;\n')
     src.write('    }\n')
     src.write('}\n')
 
