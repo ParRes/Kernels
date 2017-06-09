@@ -67,7 +67,7 @@ def main():
                 src.write('+in[(i+'+str(j-r)+')*n+(j+'+str(i-r)+')] * '+str(W[j][i])+'f')
                 if (k<kmax): src.write('\n')
                 if (k>0 and k<kmax): src.write('                      ')
-    src.write('    ;\n')
+    src.write(';\n')
     src.write('    }\n')
     src.write('}\n')
 
