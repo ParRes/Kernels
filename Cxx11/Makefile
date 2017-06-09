@@ -41,7 +41,10 @@ target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
 opencl: stencil-opencl transpose-opencl
 
-%-opencl: %-opencl.cc %.cl prk_util.h prk_opencl.h
+tranpose-opencl: tranpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
+	$(CXX) $(CXXFLAGS) $(OCLFLAGS) $< -o $@
+
+%-opencl: %-opencl.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $(OCLFLAGS) $< -o $@
 
 %-target: %-target.cc prk_util.h
