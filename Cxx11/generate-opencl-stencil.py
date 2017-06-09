@@ -23,11 +23,11 @@ def main():
     else:
         r = 2 # radius=2 is what other impls use right now
 
-    if pattern == 'star':
-        print('Type of stencil      = ', 'star')
-    else:
-        print('Type of stencil      = ', 'stencil')
-    print('Radius of stencil    = ', r)
+    #if pattern == 'star':
+    #    print('Type of stencil      = ', 'star')
+    #else:
+    #    print('Type of stencil      = ', 'stencil')
+    #print('Radius of stencil    = ', r)
 
     W = [[0.0 for x in range(2*r+1)] for x in range(2*r+1)]
     if pattern == 'star':
@@ -63,7 +63,7 @@ def main():
         for i in range(0,2*r+1):
             if ( W[j][i] != 0.0):
                 k+=1
-                print(j-r,i-r,W[j][i])
+                #print(j-r,i-r,W[j][i])
                 src.write('in[(i+'+str(j-r)+')*n+(j+'+str(i-r)+')] * '+str(W[j][i])+'f')
                 if (k==kmax): src.write(';\n')
                 else: src.write('\n')

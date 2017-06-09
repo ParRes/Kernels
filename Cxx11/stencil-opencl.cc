@@ -135,7 +135,17 @@ int main(int argc, char * argv[])
   //std::cout << "funcname = " << funcname << std::endl;
   //std::cout << "filename = " << filename << std::endl;
 
-  cl::Program program1(context, prk::loadProgram(filename), true);
+  std::string source = prk::loadProgram(filename);
+  if ( source==std::string("FAIL") ) {
+      std::cerr << "OpenCL kernel source file (" << filename << ") not found. "
+                << "Generating using Python script" << std::endl;
+      std::string command("./generate-opencl-stencil.py ");
+      command += ( star ? "star " : "grid " );
+      command += std::to_string(radius);
+      std::system( command.c_str() );
+  }
+  source = prk::loadProgram(filename);
+  cl::Program program1(context, source, true);
   cl::Program program2(context, prk::loadProgram("add.cl"), true);
 
   auto kernel1 = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program1, funcname);
