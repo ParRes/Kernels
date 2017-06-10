@@ -1,4 +1,5 @@
 include ../../common/MPI.defs
+COMOBJS += timestep.o
 
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults
