@@ -173,58 +173,6 @@ void time_step(int    Num_procs,
 	       MPI_Comm comm_bg,
                int    first_through);
 
-/* before interpolating from the background grid, we need to gather that BG data
-   from wherever it resides and copy it to the right locations of the refinement */
-void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long expand,
-                 int Num_procs, long L_width_bg, 
-                 long L_istart_bg, long L_iend_bg, long L_jstart_bg, long L_jend_bg,
-                 long L_istart_r, long L_iend_r, long L_jstart_r, long L_jend_r,
-                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, MPI_Comm comm_r,
-                 long L_istart_r_gross, long L_iend_r_gross, 
-                 long L_jstart_r_gross, long L_jend_r_gross, 
-                 long L_width_r_true_gross, long L_istart_r_true_gross, long L_iend_r_true_gross,
-                 long L_jstart_r_true_gross, long L_jend_r_true_gross, int g);
-
-/* use two-stage, bi-linear interpolation of BG values to refinement. BG values
-   have already been copied to the refinement                                   */
-void interpolate(DTYPE *ing_r, long L_width_r_true_gross,
-                 long L_istart_r_true_gross, long L_iend_r_true_gross,
-                 long L_jstart_r_true_gross, long L_jend_r_true_gross, 
-                 long L_istart_r_true, long L_iend_r_true,
-                 long L_jstart_r_true, long L_jend_r_true, 
-                 long expand, DTYPE h_r, int g, int Num_procs, int my_ID) {
-
-  long ir, jr, ib, jrb, jrb1, jb;
-  DTYPE xr, xb, yr, yb;
-
-  if (expand==1) return; /* nothing to do anymore                                  */
-
-  /* First, interpolate in x-direction                                             */
-  for (jr=L_jstart_r_true_gross; jr<=L_jend_r_true_gross; jr+=expand) {
-    for (ir=L_istart_r_true_gross; ir<L_iend_r_true_gross; ir++) {
-      xr = h_r*(DTYPE)ir;
-      ib = (long)xr;
-      xb = (DTYPE)ib;
-      ING_R(ir,jr) = ING_R((ib+1)*expand,jr)*(xr-xb) +
-	             ING_R(ib*expand,jr)*(xb+(DTYPE)1.0-xr);
-    }
-  }
-
-  /* Next, interpolate in y-direction                                              */
-  for (jr=L_jstart_r_true; jr<=L_jend_r_true; jr++) {
-    yr = h_r*(DTYPE)jr;
-    jb = (long)yr;
-    jrb = jb*expand;
-    jrb1 = (jb+1)*expand;
-    yb = (DTYPE)jb;
-    for (ir=L_istart_r_true; ir<=L_iend_r_true; ir++) {
-      ING_R(ir,jr) = ING_R(ir,jrb1)*(yr-yb) + ING_R(ir,jrb)*(yb+(DTYPE)1.0-yr);
-    }
-    /* note that (yr-yb) and (yb+(DTYPE)1.0-yr) can be hoisted out of the loop,
-       so in the performance computation we assign 3 flops per point               */
-  }
-}
-
 int main(int argc, char ** argv) {
 
   int    Num_procs;         /* number of ranks                                     */
