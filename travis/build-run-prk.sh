@@ -175,6 +175,20 @@ case "$PRK_TARGET" in
             done
             cd ..
         fi
+
+        # C++11 with TBB
+        case "$os" in
+            Darwin)
+                ${CC} -v
+                echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb" >> common/make.defs
+                ;;
+            Linux)
+                echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb" >> common/make.defs
+                ;;
+        esac
+        make -C $PRK_TARGET_PATH tbb
+        #$PRK_TARGET_PATH/stencil-vector-tbb     10 1000
+        $PRK_TARGET_PATH/transpose-vector-tbb   10 1024 32
         ;;
     allfortran*)
         # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty allfortrantarget
