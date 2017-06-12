@@ -35,11 +35,11 @@ vector: p2p-vector stencil-vector transpose-vector
 
 valarray: transpose-valarray
 
-openmp: p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
+openmp: p2p-wavefront-openmp p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
 
 target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
-opencl: p2p-tasks-opencl stencil-opencl transpose-opencl
+opencl: p2p-wavefront-opencl p2p-tasks-opencl stencil-opencl transpose-opencl
 
 tranpose-opencl: tranpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $(OCLFLAGS) $< -o $@
