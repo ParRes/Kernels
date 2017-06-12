@@ -35,6 +35,10 @@ OPENCLFLAG=-framework OpenCL
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I$OPENCLDIR -L$OPENCLDIR/lib64 -lOpenCL
 #
+# Cilk
+#
+CILKFLAG=-intel-extensions # default
+#
 # MPI
 #
 # We assume you have Intel MPI and have setup your environment with e.g.
