@@ -25,6 +25,7 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
 #
 OPENMPFLAG=-fopenmp
 OFFLOADFLAG=-foffload="-O3 -v"
+ORNLACCFLAG=-fopenacc
 #
 # OpenCL flags
 #
