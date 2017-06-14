@@ -59,6 +59,10 @@
 #include <omp.h>
 #endif
 
+#ifdef __cilk
+#include <cilk/cilk.h>
+#endif
+
 #define RESTRICT __restrict__
 
 namespace prk {

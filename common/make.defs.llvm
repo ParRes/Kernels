@@ -5,11 +5,11 @@
 # Base compilers and language options
 #
 # C99 is required in some implementations.
-CC=/usr/local/Cellar/llvm/4.0.0_1/bin/clang -std=gnu99
+CC=clang -std=gnu99
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=false
 # C++11 may not be required but does no harm here.
-CXX=/usr/local/Cellar/llvm/4.0.0_1/bin/clang++ -std=gnu++11
+CXX=clang++ -std=gnu++11
 #
 # Compiler flags
 #
@@ -22,10 +22,17 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
 #
 # OpenMP flags
 #
-OPENMPFLAG=-fopenmp -L/usr/local/Cellar/llvm/4.0.0_1/lib
-OFFLOADFLAG=-fopenmp -L/usr/local/Cellar/llvm/4.0.0_1/lib
+OPENMPFLAG=-fopenmp
+OFFLOADFLAG=-fopenmp
+# Klondike weirdness
+# OPENMPFLAG+=-L/opt/intel/compilers_and_libraries_2018.0.082/linux/compiler/lib/intel64_lin -liomp5
+# Mac weirdness
+# OPENMPFLAG+=-L/usr/local/Cellar/llvm/4.0.0_1/lib
 #
 # OpenCL flags
 #
 # MacOS
 OPENCLFLAG=-framework OpenCL
+# Linux
+#OPENCLDIR=/etc/alternatives/opencl-intel-tools
+#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL

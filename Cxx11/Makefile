@@ -18,9 +18,11 @@ CXXFLAGS += -I.
 
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
-OCLFLAGS = $(OPENCLFLAG)
+OPENCLFLAGS = $(OPENCLFLAG)
+ORNLACCFLAGS = $(ORNLACCFLAG)
+CILKLAGS = $(CILKFLAG)
 
-.PHONY: all clean run vector valarray openmp target opencl
+.PHONY: all clean run vector valarray openmp target opencl cilk
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(CXX),icpc)
@@ -41,17 +43,22 @@ target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
 opencl: stencil-opencl transpose-opencl
 
+cilk: stencil-vector-cilk transpose-vector-cilk
+
 tranpose-opencl: tranpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
-	$(CXX) $(CXXFLAGS) $(OCLFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $(OPENCLFLAGS) $< -o $@
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
-	$(CXX) $(CXXFLAGS) $(OCLFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $(OPENCLFLAGS) $< -o $@
 
 %-target: %-target.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $(TARGETFLAGS) $< -o $@
 
 %-openmp: %-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $< -o $@
+
+%-cilk: %-cilk.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $(CILKFLAGS) $< -o $@
 
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -66,6 +73,7 @@ clean:
 	-rm -f *-openmp
 	-rm -f *-target
 	-rm -f *-opencl
+	-rm -f *-cilk
 
 cleancl:
 	-rm -f star[123456789].cl
