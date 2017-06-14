@@ -178,6 +178,7 @@ case "$PRK_TARGET" in
 
         # C++11 with TBB
         case "$os" in
+            TBBROOT=${TRAVIS_ROOT}/tbb
             Darwin)
                 ${CC} -v
                 echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb" >> common/make.defs
@@ -187,6 +188,7 @@ case "$PRK_TARGET" in
                 ;;
         esac
         make -C $PRK_TARGET_PATH tbb
+        #$PRK_TARGET_PATH/p2p-vector-tbb     10 1024 1024 64 64
         #$PRK_TARGET_PATH/stencil-vector-tbb     10 1000
         $PRK_TARGET_PATH/transpose-vector-tbb   10 1024 32
         ;;

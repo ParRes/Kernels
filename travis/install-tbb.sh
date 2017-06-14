@@ -23,3 +23,4 @@ case "${TRAVIS_OS_NAME}" in
         ;;
 esac
 export TBBROOT=${PWD}/${DIRECTORY}
+ln -s ${TBBROOT} ${TRAVIS_ROOT}/tbb
