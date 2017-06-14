@@ -44,17 +44,15 @@ target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
 opencl: stencil-opencl transpose-opencl
 
-<<<<<<< HEAD
 cilk: stencil-vector-cilk transpose-vector-cilk
+
+tbb: p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
 
 tranpose-opencl: tranpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $(OPENCLFLAGS) $< -o $@
-=======
-tbb: stencil-vector-tbb transpose-vector-tbb
 
 transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $(OCLFLAGS) $< -o $@
->>>>>>> de8255e... add TBB templates (no port yet)
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $(OPENCLFLAGS) $< -o $@
@@ -65,13 +63,11 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-openmp: %-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $< -o $@
 
-<<<<<<< HEAD
 %-cilk: %-cilk.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(CILKFLAGS) $< -o $@
-=======
+
 %-tbb: %-tbb.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(TBBFLAGS) $< -o $@
->>>>>>> de8255e... add TBB templates (no port yet)
 
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -86,11 +82,8 @@ clean:
 	-rm -f *-openmp
 	-rm -f *-target
 	-rm -f *-opencl
-<<<<<<< HEAD
 	-rm -f *-cilk
-=======
 	-rm -f *-tbb
->>>>>>> de8255e... add TBB templates (no port yet)
 
 cleancl:
 	-rm -f star[123456789].cl
