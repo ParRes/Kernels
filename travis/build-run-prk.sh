@@ -159,6 +159,22 @@ case "$PRK_TARGET" in
                 ;;
         esac
 
+        # C++11 with TBB
+        TBBROOT=${TRAVIS_ROOT}/tbb
+        case "$os" in
+            Linux)
+                ${CC} --version
+                echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb" >> common/make.defs
+                ;;
+            Darwin)
+                echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb" >> common/make.defs
+                ;;
+        esac
+        make -C $PRK_TARGET_PATH tbb
+        #$PRK_TARGET_PATH/p2p-vector-tbb     10 1024 1024 64 64
+        #$PRK_TARGET_PATH/stencil-vector-tbb     10 1000
+        $PRK_TARGET_PATH/transpose-vector-tbb   10 1024 32
+
         # C++11 with OpenCL
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             echo "OPENCLFLAG=-framework OpenCL" >> common/make.defs
@@ -175,22 +191,6 @@ case "$PRK_TARGET" in
             done
             cd ..
         fi
-
-        # C++11 with TBB
-        TBBROOT=${TRAVIS_ROOT}/tbb
-        case "$os" in
-            Darwin)
-                ${CC} -v
-                echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb" >> common/make.defs
-                ;;
-            Linux)
-                echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb" >> common/make.defs
-                ;;
-        esac
-        make -C $PRK_TARGET_PATH tbb
-        #$PRK_TARGET_PATH/p2p-vector-tbb     10 1024 1024 64 64
-        #$PRK_TARGET_PATH/stencil-vector-tbb     10 1000
-        $PRK_TARGET_PATH/transpose-vector-tbb   10 1024 32
         ;;
     allfortran*)
         # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty allfortrantarget
