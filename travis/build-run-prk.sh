@@ -177,8 +177,8 @@ case "$PRK_TARGET" in
         fi
 
         # C++11 with TBB
+        TBBROOT=${TRAVIS_ROOT}/tbb
         case "$os" in
-            TBBROOT=${TRAVIS_ROOT}/tbb
             Darwin)
                 ${CC} -v
                 echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb" >> common/make.defs
