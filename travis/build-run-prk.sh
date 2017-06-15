@@ -178,6 +178,8 @@ case "$PRK_TARGET" in
 
         # C++11 with TBB
         TBBROOT=${TRAVIS_ROOT}/tbb
+        find ${TBBROOT} -name "libtbb*"
+        find ${TBBROOT} -name "*.h"
         case "$os" in
             Darwin)
                 ${CC} -v
