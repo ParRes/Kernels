@@ -237,36 +237,43 @@ case "$PRK_TARGET" in
                 fi
                 ;;
         esac
-        make $PRK_TARGET
+        #make $PRK_TARGET # see below
         export PRK_TARGET_PATH=FORTRAN
         case "$PRK_TARGET" in
             allfortranserial)
+                make -C ${PRK_TARGET_PATH} serial
                 $PRK_TARGET_PATH/p2p               10 1024 1024
                 $PRK_TARGET_PATH/stencil           10 1000
                 $PRK_TARGET_PATH/transpose         10 1024 1
                 $PRK_TARGET_PATH/transpose         10 1024 32
                 ;;
             allfortranpretty)
+                make -C ${PRK_TARGET_PATH} pretty
                 #$PRK_TARGET_PATH/p2p-pretty          10 1024 1024
                 # pretty versions do not support tiling...
                 $PRK_TARGET_PATH/stencil-pretty      10 1000
                 $PRK_TARGET_PATH/transpose-pretty    10 1024
                 ;;
             allfortranopenmp)
+                make -C ${PRK_TARGET_PATH} p2p-openmp-tasks p2p-openmp-datapar stencil-openmp transpose-openmp
                 export OMP_NUM_THREADS=2
                 $PRK_TARGET_PATH/p2p-openmp-tasks     10 1024 1024
+                $PRK_TARGET_PATH/p2p-openmp-datapar   10 1024 1024
+                #$PRK_TARGET_PATH/p2p-openmp-doacross  10 1024 1024 # most compilers do not support doacross yet
                 $PRK_TARGET_PATH/stencil-openmp       10 1000
                 $PRK_TARGET_PATH/transpose-openmp     10 1024 1
                 $PRK_TARGET_PATH/transpose-openmp     10 1024 32
                 ;;
             allfortrantarget)
+                make -C ${PRK_TARGET_PATH} stencil-openmp-target transpose-openmp-target
                 export OMP_NUM_THREADS=2
-                #$PRK_TARGET_PATH/p2p-target           10 1024 1024 # not threaded yet
-                $PRK_TARGET_PATH/stencil-target       10 1000
-                $PRK_TARGET_PATH/transpose-target     10 1024 1
-                $PRK_TARGET_PATH/transpose-target     10 1024 32
+                #$PRK_TARGET_PATH/p2p-openmp-target           10 1024 1024 # most compilers do not support doacross yet
+                $PRK_TARGET_PATH/stencil-openmp-target       10 1000
+                $PRK_TARGET_PATH/transpose-openmp-target     10 1024 1
+                $PRK_TARGET_PATH/transpose-openmp-target     10 1024 32
                 ;;
             allfortrancoarray)
+                make -C ${PRK_TARGET_PATH} coarray
                 export PRK_MPI_PROCS=4
                 if [ "${CC}" = "gcc" ] ; then
                     export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
