@@ -13,7 +13,7 @@ FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 all: serial pretty openmp coarray target
 
-serial: p2p p2p-dp stencil transpose
+serial: p2p stencil transpose
 
 pretty: stencil-pretty transpose-pretty
 
