@@ -40,6 +40,7 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
             sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
         fi
+        sh ./travis/install-tbb.sh $TRAVIS_ROOT
         ;;
     allfortran*)
         echo "Fortran"

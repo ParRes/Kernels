@@ -159,6 +159,28 @@ case "$PRK_TARGET" in
                 ;;
         esac
 
+        # C++11 with TBB
+        # Skip Clang because older Clang from Linux chokes on max_align_t (https://travis-ci.org/jeffhammond/PRK/jobs/243395307)
+        if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            TBBROOT=${TRAVIS_ROOT}/tbb
+            case "$os" in
+                Linux)
+                    ${CC} --version
+                    echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb" >> common/make.defs
+                    export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
+                    ;;
+                Darwin)
+                    echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb" >> common/make.defs
+                    export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
+                    ;;
+            esac
+            # Only build transpose because stencil is wrong in at least one way (https://travis-ci.org/jeffhammond/PRK/jobs/243395309)
+            make -C $PRK_TARGET_PATH transpose-vector-tbb
+            #$PRK_TARGET_PATH/p2p-vector-tbb     10 1024 1024 64 64
+            #$PRK_TARGET_PATH/stencil-vector-tbb     10 1000
+            $PRK_TARGET_PATH/transpose-vector-tbb   10 1024 32
+        fi
+
         # C++11 with OpenCL
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             echo "OPENCLFLAG=-framework OpenCL" >> common/make.defs
