@@ -23,4 +23,8 @@ case "${TRAVIS_OS_NAME}" in
         ;;
 esac
 export TBBROOT=${PWD}/${DIRECTORY}
-ln -s ${TBBROOT} ${TRAVIS_ROOT}/tbb
+ls -l ${TBBROOT}
+mv ${TBBROOT} ${TRAVIS_ROOT}/tbb
+ls -l ${TRAVIS_ROOT}/tbb
+find ${TRAVIS_ROOT}/tbb -name "*.h"
+find ${TRAVIS_ROOT}/tbb -name "libtbb*"
