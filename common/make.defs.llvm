@@ -1,0 +1,38 @@
+#
+# This file shows the LLVM toolchain options for PRKs using
+# OpenMP, MPI and/or Fortran coarrays only.
+#
+# Base compilers and language options
+#
+# C99 is required in some implementations.
+CC=clang -std=gnu99
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+FC=false
+# C++11 may not be required but does no harm here.
+CXX=clang++ -std=gnu++11
+#
+# Compiler flags
+#
+# -mtune=native is appropriate for most cases.
+# -march=native is appropriate if you want portable binaries.
+DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
+# If you are compiling for KNL on a Xeon login node, use the following:
+# DEFAULT_OPT_FLAGS=-g -O3 -march=knl
+# See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
+#
+# OpenMP flags
+#
+OPENMPFLAG=-fopenmp
+OFFLOADFLAG=-fopenmp
+# Klondike weirdness
+# OPENMPFLAG+=-L/opt/intel/compilers_and_libraries_2018.0.082/linux/compiler/lib/intel64_lin -liomp5
+# Mac weirdness
+# OPENMPFLAG+=-L/usr/local/Cellar/llvm/4.0.0_1/lib
+#
+# OpenCL flags
+#
+# MacOS
+OPENCLFLAG=-framework OpenCL
+# Linux
+#OPENCLDIR=/etc/alternatives/opencl-intel-tools
+#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL

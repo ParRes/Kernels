@@ -105,7 +105,9 @@ int main(int argc, char *argv[])
       iter, iterations;
   long lda, ldb, ldc,
        nb, myncols;     /* make long to avoid integer overflow     */
-  double RESTRICT *a, *b, *c,    /* arrays that hold local a, b, c */
+  double * RESTRICT a,  /* arrays that hold local a, b, c          */
+         * RESTRICT b, 
+         * RESTRICT c,
       *work1, *work2,   /* work arrays to pass to dpmmmult         */
       local_dgemm_time, /* timing parameters                       */
       dgemm_time,
@@ -362,7 +364,9 @@ int    k,               /* global matrix dimensions                */
        mm[], nn[],      /* dimensions of blocks of A, B, C         */
        lda, ldb, ldc;   /* leading dimension of local arrays that 
                            hold local portions of matrices A, B, C */
-double RESTRICT *a, *b, *c,/* arrays holding local parts of A, B, C \*/
+double * RESTRICT a,    /* arrays holding local parts of A, B, C   */
+       * RESTRICT b,  
+       * RESTRICT c,
        *work1, *work2;  /* work arrays                             */
 MPI_Comm comm_row,      /* Communicator for this row of nodes      */
        comm_col;        /* Communicator for this column of nodes   */

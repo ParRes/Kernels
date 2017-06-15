@@ -59,15 +59,12 @@ History:   Written by Rob Van der Wijngaart, December 2015
 
 #include <random_draw.h>
 
-#define NMAX 64
-
 static uint64_t  LCG_a = 6364136223846793005;
 static uint64_t  LCG_c = 1442695040888963407;
 static uint64_t  LCG_seed_init = 27182818285; //used to (re)set seed 
-static uint64_t  LCG_seed      = 27182818285;
-static uint64_t  LCG_A[NMAX];
+
 #ifdef __OPENMP
-#pragma omp threadprivate (LCG_a, LCG_c, LCG_seed, LCG_A)
+#pragma omp threadprivate (LCG_seed, LCG_A)
 #endif
   
 /* for a range of 0 to size-i, find chunk assigned to calling thread */
@@ -97,9 +94,9 @@ static uint64_t tail(uint64_t x) {
 }  
  
 /* Sum(i=1,2^k) a^i */
-static uint64_t SUMPOWER(int k) {
+static uint64_t SUMPOWER(int k, random_draw_t *parm) {
   if (!k) return LCG_a;
-  return SUMPOWER(k-1)*(1+LCG_A[k-1]);
+  return SUMPOWER(k-1, parm)*(1+parm->LCG_A[k-1]);
 }
  
 static int LOG(uint64_t n) {
@@ -109,43 +106,43 @@ static int LOG(uint64_t n) {
 }
  
 /* Sum(i=1,n) a^i, with n arbitrary */
-static uint64_t SUMK(uint64_t n) {
+static uint64_t SUMK(uint64_t n, random_draw_t *parm) {
   if (n==0) return(0);
-  uint64_t HEAD = SUMPOWER(LOG(n));
+  uint64_t HEAD = SUMPOWER(LOG(n),parm);
   uint64_t TAILn = tail(n);
   if (TAILn==0) return(HEAD);
-  return(HEAD + (LCG_A[LOG(n)])*SUMK(TAILn));
+  return(HEAD + (parm->LCG_A[LOG(n)])*SUMK(TAILn,parm));
 }
  
-uint64_t LCG_next(uint64_t bound) {
-  LCG_seed = LCG_a*LCG_seed + LCG_c;
-  return (LCG_seed%bound);
+uint64_t LCG_next(uint64_t bound, random_draw_t *parm) {
+  parm->LCG_seed = LCG_a*parm->LCG_seed + LCG_c;
+  return (parm->LCG_seed%bound);
 }
  
-void LCG_init(void){
+void LCG_init(random_draw_t *parm){
  
   int i;
  
-  LCG_seed = LCG_seed_init;
-  LCG_A[0] = LCG_a;
+  parm->LCG_seed = LCG_seed_init;
+  parm->LCG_A[0] = LCG_a;
   for (i=1; i<NMAX; i++) {
-    LCG_A[i] = LCG_A[i-1]*LCG_A[i-1];
+    parm->LCG_A[i] = parm->LCG_A[i-1]*parm->LCG_A[i-1];
   }
   return;
 }
  
-  void LCG_jump(uint64_t m, uint64_t bound){
+void LCG_jump(uint64_t m, uint64_t bound, random_draw_t *parm){
  
   int i, index, LCG_power[NMAX];
   uint64_t mm, s_part;
 
   for (i=0; i<NMAX; i++) LCG_power[i] = 0; 
-  LCG_seed = LCG_seed_init;
+  parm->LCG_seed = LCG_seed_init;
   
   /* Catch two special cases */
   switch (m) {
   case 0: return;
-  case 1: LCG_next(bound); return;
+  case 1: LCG_next(bound, parm); return;
   }
  
   mm = m;
@@ -156,12 +153,12 @@ void LCG_init(void){
   }
  
   s_part = 1;
-  for (i=0; i<index; i++) if (LCG_power[i]) s_part *= LCG_A[i];
-  LCG_seed = s_part*LCG_seed + (SUMK(m-1)+1)*LCG_c;
+  for (i=0; i<index; i++) if (LCG_power[i]) s_part *= parm->LCG_A[i];
+  parm->LCG_seed = s_part*parm->LCG_seed + (SUMK(m-1,parm)+1)*LCG_c;
   return;
 }
 
-uint64_t random_draw(double mu)
+uint64_t random_draw(double mu, random_draw_t *parm)
 {
   const double   two_pi      = 2.0*3.14159265358979323846;
   const uint64_t rand_max    = ULLONG_MAX;
@@ -174,9 +171,10 @@ uint64_t random_draw(double mu)
   static uint64_t i0, i1;
 
   if (mu>=1.0) {
+    /* set std dev equal to 15% of average; ensures result will never be negative       */
     sigma = mu*0.15;  
-    u0 = LCG_next(rand_max) * rand_div;
-    u1 = LCG_next(rand_max) * rand_div;
+    u0 = LCG_next(rand_max, parm) * rand_div;
+    u1 = LCG_next(rand_max, parm) * rand_div;
 
     z0 = sqrt(-2.0 * log(u0)) * cos(two_pi * u1);
     z1 = sqrt(-2.0 * log(u0)) * sin(two_pi * u1);
@@ -185,8 +183,8 @@ uint64_t random_draw(double mu)
   else {
     /* we need to pick two integers whose quotient approximates mu; set one to UINT_MAX */
     numerator = (uint32_t) (mu*(double)denominator);
-    i0 = LCG_next(denominator); /* don't use this value, but must call LCG_next twice   */
-    i1 = LCG_next(denominator);
+    i0 = LCG_next(denominator, parm); /* don't use value, but must call LCG_next twice  */
+    i1 = LCG_next(denominator, parm);
     return ((uint64_t)(i1<=numerator));
   }
 

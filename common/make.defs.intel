@@ -24,8 +24,20 @@ DEFAULT_OPT_FLAGS=-g -O3 -xHOST
 #
 # OpenMP flags
 #
-# You can also use -qopenmp.  -openmp is deprecated.
-OPENMPFLAG=-fopenmp
+OPENMPFLAG=-qopenmp
+OFFLOADFLAG=-qopenmp-offload=host
+#
+# OpenCL flags
+#
+# MacOS
+OPENCLFLAG=-framework OpenCL
+# Linux
+#OPENCLDIR=/etc/alternatives/opencl-intel-tools
+#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+#
+# Cilk
+#
+CILKFLAG=-intel-extensions # default
 #
 # MPI
 #

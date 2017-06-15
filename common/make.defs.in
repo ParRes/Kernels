@@ -12,6 +12,7 @@ FC=
 
 #name of compile line flag enabling OpenMP, e.g. -openmp, -qopenmp, -fopenmp
 OPENMPFLAG=
+OFFLOADFLAG=
 
 #default compiler optimization flags
 DEFAULT_OPT_FLAGS:=
@@ -51,3 +52,9 @@ OCAS=
 
 #location where Legion is installed, e.g. $(HOME)/legion
 LEGIONTOP=
+
+#location where ULFM-enabled MPI is installed
+ULFMTOP=
+ 
+#location where Fenix is installed
+FENIXTOP=

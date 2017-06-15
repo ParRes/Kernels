@@ -21,7 +21,7 @@ endif
 #description: default is compact (non-expanded) form of loop body
 
 STARFLAG   = -DSTAR
-#description: default stencil is compact (dense, square)
+#description: default stencil is star-shaped
 
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent

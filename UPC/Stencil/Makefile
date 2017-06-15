@@ -3,35 +3,34 @@ include ../../common/UPC.defs
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults
 
-#OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
-OPTFLAGS    = -O3
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system
 
-USERFLAGS    = 
+USERFLAGS    =
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
-EXTOBJS      = 
+EXTOBJS      =
 LIBS         =
-LIBPATHS     = 
-INCLUDEPATHS = 
+LIBPATHS     =
+INCLUDEPATHS =
 
 ### End User configurable options ###
 
 ifndef DOUBLE
   DOUBLE=1
 endif
-#description: default data type is single precision
+#description: default data type is double precision
 
 ifndef STAR
   STAR=1
 endif
-#description: default stencil is compact (dense, square)
+#description: default stencil is star-shaped
 
 ifndef RESTRICT_KEYWORD
   RESTRICT_KEYWORD=0
 endif
-#description: the "restrict" keyword can be used on IA platforms to disambiguate  
+#description: the "restrict" keyword can be used on IA platforms to disambiguate
 #             data accessed through pointers (requires -restrict compiler flag)
 
 ifndef RADIUS
@@ -66,7 +65,7 @@ STAR=0/1                box/star shaped stencil                    [1]  \n\
 VERBOSE=0/1             omit/include verbose run information       [0]"
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG)$(USERFLAGS) $(LOOPGENFLAG)\
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG) 
+               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)
 PROGRAM     = stencil
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

@@ -3,11 +3,15 @@ language: cpp
 env:
   matrix:
   - PRK_TARGET=allserial
+  - PRK_TARGET=allcxx
   - PRK_TARGET=allpython
+  - PRK_TARGET=alloctave
   - PRK_TARGET=alljulia
+  - PRK_TARGET=allrust
   - PRK_TARGET=allopenmp
   - PRK_TARGET=allfortranserial
   - PRK_TARGET=allfortranopenmp
+  - PRK_TARGET=allfortrantarget
   - PRK_TARGET=allfortranpretty
   - PRK_TARGET=allfortrancoarray
   - PRK_TARGET=allmpi1
@@ -104,32 +108,42 @@ matrix:
   - compiler: clang
     env: PRK_TARGET=allfortranopenmp
   - compiler: clang
+    env: PRK_TARGET=allfortrantarget
+  - compiler: clang
     env: PRK_TARGET=allfortranpretty
   - compiler: clang
     env: PRK_TARGET=allfortrancoarray
-  # Python does not use compiler so only test one of them per OS (Clang)
+  # Skip Linux because we rely on Homebrew for these
+  - os: linux
+    env: PRK_TARGET=alloctave
+  - os: linux
+    env: PRK_TARGET=allrust
+  # Python/Julia/Octave does not use compiler so only test one of them per OS (Clang)
+  # GCC
   - compiler: gcc
     env: PRK_TARGET=allpython
   - compiler: gcc
+    env: PRK_TARGET=alloctave
+  - compiler: gcc
     env: PRK_TARGET=alljulia
+  - compiler: gcc
+    env: PRK_TARGET=allrust
+  # ICC
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allpython
   - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=alloctave
+  - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=alljulia
-  # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
-  - os: osx
-    env: PRK_TARGET=allfgmpi
-  # MPI implementations of Transpose hand with Intel compilers (why?!?!)
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allrust
+  # MPI implementations of Transpose hang with Intel compilers (why?!?!)
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allmpi1
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allmpiomp
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allmpishm
-  # Linux may not have GCC-6...
-  - os: linux
-    compiler: gcc
-    env: PRK_TARGET=allfortrancoarray
   # UPC over MPICH on Mac hangs - may be async progress issue
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
@@ -150,6 +164,32 @@ matrix:
   #- env: PRK_TARGET=allupc UPC_IMPL=gupc
   # we have lots of Grappa issues...
   - env: PRK_TARGET=allgrappa
+  # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
+  - os: osx
+    env: PRK_TARGET=allfgmpi
+  - os: linux
+    env: PRK_TARGET=allfgmpi
+  # Linux may not have GCC-6...
+  #- os: linux
+  #  compiler: gcc
+  #  env: PRK_TARGET=allfortrancoarray
+  # BUPC has trouble with flags
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
+  # Travis tests failing due to runtime problems
+  - os: osx
+    env: PRK_TARGET=allampi
+  - os: linux
+    env: PRK_TARGET=allampi
+  - os: osx
+    env: PRK_TARGET=allcharm++
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allampi
 addons:
   apt:
     sources:
@@ -160,12 +200,12 @@ addons:
     #- boost-latest
     packages:
     - python-numpy
-    - gcc-4.9
-    - g++-4.9
-    - gfortran-4.9
     - gcc-5
     - g++-5
     - gfortran-5
+    - gcc-6
+    - g++-6
+    - gfortran-6
     # Required by GUPC
     - libnuma-dev
     # This should provide OpenMP

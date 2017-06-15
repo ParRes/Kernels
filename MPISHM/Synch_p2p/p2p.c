@@ -88,7 +88,7 @@ int main(int argc, char ** argv)
          nbr_segment_size;
   int    error=0;       /* error flag                                            */
   int    Num_procs;     /* Number of ranks                                       */
-  double RESTRICT *vector;/* array holding grid values                           */
+  double * RESTRICT vector;/* array holding grid values                          */
   long   total_length;  /* total required length to store grid values            */
   MPI_Win shm_win;      /* Shared Memory window object                           */
   MPI_Info rma_winfo;   /* info for window                                       */

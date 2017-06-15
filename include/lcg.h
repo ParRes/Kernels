@@ -33,13 +33,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef LCG_H
 #define LCG_H
 
-#include <stdint.h>
-#include <inttypes.h>
-#include <math.h>
- 
+#include "par-res-kern_general.h"
+
 extern void     LCG_init(void);
 extern uint64_t LCG_next(uint64_t);
 extern void     LCG_get_chunk(uint64_t *, uint64_t *, int, int, uint64_t);
 extern void     LCG_jump(uint64_t, uint64_t);
 
-#endif
+#endif /* LCG_H */

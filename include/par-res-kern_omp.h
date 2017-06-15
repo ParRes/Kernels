@@ -30,10 +30,17 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PRK_OMP_H
+#define PRK_OMP_H
+
+/* DO NOT INCLUDE ANY C STD HEADERS DIRECTLY IN THIS FILE!
+ * Include them in the general header to make sure that
+ * certain macros are set before header inclusion. */
+#include "par-res-kern_general.h"
+
 #ifdef _OPENMP
 #include <omp.h>
 #else
-#include <stdlib.h>
 #warning Your compiler - probably Clang - does not support OpenMP, so dummy symbols will be used.
 /* utility API */
 int omp_get_thread_num() { return 0; }
@@ -91,3 +98,5 @@ int omp_test_lock(omp_lock_t * l)
 #endif
 
 extern void bail_out(int);
+
+#endif /* PRK_OMP_H */

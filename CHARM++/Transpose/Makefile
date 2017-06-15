@@ -10,15 +10,6 @@ RESTRICTFLAG = -DRESTRICT_KEYWORD
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers
 
-RADIUSFLAG  = -DRADIUS=2
-#description: default radius of filter to be applied is 2
-
-DOUBLEFLAG = -DDOUBLE
-#description: default data type is single precision
-
-STARFLAG   = -DSTAR
-#description: default stencil is compact (dense, square)
-
 #DEBUGFLAG   = -DVERBOSE
 #description: default diagnostic style is silent
 
@@ -33,8 +24,7 @@ INCLUDEPATHS =
 
 ### End User configurable options ###
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) \
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)
+TUNEFLAGS    = $(RESTRICTFLAG) $(DEBUGFLAG)  $(USERFLAGS) 
 PROGRAM     = transpose
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

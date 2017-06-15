@@ -30,6 +30,9 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PRK_FGMPI_H
+#define PRK_FGMPI_H
+
 /******* FG-MPI Boilerplate begin *********/
 #include "fgmpi.h"
 int mymain(int argc, char** argv ); /*forward declaration*/
@@ -49,3 +52,5 @@ int main( int argc, char *argv[] )
 #include <par-res-kern_mpi.h>
 #define main mymain
 extern void bail_out(int);
+
+#endif /* PRK_FGMPI_H */

@@ -20,12 +20,12 @@ INCLUDEPATHS =
 ifndef DOUBLE
   DOUBLE=1
 endif
-#description: default data type is single precision
+#description: default data type is double precision
 
 ifndef STAR
   STAR=1
 endif
-#description: default stencil is compact (dense, square)
+#description: default stencil is star-shaped
 
 ifndef LOCAL_BARRIER_SYNCH
   LOCAL_BARRIER_SYNCH=0
