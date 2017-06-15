@@ -165,9 +165,11 @@ case "$PRK_TARGET" in
             Linux)
                 ${CC} --version
                 echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb" >> common/make.defs
+                export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
                 ;;
             Darwin)
                 echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb" >> common/make.defs
+                export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
                 ;;
         esac
         make -C $PRK_TARGET_PATH tbb
