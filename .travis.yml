@@ -11,6 +11,7 @@ env:
   - PRK_TARGET=allopenmp
   - PRK_TARGET=allfortranserial
   - PRK_TARGET=allfortranopenmp
+  - PRK_TARGET=allfortrantarget
   - PRK_TARGET=allfortranpretty
   - PRK_TARGET=allfortrancoarray
   - PRK_TARGET=allmpi1
@@ -106,6 +107,8 @@ matrix:
     env: PRK_TARGET=allfortranserial
   - compiler: clang
     env: PRK_TARGET=allfortranopenmp
+  - compiler: clang
+    env: PRK_TARGET=allfortrantarget
   - compiler: clang
     env: PRK_TARGET=allfortranpretty
   - compiler: clang
