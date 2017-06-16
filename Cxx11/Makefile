@@ -49,7 +49,7 @@ openmp: p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transp
 
 target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
-taskloop: transpose-vector-taskloop
+taskloop: stencil-vector-taskloop transpose-vector-taskloop
 
 opencl: stencil-opencl transpose-opencl
 
