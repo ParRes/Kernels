@@ -57,12 +57,14 @@
 
 int main(int argc, char * argv[])
 {
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "C++11/OpenCL Matrix transpose: B = A^T" << std::endl;
+
+  prk::OpenCLinfo();
+
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
-
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenCL Matrix transpose: B = A^T" << std::endl;
 
   int iterations;
   int order;
