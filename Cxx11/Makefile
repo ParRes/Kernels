@@ -8,10 +8,11 @@ endif
 STARFLAG   = -DSTAR
 #DOUBLEFLAG = -DDOUBLE
 
-CXXFLAGS  = $(DEFAULT_OPT_FLAGS)
-CXXFLAGS += -DPRKVERSION=$(PRKVERSION)
-CXXFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
-CXXFLAGS += -I.
+CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
+CPPFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
+CPPFLAGS += -I.
+
+CXXFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 
 # debugging
 #CXXFLAGS += -DVERBOSE
@@ -45,6 +46,8 @@ opencl: stencil-opencl transpose-opencl
 
 cilk: stencil-vector-cilk transpose-vector-cilk
 
+cuda: transpose-cuda
+
 tranpose-opencl: tranpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $(OPENCLFLAGS) $< -o $@
 
@@ -60,6 +63,9 @@ tranpose-opencl: tranpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-cilk: %-cilk.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(CILKFLAGS) $< -o $@
 
+%-cuda: %-cuda.cu prk_util.h
+	nvcc $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
+
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
@@ -74,6 +80,7 @@ clean:
 	-rm -f *-target
 	-rm -f *-opencl
 	-rm -f *-cilk
+	-rm -f *-cuda
 
 cleancl:
 	-rm -f star[123456789].cl
