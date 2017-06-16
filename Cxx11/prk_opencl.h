@@ -42,6 +42,7 @@ namespace prk {
             std::cout<<" No platforms found. Check OpenCL installation!\n";
             exit(1);
         }
+        std::cout << "The first of the following is the default and will be used.\n" << "\n";
         for (auto i : all_platforms) {
             std::cout << "Available OpenCL platform: " << i.getInfo<CL_PLATFORM_NAME>() << "\n";
         }
