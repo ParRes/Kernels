@@ -71,6 +71,6 @@ clean:
 	-rm -f p2p-openmp-tasks      stencil-openmp          transpose-openmp
 	-rm -f p2p-openmp-doacross   p2p-openmp-datapar
 	-rm -f p2p-openmp-target     stencil-openmp-target   transpose-openmp-target
-	-rm -f p2p-ornlacc 	     stencil-ornlacc         transpose-ornlacc
+	-rm -f p2p-ornlacc           stencil-ornlacc         transpose-ornlacc
 	-rm -f stencil-tasks         transpose-tasks
 	-rm -f stencil-taskloop      transpose-taskloop

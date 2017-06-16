@@ -275,11 +275,9 @@ program main
 
   !$omp parallel default(none)                                        &
   !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size,is_star)   &
-  !$omp&  private(i,j,k)                                  &
-  !$omp&  reduction(+:norm)
+  !$omp&  private(i,j,k)
 
   !$omp master
-
   !$omp taskloop
   do j=1,n
     do i=1,n
@@ -301,7 +299,6 @@ program main
 
     ! Apply the stencil operator
     call apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
-
     !$omp taskwait
 
     ! add constant to solution to force refresh of neighbor data, if any
@@ -319,20 +316,20 @@ program main
 
   t1 = prk_get_wtime()
 
+  !$omp end master
+  !$omp end parallel
+
+  stencil_time = t1 - t0
 
   ! compute L1 norm in parallel
-  !$omp taskloop
+  !$omp parallel do reduction(+:norm)
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
-  !$omp end taskloop
+  !$omp end parallel do
 
-  !$omp end master
-  !$omp end parallel
-
-  stencil_time = t1 - t0
   norm = norm / real(active_points,REAL64)
 
   !******************************************************************************
