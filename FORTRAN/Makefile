@@ -19,7 +19,7 @@ pretty: stencil-pretty transpose-pretty
 
 openmp: p2p-openmp-tasks p2p-openmp-doacross p2p-openmp-datapar stencil-openmp transpose-openmp
 
-tasks: p2p-openmp-tasks transpose-tasks transpose-taskloop
+tasks: p2p-openmp-tasks stencil-taskloop transpose-tasks transpose-taskloop
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
