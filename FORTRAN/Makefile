@@ -19,6 +19,8 @@ pretty: stencil-pretty transpose-pretty
 
 openmp: p2p-openmp-tasks p2p-openmp-doacross p2p-openmp-datapar stencil-openmp transpose-openmp
 
+tasks: p2p-openmp-tasks transpose-tasks transpose-taskloop
+
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
 target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
@@ -31,9 +33,6 @@ ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc
 %-pretty: %-pretty.f90
 	$(FC) $(FCFLAGS) $< -o $@
 
-p2p-openmp-tasks: p2p-openmp-tasks.f90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
-
 p2p-openmp-doacross: p2p-openmp-doacross.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
@@ -41,6 +40,12 @@ p2p-openmp-datapar: p2p-openmp-datapar.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 %-openmp: %.f90
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+
+%-tasks: %-tasks.f90
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+
+%-taskloop: %-taskloop.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 %-coarray: %-coarray.f90
@@ -67,3 +72,5 @@ clean:
 	-rm -f p2p-openmp-doacross   p2p-openmp-datapar
 	-rm -f p2p-openmp-target     stencil-openmp-target   transpose-openmp-target
 	-rm -f p2p-ornlacc 	     stencil-ornlacc         transpose-ornlacc
+	-rm -f stencil-tasks         transpose-tasks
+	-rm -f stencil-taskloop      transpose-taskloop
