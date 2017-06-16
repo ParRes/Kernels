@@ -23,7 +23,7 @@ ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKLAGS = $(CILKFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB
 
-.PHONY: all clean run vector valarray openmp target opencl cilk
+.PHONY: all clean run vector valarray openmp target opencl cilk taskloop
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(CXX),icpc)
@@ -32,7 +32,14 @@ endif
 else
 TARGET = target
 endif
-all: vector valarray openmp opencl $(TARGET)
+
+# TBB can use any compiler and Cilk supports GCC at least,
+# but only ICC has built-in support for them.
+ifeq ($(CXX),icpc)
+INTEL_STUFF = tbb cilk
+endif
+
+all: vector valarray openmp $(TARGET) taskloop opencl $(INTEL_STUFF)
 
 vector: p2p-vector stencil-vector transpose-vector
 
@@ -41,6 +48,8 @@ valarray: transpose-valarray
 openmp: p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
 
 target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
+
+taskloop: transpose-vector-taskloop
 
 opencl: stencil-opencl transpose-opencl
 
@@ -58,6 +67,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@
 
 %-openmp: %-openmp.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
+
+%-taskloop: %-taskloop.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
 
 %-cilk: %-cilk.cc prk_util.h
@@ -78,6 +90,7 @@ clean:
 	-rm -f *-valarray
 	-rm -f *-openmp
 	-rm -f *-target
+	-rm -f *-taskloop
 	-rm -f *-opencl
 	-rm -f *-cilk
 	-rm -f *-tbb
