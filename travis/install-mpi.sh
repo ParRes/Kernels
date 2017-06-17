@@ -55,7 +55,7 @@ case "$os" in
                     if [ -f "`which clang$clangversion`" ]; then
                         export PRK_CC="clang$clangversion"
                         export PRK_CXX="clang++$clangversion"
-                        echo "Found GCC: $PRK_CC"
+                        echo "Found Clang: $PRK_CC"
                         break
                     fi
                 done
