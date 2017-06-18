@@ -9,7 +9,7 @@ CC=cc -h c99
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=ftn -e F
 # C++11 may not be required but does no harm here.
-CXX=CC -h c++11
+CXX=CC -hstd=c++11
 #
 # Compiler flags
 #
@@ -18,6 +18,9 @@ DEFAULT_OPT_FLAGS=-O2
 # OpenMP flags
 #
 OPENMPFLAG=-h omp
+# Cray requires 'module load craype-accel-host' or similar
+OFFLOADFLAG=-h omp
+ORNLACCFLAG=-h acc
 #
 # MPI
 #
