@@ -34,5 +34,18 @@ namespace prk {
                             std::istreambuf_iterator<char>() );
     }
 
+    void OpenCLinfo()
+    {
+        std::vector<cl::Platform> all_platforms;
+        cl::Platform::get(&all_platforms);
+        if ( all_platforms.size() == 0 ) {
+            std::cout<<" No platforms found. Check OpenCL installation!\n";
+            exit(1);
+        }
+        std::cout << "The first of the following is the default and will be used.\n" << "\n";
+        for (auto i : all_platforms) {
+            std::cout << "Available OpenCL platform: " << i.getInfo<CL_PLATFORM_NAME>() << "\n";
+        }
+    }
 }
 #endif // PRK_OPENCL_HPP
