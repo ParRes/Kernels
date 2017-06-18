@@ -39,6 +39,10 @@ OPENCLFLAG=-framework OpenCL
 #
 CILKFLAG=-intel-extensions # default
 #
+# TBB
+#
+TBBFLAG=-tbb
+#
 # MPI
 #
 # We assume you have Intel MPI and have setup your environment with e.g.
