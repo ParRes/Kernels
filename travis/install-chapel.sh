@@ -14,12 +14,17 @@ else
     # We could test Clang via the C back-end as well, but it seems silly.
     # Let GCC exercise C back-end and test the LLVM back-end for Clang.
     if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
-        CHPL_LLVM=llvm
+        #CHPL_LLVM=llvm
+        # Attempt to use built-in LLVM, since compiling it in Travis takes a while.
+        CHPL_LLVM=system
+    else
+        CHPL_LLVM=none
     fi
     cd $TRAVIS_ROOT
-    wget -q --no-check-certificate https://github.com/chapel-lang/chapel/releases/download/1.12.0/chapel-1.12.0.tar.gz
-    tar -xzf chapel-1.12.0.tar.gz
-    ln -s chapel-1.12.0 chapel
+    CHAPEL_RELEASE=1.15.0
+    wget -q --no-check-certificate https://github.com/chapel-lang/chapel/releases/download/${CHAPEL_RELEASE}/chapel-${CHAPEL_RELEASE}.tar.gz
+    tar -xzf chapel-${CHAPEL_RELEASE}.tar.gz
+    ln -s chapel-${CHAPEL_RELEASE} chapel
     cd chapel
     make
     ln -s `find $PWD -type f -name chpl` $TRAVIS_HOME/bin/chpl
