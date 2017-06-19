@@ -42,7 +42,7 @@ openmp: p2p-wavefront-openmp p2p-vector-doacross-openmp p2p-tasks-openmp stencil
 
 target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
-opencl: p2p-wavefront-opencl p2p-tasks-opencl stencil-opencl transpose-opencl
+opencl: stencil-opencl transpose-opencl
 
 cilk: stencil-vector-cilk transpose-vector-cilk
 
