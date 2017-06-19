@@ -70,15 +70,13 @@ void SequentialSweep(size_t m, size_t n, std::vector<double> & grid)
   }
 }
 
-const int N = 64;
-const int MAX_LEN = 1024;
-tbb::atomic<char> Count[MAX_LEN/N+1][MAX_LEN/N+1];
-double F[MAX_LEN][MAX_LEN];
-
-void ParallelSweep( const char* x, size_t xlen, const char* y, size_t ylen ) {
+void ParallelSweep( const size_t xlen, const size_t ylen, std::vector<double> & grid,
+                    std::vector<std::vector<tbb::atomic<char>>> & Count,
+                    const size_t blocking )
+{
    // Initialize predecessor counts for blocks.
-   size_t m = (xlen+N-1)/N;
-   size_t n = (ylen+N-1)/N;
+   size_t m = (xlen+blocking-1)/blocking;
+   size_t n = (ylen+blocking-1)/blocking;
    for( int i=0; i<m; ++i ) {
        for( int j=0; j<n; ++j ) {
            Count[i][j] = (i>0)+(j>0);
@@ -88,18 +86,19 @@ void ParallelSweep( const char* x, size_t xlen, const char* y, size_t ylen ) {
    typedef std::pair<size_t,size_t> block;
    block origin(0,0);
    tbb::parallel_do( &origin, &origin+1,
-       [=]( const block& b, tbb::parallel_do_feeder<block>&feeder ) {
+       [&]( const block& b, tbb::parallel_do_feeder<block>&feeder ) {
            // Extract bounds on block
            size_t bi = b.first;
            size_t bj = b.second;
-           size_t xl = N*bi+1;
-           size_t xu = std::min(xl+N,xlen+1);
-           size_t yl = N*bj+1;
-           size_t yu = std::min(yl+N,ylen+1);
+           size_t xl = blocking*bi+1;
+           size_t yl = blocking*bj+1;
+           size_t xu = std::min(xl+blocking,xlen+1);
+           size_t yu = std::min(yl+blocking,ylen+1);
            // Process the block
            for( size_t i=xl; i<xu; ++i ) {
                for( size_t j=yl; j<yu; ++j ) {
-                   F[i][j] = x[i-1]==y[j-1] ? F[i-1][j-1]+1 : std::max(F[i][j-1],F[i-1][j]);
+                   std::cout << i << "," << j << "=" << grid[i*n+j] << "\n";
+                   grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
                }
            }
            // Account for successors
@@ -123,7 +122,7 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   if (argc < 3){
-    std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> [<second array dimension>]" << std::endl;
+    std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> [<second array dimension> [<blocking]] " << std::endl;
     return(EXIT_FAILURE);
   }
 
@@ -145,8 +144,18 @@ int main(int argc, char* argv[])
     exit(EXIT_FAILURE);
   }
 
+  // blocking
+  size_t blocking = 64;
+  if (argc > 4) {
+     blocking = std::atol(argv[4]);
+  }
+  if (blocking > m || blocking > n) {
+      blocking = std::min(m,n);
+  }
+
   std::cout << "Number of iterations      = " << iterations << std::endl;
   std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
+  std::cout << "Blocking                  = " << blocking << std::endl;
 
   tbb::task_scheduler_init init(tbb::task_scheduler_init::automatic);
 
@@ -155,6 +164,13 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   auto pipeline_time = 0.0; // silence compiler warning
+
+  // used by TBB
+  std::vector<std::vector<tbb::atomic<char>>> Count;
+  Count.resize(m/blocking+1);
+  for (auto i=0; i<m/blocking+1; ++i) {
+      Count[i].resize(n/blocking+1, 0);
+  }
 
   // working set
   std::vector<double> grid;
@@ -170,7 +186,8 @@ int main(int argc, char* argv[])
 
   for (auto iter = 0; iter<=iterations; iter++){
     if (iter == 1) pipeline_time = prk::wtime();
-    SequentialSweep(m, n, grid);
+    //SequentialSweep(m, n, grid);
+    ParallelSweep(m, n, grid, Count, blocking);
     grid[0*n+0] = -grid[(m-1)*n+(n-1)];
   }
 
@@ -187,7 +204,7 @@ int main(int argc, char* argv[])
   auto corner_val = ((iterations+1.)*(n+m-2.));
   if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
-              << " does not match verification value" << corner_val << std::endl;
+              << " does not match verification value " << corner_val << std::endl;
     exit(EXIT_FAILURE);
   }
 
