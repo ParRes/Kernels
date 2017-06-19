@@ -1129,7 +1129,21 @@ case "$PRK_TARGET" in
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_global/global 10 16384
         ;;
     allchapel)
-        echo "Nothing to do yet"
+        echo "Chapel"
+        make $PRK_TARGET
+        ./$PRK_TARGET_PATH/p2p-serial-fast           --iterations=10 --m=1024 --n=1024
+        ./$PRK_TARGET_PATH/stencil-defaultdist       --iterations=10 --order=1000
+        ./$PRK_TARGET_PATH/stencil-stencildist       --iterations=10 --order=1000
+        ./$PRK_TARGET_PATH/stencil-blockdist         --iterations=10 --order=1000
+        ./$PRK_TARGET_PATH/transpose                 --iterations=10 --order=1024 --tileSize=64
+        ./$PRK_TARGET_PATH/nstream                   --iterations=10 --length=16777216
+        ./$PRK_TARGET_PATH/sparse                    --iterations=10 --lsize=5
+        ./$PRK_TARGET_PATH/dgemm                     --iterations=10 --order=1024 --blockSize=32
+        # save for later
+        #./$PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 2 GEOMETRIC 0.99
+        #./$PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 0 1 SINUSOIDAL
+        #./$PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 LINEAR 1.0 3.0
+        #./$PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 PATCH 0 200 100 200
         ;;
     allhpx3)
         echo "Nothing to do yet"
