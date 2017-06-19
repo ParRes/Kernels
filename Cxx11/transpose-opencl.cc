@@ -125,13 +125,9 @@ int main(int argc, char * argv[])
   auto trans_time = 0.0;
 
   for (auto iter = 0; iter<=iterations; iter++) {
-
     if (iter==1) trans_time = prk::wtime();
-
-    // transpose the  matrix
     kernel(cl::EnqueueArgs(queue, cl::NDRange(order,order)), order, d_a, d_b);
     queue.finish();
-
   }
   trans_time = prk::wtime() - trans_time;
 
@@ -149,7 +145,7 @@ int main(int argc, char * argv[])
 
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
+  auto abserr = 0.0f;
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const size_t ij = (size_t)i*(size_t)order+(size_t)j;
@@ -163,7 +159,7 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  const auto epsilon = 1.0e-8;
+  const auto epsilon = 1.0e-4f;
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;

@@ -62,6 +62,7 @@
 #include <omp.h>
 
 #include "prk_util.h"
+#include "prk_opencl.h"
 
 int main(int argc, char* argv[])
 {
@@ -85,7 +86,7 @@ int main(int argc, char* argv[])
   }
 
   // grid dimensions
-  size_t n = std::atol(argv[2]);
+  int n = std::atoi(argv[2]);
   if (n < 1) {
     std::cout << "ERROR: grid dimensions must be positive: " << n << std::endl;
     exit(EXIT_FAILURE);
@@ -94,45 +95,72 @@ int main(int argc, char* argv[])
   std::cout << "Number of iterations      = " << iterations << std::endl;
   std::cout << "Grid sizes                = " << n << ", " << n << std::endl;
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  //////////////////////////////////////////////////////////////////////
+  /// Setup OpenCL environment
+  //////////////////////////////////////////////////////////////////////
+
+  // FIXME: allow other options here
+  cl::Context context(CL_DEVICE_TYPE_DEFAULT);
+
+  cl::Program program(context, prk::loadProgram("p2p.cl"), true);
+
+  auto kernel = cl::make_kernel<int, int, int, cl::Buffer>(program, "p2p");
+
+  cl::CommandQueue queue(context);
+
+  //////////////////////////////////////////////////////////////////////
+  /// Allocate space for the input and transpose matrix
+  //////////////////////////////////////////////////////////////////////
 
   // working set
-  std::vector<double> grid;
-  grid.resize(n*n,0.0);
+  std::vector<float> h_grid;
+  h_grid.resize(n*n,0.0f);
 
   // set boundary values (bottom and left side of grid)
   for (auto j=0; j<n; j++) {
-    grid[0*n+j] = static_cast<double>(j);
+    h_grid[0*n+j] = static_cast<float>(j);
   }
   for (auto i=0; i<n; i++) {
-    grid[i*n+0] = static_cast<double>(i);
+    h_grid[i*n+0] = static_cast<float>(i);
   }
+
+  // copy input from host to device
+  cl::Buffer d_grid = cl::Buffer(context, begin(h_grid), end(h_grid), true);
+
+  auto pipeline_time = 0.0; // silence compiler warning
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) pipeline_time = prk::wtime();
 
-    for (auto i=1; i<n; i++) {
-      for (auto j=1; j<n; j++) {
-        grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-      }
+    for (auto j=1; j<n; j++) {
+      kernel(cl::EnqueueArgs(queue, cl::NDRange(n)), 0, j, n, d_grid);
+      queue.finish();
     }
-    grid[0*n+0] = -grid[(n-1)*n+(n-1)];
+    for (auto j=n-2; j>=1; j--) {
+      kernel(cl::EnqueueArgs(queue, cl::NDRange(n)), 1, j, n, d_grid);
+      queue.finish();
+    }
+    kernel(cl::EnqueueArgs(queue, cl::NDRange(n)), 2, n, n, d_grid);
+    queue.finish();
   }
 
   pipeline_time = prk::wtime() - pipeline_time;
+
+  // copy output back to host
+  cl::copy(queue, d_grid, begin(h_grid), end(h_grid));
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
   // error tolerance
-  const double epsilon = 1.e-8;
+  const auto epsilon = 1.0e-4f;
 
   // verify correctness, using top right value
-  auto corner_val = ((iterations+1.)*(2.*n-2.));
-  if ( (std::fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
-    std::cout << "ERROR: checksum " << grid[(n-1)*n+(n-1)]
+  auto corner_val = ((iterations+1.0f)*(2.0f*n-2.0f));
+  if ( (std::fabs(h_grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+    std::cout << "ERROR: checksum " << h_grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     exit(EXIT_FAILURE);
   }
