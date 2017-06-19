@@ -91,6 +91,7 @@ int main(int argc, char* argv[])
     exit(EXIT_FAILURE);
   }
 
+  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations      = " << iterations << std::endl;
   std::cout << "Grid sizes                = " << n << ", " << n << std::endl;
 
@@ -127,26 +128,22 @@ int main(int argc, char* argv[])
           pipeline_time = prk::wtime();
       }
 
-      _Pragma("omp master")
       for (auto j=1; j<n; j++) {
-        for (auto i=1; i<j; i++) {
+        _Pragma("omp for")
+        for (auto i=1; i<=j; i++) {
           auto x = i;
-          auto y = j-i+3;
-          std::cout << i << "," << j << "," << x << "," << y << "\n";
-          //grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+          auto y = j-i+1;
+          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
         }
       }
-#if 0
-      _Pragma("omp master")
-      for (auto j=n-2; j>1; j++) {
-        for (auto i=1; i<j; i++) {
-          auto x = n+i-j;
-          auto y = n-i+2;
-          std::cout << x << "," << y << "\n";
-          //grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+      for (auto j=n-2; j>=1; j--) {
+        _Pragma("omp for")
+        for (auto i=1; i<=j; i++) {
+          auto x = n+i-j-1;
+          auto y = n-i;
+          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
         }
       }
-#endif
       _Pragma("omp master")
       grid[0*n+0] = -grid[(n-1)*n+(n-1)];
     }
