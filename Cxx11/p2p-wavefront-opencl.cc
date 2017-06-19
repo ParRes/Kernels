@@ -113,7 +113,6 @@ int main(int argc, char* argv[])
     if (iter==1) pipeline_time = prk::wtime();
 
     for (auto i=1; i<n; i++) {
-      _Pragma("omp parallel for")
       for (auto j=1; j<n; j++) {
         grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
       }

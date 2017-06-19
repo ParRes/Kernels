@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
   }
 
   // grid dimensions
-  int n = std::atol(argv[2]);
+  size_t n = std::atol(argv[2]);
   if (n < 1) {
     std::cout << "ERROR: grid dimensions must be positive: " << n << std::endl;
     exit(EXIT_FAILURE);
