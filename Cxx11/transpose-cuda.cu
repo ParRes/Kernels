@@ -54,22 +54,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
-namespace prk
-{
-    void CUDAinfo()
-    {
-        int nDevices;
-        cudaGetDeviceCount(&nDevices);
-        for (int i = 0; i < nDevices; i++) {
-            cudaDeviceProp prop;
-            cudaGetDeviceProperties(&prop, i);
-            std::cout << "Device name: " << prop.name << "\n";
-            std::cout << "Memory Clock Rate (KHz): " << prop.memoryClockRate << "\n";
-            std::cout << "Memory Bus Width (bits): " << prop.memoryBusWidth << "\n";
-        }
-    }
-}
+#include "prk_cuda.h"
 
 // The kernel was derived from https://github.com/parallel-forall/code-samples/blob/master/series/cuda-cpp/transpose/transpose.cu,
 // which is the reason for the additional copyright noted above.

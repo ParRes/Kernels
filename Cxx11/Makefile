@@ -63,7 +63,7 @@ tranpose-opencl: tranpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-cilk: %-cilk.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(CILKFLAGS) $< -o $@
 
-%-cuda: %-cuda.cu prk_util.h
+%-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	nvcc $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
 %: %.cc prk_util.h
