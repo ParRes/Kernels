@@ -22,6 +22,7 @@ TARGETFLAGS = $(OFFLOADFLAG)
 OPENCLFLAGS = $(OPENCLFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKLAGS = $(CILKFLAG)
+TBBFLAGS = $(TBBFLAG) -DUSE_TBB
 
 .PHONY: all clean run vector valarray openmp target opencl cilk
 
@@ -46,22 +47,27 @@ opencl: stencil-opencl transpose-opencl
 
 cilk: stencil-vector-cilk transpose-vector-cilk
 
+tbb: p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
+
 cuda: transpose-cuda
 
-tranpose-opencl: tranpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
-	$(CXX) $(CXXFLAGS) $(OPENCLFLAGS) $< -o $@
+transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
+	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
-	$(CXX) $(CXXFLAGS) $(OPENCLFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-target: %-target.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $(TARGETFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@
 
 %-openmp: %-openmp.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
 
 %-cilk: %-cilk.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $(CILKFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $< $(CILKFLAGS) -o $@
+
+%-tbb: %-tbb.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	nvcc $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
@@ -80,6 +86,7 @@ clean:
 	-rm -f *-target
 	-rm -f *-opencl
 	-rm -f *-cilk
+	-rm -f *-tbb
 	-rm -f *-cuda
 
 cleancl:

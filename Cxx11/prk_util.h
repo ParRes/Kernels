@@ -63,6 +63,12 @@
 #include <cilk/cilk.h>
 #endif
 
+#ifdef USE_TBB
+#include <tbb/tbb.h>
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+#endif
+
 #define RESTRICT __restrict__
 
 namespace prk {
