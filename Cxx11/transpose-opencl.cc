@@ -110,12 +110,12 @@ int main(int argc, char * argv[])
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<float> h_a;
-  std::vector<float> h_b;
+  std::vector<double> h_a;
+  std::vector<double> h_b;
   size_t nelems = (size_t)order * (size_t)order;
   h_a.resize(nelems);
   h_b.resize(nelems,0.0);
-  // fill A with the sequence 0 to order^2-1 as floats
+  // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(h_a.begin(), h_a.end(), 0.0);
 
   // copy input from host to device
@@ -167,7 +167,7 @@ int main(int argc, char * argv[])
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(float);
+    auto bytes = (size_t)order * (size_t)order * sizeof(double);
     std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {

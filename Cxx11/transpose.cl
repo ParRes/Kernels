@@ -6,18 +6,20 @@
 // - https://github.com/sschaetz/nvidia-opencl-examples/blob/master/OpenCL/src/oclTranspose/transpose.cl
 //
 
-// To enable double precision, use this:
-//#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+//#define REAL float
+
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#define REAL double
 
 __kernel void transpose(const int order,
-                        __global float * a,
-                        __global float * b)
+                        __global REAL * a,
+                        __global REAL * b)
 {
     const int i = get_global_id(0);
     const int j = get_global_id(1);
 
     if ((i<order) && (j<order)) {
         b[i*order+j] += a[j*order+i];
-        a[j*order+i] += 1.0f;
+        a[j*order+i] += (REAL)1;
     }
 }
