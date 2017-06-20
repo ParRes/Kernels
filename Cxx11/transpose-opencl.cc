@@ -114,9 +114,9 @@ int main(int argc, char * argv[])
   std::vector<double> h_b;
   size_t nelems = (size_t)order * (size_t)order;
   h_a.resize(nelems);
-  h_b.resize(nelems,0.0);
+  h_b.resize(nelems,0);
   // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(h_a.begin(), h_a.end(), 0.0);
+  std::iota(h_a.begin(), h_a.end(), 0);
 
   // copy input from host to device
   cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);
@@ -163,7 +163,7 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  const double epsilon = 1.0e-4;
+  const double epsilon = 1.0e-8;
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;

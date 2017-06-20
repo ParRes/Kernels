@@ -159,17 +159,17 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<float> h_in;
-  std::vector<float> h_out;
-  h_in.resize(n*n,0.0f);
-  h_out.resize(n*n,0.0f);
+  std::vector<double> h_in;
+  std::vector<double> h_out;
+  h_in.resize(n*n,0);
+  h_out.resize(n*n,0);
 
   auto stencil_time = 0.0;
 
   // initialize the input array
   for (auto i=0; i<n; i++) {
     for (auto j=0; j<n; j++) {
-      h_in[i*n+j] = static_cast<float>(i+j);
+      h_in[i*n+j] = static_cast<double>(i+j);
     }
   }
 
@@ -214,7 +214,7 @@ int main(int argc, char * argv[])
   norm /= active_points;
 
   // verify correctness
-  const double epsilon = 1.0e-4;
+  const double epsilon = 1.0e-8;
   double reference_norm = 2*(iterations+1);
   if (std::fabs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
