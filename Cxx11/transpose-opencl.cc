@@ -148,14 +148,14 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
+  const double addit = (iterations+1.0) * (0.5*iterations);
+  double abserr = 0.0;
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const size_t ij = (size_t)i*(size_t)order+(size_t)j;
       const size_t ji = (size_t)j*(size_t)order+(size_t)i;
-      const float reference = static_cast<float>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(h_b[ji] - reference);
+      const double reference = static_cast<double>(ij)*(iterations+1)+addit;
+      abserr += std::fabs(static_cast<double>(h_b[ji]) - reference);
     }
   }
 
@@ -163,7 +163,7 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  const auto epsilon = 1.0e-8;
+  const double epsilon = 1.0e-4;
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;

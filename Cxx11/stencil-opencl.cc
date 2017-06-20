@@ -205,7 +205,7 @@ int main(int argc, char * argv[])
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
   // compute L1 norm in parallel
-  float norm = 0.0f;
+  double norm = 0.0;
   for (auto i=radius; i<n-radius; i++) {
     for (auto j=radius; j<n-radius; j++) {
       norm += std::fabs(h_out[i*n+j]);
@@ -214,8 +214,8 @@ int main(int argc, char * argv[])
   norm /= active_points;
 
   // verify correctness
-  const float epsilon = 1.0e-4f;
-  float reference_norm = 2.f*(iterations+1.f);
+  const double epsilon = 1.0e-4;
+  double reference_norm = 2*(iterations+1);
   if (std::fabs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
