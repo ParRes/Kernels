@@ -79,7 +79,7 @@ int main(int argc, char * argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/CUDA Matrix transpose: B = A^T" << std::endl;
 
-  prk::CUDAinfo();
+  //prk::CUDAinfo();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -133,8 +133,8 @@ int main(int argc, char * argv[])
   float * h_a;
   float * h_b;
 #if 1
-  cudaMallocHost((float**)&h_a, bytes);
-  cudaMallocHost((float**)&h_b, bytes);
+  prk::CUDAcheck( cudaMallocHost((float**)&h_a, bytes) );
+  prk::CUDAcheck( cudaMallocHost((float**)&h_b, bytes) );
 #else
   posix_memalign((float**)&h_a, alignment, bytes);
   posix_memalign((float**)&h_b, alignment, bytes);
@@ -150,10 +150,10 @@ int main(int argc, char * argv[])
   // copy input from host to device
   float * d_a;
   float * d_b;
-  cudaMalloc((float**)&d_a, bytes);
-  cudaMalloc((float**)&d_b, bytes);
-  cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice);
+  prk::CUDAcheck( cudaMalloc((float**)&d_a, bytes) );
+  prk::CUDAcheck( cudaMalloc((float**)&d_b, bytes) );
+  prk::CUDAcheck( cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::CUDAcheck( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
 
   auto trans_time = 0.0;
 
@@ -162,20 +162,20 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     transpose<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-    cudaDeviceSynchronize();
+    prk::CUDAcheck( cudaDeviceSynchronize() );
   }
   trans_time = prk::wtime() - trans_time;
 
   // copy output back to host
-  cudaMemcpy(&(h_b[0]), d_b, bytes, cudaMemcpyDeviceToHost);
+  prk::CUDAcheck( cudaMemcpy(&(h_b[0]), d_b, bytes, cudaMemcpyDeviceToHost) );
 
 #ifdef VERBOSE
   // copy input back to host - debug only
-  cudaMemcpy(&(h_a[0]), d_a, bytes, cudaMemcpyDeviceToHost);
+  prk::CUDAcheck( cudaMemcpy(&(h_a[0]), d_a, bytes, cudaMemcpyDeviceToHost) );
 #endif
 
-  cudaFree(d_b);
-  cudaFree(d_a);
+  prk::CUDAcheck( cudaFree(d_b) );
+  prk::CUDAcheck( cudaFree(d_a) );
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -198,8 +198,8 @@ int main(int argc, char * argv[])
 #endif
 
 #if 1
-  cudaFreeHost(h_b);
-  cudaFreeHost(h_a);
+  prk::CUDAcheck( cudaFreeHost(h_b) );
+  prk::CUDAcheck( cudaFreeHost(h_a) );
 #else
   free(h_b);
   free(h_a);

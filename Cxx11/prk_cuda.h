@@ -1,6 +1,9 @@
 #ifndef PRK_CUDA_HPP
 #define PRK_CUDA_HPP
 
+#include <cstdio>
+#include <cstdlib>
+
 #ifndef __NVCC__
 #warning Please compile CUDA code with CC=nvcc.
 #include <cuda.h>
@@ -21,6 +24,16 @@ namespace prk
             std::cout << "Device name: " << prop.name << "\n";
             std::cout << "Memory Clock Rate (KHz): " << prop.memoryClockRate << "\n";
             std::cout << "Memory Bus Width (bits): " << prop.memoryBusWidth << "\n";
+        }
+    }
+
+    inline void CUDAcheck(cudaError_t rc)
+    {
+        if (rc==cudaSuccess) {
+            return;
+        } else {
+            std::cerr << "PRK CUDA error: " << cudaGetErrorString(rc) << std::endl;
+            std::abort();
         }
     }
 }
