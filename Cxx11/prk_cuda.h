@@ -22,8 +22,10 @@ namespace prk
             cudaDeviceProp prop;
             cudaGetDeviceProperties(&prop, i);
             std::cout << "Device name: " << prop.name << "\n";
+#ifndef __CORIANDERCC__
             std::cout << "Memory Clock Rate (KHz): " << prop.memoryClockRate << "\n";
             std::cout << "Memory Bus Width (bits): " << prop.memoryBusWidth << "\n";
+#endif
         }
     }
 

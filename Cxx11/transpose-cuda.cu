@@ -132,12 +132,12 @@ int main(int argc, char * argv[])
   const size_t bytes = nelems * sizeof(float);
   float * h_a;
   float * h_b;
-#if 1
+#ifndef __CORIANDERCC__
   prk::CUDAcheck( cudaMallocHost((float**)&h_a, bytes) );
   prk::CUDAcheck( cudaMallocHost((float**)&h_b, bytes) );
 #else
-  posix_memalign((float**)&h_a, alignment, bytes);
-  posix_memalign((float**)&h_b, alignment, bytes);
+  h_a = new float[nelems];
+  h_b = new float[nelems];
 #endif
   // fill A with the sequence 0 to order^2-1 as floats
   for (auto j=0; j<order; j++) {
@@ -162,7 +162,10 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     transpose<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    /// silence "ignoring cudaDeviceSynchronize for now" warning
+#ifndef __CORIANDERCC__
     prk::CUDAcheck( cudaDeviceSynchronize() );
+#endif
   }
   trans_time = prk::wtime() - trans_time;
 
@@ -197,12 +200,9 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-#if 1
+#ifndef __CORIANDERCC__
   prk::CUDAcheck( cudaFreeHost(h_b) );
   prk::CUDAcheck( cudaFreeHost(h_a) );
-#else
-  free(h_b);
-  free(h_a);
 #endif
 
   const auto epsilon = 1.0e-8;

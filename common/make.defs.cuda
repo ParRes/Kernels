@@ -38,6 +38,10 @@ OPENCLFLAG=-I/usr/include -L/usr/lib/x86_64-linux-gnu -lOpenCL
 #
 # CUDA flags
 #
+# Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
+NVCC=/opt/llvm/cocl/bin/cocl
+# Linux w/ NVIDIA CUDA
+#NVCC=nvcc
 CUDAFLAGS=-g -O3 -std=c++11
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
