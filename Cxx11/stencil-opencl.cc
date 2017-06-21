@@ -67,7 +67,7 @@ int main(int argc, char * argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OpenCL stencil execution on 2D grid" << std::endl;
 
-  prk::OpenCLinfo();
+  prk::opencl::listPlatforms();
 
   //////////////////////////////////////////////////////////////////////
   // process and test input parameters
@@ -133,11 +133,12 @@ int main(int argc, char * argv[])
   funcname.reserve(255);
   funcname += ( star ? "star" : "grid" );
   funcname += std::to_string(radius);
+  funcname += std::to_string(64);
   filename = funcname + ( ".cl" );
   //std::cout << "funcname = " << funcname << std::endl;
   //std::cout << "filename = " << filename << std::endl;
 
-  std::string source = prk::loadProgram(filename);
+  std::string source = prk::opencl::loadProgram(filename);
   if ( source==std::string("FAIL") ) {
       std::cerr << "OpenCL kernel source file (" << filename << ") not found. "
                 << "Generating using Python script" << std::endl;
@@ -146,12 +147,12 @@ int main(int argc, char * argv[])
       command += std::to_string(radius);
       std::system( command.c_str() );
   }
-  source = prk::loadProgram(filename);
+  source = prk::opencl::loadProgram(filename);
   cl::Program program1(context, source, true);
-  cl::Program program2(context, prk::loadProgram("add.cl"), true);
+  cl::Program program2(context, prk::opencl::loadProgram("add.cl"), true);
 
   auto kernel1 = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program1, funcname);
-  auto kernel2 = cl::make_kernel<int, cl::Buffer>(program2, "add");
+  auto kernel2 = cl::make_kernel<int, cl::Buffer>(program2, "add64");
 
   cl::CommandQueue queue(context);
 

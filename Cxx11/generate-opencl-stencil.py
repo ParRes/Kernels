@@ -5,9 +5,7 @@ import fileinput
 import string
 import os
 
-precision=64
-
-def main():
+def main(precision):
 
     if len(sys.argv) < 3:
         print('argument count = ', len(sys.argv))
@@ -52,13 +50,14 @@ def main():
             W[r+j][r+j]    = +1./(4*j*r)
             W[r-j][r-j]    = -1./(4*j*r)
 
-    src = open(pattern+str(r)+'.cl','w')
     if (precision==32):
-        src.write('#define REAL float\n\n')
+        t = 'float'
+        src = open(pattern+str(r)+'.cl','w')
     else:
-        src.write('#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n')
-        src.write('#define REAL double\n\n')
-    src.write('__kernel void '+pattern+str(r)+'(const int n, __global const REAL * in, __global REAL * out)\n')
+        t = 'double'
+        src = open(pattern+str(r)+'.cl','a')
+        src.write('#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n\n')
+    src.write('__kernel void '+pattern+str(r)+'_'+str(precision)+'(const int n, __global const '+t+' * in, __global '+t+' * out)\n')
     src.write('{\n')
     src.write('    const int i = get_global_id(0);\n')
     src.write('    const int j = get_global_id(1);\n')
@@ -78,8 +77,9 @@ def main():
                 if (k>0 and k<kmax): src.write('                      ')
     src.write(';\n')
     src.write('    }\n')
-    src.write('}\n')
+    src.write('}\n\n')
 
 if __name__ == '__main__':
-    main()
+    main(32)
+    main(64)
 

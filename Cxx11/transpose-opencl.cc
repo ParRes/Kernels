@@ -55,12 +55,87 @@
 #include "prk_util.h"
 #include "prk_opencl.h"
 
+template <typename T>
+void run(cl::Context context, int iterations, int order)
+{
+  cl::Program program(context, prk::opencl::loadProgram("transpose.cl"), true);
+
+  auto function = (sizeof(T)==8) ? "transpose64" : "transpose32";
+  auto kernel = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program, function);
+
+  cl::CommandQueue queue(context);
+
+  //////////////////////////////////////////////////////////////////////
+  /// Allocate space for the input and transpose matrix
+  //////////////////////////////////////////////////////////////////////
+
+  const size_t nelems = (size_t)order * (size_t)order;
+  std::vector<T> h_a;
+  std::vector<T> h_b;
+  h_a.resize(nelems);
+  h_b.resize(nelems, (T)0);
+  // fill A with the sequence 0 to order^2-1 as doubles
+  std::iota(h_a.begin(), h_a.end(), (T)0);
+
+  // copy input from host to device
+  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);
+  cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), true);
+
+  auto trans_time = 0.0;
+
+  for (auto iter = 0; iter<=iterations; iter++) {
+
+    if (iter==1) trans_time = prk::wtime();
+
+    // transpose the  matrix
+    kernel(cl::EnqueueArgs(queue, cl::NDRange(order,order)), order, d_a, d_b);
+    queue.finish();
+
+  }
+  trans_time = prk::wtime() - trans_time;
+
+  // copy output back to host
+  cl::copy(queue, d_b, begin(h_b), end(h_b));
+
+  // TODO: replace with std::generate, std::accumulate, or similar
+  const double addit = (iterations+1.0) * (0.5*iterations);
+  double abserr = 0.0;
+  for (auto j=0; j<order; j++) {
+    for (auto i=0; i<order; i++) {
+      const size_t ij = (size_t)i*(size_t)order+(size_t)j;
+      const size_t ji = (size_t)j*(size_t)order+(size_t)i;
+      const double reference = static_cast<double>(ij)*(iterations+1)+addit;
+      abserr += std::fabs(static_cast<double>(h_b[ji]) - reference);
+    }
+  }
+  //
+  //////////////////////////////////////////////////////////////////////
+  /// Analyze and output results
+  //////////////////////////////////////////////////////////////////////
+
+#ifdef VERBOSE
+  std::cout << "Sum of absolute differences: " << abserr << std::endl;
+#endif
+
+  const double epsilon = (sizeof(T)==8) ? 1.0e-8 : 1.0e-4;
+  if (abserr < epsilon) {
+    std::cout << "Solution validates" << std::endl;
+    auto avgtime = trans_time/iterations;
+    auto bytes = (size_t)order * (size_t)order * sizeof(double);
+    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
+              << " Avg time (s): " << avgtime << std::endl;
+  } else {
+    std::cout << "ERROR: Aggregate squared error " << abserr
+              << " exceeds threshold " << epsilon << std::endl;
+  }
+}
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OpenCL Matrix transpose: B = A^T" << std::endl;
 
-  prk::OpenCLinfo();
+  prk::opencl::listPlatforms();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -98,89 +173,16 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   // FIXME: allow other options here
-  cl::Context context(CL_DEVICE_TYPE_DEFAULT);
+  //cl::Context context(CL_DEVICE_TYPE_DEFAULT);
+  cl::Context context(CL_DEVICE_TYPE_CPU);
+  const int precision = prk::opencl::precision(context);
 
-  cl::Program program(context, prk::loadProgram("transpose.cl"), true);
+  std::cout << "Precision             = " << precision << "-bit" << std::endl;
 
-  auto kernel = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program, "transpose");
-
-  cl::CommandQueue queue(context);
-
-  //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
-  //////////////////////////////////////////////////////////////////////
-
-  std::vector<double> h_a;
-  std::vector<double> h_b;
-  size_t nelems = (size_t)order * (size_t)order;
-  h_a.resize(nelems);
-  h_b.resize(nelems,0);
-  // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(h_a.begin(), h_a.end(), 0);
-
-  // copy input from host to device
-  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);
-  cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), true);
-
-  auto trans_time = 0.0;
-
-  for (auto iter = 0; iter<=iterations; iter++) {
-
-    if (iter==1) trans_time = prk::wtime();
-
-    // transpose the  matrix
-    kernel(cl::EnqueueArgs(queue, cl::NDRange(order,order)), order, d_a, d_b);
-    queue.finish();
-
-  }
-  trans_time = prk::wtime() - trans_time;
-
-  // copy output back to host
-  cl::copy(queue, d_b, begin(h_b), end(h_b));
-
-#ifdef VERBOSE
-  // copy input back to host - debug only
-  cl::copy(queue, d_a, begin(h_a), end(h_a));
-#endif
-
-  //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
-  //////////////////////////////////////////////////////////////////////
-
-  // TODO: replace with std::generate, std::accumulate, or similar
-  const double addit = (iterations+1.0) * (0.5*iterations);
-  double abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
-      const size_t ij = (size_t)i*(size_t)order+(size_t)j;
-      const size_t ji = (size_t)j*(size_t)order+(size_t)i;
-      const double reference = static_cast<double>(ij)*(iterations+1)+addit;
-      abserr += std::fabs(static_cast<double>(h_b[ji]) - reference);
-    }
-  }
-
-#ifdef VERBOSE
-  std::cout << "Sum of absolute differences: " << abserr << std::endl;
-#endif
-
-  const double epsilon = 1.0e-8;
-  if (abserr < epsilon) {
-    std::cout << "Solution validates" << std::endl;
-    auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+  if (precision==64) {
+      run<double>(context, iterations, order);
   } else {
-#ifdef VERBOSE
-    for (auto i=0; i<order; i++) {
-      for (auto j=0; j<order; j++) {
-        std::cout << "(" << i << "," << j << ") = " << h_a[i*order+j] << ", " << h_b[i*order+j] << "\n";
-      }
-    }
-#endif
-    std::cout << "ERROR: Aggregate squared error " << abserr
-              << " exceeds threshold " << epsilon << std::endl;
-    return 1;
+      run<float>(context, iterations, order);
   }
 
   return 0;
