@@ -8,10 +8,11 @@ endif
 STARFLAG   = -DSTAR
 #DOUBLEFLAG = -DDOUBLE
 
-CXXFLAGS  = $(DEFAULT_OPT_FLAGS)
-CXXFLAGS += -DPRKVERSION=$(PRKVERSION)
-CXXFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
-CXXFLAGS += -I.
+CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
+CPPFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
+CPPFLAGS += -I.
+
+CXXFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 
 # debugging
 #CXXFLAGS += -DVERBOSE
@@ -48,6 +49,8 @@ cilk: stencil-vector-cilk transpose-vector-cilk
 
 tbb: p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
 
+cuda: transpose-cuda
+
 transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
@@ -66,14 +69,18 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-tbb: %-tbb.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
 
+%-cuda: %-cuda.cu prk_util.h prk_cuda.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
+
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
 clean:
 	-rm -f *.o
+	-rm -f *.ll # Coriander
 	-rm -f *.optrpt
 	-rm -f *.dwarf
-	-rm -rf *.dSYM
+	-rm -rf *.dSYM # Mac
 	-rm -f *-vector
 	-rm -f *-valarray
 	-rm -f *-openmp
@@ -81,6 +88,7 @@ clean:
 	-rm -f *-opencl
 	-rm -f *-cilk
 	-rm -f *-tbb
+	-rm -f *-cuda
 
 cleancl:
 	-rm -f star[123456789].cl
