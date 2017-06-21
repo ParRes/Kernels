@@ -15,6 +15,8 @@ scripts/small/runfenix
 *.error                         # ALCF Cobalt scheduler
 
 *.swp                           # Vim
+*/*.swp                         # Vim
+*/*/*.swp                       # Vim
 *.dSYM                          # Mac
 *__genmod.mod                   # Intel compiler
 *__genmod.f90                   # Intel compiler

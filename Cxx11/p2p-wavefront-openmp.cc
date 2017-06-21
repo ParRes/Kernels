@@ -35,13 +35,13 @@
 ///
 /// PURPOSE: This program tests the efficiency with which point-to-point
 ///          synchronization can be carried out. It does so by executing
-///          a pipelined algorithm on an m*n grid. The first array dimension
+///          a pipelined algorithm on an n^2 grid. The first array dimension
 ///          is distributed among the threads (stripwise decomposition).
 ///
 /// USAGE:   The program takes as input the
 ///          dimensions of the grid, and the number of iterations on the grid
 ///
-///                <progname> <iterations> <m> <n>
+///                <progname> <iterations> <n>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -59,32 +59,21 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include "prk_util.h"
+#include <omp.h>
 
-inline void sweep_tile(size_t startm, size_t endm,
-                       size_t startn, size_t endn,
-                       size_t m,      size_t n,
-                       std::vector<double> & grid)
-{
-  for (auto i=startm; i<endm; i++) {
-    for (auto j=startn; j<endn; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
+#include "prk_util.h"
 
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/OpenCL WAVEFRONT pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 4){
-    std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> <second array dimension>"
-                                      << " [<first chunk dimension> <second chunk dimension>]" << std::endl;
+  if (argc < 3){
+    std::cout << "Usage: " << argv[0] << " <# iterations> <array dimension>" << std::endl;
     return(EXIT_FAILURE);
   }
 
@@ -96,70 +85,73 @@ int main(int argc, char* argv[])
   }
 
   // grid dimensions
-  size_t m = std::atol(argv[2]);
-  size_t n = std::atol(argv[3]);
-  if (m < 1 || n < 1) {
-    std::cout << "ERROR: grid dimensions must be positive: " << m <<  n << std::endl;
+  int n = std::atol(argv[2]);
+  if (n < 1) {
+    std::cout << "ERROR: grid dimensions must be positive: " << n << std::endl;
     exit(EXIT_FAILURE);
   }
 
-  // grid chunk dimensions
-  size_t mc = (argc > 4) ? std::atol(argv[4]) : m;
-  size_t nc = (argc > 5) ? std::atol(argv[5]) : n;
-  if (mc < 1 || mc > m || nc < 1 || nc > n) {
-    std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
-    mc = m;
-    nc = n;
-  }
-
+  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations      = " << iterations << std::endl;
-  std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
-  if (mc!=m || nc!=n) {
-      std::cout << "Grid chunk sizes          = " << mc << ", " << nc << std::endl;
-  }
+  std::cout << "Grid sizes                = " << n << ", " << n << std::endl;
 
   auto pipeline_time = 0.0; // silence compiler warning
 
   // working set
-  std::vector<double> grid;
-  grid.resize(m*n,0.0);
-
-  // set boundary values (bottom and left side of grid)
-  for (auto j=0; j<n; j++) {
-    grid[0*n+j] = static_cast<double>(j);
-  }
-  for (auto i=0; i<m; i++) {
-    grid[i*n+0] = static_cast<double>(i);
-  }
-
-  for (auto iter = 0; iter<=iterations; iter++) {
-
-    if (iter==1) pipeline_time = prk::wtime();
-
-    if (mc==m && nc==n) {
-      for (auto i=1; i<m; i++) {
-        for (auto j=1; j<n; j++) {
-          grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-        }
-      }
-    } else /* chunking */ {
-      for (auto i=1; i<m; i+=mc) {
-        for (auto j=1; j<n; j+=nc) {
-          //grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-          sweep_tile(i, std::min(m,i+mc),
-                     j, std::min(n,j+nc),
-                     m, n, grid);
-        }
+  double * grid = new double[n*n];
+  _Pragma("omp parallel")
+  {
+    _Pragma("omp for")
+    for (auto i=0; i<n; i++) {
+      for (auto j=0; j<n; j++) {
+        grid[i*n+j] = 0.0;
       }
     }
 
-    // copy top right corner value to bottom left corner to create dependency; we
-    // need a barrier to make sure the latest value is used. This also guarantees
-    // that the flags for the next iteration (if any) are not getting clobbered
-    grid[0*n+0] = -grid[(m-1)*n+(n-1)];
-  }
+    // set boundary values (bottom and left side of grid)
+    _Pragma("omp master")
+    {
+      for (auto j=0; j<n; j++) {
+        grid[0*n+j] = static_cast<double>(j);
+      }
+      for (auto i=0; i<n; i++) {
+        grid[i*n+0] = static_cast<double>(i);
+      }
+    }
+    _Pragma("omp barrier")
 
-  pipeline_time = prk::wtime() - pipeline_time;
+    for (auto iter = 0; iter<=iterations; iter++) {
+
+      if (iter==1) {
+          _Pragma("omp barrier")
+          _Pragma("omp master")
+          pipeline_time = prk::wtime();
+      }
+
+      for (auto j=1; j<n; j++) {
+        _Pragma("omp for")
+        for (auto i=1; i<=j; i++) {
+          auto x = i;
+          auto y = j-i+1;
+          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+        }
+      }
+      for (auto j=n-2; j>=1; j--) {
+        _Pragma("omp for")
+        for (auto i=1; i<=j; i++) {
+          auto x = n+i-j-1;
+          auto y = n-i;
+          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+        }
+      }
+      _Pragma("omp master")
+      grid[0*n+0] = -grid[(n-1)*n+(n-1)];
+    }
+
+    _Pragma("omp barrier")
+    _Pragma("omp master")
+    pipeline_time = prk::wtime() - pipeline_time;
+  }
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
@@ -169,9 +161,9 @@ int main(int argc, char* argv[])
   const double epsilon = 1.e-8;
 
   // verify correctness, using top right value
-  auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
-    std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
+  auto corner_val = ((iterations+1.)*(2.*n-2.));
+  if ( (std::fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+    std::cout << "ERROR: checksum " << grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     exit(EXIT_FAILURE);
   }
@@ -183,7 +175,7 @@ int main(int argc, char* argv[])
 #endif
   auto avgtime = pipeline_time/iterations;
   std::cout << "Rate (MFlops/s): "
-            << 1.0e-6 * 2. * ( static_cast<size_t>(m-1)*static_cast<size_t>(n-1) )/avgtime
+            << 1.0e-6 * 2. * ( static_cast<size_t>(n-1)*static_cast<size_t>(n-1) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
 
   return 0;
