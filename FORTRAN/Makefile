@@ -11,7 +11,16 @@ FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 .PHONY: all clean serial pretty openmp coarray
 
-all: serial pretty openmp coarray target
+COARRAY =
+ifeq ($(shell uname -s),Darwin)
+ifneq ($(findstring ifort,$(FC)),ifort)
+COARRAY = coarray
+endif
+else
+COARRAY = coarray
+endif
+
+all: serial pretty openmp $(COARRAY) target
 
 serial: p2p stencil transpose
 
