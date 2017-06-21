@@ -77,9 +77,10 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 
 clean:
 	-rm -f *.o
+	-rm -f *.ll # Coriander
 	-rm -f *.optrpt
 	-rm -f *.dwarf
-	-rm -rf *.dSYM
+	-rm -rf *.dSYM # Mac
 	-rm -f *-vector
 	-rm -f *-valarray
 	-rm -f *-openmp
