@@ -58,9 +58,11 @@
 template <typename T>
 void run(cl::Context context, int iterations, int order)
 {
+  auto precision = (sizeof(T)==8) ? 64 : 32;
+
   cl::Program program(context, prk::opencl::loadProgram("transpose.cl"), true);
 
-  auto function = (sizeof(T)==8) ? "transpose64" : "transpose32";
+  auto function = (precision==64) ? "transpose64" : "transpose32";
   auto kernel = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program, function);
 
   cl::CommandQueue queue(context);
@@ -117,7 +119,7 @@ void run(cl::Context context, int iterations, int order)
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  const double epsilon = (sizeof(T)==8) ? 1.0e-8 : 1.0e-4;
+  const double epsilon = (precision==64) ? 1.0e-8 : 1.0e-4;
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
