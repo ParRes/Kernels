@@ -35,6 +35,11 @@ OPENCLFLAG=-framework OpenCL
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
+# Parallel STL, Boost, etc.
+#
+BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
+PSTLFLAG=
+#
 # MPI
 #
 # We assume you have installed an implementation of MPI-3 that is in your path.

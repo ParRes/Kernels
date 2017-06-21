@@ -22,8 +22,9 @@ OPENCLFLAGS = $(OPENCLFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKLAGS = $(CILKFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB
+PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAG) -USE_BOOST
 
-.PHONY: all clean run vector valarray openmp target opencl cilk
+.PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(CXX),icpc)
@@ -48,6 +49,8 @@ cilk: stencil-vector-cilk transpose-vector-cilk
 
 tbb: p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
 
+pstl: transpose-vector-pstl
+
 transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
@@ -66,6 +69,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-tbb: %-tbb.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
 
+%-pstl: %-pstl.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(PSTLFLAGS) -o $@
+
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
@@ -81,6 +87,7 @@ clean:
 	-rm -f *-opencl
 	-rm -f *-cilk
 	-rm -f *-tbb
+	-rm -f *-pstl
 
 cleancl:
 	-rm -f star[123456789].cl

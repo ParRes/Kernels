@@ -69,6 +69,10 @@
 #include <tbb/blocked_range.h>
 #endif
 
+#ifdef USE_BOOST
+#include <boost/range/irange.hpp>
+#endif
+
 #define RESTRICT __restrict__
 
 namespace prk {
