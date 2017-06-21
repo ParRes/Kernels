@@ -97,6 +97,17 @@ namespace prk {
       }
       return ( has64 ? 64 : 32 );
     }
+
+    bool available(cl::Context context) {
+      std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+      if ( devices.size() == 0 ) return false;
+      bool avail = true;
+      for (auto j : devices) {
+        auto a = j.getInfo<CL_DEVICE_AVAILABLE>();
+        avail &= (a==1);
+      }
+      return ( avail );
+    }
   }
 }
 #endif // PRK_OPENCL_HPP

@@ -172,17 +172,47 @@ int main(int argc, char * argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
-  // FIXME: allow other options here
-  //cl::Context context(CL_DEVICE_TYPE_DEFAULT);
-  cl::Context context(CL_DEVICE_TYPE_CPU);
-  const int precision = prk::opencl::precision(context);
+  cl::Context cpu(CL_DEVICE_TYPE_CPU);
+  if ( prk::opencl::available(cpu) )
+  {
+    const int precision = prk::opencl::precision(cpu);
 
-  std::cout << "Precision             = " << precision << "-bit" << std::endl;
+    std::cout << "CPU Precision         = " << precision << "-bit" << std::endl;
 
-  if (precision==64) {
-      run<double>(context, iterations, order);
-  } else {
-      run<float>(context, iterations, order);
+    if (precision==64) {
+        run<double>(cpu, iterations, order);
+    } else {
+        run<float>(cpu, iterations, order);
+    }
+  }
+
+  cl::Context gpu(CL_DEVICE_TYPE_GPU);
+  if ( prk::opencl::available(gpu) )
+  {
+    const int precision = prk::opencl::precision(gpu);
+
+    std::cout << "GPU Precision         = " << precision << "-bit" << std::endl;
+
+    if (precision==64) {
+        run<double>(gpu, iterations, order);
+    } else {
+        run<float>(gpu, iterations, order);
+    }
+  }
+
+  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR);
+  if ( prk::opencl::available(acc) )
+  {
+
+    const int precision = prk::opencl::precision(acc);
+
+    std::cout << "ACC Precision         = " << precision << "-bit" << std::endl;
+
+    if (precision==64) {
+        run<double>(acc, iterations, order);
+    } else {
+        run<float>(acc, iterations, order);
+    }
   }
 
   return 0;
