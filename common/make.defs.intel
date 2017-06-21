@@ -13,7 +13,7 @@ CC=icc -std=c99
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=ifort -std08 -fpp
 # C++11 may not be required but does no harm here.
-CXX=icpc -std=c++11
+CXX=icpc -std=c++17
 #
 # Compiler flags
 #
@@ -42,6 +42,11 @@ CILKFLAG=-intel-extensions # default
 # TBB
 #
 TBBFLAG=-tbb
+#
+# Parallel STL, Boost, etc.
+#
+BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
+PSTLFLAG=-DUSE_PSTL -qopenmp -tbb
 #
 # MPI
 #
