@@ -72,7 +72,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   funcname1 += ( star ? "star" : "grid" );
   funcname1 += std::to_string(radius);
   filename1 = funcname1 + ( ".cl" );
-  funcname1 += std::to_string(precision);
+  funcname1 += "_" + std::to_string(precision);
   auto funcname2 = (precision==64) ? "add64" : "add32";
   auto filename2 = "add.cl";
 
