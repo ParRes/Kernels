@@ -239,7 +239,7 @@ int main(int argc, char * argv[])
   cl::Context cpu(CL_DEVICE_TYPE_CPU);
   if ( prk::opencl::available(cpu) )
   {
-    const int precision = 32; //prk::opencl::precision(cpu);
+    const int precision = prk::opencl::precision(cpu);
 
     std::cout << "CPU Precision         = " << precision << "-bit" << std::endl;
 
@@ -253,7 +253,7 @@ int main(int argc, char * argv[])
   cl::Context gpu(CL_DEVICE_TYPE_GPU);
   if ( prk::opencl::available(gpu) )
   {
-    const int precision = 32; //prk::opencl::precision(gpu);
+    const int precision = prk::opencl::precision(gpu);
 
     std::cout << "GPU Precision         = " << precision << "-bit" << std::endl;
 
