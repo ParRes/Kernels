@@ -122,12 +122,14 @@ int main(int argc, char * argv[])
       std::for_each( std::begin(irange), std::end(irange), [&] (int i) {
         std::for_each( std::begin(jrange), std::end(jrange), [&] (int j) {
           B[i*order+j] += A[j*order+i];
+          A[j*order+i] += 1.0;
         });
       });
     } else {
       std::for_each( std::begin(irange), std::end(irange), [&] (int i) {
         for (auto j : jrange) {
           B[i*order+j] += A[j*order+i];
+          A[j*order+i] += 1.0;
         }
       });
     }
@@ -136,6 +138,7 @@ int main(int argc, char * argv[])
       std::for_each( std::execution::par, std::begin(irange), std::end(irange), [&] (int i) {
         std::for_each( std::execution::unseq, std::begin(jrange), std::end(jrange), [&] (int j) {
           B[i*order+j] += A[j*order+i];
+          A[j*order+i] += 1.0;
         });
       });
     } else {
@@ -143,13 +146,14 @@ int main(int argc, char * argv[])
       std::for_each( std::execution::par_unseq, std::begin(irange), std::end(irange), [&] (int i) {
         for (auto j : jrange) {
           B[i*order+j] += A[j*order+i];
+          A[j*order+i] += 1.0;
         }
       });
     }
 #endif
 
     // A += 1.0
-    std::transform(A.begin(), A.end(), A.begin(), [](double c) { return c+=1.0; });
+    //std::transform(A.begin(), A.end(), A.begin(), [](double c) { return c+=1.0; });
   }
   trans_time = prk::wtime() - trans_time;
 

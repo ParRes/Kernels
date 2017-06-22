@@ -126,6 +126,7 @@ int main(int argc, char * argv[])
           for (auto i=it; i<std::min(order,it+tile_size); i++) {
             for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
               B[i*order+j] += A[j*order+i];
+              A[j*order+i] += 1.0;
             }
           }
         }
@@ -134,12 +135,13 @@ int main(int argc, char * argv[])
       for (auto i=0;i<order; i++) {
         for (auto j=0;j<order;j++) {
           B[i*order+j] += A[j*order+i];
+          A[j*order+i] += 1.0;
         }
       }
     }
 
     // A += 1.0
-    std::transform(A.begin(), A.end(), A.begin(), [](double c) { return c+=1.0; });
+    //std::transform(A.begin(), A.end(), A.begin(), [](double c) { return c+=1.0; });
   }
   trans_time = prk::wtime() - trans_time;
 

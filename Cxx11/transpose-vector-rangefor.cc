@@ -113,11 +113,12 @@ int main(int argc, char * argv[])
     for (auto i : irange) {
       for (auto j : jrange) {
         B[i*order+j] += A[j*order+i];
+        A[j*order+i] += 1.0;
       }
     }
 
     // A += 1.0
-    std::transform(A.begin(), A.end(), A.begin(), [](double c) { return c+=1.0; });
+    //std::transform(A.begin(), A.end(), A.begin(), [](double c) { return c+=1.0; });
   }
   trans_time = prk::wtime() - trans_time;
 
