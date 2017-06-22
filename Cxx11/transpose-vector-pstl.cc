@@ -151,9 +151,6 @@ int main(int argc, char * argv[])
       });
     }
 #endif
-
-    // A += 1.0
-    //std::transform(A.begin(), A.end(), A.begin(), [](double c) { return c+=1.0; });
   }
   trans_time = prk::wtime() - trans_time;
 

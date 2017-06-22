@@ -140,7 +140,6 @@ int main(int argc, char * argv[])
         }
       }
     }
-    //A += 1.0;
   }
   trans_time = prk::wtime() - trans_time;
 
