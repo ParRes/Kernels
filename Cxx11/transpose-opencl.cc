@@ -180,8 +180,10 @@ int main(int argc, char * argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
-  cl::Context cpu(CL_DEVICE_TYPE_CPU);
-  if ( prk::opencl::available(cpu) )
+  cl_int err = CL_SUCCESS;
+
+  cl::Context cpu(CL_DEVICE_TYPE_CPU, NULL, NULL, NULL, &err);
+  if ( err == CL_SUCCESS && prk::opencl::available(cpu) )
   {
     const int precision = prk::opencl::precision(cpu);
 
@@ -194,8 +196,8 @@ int main(int argc, char * argv[])
     }
   }
 
-  cl::Context gpu(CL_DEVICE_TYPE_GPU);
-  if ( prk::opencl::available(gpu) )
+  cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
+  if ( err == CL_SUCCESS && prk::opencl::available(gpu) )
   {
     const int precision = prk::opencl::precision(gpu);
 
@@ -208,8 +210,8 @@ int main(int argc, char * argv[])
     }
   }
 
-  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR);
-  if ( prk::opencl::available(acc) )
+  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
+  if ( err == CL_SUCCESS && prk::opencl::available(acc) )
   {
 
     const int precision = prk::opencl::precision(acc);
@@ -225,5 +227,3 @@ int main(int argc, char * argv[])
 
   return 0;
 }
-
-
