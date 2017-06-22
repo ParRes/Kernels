@@ -23,8 +23,9 @@ OPENCLFLAGS = $(OPENCLFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKLAGS = $(CILKFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB
+PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAG) -USE_BOOST
 
-.PHONY: all clean run vector valarray openmp target opencl cilk
+.PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(CXX),icpc)
@@ -49,6 +50,8 @@ cilk: stencil-vector-cilk transpose-vector-cilk
 
 tbb: p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
 
+pstl: transpose-vector-pstl
+
 cuda: transpose-cuda
 
 transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
@@ -69,6 +72,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-tbb: %-tbb.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
 
+%-pstl: %-pstl.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(PSTLFLAGS) -o $@
+
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
@@ -88,6 +94,7 @@ clean:
 	-rm -f *-opencl
 	-rm -f *-cilk
 	-rm -f *-tbb
+	-rm -f *-pstl
 	-rm -f *-cuda
 
 cleancl:
