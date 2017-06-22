@@ -50,7 +50,7 @@ cilk: stencil-vector-cilk transpose-vector-cilk
 
 tbb: p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
 
-pstl: transpose-vector-pstl
+pstl: stencil-vector-pstl transpose-vector-pstl
 
 cuda: transpose-cuda
 
