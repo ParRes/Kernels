@@ -71,7 +71,7 @@ void do_stencil(int n, std::vector<std::vector<double>> weight, std::vector<doub
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
 #else
-    std::for_each( std::execution::par_unseq, std::begin(inside), std::end(inside), [&] (int i) {
+    std::for_each( std::execution::par, std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::execution::par_unseq, std::begin(inside), std::end(inside), [&] (int j) {
 #endif
         if (star) {
@@ -198,13 +198,14 @@ int main(int argc, char * argv[])
   auto range = boost::irange(0,n);
 #ifndef USE_PSTL
   std::for_each( std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( std::begin(range), std::end(range), [&] (int j) {
 #else
-  std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int i) {
+  std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
 #endif
-    for (auto j : range) {
       in[i*n+j] = static_cast<double>(i+j);
       out[i*n+j] = 0.0;
-    }
+    });
   });
 
   for (auto iter = 0; iter<=iterations; iter++) {
