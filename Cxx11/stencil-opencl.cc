@@ -89,8 +89,17 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   cl::Program program1(context, source, true);
   cl::Program program2(context, prk::opencl::loadProgram(filename2), true);
 
-  auto kernel1 = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program1, funcname1);
-  auto kernel2 = cl::make_kernel<int, cl::Buffer>(program2, funcname2);
+  cl_int err;
+  auto kernel1 = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program1, funcname1, &err);
+  if(err != CL_SUCCESS){
+    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+    std::cout << program1.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
+  }
+  auto kernel2 = cl::make_kernel<int, cl::Buffer>(program2, funcname2, &err);
+  if(err != CL_SUCCESS){
+    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+    std::cout << program2.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
+  }
 
   cl::CommandQueue queue(context);
 
