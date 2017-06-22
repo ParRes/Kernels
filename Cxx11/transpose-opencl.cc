@@ -63,7 +63,13 @@ void run(cl::Context context, int iterations, int order)
   cl::Program program(context, prk::opencl::loadProgram("transpose.cl"), true);
 
   auto function = (precision==64) ? "transpose64" : "transpose32";
-  auto kernel = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program, function);
+
+  cl_int err;
+  auto kernel = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program, function, &err);
+  if(err != CL_SUCCESS){
+    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+    std::cout << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
+  }
 
   cl::CommandQueue queue(context);
 
