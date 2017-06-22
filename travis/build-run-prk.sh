@@ -131,6 +131,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/transpose-vector   10 1024 32
 
         # C++11 with OpenMP
+        export OMP_NUM_THREADS=2
         case "$CC" in
             gcc)
                 # Host
