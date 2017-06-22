@@ -122,9 +122,7 @@ int main(int argc, char * argv[])
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
-    if (iter==1) {
-        trans_time = prk::wtime();
-    }
+    if (iter==1) trans_time = prk::wtime();
 
     // transpose the  matrix
     if (tile_size < order) {
