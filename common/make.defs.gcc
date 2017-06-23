@@ -41,7 +41,7 @@ BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
 #PSTLFLAG=-DUSE_PSTL -D_GLIBCXX_PARALLEL -fopenmp
 PSTLFLAG=
 KOKKOSDIR=/opt/kokkos/gcc/openmp
-KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos -fopenmp
+KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos -ldl -fopenmp
 #
 # MPI
 #
