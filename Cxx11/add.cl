@@ -6,7 +6,7 @@ __kernel void add32(const int n, __global float * inout)
     const int j = get_global_id(1);
 
     if ( (i<n) && (j<n) ) {
-        out[i*n+j] += 1.0f;
+        inout[i*n+j] += 1.0f;
     }
 }
 
@@ -16,6 +16,6 @@ __kernel void add64(const int n, __global double * inout)
     const int j = get_global_id(1);
 
     if ( (i<n) && (j<n) ) {
-        out[i*n+j] += 1.0;
+        inout[i*n+j] += 1.0;
     }
 }

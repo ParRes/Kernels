@@ -89,8 +89,17 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   cl::Program program1(context, source, true);
   cl::Program program2(context, prk::opencl::loadProgram(filename2), true);
 
-  auto kernel1 = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program1, funcname1);
-  auto kernel2 = cl::make_kernel<int, cl::Buffer>(program2, funcname2);
+  cl_int err;
+  auto kernel1 = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program1, funcname1, &err);
+  if(err != CL_SUCCESS){
+    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+    std::cout << program1.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
+  }
+  auto kernel2 = cl::make_kernel<int, cl::Buffer>(program2, funcname2, &err);
+  if(err != CL_SUCCESS){
+    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+    std::cout << program2.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
+  }
 
   cl::CommandQueue queue(context);
 
@@ -236,8 +245,10 @@ int main(int argc, char * argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
-  cl::Context cpu(CL_DEVICE_TYPE_CPU);
-  if ( prk::opencl::available(cpu) )
+  cl_int err = CL_SUCCESS;
+
+  cl::Context cpu(CL_DEVICE_TYPE_CPU, NULL, NULL, NULL, &err);
+  if ( err == CL_SUCCESS && prk::opencl::available(cpu) )
   {
     const int precision = prk::opencl::precision(cpu);
 
@@ -250,8 +261,8 @@ int main(int argc, char * argv[])
     }
   }
 
-  cl::Context gpu(CL_DEVICE_TYPE_GPU);
-  if ( prk::opencl::available(gpu) )
+  cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
+  if ( err == CL_SUCCESS && prk::opencl::available(gpu) )
   {
     const int precision = prk::opencl::precision(gpu);
 
@@ -264,8 +275,8 @@ int main(int argc, char * argv[])
     }
   }
 
-  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR);
-  if ( prk::opencl::available(acc) )
+  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
+  if ( err == CL_SUCCESS && prk::opencl::available(acc) )
   {
 
     const int precision = prk::opencl::precision(acc);
