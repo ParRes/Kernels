@@ -63,7 +63,13 @@ void run(cl::Context context, int iterations, int order)
   cl::Program program(context, prk::opencl::loadProgram("transpose.cl"), true);
 
   auto function = (precision==64) ? "transpose64" : "transpose32";
-  auto kernel = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program, function);
+
+  cl_int err;
+  auto kernel = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program, function, &err);
+  if(err != CL_SUCCESS){
+    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+    std::cout << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
+  }
 
   cl::CommandQueue queue(context);
 
@@ -174,8 +180,10 @@ int main(int argc, char * argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
-  cl::Context cpu(CL_DEVICE_TYPE_CPU);
-  if ( prk::opencl::available(cpu) )
+  cl_int err = CL_SUCCESS;
+
+  cl::Context cpu(CL_DEVICE_TYPE_CPU, NULL, NULL, NULL, &err);
+  if ( err == CL_SUCCESS && prk::opencl::available(cpu) )
   {
     const int precision = prk::opencl::precision(cpu);
 
@@ -188,8 +196,8 @@ int main(int argc, char * argv[])
     }
   }
 
-  cl::Context gpu(CL_DEVICE_TYPE_GPU);
-  if ( prk::opencl::available(gpu) )
+  cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
+  if ( err == CL_SUCCESS && prk::opencl::available(gpu) )
   {
     const int precision = prk::opencl::precision(gpu);
 
@@ -202,8 +210,8 @@ int main(int argc, char * argv[])
     }
   }
 
-  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR);
-  if ( prk::opencl::available(acc) )
+  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
+  if ( err == CL_SUCCESS && prk::opencl::available(acc) )
   {
 
     const int precision = prk::opencl::precision(acc);
@@ -219,5 +227,3 @@ int main(int argc, char * argv[])
 
   return 0;
 }
-
-
