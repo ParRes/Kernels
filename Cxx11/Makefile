@@ -110,6 +110,7 @@ clean:
 	-rm -f *-tbb
 	-rm -f *-pstl
 	-rm -f *-rangefor
+	-rm -f *-kokkos
 	-rm -f *-cuda
 
 cleancl:
