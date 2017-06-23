@@ -62,6 +62,17 @@
 
 #include "prk_util.h"
 
+// These empty definitions are required for the compiler to understand the specializations.
+template <int>
+struct Star {
+};
+
+template <int>
+struct Grid {
+};
+
+#include "stencil_tbb.hpp"
+
 std::vector<std::vector<double>> initialize_w(bool star, int radius)
 {
   std::vector<std::vector<double>> weight;
@@ -190,6 +201,22 @@ void ParallelStencil(int n, int tile_size, std::vector<std::vector<double>> & we
                      std::vector<double> & A, std::vector<double> & B)
 {
     Stencil<star, radius> s(n, weights, A, B);
+    const tbb::blocked_range2d<int> r(radius, n-radius, tile_size, radius, n-radius, tile_size);
+    parallel_for(r,s);
+}
+
+template <int radius>
+void ParallelStar(int n, int tile_size, std::vector<double> & A, std::vector<double> & B)
+{
+    Star<radius> s(n, A, B);
+    const tbb::blocked_range2d<int> r(radius, n-radius, tile_size, radius, n-radius, tile_size);
+    parallel_for(r,s);
+}
+
+template <int radius>
+void ParallelGrid(int n, int tile_size, std::vector<double> & A, std::vector<double> & B)
+{
+    Grid<radius> s(n, A, B);
     const tbb::blocked_range2d<int> r(radius, n-radius, tile_size, radius, n-radius, tile_size);
     parallel_for(r,s);
 }

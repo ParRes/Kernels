@@ -1,8 +1,7 @@
 #define RESTRICT __restrict__
 
-template <true, 1>
-struct Stencil {
-  public:
+template <>
+struct Star<1> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -14,20 +13,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Star(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <true, 2>
-struct Stencil {
-  public:
+template <>
+struct Star<2> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -43,20 +38,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Star(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <true, 3>
-struct Stencil {
-  public:
+template <>
+struct Star<3> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -76,20 +67,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Star(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <true, 4>
-struct Stencil {
-  public:
+template <>
+struct Star<4> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -113,20 +100,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Star(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <true, 5>
-struct Stencil {
-  public:
+template <>
+struct Star<5> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -154,20 +137,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Star(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <true, 6>
-struct Stencil {
-  public:
+template <>
+struct Star<6> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -199,20 +178,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Star(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <true, 7>
-struct Stencil {
-  public:
+template <>
+struct Star<7> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -248,20 +223,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Star(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <true, 8>
-struct Stencil {
-  public:
+template <>
+struct Star<8> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -301,20 +272,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Star(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <true, 9>
-struct Stencil {
-  public:
+template <>
+struct Star<9> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -358,20 +325,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Star(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <false, 1>
-struct Stencil {
-  public:
+template <>
+struct Grid<1> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -386,20 +349,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Grid(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <false, 2>
-struct Stencil {
-  public:
+template <>
+struct Grid<2> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -428,20 +387,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Grid(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <false, 3>
-struct Stencil {
-  public:
+template <>
+struct Grid<3> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -492,20 +447,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Grid(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <false, 4>
-struct Stencil {
-  public:
+template <>
+struct Grid<4> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -586,20 +537,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Grid(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <false, 5>
-struct Stencil {
-  public:
+template <>
+struct Grid<5> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -718,20 +665,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Grid(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <false, 6>
-struct Stencil {
-  public:
+template <>
+struct Grid<6> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -896,20 +839,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Grid(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <false, 7>
-struct Stencil {
-  public:
+template <>
+struct Grid<7> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -1128,20 +1067,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Grid(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <false, 8>
-struct Stencil {
-  public:
+template <>
+struct Grid<8> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -1422,20 +1357,16 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Grid(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 
-template <false, 9>
-struct Stencil {
-  public:
+template <>
+struct Grid<9> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -1786,14 +1717,11 @@ struct Stencil {
      }
   }
 
-  Stencil(int n, std::vector<std::vector<double>> & w,
-          std::vector<double> & A, std::vector<double> & B)
-        : n_(n), w_(w), A_(A), B_(B) { }
+    Grid(int n, std::vector<double> & in, std::vector<double> & out)
+        : n(n), in(in), out(out) { }
 
-  private:
-    int n_;
-    std::vector<std::vector<double>> & w_;
-    std::vector<double> & A_;
-    std::vector<double> & B_;
+    int n;
+    std::vector<double> & in;
+    std::vector<double> & out;
 };
 

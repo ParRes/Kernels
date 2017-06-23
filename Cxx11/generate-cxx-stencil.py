@@ -38,11 +38,12 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('    cilk_for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
         src.write('      cilk_for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='tbb'):
-        if pattern=='star': b='true'
-        else: b='false'
-        src.write('template <'+b+', '+str(radius)+'>\n')
-        src.write('struct Stencil {\n')
-        src.write('  public:\n')
+        src.write('template <>\n')
+        if pattern=='star':
+            name='Star'
+        elif pattern=='grid':
+            name='Grid'
+        src.write('struct '+name+'<'+str(radius)+'> {\n')
         src.write('  void operator()( const tbb::blocked_range2d<int>& r ) const {\n')
         src.write('    for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {\n')
         src.write('      for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {\n')
@@ -69,14 +70,12 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('     }\n')
     if (model=='tbb'):
         src.write('  }\n\n')
-        src.write('  Stencil(int n, std::vector<std::vector<double>> & w,\n')
-        src.write('          std::vector<double> & A, std::vector<double> & B)\n')
-        src.write('        : n_(n), w_(w), A_(A), B_(B) { }\n\n')
-        src.write('  private:\n')
-        src.write('    int n_;\n')
-        src.write('    std::vector<std::vector<double>> & w_;\n')
-        src.write('    std::vector<double> & A_;\n')
-        src.write('    std::vector<double> & B_;\n')
+        #src.write('    '+name+'<'+str(radius)+'> (int n, std::vector<double> & in, std::vector<double> & out)\n')
+        src.write('    '+name+'(int n, std::vector<double> & in, std::vector<double> & out)\n')
+        src.write('        : n(n), in(in), out(out) { }\n\n')
+        src.write('    int n;\n')
+        src.write('    std::vector<double> & in;\n')
+        src.write('    std::vector<double> & out;\n')
         src.write('};\n\n')
     else:
         src.write('}\n\n')
