@@ -27,6 +27,7 @@ CILKLAGS = $(CILKFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB
 BOOSTFLAGS = $(BOOSTFLAG) -USE_BOOST
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
+KOKKOSFLAGS = $(KOKKOSFLAG) $(OPENMPFLAG) $(PSTLFLAG) $(BOOSTFLAG)
 
 .PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl
 
@@ -57,6 +58,8 @@ pstl: stencil-vector-pstl transpose-vector-pstl
 
 rangefor: stencil-vector-rangefor transpose-vector-rangefor
 
+kokkos: stencil-kokkos transpose-kokkos
+
 cuda: transpose-cuda
 
 transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
@@ -82,6 +85,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 
 %-rangefor: %-rangefor.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) -o $@
+
+%-kokkos: %-kokkos.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@

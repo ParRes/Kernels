@@ -84,6 +84,10 @@
 # endif
 #endif
 
+#ifdef USE_KOKKOS
+#include <Kokkos_Core.hpp>
+#endif
+
 #define RESTRICT __restrict__
 
 namespace prk {
