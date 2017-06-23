@@ -62,31 +62,7 @@
 
 #include "prk_util.h"
 
-template <int radius, bool star>
-void do_stencil(int n, std::vector<std::vector<double>> weight, std::vector<double> & in, std::vector<double> & out)
-{
-    cilk_for (auto i=radius; i<n-radius; i++) {
-      cilk_for (auto j=radius; j<n-radius; j++) {
-        if (star) {
-          for (auto jj=-radius; jj<=radius; jj++) {
-            out[i*n+j] += weight[radius][radius+jj]*in[i*n+j+jj];
-          }
-          for (auto ii=-radius; ii<0; ii++) {
-            out[i*n+j] += weight[radius+ii][radius]*in[(i+ii)*n+j];
-          }
-          for (auto ii=1; ii<=radius; ii++) {
-            out[i*n+j] += weight[radius+ii][radius]*in[(i+ii)*n+j];
-          }
-        } else {
-          for (auto ii=-radius; ii<=radius; ii++) {
-            for (auto jj=-radius; jj<=radius; jj++) {
-              out[i*n+j] += weight[radius+ii][radius+jj]*in[(i+ii)*n+j+jj];
-            }
-          }
-        }
-      }
-    }
-}
+#include "stencil_cilk.hpp"
 
 int main(int argc, char * argv[])
 {
@@ -205,29 +181,29 @@ int main(int argc, char * argv[])
     // Apply the stencil operator
     if (star) {
         switch (radius) {
-            case 1: do_stencil<1,true>(n, weight, in, out); break;
-            case 2: do_stencil<2,true>(n, weight, in, out); break;
-            case 3: do_stencil<3,true>(n, weight, in, out); break;
-            case 4: do_stencil<4,true>(n, weight, in, out); break;
-            case 5: do_stencil<5,true>(n, weight, in, out); break;
-            case 6: do_stencil<6,true>(n, weight, in, out); break;
-            case 7: do_stencil<7,true>(n, weight, in, out); break;
-            case 8: do_stencil<8,true>(n, weight, in, out); break;
-            case 9: do_stencil<9,true>(n, weight, in, out); break;
-            default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
+            case 1: star1(n, in, out); break;
+            case 2: star2(n, in, out); break;
+            case 3: star3(n, in, out); break;
+            case 4: star4(n, in, out); break;
+            case 5: star5(n, in, out); break;
+            case 6: star6(n, in, out); break;
+            case 7: star7(n, in, out); break;
+            case 8: star8(n, in, out); break;
+            case 9: star9(n, in, out); break;
+            default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
         }
     } else {
         switch (radius) {
-            case 1: do_stencil<1,false>(n, weight, in, out); break;
-            case 2: do_stencil<2,false>(n, weight, in, out); break;
-            case 3: do_stencil<3,false>(n, weight, in, out); break;
-            case 4: do_stencil<4,false>(n, weight, in, out); break;
-            case 5: do_stencil<5,false>(n, weight, in, out); break;
-            case 6: do_stencil<6,false>(n, weight, in, out); break;
-            case 7: do_stencil<7,false>(n, weight, in, out); break;
-            case 8: do_stencil<8,false>(n, weight, in, out); break;
-            case 9: do_stencil<9,false>(n, weight, in, out); break;
-            default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
+            case 1: grid1(n, in, out); break;
+            case 2: grid2(n, in, out); break;
+            case 3: grid3(n, in, out); break;
+            case 4: grid4(n, in, out); break;
+            case 5: grid5(n, in, out); break;
+            case 6: grid6(n, in, out); break;
+            case 7: grid7(n, in, out); break;
+            case 8: grid8(n, in, out); break;
+            case 9: grid9(n, in, out); break;
+            default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
         }
     }
       // add constant to solution to force refresh of neighbor data, if any
