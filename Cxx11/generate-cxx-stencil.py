@@ -73,7 +73,10 @@ def codegen(src,pattern,stencil_size,radius,W,model):
                 if (k<kmax): src.write('\n')
                 if (k>0 and k<kmax): src.write('                      ')
     src.write(';\n')
-    if (model=='stl' or model=='pstl' or model=='kokkos'):
+    if (model=='stl' or model=='pstl'):
+        src.write('       });\n')
+        src.write('     });\n')
+    elif (model=='kokkos'):
         src.write('       }\n')
         src.write('     });\n')
     else:
