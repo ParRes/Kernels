@@ -62,10 +62,9 @@ int main(int argc, char * argv[])
 
   int iterations;
   int order;
-  bool nested_for_each = false;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [<nested_for_each=0/1>]";
+        throw "Usage: <# iterations> <matrix order>";
       }
 
       // number of times to do the transpose
@@ -81,11 +80,6 @@ int main(int argc, char * argv[])
       } else if (order > std::floor(std::sqrt(INT_MAX))) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
-
-      // order of a the matrix
-      if (argc > 3) {
-        nested_for_each = ( 0 != std::atoi(argv[3]) );
-      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -94,7 +88,6 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Nested for_each       = " << ( nested_for_each ? "yes" : "no" ) << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -107,8 +100,7 @@ int main(int argc, char * argv[])
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 
-  auto irange = boost::irange(0,order);
-  auto jrange = boost::irange(0,order);
+  auto range = boost::irange(0,order);
 
   auto trans_time = 0.0;
 
@@ -118,38 +110,19 @@ int main(int argc, char * argv[])
 
     // transpose
 #ifndef USE_PSTL
-    if (nested_for_each) {
-      std::for_each( std::begin(irange), std::end(irange), [&] (int i) {
-        std::for_each( std::begin(jrange), std::end(jrange), [&] (int j) {
-          B[i*order+j] += A[j*order+i];
-          A[j*order+i] += 1.0;
-        });
+    std::for_each( std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( std::begin(range), std::end(range), [&] (int j) {
+        B[i*order+j] += A[j*order+i];
+        A[j*order+i] += 1.0;
       });
-    } else {
-      std::for_each( std::begin(irange), std::end(irange), [&] (int i) {
-        for (auto j : jrange) {
-          B[i*order+j] += A[j*order+i];
-          A[j*order+i] += 1.0;
-        }
-      });
-    }
+    });
 #else
-    if (nested_for_each) {
-      std::for_each( std::execution::par, std::begin(irange), std::end(irange), [&] (int i) {
-        std::for_each( std::execution::unseq, std::begin(jrange), std::end(jrange), [&] (int j) {
-          B[i*order+j] += A[j*order+i];
-          A[j*order+i] += 1.0;
-        });
+    std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+        B[i*order+j] += A[j*order+i];
+        A[j*order+i] += 1.0;
       });
-    } else {
-      //__gnu_parallel::for_each( std::execution::par_unseq, std::begin(irange), std::end(irange),
-      std::for_each( std::execution::par_unseq, std::begin(irange), std::end(irange), [&] (int i) {
-        for (auto j : jrange) {
-          B[i*order+j] += A[j*order+i];
-          A[j*order+i] += 1.0;
-        }
-      });
-    }
+    });
 #endif
   }
   trans_time = prk::wtime() - trans_time;
@@ -161,8 +134,8 @@ int main(int argc, char * argv[])
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  for (auto i : irange) {
-    for (auto j : jrange) {
+  for (auto i : range) {
+    for (auto j : range) {
       const size_t ij = i*order+j;
       const size_t ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
