@@ -62,7 +62,11 @@
 
 #include "prk_util.h"
 
+#ifndef USE_PSTL
+#include "stencil_stl.hpp"
+#else
 #include "stencil_pstl.hpp"
+#endif
 
 int main(int argc, char * argv[])
 {
