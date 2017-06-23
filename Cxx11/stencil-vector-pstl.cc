@@ -221,8 +221,8 @@ int main(int argc, char * argv[])
       std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
 #endif
         in[i*n+j] += 1.0;
-      }
-    }
+      });
+    });
   }
 
   stencil_time = prk::wtime() - stencil_time;
