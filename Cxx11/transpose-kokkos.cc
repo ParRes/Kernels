@@ -56,7 +56,7 @@ int main(int argc, char * argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/Kokkos Stencil execution on 2D grid" << std::endl;
 
-  Kokkos::initialize (argc, argv);
+  Kokkos::initialize(argc, argv);
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -97,36 +97,31 @@ int main(int argc, char * argv[])
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> A;
-  std::vector<double> B;
-  B.resize(order*order,0.0);
-  A.resize(order*order);
-  // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(A.begin(), A.end(), 0.0);
+  // row-major 2D array
+  Kokkos::View<double**, Kokkos::LayoutRight> A("A", order, order);
+  Kokkos::View<double**, Kokkos::LayoutRight> B("B", order, order);
 
-  auto range = boost::irange(0,order);
+  Kokkos::parallel_for (order, KOKKOS_LAMBDA (int i) {
+    Kokkos::parallel_for (order, KOKKOS_LAMBDA (int j) {
+      A(i,j) = static_cast<double>(i*order+j);
+      B(i,j) = 0.0;
+    });
+  });
 
   auto trans_time = 0.0;
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
-
-    // transpose
-#ifndef USE_PSTL
-    std::for_each( std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::begin(range), std::end(range), [&] (int j) {
-        B[i*order+j] += A[j*order+i];
-        A[j*order+i] += 1.0;
+#ifdef KOKKOS_ENABLE_CXX11_DISPATCH_LAMBDA
+    Kokkos::parallel_for (order, KOKKOS_LAMBDA (int i) {
+      Kokkos::parallel_for (order, KOKKOS_LAMBDA (int j) {
+        B(i,j) += A(j,i);
+        A(j,i) += 1.0;
       });
     });
 #else
-    std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
-        B[i*order+j] += A[j*order+i];
-        A[j*order+i] += 1.0;
-      });
-    });
+#error KOKKOS_ENABLE_CXX11_DISPATCH_LAMBDA not defined
 #endif
   }
   trans_time = prk::wtime() - trans_time;
@@ -138,12 +133,12 @@ int main(int argc, char * argv[])
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
+  auto range = boost::irange(0,order);
   for (auto i : range) {
     for (auto j : range) {
       const size_t ij = i*order+j;
-      const size_t ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      abserr += std::fabs(B(j,i) - reference);
     }
   }
 
@@ -164,7 +159,7 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  Kokkos::finalize ();
+  Kokkos::finalize();
 
   return 0;
 }
