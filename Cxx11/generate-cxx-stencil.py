@@ -39,10 +39,9 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('    cilk_for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
         src.write('      cilk_for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='kokkos'):
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
-        src.write('    std::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
-        src.write('      std::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
+        src.write('void '+pattern+str(radius)+'(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {\n')
+        src.write('    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::OpenMP>(0,n),[&] (int i) {\n')
+        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='tbb'):
         src.write('template <>\n')
         if pattern=='star':
@@ -57,19 +56,25 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
-    src.write('        out[i*n+j] += ')
+    if (model=='kokkos'):
+        src.write('          out(i,j) += ')
+    else:
+        src.write('          out[i*n+j] += ')
     k = 0
     kmax = stencil_size-1;
     for j in range(0,2*radius+1):
         for i in range(0,2*radius+1):
             if ( W[j][i] != 0.0):
                 k+=1
-                src.write('+in[(i+'+str(j-radius)+')*n+(j+'+str(i-radius)+')] * '+str(W[j][i]))
+                if (model=='kokkos'):
+                    src.write('+in(i+'+str(j-radius)+',j+'+str(i-radius)+') * '+str(W[j][i]))
+                else:
+                    src.write('+in[(i+'+str(j-radius)+')*n+(j+'+str(i-radius)+')] * '+str(W[j][i]))
                 if (k<kmax): src.write('\n')
                 if (k>0 and k<kmax): src.write('                      ')
     src.write(';\n')
     if (model=='stl' or model=='pstl' or model=='kokkos'):
-        src.write('       });\n')
+        src.write('       }\n')
         src.write('     });\n')
     else:
         src.write('       }\n')

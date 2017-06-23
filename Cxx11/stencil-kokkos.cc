@@ -131,54 +131,28 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<std::vector<double>> weight;
-  weight.resize(2*radius+1);
-  for (auto i=0; i<2*radius+1; i++) {
-    weight[i].resize(2*radius+1, 0.0);
-  }
+  // row-major 2D array
+  Kokkos::View<double**, Kokkos::LayoutRight> in("in", n, n);
+  Kokkos::View<double**, Kokkos::LayoutRight> out("out", n, n);
 
-  // fill the stencil weights to reflect a discrete divergence operator
-  if (star) {
-    for (auto ii=1; ii<=radius; ii++) {
-      weight[radius][radius+ii] = weight[radius+ii][radius] = +1./(2*ii*radius);
-      weight[radius][radius-ii] = weight[radius-ii][radius] = -1./(2*ii*radius);
-    }
-  } else {
-    for (auto jj=1; jj<=radius; jj++) {
-      for (auto ii=-jj+1; ii<jj; ii++) {
-        weight[radius+ii][radius+jj] = +1./(4*jj*(2*jj-1)*radius);
-        weight[radius+ii][radius-jj] = -1./(4*jj*(2*jj-1)*radius);
-        weight[radius+jj][radius+ii] = +1./(4*jj*(2*jj-1)*radius);
-        weight[radius-jj][radius+ii] = -1./(4*jj*(2*jj-1)*radius);
+  try {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::OpenMP>(0,n),[&] (int i) {
+      for (auto j=0; j<n; ++j){
+          in(i,j) = static_cast<double>(i+j);
+          out(i,j) = 0.0;
       }
-      weight[radius+jj][radius+jj]   = +1./(4*jj*radius);
-      weight[radius-jj][radius-jj]   = -1./(4*jj*radius);
-    }
+    });
   }
-
-  // interior of grid with respect to stencil
-  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
-
-  std::vector<double> in;
-  std::vector<double> out;
-  in.resize(n*n);
-  out.resize(n*n);
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return 1;
+  }
+  catch (std::exception const & e) {
+    std::cout << e.what() << std::endl;
+    return 1;
+  }
 
   auto stencil_time = 0.0;
-
-  // initialize the input and output arrays
-  auto range = boost::irange(0,n);
-#ifndef USE_PSTL
-  std::for_each( std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( std::begin(range), std::end(range), [&] (int j) {
-#else
-  std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
-#endif
-      in[i*n+j] = static_cast<double>(i+j);
-      out[i*n+j] = 0.0;
-    });
-  });
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -213,15 +187,10 @@ int main(int argc, char * argv[])
         }
     }
     // add constant to solution to force refresh of neighbor data, if any
-#ifndef USE_PSTL
-    std::for_each( std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::begin(range), std::end(range), [&] (int j) {
-#else
-    std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
-#endif
-        in[i*n+j] += 1.0;
-      });
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::OpenMP>(0,n),[&] (int i) {
+      for (auto j=0; j<n; ++j){
+        in(i,j) += 1.0;
+      }
     });
   }
 
@@ -231,12 +200,13 @@ int main(int argc, char * argv[])
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
+  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
   // compute L1 norm in parallel
   double norm = 0.0;
   auto inside = boost::irange(radius,n-radius);
   for (auto i : inside) {
     for (auto j : inside) {
-      norm += std::fabs(out[i*n+j]);
+      norm += std::fabs(out(i,j));
     }
   }
   norm /= active_points;

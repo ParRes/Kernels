@@ -5,7 +5,7 @@ struct Star<1> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-1)*n+(j+0)] * -0.5
+          out[i*n+j] += +in[(i+-1)*n+(j+0)] * -0.5
                       +in[(i+0)*n+(j+-1)] * -0.5
                       +in[(i+0)*n+(j+1)] * 0.5
                       +in[(i+1)*n+(j+0)] * 0.5;
@@ -26,7 +26,7 @@ struct Star<2> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-2)*n+(j+0)] * -0.125
+          out[i*n+j] += +in[(i+-2)*n+(j+0)] * -0.125
                       +in[(i+-1)*n+(j+0)] * -0.25
                       +in[(i+0)*n+(j+-2)] * -0.125
                       +in[(i+0)*n+(j+-1)] * -0.25
@@ -51,7 +51,7 @@ struct Star<3> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-3)*n+(j+0)] * -0.0555555555556
+          out[i*n+j] += +in[(i+-3)*n+(j+0)] * -0.0555555555556
                       +in[(i+-2)*n+(j+0)] * -0.0833333333333
                       +in[(i+-1)*n+(j+0)] * -0.166666666667
                       +in[(i+0)*n+(j+-3)] * -0.0555555555556
@@ -80,7 +80,7 @@ struct Star<4> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-4)*n+(j+0)] * -0.03125
+          out[i*n+j] += +in[(i+-4)*n+(j+0)] * -0.03125
                       +in[(i+-3)*n+(j+0)] * -0.0416666666667
                       +in[(i+-2)*n+(j+0)] * -0.0625
                       +in[(i+-1)*n+(j+0)] * -0.125
@@ -113,7 +113,7 @@ struct Star<5> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-5)*n+(j+0)] * -0.02
+          out[i*n+j] += +in[(i+-5)*n+(j+0)] * -0.02
                       +in[(i+-4)*n+(j+0)] * -0.025
                       +in[(i+-3)*n+(j+0)] * -0.0333333333333
                       +in[(i+-2)*n+(j+0)] * -0.05
@@ -150,7 +150,7 @@ struct Star<6> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-6)*n+(j+0)] * -0.0138888888889
+          out[i*n+j] += +in[(i+-6)*n+(j+0)] * -0.0138888888889
                       +in[(i+-5)*n+(j+0)] * -0.0166666666667
                       +in[(i+-4)*n+(j+0)] * -0.0208333333333
                       +in[(i+-3)*n+(j+0)] * -0.0277777777778
@@ -191,7 +191,7 @@ struct Star<7> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-7)*n+(j+0)] * -0.0102040816327
+          out[i*n+j] += +in[(i+-7)*n+(j+0)] * -0.0102040816327
                       +in[(i+-6)*n+(j+0)] * -0.0119047619048
                       +in[(i+-5)*n+(j+0)] * -0.0142857142857
                       +in[(i+-4)*n+(j+0)] * -0.0178571428571
@@ -236,7 +236,7 @@ struct Star<8> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-8)*n+(j+0)] * -0.0078125
+          out[i*n+j] += +in[(i+-8)*n+(j+0)] * -0.0078125
                       +in[(i+-7)*n+(j+0)] * -0.00892857142857
                       +in[(i+-6)*n+(j+0)] * -0.0104166666667
                       +in[(i+-5)*n+(j+0)] * -0.0125
@@ -285,7 +285,7 @@ struct Star<9> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-9)*n+(j+0)] * -0.00617283950617
+          out[i*n+j] += +in[(i+-9)*n+(j+0)] * -0.00617283950617
                       +in[(i+-8)*n+(j+0)] * -0.00694444444444
                       +in[(i+-7)*n+(j+0)] * -0.00793650793651
                       +in[(i+-6)*n+(j+0)] * -0.00925925925926
@@ -338,7 +338,7 @@ struct Grid<1> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-1)*n+(j+-1)] * -0.25
+          out[i*n+j] += +in[(i+-1)*n+(j+-1)] * -0.25
                       +in[(i+-1)*n+(j+0)] * -0.25
                       +in[(i+0)*n+(j+-1)] * -0.25
                       +in[(i+0)*n+(j+1)] * 0.25
@@ -362,7 +362,7 @@ struct Grid<2> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-2)*n+(j+-2)] * -0.0625
+          out[i*n+j] += +in[(i+-2)*n+(j+-2)] * -0.0625
                       +in[(i+-2)*n+(j+-1)] * -0.0208333333333
                       +in[(i+-2)*n+(j+0)] * -0.0208333333333
                       +in[(i+-2)*n+(j+1)] * -0.0208333333333
@@ -400,7 +400,7 @@ struct Grid<3> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-3)*n+(j+-3)] * -0.0277777777778
+          out[i*n+j] += +in[(i+-3)*n+(j+-3)] * -0.0277777777778
                       +in[(i+-3)*n+(j+-2)] * -0.00555555555556
                       +in[(i+-3)*n+(j+-1)] * -0.00555555555556
                       +in[(i+-3)*n+(j+0)] * -0.00555555555556
@@ -460,7 +460,7 @@ struct Grid<4> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-4)*n+(j+-4)] * -0.015625
+          out[i*n+j] += +in[(i+-4)*n+(j+-4)] * -0.015625
                       +in[(i+-4)*n+(j+-3)] * -0.00223214285714
                       +in[(i+-4)*n+(j+-2)] * -0.00223214285714
                       +in[(i+-4)*n+(j+-1)] * -0.00223214285714
@@ -550,7 +550,7 @@ struct Grid<5> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-5)*n+(j+-5)] * -0.01
+          out[i*n+j] += +in[(i+-5)*n+(j+-5)] * -0.01
                       +in[(i+-5)*n+(j+-4)] * -0.00111111111111
                       +in[(i+-5)*n+(j+-3)] * -0.00111111111111
                       +in[(i+-5)*n+(j+-2)] * -0.00111111111111
@@ -678,7 +678,7 @@ struct Grid<6> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-6)*n+(j+-6)] * -0.00694444444444
+          out[i*n+j] += +in[(i+-6)*n+(j+-6)] * -0.00694444444444
                       +in[(i+-6)*n+(j+-5)] * -0.000631313131313
                       +in[(i+-6)*n+(j+-4)] * -0.000631313131313
                       +in[(i+-6)*n+(j+-3)] * -0.000631313131313
@@ -852,7 +852,7 @@ struct Grid<7> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-7)*n+(j+-7)] * -0.00510204081633
+          out[i*n+j] += +in[(i+-7)*n+(j+-7)] * -0.00510204081633
                       +in[(i+-7)*n+(j+-6)] * -0.000392464678179
                       +in[(i+-7)*n+(j+-5)] * -0.000392464678179
                       +in[(i+-7)*n+(j+-4)] * -0.000392464678179
@@ -1080,7 +1080,7 @@ struct Grid<8> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-8)*n+(j+-8)] * -0.00390625
+          out[i*n+j] += +in[(i+-8)*n+(j+-8)] * -0.00390625
                       +in[(i+-8)*n+(j+-7)] * -0.000260416666667
                       +in[(i+-8)*n+(j+-6)] * -0.000260416666667
                       +in[(i+-8)*n+(j+-5)] * -0.000260416666667
@@ -1370,7 +1370,7 @@ struct Grid<9> {
   void operator()( const tbb::blocked_range2d<int>& r ) const {
     for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-        out[i*n+j] += +in[(i+-9)*n+(j+-9)] * -0.00308641975309
+          out[i*n+j] += +in[(i+-9)*n+(j+-9)] * -0.00308641975309
                       +in[(i+-9)*n+(j+-8)] * -0.000181554103123
                       +in[(i+-9)*n+(j+-7)] * -0.000181554103123
                       +in[(i+-9)*n+(j+-6)] * -0.000181554103123
