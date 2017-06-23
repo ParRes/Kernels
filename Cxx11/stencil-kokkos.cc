@@ -136,7 +136,7 @@ int main(int argc, char * argv[])
   Kokkos::View<double**, Kokkos::LayoutRight> out("out", n, n);
 
   try {
-    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::OpenMP>(0,n),[&] (int i) {
+    Kokkos::parallel_for ( n,[&] (int i) {
       for (auto j=0; j<n; ++j){
           in(i,j) = static_cast<double>(i+j);
           out(i,j) = 0.0;
@@ -187,7 +187,7 @@ int main(int argc, char * argv[])
         }
     }
     // add constant to solution to force refresh of neighbor data, if any
-    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::OpenMP>(0,n),[&] (int i) {
+    Kokkos::parallel_for ( n,[&] (int i) {
       for (auto j=0; j<n; ++j){
         in(i,j) += 1.0;
       }

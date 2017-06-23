@@ -40,7 +40,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      cilk_for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='kokkos'):
         src.write('void '+pattern+str(radius)+'(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {\n')
-        src.write('    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::OpenMP>(0,n),[&] (int i) {\n')
+        src.write('    Kokkos::parallel_for ( n,[&] (int i) {\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='tbb'):
         src.write('template <>\n')
