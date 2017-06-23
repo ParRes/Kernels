@@ -54,7 +54,9 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++17 Parallel STL Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/Kokkos Stencil execution on 2D grid" << std::endl;
+
+  Kokkos::initialize (argc, argv);
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -88,6 +90,8 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
+
+  std::cout << "Kokkos execution space: " << typeid (Kokkos::DefaultExecutionSpace).name () << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -159,6 +163,8 @@ int main(int argc, char * argv[])
               << " exceeds threshold " << epsilon << std::endl;
     return 1;
   }
+
+  Kokkos::finalize ();
 
   return 0;
 }

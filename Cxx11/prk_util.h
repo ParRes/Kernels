@@ -85,6 +85,7 @@
 #endif
 
 #ifdef USE_KOKKOS
+#include <typeinfo>
 #include <Kokkos_Core.hpp>
 #endif
 

@@ -62,16 +62,14 @@
 
 #include "prk_util.h"
 
-#ifndef USE_PSTL
-#include "stencil_stl.hpp"
-#else
-#include "stencil_pstl.hpp"
-#endif
+#include "stencil_kokkos.hpp"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++17/Parallel STL Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/Kokkos Stencil execution on 2D grid" << std::endl;
+
+  Kokkos::initialize (argc, argv);
 
   //////////////////////////////////////////////////////////////////////
   // process and test input parameters
@@ -126,6 +124,8 @@ int main(int argc, char * argv[])
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
   std::cout << "Compact representation of stencil loop body" << std::endl;
+
+  std::cout << "Kokkos execution space: " << typeid (Kokkos::DefaultExecutionSpace).name () << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -260,6 +260,8 @@ int main(int argc, char * argv[])
     std::cout << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   }
+
+  Kokkos::finalize ();
 
   return 0;
 }
