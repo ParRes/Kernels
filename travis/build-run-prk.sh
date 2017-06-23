@@ -117,6 +117,7 @@ case "$PRK_TARGET" in
             exit 9
         fi
         ${PRK_CXX} -v
+        # Need to increment this for PSTL
         echo "CXX=${PRK_CXX} -std=c++11" >> common/make.defs
 
         # C++11 without external parallelism
@@ -129,6 +130,36 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/p2p-vector         10 1024 1024 100 100
         $PRK_TARGET_PATH/stencil-vector     10 1000
         $PRK_TARGET_PATH/transpose-vector   10 1024 32
+        #echo "Test stencil code generator"
+        #for s in star grid ; do
+        #    for r in 1 2 3 4 5 6 7 8 9 ; do
+        #        ./stencil-vector 10 200 $s $r
+        #    done
+        #done
+
+        # C++11 with rangefor
+        echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
+        make -C $PRK_TARGET_PATH rangefor
+        $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
+        $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
+        #echo "Test stencil code generator"
+        #for s in star grid ; do
+        #    for r in 1 2 3 4 5 6 7 8 9 ; do
+        #        ./stencil-vector-rangefor 10 200 $s $r
+        #    done
+        #done
+
+        # C++11 with STL (C++17 PSTL disabled)
+        echo "PSTLFLAG=" >> common/make.defs
+        make -C $PRK_TARGET_PATH pstl
+        $PRK_TARGET_PATH/stencil-vector-pstl     10 1000
+        $PRK_TARGET_PATH/transpose-vector-pstl   10 1024 32
+        #echo "Test stencil code generator"
+        #for s in star grid ; do
+        #    for r in 1 2 3 4 5 6 7 8 9 ; do
+        #        ./stencil-vector-pstl 10 200 $s $r
+        #    done
+        #done
 
         # C++11 with OpenMP
         export OMP_NUM_THREADS=2
@@ -141,6 +172,12 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/p2p-wavefront-openmp             10 1024
                 $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
                 $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
+                #echo "Test stencil code generator"
+                #for s in star grid ; do
+                #    for r in 1 2 3 4 5 6 7 8 9 ; do
+                #        ./stencil-vector-openmp 10 200 $s $r
+                #    done
+                #done
                 # Offload
                 echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
                 make -C $PRK_TARGET_PATH target
@@ -177,10 +214,16 @@ case "$PRK_TARGET" in
                     ;;
             esac
             # Only build transpose because stencil is wrong in at least one way (https://travis-ci.org/jeffhammond/PRK/jobs/243395309)
-            make -C $PRK_TARGET_PATH transpose-vector-tbb
+            make -C $PRK_TARGET_PATH stencil-vector-tbb transpose-vector-tbb
             #$PRK_TARGET_PATH/p2p-vector-tbb     10 1024 1024 64 64
-            #$PRK_TARGET_PATH/stencil-vector-tbb     10 1000
+            $PRK_TARGET_PATH/stencil-vector-tbb     10 1000
             $PRK_TARGET_PATH/transpose-vector-tbb   10 1024 32
+            #echo "Test stencil code generator"
+            #for s in star grid ; do
+            #    for r in 1 2 3 4 5 6 7 8 9 ; do
+            #        ./stencil-vector-tbb 10 200 32 $s $r
+            #    done
+            #done
         fi
 
         # C++11 with OpenCL
@@ -191,7 +234,7 @@ case "$PRK_TARGET" in
             cd $PRK_TARGET_PATH
             ./stencil-opencl     10 1000
             ./transpose-opencl   10 1024 32
-            echo "Test stencil code generator"
+            #echo "Test stencil code generator"
             for s in star grid ; do
                 for r in 1 2 3 4 5 6 7 8 9 ; do
                     ./stencil-opencl 10 200 $s $r

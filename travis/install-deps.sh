@@ -41,6 +41,10 @@ case "$PRK_TARGET" in
             sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
         fi
         sh ./travis/install-tbb.sh $TRAVIS_ROOT
+        # Boost is whitelisted and obtained from package manager
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            sh ./travis/install-boost.sh $TRAVIS_ROOT
+        fi
         ;;
     allfortran*)
         echo "Fortran"
