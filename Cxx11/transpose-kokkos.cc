@@ -101,29 +101,32 @@ int main(int argc, char * argv[])
   Kokkos::View<double**, Kokkos::LayoutRight> A("A", order, order);
   Kokkos::View<double**, Kokkos::LayoutRight> B("B", order, order);
 
-  Kokkos::parallel_for (order, KOKKOS_LAMBDA (int i) {
-    Kokkos::parallel_for (order, KOKKOS_LAMBDA (int j) {
-      A(i,j) = static_cast<double>(i*order+j);
-      B(i,j) = 0.0;
+  try {
+    Kokkos::parallel_for (order, KOKKOS_LAMBDA (int i) {
+      Kokkos::parallel_for (order, KOKKOS_LAMBDA (int j) {
+        A(i,j) = static_cast<double>(i*order+j);
+        B(i,j) = 0.0;
+      });
     });
-  });
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return 1;
+  }
 
   auto trans_time = 0.0;
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
-#ifdef KOKKOS_ENABLE_CXX11_DISPATCH_LAMBDA
     Kokkos::parallel_for (order, KOKKOS_LAMBDA (int i) {
       Kokkos::parallel_for (order, KOKKOS_LAMBDA (int j) {
         B(i,j) += A(j,i);
         A(j,i) += 1.0;
       });
     });
-#else
-#error KOKKOS_ENABLE_CXX11_DISPATCH_LAMBDA not defined
-#endif
   }
+
   trans_time = prk::wtime() - trans_time;
 
   //////////////////////////////////////////////////////////////////////

@@ -48,7 +48,8 @@ TBBFLAG=-tbb
 BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
 #BOOSTFLAG=-DUSE_BOOST
 PSTLFLAG=-DUSE_PSTL -qopenmp -tbb
-KOKKOSFLAG=-DUSE_KOKKOS -I/opt/kokkos/include -L/opt/kokkos/lib -lkokkos
+KOKKOSDIR=/opt/kokkos/intel/openmp
+KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos -qopenmp
 #
 # CUDA flags
 #

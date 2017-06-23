@@ -36,3 +36,11 @@ OPENCLFLAG=-framework OpenCL
 # Linux
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+#
+# Parallel STL, Boost, etc.
+#
+BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
+#BOOSTFLAG=-DUSE_BOOST
+PSTLFLAG=#-DUSE_PSTL
+KOKKOSDIR=/opt/kokkos/clang/serial
+KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos
