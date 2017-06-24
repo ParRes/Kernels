@@ -133,7 +133,7 @@ case "$PRK_TARGET" in
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 6 7 8 9 ; do
-                ./stencil-vector 10 200 $s $r
+                $PRK_TARGET_PATH/stencil-vector 10 200 $s $r
             done
         done
 
@@ -145,7 +145,7 @@ case "$PRK_TARGET" in
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 6 7 8 9 ; do
-                ./stencil-vector-rangefor 10 200 $s $r
+                $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 $s $r
             done
         done
 
@@ -157,7 +157,7 @@ case "$PRK_TARGET" in
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 6 7 8 9 ; do
-                ./stencil-vector-pstl 10 200 $s $r
+                $PRK_TARGET_PATH/stencil-vector-pstl 10 200 $s $r
             done
         done
 
@@ -175,7 +175,7 @@ case "$PRK_TARGET" in
                 #echo "Test stencil code generator"
                 for s in star grid ; do
                     for r in 1 2 3 4 5 6 7 8 9 ; do
-                        ./stencil-vector-openmp 10 200 $s $r
+                        $PRK_TARGET_PATH/stencil-vector-openmp 10 200 $s $r
                     done
                 done
                 # Offload
@@ -192,6 +192,12 @@ case "$PRK_TARGET" in
                 #$PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
                 #$PRK_TARGET_PATH/stencil-vector-openmp            10 1000
                 #$PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
+                #echo "Test stencil code generator"
+                #for s in star grid ; do
+                #    for r in 1 2 3 4 5 6 7 8 9 ; do
+                #        $PRK_TARGET_PATH/stencil-vector-openmp 10 200 $s $r
+                #    done
+                #done
                 ;;
             *)
                 echo "Figure out your OpenMP flags..."
@@ -221,7 +227,7 @@ case "$PRK_TARGET" in
             #echo "Test stencil code generator"
             for s in star grid ; do
                 for r in 1 2 3 4 5 6 7 8 9 ; do
-                    ./stencil-vector-tbb 10 200 32 $s $r
+                    $PRK_TARGET_PATH/stencil-vector-tbb 10 200 32 $s $r
                 done
             done
         fi
