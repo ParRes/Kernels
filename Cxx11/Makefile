@@ -29,7 +29,7 @@ BOOSTFLAGS = $(BOOSTFLAG)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(BOOSTFLAGS)
 
-.PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl
+.PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl rangefor kokkos cuda
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(CXX),icpc)
