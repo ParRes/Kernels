@@ -28,7 +28,7 @@ TBBFLAGS = $(TBBFLAG) -DUSE_TBB
 BOOSTFLAGS = $(BOOSTFLAG) -USE_BOOST
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 
-.PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl
+.PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl rangefor cuda
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(CXX),icpc)
