@@ -41,7 +41,8 @@ CILKFLAG=-fcilkplus
 #
 # TBB
 #
-TBBFLAG=
+TBBDIR=/usr/local/Cellar/tbb/2017_U7
+TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
