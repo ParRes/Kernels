@@ -152,8 +152,8 @@ int main(int argc, char * argv[])
 
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
-  RAJA::ReduceSum<RAJA::seq_reduce, double> abserr(0.0);
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>>>
+  RAJA::ReduceSum<RAJA::omp_reduce, double> abserr(0.0);
+  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::seq_exec>>>
           ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
             [&](RAJA::Index_type i, RAJA::Index_type j) {
       const size_t ij = i*order+j;
