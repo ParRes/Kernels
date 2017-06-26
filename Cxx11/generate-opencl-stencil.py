@@ -5,7 +5,7 @@ import fileinput
 import string
 import os
 
-def main():
+def main(precision):
 
     if len(sys.argv) < 3:
         print('argument count = ', len(sys.argv))
@@ -50,8 +50,14 @@ def main():
             W[r+j][r+j]    = +1./(4*j*r)
             W[r-j][r-j]    = -1./(4*j*r)
 
-    src = open(pattern+str(r)+'.cl','w')
-    src.write('__kernel void '+pattern+str(r)+'(const int n, __global const float * in, __global float * out)\n')
+    if (precision==32):
+        t = 'float'
+        src = open(pattern+str(r)+'.cl','w')
+    else:
+        t = 'double'
+        src = open(pattern+str(r)+'.cl','a')
+        src.write('#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n\n')
+    src.write('__kernel void '+pattern+str(r)+'_'+str(precision)+'(const int n, __global const '+t+' * in, __global '+t+' * out)\n')
     src.write('{\n')
     src.write('    const int i = get_global_id(0);\n')
     src.write('    const int j = get_global_id(1);\n')
@@ -64,13 +70,16 @@ def main():
             if ( W[j][i] != 0.0):
                 k+=1
                 #print(j-r,i-r,W[j][i])
-                src.write('+in[(i+'+str(j-r)+')*n+(j+'+str(i-r)+')] * '+str(W[j][i])+'f')
+                src.write('+in[(i+'+str(j-r)+')*n+(j+'+str(i-r)+')] * '+str(W[j][i]))
+                if (precision==32):
+                    src.write('f') # make W coefficient a float
                 if (k<kmax): src.write('\n')
                 if (k>0 and k<kmax): src.write('                      ')
     src.write(';\n')
     src.write('    }\n')
-    src.write('}\n')
+    src.write('}\n\n')
 
 if __name__ == '__main__':
-    main()
+    main(32)
+    main(64)
 

@@ -69,6 +69,21 @@
 #include <tbb/blocked_range.h>
 #endif
 
+#ifdef USE_BOOST
+#include <boost/range/irange.hpp>
+#endif
+
+#ifdef USE_PSTL
+# if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
+#  include <pstl/execution>
+#  include <pstl/algorithm>
+#  include <pstl/numeric>
+#  include <pstl/memory>
+# else
+#  include <parallel/algorithm>
+# endif
+#endif
+
 #define RESTRICT __restrict__
 
 namespace prk {

@@ -62,34 +62,16 @@
 
 #include "prk_util.h"
 
-std::vector<std::vector<double>> initialize_w(bool star, int radius)
-{
-  std::vector<std::vector<double>> weight;
-  weight.resize(2*radius+1);
-  for (auto i=0; i<2*radius+1; i++) {
-    weight[i].resize(2*radius+1, 0.0);
-  }
+// These empty definitions are required for the compiler to understand the specializations.
+template <int>
+struct Star {
+};
 
-  // fill the stencil weights to reflect a discrete divergence operator
-  if (star) {
-    for (auto ii=1; ii<=radius; ii++) {
-      weight[radius][radius+ii] = weight[radius+ii][radius] = +1./(2*ii*radius);
-      weight[radius][radius-ii] = weight[radius-ii][radius] = -1./(2*ii*radius);
-    }
-  } else {
-    for (auto jj=1; jj<=radius; jj++) {
-      for (auto ii=-jj+1; ii<jj; ii++) {
-        weight[radius+ii][radius+jj] = +1./(4*jj*(2*jj-1)*radius);
-        weight[radius+ii][radius-jj] = -1./(4*jj*(2*jj-1)*radius);
-        weight[radius+jj][radius+ii] = +1./(4*jj*(2*jj-1)*radius);
-        weight[radius-jj][radius+ii] = -1./(4*jj*(2*jj-1)*radius);
-      }
-      weight[radius+jj][radius+jj]   = +1./(4*jj*radius);
-      weight[radius-jj][radius-jj]   = -1./(4*jj*radius);
-    }
-  }
-  return weight;
-}
+template <int>
+struct Grid {
+};
+
+#include "stencil_tbb.hpp"
 
 struct Initialize
 {
@@ -131,46 +113,6 @@ struct Add
 
 };
 
-template <bool s_, int r_>
-struct Stencil
-{
-    public:
-        void operator()( const tbb::blocked_range2d<int>& r ) const {
-            for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                    if (s_) {
-                        for (auto jj=-r_; jj<=r_; jj++) {
-                            B_[i*n_+j] += w_[r_][r_+jj]*A_[i*n_+j+jj];
-                        }
-                        for (auto ii=-r_; ii<0; ii++) {
-                            B_[i*n_+j] += w_[r_+ii][r_]*A_[(i+ii)*n_+j];
-                        }
-                        for (auto ii=1; ii<=r_; ii++) {
-                            B_[i*n_+j] += w_[r_+ii][r_]*A_[(i+ii)*n_+j];
-                        }
-                    } else {
-                        for (auto ii=-r_; ii<=r_; ii++) {
-                            for (auto jj=-r_; jj<=r_; jj++) {
-                                B_[i*n_+j] += w_[r_+ii][r_+jj]*A_[(i+ii)*n_+j+jj];
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Stencil(int n, std::vector<std::vector<double>> & w,
-                std::vector<double> & A, std::vector<double> & B)
-              : n_(n), w_(w), A_(A), B_(B) { }
-
-    private:
-        int n_;
-        std::vector<std::vector<double>> & w_;
-        std::vector<double> & A_;
-        std::vector<double> & B_;
-
-};
-
 void ParallelInitialize(int n, int tile_size, std::vector<double> & A, std::vector<double> & B)
 {
     Initialize i(n, A, B);
@@ -185,11 +127,18 @@ void ParallelAdd(int n, int tile_size, std::vector<double> & A)
     parallel_for(r,a);
 }
 
-template <bool star, int radius>
-void ParallelStencil(int n, int tile_size, std::vector<std::vector<double>> & weights,
-                     std::vector<double> & A, std::vector<double> & B)
+template <int radius>
+void ParallelStar(int n, int tile_size, std::vector<double> & A, std::vector<double> & B)
 {
-    Stencil<star, radius> s(n, weights, A, B);
+    Star<radius> s(n, A, B);
+    const tbb::blocked_range2d<int> r(radius, n-radius, tile_size, radius, n-radius, tile_size);
+    parallel_for(r,s);
+}
+
+template <int radius>
+void ParallelGrid(int n, int tile_size, std::vector<double> & A, std::vector<double> & B)
+{
+    Grid<radius> s(n, A, B);
     const tbb::blocked_range2d<int> r(radius, n-radius, tile_size, radius, n-radius, tile_size);
     parallel_for(r,s);
 }
@@ -267,7 +216,6 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<std::vector<double>> weight = initialize_w(star, radius);
 
   std::vector<double> A;
   std::vector<double> B;
@@ -285,28 +233,28 @@ int main(int argc, char * argv[])
     // Apply the stencil operator
     if (star) {
         switch (radius) {
-            case 1: ParallelStencil<1,true>(n, tile_size, weight, A, B); break;
-            case 2: ParallelStencil<2,true>(n, tile_size, weight, A, B); break;
-            case 3: ParallelStencil<3,true>(n, tile_size, weight, A, B); break;
-            case 4: ParallelStencil<4,true>(n, tile_size, weight, A, B); break;
-            case 5: ParallelStencil<5,true>(n, tile_size, weight, A, B); break;
-            case 6: ParallelStencil<6,true>(n, tile_size, weight, A, B); break;
-            case 7: ParallelStencil<7,true>(n, tile_size, weight, A, B); break;
-            case 8: ParallelStencil<8,true>(n, tile_size, weight, A, B); break;
-            case 9: ParallelStencil<9,true>(n, tile_size, weight, A, B); break;
+            case 1: ParallelStar<1>(n, tile_size, A, B); break;
+            case 2: ParallelStar<2>(n, tile_size, A, B); break;
+            case 3: ParallelStar<3>(n, tile_size, A, B); break;
+            case 4: ParallelStar<4>(n, tile_size, A, B); break;
+            case 5: ParallelStar<5>(n, tile_size, A, B); break;
+            case 6: ParallelStar<6>(n, tile_size, A, B); break;
+            case 7: ParallelStar<7>(n, tile_size, A, B); break;
+            case 8: ParallelStar<8>(n, tile_size, A, B); break;
+            case 9: ParallelStar<9>(n, tile_size, A, B); break;
             default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
         }
     } else {
         switch (radius) {
-            case 1: ParallelStencil<1,false>(n, tile_size, weight, A, B); break;
-            case 2: ParallelStencil<2,false>(n, tile_size, weight, A, B); break;
-            case 3: ParallelStencil<3,false>(n, tile_size, weight, A, B); break;
-            case 4: ParallelStencil<4,false>(n, tile_size, weight, A, B); break;
-            case 5: ParallelStencil<5,false>(n, tile_size, weight, A, B); break;
-            case 6: ParallelStencil<6,false>(n, tile_size, weight, A, B); break;
-            case 7: ParallelStencil<7,false>(n, tile_size, weight, A, B); break;
-            case 8: ParallelStencil<8,false>(n, tile_size, weight, A, B); break;
-            case 9: ParallelStencil<9,false>(n, tile_size, weight, A, B); break;
+            case 1: ParallelGrid<1>(n, tile_size, A, B); break;
+            case 2: ParallelGrid<2>(n, tile_size, A, B); break;
+            case 3: ParallelGrid<3>(n, tile_size, A, B); break;
+            case 4: ParallelGrid<4>(n, tile_size, A, B); break;
+            case 5: ParallelGrid<5>(n, tile_size, A, B); break;
+            case 6: ParallelGrid<6>(n, tile_size, A, B); break;
+            case 7: ParallelGrid<7>(n, tile_size, A, B); break;
+            case 8: ParallelGrid<8>(n, tile_size, A, B); break;
+            case 9: ParallelGrid<9>(n, tile_size, A, B); break;
             default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
         }
     }

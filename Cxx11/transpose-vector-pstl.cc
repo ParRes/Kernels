@@ -39,10 +39,7 @@
 /// USAGE:   Program input is the matrix order and the number of times to
 ///          repeat the operation:
 ///
-///          transpose <matrix_size> <# iterations> [tile size]
-///
-///          An optional parameter specifies the tile size used to divide the
-///          individual matrix blocks for improved cache and TLB performance.
+///          transpose <matrix_size> <# iterations>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          transpose worked and timing statistics.
@@ -56,19 +53,18 @@
 
 int main(int argc, char * argv[])
 {
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "C++17 Parallel STL Matrix transpose: B = A^T" << std::endl;
+
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/Cilk Matrix transpose: B = A^T" << std::endl;
-
   int iterations;
-  size_t order;
-  size_t tile_size;
+  int order;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [tile size]";
+        throw "Usage: <# iterations> <matrix order>";
       }
 
       // number of times to do the transpose
@@ -78,16 +74,12 @@ int main(int argc, char * argv[])
       }
 
       // order of a the matrix
-      order = std::atol(argv[2]);
+      order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
+      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        throw "ERROR: matrix dimension too large - overflow risk";
       }
-
-      // default tile size for tiling of local transpose
-      tile_size = (argc>4) ? std::atol(argv[3]) : 32;
-      // a negative tile size means no tiling of the local transpose
-      if (tile_size <= 0) tile_size = order;
-
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -96,11 +88,6 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-  if (tile_size < order) {
-      std::cout << "Tile size             = " << tile_size << std::endl;
-  } else {
-      std::cout << "Untiled" << std::endl;
-  }
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -108,42 +95,35 @@ int main(int argc, char * argv[])
 
   std::vector<double> A;
   std::vector<double> B;
+  B.resize(order*order,0.0);
   A.resize(order*order);
-  B.resize(order*order);
+  // fill A with the sequence 0 to order^2-1 as doubles
+  std::iota(A.begin(), A.end(), 0.0);
+
+  auto range = boost::irange(0,order);
 
   auto trans_time = 0.0;
-
-  _Cilk_for (auto i=0; i<order; i++) {
-    _Cilk_for (auto j=0;j<order;j++) {
-      A[i*order+j] = static_cast<double>(i*order+j);
-      B[i*order+j] = 0.0;
-    }
-  }
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
-    // transpose the  matrix
-    if (tile_size < order) {
-      _Cilk_for (auto it=0; it<order; it+=tile_size) {
-        _Cilk_for (auto jt=0; jt<order; jt+=tile_size) {
-          for (auto i=it; i<std::min(order,it+tile_size); i++) {
-            for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
-              B[i*order+j] += A[j*order+i];
-              A[j*order+i] += 1.0;
-            }
-          }
-        }
-      }
-    } else {
-      _Cilk_for (auto i=0;i<order; i++) {
-        _Cilk_for (auto j=0;j<order;j++) {
-          B[i*order+j] += A[j*order+i];
-          A[j*order+i] += 1.0;
-        }
-      }
-    }
+    // transpose
+#ifndef USE_PSTL
+    std::for_each( std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( std::begin(range), std::end(range), [&] (int j) {
+        B[i*order+j] += A[j*order+i];
+        A[j*order+i] += 1.0;
+      });
+    });
+#else
+    std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+        B[i*order+j] += A[j*order+i];
+        A[j*order+i] += 1.0;
+      });
+    });
+#endif
   }
   trans_time = prk::wtime() - trans_time;
 
@@ -151,10 +131,11 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
+  // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (auto i : range) {
+    for (auto j : range) {
       const size_t ij = i*order+j;
       const size_t ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;

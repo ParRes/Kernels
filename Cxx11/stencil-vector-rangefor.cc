@@ -62,12 +62,12 @@
 
 #include "prk_util.h"
 
-#include "stencil_cilk.hpp"
+#include "stencil_seq.hpp"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/Cilk Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++17/range-for Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // process and test input parameters
@@ -134,7 +134,6 @@ int main(int argc, char * argv[])
   }
 
   // fill the stencil weights to reflect a discrete divergence operator
-  const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
   if (star) {
     for (auto ii=1; ii<=radius; ii++) {
       weight[radius][radius+ii] = weight[radius+ii][radius] = +1./(2*ii*radius);
@@ -163,20 +162,18 @@ int main(int argc, char * argv[])
 
   auto stencil_time = 0.0;
 
-  {
-    // initialize the input and output arrays
-    _Cilk_for (auto i=0; i<n; i++) {
-      _Cilk_for (auto j=0; j<n; j++) {
-        in[i*n+j] = static_cast<double>(i+j);
-        out[i*n+j] = 0.0;
-      }
+  // initialize the input and output arrays
+  auto range = boost::irange(0,n);
+  for (auto i : range) {
+    for (auto j : range) {
+      in[i*n+j] = static_cast<double>(i+j);
+      out[i*n+j] = 0.0;
     }
+  }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+  for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          stencil_time = prk::wtime();
-      }
+    if (iter==1) stencil_time = prk::wtime();
 
     // Apply the stencil operator
     if (star) {
@@ -206,17 +203,15 @@ int main(int argc, char * argv[])
             default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
         }
     }
-      // add constant to solution to force refresh of neighbor data, if any
-      _Cilk_for (auto i=0; i<n; i++) {
-        _Cilk_for (auto j=0; j<n; j++) {
-          in[i*n+j] += 1.0;
-        }
+    // add constant to solution to force refresh of neighbor data, if any
+    for (auto i : range) {
+      for (auto j : range) {
+        in[i*n+j] += 1.0;
       }
     }
-    {
-        stencil_time = prk::wtime() - stencil_time;
-    }
   }
+
+  stencil_time = prk::wtime() - stencil_time;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
@@ -224,8 +219,9 @@ int main(int argc, char * argv[])
 
   // compute L1 norm in parallel
   double norm = 0.0;
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
+  auto inside = boost::irange(radius,n-radius);
+  for (auto i : inside) {
+    for (auto j : inside) {
       norm += std::fabs(out[i*n+j]);
     }
   }
@@ -244,6 +240,7 @@ int main(int argc, char * argv[])
     std::cout << "L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
 #endif
+    const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
     size_t flops = (2L*(size_t)stencil_size+1L) * active_points;
     auto avgtime = stencil_time/iterations;
     std::cout << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
