@@ -62,6 +62,7 @@ int main(int argc, char * argv[])
 
   int iterations;
   int order;
+  int variant;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order>";
@@ -80,6 +81,9 @@ int main(int argc, char * argv[])
       } else if (order > std::floor(std::sqrt(INT_MAX))) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
+
+      // RAJA implementation variant
+      variant  = (argc > 3) ? std::atoi(argv[3]) : 1;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -88,6 +92,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "RAJA variant          = " << variant << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -107,12 +112,29 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     // transpose
-    RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int i) {
-        for (auto j=0; j<order; ++j) {
-            B[i*order+j] += A[j*order+i];
-            A[j*order+i] += 1.0;
-        }
-    });
+
+    switch (variant) {
+        case 1:
+            RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int i) {
+                for (auto j=0; j<order; ++j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+                }
+            });
+            break;
+        case 2:
+            RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int i) {
+                for (auto j=0; j<order; ++j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+                }
+            });
+            break;
+        default:
+            std::cout << "Invalid variant number (" << variant << ")" << std::endl;
+            std::abort();
+            break;
+    }
   }
   trans_time = prk::wtime() - trans_time;
 
