@@ -38,8 +38,22 @@ OPENCLFLAG=-framework OpenCL
 # Parallel STL, Boost, etc.
 #
 BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
-#PSTLFLAG=-DUSE_PSTL -D_GLIBCXX_PARALLEL -fopenmp
-PSTLFLAG=
+#BOOSTFLAG=-DUSE_BOOST
+PSTLFLAG=-DUSE_PSTL -qopenmp -tbb
+KOKKOSDIR=/opt/kokkos/gcc/openmp
+KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos -qopenmp
+RAJADIR=/opt/raja/gcc
+RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lraja -qopenmp
+#
+# CUDA flags
+#
+# Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
+NVCC=/opt/llvm/cocl/bin/cocl
+# Linux w/ NVIDIA CUDA
+#NVCC=nvcc
+CUDAFLAGS=-g -O3 -std=c++11
+# https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
+CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #
 # MPI
 #

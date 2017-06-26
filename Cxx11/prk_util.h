@@ -84,6 +84,16 @@
 # endif
 #endif
 
+#ifdef USE_KOKKOS
+#include <typeinfo>
+#include <Kokkos_Core.hpp>
+#endif
+
+#ifdef USE_RAJA
+#include "RAJA/RAJA.hxx"
+//#include "RAJA/internal/defines.hxx"
+#endif
+
 #define RESTRICT __restrict__
 
 namespace prk {
