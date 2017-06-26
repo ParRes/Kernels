@@ -199,6 +199,14 @@ case "$PRK_TARGET" in
             done
             cd ..
         fi
+
+        # C++11 with Cilk
+        if [ "${CC}" = "gcc" ] ; then
+            echo "CILKFLAG=-fcilkplus" >> common/make.defs
+            make -C $PRK_TARGET_PATH stencil-vector-cilk transpose-vector-cilk
+            $PRK_TARGET_PATH/stencil-vector-cilk     10 1000
+            $PRK_TARGET_PATH/transpose-vector-cilk   10 1024 32
+        fi
         ;;
     allfortran*)
         # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty allfortrantarget

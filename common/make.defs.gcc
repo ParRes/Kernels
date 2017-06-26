@@ -35,6 +35,14 @@ OPENCLFLAG=-framework OpenCL
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
+# Cilk
+#
+CILKFLAG=-fcilkplus
+#
+# TBB
+#
+TBBFLAG=
+#
 # Parallel STL, Boost, etc.
 #
 BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
