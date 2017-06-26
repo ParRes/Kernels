@@ -115,16 +115,16 @@ int main(int argc, char * argv[])
 
     switch (variant) {
         case 1:
-            RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int i) {
-                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int j) {
+            RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
+                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
                 });
             });
             break;
         case 2:
-            RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int i) {
-                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int j) {
+            RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
+                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
                 });
@@ -152,16 +152,15 @@ int main(int argc, char * argv[])
 
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
-  auto range = boost::irange(0,order);
-  for (auto i : range) {
-    for (auto j : range) {
+  RAJA::ReduceSum<RAJA::seq_reduce, double> abserr(0.0);
+  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>>>
+          ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+            [&](RAJA::Index_type i, RAJA::Index_type j) {
       const size_t ij = i*order+j;
       const size_t ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(B[ji] - reference);
-    }
-  }
+  });
 
 #ifdef VERBOSE
   std::cout << "Sum of absolute differences: " << abserr << std::endl;

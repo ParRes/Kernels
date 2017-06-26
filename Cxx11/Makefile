@@ -28,7 +28,7 @@ TBBFLAGS = $(TBBFLAG) -DUSE_TBB
 BOOSTFLAGS = $(BOOSTFLAG)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(BOOSTFLAGS)
-RAJAFLAGS = $(RAJAFLAG) $(BOOSTFLAGS)
+RAJAFLAGS = $(RAJAFLAG)
 
 .PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl rangefor kokkos raja cuda
 
