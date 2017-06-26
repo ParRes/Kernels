@@ -39,11 +39,11 @@ OPENCLFLAG=-framework OpenCL
 #
 BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
 #BOOSTFLAG=-DUSE_BOOST
-PSTLFLAG=-DUSE_PSTL -qopenmp -tbb
+PSTLFLAG=-DUSE_PSTL -fopenmp
 KOKKOSDIR=/opt/kokkos/gcc/openmp
-KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos -qopenmp
+KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos -fopenmp
 RAJADIR=/opt/raja/gcc
-RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lraja -qopenmp
+RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lraja -fopenmp -fcilkplus
 #
 # CUDA flags
 #
