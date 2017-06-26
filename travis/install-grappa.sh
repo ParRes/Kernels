@@ -58,7 +58,7 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
                  #-DMPI_CXX_LIBRARIES="-lmpicxx -lmpi" \
                  #-DMPI_CXX_INCLUDE_PATH="$MPI_ROOT/include" \
     fi
-    make -j4
+    make -j2
     make install
 else
     echo "Grappa installed..."

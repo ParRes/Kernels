@@ -12,7 +12,7 @@ if [ "${CC}" = "gcc" ] || [ "${CXX}" = "g++" ] ; then
             echo "Mac"
             brew update
             # this is 5.3.0 or later
-            brew install gcc --force-bottle
+            brew upgrade gcc || brew install gcc --force-bottle
             ;;
         DisableLinux)
             echo "Linux"
