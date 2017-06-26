@@ -172,8 +172,8 @@ int main(int argc, char * argv[])
   std::for_each( std::begin(range), std::end(range), [&] (int i) {
     std::for_each( std::begin(range), std::end(range), [&] (int j) {
 #else
-  std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+  std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
 #endif
       in[i*n+j] = static_cast<double>(i+j);
       out[i*n+j] = 0.0;
@@ -217,8 +217,8 @@ int main(int argc, char * argv[])
     std::for_each( std::begin(range), std::end(range), [&] (int i) {
       std::for_each( std::begin(range), std::end(range), [&] (int j) {
 #else
-    std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+    std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
 #endif
         in[i*n+j] += 1.0;
       });

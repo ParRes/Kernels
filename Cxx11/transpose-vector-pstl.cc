@@ -117,8 +117,8 @@ int main(int argc, char * argv[])
       });
     });
 #else
-    std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+    std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
         B[i*order+j] += A[j*order+i];
         A[j*order+i] += 1.0;
       });
