@@ -90,6 +90,7 @@
 #endif
 
 #ifdef USE_RAJA
+#define RAJA_ENABLE_NESTED 1
 #include "RAJA/RAJA.hxx"
 //#include "RAJA/internal/defines.hxx"
 #endif

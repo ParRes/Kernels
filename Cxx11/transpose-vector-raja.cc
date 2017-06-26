@@ -116,18 +116,26 @@ int main(int argc, char * argv[])
     switch (variant) {
         case 1:
             RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int i) {
-                for (auto j=0; j<order; ++j) {
+                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
-                }
+                });
             });
             break;
         case 2:
-            RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int i) {
-                for (auto j=0; j<order; ++j) {
+            RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int i) {
+                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](int j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
-                }
+                });
+            });
+            break;
+        case 3:
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
             });
             break;
         default:
