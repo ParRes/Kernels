@@ -94,11 +94,17 @@ int main(int argc, char * argv[])
   std::string vname;
   switch (variant) {
       case 1: vname = "forall(seq_exec),forall(seq_exec)"; break;
+      case 2: vname = "forallN(seq_exec,seq_exec,PERM_IJ)"; break;
+      case 3: vname = "forallN(seq_exec,seq_exec,PERM_JI)"; break;
+      case 4: vname = "forallN(simd_exec,simd_exec,PERM_IJ)"; break;
+      case 5: vname = "forallN(simd_exec,simd_exec,PERM_JI)"; break;
 #ifdef RAJA_ENABLE_OPENMP
-      case 2: vname = "forall(omp_parallel_for_exec),forall(simd_exec)"; break;
-      case 3: vname = "forallN(omp_parallel_for_exec,simd_exec)"; break;
+      case 10: vname = "forall(omp_parallel_for_exec),forall(simd_exec)"; break;
+      case 11: vname = "forallN(omp_parallel_for_exec,simd_exec)"; break;
+      case 12: vname = "forallN(omp_parallel_for_exec,simd_exec,PERM_IJ)"; break;
+      case 13: vname = "forallN(omp_parallel_for_exec,simd_exec,PERM_JI)"; break;
 #endif
-      default: std::cout << "Invalid RAJA variant number (" << variant << ")" << std::endl; std::abort(); break;
+      default: std::cout << "Invalid RAJA variant number (" << variant << ")" << std::endl; return -1; break;
   }
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
@@ -133,8 +139,40 @@ int main(int argc, char * argv[])
                 });
             });
             break;
-#ifdef RAJA_ENABLE_OPENMP
         case 2:
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>,RAJA::Permute<RAJA::PERM_IJ>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+            });
+            break;
+        case 3:
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>,RAJA::Permute<RAJA::PERM_JI>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+            });
+            break;
+        case 4:
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::simd_exec, RAJA::simd_exec>,RAJA::Permute<RAJA::PERM_IJ>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+            });
+            break;
+        case 5:
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::simd_exec, RAJA::simd_exec>,RAJA::Permute<RAJA::PERM_JI>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+            });
+            break;
+#ifdef RAJA_ENABLE_OPENMP
+        case 10:
             RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
                 RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
@@ -142,8 +180,24 @@ int main(int argc, char * argv[])
                 });
             });
             break;
-        case 3:
+        case 11:
             RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+            });
+            break;
+        case 12:
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>,RAJA::Permute<RAJA::PERM_IJ>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+            });
+            break;
+        case 13:
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>,RAJA::Permute<RAJA::PERM_JI>>>
                     ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
                       [&](RAJA::Index_type i, RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
@@ -159,8 +213,15 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  RAJA::ReduceSum<RAJA::omp_reduce, double> abserr(0.0);
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::seq_exec>>>
+#ifdef RAJA_ENABLE_OPENMP
+  typedef RAJA::omp_reduce reduce_policy;
+  typedef RAJA::omp_parallel_for_exec loop_policy;
+#else
+  typedef RAJA::seq_reduce reduce_policy;
+  typedef RAJA::seq_exec loop_policy;
+#endif
+  RAJA::ReduceSum<reduce_policy, double> abserr(0.0);
+  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
           ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
             [&](RAJA::Index_type i, RAJA::Index_type j) {
       const size_t ij = i*order+j;
