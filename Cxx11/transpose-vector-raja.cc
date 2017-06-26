@@ -94,8 +94,10 @@ int main(int argc, char * argv[])
   std::string vname;
   switch (variant) {
       case 1: vname = "forall(seq_exec),forall(seq_exec)"; break;
+#ifdef RAJA_ENABLE_OPENMP
       case 2: vname = "forall(omp_parallel_for_exec),forall(simd_exec)"; break;
       case 3: vname = "forallN(omp_parallel_for_exec,simd_exec)"; break;
+#endif
       default: std::cout << "Invalid RAJA variant number (" << variant << ")" << std::endl; std::abort(); break;
   }
 
@@ -131,6 +133,7 @@ int main(int argc, char * argv[])
                 });
             });
             break;
+#ifdef RAJA_ENABLE_OPENMP
         case 2:
             RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
                 RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
@@ -147,6 +150,7 @@ int main(int argc, char * argv[])
                     A[j*order+i] += 1.0;
             });
             break;
+#endif
     }
   }
   trans_time = prk::wtime() - trans_time;
@@ -155,14 +159,13 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
   RAJA::ReduceSum<RAJA::omp_reduce, double> abserr(0.0);
   RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::seq_exec>>>
           ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
             [&](RAJA::Index_type i, RAJA::Index_type j) {
       const size_t ij = i*order+j;
       const size_t ji = j*order+i;
+      const auto addit = (iterations+1.) * (iterations/2.);
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(B[ji] - reference);
   });
