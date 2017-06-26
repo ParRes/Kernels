@@ -10,7 +10,7 @@ case "$os" in
     Darwin)
         echo "Mac"
         brew update
-        brew install boost || brew update boost || true
+        brew install boost || brew upgrade boost || true
         ;;
 
     Linux)

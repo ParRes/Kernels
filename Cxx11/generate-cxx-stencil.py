@@ -36,8 +36,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      std::for_each( std::execution::unseq, std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='cilk'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    cilk_for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      cilk_for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
+        src.write('    _Cilk_for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
+        src.write('      _Cilk_for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='kokkos'):
         src.write('void '+pattern+str(radius)+'(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {\n')
         src.write('    Kokkos::parallel_for ( n,[&] (int i) {\n')

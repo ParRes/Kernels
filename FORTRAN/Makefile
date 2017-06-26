@@ -9,7 +9,7 @@ STARFLAG   = -DSTAR
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
 FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
-.PHONY: all clean serial pretty openmp coarray
+.PHONY: all clean serial pretty openmp coarray target ornlacc
 
 COARRAY =
 ifeq ($(shell uname -s),Darwin)
