@@ -113,8 +113,8 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  cilk_for (auto i=0; i<order; i++) {
-    cilk_for (auto j=0;j<order;j++) {
+  _Cilk_for (auto i=0; i<order; i++) {
+    _Cilk_for (auto j=0;j<order;j++) {
       A[i*order+j] = static_cast<double>(i*order+j);
       B[i*order+j] = 0.0;
     }
@@ -126,8 +126,8 @@ int main(int argc, char * argv[])
 
     // transpose the  matrix
     if (tile_size < order) {
-      cilk_for (auto it=0; it<order; it+=tile_size) {
-        cilk_for (auto jt=0; jt<order; jt+=tile_size) {
+      _Cilk_for (auto it=0; it<order; it+=tile_size) {
+        _Cilk_for (auto jt=0; jt<order; jt+=tile_size) {
           for (auto i=it; i<std::min(order,it+tile_size); i++) {
             for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
               B[i*order+j] += A[j*order+i];
@@ -137,8 +137,8 @@ int main(int argc, char * argv[])
         }
       }
     } else {
-      cilk_for (auto i=0;i<order; i++) {
-        cilk_for (auto j=0;j<order;j++) {
+      _Cilk_for (auto i=0;i<order; i++) {
+        _Cilk_for (auto j=0;j<order;j++) {
           B[i*order+j] += A[j*order+i];
           A[j*order+i] += 1.0;
         }
