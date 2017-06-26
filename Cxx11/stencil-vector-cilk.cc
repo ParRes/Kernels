@@ -165,8 +165,8 @@ int main(int argc, char * argv[])
 
   {
     // initialize the input and output arrays
-    cilk_for (auto i=0; i<n; i++) {
-      cilk_for (auto j=0; j<n; j++) {
+    _Cilk_for (auto i=0; i<n; i++) {
+      _Cilk_for (auto j=0; j<n; j++) {
         in[i*n+j] = static_cast<double>(i+j);
         out[i*n+j] = 0.0;
       }
@@ -207,8 +207,8 @@ int main(int argc, char * argv[])
         }
     }
       // add constant to solution to force refresh of neighbor data, if any
-      cilk_for (auto i=0; i<n; i++) {
-        cilk_for (auto j=0; j<n; j++) {
+      _Cilk_for (auto i=0; i<n; i++) {
+        _Cilk_for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
