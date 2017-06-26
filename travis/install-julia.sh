@@ -9,20 +9,9 @@ TRAVIS_ROOT="$1"
 case "$os" in
     Darwin)
         echo "Mac"
-        set +e
         brew update
-        for p in julia Caskroom/cask/julia ; do
-            if [ "x`brew ls --versions $p`" = "x" ] ; then
-                echo "$p is not installed - installing it"
-                brew install $p
-            else
-                echo "$p is installed - upgrading it"
-                brew upgrade $p
-            fi
-        done
-        set -e
-    ;;
-
+        brew upgrade julia || brew install julia || brew upgrade Caskroom/cask/julia || brew install Caskroom/cask/julia
+        ;;
     Linux)
         echo "Linux"
         #JULIA_NAME=julia-2ac304dfba    # julia-0.4.5-linux-x86_64.tar.gz

@@ -10,11 +10,10 @@ case "$os" in
     Darwin)
         echo "Mac"
         brew update
-        brew tap homebrew/science
-        brew install octave || brew upgrade octave
-    ;;
+        brew install boost || brew upgrade boost || true
+        ;;
 
     Linux)
-        echo "Linux not supported"
-    ;;
+        echo "Linux"
+        ;;
 esac
