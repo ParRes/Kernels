@@ -35,8 +35,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      std::for_each( pstl::execution::unseq, std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='cilk'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    cilk_for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      cilk_for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
+        src.write('    _Cilk_for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
+        src.write('      _Cilk_for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='tbb'):
         src.write('template <>\n')
         if pattern=='star':
