@@ -90,9 +90,18 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+  // Make sure to update these with the implementations below...
+  std::string vname;
+  switch (variant) {
+      case 1: vname = "forall(seq_exec),forall(seq_exec)"; break;
+      case 2: vname = "forall(omp_parallel_for_exec),forall(simd_exec)"; break;
+      case 3: vname = "forallN(omp_parallel_for_exec,simd_exec)"; break;
+      default: std::cout << "Invalid RAJA variant number (" << variant << ")" << std::endl; std::abort(); break;
+  }
+
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "RAJA variant          = " << variant << std::endl;
+  std::cout << "RAJA variant          = " << vname << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -112,7 +121,7 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     // transpose
-
+    // If a new variant is added, it must be added above to the vname case-switch...
     switch (variant) {
         case 1:
             RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
@@ -137,10 +146,6 @@ int main(int argc, char * argv[])
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
             });
-            break;
-        default:
-            std::cout << "Invalid variant number (" << variant << ")" << std::endl;
-            std::abort();
             break;
     }
   }
