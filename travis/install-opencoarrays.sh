@@ -21,6 +21,9 @@ elif [ ! -d "$TRAVIS_ROOT/opencoarrays" ] ; then
             #brew install cmake || brew update cmake
             #cmake --version
             brew install opencoarrays || brew update opencoarrays
+            brew list opencoarrays
+            which caf
+            which cafrun
             ;;
 
         Linux)

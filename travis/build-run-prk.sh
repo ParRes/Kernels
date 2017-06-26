@@ -316,7 +316,12 @@ case "$PRK_TARGET" in
             allfortrancoarray)
                 if [ "${CC}" = "gcc" ] ; then
                     #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
-                    export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
+                    if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+                        # Homebrew installs a symlink in /usr/local/bin
+                        export PRK_CAFC=caf
+                    elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+                        export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
+                    fi
                     echo "FC=$PRK_CAFC\nCOARRAYFLAG=-cpp -std=f2008 -fcoarray=lib" >> common/make.defs
                 elif [ "${CC}" = "icc" ] ; then
                     export PRK_CAFC="ifort"
@@ -386,7 +391,12 @@ case "$PRK_TARGET" in
                 make -C ${PRK_TARGET_PATH} coarray
                 export PRK_MPI_PROCS=4
                 if [ "${CC}" = "gcc" ] ; then
-                    export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
+                    if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+                        # Homebrew installs a symlink in /usr/local/bin
+                        export PRK_LAUNCHER=cafrun
+                    elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+                        export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
+                    fi
                     $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/p2p-coarray       10 1024 1024
                     $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/stencil-coarray   10 1000
                     $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/transpose-coarray 10 1024 1
