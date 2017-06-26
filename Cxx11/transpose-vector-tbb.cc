@@ -112,12 +112,12 @@ void ParallelTranspose(size_t order, size_t tile_size, std::vector<double> & A, 
 
 int main(int argc, char * argv[])
 {
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "C++11/TBB Matrix transpose: B = A^T" << std::endl;
+
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
-
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/TBB Matrix transpose: B = A^T" << std::endl;
 
   int iterations;
   size_t order;
