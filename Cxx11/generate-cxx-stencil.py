@@ -28,11 +28,16 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    std::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
         src.write('      std::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
+    elif (model=='pgnu'):
+        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    __gnu_parallel::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
+        src.write('      __gnu_parallel::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='pstl'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
-        src.write('    std::for_each( pstl::execution::par, std::begin(inside), std::end(inside), [&] (int i) {\n')
-        src.write('      std::for_each( pstl::execution::unseq, std::begin(inside), std::end(inside), [&] (int j) {\n')
+        src.write('    std::for_each( std::execution::par, std::begin(inside), std::end(inside), [&] (int i) {\n')
+        src.write('      std::for_each( std::execution::unseq, std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='cilk'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    _Cilk_for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
@@ -62,7 +67,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
                 if (k<kmax): src.write('\n')
                 if (k>0 and k<kmax): src.write('                      ')
     src.write(';\n')
-    if (model=='stl' or model=='pstl'):
+    if (model=='stl' or model=='pgnu' or model=='pstl'):
         src.write('       });\n')
         src.write('     });\n')
     else:
@@ -70,7 +75,6 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('     }\n')
     if (model=='tbb'):
         src.write('  }\n\n')
-        #src.write('    '+name+'<'+str(radius)+'> (int n, std::vector<double> & in, std::vector<double> & out)\n')
         src.write('    '+name+'(int n, std::vector<double> & in, std::vector<double> & out)\n')
         src.write('        : n(n), in(in), out(out) { }\n\n')
         src.write('    int n;\n')
@@ -106,7 +110,7 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','rangefor','stl','pstl','openmp','tbb','cilk']:
+    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','tbb','cilk']:
       src = open('stencil_'+model+'.hpp','w')
       src.write('#define RESTRICT __restrict__\n\n')
       for pattern in ['star','grid']:

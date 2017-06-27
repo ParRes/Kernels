@@ -79,12 +79,9 @@
 #  include <pstl/algorithm>
 #  include <pstl/numeric>
 #  include <pstl/memory>
-namespace pstl = std;
 # else
 #  include <parallel/algorithm>
 #  include <parallel/numeric>
-//namespace pstl = __gnu_parallel;
-namespace pstl = std;
 # endif
 #endif
 
