@@ -72,12 +72,12 @@ void nothing(const int n, const double * restrict in, double * restrict out)
     exit(EXIT_FAILURE);
 }
 
-#include "stencil_seq.h"
+#include "stencil_openmp.h"
 
 int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
-  printf("C11 Stencil execution on 2D grid\n");
+  printf("C11/OpenMP Stencil execution on 2D grid\n");
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -123,6 +123,7 @@ int main(int argc, char * argv[])
     exit(EXIT_FAILURE);
   }
 
+  printf("Number of threads (max)   = %d\n", omp_get_max_threads());
   printf("Number of iterations      = %d\n", iterations);
   printf("Grid sizes                = %d\n", n);
   printf("Type of stencil           = %s\n", (star ? "star" : "grid") );
@@ -168,29 +169,39 @@ int main(int argc, char * argv[])
   double * restrict in  = prk_malloc(bytes);
   double * restrict out = prk_malloc(bytes);
 
-  for (int i=0; i<n; i++) {
-    for (int j=0; j<n; j++) {
-      in[i*n+j]  = (double)(i+j);
-      out[i*n+j] = 0.0;
-    }
-  }
-
-  for (int iter = 0; iter<=iterations; iter++) {
-
-    if (iter==1) stencil_time = prk_wtime();
-
-    // Apply the stencil operator
-    stencil(n, in, out);
-
-    // Add constant to solution to force refresh of neighbor data, if any
+  _Pragma("omp parallel")
+  {
+    _Pragma("omp for")
     for (int i=0; i<n; i++) {
       for (int j=0; j<n; j++) {
-        in[i*n+j] += 1.0;
+        in[i*n+j]  = (double)(i+j);
+        out[i*n+j] = 0.0;
       }
     }
 
+    for (int iter = 0; iter<=iterations; iter++) {
+
+      if (iter==1) {
+          _Pragma("omp barrier")
+          _Pragma("omp master")
+          stencil_time = prk_wtime();
+      }
+
+      // Apply the stencil operator
+      stencil(n, in, out);
+
+      // Add constant to solution to force refresh of neighbor data, if any
+      _Pragma("omp for")
+      for (int i=0; i<n; i++) {
+        for (int j=0; j<n; j++) {
+          in[i*n+j] += 1.0;
+        }
+      }
+    }
+    _Pragma("omp barrier")
+    _Pragma("omp master")
+    stencil_time = prk_wtime() - stencil_time;
   }
-  stencil_time = prk_wtime() - stencil_time;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
@@ -198,6 +209,7 @@ int main(int argc, char * argv[])
 
   // compute L1 norm in parallel
   double norm = 0.0;
+  _Pragma("omp parallel for reduction(+:norm)")
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
       norm += fabs(out[i*n+j]);

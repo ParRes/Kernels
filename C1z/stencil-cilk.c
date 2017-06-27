@@ -72,12 +72,12 @@ void nothing(const int n, const double * restrict in, double * restrict out)
     exit(EXIT_FAILURE);
 }
 
-#include "stencil_seq.h"
+#include "stencil_cilk.h"
 
 int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
-  printf("C11 Stencil execution on 2D grid\n");
+  printf("C11/Cilk Stencil execution on 2D grid\n");
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -168,8 +168,8 @@ int main(int argc, char * argv[])
   double * restrict in  = prk_malloc(bytes);
   double * restrict out = prk_malloc(bytes);
 
-  for (int i=0; i<n; i++) {
-    for (int j=0; j<n; j++) {
+  _Cilk_for (int i=0; i<n; i++) {
+    _Cilk_for (int j=0; j<n; j++) {
       in[i*n+j]  = (double)(i+j);
       out[i*n+j] = 0.0;
     }
@@ -183,12 +183,11 @@ int main(int argc, char * argv[])
     stencil(n, in, out);
 
     // Add constant to solution to force refresh of neighbor data, if any
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
+    _Cilk_for (int i=0; i<n; i++) {
+      _Cilk_for (int j=0; j<n; j++) {
         in[i*n+j] += 1.0;
       }
     }
-
   }
   stencil_time = prk_wtime() - stencil_time;
 

@@ -32,13 +32,13 @@ endif
 else
 TARGET = target
 endif
-all: serial openmp $(TARGET)
+all: serial openmp cilk #$(TARGET)
 
 serial: p2p stencil transpose
 
-openmp: p2p-wavefront-openmp p2p-doacross-openmp p2p-tasks-openmp stencil-openmp transpose-openmp
+openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
-target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
+target: p2p-target stencil-target transpose-target
 
 cilk: stencil-cilk transpose-cilk
 

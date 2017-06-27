@@ -58,7 +58,7 @@
 int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
-  printf("C++11 Matrix transpose: B = A^T\n");
+  printf("C11 Matrix transpose: B = A^T\n");
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
