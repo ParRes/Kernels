@@ -222,11 +222,9 @@ int main(int argc, char * argv[])
         }
       }
     }
-    {
-        _Pragma("omp barrier")
-        _Pragma("omp master")
-        stencil_time = prk::wtime() - stencil_time;
-    }
+    _Pragma("omp barrier")
+    _Pragma("omp master")
+    stencil_time = prk::wtime() - stencil_time;
   }
 
   //////////////////////////////////////////////////////////////////////
