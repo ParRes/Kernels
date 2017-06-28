@@ -62,15 +62,15 @@
 
 #include "prk_util.h"
 
-#include "stencil_cilk.hpp"
+#include "stencil_raja.hpp"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/Cilk Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/RAJA STL Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // process and test input parameters
+  // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -127,9 +127,6 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  // interior of grid with respect to stencil
-  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
-
   std::vector<double> in;
   std::vector<double> out;
   in.resize(n*n);
@@ -137,20 +134,17 @@ int main(int argc, char * argv[])
 
   auto stencil_time = 0.0;
 
-  {
-    // initialize the input and output arrays
-    _Cilk_for (auto i=0; i<n; i++) {
-      _Cilk_for (auto j=0; j<n; j++) {
-        in[i*n+j] = static_cast<double>(i+j);
-        out[i*n+j] = 0.0;
-      }
-    }
+  // initialize the input and output arrays
+  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+          ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
+            [&](RAJA::Index_type i, RAJA::Index_type j) {
+      in[i*n+j] = static_cast<double>(i+j);
+      out[i*n+j] = 0.0;
+  });
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+  for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          stencil_time = prk::wtime();
-      }
+    if (iter==1) stencil_time = prk::wtime();
 
     // Apply the stencil operator
     if (star) {
@@ -180,30 +174,31 @@ int main(int argc, char * argv[])
             default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
         }
     }
-      // add constant to solution to force refresh of neighbor data, if any
-      _Cilk_for (auto i=0; i<n; i++) {
-        _Cilk_for (auto j=0; j<n; j++) {
-          in[i*n+j] += 1.0;
-        }
-      }
-    }
-    {
-        stencil_time = prk::wtime() - stencil_time;
-    }
+    // add constant to solution to force refresh of neighbor data, if any
+    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+            ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
+              [&](RAJA::Index_type i, RAJA::Index_type j) {
+        in[i*n+j] += 1.0;
+    });
   }
+
+  stencil_time = prk::wtime() - stencil_time;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
+  // interior of grid with respect to stencil
+  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
+
   // compute L1 norm in parallel
-  double norm = 0.0;
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
-      norm += std::fabs(out[i*n+j]);
-    }
-  }
-  norm /= active_points;
+  RAJA::ReduceSum<RAJA::omp_reduce, double> reduced_norm(0.0);
+  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+          ( RAJA::RangeSegment(radius,n-radius), RAJA::RangeSegment(radius,n-radius),
+            [&](RAJA::Index_type i, RAJA::Index_type j) {
+      reduced_norm += std::fabs(out[i*n+j]);
+  });
+  double norm = reduced_norm / active_points;
 
   // verify correctness
   const double epsilon = 1.0e-8;

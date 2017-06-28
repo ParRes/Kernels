@@ -6,14 +6,13 @@ import string
 import os
 
 def codegen(src,pattern,stencil_size,radius,W,model):
-    if (model=='openmp' or model=='target'):
+    if (model=='openmp'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    _Pragma("omp for")\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
         src.write('      _Pragma("omp simd")\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='target'):
-        src.write('_Pragma("omp declare target")\n')
         src.write('void '+pattern+str(radius)+'(const int n, const double * RESTRICT in, double * RESTRICT out) {\n')
         src.write('    _Pragma("omp for")\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
@@ -43,10 +42,6 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    _Cilk_for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
         src.write('      _Cilk_for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
-    elif (model=='kokkos'):
-        src.write('void '+pattern+str(radius)+'(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {\n')
-        src.write('    Kokkos::parallel_for ( n,[&] (int i) {\n')
-        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='tbb'):
         src.write('template <>\n')
         if pattern=='star':
@@ -57,6 +52,17 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('  void operator()( const tbb::blocked_range2d<int>& r ) const {\n')
         src.write('    for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {\n')
         src.write('      for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {\n')
+    elif (model=='raja'):
+        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>\n')
+        src.write('            ( RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),'
+                                'RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),\n')
+        src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
+    elif (model=='kokkos'):
+        src.write('void '+pattern+str(radius)+'(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in,'
+                                                           ' Kokkos::View<double**, Kokkos::LayoutRight> & out) {\n')
+        src.write('    Kokkos::parallel_for ( n,[&] (int i) {\n')
+        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     else:
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
@@ -83,6 +89,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('     });\n')
     elif (model=='kokkos'):
         src.write('       }\n')
+        src.write('     });\n')
+    elif (model=='raja'):
         src.write('     });\n')
     else:
         src.write('       }\n')
@@ -124,7 +132,7 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','target','tbb','cilk','kokkos']:
+    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','target','tbb','cilk','raja','kokkos']:
       src = open('stencil_'+model+'.hpp','w')
       src.write('#define RESTRICT __restrict__\n\n')
       if (model=='target'):

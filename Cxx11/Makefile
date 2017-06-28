@@ -27,9 +27,10 @@ CILKFLAGS = $(CILKFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB
 BOOSTFLAGS = $(BOOSTFLAG)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
+RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(BOOSTFLAGS)
 
-.PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl rangefor kokkos cuda
+.PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl rangefor kokkos raja cuda
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(CXX),icpc)
@@ -38,7 +39,7 @@ endif
 else
 TARGET = target
 endif
-all: vector valarray openmp opencl $(TARGET)
+all: vector valarray openmp opencl $(TARGET) cilk tbb pstl rangefor raja kokkos
 
 vector: p2p-vector stencil-vector transpose-vector
 
@@ -59,6 +60,8 @@ pstl: stencil-vector-pstl transpose-vector-pstl
 rangefor: stencil-vector-rangefor transpose-vector-rangefor
 
 kokkos: stencil-kokkos transpose-kokkos
+
+raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja
 
 cuda: transpose-cuda
 
@@ -86,6 +89,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-rangefor: %-rangefor.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) -o $@
 
+%-raja: %-raja.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
+
 %-kokkos: %-kokkos.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
 
@@ -110,6 +116,7 @@ clean:
 	-rm -f *-tbb
 	-rm -f *-pstl
 	-rm -f *-rangefor
+	-rm -f *-raja
 	-rm -f *-kokkos
 	-rm -f *-cuda
 
