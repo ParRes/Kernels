@@ -6,7 +6,7 @@ import string
 import os
 
 def codegen(src,pattern,stencil_size,radius,W,model):
-    if (model=='openmp' or model=='target'):
+    if (model=='openmp'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    _Pragma("omp for")\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
@@ -52,6 +52,12 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('  void operator()( const tbb::blocked_range2d<int>& r ) const {\n')
         src.write('    for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {\n')
         src.write('      for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {\n')
+    elif (model=='raja'):
+        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>\n')
+        src.write('            ( RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),'
+                                'RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),\n')
+        src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
     else:
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
@@ -69,6 +75,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     src.write(';\n')
     if (model=='stl' or model=='pgnu' or model=='pstl'):
         src.write('       });\n')
+        src.write('     });\n')
+    elif (model=='raja'):
         src.write('     });\n')
     else:
         src.write('       }\n')
@@ -110,7 +118,7 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','target','tbb','cilk']:
+    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','target','tbb','cilk','raja']:
       src = open('stencil_'+model+'.hpp','w')
       src.write('#define RESTRICT __restrict__\n\n')
       if (model=='target'):

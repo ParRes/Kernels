@@ -61,69 +61,18 @@
 
 #include "prk_util.h"
 
-void SequentialSweep(size_t m, size_t n, std::vector<double> & grid)
-{
-  for (auto i=1; i<m; i++) {
-    for (auto j=1; j<n; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
-
-const int N = 64;
-const int MAX_LEN = 1024;
-tbb::atomic<char> Count[MAX_LEN/N+1][MAX_LEN/N+1];
-double F[MAX_LEN][MAX_LEN];
-
-void ParallelSweep( const char* x, size_t xlen, const char* y, size_t ylen ) {
-   // Initialize predecessor counts for blocks.
-   size_t m = (xlen+N-1)/N;
-   size_t n = (ylen+N-1)/N;
-   for( int i=0; i<m; ++i ) {
-       for( int j=0; j<n; ++j ) {
-           Count[i][j] = (i>0)+(j>0);
-       }
-   }
-   // Roll the wavefront from the origin.
-   typedef std::pair<size_t,size_t> block;
-   block origin(0,0);
-   tbb::parallel_do( &origin, &origin+1,
-       [=]( const block& b, tbb::parallel_do_feeder<block>&feeder ) {
-           // Extract bounds on block
-           size_t bi = b.first;
-           size_t bj = b.second;
-           size_t xl = N*bi+1;
-           size_t xu = std::min(xl+N,xlen+1);
-           size_t yl = N*bj+1;
-           size_t yu = std::min(yl+N,ylen+1);
-           // Process the block
-           for( size_t i=xl; i<xu; ++i ) {
-               for( size_t j=yl; j<yu; ++j ) {
-                   F[i][j] = x[i-1]==y[j-1] ? F[i-1][j-1]+1 : std::max(F[i][j-1],F[i-1][j]);
-               }
-           }
-           // Account for successors
-           if( bj+1<n && --Count[bi][bj+1]==0 ) {
-               feeder.add( block(bi,bj+1) );
-               }
-           if( bi+1<m && --Count[bi+1][bj]==0 ) {
-               feeder.add( block(bi+1,bj) );
-           }
-       }
-   );
-}
-
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/TBB pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/RAJA pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 3){
-    std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> [<second array dimension>]" << std::endl;
+  if (argc < 4){
+    std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> <second array dimension>"
+                                      << " [<first chunk dimension> <second chunk dimension>]" << std::endl;
     return(EXIT_FAILURE);
   }
 
@@ -136,19 +85,26 @@ int main(int argc, char* argv[])
 
   // grid dimensions
   size_t m = std::atol(argv[2]);
-  size_t n = m;
-  if (argc > 3) {
-    n = std::atol(argv[3]);
-  }
+  size_t n = std::atol(argv[3]);
   if (m < 1 || n < 1) {
     std::cout << "ERROR: grid dimensions must be positive: " << m <<  n << std::endl;
     exit(EXIT_FAILURE);
   }
 
+  // grid chunk dimensions
+  size_t mc = (argc > 4) ? std::atol(argv[4]) : m;
+  size_t nc = (argc > 5) ? std::atol(argv[5]) : n;
+  if (mc < 1 || mc > m || nc < 1 || nc > n) {
+    std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
+    mc = m;
+    nc = n;
+  }
+
   std::cout << "Number of iterations      = " << iterations << std::endl;
   std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
-
-  tbb::task_scheduler_init init(tbb::task_scheduler_init::automatic);
+  if (mc!=m || nc!=n) {
+      std::cout << "Grid chunk sizes          = " << mc << ", " << nc << std::endl;
+  }
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -168,9 +124,31 @@ int main(int argc, char* argv[])
     grid[i*n+0] = static_cast<double>(i);
   }
 
-  for (auto iter = 0; iter<=iterations; iter++){
-    if (iter == 1) pipeline_time = prk::wtime();
-    SequentialSweep(m, n, grid);
+  for (auto iter = 0; iter<=iterations; iter++) {
+
+    if (iter==1) pipeline_time = prk::wtime();
+
+#if 0
+    RAJA::Layout<2> index_converter(n, m);
+    RAJA::IndexSet p2p_indexset{};
+    RAJA::computeIndexSet(p2p_indexset); // I guess I need to implement this
+    // add one segment, probably a RangeStrideSegment, per anti diagonal
+    // that gives out an index to directly access grid, rather than an i,j pair
+    RAJA::forall<RAJA::IndexSet::ExecPolicy<RAJA::omp_parallel_exec<RAJA::seq_exec>,RAJA::omp_for_exec>(p2p_indexset,
+        [=](RAJA::Index_type in) {
+
+        // Option 1: use a layout to get indices back
+        RAJA::Index_type i,j;
+        RAJA::index_converter.toIndices(in, i, j);
+        grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+        // Option 2: use indices directly
+        //grid[in] = grid[in - n] + grid[in - 1] - grid[in - n - 1];
+    });
+#endif
+
+    // copy top right corner value to bottom left corner to create dependency; we
+    // need a barrier to make sure the latest value is used. This also guarantees
+    // that the flags for the next iteration (if any) are not getting clobbered
     grid[0*n+0] = -grid[(m-1)*n+(n-1)];
   }
 
@@ -187,7 +165,7 @@ int main(int argc, char* argv[])
   auto corner_val = ((iterations+1.)*(n+m-2.));
   if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
-              << " does not match verification value" << corner_val << std::endl;
+              << " does not match verification value " << corner_val << std::endl;
     exit(EXIT_FAILURE);
   }
 
