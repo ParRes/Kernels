@@ -81,6 +81,7 @@
 #  include <pstl/memory>
 # else
 #  include <parallel/algorithm>
+#  include <parallel/numeric>
 # endif
 #endif
 
