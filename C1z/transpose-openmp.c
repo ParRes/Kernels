@@ -49,6 +49,7 @@
 ///
 /// HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, February 2016 and May 2017.
+///          C11-ification by Jeff Hammond, June 2017.
 ///
 //////////////////////////////////////////////////////////////////////
 
@@ -56,89 +57,81 @@
 
 int main(int argc, char * argv[])
 {
+  printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+  printf("C11/OpenMP Matrix transpose: B = A^T\n");
+
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP Matrix transpose: B = A^T" << std::endl;
-
-  int iterations;
-  size_t order;
-  size_t tile_size;
-  try {
-      if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [tile size]";
-      }
-
-      // number of times to do the transpose
-      iterations  = std::atoi(argv[1]);
-      if (iterations < 1) {
-        throw "ERROR: iterations must be >= 1";
-      }
-
-      // order of a the matrix
-      order = std::atol(argv[2]);
-      if (order <= 0) {
-        throw "ERROR: Matrix Order must be greater than 0";
-      }
-
-      // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atol(argv[3]) : 32;
-      // a negative tile size means no tiling of the local transpose
-      if (tile_size <= 0) tile_size = order;
-
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
+  if (argc < 3) {
+    printf("Usage: <# iterations> <matrix order> [tile size]\n");
     return 1;
   }
 
-  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
+  // number of times to do the transpose
+  int iterations = atoi(argv[1]);
+  if (iterations < 1) {
+    printf("ERROR: iterations must be >= 1\n");
+    exit(EXIT_FAILURE);
+  }
+
+  // order of a the matrix
+  int order = atoi(argv[2]);
+  if (order <= 0) {
+    printf("ERROR: Matrix Order must be greater than 0\n");
+    exit(EXIT_FAILURE);
+  }
+
+  // default tile size for tiling of local transpose
+  int tile_size = (argc>4) ? atoi(argv[3]) : 32;
+  // a negative tile size means no tiling of the local transpose
+  if (tile_size <= 0) tile_size = order;
+
+  printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+  printf("Number of iterations  = %d\n", iterations);
+  printf("Matrix order          = %d\n", order);
   if (tile_size < order) {
-      std::cout << "Tile size             = " << tile_size << std::endl;
+      printf("Tile size             = %d\n", tile_size);
   } else {
-      std::cout << "Untiled" << std::endl;
+      printf("Untiled" );
   }
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  auto trans_time = 0.0;
+  double trans_time = 0.0;
 
-  std::vector<double> A;
-  std::vector<double> B;
-  A.resize(order*order);
-  B.resize(order*order);
+  size_t bytes = order*order*sizeof(double);
+  double * restrict A = prk_malloc(bytes);
+  double * restrict B = prk_malloc(bytes);
 
   _Pragma("omp parallel")
   {
     _Pragma("omp for")
-    for (auto i=0;i<order; i++) {
-      for (auto j=0;j<order;j++) {
-        A[i*order+j] = static_cast<double>(i*order+j);
+    for (int i=0;i<order; i++) {
+      for (int j=0;j<order;j++) {
+        A[i*order+j] = (double)(i*order+j);
         B[i*order+j] = 0.0;
       }
     }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
           _Pragma("omp barrier")
           _Pragma("omp master")
-          trans_time = prk::wtime();
+          trans_time = prk_wtime();
       }
 
       // transpose the  matrix
       if (tile_size < order) {
         _Pragma("omp for")
-        for (auto it=0; it<order; it+=tile_size) {
-          for (auto jt=0; jt<order; jt+=tile_size) {
-            for (auto i=it; i<std::min(order,it+tile_size); i++) {
-              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
+        for (int it=0; it<order; it+=tile_size) {
+          for (int jt=0; jt<order; jt+=tile_size) {
+            for (int i=it; i<MIN(order,it+tile_size); i++) {
+              for (int j=jt; j<MIN(order,jt+tile_size); j++) {
                 B[i*order+j] += A[j*order+i];
                 A[j*order+i] += 1.0;
               }
@@ -147,8 +140,8 @@ int main(int argc, char * argv[])
         }
       } else {
         _Pragma("omp for")
-        for (auto i=0;i<order; i++) {
-          for (auto j=0;j<order;j++) {
+        for (int i=0;i<order; i++) {
+          for (int j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
             A[j*order+i] += 1.0;
           }
@@ -157,39 +150,39 @@ int main(int argc, char * argv[])
     }
     _Pragma("omp barrier")
     _Pragma("omp master")
-    trans_time = prk::wtime() - trans_time;
+    trans_time = prk_wtime() - trans_time;
   }
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
+  const double addit = (iterations+1.) * (iterations/2.);
+  double abserr = 0.0;
   _Pragma("omp parallel for reduction(+:abserr)")
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const size_t ij = i*order+j;
       const size_t ji = j*order+i;
-      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      const double reference = (double)(ij)*(1.+iterations)+addit;
+      abserr += fabs(B[ji] - reference);
     }
   }
 
+  prk_free(A);
+  prk_free(B);
+
 #ifdef VERBOSE
-  std::cout << "Sum of absolute differences: " << abserr << std::endl;
+  printf("Sum of absolute differences: %lf\n", abserr);
 #endif
 
-  const auto epsilon = 1.0e-8;
+  const double epsilon = 1.0e-8;
   if (abserr < epsilon) {
-    std::cout << "Solution validates" << std::endl;
-    auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+    printf("Solution validates\n");
+    const double avgtime = trans_time/iterations;
+    printf("Rate (MB/s): %lf Avg time (s): %lf\n", 2.0e-6 * bytes/avgtime, avgtime );
   } else {
-    std::cout << "ERROR: Aggregate squared error " << abserr
-              << " exceeds threshold " << epsilon << std::endl;
+    printf("ERROR: Aggregate squared error %lf exceeds threshold %lf\n", abserr, epsilon );
     return 1;
   }
 

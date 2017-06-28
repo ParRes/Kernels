@@ -6,7 +6,7 @@ import string
 import os
 
 def codegen(src,pattern,stencil_size,radius,W,model):
-    if (model=='openmp'):
+    if (model=='openmp' or model=='target'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    _Pragma("omp for")\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
@@ -106,12 +106,16 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','rangefor','stl','pstl','openmp','tbb','cilk']:
+    for model in ['seq','rangefor','stl','pstl','openmp','target','tbb','cilk']:
       src = open('stencil_'+model+'.hpp','w')
       src.write('#define RESTRICT __restrict__\n\n')
+      if (model=='target'):
+          src.write('_Pragma("omp declare target")\n')
       for pattern in ['star','grid']:
         for r in range(1,10):
           instance(src,model,pattern,r)
+      if (model=='target'):
+          src.write('_Pragma("omp end declare target")\n')
       src.close()
 
 if __name__ == '__main__':
