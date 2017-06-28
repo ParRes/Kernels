@@ -192,8 +192,14 @@ int main(int argc, char * argv[])
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
   // compute L1 norm in parallel
+#if 0
+  // This leads to incorrect computation of the norm.
   RAJA::ReduceSum<RAJA::omp_reduce, double> reduced_norm(0.0);
   RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+#else
+  RAJA::ReduceSum<RAJA::seq_reduce, double> reduced_norm(0.0);
+  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>>>
+#endif
           ( RAJA::RangeSegment(radius,n-radius), RAJA::RangeSegment(radius,n-radius),
             [&](RAJA::Index_type i, RAJA::Index_type j) {
       reduced_norm += std::fabs(out[i*n+j]);
