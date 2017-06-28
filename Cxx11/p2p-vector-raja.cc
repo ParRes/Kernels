@@ -61,18 +61,6 @@
 
 #include "prk_util.h"
 
-inline void sweep_tile(size_t startm, size_t endm,
-                       size_t startn, size_t endn,
-                       size_t m,      size_t n,
-                       std::vector<double> & grid)
-{
-  for (auto i=startm; i<endm; i++) {
-    for (auto j=startn; j<endn; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
-
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -140,22 +128,23 @@ int main(int argc, char* argv[])
 
     if (iter==1) pipeline_time = prk::wtime();
 
-    if (mc==m && nc==n) {
-      for (auto i=1; i<m; i++) {
-        for (auto j=1; j<n; j++) {
-          grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-        }
-      }
-    } else /* chunking */ {
-      for (auto i=1; i<m; i+=mc) {
-        for (auto j=1; j<n; j+=nc) {
-          //grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-          sweep_tile(i, std::min(m,i+mc),
-                     j, std::min(n,j+nc),
-                     m, n, grid);
-        }
-      }
-    }
+#if 0
+    RAJA::Layout<2> index_converter(n, m);
+    RAJA::IndexSet p2p_indexset{};
+    RAJA::computeIndexSet(p2p_indexset); // I guess I need to implement this
+    // add one segment, probably a RangeStrideSegment, per anti diagonal
+    // that gives out an index to directly access grid, rather than an i,j pair
+    RAJA::forall<RAJA::IndexSet::ExecPolicy<RAJA::omp_parallel_exec<RAJA::seq_exec>,RAJA::omp_for_exec>(p2p_indexset,
+        [=](RAJA::Index_type in) {
+
+        // Option 1: use a layout to get indices back
+        RAJA::Index_type i,j;
+        RAJA::index_converter.toIndices(in, i, j);
+        grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+        // Option 2: use indices directly
+        //grid[in] = grid[in - n] + grid[in - 1] - grid[in - n - 1];
+    });
+#endif
 
     // copy top right corner value to bottom left corner to create dependency; we
     // need a barrier to make sure the latest value is used. This also guarantees
