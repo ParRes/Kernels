@@ -1,7 +1,7 @@
 #define RESTRICT __restrict__
 
 _Pragma("omp declare target")
-void star1(const int n, std::vector<double> & in, std::vector<double> & out) {
+void star1(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=1; i<n-1; ++i) {
       _Pragma("omp simd")
@@ -14,7 +14,7 @@ void star1(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void star2(const int n, std::vector<double> & in, std::vector<double> & out) {
+void star2(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=2; i<n-2; ++i) {
       _Pragma("omp simd")
@@ -31,7 +31,7 @@ void star2(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void star3(const int n, std::vector<double> & in, std::vector<double> & out) {
+void star3(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=3; i<n-3; ++i) {
       _Pragma("omp simd")
@@ -52,7 +52,7 @@ void star3(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void star4(const int n, std::vector<double> & in, std::vector<double> & out) {
+void star4(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=4; i<n-4; ++i) {
       _Pragma("omp simd")
@@ -77,7 +77,7 @@ void star4(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void star5(const int n, std::vector<double> & in, std::vector<double> & out) {
+void star5(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=5; i<n-5; ++i) {
       _Pragma("omp simd")
@@ -106,7 +106,7 @@ void star5(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void star6(const int n, std::vector<double> & in, std::vector<double> & out) {
+void star6(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=6; i<n-6; ++i) {
       _Pragma("omp simd")
@@ -139,7 +139,7 @@ void star6(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void star7(const int n, std::vector<double> & in, std::vector<double> & out) {
+void star7(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=7; i<n-7; ++i) {
       _Pragma("omp simd")
@@ -176,7 +176,7 @@ void star7(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void star8(const int n, std::vector<double> & in, std::vector<double> & out) {
+void star8(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=8; i<n-8; ++i) {
       _Pragma("omp simd")
@@ -217,7 +217,7 @@ void star8(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void star9(const int n, std::vector<double> & in, std::vector<double> & out) {
+void star9(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=9; i<n-9; ++i) {
       _Pragma("omp simd")
@@ -262,7 +262,7 @@ void star9(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void grid1(const int n, std::vector<double> & in, std::vector<double> & out) {
+void grid1(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=1; i<n-1; ++i) {
       _Pragma("omp simd")
@@ -278,7 +278,7 @@ void grid1(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void grid2(const int n, std::vector<double> & in, std::vector<double> & out) {
+void grid2(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=2; i<n-2; ++i) {
       _Pragma("omp simd")
@@ -308,7 +308,7 @@ void grid2(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void grid3(const int n, std::vector<double> & in, std::vector<double> & out) {
+void grid3(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=3; i<n-3; ++i) {
       _Pragma("omp simd")
@@ -360,7 +360,7 @@ void grid3(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void grid4(const int n, std::vector<double> & in, std::vector<double> & out) {
+void grid4(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=4; i<n-4; ++i) {
       _Pragma("omp simd")
@@ -442,7 +442,7 @@ void grid4(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void grid5(const int n, std::vector<double> & in, std::vector<double> & out) {
+void grid5(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=5; i<n-5; ++i) {
       _Pragma("omp simd")
@@ -562,7 +562,7 @@ void grid5(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void grid6(const int n, std::vector<double> & in, std::vector<double> & out) {
+void grid6(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=6; i<n-6; ++i) {
       _Pragma("omp simd")
@@ -728,7 +728,7 @@ void grid6(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void grid7(const int n, std::vector<double> & in, std::vector<double> & out) {
+void grid7(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=7; i<n-7; ++i) {
       _Pragma("omp simd")
@@ -948,7 +948,7 @@ void grid7(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void grid8(const int n, std::vector<double> & in, std::vector<double> & out) {
+void grid8(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=8; i<n-8; ++i) {
       _Pragma("omp simd")
@@ -1230,7 +1230,7 @@ void grid8(const int n, std::vector<double> & in, std::vector<double> & out) {
      }
 }
 
-void grid9(const int n, std::vector<double> & in, std::vector<double> & out) {
+void grid9(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=9; i<n-9; ++i) {
       _Pragma("omp simd")

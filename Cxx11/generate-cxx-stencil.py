@@ -6,7 +6,7 @@ import string
 import os
 
 def codegen(src,pattern,stencil_size,radius,W,model):
-    if (model=='openmp' or model=='target'):
+    if (model=='openmp'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    _Pragma("omp for")\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
