@@ -1,16 +1,7 @@
 include ../common/make.defs
 include ../common/PRKVERSION
 
-ifndef RADIUS
-  RADIUS=2
-endif
-
-STARFLAG   = -DSTAR
-#DOUBLEFLAG = -DDOUBLE
-
 CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
-CPPFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
-CPPFLAGS += -I.
 
 CFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS) -Wall -Wextra
 #CFLAGS  = $(PRKCPPFLAGS) -g3 -O0
@@ -38,7 +29,7 @@ serial: p2p stencil transpose
 
 openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
-target: p2p-target stencil-target transpose-target
+target: stencil-target transpose-target
 
 cilk: stencil-cilk transpose-cilk
 
