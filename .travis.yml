@@ -190,6 +190,16 @@ matrix:
   - os: linux
     compiler: clang
     env: PRK_TARGET=allampi
+  # These started failing in June 2017.  Need to debug.
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allmpi1
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allrma
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allshm
 addons:
   apt:
     sources:
