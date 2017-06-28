@@ -48,7 +48,8 @@ TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
 #PSTLFLAG=-DUSE_PSTL -D_GLIBCXX_PARALLEL -fopenmp
-PSTLFLAG=
+PSTLFLAG=-DUSE_PSTL -fopenmp
+#PSTLFLAG=
 #
 # MPI
 #
