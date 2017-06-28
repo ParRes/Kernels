@@ -39,7 +39,7 @@ endif
 else
 TARGET = target
 endif
-all: vector valarray openmp opencl $(TARGET)
+all: vector valarray openmp opencl $(TARGET) cilk tbb pstl rangefor raja
 
 vector: p2p-vector stencil-vector transpose-vector
 
