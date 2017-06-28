@@ -62,10 +62,14 @@
 
 #include "prk_util.h"
 
-#ifndef USE_PSTL
-#include "stencil_stl.hpp"
-#else
+// See ParallelSTL.md for important information.
+#if defined(USE_PSTL) && defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
 #include "stencil_pstl.hpp"
+#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
+                        && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
+#include "stencil_pgnu.hpp"
+#else
+#include "stencil_stl.hpp"
 #endif
 
 int main(int argc, char * argv[])
@@ -168,12 +172,17 @@ int main(int argc, char * argv[])
 
   // initialize the input and output arrays
   auto range = boost::irange(0,n);
-#ifndef USE_PSTL
+#if defined(USE_PSTL) && defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
+  std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
+                        && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
+  __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
+    __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int j) {
+#else
+#warning Parallel STL is NOT being used!
   std::for_each( std::begin(range), std::end(range), [&] (int i) {
     std::for_each( std::begin(range), std::end(range), [&] (int j) {
-#else
-  std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
 #endif
       in[i*n+j] = static_cast<double>(i+j);
       out[i*n+j] = 0.0;
@@ -213,12 +222,15 @@ int main(int argc, char * argv[])
         }
     }
     // add constant to solution to force refresh of neighbor data, if any
-#ifndef USE_PSTL
-    std::for_each( std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::begin(range), std::end(range), [&] (int j) {
+#if defined(USE_PSTL) && defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
+  std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) && (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2)
+  __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
+    __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int j) {
 #else
-    std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+  std::for_each( std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( std::begin(range), std::end(range), [&] (int j) {
 #endif
         in[i*n+j] += 1.0;
       });

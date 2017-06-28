@@ -81,12 +81,19 @@
 #  include <pstl/memory>
 # else
 #  include <parallel/algorithm>
+#  include <parallel/numeric>
 # endif
 #endif
 
 #ifdef USE_KOKKOS
 #include <typeinfo>
 #include <Kokkos_Core.hpp>
+#endif
+
+#ifdef USE_RAJA
+#define RAJA_ENABLE_NESTED 1
+#include "RAJA/RAJA.hxx"
+//#include "RAJA/internal/defines.hxx"
 #endif
 
 #define RESTRICT __restrict__

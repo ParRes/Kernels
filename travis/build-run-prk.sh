@@ -322,6 +322,9 @@ case "$PRK_TARGET" in
         esac
         case "$PRK_TARGET" in
             allfortrancoarray)
+                # OpenCoarrays uses Open-MPI on Mac thanks to Homebrew
+                # see https://github.com/open-mpi/ompi/issues/2956
+                export TMPDIR=/tmp
                 if [ "${CC}" = "gcc" ] ; then
                     #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
                     if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
