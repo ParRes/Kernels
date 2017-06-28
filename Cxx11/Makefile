@@ -61,8 +61,7 @@ rangefor: stencil-vector-rangefor transpose-vector-rangefor
 
 kokkos: stencil-kokkos transpose-kokkos
 
-#raja: stencil-vector-raja transpose-vector-raja
-raja: transpose-vector-raja
+raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja
 
 cuda: transpose-cuda
 

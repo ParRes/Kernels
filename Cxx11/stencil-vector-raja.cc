@@ -138,17 +138,11 @@ int main(int argc, char * argv[])
   auto stencil_time = 0.0;
 
   // initialize the input and output arrays
-  auto range = boost::irange(0,n);
-#ifndef USE_PSTL
-  std::for_each( std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( std::begin(range), std::end(range), [&] (int j) {
-#else
-  std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
-#endif
+  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+          ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
+            [&](RAJA::Index_type i, RAJA::Index_type j) {
       in[i*n+j] = static_cast<double>(i+j);
       out[i*n+j] = 0.0;
-    });
   });
 
   for (auto iter = 0; iter<=iterations; iter++) {
@@ -184,15 +178,10 @@ int main(int argc, char * argv[])
         }
     }
     // add constant to solution to force refresh of neighbor data, if any
-#ifndef USE_PSTL
-    std::for_each( std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::begin(range), std::end(range), [&] (int j) {
-#else
-    std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
-#endif
+    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+            ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
+              [&](RAJA::Index_type i, RAJA::Index_type j) {
         in[i*n+j] += 1.0;
-      });
     });
   }
 
@@ -203,14 +192,13 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   // compute L1 norm in parallel
-  double norm = 0.0;
-  auto inside = boost::irange(radius,n-radius);
-  for (auto i : inside) {
-    for (auto j : inside) {
-      norm += std::fabs(out[i*n+j]);
-    }
-  }
-  norm /= active_points;
+  RAJA::ReduceSum<RAJA::omp_reduce, double> reduced_norm(0.0);
+  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+          ( RAJA::RangeSegment(radius,n-radius), RAJA::RangeSegment(radius,n-radius),
+            [&](RAJA::Index_type i, RAJA::Index_type j) {
+      reduced_norm += std::fabs(out[i*n+j]);
+  });
+  double norm = reduced_norm / active_points;
 
   // verify correctness
   const double epsilon = 1.0e-8;
