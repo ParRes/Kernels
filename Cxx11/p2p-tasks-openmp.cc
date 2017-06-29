@@ -124,6 +124,10 @@ int main(int argc, char* argv[])
   std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
   std::cout << "Grid chunk sizes          = " << mc << ", " << nc << std::endl;
 
+  //////////////////////////////////////////////////////////////////////
+  // Allocate space and perform the computation
+  //////////////////////////////////////////////////////////////////////
+
   auto pipeline_time = 0.0; // silence compiler warning
 
   // working set
@@ -166,9 +170,7 @@ int main(int argc, char* argv[])
         for (auto i=1; i<m; i+=mc) {
           for (auto j=1; j<n; j+=nc) {
             _Pragma("omp task depend(in:grid[0],grid[(i-mc)*n+j],grid[i*n+(j-nc)],grid[(i-mc)*n+(j-nc)]) depend(out:grid[i*n+j])")
-            sweep_tile(i, std::min(m,i+mc),
-                       j, std::min(n,j+nc),
-                       m, n, grid);
+            sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), m, n, grid);
           }
         }
         _Pragma("omp task depend(in:grid[(lic-1)*n+(ljc)]) depend(out:grid[0])")
@@ -185,10 +187,7 @@ int main(int argc, char* argv[])
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
-  // error tolerance
   const double epsilon = 1.e-8;
-
-  // verify correctness, using top right value
   auto corner_val = ((iterations+1.)*(n+m-2.));
   if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]

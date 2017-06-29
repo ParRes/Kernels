@@ -116,7 +116,7 @@ void ParallelSweep( const char* x, size_t xlen, const char* y, size_t ylen ) {
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/TBB pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters

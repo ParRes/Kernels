@@ -190,14 +190,25 @@ matrix:
   - os: linux
     compiler: clang
     env: PRK_TARGET=allampi
+  # These started failing in June 2017.  Need to debug.
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allmpi1
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allrma
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allshm
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
-    # clang-3.8 comes from this
-    - llvm-toolchain-precise
-    #  Boost is for Grappa and HPX
-    #- boost-latest
+    # works on Precise and Trusty
+    # see https://docs.travis-ci.com/user/languages/c/ for details
+    - llvm-toolchain-precise-3.8
+    #  Boost is for Grappa, HPX, C++ rangefor, pstl
+    - boost-latest
     packages:
     - python-numpy
     - gcc-5
@@ -212,6 +223,8 @@ addons:
     - clang-3.8
     # Grappa and HPX use CMake
     - cmake
+    # C++ code needs range headers
+    - libboost-all-dev
     # Boost is for Grappa and HPX-3 - reactivate with them
     # Grappa needs these (according to their .travis.yml)
     #- libboost-date-time1.55-dev

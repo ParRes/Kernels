@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>4) ? std::atol(argv[3]) : 32;
+      tile_size = (argc>3) ? std::atol(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
 
@@ -107,12 +107,12 @@ int main(int argc, char * argv[])
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
+  auto trans_time = 0.0;
+
   std::vector<double> A;
   std::vector<double> B;
   A.resize(order*order);
   B.resize(order*order);
-
-  auto trans_time = 0.0;
 
   _Pragma("omp parallel")
   {
@@ -155,11 +155,9 @@ int main(int argc, char * argv[])
         }
       }
     }
-    {
-      _Pragma("omp barrier")
-      _Pragma("omp master")
-      trans_time = prk::wtime() - trans_time;
-    }
+    _Pragma("omp barrier")
+    _Pragma("omp master")
+    trans_time = prk::wtime() - trans_time;
   }
 
   //////////////////////////////////////////////////////////////////////
