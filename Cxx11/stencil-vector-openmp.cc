@@ -135,7 +135,6 @@ int main(int argc, char * argv[])
 
   auto stencil_time = 0.0;
 
-  // initialize the input and output arrays
   _Pragma("omp parallel")
   {
     _Pragma("omp for")
@@ -154,34 +153,34 @@ int main(int argc, char * argv[])
           stencil_time = prk::wtime();
       }
 
-    // Apply the stencil operator
-    if (star) {
-        switch (radius) {
-            case 1: star1(n, in, out); break;
-            case 2: star2(n, in, out); break;
-            case 3: star3(n, in, out); break;
-            case 4: star4(n, in, out); break;
-            case 5: star5(n, in, out); break;
-            case 6: star6(n, in, out); break;
-            case 7: star7(n, in, out); break;
-            case 8: star8(n, in, out); break;
-            case 9: star9(n, in, out); break;
-            default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
-        }
-    } else {
-        switch (radius) {
-            case 1: grid1(n, in, out); break;
-            case 2: grid2(n, in, out); break;
-            case 3: grid3(n, in, out); break;
-            case 4: grid4(n, in, out); break;
-            case 5: grid5(n, in, out); break;
-            case 6: grid6(n, in, out); break;
-            case 7: grid7(n, in, out); break;
-            case 8: grid8(n, in, out); break;
-            case 9: grid9(n, in, out); break;
-            default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
-        }
-    }
+      // Apply the stencil operator
+      if (star) {
+          switch (radius) {
+              case 1: star1(n, in, out); break;
+              case 2: star2(n, in, out); break;
+              case 3: star3(n, in, out); break;
+              case 4: star4(n, in, out); break;
+              case 5: star5(n, in, out); break;
+              case 6: star6(n, in, out); break;
+              case 7: star7(n, in, out); break;
+              case 8: star8(n, in, out); break;
+              case 9: star9(n, in, out); break;
+              default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
+          }
+      } else {
+          switch (radius) {
+              case 1: grid1(n, in, out); break;
+              case 2: grid2(n, in, out); break;
+              case 3: grid3(n, in, out); break;
+              case 4: grid4(n, in, out); break;
+              case 5: grid5(n, in, out); break;
+              case 6: grid6(n, in, out); break;
+              case 7: grid7(n, in, out); break;
+              case 8: grid8(n, in, out); break;
+              case 9: grid9(n, in, out); break;
+              default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
+          }
+      }
       // add constant to solution to force refresh of neighbor data, if any
       _Pragma("omp for")
       for (auto i=0; i<n; i++) {

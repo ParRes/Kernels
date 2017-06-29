@@ -62,32 +62,7 @@
 
 #include "prk_util.h"
 
-template <int radius, bool star>
-void do_stencil(int n, std::vector<std::vector<double>> weight, std::vector<double> & in, std::vector<double> & out)
-{
-    _Pragma("omp taskloop collapse(2)")
-    for (auto i=radius; i<n-radius; i++) {
-      for (auto j=radius; j<n-radius; j++) {
-        if (star) {
-          for (auto jj=-radius; jj<=radius; jj++) {
-            out[i*n+j] += weight[radius][radius+jj]*in[i*n+j+jj];
-          }
-          for (auto ii=-radius; ii<0; ii++) {
-            out[i*n+j] += weight[radius+ii][radius]*in[(i+ii)*n+j];
-          }
-          for (auto ii=1; ii<=radius; ii++) {
-            out[i*n+j] += weight[radius+ii][radius]*in[(i+ii)*n+j];
-          }
-        } else {
-          for (auto ii=-radius; ii<=radius; ii++) {
-            for (auto jj=-radius; jj<=radius; jj++) {
-              out[i*n+j] += weight[radius+ii][radius+jj]*in[(i+ii)*n+j+jj];
-            }
-          }
-        }
-      }
-    }
-}
+#include "stencil_taskloop.hpp"
 
 int main(int argc, char * argv[])
 {
@@ -95,7 +70,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11/OpenMP TASKLOOP Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // process and test input parameters
+  // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -153,35 +128,6 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<std::vector<double>> weight;
-  weight.resize(2*radius+1);
-  for (auto i=0; i<2*radius+1; i++) {
-    weight[i].resize(2*radius+1, 0.0);
-  }
-
-  // fill the stencil weights to reflect a discrete divergence operator
-  const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
-  if (star) {
-    for (auto ii=1; ii<=radius; ii++) {
-      weight[radius][radius+ii] = weight[radius+ii][radius] = +1./(2*ii*radius);
-      weight[radius][radius-ii] = weight[radius-ii][radius] = -1./(2*ii*radius);
-    }
-  } else {
-    for (auto jj=1; jj<=radius; jj++) {
-      for (auto ii=-jj+1; ii<jj; ii++) {
-        weight[radius+ii][radius+jj] = +1./(4*jj*(2*jj-1)*radius);
-        weight[radius+ii][radius-jj] = -1./(4*jj*(2*jj-1)*radius);
-        weight[radius+jj][radius+ii] = +1./(4*jj*(2*jj-1)*radius);
-        weight[radius-jj][radius+ii] = -1./(4*jj*(2*jj-1)*radius);
-      }
-      weight[radius+jj][radius+jj]   = +1./(4*jj*radius);
-      weight[radius-jj][radius-jj]   = -1./(4*jj*radius);
-    }
-  }
-
-  // interior of grid with respect to stencil
-  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
-
   std::vector<double> in;
   std::vector<double> out;
   in.resize(n*n);
@@ -192,8 +138,8 @@ int main(int argc, char * argv[])
   _Pragma("omp parallel")
   _Pragma("omp master")
   {
-    // initialize the input and output arrays
-    _Pragma("omp taskloop collapse(2)")
+    //_Pragma("omp taskloop collapse(2)")
+    _Pragma("omp taskloop grainsize(32)")
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
         in[i*n+j] = static_cast<double>(i+j);
@@ -212,35 +158,34 @@ int main(int argc, char * argv[])
       // Apply the stencil operator
       if (star) {
           switch (radius) {
-              case 1: do_stencil<1,true>(n, weight, in, out); break;
-              case 2: do_stencil<2,true>(n, weight, in, out); break;
-              case 3: do_stencil<3,true>(n, weight, in, out); break;
-              case 4: do_stencil<4,true>(n, weight, in, out); break;
-              case 5: do_stencil<5,true>(n, weight, in, out); break;
-              case 6: do_stencil<6,true>(n, weight, in, out); break;
-              case 7: do_stencil<7,true>(n, weight, in, out); break;
-              case 8: do_stencil<8,true>(n, weight, in, out); break;
-              case 9: do_stencil<9,true>(n, weight, in, out); break;
-              default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
+              case 1: star1(n, in, out); break;
+              case 2: star2(n, in, out); break;
+              case 3: star3(n, in, out); break;
+              case 4: star4(n, in, out); break;
+              case 5: star5(n, in, out); break;
+              case 6: star6(n, in, out); break;
+              case 7: star7(n, in, out); break;
+              case 8: star8(n, in, out); break;
+              case 9: star9(n, in, out); break;
+              default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
           }
       } else {
           switch (radius) {
-              case 1: do_stencil<1,false>(n, weight, in, out); break;
-              case 2: do_stencil<2,false>(n, weight, in, out); break;
-              case 3: do_stencil<3,false>(n, weight, in, out); break;
-              case 4: do_stencil<4,false>(n, weight, in, out); break;
-              case 5: do_stencil<5,false>(n, weight, in, out); break;
-              case 6: do_stencil<6,false>(n, weight, in, out); break;
-              case 7: do_stencil<7,false>(n, weight, in, out); break;
-              case 8: do_stencil<8,false>(n, weight, in, out); break;
-              case 9: do_stencil<9,false>(n, weight, in, out); break;
-              default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
+              case 1: grid1(n, in, out); break;
+              case 2: grid2(n, in, out); break;
+              case 3: grid3(n, in, out); break;
+              case 4: grid4(n, in, out); break;
+              case 5: grid5(n, in, out); break;
+              case 6: grid6(n, in, out); break;
+              case 7: grid7(n, in, out); break;
+              case 8: grid8(n, in, out); break;
+              case 9: grid9(n, in, out); break;
+              default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
           }
       }
-      _Pragma("omp taskwait")
-
       // add constant to solution to force refresh of neighbor data, if any
-      _Pragma("omp taskloop collapse(2)")
+      //_Pragma("omp taskloop collapse(2)")
+      _Pragma("omp taskloop grainsize(32)")
       for (auto i=0; i<n; i++) {
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
@@ -254,6 +199,9 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
+
+  // interior of grid with respect to stencil
+  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
   // compute L1 norm in parallel
   double norm = 0.0;
@@ -278,6 +226,7 @@ int main(int argc, char * argv[])
     std::cout << "L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
 #endif
+    const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
     size_t flops = (2L*(size_t)stencil_size+1L) * active_points;
     auto avgtime = stencil_time/iterations;
     std::cout << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
