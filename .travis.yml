@@ -196,10 +196,10 @@ matrix:
     env: PRK_TARGET=allmpi1
   - os: linux
     compiler: clang
-    env: PRK_TARGET=allrma
+    env: PRK_TARGET=allmpirma
   - os: linux
     compiler: clang
-    env: PRK_TARGET=allshm
+    env: PRK_TARGET=allmpishm
 addons:
   apt:
     sources:
