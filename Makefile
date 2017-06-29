@@ -48,6 +48,7 @@ help:
 	@echo "Usage: \"make all\"          (re-)builds all targets"
 	@echo "       \"make allserial\"    (re-)builds all serial targets"
 	@echo "       \"make allcxx\"       (re-)builds all C++ targets"
+	@echo "       \"make allc11\"       (re-)builds all C1z targets"
 	@echo "       \"make allrust\"      (re-)builds all Rust targets"
 	@echo "       \"make allopenmp\"    (re-)builds all OpenMP targets"
 	@echo "       \"make allmpi1\"      (re-)builds all conventional MPI targets"
@@ -71,11 +72,13 @@ help:
 	@echo "       \"make allfreaks\"    (re-)builds the above four targets"
 	@echo "       optionally, specify   \"matrix_rank=<n> number_of_functions=<m>\""
 	@echo "       optionally, specify   \"default_opt_flags=<list of optimization flags>\""
+	@echo "       \"make allshared\"    (re-)builds the shared-memory targets (C89, C11, C++11, Fortran, RUST)"
 	@echo "       \"make clean\"        removes all objects and executables"
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
 all: alldarwin allfreaks
 alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran allfenix
+allshared: allserial allopenmp allfortran allcxx allc11 allrust
 allfreaks: allcharm++ allampi allgrappa alllegion
 
 allmpi1:
@@ -235,6 +238,9 @@ allfortrancoarray:
 allcxx:
 	$(MAKE) -C Cxx11
 
+allc11:
+	$(MAKE) -C C1z
+
 allrust:
 	$(MAKE) -C RUST
 
@@ -324,6 +330,8 @@ clean:
 	cd SERIAL/AMR;              $(MAKE) clean
 	make -C FORTRAN clean
 	make -C Cxx11 clean
+	make -C C1z clean
+	make -C RUST clean
 	rm -f stats.json
 
 veryclean: clean
