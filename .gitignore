@@ -1,9 +1,11 @@
 *.i                             # Preprocessed source
 *.s                             # Assembly output
+*.ll                            # LLVM intermediate
 *.o
 *.a
 *.x
 *.incl
+core.*                          # core files
 func.c
 common/make.defs
 scripts/small/runfgmpi
@@ -18,6 +20,8 @@ scripts/small/runfenix
 */*.swp                         # Vim
 */*/*.swp                       # Vim
 *.dSYM                          # Mac
+*/*.dSYM                        # Mac
+*/*/*.dSYM                      # Mac
 *__genmod.mod                   # Intel compiler
 *__genmod.f90                   # Intel compiler
 *.optrpt                        # Intel compiler
@@ -169,6 +173,8 @@ FORTRAN/p2p
 FORTRAN/p2p-coarray
 FORTRAN/p2p-openmp-target
 FORTRAN/p2p-openmp-tasks
+FORTRAN/p2p-openmp-datapar
+FORTRAN/p2p-openmp-doacross
 FORTRAN/stencil
 FORTRAN/stencil-coarray
 FORTRAN/stencil-openmp
