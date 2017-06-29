@@ -9,9 +9,9 @@ TRAVIS_ROOT="$1"
 case "$os" in
     Darwin)
         echo "Mac"
-        brew update
-        brew upgrade cmake || brew install cmake
-        brew list cmake
+        brew update || true
+        brew upgrade cmake || brew install cmake || true
+        #brew list cmake
         ;;
 
     Linux)
