@@ -61,10 +61,9 @@
 
 #include "prk_util.h"
 
-inline void sweep_tile(size_t startm, size_t endm,
-                       size_t startn, size_t endn,
-                       size_t m,      size_t n,
-                       std::vector<double> & grid)
+inline void sweep_tile(int startm, int endm,
+                       int startn, int endn,
+                       int n, std::vector<double> & grid)
 {
   for (auto i=startm; i<endm; i++) {
     for (auto j=startn; j<endn; j++) {
@@ -96,16 +95,16 @@ int main(int argc, char* argv[])
   }
 
   // grid dimensions
-  size_t m = std::atol(argv[2]);
-  size_t n = std::atol(argv[3]);
+  int m = std::atoi(argv[2]);
+  int n = std::atoi(argv[3]);
   if (m < 1 || n < 1) {
     std::cout << "ERROR: grid dimensions must be positive: " << m <<  n << std::endl;
     exit(EXIT_FAILURE);
   }
 
   // grid chunk dimensions
-  size_t mc = (argc > 4) ? std::atol(argv[4]) : m;
-  size_t nc = (argc > 5) ? std::atol(argv[5]) : n;
+  int mc = (argc > 4) ? std::atoi(argv[4]) : m;
+  int nc = (argc > 5) ? std::atoi(argv[5]) : n;
   if (mc < 1 || mc > m || nc < 1 || nc > n) {
     std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
     mc = m;
@@ -150,9 +149,7 @@ int main(int argc, char* argv[])
       for (auto i=1; i<m; i+=mc) {
         for (auto j=1; j<n; j+=nc) {
           //grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-          sweep_tile(i, std::min(m,i+mc),
-                     j, std::min(n,j+nc),
-                     m, n, grid);
+          sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, grid);
         }
       }
     }
@@ -187,7 +184,7 @@ int main(int argc, char* argv[])
 #endif
   auto avgtime = pipeline_time/iterations;
   std::cout << "Rate (MFlops/s): "
-            << 1.0e-6 * 2. * ( static_cast<size_t>(m-1)*static_cast<size_t>(n-1) )/avgtime
+            << 2.0e-6 * ( (m-1)*(n-1) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
 
   return 0;

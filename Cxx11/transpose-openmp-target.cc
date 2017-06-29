@@ -64,8 +64,8 @@ int main(int argc, char * argv[])
   std::cout << "C++11/OpenMP TARGET Matrix transpose: B = A^T" << std::endl;
 
   int iterations;
-  size_t order;
-  size_t tile_size;
+  int order;
+  int tile_size;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order> [tile size]";
@@ -175,8 +175,8 @@ int main(int argc, char * argv[])
   _Pragma("omp parallel for reduction(+:abserr)")
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      const size_t ij = i*order+j;
-      const size_t ji = j*order+i;
+      const int ij = i*order+j;
+      const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(B[ji] - reference);
     }
@@ -190,7 +190,7 @@ int main(int argc, char * argv[])
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(double);
+    auto bytes = order * order * sizeof(double);
     std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
