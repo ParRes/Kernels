@@ -7,7 +7,7 @@
 # C99 is required in some implementations.
 CC=/opt/llvm/4.0.0/bin/clang -std=c11
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=false
+FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Mfreeform -L/opt/llvm/pgi-flang/lib -Wl,-rpath=/opt/llvm/pgi-flang/lib
 # C++11 may not be required but does no harm here.
 CXX=/opt/llvm/4.0.0/bin/clang++ -std=c++1z
 #
@@ -24,6 +24,7 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
 #
 OPENMPFLAG=-fopenmp -L/opt/llvm/4.0.0/lib -lomp
 OFFLOADFLAG=-fopenmp -L/opt/llvm/4.0.0/lib -lomp
+ORNLACCFLAG= # Flang does not support OpenACC
 # Klondike weirdness
 # OPENMPFLAG+=-L/opt/intel/compilers_and_libraries_2018.0.082/linux/compiler/lib/intel64_lin -liomp5
 # Mac weirdness
