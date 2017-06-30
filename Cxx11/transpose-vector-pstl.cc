@@ -139,8 +139,8 @@ int main(int argc, char * argv[])
   auto abserr = 0.0;
   for (auto i : range) {
     for (auto j : range) {
-      const size_t ij = i*order+j;
-      const size_t ji = j*order+i;
+      const int ij = i*order+j;
+      const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(B[ji] - reference);
     }

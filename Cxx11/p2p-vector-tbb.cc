@@ -61,7 +61,7 @@
 
 #include "prk_util.h"
 
-void SequentialSweep(size_t m, size_t n, std::vector<double> & grid)
+void SequentialSweep(int m, int n, std::vector<double> & grid)
 {
   for (auto i=1; i<m; i++) {
     for (auto j=1; j<n; j++) {
@@ -75,30 +75,30 @@ const int MAX_LEN = 1024;
 tbb::atomic<char> Count[MAX_LEN/N+1][MAX_LEN/N+1];
 double F[MAX_LEN][MAX_LEN];
 
-void ParallelSweep( const char* x, size_t xlen, const char* y, size_t ylen ) {
+void ParallelSweep( const char* x, int xlen, const char* y, int ylen ) {
    // Initialize predecessor counts for blocks.
-   size_t m = (xlen+N-1)/N;
-   size_t n = (ylen+N-1)/N;
+   int m = (xlen+N-1)/N;
+   int n = (ylen+N-1)/N;
    for( int i=0; i<m; ++i ) {
        for( int j=0; j<n; ++j ) {
            Count[i][j] = (i>0)+(j>0);
        }
    }
    // Roll the wavefront from the origin.
-   typedef std::pair<size_t,size_t> block;
+   typedef std::pair<int,int> block;
    block origin(0,0);
    tbb::parallel_do( &origin, &origin+1,
        [=]( const block& b, tbb::parallel_do_feeder<block>&feeder ) {
            // Extract bounds on block
-           size_t bi = b.first;
-           size_t bj = b.second;
-           size_t xl = N*bi+1;
-           size_t xu = std::min(xl+N,xlen+1);
-           size_t yl = N*bj+1;
-           size_t yu = std::min(yl+N,ylen+1);
+           int bi = b.first;
+           int bj = b.second;
+           int xl = N*bi+1;
+           int xu = std::min(xl+N,xlen+1);
+           int yl = N*bj+1;
+           int yu = std::min(yl+N,ylen+1);
            // Process the block
-           for( size_t i=xl; i<xu; ++i ) {
-               for( size_t j=yl; j<yu; ++j ) {
+           for( int i=xl; i<xu; ++i ) {
+               for( int j=yl; j<yu; ++j ) {
                    F[i][j] = x[i-1]==y[j-1] ? F[i-1][j-1]+1 : std::max(F[i][j-1],F[i-1][j]);
                }
            }
@@ -135,10 +135,10 @@ int main(int argc, char* argv[])
   }
 
   // grid dimensions
-  size_t m = std::atol(argv[2]);
-  size_t n = m;
+  int m = std::atoi(argv[2]);
+  int n = m;
   if (argc > 3) {
-    n = std::atol(argv[3]);
+    n = std::atoi(argv[3]);
   }
   if (m < 1 || n < 1) {
     std::cout << "ERROR: grid dimensions must be positive: " << m <<  n << std::endl;
@@ -198,7 +198,7 @@ int main(int argc, char* argv[])
 #endif
   auto avgtime = pipeline_time/iterations;
   std::cout << "Rate (MFlops/s): "
-            << 1.0e-6 * 2. * ( static_cast<size_t>(m-1)*static_cast<size_t>(n-1) )/avgtime
+            << 2.0e-6 * ( (m-1)*(n-1) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
 
   return 0;
