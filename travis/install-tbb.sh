@@ -24,4 +24,4 @@ case "${TRAVIS_OS_NAME}" in
 esac
 export TBBROOT=${PWD}/${DIRECTORY}
 mv ${TBBROOT} ${TRAVIS_ROOT}/tbb
-find ${TRAVIS_ROOT}/tbb -name "libtbb*"
+find ${TRAVIS_ROOT}/tbb -name "libtbb.so"
