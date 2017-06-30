@@ -69,7 +69,7 @@ void nothing(const int n, const double * restrict in, double * restrict out)
     printf("Please generate the new stencil using the code generator.\n");
     // n will never be zero - this is to silence compiler warnings.
     if (n==0) printf("%p %p\n", in, out);
-    return 1;
+    abort();
 }
 
 #include "stencil_seq.h"
