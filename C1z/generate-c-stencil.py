@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import fileinput
@@ -10,13 +10,20 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     if (model=='openmp' or model=='target'):
         src.write('    _Pragma("omp for")\n')
         src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')
-        src.write('      _Pragma("omp simd")\n')
+        src.write('      PRAGMA_OMP_SIMD\n')
+        src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
+    elif (model=='taskloop'):
+        src.write('    _Pragma("omp taskloop")\n')
+        src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')
+        src.write('      PRAGMA_OMP_SIMD\n')
         src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
     elif (model=='cilk'):
         src.write('    _Cilk_for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')
-        src.write('      _Cilk_for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
+        src.write('      PRAGMA_SIMD\n')
+        src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
     else:
         src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')
+        src.write('      PRAGMA_SIMD\n')
         src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
     src.write('        out[i*n+j] += ')
     k = 0
@@ -59,7 +66,7 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','openmp','target','cilk']:
+    for model in ['seq','openmp','target','cilk','taskloop']:
       src = open('stencil_'+model+'.h','w')
       if (model=='target'):
           src.write('_Pragma("omp declare target")\n')

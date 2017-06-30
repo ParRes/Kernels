@@ -13,7 +13,7 @@ case "$os" in
         brew install autoconf || brew upgrade autoconf || true
         brew install automake || brew upgrade automake || true
         brew install libtool  || brew upgrade libtool  || true
-        brew list autoconf automake libtool || true
+        #brew list autoconf automake libtool || true
         which glibtool
         which glibtoolize
         #glibtool --version

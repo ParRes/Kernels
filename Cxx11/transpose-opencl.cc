@@ -110,8 +110,8 @@ void run(cl::Context context, int iterations, int order)
   double abserr = 0.0;
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      const size_t ij = (size_t)i*(size_t)order+(size_t)j;
-      const size_t ji = (size_t)j*(size_t)order+(size_t)i;
+      const int ij = i*order+j;
+      const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(iterations+1)+addit;
       abserr += std::fabs(static_cast<double>(h_b[ji]) - reference);
     }

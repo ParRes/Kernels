@@ -1,18 +1,9 @@
 include ../common/make.defs
 include ../common/PRKVERSION
 
-ifndef RADIUS
-  RADIUS=2
-endif
-
-STARFLAG   = -DSTAR
-#DOUBLEFLAG = -DDOUBLE
-
 CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
-CPPFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
-CPPFLAGS += -I.
 
-CFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS) -Wall -Wextra
+CFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 #CFLAGS  = $(PRKCPPFLAGS) -g3 -O0
 
 # debugging
@@ -23,7 +14,7 @@ TARGETFLAGS = $(OFFLOADFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKFLAGS = $(CILKFLAG)
 
-.PHONY: all clean serial openmp target cilk
+.PHONY: all clean serial openmp target taskloop cilk
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(CC),icc)
@@ -32,18 +23,23 @@ endif
 else
 TARGET = target
 endif
-all: serial openmp cilk #$(TARGET)
+all: serial openmp cilk taskloop $(TARGET)
 
 serial: p2p stencil transpose
 
 openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
-target: p2p-target stencil-target transpose-target
+target: stencil-target transpose-target
+
+taskloop: stencil-taskloop transpose-taskloop
 
 cilk: stencil-cilk transpose-cilk
 
 %-target: %-target.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@
+
+%-taskloop: %-taskloop.c prk_util.h
+	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(OMPFLAGS) -o $@
 
 %-openmp: %-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) -o $@
@@ -63,6 +59,7 @@ clean:
 	-rm -f p2p stencil transpose
 	-rm -f *-openmp
 	-rm -f *-target
+	-rm -f *-taskloop
 	-rm -f *-cilk
 
 cleancl:

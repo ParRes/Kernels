@@ -1,9 +1,11 @@
 *.i                             # Preprocessed source
 *.s                             # Assembly output
+*.ll                            # LLVM intermediate
 *.o
 *.a
 *.x
 *.incl
+core.*                          # core files
 func.c
 common/make.defs
 scripts/small/runfgmpi
@@ -18,6 +20,8 @@ scripts/small/runfenix
 */*.swp                         # Vim
 */*/*.swp                       # Vim
 *.dSYM                          # Mac
+*/*.dSYM                        # Mac
+*/*/*.dSYM                      # Mac
 *__genmod.mod                   # Intel compiler
 *__genmod.f90                   # Intel compiler
 *.optrpt                        # Intel compiler
@@ -125,15 +129,28 @@ Cxx11/p2p-openmp-target
 Cxx11/p2p-tasks-openmp
 Cxx11/p2p-vector
 Cxx11/p2p-vector-doacross-openmp
+Cxx11/p2p-vector-raja
+Cxx11/p2p-vector-tbb
+Cxx11/p2p-wavefront-openmp
 Cxx11/stencil-opencl
 Cxx11/stencil-openmp-target
 Cxx11/stencil-vector
 Cxx11/stencil-vector-openmp
+Cxx11/stencil-vector-cilk
+Cxx11/stencil-vector-pstl
+Cxx11/stencil-vector-raja
+Cxx11/stencil-vector-rangefor
+Cxx11/stencil-vector-tbb
 Cxx11/transpose-opencl
 Cxx11/transpose-openmp-target
 Cxx11/transpose-valarray
 Cxx11/transpose-vector
 Cxx11/transpose-vector-openmp
+Cxx11/transpose-vector-cilk
+Cxx11/transpose-vector-pstl
+Cxx11/transpose-vector-raja
+Cxx11/transpose-vector-rangefor
+Cxx11/transpose-vector-tbb
 Cxx11/grid1.cl
 Cxx11/grid2.cl
 Cxx11/grid3.cl
@@ -156,6 +173,8 @@ FORTRAN/p2p
 FORTRAN/p2p-coarray
 FORTRAN/p2p-openmp-target
 FORTRAN/p2p-openmp-tasks
+FORTRAN/p2p-openmp-datapar
+FORTRAN/p2p-openmp-doacross
 FORTRAN/stencil
 FORTRAN/stencil-coarray
 FORTRAN/stencil-openmp

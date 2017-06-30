@@ -47,13 +47,11 @@ TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 # Parallel STL, Boost, etc.
 #
 BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
-#BOOSTFLAG=-DUSE_BOOST
-PSTLFLAG=-DUSE_PSTL -fopenmp
-RAJADIR=/opt/raja/gcc
-RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lraja -fopenmp -fcilkplus
+PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG}
 KOKKOSDIR=/opt/kokkos/gcc/openmp
-#KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos -ldl -fopenmp
-KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos -fopenmp
+KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos ${OPENMPFLAG}
+RAJADIR=/opt/raja/gcc
+RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${OPENMPFLAG} ${CILKFLAG}
 #
 # CUDA flags
 #

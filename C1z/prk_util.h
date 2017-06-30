@@ -32,6 +32,10 @@
 #ifndef PRK_UTIL_H
 #define PRK_UTIL_H
 
+#if !(defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L))
+# error You need a C99+ compiler.
+#endif
+
 // All of this is to get posix_memalign defined...
 // #define _POSIX_C_SOURCE (200112L)
 #define _POSIX_C_SOURCE (200809L)
@@ -58,11 +62,24 @@
 #endif
 
 #ifdef _OPENMP
-#include <omp.h>
+# include <omp.h>
+# if (_OPENMP >= 201300)
+#  define PRAGMA_OMP_SIMD _Pragma("omp simd")
+#  define PRAGMA_OMP_FOR_SIMD _Pragma("omp for simd")
+# else
+#  define PRAGMA_OMP_SIMD
+#  define PRAGMA_OMP_FOR_SIMD _Pragma("omp for")
+# endif
 #endif
 
 #ifdef __cilk
-#include <cilk/cilk.h>
+# include <cilk/cilk.h>
+#endif
+
+#if defined(__INTEL_COMPILER) && !defined(PRAGMA_OMP_SIMD)
+# define PRAGMA_SIMD _Pragma("simd")
+#else
+# define PRAGMA_SIMD
 #endif
 
 #if __APPLE__
