@@ -79,7 +79,7 @@ int main(int argc, char * argv[])
   int iterations = atoi(argv[1]);
   if (iterations < 1) {
     printf("ERROR: iterations must be >= 1\n");
-    exit(EXIT_FAILURE);
+    return 1;
   }
 
   // grid dimensions
@@ -87,7 +87,7 @@ int main(int argc, char * argv[])
   int n = atol(argv[3]);
   if (m < 1 || n < 1) {
     printf("ERROR: grid dimensions must be positive: %d,%d\n", m, n);
-    exit(EXIT_FAILURE);
+    return 1;
   }
 
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
@@ -164,7 +164,7 @@ int main(int argc, char * argv[])
   const double corner_val = ((iterations+1.)*(n+m-2.));
   if ( (fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     printf("ERROR: checksum %lf does not match verification value %lf\n", grid[(m-1)*n+(n-1)], corner_val);
-    exit(EXIT_FAILURE);
+    return 1;
   }
 
   prk_free(grid);

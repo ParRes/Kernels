@@ -69,7 +69,7 @@ void nothing(const int n, const double * restrict in, double * restrict out)
     printf("Please generate the new stencil using the code generator.\n");
     // n will never be zero - this is to silence compiler warnings.
     if (n==0) printf("%p %p\n", in, out);
-    exit(EXIT_FAILURE);
+    return 1;
 }
 
 #include "stencil_cilk.h"
@@ -85,24 +85,24 @@ int main(int argc, char * argv[])
 
   if (argc < 3){
     printf("Usage: <# iterations> <array dimension> [<star/grid> <radius>]\n");
-    exit(EXIT_FAILURE);
+    return 1;
   }
 
   // number of times to run the algorithm
   int iterations  = atoi(argv[1]);
   if (iterations < 1) {
     printf("ERROR: iterations must be >= 1\n");
-    exit(EXIT_FAILURE);
+    return 1;
   }
 
   // linear grid dimension
   int n  = atoi(argv[2]);
   if (n < 1) {
     printf("ERROR: grid dimension must be positive\n");
-    exit(EXIT_FAILURE);
+    return 1;
   } else if (n > floor(sqrt(INT_MAX))) {
     printf("ERROR: grid dimension too large - overflow risk\n");
-    exit(EXIT_FAILURE);
+    return 1;
   }
 
   // stencil pattern
@@ -120,7 +120,7 @@ int main(int argc, char * argv[])
 
   if ( (radius < 1) || (2*radius+1 > n) ) {
     printf("ERROR: Stencil radius negative or too large\n");
-    exit(EXIT_FAILURE);
+    return 1;
   }
 
   printf("Number of iterations      = %d\n", iterations);

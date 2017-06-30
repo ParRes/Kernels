@@ -73,14 +73,14 @@ int main(int argc, char * argv[])
   int iterations = atoi(argv[1]);
   if (iterations < 1) {
     printf("ERROR: iterations must be >= 1\n");
-    exit(EXIT_FAILURE);
+    return 1;
   }
 
   // order of a the matrix
   int order = atoi(argv[2]);
   if (order <= 0) {
     printf("ERROR: Matrix Order must be greater than 0\n");
-    exit(EXIT_FAILURE);
+    return 1;
   }
 
   // default tile size for tiling of local transpose
