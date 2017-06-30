@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import fileinput
@@ -10,29 +10,31 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    _Pragma("omp for")\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      _Pragma("omp simd")\n')
+        src.write('      PRAGMA_OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='target'):
         src.write('void '+pattern+str(radius)+'(const int n, const double * RESTRICT in, double * RESTRICT out) {\n')
         src.write('    _Pragma("omp for")\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      _Pragma("omp simd")\n')
+        src.write('      PRAGMA_OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='rangefor'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    for (auto i : inside) {\n')
+        src.write('      PRAGMA_SIMD\n')
         src.write('      for (auto j : inside) {\n')
     elif (model=='stl'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    std::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
+        src.write('      PRAGMA_SIMD\n')
         src.write('      std::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='pgnu'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    __gnu_parallel::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
-        src.write('      __gnu_parallel::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
+        src.write('      for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='pstl'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
@@ -41,7 +43,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     elif (model=='cilk'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    _Cilk_for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      _Cilk_for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
+        src.write('      PRAGMA_SIMD\n')
+        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='tbb'):
         src.write('template <>\n')
         if pattern=='star':
@@ -61,6 +64,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     else:
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
+        src.write('      PRAGMA_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     src.write('        out[i*n+j] += ')
     k = 0

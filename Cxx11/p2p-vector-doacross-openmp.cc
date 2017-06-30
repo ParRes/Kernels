@@ -72,29 +72,41 @@ int main(int argc, char* argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 4){
-    std::cout << "Usage: " << argv[0] << " <# iterations> <first array dimension> <second array dimension>" << std::endl;
-    return(EXIT_FAILURE);
-  }
+  int iterations;
+  int m, n;
+  int mc, nc;
+  try {
+      if (argc < 4){
+        throw " <# iterations> <first array dimension> <second array dimension> [<first chunk dimension> <second chunk dimension>]";
+      }
 
-  // number of times to run the pipeline algorithm
-  int iterations  = std::atoi(argv[1]);
-  if (iterations < 1){
-    std::cout << "ERROR: iterations must be >= 1 : " << iterations << std::endl;
-    exit(EXIT_FAILURE);
-  }
+      // number of times to run the pipeline algorithm
+      iterations  = std::atoi(argv[1]);
+      if (iterations < 1) {
+        throw "ERROR: iterations must be >= 1";
+      }
 
-  // grid dimensions
-  int m = std::atoi(argv[2]);
-  int n = std::atoi(argv[3]);
-  if (m < 1 || n < 1) {
-    std::cout << "ERROR: grid dimensions must be positive: " << m <<  n << std::endl;
-    exit(EXIT_FAILURE);
+      // grid dimensions
+      m = std::atoi(argv[2]);
+      n = std::atoi(argv[3]);
+      if (m < 1 || n < 1) {
+        throw "ERROR: grid dimensions must be positive";
+      } else if ( static_cast<size_t>(m)*static_cast<size_t>(n) > INT_MAX) {
+        throw "ERROR: grid dimension too large - overflow risk";
+      }
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return 1;
   }
 
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
-  std::cout << "Number of iterations      = " << iterations << std::endl;
-  std::cout << "Grid sizes                = " << m << ", " << n << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
+
+  //////////////////////////////////////////////////////////////////////
+  // Allocate space and perform the computation
+  //////////////////////////////////////////////////////////////////////
 
   auto pipeline_time = 0.0; // silence compiler warning
 
@@ -153,15 +165,12 @@ int main(int argc, char* argv[])
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
-  // error tolerance
   const double epsilon = 1.e-8;
-
-  // verify correctness, using top right value
   auto corner_val = ((iterations+1.)*(n+m-2.));
   if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
-    exit(EXIT_FAILURE);
+    return 1;
   }
 
 #ifdef VERBOSE

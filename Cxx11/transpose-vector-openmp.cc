@@ -118,6 +118,7 @@ int main(int argc, char * argv[])
   {
     _Pragma("omp for")
     for (auto i=0;i<order; i++) {
+      PRAGMA_SIMD
       for (auto j=0;j<order;j++) {
         A[i*order+j] = static_cast<double>(i*order+j);
         B[i*order+j] = 0.0;
@@ -137,7 +138,9 @@ int main(int argc, char * argv[])
         _Pragma("omp for")
         for (auto it=0; it<order; it+=tile_size) {
           for (auto jt=0; jt<order; jt+=tile_size) {
+            PRAGMA_SIMD
             for (auto i=it; i<std::min(order,it+tile_size); i++) {
+              PRAGMA_SIMD
               for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
                 B[i*order+j] += A[j*order+i];
                 A[j*order+i] += 1.0;
@@ -148,6 +151,7 @@ int main(int argc, char * argv[])
       } else {
         _Pragma("omp for")
         for (auto i=0;i<order; i++) {
+        PRAGMA_SIMD
           for (auto j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
             A[j*order+i] += 1.0;
