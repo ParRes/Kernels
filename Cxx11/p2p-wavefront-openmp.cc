@@ -74,10 +74,9 @@ int main(int argc, char* argv[])
 
   int iterations;
   int m, n;
-  int mc, nc;
   try {
       if (argc < 4){
-        throw " <# iterations> <first array dimension> <second array dimension> [<first chunk dimension> <second chunk dimension>]";
+        throw " <# iterations> <first array dimension> <second array dimension>";
       }
 
       // number of times to run the pipeline algorithm
@@ -94,15 +93,6 @@ int main(int argc, char* argv[])
       } else if ( static_cast<size_t>(m)*static_cast<size_t>(n) > INT_MAX) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
-
-      // grid chunk dimensions
-      mc = (argc > 4) ? std::atoi(argv[4]) : m;
-      nc = (argc > 5) ? std::atoi(argv[5]) : n;
-      if (mc < 1 || mc > m || nc < 1 || nc > n) {
-        std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
-        mc = m;
-        nc = n;
-      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -112,7 +102,6 @@ int main(int argc, char* argv[])
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
-  std::cout << "Grid chunk sizes     = " << mc << ", " << nc << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
