@@ -72,36 +72,60 @@ int main(int argc, char* argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 3){
-    std::cout << "Usage: " << argv[0] << " <# iterations> <array dimension>" << std::endl;
-    return(EXIT_FAILURE);
-  }
+  int iterations;
+  int m, n;
+  int mc, nc;
+  try {
+      if (argc < 4){
+        throw " <# iterations> <first array dimension> <second array dimension> [<first chunk dimension> <second chunk dimension>]";
+      }
 
-  // number of times to run the pipeline algorithm
-  int iterations  = std::atoi(argv[1]);
-  if (iterations < 1){
-    std::cout << "ERROR: iterations must be >= 1 : " << iterations << std::endl;
-    exit(EXIT_FAILURE);
-  }
+      // number of times to run the pipeline algorithm
+      iterations  = std::atoi(argv[1]);
+      if (iterations < 1) {
+        throw "ERROR: iterations must be >= 1";
+      }
 
-  // grid dimensions
-  int n = std::atol(argv[2]);
-  if (n < 1) {
-    std::cout << "ERROR: grid dimensions must be positive: " << n << std::endl;
-    exit(EXIT_FAILURE);
+      // grid dimensions
+      m = std::atoi(argv[2]);
+      n = std::atoi(argv[3]);
+      if (m < 1 || n < 1) {
+        throw "ERROR: grid dimensions must be positive";
+      } else if ( static_cast<size_t>(m)*static_cast<size_t>(n) > INT_MAX) {
+        throw "ERROR: grid dimension too large - overflow risk";
+      }
+
+      // grid chunk dimensions
+      mc = (argc > 4) ? std::atoi(argv[4]) : m;
+      nc = (argc > 5) ? std::atoi(argv[5]) : n;
+      if (mc < 1 || mc > m || nc < 1 || nc > n) {
+        std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
+        mc = m;
+        nc = n;
+      }
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return 1;
   }
 
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
-  std::cout << "Number of iterations      = " << iterations << std::endl;
-  std::cout << "Grid sizes                = " << n << ", " << n << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
+  std::cout << "Grid chunk sizes     = " << mc << ", " << nc << std::endl;
+
+  //////////////////////////////////////////////////////////////////////
+  // Allocate space and perform the computation
+  //////////////////////////////////////////////////////////////////////
 
   auto pipeline_time = 0.0; // silence compiler warning
 
   // working set
   double * grid = new double[n*n];
+
   _Pragma("omp parallel")
   {
-    _Pragma("omp for")
+    PRAGMA_OMP_FOR_SIMD
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
@@ -129,7 +153,7 @@ int main(int argc, char* argv[])
       }
 
       for (auto j=1; j<n; j++) {
-        _Pragma("omp for")
+        PRAGMA_OMP_FOR_SIMD
         for (auto i=1; i<=j; i++) {
           auto x = i;
           auto y = j-i+1;
@@ -137,7 +161,7 @@ int main(int argc, char* argv[])
         }
       }
       for (auto j=n-2; j>=1; j--) {
-        _Pragma("omp for")
+        PRAGMA_OMP_FOR_SIMD
         for (auto i=1; i<=j; i++) {
           auto x = n+i-j-1;
           auto y = n-i;
@@ -157,15 +181,12 @@ int main(int argc, char* argv[])
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
-  // error tolerance
   const double epsilon = 1.e-8;
-
-  // verify correctness, using top right value
   auto corner_val = ((iterations+1.)*(2.*n-2.));
   if ( (std::fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
-    exit(EXIT_FAILURE);
+    return 1;
   }
 
 #ifdef VERBOSE
@@ -175,7 +196,7 @@ int main(int argc, char* argv[])
 #endif
   auto avgtime = pipeline_time/iterations;
   std::cout << "Rate (MFlops/s): "
-            << 1.0e-6 * 2. * ( static_cast<size_t>(n-1)*static_cast<size_t>(n-1) )/avgtime
+            << 2.0e-6 * ( (n-1)*(n-1) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
 
   return 0;

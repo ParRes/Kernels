@@ -29,6 +29,13 @@
 /// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 /// POSSIBILITY OF SUCH DAMAGE.
 
+#ifndef PRK_UTIL_H
+#define PRK_UTIL_H
+
+#if !(defined(__cplusplus) && (__cplusplus >= 201103L))
+# error You need a C++11 compiler.
+#endif
+
 #include <cstdio>  // atoi
 #include <cstdlib> // getenv
 #include <cstdint>
@@ -51,26 +58,35 @@
 #include <numeric>
 #include <algorithm>
 
-#if !(defined(__cplusplus) && (__cplusplus >= 201103L))
-#error You need a C++11 compiler.
-#endif
-
 #ifdef _OPENMP
-#include <omp.h>
+# include <omp.h>
+# if (_OPENMP >= 201300)
+#  define PRAGMA_OMP_SIMD _Pragma("omp simd")
+#  define PRAGMA_OMP_FOR_SIMD _Pragma("omp for simd")
+# else
+#  define PRAGMA_OMP_SIMD
+#  define PRAGMA_OMP_FOR_SIMD _Pragma("omp for")
+# endif
 #endif
 
 #ifdef __cilk
-#include <cilk/cilk.h>
+# include <cilk/cilk.h>
+#endif
+
+#if defined(__INTEL_COMPILER) && !defined(PRAGMA_OMP_SIMD)
+# define PRAGMA_SIMD _Pragma("simd")
+#else
+# define PRAGMA_SIMD
 #endif
 
 #ifdef USE_TBB
-#include <tbb/tbb.h>
-#include <tbb/parallel_for.h>
-#include <tbb/blocked_range.h>
+# include <tbb/tbb.h>
+# include <tbb/parallel_for.h>
+# include <tbb/blocked_range.h>
 #endif
 
 #ifdef USE_BOOST
-#include <boost/range/irange.hpp>
+# include <boost/range/irange.hpp>
 #endif
 
 #ifdef USE_PSTL
@@ -86,14 +102,13 @@
 #endif
 
 #ifdef USE_KOKKOS
-#include <typeinfo>
-#include <Kokkos_Core.hpp>
+# include <typeinfo>
+# include <Kokkos_Core.hpp>
 #endif
 
 #ifdef USE_RAJA
-#define RAJA_ENABLE_NESTED 1
-#include "RAJA/RAJA.hxx"
-//#include "RAJA/internal/defines.hxx"
+# define RAJA_ENABLE_NESTED 1
+# include "RAJA/RAJA.hxx"
 #endif
 
 #define RESTRICT __restrict__
@@ -114,20 +129,6 @@ namespace prk {
 #endif
     }
 
-    /* This function is separate from prk_malloc() because
-     * we need it when calling prk_shmem_align(..)           */
-    static inline int get_alignment(void)
-    {
-        /* a := alignment */
-#ifdef PRK_ALIGNMENT
-        int a = PRK_ALIGNMENT;
-#else
-        char* temp = getenv("PRK_ALIGNMENT");
-        int a = (temp!=NULL) ? atoi(temp) : 64;
-        if (a < 8) a = 8;
-        assert( (a & (~a+1)) == a ); /* is power of 2? */
-#endif
-        return a;
-    }
-
 } // namespace prk
+
+#endif /* PRK_UTIL_H */
