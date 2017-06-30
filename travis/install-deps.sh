@@ -45,6 +45,8 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             sh ./travis/install-boost.sh $TRAVIS_ROOT
         fi
+        sh ./travis/install-raja.sh $TRAVIS_ROOT
+        sh ./travis/install-kokkos.sh $TRAVIS_ROOT
         ;;
     allfortran*)
         echo "Fortran"
