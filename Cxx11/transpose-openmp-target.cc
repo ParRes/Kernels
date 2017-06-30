@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>4) ? std::atol(argv[3]) : 32;
+      tile_size = (argc>3) ? std::atol(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
 
@@ -94,13 +94,14 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
+  std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
   if (tile_size < order) {
       std::cout << "Tile size             = " << tile_size << std::endl;
   } else {
       std::cout << "Untiled" << std::endl;
   }
-  std::cout << "Number of iterations  = " << iterations << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -116,6 +117,7 @@ int main(int argc, char * argv[])
   {
     _Pragma("omp for")
     for (auto i=0;i<order; i++) {
+      PRAGMA_SIMD
       for (auto j=0;j<order;j++) {
         A[i*order+j] = static_cast<double>(i*order+j);
         B[i*order+j] = 0.0;
@@ -140,7 +142,9 @@ int main(int argc, char * argv[])
         _Pragma("omp for")
         for (auto it=0; it<order; it+=tile_size) {
           for (auto jt=0; jt<order; jt+=tile_size) {
+            PRAGMA_SIMD
             for (auto i=it; i<std::min(order,it+tile_size); i++) {
+              PRAGMA_SIMD
               for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
                 B[i*order+j] += A[j*order+i];
                 A[j*order+i] += 1.0;
@@ -151,6 +155,7 @@ int main(int argc, char * argv[])
       } else {
         _Pragma("omp for")
         for (auto i=0;i<order; i++) {
+        PRAGMA_SIMD
           for (auto j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
             A[j*order+i] += 1.0;
@@ -158,11 +163,9 @@ int main(int argc, char * argv[])
         }
       }
     }
-    {
-      _Pragma("omp barrier")
-      _Pragma("omp master")
-      trans_time = prk::wtime() - trans_time;
-    }
+    _Pragma("omp barrier")
+    _Pragma("omp master")
+    trans_time = prk::wtime() - trans_time;
   }
 
   //////////////////////////////////////////////////////////////////////

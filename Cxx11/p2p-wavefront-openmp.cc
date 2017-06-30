@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
   double * grid = new double[n*n];
   _Pragma("omp parallel")
   {
-    _Pragma("omp for")
+    PRAGMA_OMP_FOR_SIMD
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
       }
 
       for (auto j=1; j<n; j++) {
-        _Pragma("omp for")
+        PRAGMA_OMP_FOR_SIMD
         for (auto i=1; i<=j; i++) {
           auto x = i;
           auto y = j-i+1;
@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
         }
       }
       for (auto j=n-2; j>=1; j--) {
-        _Pragma("omp for")
+        PRAGMA_OMP_FOR_SIMD
         for (auto i=1; i<=j; i++) {
           auto x = n+i-j-1;
           auto y = n-i;

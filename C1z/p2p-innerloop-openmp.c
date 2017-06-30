@@ -105,7 +105,7 @@ int main(int argc, char * argv[])
 
   _Pragma("omp parallel")
   {
-    _Pragma("omp for simd")
+    PRAGMA_OMP_FOR_SIMD
     for (int i=0; i<m; i++) {
       for (int j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
@@ -133,7 +133,7 @@ int main(int argc, char * argv[])
       }
 
       for (int j=1; j<n; j++) {
-        _Pragma("omp for simd")
+        PRAGMA_OMP_FOR_SIMD
         for (int i=1; i<=j; i++) {
           const int x = i;
           const int y = j-i+1;
@@ -141,7 +141,7 @@ int main(int argc, char * argv[])
         }
       }
       for (int j=n-2; j>=1; j--) {
-        _Pragma("omp for simd")
+        PRAGMA_OMP_FOR_SIMD
         for (int i=1; i<=j; i++) {
           const int x = n+i-j-1;
           const int y = n-i;

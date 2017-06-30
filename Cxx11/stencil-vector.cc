@@ -70,7 +70,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11 Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // process and test input parameters
+  // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
