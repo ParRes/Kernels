@@ -305,13 +305,11 @@ case "$PRK_TARGET" in
                 export EXTRAFLAG="-lpthread -ldl"
                 ;;
         esac
-        echo "RAJADIR=${TRAVIS_ROOT}/raja" >> common/make.defs
-        echo "RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${EXTRAFLAG}" >> common/make.defs
+        echo "RAJAFLAG=-DUSE_RAJA -I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${EXTRAFLAG}" >> common/make.defs
         make -C $PRK_TARGET_PATH stencil-vector-raja transpose-vector-raja
         $PRK_TARGET_PATH/stencil-vector-raja     10 1000
         $PRK_TARGET_PATH/transpose-vector-raja   10 1024 32
-        #echo "KOKKOSDIR=${TRAVIS_ROOT}/kokkos" >> common/make.defs
-        #echo "KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos ${EXTRAFLAG}" >> common/make.defs
+        #echo "KOKKOSFLAG=-DUSE_KOKKOS -I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos ${EXTRAFLAG}" >> common/make.defs
         #make -C $PRK_TARGET_PATH stencil-vector-kokkos transpose-vector-kokkos
         #$PRK_TARGET_PATH/stencil-vector-kokkos     10 1000
         #$PRK_TARGET_PATH/transpose-vector-kokkos   10 1024 32
