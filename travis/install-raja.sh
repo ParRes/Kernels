@@ -6,7 +6,8 @@ set -x
 TRAVIS_ROOT="$1"
 
 if [ ! -d "$TRAVIS_ROOT/raja" ]; then
-    git clone --depth 10 https://github.com/LLNL/RAJA.git
+    BRANCH=bugfix/jeffhammond/abort-and-getenv
+    git clone --depth 10 -b ${BRANCH} https://github.com/LLNL/RAJA.git
     cd RAJA
     mkdir build
     cd build
