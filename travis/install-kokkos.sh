@@ -19,6 +19,34 @@ case "${CXX}" in
         ;;
 esac
 
+case $CXX in
+    g++)
+        for major in "-9" "-8" "-7" "-6" "-5" "" ; do
+          if [ -f "`which ${CXX}${major}`" ]; then
+              export PRK_CXX="${CXX}${major}"
+              echo "Found C++: $PRK_CXX"
+              break
+          fi
+        done
+        if [ "x$PRK_CXX" = "x" ] ; then
+            export PRK_CXX="${CXX}"
+        fi
+        ;;
+    clang++)
+        for version in "-5" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
+          if [ -f "`which ${CXX}${version}`" ]; then
+              export PRK_CXX="${CXX}${version}"
+              echo "Found C++: $PRK_CXX"
+              break
+          fi
+        done
+        if [ "x$PRK_CXX" = "x" ] ; then
+            export PRK_CXX="${CXX}"
+        fi
+        ;;
+esac
+${PRK_CXX} -v
+
 if [ ! -d "$TRAVIS_ROOT/kokkos" ]; then
     git clone --depth 10 https://github.com/kokkos/kokkos.git
     cd kokkos
@@ -26,7 +54,7 @@ if [ ! -d "$TRAVIS_ROOT/kokkos" ]; then
     cd build
     # Build for SNB just to be safe...
     ../generate_makefile.bash --prefix=${TRAVIS_ROOT}/kokkos \
-                              --compiler=${CXX} ${KOKKOS_BACKEND} \
+                              --compiler=${PRK_CXX} ${KOKKOS_BACKEND} \
                               --arch=SNB \
                               --make-j=2
     make

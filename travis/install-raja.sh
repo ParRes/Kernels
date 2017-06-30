@@ -5,13 +5,41 @@ set -x
 
 TRAVIS_ROOT="$1"
 
+case $CXX in
+    g++)
+        for major in "-9" "-8" "-7" "-6" "-5" "" ; do
+          if [ -f "`which ${CXX}${major}`" ]; then
+              export PRK_CXX="${CXX}${major}"
+              echo "Found C++: $PRK_CXX"
+              break
+          fi
+        done
+        if [ "x$PRK_CXX" = "x" ] ; then
+            export PRK_CXX="${CXX}"
+        fi
+        ;;
+    clang++)
+        for version in "-5" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
+          if [ -f "`which ${CXX}${version}`" ]; then
+              export PRK_CXX="${CXX}${version}"
+              echo "Found C++: $PRK_CXX"
+              break
+          fi
+        done
+        if [ "x$PRK_CXX" = "x" ] ; then
+            export PRK_CXX="${CXX}"
+        fi
+        ;;
+esac
+${PRK_CXX} -v
+
 if [ ! -d "$TRAVIS_ROOT/raja" ]; then
     BRANCH=bugfix/jeffhammond/abort-and-getenv
     git clone --depth 10 -b ${BRANCH} https://github.com/LLNL/RAJA.git
     cd RAJA
     mkdir build
     cd build
-    cmake .. -DCMAKE_CXX_COMPILER=${CXX} -DCMAKE_C_COMPILER=${CC} \
+    cmake .. -DCMAKE_CXX_COMPILER=${PRK_CXX} -DCMAKE_C_COMPILER=${PRK_CC} \
              -DCMAKE_INSTALL_PREFIX=${TRAVIS_ROOT}/raja \
              -DRAJA_ENABLE_OPENMP=On
     make -j2
