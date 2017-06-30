@@ -45,6 +45,8 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             sh ./travis/install-boost.sh $TRAVIS_ROOT
         fi
+        # CMake 3.3 or higher is required.  You are running version 2.8.7.
+        sh ./travis/install-cmake.sh $TRAVIS_ROOT
         sh ./travis/install-raja.sh $TRAVIS_ROOT
         sh ./travis/install-kokkos.sh $TRAVIS_ROOT
         ;;
