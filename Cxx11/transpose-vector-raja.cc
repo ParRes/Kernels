@@ -275,8 +275,8 @@ int main(int argc, char * argv[])
   RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
           ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
             [&](RAJA::Index_type i, RAJA::Index_type j) {
-      const size_t ij = i*order+j;
-      const size_t ji = j*order+i;
+      const int ij = i*order+j;
+      const int ji = j*order+i;
       const auto addit = (iterations+1.) * (iterations/2.);
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(B[ji] - reference);

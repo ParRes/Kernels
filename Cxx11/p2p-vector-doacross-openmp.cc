@@ -85,8 +85,8 @@ int main(int argc, char* argv[])
   }
 
   // grid dimensions
-  size_t m = std::atol(argv[2]);
-  size_t n = std::atol(argv[3]);
+  int m = std::atoi(argv[2]);
+  int n = std::atoi(argv[3]);
   if (m < 1 || n < 1) {
     std::cout << "ERROR: grid dimensions must be positive: " << m <<  n << std::endl;
     exit(EXIT_FAILURE);
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
 #endif
   auto avgtime = pipeline_time/iterations;
   std::cout << "Rate (MFlops/s): "
-            << 1.0e-6 * 2. * ( static_cast<size_t>(m-1)*static_cast<size_t>(n-1) )/avgtime
+            << 2.0e-6 * ( (m-1)*(n-1) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
 
   return 0;
