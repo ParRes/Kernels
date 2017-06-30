@@ -293,6 +293,28 @@ case "$PRK_TARGET" in
             $PRK_TARGET_PATH/stencil-vector-cilk     10 1000
             $PRK_TARGET_PATH/transpose-vector-cilk   10 1024 32
         fi
+
+        # C++11 with Kokkos, RAJA
+        case "$CC" in
+            gcc)
+                # Kokkos and Raja are built with OpenMP support with GCC
+                export EXTRAFLAG="-fopenmp"
+                ;;
+            clang)
+                # Kokkos is built with Pthread support with Clang
+                export EXTRAFLAG="-lpthread -ldl"
+                ;;
+        esac
+        echo "RAJADIR=${TRAVIS_ROOT}/raja" >> common/make.defs
+        echo "RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${EXTRAFLAG}" >> common/make.defs
+        make -C $PRK_TARGET_PATH stencil-vector-raja transpose-vector-raja
+        $PRK_TARGET_PATH/stencil-vector-raja     10 1000
+        $PRK_TARGET_PATH/transpose-vector-raja   10 1024 32
+        #echo "KOKKOSDIR=${TRAVIS_ROOT}/kokkos" >> common/make.defs
+        #echo "KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos ${EXTRAFLAG}" >> common/make.defs
+        #make -C $PRK_TARGET_PATH stencil-vector-kokkos transpose-vector-kokkos
+        #$PRK_TARGET_PATH/stencil-vector-kokkos     10 1000
+        #$PRK_TARGET_PATH/transpose-vector-kokkos   10 1024 32
         ;;
     allfortran*)
         # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty allfortrantarget
