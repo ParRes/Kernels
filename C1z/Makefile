@@ -36,19 +36,19 @@ taskloop: stencil-taskloop transpose-taskloop
 cilk: stencil-cilk transpose-cilk
 
 %-target: %-target.c prk_util.h
-	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@
+	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) $(EXTRALIBS) -o $@
 
 %-taskloop: %-taskloop.c prk_util.h
-	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(OMPFLAGS) -o $@
+	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(OMPFLAGS) $(EXTRALIBS) -o $@
 
 %-openmp: %-openmp.c prk_util.h
-	$(CC) $(CFLAGS) $< $(OMPFLAGS) -o $@
+	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRALIBS) -o $@
 
 %-cilk: %-cilk.c prk_util.h
-	$(CC) $(CFLAGS) $< $(CILKFLAGS) -o $@
+	$(CC) $(CFLAGS) $< $(CILKFLAGS) $(EXTRALIBS) -o $@
 
 %: %.c prk_util.h
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $< $(EXTRALIBS) -o $@
 
 clean:
 	-rm -f *.o
