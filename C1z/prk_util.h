@@ -118,8 +118,7 @@ static inline double prk_wtime(void)
 {
   struct timeval tv;
   gettimeofday( &tv, NULL);
-  t  = (double) tv.tv_sec;
-  t += (double) tv.tv_usec * 1.0e-6;
+  double t  = (double) tv.tv_sec + (double) tv.tv_usec * 1.0e-6;
   return t;
 }
 
