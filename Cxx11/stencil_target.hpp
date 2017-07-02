@@ -1,11 +1,6 @@
 #define RESTRICT __restrict__
 
 _Pragma("omp declare target")
-#ifdef RAJA_ENABLE_OPENMP
-  typedef RAJA::omp_parallel_for_exec thread_exec;
-#else
-  typedef RAJA::seq_exec thread_exec;
-#endif
 void star1(const int n, const double * RESTRICT in, double * RESTRICT out) {
     _Pragma("omp for")
     for (auto i=1; i<n-1; ++i) {

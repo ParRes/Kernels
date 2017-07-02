@@ -1,5 +1,10 @@
 #define RESTRICT __restrict__
 
+#ifdef RAJA_ENABLE_OPENMP
+  typedef RAJA::omp_parallel_for_exec thread_exec;
+#else
+  typedef RAJA::seq_exec thread_exec;
+#endif
 void star1(const int n, std::vector<double> & in, std::vector<double> & out) {
     RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
             ( RAJA::RangeSegment(1,n-1),RAJA::RangeSegment(1,n-1),

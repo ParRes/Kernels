@@ -132,7 +132,7 @@ def main():
       src.write('#define RESTRICT __restrict__\n\n')
       if (model=='target'):
           src.write('_Pragma("omp declare target")\n')
-      if (model=='target'):
+      if (model=='raja'):
           src.write('#ifdef RAJA_ENABLE_OPENMP\n')
           src.write('  typedef RAJA::omp_parallel_for_exec thread_exec;\n')
           src.write('#else\n')
