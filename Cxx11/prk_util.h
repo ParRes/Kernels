@@ -108,7 +108,7 @@
 
 #ifdef USE_RAJA
 # define RAJA_ENABLE_NESTED 1
-# include "RAJA/RAJA.hxx"
+# include "RAJA/RAJA.hpp"
 #endif
 
 #define RESTRICT __restrict__
