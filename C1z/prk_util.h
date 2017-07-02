@@ -82,37 +82,82 @@
 # define PRAGMA_SIMD
 #endif
 
-#if __APPLE__
+#if defined(_OPENMP)
+
+#include <omp.h>
+
+// OpenMP has its own timer and is desirable since it will
+// not overcount by measuring processor time.
+static inline double prk_wtime(void)
+{
+    return omp_get_wtime();
+}
+
+// Apple does not have C11 support in the C standard library...
+#elif defined(__APPLE__)
+
 #include <mach/mach.h>
 #include <mach/mach_time.h>
-#endif
 
 static inline double prk_wtime(void)
 {
-#if defined(_OPENMP)
-    return omp_get_wtime();
-#elif defined(__APPLE__)
-    // Apple does not have C11 support in the C standard library...
     mach_timebase_info_data_t info;
     mach_timebase_info(&info);
     uint64_t at = mach_absolute_time();
     return ( 1.e-9 * at * info.numer / info.denom );
+}
+
+// gettimeofday is the worst timer, but should work everywhere.
+// This addresses issues with clock_gettime and timespec_get
+// library support in Travis
+#elif defined(PRK_USE_GETTIMEOFDAY)
+
+#include <sys/time.h>
+
+static inline double prk_wtime(void)
+{
+  struct timeval tv;
+  gettimeofday( &tv, NULL);
+  double t  = (double) tv.tv_sec + (double) tv.tv_usec * 1.0e-6;
+  return t;
+}
+
+// GCC claims to be C11 without knowing if glibc is compliant...
 #elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+
+static inline double prk_wtime(void)
+{
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
     time_t s  = ts.tv_sec;
     long   ns = ts.tv_nsec;
     double t  = (double)s + 1.e-9 * (double)ns;
     return t;
-#else // POSIX
+}
+
+// clock_gettime is not supported everywhere, or requires librt.
+#elif defined(CLOCK_PROCESS_CPUTIME_ID)
+
+static inline double prk_wtime(void)
+{
     struct timespec ts;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
     time_t s  = ts.tv_sec;
     long   ns = ts.tv_nsec;
     double t  = (double)s + 1.e-9 * (double)ns;
     return t;
-#endif
 }
+
+#else
+
+#warning No timer found!
+
+static inline double prk_wtime(void)
+{
+    return 0.0;
+}
+
+#endif // timers
 
 static inline int prk_get_alignment(void)
 {
@@ -138,7 +183,9 @@ void * prk_malloc(size_t bytes)
 
 // We cannot use C11 aligned_alloc on Mac.
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69680 */
-#elif !defined(__APPLE__) && \
+// GCC claims to be C11 without knowing if glibc is compliant...
+#elif !defined(__GNUC__) && \
+      !defined(__APPLE__) && \
        defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 
 // From ISO C11:

@@ -121,7 +121,6 @@ int main(int argc, char * argv[])
   std::cout << "Grid size            = " << n << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
-  std::cout << "Compact representation of stencil loop body" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation

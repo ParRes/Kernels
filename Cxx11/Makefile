@@ -21,24 +21,31 @@ PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(BOOSTFLAGS)
 
-.PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl rangefor kokkos raja cuda
+.PHONY: all clean run vector valarray openmp target opencl cilk taskloop tbb pstl rangefor kokkos raja cuda
 
 ifeq ($(shell uname -s),Darwin)
-ifneq ($(CXX),icpc)
+ifneq ($(findstring icpc,$(CXX)),icpc)
 TARGET = target
 endif
 else
 TARGET = target
 endif
+<<<<<<< HEAD
 all: vector valarray openmp opencl $(TARGET) cilk tbb pstl rangefor raja kokkos
+=======
+
+all: vector valarray openmp opencl $(TARGET) cilk taskloop tbb pstl rangefor raja
+>>>>>>> master
 
 vector: p2p-vector stencil-vector transpose-vector
 
 valarray: transpose-valarray
 
-openmp: p2p-wavefront-openmp p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
+openmp: p2p-innerloop-openmp p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
 
 target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
+
+taskloop: stencil-vector-taskloop transpose-vector-taskloop
 
 opencl: stencil-opencl transpose-opencl
 
@@ -66,6 +73,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@
 
 %-openmp: %-openmp.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
+
+%-taskloop: %-taskloop.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
 
 %-cilk: %-cilk.cc prk_util.h
@@ -102,6 +112,7 @@ clean:
 	-rm -f *-valarray
 	-rm -f *-openmp
 	-rm -f *-target
+	-rm -f *-taskloop
 	-rm -f *-opencl
 	-rm -f *-cilk
 	-rm -f *-tbb

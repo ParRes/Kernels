@@ -1,26 +1,22 @@
 #define RESTRICT __restrict__
 
-#ifdef RAJA_ENABLE_OPENMP
-  typedef RAJA::omp_parallel_for_exec thread_exec;
-#else
-  typedef RAJA::seq_exec thread_exec;
-#endif
 void star1(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(1,n-1),RAJA::RangeSegment(1,n-1),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-1)*n+(j+0)] * -0.5
+    _Pragma("omp taskloop")
+    for (auto i=1; i<n-1; ++i) {
+      for (auto j=1; j<n-1; ++j) {
+        out[i*n+j] += +in[(i+-1)*n+(j+0)] * -0.5
                       +in[(i+0)*n+(j+-1)] * -0.5
                       +in[(i+0)*n+(j+1)] * 0.5
                       +in[(i+1)*n+(j+0)] * 0.5;
-     });
+       }
+     }
 }
 
 void star2(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(2,n-2),RAJA::RangeSegment(2,n-2),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-2)*n+(j+0)] * -0.125
+    _Pragma("omp taskloop")
+    for (auto i=2; i<n-2; ++i) {
+      for (auto j=2; j<n-2; ++j) {
+        out[i*n+j] += +in[(i+-2)*n+(j+0)] * -0.125
                       +in[(i+-1)*n+(j+0)] * -0.25
                       +in[(i+0)*n+(j+-2)] * -0.125
                       +in[(i+0)*n+(j+-1)] * -0.25
@@ -28,14 +24,15 @@ void star2(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+0)*n+(j+2)] * 0.125
                       +in[(i+1)*n+(j+0)] * 0.25
                       +in[(i+2)*n+(j+0)] * 0.125;
-     });
+       }
+     }
 }
 
 void star3(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(3,n-3),RAJA::RangeSegment(3,n-3),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-3)*n+(j+0)] * -0.05555555555555555
+    _Pragma("omp taskloop")
+    for (auto i=3; i<n-3; ++i) {
+      for (auto j=3; j<n-3; ++j) {
+        out[i*n+j] += +in[(i+-3)*n+(j+0)] * -0.05555555555555555
                       +in[(i+-2)*n+(j+0)] * -0.08333333333333333
                       +in[(i+-1)*n+(j+0)] * -0.16666666666666666
                       +in[(i+0)*n+(j+-3)] * -0.05555555555555555
@@ -47,14 +44,15 @@ void star3(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+1)*n+(j+0)] * 0.16666666666666666
                       +in[(i+2)*n+(j+0)] * 0.08333333333333333
                       +in[(i+3)*n+(j+0)] * 0.05555555555555555;
-     });
+       }
+     }
 }
 
 void star4(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(4,n-4),RAJA::RangeSegment(4,n-4),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-4)*n+(j+0)] * -0.03125
+    _Pragma("omp taskloop")
+    for (auto i=4; i<n-4; ++i) {
+      for (auto j=4; j<n-4; ++j) {
+        out[i*n+j] += +in[(i+-4)*n+(j+0)] * -0.03125
                       +in[(i+-3)*n+(j+0)] * -0.041666666666666664
                       +in[(i+-2)*n+(j+0)] * -0.0625
                       +in[(i+-1)*n+(j+0)] * -0.125
@@ -70,14 +68,15 @@ void star4(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+2)*n+(j+0)] * 0.0625
                       +in[(i+3)*n+(j+0)] * 0.041666666666666664
                       +in[(i+4)*n+(j+0)] * 0.03125;
-     });
+       }
+     }
 }
 
 void star5(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(5,n-5),RAJA::RangeSegment(5,n-5),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-5)*n+(j+0)] * -0.02
+    _Pragma("omp taskloop")
+    for (auto i=5; i<n-5; ++i) {
+      for (auto j=5; j<n-5; ++j) {
+        out[i*n+j] += +in[(i+-5)*n+(j+0)] * -0.02
                       +in[(i+-4)*n+(j+0)] * -0.025
                       +in[(i+-3)*n+(j+0)] * -0.03333333333333333
                       +in[(i+-2)*n+(j+0)] * -0.05
@@ -97,14 +96,15 @@ void star5(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+3)*n+(j+0)] * 0.03333333333333333
                       +in[(i+4)*n+(j+0)] * 0.025
                       +in[(i+5)*n+(j+0)] * 0.02;
-     });
+       }
+     }
 }
 
 void star6(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(6,n-6),RAJA::RangeSegment(6,n-6),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-6)*n+(j+0)] * -0.013888888888888888
+    _Pragma("omp taskloop")
+    for (auto i=6; i<n-6; ++i) {
+      for (auto j=6; j<n-6; ++j) {
+        out[i*n+j] += +in[(i+-6)*n+(j+0)] * -0.013888888888888888
                       +in[(i+-5)*n+(j+0)] * -0.016666666666666666
                       +in[(i+-4)*n+(j+0)] * -0.020833333333333332
                       +in[(i+-3)*n+(j+0)] * -0.027777777777777776
@@ -128,14 +128,15 @@ void star6(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+4)*n+(j+0)] * 0.020833333333333332
                       +in[(i+5)*n+(j+0)] * 0.016666666666666666
                       +in[(i+6)*n+(j+0)] * 0.013888888888888888;
-     });
+       }
+     }
 }
 
 void star7(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(7,n-7),RAJA::RangeSegment(7,n-7),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-7)*n+(j+0)] * -0.01020408163265306
+    _Pragma("omp taskloop")
+    for (auto i=7; i<n-7; ++i) {
+      for (auto j=7; j<n-7; ++j) {
+        out[i*n+j] += +in[(i+-7)*n+(j+0)] * -0.01020408163265306
                       +in[(i+-6)*n+(j+0)] * -0.011904761904761904
                       +in[(i+-5)*n+(j+0)] * -0.014285714285714285
                       +in[(i+-4)*n+(j+0)] * -0.017857142857142856
@@ -163,14 +164,15 @@ void star7(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+5)*n+(j+0)] * 0.014285714285714285
                       +in[(i+6)*n+(j+0)] * 0.011904761904761904
                       +in[(i+7)*n+(j+0)] * 0.01020408163265306;
-     });
+       }
+     }
 }
 
 void star8(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(8,n-8),RAJA::RangeSegment(8,n-8),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-8)*n+(j+0)] * -0.0078125
+    _Pragma("omp taskloop")
+    for (auto i=8; i<n-8; ++i) {
+      for (auto j=8; j<n-8; ++j) {
+        out[i*n+j] += +in[(i+-8)*n+(j+0)] * -0.0078125
                       +in[(i+-7)*n+(j+0)] * -0.008928571428571428
                       +in[(i+-6)*n+(j+0)] * -0.010416666666666666
                       +in[(i+-5)*n+(j+0)] * -0.0125
@@ -202,14 +204,15 @@ void star8(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+6)*n+(j+0)] * 0.010416666666666666
                       +in[(i+7)*n+(j+0)] * 0.008928571428571428
                       +in[(i+8)*n+(j+0)] * 0.0078125;
-     });
+       }
+     }
 }
 
 void star9(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(9,n-9),RAJA::RangeSegment(9,n-9),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-9)*n+(j+0)] * -0.006172839506172839
+    _Pragma("omp taskloop")
+    for (auto i=9; i<n-9; ++i) {
+      for (auto j=9; j<n-9; ++j) {
+        out[i*n+j] += +in[(i+-9)*n+(j+0)] * -0.006172839506172839
                       +in[(i+-8)*n+(j+0)] * -0.006944444444444444
                       +in[(i+-7)*n+(j+0)] * -0.007936507936507936
                       +in[(i+-6)*n+(j+0)] * -0.009259259259259259
@@ -245,28 +248,30 @@ void star9(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+7)*n+(j+0)] * 0.007936507936507936
                       +in[(i+8)*n+(j+0)] * 0.006944444444444444
                       +in[(i+9)*n+(j+0)] * 0.006172839506172839;
-     });
+       }
+     }
 }
 
 void grid1(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(1,n-1),RAJA::RangeSegment(1,n-1),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-1)*n+(j+-1)] * -0.25
+    _Pragma("omp taskloop")
+    for (auto i=1; i<n-1; ++i) {
+      for (auto j=1; j<n-1; ++j) {
+        out[i*n+j] += +in[(i+-1)*n+(j+-1)] * -0.25
                       +in[(i+-1)*n+(j+0)] * -0.25
                       +in[(i+0)*n+(j+-1)] * -0.25
                       +in[(i+0)*n+(j+1)] * 0.25
                       +in[(i+1)*n+(j+0)] * 0.25
                       +in[(i+1)*n+(j+1)] * 0.25
                       ;
-     });
+       }
+     }
 }
 
 void grid2(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(2,n-2),RAJA::RangeSegment(2,n-2),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-2)*n+(j+-2)] * -0.0625
+    _Pragma("omp taskloop")
+    for (auto i=2; i<n-2; ++i) {
+      for (auto j=2; j<n-2; ++j) {
+        out[i*n+j] += +in[(i+-2)*n+(j+-2)] * -0.0625
                       +in[(i+-2)*n+(j+-1)] * -0.020833333333333332
                       +in[(i+-2)*n+(j+0)] * -0.020833333333333332
                       +in[(i+-2)*n+(j+1)] * -0.020833333333333332
@@ -287,14 +292,15 @@ void grid2(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+2)*n+(j+1)] * 0.020833333333333332
                       +in[(i+2)*n+(j+2)] * 0.0625
                       ;
-     });
+       }
+     }
 }
 
 void grid3(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(3,n-3),RAJA::RangeSegment(3,n-3),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-3)*n+(j+-3)] * -0.027777777777777776
+    _Pragma("omp taskloop")
+    for (auto i=3; i<n-3; ++i) {
+      for (auto j=3; j<n-3; ++j) {
+        out[i*n+j] += +in[(i+-3)*n+(j+-3)] * -0.027777777777777776
                       +in[(i+-3)*n+(j+-2)] * -0.005555555555555556
                       +in[(i+-3)*n+(j+-1)] * -0.005555555555555556
                       +in[(i+-3)*n+(j+0)] * -0.005555555555555556
@@ -337,14 +343,15 @@ void grid3(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+3)*n+(j+2)] * 0.005555555555555556
                       +in[(i+3)*n+(j+3)] * 0.027777777777777776
                       ;
-     });
+       }
+     }
 }
 
 void grid4(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(4,n-4),RAJA::RangeSegment(4,n-4),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-4)*n+(j+-4)] * -0.015625
+    _Pragma("omp taskloop")
+    for (auto i=4; i<n-4; ++i) {
+      for (auto j=4; j<n-4; ++j) {
+        out[i*n+j] += +in[(i+-4)*n+(j+-4)] * -0.015625
                       +in[(i+-4)*n+(j+-3)] * -0.002232142857142857
                       +in[(i+-4)*n+(j+-2)] * -0.002232142857142857
                       +in[(i+-4)*n+(j+-1)] * -0.002232142857142857
@@ -417,14 +424,15 @@ void grid4(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+4)*n+(j+3)] * 0.002232142857142857
                       +in[(i+4)*n+(j+4)] * 0.015625
                       ;
-     });
+       }
+     }
 }
 
 void grid5(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(5,n-5),RAJA::RangeSegment(5,n-5),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-5)*n+(j+-5)] * -0.01
+    _Pragma("omp taskloop")
+    for (auto i=5; i<n-5; ++i) {
+      for (auto j=5; j<n-5; ++j) {
+        out[i*n+j] += +in[(i+-5)*n+(j+-5)] * -0.01
                       +in[(i+-5)*n+(j+-4)] * -0.0011111111111111111
                       +in[(i+-5)*n+(j+-3)] * -0.0011111111111111111
                       +in[(i+-5)*n+(j+-2)] * -0.0011111111111111111
@@ -535,14 +543,15 @@ void grid5(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+5)*n+(j+4)] * 0.0011111111111111111
                       +in[(i+5)*n+(j+5)] * 0.01
                       ;
-     });
+       }
+     }
 }
 
 void grid6(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(6,n-6),RAJA::RangeSegment(6,n-6),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-6)*n+(j+-6)] * -0.006944444444444444
+    _Pragma("omp taskloop")
+    for (auto i=6; i<n-6; ++i) {
+      for (auto j=6; j<n-6; ++j) {
+        out[i*n+j] += +in[(i+-6)*n+(j+-6)] * -0.006944444444444444
                       +in[(i+-6)*n+(j+-5)] * -0.0006313131313131314
                       +in[(i+-6)*n+(j+-4)] * -0.0006313131313131314
                       +in[(i+-6)*n+(j+-3)] * -0.0006313131313131314
@@ -699,14 +708,15 @@ void grid6(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+6)*n+(j+5)] * 0.0006313131313131314
                       +in[(i+6)*n+(j+6)] * 0.006944444444444444
                       ;
-     });
+       }
+     }
 }
 
 void grid7(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(7,n-7),RAJA::RangeSegment(7,n-7),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-7)*n+(j+-7)] * -0.00510204081632653
+    _Pragma("omp taskloop")
+    for (auto i=7; i<n-7; ++i) {
+      for (auto j=7; j<n-7; ++j) {
+        out[i*n+j] += +in[(i+-7)*n+(j+-7)] * -0.00510204081632653
                       +in[(i+-7)*n+(j+-6)] * -0.0003924646781789639
                       +in[(i+-7)*n+(j+-5)] * -0.0003924646781789639
                       +in[(i+-7)*n+(j+-4)] * -0.0003924646781789639
@@ -917,14 +927,15 @@ void grid7(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+7)*n+(j+6)] * 0.0003924646781789639
                       +in[(i+7)*n+(j+7)] * 0.00510204081632653
                       ;
-     });
+       }
+     }
 }
 
 void grid8(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(8,n-8),RAJA::RangeSegment(8,n-8),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-8)*n+(j+-8)] * -0.00390625
+    _Pragma("omp taskloop")
+    for (auto i=8; i<n-8; ++i) {
+      for (auto j=8; j<n-8; ++j) {
+        out[i*n+j] += +in[(i+-8)*n+(j+-8)] * -0.00390625
                       +in[(i+-8)*n+(j+-7)] * -0.00026041666666666666
                       +in[(i+-8)*n+(j+-6)] * -0.00026041666666666666
                       +in[(i+-8)*n+(j+-5)] * -0.00026041666666666666
@@ -1197,14 +1208,15 @@ void grid8(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+8)*n+(j+7)] * 0.00026041666666666666
                       +in[(i+8)*n+(j+8)] * 0.00390625
                       ;
-     });
+       }
+     }
 }
 
 void grid9(const int n, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(9,n-9),RAJA::RangeSegment(9,n-9),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-          out[i*n+j] += +in[(i+-9)*n+(j+-9)] * -0.0030864197530864196
+    _Pragma("omp taskloop")
+    for (auto i=9; i<n-9; ++i) {
+      for (auto j=9; j<n-9; ++j) {
+        out[i*n+j] += +in[(i+-9)*n+(j+-9)] * -0.0030864197530864196
                       +in[(i+-9)*n+(j+-8)] * -0.00018155410312273057
                       +in[(i+-9)*n+(j+-7)] * -0.00018155410312273057
                       +in[(i+-9)*n+(j+-6)] * -0.00018155410312273057
@@ -1547,6 +1559,7 @@ void grid9(const int n, std::vector<double> & in, std::vector<double> & out) {
                       +in[(i+9)*n+(j+8)] * 0.00018155410312273057
                       +in[(i+9)*n+(j+9)] * 0.0030864197530864196
                       ;
-     });
+       }
+     }
 }
 
