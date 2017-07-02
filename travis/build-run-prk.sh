@@ -308,7 +308,17 @@ case "$PRK_TARGET" in
         echo "RAJAFLAG=-DUSE_RAJA -I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${EXTRAFLAG}" >> common/make.defs
         make -C $PRK_TARGET_PATH stencil-vector-raja transpose-vector-raja
         $PRK_TARGET_PATH/stencil-vector-raja     10 1000
-        $PRK_TARGET_PATH/transpose-vector-raja   10 1024 32
+        # RAJA variant 11 should be the best
+        $PRK_TARGET_PATH/transpose-vector-raja   10 1024 11
+        # test all the RAJA variants with a smaller problem
+        for v in 1 2 3 4 5 6 7 10 11 12 13 14 15 ; do
+            $PRK_TARGET_PATH/transpose-vector-raja   10 200 $v
+        done
+        for s in star grid ; do
+            for r in 1 2 3 4 5 6 7 8 9 ; do
+                ./stencil-vector-raja 10 200 $s $r
+            done
+        done
         #echo "KOKKOSFLAG=-DUSE_KOKKOS -I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos ${EXTRAFLAG}" >> common/make.defs
         #make -C $PRK_TARGET_PATH stencil-vector-kokkos transpose-vector-kokkos
         #$PRK_TARGET_PATH/stencil-vector-kokkos     10 1000
