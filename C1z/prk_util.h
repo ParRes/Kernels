@@ -82,37 +82,70 @@
 # define PRAGMA_SIMD
 #endif
 
-#if __APPLE__
-#include <mach/mach.h>
-#include <mach/mach_time.h>
-#endif
+#if defined(_OPENMP)
+
+#include <omp.h>
 
 static inline double prk_wtime(void)
 {
-#if defined(_OPENMP)
     return omp_get_wtime();
+}
+
+// Apple does not have C11 support in the C standard library...
 #elif defined(__APPLE__)
-    // Apple does not have C11 support in the C standard library...
+
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+
+static inline double prk_wtime(void)
+{
     mach_timebase_info_data_t info;
     mach_timebase_info(&info);
     uint64_t at = mach_absolute_time();
     return ( 1.e-9 * at * info.numer / info.denom );
-#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+}
+
+// GCC claims to be C11 without knowing if glibc is compliant...
+#elif 0 // defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+
+static inline double prk_wtime(void)
+{
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
     time_t s  = ts.tv_sec;
     long   ns = ts.tv_nsec;
     double t  = (double)s + 1.e-9 * (double)ns;
     return t;
-#else // POSIX
+}
+
+// clock_gettime is not supported everywhere...
+#elif defined(CLOCK_PROCESS_CPUTIME_ID)
+
+static inline double prk_wtime(void)
+{
     struct timespec ts;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
     time_t s  = ts.tv_sec;
     long   ns = ts.tv_nsec;
     double t  = (double)s + 1.e-9 * (double)ns;
     return t;
-#endif
 }
+
+// gettimeofday is the worst timer, but should work everywhere.
+#else
+
+#include <sys/time.h>
+
+static inline double prk_wtime(void)
+{
+  struct timeval tv;
+  gettimeofday( &tv, NULL);
+  t  = (double) tv.tv_sec;
+  t += (double) tv.tv_usec * 1.0e-6;
+  return t;
+}
+
+#endif // timers
 
 static inline int prk_get_alignment(void)
 {
