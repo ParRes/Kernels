@@ -18,8 +18,8 @@ CILKFLAGS = $(CILKFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB
 BOOSTFLAGS = $(BOOSTFLAG)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
-KOKKOSFLAGS = $(KOKKOSFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
+KOKKOSFLAGS = $(KOKKOSFLAG) $(BOOSTFLAGS)
 
 .PHONY: all clean run vector valarray openmp target opencl cilk taskloop tbb pstl rangefor kokkos raja cuda
 
@@ -31,7 +31,7 @@ else
 TARGET = target
 endif
 
-all: vector valarray openmp opencl $(TARGET) cilk taskloop tbb pstl rangefor raja
+all: vector valarray openmp opencl $(TARGET) cilk taskloop tbb pstl rangefor raja kokkos
 
 vector: p2p-vector stencil-vector transpose-vector
 
@@ -86,11 +86,11 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-rangefor: %-rangefor.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) -o $@
 
-%-kokkos: %-kokkos.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
-
 %-raja: %-raja.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
+
+%-kokkos: %-kokkos.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
@@ -114,8 +114,8 @@ clean:
 	-rm -f *-tbb
 	-rm -f *-pstl
 	-rm -f *-rangefor
-	-rm -f *-kokkos
 	-rm -f *-raja
+	-rm -f *-kokkos
 	-rm -f *-cuda
 
 cleancl:

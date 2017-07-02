@@ -16,6 +16,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    _Pragma("omp taskloop")\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
+        src.write('      PRAGMA_OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='target'):
         src.write('void '+pattern+str(radius)+'(const int n, const double * RESTRICT in, double * RESTRICT out) {\n')
@@ -66,24 +67,37 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('            ( RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),'
                                 'RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),\n')
         src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
+    elif (model=='kokkos'):
+        src.write('void '+pattern+str(radius)+'(const int n, matrix & in, matrix & out) {\n')
+        src.write('    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>('+str(radius)+',n-'+str(radius)+'), KOKKOS_LAMBDA(const int i) {\n')
+        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     else:
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
         src.write('      PRAGMA_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
-    src.write('        out[i*n+j] += ')
+    if (model=='kokkos'):
+        src.write('        out(i,j) += ')
+    else:
+        src.write('        out[i*n+j] += ')
     k = 0
     kmax = stencil_size-1;
     for j in range(0,2*radius+1):
         for i in range(0,2*radius+1):
             if ( W[j][i] != 0.0):
                 k+=1
-                src.write('+in[(i+'+str(j-radius)+')*n+(j+'+str(i-radius)+')] * '+str(W[j][i]))
+                if (model=='kokkos'):
+                    src.write('+in(i+'+str(j-radius)+',j+'+str(i-radius)+') * '+str(W[j][i]))
+                else:
+                    src.write('+in[(i+'+str(j-radius)+')*n+(j+'+str(i-radius)+')] * '+str(W[j][i]))
                 if (k<kmax): src.write('\n')
                 if (k>0 and k<kmax): src.write('                      ')
     src.write(';\n')
     if (model=='stl' or model=='pgnu' or model=='pstl'):
         src.write('       });\n')
+        src.write('     });\n')
+    elif (model=='kokkos'):
+        src.write('       }\n')
         src.write('     });\n')
     elif (model=='raja'):
         src.write('     });\n')
@@ -103,7 +117,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
 
 def instance(src,model,pattern,r):
 
-    W = [[0.0 for x in range(2*r+1)] for x in range(2*r+1)]
+    W = [[0.0e0 for x in range(2*r+1)] for x in range(2*r+1)]
     if pattern == 'star':
         stencil_size = 4*r+1
         for i in range(1,r+1):
@@ -127,7 +141,7 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','cilk','raja']:
+    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','cilk','raja','kokkos']:
       src = open('stencil_'+model+'.hpp','w')
       src.write('#define RESTRICT __restrict__\n\n')
       if (model=='target'):

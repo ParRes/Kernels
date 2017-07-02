@@ -52,10 +52,8 @@ if [ ! -d "$TRAVIS_ROOT/kokkos" ]; then
     cd kokkos
     mkdir build
     cd build
-    # Build for SNB just to be safe...
     ../generate_makefile.bash --prefix=${TRAVIS_ROOT}/kokkos \
                               --compiler=${PRK_CXX} ${KOKKOS_BACKEND} \
-                              --arch=SNB \
                               --make-j=2
     make
     make install
