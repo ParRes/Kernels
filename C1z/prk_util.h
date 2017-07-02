@@ -86,6 +86,8 @@
 
 #include <omp.h>
 
+// OpenMP has its own timer and is desirable since it will
+// not overcount by measuring processor time.
 static inline double prk_wtime(void)
 {
     return omp_get_wtime();
@@ -105,9 +107,24 @@ static inline double prk_wtime(void)
     return ( 1.e-9 * at * info.numer / info.denom );
 }
 
+// gettimeofday is the worst timer, but should work everywhere.
+// This addresses issues with clock_gettime and timespec_get
+// library support in Travis
+#elif defined(PRK_USE_GETTIMEOFDAY)
+
+#include <sys/time.h>
+
+static inline double prk_wtime(void)
+{
+  struct timeval tv;
+  gettimeofday( &tv, NULL);
+  t  = (double) tv.tv_sec;
+  t += (double) tv.tv_usec * 1.0e-6;
+  return t;
+}
+
 // GCC claims to be C11 without knowing if glibc is compliant...
-#elif !defined(__GNUC__) && \
-       defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 
 static inline double prk_wtime(void)
 {
@@ -119,7 +136,7 @@ static inline double prk_wtime(void)
     return t;
 }
 
-// clock_gettime is not supported everywhere...
+// clock_gettime is not supported everywhere, or requires librt.
 #elif defined(CLOCK_PROCESS_CPUTIME_ID)
 
 static inline double prk_wtime(void)
@@ -132,18 +149,13 @@ static inline double prk_wtime(void)
     return t;
 }
 
-// gettimeofday is the worst timer, but should work everywhere.
 #else
 
-#include <sys/time.h>
+#warning No timer found!
 
 static inline double prk_wtime(void)
 {
-  struct timeval tv;
-  gettimeofday( &tv, NULL);
-  t  = (double) tv.tv_sec;
-  t += (double) tv.tv_usec * 1.0e-6;
-  return t;
+    return 0.0;
 }
 
 #endif // timers
