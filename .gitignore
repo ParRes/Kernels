@@ -129,6 +129,7 @@ Cxx11/stencil-vector-pstl
 Cxx11/stencil-vector-raja
 Cxx11/stencil-vector-rangefor
 Cxx11/stencil-vector-tbb
+Cxx11/stencil-vector-taskloop
 Cxx11/stencil-kokkos
 Cxx11/transpose-opencl
 Cxx11/transpose-openmp-target
@@ -176,4 +177,6 @@ FORTRAN/transpose-coarray
 FORTRAN/transpose-openmp
 FORTRAN/transpose-openmp-target
 FORTRAN/transpose-pretty
-
+RUST/p2p
+RUST/stencil
+RUST/transpose
