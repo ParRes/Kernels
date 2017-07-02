@@ -106,7 +106,8 @@ static inline double prk_wtime(void)
 }
 
 // GCC claims to be C11 without knowing if glibc is compliant...
-#elif 0 // defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#elif !defined(__GNUC__) && \
+       defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 
 static inline double prk_wtime(void)
 {
@@ -171,7 +172,9 @@ void * prk_malloc(size_t bytes)
 
 // We cannot use C11 aligned_alloc on Mac.
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69680 */
-#elif !defined(__APPLE__) && \
+// GCC claims to be C11 without knowing if glibc is compliant...
+#elif !defined(__GNUC__) && \
+      !defined(__APPLE__) && \
        defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 
 // From ISO C11:
