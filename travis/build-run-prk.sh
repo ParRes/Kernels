@@ -103,7 +103,7 @@ case "$PRK_TARGET" in
         ./$PRK_TARGET_PATH/transpose         10 100
         ;;
     allc1z)
-        echo "C11"
+        echo "C1z"
         case $CC in
             g*)
                 for major in "-9" "-8" "-7" "-6" "-5" "" ; do
