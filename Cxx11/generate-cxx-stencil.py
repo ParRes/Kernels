@@ -12,6 +12,11 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
         src.write('      PRAGMA_OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
+    elif (model=='taskloop'):
+        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('    _Pragma("omp taskloop")\n')
+        src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
+        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='target'):
         src.write('void '+pattern+str(radius)+'(const int n, const double * RESTRICT in, double * RESTRICT out) {\n')
         src.write('    _Pragma("omp for")\n')
@@ -122,7 +127,7 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','target','tbb','cilk','raja']:
+    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','cilk','raja']:
       src = open('stencil_'+model+'.hpp','w')
       src.write('#define RESTRICT __restrict__\n\n')
       if (model=='target'):
