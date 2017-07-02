@@ -3,6 +3,7 @@ language: cpp
 env:
   matrix:
   - PRK_TARGET=allserial
+  - PRK_TARGET=allc1z
   - PRK_TARGET=allcxx
   - PRK_TARGET=allpython
   - PRK_TARGET=alloctave

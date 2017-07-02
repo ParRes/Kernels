@@ -110,7 +110,7 @@ int main(int argc, char * argv[])
       case 14: vname = "forallN(omp_parallel_for_exec,simd_exec,tiled,PERM_IJ)"; break;
       case 15: vname = "forallN(omp_parallel_for_exec,simd_exec,tiled,PERM_JI)"; break;
 #endif
-      default: std::cout << "Invalid RAJA variant number (" << variant << ")" << std::endl; return -1; break;
+      default: std::cout << "Invalid RAJA variant number (" << variant << ")" << std::endl; return 0; break;
   }
 
   std::cout << "Number of iterations  = " << iterations << std::endl;

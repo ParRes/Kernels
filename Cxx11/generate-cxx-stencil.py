@@ -62,7 +62,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {\n')
     elif (model=='raja'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>\n')
+        src.write('    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>\n')
         src.write('            ( RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),'
                                 'RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),\n')
         src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
@@ -132,6 +132,12 @@ def main():
       src.write('#define RESTRICT __restrict__\n\n')
       if (model=='target'):
           src.write('_Pragma("omp declare target")\n')
+      if (model=='raja'):
+          src.write('#ifdef RAJA_ENABLE_OPENMP\n')
+          src.write('  typedef RAJA::omp_parallel_for_exec thread_exec;\n')
+          src.write('#else\n')
+          src.write('  typedef RAJA::seq_exec thread_exec;\n')
+          src.write('#endif\n')
       for pattern in ['star','grid']:
         for r in range(1,10):
           instance(src,model,pattern,r)

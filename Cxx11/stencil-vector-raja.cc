@@ -67,7 +67,7 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/RAJA STL Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/RAJA Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -126,15 +126,20 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
+  auto stencil_time = 0.0;
+
   std::vector<double> in;
   std::vector<double> out;
   in.resize(n*n);
   out.resize(n*n);
 
-  auto stencil_time = 0.0;
-
+#ifdef RAJA_ENABLE_OPENMP
+  typedef RAJA::omp_parallel_for_exec thread_exec;
+#else
+  typedef RAJA::seq_exec thread_exec;
+#endif
   // initialize the input and output arrays
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
           ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
             [&](RAJA::Index_type i, RAJA::Index_type j) {
       in[i*n+j] = static_cast<double>(i+j);
@@ -174,7 +179,7 @@ int main(int argc, char * argv[])
         }
     }
     // add constant to solution to force refresh of neighbor data, if any
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
             ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
               [&](RAJA::Index_type i, RAJA::Index_type j) {
         in[i*n+j] += 1.0;
@@ -194,7 +199,7 @@ int main(int argc, char * argv[])
 #if 0
   // This leads to incorrect computation of the norm.
   RAJA::ReduceSum<RAJA::omp_reduce, double> reduced_norm(0.0);
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
 #else
   RAJA::ReduceSum<RAJA::seq_reduce, double> reduced_norm(0.0);
   RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>>>

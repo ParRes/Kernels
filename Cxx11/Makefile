@@ -24,7 +24,7 @@ RAJAFLAGS = $(RAJAFLAG)
 .PHONY: all clean run vector valarray openmp target opencl cilk taskloop tbb pstl rangefor kokkos raja cuda
 
 ifeq ($(shell uname -s),Darwin)
-ifneq ($(CXX),icpc)
+ifneq ($(findstring icpc,$(CXX)),icpc)
 TARGET = target
 endif
 else
@@ -37,7 +37,7 @@ vector: p2p-vector stencil-vector transpose-vector
 
 valarray: transpose-valarray
 
-openmp: p2p-wavefront-openmp p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
+openmp: p2p-innerloop-openmp p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
 
 target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
