@@ -69,7 +69,7 @@ CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 # in your .bashrc.
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPICC=mpiicc
+MPICC=mpiicc -std=c99
 #
 # Fortran 2008 coarrays
 #
