@@ -478,7 +478,7 @@ case "$PRK_TARGET" in
         done
         # Kokkos
         echo "KOKKOSFLAG=-DUSE_KOKKOS -I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos ${EXTRAFLAG}" >> common/make.defs
-        make -C $PRK_TARGET_PATH stencil-vector-kokkos transpose-vector-kokkos
+        make -C $PRK_TARGET_PATH stencil-kokkos transpose-kokkos
         $PRK_TARGET_PATH/stencil-kokkos     10 1000
         $PRK_TARGET_PATH/transpose-kokkos   10 1024 32
         for s in star grid ; do
