@@ -109,7 +109,7 @@ static inline double prk_wtime(void)
 
 // gettimeofday is the worst timer, but should work everywhere.
 // This addresses issues with clock_gettime and timespec_get
-// library support in Travis
+// library support in Travis.
 #elif defined(PRK_USE_GETTIMEOFDAY)
 
 #include <sys/time.h>
@@ -135,7 +135,7 @@ static inline double prk_wtime(void)
     return t;
 }
 
-// clock_gettime is not supported everywhere, or requires librt.
+// clock_gettime is not supported everywhere, or requires explicit librt.
 #elif defined(CLOCK_PROCESS_CPUTIME_ID)
 
 static inline double prk_wtime(void)
@@ -150,11 +150,14 @@ static inline double prk_wtime(void)
 
 #else
 
-#warning No timer found!
+#include <sys/time.h>
 
 static inline double prk_wtime(void)
 {
-    return 0.0;
+  struct timeval tv;
+  gettimeofday( &tv, NULL);
+  double t  = (double) tv.tv_sec + (double) tv.tv_usec * 1.0e-6;
+  return t;
 }
 
 #endif // timers
