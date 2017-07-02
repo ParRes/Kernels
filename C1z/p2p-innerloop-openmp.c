@@ -35,13 +35,13 @@
 ///
 /// PURPOSE: This program tests the efficiency with which point-to-point
 ///          synchronization can be carried out. It does so by executing
-///          a pipelined algorithm on an m*n grid. The first array dimension
+///          a pipelined algorithm on an n*n grid. The first array dimension
 ///          is distributed among the threads (stripwise decomposition).
 ///
 /// USAGE:   The program takes as input the
 ///          dimensions of the grid, and the number of iterations on the grid
 ///
-///                <progname> <iterations> <m> <n>
+///                <progname> <iterations> <n> <n>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -70,8 +70,8 @@ int main(int argc, char * argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 4) {
-    printf("Usage: <# iterations> <first array dimension> <second array dimension>\n");
+  if (argc < 3) {
+    printf("Usage: <# iterations> <array dimension>\n");
     return 1;
   }
 
@@ -83,16 +83,15 @@ int main(int argc, char * argv[])
   }
 
   // grid dimensions
-  int m = atol(argv[2]);
-  int n = atol(argv[3]);
-  if (m < 1 || n < 1) {
-    printf("ERROR: grid dimensions must be positive: %d,%d\n", m, n);
+  int n = atol(argv[2]);
+  if (n < 1) {
+    printf("ERROR: grid dimension must be positive: %d\n", n);
     return 1;
   }
 
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
   printf("Number of iterations      = %d\n", iterations);
-  printf("Grid sizes                = %d,%d\n", m, n);
+  printf("Grid sizes                = %d,%d\n", n, n);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -100,13 +99,13 @@ int main(int argc, char * argv[])
 
   double pipeline_time = 0.0; // silence compiler warning
 
-  size_t bytes = m*n*sizeof(double);
+  size_t bytes = n*n*sizeof(double);
   double * restrict grid = prk_malloc(bytes);
 
   _Pragma("omp parallel")
   {
     PRAGMA_OMP_FOR_SIMD
-    for (int i=0; i<m; i++) {
+    for (int i=0; i<n; i++) {
       for (int j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
       }
@@ -118,7 +117,7 @@ int main(int argc, char * argv[])
       for (int j=0; j<n; j++) {
         grid[0*n+j] = (double)j;
       }
-      for (int i=0; i<m; i++) {
+      for (int i=0; i<n; i++) {
         grid[i*n+0] = (double)i;
       }
     }
@@ -161,9 +160,9 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   const double epsilon = 1.e-8;
-  const double corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
-    printf("ERROR: checksum %lf does not match verification value %lf\n", grid[(m-1)*n+(n-1)], corner_val);
+  const double corner_val = ((iterations+1.)*(n+n-2.));
+  if ( (fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+    printf("ERROR: checksum %lf does not match verification value %lf\n", grid[(n-1)*n+(n-1)], corner_val);
     return 1;
   }
 
@@ -175,7 +174,7 @@ int main(int argc, char * argv[])
   printf("Solution validates\n" );
 #endif
   double avgtime = pipeline_time/iterations;
-  printf("Rate (MFlops/s): %lf Avg time (s): %lf\n", 2.0e-6 * ( (m-1)*(n-1) )/avgtime, avgtime );
+  printf("Rate (MFlops/s): %lf Avg time (s): %lf\n", 2.0e-6 * ( (n-1)*(n-1) )/avgtime, avgtime );
 
   return 0;
 }
