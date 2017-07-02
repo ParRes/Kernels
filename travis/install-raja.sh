@@ -10,24 +10,28 @@ case $CXX in
         for major in "-9" "-8" "-7" "-6" "-5" "" ; do
           if [ -f "`which ${CXX}${major}`" ]; then
               export PRK_CXX="${CXX}${major}"
+              export PRK_CC="${CC}${major}"
               echo "Found C++: $PRK_CXX"
               break
           fi
         done
         if [ "x$PRK_CXX" = "x" ] ; then
             export PRK_CXX="${CXX}"
+            export PRK_CC="${CC}"
         fi
         ;;
     clang++)
         for version in "-5" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
           if [ -f "`which ${CXX}${version}`" ]; then
               export PRK_CXX="${CXX}${version}"
+              export PRK_CC="${CC}${major}"
               echo "Found C++: $PRK_CXX"
               break
           fi
         done
         if [ "x$PRK_CXX" = "x" ] ; then
             export PRK_CXX="${CXX}"
+            export PRK_CC="${CC}"
         fi
         ;;
 esac
