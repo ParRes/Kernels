@@ -17,7 +17,7 @@ CILKFLAGS = $(CILKFLAG)
 .PHONY: all clean serial openmp target taskloop cilk
 
 ifeq ($(shell uname -s),Darwin)
-ifneq ($(CC),icc)
+ifneq ($(findstring icc,$(CC)),icc)
 TARGET = target
 endif
 else

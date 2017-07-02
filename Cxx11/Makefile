@@ -24,7 +24,7 @@ RAJAFLAGS = $(RAJAFLAG)
 .PHONY: all clean run vector valarray openmp target opencl cilk taskloop tbb pstl rangefor kokkos raja cuda
 
 ifeq ($(shell uname -s),Darwin)
-ifneq ($(CXX),icpc)
+ifneq ($(findstring icpc,$(CXX)),icpc)
 TARGET = target
 endif
 else
