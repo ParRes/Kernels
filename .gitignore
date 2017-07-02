@@ -99,6 +99,19 @@ SERIAL/Sparse/sparse
 SERIAL/Stencil/stencil
 SERIAL/Synch_p2p/p2p
 SERIAL/Transpose/transpose
+C1z/p2p
+C1z/p2p-innerloop-openmp
+C1z/p2p-tasks-openmp
+C1z/stencil
+C1z/stencil-cilk
+C1z/stencil-openmp
+C1z/stencil-target
+C1z/stencil-taskloop
+C1z/transpose
+C1z/transpose-cilk
+C1z/transpose-openmp
+C1z/transpose-target
+C1z/transpose-taskloop
 Cxx11/p2p-openmp-target
 Cxx11/p2p-tasks-openmp
 Cxx11/p2p-vector
@@ -106,6 +119,7 @@ Cxx11/p2p-vector-doacross-openmp
 Cxx11/p2p-vector-raja
 Cxx11/p2p-vector-tbb
 Cxx11/p2p-wavefront-openmp
+Cxx11/p2p-innerloop-openmp
 Cxx11/stencil-opencl
 Cxx11/stencil-openmp-target
 Cxx11/stencil-vector
@@ -115,6 +129,7 @@ Cxx11/stencil-vector-pstl
 Cxx11/stencil-vector-raja
 Cxx11/stencil-vector-rangefor
 Cxx11/stencil-vector-tbb
+Cxx11/stencil-kokkos
 Cxx11/transpose-opencl
 Cxx11/transpose-openmp-target
 Cxx11/transpose-valarray
@@ -125,6 +140,8 @@ Cxx11/transpose-vector-pstl
 Cxx11/transpose-vector-raja
 Cxx11/transpose-vector-rangefor
 Cxx11/transpose-vector-tbb
+Cxx11/transpose-vector-taskloop
+Cxx11/transpose-kokkos
 Cxx11/grid1.cl
 Cxx11/grid2.cl
 Cxx11/grid3.cl
