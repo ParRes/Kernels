@@ -62,12 +62,12 @@
 
 #include "prk_util.h"
 
-#include "stencil_openmp.hpp"
+#include "stencil_taskloop.hpp"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/OpenMP TASKLOOP Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -122,6 +122,7 @@ int main(int argc, char * argv[])
   std::cout << "Grid size            = " << n << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
+  std::cout << "Compact representation of stencil loop body" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -135,8 +136,10 @@ int main(int argc, char * argv[])
   auto stencil_time = 0.0;
 
   _Pragma("omp parallel")
+  _Pragma("omp master")
   {
-    _Pragma("omp for")
+    //_Pragma("omp taskloop collapse(2)")
+    _Pragma("omp taskloop grainsize(32)")
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
         in[i*n+j] = static_cast<double>(i+j);
@@ -144,11 +147,11 @@ int main(int argc, char * argv[])
       }
     }
 
+    _Pragma("omp taskwait")
+
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
           stencil_time = prk::wtime();
       }
 
@@ -181,15 +184,15 @@ int main(int argc, char * argv[])
           }
       }
       // add constant to solution to force refresh of neighbor data, if any
-      _Pragma("omp for")
+      //_Pragma("omp taskloop collapse(2)")
+      _Pragma("omp taskloop grainsize(32)")
       for (auto i=0; i<n; i++) {
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
+      _Pragma("omp taskwait")
     }
-    _Pragma("omp barrier")
-    _Pragma("omp master")
     stencil_time = prk::wtime() - stencil_time;
   }
 
