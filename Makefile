@@ -76,10 +76,10 @@ help:
 	@echo "       \"make clean\"        removes all objects and executables"
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
-all: alldarwin allfreaks
+all: alldarwin allfreaks allshared
 alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran allfenix
-allshared: allserial allopenmp allfortran allcxx allc1z allrust
 allfreaks: allcharm++ allampi allgrappa alllegion
+allshared: allserial allopenmp allfortran allcxx allc1z allrust
 
 allmpi1:
 	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
