@@ -1,9 +1,9 @@
 #define RESTRICT __restrict__
 
-void star1(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void star1(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(1,n-1), KOKKOS_LAMBDA(const int i) {
       for (auto j=1; j<n-1; ++j) {
-          out(i,j) += +in(i+-1,j+0) * -0.5
+        out(i,j) += +in(i+-1,j+0) * -0.5
                       +in(i+0,j+-1) * -0.5
                       +in(i+0,j+1) * 0.5
                       +in(i+1,j+0) * 0.5;
@@ -11,10 +11,10 @@ void star1(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void star2(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void star2(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(2,n-2), KOKKOS_LAMBDA(const int i) {
       for (auto j=2; j<n-2; ++j) {
-          out(i,j) += +in(i+-2,j+0) * -0.125
+        out(i,j) += +in(i+-2,j+0) * -0.125
                       +in(i+-1,j+0) * -0.25
                       +in(i+0,j+-2) * -0.125
                       +in(i+0,j+-1) * -0.25
@@ -26,10 +26,10 @@ void star2(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void star3(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void star3(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(3,n-3), KOKKOS_LAMBDA(const int i) {
       for (auto j=3; j<n-3; ++j) {
-          out(i,j) += +in(i+-3,j+0) * -0.05555555555555555
+        out(i,j) += +in(i+-3,j+0) * -0.05555555555555555
                       +in(i+-2,j+0) * -0.08333333333333333
                       +in(i+-1,j+0) * -0.16666666666666666
                       +in(i+0,j+-3) * -0.05555555555555555
@@ -45,10 +45,10 @@ void star3(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void star4(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void star4(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(4,n-4), KOKKOS_LAMBDA(const int i) {
       for (auto j=4; j<n-4; ++j) {
-          out(i,j) += +in(i+-4,j+0) * -0.03125
+        out(i,j) += +in(i+-4,j+0) * -0.03125
                       +in(i+-3,j+0) * -0.041666666666666664
                       +in(i+-2,j+0) * -0.0625
                       +in(i+-1,j+0) * -0.125
@@ -68,10 +68,10 @@ void star4(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void star5(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void star5(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(5,n-5), KOKKOS_LAMBDA(const int i) {
       for (auto j=5; j<n-5; ++j) {
-          out(i,j) += +in(i+-5,j+0) * -0.02
+        out(i,j) += +in(i+-5,j+0) * -0.02
                       +in(i+-4,j+0) * -0.025
                       +in(i+-3,j+0) * -0.03333333333333333
                       +in(i+-2,j+0) * -0.05
@@ -95,10 +95,10 @@ void star5(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void star6(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void star6(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(6,n-6), KOKKOS_LAMBDA(const int i) {
       for (auto j=6; j<n-6; ++j) {
-          out(i,j) += +in(i+-6,j+0) * -0.013888888888888888
+        out(i,j) += +in(i+-6,j+0) * -0.013888888888888888
                       +in(i+-5,j+0) * -0.016666666666666666
                       +in(i+-4,j+0) * -0.020833333333333332
                       +in(i+-3,j+0) * -0.027777777777777776
@@ -126,10 +126,10 @@ void star6(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void star7(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void star7(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(7,n-7), KOKKOS_LAMBDA(const int i) {
       for (auto j=7; j<n-7; ++j) {
-          out(i,j) += +in(i+-7,j+0) * -0.01020408163265306
+        out(i,j) += +in(i+-7,j+0) * -0.01020408163265306
                       +in(i+-6,j+0) * -0.011904761904761904
                       +in(i+-5,j+0) * -0.014285714285714285
                       +in(i+-4,j+0) * -0.017857142857142856
@@ -161,10 +161,10 @@ void star7(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void star8(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void star8(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(8,n-8), KOKKOS_LAMBDA(const int i) {
       for (auto j=8; j<n-8; ++j) {
-          out(i,j) += +in(i+-8,j+0) * -0.0078125
+        out(i,j) += +in(i+-8,j+0) * -0.0078125
                       +in(i+-7,j+0) * -0.008928571428571428
                       +in(i+-6,j+0) * -0.010416666666666666
                       +in(i+-5,j+0) * -0.0125
@@ -200,10 +200,10 @@ void star8(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void star9(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void star9(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(9,n-9), KOKKOS_LAMBDA(const int i) {
       for (auto j=9; j<n-9; ++j) {
-          out(i,j) += +in(i+-9,j+0) * -0.006172839506172839
+        out(i,j) += +in(i+-9,j+0) * -0.006172839506172839
                       +in(i+-8,j+0) * -0.006944444444444444
                       +in(i+-7,j+0) * -0.007936507936507936
                       +in(i+-6,j+0) * -0.009259259259259259
@@ -243,10 +243,10 @@ void star9(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void grid1(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void grid1(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(1,n-1), KOKKOS_LAMBDA(const int i) {
       for (auto j=1; j<n-1; ++j) {
-          out(i,j) += +in(i+-1,j+-1) * -0.25
+        out(i,j) += +in(i+-1,j+-1) * -0.25
                       +in(i+-1,j+0) * -0.25
                       +in(i+0,j+-1) * -0.25
                       +in(i+0,j+1) * 0.25
@@ -257,10 +257,10 @@ void grid1(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void grid2(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void grid2(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(2,n-2), KOKKOS_LAMBDA(const int i) {
       for (auto j=2; j<n-2; ++j) {
-          out(i,j) += +in(i+-2,j+-2) * -0.0625
+        out(i,j) += +in(i+-2,j+-2) * -0.0625
                       +in(i+-2,j+-1) * -0.020833333333333332
                       +in(i+-2,j+0) * -0.020833333333333332
                       +in(i+-2,j+1) * -0.020833333333333332
@@ -285,10 +285,10 @@ void grid2(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void grid3(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void grid3(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(3,n-3), KOKKOS_LAMBDA(const int i) {
       for (auto j=3; j<n-3; ++j) {
-          out(i,j) += +in(i+-3,j+-3) * -0.027777777777777776
+        out(i,j) += +in(i+-3,j+-3) * -0.027777777777777776
                       +in(i+-3,j+-2) * -0.005555555555555556
                       +in(i+-3,j+-1) * -0.005555555555555556
                       +in(i+-3,j+0) * -0.005555555555555556
@@ -335,10 +335,10 @@ void grid3(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void grid4(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void grid4(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(4,n-4), KOKKOS_LAMBDA(const int i) {
       for (auto j=4; j<n-4; ++j) {
-          out(i,j) += +in(i+-4,j+-4) * -0.015625
+        out(i,j) += +in(i+-4,j+-4) * -0.015625
                       +in(i+-4,j+-3) * -0.002232142857142857
                       +in(i+-4,j+-2) * -0.002232142857142857
                       +in(i+-4,j+-1) * -0.002232142857142857
@@ -415,10 +415,10 @@ void grid4(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void grid5(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void grid5(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(5,n-5), KOKKOS_LAMBDA(const int i) {
       for (auto j=5; j<n-5; ++j) {
-          out(i,j) += +in(i+-5,j+-5) * -0.01
+        out(i,j) += +in(i+-5,j+-5) * -0.01
                       +in(i+-5,j+-4) * -0.0011111111111111111
                       +in(i+-5,j+-3) * -0.0011111111111111111
                       +in(i+-5,j+-2) * -0.0011111111111111111
@@ -533,10 +533,10 @@ void grid5(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void grid6(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void grid6(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(6,n-6), KOKKOS_LAMBDA(const int i) {
       for (auto j=6; j<n-6; ++j) {
-          out(i,j) += +in(i+-6,j+-6) * -0.006944444444444444
+        out(i,j) += +in(i+-6,j+-6) * -0.006944444444444444
                       +in(i+-6,j+-5) * -0.0006313131313131314
                       +in(i+-6,j+-4) * -0.0006313131313131314
                       +in(i+-6,j+-3) * -0.0006313131313131314
@@ -697,10 +697,10 @@ void grid6(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void grid7(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void grid7(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(7,n-7), KOKKOS_LAMBDA(const int i) {
       for (auto j=7; j<n-7; ++j) {
-          out(i,j) += +in(i+-7,j+-7) * -0.00510204081632653
+        out(i,j) += +in(i+-7,j+-7) * -0.00510204081632653
                       +in(i+-7,j+-6) * -0.0003924646781789639
                       +in(i+-7,j+-5) * -0.0003924646781789639
                       +in(i+-7,j+-4) * -0.0003924646781789639
@@ -915,10 +915,10 @@ void grid7(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void grid8(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void grid8(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(8,n-8), KOKKOS_LAMBDA(const int i) {
       for (auto j=8; j<n-8; ++j) {
-          out(i,j) += +in(i+-8,j+-8) * -0.00390625
+        out(i,j) += +in(i+-8,j+-8) * -0.00390625
                       +in(i+-8,j+-7) * -0.00026041666666666666
                       +in(i+-8,j+-6) * -0.00026041666666666666
                       +in(i+-8,j+-5) * -0.00026041666666666666
@@ -1195,10 +1195,10 @@ void grid8(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos
      });
 }
 
-void grid9(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in, Kokkos::View<double**, Kokkos::LayoutRight> & out) {
-    Kokkos::parallel_for ( n,[&] (int i) {
+void grid9(const int n, matrix & in, matrix & out) {
+    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(9,n-9), KOKKOS_LAMBDA(const int i) {
       for (auto j=9; j<n-9; ++j) {
-          out(i,j) += +in(i+-9,j+-9) * -0.0030864197530864196
+        out(i,j) += +in(i+-9,j+-9) * -0.0030864197530864196
                       +in(i+-9,j+-8) * -0.00018155410312273057
                       +in(i+-9,j+-7) * -0.00018155410312273057
                       +in(i+-9,j+-6) * -0.00018155410312273057

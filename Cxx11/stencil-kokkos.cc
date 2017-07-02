@@ -62,6 +62,10 @@
 
 #include "prk_util.h"
 
+typedef Kokkos::View<double**, Kokkos::LayoutRight> matrix;
+//typedef Kokkos::View<double**, Kokkos::LayoutLeft> matrix;
+//typedef Kokkos::View<double**> matrix;
+
 #include "stencil_kokkos.hpp"
 
 int main(int argc, char * argv[])
@@ -132,8 +136,8 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   // row-major 2D array
-  Kokkos::View<double**, Kokkos::LayoutRight> in("in", n, n);
-  Kokkos::View<double**, Kokkos::LayoutRight> out("out", n, n);
+  matrix in("in", n, n);
+  matrix out("out", n, n);
 
   try {
     Kokkos::parallel_for ( n,[&] (int i) {

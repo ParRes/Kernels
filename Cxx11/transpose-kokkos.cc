@@ -98,11 +98,14 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   // row-major 2D array
-  Kokkos::View<double**, Kokkos::LayoutRight> A("A", order, order);
-  Kokkos::View<double**, Kokkos::LayoutRight> B("B", order, order);
+  typedef Kokkos::View<double**, Kokkos::LayoutRight> matrix;
+  //typedef Kokkos::View<double**, Kokkos::LayoutLeft> matrix;
+  //typedef Kokkos::View<double**> matrix;
+  matrix A("A", order, order);
+  matrix B("B", order, order);
 
   try {
-    Kokkos::parallel_for ( order,[&] (int i) {
+    Kokkos::parallel_for ( order, KOKKOS_LAMBDA(const int i) {
       for (auto j=0; j<order; ++j){
           A(i,j) = static_cast<double>(i*order+j);
           B(i,j) = 0.0;
@@ -125,7 +128,7 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     try {
-      Kokkos::parallel_for ( order,[&] (int i) {
+      Kokkos::parallel_for ( order, KOKKOS_LAMBDA(const int i) {
         for (auto j=0; j<order; ++j){
           B(i,j) += A(j,i);
           A(j,i) += 1.0;

@@ -5,7 +5,7 @@ void star1(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-1)*n+(j+0)] * -0.5
+        out[i*n+j] += +in[(i+-1)*n+(j+0)] * -0.5
                       +in[(i+0)*n+(j+-1)] * -0.5
                       +in[(i+0)*n+(j+1)] * 0.5
                       +in[(i+1)*n+(j+0)] * 0.5;
@@ -18,7 +18,7 @@ void star2(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-2)*n+(j+0)] * -0.125
+        out[i*n+j] += +in[(i+-2)*n+(j+0)] * -0.125
                       +in[(i+-1)*n+(j+0)] * -0.25
                       +in[(i+0)*n+(j+-2)] * -0.125
                       +in[(i+0)*n+(j+-1)] * -0.25
@@ -35,7 +35,7 @@ void star3(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-3)*n+(j+0)] * -0.05555555555555555
+        out[i*n+j] += +in[(i+-3)*n+(j+0)] * -0.05555555555555555
                       +in[(i+-2)*n+(j+0)] * -0.08333333333333333
                       +in[(i+-1)*n+(j+0)] * -0.16666666666666666
                       +in[(i+0)*n+(j+-3)] * -0.05555555555555555
@@ -56,7 +56,7 @@ void star4(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-4)*n+(j+0)] * -0.03125
+        out[i*n+j] += +in[(i+-4)*n+(j+0)] * -0.03125
                       +in[(i+-3)*n+(j+0)] * -0.041666666666666664
                       +in[(i+-2)*n+(j+0)] * -0.0625
                       +in[(i+-1)*n+(j+0)] * -0.125
@@ -81,7 +81,7 @@ void star5(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-5)*n+(j+0)] * -0.02
+        out[i*n+j] += +in[(i+-5)*n+(j+0)] * -0.02
                       +in[(i+-4)*n+(j+0)] * -0.025
                       +in[(i+-3)*n+(j+0)] * -0.03333333333333333
                       +in[(i+-2)*n+(j+0)] * -0.05
@@ -110,7 +110,7 @@ void star6(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-6)*n+(j+0)] * -0.013888888888888888
+        out[i*n+j] += +in[(i+-6)*n+(j+0)] * -0.013888888888888888
                       +in[(i+-5)*n+(j+0)] * -0.016666666666666666
                       +in[(i+-4)*n+(j+0)] * -0.020833333333333332
                       +in[(i+-3)*n+(j+0)] * -0.027777777777777776
@@ -143,7 +143,7 @@ void star7(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-7)*n+(j+0)] * -0.01020408163265306
+        out[i*n+j] += +in[(i+-7)*n+(j+0)] * -0.01020408163265306
                       +in[(i+-6)*n+(j+0)] * -0.011904761904761904
                       +in[(i+-5)*n+(j+0)] * -0.014285714285714285
                       +in[(i+-4)*n+(j+0)] * -0.017857142857142856
@@ -180,7 +180,7 @@ void star8(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-8)*n+(j+0)] * -0.0078125
+        out[i*n+j] += +in[(i+-8)*n+(j+0)] * -0.0078125
                       +in[(i+-7)*n+(j+0)] * -0.008928571428571428
                       +in[(i+-6)*n+(j+0)] * -0.010416666666666666
                       +in[(i+-5)*n+(j+0)] * -0.0125
@@ -221,7 +221,7 @@ void star9(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-9)*n+(j+0)] * -0.006172839506172839
+        out[i*n+j] += +in[(i+-9)*n+(j+0)] * -0.006172839506172839
                       +in[(i+-8)*n+(j+0)] * -0.006944444444444444
                       +in[(i+-7)*n+(j+0)] * -0.007936507936507936
                       +in[(i+-6)*n+(j+0)] * -0.009259259259259259
@@ -266,7 +266,7 @@ void grid1(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-1)*n+(j+-1)] * -0.25
+        out[i*n+j] += +in[(i+-1)*n+(j+-1)] * -0.25
                       +in[(i+-1)*n+(j+0)] * -0.25
                       +in[(i+0)*n+(j+-1)] * -0.25
                       +in[(i+0)*n+(j+1)] * 0.25
@@ -282,7 +282,7 @@ void grid2(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-2)*n+(j+-2)] * -0.0625
+        out[i*n+j] += +in[(i+-2)*n+(j+-2)] * -0.0625
                       +in[(i+-2)*n+(j+-1)] * -0.020833333333333332
                       +in[(i+-2)*n+(j+0)] * -0.020833333333333332
                       +in[(i+-2)*n+(j+1)] * -0.020833333333333332
@@ -312,7 +312,7 @@ void grid3(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-3)*n+(j+-3)] * -0.027777777777777776
+        out[i*n+j] += +in[(i+-3)*n+(j+-3)] * -0.027777777777777776
                       +in[(i+-3)*n+(j+-2)] * -0.005555555555555556
                       +in[(i+-3)*n+(j+-1)] * -0.005555555555555556
                       +in[(i+-3)*n+(j+0)] * -0.005555555555555556
@@ -364,7 +364,7 @@ void grid4(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-4)*n+(j+-4)] * -0.015625
+        out[i*n+j] += +in[(i+-4)*n+(j+-4)] * -0.015625
                       +in[(i+-4)*n+(j+-3)] * -0.002232142857142857
                       +in[(i+-4)*n+(j+-2)] * -0.002232142857142857
                       +in[(i+-4)*n+(j+-1)] * -0.002232142857142857
@@ -446,7 +446,7 @@ void grid5(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-5)*n+(j+-5)] * -0.01
+        out[i*n+j] += +in[(i+-5)*n+(j+-5)] * -0.01
                       +in[(i+-5)*n+(j+-4)] * -0.0011111111111111111
                       +in[(i+-5)*n+(j+-3)] * -0.0011111111111111111
                       +in[(i+-5)*n+(j+-2)] * -0.0011111111111111111
@@ -566,7 +566,7 @@ void grid6(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-6)*n+(j+-6)] * -0.006944444444444444
+        out[i*n+j] += +in[(i+-6)*n+(j+-6)] * -0.006944444444444444
                       +in[(i+-6)*n+(j+-5)] * -0.0006313131313131314
                       +in[(i+-6)*n+(j+-4)] * -0.0006313131313131314
                       +in[(i+-6)*n+(j+-3)] * -0.0006313131313131314
@@ -732,7 +732,7 @@ void grid7(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-7)*n+(j+-7)] * -0.00510204081632653
+        out[i*n+j] += +in[(i+-7)*n+(j+-7)] * -0.00510204081632653
                       +in[(i+-7)*n+(j+-6)] * -0.0003924646781789639
                       +in[(i+-7)*n+(j+-5)] * -0.0003924646781789639
                       +in[(i+-7)*n+(j+-4)] * -0.0003924646781789639
@@ -952,7 +952,7 @@ void grid8(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-8)*n+(j+-8)] * -0.00390625
+        out[i*n+j] += +in[(i+-8)*n+(j+-8)] * -0.00390625
                       +in[(i+-8)*n+(j+-7)] * -0.00026041666666666666
                       +in[(i+-8)*n+(j+-6)] * -0.00026041666666666666
                       +in[(i+-8)*n+(j+-5)] * -0.00026041666666666666
@@ -1234,7 +1234,7 @@ void grid9(const int n, std::vector<double> & in, std::vector<double> & out) {
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       PRAGMA_SIMD
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
-          out[i*n+j] += +in[(i+-9)*n+(j+-9)] * -0.0030864197530864196
+        out[i*n+j] += +in[(i+-9)*n+(j+-9)] * -0.0030864197530864196
                       +in[(i+-9)*n+(j+-8)] * -0.00018155410312273057
                       +in[(i+-9)*n+(j+-7)] * -0.00018155410312273057
                       +in[(i+-9)*n+(j+-6)] * -0.00018155410312273057

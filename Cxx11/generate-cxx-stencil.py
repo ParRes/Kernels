@@ -16,6 +16,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    _Pragma("omp taskloop")\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
+        src.write('      PRAGMA_OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='target'):
         src.write('void '+pattern+str(radius)+'(const int n, const double * RESTRICT in, double * RESTRICT out) {\n')
@@ -67,9 +68,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
                                 'RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),\n')
         src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
     elif (model=='kokkos'):
-        src.write('void '+pattern+str(radius)+'(const int n, Kokkos::View<double**, Kokkos::LayoutRight> & in,'
-                                                           ' Kokkos::View<double**, Kokkos::LayoutRight> & out) {\n')
-        src.write('    Kokkos::parallel_for ( n,[&] (int i) {\n')
+        src.write('void '+pattern+str(radius)+'(const int n, matrix & in, matrix & out) {\n')
+        src.write('    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>('+str(radius)+',n-'+str(radius)+'), KOKKOS_LAMBDA(const int i) {\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     else:
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
@@ -77,9 +77,9 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      PRAGMA_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     if (model=='kokkos'):
-        src.write('          out(i,j) += ')
+        src.write('        out(i,j) += ')
     else:
-        src.write('          out[i*n+j] += ')
+        src.write('        out[i*n+j] += ')
     k = 0
     kmax = stencil_size-1;
     for j in range(0,2*radius+1):
