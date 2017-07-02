@@ -208,7 +208,6 @@ int main(int argc, char * argv[])
   std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
-  std::cout << "Compact representation of stencil loop body" << std::endl;
 
   tbb::task_scheduler_init init(tbb::task_scheduler_init::automatic);
 
