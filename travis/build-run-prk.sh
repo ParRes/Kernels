@@ -154,10 +154,10 @@ case "$PRK_TARGET" in
                 # Host
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
                 make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
-                $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-innerloop-openmp             10 1024 1024
-                $PRK_TARGET_PATH/stencil-openmp                   10 1000
-                $PRK_TARGET_PATH/transpose-openmp                 10 1024 32
+                $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
+                $PRK_TARGET_PATH/p2p-innerloop-openmp     10 1024 1024
+                $PRK_TARGET_PATH/stencil-openmp           10 1000
+                $PRK_TARGET_PATH/transpose-openmp         10 1024 32
                 #echo "Test stencil code generator"
                 for s in star grid ; do
                     for r in 1 2 3 4 5 6 7 8 9 ; do
@@ -194,11 +194,11 @@ case "$PRK_TARGET" in
             ic*)
                 # Host
                 echo "OPENMPFLAG=-qopenmp" >> common/make.defs
-                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-penmp
-                $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-innerloop-openmp             10 1024
-                $PRK_TARGET_PATH/stencil-openmp            10 1000
-                $PRK_TARGET_PATH/transpose-openmp          10 1024 32
+                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+                $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
+                $PRK_TARGET_PATH/p2p-innerloop-openmp     10 1024 1024
+                $PRK_TARGET_PATH/stencil-openmp           10 1000
+                $PRK_TARGET_PATH/transpose-openmp         10 1024 32
                 #echo "Test stencil code generator"
                 for s in star grid ; do
                     for r in 1 2 3 4 5 6 7 8 9 ; do
