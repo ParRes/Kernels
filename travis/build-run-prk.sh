@@ -133,7 +133,7 @@ case "$PRK_TARGET" in
         esac
         ${PRK_CC} -v
         # Need to increment this for CPLEX (some day)
-        echo "CC=${PRK_CC} -std=c11" >> common/make.defs
+        echo "CC=${PRK_CC} -std=c11\nEXTRALIBS=-lrt" >> common/make.defs
 
         # C11 without external parallelism
         make -C $PRK_TARGET_PATH serial
