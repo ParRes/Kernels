@@ -131,7 +131,6 @@ int main(int argc, char * argv[])
         _Pragma("omp taskloop")
         for (int it=0; it<order; it+=tile_size) {
           for (int jt=0; jt<order; jt+=tile_size) {
-            PRAGMA_OMP_SIMD
             for (int i=it; i<MIN(order,it+tile_size); i++) {
               PRAGMA_OMP_SIMD
               for (int j=jt; j<MIN(order,jt+tile_size); j++) {
