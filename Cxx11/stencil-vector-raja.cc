@@ -67,7 +67,7 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/RAJA STL Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/RAJA Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
