@@ -30,12 +30,8 @@ endif
 else
 TARGET = target
 endif
-<<<<<<< HEAD
-all: vector valarray openmp opencl $(TARGET) cilk tbb pstl rangefor raja kokkos
-=======
 
-all: vector valarray openmp opencl $(TARGET) cilk taskloop tbb pstl rangefor raja
->>>>>>> master
+all: vector valarray openmp opencl $(TARGET) cilk taskloop tbb pstl rangefor raja kokkos
 
 vector: p2p-vector stencil-vector transpose-vector
 
