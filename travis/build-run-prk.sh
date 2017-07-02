@@ -104,6 +104,7 @@ case "$PRK_TARGET" in
         ;;
     allc1z)
         echo "C1z"
+        export PRK_TARGET_PATH=C1z
         case $CC in
             g*)
                 for major in "-9" "-8" "-7" "-6" "-5" "" ; do
