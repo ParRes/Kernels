@@ -454,13 +454,14 @@ case "$PRK_TARGET" in
         case "$CC" in
             gcc)
                 # Kokkos and Raja are built with OpenMP support with GCC
-                export EXTRAFLAG="-fopenmp"
+                export EXTRAFLAG="-fopenmp -ldl"
                 ;;
             clang)
                 # Kokkos is built with Pthread support with Clang
                 export EXTRAFLAG="-lpthread -ldl"
                 ;;
         esac
+        # RAJA
         echo "RAJAFLAG=-DUSE_RAJA -I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${EXTRAFLAG}" >> common/make.defs
         make -C $PRK_TARGET_PATH stencil-vector-raja transpose-vector-raja
         $PRK_TARGET_PATH/stencil-vector-raja     10 1000
@@ -475,10 +476,16 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil-vector-raja 10 200 $s $r
             done
         done
-        #echo "KOKKOSFLAG=-DUSE_KOKKOS -I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos ${EXTRAFLAG}" >> common/make.defs
-        #make -C $PRK_TARGET_PATH stencil-vector-kokkos transpose-vector-kokkos
-        #$PRK_TARGET_PATH/stencil-vector-kokkos     10 1000
-        #$PRK_TARGET_PATH/transpose-vector-kokkos   10 1024 32
+        # Kokkos
+        echo "KOKKOSFLAG=-DUSE_KOKKOS -I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos ${EXTRAFLAG}" >> common/make.defs
+        make -C $PRK_TARGET_PATH stencil-vector-kokkos transpose-vector-kokkos
+        $PRK_TARGET_PATH/stencil-kokkos     10 1000
+        $PRK_TARGET_PATH/transpose-kokkos   10 1024 32
+        for s in star grid ; do
+            for r in 1 2 3 4 5 6 7 8 9 ; do
+                $PRK_TARGET_PATH/stencil-kokkos 10 200 $s $r
+            done
+        done
         ;;
     allfortran*)
         # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty allfortrantarget
