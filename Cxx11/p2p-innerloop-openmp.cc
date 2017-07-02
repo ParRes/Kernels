@@ -66,17 +66,17 @@
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP WAVEFRONT pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/OpenMP INNERLOOP pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int m, n;
+  int n;
   try {
-      if (argc < 4){
-        throw " <# iterations> <first array dimension> <second array dimension>";
+      if (argc < 3){
+        throw " <# iterations> <array dimension>";
       }
 
       // number of times to run the pipeline algorithm
@@ -86,11 +86,10 @@ int main(int argc, char* argv[])
       }
 
       // grid dimensions
-      m = std::atoi(argv[2]);
-      n = std::atoi(argv[3]);
-      if (m < 1 || n < 1) {
+      n = std::atoi(argv[2]);
+      if (n < 1) {
         throw "ERROR: grid dimensions must be positive";
-      } else if ( static_cast<size_t>(m)*static_cast<size_t>(n) > INT_MAX) {
+      } else if ( static_cast<size_t>(n)*static_cast<size_t>(n) > INT_MAX) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
   }
@@ -101,7 +100,7 @@ int main(int argc, char* argv[])
 
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
+  std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation

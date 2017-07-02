@@ -182,9 +182,9 @@ case "$PRK_TARGET" in
             gcc)
                 # Host
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-wavefront-openmp stencil-vector-openmp transpose-vector-openmp
+                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-vector-openmp transpose-vector-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-wavefront-openmp             10 1024 1024
+                $PRK_TARGET_PATH/p2p-innerloop-openmp             10 1024 1024
                 $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
                 $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
                 #echo "Test stencil code generator"
@@ -217,9 +217,9 @@ case "$PRK_TARGET" in
             icc)
                 # Host
                 echo "OPENMPFLAG=-qopenmp" >> common/make.defs
-                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-wavefront-openmp stencil-vector-openmp transpose-vector-openmp
+                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-vector-openmp transpose-vector-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-wavefront-openmp             10 1024 1024
+                $PRK_TARGET_PATH/p2p-innerloop-openmp             10 1024 1024
                 $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
                 $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
                 #echo "Test stencil code generator"
