@@ -68,14 +68,16 @@ case "$os" in
         case "$MPI_IMPL" in
             mpich)
                 if [ ! -f "$TRAVIS_ROOT/bin/mpichversion" ]; then
+                    MPICH_V=3.3a2
                     wget --no-check-certificate -q \
-                         http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz || \
+                         http://www.mpich.org/static/downloads/${MPICH_V}/mpich-${MPICH_V}.tar.gz || \
                          wget --no-check-certificate -q \
-                         https://github.com/pmodels/mpich/archive/v3.2.tar.gz
-                    tar -xzf mpich-3.2.tar.gz || tar -xzf v3.2.tar.gz
-                    cd mpich-3.2
+                         https://github.com/pmodels/mpich/archive/v${MPICH_V}.tar.gz
+                    tar -xzf mpich-${MPICH_V}.tar.gz || tar -xzf v${MPICH_V}.tar.gz
+                    cd mpich-${MPICH_V}
+                    # Autotools not required with release tarballs
                     #sh $TRAVIS_HOME/travis/install-autotools.sh $TRAVIS_ROOT
-                    #./autogen.sh # not required with release tarballs
+                    #./autogen.sh
                     mkdir build ; cd build
                     if [ "x$MPI_FORTRAN" != "x1" ] ; then
                         ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX --disable-fortran

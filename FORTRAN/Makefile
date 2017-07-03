@@ -1,4 +1,8 @@
-include ../common/FORTRAN.defs
+include ../common/make.defs
+
+ifndef CAFC
+  CAFC=$(FC)
+endif
 
 ifndef RADIUS
   RADIUS=2
@@ -59,7 +63,7 @@ p2p-openmp-datapar: p2p-openmp-datapar.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 %-coarray: %-coarray.f90
-	$(CAFCOMPILER) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
+	$(CAFC) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
 
 %-target: %-target.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< -o $@

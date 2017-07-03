@@ -10,11 +10,7 @@ env:
   - PRK_TARGET=alljulia
   - PRK_TARGET=allrust
   - PRK_TARGET=allopenmp
-  - PRK_TARGET=allfortranserial
-  - PRK_TARGET=allfortranopenmp
-  - PRK_TARGET=allfortrantarget
-  - PRK_TARGET=allfortranpretty
-  - PRK_TARGET=allfortrancoarray
+  - PRK_TARGET=allfortran
   - PRK_TARGET=allmpi1
   - PRK_TARGET=allmpirma
   - PRK_TARGET=allmpishm
@@ -105,15 +101,7 @@ matrix:
     env: PRK_TARGET=allhpx3
   # LLVM Fortran is not ready.
   - compiler: clang
-    env: PRK_TARGET=allfortranserial
-  - compiler: clang
-    env: PRK_TARGET=allfortranopenmp
-  - compiler: clang
-    env: PRK_TARGET=allfortrantarget
-  - compiler: clang
-    env: PRK_TARGET=allfortranpretty
-  - compiler: clang
-    env: PRK_TARGET=allfortrancoarray
+    env: PRK_TARGET=allfortran
   # Skip Linux because we rely on Homebrew for these
   - os: linux
     env: PRK_TARGET=alloctave
@@ -170,10 +158,6 @@ matrix:
     env: PRK_TARGET=allfgmpi
   - os: linux
     env: PRK_TARGET=allfgmpi
-  # Linux may not have GCC-6...
-  #- os: linux
-  #  compiler: gcc
-  #  env: PRK_TARGET=allfortrancoarray
   # BUPC has trouble with flags
   #- os: linux
   #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
