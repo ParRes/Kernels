@@ -8,7 +8,7 @@ TRAVIS_ROOT="$1"
 if [ "${TRAVIS_OS_NAME}" = "osx" ] || [ "${CHPL_COMM}" = "none" ] ; then
     echo "Mac single-locale"
     brew update
-    brew install chapel
+    brew install chapel || brew upgrade chapel
     brew test chapel
 else
     # We could test Clang via the C back-end as well, but it seems silly.

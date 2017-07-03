@@ -95,6 +95,9 @@ public:
           break;
         }
       }
+      // determine best way to create a 2D grid of ranks (closest to square)     */
+      factor(num_chares, &num_chare_cols, &num_chare_rows);
+      
       min_size = (n+num_chare_cols-1)/num_chare_cols;
       if (min_size<RADIUS) {
         CkPrintf("ERROR: Some tiles smaller than radius of difference stencil\n");

@@ -207,15 +207,9 @@ int main(int argc, char ** argv) {
   }
   bail_out(error);
 
-  /* determine best way to create a 2D grid of ranks (closest to square, for
-     best surface/volume ratio); we do this brute force for now
-  */
-  for (Num_procsx=(int) (sqrt(Num_procs+1)); Num_procsx>0; Num_procsx--) {
-    if (!(Num_procs%Num_procsx)) {
-      Num_procsy = Num_procs/Num_procsx;
-      break;
-    }
-  }
+  /* determine best way to create a 2D grid of ranks (closest to square)     */
+  factor(Num_procs, &Num_procsx, &Num_procsy);
+
   my_IDx = my_ID%Num_procsx;
   my_IDy = my_ID/Num_procsx;
   /* compute neighbors; don't worry about dropping off the edges of the grid */

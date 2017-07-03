@@ -30,11 +30,24 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PRK_GENERAL_H
+#define PRK_GENERAL_H
+
+/* All of this is to get posix_memalign defined... */
+/* #define _POSIX_C_SOURCE (200112L) */
+#define _POSIX_C_SOURCE (200809L)
+#define _XOPEN_SOURCE 600
+
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include <limits.h>
+
+#include <stdint.h>
+#include <inttypes.h>
 
 #include <unistd.h>
 
@@ -141,7 +154,7 @@ static inline void* prk_malloc(size_t bytes)
 
 static inline void prk_free(void* p)
 {
-#if defined(__INTEL_COMPILER) && !defined(PRK_USE_POSIX_MEMALIGN)
+#if !defined(__UPC__) && defined(__INTEL_COMPILER) && !defined(PRK_USE_POSIX_MEMALIGN)
     _mm_free(p);
 #else
     free(p);
@@ -158,3 +171,36 @@ static inline void prk_pause(double dt)
   }
   return;
 }
+
+/* find factorization of an integer into two factors that are as close together as 
+   possible. If not the same, second factor is the largest                               */
+static inline void factor(int r, int *fac1, int *fac2) {
+  for (*fac1=(int) (sqrt(r+1.0)); *fac1>0; (*fac1)--) {
+    if (!(r%(*fac1))) { *fac2 = r/(*fac1); break;}
+  }
+}
+
+/* find optimal division of a pair of integers whose sum is fixed, such that the pair 
+   is as close as possible to an input pair, but whose two-term factorizations have 
+   minimal maximum aspect ratios                                                         */
+static inline void optimize_split(int *r_in0, int *r_in1, float lb_weight){
+  int r[2], fac[2][2], delta, r_opt[2], i;
+  float max_aspect, imbalance, cost, cost_opt;
+    
+  cost_opt=INT_MAX;
+  for (delta=-MIN((*r_in0),(*r_in1))+1; delta<MIN((*r_in0),(*r_in1)); delta++) {
+    r[0]=(*r_in0-delta); r[1] = (*r_in1)+delta;
+    for (i=0; i<2; i++) factor(r[i], &fac[i][0], &fac[i][1]);
+    max_aspect=1.0-1.0/MAX((float)fac[0][1]/(float)fac[0][0],(float)fac[1][1]/(float)fac[1][0]);
+    imbalance=MAX(1.0-(float)r[1]/(float)(*r_in1),1.0-(float)r[0]/(float)(*r_in0));
+    cost = imbalance*lb_weight + max_aspect;
+    if (cost<cost_opt) {
+      cost_opt = cost;
+      for (i=0; i<2; i++) r_opt[i] = r[i];
+    }
+  }
+  *r_in0 = r_opt[0];
+  *r_in1 = r_opt[1];
+}
+  
+#endif /* PRK_GENERAL_H */

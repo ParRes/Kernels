@@ -3,13 +3,14 @@ language: cpp
 env:
   matrix:
   - PRK_TARGET=allserial
+  - PRK_TARGET=allc1z
+  - PRK_TARGET=allcxx
   - PRK_TARGET=allpython
+  - PRK_TARGET=alloctave
   - PRK_TARGET=alljulia
+  - PRK_TARGET=allrust
   - PRK_TARGET=allopenmp
-  - PRK_TARGET=allfortranserial
-  - PRK_TARGET=allfortranopenmp
-  - PRK_TARGET=allfortranpretty
-  - PRK_TARGET=allfortrancoarray
+  - PRK_TARGET=allfortran
   - PRK_TARGET=allmpi1
   - PRK_TARGET=allmpirma
   - PRK_TARGET=allmpishm
@@ -100,36 +101,38 @@ matrix:
     env: PRK_TARGET=allhpx3
   # LLVM Fortran is not ready.
   - compiler: clang
-    env: PRK_TARGET=allfortranserial
-  - compiler: clang
-    env: PRK_TARGET=allfortranopenmp
-  - compiler: clang
-    env: PRK_TARGET=allfortranpretty
-  - compiler: clang
-    env: PRK_TARGET=allfortrancoarray
-  # Python does not use compiler so only test one of them per OS (Clang)
+    env: PRK_TARGET=allfortran
+  # Skip Linux because we rely on Homebrew for these
+  - os: linux
+    env: PRK_TARGET=alloctave
+  - os: linux
+    env: PRK_TARGET=allrust
+  # Python/Julia/Octave does not use compiler so only test one of them per OS (Clang)
+  # GCC
   - compiler: gcc
     env: PRK_TARGET=allpython
   - compiler: gcc
+    env: PRK_TARGET=alloctave
+  - compiler: gcc
     env: PRK_TARGET=alljulia
+  - compiler: gcc
+    env: PRK_TARGET=allrust
+  # ICC
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allpython
   - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=alloctave
+  - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=alljulia
-  # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
-  - os: osx
-    env: PRK_TARGET=allfgmpi
-  # MPI implementations of Transpose hand with Intel compilers (why?!?!)
+  - compiler: touch ~/use-intel-compilers ; gcc
+    env: PRK_TARGET=allrust
+  # MPI implementations of Transpose hang with Intel compilers (why?!?!)
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allmpi1
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allmpiomp
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allmpishm
-  # Linux may not have GCC-6...
-  - os: linux
-    compiler: gcc
-    env: PRK_TARGET=allfortrancoarray
   # UPC over MPICH on Mac hangs - may be async progress issue
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
@@ -150,28 +153,63 @@ matrix:
   #- env: PRK_TARGET=allupc UPC_IMPL=gupc
   # we have lots of Grappa issues...
   - env: PRK_TARGET=allgrappa
+  # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
+  - os: osx
+    env: PRK_TARGET=allfgmpi
+  - os: linux
+    env: PRK_TARGET=allfgmpi
+  # BUPC has trouble with flags
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
+  #- os: linux
+  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
+  # Travis tests failing due to runtime problems
+  - os: osx
+    env: PRK_TARGET=allampi
+  - os: linux
+    env: PRK_TARGET=allampi
+  - os: osx
+    env: PRK_TARGET=allcharm++
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allampi
+  # These started failing in June 2017.  Need to debug.
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allmpi1
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allmpirma
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allmpishm
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
-    # clang-3.8 comes from this
-    - llvm-toolchain-precise
-    #  Boost is for Grappa and HPX
-    #- boost-latest
+    # works on Precise and Trusty
+    # see https://docs.travis-ci.com/user/languages/c/ for details
+    - llvm-toolchain-precise-3.8
+    #  Boost is for Grappa, HPX, C++ rangefor, pstl
+    - boost-latest
     packages:
     - python-numpy
-    - gcc-4.9
-    - g++-4.9
-    - gfortran-4.9
     - gcc-5
     - g++-5
     - gfortran-5
+    - gcc-6
+    - g++-6
+    - gfortran-6
     # Required by GUPC
     - libnuma-dev
     # This should provide OpenMP
     - clang-3.8
     # Grappa and HPX use CMake
     - cmake
+    # C++ code needs range headers
+    - libboost-all-dev
     # Boost is for Grappa and HPX-3 - reactivate with them
     # Grappa needs these (according to their .travis.yml)
     #- libboost-date-time1.55-dev

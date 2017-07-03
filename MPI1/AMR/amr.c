@@ -32,23 +32,14 @@ POSSIBILITY OF SUCH DAMAGE.
 
 /*******************************************************************
 
-NAME:    Stencil
+NAME:    AMR
 
 PURPOSE: This program tests the efficiency with which a space-invariant,
          linear, symmetric filter (stencil) can be applied to a square
          grid or image, with periodic introduction and removal of
          subgrids.
   
-USAGE:   The program takes as input the linear
-         dimension of the grid, and the number of iterations on the grid
-
-               <progname> <iterations> <background grid size> <refinement level>
-                          <refinement size> <refinement period> 
-                          <refinement duration> <refinement sub-iterations>
-                          <load balancer> [tile size]
-  
-         The output consists of diagnostics to make sure the 
-         algorithm worked, and of timing statistics.
+USAGE:   Type ./amr for full list of parameters
 
 FUNCTIONS CALLED:
 
@@ -108,7 +99,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
                  int Num_procs, long L_width_bg, 
                  long L_istart_bg, long L_iend_bg, long L_jstart_bg, long L_jend_bg,
                  long L_istart_r, long L_iend_r, long L_jstart_r, long L_jend_r,
-                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, MPI_Comm comm_r,
+                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, int comm_r,
                  long L_istart_r_gross, long L_iend_r_gross, 
                  long L_jstart_r_gross, long L_jend_r_gross, 
                  long L_width_r_true_gross, long L_istart_r_true_gross, long L_iend_r_true_gross,
@@ -314,7 +305,6 @@ int main(int argc, char ** argv) {
   DTYPE  *left_buf_in_r[4]; /*       "         "          "                        */
   int    root = 0;
   long   n;                 /* linear grid dimension                               */
-  long   n2, nr2, n_total;  /* #points in BG, in each refinement, and in total     */
   int    refine_level;      /* refinement level                                    */
   long   G_istart_r[4];     /* global left boundaries of refinements               */
   long   G_iend_r[4];       /* global right boundaries of refinements              */
@@ -332,7 +322,6 @@ int main(int argc, char ** argv) {
   long   L_istart_r_true[4], L_iend_r_true[4]; /*               "                  */
   long   L_jstart_r_true[4], L_jend_r_true[4]; /*               "                  */
   long   L_width_r[4], L_height_r[4]; /* local refinement dimensions               */
-  long   L_width_r_gross[4], L_height_r_gross[4]; /* local refinement dimensions   */
   long   L_width_r_true_gross[4], L_height_r_true_gross[4];/* "            "       */
   long   L_width_r_true[4], L_height_r_true[4];/*             "            "       */
   int    g;                 /* refinement grid index                               */
@@ -342,7 +331,8 @@ int main(int argc, char ** argv) {
   int    period;            /* refinement period                                   */
   int    duration;          /* lifetime of a refinement                            */
   int    sub_iterations;    /* number of sub-iterations on refinement              */
-  long   i, j, ii, jj, it, jt, iter, l, sub_iter, leftover;  /* dummies            */
+  long   i, j, ii, jj, it, jt, l, leftover; /* dummies                             */
+  int    iter, sub_iter;    /* dummies                                             */
   DTYPE  norm, local_norm,  /* L1 norm of solution on background grid              */
          reference_norm;
   DTYPE  norm_in,           /* L1 norm of input field on background grid           */
@@ -383,7 +373,6 @@ int main(int argc, char ** argv) {
   int    validate=1;        /* tracks correct solution on all grids                */
   char   *c_load_balance;   /* input string defining load balancing                */
   int    load_balance;      /* integer defining load balancing                     */
-  int    skip_r[4];         /* calling rank has no work to do on refinement        */
   MPI_Request request_bg[8];
   MPI_Request request_r[4][8];
   MPI_Comm comm_r[4];       /* communicators for refinements                       */
@@ -416,7 +405,7 @@ int main(int argc, char ** argv) {
     if (argc != 9 && argc != 10){
       printf("Usage: %s <# iterations> <background grid size> <refinement size>\n",
              *argv);
-      printf("       <refinement level> <refinement period>  <refinement duration>\n");
+      printf("       <refinement level> <refinement period> <refinement duration>\n");
       printf("       <refinement sub-iterations> <load balancer> \n");
       printf("       load balancer: FINE_GRAIN [refinement rank spread]\n");
       printf("                      NO_TALK\n");
@@ -491,11 +480,13 @@ int main(int argc, char ** argv) {
       error = 1;
       goto ENDOFINPUTTESTS;
     }
+
     if (load_balance == high_water && Num_procs==1) {
       printf("ERROR: Load balancer HIGH_WATER requires more than one rank\n");
       error = 1;
       goto ENDOFINPUTTESTS;
     }
+
     if (load_balance==fine_grain && argc==10) {
       rank_spread = atoi(*++argv);
       if (rank_spread<1 || rank_spread>Num_procs) {
@@ -574,6 +565,11 @@ int main(int argc, char ** argv) {
                    Frac_procs_bg;
                    Frac_procs_bg = (float) Num_procs * bg_size/total_size;
                    Num_procs_bg = MIN(Num_procs-1,MAX(1,ceil(Frac_procs_bg)));
+
+		   /* Adjust number of BG procs to avoid pathological aspect ratios */
+		   int Num_procs_R = Num_procs-Num_procs_bg;
+		   optimize_split(&Num_procs_bg, &Num_procs_R, 3);
+
                    if (my_ID>=Num_procs_bg) {color_bg = MPI_UNDEFINED; color_r = 1;}
                    else                     {color_bg = 1; color_r = MPI_UNDEFINED;}
                    MPI_Comm_split(MPI_COMM_WORLD, color_bg, my_ID, &comm_bg);
@@ -586,7 +582,10 @@ int main(int argc, char ** argv) {
 		     if (comm_r[g] != MPI_COMM_NULL) {
                        MPI_Comm_size(comm_r[g], &Num_procs_r[g]);
                        MPI_Comm_rank(comm_r[g], &my_ID_r[g]);
-		     } else Num_procs_r[g] = Num_procs - Num_procs_bg;
+		     } 
+                     else {
+                       Num_procs_r[g] = Num_procs - Num_procs_bg;
+                     }
                    }
 		   if (comm_bg == MPI_COMM_NULL) Num_procs_bg = Num_procs - Num_procs_r[0];
                    break;
@@ -594,14 +593,9 @@ int main(int argc, char ** argv) {
 
   /* do bookkeeping for background grid                                       */
   if (comm_bg != MPI_COMM_NULL) {
-    /* determine best way to create a 2D grid of ranks (closest to square, for 
-       best surface/volume ratio) for BG; we do this brute force for now      */
-    for (Num_procs_bgx=(int) (sqrt(Num_procs_bg+1)); Num_procs_bgx>0; Num_procs_bgx--) {
-      if (!(Num_procs_bg%Num_procs_bgx)) {
-        Num_procs_bgy = Num_procs_bg/Num_procs_bgx;
-        break;
-      }
-    }   
+    /* determine best way to create a 2D grid of ranks (closest to square)    */
+    factor(Num_procs_bg, &Num_procs_bgx, &Num_procs_bgy);
+
     /* communication neighbors on BG are computed for all who own part of it  */
     my_ID_bgx = my_ID_bg%Num_procs_bgx;
     my_ID_bgy = my_ID_bg/Num_procs_bgx;
@@ -658,11 +652,11 @@ int main(int argc, char ** argv) {
       goto ENDOFBG;
     }
 
-    total_length_in  = (long) (L_width_bg+2*RADIUS)*(long) (L_height_bg+2*RADIUS)*sizeof(DTYPE);
-    total_length_out = (long) L_width_bg* (long) L_height_bg*sizeof(DTYPE);
+    total_length_in  = (long) (L_width_bg+2*RADIUS)*(long) (L_height_bg+2*RADIUS);
+    total_length_out = (long) L_width_bg* (long) L_height_bg;
 
-    in_bg  = (DTYPE *) prk_malloc(total_length_in);
-    out_bg = (DTYPE *) prk_malloc(total_length_out);
+    in_bg  = (DTYPE *) prk_malloc(total_length_in*sizeof(DTYPE));
+    out_bg = (DTYPE *) prk_malloc(total_length_out*sizeof(DTYPE));
     if (!in_bg || !out_bg) {
       printf("ERROR: rank %d could not allocate space for input/output array\n",
               my_ID);
@@ -712,21 +706,13 @@ int main(int argc, char ** argv) {
                        MPI_Allreduce(&my_ID_bgy,&jhigh,1,MPI_LONG,MPI_MAX,comm_r[g]);
 		       Num_procs_rx[g] = ihigh-ilow+1;
 		       Num_procs_ry[g] = jhigh-jlow+1;
-		     };
+		     }
 		   }
                    break;
   case fine_grain: 
   case high_water: // refinements are partitioned independently, but similar to BG
-                   for (g=0; g<4; g++) {
-                     if (comm_r[g] != MPI_COMM_NULL) {
-                       for (Num_procs_rx[g]=(int) (sqrt(Num_procs_r[g]+1)); 
-                         Num_procs_rx[g]>0; Num_procs_rx[g]--) {
-                         if (!(Num_procs_r[g]%Num_procs_rx[g])) {
-                           Num_procs_ry[g] = Num_procs_r[g]/Num_procs_rx[g];
-                           break;
-                         }
-                       }
-		     }
+                   for (g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
+		     factor(Num_procs_r[g], &Num_procs_rx[g], &Num_procs_ry[g]);
 		   }
                    break;
   }
@@ -844,8 +830,6 @@ int main(int argc, char ** argv) {
       /* shift refinement patch boundaries to BG coordinates                                */
       L_istart_r[g] += G_istart_r[g]; L_iend_r[g] += G_istart_r[g];
       L_jstart_r[g] += G_jstart_r[g]; L_jend_r[g] += G_jstart_r[g];
-      /* we're not skipping any refinement, in principle                                    */
-      skip_r[g] = 0;
     }
     else if (load_balance == no_talk) { // already computed refinement partition boundaries
       L_istart_r_true[g] = (L_istart_r[g] - G_istart_r[g])*expand;
@@ -856,14 +840,13 @@ int main(int argc, char ** argv) {
       if (my_ID_ry[g]>0) L_jstart_r_true[g] -= expand/2;
       L_jend_r_true[g]   = (L_jend_r[g]   - G_jstart_r[g])*expand;
       if (my_ID_ry[g] < Num_procs_ry[g]-1) L_jend_r_true[g] += (expand-1)/2;
-      skip_r[g] = 0;
     }
 
     /* make sure that the gross boundaries of the patch coincide with BG points           */
-    L_istart_r_true_gross[g] =  (L_istart_r_true[g]/expand)*expand;
-    L_iend_r_true_gross[g]   = ((L_iend_r_true[g]+expand-1)/expand)*expand;
-    L_jstart_r_true_gross[g] =  (L_jstart_r_true[g]/expand)*expand;
-    L_jend_r_true_gross[g]   = ((L_jend_r_true[g]+expand-1)/expand)*expand;
+    L_istart_r_true_gross[g] = (L_istart_r_true[g]/expand)*expand;
+    L_iend_r_true_gross[g]   = (L_iend_r_true[g]/expand+1)*expand;
+    L_jstart_r_true_gross[g] = (L_jstart_r_true[g]/expand)*expand;
+    L_jend_r_true_gross[g]   = (L_jend_r_true[g]/expand+1)*expand;
     L_istart_r_gross[g]      = L_istart_r_true_gross[g]/expand;
     L_iend_r_gross[g]        = L_iend_r_true_gross[g]/expand;
     L_jstart_r_gross[g]      = L_jstart_r_true_gross[g]/expand;
@@ -875,36 +858,32 @@ int main(int argc, char ** argv) {
 
     L_height_r[g]            = L_jend_r[g] -            L_jstart_r[g] + 1;
     L_width_r[g]             = L_iend_r[g] -            L_istart_r[g] + 1;
-    L_height_r_gross[g]      = L_jend_r_gross[g] -      L_jstart_r_gross[g] + 1;
-    L_width_r_gross[g]       = L_iend_r_gross[g] -      L_istart_r_gross[g] + 1;
     L_height_r_true_gross[g] = L_jend_r_true_gross[g] - L_jstart_r_true_gross[g] + 1;
     L_width_r_true_gross[g]  = L_iend_r_true_gross[g] - L_istart_r_true_gross[g] + 1;
     L_height_r_true[g]       = L_jend_r_true[g] -       L_jstart_r_true[g] + 1;
     L_width_r_true[g]        = L_iend_r_true[g] -       L_istart_r_true[g] + 1;
 
-    if ( !skip_r[g] && (L_height_r_true[g] == 0 || L_width_r_true[g] == 0))  {
-      printf("WARNING: rank %d has no work to do on refinement %d\n", my_ID, g);
-      skip_r[g] = 1;
+    if (L_height_r_true[g] == 0 || L_width_r_true[g] == 0)  {
+      printf("ERROR: rank %d has no work to do on refinement %d\n", my_ID, g);
+      error = 1;
     }
 
     /* FIX THIS; don't want to bail out, just because a rank doesn't have a large
        enough refinement tile to work with. Can merge until tile is large enough */
-    if (!skip_r[g] &&(L_width_r_true[g] < RADIUS || L_height_r_true[g] < RADIUS)) {
+    if (L_width_r_true[g] < RADIUS || L_height_r_true[g] < RADIUS) {
       printf("ERROR: rank %d's work tile %d smaller than stencil radius: %d\n", 
 	     my_ID, g, MIN(L_width_r_true[g],L_height_r_true[g]));
       error = 1;
     }
 
-    if (!skip_r[g]) {
-      total_length_in_r[g]  = (L_width_r_true_gross[g]+2*RADIUS)*
-                              (L_height_r_true_gross[g]+2*RADIUS);
-      total_length_out_r[g] = L_width_r_true_gross[g] * L_height_r_true_gross[g];
-      in_r[g]  = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_in_r[g]);
-      out_r[g] = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_out_r[g]);
-      if (!in_r[g] || !out_r[g]) {
-        printf("ERROR: could not allocate space for refinement input or output arrays\n");
-        error=1;
-      }
+    total_length_in_r[g]  = (L_width_r_true_gross[g]+2*RADIUS)*
+                            (L_height_r_true_gross[g]+2*RADIUS);
+    total_length_out_r[g] = L_width_r_true_gross[g] * L_height_r_true_gross[g];
+    in_r[g]  = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_in_r[g]);
+    out_r[g] = (DTYPE *) prk_malloc(sizeof(DTYPE)*total_length_out_r[g]);
+    if (!in_r[g] || !out_r[g]) {
+      printf("ERROR: could not allocate space for refinement input or output arrays\n");
+      error=1;
     }
   }
   else {//Bogus patch
@@ -950,6 +929,8 @@ int main(int argc, char ** argv) {
     bottom_buf_out_bg = top_buf_out_bg + 2*RADIUS*L_width_bg;
     bottom_buf_in_bg  = top_buf_out_bg + 3*RADIUS*L_width_bg;
 
+    /* add 1 on each side of the ghost point buffers for communication in the
+       horizontal direction, to enable the NO_TALK scenario. See implementation details */
     right_buf_out_bg  = (DTYPE *) prk_malloc(4*sizeof(DTYPE)*RADIUS*(L_height_bg+2));
     if (!right_buf_out_bg) {
       printf("ERROR: Rank %d could not allocate comm buffers for x-direction\n", my_ID);
@@ -1109,7 +1090,7 @@ int main(int argc, char ** argv) {
       /* even though this rank may not interpolate, some just did, so we keep track   */
       num_interpolations++;
 
-    }
+    } // end of initialization of refinement g
 
     if (comm_r[g] != MPI_COMM_NULL) if ((iter%period) < duration) {
 
@@ -1288,6 +1269,7 @@ int main(int argc, char ** argv) {
     if (my_ID == root) norm_in_r[g] /=  n_r_true*n_r_true;
   }
 
+
   /*******************************************************************************
   ** Analyze and output results.
   ********************************************************************************/
@@ -1363,7 +1345,7 @@ int main(int argc, char ** argv) {
                reference_norm_r[g], norm_r[g]);
 #endif
       }
-      
+
       if (ABS(norm_in_r[g]-reference_norm_in_r[g]) > EPSILON) {
         printf("ERROR: L1 input norm %d = "FSTR", Reference L1 input norm %d = "FSTR"\n",
                g, norm_in_r[g], g, reference_norm_in_r[g]);
@@ -1399,7 +1381,7 @@ int main(int argc, char ** argv) {
              1.0E-06 * flops/stencil_time, avgtime);
     }
   }
- 
+
   MPI_Finalize();
   return(MPI_SUCCESS);
 }

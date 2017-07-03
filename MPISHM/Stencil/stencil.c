@@ -306,7 +306,7 @@ int main(int argc, char ** argv) {
   /* determine best way to create a 2D grid of ranks (closest to square, for
      best surface/volume ratio); we do this brute force for now. The
      decomposition needs to be such that shared memory groups can evenly
-     tessellate the rank grid
+     tessellate the rank grid, so we cannot use the standard "factor" call
   */
   for (Num_procsx=(int) (sqrt(Num_procs+1)); Num_procsx>0; Num_procsx--) {
     if (!(Num_procs%Num_procsx)) {

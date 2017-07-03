@@ -1,0 +1,35 @@
+#
+# This file shows the PGI toolchain options for PRKs.
+#
+# Base compilers and language options
+#
+# C99 is required in some implementations.
+CC=pgcc -c11
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+FC=pgfortran -Mpreprocess -Mfreeform
+#FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Wl,-rpath=/opt/llvm/pgi-flang/lib
+# C++11 may not be required but does no harm here.
+CXX=pgc++ --c++11
+#
+# Compiler flags
+#
+DEFAULT_OPT_FLAGS=-O2 -tp=haswell
+#
+# OpenMP flags
+#
+OPENMPFLAG=-mp #-Minfo=mp,vect
+OFFLOADFLAG=-mp #-Minfo=mp,vect
+ORNLACCFLAG=-acc -ta=multicore #-Minfo=accel
+#
+# OpenCL flags
+#
+# MacOS
+#OPENCLFLAG=-framework OpenCL
+# Linux
+OPENCLDIR=/etc/alternatives/opencl-intel-tools
+OPENCLFLAG=-I$OPENCLDIR -L$OPENCLDIR/lib64 -lOpenCL
+#
+# MPI
+#
+# Needs PATH and LD_LIBRARY_PATH set appropriately...
+MPICC=/opt/pgi/linux86-64/2017/mpi/openmpi/bin/mpicc

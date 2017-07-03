@@ -1,20 +1,28 @@
 NUMPROCS=4
+NUMVPROCS=8
 NUMITERS=10
 SEPLINE="==============================================================="
-MPIRUN=mpirun
+#we can pick any of the launchers put in the respective target directories
+MPIRUN=AMPI/Branch/charmrun
+LBPARMS="+isomalloc_sync +balancer RefineLB"
 
 for type in vector_go vector_stop no_vector ins_heavy; do
-  $MPIRUN -np $NUMPROCS AMPI/Branch/branch           $NUMITERS 1000 $type; echo $SEPLINE
+  $MPIRUN  AMPI/Branch/branch    $NUMITERS 1000 $type                               +p$NUMPROCS +vp$NUMVPROCS;          echo $SEPLINE
 done
 #need to fix problem with MPI_Comm_create in AMPI
-$MPIRUN -np $NUMPROCS AMPI/DGEMM/dgemm               $NUMITERS 500 32 1;   echo $SEPLINE
-$MPIRUN -np $NUMPROCS AMPI/Nstream/nstream           $NUMITERS 2000000 0;  echo $SEPLINE
-$MPIRUN -np $NUMPROCS AMPI/Random/random             16 16;                echo $SEPLINE
-$MPIRUN -np $NUMPROCS AMPI/Reduce/reduce             $NUMITERS 2000000;    echo $SEPLINE
-$MPIRUN -np $NUMPROCS AMPI/Sparse/sparse             $NUMITERS 10 4;       echo $SEPLINE
-$MPIRUN -np $NUMPROCS AMPI/Stencil/stencil           $NUMITERS 1000;       echo $SEPLINE
-$MPIRUN -np $NUMPROCS AMPI/Synch_global/global       $NUMITERS 10000;      echo $SEPLINE
-$MPIRUN -np $NUMPROCS AMPI/Synch_p2p/p2p             $NUMITERS 1000 100;   echo $SEPLINE
-$MPIRUN -np $NUMPROCS AMPI/Transpose/transpose       $NUMITERS 2000 64;    echo $SEPLINE
-
-
+$MPIRUN AMPI/DGEMM/dgemm         $NUMITERS 500 32 1                                 +p$NUMPROCS +vp$NUMVPROCS;          echo $SEPLINE
+$MPIRUN AMPI/Nstream/nstream     $NUMITERS 2000000 0                                +p$NUMPROCS +vp$NUMVPROCS;          echo $SEPLINE
+$MPIRUN AMPI/Random/random       16 16                                              +p$NUMPROCS +vp$NUMVPROCS;          echo $SEPLINE
+$MPIRUN AMPI/Reduce/reduce       $NUMITERS 2000000                                  +p$NUMPROCS +vp$NUMVPROCS;          echo $SEPLINE
+$MPIRUN AMPI/Sparse/sparse       $NUMITERS 10 4                                     +p$NUMPROCS +vp$NUMVPROCS;          echo $SEPLINE
+$MPIRUN AMPI/Stencil/stencil     $NUMITERS 1000                                     +p$NUMPROCS +vp$NUMVPROCS;          echo $SEPLINE
+$MPIRUN AMPI/Synch_global/global $NUMITERS 10000                                    +p$NUMPROCS +vp$NUMVPROCS;          echo $SEPLINE
+$MPIRUN AMPI/Synch_p2p/p2p       $NUMITERS 1000 100                                 +p$NUMPROCS +vp$NUMVPROCS;          echo $SEPLINE
+$MPIRUN AMPI/Transpose/transpose $NUMITERS 2000 64                                  +p$NUMPROCS +vp$NUMVPROCS;          echo $SEPLINE
+$MPIRUN AMPI/PIC/pic             $NUMITERS 1000 1000000 1 2 5 2 GEOMETRIC 0.99      +p$NUMPROCS +vp$NUMVPROCS $LBPARMS; echo $SEPLINE            
+$MPIRUN AMPI/PIC/pic             $NUMITERS 1000 1000000 0 1 5 2 SINUSOIDAL          +p$NUMPROCS +vp$NUMVPROCS $LBPARMS; echo $SEPLINE            
+$MPIRUN AMPI/PIC/pic             $NUMITERS 1000 1000000 1 0 5 2 LINEAR 1.0 3.0      +p$NUMPROCS +vp$NUMVPROCS $LBPARMS; echo $SEPLINE
+$MPIRUN AMPI/PIC/pic             $NUMITERS 1000 1000000 1 0 5 2 PATCH 0 200 100 200 +p$NUMPROCS +vp$NUMVPROCS $LBPARMS; echo $SEPLINE            
+$MPIRUN AMPI/AMR/amr             $NUMITERS 1000 100 2 4 2 5 1 FINE_GRAIN 2          +p$NUMPROCS +vp$NUMVPROCS $LBPARMS; echo $SEPLINE            
+$MPIRUN AMPI/AMR/amr             $NUMITERS 1000 100 2 4 2 5 1 HIGH_WATER            +p$NUMPROCS +vp$NUMVPROCS $LBPARMS; echo $SEPLINE            
+$MPIRUN AMPI/AMR/amr             $NUMITERS 1000 100 2 4 2 5 1 NO_TALK               +p$NUMPROCS +vp$NUMVPROCS $LBPARMS; echo $SEPLINE            

@@ -86,10 +86,10 @@ int main(int argc, char ** argv)
   long   segment_size;    /* x-dimension of grid slice owned by calling rank     */
   int    error=0;         /* error flag                                          */
   int    Num_procs;       /* Number of ranks                                     */
-  double *vector;         /* array holding grid values                           */
+  double * RESTRICT vector;/* array holding grid values                          */
   long   total_length;    /* total required length to store grid values          */
   int    *flag_left;      /* synchronization flags                               */
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
   int    *flag_right;     /* synchronization flags                               */
 #endif
   double *dst;            /* target address of communication                     */
@@ -166,7 +166,7 @@ int main(int argc, char ** argv)
     printf("Number of ranks            = %d\n",Num_procs);
     printf("Grid sizes                 = %ld, %ld\n", m, n);
     printf("Number of iterations       = %d\n", iterations);
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
     printf("Handshake between neighbor threads\n");
 #else
     printf("No handshake between neighbor threads\n");
@@ -174,7 +174,7 @@ int main(int argc, char ** argv)
   }
 
   flag_left = (int *) prk_shmem_align(prk_get_alignment(),sizeof(int) * n);
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
   flag_right = (int *) prk_shmem_align(prk_get_alignment(),sizeof(int) * n);
   int recv_val [1];
   recv_val [0] = -1;
@@ -238,7 +238,7 @@ int main(int argc, char ** argv)
   int true = 1; int false = !true;
   for (j=0; j<n; j++) {
     flag_left[j] = false;
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
     flag_right[j] = false;
 #endif
   }  
@@ -247,7 +247,7 @@ int main(int argc, char ** argv)
 
   for (iter=0; iter<=iterations; iter++) {
 
-#ifndef SYNCHRONOUS
+#if !SYNCHRONOUS
     /* true and false toggle each iteration                                      */
     true = (iter+1)%2; false = !true;
 #endif
@@ -263,7 +263,7 @@ int main(int argc, char ** argv)
       if (iter>0) {
         ARRAY(start[my_ID]-1,0) = dst[0];
       }
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
       flag_left[0]= true;
       shmem_int_p(&flag_right[0], true, root);
       shmem_fence();
@@ -275,7 +275,7 @@ int main(int argc, char ** argv)
       /* if I am not at the left boundary, wait for left neighbor to send data   */
       if (my_ID > 0) {
         shmem_int_wait_until(&flag_left[j], SHMEM_CMP_EQ, true);
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
         flag_left[j]= false;
         // tell the left neighbor I got the data
         shmem_int_p(&flag_right[j], false, my_ID-1);
@@ -288,7 +288,7 @@ int main(int argc, char ** argv)
       }
 
       if (my_ID != Num_procs-1) {
-#ifdef SYNCHRONOUS 
+#if SYNCHRONOUS 
         shmem_int_wait_until(&flag_right[j], SHMEM_CMP_EQ, false);
         flag_right[j] = true;
 #endif 
@@ -308,7 +308,7 @@ int main(int argc, char ** argv)
         shmem_double_p(&dst[0], src[0], 0);
         shmem_fence();
         /* indicate to PE 0 that data is available  */
-#ifdef SYNCHRONOUS
+#if SYNCHRONOUS
         shmem_int_wait_until(&flag_right[0], SHMEM_CMP_EQ, true);
         flag_right[j] = false;
         shmem_int_p(&flag_left[0], false, 0);
@@ -337,7 +337,7 @@ int main(int argc, char ** argv)
 
   if (my_ID == root) {
     avgtime = pipeline_time [0]/iterations;
-#ifdef VERBOSE   
+#if VERBOSE   
     printf("Solution validates; verification value = %lf\n", corner_val);
     printf("Point-to-point synchronizations/s: %lf\n",
            ((float)((n-1)*(Num_procs-1)))/(avgtime));

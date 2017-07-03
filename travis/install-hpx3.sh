@@ -23,13 +23,7 @@ case "$TRAVIS_OS_NAME" in
             export HPX_BOOST="boost"
         fi
         for p in $HPX_BOOST jemalloc gperftools ; do
-            if [ "x`brew ls --versions $p`" = "x" ] ; then
-                echo "$p is not installed - installing it"
-                brew install $p
-            else
-                echo "$p is installed - upgrading it"
-                brew upgrade $p
-            fi
+            brew install $p || brew upgrade $p
         done
         set -e
         ;;

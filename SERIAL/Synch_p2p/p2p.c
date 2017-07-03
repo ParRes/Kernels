@@ -71,7 +71,7 @@ int main(int argc, char ** argv) {
          avgtime; 
   double epsilon = 1.e-8; /* error tolerance                                     */
   double corner_val;      /* verification value at top right corner of grid      */
-  double *RESTRICT vector;/* array holding grid values                           */
+  double * RESTRICT vector;/* array holding grid values                          */
   long   total_length;    /* total required length to store grid values          */
 
   /*******************************************************************************

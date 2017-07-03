@@ -3,7 +3,7 @@ include ../../common/MPI.defs
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system
 
 USERFLAGS    = 
@@ -20,12 +20,12 @@ INCLUDEPATHS =
 ifndef DOUBLE
   DOUBLE=1
 endif
-#description: default data type is single precision
+#description: default data type is double precision
 
 ifndef STAR
   STAR=1
 endif
-#description: default stencil is compact (dense, square)
+#description: default stencil is star-shaped
 
 ifndef RESTRICT_KEYWORD
   RESTRICT_KEYWORD=0
@@ -48,12 +48,12 @@ ifndef VERBOSE
 endif
 #description: default diagnostic style is silent
 
-VERBOSEFLAG     = -DVERBOSE=$(VERBOSE)
-RESTRICTFLAG    = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
-RADIUSFLAG      = -DRADIUS=$(RADIUS)
-LOOPGENFLAG     = -DLOOPGEN=$(LOOPGEN)
-DOUBLEFLAG      = -DDOUBLE=$(DOUBLE)
-STARFLAG        = -DSTAR=$(STAR)
+VERBOSEFLAG      = -DVERBOSE=$(VERBOSE)
+RESTRICTFLAG     = -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
+RADIUSFLAG       = -DRADIUS=$(RADIUS)
+LOOPGENFLAG      = -DLOOPGEN=$(LOOPGEN)
+DOUBLEFLAG       = -DDOUBLE=$(DOUBLE)
+STARFLAG         = -DSTAR=$(STAR)
 
 OPTIONSSTRING="Make options:\n\
 OPTION                  MEANING                                  DEFAULT\n\
@@ -66,7 +66,7 @@ VERBOSE=0/1             omit/include verbose run information       [0]"
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG) $(USERFLAGS) \
                $(DOUBLEFLAG)   $(RADIUSFLAG)  $(STARFLAG)  \
-               $(LOOPGENFLAG)
+               $(LOOPGENFLAG) 
 PROGRAM     = amr
 OBJS        = $(PROGRAM).o $(COMOBJS)
 

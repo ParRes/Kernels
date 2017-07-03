@@ -30,6 +30,11 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PRK_LEGION_H
+#define PRK_LEGION_H
+
+#include "par-res-kern_general.h"
+
 #include <cstdio>
 #include <cassert>
 #include <cmath>
@@ -37,7 +42,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "legion.h"
 #include "default_mapper.h"
 #include "par-res-kern_general.h"
-using namespace LegionRuntime::HighLevel;
+using namespace Legion;
+using namespace Legion::Mapping;
 using namespace LegionRuntime::Accessor;
 using namespace LegionRuntime::Arrays;
 
+#endif /* PRK_LEGION_H */
