@@ -21,15 +21,6 @@ case "$os" in
         export MPI_ROOT=$TRAVIS_ROOT
         ;;
 esac
-# default to mpirun but override later when necessary
-if [ -f ~/use-intel-compilers ] ; then
-    # use Intel MPI
-    export PRK_MPICC="mpiicc -std=c99"
-    export PRK_LAUNCHER=mpirun
-else
-    export PRK_MPICC="$MPI_ROOT/bin/mpicc -std=c99"
-    export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
-fi
 
 echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 
@@ -620,6 +611,14 @@ case "$PRK_TARGET" in
         ;;
     allmpi)
         echo "All MPI"
+        if [ -f ~/use-intel-compilers ] ; then
+            # use Intel MPI
+            export PRK_MPICC="mpiicc -std=c99"
+            export PRK_LAUNCHER=mpirun
+        else # Clang or GCC
+            export PRK_MPICC="$MPI_ROOT/bin/mpicc -std=c99"
+            export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
+        fi
         # Inline the Homebrew OpenMP stuff here so versions do not diverge.
         # Note that -cc= likely only works with MPICH.
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
@@ -630,6 +629,20 @@ case "$PRK_TARGET" in
             GCC_VERSION=6
             brew install gcc@$GCC_VERSION || brew upgrade gcc@$GCC_VERSION
             export PRK_MPICC="${PRK_MPICC} -cc=/usr/local/opt/gcc@${GCC_VERSION}/bin/gcc-${GCC_VERSION}"
+        elif [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "clang" ] ; then
+            # According to http://openmp.llvm.org/, we need version 3.8 or later to get OpenMP.
+            for version in "-5" "-4" "-3.9" "-3.8" "" ; do
+              if [ -f "`which ${CC}${version}`" ]; then
+                  export PRK_CC="${CC}${version}"
+                  echo "Found C: $PRK_CC"
+                  break
+              fi
+            done
+            if [ "x$PRK_CC" = "x" ] ; then
+                export PRK_CC="${CC}"
+            fi
+            ${PRK_CC} -v
+            export PRK_MPICC="${PRK_MPICC} -cc=${PRK_CC}"
         fi
         echo "MPICC=$PRK_MPICC" >> common/make.defs
         echo "OPENMPFLAG=-fopenmp" >> common/make.defs
