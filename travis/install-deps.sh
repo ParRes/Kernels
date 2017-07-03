@@ -59,13 +59,13 @@ case "$PRK_TARGET" in
         sh ./travis/install-raja.sh $TRAVIS_ROOT
         sh ./travis/install-kokkos.sh $TRAVIS_ROOT
         ;;
-    allfortran*)
+    allfortran)
         echo "Fortran"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
             brew update || true
             brew install gcc || brew upgrade gcc || true
         fi
-        if [ "${PRK_TARGET}" = "allfortrancoarray" ] && [ "${CC}" = "gcc" ] ; then
+        if [ "${CC}" = "gcc" ] ; then
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
         fi
         ;;

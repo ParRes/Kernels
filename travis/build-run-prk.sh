@@ -487,13 +487,10 @@ case "$PRK_TARGET" in
             done
         done
         ;;
-    allfortran*)
-        # allfortranserial allfortranopenmp allfortrancoarray allfortranpretty allfortrantarget
+    allfortran)
         echo "Fortran"
+        export PRK_TARGET_PATH=FORTRAN
         case "$CC" in
-            icc)
-                echo "FC=ifort" >> common/make.defs
-                ;;
             gcc)
                 for major in "-9" "-8" "-7" "-6" "-5" "-4" "-3" "-2" "-1" "" ; do
                     if [ -f "`which gfortran$major`" ]; then
@@ -506,114 +503,93 @@ case "$PRK_TARGET" in
                     echo "No Fortran compiler found!"
                     exit 9
                 fi
+                export PRK_FC="$PRK_FC -std=f2008 -cpp"
+                echo "FC=$PRK_FC" >> common/make.defs
+                echo "OPENMPFLAG=-fopenmp" >> common/make.defs
+                echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
+                if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+                    # Homebrew installs a symlink in /usr/local/bin
+                    export PRK_CAFC=caf
+                elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+                    export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
+                fi
+                echo "CAFC=$PRK_CAFC -std=f2008 -cpp" >> common/make.defs
+                echo "COARRAYFLAG=-fcoarray=single" >> common/make.defs
                 ;;
             clang)
                 echo "LLVM Fortran is not supported."
                 exit 9
                 echo "FC=flang" >> common/make.defs
                 ;;
-        esac
-        case "$PRK_TARGET" in
-            allfortrancoarray)
-                # OpenCoarrays uses Open-MPI on Mac thanks to Homebrew
-                # see https://github.com/open-mpi/ompi/issues/2956
-                export TMPDIR=/tmp
-                if [ "${CC}" = "gcc" ] ; then
-                    #echo "FC=$PRK_FC\nCOARRAYFLAG=-fcoarray=single" >> common/make.defs
-                    if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-                        # Homebrew installs a symlink in /usr/local/bin
-                        export PRK_CAFC=caf
-                    elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-                        export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
-                    fi
-                    echo "FC=$PRK_CAFC\nCOARRAYFLAG=-cpp -std=f2008 -fcoarray=lib" >> common/make.defs
-                elif [ "${CC}" = "icc" ] ; then
-                    export PRK_CAFC="ifort"
-                    echo "FC=$PRK_CAFC\nCOARRAYFLAG=-fpp -std08 -traceback -coarray" >> common/make.defs
-                fi
-                ;;
-            allfortrantarget)
-                if [ "${CC}" = "gcc" ] ; then
-                    export PRK_FC="$PRK_FC -std=f2008 -cpp"
-                    echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp\nOFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
-                elif [ "${CC}" = "icc" ] ; then
-                    if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-                        echo "ICC does not support OpenMP target on MacOS yet..."
-                        exit 7
-                    fi
-                    export PRK_FC="ifort -fpp -std08"
-                    echo "FC=$PRK_FC\nOPENMPFLAG=-qopenmp\nOFFLOADFLAG=-qopenmp-offload=host" >> common/make.defs
-                fi
-                ;;
-            *)
-                if [ "${CC}" = "gcc" ] ; then
-                    export PRK_FC="$PRK_FC -std=f2008 -cpp"
-                    echo "FC=$PRK_FC\nOPENMPFLAG=-fopenmp" >> common/make.defs
-                elif [ "${CC}" = "icc" ] ; then
-                    # -heap-arrays prevents SEGV in transpose-pretty (?)
-                    export PRK_FC="ifort -fpp -std08 -traceback -heap-arrays"
-                    echo "FC=$PRK_FC\nOPENMPFLAG=-qopenmp" >> common/make.defs
-                fi
+            icc)
+                # -heap-arrays prevents SEGV in transpose-pretty (?)
+                export PRK_FC="ifort -fpp -std08 -heap-arrays"
+                echo "FC=$PRK_FC" >> common/make.defs
+                echo "OPENMPFLAG=-qopenmp" >> common/make.defs
+                echo "OFFLOADFLAG=-qopenmp-offload=host" >> common/make.defs
+                echo "COARRAYFLAG=-coarray" >> common/make.defs
                 ;;
         esac
-        #make $PRK_TARGET # see below
-        export PRK_TARGET_PATH=FORTRAN
-        case "$PRK_TARGET" in
-            allfortranserial)
-                make -C ${PRK_TARGET_PATH} serial
-                $PRK_TARGET_PATH/p2p               10 1024 1024
-                $PRK_TARGET_PATH/stencil           10 1000
-                $PRK_TARGET_PATH/transpose         10 1024 1
-                $PRK_TARGET_PATH/transpose         10 1024 32
-                ;;
-            allfortranpretty)
-                make -C ${PRK_TARGET_PATH} pretty
-                #$PRK_TARGET_PATH/p2p-pretty          10 1024 1024
-                # pretty versions do not support tiling...
-                $PRK_TARGET_PATH/stencil-pretty      10 1000
-                $PRK_TARGET_PATH/transpose-pretty    10 1024
-                ;;
-            allfortranopenmp)
-                make -C ${PRK_TARGET_PATH} p2p-openmp-tasks p2p-openmp-datapar stencil-openmp transpose-openmp
-                export OMP_NUM_THREADS=2
-                $PRK_TARGET_PATH/p2p-openmp-tasks     10 1024 1024
-                $PRK_TARGET_PATH/p2p-openmp-datapar   10 1024 1024
-                #$PRK_TARGET_PATH/p2p-openmp-doacross  10 1024 1024 # most compilers do not support doacross yet
-                $PRK_TARGET_PATH/stencil-openmp       10 1000
-                $PRK_TARGET_PATH/transpose-openmp     10 1024 1
-                $PRK_TARGET_PATH/transpose-openmp     10 1024 32
-                ;;
-            allfortrantarget)
-                make -C ${PRK_TARGET_PATH} stencil-openmp-target transpose-openmp-target
-                export OMP_NUM_THREADS=2
-                #$PRK_TARGET_PATH/p2p-openmp-target           10 1024 1024 # most compilers do not support doacross yet
-                $PRK_TARGET_PATH/stencil-openmp-target       10 1000
-                $PRK_TARGET_PATH/transpose-openmp-target     10 1024 1
-                $PRK_TARGET_PATH/transpose-openmp-target     10 1024 32
-                ;;
-            allfortrancoarray)
-                make -C ${PRK_TARGET_PATH} coarray
-                export PRK_MPI_PROCS=4
-                if [ "${CC}" = "gcc" ] ; then
-                    if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-                        # Homebrew installs a symlink in /usr/local/bin
-                        export PRK_LAUNCHER=cafrun
-                    elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-                        export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
-                    fi
-                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/p2p-coarray       10 1024 1024
-                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/stencil-coarray   10 1000
-                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/transpose-coarray 10 1024 1
-                    $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/transpose-coarray 10 1024 32
-                elif [ "${CC}" = "icc" ] ; then
-                    export FOR_COARRAY_NUM_IMAGES=$PRK_MPI_PROCS
-                    $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
-                    $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
-                    $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
-                    $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+
+        # Serial
+        make -C ${PRK_TARGET_PATH} serial
+        $PRK_TARGET_PATH/p2p               10 1024 1024
+        $PRK_TARGET_PATH/stencil           10 1000
+        $PRK_TARGET_PATH/transpose         10 1024 1
+        $PRK_TARGET_PATH/transpose         10 1024 32
+
+        # Pretty
+        make -C ${PRK_TARGET_PATH} pretty
+        #$PRK_TARGET_PATH/p2p-pretty          10 1024 1024
+        # pretty versions do not support tiling...
+        $PRK_TARGET_PATH/stencil-pretty      10 1000
+        $PRK_TARGET_PATH/transpose-pretty    10 1024
+
+        # OpenMP host
+        make -C ${PRK_TARGET_PATH} p2p-openmp-tasks p2p-openmp-datapar stencil-openmp transpose-openmp
+        export OMP_NUM_THREADS=2
+        $PRK_TARGET_PATH/p2p-openmp-tasks     10 1024 1024
+        $PRK_TARGET_PATH/p2p-openmp-datapar   10 1024 1024
+        #$PRK_TARGET_PATH/p2p-openmp-doacross  10 1024 1024 # most compilers do not support doacross yet
+        $PRK_TARGET_PATH/stencil-openmp       10 1000
+        $PRK_TARGET_PATH/transpose-openmp     10 1024 1
+        $PRK_TARGET_PATH/transpose-openmp     10 1024 32
+
+        # Intel Mac does not support OpenMP target or coarrays
+        if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+            # OpenMP target
+            make -C ${PRK_TARGET_PATH} stencil-openmp-target transpose-openmp-target
+            export OMP_NUM_THREADS=2
+            #$PRK_TARGET_PATH/p2p-openmp-target           10 1024 1024 # most compilers do not support doacross yet
+            $PRK_TARGET_PATH/stencil-openmp-target       10 1000
+            $PRK_TARGET_PATH/transpose-openmp-target     10 1024 1
+            $PRK_TARGET_PATH/transpose-openmp-target     10 1024 32
+
+            # Fortran coarrays
+            make -C ${PRK_TARGET_PATH} coarray
+            export PRK_MPI_PROCS=4
+            if [ "${CC}" = "gcc" ] ; then
+                if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+                    # Homebrew installs a symlink in /usr/local/bin
+                    export PRK_LAUNCHER=cafrun
+                    # OpenCoarrays uses Open-MPI on Mac thanks to Homebrew
+                    # see https://github.com/open-mpi/ompi/issues/2956
+                    export TMPDIR=/tmp
+                elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+                    export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
                 fi
-                ;;
-            esac
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/p2p-coarray       10 1024 1024
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/stencil-coarray   10 1000
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/transpose-coarray 10 1024 1
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/transpose-coarray 10 1024 32
+            elif [ "${CC}" = "icc" ] ; then
+                export FOR_COARRAY_NUM_IMAGES=$PRK_MPI_PROCS
+                $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
+                $PRK_TARGET_PATH/Stencil/stencil-coarray     10 1000
+                $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 1
+                $PRK_TARGET_PATH/Transpose/transpose-coarray 10 1024 32
+            fi
+        fi
         ;;
     allopenmp)
         echo "OpenMP"
