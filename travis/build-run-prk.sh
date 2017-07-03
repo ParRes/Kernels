@@ -649,9 +649,9 @@ case "$PRK_TARGET" in
         echo "MPICC=$PRK_MPICC" >> common/make.defs
         echo "OPENMPFLAG=-fopenmp" >> common/make.defs
 
-        make $PRK_TARGET
 
         echo "MPI-1"
+        make allmpi1
         export PRK_TARGET_PATH=MPI1
         export PRK_MPI_PROCS=4
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
@@ -674,6 +674,7 @@ case "$PRK_TARGET" in
         # MPI+OpenMP is just too much of a pain with Clang right now.
         if [ "${CC}" = "gcc" ] ; then
             echo "MPI+OpenMP"
+            make allmpiomp
             export PRK_TARGET_PATH=MPIOPENMP
             export PRK_MPI_PROCS=2
             export OMP_NUM_THREADS=2
@@ -684,6 +685,7 @@ case "$PRK_TARGET" in
         fi
 
         echo "MPI-RMA"
+        make allmpirma
         export PRK_TARGET_PATH=MPIRMA
         export PRK_MPI_PROCS=4
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
@@ -691,6 +693,7 @@ case "$PRK_TARGET" in
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
 
         echo "MPI+MPI"
+        make allmpishm
         export PRK_TARGET_PATH=MPISHM
         export PRK_MPI_PROCS=4
         export PRK_MPISHM_RANKS=$(($PRK_MPI_PROCS/2))
