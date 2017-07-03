@@ -620,9 +620,16 @@ case "$PRK_TARGET" in
         ;;
     allmpi)
         echo "All MPI"
-        # Clang 3.9 should have OpenMP
+        # Inline the Homebrew OpenMP stuff here so versions do not diverge.
+        # Note that -cc= likely only works with MPICH.
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
-            export PRK_MPICC="${PRK_MPICC} -cc=clang-3.9"
+            CLANG_VERSION=3.9
+            brew install llvm@$CLANG_VERSION || brew upgrade llvm@$CLANG_VERSION
+            export PRK_MPICC="${PRK_MPICC} -cc=/usr/local/opt/llvm@${CLANG_VERSION}/bin/clang-${CLANG_VERSION}"
+        elif [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
+            GCC_VERSION=6
+            brew install gcc@$GCC_VERSION || brew upgrade gcc@$GCC_VERSION
+            export PRK_MPICC="${PRK_MPICC} -cc=/usr/local/opt/gcc@${GCC_VERSION}/bin/gcc-${GCC_VERSION}"
         fi
         echo "MPICC=$PRK_MPICC" >> common/make.defs
         echo "OPENMPFLAG=-fopenmp" >> common/make.defs

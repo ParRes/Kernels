@@ -77,7 +77,6 @@ case "$PRK_TARGET" in
         ;;
     allmpi)
         echo "Traditional MPI"
-        sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
         # install except when Intel MPI used
         if [ ! -f ~/use-intel-compilers ] ; then
             sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0
