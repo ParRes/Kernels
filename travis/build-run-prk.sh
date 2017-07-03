@@ -21,15 +21,6 @@ case "$os" in
         export MPI_ROOT=$TRAVIS_ROOT
         ;;
 esac
-# default to mpirun but override later when necessary
-if [ -f ~/use-intel-compilers ] ; then
-    # use Intel MPI
-    export PRK_MPICC="mpiicc -std=c99"
-    export PRK_LAUNCHER=mpirun
-else
-    export PRK_MPICC="$MPI_ROOT/bin/mpicc -std=c99"
-    export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
-fi
 
 echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 
@@ -618,10 +609,49 @@ case "$PRK_TARGET" in
         # random is broken right now it seems
         #$PRK_TARGET_PATH/Random/random $OMP_NUM_THREADS 10 16384 32
         ;;
-    allmpi1)
-        echo "MPI-1"
+    allmpi)
+        echo "All MPI"
+        if [ -f ~/use-intel-compilers ] ; then
+            # use Intel MPI
+            export PRK_MPICC="mpiicc -std=c99"
+            export PRK_LAUNCHER=mpirun
+        else # Clang or GCC
+            export PRK_MPICC="$MPI_ROOT/bin/mpicc -std=c99"
+            export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
+        fi
+        # Inline the Homebrew OpenMP stuff here so versions do not diverge.
+        # Note that -cc= likely only works with MPICH.
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
+            GCC_VERSION=6
+            brew install gcc@$GCC_VERSION || brew upgrade gcc@$GCC_VERSION
+            export PRK_MPICC="${PRK_MPICC} -cc=/usr/local/opt/gcc@${GCC_VERSION}/bin/gcc-${GCC_VERSION}"
+        fi
+        #if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+        #    CLANG_VERSION=3.9
+        #    brew install llvm@$CLANG_VERSION || brew upgrade llvm@$CLANG_VERSION
+        #    export PRK_MPICC="${PRK_MPICC} -cc=/usr/local/opt/llvm@${CLANG_VERSION}/bin/clang-${CLANG_VERSION}"
+        #fi
+        #if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "clang" ] ; then
+        #    # According to http://openmp.llvm.org/, we need version 3.8 or later to get OpenMP.
+        #    for version in "-5" "-4" "-3.9" "-3.8" "" ; do
+        #      if [ -f "`which ${CC}${version}`" ]; then
+        #          export PRK_CC="${CC}${version}"
+        #          echo "Found C: $PRK_CC"
+        #          break
+        #      fi
+        #    done
+        #    if [ "x$PRK_CC" = "x" ] ; then
+        #        export PRK_CC="${CC}"
+        #    fi
+        #    ${PRK_CC} -v
+        #    export PRK_MPICC="${PRK_MPICC} -cc=${PRK_CC}"
+        #fi
         echo "MPICC=$PRK_MPICC" >> common/make.defs
-        make $PRK_TARGET
+        echo "OPENMPFLAG=-fopenmp" >> common/make.defs
+
+
+        echo "MPI-1"
+        make allmpi1
         export PRK_TARGET_PATH=MPI1
         export PRK_MPI_PROCS=4
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
@@ -636,41 +666,34 @@ case "$PRK_TARGET" in
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 2 GEOMETRIC 0.99
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 0 1 SINUSOIDAL
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 LINEAR 1.0 3.0
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 PATCH 0 200 100 200 
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 PATCH 0 200 100 200
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 FINE_GRAIN 2
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 HIGH_WATER 
+        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 HIGH_WATER
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 NO_TALK
-        ;;
-    allmpio*mp)
-        echo "MPI+OpenMP"
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
-            # Mac Clang does not support OpenMP but we should have installed clang-omp via Brew.
-            export PRK_MPICC="${PRK_MPICC} -cc=clang-omp"
+
+        # MPI+OpenMP is just too much of a pain with Clang right now.
+        if [ "${CC}" = "gcc" ] ; then
+            echo "MPI+OpenMP"
+            make allmpiomp
+            export PRK_TARGET_PATH=MPIOPENMP
+            export PRK_MPI_PROCS=2
+            export OMP_NUM_THREADS=2
+            $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       $OMP_NUM_THREADS 10 1024 1024
+            $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     $OMP_NUM_THREADS 10 1000
+            $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose $OMP_NUM_THREADS 10 1024 32
+            $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Nstream/nstream     $OMP_NUM_THREADS 10 16777216 32
         fi
-        echo "MPICC=$PRK_MPICC\nOPENMPFLAG=-fopenmp" >> common/make.defs
-        make $PRK_TARGET
-        export PRK_TARGET_PATH=MPIOPENMP
-        export PRK_MPI_PROCS=2
-        export OMP_NUM_THREADS=2
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       $OMP_NUM_THREADS 10 1024 1024
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     $OMP_NUM_THREADS 10 1000
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose $OMP_NUM_THREADS 10 1024 32
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Nstream/nstream     $OMP_NUM_THREADS 10 16777216 32
-        ;;
-    allmpirma)
+
         echo "MPI-RMA"
-        echo "MPICC=$PRK_MPICC" >> common/make.defs
-        make $PRK_TARGET
+        make allmpirma
         export PRK_TARGET_PATH=MPIRMA
         export PRK_MPI_PROCS=4
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
-        ;;
-    allmpishm)
+
         echo "MPI+MPI"
-        echo "MPICC=$PRK_MPICC" >> common/make.defs
-        make $PRK_TARGET
+        make allmpishm
         export PRK_TARGET_PATH=MPISHM
         export PRK_MPI_PROCS=4
         export PRK_MPISHM_RANKS=$(($PRK_MPI_PROCS/2))
