@@ -513,7 +513,7 @@ case "$PRK_TARGET" in
                 elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
                     export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
                 fi
-                echo "CAFC=$PRK_CAFC" >> common/make.defs
+                echo "CAFC=$PRK_CAFC -std=f2008 -cpp" >> common/make.defs
                 echo "COARRAYFLAG=-fcoarray=single" >> common/make.defs
                 ;;
             clang)
