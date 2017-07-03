@@ -621,29 +621,31 @@ case "$PRK_TARGET" in
         fi
         # Inline the Homebrew OpenMP stuff here so versions do not diverge.
         # Note that -cc= likely only works with MPICH.
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
-            CLANG_VERSION=3.9
-            brew install llvm@$CLANG_VERSION || brew upgrade llvm@$CLANG_VERSION
-            export PRK_MPICC="${PRK_MPICC} -cc=/usr/local/opt/llvm@${CLANG_VERSION}/bin/clang-${CLANG_VERSION}"
-        elif [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
             GCC_VERSION=6
             brew install gcc@$GCC_VERSION || brew upgrade gcc@$GCC_VERSION
             export PRK_MPICC="${PRK_MPICC} -cc=/usr/local/opt/gcc@${GCC_VERSION}/bin/gcc-${GCC_VERSION}"
-        elif [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "clang" ] ; then
-            # According to http://openmp.llvm.org/, we need version 3.8 or later to get OpenMP.
-            for version in "-5" "-4" "-3.9" "-3.8" "" ; do
-              if [ -f "`which ${CC}${version}`" ]; then
-                  export PRK_CC="${CC}${version}"
-                  echo "Found C: $PRK_CC"
-                  break
-              fi
-            done
-            if [ "x$PRK_CC" = "x" ] ; then
-                export PRK_CC="${CC}"
-            fi
-            ${PRK_CC} -v
-            export PRK_MPICC="${PRK_MPICC} -cc=${PRK_CC}"
         fi
+        #if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+        #    CLANG_VERSION=3.9
+        #    brew install llvm@$CLANG_VERSION || brew upgrade llvm@$CLANG_VERSION
+        #    export PRK_MPICC="${PRK_MPICC} -cc=/usr/local/opt/llvm@${CLANG_VERSION}/bin/clang-${CLANG_VERSION}"
+        #fi
+        #if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "clang" ] ; then
+        #    # According to http://openmp.llvm.org/, we need version 3.8 or later to get OpenMP.
+        #    for version in "-5" "-4" "-3.9" "-3.8" "" ; do
+        #      if [ -f "`which ${CC}${version}`" ]; then
+        #          export PRK_CC="${CC}${version}"
+        #          echo "Found C: $PRK_CC"
+        #          break
+        #      fi
+        #    done
+        #    if [ "x$PRK_CC" = "x" ] ; then
+        #        export PRK_CC="${CC}"
+        #    fi
+        #    ${PRK_CC} -v
+        #    export PRK_MPICC="${PRK_MPICC} -cc=${PRK_CC}"
+        #fi
         echo "MPICC=$PRK_MPICC" >> common/make.defs
         echo "OPENMPFLAG=-fopenmp" >> common/make.defs
 
@@ -669,8 +671,8 @@ case "$PRK_TARGET" in
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 HIGH_WATER
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 NO_TALK
 
-        # MPI+OpenMP will not work with older Clang, as we will probably get on Linux
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] || [ "${CC}" = "gcc" ] ; then
+        # MPI+OpenMP is just too much of a pain with Clang right now.
+        if [ "${CC}" = "gcc" ] ; then
             echo "MPI+OpenMP"
             export PRK_TARGET_PATH=MPIOPENMP
             export PRK_MPI_PROCS=2
