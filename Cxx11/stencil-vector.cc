@@ -64,13 +64,13 @@
 
 #include "stencil_seq.hpp"
 
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11 Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // process and test input parameters
+  // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -121,46 +121,17 @@ int main(int argc, char * argv[])
   std::cout << "Grid size            = " << n << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
-  std::cout << "Compact representation of stencil loop body" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<std::vector<double>> weight;
-  weight.resize(2*radius+1);
-  for (auto i=0; i<2*radius+1; i++) {
-    weight[i].resize(2*radius+1, 0.0);
-  }
-
-  // fill the stencil weights to reflect a discrete divergence operator
-  if (star) {
-    for (auto ii=1; ii<=radius; ii++) {
-      weight[radius][radius+ii] = weight[radius+ii][radius] = +1./(2*ii*radius);
-      weight[radius][radius-ii] = weight[radius-ii][radius] = -1./(2*ii*radius);
-    }
-  } else {
-    for (auto jj=1; jj<=radius; jj++) {
-      for (auto ii=-jj+1; ii<jj; ii++) {
-        weight[radius+ii][radius+jj] = +1./(4*jj*(2*jj-1)*radius);
-        weight[radius+ii][radius-jj] = -1./(4*jj*(2*jj-1)*radius);
-        weight[radius+jj][radius+ii] = +1./(4*jj*(2*jj-1)*radius);
-        weight[radius-jj][radius+ii] = -1./(4*jj*(2*jj-1)*radius);
-      }
-      weight[radius+jj][radius+jj]   = +1./(4*jj*radius);
-      weight[radius-jj][radius-jj]   = -1./(4*jj*radius);
-    }
-  }
-
-  // interior of grid with respect to stencil
-  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
+  auto stencil_time = 0.0;
 
   std::vector<double> in;
   std::vector<double> out;
   in.resize(n*n,0.0);
   out.resize(n*n,0.0);
-
-  auto stencil_time = 0.0;
 
   // initialize the input array
   for (auto i=0; i<n; i++) {
@@ -210,6 +181,9 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
+
+  // interior of grid with respect to stencil
+  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
   // compute L1 norm in parallel
   double norm = 0.0;

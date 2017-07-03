@@ -1,42 +1,48 @@
 *.i                             # Preprocessed source
+*/*.i
+*/*/*.i
 *.s                             # Assembly output
-*.o
-*.a
-*.x
-*.incl
-func.c
+*/*.s
+*/*/*.s
+*.ll                            # LLVM intermediate
+*/*.ll
+*/*/*.ll
+*.o                             # Object files
+*/*.o
+*/*/*.o
+core.*                          # core files
+*/core.*
+*/*/core.*
+octave-workspace                # Octave crashes
+*/octave-workspace
+*.swp                           # Vim
+*/*.swp
+*/*/*.swp
+*.dSYM                          # Mac
+*/*.dSYM
+*/*/*.dSYM
+*.optrpt                        # Intel compiler
+*/*.optrpt
+*/*/*.optrpt
+*__genmod.*                     # Intel Fortran compiler
+*/*__genmod.mod
+
 common/make.defs
 scripts/small/runfgmpi
 scripts/wide/runfgmpi
 scripts/small/runfenix
 
+*.incl                          # PRK C89 stencil generated code
+*/*.incl
+*/*/*.incl
+func.c                          # PRK C89 stencil generated code
+*/func.c
+*/*/func.c
+
 *.cobaltlog                     # ALCF Cobalt scheduler
 *.output                        # ALCF Cobalt scheduler
 *.error                         # ALCF Cobalt scheduler
 
-*.swp                           # Vim
-*/*.swp                         # Vim
-*/*/*.swp                       # Vim
-*.dSYM                          # Mac
-*__genmod.mod                   # Intel compiler
-*__genmod.f90                   # Intel compiler
-*.optrpt                        # Intel compiler
-octave-workspace                # Octave crashes
-
-# since the above is not working
-AMPI/AMR/loop_body_compact.incl
-AMPI/AMR/loop_body_compact_amr.incl
-AMPI/AMR/loop_body_star.incl
-AMPI/AMR/loop_body_star_amr.incl
-AMPI/Branch/func.c
-AMPI/Stencil/loop_body_compact.incl
-AMPI/Stencil/loop_body_star.incl
-CHARM++/Stencil/loop_body_star.incl
-FENIX/Stencil/loop_body_compact.incl
-FENIX/Stencil/loop_body_star.incl
-FG_MPI/Branch/func.c
-FG_MPI/Stencil/loop_body_compact.incl
-FG_MPI/Stencil/loop_body_star.incl
 FORTRAN/Stencil/stencil
 FORTRAN/Stencil/stencil-coarray
 FORTRAN/Stencil/stencil-omp
@@ -48,44 +54,29 @@ FORTRAN/Transpose/transpose
 FORTRAN/Transpose/transpose-coarray
 FORTRAN/Transpose/transpose-omp
 FORTRAN/Transpose/transpose-pretty
-GRAPPA/Stencil/loop_body_star.incl
 MPI1/AMR/amr
-MPI1/AMR/loop_body_compact.incl
-MPI1/AMR/loop_body_compact_amr.incl
-MPI1/AMR/loop_body_star.incl
-MPI1/AMR/loop_body_star_amr.incl
 MPI1/Branch/branch
-MPI1/Branch/func.c
 MPI1/DGEMM/dgemm
 MPI1/Nstream/nstream
 MPI1/PIC-static/pic
 MPI1/Random/random
 MPI1/Reduce/reduce
 MPI1/Sparse/sparse
-MPI1/Stencil/loop_body_compact.incl
-MPI1/Stencil/loop_body_star.incl
 MPI1/Stencil/stencil
 MPI1/Synch_global/global
 MPI1/Synch_p2p/p2p
 MPI1/Transpose/transpose
 MPIOPENMP/Nstream/nstream
-MPIOPENMP/Stencil/loop_body_compact.incl
-MPIOPENMP/Stencil/loop_body_star.incl
 MPIOPENMP/Stencil/stencil
 MPIOPENMP/Synch_p2p/p2p
 MPIOPENMP/Transpose/transpose
-MPIRMA/Stencil/loop_body_compact.incl
-MPIRMA/Stencil/loop_body_star.incl
 MPIRMA/Stencil/stencil
 MPIRMA/Synch_p2p/p2p
 MPIRMA/Transpose/transpose
-MPISHM/Stencil/loop_body_compact.incl
-MPISHM/Stencil/loop_body_star.incl
 MPISHM/Stencil/stencil
 MPISHM/Synch_p2p/p2p
 MPISHM/Transpose/transpose
 OPENMP/Branch/branch
-OPENMP/Branch/func.c
 OPENMP/DGEMM/dgemm
 OPENMP/Nstream/nstream
 OPENMP/PIC/pic
@@ -93,47 +84,65 @@ OPENMP/Random/random
 OPENMP/Reduce/reduce
 OPENMP/Refcount/refcount
 OPENMP/Sparse/sparse
-OPENMP/Stencil/loop_body_compact.incl
-OPENMP/Stencil/loop_body_star.incl
 OPENMP/Stencil/stencil
 OPENMP/Synch_global/global
 OPENMP/Synch_p2p/p2p
 OPENMP/Transpose/transpose
 SERIAL/AMR/amr
-SERIAL/AMR/loop_body_compact.incl
-SERIAL/AMR/loop_body_compact_amr.incl
-SERIAL/AMR/loop_body_star.incl
-SERIAL/AMR/loop_body_star_amr.incl
 SERIAL/Branch/branch
-SERIAL/Branch/func.c
 SERIAL/DGEMM/dgemm
 SERIAL/Nstream/nstream
 SERIAL/PIC/pic
 SERIAL/Random/random
 SERIAL/Reduce/reduce
 SERIAL/Sparse/sparse
-SERIAL/Stencil/loop_body_compact.incl
-SERIAL/Stencil/loop_body_star.incl
 SERIAL/Stencil/stencil
 SERIAL/Synch_p2p/p2p
 SERIAL/Transpose/transpose
-SHMEM/Stencil/loop_body_compact.incl
-SHMEM/Stencil/loop_body_star.incl
-UPC/Stencil/loop_body_compact.incl
-UPC/Stencil/loop_body_star.incl
+C1z/p2p
+C1z/p2p-innerloop-openmp
+C1z/p2p-tasks-openmp
+C1z/stencil
+C1z/stencil-cilk
+C1z/stencil-openmp
+C1z/stencil-target
+C1z/stencil-taskloop
+C1z/transpose
+C1z/transpose-cilk
+C1z/transpose-openmp
+C1z/transpose-target
+C1z/transpose-taskloop
 Cxx11/p2p-openmp-target
 Cxx11/p2p-tasks-openmp
 Cxx11/p2p-vector
 Cxx11/p2p-vector-doacross-openmp
+Cxx11/p2p-vector-raja
+Cxx11/p2p-vector-tbb
+Cxx11/p2p-wavefront-openmp
+Cxx11/p2p-innerloop-openmp
 Cxx11/stencil-opencl
 Cxx11/stencil-openmp-target
 Cxx11/stencil-vector
 Cxx11/stencil-vector-openmp
+Cxx11/stencil-vector-cilk
+Cxx11/stencil-vector-pstl
+Cxx11/stencil-vector-raja
+Cxx11/stencil-vector-rangefor
+Cxx11/stencil-vector-tbb
+Cxx11/stencil-vector-taskloop
+Cxx11/stencil-kokkos
 Cxx11/transpose-opencl
 Cxx11/transpose-openmp-target
 Cxx11/transpose-valarray
 Cxx11/transpose-vector
 Cxx11/transpose-vector-openmp
+Cxx11/transpose-vector-cilk
+Cxx11/transpose-vector-pstl
+Cxx11/transpose-vector-raja
+Cxx11/transpose-vector-rangefor
+Cxx11/transpose-vector-tbb
+Cxx11/transpose-vector-taskloop
+Cxx11/transpose-kokkos
 Cxx11/grid1.cl
 Cxx11/grid2.cl
 Cxx11/grid3.cl
@@ -156,6 +165,8 @@ FORTRAN/p2p
 FORTRAN/p2p-coarray
 FORTRAN/p2p-openmp-target
 FORTRAN/p2p-openmp-tasks
+FORTRAN/p2p-openmp-datapar
+FORTRAN/p2p-openmp-doacross
 FORTRAN/stencil
 FORTRAN/stencil-coarray
 FORTRAN/stencil-openmp
@@ -166,4 +177,6 @@ FORTRAN/transpose-coarray
 FORTRAN/transpose-openmp
 FORTRAN/transpose-openmp-target
 FORTRAN/transpose-pretty
-
+RUST/p2p
+RUST/stencil
+RUST/transpose

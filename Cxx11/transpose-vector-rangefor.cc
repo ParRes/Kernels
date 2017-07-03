@@ -54,7 +54,7 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++17 Parallel STL Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/range-for Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -128,8 +128,8 @@ int main(int argc, char * argv[])
   auto abserr = 0.0;
   for (auto i : irange) {
     for (auto j : jrange) {
-      const size_t ij = i*order+j;
-      const size_t ji = j*order+i;
+      const int ij = i*order+j;
+      const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(B[ji] - reference);
     }

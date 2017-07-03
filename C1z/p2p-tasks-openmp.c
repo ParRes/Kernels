@@ -35,13 +35,13 @@
 ///
 /// PURPOSE: This program tests the efficiency with which point-to-point
 ///          synchronization can be carried out. It does so by executing
-///          a pipelined algorithm on an n^2 grid. The first array dimension
+///          a pipelined algorithm on an m*n grid. The first array dimension
 ///          is distributed among the threads (stripwise decomposition).
 ///
 /// USAGE:   The program takes as input the
 ///          dimensions of the grid, and the number of iterations on the grid
 ///
-///                <progname> <iterations> <n>
+///                <progname> <iterations> <m> <n>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -54,56 +54,86 @@
 ///          wtime()
 ///
 /// HISTORY: - Written by Rob Van der Wijngaart, February 2009.
-///            C99-ification by Jeff Hammond, February 2016.
-///            C++11-ification by Jeff Hammond, May 2017.
+///          - C99-ification by Jeff Hammond, February 2016.
+///          - C11-ification by Jeff Hammond, June 2017.
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <omp.h>
-
 #include "prk_util.h"
 
-int main(int argc, char* argv[])
+static inline void sweep_tile(int startm, int endm,
+                              int startn, int endn,
+                              int n,
+                              double grid[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenCL WAVEFRONT pipeline execution on 2D grid" << std::endl;
+  for (int i=startm; i<endm; i++) {
+    for (int j=startn; j<endn; j++) {
+      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+    }
+  }
+}
+
+int main(int argc, char * argv[])
+{
+  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("C11/OpenMP pipeline execution on 2D grid\n");
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 3){
-    std::cout << "Usage: " << argv[0] << " <# iterations> <array dimension>" << std::endl;
-    return(EXIT_FAILURE);
+  if (argc < 4) {
+    printf("Usage: <# iterations> <first array dimension> <second array dimension>"
+           " [<first chunk dimension> <second chunk dimension>]\n");
+    return 1;
   }
 
   // number of times to run the pipeline algorithm
-  int iterations  = std::atoi(argv[1]);
-  if (iterations < 1){
-    std::cout << "ERROR: iterations must be >= 1 : " << iterations << std::endl;
-    exit(EXIT_FAILURE);
+  int iterations = atoi(argv[1]);
+  if (iterations < 1) {
+    printf("ERROR: iterations must be >= 1\n");
+    return 1;
   }
 
   // grid dimensions
-  int n = std::atol(argv[2]);
-  if (n < 1) {
-    std::cout << "ERROR: grid dimensions must be positive: " << n << std::endl;
-    exit(EXIT_FAILURE);
+  int m = atol(argv[2]);
+  int n = atol(argv[3]);
+  if (m < 1 || n < 1) {
+    printf("ERROR: grid dimensions must be positive: %d,%d\n", m, n);
+    return 1;
   }
 
-  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
-  std::cout << "Number of iterations      = " << iterations << std::endl;
-  std::cout << "Grid sizes                = " << n << ", " << n << std::endl;
+  // grid chunk dimensions
+  int mc = (argc > 4) ? atol(argv[4]) : m;
+  int nc = (argc > 5) ? atol(argv[5]) : n;
+  if (mc < 1 || mc > m || nc < 1 || nc > n) {
+    printf("WARNING: grid chunk dimensions invalid: %d,%d (ignoring)\n", mc, nc);
+    mc = m;
+    nc = n;
+  }
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+  printf("Number of iterations      = %d\n", iterations);
+  printf("Grid sizes                = %d,%d\n", m, n);
+  printf("Grid chunk sizes          = %d,%d\n", mc, nc);
 
-  // working set
-  double * grid = new double[n*n];
+  //////////////////////////////////////////////////////////////////////
+  // Allocate space and perform the computation
+  //////////////////////////////////////////////////////////////////////
+
+  double pipeline_time = 0.0; // silence compiler warning
+
+  size_t bytes = m*n*sizeof(double);
+  double * restrict grid = prk_malloc(bytes);
+
   _Pragma("omp parallel")
   {
+    int lic = (m/mc-1) * mc + 1;
+    int ljc = (n/nc-1) * nc + 1;
+
     _Pragma("omp for")
-    for (auto i=0; i<n; i++) {
-      for (auto j=0; j<n; j++) {
+    for (int i=0; i<m; i++) {
+      for (int j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
       }
     }
@@ -111,72 +141,60 @@ int main(int argc, char* argv[])
     // set boundary values (bottom and left side of grid)
     _Pragma("omp master")
     {
-      for (auto j=0; j<n; j++) {
-        grid[0*n+j] = static_cast<double>(j);
+      for (int j=0; j<n; j++) {
+        grid[0*n+j] = (double)j;
       }
-      for (auto i=0; i<n; i++) {
-        grid[i*n+0] = static_cast<double>(i);
+      for (int i=0; i<m; i++) {
+        grid[i*n+0] = (double)i;
       }
     }
     _Pragma("omp barrier")
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
           _Pragma("omp barrier")
           _Pragma("omp master")
-          pipeline_time = prk::wtime();
+          pipeline_time = prk_wtime();
       }
 
-      for (auto j=1; j<n; j++) {
-        _Pragma("omp for")
-        for (auto i=1; i<=j; i++) {
-          auto x = i;
-          auto y = j-i+1;
-          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-        }
-      }
-      for (auto j=n-2; j>=1; j--) {
-        _Pragma("omp for")
-        for (auto i=1; i<=j; i++) {
-          auto x = n+i-j-1;
-          auto y = n-i;
-          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-        }
-      }
       _Pragma("omp master")
-      grid[0*n+0] = -grid[(n-1)*n+(n-1)];
+      {
+        for (int i=1; i<m; i+=mc) {
+          for (int j=1; j<n; j+=nc) {
+            _Pragma("omp task depend(in:grid[0],grid[(i-mc)*n+j],grid[i*n+(j-nc)],grid[(i-mc)*n+(j-nc)]) depend(out:grid[i*n+j])")
+            sweep_tile(i, MIN(m,i+mc), j, MIN(n,j+nc), n, grid);
+          }
+        }
+        _Pragma("omp task depend(in:grid[(lic-1)*n+(ljc)]) depend(out:grid[0])")
+        grid[0*n+0] = -grid[(m-1)*n+(n-1)];
+      }
     }
-
     _Pragma("omp barrier")
     _Pragma("omp master")
-    pipeline_time = prk::wtime() - pipeline_time;
+    pipeline_time = prk_wtime() - pipeline_time;
   }
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
-  // error tolerance
   const double epsilon = 1.e-8;
-
-  // verify correctness, using top right value
-  auto corner_val = ((iterations+1.)*(2.*n-2.));
-  if ( (std::fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
-    std::cout << "ERROR: checksum " << grid[(n-1)*n+(n-1)]
-              << " does not match verification value " << corner_val << std::endl;
-    exit(EXIT_FAILURE);
+  const double corner_val = ((iterations+1.)*(n+m-2.));
+  if ( (fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+    printf("ERROR: checksum %lf does not match verification value %lf\n", grid[(m-1)*n+(n-1)], corner_val);
+    return 1;
   }
 
+  prk_free(grid);
+
 #ifdef VERBOSE
-  std::cout << "Solution validates; verification value = " << corner_val << std::endl;
+  printf("Solution validates; verification value = %lf\n", corner_val );
 #else
-  std::cout << "Solution validates" << std::endl;
+  printf("Solution validates\n" );
 #endif
-  auto avgtime = pipeline_time/iterations;
-  std::cout << "Rate (MFlops/s): "
-            << 1.0e-6 * 2. * ( static_cast<size_t>(n-1)*static_cast<size_t>(n-1) )/avgtime
-            << " Avg time (s): " << avgtime << std::endl;
+  double avgtime = pipeline_time/iterations;
+  printf("Rate (MFlops/s): %lf Avg time (s): %lf\n", 2.0e-6 * ( (m-1)*(n-1) )/avgtime, avgtime );
 
   return 0;
 }

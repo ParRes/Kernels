@@ -66,10 +66,10 @@ struct Initialize
             }
         }
 
-        Initialize(size_t n, std::vector<double> & A, std::vector<double> & B) : n_(n), A_(A), B_(B) { }
+        Initialize(int n, std::vector<double> & A, std::vector<double> & B) : n_(n), A_(A), B_(B) { }
 
     private:
-        size_t n_;
+        int n_;
         std::vector<double> & A_;
         std::vector<double> & B_;
 
@@ -87,23 +87,23 @@ struct Transpose
             }
         }
 
-        Transpose(size_t n, std::vector<double> & A, std::vector<double> & B) : n_(n), A_(A), B_(B) { }
+        Transpose(int n, std::vector<double> & A, std::vector<double> & B) : n_(n), A_(A), B_(B) { }
 
     private:
-        size_t n_;
+        int n_;
         std::vector<double> & A_;
         std::vector<double> & B_;
 
 };
 
-void ParallelInitialize(size_t order, size_t tile_size, std::vector<double> & A, std::vector<double> & B)
+void ParallelInitialize(int order, int tile_size, std::vector<double> & A, std::vector<double> & B)
 {
     Initialize t(order, A, B);
     const tbb::blocked_range2d<int> r(0, order, tile_size, 0, order, tile_size);
     parallel_for(r,t);
 }
 
-void ParallelTranspose(size_t order, size_t tile_size, std::vector<double> & A, std::vector<double> & B)
+void ParallelTranspose(int order, int tile_size, std::vector<double> & A, std::vector<double> & B)
 {
     Transpose t(order, A, B);
     const tbb::blocked_range2d<int> r(0, order, tile_size, 0, order, tile_size);
@@ -112,16 +112,16 @@ void ParallelTranspose(size_t order, size_t tile_size, std::vector<double> & A, 
 
 int main(int argc, char * argv[])
 {
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "C++11/TBB Matrix transpose: B = A^T" << std::endl;
+
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/TBB Matrix transpose: B = A^T" << std::endl;
-
   int iterations;
-  size_t order;
-  size_t tile_size;
+  int order;
+  int tile_size;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order> [tile size]";
@@ -186,8 +186,8 @@ int main(int argc, char * argv[])
   auto abserr = 0.0;
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      const size_t ij = i*order+j;
-      const size_t ji = j*order+i;
+      const int ij = i*order+j;
+      const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(B[ji] - reference);
     }

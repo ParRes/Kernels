@@ -62,10 +62,14 @@
 
 #include "prk_util.h"
 
-#ifndef USE_PSTL
-#include "stencil_stl.hpp"
-#else
+// See ParallelSTL.md for important information.
+#if defined(USE_PSTL) && defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
 #include "stencil_pstl.hpp"
+#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
+                        && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
+#include "stencil_pgnu.hpp"
+#else
+#include "stencil_stl.hpp"
 #endif
 
 int main(int argc, char * argv[])
@@ -125,36 +129,10 @@ int main(int argc, char * argv[])
   std::cout << "Grid size            = " << n << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
-  std::cout << "Compact representation of stencil loop body" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
-
-  std::vector<std::vector<double>> weight;
-  weight.resize(2*radius+1);
-  for (auto i=0; i<2*radius+1; i++) {
-    weight[i].resize(2*radius+1, 0.0);
-  }
-
-  // fill the stencil weights to reflect a discrete divergence operator
-  if (star) {
-    for (auto ii=1; ii<=radius; ii++) {
-      weight[radius][radius+ii] = weight[radius+ii][radius] = +1./(2*ii*radius);
-      weight[radius][radius-ii] = weight[radius-ii][radius] = -1./(2*ii*radius);
-    }
-  } else {
-    for (auto jj=1; jj<=radius; jj++) {
-      for (auto ii=-jj+1; ii<jj; ii++) {
-        weight[radius+ii][radius+jj] = +1./(4*jj*(2*jj-1)*radius);
-        weight[radius+ii][radius-jj] = -1./(4*jj*(2*jj-1)*radius);
-        weight[radius+jj][radius+ii] = +1./(4*jj*(2*jj-1)*radius);
-        weight[radius-jj][radius+ii] = -1./(4*jj*(2*jj-1)*radius);
-      }
-      weight[radius+jj][radius+jj]   = +1./(4*jj*radius);
-      weight[radius-jj][radius-jj]   = -1./(4*jj*radius);
-    }
-  }
 
   // interior of grid with respect to stencil
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
@@ -168,12 +146,17 @@ int main(int argc, char * argv[])
 
   // initialize the input and output arrays
   auto range = boost::irange(0,n);
-#ifndef USE_PSTL
+#if defined(USE_PSTL) && defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
+  std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
+                        && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
+  __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
+    __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int j) {
+#else
+#warning Parallel STL is NOT being used!
   std::for_each( std::begin(range), std::end(range), [&] (int i) {
     std::for_each( std::begin(range), std::end(range), [&] (int j) {
-#else
-  std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
 #endif
       in[i*n+j] = static_cast<double>(i+j);
       out[i*n+j] = 0.0;
@@ -213,16 +196,31 @@ int main(int argc, char * argv[])
         }
     }
     // add constant to solution to force refresh of neighbor data, if any
-#ifndef USE_PSTL
+#if 0
+#if defined(USE_PSTL) && defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
+    std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
+                        && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
+      __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
+        __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int j) {
+#else
     std::for_each( std::begin(range), std::end(range), [&] (int i) {
       std::for_each( std::begin(range), std::end(range), [&] (int j) {
-#else
-    std::for_each( std::execution::par, std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
 #endif
         in[i*n+j] += 1.0;
       });
     });
+#else
+#if defined(USE_PSTL) && defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
+    std::transform( pstl::execution::par_unseq, in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
+#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
+                        && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
+    __gnu_parallel::transform( in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
+#else
+    std::transform( in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
+#endif
+#endif
   }
 
   stencil_time = prk::wtime() - stencil_time;

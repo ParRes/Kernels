@@ -46,8 +46,11 @@ TBBFLAG=-tbb
 # Parallel STL, Boost, etc.
 #
 BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
-#BOOSTFLAG=-DUSE_BOOST
-PSTLFLAG=-DUSE_PSTL -qopenmp -tbb
+PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG}
+KOKKOSDIR=/opt/kokkos/intel/openmp
+KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos ${OPENMPFLAG}
+RAJADIR=/opt/raja/intel
+RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${OPENMPFLAG} ${CILKFLAG}
 #
 # CUDA flags
 #
@@ -66,7 +69,7 @@ CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 # in your .bashrc.
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPICC=mpiicc
+MPICC=mpiicc -std=c99
 #
 # Fortran 2008 coarrays
 #

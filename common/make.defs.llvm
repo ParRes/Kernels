@@ -5,11 +5,11 @@
 # Base compilers and language options
 #
 # C99 is required in some implementations.
-CC=clang -std=gnu99
+CC=/opt/llvm/4.0.0/bin/clang -std=c11
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=false
+FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Mfreeform -L/opt/llvm/pgi-flang/lib -Wl,-rpath=/opt/llvm/pgi-flang/lib
 # C++11 may not be required but does no harm here.
-CXX=clang++ -std=gnu++11
+CXX=/opt/llvm/4.0.0/bin/clang++ -std=c++1z
 #
 # Compiler flags
 #
@@ -22,8 +22,9 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
 #
 # OpenMP flags
 #
-OPENMPFLAG=-fopenmp
-OFFLOADFLAG=-fopenmp
+OPENMPFLAG=-fopenmp -L/opt/llvm/4.0.0/lib -lomp
+OFFLOADFLAG=-fopenmp -L/opt/llvm/4.0.0/lib -lomp
+ORNLACCFLAG= # Flang does not support OpenACC
 # Klondike weirdness
 # OPENMPFLAG+=-L/opt/intel/compilers_and_libraries_2018.0.082/linux/compiler/lib/intel64_lin -liomp5
 # Mac weirdness
@@ -32,7 +33,40 @@ OFFLOADFLAG=-fopenmp
 # OpenCL flags
 #
 # MacOS
-OPENCLFLAG=-framework OpenCL
+#OPENCLFLAG=-framework OpenCL
 # Linux
-#OPENCLDIR=/etc/alternatives/opencl-intel-tools
-#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLDIR=/etc/alternatives/opencl-intel-tools
+OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+#
+# Cilk
+#
+CILKFLAG=
+#
+# TBB
+#
+TBBDIR=/usr/local/Cellar/tbb/2017_U7
+TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+#
+# Parallel STL, Boost, etc.
+#
+BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
+PSTLFLAG=
+KOKKOSDIR=/opt/kokkos/clang/openmp
+KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos ${OPENMPFLAG}
+RAJADIR=/opt/raja/clang
+RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${OPENMPFLAG} $(CILKFLAG)
+#
+# CUDA flags
+#
+# Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
+NVCC=/opt/llvm/cocl/bin/cocl
+# Linux w/ NVIDIA CUDA
+#NVCC=nvcc
+CUDAFLAGS=-g -O3 -std=c++11
+# https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
+CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# MPI
+#
+# We assume you have installed an implementation of MPI-3 that is in your path.
+MPICC=mpicc

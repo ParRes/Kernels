@@ -1,16 +1,7 @@
 include ../common/Cxx11.defs
 include ../common/PRKVERSION
 
-ifndef RADIUS
-  RADIUS=2
-endif
-
-STARFLAG   = -DSTAR
-#DOUBLEFLAG = -DDOUBLE
-
 CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
-CPPFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG) $(DOUBLEFLAG)
-CPPFLAGS += -I.
 
 CXXFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 
@@ -25,27 +16,32 @@ OPENCLFLAGS = $(OPENCLFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKFLAGS = $(CILKFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB
-BOOSTFLAGS = $(BOOSTFLAG) -USE_BOOST
+BOOSTFLAGS = $(BOOSTFLAG)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
+RAJAFLAGS = $(RAJAFLAG)
+KOKKOSFLAGS = $(KOKKOSFLAG) $(BOOSTFLAGS)
 
-.PHONY: all clean run vector valarray openmp target opencl cilk tbb pstl rangefor cuda
+.PHONY: all clean run vector valarray openmp target opencl cilk taskloop tbb pstl rangefor kokkos raja cuda
 
 ifeq ($(shell uname -s),Darwin)
-ifneq ($(CXX),icpc)
+ifneq ($(findstring icpc,$(CXX)),icpc)
 TARGET = target
 endif
 else
 TARGET = target
 endif
-all: vector valarray openmp opencl $(TARGET)
+
+all: vector valarray openmp opencl $(TARGET) cilk taskloop tbb pstl rangefor raja kokkos
 
 vector: p2p-vector stencil-vector transpose-vector
 
 valarray: transpose-valarray
 
-openmp: p2p-wavefront-openmp p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
+openmp: p2p-innerloop-openmp p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
 
 target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
+
+taskloop: stencil-vector-taskloop transpose-vector-taskloop
 
 opencl: stencil-opencl transpose-opencl
 
@@ -56,6 +52,10 @@ tbb: p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
 pstl: stencil-vector-pstl transpose-vector-pstl
 
 rangefor: stencil-vector-rangefor transpose-vector-rangefor
+
+kokkos: stencil-kokkos transpose-kokkos
+
+raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja
 
 cuda: transpose-cuda
 
@@ -71,6 +71,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-openmp: %-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
 
+%-taskloop: %-taskloop.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
+
 %-cilk: %-cilk.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(CILKFLAGS) -o $@
 
@@ -82,6 +85,12 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 
 %-rangefor: %-rangefor.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) -o $@
+
+%-raja: %-raja.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
+
+%-kokkos: %-kokkos.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
@@ -99,11 +108,14 @@ clean:
 	-rm -f *-valarray
 	-rm -f *-openmp
 	-rm -f *-target
+	-rm -f *-taskloop
 	-rm -f *-opencl
 	-rm -f *-cilk
 	-rm -f *-tbb
 	-rm -f *-pstl
 	-rm -f *-rangefor
+	-rm -f *-raja
+	-rm -f *-kokkos
 	-rm -f *-cuda
 
 cleancl:

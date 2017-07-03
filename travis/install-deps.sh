@@ -32,6 +32,15 @@ case "$PRK_TARGET" in
         echo "Rust"
         sh ./travis/install-rust.sh $TRAVIS_ROOT
         ;;
+    allc1z)
+        echo "C1z"
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
+            sh ./travis/install-gcc.sh $TRAVIS_ROOT
+        fi
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+            sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
+        fi
+        ;;
     allcxx)
         echo "C++11"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
@@ -45,17 +54,18 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             sh ./travis/install-boost.sh $TRAVIS_ROOT
         fi
+        # CMake 3.3 or higher is required.  You are running version 2.8.7.
+        sh ./travis/install-cmake.sh $TRAVIS_ROOT
+        sh ./travis/install-raja.sh $TRAVIS_ROOT
+        sh ./travis/install-kokkos.sh $TRAVIS_ROOT
         ;;
-    allfortran*)
+    allfortran)
         echo "Fortran"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
-            set +e
-            brew update
-            brew install gcc || brew upgrade gcc
-            brew list gcc
-            set -e
+            brew update || true
+            brew install gcc || brew upgrade gcc || true
         fi
-        if [ "${PRK_TARGET}" = "allfortrancoarray" ] && [ "${CC}" = "gcc" ] ; then
+        if [ "${CC}" = "gcc" ] ; then
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
         fi
         ;;
