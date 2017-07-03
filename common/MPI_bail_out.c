@@ -47,8 +47,8 @@ History:   Written by Rob Van der Wijngaart, January 2006
 
 **********************************************************************/
 
-#include <mpi.h>
 #include <par-res-kern_general.h>
+#include <mpi.h>
 
 void bail_out(int error) {
 

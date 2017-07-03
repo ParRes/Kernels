@@ -20,33 +20,55 @@ case "$PRK_TARGET" in
     allserial)
         echo "Serial"
         ;;
-
+    alloctave)
+        echo "Octave"
+        sh ./travis/install-octave.sh $TRAVIS_ROOT
+        ;;
     alljulia)
         echo "Julia"
         sh ./travis/install-julia.sh $TRAVIS_ROOT
         ;;
-
-    allfortran*)
+    allrust)
+        echo "Rust"
+        sh ./travis/install-rust.sh $TRAVIS_ROOT
+        ;;
+    allc1z)
+        echo "C1z"
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
+            sh ./travis/install-gcc.sh $TRAVIS_ROOT
+        fi
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+            sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
+        fi
+        ;;
+    allcxx)
+        echo "C++11"
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
+            sh ./travis/install-gcc.sh $TRAVIS_ROOT
+        fi
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+            sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
+        fi
+        sh ./travis/install-tbb.sh $TRAVIS_ROOT
+        # Boost is whitelisted and obtained from package manager
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            sh ./travis/install-boost.sh $TRAVIS_ROOT
+        fi
+        # CMake 3.3 or higher is required.  You are running version 2.8.7.
+        sh ./travis/install-cmake.sh $TRAVIS_ROOT
+        sh ./travis/install-raja.sh $TRAVIS_ROOT
+        sh ./travis/install-kokkos.sh $TRAVIS_ROOT
+        ;;
+    allfortran)
         echo "Fortran"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
-            set +e
-            brew update
-            p=gcc
-            if [ "x`brew ls --versions $p`" = "x" ] ; then
-                echo "$p is not installed - installing it"
-                brew install $p
-            else
-                echo "$p is installed - upgrading it"
-                brew upgrade $p
-            fi
-            brew list gcc
-            set -e
+            brew update || true
+            brew install gcc || brew upgrade gcc || true
         fi
-        if [ "${PRK_TARGET}" = "allfortrancoarray" ] && [ "${CC}" = "gcc" ] ; then
+        if [ "${CC}" = "gcc" ] ; then
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
         fi
         ;;
-
     allopenmp)
         echo "OpenMP"
         if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then

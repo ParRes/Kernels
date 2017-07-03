@@ -71,7 +71,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #define LINEWORDS  16 
 #define flag(TID,j)    flag[((TID)+(j)*nthread)*LINEWORDS] 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
-double *vector; /* array holding grid values                                     */
+double * RESTRICT vector;/* array holding grid values                            */
  
 int main(int argc, char ** argv)
 {

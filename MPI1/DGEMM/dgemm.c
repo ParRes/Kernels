@@ -104,7 +104,9 @@ int main(int argc, char *argv[])
       iter, iterations;
   long lda, ldb, ldc,
        nb, myncols;     /* make long to avoid integer overflow     */
-  double RESTRICT *a, *b, *c,    /* arrays that hold local a, b, c */
+  double * RESTRICT a,  /* arrays that hold local a, b, c          */
+         * RESTRICT b, 
+         * RESTRICT c, 
       *work1, *work2,   /* work arrays to pass to dpmmmult         */
       local_dgemm_time, /* timing parameters                       */
       dgemm_time,

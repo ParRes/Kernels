@@ -10,11 +10,11 @@ if [ "${CC}" = "gcc" ] || [ "${CXX}" = "g++" ] ; then
     case "$os" in
         Darwin)
             echo "Mac"
-            brew update
+            brew update || true
             # this is 5.3.0 or later
-            brew install gcc --without-multilib
+            brew upgrade gcc || brew install gcc --force-bottle || true
             ;;
-        Linux)
+        DisableLinux)
             echo "Linux"
             if [ ! -d "$TRAVIS_ROOT/gcc" ]; then
                 cd $TRAVIS_ROOT

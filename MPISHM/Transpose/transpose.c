@@ -99,10 +99,10 @@ int main(int argc, char ** argv)
   int phase;           /* phase in the staged communication                      */
   size_t colstart;     /* sequence number of first column owned by calling rank  */
   int error=0;         /* error flag                                             */
-  double RESTRICT *A_p;/* original matrix column block                           */
-  double RESTRICT *B_p;/* transposed matrix column block                         */
-  double RESTRICT *Work_in_p; /* workspace for transpose function                */
-  double RESTRICT *Work_out_p;/* workspace for transpose function                */
+  double * RESTRICT A_p;/* original matrix column block                          */
+  double * RESTRICT B_p;/* transposed matrix column block                        */
+  double * RESTRICT Work_in_p; /* workspace for transpose function               */
+  double * RESTRICT Work_out_p;/* workspace for transpose function               */
   double abserr, abserr_tot; /* computed error                                   */
   double epsilon = 1.e-8; /* error tolerance                                     */
   double local_trans_time, /* timing parameters                                  */

@@ -24,10 +24,10 @@ case "$os" in
         brew update
         case "$MPI_IMPL" in
             mpich)
-                brew install mpich
+                brew install mpich || brew upgrade mpich
                 ;;
             openmpi)
-                brew install openmpi
+                brew install openmpi || brew upgrade openmpi
                 ;;
             *)
                 echo "Unknown MPI implementation: $MPI_IMPL"
@@ -39,7 +39,7 @@ case "$os" in
         echo "Linux"
         case "$CC" in
             gcc)
-                for gccversion in "-6" "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
+                for gccversion in "-9" "-8" "-7" "-6" "-5" "-5.3" "-5.2" "-5.1" "-4.9" "-4.8" "-4.7" "-4.6" "" ; do
                     if [ -f "`which gcc$gccversion`" ]; then
                         export PRK_CC="gcc$gccversion"
                         export PRK_CXX="g++$gccversion"
@@ -50,7 +50,7 @@ case "$os" in
                 done
                 ;;
             clang)
-                for clangversion in "-omp" "-3.9" "-3.8" "-3.7" "-3.6" "-3.5" "-3.4" "" ; do
+                for clangversion in "-omp" "-5" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
                     find /usr/local -name clang$clangversion
                     if [ -f "`which clang$clangversion`" ]; then
                         export PRK_CC="clang$clangversion"
@@ -68,30 +68,23 @@ case "$os" in
         case "$MPI_IMPL" in
             mpich)
                 if [ ! -f "$TRAVIS_ROOT/bin/mpichversion" ]; then
-                    set +e
+                    MPICH_V=3.3a2
                     wget --no-check-certificate -q \
-                         http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz
-                    set -e
-                    if [ ! -f "$TRAVIS_ROOT/mpich-3.2.tar.gz" ]; then
-                        echo "MPICH download from mpich.org failed - trying Github mirror"
-                        wget --no-check-certificate -q \
-                             https://github.com/jeffhammond/mpich/archive/v3.2.tar.gz \
-                             -O mpich-3.2.tar.gz
-                        tar -xzf mpich-3.2.tar.gz
-                        cd mpich-3.2
-                    else
-                        tar -xzf mpich-3.2.tar.gz
-                        cd mpich-3.2
-                    fi
-                    sh $TRAVIS_HOME/travis/install-autotools.sh $TRAVIS_ROOT
-                    ./autogen.sh
+                         http://www.mpich.org/static/downloads/${MPICH_V}/mpich-${MPICH_V}.tar.gz || \
+                         wget --no-check-certificate -q \
+                         https://github.com/pmodels/mpich/archive/v${MPICH_V}.tar.gz
+                    tar -xzf mpich-${MPICH_V}.tar.gz || tar -xzf v${MPICH_V}.tar.gz
+                    cd mpich-${MPICH_V}
+                    # Autotools not required with release tarballs
+                    #sh $TRAVIS_HOME/travis/install-autotools.sh $TRAVIS_ROOT
+                    #./autogen.sh
                     mkdir build ; cd build
                     if [ "x$MPI_FORTRAN" != "x1" ] ; then
                         ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX --disable-fortran
                     else
                         ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX FC=$PRK_FC
                     fi
-                    make -j4
+                    make -j2
                     make install
                 else
                     echo "MPICH installed..."
@@ -101,16 +94,16 @@ case "$os" in
                 ;;
             openmpi)
                 if [ ! -f "$TRAVIS_ROOT/bin/ompi_info" ]; then
-                    wget --no-check-certificate -q http://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.1.tar.bz2
-                    tar -xjf http://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.1.tar.bz2
-                    cd openmpi-1.10.1
+                    wget --no-check-certificate -q https://www.open-mpi.org/software/ompi/v2.1/downloads/openmpi-2.1.1.tar.bz2
+                    tar -xjf openmpi-2.1.1.tar.bz2
+                    cd openmpi-2.1.1
                     mkdir build && cd build
                     if [ "x$MPI_FORTRAN" != "x1" ] ; then
                         ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX --enable-mpi-fortran=none
                     else
                         ../configure --prefix=$TRAVIS_ROOT CC=$PRK_CC CXX=$PRK_CXX FC=$PRK_FC
                     fi
-                    make -j4
+                    make -j2
                     make install
                 else
                     echo "OpenMPI installed..."

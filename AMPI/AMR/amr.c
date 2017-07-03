@@ -1215,6 +1215,17 @@ int main(int argc, char ** argv) {
   
   for (iter = 0; iter<=iterations; iter++){
 
+#if !NO_MIGRATE    
+    /* we only migrate at the start or end of a refinement period, but never if
+       there is no intervening time when no refinements are present              */
+    if ((iter%period == 0 || iter%period == duration ) && period != duration) {
+      AMPI_Load_start_measure();
+#if VERBOSE
+      if (my_ID==root) printf("Start measuring load in iteration %d\n", iter);
+#endif
+    }
+#endif
+
     /* start timer after a warmup iteration */
     if (iter == 1) {
       MPI_Barrier(MPI_COMM_WORLD);
@@ -1459,9 +1470,11 @@ int main(int argc, char ** argv) {
 #if !NO_MIGRATE    
     /* we only migrate at the start or end of a refinement period, but never if
        there is no intervening time when no refinements are present              */
-    if ((iter%period == migration_delay) || (iter%period == duration + migration_delay)) {
-      if (iter%period == migration_delay)            AMPI_Load_start_measure();
-      if (iter%period == duration + migration_delay) AMPI_Load_stop_measure();
+    if ((iter%period == migration_delay || iter%period == duration +migration_delay) && period != duration) {
+      AMPI_Load_stop_measure();
+#if VERBOSE
+      if (my_ID==root) printf("Stop measuring load in iteration %d and migrate\n", iter);
+#endif      
 #if USE_PUPER
       /* Copy pointers to data structure since migration is following*/
       fill_my_heap_ds(&my_heap_ds, L_width_bg, L_height_bg, total_length_in, total_length_out, 
@@ -1646,18 +1659,6 @@ int main(int argc, char ** argv) {
     }
   }
 
-  if (comm_bg != MPI_COMM_NULL) {
-    prk_free(in_bg); 
-    prk_free(out_bg);
-    prk_free(top_buf_out_bg);
-    prk_free(right_buf_out_bg);
-  }
-  for (int g=0; g<4; g++) if (comm_r[g] != MPI_COMM_NULL) {
-    prk_free(in_r[g]); 
-    prk_free(out_r[g]);
-    prk_free(top_buf_out_r[g]);
-    prk_free(right_buf_out_r[g]);    
-  }
   MPI_Finalize();
   return(MPI_SUCCESS);
 }
