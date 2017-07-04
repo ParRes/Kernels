@@ -72,7 +72,7 @@ case "$PRK_TARGET" in
     allopenmp)
         echo "OpenMP"
         if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
-            sh ./travis/install-clang.sh $TRAVIS_ROOT omp
+            sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
         fi
         ;;
     allmpi)
