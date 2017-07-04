@@ -215,7 +215,7 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
+  write(*,'(a25)') 'Parallel Research Kernels'
 #ifdef _OPENMP
   write(*,'(a40)') 'Fortran OpenMP Stencil execution on 2D grid'
 #else

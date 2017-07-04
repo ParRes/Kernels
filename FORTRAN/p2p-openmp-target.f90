@@ -87,7 +87,7 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
+  write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a40)') 'Fortran OpenMP pipeline execution on 2D grid'
 
   if (command_argument_count().lt.3) then

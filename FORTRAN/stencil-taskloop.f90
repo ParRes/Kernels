@@ -180,7 +180,7 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
+  write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a60)') 'Fortran OpenMP TASKLOOP Stencil execution on 2D grid'
 
   if (command_argument_count().lt.2) then

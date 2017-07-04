@@ -105,7 +105,7 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
+  write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a40)') 'Fortran OpenMP TASKS pipeline execution on 2D grid'
 
   if (command_argument_count().lt.2) then

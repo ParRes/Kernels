@@ -229,7 +229,7 @@ program main
   np = num_images()
   me = this_image()
   if (me == 1) then
-    write(*,'(a40)') 'Parallel Research Kernels'
+    write(*,'(a25)') 'Parallel Research Kernels'
     write(*,'(a40)') 'Fortran coarray stencil execution on 2D grid'
   endif
 
