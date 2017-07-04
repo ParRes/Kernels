@@ -585,11 +585,13 @@ case "$PRK_TARGET" in
     allopenmp)
         echo "OpenMP"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
-            which clang-omp
-            echo "CC=clang-omp -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
+            CLANG_VERSION=3.9
+            brew install llvm@$CLANG_VERSION || brew upgrade llvm@$CLANG_VERSION
+            echo "CC=/usr/local/opt/llvm@${CLANG_VERSION}/bin/clang-${CLANG_VERSION} -std=c99" >> common/make.defs
         else
-            echo "CC=$CC -std=c99\nOPENMPFLAG=-fopenmp" >> common/make.defs
+            echo "CC=$CC -std=c99" >> common/make.defs
         fi
+        echo "OPENMPFLAG=-fopenmp" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=OPENMP
         export OMP_NUM_THREADS=4
