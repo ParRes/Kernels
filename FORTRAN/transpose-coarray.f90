@@ -84,7 +84,6 @@ program main
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
   integer(kind=INT32) ::  order                     ! order of a the matrix
-!!  !dec$ attribute align:4096 :: A, B
   real(kind=REAL64), allocatable ::  A(:,:)[:]      ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)[:]      ! buffer to hold transposed matrix
   real(kind=REAL64), allocatable ::  T(:,:)         ! temporary to hold tile
