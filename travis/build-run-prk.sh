@@ -587,7 +587,6 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
             CLANG_VERSION=3.9
             brew install llvm@$CLANG_VERSION || brew upgrade llvm@$CLANG_VERSION
-            brew list llvm@$CLANG_VERSION
             echo "CC=/usr/local/opt/llvm@${CLANG_VERSION}/bin/clang-${CLANG_VERSION} -std=c99" >> common/make.defs
             echo "OPENMPFLAG=-fopenmp" \
                             " -L/usr/local/opt/llvm@$CLANG_VERSION/lib -lomp" \
