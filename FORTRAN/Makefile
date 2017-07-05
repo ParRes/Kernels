@@ -71,6 +71,7 @@ clean:
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
 	-rm -f p2p stencil transpose
+	-rm -f p2p-innerloop
 	-rm -f *-pretty
 	-rm -f *-coarray
 	-rm -f *-openmp
