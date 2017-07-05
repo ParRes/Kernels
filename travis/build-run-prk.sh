@@ -823,7 +823,7 @@ case "$PRK_TARGET" in
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
-        make $PRK_TARGET PRK_FLAGS=-O3
+        make $PRK_TARGET PRK_FLAGS="-O3 -std=gnu99"
         export PRK_TARGET_PATH=AMPI
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
