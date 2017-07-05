@@ -60,7 +60,7 @@
 
 program main
     print*,'PGI does not support Fortran 2008'
-    stop 1
+    stop
 end program main
 
 #else
@@ -129,12 +129,12 @@ program main
 
      if (iterations .lt. 1) then
         write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-        error stop 1
+        error stop
      endif
 
      if ((m .lt. 1).or.(n .lt. 1)) then
         write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
-        error stop 1
+        error stop
      endif
 
   ! co_max is part of Fortran 2015, so we will not assume it. This is present
@@ -149,7 +149,7 @@ program main
 
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of grid returned ',err
-    error stop 1
+    error stop
   endif
 
   if(me == 1) then
@@ -225,7 +225,7 @@ program main
      if (abs(grid(m_local,n)-corner_val)/corner_val .gt. epsilon) then
         write(*,'(a,f10.2,a,f10.2)') 'ERROR: checksum ',grid(m_local,n), &
              ' does not match verification value ', corner_val
-        error stop 1
+        error stop
      endif
      write(*,'(a)') 'Solution validates'
 

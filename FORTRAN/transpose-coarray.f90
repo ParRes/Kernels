@@ -57,7 +57,7 @@
 
 program main
     print*,'PGI does not support Fortran 2008'
-    stop 1
+    stop
 end program main
 
 #else
@@ -324,7 +324,7 @@ program main
       write(6,'(a30,f13.6,a18,f13.6)') 'ERROR: Aggregate squared error ', &
               abserr,' exceeds threshold ',(epsilon/npes)
     endif
-    error stop 1
+    error stop
   endif
 
 end program main

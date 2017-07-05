@@ -93,7 +93,7 @@ program main
     write(*,'(a20,i1)') 'argument count = ', command_argument_count()
     write(*,'(a35,a50)')  'Usage: ./synch_p2p <# iterations> ',  &
                           '<array x-dimension> <array y-dimension>'
-    stop 1
+    stop
   endif
 
   iterations = 1
@@ -110,12 +110,12 @@ program main
 
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
+    stop
   endif
 
   if ((m .lt. 1).or.(n .lt. 1)) then
     write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
-    stop 1
+    stop
   endif
 
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
@@ -124,7 +124,7 @@ program main
   allocate( grid(m,n), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of grid returned ',err
-    stop 1
+    stop
   endif
 
   !$acc parallel loop gang
@@ -172,7 +172,7 @@ program main
   if (abs(grid(m,n)-corner_val)/corner_val .gt. epsilon) then
     write(*,'(a,f10.2,a,f10.2)') 'ERROR: checksum ',grid(m,n), &
             ' does not match verification value ', corner_val
-    stop 1
+    stop
   endif
 
   write(*,'(a)') 'Solution validates'
