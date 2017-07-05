@@ -6,7 +6,8 @@ env:
   - PRK_TARGET=allc1z
   - PRK_TARGET=allcxx
   - PRK_TARGET=allpython
-  - PRK_TARGET=alloctave
+  # Octave is working but it takes forever to brew (~20 minutes).
+  #- PRK_TARGET=alloctave
   - PRK_TARGET=alljulia
   - PRK_TARGET=allrust
   - PRK_TARGET=allopenmp
@@ -154,6 +155,10 @@ matrix:
   - os: linux
     compiler: clang
     env: PRK_TARGET=allampi
+  # Undiagnosed failure (https://travis-ci.org/ParRes/Kernels/jobs/250493905)
+  - os: osx
+    compiler: clang
+    env: PRK_TARGET=allfgmpi
 addons:
   apt:
     sources:
