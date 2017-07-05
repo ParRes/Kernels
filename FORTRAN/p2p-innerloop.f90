@@ -80,7 +80,9 @@ end subroutine
 
 program main
   use iso_fortran_env
+#ifdef _OPENMP
   use omp_lib
+#endif
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -102,14 +104,20 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran OpenMP wavefront pipeline execution on 2D grid'
+  write(*,'(a25)') 'Parallel Research Kernels'
+#ifdef _OPENMP
+  write(*,'(a33,a21)') 'Fortran OpenMP INNERLOOP pipeline', &
+                       ' execution on 2D grid'
+#else
+  write(*,'(a33,a21)') 'Fortran Serial INNERLOOP pipeline', &
+                       ' execution on 2D grid'
+#endif
 
   if (command_argument_count().lt.2) then
-    write(*,'(a20,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a35,a50)')  'Usage: ./synch_p2p <# iterations> ',  &
-                          '<grid dimension>'
-    stop 1
+    write(*,'(a16,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a34,a16)') 'Usage: ./synch_p2p <# iterations> ',  &
+                         '<grid dimension>'
+    stop
   endif
 
   iterations = 1
@@ -122,22 +130,24 @@ program main
 
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
+    stop
   endif
 
   if (n .lt. 1) then
     write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', n
-    stop 1
+    stop
   endif
 
+#ifdef _OPENMP
   write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
+#endif
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
   write(*,'(a,i8,i8)') 'Grid sizes               = ', n, n
 
   allocate( grid(n,n), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of grid returned ',err
-    stop 1
+    stop
   endif
 
   !$omp parallel default(none)                                  &
@@ -215,7 +225,7 @@ program main
   if (abs(grid(n,n)-corner_val)/corner_val .gt. epsilon) then
     write(*,'(a,f10.2,a,f10.2)') 'ERROR: checksum ',grid(n,n), &
             ' does not match verification value ', corner_val
-    stop 1
+    stop
   endif
 
   write(*,'(a)') 'Solution validates'
