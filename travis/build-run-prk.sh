@@ -591,7 +591,7 @@ case "$PRK_TARGET" in
             echo "OPENMPFLAG=-fopenmp" \
                             " -L/usr/local/opt/llvm@$CLANG_VERSION/lib -lomp" \
                             " /usr/local/opt/llvm@$CLANG_VERSION/lib/libomp.dylib" \
-                            " -Wl,-rpath=/usr/local/opt/llvm@$CLANG_VERSION/lib" >> common/make.defs
+                            " -Wl,-rpath -Wl,/usr/local/opt/llvm@$CLANG_VERSION/lib" >> common/make.defs
             export LD_RUN_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$LD_RUN_PATH
             export LD_LIBRARY_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$LD_LIBRARY_PATH
             export DYLD_LIBRARY_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$DYLD_LIBRARY_PATH
