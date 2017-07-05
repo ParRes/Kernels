@@ -6,7 +6,7 @@ include ../../common/SERIAL.defs
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
 #description: change above into something that is a decent optimization on you system
 
-USERFLAGS    = 
+USERFLAGS    = #-DDEBUG_DUMP
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
