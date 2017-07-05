@@ -589,7 +589,13 @@ case "$PRK_TARGET" in
             brew install llvm@$CLANG_VERSION || brew upgrade llvm@$CLANG_VERSION
             brew list llvm@$CLANG_VERSION
             echo "CC=/usr/local/opt/llvm@${CLANG_VERSION}/bin/clang-${CLANG_VERSION} -std=c99" >> common/make.defs
-            echo "OPENMPFLAG=-fopenmp /usr/local/opt/llvm@$CLANG_VERSION/lib/libomp.dylib" >> common/make.defs
+            echo "OPENMPFLAG=-fopenmp" \
+                            " -L/usr/local/opt/llvm@$CLANG_VERSION/lib -lomp" \
+                            " /usr/local/opt/llvm@$CLANG_VERSION/lib/libomp.dylib" \
+                            " -Wl,-rpath=/usr/local/opt/llvm@$CLANG_VERSION/lib" >> common/make.defs
+            export LD_RUN_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$LD_RUN_PATH
+            export LD_LIBRARY_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$LD_LIBRARY_PATH
+            export DYLD_LIBRARY_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$DYLD_LIBRARY_PATH
         else
             echo "CC=$CC -std=c99" >> common/make.defs
             echo "OPENMPFLAG=-fopenmp" >> common/make.defs
