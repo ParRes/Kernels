@@ -42,11 +42,8 @@ esac
 
 if [ ! -d "$TRAVIS_ROOT/charm" ]; then
     cd $TRAVIS_ROOT
-    #wget --no-check-certificate -q https://charm.cs.illinois.edu/distrib/charm-6.7.1.tar.gz
-    #tar -xzf charm-6.7.1.tar.gz
-    #cd charm-6.7.1
-    git clone -b v6.8.0-beta2 https://charm.cs.illinois.edu/gerrit/charm.git charm-6.8.0-beta2
-    cd charm-6.8.0-beta2
+    git clone -b v6.8.0-beta2 https://charm.cs.illinois.edu/gerrit/charm.git charm
+    cd charm
     case "$os" in
         Darwin)
             echo "Mac"
