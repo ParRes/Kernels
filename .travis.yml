@@ -148,16 +148,9 @@ matrix:
   #- os: linux
   #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
   # Travis tests failing due to runtime problems
-  - os: osx
-    env: PRK_TARGET=allampi
   - os: linux
     env: PRK_TARGET=allampi
   - os: linux
-    compiler: clang
-    env: PRK_TARGET=allampi
-  # Undiagnosed failure (https://travis-ci.org/ParRes/Kernels/jobs/250493905)
-  - os: osx
-    compiler: clang
     env: PRK_TARGET=allfgmpi
 addons:
   apt:
