@@ -587,9 +587,14 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
             CLANG_VERSION=3.9
             brew install llvm@$CLANG_VERSION || brew upgrade llvm@$CLANG_VERSION
-            brew list llvm@$CLANG_VERSION
             echo "CC=/usr/local/opt/llvm@${CLANG_VERSION}/bin/clang-${CLANG_VERSION} -std=c99" >> common/make.defs
-            echo "OPENMPFLAG=-fopenmp /usr/local/opt/llvm@$CLANG_VERSION/lib/libomp.dylib" >> common/make.defs
+            echo "OPENMPFLAG=-fopenmp" \
+                            " -L/usr/local/opt/llvm@$CLANG_VERSION/lib -lomp" \
+                            " /usr/local/opt/llvm@$CLANG_VERSION/lib/libomp.dylib" \
+                            " -Wl,-rpath -Wl,/usr/local/opt/llvm@$CLANG_VERSION/lib" >> common/make.defs
+            export LD_RUN_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$LD_RUN_PATH
+            export LD_LIBRARY_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$LD_LIBRARY_PATH
+            export DYLD_LIBRARY_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$DYLD_LIBRARY_PATH
         else
             echo "CC=$CC -std=c99" >> common/make.defs
             echo "OPENMPFLAG=-fopenmp" >> common/make.defs
@@ -785,12 +790,12 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-linux-x86_64-smp
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
+                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
@@ -809,16 +814,16 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-linux-x86_64-smp
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
+                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
-        make $PRK_TARGET PRK_FLAGS=-O3
+        make $PRK_TARGET PRK_FLAGS="-O3 -std=gnu99"
         export PRK_TARGET_PATH=AMPI
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
