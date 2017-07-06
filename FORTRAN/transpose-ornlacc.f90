@@ -91,7 +91,7 @@ program main
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
     write(*,'(a)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
-    stop
+    error stop
   endif
 
   iterations = 1
@@ -99,7 +99,7 @@ program main
   if (err.eq.0) read(argtmp,'(i32)') iterations
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop
+    error stop
   endif
 
   order = 1
@@ -107,7 +107,7 @@ program main
   if (err.eq.0) read(argtmp,'(i32)') order
   if (order .lt. 1) then
     write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
-    stop
+    error stop
   endif
 
   ! same default as the C implementation
@@ -129,13 +129,13 @@ program main
   allocate( A(order,order), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of A returned ',err
-    stop
+    error stop
   endif
 
   allocate( B(order,order), stat=err )
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of B returned ',err
-    stop
+    error stop
   endif
 
   write(*,'(a,i8)') 'Matrix order         = ', order
@@ -239,7 +239,7 @@ program main
   else
     write(*,'(a,f30.15,a,f30.15)') 'ERROR: Aggregate squared error ',abserr, &
            'exceeds threshold ',epsilon
-    stop
+    error stop
   endif
 
 end program main

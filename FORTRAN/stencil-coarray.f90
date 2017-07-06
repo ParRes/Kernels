@@ -58,7 +58,7 @@
 !            refreshing of neighbor data in parallel versions; August 2013
 !          - Converted to Fortran by Jeff Hammond, January-February 2016.
 !          - Converted to CAF by Alessandro Fanfarillo, February 2016.
-!          - Small fixes for OpenCoarrays `stop` issue work around by
+!          - Small fixes for OpenCoarrays `error stop` issue work around by
 !            Izaak "Zaak" Beekman, March 2017
 ! *************************************************************************
 
@@ -66,7 +66,7 @@
 
 program main
     print*,'PGI does not support Fortran 2008'
-    stop
+    error stop
 end program main
 
 #else

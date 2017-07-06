@@ -211,7 +211,7 @@ program main
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
     write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',             &
                       '<array dimension> [tile_size]'
-    stop
+    error stop
   endif
 
   iterations = 1
@@ -219,7 +219,7 @@ program main
   if (err.eq.0) read(argtmp,'(i32)') iterations
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop
+    error stop
   endif
 
   n = 1
@@ -227,7 +227,7 @@ program main
   if (err.eq.0) read(argtmp,'(i32)') n
   if (n .lt. 1) then
     write(*,'(a,i5)') 'ERROR: array dimension must be >= 1 : ', n
-    stop
+    error stop
   endif
 
   tiling    = .false.
@@ -254,23 +254,23 @@ program main
 
   if (r .lt. 1) then
     write(*,'(a,i5,a)') 'ERROR: Stencil radius ',r,' should be positive'
-    stop
+    error stop
   else if ((2*r+1) .gt. n) then
     write(*,'(a,i5,a,i5)') 'ERROR: Stencil radius ',r,&
                            ' exceeds grid size ',n
-    stop
+    error stop
   endif
 
   allocate( A(n,n), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of A returned ',err
-    stop
+    error stop
   endif
 
   allocate( B(n,n), stat=err )
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of B returned ',err
-    stop
+    error stop
   endif
 
   norm = 0.d0

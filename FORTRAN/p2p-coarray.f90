@@ -60,7 +60,7 @@
 
 program main
     print*,'PGI does not support Fortran 2008'
-    stop
+    error stop
 end program main
 
 #else
@@ -236,11 +236,7 @@ program main
 
   sync all
 
-  ! deallocate( grid ) ! Shouldn't be needed... if memory leaks are occuring please
-                       ! report to upstream
-
-  ! error stop ! Use error stop instead of stop due to
-               ! https://github.com/sourceryinstitute/OpenCoarrays/issues/309
+  deallocate( grid )
 
 end program
 

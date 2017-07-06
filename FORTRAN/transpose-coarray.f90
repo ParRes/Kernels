@@ -57,7 +57,7 @@
 
 program main
     print*,'PGI does not support Fortran 2008'
-    stop
+    error stop
 end program main
 
 #else
