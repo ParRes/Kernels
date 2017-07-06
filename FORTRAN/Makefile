@@ -27,9 +27,9 @@ endif
 
 all: serial pretty openmp $(COARRAY) $(TARGET)
 
-serial: p2p stencil transpose
+serial: p2p stencil transpose p2p-innerloop
 
-pretty: stencil-pretty transpose-pretty p2p-innerloop
+pretty: stencil-pretty transpose-pretty
 
 openmp: p2p-tasks-openmp p2p-doacross-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
