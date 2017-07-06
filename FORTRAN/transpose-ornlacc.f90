@@ -85,12 +85,12 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran ORNL-ACC Matrix transpose: B = A^T'
+  write(*,'(a25)') 'Parallel Research Kernels'
+  write(*,'(a41)') 'Fortran OpenACC Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
+    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
     error stop
   endif
 

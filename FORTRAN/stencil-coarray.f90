@@ -229,13 +229,14 @@ program main
   np = num_images()
   me = this_image()
   if (me == 1) then
-    write(*,'(a40)') 'Parallel Research Kernels'
-    write(*,'(a40)') 'Fortran coarray stencil execution on 2D grid'
+    write(*,'(a25)') 'Parallel Research Kernels'
+    write(*,'(a44)') 'Fortran coarray stencil execution on 2D grid'
   endif
 
   if (command_argument_count().lt.2) then
     if (me == 1) then
-      write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',           &
+      write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+      write(*,'(a32,a29)') 'Usage: ./stencil <# iterations> ', &
                         '<array dimension> [tile_size]'
     endif
     error stop

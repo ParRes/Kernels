@@ -103,14 +103,15 @@ program main
 
   ! co_broadcast is part of Fortran 2015, so we will not assume it yet.
   if(me == 1) then
-     write(*,'(a40)') 'Parallel Research Kernels'
-     write(*,'(a40)') 'Fortran coarray pipeline execution on 2D grid'
+     write(*,'(a25)') 'Parallel Research Kernels'
+     write(*,'(a45)') 'Fortran coarray pipeline execution on 2D grid'
 
   endif
      if (command_argument_count().lt.3) then
         if(me == 1) then
-          write(*,'(a,a)')  'Usage: ./synch_p2p <# iterations> ',           &
-               '<first array dimension> <second array dimension>'
+          write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+          write(*,'(a34,a38)')  'Usage: ./synch_p2p <# iterations> ',  &
+                                '<array x-dimension> <array y-dimension>'
         endif
         error stop
      endif
