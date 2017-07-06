@@ -155,10 +155,8 @@ matrix:
   - os: linux
     compiler: clang
     env: PRK_TARGET=allampi
-  # Undiagnosed failure (https://travis-ci.org/ParRes/Kernels/jobs/250493905)
-  - os: osx
-    compiler: clang
-    env: PRK_TARGET=allfgmpi
+  # FG-MPI fails non-deterministically it seems.
+  - env: PRK_TARGET=allfgmpi
 addons:
   apt:
     sources:
