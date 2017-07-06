@@ -537,10 +537,10 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/transpose-pretty    10 1024
 
         # OpenMP host
-        make -C ${PRK_TARGET_PATH} p2p-openmp-tasks p2p-openmp-datapar stencil-openmp transpose-openmp
+        make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-datapar-openmp stencil-openmp transpose-openmp
         export OMP_NUM_THREADS=2
-        $PRK_TARGET_PATH/p2p-openmp-tasks     10 1024 1024
-        $PRK_TARGET_PATH/p2p-openmp-datapar   10 1024 1024
+        $PRK_TARGET_PATH/p2p-tasks-openmp     10 1024 1024
+        $PRK_TARGET_PATH/p2p-datapar-openmp   10 1024 1024
         #$PRK_TARGET_PATH/p2p-openmp-doacross  10 1024 1024 # most compilers do not support doacross yet
         $PRK_TARGET_PATH/stencil-openmp       10 1000
         $PRK_TARGET_PATH/transpose-openmp     10 1024 1
