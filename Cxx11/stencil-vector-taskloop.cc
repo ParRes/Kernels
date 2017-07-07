@@ -138,8 +138,7 @@ int main(int argc, char * argv[])
   _Pragma("omp parallel")
   _Pragma("omp master")
   {
-    //_Pragma("omp taskloop collapse(2)")
-    _Pragma("omp taskloop grainsize(32)")
+    _Pragma("omp taskloop firstprivate(n) shared(in,out)")
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
         in[i*n+j] = static_cast<double>(i+j);
@@ -184,8 +183,7 @@ int main(int argc, char * argv[])
           }
       }
       // add constant to solution to force refresh of neighbor data, if any
-      //_Pragma("omp taskloop collapse(2)")
-      _Pragma("omp taskloop grainsize(32)")
+      _Pragma("omp taskloop firstprivate(n) shared(in)")
       for (auto i=0; i<n; i++) {
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
