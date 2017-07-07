@@ -152,7 +152,7 @@ program main
   !$omp&  private(i,j,it,jt,k)
   !$omp master
 
-  !$omp taskloop collapse(2) mergeable
+  !$omp taskloop shared(A,B) collapse(2) mergeable
   do jt=1,order,tile_size
     do it=1,order,tile_size
       do j=jt,min(order,jt+tile_size-1)
@@ -173,7 +173,7 @@ program main
       t0 = prk_get_wtime()
     endif
 
-    !$omp taskloop collapse(2) mergeable
+    !$omp taskloop shared(A,B) collapse(2) mergeable
     do jt=1,order,tile_size
       do it=1,order,tile_size
         do j=jt,min(order,jt+tile_size-1)
