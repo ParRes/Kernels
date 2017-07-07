@@ -63,6 +63,21 @@ function prk_get_wtime() result(t)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
 
+subroutine sweep_tile(startm,endm,startn,endn,m,n,grid)
+  use iso_fortran_env
+  implicit none
+  integer(kind=INT32), intent(in) :: m,n
+  integer(kind=INT32), intent(in) :: startm,endm
+  integer(kind=INT32), intent(in) :: startn,endn
+  real(kind=REAL64), intent(inout) ::  grid(m,n)
+  integer(kind=INT32) :: i,j
+  do j=startn,endn
+    do i=startm,endm
+      grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
+    enddo
+  enddo
+end subroutine
+
 program main
   use iso_fortran_env
   use omp_lib
@@ -79,6 +94,9 @@ program main
   real(kind=REAL64), allocatable :: grid(:,:)           ! array holding grid values
   ! runtime variables
   integer(kind=INT32) :: i, j, k
+  integer(kind=INT32) :: ic, mc                         ! ic = chunking index, mc = chunking dimension
+  integer(kind=INT32) :: jc, nc                         ! jc = chunking index, nc = chunking dimension
+  integer(kind=INT32) :: lic, ljc                       ! hold indexes of last block
   integer ::  me, nt
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
@@ -87,12 +105,12 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran OpenMP pipeline execution on 2D grid'
+  write(*,'(a25)') 'Parallel Research Kernels'
+  write(*,'(a50)') 'Fortran OpenMP TASKS pipeline execution on 2D grid'
 
-  if (command_argument_count().lt.3) then
-    write(*,'(a20,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a35,a50)')  'Usage: ./synch_p2p <# iterations> ',  &
+  if (command_argument_count().lt.2) then
+    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a34,a38)')  'Usage: ./synch_p2p <# iterations> ',  &
                           '<array x-dimension> <array y-dimension>'
     stop 1
   endif
@@ -105,9 +123,19 @@ program main
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') m
 
-  n = 1
-  call get_command_argument(3,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') n
+  n = m
+  if (command_argument_count().gt.2) then
+    call get_command_argument(3,argtmp,arglen,err)
+    if (err.eq.0) read(argtmp,'(i32)') n
+
+    mc = m
+    call get_command_argument(4,argtmp,arglen,err)
+    if (err.eq.0) read(argtmp,'(i32)') mc
+
+    nc = n
+    call get_command_argument(5,argtmp,arglen,err)
+    if (err.eq.0) read(argtmp,'(i32)') nc
+  endif
 
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
@@ -119,9 +147,19 @@ program main
     stop 1
   endif
 
+  ! mc=m or nc=n disables chunking in that dimension, which means
+  ! there is no task parallelism to exploit
+  if (((mc.lt.1).or.(mc.gt.m)).or.((nc.lt.1).or.(nc.gt.n))) then
+    mc = int(m/omp_get_max_threads())
+    nc = int(n/omp_get_max_threads())
+  endif
+  mc = max(1,mc)
+  nc = max(1,nc)
+
   write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
   write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
+  write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
 
   allocate( grid(m,n), stat=err)
   if (err .ne. 0) then
@@ -129,9 +167,12 @@ program main
     stop 1
   endif
 
+  lic = (m/mc-1) * mc + 2
+  ljc = (n/nc-1) * nc + 2
+
   !$omp parallel default(none)                                  &
   !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
-  !$omp&  firstprivate(m,n)                                     &
+  !$omp&  firstprivate(m,n,mc,nc,ic,jc,lic,ljc)                 &
   !$omp&  private(i,j,k,corner_val)
 
   !$omp do collapse(2)
@@ -163,21 +204,18 @@ program main
       !$omp end master
     endif
 
-    !$omp do ordered(2) collapse(2)
-    do j=2,n
-      do i=2,m
-        !$omp ordered depend(sink:j,i-1) depend(sink:j-1,i) depend(sink:j-1,i-1)
-        grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
-        !$omp ordered depend(source)
+    !$omp master
+    do ic=2,m,mc
+      do jc=2,n,nc
+        !$omp task depend(in:grid(1,1),grid(ic-mc,jc-nc),grid(ic-mc,jc),grid(ic,jc-nc)) depend(out:grid(ic,jc))
+        call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
+        !$omp end task
       enddo
     enddo
-    !$omp end do
-
-    !$omp master
+    !$omp task depend(in:grid(lic,ljc)) depend(out:grid(1,1))
     grid(1,1) = -grid(m,n)
+    !$omp end task
     !$omp end master
-
-    !$omp barrier
 
   enddo ! iterations
 

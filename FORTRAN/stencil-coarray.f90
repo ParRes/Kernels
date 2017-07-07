@@ -58,7 +58,7 @@
 !            refreshing of neighbor data in parallel versions; August 2013
 !          - Converted to Fortran by Jeff Hammond, January-February 2016.
 !          - Converted to CAF by Alessandro Fanfarillo, February 2016.
-!          - Small fixes for OpenCoarrays `stop` issue work around by
+!          - Small fixes for OpenCoarrays `stop 1` issue work around by
 !            Izaak "Zaak" Beekman, March 2017
 ! *************************************************************************
 
@@ -229,16 +229,17 @@ program main
   np = num_images()
   me = this_image()
   if (me == 1) then
-    write(*,'(a40)') 'Parallel Research Kernels'
-    write(*,'(a40)') 'Fortran coarray stencil execution on 2D grid'
+    write(*,'(a25)') 'Parallel Research Kernels'
+    write(*,'(a44)') 'Fortran coarray stencil execution on 2D grid'
   endif
 
   if (command_argument_count().lt.2) then
     if (me == 1) then
-      write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',           &
+      write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+      write(*,'(a32,a29)') 'Usage: ./stencil <# iterations> ', &
                         '<array dimension> [tile_size]'
     endif
-    error stop
+    stop 1
   endif
 
   iterations = 1
@@ -248,7 +249,7 @@ program main
     if (me == 1) then
       write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     endif
-    error stop
+    stop 1
   endif
 
   n = 1
@@ -258,7 +259,7 @@ program main
     if (me == 1) then
       write(*,'(a,i5)') 'ERROR: array dimension must be >= 1 : ', n
     endif
-    error stop
+    stop 1
   endif
 
   tiling    = .false.
@@ -287,13 +288,13 @@ program main
     if (me == 1) then
       write(*,'(a,i5,a)') 'ERROR: Stencil radius ',r,' should be positive'
     endif
-    error stop
+    stop 1
   else if ((2*r+1) .gt. n) then
     if (me == 1) then
       write(*,'(a,i5,a,i5)') 'ERROR: Stencil radius ',r,&
                              ' exceeds grid size ',n
     endif
-    error stop
+    stop 1
   endif
 
 !  Collectives are part of Fortran 2015
@@ -332,13 +333,13 @@ program main
   allocate( A(1-r:nr_g+r,1-r:nc_g+r)[dims(1),*], stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of A returned ',err
-    error stop
+    stop 1
   endif
 
   allocate( B(1:nr_g,1:nc_g), stat=err )
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of B returned ',err
-    error stop
+    stop 1
   endif
 
   norm = 0.d0

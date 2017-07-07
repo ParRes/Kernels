@@ -88,16 +88,16 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
+  write(*,'(a25)') 'Parallel Research Kernels'
 #ifdef _OPENMP
   write(*,'(a40)') 'Fortran OpenMP Matrix transpose: B = A^T'
 #else
-  write(*,'(a40)') 'Fortran Matrix transpose: B = A^T'
+  write(*,'(a40)') 'Fortran Serial Matrix transpose: B = A^T'
 #endif
 
   if (command_argument_count().lt.2) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
+    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
     stop 1
   endif
 
@@ -124,7 +124,7 @@ program main
       if (err.eq.0) read(argtmp,'(i32)') tile_size
   endif
   if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
+    write(*,'(a20,i5,a22,i5)') 'WARNING: tile_size ',tile_size,&
                            ' must be >= 1 and <= ',order
     tile_size = order ! no tiling
   endif

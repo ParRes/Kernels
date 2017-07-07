@@ -103,12 +103,12 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran Serial pipeline execution on 2D grid'
+  write(*,'(a25)') 'Parallel Research Kernels'
+  write(*,'(a44)') 'Fortran Serial pipeline execution on 2D grid'
 
-  if (command_argument_count().lt.3) then
-    write(*,'(a20,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a35,a50)')  'Usage: ./synch_p2p <# iterations> ',  &
+  if (command_argument_count().lt.2) then
+    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a34,a38)')  'Usage: ./synch_p2p <# iterations> ',  &
                           '<array x-dimension> <array y-dimension>'
     stop 1
   endif
@@ -121,17 +121,19 @@ program main
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') m
 
-  n = 1
-  call get_command_argument(3,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') n
+  n = m
+  if (command_argument_count().gt.2) then
+    call get_command_argument(3,argtmp,arglen,err)
+    if (err.eq.0) read(argtmp,'(i32)') n
 
-  mc = m
-  call get_command_argument(4,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') mc
+    mc = m
+    call get_command_argument(4,argtmp,arglen,err)
+    if (err.eq.0) read(argtmp,'(i32)') mc
 
-  nc = n
-  call get_command_argument(5,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') nc
+    nc = n
+    call get_command_argument(5,argtmp,arglen,err)
+    if (err.eq.0) read(argtmp,'(i32)') nc
+  endif
 
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
@@ -152,12 +154,7 @@ program main
 
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
   write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
-  if (chunk) then
-      write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
-      if (mc==1) write(*,'(a)') '> traverse in the n dimension'
-  else
-      if (mc==m) write(*,'(a)') '> traverse in the m dimension'
-  endif
+  write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
 
   allocate( grid(m,n), stat=err)
   if (err .ne. 0) then

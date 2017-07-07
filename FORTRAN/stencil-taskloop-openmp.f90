@@ -180,12 +180,12 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
-  write(*,'(a60)') 'Fortran OpenMP TASKLOOP Stencil execution on 2D grid'
+  write(*,'(a25)') 'Parallel Research Kernels'
+  write(*,'(a52)') 'Fortran OpenMP TASKLOOP Stencil execution on 2D grid'
 
   if (command_argument_count().lt.2) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',             &
+    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a32,a29)') 'Usage: ./stencil <# iterations> ', &
                       '<array dimension> [tile_size]'
     stop 1
   endif

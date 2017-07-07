@@ -523,24 +523,25 @@ case "$PRK_TARGET" in
         esac
 
         # Serial
-        make -C ${PRK_TARGET_PATH} serial
+        make -C ${PRK_TARGET_PATH} p2p p2p-innerloop stencil transpose
         $PRK_TARGET_PATH/p2p               10 1024 1024
+        $PRK_TARGET_PATH/p2p-innerloop     10 1024 1024
         $PRK_TARGET_PATH/stencil           10 1000
         $PRK_TARGET_PATH/transpose         10 1024 1
         $PRK_TARGET_PATH/transpose         10 1024 32
 
         # Pretty
-        make -C ${PRK_TARGET_PATH} pretty
+        make -C ${PRK_TARGET_PATH} stencil-pretty transpose-pretty
         #$PRK_TARGET_PATH/p2p-pretty          10 1024 1024
         # pretty versions do not support tiling...
         $PRK_TARGET_PATH/stencil-pretty      10 1000
         $PRK_TARGET_PATH/transpose-pretty    10 1024
 
         # OpenMP host
-        make -C ${PRK_TARGET_PATH} p2p-openmp-tasks p2p-openmp-datapar stencil-openmp transpose-openmp
+        make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
         export OMP_NUM_THREADS=2
-        $PRK_TARGET_PATH/p2p-openmp-tasks     10 1024 1024
-        $PRK_TARGET_PATH/p2p-openmp-datapar   10 1024 1024
+        $PRK_TARGET_PATH/p2p-tasks-openmp     10 1024 1024
+        $PRK_TARGET_PATH/p2p-innerloop-openmp 10 1024 1024
         #$PRK_TARGET_PATH/p2p-openmp-doacross  10 1024 1024 # most compilers do not support doacross yet
         $PRK_TARGET_PATH/stencil-openmp       10 1000
         $PRK_TARGET_PATH/transpose-openmp     10 1024 1
