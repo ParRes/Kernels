@@ -111,7 +111,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
   integer(kind=INT32) :: i, j, ii, jj, it, jt
   if (is_star) then
     if (.not.tiling) then
-      !$omp taskloop
+      !$omp taskloop shared(W,A,B)
       do j=r,n-r-1
         do i=r,n-r-1
             ! do not use Intel Fortran unroll directive here (slows down)
@@ -128,7 +128,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
       enddo
       !$omp end taskloop
     else ! tiling
-      !$omp taskloop
+      !$omp taskloop shared(W,A,B)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -150,7 +150,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
     endif ! tiling
   else ! grid
     if (.not.tiling) then
-      !$omp taskloop
+      !$omp taskloop shared(W,A,B)
       do j=r,n-r-1
         do i=r,n-r-1
           do jj=-r,r
@@ -162,7 +162,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
       enddo
       !$omp end taskloop
     else ! tiling
-      !$omp taskloop
+      !$omp taskloop shared(W,A,B)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -311,7 +311,7 @@ program main
   !$omp&  private(i,j,k)
 
   !$omp master
-  !$omp taskloop
+  !$omp taskloop shared(A,B)
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
@@ -335,7 +335,7 @@ program main
     !$omp taskwait
 
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp taskloop
+    !$omp taskloop shared(A)
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.d0
