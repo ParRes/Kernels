@@ -102,7 +102,7 @@ program main
     write(*,'(a16,i1)') 'argument count = ', command_argument_count()
     write(*,'(a34,a16)') 'Usage: ./synch_p2p <# iterations> ',  &
                          '<grid dimension>'
-    error stop
+    stop 1
   endif
 
   iterations = 1
@@ -115,12 +115,12 @@ program main
 
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    error stop
+    stop 1
   endif
 
   if (n .lt. 1) then
     write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', n
-    error stop
+    stop 1
   endif
 
 #ifdef _OPENMP
@@ -132,7 +132,7 @@ program main
   allocate( grid(n,n), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of grid returned ',err
-    error stop
+    stop 1
   endif
 
   !$omp parallel default(none)                                  &
@@ -210,7 +210,7 @@ program main
   if (abs(grid(n,n)-corner_val)/corner_val .gt. epsilon) then
     write(*,'(a,f10.2,a,f10.2)') 'ERROR: checksum ',grid(n,n), &
             ' does not match verification value ', corner_val
-    error stop
+    stop 1
   endif
 
   write(*,'(a)') 'Solution validates'

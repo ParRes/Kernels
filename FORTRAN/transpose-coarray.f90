@@ -57,7 +57,7 @@
 
 program main
     print*,'PGI does not support Fortran 2008'
-    error stop
+    stop 1
 end program main
 
 #else
@@ -116,7 +116,7 @@ program main
       write(*,'(a17,i1)') 'argument count = ', command_argument_count()
       write(6,'(a62)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
     endif
-    error stop
+    stop 1
   endif
 
   iterations = 1
@@ -126,7 +126,7 @@ program main
     if (printer) then
       write(6,'(a35,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     endif
-    error stop
+    stop 1
   endif
 
   order = 1
@@ -136,14 +136,14 @@ program main
     if (printer) then
       write(6,'(a30,i5)') 'ERROR: order must be >= 1 : ', order
     endif
-    error stop
+    stop 1
   endif
   if (modulo(order,npes).gt.0) then
     if (printer) then
       write(6,'(a20,i5,a35,i5)') 'ERROR: matrix order ',order,&
                         ' should be divisible by # images ',npes
     endif
-    error stop
+    stop 1
   endif
   col_per_pe = order/npes
 
@@ -166,19 +166,19 @@ program main
   allocate( A(order,col_per_pe)[*], stat=err)
   if (err .ne. 0) then
     write(6,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
-    error stop
+    stop 1
   endif
 
   allocate( B(order,col_per_pe)[*], stat=err )
   if (err .ne. 0) then
     write(6,'(a20,i3,a10,i5)') 'allocation of B returned ',err,' at image ',me
-    error stop
+    stop 1
   endif
 
   allocate( T(col_per_pe,col_per_pe), stat=err )
   if (err .ne. 0) then
     write(6,'(a20,i3,a10,i5)') 'allocation of T returned ',err,' at image ',me
-    error stop
+    stop 1
   endif
 
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
@@ -321,7 +321,7 @@ program main
       write(6,'(a30,f13.6,a18,f13.6)') 'ERROR: Aggregate squared error ', &
               abserr,' exceeds threshold ',(epsilon/npes)
     endif
-    error stop
+    stop 1
   endif
 
 end program main
