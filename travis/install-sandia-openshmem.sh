@@ -14,9 +14,9 @@ SHMEM_ROOT=$TRAVIS_ROOT/sandia-openshmem
 
 if [ ! -d "$SHMEM_ROOT" ]; then
     # master
-    #git clone --depth 10 https://github.com/regrant/sandia-shmem.git sandia-shmem
-    #git clone --depth 10 https://github.com/Sandia-OpenSHMEM/SOS.git sandia-shmem
-    #git clone -b v1.3.2 --depth 10 https://github.com/Sandia-OpenSHMEM/SOS.git sandia-shmem
+    #git clone --depth 1 https://github.com/regrant/sandia-shmem.git sandia-shmem
+    #git clone --depth 1 https://github.com/Sandia-OpenSHMEM/SOS.git sandia-shmem
+    #git clone -b v1.3.2 --depth 1 https://github.com/Sandia-OpenSHMEM/SOS.git sandia-shmem
     #cd sandia-shmem
     # 1.3 release
     wget https://github.com/Sandia-OpenSHMEM/SOS/archive/v1.3.2.tar.gz

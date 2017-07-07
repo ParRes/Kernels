@@ -39,7 +39,7 @@ ${PRK_CXX} -v
 
 if [ ! -d "$TRAVIS_ROOT/raja" ]; then
     BRANCH=bugfix/jeffhammond/abort-and-getenv
-    git clone --depth 10 -b ${BRANCH} https://github.com/LLNL/RAJA.git
+    git clone --depth 1 -b ${BRANCH} https://github.com/LLNL/RAJA.git
     cd RAJA
     mkdir build
     cd build
