@@ -110,11 +110,11 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
   real(kind=REAL64), intent(inout) :: B(n,n)
   integer(kind=INT32) :: i, j, ii, jj, it, jt
   if (is_star) then
-    !$omp taskloop collapse(2)
-    do jt=r,n-r-1,tile_size
-      do it=r,n-r-1,tile_size
-        do j=jt,min(n-r-1,jt+tile_size-1)
-          do i=it,min(n-r-1,it+tile_size-1)
+    if (.not.tiling) then
+      !$omp taskloop
+      do j=r,n-r-1
+        do i=r,n-r-1
+            ! do not use Intel Fortran unroll directive here (slows down)
             do jj=-r,r
               B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
             enddo
@@ -124,27 +124,60 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
             do ii=1,r
               B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
             enddo
-          enddo
         enddo
       enddo
-    enddo
-    !$omp end taskloop
-  else ! grid
-    !$omp taskloop collapse(2)
-    do jt=r,n-r-1,tile_size
-      do it=r,n-r-1,tile_size
-        do j=jt,min(n-r-1,jt+tile_size-1)
-          do i=it,min(n-r-1,it+tile_size-1)
-            do jj=-r,r
-              do ii=-r,r
-                B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
+      !$omp end taskloop
+    else ! tiling
+      !$omp taskloop
+      do jt=r,n-r-1,tile_size
+        do it=r,n-r-1,tile_size
+          do j=jt,min(n-r-1,jt+tile_size-1)
+            do i=it,min(n-r-1,it+tile_size-1)
+              do jj=-r,r
+                B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
+              enddo
+              do ii=-r,-1
+                B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
+              enddo
+              do ii=1,r
+                B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
               enddo
             enddo
           enddo
         enddo
       enddo
-    enddo
-    !$omp end taskloop
+      !$omp end taskloop
+    endif ! tiling
+  else ! grid
+    if (.not.tiling) then
+      !$omp taskloop
+      do j=r,n-r-1
+        do i=r,n-r-1
+          do jj=-r,r
+            do ii=-r,r
+              B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
+            enddo
+          enddo
+        enddo
+      enddo
+      !$omp end taskloop
+    else ! tiling
+      !$omp taskloop
+      do jt=r,n-r-1,tile_size
+        do it=r,n-r-1,tile_size
+          do j=jt,min(n-r-1,jt+tile_size-1)
+            do i=it,min(n-r-1,it+tile_size-1)
+              do jj=-r,r
+                do ii=-r,r
+                  B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
+                enddo
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+      !$omp end taskloop
+    endif ! tiling
   endif ! star
 end subroutine apply_stencil
 
