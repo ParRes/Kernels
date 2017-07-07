@@ -236,6 +236,15 @@ program main
     stop 1
   endif
 
+  ! TODO: parse runtime input for star/grid
+#ifdef STAR
+  is_star = .true.
+#else
+  is_star = .false.
+#endif
+
+  ! TODO: parse runtime input for radius
+
   if (r .lt. 1) then
     write(*,'(a,i5,a)') 'ERROR: Stencil radius ',r,' should be positive'
     stop 1
