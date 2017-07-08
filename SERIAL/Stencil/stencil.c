@@ -75,7 +75,7 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
   #define FSTR    "%f"
 #endif
 
-#ifdef DEBUG_DUMP
+#if VERBOSE >= 10
 #include "debug_dump.h"
 #endif
 
@@ -185,7 +185,7 @@ int main(int argc, char ** argv) {
   }
 #endif
 
-#ifdef DEBUG_DUMP
+#if VERBOSE >= 10
   write_weights(weight);
 #endif
 
@@ -279,7 +279,7 @@ int main(int argc, char ** argv) {
       }
     }
 
-#ifdef DEBUG_DUMP
+#if VERBOSE >= 10
     write_out(iter, n, out);
 #endif
 
