@@ -279,12 +279,12 @@ int main(int argc, char ** argv) {
       }
     }
 
+    /* add constant to solution to force refresh of neighbor data, if any       */
+    for (j=0; j<n; j++) for (i=0; i<n; i++) IN(i,j)+= 1.0;
+
 #if VERBOSE >= 10
     write_out(iter, n, out);
 #endif
-
-    /* add constant to solution to force refresh of neighbor data, if any       */
-    for (j=0; j<n; j++) for (i=0; i<n; i++) IN(i,j)+= 1.0;
 
   } /* end of iterations                                                        */
 
