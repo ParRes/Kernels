@@ -189,6 +189,10 @@ int main(int argc, char * argv[])
       }
     }
 
+#if VERBOSE >= 10
+    write_out(iter, n, out);
+#endif
+
   }
   stencil_time = prk_wtime() - stencil_time;
 
