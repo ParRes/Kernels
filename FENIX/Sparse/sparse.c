@@ -127,8 +127,7 @@ int main(int argc, char **argv){
                     row_offset;
   s64Int            nent;       /* number of nonzero entries                      */
   double            sparsity;   /* fraction of non-zeroes in matrix               */
-  double            local_sparse_time,/* timing parameters                        */
-                    sparse_time,
+  double            sparse_time,/* timing parameters                              */
                     avgtime;
   double * RESTRICT matrix;     /* sparse matrix entries                          */
   double * RESTRICT vector;     /* vector multiplying the sparse matrix           */
