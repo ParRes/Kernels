@@ -109,7 +109,7 @@ int main(int argc, char * argv[])
 
   _Pragma("omp parallel")
   {
-    _Pragma("omp taskloop")
+    _Pragma("omp taskloop firstprivate(order) shared(A,B)")
     for (int i=0;i<order; i++) {
       PRAGMA_OMP_SIMD
       for (int j=0;j<order;j++) {
@@ -117,6 +117,7 @@ int main(int argc, char * argv[])
         B[i*order+j] = 0.0;
       }
     }
+    _Pragma("omp taskwait")
 
     for (int iter = 0; iter<=iterations; iter++) {
 
@@ -128,7 +129,7 @@ int main(int argc, char * argv[])
 
       // transpose the  matrix
       if (tile_size < order) {
-        _Pragma("omp taskloop")
+        _Pragma("omp taskloop firstprivate(order) shared(A,B)")
         for (int it=0; it<order; it+=tile_size) {
           for (int jt=0; jt<order; jt+=tile_size) {
             for (int i=it; i<MIN(order,it+tile_size); i++) {
@@ -141,7 +142,7 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        _Pragma("omp taskloop")
+        _Pragma("omp taskloop firstprivate(order) shared(A,B)")
         for (int i=0;i<order; i++) {
           PRAGMA_OMP_SIMD
           for (int j=0;j<order;j++) {
@@ -150,6 +151,7 @@ int main(int argc, char * argv[])
           }
         }
       }
+      _Pragma("omp taskwait")
     }
     _Pragma("omp barrier")
     _Pragma("omp master")

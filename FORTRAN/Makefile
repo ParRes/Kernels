@@ -27,13 +27,13 @@ endif
 
 all: serial pretty openmp $(COARRAY) $(TARGET)
 
-serial: p2p stencil transpose
+serial: p2p stencil transpose p2p-innerloop
 
 pretty: stencil-pretty transpose-pretty
 
-openmp: p2p-openmp-tasks p2p-openmp-doacross p2p-openmp-datapar stencil-openmp transpose-openmp
+openmp: p2p-tasks-openmp p2p-doacross-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
-tasks: p2p-openmp-tasks stencil-taskloop transpose-tasks transpose-taskloop
+tasks: p2p-tasks-openmp stencil-taskloop-openmp transpose-tasks-openmp transpose-taskloop-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
@@ -47,19 +47,10 @@ ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc
 %-pretty: %-pretty.f90
 	$(FC) $(FCFLAGS) $< -o $@
 
-p2p-openmp-doacross: p2p-openmp-doacross.f90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
-
-p2p-openmp-datapar: p2p-openmp-datapar.f90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
-
 %-openmp: %.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
-%-tasks: %-tasks.f90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
-
-%-taskloop: %-taskloop.f90
+%-openmp: %-openmp.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 %-coarray: %-coarray.f90
@@ -79,12 +70,10 @@ clean:
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
-	-rm -f p2p                   stencil                 transpose
-	-rm -f p2p-pretty            stencil-pretty          transpose-pretty
-	-rm -f p2p-coarray           stencil-coarray         transpose-coarray
-	-rm -f p2p-openmp-tasks      stencil-openmp          transpose-openmp
-	-rm -f p2p-openmp-doacross   p2p-openmp-datapar
-	-rm -f p2p-openmp-target     stencil-openmp-target   transpose-openmp-target
-	-rm -f p2p-ornlacc           stencil-ornlacc         transpose-ornlacc
-	-rm -f stencil-tasks         transpose-tasks
-	-rm -f stencil-taskloop      transpose-taskloop
+	-rm -f p2p stencil transpose
+	-rm -f p2p-innerloop
+	-rm -f *-pretty
+	-rm -f *-coarray
+	-rm -f *-openmp
+	-rm -f *-target
+	-rm -f *-ornlacc

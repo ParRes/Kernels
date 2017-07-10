@@ -72,7 +72,6 @@ program main
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
   integer(kind=INT32) ::  order                     ! order of a the matrix
-  !dec$ attributes align:64 :: A, B
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
@@ -153,7 +152,7 @@ program main
   !$omp&  private(i,j,it,jt,k)
   !$omp master
 
-  !$omp taskloop collapse(2) mergeable
+  !$omp taskloop firstprivate(order,tile_size) shared(A,B)
   do jt=1,order,tile_size
     do it=1,order,tile_size
       do j=jt,min(order,jt+tile_size-1)
@@ -174,7 +173,7 @@ program main
       t0 = prk_get_wtime()
     endif
 
-    !$omp taskloop collapse(2) mergeable
+    !$omp taskloop firstprivate(order,tile_size) shared(A,B)
     do jt=1,order,tile_size
       do it=1,order,tile_size
         do j=jt,min(order,jt+tile_size-1)

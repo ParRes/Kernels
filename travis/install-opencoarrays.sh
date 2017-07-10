@@ -31,7 +31,7 @@ elif [ ! -d "$TRAVIS_ROOT/opencoarrays" ] ; then
             sh ./travis/install-cmake.sh $TRAVIS_ROOT
             sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich 1
             cd $TRAVIS_ROOT
-            git clone --depth 10 https://github.com/sourceryinstitute/opencoarrays.git opencoarrays-source
+            git clone --depth 1 https://github.com/sourceryinstitute/opencoarrays.git opencoarrays-source
             cd opencoarrays-source
             mkdir build
             cd build

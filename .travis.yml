@@ -6,20 +6,18 @@ env:
   - PRK_TARGET=allc1z
   - PRK_TARGET=allcxx
   - PRK_TARGET=allpython
-  - PRK_TARGET=alloctave
+  # Octave is working but it takes forever to brew (~20 minutes).
+  #- PRK_TARGET=alloctave
   - PRK_TARGET=alljulia
   - PRK_TARGET=allrust
   - PRK_TARGET=allopenmp
   - PRK_TARGET=allfortran
-  - PRK_TARGET=allmpi1
-  - PRK_TARGET=allmpirma
-  - PRK_TARGET=allmpishm
-  - PRK_TARGET=allmpiomp
+  - PRK_TARGET=allmpi
   - PRK_TARGET=allshmem
   - PRK_TARGET=allampi
   - PRK_TARGET=allfgmpi
   - PRK_TARGET=allcharm++
-  - PRK_TARGET=allgrappa
+  #- PRK_TARGET=allgrappa
   - PRK_TARGET=allupc UPC_IMPL=gupc
   - PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
   # This works but we don't need to test it.
@@ -56,23 +54,10 @@ matrix:
   - os: linux
     compiler: clang
     env: PRK_TARGET=allopenmp
-  - os: linux
-    compiler: clang
-    env: PRK_TARGET=allmpiomp
-  # Mac/Clang OpenMP broken because Brew no longer supports "clang-omp"
-  - os: osx
-    compiler: clang
-    env: PRK_TARGET=allopenmp
-  - os: osx
-    compiler: clang
-    env: PRK_TARGET=allmpiomp
   # dealing with broken GCC on Mac not worth it here
   - os: osx
     compiler: gcc
     env: PRK_TARGET=allopenmp
-  - os: osx
-    compiler: gcc
-    env: PRK_TARGET=allmpiomp
   # Clang UPC requires source build, which probably takes too long
   - compiler: clang
     env: PRK_TARGET=allupc UPC_IMPL=gupc
@@ -128,11 +113,7 @@ matrix:
     env: PRK_TARGET=allrust
   # MPI implementations of Transpose hang with Intel compilers (why?!?!)
   - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpi1
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpiomp
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpishm
+    env: PRK_TARGET=allmpi
   # UPC over MPICH on Mac hangs - may be async progress issue
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
@@ -144,6 +125,14 @@ matrix:
   # Grappa with Intel unlikely to succeed, especially if Clang doesn't.
   - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allgrappa
+  # Charm++ on Mac is not working for us.
+  - os: osx
+    env: PRK_TARGET=allcharm++
+  # We have lots of Grappa issues.  Need to resolve outside of Travis.
+  - env: PRK_TARGET=allgrappa
+  # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
+  - os: osx
+    env: PRK_TARGET=allfgmpi
   allow_failures:
   ## will fail if numpy package cannot be acquired via apt
   #- env: PRK_TARGET=allpython
@@ -151,13 +140,6 @@ matrix:
   #  env: PRK_TARGET=alljulia
   ## GUPC will fail when libnuma cannot be acquired via apt
   #- env: PRK_TARGET=allupc UPC_IMPL=gupc
-  # we have lots of Grappa issues...
-  - env: PRK_TARGET=allgrappa
-  # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
-  - os: osx
-    env: PRK_TARGET=allfgmpi
-  - os: linux
-    env: PRK_TARGET=allfgmpi
   # BUPC has trouble with flags
   #- os: linux
   #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
@@ -166,25 +148,10 @@ matrix:
   #- os: linux
   #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
   # Travis tests failing due to runtime problems
-  - os: osx
-    env: PRK_TARGET=allampi
   - os: linux
     env: PRK_TARGET=allampi
-  - os: osx
-    env: PRK_TARGET=allcharm++
   - os: linux
-    compiler: clang
-    env: PRK_TARGET=allampi
-  # These started failing in June 2017.  Need to debug.
-  - os: linux
-    compiler: clang
-    env: PRK_TARGET=allmpi1
-  - os: linux
-    compiler: clang
-    env: PRK_TARGET=allmpirma
-  - os: linux
-    compiler: clang
-    env: PRK_TARGET=allmpishm
+    env: PRK_TARGET=allfgmpi
 addons:
   apt:
     sources:

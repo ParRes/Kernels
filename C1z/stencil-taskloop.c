@@ -171,7 +171,7 @@ int main(int argc, char * argv[])
 
   _Pragma("omp parallel")
   {
-    _Pragma("omp for")
+    _Pragma("omp taskloop firstprivate(n) shared(in,out)")
     for (int i=0; i<n; i++) {
       PRAGMA_OMP_SIMD
       for (int j=0; j<n; j++) {
@@ -190,17 +190,18 @@ int main(int argc, char * argv[])
 
       // Apply the stencil operator
       stencil(n, in, out);
+      _Pragma("omp taskwait")
 
       // Add constant to solution to force refresh of neighbor data, if any
-      _Pragma("omp for")
+      _Pragma("omp taskloop firstprivate(n) shared(in,out)")
       for (int i=0; i<n; i++) {
         PRAGMA_OMP_SIMD
         for (int j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
+      _Pragma("omp taskwait")
     }
-    _Pragma("omp barrier")
     _Pragma("omp master")
     stencil_time = prk_wtime() - stencil_time;
   }

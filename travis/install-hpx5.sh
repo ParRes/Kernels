@@ -25,7 +25,7 @@ if [ ! -d "$TRAVIS_ROOT/hpx5" ] ; then
         cd HPX_Release_v2.0.0/hpx
     else
        export GIT_SSL_NO_VERIFY=1
-       git clone http://gitlab.crest.iu.edu/extreme/hpx.git hpx5-source
+       git clone --depth 1 http://gitlab.crest.iu.edu/extreme/hpx.git hpx5-source
        cd hpx5-source
     fi
     ./bootstrap
