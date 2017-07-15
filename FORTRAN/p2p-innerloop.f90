@@ -169,6 +169,7 @@ program main
       !$omp end master
     endif
 
+#if 0
     do j=2,n
       !$omp do
       do i=2,j
@@ -187,6 +188,20 @@ program main
       enddo
       !$omp end do
     enddo
+#else
+    !print*,k,'==============================='
+    do i=2,2*n-2
+      !print*,'i,max(2,i-n+1),min(n,i)=',i,max(2,i-n+1),min(n,i)
+      !$omp do
+      do j=max(2,i-n+2),min(i,n)
+        x = i-j+2
+        y = j
+        !print*,k,'x,y=',x,y
+        grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1)
+      enddo
+      !$omp end do
+    enddo
+#endif
     !$omp master
     grid(1,1) = -grid(n,n)
     !$omp end master
