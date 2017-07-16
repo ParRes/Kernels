@@ -8,14 +8,14 @@ import os
 def codegen(src,pattern,stencil_size,radius,W,model):
     src.write('void '+pattern+str(radius)+'(const int n, const double * restrict in, double * restrict out) {\n')
     if (model=='openmp' or model=='target'):
-        src.write('    _Pragma("omp for")\n')
+        src.write('    OMP_FOR\n')
         src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')
-        src.write('      PRAGMA_OMP_SIMD\n')
+        src.write('      OMP_SIMD\n')
         src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
     elif (model=='taskloop'):
         src.write('    _Pragma("omp taskloop firstprivate(n) shared(in,out)")\n')
         src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')
-        src.write('      PRAGMA_OMP_SIMD\n')
+        src.write('      OMP_SIMD\n')
         src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
     elif (model=='cilk'):
         src.write('    _Cilk_for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')

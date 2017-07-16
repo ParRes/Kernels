@@ -63,13 +63,25 @@
 
 #ifdef _OPENMP
 # include <omp.h>
+# define OMP_PARALLEL _Pragma("omp parallel")
+# define OMP_MASTER _Pragma("omp master")
+# define OMP_BARRIER _Pragma("omp barrier")
+# define OMP_FOR _Pragma("omp for")
+// OpenMP SIMD if supported, else not.
 # if (_OPENMP >= 201300)
-#  define PRAGMA_OMP_SIMD _Pragma("omp simd")
-#  define PRAGMA_OMP_FOR_SIMD _Pragma("omp for simd")
+#  define OMP_SIMD _Pragma("omp simd")
+#  define OMP_FOR_SIMD _Pragma("omp for simd")
 # else
-#  define PRAGMA_OMP_SIMD
-#  define PRAGMA_OMP_FOR_SIMD _Pragma("omp for")
+#  define OMP_SIMD
+#  define OMP_FOR_SIMD _Pragma("omp for")
 # endif
+#else
+# define OMP_PARALLEL
+# define OMP_MASTER
+# define OMP_BARRIER
+# define OMP_FOR
+# define OMP_SIMD
+# define OMP_FOR_SIMD
 #endif
 
 #ifdef __cilk
