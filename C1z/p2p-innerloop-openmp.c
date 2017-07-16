@@ -131,6 +131,7 @@ int main(int argc, char * argv[])
           pipeline_time = prk_wtime();
       }
 
+#if 0
       for (int j=1; j<n; j++) {
         PRAGMA_OMP_FOR_SIMD
         for (int i=1; i<=j; i++) {
@@ -147,6 +148,16 @@ int main(int argc, char * argv[])
           grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
         }
       }
+#else
+      for (int i=2; i<=2*n-2; i++) {
+        PRAGMA_OMP_FOR_SIMD
+        for (int j=MAX(2,i-n+2); j<=MIN(i,n); j++) {
+          const int x = i-j+2-1;
+          const int y = j-1;
+          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+        }
+      }
+#endif
       _Pragma("omp master")
       grid[0*n+0] = -grid[(n-1)*n+(n-1)];
     }
