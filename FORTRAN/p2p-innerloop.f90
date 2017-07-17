@@ -102,7 +102,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a47)') 'Fortran innerloop pipeline execution on 2D grid'
+  write(*,'(a47)') 'Fortran Serial innerloop pipeline execution on 2D grid'
 
   if (command_argument_count().lt.2) then
     write(*,'(a20,i1)') 'argument count = ', command_argument_count()
