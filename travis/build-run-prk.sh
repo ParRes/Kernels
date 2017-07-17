@@ -127,11 +127,12 @@ case "$PRK_TARGET" in
         echo "CC=${PRK_CC} -std=c11 -DPRK_USE_GETTIMEOFDAY\nEXTRA_CLIBS=-lm" >> common/make.defs
 
         # C11 without external parallelism
-        make -C $PRK_TARGET_PATH serial
-        $PRK_TARGET_PATH/p2p         10 1024 1024
-        $PRK_TARGET_PATH/p2p         10 1024 1024 100 100
-        $PRK_TARGET_PATH/stencil     10 1000
-        $PRK_TARGET_PATH/transpose   10 1024 32
+        make -C $PRK_TARGET_PATH p2p stencil transpose p2p-innerloop
+        $PRK_TARGET_PATH/p2p             10 1024 1024
+        $PRK_TARGET_PATH/p2p             10 1024 1024 100 100
+        $PRK_TARGET_PATH/p2p-innerloop   10 1024
+        $PRK_TARGET_PATH/stencil         10 1000
+        $PRK_TARGET_PATH/transpose       10 1024 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 6 7 8 9 ; do
@@ -147,7 +148,7 @@ case "$PRK_TARGET" in
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
                 make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-innerloop-openmp     10 1024 1024
+                $PRK_TARGET_PATH/p2p-innerloop-openmp     10 1024
                 $PRK_TARGET_PATH/stencil-openmp           10 1000
                 $PRK_TARGET_PATH/transpose-openmp         10 1024 32
                 #echo "Test stencil code generator"
@@ -525,7 +526,7 @@ case "$PRK_TARGET" in
         # Serial
         make -C ${PRK_TARGET_PATH} p2p p2p-innerloop stencil transpose
         $PRK_TARGET_PATH/p2p               10 1024 1024
-        $PRK_TARGET_PATH/p2p-innerloop     10 1024 1024
+        $PRK_TARGET_PATH/p2p-innerloop     10 1024
         $PRK_TARGET_PATH/stencil           10 1000
         $PRK_TARGET_PATH/transpose         10 1024 1
         $PRK_TARGET_PATH/transpose         10 1024 32
@@ -541,7 +542,7 @@ case "$PRK_TARGET" in
         make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
         export OMP_NUM_THREADS=2
         $PRK_TARGET_PATH/p2p-tasks-openmp     10 1024 1024
-        $PRK_TARGET_PATH/p2p-innerloop-openmp 10 1024 1024
+        $PRK_TARGET_PATH/p2p-innerloop-openmp 10 1024
         #$PRK_TARGET_PATH/p2p-openmp-doacross  10 1024 1024 # most compilers do not support doacross yet
         $PRK_TARGET_PATH/stencil-openmp       10 1000
         $PRK_TARGET_PATH/transpose-openmp     10 1024 1
