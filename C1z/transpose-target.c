@@ -88,7 +88,9 @@ int main(int argc, char * argv[])
   // a negative tile size means no tiling of the local transpose
   if (tile_size <= 0) tile_size = order;
 
+#ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
   if (tile_size < order) {
@@ -109,9 +111,9 @@ int main(int argc, char * argv[])
 
   // HOST
   // initialize the input and output arrays
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
   {
-    _Pragma("omp for")
+    OMP_FOR
     for (int i=0;i<order; i++) {
       for (int j=0;j<order;j++) {
         A[i*order+j] = (double)(i*order+j);
@@ -121,20 +123,20 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  _Pragma("omp target map(tofrom: A[0:order*order], B[0:order*order]) map(from:trans_time)")
-  _Pragma("omp parallel")
+  OMP_TARGET( map(tofrom: A[0:order*order], B[0:order*order]) map(from:trans_time) )
+  OMP_PARALLEL()
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
+          OMP_BARRIER
+          OMP_MASTER
           trans_time = prk_wtime();
       }
 
       // transpose the  matrix
       if (tile_size < order) {
-        _Pragma("omp for")
+        OMP_FOR
         for (int it=0; it<order; it+=tile_size) {
           for (int jt=0; jt<order; jt+=tile_size) {
             for (int i=it; i<MIN(order,it+tile_size); i++) {
@@ -146,7 +148,7 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        _Pragma("omp for")
+        OMP_FOR
         for (int i=0;i<order; i++) {
           for (int j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
@@ -155,8 +157,8 @@ int main(int argc, char * argv[])
         }
       }
     }
-    _Pragma("omp barrier")
-    _Pragma("omp master")
+    OMP_BARRIER
+    OMP_MASTER
     trans_time = prk_wtime() - trans_time;
   }
 
@@ -166,7 +168,7 @@ int main(int argc, char * argv[])
 
   const double addit = (iterations+1.) * (iterations/2.);
   double abserr = 0.0;
-  _Pragma("omp parallel for reduction(+:abserr)")
+  OMP_PARALLEL_FOR_REDUCE( +:abserr )
   for (int j=0; j<order; j++) {
     for (int i=0; i<order; i++) {
       const size_t ij = i*order+j;

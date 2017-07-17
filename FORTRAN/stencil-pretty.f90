@@ -211,12 +211,12 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran pretty stencil execution on 2D grid'
+  write(*,'(a43)') 'Fortran pretty stencil execution on 2D grid'
 
   if (command_argument_count().lt.2) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',             &
-                      '<array dimension>'
+    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a32,a29)') 'Usage: ./stencil <# iterations> ', &
+                      '<array dimension> [tile_size]'
     stop 1
   endif
 
@@ -235,6 +235,15 @@ program main
     write(*,'(a,i5)') 'ERROR: array dimension must be >= 1 : ', n
     stop 1
   endif
+
+  ! TODO: parse runtime input for star/grid
+#ifdef STAR
+  is_star = .true.
+#else
+  is_star = .false.
+#endif
+
+  ! TODO: parse runtime input for radius
 
   if (r .lt. 1) then
     write(*,'(a,i5,a)') 'ERROR: Stencil radius ',r,' should be positive'
@@ -260,6 +269,7 @@ program main
   norm = 0.d0
   active_points = int(n-2*r,INT64)**2
 
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Grid size            = ', n
   write(*,'(a,i8)') 'Radius of stencil    = ', r
   if (is_star) then
@@ -271,7 +281,6 @@ program main
   endif
   write(*,'(a)') 'Data type            = double precision'
   write(*,'(a)') 'Compact representation of stencil loop body'
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   call initialize_w(is_star,r,W)
 

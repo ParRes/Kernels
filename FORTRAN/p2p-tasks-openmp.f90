@@ -97,7 +97,6 @@ program main
   integer(kind=INT32) :: ic, mc                         ! ic = chunking index, mc = chunking dimension
   integer(kind=INT32) :: jc, nc                         ! jc = chunking index, nc = chunking dimension
   integer(kind=INT32) :: lic, ljc                       ! hold indexes of last block
-  integer ::  me, nt
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
 
@@ -106,11 +105,11 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran OpenMP TASKS pipeline execution on 2D grid'
+  write(*,'(a50)') 'Fortran OpenMP TASKS pipeline execution on 2D grid'
 
   if (command_argument_count().lt.2) then
-    write(*,'(a20,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a35,a50)')  'Usage: ./synch_p2p <# iterations> ',  &
+    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a34,a39)')  'Usage: ./synch_p2p <# iterations> ',  &
                           '<array x-dimension> <array y-dimension>'
     stop 1
   endif

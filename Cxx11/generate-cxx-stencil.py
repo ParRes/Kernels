@@ -14,7 +14,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='taskloop'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    _Pragma("omp taskloop")\n')
+        src.write('    _Pragma("omp taskloop firstprivate(n) shared(in,out)")\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
         src.write('      PRAGMA_OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')

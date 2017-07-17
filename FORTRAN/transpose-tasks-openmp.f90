@@ -87,7 +87,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a60)') 'Fortran OpenMP TASKS Matrix transpose: B = A^T'
+  write(*,'(a46)') 'Fortran OpenMP TASKS Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
@@ -140,9 +140,9 @@ program main
   endif
 
   write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Matrix order         = ', order
   write(*,'(a,i8)') 'Tile size            = ', tile_size
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   t0 = 0
 

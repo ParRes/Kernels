@@ -140,9 +140,9 @@ program main
   endif
 
   write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Matrix order         = ', order
   write(*,'(a,i8)') 'Tile size            = ', tile_size
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   t0 = 0
 
@@ -152,7 +152,7 @@ program main
   !$omp&  private(i,j,it,jt,k)
   !$omp master
 
-  !$omp taskloop collapse(2) mergeable
+  !$omp taskloop firstprivate(order,tile_size) shared(A,B)
   do jt=1,order,tile_size
     do it=1,order,tile_size
       do j=jt,min(order,jt+tile_size-1)
@@ -173,7 +173,7 @@ program main
       t0 = prk_get_wtime()
     endif
 
-    !$omp taskloop collapse(2) mergeable
+    !$omp taskloop firstprivate(order,tile_size) shared(A,B)
     do jt=1,order,tile_size
       do it=1,order,tile_size
         do j=jt,min(order,jt+tile_size-1)

@@ -36,6 +36,8 @@
 # error You need a C99+ compiler.
 #endif
 
+#define PRAGMA(x) _Pragma(#x)
+
 // All of this is to get posix_memalign defined...
 // #define _POSIX_C_SOURCE (200112L)
 #define _POSIX_C_SOURCE (200809L)
@@ -63,13 +65,47 @@
 
 #ifdef _OPENMP
 # include <omp.h>
+# define OMP_PARALLEL(x) PRAGMA(omp parallel x)
+# define OMP_PARALLEL_FOR_REDUCE(x) PRAGMA(omp parallel for reduction (x) )
+# define OMP_MASTER PRAGMA(omp master)
+# define OMP_BARRIER PRAGMA(omp barrier)
+# define OMP_FOR PRAGMA(omp for)
+# define OMP_FOR_REDUCE(x) PRAGMA(omp for reduction (x) )
+// OpenMP SIMD if supported, else not.
 # if (_OPENMP >= 201300)
-#  define PRAGMA_OMP_SIMD _Pragma("omp simd")
-#  define PRAGMA_OMP_FOR_SIMD _Pragma("omp for simd")
+#  define OMP_SIMD PRAGMA(omp simd)
+#  define OMP_FOR_SIMD PRAGMA(omp for simd)
+#  define OMP_TASK(x) PRAGMA(omp task x)
+#  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x)
+#  define OMP_TASKWAIT PRAGMA(omp taskwait)
+#  define OMP_TARGET(x) PRAGMA(omp target x)
+#  define OMP_DECLARE_TARGET PRAGMA(omp declare target)
+#  define OMP_END_DECLARE_TARGET PRAGMA(omp end declare target)
 # else
-#  define PRAGMA_OMP_SIMD
-#  define PRAGMA_OMP_FOR_SIMD _Pragma("omp for")
+#  define OMP_SIMD
+#  define OMP_FOR_SIMD PRAGMA(omp for)
+#  define OMP_TASK(x)
+#  define OMP_TASKLOOP(x)
+#  define OMP_TASKWAIT
+#  define OMP_TARGET(x)
+#  define OMP_DECLARE_TARGET
+#  define OMP_END_DECLARE_TARGET
 # endif
+#else
+# define OMP_PARALLEL(x)
+# define OMP_PARALLEL_FOR_REDUCE(x)
+# define OMP_MASTER
+# define OMP_BARRIER
+# define OMP_FOR
+# define OMP_FOR_REDUCE(x)
+# define OMP_SIMD
+# define OMP_FOR_SIMD
+# define OMP_TASK(x)
+# define OMP_TASKLOOP(x)
+# define OMP_TASKWAIT
+# define OMP_TARGET(x)
+# define OMP_DECLARE_TARGET
+# define OMP_END_DECLARE_TARGET
 #endif
 
 #ifdef __cilk
@@ -77,7 +113,7 @@
 #endif
 
 #if defined(__INTEL_COMPILER) && !defined(PRAGMA_OMP_SIMD)
-# define PRAGMA_SIMD _Pragma("simd")
+# define PRAGMA_SIMD PRAGMA(simd)
 #else
 # define PRAGMA_SIMD
 #endif
