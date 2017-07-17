@@ -155,8 +155,8 @@ program main
 
   if(me == 1) then
      write(*,'(a,i8)')    'Number of threads        = ', num_images()
-     write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
      write(*,'(a,i8)')    'Number of iterations     = ', iterations
+     write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
   endif
 
   do j=1,n

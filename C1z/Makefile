@@ -25,7 +25,7 @@ TARGET = target
 endif
 all: serial openmp cilk taskloop $(TARGET)
 
-serial: p2p stencil transpose
+serial: p2p p2p-innerloop stencil transpose
 
 openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
@@ -34,6 +34,9 @@ target: stencil-target transpose-target
 taskloop: stencil-taskloop transpose-taskloop
 
 cilk: stencil-cilk transpose-cilk
+
+p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
+	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 %-target: %-target.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) $(EXTRA_CLIBS) -o $@

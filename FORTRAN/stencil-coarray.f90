@@ -347,6 +347,7 @@ program main
 
   if (me == 1) then
     write(*,'(a,i8)') 'Number of images     = ',num_images()
+    write(*,'(a,i8)') 'Number of iterations = ', iterations
     write(*,'(a,i8)') 'Grid size            = ', n
     write(*,'(a,i8)') 'Radius of stencil    = ', r
     if (is_star) then
@@ -356,20 +357,19 @@ program main
       write(*,'(a,a)')  'Type of stencil      = grid'
       stencil_size = (2*r+1)**2
     endif
-    write(*,'(a)') 'Data type            = double precision'
-    write(*,'(a)') 'Compact representation of stencil loop body'
+    !write(*,'(a)') 'Data type            = double precision'
+    !write(*,'(a)') 'Compact representation of stencil loop body'
     if (tiling) then
       write(*,'(a,i5)') 'Tile size            = ', tile_size
     else
       write(*,'(a)') 'Untiled'
     endif
-    write(*,'(a,i8)') 'Number of iterations = ', iterations
   endif
 
   call initialize_w(is_star,r,W)
 
   ! Getting the remote size of the upper and left images
-  ! in order to initialize correctly the local grid A. 
+  ! in order to initialize correctly the local grid A.
   nr_g = 0; nc_g = 0
   do k=1,coords(1)-1
      nr_g = nr_g + nr[k,coords(2)]

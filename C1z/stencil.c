@@ -168,29 +168,30 @@ int main(int argc, char * argv[])
   double * restrict in  = prk_malloc(bytes);
   double * restrict out = prk_malloc(bytes);
 
-  for (int i=0; i<n; i++) {
-    for (int j=0; j<n; j++) {
-      in[i*n+j]  = (double)(i+j);
-      out[i*n+j] = 0.0;
-    }
-  }
-
-  for (int iter = 0; iter<=iterations; iter++) {
-
-    if (iter==1) stencil_time = prk_wtime();
-
-    // Apply the stencil operator
-    stencil(n, in, out);
-
-    // Add constant to solution to force refresh of neighbor data, if any
+  {
     for (int i=0; i<n; i++) {
       for (int j=0; j<n; j++) {
-        in[i*n+j] += 1.0;
+        in[i*n+j]  = (double)(i+j);
+        out[i*n+j] = 0.0;
       }
     }
 
+    for (int iter = 0; iter<=iterations; iter++) {
+
+      if (iter==1) stencil_time = prk_wtime();
+
+      // Apply the stencil operator
+      stencil(n, in, out);
+
+      // Add constant to solution to force refresh of neighbor data, if any
+      for (int i=0; i<n; i++) {
+        for (int j=0; j<n; j++) {
+          in[i*n+j] += 1.0;
+        }
+      }
+    }
+    stencil_time = prk_wtime() - stencil_time;
   }
-  stencil_time = prk_wtime() - stencil_time;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.

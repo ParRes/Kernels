@@ -185,9 +185,9 @@ program main
 
   if (printer) then
     write(6,'(a23,i8)') 'Number of images     = ', num_images()
+    write(6,'(a23,i8)') 'Number of iterations = ', iterations
     write(6,'(a23,i8)') 'Matrix order         = ', order
     write(6,'(a23,i8)') 'Tile size            = ', tile_size
-    write(6,'(a23,i8)') 'Number of iterations = ', iterations
   endif
 
   ! initialization

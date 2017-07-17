@@ -204,6 +204,7 @@ program main
   norm = 0.d0
   active_points = int(n-2*r,INT64)**2
 
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Grid size            = ', n
   write(*,'(a,i8)') 'Radius of stencil    = ', r
   if (is_star) then
@@ -220,7 +221,6 @@ program main
   else
       write(*,'(a)') 'Untiled'
   endif
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   call initialize_w(is_star,r,W)
 

@@ -169,20 +169,11 @@ program main
       !$omp end master
     endif
 
-    do j=2,n
+    do i=2,2*n-2
       !$omp do
-      do i=2,j
-        x = i
-        y = j-i+2
-        grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1)
-      enddo
-      !$omp end do
-    enddo
-    do j=n-1,2,-1
-      !$omp do
-      do i=2,j
-        x = n+i-j
-        y = n-i+2
+      do j=max(2,i-n+2),min(i,n)
+        x = i-j+2
+        y = j
         grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1)
       enddo
       !$omp end do
