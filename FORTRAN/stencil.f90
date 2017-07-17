@@ -212,7 +212,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           case (9)
               call star9(n,A,B)
           case default
-              stop r
+              stop 10
       end select
   else ! grid
       select case (r)
@@ -235,7 +235,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           case (9)
               call grid9(n,A,B)
           case default
-              stop r
+              stop 10
       end select
   endif ! grid
 end subroutine apply_stencil
