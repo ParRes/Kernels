@@ -61,12 +61,18 @@
 ! *******************************************************************
 
 function prk_get_wtime() result(t)
+#ifdef _OPENMP
+  use omp_lib
+  real(kind=REAL64) ::  t
+  t = omp_get_wtime()
+#else
   use iso_fortran_env
   implicit none
   real(kind=REAL64) ::  t
   integer(kind=INT64) :: c, r
   call system_clock(count = c, count_rate = r)
   t = real(c,REAL64) / real(r,REAL64)
+#endif
 end function prk_get_wtime
 
 subroutine initialize_w(is_star,r,W)
@@ -384,33 +390,22 @@ program main
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
-#if 1
-      B(i,j) = 0.d0
-#endif
-    enddo
-  enddo
-  !$omp end do
-#if 0
-  !$omp do
-  do j=r+1,n-r
-    do i=r+1,n-r
       B(i,j) = 0.d0
     enddo
   enddo
   !$omp end do
-#endif
 
   t0 = 0
 
   do k=0,iterations
 
     ! start timer after a warmup iteration
-    !$omp barrier
-    !$omp master
     if (k.eq.1) then
-       t0 = prk_get_wtime()
+        !$omp barrier
+        !$omp master
+        t0 = prk_get_wtime()
+        !$omp end master
     endif
-    !$omp end master
 
     ! Apply the stencil operator
     call apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
