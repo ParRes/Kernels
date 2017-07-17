@@ -35,14 +35,14 @@ taskloop: stencil-taskloop transpose-taskloop
 
 cilk: stencil-cilk transpose-cilk
 
+p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
+	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
 %-target: %-target.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-taskloop: %-taskloop.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
-
-%: %-openmp.c prk_util.h
-	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 %-openmp: %-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@

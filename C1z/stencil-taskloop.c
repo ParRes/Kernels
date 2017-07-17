@@ -169,9 +169,9 @@ int main(int argc, char * argv[])
   double * restrict in  = prk_malloc(bytes);
   double * restrict out = prk_malloc(bytes);
 
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
   {
-    _Pragma("omp taskloop firstprivate(n) shared(in,out)")
+    OMP_TASKLOOP( firstprivate(n) shared(in,out) )
     for (int i=0; i<n; i++) {
       OMP_SIMD
       for (int j=0; j<n; j++) {
@@ -183,26 +183,26 @@ int main(int argc, char * argv[])
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
+          OMP_BARRIER
+          OMP_MASTER
           stencil_time = prk_wtime();
       }
 
       // Apply the stencil operator
       stencil(n, in, out);
-      _Pragma("omp taskwait")
+      OMP_TASKWAIT
 
       // Add constant to solution to force refresh of neighbor data, if any
-      _Pragma("omp taskloop firstprivate(n) shared(in,out)")
+      OMP_TASKLOOP( firstprivate(n) shared(in,out) )
       for (int i=0; i<n; i++) {
         OMP_SIMD
         for (int j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
-      _Pragma("omp taskwait")
+      OMP_TASKWAIT
     }
-    _Pragma("omp master")
+    OMP_MASTER
     stencil_time = prk_wtime() - stencil_time;
   }
 
@@ -212,7 +212,7 @@ int main(int argc, char * argv[])
 
   // compute L1 norm in parallel
   double norm = 0.0;
-  _Pragma("omp parallel for reduction(+:norm)")
+  OMP_PARALLEL_FOR_REDUCE( +:norm )
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
       norm += fabs(out[i*n+j]);

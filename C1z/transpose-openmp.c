@@ -58,7 +58,11 @@
 int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+#ifdef _OPENMP
   printf("C11/OpenMP Matrix transpose: B = A^T\n");
+#else
+  printf("C11/Serial Matrix transpose: B = A^T\n");
+#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -88,7 +92,9 @@ int main(int argc, char * argv[])
   // a negative tile size means no tiling of the local transpose
   if (tile_size <= 0) tile_size = order;
 
+#ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
   if (tile_size < order) {
@@ -107,9 +113,9 @@ int main(int argc, char * argv[])
   double * restrict A = prk_malloc(bytes);
   double * restrict B = prk_malloc(bytes);
 
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
   {
-    _Pragma("omp for")
+    OMP_FOR
     for (int i=0;i<order; i++) {
       for (int j=0;j<order;j++) {
         A[i*order+j] = (double)(i*order+j);
@@ -120,14 +126,14 @@ int main(int argc, char * argv[])
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
+          OMP_BARRIER
+          OMP_MASTER
           trans_time = prk_wtime();
       }
 
       // transpose the  matrix
       if (tile_size < order) {
-        _Pragma("omp for")
+        OMP_FOR
         for (int it=0; it<order; it+=tile_size) {
           for (int jt=0; jt<order; jt+=tile_size) {
             for (int i=it; i<MIN(order,it+tile_size); i++) {
@@ -139,8 +145,9 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        _Pragma("omp for")
+        OMP_FOR
         for (int i=0;i<order; i++) {
+          OMP_SIMD
           for (int j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
             A[j*order+i] += 1.0;
@@ -148,18 +155,18 @@ int main(int argc, char * argv[])
         }
       }
     }
-    _Pragma("omp barrier")
-    _Pragma("omp master")
+    OMP_BARRIER
+    OMP_MASTER
     trans_time = prk_wtime() - trans_time;
   }
 
   //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
+  // Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
   const double addit = (iterations+1.) * (iterations/2.);
   double abserr = 0.0;
-  _Pragma("omp parallel for reduction(+:abserr)")
+  OMP_PARALLEL_FOR_REDUCE( +:abserr )
   for (int j=0; j<order; j++) {
     for (int i=0; i<order; i++) {
       const size_t ij = i*order+j;

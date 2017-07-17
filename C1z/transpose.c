@@ -88,13 +88,13 @@ int main(int argc, char * argv[])
   // a negative tile size means no tiling of the local transpose
   if (tile_size <= 0) tile_size = order;
 
+  printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
   if (tile_size < order) {
       printf("Tile size             = %d\n", tile_size);
   } else {
       printf("Untiled" );
   }
-  printf("Number of iterations  = %d\n", iterations);
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -106,42 +106,44 @@ int main(int argc, char * argv[])
   double * restrict A = prk_malloc(bytes);
   double * restrict B = prk_malloc(bytes);
 
-  for (int i=0;i<order; i++) {
-    for (int j=0;j<order;j++) {
-      A[i*order+j] = (double)(i*order+j);
-      B[i*order+j] = 0.0;
+  {
+    for (int i=0;i<order; i++) {
+      for (int j=0;j<order;j++) {
+        A[i*order+j] = (double)(i*order+j);
+        B[i*order+j] = 0.0;
+      }
     }
-  }
 
-  for (int iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
-    if (iter==1) trans_time = prk_wtime();
+      if (iter==1) trans_time = prk_wtime();
 
-    // transpose the  matrix
-    if (tile_size < order) {
-      for (int it=0; it<order; it+=tile_size) {
-        for (int jt=0; jt<order; jt+=tile_size) {
-          for (int i=it; i<MIN(order,it+tile_size); i++) {
-            for (int j=jt; j<MIN(order,jt+tile_size); j++) {
-              B[i*order+j] += A[j*order+i];
-              A[j*order+i] += 1.0;
+      // transpose the  matrix
+      if (tile_size < order) {
+        for (int it=0; it<order; it+=tile_size) {
+          for (int jt=0; jt<order; jt+=tile_size) {
+            for (int i=it; i<MIN(order,it+tile_size); i++) {
+              for (int j=jt; j<MIN(order,jt+tile_size); j++) {
+                B[i*order+j] += A[j*order+i];
+                A[j*order+i] += 1.0;
+              }
             }
           }
         }
-      }
-    } else {
-      for (int i=0;i<order; i++) {
-        for (int j=0;j<order;j++) {
-          B[i*order+j] += A[j*order+i];
-          A[j*order+i] += 1.0;
+      } else {
+        for (int i=0;i<order; i++) {
+          for (int j=0;j<order;j++) {
+            B[i*order+j] += A[j*order+i];
+            A[j*order+i] += 1.0;
+          }
         }
       }
     }
+    trans_time = prk_wtime() - trans_time;
   }
-  trans_time = prk_wtime() - trans_time;
 
   //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
+  // Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
   const double addit = (iterations+1.) * (iterations/2.);

@@ -1,4 +1,4 @@
-_Pragma("omp declare target")
+OMP_DECLARE_TARGET
 void star1(const int n, const double * restrict in, double * restrict out) {
     OMP_FOR
     for (int i=1; i<n-1; i++) {
@@ -1580,4 +1580,4 @@ void grid9(const int n, const double * restrict in, double * restrict out) {
      }
 }
 
-_Pragma("omp end declare target")
+OMP_END_DECLARE_TARGET

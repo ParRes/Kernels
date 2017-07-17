@@ -108,7 +108,7 @@ int main(int argc, char * argv[])
   size_t bytes = n*n*sizeof(double);
   double * restrict grid = prk_malloc(bytes);
 
-  OMP_PARALLEL
+  OMP_PARALLEL()
   {
     OMP_FOR_SIMD
     for (int i=0; i<n; i++) {
