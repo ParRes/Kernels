@@ -65,7 +65,9 @@ end function prk_get_wtime
 
 program main
   use iso_fortran_env
+#ifdef _OPENMP
   use omp_lib
+#endif
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -74,11 +76,12 @@ program main
   character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
-  integer(kind=INT32) :: m, n
+  integer(kind=INT32) :: n
   real(kind=REAL64) :: corner_val                       ! verification value at top right corner of grid
   real(kind=REAL64), allocatable :: grid(:,:)           ! array holding grid values
   ! runtime variables
   integer(kind=INT32) :: i, j, k
+  integer(kind=INT32) :: x, y
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
 
@@ -87,12 +90,18 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a44)') 'Fortran OpenMP pipeline execution on 2D grid'
+#ifdef _OPENMP
+  write(*,'(a33,a21)') 'Fortran OpenMP INNERLOOP pipeline', &
+                       ' execution on 2D grid'
+#else
+  write(*,'(a33,a21)') 'Fortran Serial INNERLOOP pipeline', &
+                       ' execution on 2D grid'
+#endif
 
-  if (command_argument_count().lt.3) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a34,a38)')  'Usage: ./synch_p2p <# iterations> ',  &
-                          '<array x-dimension> <array y-dimension>'
+  if (command_argument_count().lt.2) then
+    write(*,'(a16,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a34,a16)') 'Usage: ./synch_p2p <# iterations> ',  &
+                         '<grid dimension>'
     stop 1
   endif
 
@@ -100,12 +109,8 @@ program main
   call get_command_argument(1,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') iterations
 
-  m = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') m
-
   n = 1
-  call get_command_argument(3,argtmp,arglen,err)
+  call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') n
 
   if (iterations .lt. 1) then
@@ -113,16 +118,18 @@ program main
     stop 1
   endif
 
-  if ((m .lt. 1).or.(n .lt. 1)) then
-    write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
+  if (n .lt. 1) then
+    write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', n
     stop 1
   endif
 
+#ifdef _OPENMP
   write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
+#endif
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
-  write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
+  write(*,'(a,i8,i8)') 'Grid sizes               = ', n, n
 
-  allocate( grid(m,n), stat=err)
+  allocate( grid(n,n), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of grid returned ',err
     stop 1
@@ -130,12 +137,12 @@ program main
 
   !$omp parallel default(none)                                  &
   !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
-  !$omp&  firstprivate(m,n)                                     &
-  !$omp&  private(i,j,k,corner_val)
+  !$omp&  firstprivate(n)                                       &
+  !$omp&  private(i,j,k,corner_val,x,y)
 
   !$omp do collapse(2)
   do j=1,n
-    do i=1,m
+    do i=1,n
       grid(i,j) = 0.0d0
     enddo
   enddo
@@ -147,7 +154,7 @@ program main
   enddo
   !$omp end do
   !$omp do
-  do i=1,m
+  do i=1,n
     grid(i,1) = real(i-1,REAL64)
   enddo
   !$omp end do
@@ -162,21 +169,18 @@ program main
       !$omp end master
     endif
 
-    !$omp do ordered(2) collapse(2)
-    do j=2,n
-      do i=2,m
-        !$omp ordered depend(sink:j,i-1) depend(sink:j-1,i) depend(sink:j-1,i-1)
-        grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
-        !$omp ordered depend(source)
+    do i=2,2*n-2
+      !$omp do
+      do j=max(2,i-n+2),min(i,n)
+        x = i-j+2
+        y = j
+        grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1)
       enddo
+      !$omp end do
     enddo
-    !$omp end do
-
     !$omp master
-    grid(1,1) = -grid(m,n)
+    grid(1,1) = -grid(n,n)
     !$omp end master
-
-    !$omp barrier
 
   enddo ! iterations
 
@@ -193,16 +197,16 @@ program main
   ! ********************************************************************
 
   ! verify correctness, using top right value
-  corner_val = real((iterations+1)*(n+m-2),REAL64);
-  if (abs(grid(m,n)-corner_val)/corner_val .gt. epsilon) then
-    write(*,'(a,f10.2,a,f10.2)') 'ERROR: checksum ',grid(m,n), &
+  corner_val = real((iterations+1)*(2*n-2),REAL64);
+  if (abs(grid(n,n)-corner_val)/corner_val .gt. epsilon) then
+    write(*,'(a,f10.2,a,f10.2)') 'ERROR: checksum ',grid(n,n), &
             ' does not match verification value ', corner_val
     stop 1
   endif
 
   write(*,'(a)') 'Solution validates'
   avgtime = pipeline_time/iterations
-  write(*,'(a,f13.6,a,f10.6)') 'Rate (MFlop/s): ',2.d-6*real((m-1)*(n-1),INT64)/avgtime, &
+  write(*,'(a,f13.6,a,f10.6)') 'Rate (MFlop/s): ',2.d-6*real((n-1)*(n-1),REAL64)/avgtime, &
          ' Avg time (s): ', avgtime
 
   deallocate( grid )
