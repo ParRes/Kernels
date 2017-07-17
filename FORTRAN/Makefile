@@ -46,7 +46,11 @@ ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc
 
 stencil: stencil.f90 stencil_serial.f90
 	$(FC) $(FCFLAGS) -c stencil_serial.f90 -o stencil_serial.o
-	$(FC) $(FCFLAGS) $< -o $@
+	$(FC) $(FCFLAGS) $< stencil_serial.o -o $@
+
+stencil-openmp: stencil.f90 stencil_openmp.f90
+	$(FC) $(FCFLAGS) -c stencil_openmp.f90 -o stencil_openmp.o
+	$(FC) $(FCFLAGS) $< stencil_openmp.o -o $@
 
 %-pretty: %-pretty.f90
 	$(FC) $(FCFLAGS) $< -o $@

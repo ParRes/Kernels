@@ -80,7 +80,9 @@ end subroutine
 
 program main
   use iso_fortran_env
+#ifdef _OPENMP
   use omp_lib
+#endif
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -103,7 +105,11 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
+#ifdef _OPENMP
   write(*,'(a40)') 'Fortran OpenMP INNERLOOP pipeline execution on 2D grid'
+#else
+  write(*,'(a47)') 'Fortran Serial innerloop pipeline execution on 2D grid'
+#endif
 
   if (command_argument_count().lt.2) then
     write(*,'(a20,i1)') 'argument count = ', command_argument_count()
@@ -130,7 +136,9 @@ program main
     stop 1
   endif
 
+#ifdef _OPENMP
   write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
+#endif
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
   write(*,'(a,i8,i8)') 'Grid sizes               = ', n, n
 

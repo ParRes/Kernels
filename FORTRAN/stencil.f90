@@ -100,6 +100,7 @@ subroutine initialize_w(is_star,r,W)
   endif
 end subroutine initialize_w
 
+#if 0
 subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
   use iso_fortran_env
   implicit none
@@ -180,6 +181,65 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
     endif ! tiling
   endif ! star
 end subroutine apply_stencil
+#else
+subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
+  use iso_fortran_env
+  implicit none
+  logical, intent(in) :: is_star, tiling
+  integer(kind=INT32), intent(in) :: tile_size, r, n
+  real(kind=REAL64), intent(in) :: W(-r:r,-r:r)
+  real(kind=REAL64), intent(in) :: A(n,n)
+  real(kind=REAL64), intent(inout) :: B(n,n)
+  integer(kind=INT32) :: i, j, ii, jj, it, jt
+  if (is_star) then
+      select case (r)
+          case (1)
+              call star1(n,A,B)
+          case (2)
+              call star2(n,A,B)
+          case (3)
+              call star3(n,A,B)
+          case (4)
+              call star4(n,A,B)
+          case (5)
+              call star5(n,A,B)
+          case (6)
+              call star6(n,A,B)
+          case (7)
+              call star7(n,A,B)
+          case (8)
+              call star8(n,A,B)
+          case (9)
+              call star9(n,A,B)
+          case default
+              stop r
+      end select
+  else ! grid
+      select case (r)
+          case (1)
+              call grid1(n,A,B)
+          case (2)
+              call grid2(n,A,B)
+          case (3)
+              call grid3(n,A,B)
+          case (4)
+              call grid4(n,A,B)
+          case (5)
+              call grid5(n,A,B)
+          case (6)
+              call grid6(n,A,B)
+          case (7)
+              call grid7(n,A,B)
+          case (8)
+              call grid8(n,A,B)
+          case (9)
+              call grid9(n,A,B)
+          case default
+              stop r
+      end select
+  endif ! grid
+end subroutine apply_stencil
+#endif
 
 program main
   use iso_fortran_env
