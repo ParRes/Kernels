@@ -61,14 +61,15 @@
 ! *******************************************************************
 
 function prk_get_wtime() result(t)
+  use iso_fortran_env
 #ifdef _OPENMP
   use omp_lib
-  real(kind=REAL64) ::  t
-  t = omp_get_wtime()
-#else
-  use iso_fortran_env
+#endif
   implicit none
   real(kind=REAL64) ::  t
+#ifdef _OPENMP
+  t = omp_get_wtime()
+#else
   integer(kind=INT64) :: c, r
   call system_clock(count = c, count_rate = r)
   t = real(c,REAL64) / real(r,REAL64)
