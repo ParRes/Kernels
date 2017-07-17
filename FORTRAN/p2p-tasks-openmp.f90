@@ -97,7 +97,6 @@ program main
   integer(kind=INT32) :: ic, mc                         ! ic = chunking index, mc = chunking dimension
   integer(kind=INT32) :: jc, nc                         ! jc = chunking index, nc = chunking dimension
   integer(kind=INT32) :: lic, ljc                       ! hold indexes of last block
-  integer ::  me, nt
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
 
