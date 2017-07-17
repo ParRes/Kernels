@@ -107,8 +107,8 @@ program main
     stop 1
   endif
 
-  write(*,'(a,i8)') 'Matrix order         = ', order
   write(*,'(a,i8)') 'Number of iterations = ', iterations
+  write(*,'(a,i8)') 'Matrix order         = ', order
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
