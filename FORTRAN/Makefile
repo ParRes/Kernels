@@ -44,10 +44,6 @@ ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc
 %: %.f90
 	$(FC) $(FCFLAGS) $< -o $@
 
-stencil: stencil.f90 stencil_serial.f90
-	$(FC) $(FCFLAGS) -c stencil_serial.f90 -o stencil_serial.o
-	$(FC) $(FCFLAGS) $< -o $@
-
 %-pretty: %-pretty.f90
 	$(FC) $(FCFLAGS) $< -o $@
 
@@ -65,6 +61,42 @@ stencil: stencil.f90 stencil_serial.f90
 
 %-ornlacc: %-ornlacc.f90
 	$(FC) $(FCFLAGS) $(ORNLACCFLAG) $< -o $@
+
+stencil: stencil.f90 stencil_serial.o
+	$(FC) $(FCFLAGS) $^ -o $@
+
+stencil-pretty: stencil.f90 stencil_pretty.o
+	$(FC) $(FCFLAGS) $^ -o $@
+
+stencil-openmp: stencil.f90 stencil_openmp.o
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $^ -o $@
+
+stencil-target: stencil.f90 stencil_target.o
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $^ -o $@
+
+stencil-coarray: stencil.f90 stencil_coarray.o
+	$(FC) $(FCFLAGS) $(COARRAYFLAG) $^ -o $@
+
+stencil-ornlacc: stencil.f90 stencil_ornlacc.o
+	$(FC) $(FCFLAGS) $(ORNLACCFLAG) $^ -o $@
+
+stencil_serial.o: stencil_serial.f90
+	$(FC) $(FCFLAGS) -c $< -o $@
+
+stencil_pretty.o: stencil_pretty.f90
+	$(FC) $(FCFLAGS) -c $< -o $@
+
+stencil_openmp.o: stencil_openmp.f90
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) -c $< -o $@
+
+stencil_target.o: stencil_target.f90
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) -c $< -o $@
+
+stencil_coarray.o: stencil_coarray.f90
+	$(FC) $(FCFLAGS) $(COARRAYFLAG) -c $< -o $@
+
+stencil_ornlacc.o: stencil_ornlacc.f90
+	$(FC) $(FCFLAGS) $(ORNLACCFLAG) -c $< -o $@
 
 clean:
 	-rm -f *.o
