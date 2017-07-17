@@ -88,7 +88,9 @@ int main(int argc, char * argv[])
   // a negative tile size means no tiling of the local transpose
   if (tile_size <= 0) tile_size = order;
 
+#ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
   if (tile_size < order) {

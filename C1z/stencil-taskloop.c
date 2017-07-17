@@ -72,12 +72,20 @@ void nothing(const int n, const double * restrict in, double * restrict out)
     abort();
 }
 
+#ifdef _OPENMP
 #include "stencil_taskloop.h"
+#else
+#include "stencil_seq.h"
+#endif
 
 int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+#ifdef _OPENMP
   printf("C11/OpenMP TASKLOOP Stencil execution on 2D grid\n");
+#else
+  printf("C11/Serial Stencil execution on 2D grid\n");
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -123,7 +131,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
   printf("Number of iterations      = %d\n", iterations);
   printf("Grid sizes                = %d\n", n);
   printf("Type of stencil           = %s\n", (star ? "star" : "grid") );

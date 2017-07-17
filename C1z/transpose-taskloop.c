@@ -58,7 +58,11 @@
 int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+#ifdef _OPENMP
   printf("C11/OpenMP TASKLOOP Matrix transpose: B = A^T\n");
+#else
+  printf("C11/Serial Matrix transpose: B = A^T\n");
+#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -88,7 +92,9 @@ int main(int argc, char * argv[])
   // a negative tile size means no tiling of the local transpose
   if (tile_size <= 0) tile_size = order;
 
+#ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
   if (tile_size < order) {
@@ -159,7 +165,7 @@ int main(int argc, char * argv[])
   }
 
   //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
+  // Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
   const double addit = (iterations+1.) * (iterations/2.);

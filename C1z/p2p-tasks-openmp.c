@@ -76,7 +76,11 @@ static inline void sweep_tile(int startm, int endm,
 int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
-  printf("C11/OpenMP pipeline execution on 2D grid\n");
+#ifdef _OPENMP
+  printf("C11/OpenMP TASKS pipeline execution on 2D grid\n");
+#else
+  printf("C11/Serial pipeline execution on 2D grid\n");
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -112,7 +116,9 @@ int main(int argc, char * argv[])
     nc = n;
   }
 
+#ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
   printf("Number of iterations      = %d\n", iterations);
   printf("Grid sizes                = %d,%d\n", m, n);
   printf("Grid chunk sizes          = %d,%d\n", mc, nc);

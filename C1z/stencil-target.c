@@ -123,7 +123,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
   printf("Number of iterations      = %d\n", iterations);
   printf("Grid sizes                = %d\n", n);
   printf("Type of stencil           = %s\n", (star ? "star" : "grid") );
