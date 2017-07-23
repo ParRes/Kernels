@@ -95,7 +95,8 @@
 #  include <pstl/algorithm>
 #  include <pstl/numeric>
 #  include <pstl/memory>
-# else
+# elif defined(__GNUC__) && defined(__GNUC_MINOR__) && \
+       ( (__GNUC__ >= 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
 #  include <parallel/algorithm>
 #  include <parallel/numeric>
 # endif
