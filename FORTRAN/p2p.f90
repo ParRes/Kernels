@@ -108,7 +108,7 @@ program main
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a34,a38)')  'Usage: ./synch_p2p <# iterations> ',  &
+    write(*,'(a34,a39)')  'Usage: ./synch_p2p <# iterations> ',  &
                           '<array x-dimension> <array y-dimension>'
     stop 1
   endif

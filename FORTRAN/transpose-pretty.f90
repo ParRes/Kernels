@@ -72,7 +72,10 @@ program main
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
-  integer(kind=INT32) :: i, k
+#if defined(__PGI)
+  integer(kind=INT32) :: i
+#endif
+  integer(kind=INT32) :: k
   integer(kind=INT64) :: j, o2                      ! for loop over order**2
   real(kind=REAL64) ::  abserr                      ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
@@ -107,8 +110,8 @@ program main
     stop 1
   endif
 
-  write(*,'(a,i8)') 'Matrix order         = ', order
   write(*,'(a,i8)') 'Number of iterations = ', iterations
+  write(*,'(a,i8)') 'Matrix order         = ', order
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -151,7 +154,7 @@ program main
   A = ( transpose(reshape((/ (j, j = 0,o2) /),(/order, order/))) &
         * real(iterations+1,REAL64) ) &
       + real((iterations*(iterations+1))/2,REAL64)
-#if 0
+#if 0 && defined(__PGI)
   ! PGI generates a segfault here...
   abserr = 0.0d0
   forall (j=1:order,i=1:order)

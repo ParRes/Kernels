@@ -40,7 +40,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    __gnu_parallel::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
-        src.write('      for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
+        src.write('      std::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='pstl'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
