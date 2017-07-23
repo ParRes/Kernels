@@ -110,11 +110,11 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
   real(kind=REAL64), intent(inout) :: B(n,n)
   integer(kind=INT32) :: i, j, ii, jj, it, jt
   if (is_star) then
-    !$omp taskloop collapse(2)
-    do jt=r,n-r-1,tile_size
-      do it=r,n-r-1,tile_size
-        do j=jt,min(n-r-1,jt+tile_size-1)
-          do i=it,min(n-r-1,it+tile_size-1)
+    if (.not.tiling) then
+      !$omp taskloop shared(W,A,B)
+      do j=r,n-r-1
+        do i=r,n-r-1
+            ! do not use Intel Fortran unroll directive here (slows down)
             do jj=-r,r
               B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
             enddo
@@ -124,27 +124,60 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
             do ii=1,r
               B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
             enddo
-          enddo
         enddo
       enddo
-    enddo
-    !$omp end taskloop
-  else ! grid
-    !$omp taskloop collapse(2)
-    do jt=r,n-r-1,tile_size
-      do it=r,n-r-1,tile_size
-        do j=jt,min(n-r-1,jt+tile_size-1)
-          do i=it,min(n-r-1,it+tile_size-1)
-            do jj=-r,r
-              do ii=-r,r
-                B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
+      !$omp end taskloop
+    else ! tiling
+      !$omp taskloop shared(W,A,B)
+      do jt=r,n-r-1,tile_size
+        do it=r,n-r-1,tile_size
+          do j=jt,min(n-r-1,jt+tile_size-1)
+            do i=it,min(n-r-1,it+tile_size-1)
+              do jj=-r,r
+                B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
+              enddo
+              do ii=-r,-1
+                B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
+              enddo
+              do ii=1,r
+                B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
               enddo
             enddo
           enddo
         enddo
       enddo
-    enddo
-    !$omp end taskloop
+      !$omp end taskloop
+    endif ! tiling
+  else ! grid
+    if (.not.tiling) then
+      !$omp taskloop shared(W,A,B)
+      do j=r,n-r-1
+        do i=r,n-r-1
+          do jj=-r,r
+            do ii=-r,r
+              B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
+            enddo
+          enddo
+        enddo
+      enddo
+      !$omp end taskloop
+    else ! tiling
+      !$omp taskloop shared(W,A,B)
+      do jt=r,n-r-1,tile_size
+        do it=r,n-r-1,tile_size
+          do j=jt,min(n-r-1,jt+tile_size-1)
+            do i=it,min(n-r-1,it+tile_size-1)
+              do jj=-r,r
+                do ii=-r,r
+                  B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
+                enddo
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+      !$omp end taskloop
+    endif ! tiling
   endif ! star
 end subroutine apply_stencil
 
@@ -180,12 +213,12 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
-  write(*,'(a60)') 'Fortran OpenMP TASKLOOP Stencil execution on 2D grid'
+  write(*,'(a25)') 'Parallel Research Kernels'
+  write(*,'(a52)') 'Fortran OpenMP TASKLOOP Stencil execution on 2D grid'
 
   if (command_argument_count().lt.2) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',             &
+    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a32,a29)') 'Usage: ./stencil <# iterations> ', &
                       '<array dimension> [tile_size]'
     stop 1
   endif
@@ -253,6 +286,7 @@ program main
   active_points = int(n-2*r,INT64)**2
 
   write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Grid size            = ', n
   write(*,'(a,i8)') 'Radius of stencil    = ', r
   if (is_star) then
@@ -269,7 +303,6 @@ program main
   else
       write(*,'(a)') 'Untiled'
   endif
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   call initialize_w(is_star,r,W)
 
@@ -278,7 +311,7 @@ program main
   !$omp&  private(i,j,k)
 
   !$omp master
-  !$omp taskloop
+  !$omp taskloop shared(A,B)
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
@@ -302,7 +335,7 @@ program main
     !$omp taskwait
 
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp taskloop
+    !$omp taskloop shared(A)
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.d0

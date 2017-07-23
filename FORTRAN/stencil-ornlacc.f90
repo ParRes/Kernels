@@ -132,12 +132,12 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran ORNL-ACC Stencil execution on 2D grid'
+  write(*,'(a25)') 'Parallel Research Kernels'
+  write(*,'(a44)') 'Fortran OpenACC Stencil execution on 2D grid'
 
   if (command_argument_count().lt.2) then
-    write(*,'(a,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a,a)')  'Usage: ./stencil <# iterations> ',             &
+    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a32,a29)') 'Usage: ./stencil <# iterations> ', &
                       '<array dimension> [tile_size]'
     stop 1
   endif
@@ -204,6 +204,7 @@ program main
   norm = 0.d0
   active_points = int(n-2*r,INT64)**2
 
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Grid size            = ', n
   write(*,'(a,i8)') 'Radius of stencil    = ', r
   if (is_star) then
@@ -220,7 +221,6 @@ program main
   else
       write(*,'(a)') 'Untiled'
   endif
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
 
   call initialize_w(is_star,r,W)
 

@@ -64,7 +64,11 @@
 int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
-  printf("C11/OpenMP pipeline execution on 2D grid\n");
+#ifdef _OPENMP
+  printf("C11 OpenMP INNERLOOP pipeline execution on 2D grid\n");
+#else
+  printf("C11 serial INNERLOOP pipeline execution on 2D grid\n");
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -89,7 +93,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
   printf("Number of iterations      = %d\n", iterations);
   printf("Grid sizes                = %d,%d\n", n, n);
 
@@ -102,9 +108,9 @@ int main(int argc, char * argv[])
   size_t bytes = n*n*sizeof(double);
   double * restrict grid = prk_malloc(bytes);
 
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
   {
-    PRAGMA_OMP_FOR_SIMD
+    OMP_FOR_SIMD
     for (int i=0; i<n; i++) {
       for (int j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
@@ -112,7 +118,7 @@ int main(int argc, char * argv[])
     }
 
     // set boundary values (bottom and left side of grid)
-    _Pragma("omp master")
+    OMP_MASTER
     {
       for (int j=0; j<n; j++) {
         grid[0*n+j] = (double)j;
@@ -121,37 +127,29 @@ int main(int argc, char * argv[])
         grid[i*n+0] = (double)i;
       }
     }
-    _Pragma("omp barrier")
+    OMP_BARRIER
 
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
+          OMP_BARRIER
+          OMP_MASTER
           pipeline_time = prk_wtime();
       }
 
-      for (int j=1; j<n; j++) {
-        PRAGMA_OMP_FOR_SIMD
-        for (int i=1; i<=j; i++) {
-          const int x = i;
-          const int y = j-i+1;
+      for (int i=2; i<=2*n-2; i++) {
+        OMP_FOR_SIMD
+        for (int j=MAX(2,i-n+2); j<=MIN(i,n); j++) {
+          const int x = i-j+2-1;
+          const int y = j-1;
           grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
         }
       }
-      for (int j=n-2; j>=1; j--) {
-        PRAGMA_OMP_FOR_SIMD
-        for (int i=1; i<=j; i++) {
-          const int x = n+i-j-1;
-          const int y = n-i;
-          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-        }
-      }
-      _Pragma("omp master")
+      OMP_MASTER
       grid[0*n+0] = -grid[(n-1)*n+(n-1)];
     }
-    _Pragma("omp barrier")
-    _Pragma("omp master")
+    OMP_BARRIER
+    OMP_MASTER
     pipeline_time = prk_wtime() - pipeline_time;
   }
 

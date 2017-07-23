@@ -20,7 +20,7 @@ if [ ! -d "$TRAVIS_ROOT/fgmpi" ]; then
 
     # GIT build
     #cd $TRAVIS_ROOT
-    #git clone --depth 10 https://github.com/humairakamal/fgmpi.git fgmpi-source
+    #git clone --depth 1 https://github.com/humairakamal/fgmpi.git fgmpi-source
     #cd fgmpi-source
     ## this may fail on older autotools
     #./autogen.sh

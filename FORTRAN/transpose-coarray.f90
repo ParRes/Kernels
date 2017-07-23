@@ -107,20 +107,17 @@ program main
   ! ********************************************************************
 
   if (printer) then
-    write(6,'(a40)') 'Parallel Research Kernels'
-    write(6,'(a40)') 'Fortran coarray Matrix transpose: B = A^T'
+    write(6,'(a25)') 'Parallel Research Kernels'
+    write(6,'(a41)') 'Fortran coarray Matrix transpose: B = A^T'
   endif
 
   if (command_argument_count().lt.2) then
     if (printer) then
-      write(6,'(a60)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
+      write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+      write(6,'(a62)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
     endif
-    error stop
+    stop 1
   endif
-
-  ! Fortran 2008 has no broadcast functionality, so for now,
-  ! I will just parse the arguments at every image.
-  ! The errors will be emitted O(npes) times.
 
   iterations = 1
   call get_command_argument(1,argtmp,arglen,err)
@@ -129,7 +126,7 @@ program main
     if (printer) then
       write(6,'(a35,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     endif
-    error stop
+    stop 1
   endif
 
   order = 1
@@ -139,19 +136,19 @@ program main
     if (printer) then
       write(6,'(a30,i5)') 'ERROR: order must be >= 1 : ', order
     endif
-    error stop
+    stop 1
   endif
   if (modulo(order,npes).gt.0) then
     if (printer) then
       write(6,'(a20,i5,a35,i5)') 'ERROR: matrix order ',order,&
                         ' should be divisible by # images ',npes
     endif
-    error stop
+    stop 1
   endif
   col_per_pe = order/npes
 
   ! same default as the C implementation
-  tile_size = 1
+  tile_size = 32
   if (command_argument_count().gt.2) then
       call get_command_argument(3,argtmp,arglen,err)
       if (err.eq.0) read(argtmp,'(i32)') tile_size
@@ -169,28 +166,28 @@ program main
   allocate( A(order,col_per_pe)[*], stat=err)
   if (err .ne. 0) then
     write(6,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
-    error stop
+    stop 1
   endif
 
   allocate( B(order,col_per_pe)[*], stat=err )
   if (err .ne. 0) then
     write(6,'(a20,i3,a10,i5)') 'allocation of B returned ',err,' at image ',me
-    error stop
+    stop 1
   endif
 
   allocate( T(col_per_pe,col_per_pe), stat=err )
   if (err .ne. 0) then
     write(6,'(a20,i3,a10,i5)') 'allocation of T returned ',err,' at image ',me
-    error stop
+    stop 1
   endif
 
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
   if (printer) then
     write(6,'(a23,i8)') 'Number of images     = ', num_images()
+    write(6,'(a23,i8)') 'Number of iterations = ', iterations
     write(6,'(a23,i8)') 'Matrix order         = ', order
     write(6,'(a23,i8)') 'Tile size            = ', tile_size
-    write(6,'(a23,i8)') 'Number of iterations = ', iterations
   endif
 
   ! initialization
@@ -324,7 +321,7 @@ program main
       write(6,'(a30,f13.6,a18,f13.6)') 'ERROR: Aggregate squared error ', &
               abserr,' exceeds threshold ',(epsilon/npes)
     endif
-    error stop 1
+    stop 1
   endif
 
 end program main

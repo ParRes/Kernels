@@ -6,7 +6,7 @@ set -x
 TRAVIS_ROOT="$1"
 
 if [ ! -d "$TRAVIS_ROOT/oshmpi" ]; then
-    git clone --depth 10 https://github.com/jeffhammond/oshmpi.git
+    git clone --depth 1 https://github.com/jeffhammond/oshmpi.git
     cd oshmpi
     ./autogen.sh
     ./configure CC=mpicc --prefix=$TRAVIS_ROOT/oshmpi

@@ -127,11 +127,12 @@ case "$PRK_TARGET" in
         echo "CC=${PRK_CC} -std=c11 -DPRK_USE_GETTIMEOFDAY\nEXTRA_CLIBS=-lm" >> common/make.defs
 
         # C11 without external parallelism
-        make -C $PRK_TARGET_PATH serial
-        $PRK_TARGET_PATH/p2p         10 1024 1024
-        $PRK_TARGET_PATH/p2p         10 1024 1024 100 100
-        $PRK_TARGET_PATH/stencil     10 1000
-        $PRK_TARGET_PATH/transpose   10 1024 32
+        make -C $PRK_TARGET_PATH p2p stencil transpose p2p-innerloop
+        $PRK_TARGET_PATH/p2p             10 1024 1024
+        $PRK_TARGET_PATH/p2p             10 1024 1024 100 100
+        $PRK_TARGET_PATH/p2p-innerloop   10 1024
+        $PRK_TARGET_PATH/stencil         10 1000
+        $PRK_TARGET_PATH/transpose       10 1024 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 6 7 8 9 ; do
@@ -147,7 +148,7 @@ case "$PRK_TARGET" in
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
                 make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-innerloop-openmp     10 1024 1024
+                $PRK_TARGET_PATH/p2p-innerloop-openmp     10 1024
                 $PRK_TARGET_PATH/stencil-openmp           10 1000
                 $PRK_TARGET_PATH/transpose-openmp         10 1024 32
                 #echo "Test stencil code generator"
@@ -523,24 +524,25 @@ case "$PRK_TARGET" in
         esac
 
         # Serial
-        make -C ${PRK_TARGET_PATH} serial
+        make -C ${PRK_TARGET_PATH} p2p p2p-innerloop stencil transpose
         $PRK_TARGET_PATH/p2p               10 1024 1024
+        $PRK_TARGET_PATH/p2p-innerloop     10 1024
         $PRK_TARGET_PATH/stencil           10 1000
         $PRK_TARGET_PATH/transpose         10 1024 1
         $PRK_TARGET_PATH/transpose         10 1024 32
 
         # Pretty
-        make -C ${PRK_TARGET_PATH} pretty
+        make -C ${PRK_TARGET_PATH} stencil-pretty transpose-pretty
         #$PRK_TARGET_PATH/p2p-pretty          10 1024 1024
         # pretty versions do not support tiling...
         $PRK_TARGET_PATH/stencil-pretty      10 1000
         $PRK_TARGET_PATH/transpose-pretty    10 1024
 
         # OpenMP host
-        make -C ${PRK_TARGET_PATH} p2p-openmp-tasks p2p-openmp-datapar stencil-openmp transpose-openmp
+        make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
         export OMP_NUM_THREADS=2
-        $PRK_TARGET_PATH/p2p-openmp-tasks     10 1024 1024
-        $PRK_TARGET_PATH/p2p-openmp-datapar   10 1024 1024
+        $PRK_TARGET_PATH/p2p-tasks-openmp     10 1024 1024
+        $PRK_TARGET_PATH/p2p-innerloop-openmp 10 1024
         #$PRK_TARGET_PATH/p2p-openmp-doacross  10 1024 1024 # most compilers do not support doacross yet
         $PRK_TARGET_PATH/stencil-openmp       10 1000
         $PRK_TARGET_PATH/transpose-openmp     10 1024 1
@@ -790,12 +792,12 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-linux-x86_64-smp
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
+                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
@@ -814,12 +816,12 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.1/netlrts-linux-x86_64-smp
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm-6.7.0/multicore-linux64
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
+                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
+                #export CHARM_ROOT=$TRAVIS_ROOT/charm/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs

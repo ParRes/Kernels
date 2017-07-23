@@ -63,24 +63,11 @@ function prk_get_wtime() result(t)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
 
-subroutine sweep_tile(startm,endm,startn,endn,m,n,grid)
-  use iso_fortran_env
-  implicit none
-  integer(kind=INT32), intent(in) :: m,n
-  integer(kind=INT32), intent(in) :: startm,endm
-  integer(kind=INT32), intent(in) :: startn,endn
-  real(kind=REAL64), intent(inout) ::  grid(m,n)
-  integer(kind=INT32) :: i,j
-  do j=startn,endn
-    do i=startm,endm
-      grid(i,j) = grid(i-1,j) + grid(i,j-1) - grid(i-1,j-1)
-    enddo
-  enddo
-end subroutine
-
 program main
   use iso_fortran_env
+#ifdef _OPENMP
   use omp_lib
+#endif
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -102,13 +89,19 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran OpenMP wavefront pipeline execution on 2D grid'
+  write(*,'(a25)') 'Parallel Research Kernels'
+#ifdef _OPENMP
+  write(*,'(a33,a21)') 'Fortran OpenMP INNERLOOP pipeline', &
+                       ' execution on 2D grid'
+#else
+  write(*,'(a33,a21)') 'Fortran Serial INNERLOOP pipeline', &
+                       ' execution on 2D grid'
+#endif
 
   if (command_argument_count().lt.2) then
-    write(*,'(a20,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a35,a50)')  'Usage: ./synch_p2p <# iterations> ',  &
-                          '<grid dimension>'
+    write(*,'(a16,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a34,a16)') 'Usage: ./synch_p2p <# iterations> ',  &
+                         '<grid dimension>'
     stop 1
   endif
 
@@ -130,7 +123,9 @@ program main
     stop 1
   endif
 
+#ifdef _OPENMP
   write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
+#endif
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
   write(*,'(a,i8,i8)') 'Grid sizes               = ', n, n
 
@@ -174,20 +169,11 @@ program main
       !$omp end master
     endif
 
-    do j=2,n
+    do i=2,2*n-2
       !$omp do
-      do i=2,j
-        x = i
-        y = j-i+2
-        grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1)
-      enddo
-      !$omp end do
-    enddo
-    do j=n-1,2,-1
-      !$omp do
-      do i=2,j
-        x = n+i-j
-        y = n-i+2
+      do j=max(2,i-n+2),min(i,n)
+        x = i-j+2
+        y = j
         grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1)
       enddo
       !$omp end do

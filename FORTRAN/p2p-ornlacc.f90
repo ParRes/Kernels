@@ -86,12 +86,12 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a40)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran OpenMP pipeline execution on 2D grid'
+  write(*,'(a25)') 'Parallel Research Kernels'
+  write(*,'(a45)') 'Fortran OpenACC pipeline execution on 2D grid'
 
-  if (command_argument_count().lt.3) then
-    write(*,'(a20,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a35,a50)')  'Usage: ./synch_p2p <# iterations> ',  &
+  if (command_argument_count().lt.2) then
+    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+    write(*,'(a34,a39)')  'Usage: ./synch_p2p <# iterations> ',  &
                           '<array x-dimension> <array y-dimension>'
     stop 1
   endif
@@ -104,9 +104,11 @@ program main
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') m
 
-  n = 1
-  call get_command_argument(3,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') n
+  n = m
+  if (command_argument_count().gt.2) then
+    call get_command_argument(3,argtmp,arglen,err)
+    if (err.eq.0) read(argtmp,'(i32)') n
+  endif
 
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
