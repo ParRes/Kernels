@@ -103,39 +103,40 @@ program main
 
   ! co_broadcast is part of Fortran 2015, so we will not assume it yet.
   if(me == 1) then
-     write(*,'(a40)') 'Parallel Research Kernels'
-     write(*,'(a40)') 'Fortran coarray pipeline execution on 2D grid'
-
+     write(*,'(a25)') 'Parallel Research Kernels'
+     write(*,'(a45)') 'Fortran coarray pipeline execution on 2D grid'
   endif
-     if (command_argument_count().lt.3) then
-        if(me == 1) then
-          write(*,'(a,a)')  'Usage: ./synch_p2p <# iterations> ',           &
-               '<first array dimension> <second array dimension>'
-        endif
-        error stop
+
+  if (command_argument_count().lt.3) then
+     if(me == 1) then
+       write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+       write(*,'(a34,a38)')  'Usage: ./synch_p2p <# iterations> ',  &
+                             '<array x-dimension> <array y-dimension>'
      endif
+     stop 1
+  endif
 
-     iterations = 1
-     call get_command_argument(1,argtmp,arglen,err)
-     if (err.eq.0) read(argtmp,'(i32)') iterations
+  iterations = 1
+  call get_command_argument(1,argtmp,arglen,err)
+  if (err.eq.0) read(argtmp,'(i32)') iterations
 
-     m = 1
-     call get_command_argument(2,argtmp,arglen,err)
-     if (err.eq.0) read(argtmp,'(i32)') m
+  m = 1
+  call get_command_argument(2,argtmp,arglen,err)
+  if (err.eq.0) read(argtmp,'(i32)') m
 
-     n = 1
-     call get_command_argument(3,argtmp,arglen,err)
-     if (err.eq.0) read(argtmp,'(i32)') n
+  n = 1
+  call get_command_argument(3,argtmp,arglen,err)
+  if (err.eq.0) read(argtmp,'(i32)') n
 
-     if (iterations .lt. 1) then
-        write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-        error stop 1
-     endif
+  if (iterations .lt. 1) then
+     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
+     stop 1
+  endif
 
-     if ((m .lt. 1).or.(n .lt. 1)) then
-        write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
-        error stop 1
-     endif
+  if ((m .lt. 1).or.(n .lt. 1)) then
+     write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
+     stop 1
+  endif
 
   ! co_max is part of Fortran 2015, so we will not assume it. This is present
   ! in OpenCoarrays and has been for a while, when used with GFortran >= 6.
@@ -149,13 +150,13 @@ program main
 
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation of grid returned ',err
-    error stop 1
+    stop 1
   endif
 
   if(me == 1) then
      write(*,'(a,i8)')    'Number of threads        = ', num_images()
-     write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
      write(*,'(a,i8)')    'Number of iterations     = ', iterations
+     write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
   endif
 
   do j=1,n
@@ -225,7 +226,7 @@ program main
      if (abs(grid(m_local,n)-corner_val)/corner_val .gt. epsilon) then
         write(*,'(a,f10.2,a,f10.2)') 'ERROR: checksum ',grid(m_local,n), &
              ' does not match verification value ', corner_val
-        error stop 1
+        stop 1
      endif
      write(*,'(a)') 'Solution validates'
 
@@ -236,11 +237,7 @@ program main
 
   sync all
 
-  ! deallocate( grid ) ! Shouldn't be needed... if memory leaks are occuring please
-                       ! report to upstream
-
-  ! error stop ! Use error stop instead of stop due to
-               ! https://github.com/sourceryinstitute/OpenCoarrays/issues/309
+  deallocate( grid )
 
 end program
 

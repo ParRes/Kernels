@@ -35,13 +35,13 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <mpi.h>
 
-#ifdef AMPI
-#ifndef MPI_INT64_T
-#define MPI_INT64_T MPI_LONG_LONG
-#endif /* MPI_INT64_T */
-#ifndef MPI_UINT64_T
-#define MPI_UINT64_T MPI_UNSIGNED_LONG_LONG
-#endif /* MPI_UINT64_T */
+#if defined(ADAPTIVE_MPI)
+# ifndef MPI_INT64_T
+#  define MPI_INT64_T MPI_LONG_LONG
+# endif /* MPI_INT64_T */
+# ifndef MPI_UINT64_T
+#  define MPI_UINT64_T MPI_UNSIGNED_LONG_LONG
+# endif /* MPI_UINT64_T */
 #endif /* AMPI */
 
 /* This code appears in MADNESS, which is GPL, but it was
