@@ -35,13 +35,13 @@
 ///
 /// PURPOSE: This program tests the efficiency with which point-to-point
 ///          synchronization can be carried out. It does so by executing
-///          a pipelined algorithm on an m*n grid. The first array dimension
+///          a pipelined algorithm on an n^2 grid. The first array dimension
 ///          is distributed among the threads (stripwise decomposition).
 ///
 /// USAGE:   The program takes as input the
 ///          dimensions of the grid, and the number of iterations on the grid
 ///
-///                <progname> <iterations> <m> <n>
+///                <progname> <iterations> <n>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -66,17 +66,17 @@
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP TARGET DOACROSS pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/OpenMP INNERLOOP pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int m, n;
+  int n;
   try {
-      if (argc < 4){
-        throw " <# iterations> <first array dimension> <second array dimension>";
+      if (argc < 3){
+        throw " <# iterations> <array dimension>";
       }
 
       // number of times to run the pipeline algorithm
@@ -86,11 +86,10 @@ int main(int argc, char* argv[])
       }
 
       // grid dimensions
-      m = std::atoi(argv[2]);
-      n = std::atoi(argv[3]);
-      if (m < 1 || n < 1) {
+      n = std::atoi(argv[2]);
+      if (n < 1) {
         throw "ERROR: grid dimensions must be positive";
-      } else if ( static_cast<size_t>(m)*static_cast<size_t>(n) > INT_MAX) {
+      } else if ( static_cast<size_t>(n)*static_cast<size_t>(n) > INT_MAX) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
   }
@@ -101,7 +100,7 @@ int main(int argc, char* argv[])
 
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
+  std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -110,11 +109,11 @@ int main(int argc, char* argv[])
   auto pipeline_time = 0.0; // silence compiler warning
 
   // working set
-  double * grid = new double[m*n];
+  double * grid = new double[n*n];
 
   _Pragma("omp parallel")
   {
-    _Pragma("omp for")
+    PRAGMA_OMP_FOR_SIMD
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
@@ -127,16 +126,12 @@ int main(int argc, char* argv[])
       for (auto j=0; j<n; j++) {
         grid[0*n+j] = static_cast<double>(j);
       }
-      for (auto i=0; i<m; i++) {
+      for (auto i=0; i<n; i++) {
         grid[i*n+0] = static_cast<double>(i);
       }
     }
     _Pragma("omp barrier")
-  }
 
-  _Pragma("omp target map(tofrom:grid[0:m*n]) map(from:pipeline_time)")
-  _Pragma("omp parallel")
-  {
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
@@ -145,17 +140,24 @@ int main(int argc, char* argv[])
           pipeline_time = prk::wtime();
       }
 
-      _Pragma("omp for collapse(2) ordered(2)")
-      for (auto i=1; i<m; i++) {
-        for (auto j=1; j<n; j++) {
-          _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1) depend(sink: i-1,j-1)")
-          grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-          _Pragma("omp ordered depend (source)")
+      for (auto j=1; j<n; j++) {
+        PRAGMA_OMP_FOR_SIMD
+        for (auto i=1; i<=j; i++) {
+          auto x = i;
+          auto y = j-i+1;
+          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
         }
       }
-
+      for (auto j=n-2; j>=1; j--) {
+        PRAGMA_OMP_FOR_SIMD
+        for (auto i=1; i<=j; i++) {
+          auto x = n+i-j-1;
+          auto y = n-i;
+          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+        }
+      }
       _Pragma("omp master")
-      grid[0*n+0] = -grid[(m-1)*n+(n-1)];
+      grid[0*n+0] = -grid[(n-1)*n+(n-1)];
     }
 
     _Pragma("omp barrier")
@@ -167,13 +169,10 @@ int main(int argc, char* argv[])
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
-  // error tolerance
   const double epsilon = 1.e-8;
-
-  // verify correctness, using top right value
-  auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
-    std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
+  auto corner_val = ((iterations+1.)*(2.*n-2.));
+  if ( (std::fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+    std::cout << "ERROR: checksum " << grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;
   }
@@ -185,7 +184,7 @@ int main(int argc, char* argv[])
 #endif
   auto avgtime = pipeline_time/iterations;
   std::cout << "Rate (MFlops/s): "
-            << 2.0e-6 * ( (m-1)*(n-1) )/avgtime
+            << 2.0e-6 * ( (n-1)*(n-1) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
 
   return 0;

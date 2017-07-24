@@ -54,74 +54,18 @@
 
 #include "prk_util.h"
 
-struct Initialize
-{
-    public:
-        void operator()( const tbb::blocked_range2d<int>& r ) const {
-            for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                    A_[i*n_+j] = static_cast<double>(i*n_+j);
-                    B_[i*n_+j] = 0.0;
-                }
-            }
-        }
-
-        Initialize(int n, std::vector<double> & A, std::vector<double> & B) : n_(n), A_(A), B_(B) { }
-
-    private:
-        int n_;
-        std::vector<double> & A_;
-        std::vector<double> & B_;
-
-};
-
-struct Transpose
-{
-    public:
-        void operator()( const tbb::blocked_range2d<int>& r ) const {
-            for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                    B_[i*n_+j] += A_[j*n_+i];
-                    A_[j*n_+i] += 1.0;
-                }
-            }
-        }
-
-        Transpose(int n, std::vector<double> & A, std::vector<double> & B) : n_(n), A_(A), B_(B) { }
-
-    private:
-        int n_;
-        std::vector<double> & A_;
-        std::vector<double> & B_;
-
-};
-
-void ParallelInitialize(int order, int tile_size, std::vector<double> & A, std::vector<double> & B)
-{
-    Initialize t(order, A, B);
-    const tbb::blocked_range2d<int> r(0, order, tile_size, 0, order, tile_size);
-    parallel_for(r,t);
-}
-
-void ParallelTranspose(int order, int tile_size, std::vector<double> & A, std::vector<double> & B)
-{
-    Transpose t(order, A, B);
-    const tbb::blocked_range2d<int> r(0, order, tile_size, 0, order, tile_size);
-    parallel_for(r,t);
-}
-
 int main(int argc, char * argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/TBB Matrix transpose: B = A^T" << std::endl;
-
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "C++11/OpenMP TASKLOOP Matrix transpose: B = A^T" << std::endl;
+
   int iterations;
-  int order;
-  int tile_size;
+  size_t order;
+  size_t tile_size;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order> [tile size]";
@@ -140,15 +84,17 @@ int main(int argc, char * argv[])
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atol(argv[3]) : 32;
+      tile_size = (argc>4) ? std::atol(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
+
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
+  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
   if (tile_size < order) {
@@ -156,8 +102,6 @@ int main(int argc, char * argv[])
   } else {
       std::cout << "Untiled" << std::endl;
   }
-
-  tbb::task_scheduler_init init(tbb::task_scheduler_init::automatic);
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -170,13 +114,51 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  ParallelInitialize(order, tile_size, A, B);
+  _Pragma("omp parallel")
+  _Pragma("omp master")
+  {
+    _Pragma("omp taskloop firstprivate(order) shared(A,B)")
+    for (auto i=0;i<order; i++) {
+      for (auto j=0;j<order;j++) {
+        A[i*order+j] = static_cast<double>(i*order+j);
+        B[i*order+j] = 0.0;
+      }
+    }
 
-  for (auto iter = 0; iter<=iterations; iter++) {
-    if (iter==1) trans_time = prk::wtime();
-    ParallelTranspose(order, tile_size, A, B);
+    _Pragma("omp taskwait")
+
+    for (auto iter = 0; iter<=iterations; iter++) {
+
+      if (iter==1) {
+          trans_time = prk::wtime();
+      }
+
+      // transpose the  matrix
+      if (tile_size < order) {
+        _Pragma("omp taskloop firstprivate(order) shared(A,B)")
+        for (auto it=0; it<order; it+=tile_size) {
+          for (auto jt=0; jt<order; jt+=tile_size) {
+            for (auto i=it; i<std::min(order,it+tile_size); i++) {
+              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
+                B[i*order+j] += A[j*order+i];
+                A[j*order+i] += 1.0;
+              }
+            }
+          }
+        }
+      } else {
+        _Pragma("omp taskloop firstprivate(order) shared(A,B)")
+        for (auto i=0;i<order; i++) {
+          for (auto j=0;j<order;j++) {
+            B[i*order+j] += A[j*order+i];
+            A[j*order+i] += 1.0;
+          }
+        }
+      }
+      _Pragma("omp taskwait")
+    }
+    trans_time = prk::wtime() - trans_time;
   }
-  trans_time = prk::wtime() - trans_time;
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -184,10 +166,11 @@ int main(int argc, char * argv[])
 
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
+  _Pragma("omp parallel for reduction(+:abserr)")
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      const int ij = i*order+j;
-      const int ji = j*order+i;
+      const size_t ij = i*order+j;
+      const size_t ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(B[ji] - reference);
     }

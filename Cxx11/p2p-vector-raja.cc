@@ -59,14 +59,12 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <omp.h>
-
 #include "prk_util.h"
 
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP TARGET DOACROSS pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/RAJA pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -74,9 +72,10 @@ int main(int argc, char* argv[])
 
   int iterations;
   int m, n;
+  int mc, nc;
   try {
       if (argc < 4){
-        throw " <# iterations> <first array dimension> <second array dimension>";
+        throw " <# iterations> <first array dimension> <second array dimension> [<first chunk dimension> <second chunk dimension>]";
       }
 
       // number of times to run the pipeline algorithm
@@ -93,15 +92,24 @@ int main(int argc, char* argv[])
       } else if ( static_cast<size_t>(m)*static_cast<size_t>(n) > INT_MAX) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
+
+      // grid chunk dimensions
+      mc = (argc > 4) ? std::atoi(argv[4]) : m;
+      nc = (argc > 5) ? std::atoi(argv[5]) : n;
+      if (mc < 1 || mc > m || nc < 1 || nc > n) {
+        std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
+        mc = m;
+        nc = n;
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
-  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
+  std::cout << "Grid chunk sizes     = " << mc << ", " << nc << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -110,67 +118,71 @@ int main(int argc, char* argv[])
   auto pipeline_time = 0.0; // silence compiler warning
 
   // working set
-  double * grid = new double[m*n];
+  std::vector<double> grid;
+  grid.resize(m*n,0.0);
 
-  _Pragma("omp parallel")
-  {
-    _Pragma("omp for")
-    for (auto i=0; i<n; i++) {
-      for (auto j=0; j<n; j++) {
-        grid[i*n+j] = 0.0;
-      }
-    }
-
-    // set boundary values (bottom and left side of grid)
-    _Pragma("omp master")
-    {
-      for (auto j=0; j<n; j++) {
-        grid[0*n+j] = static_cast<double>(j);
-      }
-      for (auto i=0; i<m; i++) {
-        grid[i*n+0] = static_cast<double>(i);
-      }
-    }
-    _Pragma("omp barrier")
+  // set boundary values (bottom and left side of grid)
+  for (auto j=0; j<n; j++) {
+    grid[0*n+j] = static_cast<double>(j);
+  }
+  for (auto i=0; i<m; i++) {
+    grid[i*n+0] = static_cast<double>(i);
   }
 
-  _Pragma("omp target map(tofrom:grid[0:m*n]) map(from:pipeline_time)")
-  _Pragma("omp parallel")
-  {
-    for (auto iter = 0; iter<=iterations; iter++) {
+  for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
-          pipeline_time = prk::wtime();
-      }
+    if (iter==1) pipeline_time = prk::wtime();
 
-      _Pragma("omp for collapse(2) ordered(2)")
-      for (auto i=1; i<m; i++) {
-        for (auto j=1; j<n; j++) {
-          _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1) depend(sink: i-1,j-1)")
-          grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-          _Pragma("omp ordered depend (source)")
-        }
-      }
+#if 0
+    RAJA::Layout<2> index_converter(n, m);
+    RAJA::IndexSet p2p_indexset{};
+    RAJA::computeIndexSet(p2p_indexset); // I guess I need to implement this
+    // add one segment, probably a RangeStrideSegment, per anti diagonal
+    // that gives out an index to directly access grid, rather than an i,j pair
+    RAJA::forall<RAJA::IndexSet::ExecPolicy<RAJA::omp_parallel_exec<RAJA::seq_exec>,RAJA::omp_for_exec>(p2p_indexset,
+        [=](RAJA::Index_type in) {
 
-      _Pragma("omp master")
-      grid[0*n+0] = -grid[(m-1)*n+(n-1)];
+        // Option 1: use a layout to get indices back
+        RAJA::Index_type i,j;
+        RAJA::index_converter.toIndices(in, i, j);
+        grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+        // Option 2: use indices directly
+        //grid[in] = grid[in - n] + grid[in - 1] - grid[in - n - 1];
+    });
+#else
+    for (auto j=1; j<n; j++) {
+      //_Pragma("omp for")
+      //for (auto i=1; i<=j; i++) {
+      RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
+        auto x = i;
+        auto y = j-i+1;
+        grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+      });
     }
+    for (auto j=n-2; j>=1; j--) {
+      //_Pragma("omp for")
+      //for (auto i=1; i<=j; i++) {
+      RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
+        auto x = n+i-j-1;
+        auto y = n-i;
+        grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+      });
+    }
+#endif
 
-    _Pragma("omp barrier")
-    _Pragma("omp master")
-    pipeline_time = prk::wtime() - pipeline_time;
+    // copy top right corner value to bottom left corner to create dependency; we
+    // need a barrier to make sure the latest value is used. This also guarantees
+    // that the flags for the next iteration (if any) are not getting clobbered
+    grid[0*n+0] = -grid[(m-1)*n+(n-1)];
   }
+
+  pipeline_time = prk::wtime() - pipeline_time;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
-  // error tolerance
   const double epsilon = 1.e-8;
-
-  // verify correctness, using top right value
   auto corner_val = ((iterations+1.)*(n+m-2.));
   if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
