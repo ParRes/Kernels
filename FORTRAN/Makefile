@@ -39,7 +39,7 @@ coarray: p2p-coarray stencil-coarray transpose-coarray
 
 target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
-ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc
+ornlacc: p2p-ornlacc p2p-innerloop-ornlacc stencil-ornlacc transpose-ornlacc
 
 %: %.f90
 	$(FC) $(FCFLAGS) $< -o $@
