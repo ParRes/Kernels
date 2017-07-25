@@ -124,7 +124,6 @@ int main(int argc, char * argv[])
     for (auto it=0; it<order; it+=tile_size) {
       for (auto jt=0; jt<order; jt+=tile_size) {
         pool.push_back(std::thread([=,&A,&B] {
-          std::cerr << "thread created" << std::endl;
           for (auto i=it; i<std::min(order,it+tile_size); i++) {
             for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
               B[i*order+j] += A[j*order+i];
@@ -135,7 +134,6 @@ int main(int argc, char * argv[])
       }
     }
     std::for_each(pool.begin(), pool.end(), [](std::thread & t) {
-                  std::cerr << "thread joined" << std::endl;
                   t.join();
                   });
     pool.clear();
