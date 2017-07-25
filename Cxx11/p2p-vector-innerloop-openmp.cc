@@ -66,7 +66,11 @@
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+#ifdef _OPENMP
   std::cout << "C++11/OpenMP INNERLOOP pipeline execution on 2D grid" << std::endl;
+#else
+  std::cout << "C++11/Serial INNERLOOP pipeline execution on 2D grid" << std::endl;
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -98,7 +102,9 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
+#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
 
@@ -140,26 +146,17 @@ int main(int argc, char* argv[])
           pipeline_time = prk::wtime();
       }
 
-      for (auto j=1; j<n; j++) {
+      for (auto i=2; i<=2*n-2; i++) {
         OMP_FOR_SIMD
-        for (auto i=1; i<=j; i++) {
-          auto x = i;
-          auto y = j-i+1;
-          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-        }
-      }
-      for (auto j=n-2; j>=1; j--) {
-        OMP_FOR_SIMD
-        for (auto i=1; i<=j; i++) {
-          auto x = n+i-j-1;
-          auto y = n-i;
+        for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
+          const auto x = i-j+2-1;
+          const auto y = j-1;
           grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
         }
       }
       OMP_MASTER
       grid[0*n+0] = -grid[(n-1)*n+(n-1)];
     }
-
     OMP_BARRIER
     OMP_MASTER
     pipeline_time = prk::wtime() - pipeline_time;
