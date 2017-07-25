@@ -59,8 +59,6 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <omp.h>
-
 #include "prk_util.h"
 
 inline void sweep_tile(int startm, int endm,
