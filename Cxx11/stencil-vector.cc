@@ -130,53 +130,55 @@ int main(int argc, char* argv[])
 
   std::vector<double> in;
   std::vector<double> out;
-  in.resize(n*n,0.0);
-  out.resize(n*n,0.0);
+  in.resize(n*n);
+  out.resize(n*n);
 
-  // initialize the input array
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
-      in[i*n+j] = static_cast<double>(i+j);
+  {
+    for (auto i=0; i<n; i++) {
+      for (auto j=0; j<n; j++) {
+        in[i*n+j] = static_cast<double>(i+j);
+        out[i*n+j] = 0.0;
+      }
     }
-  }
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+    for (auto iter = 0; iter<=iterations; iter++) {
 
-    if (iter==1) stencil_time = prk::wtime();
+      if (iter==1) stencil_time = prk::wtime();
 
-    // Apply the stencil operator
-    if (star) {
-        switch (radius) {
-            case 1: star1(n, in, out); break;
-            case 2: star2(n, in, out); break;
-            case 3: star3(n, in, out); break;
-            case 4: star4(n, in, out); break;
-            case 5: star5(n, in, out); break;
-            case 6: star6(n, in, out); break;
-            case 7: star7(n, in, out); break;
-            case 8: star8(n, in, out); break;
-            case 9: star9(n, in, out); break;
-            default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
-        }
-    } else {
-        switch (radius) {
-            case 1: grid1(n, in, out); break;
-            case 2: grid2(n, in, out); break;
-            case 3: grid3(n, in, out); break;
-            case 4: grid4(n, in, out); break;
-            case 5: grid5(n, in, out); break;
-            case 6: grid6(n, in, out); break;
-            case 7: grid7(n, in, out); break;
-            case 8: grid8(n, in, out); break;
-            case 9: grid9(n, in, out); break;
-            default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
-        }
+      // Apply the stencil operator
+      if (star) {
+          switch (radius) {
+              case 1: star1(n, in, out); break;
+              case 2: star2(n, in, out); break;
+              case 3: star3(n, in, out); break;
+              case 4: star4(n, in, out); break;
+              case 5: star5(n, in, out); break;
+              case 6: star6(n, in, out); break;
+              case 7: star7(n, in, out); break;
+              case 8: star8(n, in, out); break;
+              case 9: star9(n, in, out); break;
+              default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
+          }
+      } else {
+          switch (radius) {
+              case 1: grid1(n, in, out); break;
+              case 2: grid2(n, in, out); break;
+              case 3: grid3(n, in, out); break;
+              case 4: grid4(n, in, out); break;
+              case 5: grid5(n, in, out); break;
+              case 6: grid6(n, in, out); break;
+              case 7: grid7(n, in, out); break;
+              case 8: grid8(n, in, out); break;
+              case 9: grid9(n, in, out); break;
+              default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
+          }
+      }
+      // add constant to solution to force refresh of neighbor data, if any
+      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
+
     }
-    // add constant to solution to force refresh of neighbor data, if any
-    std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
-
+    stencil_time = prk::wtime() - stencil_time;
   }
-  stencil_time = prk::wtime() - stencil_time;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
