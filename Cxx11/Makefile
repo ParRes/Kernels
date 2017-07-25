@@ -43,7 +43,7 @@ target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
 taskloop: stencil-vector-taskloop transpose-vector-taskloop
 
-opencl: stencil-opencl transpose-opencl
+opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl
 
 cilk: stencil-vector-cilk transpose-vector-cilk
 

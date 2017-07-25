@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
   int iterations;
   int n;
   try {
-      if (argc < 3){
+      if (argc < 3) {
         throw " <# iterations> <array dimension>";
       }
 
