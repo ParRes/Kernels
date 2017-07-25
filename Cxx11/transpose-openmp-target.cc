@@ -113,9 +113,9 @@ int main(int argc, char * argv[])
   auto trans_time = 0.0;
 
   // HOST
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
   {
-    _Pragma("omp for")
+    OMP_FOR()
     for (auto i=0;i<order; i++) {
       PRAGMA_SIMD
       for (auto j=0;j<order;j++) {
@@ -126,20 +126,20 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  _Pragma("omp target map(tofrom: A[0:order*order], B[0:order*order]) map(from:trans_time)")
-  _Pragma("omp parallel")
+  OMP_TARGET( map(tofrom: A[0:order*order], B[0:order*order]) map(from:trans_time) )
+  OMP_PARALLEL()
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
+          OMP_BARRIER
+          OMP_MASTER
           trans_time = prk::wtime();
       }
 
       // transpose the  matrix
       if (tile_size < order) {
-        _Pragma("omp for")
+        OMP_FOR()
         for (auto it=0; it<order; it+=tile_size) {
           for (auto jt=0; jt<order; jt+=tile_size) {
             PRAGMA_SIMD
@@ -153,7 +153,7 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        _Pragma("omp for")
+        OMP_FOR()
         for (auto i=0;i<order; i++) {
         PRAGMA_SIMD
           for (auto j=0;j<order;j++) {
@@ -163,8 +163,8 @@ int main(int argc, char * argv[])
         }
       }
     }
-    _Pragma("omp barrier")
-    _Pragma("omp master")
+    OMP_BARRIER
+    OMP_MASTER
     trans_time = prk::wtime() - trans_time;
   }
 
@@ -175,7 +175,7 @@ int main(int argc, char * argv[])
   // HOST
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  _Pragma("omp parallel for reduction(+:abserr)")
+  OMP_PARALLEL_FOR_REDUCE( +:abserr )
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const int ij = i*order+j;

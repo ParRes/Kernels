@@ -137,9 +137,9 @@ int main(int argc, char * argv[])
 
   // HOST
   // initialize the input and output arrays
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
   {
-    _Pragma("omp for")
+    OMP_FOR()
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
         in[i*n+j] = static_cast<double>(i+j);
@@ -149,14 +149,14 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  _Pragma("omp target map(tofrom: in[0:n*n], out[0:n*n]) map(from:stencil_time)")
-  _Pragma("omp parallel")
+  OMP_TARGET( map(tofrom: in[0:n*n], out[0:n*n]) map(from:stencil_time) )
+  OMP_PARALLEL()
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
+          OMP_BARRIER
+          OMP_MASTER
           stencil_time = prk::wtime();
       }
 
@@ -187,15 +187,15 @@ int main(int argc, char * argv[])
         }
     }
       // add constant to solution to force refresh of neighbor data, if any
-      _Pragma("omp for")
+      OMP_FOR()
       for (auto i=0; i<n; i++) {
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
     }
-    _Pragma("omp barrier")
-    _Pragma("omp master")
+    OMP_BARRIER
+    OMP_MASTER
     stencil_time = prk::wtime() - stencil_time;
   }
 
@@ -209,7 +209,7 @@ int main(int argc, char * argv[])
   // HOST
   // compute L1 norm in parallel
   double norm = 0.0;
-  _Pragma("omp parallel for reduction(+:norm)")
+  OMP_PARALLEL_FOR_REDUCE( +:norm )
   for (auto i=radius; i<n-radius; i++) {
     for (auto j=radius; j<n-radius; j++) {
       norm += std::fabs(out[i*n+j]);

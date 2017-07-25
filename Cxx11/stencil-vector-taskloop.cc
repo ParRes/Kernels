@@ -135,10 +135,10 @@ int main(int argc, char * argv[])
 
   auto stencil_time = 0.0;
 
-  _Pragma("omp parallel")
-  _Pragma("omp master")
+  OMP_PARALLEL()
+  OMP_MASTER
   {
-    _Pragma("omp taskloop firstprivate(n) shared(in,out)")
+    OMP_TASKLOOP( firstprivate(n) shared(in,out) )
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
         in[i*n+j] = static_cast<double>(i+j);
@@ -146,7 +146,7 @@ int main(int argc, char * argv[])
       }
     }
 
-    _Pragma("omp taskwait")
+    OMP_TASKWAIT
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -183,13 +183,13 @@ int main(int argc, char * argv[])
           }
       }
       // add constant to solution to force refresh of neighbor data, if any
-      _Pragma("omp taskloop firstprivate(n) shared(in)")
+      OMP_TASKLOOP( firstprivate(n) shared(in) )
       for (auto i=0; i<n; i++) {
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
-      _Pragma("omp taskwait")
+      OMP_TASKWAIT
     }
     stencil_time = prk::wtime() - stencil_time;
   }
@@ -203,7 +203,7 @@ int main(int argc, char * argv[])
 
   // compute L1 norm in parallel
   double norm = 0.0;
-  _Pragma("omp parallel for reduction(+:norm)")
+  OMP_PARALLEL_FOR_REDUCE( +:norm )
   for (auto i=radius; i<n-radius; i++) {
     for (auto j=radius; j<n-radius; j++) {
       norm += std::fabs(out[i*n+j]);

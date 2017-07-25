@@ -33,11 +33,11 @@ endif
 
 all: vector valarray openmp opencl $(TARGET) cilk taskloop tbb pstl rangefor raja kokkos
 
-vector: p2p-vector stencil-vector transpose-vector
+vector: p2p-vector p2p-vector-innerloop stencil-vector transpose-vector
 
 valarray: transpose-valarray
 
-openmp: p2p-innerloop-openmp p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
+openmp: p2p-vector-innerloop-openmp p2p-vector-doacross-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
 
 target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
 
@@ -58,6 +58,9 @@ kokkos: stencil-kokkos transpose-kokkos
 raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja
 
 cuda: transpose-cuda
+
+p2p-vector-innerloop: p2p-vector-innerloop-openmp.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< -o $@
 
 transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
