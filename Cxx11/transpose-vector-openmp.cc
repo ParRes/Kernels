@@ -61,7 +61,11 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+#ifdef _OPENMP
   std::cout << "C++11/OpenMP Matrix transpose: B = A^T" << std::endl;
+#else
+  std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
+#endif
 
   int iterations;
   int order;
@@ -94,8 +98,10 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations  = " << iterations << std::endl;
+#endif
   std::cout << "Matrix order          = " << order << std::endl;
   if (tile_size < order) {
       std::cout << "Tile size             = " << tile_size << std::endl;
