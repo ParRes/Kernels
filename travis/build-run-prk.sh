@@ -282,6 +282,10 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil-vector 10 200 $s $r
             done
         done
+        # C++11 native parallelism
+        make -C $PRK_TARGET_PATH transpose-vector-thread transpose-vector-async
+        $PRK_TARGET_PATH/transpose-vector-thread 10 1024 32
+        $PRK_TARGET_PATH/transpose-vector-async  10 1024 32
 
         # C++11 with rangefor
         echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
