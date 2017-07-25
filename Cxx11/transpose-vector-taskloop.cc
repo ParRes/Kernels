@@ -114,10 +114,10 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  _Pragma("omp parallel")
-  _Pragma("omp master")
+  OMP_PARALLEL()
+  OMP_MASTER
   {
-    _Pragma("omp taskloop firstprivate(order) shared(A,B)")
+    OMP_TASKLOOP( firstprivate(order) shared(A,B) )
     for (auto i=0;i<order; i++) {
       for (auto j=0;j<order;j++) {
         A[i*order+j] = static_cast<double>(i*order+j);
@@ -125,7 +125,7 @@ int main(int argc, char * argv[])
       }
     }
 
-    _Pragma("omp taskwait")
+    OMP_TASKWAIT
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -135,7 +135,7 @@ int main(int argc, char * argv[])
 
       // transpose the  matrix
       if (tile_size < order) {
-        _Pragma("omp taskloop firstprivate(order) shared(A,B)")
+        OMP_TASKLOOP( firstprivate(order) shared(A,B) )
         for (auto it=0; it<order; it+=tile_size) {
           for (auto jt=0; jt<order; jt+=tile_size) {
             for (auto i=it; i<std::min(order,it+tile_size); i++) {
@@ -147,7 +147,7 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        _Pragma("omp taskloop firstprivate(order) shared(A,B)")
+        OMP_TASKLOOP( firstprivate(order) shared(A,B) )
         for (auto i=0;i<order; i++) {
           for (auto j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
@@ -155,7 +155,7 @@ int main(int argc, char * argv[])
           }
         }
       }
-      _Pragma("omp taskwait")
+      OMP_TASKWAIT
     }
     trans_time = prk::wtime() - trans_time;
   }
@@ -166,7 +166,7 @@ int main(int argc, char * argv[])
 
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  _Pragma("omp parallel for reduction(+:abserr)")
+  OMP_PARALLEL_FOR_REDUCE( +:abserr )
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const size_t ij = i*order+j;

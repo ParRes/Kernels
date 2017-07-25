@@ -112,9 +112,9 @@ int main(int argc, char* argv[])
   // working set
   double * grid = new double[m*n];
 
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
   {
-    _Pragma("omp for")
+    OMP_FOR()
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
     }
 
     // set boundary values (bottom and left side of grid)
-    _Pragma("omp master")
+    OMP_MASTER
     {
       for (auto j=0; j<n; j++) {
         grid[0*n+j] = static_cast<double>(j);
@@ -131,35 +131,35 @@ int main(int argc, char* argv[])
         grid[i*n+0] = static_cast<double>(i);
       }
     }
-    _Pragma("omp barrier")
+    OMP_BARRIER
   }
 
-  _Pragma("omp target map(tofrom:grid[0:m*n]) map(from:pipeline_time)")
-  _Pragma("omp parallel")
+  OMP_TARGET( map(tofrom:grid[0:m*n]) map(from:pipeline_time) )
+  OMP_PARALLEL()
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
+          OMP_BARRIER
+          OMP_MASTER
           pipeline_time = prk::wtime();
       }
 
-      _Pragma("omp for collapse(2) ordered(2)")
+      OMP_FOR( collapse(2) ordered(2) )
       for (auto i=1; i<m; i++) {
         for (auto j=1; j<n; j++) {
-          _Pragma("omp ordered depend(sink: i-1,j) depend(sink: i,j-1) depend(sink: i-1,j-1)")
+          OMP_ORDERED( depend(sink: i-1,j) depend(sink: i,j-1) depend(sink: i-1,j-1) )
           grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-          _Pragma("omp ordered depend (source)")
+          OMP_ORDERED( depend (source) )
         }
       }
 
-      _Pragma("omp master")
+      OMP_MASTER
       grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
 
-    _Pragma("omp barrier")
-    _Pragma("omp master")
+    OMP_BARRIER
+    OMP_MASTER
     pipeline_time = prk::wtime() - pipeline_time;
   }
 

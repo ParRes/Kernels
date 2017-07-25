@@ -59,7 +59,7 @@ clean:
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
-	-rm -f p2p stencil transpose
+	-rm -f p2p p2p-innerloop stencil transpose
 	-rm -f *-openmp
 	-rm -f *-target
 	-rm -f *-taskloop

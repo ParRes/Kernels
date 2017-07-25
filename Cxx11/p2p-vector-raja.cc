@@ -151,8 +151,6 @@ int main(int argc, char* argv[])
     });
 #else
     for (auto j=1; j<n; j++) {
-      //_Pragma("omp for")
-      //for (auto i=1; i<=j; i++) {
       RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
         auto x = i;
         auto y = j-i+1;
@@ -160,8 +158,6 @@ int main(int argc, char* argv[])
       });
     }
     for (auto j=n-2; j>=1; j--) {
-      //_Pragma("omp for")
-      //for (auto i=1; i<=j; i++) {
       RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
         auto x = n+i-j-1;
         auto y = n-i;

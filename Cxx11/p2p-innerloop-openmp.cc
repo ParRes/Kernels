@@ -111,9 +111,9 @@ int main(int argc, char* argv[])
   // working set
   double * grid = new double[n*n];
 
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
   {
-    PRAGMA_OMP_FOR_SIMD
+    OMP_FOR_SIMD
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
     }
 
     // set boundary values (bottom and left side of grid)
-    _Pragma("omp master")
+    OMP_MASTER
     {
       for (auto j=0; j<n; j++) {
         grid[0*n+j] = static_cast<double>(j);
@@ -130,18 +130,18 @@ int main(int argc, char* argv[])
         grid[i*n+0] = static_cast<double>(i);
       }
     }
-    _Pragma("omp barrier")
+    OMP_BARRIER
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
+          OMP_BARRIER
+          OMP_MASTER
           pipeline_time = prk::wtime();
       }
 
       for (auto j=1; j<n; j++) {
-        PRAGMA_OMP_FOR_SIMD
+        OMP_FOR_SIMD
         for (auto i=1; i<=j; i++) {
           auto x = i;
           auto y = j-i+1;
@@ -149,19 +149,19 @@ int main(int argc, char* argv[])
         }
       }
       for (auto j=n-2; j>=1; j--) {
-        PRAGMA_OMP_FOR_SIMD
+        OMP_FOR_SIMD
         for (auto i=1; i<=j; i++) {
           auto x = n+i-j-1;
           auto y = n-i;
           grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
         }
       }
-      _Pragma("omp master")
+      OMP_MASTER
       grid[0*n+0] = -grid[(n-1)*n+(n-1)];
     }
 
-    _Pragma("omp barrier")
-    _Pragma("omp master")
+    OMP_BARRIER
+    OMP_MASTER
     pipeline_time = prk::wtime() - pipeline_time;
   }
 

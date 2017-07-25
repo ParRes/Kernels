@@ -8,21 +8,21 @@ import os
 def codegen(src,pattern,stencil_size,radius,W,model):
     if (model=='openmp'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    _Pragma("omp for")\n')
+        src.write('    OMP_FOR()\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      PRAGMA_OMP_SIMD\n')
+        src.write('      OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='taskloop'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    _Pragma("omp taskloop firstprivate(n) shared(in,out)")\n')
+        src.write('    OMP_TASKLOOP( firstprivate(n) shared(in,out) )\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      PRAGMA_OMP_SIMD\n')
+        src.write('      OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='target'):
         src.write('void '+pattern+str(radius)+'(const int n, const double * RESTRICT in, double * RESTRICT out) {\n')
-        src.write('    _Pragma("omp for")\n')
+        src.write('    OMP_FOR()\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      PRAGMA_OMP_SIMD\n')
+        src.write('      OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='rangefor'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
@@ -145,7 +145,7 @@ def main():
       src = open('stencil_'+model+'.hpp','w')
       src.write('#define RESTRICT __restrict__\n\n')
       if (model=='target'):
-          src.write('_Pragma("omp declare target")\n')
+          src.write('OMP_DECLARE_TARGET\n')
       if (model=='raja'):
           src.write('#ifdef RAJA_ENABLE_OPENMP\n')
           src.write('  typedef RAJA::omp_parallel_for_exec thread_exec;\n')
@@ -156,7 +156,7 @@ def main():
         for r in range(1,10):
           instance(src,model,pattern,r)
       if (model=='target'):
-          src.write('_Pragma("omp end declare target")\n')
+          src.write('OMP_END_DECLARE_TARGET\n')
       src.close()
 
 if __name__ == '__main__':
