@@ -123,20 +123,15 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  OMP_TARGET( map(tofrom: A[0:order*order], B[0:order*order]) map(from:trans_time) )
-  OMP_PARALLEL()
+  OMP_TARGET( data map(tofrom: A[0:order*order], B[0:order*order]) )
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          trans_time = prk_wtime();
-      }
+      if (iter==1) trans_time = prk_wtime();
 
       // transpose the  matrix
       if (tile_size < order) {
-        OMP_FOR
+        OMP_TARGET( teams distribute parallel for simd collapse(2) )
         for (int it=0; it<order; it+=tile_size) {
           for (int jt=0; jt<order; jt+=tile_size) {
             for (int i=it; i<MIN(order,it+tile_size); i++) {
@@ -148,7 +143,7 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        OMP_FOR
+        OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
         for (int i=0;i<order; i++) {
           for (int j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
@@ -157,8 +152,6 @@ int main(int argc, char * argv[])
         }
       }
     }
-    OMP_BARRIER
-    OMP_MASTER
     trans_time = prk_wtime() - trans_time;
   }
 

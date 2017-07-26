@@ -7,10 +7,14 @@ import os
 
 def codegen(src,pattern,stencil_size,radius,W,model):
     src.write('void '+pattern+str(radius)+'(const int n, const double * restrict in, double * restrict out) {\n')
-    if (model=='openmp' or model=='target'):
+    if (model=='openmp'):
         src.write('    OMP_FOR\n')
         src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')
         src.write('      OMP_SIMD\n')
+        src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
+    elif (model=='target'):
+        src.write('    OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )\n')
+        src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')
         src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
     elif (model=='taskloop'):
         src.write('    OMP_TASKLOOP( firstprivate(n) shared(in,out) )\n')
@@ -69,12 +73,12 @@ def main():
     for model in ['seq','openmp','target','cilk','taskloop']:
       src = open('stencil_'+model+'.h','w')
       if (model=='target'):
-          src.write('OMP_DECLARE_TARGET\n')
+          src.write('OMP( declare target )\n')
       for pattern in ['star','grid']:
         for r in range(1,10):
           instance(src,model,pattern,r)
       if (model=='target'):
-          src.write('OMP_END_DECLARE_TARGET\n')
+          src.write('OMP( end declare target )\n')
       src.close()
 
 if __name__ == '__main__':
