@@ -263,7 +263,8 @@ case "$PRK_TARGET" in
         esac
         ${PRK_CXX} -v
         # Need to increment this for PSTL
-        echo "CXX=${PRK_CXX} -std=c++11" >> common/make.defs
+        # The pthread flag is supported by GCC and Clang at least
+        echo "CXX=${PRK_CXX} -std=c++11 -pthread" >> common/make.defs
 
         # C++11 without external parallelism
         make -C $PRK_TARGET_PATH transpose-valarray
