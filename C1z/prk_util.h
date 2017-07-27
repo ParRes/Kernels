@@ -120,7 +120,7 @@
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
    !defined(__STDC_NO_THREADS__) && \
-   !defined(__APPLE__)
+   defined(USE_C11_THREADS)
 # define HAVE_C11_THREADS
 # include <threads.h>
 #else
