@@ -243,6 +243,15 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=Cxx11
         case $CXX in
             g++)
+                if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "x$PRK_CXX" = "x" ] ; then
+                  for version in "-9" "-8" "-7" "-6" "-5" "" ; do
+                    if [ -f "`which /usr/local/opt/gcc@${version}/bin/g++-${version}`" ]; then
+                        export PRK_CXX="`which /usr/local/opt/llvm@${version}/bin/clang++`"
+                        echo "Found C++: $PRK_CXX"
+                        break
+                    fi
+                  done
+                fi
                 if [ "x$PRK_CXX" = "x" ] ; then
                   for major in "-9" "-8" "-7" "-6" "-5" "" ; do
                     if [ -f "`which ${CXX}${major}`" ]; then
@@ -253,33 +262,24 @@ case "$PRK_TARGET" in
                   done
                 fi
                 if [ "x$PRK_CXX" = "x" ] ; then
-                  for version in "-9" "-8" "-7" "-6" "-5" "" ; do
-                    if [ -f "`which /usr/local/opt/gcc@${version}/bin/g++-${version}`" ]; then
-                        export PRK_CXX="`which /usr/local/opt/llvm@${version}/bin/clang++`"
-                        echo "Found C++: $PRK_CXX"
-                        break
-                    fi
-                  done
-                fi
-                if [ "x$PRK_CXX" = "x" ] ; then
                     export PRK_CXX="${CXX}"
                 fi
                 ;;
             clang++)
-                if [ "x$PRK_CXX" = "x" ] ; then
-                  for version in "-5" "-4.1" "-4" "-4.0" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
-                    if [ -f "`which ${CXX}${version}`" ]; then
-                        export PRK_CXX="${CXX}${version}"
+                # Homebrew does not always place the best/latest Clang/LLVM in the default path
+                if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "x$PRK_CXX" = "x" ] ; then
+                  for version in "" "4.1" "4" "4.0" "-3.9" "-3.8" "-3.7" "-3.6" ; do
+                    if [ -f "`which /usr/local/opt/llvm@${version}/bin/clang++`" ]; then
+                        export PRK_CXX="`which /usr/local/opt/llvm@${version}/bin/clang++`"
                         echo "Found C++: $PRK_CXX"
                         break
                     fi
                   done
                 fi
                 if [ "x$PRK_CXX" = "x" ] ; then
-                  # Homebrew does not always place the best/latest Clang/LLVM in the default path
-                  for version in "" "4.1" "4" "4.0" "-3.9" "-3.8" "-3.7" "-3.6" ; do
-                    if [ -f "`which /usr/local/opt/llvm@${version}/bin/clang++`" ]; then
-                        export PRK_CXX="`which /usr/local/opt/llvm@${version}/bin/clang++`"
+                  for version in "-5" "-4.1" "-4" "-4.0" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
+                    if [ -f "`which ${CXX}${version}`" ]; then
+                        export PRK_CXX="${CXX}${version}"
                         echo "Found C++: $PRK_CXX"
                         break
                     fi
