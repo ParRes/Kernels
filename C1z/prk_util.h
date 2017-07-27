@@ -118,6 +118,17 @@
 # define PRAGMA_SIMD
 #endif
 
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
+   !defined(__STDC_NO_THREADS__) && \
+   defined(USE_C11_THREADS)
+# define HAVE_C11_THREADS
+# include <threads.h>
+#else
+# define HAVE_PTHREADS
+# include <errno.h>
+# include <pthread.h>
+#endif
+
 #if defined(_OPENMP)
 
 #include <omp.h>

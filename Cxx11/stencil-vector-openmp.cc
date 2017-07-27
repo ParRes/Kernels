@@ -62,12 +62,20 @@
 
 #include "prk_util.h"
 
+#ifdef _OPENMP
 #include "stencil_openmp.hpp"
+#else
+#include "stencil_seq.hpp"
+#endif
 
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+#ifdef _OPENMP
   std::cout << "C++11/OpenMP Stencil execution on 2D grid" << std::endl;
+#else
+  std::cout << "C++11 Stencil execution on 2D grid" << std::endl;
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -117,7 +125,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
+#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
@@ -127,12 +137,12 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
+  auto stencil_time = 0.0;
+
   std::vector<double> in;
   std::vector<double> out;
   in.resize(n*n);
   out.resize(n*n);
-
-  auto stencil_time = 0.0;
 
   OMP_PARALLEL()
   {
@@ -181,12 +191,16 @@ int main(int argc, char * argv[])
           }
       }
       // add constant to solution to force refresh of neighbor data, if any
+#ifdef _OPENMP
       OMP_FOR()
       for (auto i=0; i<n; i++) {
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
+#else
+      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
+#endif
     }
     OMP_BARRIER
     OMP_MASTER

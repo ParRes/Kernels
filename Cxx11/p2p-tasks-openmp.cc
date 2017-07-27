@@ -75,7 +75,11 @@ inline void sweep_tile(int startm, int endm,
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+#ifdef _OPENMP
   std::cout << "C++11/OpenMP TASKS pipeline execution on 2D grid" << std::endl;
+#else
+  std::cout << "C++11/Serial pipeline execution on 2D grid" << std::endl;
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -118,7 +122,9 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
+#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
   std::cout << "Grid chunk sizes     = " << mc << ", " << nc << std::endl;
@@ -129,55 +135,42 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  // working set
   double * grid = new double[m*n];
 
   OMP_PARALLEL()
+  OMP_MASTER
   {
     int lic = (m/mc-1) * mc + 1;
     int ljc = (n/nc-1) * nc + 1;
 
-    OMP_FOR()
+    OMP_TASKLOOP( firstprivate(n) shared(grid) )
     for (auto i=0; i<n; i++) {
       for (auto j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
       }
     }
+    OMP_TASKWAIT
 
-    // set boundary values (bottom and left side of grid)
-    OMP_MASTER
-    {
-      for (auto j=0; j<n; j++) {
-        grid[0*n+j] = static_cast<double>(j);
-      }
-      for (auto i=0; i<m; i++) {
-        grid[i*n+0] = static_cast<double>(i);
-      }
+    for (auto j=0; j<n; j++) {
+      grid[0*n+j] = static_cast<double>(j);
     }
-    OMP_BARRIER
+    for (auto i=0; i<m; i++) {
+      grid[i*n+0] = static_cast<double>(i);
+    }
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          pipeline_time = prk::wtime();
-      }
+      if (iter==1) pipeline_time = prk::wtime();
 
-      OMP_MASTER
-      {
-        for (auto i=1; i<m; i+=mc) {
-          for (auto j=1; j<n; j+=nc) {
-            OMP_TASK( depend(in:grid[0],grid[(i-mc)*n+j],grid[i*n+(j-nc)],grid[(i-mc)*n+(j-nc)]) depend(out:grid[i*n+j]) )
-            sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, grid);
-          }
+      for (auto i=1; i<m; i+=mc) {
+        for (auto j=1; j<n; j+=nc) {
+          OMP_TASK( depend(in:grid[0],grid[(i-mc)*n+j],grid[i*n+(j-nc)],grid[(i-mc)*n+(j-nc)]) depend(out:grid[i*n+j]) )
+          sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, grid);
         }
-        OMP_TASK( depend(in:grid[(lic-1)*n+(ljc)]) depend(out:grid[0]) )
-        grid[0*n+0] = -grid[(m-1)*n+(n-1)];
       }
+      OMP_TASK( depend(in:grid[(lic-1)*n+(ljc)]) depend(out:grid[0]) )
+      grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
-    OMP_BARRIER
-    OMP_MASTER
     pipeline_time = prk::wtime() - pipeline_time;
   }
 

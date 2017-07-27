@@ -113,9 +113,7 @@ int main(int argc, char * argv[])
 
   printf("Number of iterations      = %d\n", iterations);
   printf("Grid sizes                = %d,%d\n", m, n);
-  if (mc!=m || nc!=n) {
-      printf("Grid chunk sizes          = %d,%d\n", mc, nc);
-  }
+  printf("Grid chunk sizes          = %d,%d\n", mc, nc);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -126,39 +124,40 @@ int main(int argc, char * argv[])
   size_t bytes = m*n*sizeof(double);
   double * restrict grid = prk_malloc(bytes);
 
-  for (int i=0; i<m; i++) {
+  {
+    for (int i=0; i<m; i++) {
+      for (int j=0; j<n; j++) {
+        grid[i*n+j] = 0.0;
+      }
+    }
     for (int j=0; j<n; j++) {
-      grid[i*n+j] = 0.0;
+      grid[0*n+j] = (double)j;
     }
-  }
-  for (int j=0; j<n; j++) {
-    grid[0*n+j] = (double)j;
-  }
-  for (int i=0; i<m; i++) {
-    grid[i*n+0] = (double)i;
-  }
+    for (int i=0; i<m; i++) {
+      grid[i*n+0] = (double)i;
+    }
 
-  for (int iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
-    if (iter==1) pipeline_time = prk_wtime();
+      if (iter==1) pipeline_time = prk_wtime();
 
-    if (mc==m && nc==n) {
-      for (int i=1; i<m; i++) {
-        for (int j=1; j<n; j++) {
-          grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+      if (mc==m && nc==n) {
+        for (int i=1; i<m; i++) {
+          for (int j=1; j<n; j++) {
+            grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+          }
+        }
+      } else {
+        for (int i=1; i<m; i+=mc) {
+          for (int j=1; j<n; j+=nc) {
+            sweep_tile(i, MIN(m,i+mc), j, MIN(n,j+nc), n, grid);
+          }
         }
       }
-    } else {
-      for (int i=1; i<m; i+=mc) {
-        for (int j=1; j<n; j+=nc) {
-          sweep_tile(i, MIN(m,i+mc), j, MIN(n,j+nc), n, grid);
-        }
-      }
+      grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
-    grid[0*n+0] = -grid[(m-1)*n+(n-1)];
+    pipeline_time = prk_wtime() - pipeline_time;
   }
-
-  pipeline_time = prk_wtime() - pipeline_time;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
