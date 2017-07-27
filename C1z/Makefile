@@ -14,7 +14,7 @@ TARGETFLAGS = $(OFFLOADFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKFLAGS = $(CILKFLAG)
 
-.PHONY: all clean serial openmp target taskloop cilk
+.PHONY: all clean serial thread openmp target taskloop cilk
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(findstring icc,$(CC)),icc)
@@ -23,9 +23,11 @@ endif
 else
 TARGET = target
 endif
-all: serial openmp cilk taskloop $(TARGET)
+all: serial thread openmp cilk taskloop $(TARGET)
 
 serial: p2p p2p-innerloop stencil transpose
+
+thread: transpose-thread
 
 openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
@@ -64,6 +66,7 @@ clean:
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-cilk
+	-rm -f *-thread
 
 cleancl:
 	-rm -f star[123456789].cl

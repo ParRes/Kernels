@@ -124,7 +124,8 @@ case "$PRK_TARGET" in
         esac
         ${PRK_CC} -v
         # Need to increment this for CPLEX (some day)
-        echo "CC=${PRK_CC} -std=c11 -DPRK_USE_GETTIMEOFDAY\nEXTRA_CLIBS=-lm" >> common/make.defs
+        echo "CC=${PRK_CC} -std=c11 -DPRK_USE_GETTIMEOFDAY" >> common/make.defs
+        echo "EXTRA_CLIBS=-lm -lpthread" >> common/make.defs
 
         # C11 without external parallelism
         make -C $PRK_TARGET_PATH p2p stencil transpose p2p-innerloop
@@ -139,6 +140,11 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil 10 200 $s $r
             done
         done
+
+        # C11 with POSIX or C11 thread parallelism
+        # not testing C11 threads for now
+        make -C $PRK_TARGET_PATH transpose-thread
+        $PRK_TARGET_PATH/transpose-thread   10 1024 512
 
         # C11 with OpenMP
         export OMP_NUM_THREADS=2
