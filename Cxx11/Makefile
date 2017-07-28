@@ -120,6 +120,7 @@ clean:
 	-rm -f *-raja
 	-rm -f *-kokkos
 	-rm -f *-cuda
+	-rm -f transpose-vector-async transpose-vector-thread
 
 cleancl:
 	-rm -f star[123456789].cl
