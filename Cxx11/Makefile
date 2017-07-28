@@ -33,7 +33,7 @@ endif
 
 all: vector valarray openmp opencl $(TARGET) cilk taskloop tbb pstl rangefor raja kokkos
 
-vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector
+vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector transpose-vector-async transpose-vector-thread
 
 valarray: transpose-valarray
 

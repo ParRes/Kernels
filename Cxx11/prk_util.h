@@ -56,7 +56,9 @@
 #include <vector>
 #include <valarray>
 #include <array>
-
+#include <thread>
+#include <future>
+#include <atomic>
 #include <numeric>
 #include <algorithm>
 
