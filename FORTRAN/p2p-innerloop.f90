@@ -84,6 +84,7 @@ program main
   integer(kind=INT32) :: x, y
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
+  integer :: nt
 
   ! ********************************************************************
   ! read and test input parameters
@@ -138,7 +139,9 @@ program main
   !$omp parallel default(none)                                  &
   !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
   !$omp&  firstprivate(n)                                       &
-  !$omp&  private(i,j,k,corner_val,x,y)
+  !$omp&  private(i,j,k,x,y,nt)
+
+  nt = omp_get_num_threads()
 
   !$omp do collapse(2)
   do j=1,n
@@ -170,13 +173,20 @@ program main
     endif
 
     do i=2,2*n-2
-      !$omp do
-      do j=max(2,i-n+2),min(i,n)
-        x = i-j+2
-        y = j
-        grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1)
-      enddo
-      !$omp end do
+      if ((min(i,n)-max(2,i-n+2)).gt.(100*nt)) then
+        !$omp do
+        do j=max(2,i-n+2),min(i,n)
+          grid(i-j+2,j) = grid(i-j+2-1,j) + grid(i-j+2,j-1) - grid(i-j+2-1,j-1)
+        enddo
+        !$omp end do
+      else
+        !$omp master
+        do j=max(2,i-n+2),min(i,n)
+          grid(i-j+2,j) = grid(i-j+2-1,j) + grid(i-j+2,j-1) - grid(i-j+2-1,j-1)
+        enddo
+        !$omp end master
+        !$omp barrier
+      endif
     enddo
     !$omp master
     grid(1,1) = -grid(n,n)
