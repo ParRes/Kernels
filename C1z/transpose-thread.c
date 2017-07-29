@@ -152,7 +152,7 @@ int main(int argc, char * argv[])
   // default tile size for tiling of local transpose
   int tile_size = (argc>4) ? atoi(argv[4]) : 32;
   // a negative tile size means no tiling of the local transpose
-  if (tile_size <= 0) tile_size = order;
+  if (tile_size <= 0) tile_size = block_size;
 
   int num_threads = order/block_size;
   if (order % block_size) num_threads++;
@@ -194,12 +194,12 @@ int main(int argc, char * argv[])
       if (iter==1) trans_time = prk_wtime();
 
       int tid = 0;
-      for (int it=0; it<order; it+=block_size) {
-        for (int jt=0; jt<order; jt+=block_size) {
-          args[tid].starti   = it;
-          args[tid].endi     = MIN(order,it+block_size);
-          args[tid].startj   = jt;
-          args[tid].endj     = MIN(order,jt+block_size);
+      for (int ib=0; ib<order; ib+=block_size) {
+        for (int jb=0; jb<order; jb+=block_size) {
+          args[tid].starti   = ib;
+          args[tid].endi     = MIN(order,ib+block_size);
+          args[tid].startj   = jb;
+          args[tid].endj     = MIN(order,jb+block_size);
           args[tid].tilesize = tile_size;
           args[tid].order    = order;
           args[tid].A        = A;
