@@ -94,14 +94,10 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
+  std::cout << "Number of threads     = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-  if (tile_size < order) {
-      std::cout << "Tile size             = " << tile_size << std::endl;
-  } else {
-      std::cout << "Untiled" << std::endl;
-  }
+  std::cout << "Tile size             = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
