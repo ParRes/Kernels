@@ -141,7 +141,12 @@ program main
   !$omp&  firstprivate(n)                                       &
   !$omp&  private(i,j,k,x,y,nt)
 
+#ifdef _OPENMP
   nt = omp_get_num_threads()
+#else
+  ! only used to decide branch below
+  nt = -1
+#endif
 
   !$omp do collapse(2)
   do j=1,n
