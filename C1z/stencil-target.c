@@ -193,7 +193,7 @@ int main(int argc, char * argv[])
       if (iter==1) {
           OMP_BARRIER
           OMP_MASTER
-          stencil_time = prk_wtime();
+          stencil_time = omp_get_wtime();
       }
 
       // Apply the stencil operator
@@ -209,7 +209,7 @@ int main(int argc, char * argv[])
     }
     OMP_BARRIER
     OMP_MASTER
-    stencil_time = prk_wtime() - stencil_time;
+    stencil_time = omp_get_wtime() - stencil_time;
   }
 
   //////////////////////////////////////////////////////////////////////

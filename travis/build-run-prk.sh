@@ -27,6 +27,10 @@ echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 case "$PRK_TARGET" in
     allpython)
         echo "Python"
+        # workaround for trusty since cannot find numpy when using /opt/python/2.7.13/bin/python
+        if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+            export PATH=/usr/bin:$PATH
+        fi
         which python
         python --version
         export PRK_TARGET_PATH=PYTHON

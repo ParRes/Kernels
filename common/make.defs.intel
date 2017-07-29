@@ -9,11 +9,11 @@
 # in your .bashrc.
 #
 # C99 is required in some implementations.
-CC=icc -std=c11
+CC=icc -std=c11 -pthread
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=ifort -std08 -fpp
 # C++11 may not be required but does no harm here.
-CXX=icpc -std=c++17
+CXX=icpc -std=c++17 -pthread
 #
 # Compiler flags
 #
@@ -50,7 +50,7 @@ PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG}
 KOKKOSDIR=/opt/kokkos/intel/openmp
 KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos ${OPENMPFLAG}
 RAJADIR=/opt/raja/intel
-RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${OPENMPFLAG} ${CILKFLAG}
+RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${OPENMPFLAG}
 #
 # CUDA flags
 #
