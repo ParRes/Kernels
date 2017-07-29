@@ -44,12 +44,8 @@ os:
 compiler:
 - gcc
 - clang
-#- touch ~/use-intel-compilers ; gcc
 matrix:
   exclude:
-  # Intel for Mac not setup yet
-  - os: osx
-    compiler: touch ~/use-intel-compilers ; gcc
   # Clang does not support OpenMP yet and not willing to build from source.  Save this for Mac where we can Brew it.
   - os: linux
     compiler: clang
@@ -60,9 +56,6 @@ matrix:
     env: PRK_TARGET=allopenmp
   # Clang UPC requires source build, which probably takes too long
   - compiler: clang
-    env: PRK_TARGET=allupc UPC_IMPL=gupc
-  # Intel does not make sense with Intrepid GCC/Clang UPC
-  - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allupc UPC_IMPL=gupc
   # Source build impossible (too much time+stdout)
   - os: osx
@@ -102,18 +95,6 @@ matrix:
     env: PRK_TARGET=alljulia
   - compiler: gcc
     env: PRK_TARGET=allrust
-  # ICC
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allpython
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=alloctave
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=alljulia
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allrust
-  # MPI implementations of Transpose hang with Intel compilers (why?!?!)
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpi
   # UPC over MPICH on Mac hangs - may be async progress issue
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
@@ -122,9 +103,6 @@ matrix:
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
-  # Grappa with Intel unlikely to succeed, especially if Clang doesn't.
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allgrappa
   # Charm++ on Mac is not working for us.
   - os: osx
     env: PRK_TARGET=allcharm++
@@ -134,19 +112,9 @@ matrix:
   - os: osx
     env: PRK_TARGET=allfgmpi
   allow_failures:
-  ## will fail if numpy package cannot be acquired via apt
-  #- env: PRK_TARGET=allpython
-  #- os: linux
-  #  env: PRK_TARGET=alljulia
-  ## GUPC will fail when libnuma cannot be acquired via apt
-  #- env: PRK_TARGET=allupc UPC_IMPL=gupc
-  # BUPC has trouble with flags
-  #- os: linux
-  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
-  #- os: linux
-  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
-  #- os: linux
-  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
+  # Travis trusty breaks this
+  - os: linux
+    env: PRK_TARGET=allupc UPC_IMPL=gupc
   # Travis tests failing due to runtime problems
   - os: linux
     env: PRK_TARGET=allampi
@@ -173,28 +141,11 @@ addons:
     - libnuma-dev
     # This should provide OpenMP
     - clang-3.8
+    - clang-3.9
     # Grappa and HPX use CMake
     - cmake
     # C++ code needs range headers
     - libboost-all-dev
-    # Boost is for Grappa and HPX-3 - reactivate with them
-    # Grappa needs these (according to their .travis.yml)
-    #- libboost-date-time1.55-dev
-    #- libboost-exception1.55-dev
-    #- libboost-filesystem1.55-dev
-    #- libboost-iostreams1.55-dev
-    #- libboost-math1.55-dev
-    #- libboost-random1.55-dev
-    #- libboost-regex1.55-dev
-    #- libboost-serialization1.55-dev
-    #- libboost-signals1.55-dev
-    #- libboost-system1.55-dev
-    #- libboost-test1.55-dev
-    #- libboost-timer1.55-dev
-    # HPX-3 needs these - not whitelisted yet
-    #- libboost_chrono1.55-dev
-    #- libboost_program_options1.55-dev
-    #- libboost_thread1.55-dev
 before_install:
 - pwd
 - export TRAVIS_HOME=$PWD
