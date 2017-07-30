@@ -130,7 +130,7 @@ int main(int argc, char * argv[])
       if (iter==1) {
           OMP_BARRIER
           OMP_MASTER
-          trans_time = prk::wtime();
+          trans_time = omp_get_wtime();
       }
 
       // transpose the  matrix
@@ -161,7 +161,7 @@ int main(int argc, char * argv[])
     }
     OMP_BARRIER
     OMP_MASTER
-    trans_time = prk::wtime() - trans_time;
+    trans_time = omp_get_wtime() - trans_time;
   }
 
   //////////////////////////////////////////////////////////////////////
