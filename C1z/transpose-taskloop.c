@@ -114,6 +114,7 @@ int main(int argc, char * argv[])
   double * restrict B = prk_malloc(bytes);
 
   OMP_PARALLEL()
+  OMP_MASTER
   {
     OMP_TASKLOOP( firstprivate(order) shared(A,B) )
     for (int i=0;i<order; i++) {
@@ -127,11 +128,7 @@ int main(int argc, char * argv[])
 
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          trans_time = prk_wtime();
-      }
+      if (iter==1) trans_time = prk_wtime();
 
       // transpose the  matrix
       if (tile_size < order) {
@@ -159,8 +156,6 @@ int main(int argc, char * argv[])
       }
       OMP_TASKWAIT
     }
-    OMP_BARRIER
-    OMP_MASTER
     trans_time = prk_wtime() - trans_time;
   }
 

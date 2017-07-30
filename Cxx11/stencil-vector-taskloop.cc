@@ -146,14 +146,11 @@ int main(int argc, char * argv[])
         out[i*n+j] = 0.0;
       }
     }
-
     OMP_TASKWAIT
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          stencil_time = prk::wtime();
-      }
+      if (iter==1) stencil_time = prk::wtime();
 
       // Apply the stencil operator
       if (star) {
@@ -184,6 +181,7 @@ int main(int argc, char * argv[])
           }
       }
       OMP_TASKWAIT
+
       // add constant to solution to force refresh of neighbor data, if any
       OMP_TASKLOOP( firstprivate(n) shared(in) )
       for (auto i=0; i<n; i++) {

@@ -120,7 +120,6 @@ int main(int argc, char * argv[])
         B[i*order+j] = 0.0;
       }
     }
-
     OMP_TASKWAIT
 
     for (auto iter = 0; iter<=iterations; iter++) {
