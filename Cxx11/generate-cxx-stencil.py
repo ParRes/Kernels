@@ -52,7 +52,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         #src.write('            ( RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),'
         #                        'RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),\n')
         #src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
-        src.write('    RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type('+str(radius)+'), RAJA::Index_type(n-'+str(radius)+'), [&](RAJA::Index_type i) {\n')
+        src.write('    RAJA::forall<thread_exec>(RAJA::Index_type('+str(radius)+'), RAJA::Index_type(n-'+str(radius)+'), [&](RAJA::Index_type i) {\n')
         src.write('      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type('+str(radius)+'), RAJA::Index_type(n-'+str(radius)+'), [&](RAJA::Index_type j) {\n')
     elif (model=='cilk'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
@@ -149,12 +149,13 @@ def main():
       src.write('#define RESTRICT __restrict__\n\n')
       if (model=='target'):
           src.write('OMP_DECLARE_TARGET\n')
-      if (model=='raja'):
-          src.write('#ifdef RAJA_ENABLE_OPENMP\n')
-          src.write('  typedef RAJA::omp_parallel_for_exec thread_exec;\n')
-          src.write('#else\n')
-          src.write('  typedef RAJA::seq_exec thread_exec;\n')
-          src.write('#endif\n')
+      # controlled in parent source file
+      #if (model=='raja'):
+      #    src.write('#ifdef RAJA_ENABLE_OPENMP\n')
+      #    src.write('  typedef RAJA::omp_parallel_for_exec thread_exec;\n')
+      #    src.write('#else\n')
+      #    src.write('  typedef RAJA::seq_exec thread_exec;\n')
+      #    src.write('#endif\n')
       for pattern in ['star','grid']:
         for r in range(1,10):
           instance(src,model,pattern,r)
