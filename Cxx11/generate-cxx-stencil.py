@@ -46,6 +46,14 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    std::for_each( std::execution::par, std::begin(inside), std::end(inside), [&] (int i) {\n')
         src.write('      std::for_each( std::execution::unseq, std::begin(inside), std::end(inside), [&] (int j) {\n')
+    elif (model=='raja'):
+        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
+        #src.write('    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>\n')
+        #src.write('            ( RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),'
+        #                        'RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),\n')
+        #src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
+        src.write('    RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type('+str(radius)+'), RAJA::Index_type(n-'+str(radius)+'), [&](RAJA::Index_type i) {\n')
+        src.write('      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type('+str(radius)+'), RAJA::Index_type(n-'+str(radius)+'), [&](RAJA::Index_type j) {\n')
     elif (model=='cilk'):
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    _Cilk_for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
@@ -61,15 +69,10 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('  void operator()( const tbb::blocked_range2d<int>& r ) const {\n')
         src.write('    for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {\n')
         src.write('      for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {\n')
-    elif (model=='raja'):
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>\n')
-        src.write('            ( RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),'
-                                'RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),\n')
-        src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
     elif (model=='kokkos'):
         src.write('void '+pattern+str(radius)+'(const int n, matrix & in, matrix & out) {\n')
         src.write('    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>('+str(radius)+',n-'+str(radius)+'), KOKKOS_LAMBDA(const int i) {\n')
+        src.write('      PRAGMA_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     else:
         src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
@@ -93,13 +96,13 @@ def codegen(src,pattern,stencil_size,radius,W,model):
                 if (k<kmax): src.write('\n')
                 if (k>0 and k<kmax): src.write('                      ')
     src.write(';\n')
-    if (model=='stl' or model=='pgnu' or model=='pstl'):
+    if (model=='stl' or model=='pgnu' or model=='pstl' or model=='raja'):
         src.write('       });\n')
         src.write('     });\n')
+    #elif (model=='raja'):
+    #    src.write('     });\n')
     elif (model=='kokkos'):
         src.write('       }\n')
-        src.write('     });\n')
-    elif (model=='raja'):
         src.write('     });\n')
     else:
         src.write('       }\n')
