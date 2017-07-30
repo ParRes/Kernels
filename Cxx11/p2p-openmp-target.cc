@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
       if (iter==1) {
           OMP_BARRIER
           OMP_MASTER
-          pipeline_time = prk::wtime();
+          pipeline_time = omp_get_wtime();
       }
 
       OMP_FOR( collapse(2) ordered(2) )
@@ -158,7 +158,7 @@ int main(int argc, char* argv[])
 
     OMP_BARRIER
     OMP_MASTER
-    pipeline_time = prk::wtime() - pipeline_time;
+    pipeline_time = omp_get_wtime() - pipeline_time;
   }
 
   //////////////////////////////////////////////////////////////////////
