@@ -24,9 +24,9 @@ endif
 #             data accessed through pointers (requires -restrict compiler flag)
 
 ifndef MAXTHREADS
-  MAXTHREADS=256
+  MAXTHREADS=512
 endif
-#description: default thread limit is 256
+#description: default thread limit is 512
 
 ifndef VERBOSE
   VERBOSE=0
@@ -76,7 +76,7 @@ CHUNKED=0/1            do/do not assign table chunks to threads   [0]  \n\
 ERRORPERCENT=?         specify percentage of errors allowed            \n\
 LONG64=0/1             do/do not set long type as 64 bits         [0]  \n\
 RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
-MAXTHREADS=?           set maximum number of OpenMP threads       [256]\n\
+MAXTHREADS=?           set maximum number of OpenMP threads       [512]\n\
 VERBOSE=0/1            omit/include verbose run information       [0]"
 
 TUNEFLAGS   = $(RESTRICTFLAG) $(LONG64FLAG) $(VERBOSEFLAG) $(NTHREADFLAG)\
