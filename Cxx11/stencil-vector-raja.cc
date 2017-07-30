@@ -62,6 +62,14 @@
 
 #include "prk_util.h"
 
+// This must be before the stencil header, which uses this.
+#ifdef RAJA_ENABLE_OPENMP
+  typedef RAJA::omp_parallel_for_exec thread_exec;
+#else
+#warning No OpenMP!
+  typedef RAJA::seq_exec thread_exec;
+#endif
+
 #include "stencil_raja.hpp"
 
 int main(int argc, char * argv[])
@@ -133,18 +141,22 @@ int main(int argc, char * argv[])
   in.resize(n*n);
   out.resize(n*n);
 
-#ifdef RAJA_ENABLE_OPENMP
-  typedef RAJA::omp_parallel_for_exec thread_exec;
-#else
-  typedef RAJA::seq_exec thread_exec;
-#endif
   // initialize the input and output arrays
+#if 0
   RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
           ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
             [&](RAJA::Index_type i, RAJA::Index_type j) {
       in[i*n+j] = static_cast<double>(i+j);
       out[i*n+j] = 0.0;
   });
+#else
+  RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type i) {
+    RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type j) {
+      in[i*n+j] = static_cast<double>(i+j);
+      out[i*n+j] = 0.0;
+    });
+  });
+#endif
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -179,11 +191,19 @@ int main(int argc, char * argv[])
         }
     }
     // add constant to solution to force refresh of neighbor data, if any
+#if 0
     RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
             ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
               [&](RAJA::Index_type i, RAJA::Index_type j) {
         in[i*n+j] += 1.0;
     });
+#else
+    RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type j) {
+        in[i*n+j] += 1.0;
+      });
+    });
+#endif
   }
 
   stencil_time = prk::wtime() - stencil_time;

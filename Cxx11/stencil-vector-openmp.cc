@@ -148,6 +148,7 @@ int main(int argc, char* argv[])
   {
     OMP_FOR()
     for (auto i=0; i<n; i++) {
+      OMP_SIMD
       for (auto j=0; j<n; j++) {
         in[i*n+j] = static_cast<double>(i+j);
         out[i*n+j] = 0.0;
@@ -194,6 +195,7 @@ int main(int argc, char* argv[])
 #ifdef _OPENMP
       OMP_FOR()
       for (auto i=0; i<n; i++) {
+        OMP_SIMD
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
