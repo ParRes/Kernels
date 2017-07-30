@@ -120,6 +120,8 @@ matrix:
     env: PRK_TARGET=allampi
   - os: linux
     env: PRK_TARGET=allfgmpi
+  - os: linux
+    env: PRK_TARGET=allmpi
 addons:
   apt:
     sources:
