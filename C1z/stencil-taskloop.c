@@ -180,6 +180,7 @@ int main(int argc, char * argv[])
   double * restrict out = prk_malloc(bytes);
 
   OMP_PARALLEL()
+  OMP_MASTER
   {
     OMP_TASKLOOP( firstprivate(n) shared(in,out) )
     for (int i=0; i<n; i++) {
@@ -192,11 +193,7 @@ int main(int argc, char * argv[])
 
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          stencil_time = prk_wtime();
-      }
+      if (iter==1) stencil_time = prk_wtime();
 
       // Apply the stencil operator
       stencil(n, in, out);
@@ -212,7 +209,6 @@ int main(int argc, char * argv[])
       }
       OMP_TASKWAIT
     }
-    OMP_MASTER
     stencil_time = prk_wtime() - stencil_time;
   }
 
