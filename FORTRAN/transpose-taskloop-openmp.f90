@@ -87,7 +87,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a60)') 'Fortran OpenMP TASKLOOP Matrix transpose: B = A^T'
+  write(*,'(a50)') 'Fortran OpenMP TASKLOOP Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
     write(*,'(a,i1)') 'argument count = ', command_argument_count()
@@ -152,10 +152,11 @@ program main
   !$omp&  private(i,j,it,jt,k)
   !$omp master
 
-  !$omp taskloop firstprivate(order,tile_size) shared(A,B)
+  !$omp taskloop firstprivate(order,tile_size) shared(A,B) private(i,j,it,jt)
   do jt=1,order,tile_size
     do it=1,order,tile_size
       do j=jt,min(order,jt+tile_size-1)
+        !$omp simd
         do i=it,min(order,it+tile_size-1)
             A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
             B(i,j) = 0.0
@@ -173,10 +174,11 @@ program main
       t0 = prk_get_wtime()
     endif
 
-    !$omp taskloop firstprivate(order,tile_size) shared(A,B)
+    !$omp taskloop firstprivate(order,tile_size) shared(A,B) private(i,j,it,jt)
     do jt=1,order,tile_size
       do it=1,order,tile_size
         do j=jt,min(order,jt+tile_size-1)
+          !$omp simd
           do i=it,min(order,it+tile_size-1)
             B(j,i) = B(j,i) + A(i,j)
             A(i,j) = A(i,j) + 1.0
