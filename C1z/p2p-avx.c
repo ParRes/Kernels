@@ -90,7 +90,15 @@ static inline void sweep_tile(int startm, int endm,
   for (int i=startm; i<endm; i++) {
     for (int j=startn; j<endn; j++) {
       //g[i*n+j] = g[(i-1)*n+j] + g[i*n+(j-1)] - g[(i-1)*n+(j-1)];
-#if 1
+#if 0
+      __m256d c0 = _mm256_load_pd( &( g[(i-1)*n+(j-1)] ) ); // { g[i-1][j-1] , g[i-1][ j ] , g[i-1][j+1] , g[i-1][j+2] }
+      __m256d c1 = _mm256_load_pd( &( g[  i  *n+(j-1)] ) ); // { g[ i ][j-1] , g[ i ][ j ] , g[ i ][j+1] , g[ i ][j+2] }
+      __m256d j1 = _mm256_and_pd( c1 , el1 );               // { g[ i ][j-1] , 0 , 0 , 0 }
+      __m256d i0 = _mm256_addsub_pd( j1 , c0 );             // { g[ i ][j-1] - g[i-1][j-1] , g[i-1][ j ] , .. }
+      __m256d i1 = _mm256_and_pd( i0 , el12 );              // { g[ i ][j-1] - g[i-1][j-1] , g[ i ][ j ] + g[i-1][ j ] , 0 , 0 }
+      __m256d i2 = _mm256_hadd_pd( i1 , zero );             // { g[ i ][j-1] - g[i-1][j-1] + g[ i ][ j ] + g[i-1][ j ] , .. }
+      _mm256_maskstore_pd( &( g[i*n+j] ) , mask, i2 );      // g[i][j] = { g[i][j-1] - g[i-1][j-1] + g[i][j] + g[i-1][j] }
+#elif 0
       __m256d c0 = _mm256_load_pd( &( g[(i-1)*n+(j-1)] ) ); // { g[i-1][j-1] , g[i-1][ j ] , g[i-1][j+1] , g[i-1][j+2] }
       __m256d c1 = _mm256_load_pd( &( g[  i  *n+(j-1)] ) ); // { g[ i ][j-1] , g[ i ][ j ] , g[ i ][j+1] , g[ i ][j+2] }
       __m256d j1 = _mm256_and_pd( c1 , el1 );               // { g[ i ][j-1] , 0 , 0 , 0 }
@@ -106,7 +114,44 @@ static inline void sweep_tile(int startm, int endm,
       double i1[4] = { i0[0] , i0[1] , 0 , 0 };
       double i2[4] = { i1[0] + i1[1] , 0 , i1[2] + i1[3] , 0 };
       g[i*n+j] = i2[0];
-      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
+#elif 0
+      // BUSTED
+      double c0[4] = { g[(i-1)*n+(j-1)] , g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] };
+      double c1[4] = { g[  i  *n+(j-1)] , g[  i  *n+(j+0)] , g[  i  *n+(j+1)] , g[  i  *n+(j+2)] };
+      // first element
+      double j1[4] = { c1[0] , 0 , 0 , 0 };
+      double i0[4] = { j1[0] - c0[0] , j1[1] + c0[1] , j1[2] - c0[2] , j1[3] + c0[3] };
+      double i1[4] = { i0[0] , i0[1] , 0 , 0 };
+      double i2[4] = { i1[0] + i1[1] , 0 , i1[2] + i1[3] , 0 };
+      c1[1] = i2[0];
+      g[i*n+j] = c1[1];
+      // second element
+      double i3[4] = { -c0[0] , c0[1] , -c0[2] , c0[3] }; // ADDSUB(0,c0)
+      double i4[4] = {  c1[0] , c1[1] , 0 , 0 };          // AND(el12,c1)
+      double i5[4] = {  i4[0] - i3[0] , i4[1] - i3[1] , i4[2] - i3[2] , i4[3] - i3[3] }; // SUB(i4,i3)
+      double i6[4] = {  i5[1] , i5[2] , i5[3] , i5[0] }; // PERM(i5)
+      double i7[4] = {  i6[0] + i6[1] , 0 , i6[2] + i6[3] , 0 }; // HADD(i6,0)
+      c1[2] = i7[0];
+      g[i*n+j+1] = c1[2];
+      // third element
+
+      printf("g[%d][%d]=%f\n",i,j+0,g[i*n+j+0]);
+      printf("g[%d][%d]=%f\n",i,j+1,g[i*n+j+1]);
+      //printf("g[%d][%d]=%f\n",i,j+2,g[i*n+j+2]);
+#elif 1
+      double c0s[4] = { g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] }; // shifted
+      double c0r[4] = { g[(i-1)*n+(j-1)] , g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] }; // regular
+      double i0[4]  = { c0s[0] - c0r[0] , c0s[1] - c0r[1] ,c0s[2] - c0r[2] ,c0s[3] - c0r[3] }; // subtract
+      double c1[4]  = { g[  i  *n+(j-1)] , g[  i  *n+(j+0)] , g[  i  *n+(j+1)] , g[  i  *n+(j+2)] }; // regular
+      double i1[4]  = { c1[0] + i0[0] , 0 , 0 };        // add first element
+      double i2[4]  = { 0 , i1[0] , 0 , 0 };            // shift right
+      double i3[4]  = { 0 , i2[1] + i0[1] , 0 , 0 };    // add second element
+      double i4[4]  = { 0 , 0 , i3[2] , 0 };            // shift right
+      double i5[4]  = { 0 , 0 , i4[2] + i0[2] , 0 };    // add third element
+      double i6[4]  = { 0 , 0 , 0 , i5[2] };            // shift right
+      double i7[4]  = { 0 , 0 , 0 , i6[3] + i0[3] };    // add fourth element
+#else
+      g[i*n+j] = g[i*n+(j-1)] + g[(i-1)*n+j] - g[(i-1)*n+(j-1)];
 #endif
     }
   }
