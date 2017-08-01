@@ -87,7 +87,7 @@ static inline void sweep_tile(int startm, int endm,
       //print_m128d("c1",c1);
       __m128d i0 = _mm_addsub_pd( c1 , c0 );                // { grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)] , grid[i*n+j] + grid[(i-1)*n+j] }
       //print_m128d("i0",i0);
-      __m128d i1 = _mm_hadd_pd( i0 , i0 );                  // { grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)] + grid[i*n+j] + grid[(i-1)*n+j] , .. }
+      __m128d i1 = _mm_hadd_pd( i0 , _mm_setzero_pd() );    // { grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)] + grid[i*n+j] + grid[(i-1)*n+j] , 0 }
       //print_m128d("i1",i1);
       _mm_store_sd( &( grid[i*n+j] ) , i1 );                // grid[i*n+j] = { grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)] + grid[i*n+j] + grid[(i-1)*n+j] }
 #else
