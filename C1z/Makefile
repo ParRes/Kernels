@@ -9,6 +9,8 @@ CFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 # debugging
 #CFLAGS += -DVERBOSE
 
+ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm $(CFLAGS)
+
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
@@ -54,6 +56,9 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 
 %: %.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
+%.s: %.c prk_util.h
+	$(CC) $(ASMFLAGS) -S $< -o $@
 
 clean:
 	-rm -f *.o
