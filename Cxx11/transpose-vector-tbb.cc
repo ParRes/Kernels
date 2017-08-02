@@ -113,7 +113,7 @@ int main(int argc, char * argv[])
 #if USE_BLOCKED_RANGE_1D
   tbb::blocked_range<int> range(0, order, tile_size);
   tbb::parallel_for( range,
-                     [&](const tbb::blocked_range<int>& r) {
+                     [&](decltype(range)& r) {
                              for(auto i=r.begin(); i!=r.end(); ++i) {
                                  PRAGMA_SIMD
                                  for (auto j=0; j<order; ++j ) {
@@ -126,7 +126,7 @@ int main(int argc, char * argv[])
 #else
   tbb::blocked_range2d<int> range(0, order, tile_size, 0, order, tile_size);
   tbb::parallel_for( range,
-                     [&](const tbb::blocked_range2d<int>& r) {
+                     [&](decltype(range)& r) {
                              for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
                                  PRAGMA_SIMD
                                  for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
@@ -142,7 +142,7 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 #if USE_BLOCKED_RANGE_1D
     tbb::parallel_for( range,
-                       [&](const tbb::blocked_range<int>& r) {
+                       [&](decltype(range)& r) {
                                for(auto i=r.begin(); i!=r.end(); ++i) {
                                    PRAGMA_SIMD
                                    for (auto j=0; j<order; ++j ) {
@@ -154,7 +154,7 @@ int main(int argc, char * argv[])
                      );
 #else
     tbb::parallel_for( range,
-                       [&](const tbb::blocked_range2d<int>& r) {
+                       [&](decltype(range)& r) {
                                for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
                                    PRAGMA_SIMD
                                    for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
