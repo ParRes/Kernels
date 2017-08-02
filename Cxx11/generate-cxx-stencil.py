@@ -64,6 +64,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('  tbb::blocked_range2d<int> range('+str(radius)+', n-'+str(radius)+', tile_size, '+str(radius)+', n-'+str(radius)+', tile_size);\n')
         src.write('  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {\n')
         src.write('    for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {\n')
+        src.write('      PRAGMA_SIMD\n')
         src.write('      for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {\n')
     elif (model=='kokkos'):
         src.write('void '+pattern+str(radius)+'(const int n, matrix & in, matrix & out) {\n')

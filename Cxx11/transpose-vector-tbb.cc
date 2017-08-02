@@ -114,19 +114,21 @@ int main(int argc, char * argv[])
   tbb::blocked_range<int> range(0, order, tile_size);
   tbb::parallel_for( range,
                      [&](const tbb::blocked_range<int>& r) {
-                         for(auto i=r.begin(); i!=r.end(); ++i) {
-                             for (auto j=0; j<order; ++j ) {
-                                 A[i*order+j] = static_cast<double>(i*order+j);
-                                 B[i*order+j] = 0.0;
+                             for(auto i=r.begin(); i!=r.end(); ++i) {
+                                 PRAGMA_SIMD
+                                 for (auto j=0; j<order; ++j ) {
+                                     A[i*order+j] = static_cast<double>(i*order+j);
+                                     B[i*order+j] = 0.0;
+                                 }
                              }
-                         }
-                     }
+                        }
                    );
 #else
   tbb::blocked_range2d<int> range(0, order, tile_size, 0, order, tile_size);
   tbb::parallel_for( range,
                      [&](const tbb::blocked_range2d<int>& r) {
                              for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                                 PRAGMA_SIMD
                                  for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
                                      A[i*order+j] = static_cast<double>(i*order+j);
                                      B[i*order+j] = 0.0;
@@ -141,18 +143,20 @@ int main(int argc, char * argv[])
 #if USE_BLOCKED_RANGE_1D
     tbb::parallel_for( range,
                        [&](const tbb::blocked_range<int>& r) {
-                           for(auto i=r.begin(); i!=r.end(); ++i) {
-                               for (auto j=0; j<order; ++j ) {
-                                    B[i*order+j] += A[j*order+i];
-                                    A[j*order+i] += 1.0;
+                               for(auto i=r.begin(); i!=r.end(); ++i) {
+                                   PRAGMA_SIMD
+                                   for (auto j=0; j<order; ++j ) {
+                                        B[i*order+j] += A[j*order+i];
+                                        A[j*order+i] += 1.0;
+                                   }
                                }
-                           }
-                       }
+                          }
                      );
 #else
     tbb::parallel_for( range,
                        [&](const tbb::blocked_range2d<int>& r) {
                                for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                                   PRAGMA_SIMD
                                    for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
                                         B[i*order+j] += A[j*order+i];
                                         A[j*order+i] += 1.0;
