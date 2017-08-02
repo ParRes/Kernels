@@ -47,7 +47,7 @@ opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl
 
 cilk: stencil-vector-cilk transpose-vector-cilk
 
-tbb: p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
+tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
 
 pstl: stencil-vector-pstl transpose-vector-pstl
 
