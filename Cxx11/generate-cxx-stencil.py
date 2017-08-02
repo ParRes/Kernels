@@ -13,8 +13,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='taskloop'):
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    OMP_TASKLOOP( firstprivate(n) shared(in,out) )\n')
+        src.write('void '+pattern+str(radius)+'(const int n, const int gs, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('    OMP_TASKLOOP( firstprivate(n) shared(in,out) grainsize(gs) )\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
         src.write('      OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
