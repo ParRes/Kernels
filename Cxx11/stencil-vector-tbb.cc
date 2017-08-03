@@ -146,8 +146,9 @@ int main(int argc, char * argv[])
 
   tbb::blocked_range2d<int> range(0, n, tile_size, 0, n, tile_size);
   tbb::parallel_for( range,
-                     [&](const tbb::blocked_range2d<int>& r) {
+                     [&](decltype(range)& r) {
                          for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                             PRAGMA_SIMD
                              for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
                                  A[i*n+j] = static_cast<double>(i+j);
                                  B[i*n+j] = 0.0;
@@ -189,8 +190,9 @@ int main(int argc, char * argv[])
         }
     }
     tbb::parallel_for( range,
-                       [&](const tbb::blocked_range2d<int>& r) {
+                       [&](decltype(range)& r) {
                            for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                               PRAGMA_SIMD
                                for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
                                    A[i*n+j] += 1.0;
                                }

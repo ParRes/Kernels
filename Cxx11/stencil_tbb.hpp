@@ -2,8 +2,9 @@
 
 void star1(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(1, n-1, tile_size, 1, n-1, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-1)*n+(j+0)] * -0.5
                       +in[(i+0)*n+(j+-1)] * -0.5
@@ -16,8 +17,9 @@ void star1(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void star2(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(2, n-2, tile_size, 2, n-2, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-2)*n+(j+0)] * -0.125
                       +in[(i+-1)*n+(j+0)] * -0.25
@@ -34,8 +36,9 @@ void star2(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void star3(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(3, n-3, tile_size, 3, n-3, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-3)*n+(j+0)] * -0.05555555555555555
                       +in[(i+-2)*n+(j+0)] * -0.08333333333333333
@@ -56,8 +59,9 @@ void star3(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void star4(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(4, n-4, tile_size, 4, n-4, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-4)*n+(j+0)] * -0.03125
                       +in[(i+-3)*n+(j+0)] * -0.041666666666666664
@@ -82,8 +86,9 @@ void star4(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void star5(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(5, n-5, tile_size, 5, n-5, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-5)*n+(j+0)] * -0.02
                       +in[(i+-4)*n+(j+0)] * -0.025
@@ -112,8 +117,9 @@ void star5(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void star6(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(6, n-6, tile_size, 6, n-6, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-6)*n+(j+0)] * -0.013888888888888888
                       +in[(i+-5)*n+(j+0)] * -0.016666666666666666
@@ -146,8 +152,9 @@ void star6(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void star7(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(7, n-7, tile_size, 7, n-7, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-7)*n+(j+0)] * -0.01020408163265306
                       +in[(i+-6)*n+(j+0)] * -0.011904761904761904
@@ -184,8 +191,9 @@ void star7(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void star8(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(8, n-8, tile_size, 8, n-8, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-8)*n+(j+0)] * -0.0078125
                       +in[(i+-7)*n+(j+0)] * -0.008928571428571428
@@ -226,8 +234,9 @@ void star8(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void star9(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(9, n-9, tile_size, 9, n-9, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-9)*n+(j+0)] * -0.006172839506172839
                       +in[(i+-8)*n+(j+0)] * -0.006944444444444444
@@ -272,8 +281,9 @@ void star9(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void grid1(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(1, n-1, tile_size, 1, n-1, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-1)*n+(j+-1)] * -0.25
                       +in[(i+-1)*n+(j+0)] * -0.25
@@ -289,8 +299,9 @@ void grid1(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void grid2(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(2, n-2, tile_size, 2, n-2, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-2)*n+(j+-2)] * -0.0625
                       +in[(i+-2)*n+(j+-1)] * -0.020833333333333332
@@ -320,8 +331,9 @@ void grid2(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void grid3(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(3, n-3, tile_size, 3, n-3, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-3)*n+(j+-3)] * -0.027777777777777776
                       +in[(i+-3)*n+(j+-2)] * -0.005555555555555556
@@ -373,8 +385,9 @@ void grid3(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void grid4(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(4, n-4, tile_size, 4, n-4, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-4)*n+(j+-4)] * -0.015625
                       +in[(i+-4)*n+(j+-3)] * -0.002232142857142857
@@ -456,8 +469,9 @@ void grid4(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void grid5(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(5, n-5, tile_size, 5, n-5, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-5)*n+(j+-5)] * -0.01
                       +in[(i+-5)*n+(j+-4)] * -0.0011111111111111111
@@ -577,8 +591,9 @@ void grid5(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void grid6(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(6, n-6, tile_size, 6, n-6, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-6)*n+(j+-6)] * -0.006944444444444444
                       +in[(i+-6)*n+(j+-5)] * -0.0006313131313131314
@@ -744,8 +759,9 @@ void grid6(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void grid7(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(7, n-7, tile_size, 7, n-7, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-7)*n+(j+-7)] * -0.00510204081632653
                       +in[(i+-7)*n+(j+-6)] * -0.0003924646781789639
@@ -965,8 +981,9 @@ void grid7(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void grid8(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(8, n-8, tile_size, 8, n-8, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-8)*n+(j+-8)] * -0.00390625
                       +in[(i+-8)*n+(j+-7)] * -0.00026041666666666666
@@ -1248,8 +1265,9 @@ void grid8(const int n, const int tile_size, std::vector<double> & in, std::vect
 
 void grid9(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(9, n-9, tile_size, 9, n-9, tile_size);
-  tbb::parallel_for( range, [&](const tbb::blocked_range2d<int>& r) {
+  tbb::parallel_for( range, [&](decltype(range)& r) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+      PRAGMA_SIMD
       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
         out[i*n+j] += +in[(i+-9)*n+(j+-9)] * -0.0030864197530864196
                       +in[(i+-9)*n+(j+-8)] * -0.00018155410312273057
