@@ -99,10 +99,12 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
+  std::cout << "Taskloop grainsize   = " << gs << std::endl;
+#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
-  std::cout << "Taskloop grainsize   = " << gs << std::endl;
   std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
