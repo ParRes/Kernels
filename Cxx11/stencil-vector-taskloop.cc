@@ -122,10 +122,12 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
+  std::cout << "Taskloop grainsize   = " << gs << std::endl;
+#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
-  std::cout << "Taskloop grainsize   = " << gs << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
@@ -187,7 +189,7 @@ int main(int argc, char * argv[])
       }
       OMP_TASKWAIT
 
-      // add constant to solution to force refresh of neighbor data, if any
+      // Add constant to solution to force refresh of neighbor data, if any
       OMP_TASKLOOP( firstprivate(n) shared(in) grainsize(gs) )
       for (auto i=0; i<n; i++) {
         OMP_SIMD
