@@ -118,6 +118,8 @@ C1z/p2p-hyperplane
 C1z/p2p-hyperplane-openmp
 C1z/p2p-tasks-openmp
 C1z/p2p-simd-openmp
+C1z/p2p-avx
+C1z/p2p-sse
 C1z/stencil
 C1z/stencil-cilk
 C1z/stencil-openmp
