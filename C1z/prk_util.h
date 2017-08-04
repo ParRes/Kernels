@@ -65,6 +65,7 @@
 
 #ifdef _OPENMP
 # include <omp.h>
+# define OMP(x) PRAGMA(omp x)
 # define OMP_PARALLEL(x) PRAGMA(omp parallel x)
 # define OMP_PARALLEL_FOR_REDUCE(x) PRAGMA(omp parallel for reduction (x) )
 # define OMP_MASTER PRAGMA(omp master)
