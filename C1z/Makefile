@@ -9,6 +9,8 @@ CFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 # debugging
 #CFLAGS += -DVERBOSE
 
+ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm $(CFLAGS)
+
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
@@ -29,7 +31,7 @@ serial: p2p p2p-innerloop stencil transpose
 
 thread: transpose-thread
 
-openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+openmp: p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
 target: stencil-target transpose-target
 
@@ -44,7 +46,7 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-taskloop: %-taskloop.c prk_util.h
-	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
+	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-openmp: %-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
@@ -54,6 +56,12 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 
 %: %.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
+%-openmp.s: %-openmp.c prk_util.h
+	$(CC) $(ASMFLAGS) $(OMPFLAGS) -S $< -o $@
+
+%.s: %.c prk_util.h
+	$(CC) $(ASMFLAGS) -S $< -o $@
 
 clean:
 	-rm -f *.o
