@@ -54,62 +54,6 @@
 
 #include "prk_util.h"
 
-struct Initialize
-{
-    public:
-        void operator()( const tbb::blocked_range2d<int>& r ) const {
-            for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                    A_[i*n_+j] = static_cast<double>(i*n_+j);
-                    B_[i*n_+j] = 0.0;
-                }
-            }
-        }
-
-        Initialize(int n, std::vector<double> & A, std::vector<double> & B) : n_(n), A_(A), B_(B) { }
-
-    private:
-        int n_;
-        std::vector<double> & A_;
-        std::vector<double> & B_;
-
-};
-
-struct Transpose
-{
-    public:
-        void operator()( const tbb::blocked_range2d<int>& r ) const {
-            for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                    B_[i*n_+j] += A_[j*n_+i];
-                    A_[j*n_+i] += 1.0;
-                }
-            }
-        }
-
-        Transpose(int n, std::vector<double> & A, std::vector<double> & B) : n_(n), A_(A), B_(B) { }
-
-    private:
-        int n_;
-        std::vector<double> & A_;
-        std::vector<double> & B_;
-
-};
-
-void ParallelInitialize(int order, int tile_size, std::vector<double> & A, std::vector<double> & B)
-{
-    Initialize t(order, A, B);
-    const tbb::blocked_range2d<int> r(0, order, tile_size, 0, order, tile_size);
-    parallel_for(r,t);
-}
-
-void ParallelTranspose(int order, int tile_size, std::vector<double> & A, std::vector<double> & B)
-{
-    Transpose t(order, A, B);
-    const tbb::blocked_range2d<int> r(0, order, tile_size, 0, order, tile_size);
-    parallel_for(r,t);
-}
-
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -151,11 +95,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-  if (tile_size < order) {
-      std::cout << "Tile size             = " << tile_size << std::endl;
-  } else {
-      std::cout << "Untiled" << std::endl;
-  }
+  std::cout << "Tile size             = " << tile_size << std::endl;
 
   tbb::task_scheduler_init init(tbb::task_scheduler_init::automatic);
 
@@ -170,11 +110,61 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  ParallelInitialize(order, tile_size, A, B);
+#if USE_BLOCKED_RANGE_1D
+  tbb::blocked_range<int> range(0, order, tile_size);
+  tbb::parallel_for( range,
+                     [&](decltype(range)& r) {
+                             for(auto i=r.begin(); i!=r.end(); ++i) {
+                                 PRAGMA_SIMD
+                                 for (auto j=0; j<order; ++j ) {
+                                     A[i*order+j] = static_cast<double>(i*order+j);
+                                     B[i*order+j] = 0.0;
+                                 }
+                             }
+                        }
+                   );
+#else
+  tbb::blocked_range2d<int> range(0, order, tile_size, 0, order, tile_size);
+  tbb::parallel_for( range,
+                     [&](decltype(range)& r) {
+                             for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                                 PRAGMA_SIMD
+                                 for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                     A[i*order+j] = static_cast<double>(i*order+j);
+                                     B[i*order+j] = 0.0;
+                                 }
+                             }
+                        }
+                   );
+#endif
 
   for (auto iter = 0; iter<=iterations; iter++) {
     if (iter==1) trans_time = prk::wtime();
-    ParallelTranspose(order, tile_size, A, B);
+#if USE_BLOCKED_RANGE_1D
+    tbb::parallel_for( range,
+                       [&](decltype(range)& r) {
+                               for(auto i=r.begin(); i!=r.end(); ++i) {
+                                   PRAGMA_SIMD
+                                   for (auto j=0; j<order; ++j ) {
+                                        B[i*order+j] += A[j*order+i];
+                                        A[j*order+i] += 1.0;
+                                   }
+                               }
+                          }
+                     );
+#else
+    tbb::parallel_for( range,
+                       [&](decltype(range)& r) {
+                               for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                                   PRAGMA_SIMD
+                                   for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                        B[i*order+j] += A[j*order+i];
+                                        A[j*order+i] += 1.0;
+                                   }
+                               }
+                          }
+                     );
+#endif
   }
   trans_time = prk::wtime() - trans_time;
 

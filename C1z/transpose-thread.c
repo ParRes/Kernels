@@ -60,12 +60,17 @@ typedef struct {
     int endi;
     int startj;
     int endj;
+    int tilesize;
     int order;
     double * restrict A;
     double * restrict B;
 } args_s;
 
+#if defined(HAVE_C11_THREADS)
+int transpose_tile(void * pa)
+#elif defined(HAVE_PTHREADS)
 void * transpose_tile(void * pa)
+#endif
 {
   args_s * a = (args_s*)pa;
 
@@ -73,21 +78,38 @@ void * transpose_tile(void * pa)
   const int endi      = a->endi;
   const int startj    = a->startj;
   const int endj      = a->endj;
+  const int tilesize  = a->tilesize;
   const int order     = a->order;
   double * restrict A = a->A;
   double * restrict B = a->B;
 
+#if 0
   for (int i=starti; i<endi; i++) {
     for (int j=startj; j<endj; j++) {
       B[i*order+j] += A[j*order+i];
       A[j*order+i] += 1.0;
     }
   }
+#else
+  for (int it=starti; it<endi; it+=tilesize) {
+    for (int jt=startj; jt<endj; jt+=tilesize) {
+      for (int i=it; i<MIN(endi,it+tilesize); i++) {
+        for (int j=jt; j<MIN(endj,jt+tilesize); j++) {
+          B[i*order+j] += A[j*order+i];
+          A[j*order+i] += 1.0;
+        }
+      }
+    }
+  }
+#endif
 
-  // implicit
-  //pthread_exit(NULL);
-
+#if defined(HAVE_C11_THREADS)
+  thrd_exit(0);
+  return 0;
+#elif defined(HAVE_PTHREADS)
+  pthread_exit(NULL);
   return NULL;
+#endif
 }
 
 int main(int argc, char * argv[])
@@ -103,8 +125,8 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 3) {
-    printf("Usage: <# iterations> <matrix order> [tile size]\n");
+  if (argc < 4) {
+    printf("Usage: <# iterations> <matrix order> <block size> [tile size]\n");
     return 1;
   }
 
@@ -123,17 +145,23 @@ int main(int argc, char * argv[])
   }
 
   // default tile size for tiling of local transpose
-  int tile_size = (argc>3) ? atoi(argv[3]) : 32;
+  int block_size = (argc>3) ? atoi(argv[3]) : 256;
   // a negative tile size means no tiling of the local transpose
-  if (tile_size <= 0) tile_size = order;
+  if (block_size <= 0) block_size = order;
 
-  int num_threads = order/tile_size;
-  if (order % tile_size) num_threads++;
+  // default tile size for tiling of local transpose
+  int tile_size = (argc>4) ? atoi(argv[4]) : 32;
+  // a negative tile size means no tiling of the local transpose
+  if (tile_size <= 0) tile_size = block_size;
+
+  int num_threads = order/block_size;
+  if (order % block_size) num_threads++;
   num_threads *= num_threads;
 
   printf("Number of threads     = %d\n", num_threads);
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
+  printf("Block size            = %d\n", block_size);
   printf("Tile size             = %d\n", tile_size);
 
   //////////////////////////////////////////////////////////////////////
@@ -166,21 +194,16 @@ int main(int argc, char * argv[])
       if (iter==1) trans_time = prk_wtime();
 
       int tid = 0;
-      for (int it=0; it<order; it+=tile_size) {
-        for (int jt=0; jt<order; jt+=tile_size) {
-          //for (int i=it; i<MIN(order,it+tile_size); i++) {
-          //  for (int j=jt; j<MIN(order,jt+tile_size); j++) {
-          //    B[i*order+j] += A[j*order+i];
-          //    A[j*order+i] += 1.0;
-          //  }
-          //}
-          args[tid].starti = it;
-          args[tid].endi   = MIN(order,it+tile_size);
-          args[tid].startj = jt;
-          args[tid].endj   = MIN(order,jt+tile_size);
-          args[tid].order  = order;
-          args[tid].A      = A;
-          args[tid].B      = B;
+      for (int ib=0; ib<order; ib+=block_size) {
+        for (int jb=0; jb<order; jb+=block_size) {
+          args[tid].starti   = ib;
+          args[tid].endi     = MIN(order,ib+block_size);
+          args[tid].startj   = jb;
+          args[tid].endj     = MIN(order,jb+block_size);
+          args[tid].tilesize = tile_size;
+          args[tid].order    = order;
+          args[tid].A        = A;
+          args[tid].B        = B;
 #if defined(HAVE_C11_THREADS)
           int rc = thrd_create(&pool[tid], transpose_tile, &args[tid]);
           assert(rc==thrd_success);

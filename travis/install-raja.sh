@@ -24,7 +24,7 @@ case $CXX in
         for version in "-5" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
           if [ -f "`which ${CXX}${version}`" ]; then
               export PRK_CXX="${CXX}${version}"
-              export PRK_CC="${CC}${major}"
+              export PRK_CC="${CC}${version}"
               echo "Found C++: $PRK_CXX"
               break
           fi

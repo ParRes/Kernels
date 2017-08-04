@@ -148,6 +148,8 @@ Cxx11/transpose-vector-rangefor
 Cxx11/transpose-vector-tbb
 Cxx11/transpose-vector-taskloop
 Cxx11/transpose-kokkos
+Cxx11/transpose-vector-async
+Cxx11/transpose-vector-thread
 Cxx11/grid1.cl
 Cxx11/grid2.cl
 Cxx11/grid3.cl

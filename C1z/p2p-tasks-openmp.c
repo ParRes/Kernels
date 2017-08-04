@@ -165,6 +165,7 @@ int main(int argc, char * argv[])
       OMP_TASK( depend(in:grid[(lic-1)*n+(ljc)]) depend(out:grid[0]) )
       grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
+    OMP_TASKWAIT
     pipeline_time = prk_wtime() - pipeline_time;
   }
 

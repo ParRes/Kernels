@@ -153,7 +153,6 @@ int main(int argc, char* argv[])
       OMP_MASTER
       grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
-
     OMP_BARRIER
     OMP_MASTER
     pipeline_time = prk::wtime() - pipeline_time;
@@ -178,7 +177,7 @@ int main(int argc, char* argv[])
 #endif
   auto avgtime = pipeline_time/iterations;
   std::cout << "Rate (MFlops/s): "
-            << 2.0e-6 * ( (m-1)*(n-1) )/avgtime
+            << 2.0e-6 * ( (m-1.)*(n-1.) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
 
   return 0;

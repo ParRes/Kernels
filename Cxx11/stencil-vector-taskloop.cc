@@ -73,12 +73,11 @@ int main(int argc, char * argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int n, radius;
+  int iterations, n, radius, gs;
   bool star = true;
   try {
-      if (argc < 3){
-        throw "Usage: <# iterations> <array dimension> [<star/grid> <radius>]";
+      if (argc < 3) {
+        throw "Usage: <# iterations> <array dimension> [taskloop grainsize] [<star/grid> <radius>]";
       }
 
       // number of times to run the algorithm
@@ -95,17 +94,23 @@ int main(int argc, char * argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
+      // taskloop grainsize
+      gs = (argc > 3) ? std::atoi(argv[3]) : 100;
+      if (gs < 1 || gs > n) {
+        throw "ERROR: grainsize";
+      }
+
       // stencil pattern
-      if (argc > 3) {
-          auto stencil = std::string(argv[3]);
+      if (argc > 4) {
+          auto stencil = std::string(argv[4]);
           auto grid = std::string("grid");
           star = (stencil == grid) ? false : true;
       }
 
       // stencil radius
       radius = 2;
-      if (argc > 4) {
-          radius = std::atoi(argv[4]);
+      if (argc > 5) {
+          radius = std::atoi(argv[5]);
       }
 
       if ( (radius < 1) || (2*radius+1 > n) ) {
@@ -117,74 +122,77 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
+#ifdef _OPENMP
+  std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
+  std::cout << "Taskloop grainsize   = " << gs << std::endl;
+#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
-  std::cout << "Compact representation of stencil loop body" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
+
+  auto stencil_time = 0.0;
 
   std::vector<double> in;
   std::vector<double> out;
   in.resize(n*n);
   out.resize(n*n);
 
-  auto stencil_time = 0.0;
-
   OMP_PARALLEL()
   OMP_MASTER
   {
-    OMP_TASKLOOP( firstprivate(n) shared(in,out) )
+    OMP_TASKLOOP( firstprivate(n) shared(in,out) grainsize(gs) )
     for (auto i=0; i<n; i++) {
+      OMP_SIMD
       for (auto j=0; j<n; j++) {
         in[i*n+j] = static_cast<double>(i+j);
         out[i*n+j] = 0.0;
       }
     }
-
     OMP_TASKWAIT
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          stencil_time = prk::wtime();
-      }
+      if (iter==1) stencil_time = prk::wtime();
 
       // Apply the stencil operator
       if (star) {
           switch (radius) {
-              case 1: star1(n, in, out); break;
-              case 2: star2(n, in, out); break;
-              case 3: star3(n, in, out); break;
-              case 4: star4(n, in, out); break;
-              case 5: star5(n, in, out); break;
-              case 6: star6(n, in, out); break;
-              case 7: star7(n, in, out); break;
-              case 8: star8(n, in, out); break;
-              case 9: star9(n, in, out); break;
+              case 1: star1(n, gs, in, out); break;
+              case 2: star2(n, gs, in, out); break;
+              case 3: star3(n, gs, in, out); break;
+              case 4: star4(n, gs, in, out); break;
+              case 5: star5(n, gs, in, out); break;
+              case 6: star6(n, gs, in, out); break;
+              case 7: star7(n, gs, in, out); break;
+              case 8: star8(n, gs, in, out); break;
+              case 9: star9(n, gs, in, out); break;
               default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
           }
       } else {
           switch (radius) {
-              case 1: grid1(n, in, out); break;
-              case 2: grid2(n, in, out); break;
-              case 3: grid3(n, in, out); break;
-              case 4: grid4(n, in, out); break;
-              case 5: grid5(n, in, out); break;
-              case 6: grid6(n, in, out); break;
-              case 7: grid7(n, in, out); break;
-              case 8: grid8(n, in, out); break;
-              case 9: grid9(n, in, out); break;
+              case 1: grid1(n, gs, in, out); break;
+              case 2: grid2(n, gs, in, out); break;
+              case 3: grid3(n, gs, in, out); break;
+              case 4: grid4(n, gs, in, out); break;
+              case 5: grid5(n, gs, in, out); break;
+              case 6: grid6(n, gs, in, out); break;
+              case 7: grid7(n, gs, in, out); break;
+              case 8: grid8(n, gs, in, out); break;
+              case 9: grid9(n, gs, in, out); break;
               default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
           }
       }
-      // add constant to solution to force refresh of neighbor data, if any
-      OMP_TASKLOOP( firstprivate(n) shared(in) )
+      OMP_TASKWAIT
+
+      // Add constant to solution to force refresh of neighbor data, if any
+      OMP_TASKLOOP( firstprivate(n) shared(in) grainsize(gs) )
       for (auto i=0; i<n; i++) {
+        OMP_SIMD
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
