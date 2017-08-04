@@ -61,7 +61,11 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+#ifdef _OPENMP
   std::cout << "C++11/OpenMP Matrix transpose: B = A^T" << std::endl;
+#else
+  std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
+#endif
 
   int iterations;
   int order;
@@ -94,14 +98,12 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
+#ifdef _OPENMP
+  std::cout << "Number of threads     = " << omp_get_max_threads() << std::endl;
+#endif
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-  if (tile_size < order) {
-      std::cout << "Tile size             = " << tile_size << std::endl;
-  } else {
-      std::cout << "Untiled" << std::endl;
-  }
+  std::cout << "Tile size             = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix

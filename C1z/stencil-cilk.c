@@ -169,7 +169,8 @@ int main(int argc, char * argv[])
   double * restrict out = prk_malloc(bytes);
 
   _Cilk_for (int i=0; i<n; i++) {
-    _Cilk_for (int j=0; j<n; j++) {
+    PRAGMA_SIMD
+    for (int j=0; j<n; j++) {
       in[i*n+j]  = (double)(i+j);
       out[i*n+j] = 0.0;
     }
@@ -184,7 +185,8 @@ int main(int argc, char * argv[])
 
     // Add constant to solution to force refresh of neighbor data, if any
     _Cilk_for (int i=0; i<n; i++) {
-      _Cilk_for (int j=0; j<n; j++) {
+      PRAGMA_SIMD
+      for (int j=0; j<n; j++) {
         in[i*n+j] += 1.0;
       }
     }

@@ -33,7 +33,7 @@ endif
 
 all: vector valarray openmp opencl $(TARGET) cilk taskloop tbb pstl rangefor raja kokkos
 
-vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector
+vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector transpose-vector-async transpose-vector-thread
 
 valarray: transpose-valarray
 
@@ -47,7 +47,7 @@ opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl
 
 cilk: stencil-vector-cilk transpose-vector-cilk
 
-tbb: p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
+tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
 
 pstl: stencil-vector-pstl transpose-vector-pstl
 
@@ -120,6 +120,7 @@ clean:
 	-rm -f *-raja
 	-rm -f *-kokkos
 	-rm -f *-cuda
+	-rm -f transpose-vector-async transpose-vector-thread
 
 cleancl:
 	-rm -f star[123456789].cl

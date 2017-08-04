@@ -27,6 +27,10 @@ echo "PRKVERSION=\"'2.16'\"" > common/make.defs
 case "$PRK_TARGET" in
     allpython)
         echo "Python"
+        # workaround for trusty since cannot find numpy when using /opt/python/2.7.13/bin/python
+        if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+            export PATH=/usr/bin:$PATH
+        fi
         which python
         python --version
         export PRK_TARGET_PATH=PYTHON
@@ -124,7 +128,8 @@ case "$PRK_TARGET" in
         esac
         ${PRK_CC} -v
         # Need to increment this for CPLEX (some day)
-        echo "CC=${PRK_CC} -std=c11 -DPRK_USE_GETTIMEOFDAY\nEXTRA_CLIBS=-lm" >> common/make.defs
+        echo "CC=${PRK_CC} -std=c11 -DPRK_USE_GETTIMEOFDAY" >> common/make.defs
+        echo "EXTRA_CLIBS=-lm -lpthread" >> common/make.defs
 
         # C11 without external parallelism
         make -C $PRK_TARGET_PATH p2p stencil transpose p2p-innerloop
@@ -139,6 +144,11 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil 10 200 $s $r
             done
         done
+
+        # C11 with POSIX or C11 thread parallelism
+        # not testing C11 threads for now
+        make -C $PRK_TARGET_PATH transpose-thread
+        $PRK_TARGET_PATH/transpose-thread   10 1024 512
 
         # C11 with OpenMP
         export OMP_NUM_THREADS=2
@@ -237,25 +247,48 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=Cxx11
         case $CXX in
             g++)
-                for major in "-9" "-8" "-7" "-6" "-5" "" ; do
-                  if [ -f "`which ${CXX}${major}`" ]; then
-                      export PRK_CXX="${CXX}${major}"
-                      echo "Found C++: $PRK_CXX"
-                      break
-                  fi
-                done
+                if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "x$PRK_CXX" = "x" ] ; then
+                  for version in "-9" "-8" "-7" "-6" "-5" "" ; do
+                    if [ -f "`which /usr/local/opt/gcc@${version}/bin/g++-${version}`" ]; then
+                        export PRK_CXX="`which /usr/local/opt/llvm@${version}/bin/clang++`"
+                        echo "Found C++: $PRK_CXX"
+                        break
+                    fi
+                  done
+                fi
+                if [ "x$PRK_CXX" = "x" ] ; then
+                  for major in "-9" "-8" "-7" "-6" "-5" "" ; do
+                    if [ -f "`which ${CXX}${major}`" ]; then
+                        export PRK_CXX="${CXX}${major}"
+                        echo "Found C++: $PRK_CXX"
+                        break
+                    fi
+                  done
+                fi
                 if [ "x$PRK_CXX" = "x" ] ; then
                     export PRK_CXX="${CXX}"
                 fi
                 ;;
             clang++)
-                for version in "-5" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
-                  if [ -f "`which ${CXX}${version}`" ]; then
-                      export PRK_CXX="${CXX}${version}"
-                      echo "Found C++: $PRK_CXX"
-                      break
-                  fi
-                done
+                # Homebrew does not always place the best/latest Clang/LLVM in the default path
+                if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "x$PRK_CXX" = "x" ] ; then
+                  for version in "" "4.1" "4" "4.0" "-3.9" "-3.8" "-3.7" "-3.6" ; do
+                    if [ -f "`which /usr/local/opt/llvm@${version}/bin/clang++`" ]; then
+                        export PRK_CXX="`which /usr/local/opt/llvm@${version}/bin/clang++`"
+                        echo "Found C++: $PRK_CXX"
+                        break
+                    fi
+                  done
+                fi
+                if [ "x$PRK_CXX" = "x" ] ; then
+                  for version in "-5" "-4.1" "-4" "-4.0" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
+                    if [ -f "`which ${CXX}${version}`" ]; then
+                        export PRK_CXX="${CXX}${version}"
+                        echo "Found C++: $PRK_CXX"
+                        break
+                    fi
+                  done
+                fi
                 if [ "x$PRK_CXX" = "x" ] ; then
                     export PRK_CXX="${CXX}"
                 fi
@@ -263,7 +296,8 @@ case "$PRK_TARGET" in
         esac
         ${PRK_CXX} -v
         # Need to increment this for PSTL
-        echo "CXX=${PRK_CXX} -std=c++11" >> common/make.defs
+        # The pthread flag is supported by GCC and Clang at least
+        echo "CXX=${PRK_CXX} -std=c++11 -pthread" >> common/make.defs
 
         # C++11 without external parallelism
         make -C $PRK_TARGET_PATH transpose-valarray
@@ -282,6 +316,10 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil-vector 10 200 $s $r
             done
         done
+        # C++11 native parallelism
+        make -C $PRK_TARGET_PATH transpose-vector-thread transpose-vector-async
+        $PRK_TARGET_PATH/transpose-vector-thread 10 1024 32
+        $PRK_TARGET_PATH/transpose-vector-async  10 1024 32
 
         # C++11 with rangefor
         echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs

@@ -62,86 +62,7 @@
 
 #include "prk_util.h"
 
-// These empty definitions are required for the compiler to understand the specializations.
-template <int>
-struct Star {
-};
-
-template <int>
-struct Grid {
-};
-
 #include "stencil_tbb.hpp"
-
-struct Initialize
-{
-    public:
-        void operator()( const tbb::blocked_range2d<int>& r ) const {
-            for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                    A_[i*n_+j] = static_cast<double>(i+j);
-                    B_[i*n_+j] = 0.0;
-                }
-            }
-        }
-
-        Initialize(int n, std::vector<double> & A, std::vector<double> & B) : n_(n), A_(A), B_(B) { }
-
-    private:
-        int n_;
-        std::vector<double> & A_;
-        std::vector<double> & B_;
-
-};
-
-struct Add
-{
-    public:
-        void operator()( const tbb::blocked_range2d<int>& r ) const {
-            for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                    A_[i*n_+j] += 1.0;
-                }
-            }
-        }
-
-        Add(int n, std::vector<double> & A) : n_(n), A_(A) { }
-
-    private:
-        int n_;
-        std::vector<double> & A_;
-
-};
-
-void ParallelInitialize(int n, int tile_size, std::vector<double> & A, std::vector<double> & B)
-{
-    Initialize i(n, A, B);
-    const tbb::blocked_range2d<int> r(0, n, tile_size, 0, n, tile_size);
-    parallel_for(r,i);
-}
-
-void ParallelAdd(int n, int tile_size, std::vector<double> & A)
-{
-    Add a(n, A);
-    const tbb::blocked_range2d<int> r(0, n, tile_size, 0, n, tile_size);
-    parallel_for(r,a);
-}
-
-template <int radius>
-void ParallelStar(int n, int tile_size, std::vector<double> & A, std::vector<double> & B)
-{
-    Star<radius> s(n, A, B);
-    const tbb::blocked_range2d<int> r(radius, n-radius, tile_size, radius, n-radius, tile_size);
-    parallel_for(r,s);
-}
-
-template <int radius>
-void ParallelGrid(int n, int tile_size, std::vector<double> & A, std::vector<double> & B)
-{
-    Grid<radius> s(n, A, B);
-    const tbb::blocked_range2d<int> r(radius, n-radius, tile_size, radius, n-radius, tile_size);
-    parallel_for(r,s);
-}
 
 int main(int argc, char * argv[])
 {
@@ -223,7 +144,18 @@ int main(int argc, char * argv[])
 
   auto stencil_time = 0.0;
 
-  ParallelInitialize(n, tile_size, A, B);
+  tbb::blocked_range2d<int> range(0, n, tile_size, 0, n, tile_size);
+  tbb::parallel_for( range,
+                     [&](decltype(range)& r) {
+                         for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                             PRAGMA_SIMD
+                             for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                 A[i*n+j] = static_cast<double>(i+j);
+                                 B[i*n+j] = 0.0;
+                             }
+                         }
+                      }
+                   );
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -232,32 +164,41 @@ int main(int argc, char * argv[])
     // Apply the stencil operator
     if (star) {
         switch (radius) {
-            case 1: ParallelStar<1>(n, tile_size, A, B); break;
-            case 2: ParallelStar<2>(n, tile_size, A, B); break;
-            case 3: ParallelStar<3>(n, tile_size, A, B); break;
-            case 4: ParallelStar<4>(n, tile_size, A, B); break;
-            case 5: ParallelStar<5>(n, tile_size, A, B); break;
-            case 6: ParallelStar<6>(n, tile_size, A, B); break;
-            case 7: ParallelStar<7>(n, tile_size, A, B); break;
-            case 8: ParallelStar<8>(n, tile_size, A, B); break;
-            case 9: ParallelStar<9>(n, tile_size, A, B); break;
-            default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
+            case 1: star1(n, tile_size, A, B); break;
+            case 2: star2(n, tile_size, A, B); break;
+            case 3: star3(n, tile_size, A, B); break;
+            case 4: star4(n, tile_size, A, B); break;
+            case 5: star5(n, tile_size, A, B); break;
+            case 6: star6(n, tile_size, A, B); break;
+            case 7: star7(n, tile_size, A, B); break;
+            case 8: star8(n, tile_size, A, B); break;
+            case 9: star9(n, tile_size, A, B); break;
+            default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
         }
     } else {
         switch (radius) {
-            case 1: ParallelGrid<1>(n, tile_size, A, B); break;
-            case 2: ParallelGrid<2>(n, tile_size, A, B); break;
-            case 3: ParallelGrid<3>(n, tile_size, A, B); break;
-            case 4: ParallelGrid<4>(n, tile_size, A, B); break;
-            case 5: ParallelGrid<5>(n, tile_size, A, B); break;
-            case 6: ParallelGrid<6>(n, tile_size, A, B); break;
-            case 7: ParallelGrid<7>(n, tile_size, A, B); break;
-            case 8: ParallelGrid<8>(n, tile_size, A, B); break;
-            case 9: ParallelGrid<9>(n, tile_size, A, B); break;
-            default: { std::cerr << "Template not instantiated for radius " << radius << "\n"; break; }
+            case 1: grid1(n, tile_size, A, B); break;
+            case 2: grid2(n, tile_size, A, B); break;
+            case 3: grid3(n, tile_size, A, B); break;
+            case 4: grid4(n, tile_size, A, B); break;
+            case 5: grid5(n, tile_size, A, B); break;
+            case 6: grid6(n, tile_size, A, B); break;
+            case 7: grid7(n, tile_size, A, B); break;
+            case 8: grid8(n, tile_size, A, B); break;
+            case 9: grid9(n, tile_size, A, B); break;
+            default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
         }
     }
-    ParallelAdd(n, tile_size, A);
+    tbb::parallel_for( range,
+                       [&](decltype(range)& r) {
+                           for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                               PRAGMA_SIMD
+                               for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                   A[i*n+j] += 1.0;
+                               }
+                           }
+                        }
+                     );
   }
   stencil_time = prk::wtime() - stencil_time;
 

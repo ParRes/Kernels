@@ -76,7 +76,7 @@
 #  define OMP_SIMD PRAGMA(omp simd)
 #  define OMP_FOR_SIMD PRAGMA(omp for simd)
 #  define OMP_TASK(x) PRAGMA(omp task x)
-#  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x)
+#  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
 #  define OMP_TASKWAIT PRAGMA(omp taskwait)
 #  define OMP_TARGET(x) PRAGMA(omp target x)
 # else
@@ -111,6 +111,17 @@
 # define PRAGMA_SIMD PRAGMA(simd)
 #else
 # define PRAGMA_SIMD
+#endif
+
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
+   !defined(__STDC_NO_THREADS__) && \
+   defined(USE_C11_THREADS)
+# define HAVE_C11_THREADS
+# include <threads.h>
+#else
+# define HAVE_PTHREADS
+# include <errno.h>
+# include <pthread.h>
 #endif
 
 #if defined(_OPENMP)

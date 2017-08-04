@@ -90,11 +90,7 @@ int main(int argc, char * argv[])
 
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
-  if (tile_size < order) {
-      printf("Tile size             = %d\n", tile_size);
-  } else {
-      printf("Untiled" );
-  }
+  printf("Tile size             = %d\n", tile_size);
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
