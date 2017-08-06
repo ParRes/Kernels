@@ -145,17 +145,15 @@ int main(int argc, char * argv[])
   auto stencil_time = 0.0;
 
   tbb::blocked_range2d<int> range(0, n, tile_size, 0, n, tile_size);
-  tbb::parallel_for( range,
-                     [&](decltype(range)& r) {
-                         for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                             PRAGMA_SIMD
-                             for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                                 A[i*n+j] = static_cast<double>(i+j);
-                                 B[i*n+j] = 0.0;
-                             }
+  tbb::parallel_for( range, [&](decltype(range)& r) {
+                     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                         PRAGMA_SIMD
+                         for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                             A[i*n+j] = static_cast<double>(i+j);
+                             B[i*n+j] = 0.0;
                          }
-                      }
-                   );
+                     }
+                   }, tbb_partitioner() );
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -189,16 +187,14 @@ int main(int argc, char * argv[])
             default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
         }
     }
-    tbb::parallel_for( range,
-                       [&](decltype(range)& r) {
-                           for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                               PRAGMA_SIMD
-                               for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                                   A[i*n+j] += 1.0;
-                               }
+    tbb::parallel_for( range, [&](decltype(range)& r) {
+                       for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                           PRAGMA_SIMD
+                           for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                               A[i*n+j] += 1.0;
                            }
-                        }
-                     );
+                       }
+                     }, tbb_partitioner() );
   }
   stencil_time = prk::wtime() - stencil_time;
 

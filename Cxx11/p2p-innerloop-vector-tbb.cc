@@ -119,13 +119,11 @@ int main(int argc, char* argv[])
   for (auto iter = 0; iter<=iterations; iter++){
     if (iter == 1) pipeline_time = prk::wtime();
     for (auto i=2; i<=2*n-2; i++) {
-      tbb::parallel_for( std::max(2,i-n+2), std::min(i,n)+1,
-           [=,&grid](int j) {
+      tbb::parallel_for( std::max(2,i-n+2), std::min(i,n)+1, [=,&grid](int j) {
                const auto x = i-j+2-1;
                const auto y = j-1;
                grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-           }
-      );
+           }, tbb_partitioner() );
     }
     grid[0*n+0] = -grid[(n-1)*n+(n-1)];
   }
