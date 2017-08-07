@@ -88,6 +88,7 @@ int main(int argc, char * argv[])
   // a negative tile size means no tiling of the local transpose
   if (tile_size <= 0) tile_size = order;
 
+  printf("Number of workers     = %d\n", __cilkrts_get_nworkers() );
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
   printf("Tile size             = %d\n", tile_size);

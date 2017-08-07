@@ -111,6 +111,10 @@
 
 #ifdef __cilk
 # include <cilk/cilk.h>
+// Not defined in the header but documented at https://www.cilkplus.org/.
+extern "C" {
+    int __cilkrts_get_nworkers(void);
+}
 #endif
 
 #if defined(__INTEL_COMPILER) && !defined(PRAGMA_OMP_SIMD)
