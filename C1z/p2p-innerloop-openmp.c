@@ -110,8 +110,9 @@ int main(int argc, char* argv[])
 
   OMP_PARALLEL()
   {
-    OMP_FOR_SIMD
+    OMP_FOR()
     for (int i=0; i<n; i++) {
+      OMP_SIMD
       for (int j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
       }
@@ -138,7 +139,7 @@ int main(int argc, char* argv[])
       }
 
       for (int i=2; i<=2*n-2; i++) {
-        OMP_FOR_SIMD
+        OMP_FOR(simd)
         for (int j=MAX(2,i-n+2); j<=MIN(i,n); j++) {
           const int x = i-j+2-1;
           const int y = j-1;
