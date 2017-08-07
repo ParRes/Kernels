@@ -63,12 +63,12 @@
 #include "prk_util.h"
 #include "stencil_target.hpp"
 
-void nothing(const int n, std::vector<double> & in, std::vector<double> & out)
+void nothing(const int n, const double * RESTRICT in, double * RESTRICT out)
 {
     std::cout << "You are trying to use a stencil that does not exist." << std::endl;
     std::cout << "Please generate the new stencil using the code generator." << std::endl;
     // n will never be zero - this is to silence compiler warnings.
-    if (n==0) std::cout << in.size() << out.size() << std::endl;
+    if (n==0) std::cout << in << out << std::endl;
     std::abort();
 }
 
