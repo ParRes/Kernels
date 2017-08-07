@@ -136,10 +136,11 @@ int main(int argc, char * argv[])
   std::cout << "Radius of stencil    = " << radius << std::endl;
   std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
+  auto p = tbb_partitioner();
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
-
 
   std::vector<double> A;
   std::vector<double> B;
@@ -157,7 +158,7 @@ int main(int argc, char * argv[])
                              B[i*n+j] = 0.0;
                          }
                      }
-                   }, tbb_partitioner() );
+                   }, p );
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -198,7 +199,7 @@ int main(int argc, char * argv[])
                                A[i*n+j] += 1.0;
                            }
                        }
-                     }, tbb_partitioner() );
+                     }, p );
   }
   stencil_time = prk::wtime() - stencil_time;
 
@@ -229,7 +230,7 @@ int main(int argc, char * argv[])
                                    return temp;
                                },
                                [] (const double x1, const double x2) { return x1+x2; },
-                               tbb_partitioner() );
+                               p );
 #endif
   norm /= active_points;
 

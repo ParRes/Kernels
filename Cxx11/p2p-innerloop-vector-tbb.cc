@@ -106,6 +106,8 @@ int main(int argc, char* argv[])
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
   std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
+  auto p = tbb_partitioner();
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
@@ -129,7 +131,7 @@ int main(int argc, char* argv[])
                const auto x = i-j+2-1;
                const auto y = j-1;
                grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-           }, tbb_partitioner() );
+           }, p );
     }
     grid[0*n+0] = -grid[(n-1)*n+(n-1)];
   }

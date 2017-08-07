@@ -103,6 +103,8 @@ int main(int argc, char * argv[])
   std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
+  auto p = tbb_partitioner();
+
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
@@ -123,7 +125,7 @@ int main(int argc, char * argv[])
                              B[i*order+j] = 0.0;
                          }
                      }
-                   }, tbb_partitioner() );
+                   }, p );
 
   for (auto iter = 0; iter<=iterations; iter++) {
     if (iter==1) trans_time = prk::wtime();
@@ -135,7 +137,7 @@ int main(int argc, char * argv[])
                                 A[j*order+i] += 1.0;
                            }
                        }
-                     }, tbb_partitioner() );
+                     }, p );
   }
   trans_time = prk::wtime() - trans_time;
 
@@ -169,7 +171,7 @@ int main(int argc, char * argv[])
                                      return temp;
                                  },
                                  [] (const double x1, const double x2) { return x1+x2; },
-                                 tbb_partitioner() );
+                                 p );
 #endif
 
 #ifdef VERBOSE
