@@ -72,7 +72,16 @@
 
 #include "stencil_raja.hpp"
 
-int main(int argc, char * argv[])
+void nothing(const int n, std::vector<double> & in, std::vector<double> & out)
+{
+    std::cout << "You are trying to use a stencil that does not exist." << std::endl;
+    std::cout << "Please generate the new stencil using the code generator." << std::endl;
+    // n will never be zero - this is to silence compiler warnings.
+    if (n==0) std::cout << in.size() << out.size() << std::endl;
+    std::abort();
+}
+
+int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/RAJA Stencil execution on 2D grid" << std::endl;
@@ -130,6 +139,33 @@ int main(int argc, char * argv[])
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
+  auto stencil = nothing;
+  if (star) {
+      switch (radius) {
+          case 1: stencil = star1; break;
+          case 2: stencil = star2; break;
+          case 3: stencil = star3; break;
+          case 4: stencil = star4; break;
+          case 5: stencil = star5; break;
+          case 6: stencil = star6; break;
+          case 7: stencil = star7; break;
+          case 8: stencil = star8; break;
+          case 9: stencil = star9; break;
+      }
+  } else {
+      switch (radius) {
+          case 1: stencil = grid1; break;
+          case 2: stencil = grid2; break;
+          case 3: stencil = grid3; break;
+          case 4: stencil = grid4; break;
+          case 5: stencil = grid5; break;
+          case 6: stencil = grid6; break;
+          case 7: stencil = grid7; break;
+          case 8: stencil = grid8; break;
+          case 9: stencil = grid9; break;
+      }
+  }
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
@@ -141,7 +177,6 @@ int main(int argc, char * argv[])
   in.resize(n*n);
   out.resize(n*n);
 
-  // initialize the input and output arrays
 #if 0
   RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
           ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
@@ -161,36 +196,9 @@ int main(int argc, char * argv[])
   for (auto iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) stencil_time = prk::wtime();
-
     // Apply the stencil operator
-    if (star) {
-        switch (radius) {
-            case 1: star1(n, in, out); break;
-            case 2: star2(n, in, out); break;
-            case 3: star3(n, in, out); break;
-            case 4: star4(n, in, out); break;
-            case 5: star5(n, in, out); break;
-            case 6: star6(n, in, out); break;
-            case 7: star7(n, in, out); break;
-            case 8: star8(n, in, out); break;
-            case 9: star9(n, in, out); break;
-            default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
-        }
-    } else {
-        switch (radius) {
-            case 1: grid1(n, in, out); break;
-            case 2: grid2(n, in, out); break;
-            case 3: grid3(n, in, out); break;
-            case 4: grid4(n, in, out); break;
-            case 5: grid5(n, in, out); break;
-            case 6: grid6(n, in, out); break;
-            case 7: grid7(n, in, out); break;
-            case 8: grid8(n, in, out); break;
-            case 9: grid9(n, in, out); break;
-            default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
-        }
-    }
-    // add constant to solution to force refresh of neighbor data, if any
+    stencil(n, in, out);
+    // Add constant to solution to force refresh of neighbor data, if any
 #if 0
     RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
             ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),

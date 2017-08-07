@@ -61,6 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "stencil_seq.hpp"
 
 void nothing(const int n, std::vector<double> & in, std::vector<double> & out)
 {
@@ -71,8 +72,6 @@ void nothing(const int n, std::vector<double> & in, std::vector<double> & out)
     std::abort();
 }
 
-#include "stencil_seq.hpp"
-
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -82,11 +81,10 @@ int main(int argc, char* argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int n, radius;
+  int iterations, n, radius, gs;
   bool star = true;
   try {
-      if (argc < 3){
+      if (argc < 3) {
         throw "Usage: <# iterations> <array dimension> [<star/grid> <radius>]";
       }
 
@@ -180,12 +178,10 @@ int main(int argc, char* argv[])
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) stencil_time = prk::wtime();
-
       // Apply the stencil operator
       stencil(n, in, out);
-      // add constant to solution to force refresh of neighbor data, if any
+      // Add constant to solution to force refresh of neighbor data, if any
       std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
-
     }
     stencil_time = prk::wtime() - stencil_time;
   }
