@@ -1,6 +1,6 @@
 OMP_DECLARE_TARGET
 void star1(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=1; i<n-1; i++) {
       OMP_SIMD
       for (int j=1; j<n-1; j++) {
@@ -13,7 +13,7 @@ void star1(const int n, const double * restrict in, double * restrict out) {
 }
 
 void star2(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=2; i<n-2; i++) {
       OMP_SIMD
       for (int j=2; j<n-2; j++) {
@@ -30,7 +30,7 @@ void star2(const int n, const double * restrict in, double * restrict out) {
 }
 
 void star3(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=3; i<n-3; i++) {
       OMP_SIMD
       for (int j=3; j<n-3; j++) {
@@ -51,7 +51,7 @@ void star3(const int n, const double * restrict in, double * restrict out) {
 }
 
 void star4(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=4; i<n-4; i++) {
       OMP_SIMD
       for (int j=4; j<n-4; j++) {
@@ -76,7 +76,7 @@ void star4(const int n, const double * restrict in, double * restrict out) {
 }
 
 void star5(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=5; i<n-5; i++) {
       OMP_SIMD
       for (int j=5; j<n-5; j++) {
@@ -105,7 +105,7 @@ void star5(const int n, const double * restrict in, double * restrict out) {
 }
 
 void star6(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=6; i<n-6; i++) {
       OMP_SIMD
       for (int j=6; j<n-6; j++) {
@@ -138,7 +138,7 @@ void star6(const int n, const double * restrict in, double * restrict out) {
 }
 
 void star7(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=7; i<n-7; i++) {
       OMP_SIMD
       for (int j=7; j<n-7; j++) {
@@ -175,7 +175,7 @@ void star7(const int n, const double * restrict in, double * restrict out) {
 }
 
 void star8(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=8; i<n-8; i++) {
       OMP_SIMD
       for (int j=8; j<n-8; j++) {
@@ -216,7 +216,7 @@ void star8(const int n, const double * restrict in, double * restrict out) {
 }
 
 void star9(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=9; i<n-9; i++) {
       OMP_SIMD
       for (int j=9; j<n-9; j++) {
@@ -261,7 +261,7 @@ void star9(const int n, const double * restrict in, double * restrict out) {
 }
 
 void grid1(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=1; i<n-1; i++) {
       OMP_SIMD
       for (int j=1; j<n-1; j++) {
@@ -277,7 +277,7 @@ void grid1(const int n, const double * restrict in, double * restrict out) {
 }
 
 void grid2(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=2; i<n-2; i++) {
       OMP_SIMD
       for (int j=2; j<n-2; j++) {
@@ -307,7 +307,7 @@ void grid2(const int n, const double * restrict in, double * restrict out) {
 }
 
 void grid3(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=3; i<n-3; i++) {
       OMP_SIMD
       for (int j=3; j<n-3; j++) {
@@ -359,7 +359,7 @@ void grid3(const int n, const double * restrict in, double * restrict out) {
 }
 
 void grid4(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=4; i<n-4; i++) {
       OMP_SIMD
       for (int j=4; j<n-4; j++) {
@@ -441,7 +441,7 @@ void grid4(const int n, const double * restrict in, double * restrict out) {
 }
 
 void grid5(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=5; i<n-5; i++) {
       OMP_SIMD
       for (int j=5; j<n-5; j++) {
@@ -561,7 +561,7 @@ void grid5(const int n, const double * restrict in, double * restrict out) {
 }
 
 void grid6(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=6; i<n-6; i++) {
       OMP_SIMD
       for (int j=6; j<n-6; j++) {
@@ -727,7 +727,7 @@ void grid6(const int n, const double * restrict in, double * restrict out) {
 }
 
 void grid7(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=7; i<n-7; i++) {
       OMP_SIMD
       for (int j=7; j<n-7; j++) {
@@ -947,7 +947,7 @@ void grid7(const int n, const double * restrict in, double * restrict out) {
 }
 
 void grid8(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=8; i<n-8; i++) {
       OMP_SIMD
       for (int j=8; j<n-8; j++) {
@@ -1229,7 +1229,7 @@ void grid8(const int n, const double * restrict in, double * restrict out) {
 }
 
 void grid9(const int n, const double * restrict in, double * restrict out) {
-    OMP_FOR
+    OMP_FOR()
     for (int i=9; i<n-9; i++) {
       OMP_SIMD
       for (int j=9; j<n-9; j++) {
