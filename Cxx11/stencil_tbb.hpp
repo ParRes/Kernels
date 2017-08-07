@@ -1,8 +1,8 @@
 #define RESTRICT __restrict__
 
-void star1(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void star1(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(1, n-1, tile_size, 1, n-1, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -16,9 +16,9 @@ void star1(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void star2(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void star2(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(2, n-2, tile_size, 2, n-2, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -36,9 +36,9 @@ void star2(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void star3(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void star3(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(3, n-3, tile_size, 3, n-3, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -60,9 +60,9 @@ void star3(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void star4(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void star4(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(4, n-4, tile_size, 4, n-4, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -88,9 +88,9 @@ void star4(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void star5(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void star5(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(5, n-5, tile_size, 5, n-5, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -120,9 +120,9 @@ void star5(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void star6(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void star6(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(6, n-6, tile_size, 6, n-6, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -156,9 +156,9 @@ void star6(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void star7(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void star7(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(7, n-7, tile_size, 7, n-7, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -196,9 +196,9 @@ void star7(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void star8(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void star8(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(8, n-8, tile_size, 8, n-8, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -240,9 +240,9 @@ void star8(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void star9(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void star9(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(9, n-9, tile_size, 9, n-9, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -288,9 +288,9 @@ void star9(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void grid1(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void grid1(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(1, n-1, tile_size, 1, n-1, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -307,9 +307,9 @@ void grid1(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void grid2(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void grid2(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(2, n-2, tile_size, 2, n-2, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -340,9 +340,9 @@ void grid2(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void grid3(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void grid3(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(3, n-3, tile_size, 3, n-3, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -395,9 +395,9 @@ void grid3(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void grid4(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void grid4(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(4, n-4, tile_size, 4, n-4, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -480,9 +480,9 @@ void grid4(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void grid5(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void grid5(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(5, n-5, tile_size, 5, n-5, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -603,9 +603,9 @@ void grid5(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void grid6(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void grid6(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(6, n-6, tile_size, 6, n-6, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -772,9 +772,9 @@ void grid6(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void grid7(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void grid7(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(7, n-7, tile_size, 7, n-7, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -995,9 +995,9 @@ void grid7(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void grid8(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void grid8(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(8, n-8, tile_size, 8, n-8, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD
@@ -1280,9 +1280,9 @@ void grid8(const int n, const int tile_size, std::vector<double> & in, std::vect
   }, p );
 }
 
-void grid9(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {
+template<typename partitioner>
+void grid9(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {
   tbb::blocked_range2d<int> range(9, n-9, tile_size, 9, n-9, tile_size);
-  auto p = tbb_partitioner();
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
       PRAGMA_SIMD

@@ -167,28 +167,28 @@ int main(int argc, char * argv[])
     // Apply the stencil operator
     if (star) {
         switch (radius) {
-            case 1: star1(n, tile_size, A, B); break;
-            case 2: star2(n, tile_size, A, B); break;
-            case 3: star3(n, tile_size, A, B); break;
-            case 4: star4(n, tile_size, A, B); break;
-            case 5: star5(n, tile_size, A, B); break;
-            case 6: star6(n, tile_size, A, B); break;
-            case 7: star7(n, tile_size, A, B); break;
-            case 8: star8(n, tile_size, A, B); break;
-            case 9: star9(n, tile_size, A, B); break;
+            case 1: star1(n, tile_size, A, B, p); break;
+            case 2: star2(n, tile_size, A, B, p); break;
+            case 3: star3(n, tile_size, A, B, p); break;
+            case 4: star4(n, tile_size, A, B, p); break;
+            case 5: star5(n, tile_size, A, B, p); break;
+            case 6: star6(n, tile_size, A, B, p); break;
+            case 7: star7(n, tile_size, A, B, p); break;
+            case 8: star8(n, tile_size, A, B, p); break;
+            case 9: star9(n, tile_size, A, B, p); break;
             default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
         }
     } else {
         switch (radius) {
-            case 1: grid1(n, tile_size, A, B); break;
-            case 2: grid2(n, tile_size, A, B); break;
-            case 3: grid3(n, tile_size, A, B); break;
-            case 4: grid4(n, tile_size, A, B); break;
-            case 5: grid5(n, tile_size, A, B); break;
-            case 6: grid6(n, tile_size, A, B); break;
-            case 7: grid7(n, tile_size, A, B); break;
-            case 8: grid8(n, tile_size, A, B); break;
-            case 9: grid9(n, tile_size, A, B); break;
+            case 1: grid1(n, tile_size, A, B, p); break;
+            case 2: grid2(n, tile_size, A, B, p); break;
+            case 3: grid3(n, tile_size, A, B, p); break;
+            case 4: grid4(n, tile_size, A, B, p); break;
+            case 5: grid5(n, tile_size, A, B, p); break;
+            case 6: grid6(n, tile_size, A, B, p); break;
+            case 7: grid7(n, tile_size, A, B, p); break;
+            case 8: grid8(n, tile_size, A, B, p); break;
+            case 9: grid9(n, tile_size, A, B, p); break;
             default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
         }
     }
