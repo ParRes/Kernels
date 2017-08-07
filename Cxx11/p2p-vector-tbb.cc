@@ -159,9 +159,15 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  const char* envvar = std::getenv("TBB_NUM_THREADS");
+  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
+  tbb::task_scheduler_init init(num_threads);
+
+  std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
   std::cout << "Grid chunk sizes     = " << mc << ", " << nc << std::endl;
+  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation

@@ -124,13 +124,17 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+  const char* envvar = std::getenv("TBB_NUM_THREADS");
+  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
+  tbb::task_scheduler_init init(num_threads);
+
+  std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
   std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
-
-  tbb::task_scheduler_init init(tbb::task_scheduler_init::automatic);
+  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -145,17 +149,15 @@ int main(int argc, char * argv[])
   auto stencil_time = 0.0;
 
   tbb::blocked_range2d<int> range(0, n, tile_size, 0, n, tile_size);
-  tbb::parallel_for( range,
-                     [&](decltype(range)& r) {
-                         for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                             PRAGMA_SIMD
-                             for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                                 A[i*n+j] = static_cast<double>(i+j);
-                                 B[i*n+j] = 0.0;
-                             }
+  tbb::parallel_for( range, [&](decltype(range)& r) {
+                     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                         PRAGMA_SIMD
+                         for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                             A[i*n+j] = static_cast<double>(i+j);
+                             B[i*n+j] = 0.0;
                          }
-                      }
-                   );
+                     }
+                   }, tbb_partitioner() );
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -189,16 +191,14 @@ int main(int argc, char * argv[])
             default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
         }
     }
-    tbb::parallel_for( range,
-                       [&](decltype(range)& r) {
-                           for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                               PRAGMA_SIMD
-                               for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                                   A[i*n+j] += 1.0;
-                               }
+    tbb::parallel_for( range, [&](decltype(range)& r) {
+                       for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                           PRAGMA_SIMD
+                           for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                               A[i*n+j] += 1.0;
                            }
-                        }
-                     );
+                       }
+                     }, tbb_partitioner() );
   }
   stencil_time = prk::wtime() - stencil_time;
 
@@ -211,11 +211,26 @@ int main(int argc, char * argv[])
 
   // compute L1 norm A parallel
   double norm = 0.0;
+#if 0
+  // Use this if, for whatever reason, TBB reductions are not reliable.
   for (auto i=radius; i<n-radius; i++) {
     for (auto j=radius; j<n-radius; j++) {
       norm += std::fabs(B[i*n+j]);
     }
   }
+#else
+  norm = tbb::parallel_reduce( range, double(0),
+                               [&](decltype(range)& r, double temp) -> double {
+                                   for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                                       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                           temp += std::fabs(B[i*n+j]);
+                                       }
+                                   }
+                                   return temp;
+                               },
+                               [] (const double x1, const double x2) { return x1+x2; },
+                               tbb_partitioner() );
+#endif
   norm /= active_points;
 
   // verify correctness

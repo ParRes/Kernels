@@ -51,6 +51,7 @@
 #include <exception>
 #include <chrono>
 #include <random>
+#include <typeinfo>
 
 #include <list>
 #include <vector>
@@ -130,6 +131,10 @@
 # include <tbb/tbb.h>
 # include <tbb/parallel_for.h>
 # include <tbb/blocked_range.h>
+//typedef tbb::auto_partitioner tbb_partitioner;
+//typedef tbb::simple_partitioner tbb_partitioner;
+typedef tbb::static_partitioner tbb_partitioner;
+//typedef tbb::affinity_partitioner tbb_partitioner;
 #endif
 
 #ifdef USE_BOOST
@@ -150,7 +155,6 @@
 #endif
 
 #ifdef USE_KOKKOS
-# include <typeinfo>
 # include <Kokkos_Core.hpp>
 #endif
 
