@@ -60,7 +60,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      PRAGMA_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='tbb'):
-        src.write('void '+pattern+str(radius)+'(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('template<typename partitioner>\n')
+        src.write('void '+pattern+str(radius)+'(const int n, const int tile_size, std::vector<double> & in, std::vector<double> & out, partitioner & p) {\n')
         src.write('  tbb::blocked_range2d<int> range('+str(radius)+', n-'+str(radius)+', tile_size, '+str(radius)+', n-'+str(radius)+', tile_size);\n')
         src.write('  tbb::parallel_for( range, [&](decltype(range)& r ) {\n')
         src.write('    for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {\n')
@@ -104,7 +105,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     elif (model=='tbb'):
         src.write('      }\n')
         src.write('    }\n')
-        src.write('  }, tbb_partitioner() );\n')
+        src.write('  }, p );\n')
     else:
         src.write('       }\n')
         src.write('     }\n')
