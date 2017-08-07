@@ -64,6 +64,7 @@
 
 #ifdef _OPENMP
 # include <omp.h>
+# define OMP(x) PRAGMA(omp x)
 # define OMP_PARALLEL(x) PRAGMA(omp parallel x)
 # define OMP_PARALLEL_FOR_REDUCE(x) PRAGMA(omp parallel for reduction (x) )
 # define OMP_MASTER PRAGMA(omp master)
@@ -93,6 +94,7 @@
 #  define OMP_END_DECLARE_TARGET
 # endif
 #else
+# define OMP(x)
 # define OMP_PARALLEL(x)
 # define OMP_PARALLEL_FOR_REDUCE(x)
 # define OMP_MASTER
@@ -114,8 +116,12 @@
 # include <cilk/cilk.h>
 #endif
 
-#if defined(__INTEL_COMPILER) && !defined(PRAGMA_OMP_SIMD)
+#if defined(__INTEL_COMPILER)
 # define PRAGMA_SIMD PRAGMA(simd)
+#elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
+# define PRAGMA_SIMD PRAGMA(GCC ivdep)
+#elif defined(__clang__)
+# define PRAGMA_SIMD PRAGMA(clang loop vectorize(enable))
 #else
 # define PRAGMA_SIMD
 #endif
