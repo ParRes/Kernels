@@ -109,7 +109,7 @@ int main(int argc, char * argv[])
   // initialize the input and output arrays
   OMP_PARALLEL()
   {
-    OMP_FOR
+    OMP_FOR()
     for (int i=0;i<order; i++) {
       for (int j=0;j<order;j++) {
         A[i*order+j] = (double)(i*order+j);
@@ -132,7 +132,7 @@ int main(int argc, char * argv[])
 
       // transpose the  matrix
       if (tile_size < order) {
-        OMP_FOR
+        OMP_FOR()
         for (int it=0; it<order; it+=tile_size) {
           for (int jt=0; jt<order; jt+=tile_size) {
             for (int i=it; i<MIN(order,it+tile_size); i++) {
@@ -144,7 +144,7 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        OMP_FOR
+        OMP_FOR()
         for (int i=0;i<order; i++) {
           for (int j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];

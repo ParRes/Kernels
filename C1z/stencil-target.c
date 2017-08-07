@@ -175,7 +175,7 @@ int main(int argc, char * argv[])
   // initialize the input and output arrays
   OMP_PARALLEL()
   {
-    OMP_FOR
+    OMP_FOR()
     for (int i=0; i<n; i++) {
       for (int j=0; j<n; j++) {
         in[i*n+j]  = (double)(i+j);
@@ -200,7 +200,7 @@ int main(int argc, char * argv[])
       stencil(n, in, out);
 
       // Add constant to solution to force refresh of neighbor data, if any
-      OMP_FOR
+      OMP_FOR()
       for (int i=0; i<n; i++) {
         for (int j=0; j<n; j++) {
           in[i*n+j] += 1.0;
