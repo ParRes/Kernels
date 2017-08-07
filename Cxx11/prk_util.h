@@ -51,6 +51,7 @@
 #include <exception>
 #include <chrono>
 #include <random>
+#include <typeinfo>
 
 #include <list>
 #include <vector>
@@ -148,7 +149,6 @@ typedef tbb::static_partitioner tbb_partitioner;
 #endif
 
 #ifdef USE_KOKKOS
-# include <typeinfo>
 # include <Kokkos_Core.hpp>
 #endif
 
