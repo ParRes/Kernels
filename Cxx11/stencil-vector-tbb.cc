@@ -211,11 +211,26 @@ int main(int argc, char * argv[])
 
   // compute L1 norm A parallel
   double norm = 0.0;
+#if 0
+  // Use this if, for whatever reason, TBB reductions are not reliable.
   for (auto i=radius; i<n-radius; i++) {
     for (auto j=radius; j<n-radius; j++) {
       norm += std::fabs(B[i*n+j]);
     }
   }
+#else
+  norm = tbb::parallel_reduce( range, double(0),
+                               [&](decltype(range)& r, double temp) -> double {
+                                   for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                                       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                           temp += std::fabs(B[i*n+j]);
+                                       }
+                                   }
+                                   return temp;
+                               },
+                               [] (const double x1, const double x2) { return x1+x2; },
+                               tbb_partitioner() );
+#endif
   norm /= active_points;
 
   // verify correctness
