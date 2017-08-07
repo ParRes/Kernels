@@ -62,8 +62,6 @@
 
 #include "prk_util.h"
 
-typedef void (*stencil_t)(const int, std::vector<double> & in, std::vector<double> & out);
-
 void nothing(const int n, std::vector<double> & in, std::vector<double> & out)
 {
     std::cout << "You are trying to use a stencil that does not exist." << std::endl;
@@ -133,7 +131,7 @@ int main(int argc, char* argv[])
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
-  stencil_t stencil = nothing;
+  auto stencil = nothing;
   if (star) {
       switch (radius) {
           case 1: stencil = star1; break;
