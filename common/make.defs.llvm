@@ -16,10 +16,17 @@ CXX=${LLVM_PATH}clang++ -std=c++1z
 #
 # -mtune=native is appropriate for most cases.
 # -march=native is appropriate if you want portable binaries.
-DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
-# If you are compiling for KNL on a Xeon login node, use the following:
-# DEFAULT_OPT_FLAGS=-g -O3 -march=knl
-# See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
+#
+DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
+#
+# If you want to be specific, get the architecture options from:
+#   ${LLVM_PATH}llc --version
+# and then get the CPU/ISA options from (e.g. for x86-64):
+#   ${LLVM_PATH}llc -march=x86-64 -mcpu=help
+#
+# These are useful to understand why the compiler does not vectorize loops:
+#   DEFAULT_OPT_FLAGS+=-Rpass-analysis=loop-vectorize
+#   DEFAULT_OPT_FLAGS+=-Rpass=loop-vectorize
 #
 # OpenMP flags
 #

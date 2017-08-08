@@ -126,7 +126,9 @@ extern "C" {
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
 # define PRAGMA_SIMD PRAGMA(GCC ivdep)
 #elif defined(__clang__)
-# define PRAGMA_SIMD PRAGMA(clang loop vectorize(enable))
+//# define PRAGMA_SIMD PRAGMA(clang loop vectorize(enable))
+# define PRAGMA_SIMD PRAGMA(clang loop vectorize(assume_safety))
+//# define PRAGMA_SIMD PRAGMA(clang loop vectorize(assume_safety) vectorize_width(4) interleave_count(4))
 #else
 # define PRAGMA_SIMD
 #endif
