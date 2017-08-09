@@ -137,10 +137,15 @@ extern "C" {
 # include <tbb/tbb.h>
 # include <tbb/parallel_for.h>
 # include <tbb/blocked_range.h>
-// tbb::auto_partitioner tbb_partitioner;
-// tbb::simple_partitioner tbb_partitioner;
-// tbb::static_partitioner tbb_partitioner;
-tbb::affinity_partitioner tbb_partitioner;
+# if ( PRK_TBB_PARTITIONER == simple)
+    tbb::simple_partitioner tbb_partitioner;
+# elif ( PRK_TBB_PARTITIONER == static)
+    tbb::static_partitioner tbb_partitioner;
+# elif ( PRK_TBB_PARTITIONER == affinity)
+    tbb::affinity_partitioner tbb_partitioner;
+# else
+    tbb::auto_partitioner tbb_partitioner;
+# endif
 #endif
 
 #ifdef USE_BOOST
