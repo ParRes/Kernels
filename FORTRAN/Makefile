@@ -37,7 +37,7 @@ tasks: p2p-tasks-openmp stencil-taskloop-openmp transpose-tasks-openmp transpose
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
-target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
+target: stencil-openmp-target transpose-openmp-target
 
 ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc
 

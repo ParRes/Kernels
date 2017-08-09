@@ -9,6 +9,10 @@ CFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 # debugging
 #CFLAGS += -DVERBOSE
 
+ifeq ($(findstring musl,$(CC)),musl)
+CFLAGS += -DUSE_C11_THREADS
+endif
+
 ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm $(CFLAGS)
 
 OMPFLAGS = $(OPENMPFLAG)
