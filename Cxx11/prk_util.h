@@ -137,14 +137,18 @@ extern "C" {
 # include <tbb/tbb.h>
 # include <tbb/parallel_for.h>
 # include <tbb/blocked_range.h>
-# if ( PRK_TBB_PARTITIONER == simple)
-    tbb::simple_partitioner tbb_partitioner;
-# elif ( PRK_TBB_PARTITIONER == static)
-    tbb::static_partitioner tbb_partitioner;
-# elif ( PRK_TBB_PARTITIONER == affinity)
-    tbb::affinity_partitioner tbb_partitioner;
+# if ( PRK_TBB_PARTITIONER == 1)
+//#  warning STATIC
+   tbb::static_partitioner tbb_partitioner;
+# elif ( PRK_TBB_PARTITIONER == 2)
+//#  warning AFFINITY
+   tbb::affinity_partitioner tbb_partitioner;
+# elif ( PRK_TBB_PARTITIONER == 3)
+//#  warning SIMPLE
+   tbb::simple_partitioner tbb_partitioner;
 # else
-    tbb::auto_partitioner tbb_partitioner;
+//#  warning AUTO
+   tbb::auto_partitioner tbb_partitioner;
 # endif
 #endif
 
