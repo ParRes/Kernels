@@ -63,12 +63,13 @@
 #include "prk_util.h"
 #include "stencil_taskloop.hpp"
 
-void nothing(const int n, const int gs, std::vector<double> & in, std::vector<double> & out)
+void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out, const int gs)
 {
-    std::cout << "You are trying to use a stencil that does not exist." << std::endl;
-    std::cout << "Please generate the new stencil using the code generator." << std::endl;
+    std::cout << "You are trying to use a stencil that does not exist.\n";
+    std::cout << "Please generate the new stencil using the code generator\n";
+    std::cout << "and add it to the case-switch in the driver." << std::endl;
     // n will never be zero - this is to silence compiler warnings.
-    if (n==0) std::cout << gs << in.size() << out.size() << std::endl;
+    if (n==0 || t==0 || gs==0) std::cout << in.size() << out.size() << std::endl;
     std::abort();
 }
 
@@ -81,11 +82,11 @@ int main(int argc, char* argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, n, radius, gs;
+  int iterations, n, radius, tile_size, gs;
   bool star = true;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <array dimension> [taskloop grainsize] [<star/grid> <radius>]";
+        throw "Usage: <# iterations> <array dimension> [<tile_size> <taskloop grainsize> <star/grid> <radius>]";
       }
 
       // number of times to run the algorithm
@@ -102,22 +103,30 @@ int main(int argc, char* argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
+      // default tile size for tiling of local transpose
+      tile_size = 32;
+      if (argc > 3) {
+          tile_size = std::atoi(argv[3]);
+          if (tile_size <= 0) tile_size = n;
+          if (tile_size > n) tile_size = n;
+      }
+
       // taskloop grainsize
-      gs = (argc > 3) ? std::atoi(argv[3]) : 100;
+      gs = (argc > 4) ? std::atoi(argv[4]) : 100;
       if (gs < 1 || gs > n) {
         throw "ERROR: grainsize";
       }
 
       // stencil pattern
-      if (argc > 4) {
-          auto stencil = std::string(argv[4]);
+      if (argc > 5) {
+          auto stencil = std::string(argv[5]);
           auto grid = std::string("grid");
           star = (stencil == grid) ? false : true;
       }
 
       // stencil radius
       radius = 2;
-      if (argc > 5) {
+      if (argc > 6) {
           radius = std::atoi(argv[5]);
       }
 
@@ -136,6 +145,7 @@ int main(int argc, char* argv[])
 #endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
@@ -147,10 +157,6 @@ int main(int argc, char* argv[])
           case 3: stencil = star3; break;
           case 4: stencil = star4; break;
           case 5: stencil = star5; break;
-          case 6: stencil = star6; break;
-          case 7: stencil = star7; break;
-          case 8: stencil = star8; break;
-          case 9: stencil = star9; break;
       }
   } else {
       switch (radius) {
@@ -159,10 +165,6 @@ int main(int argc, char* argv[])
           case 3: stencil = grid3; break;
           case 4: stencil = grid4; break;
           case 5: stencil = grid5; break;
-          case 6: stencil = grid6; break;
-          case 7: stencil = grid7; break;
-          case 8: stencil = grid8; break;
-          case 9: stencil = grid9; break;
       }
   }
 
@@ -180,12 +182,16 @@ int main(int argc, char* argv[])
   OMP_PARALLEL()
   OMP_MASTER
   {
-    OMP_TASKLOOP( firstprivate(n) shared(in,out) grainsize(gs) )
-    for (auto i=0; i<n; i++) {
-      OMP_SIMD
-      for (auto j=0; j<n; j++) {
-        in[i*n+j] = static_cast<double>(i+j);
-        out[i*n+j] = 0.0;
+    OMP_TASKLOOP( collapse(2) firstprivate(n) shared(in,out) grainsize(gs) )
+    for (auto it=0; it<n; it+=tile_size) {
+      for (auto jt=0; jt<n; jt+=tile_size) {
+        for (auto i=it; i<std::min(n,it+tile_size); i++) {
+          PRAGMA_SIMD
+          for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
+            in[i*n+j] = static_cast<double>(i+j);
+            out[i*n+j] = 0.0;
+          }
+        }
       }
     }
     OMP_TASKWAIT
@@ -194,15 +200,19 @@ int main(int argc, char* argv[])
 
       if (iter==1) stencil_time = prk::wtime();
       // Apply the stencil operator
-      stencil(n, gs, in, out);
+      stencil(n, tile_size, in, out, gs);
       OMP_TASKWAIT
 
       // Add constant to solution to force refresh of neighbor data, if any
-      OMP_TASKLOOP( firstprivate(n) shared(in) grainsize(gs) )
-      for (auto i=0; i<n; i++) {
-        OMP_SIMD
-        for (auto j=0; j<n; j++) {
-          in[i*n+j] += 1.0;
+      OMP_TASKLOOP( collapse(2) firstprivate(n) shared(in,out) grainsize(gs) )
+      for (auto it=0; it<n; it+=tile_size) {
+        for (auto jt=0; jt<n; jt+=tile_size) {
+          for (auto i=it; i<std::min(n,it+tile_size); i++) {
+            PRAGMA_SIMD
+            for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
+              in[i*n+j] += 1.0;
+            }
+          }
         }
       }
       OMP_TASKWAIT
