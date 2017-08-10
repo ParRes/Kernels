@@ -8,8 +8,18 @@ CXXFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 # debugging
 #CXXFLAGS += -DVERBOSE
 
+ifeq ($(USE_PRK_TBB_PARTITIONER),static)
+    PRK_TBB_PARTITIONER=1
+endif
+ifeq ($(USE_PRK_TBB_PARTITIONER),affinity)
+    PRK_TBB_PARTITIONER=2
+endif
+ifeq ($(USE_PRK_TBB_PARTITIONER),simple)
+    PRK_TBB_PARTITIONER=3
+endif
 ifndef PRK_TBB_PARTITIONER
-    PRK_TBB_PARTITIONER=static
+    $(info PRK help: Consider setting USE_PRK_TBB_PARTITIONER={static,affinity,simple} when invoking make)
+    PRK_TBB_PARTITIONER=0
 endif
 
 OMPFLAGS = $(OPENMPFLAG)
