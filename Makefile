@@ -80,6 +80,7 @@ all: alldarwin allfreaks allshared
 alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran allfenix
 allfreaks: allcharm++ allampi allgrappa alllegion
 allshared: allserial allopenmp allfortran allcxx allc1z allrust
+allnew: allfortran allcxx allc1z
 
 allmpi1:
 	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"

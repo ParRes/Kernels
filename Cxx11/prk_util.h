@@ -51,17 +51,21 @@
 #include <exception>
 #include <chrono>
 #include <random>
+#include <typeinfo>
 
 #include <list>
 #include <vector>
 #include <valarray>
 #include <array>
-
+#include <thread>
+#include <future>
+#include <atomic>
 #include <numeric>
 #include <algorithm>
 
 #ifdef _OPENMP
 # include <omp.h>
+# define OMP(x) PRAGMA(omp x)
 # define OMP_PARALLEL(x) PRAGMA(omp parallel x)
 # define OMP_PARALLEL_FOR_REDUCE(x) PRAGMA(omp parallel for reduction (x) )
 # define OMP_MASTER PRAGMA(omp master)
@@ -73,7 +77,7 @@
 #  define OMP_SIMD PRAGMA(omp simd)
 #  define OMP_FOR_SIMD PRAGMA(omp for simd)
 #  define OMP_TASK(x) PRAGMA(omp task x)
-#  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x)
+#  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
 #  define OMP_TASKWAIT PRAGMA(omp taskwait)
 #  define OMP_ORDERED(x) PRAGMA(omp ordered x)
 #  define OMP_TARGET(x) PRAGMA(omp target x)
@@ -91,6 +95,7 @@
 #  define OMP_END_DECLARE_TARGET
 # endif
 #else
+# define OMP(x)
 # define OMP_PARALLEL(x)
 # define OMP_PARALLEL_FOR_REDUCE(x)
 # define OMP_MASTER
@@ -110,10 +115,20 @@
 
 #ifdef __cilk
 # include <cilk/cilk.h>
+// Not defined in the header but documented at https://www.cilkplus.org/.
+extern "C" {
+    int __cilkrts_get_nworkers(void);
+}
 #endif
 
-#if defined(__INTEL_COMPILER) && !defined(PRAGMA_OMP_SIMD)
+#if defined(__INTEL_COMPILER)
 # define PRAGMA_SIMD PRAGMA(simd)
+#elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
+# define PRAGMA_SIMD PRAGMA(GCC ivdep)
+#elif defined(__clang__)
+//# define PRAGMA_SIMD PRAGMA(clang loop vectorize(enable))
+# define PRAGMA_SIMD PRAGMA(clang loop vectorize(assume_safety))
+//# define PRAGMA_SIMD PRAGMA(clang loop vectorize(assume_safety) vectorize_width(4) interleave_count(4))
 #else
 # define PRAGMA_SIMD
 #endif
@@ -122,6 +137,10 @@
 # include <tbb/tbb.h>
 # include <tbb/parallel_for.h>
 # include <tbb/blocked_range.h>
+// tbb::auto_partitioner tbb_partitioner;
+// tbb::simple_partitioner tbb_partitioner;
+// tbb::static_partitioner tbb_partitioner;
+tbb::affinity_partitioner tbb_partitioner;
 #endif
 
 #ifdef USE_BOOST
@@ -142,7 +161,6 @@
 #endif
 
 #ifdef USE_KOKKOS
-# include <typeinfo>
 # include <Kokkos_Core.hpp>
 #endif
 

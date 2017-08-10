@@ -175,7 +175,7 @@ int main(int argc, char * argv[])
   // initialize the input and output arrays
   OMP_PARALLEL()
   {
-    OMP_FOR
+    OMP_FOR()
     for (int i=0; i<n; i++) {
       OMP_SIMD
       for (int j=0; j<n; j++) {

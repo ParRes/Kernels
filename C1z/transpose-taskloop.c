@@ -69,7 +69,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   if (argc < 3) {
-    printf("Usage: <# iterations> <matrix order> [tile size]\n");
+    printf("Usage: <# iterations> <matrix order> [<taskloop grainsize> <tile size>]\n");
     return 1;
   }
 
@@ -87,21 +87,21 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+  // taskloop grainsize
+  int gs = (argc > 3) ? atoi(argv[3]) : 1;
+
   // default tile size for tiling of local transpose
-  int tile_size = (argc>4) ? atoi(argv[3]) : 32;
+  int tile_size = (argc>4) ? atoi(argv[4]) : 32;
   // a negative tile size means no tiling of the local transpose
   if (tile_size <= 0) tile_size = order;
 
 #ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+  printf("Taskloop grainsize    = %d\n", gs);
 #endif
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
-  if (tile_size < order) {
-      printf("Tile size             = %d\n", tile_size);
-  } else {
-      printf("Untiled" );
-  }
+  printf("Tile size             = %d\n", tile_size);
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -114,8 +114,9 @@ int main(int argc, char * argv[])
   double * restrict B = prk_malloc(bytes);
 
   OMP_PARALLEL()
+  OMP_MASTER
   {
-    OMP_TASKLOOP( firstprivate(order) shared(A,B) )
+    OMP_TASKLOOP( firstprivate(order) shared(A,B) grainsize(gs) )
     for (int i=0;i<order; i++) {
       OMP_SIMD
       for (int j=0;j<order;j++) {
@@ -127,15 +128,11 @@ int main(int argc, char * argv[])
 
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          trans_time = prk_wtime();
-      }
+      if (iter==1) trans_time = prk_wtime();
 
       // transpose the  matrix
       if (tile_size < order) {
-        OMP_TASKLOOP( firstprivate(order) shared(A,B) )
+        OMP_TASKLOOP( firstprivate(order) shared(A,B) grainsize(gs) )
         for (int it=0; it<order; it+=tile_size) {
           for (int jt=0; jt<order; jt+=tile_size) {
             for (int i=it; i<MIN(order,it+tile_size); i++) {
@@ -148,7 +145,7 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        OMP_TASKLOOP( firstprivate(order) shared(A,B) )
+        OMP_TASKLOOP( firstprivate(order) shared(A,B) grainsize(gs) )
         for (int i=0;i<order; i++) {
           OMP_SIMD
           for (int j=0;j<order;j++) {
@@ -159,8 +156,6 @@ int main(int argc, char * argv[])
       }
       OMP_TASKWAIT
     }
-    OMP_BARRIER
-    OMP_MASTER
     trans_time = prk_wtime() - trans_time;
   }
 
