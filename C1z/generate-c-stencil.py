@@ -6,13 +6,14 @@ import string
 import os
 
 def codegen(src,pattern,stencil_size,radius,W,model):
-    if (model=='openmp' or model=='target'):
+    if (model=='openmp'):
         src.write('void '+pattern+str(radius)+'(const int n, const double * restrict in, double * restrict out) {\n')
         src.write('    OMP_FOR()\n')
         src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')
         src.write('      OMP_SIMD\n')
         src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
     elif (model=='target'):
+        src.write('void '+pattern+str(radius)+'(const int n, const double * restrict in, double * restrict out) {\n')
         src.write('    OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )\n')
         src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')
         src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
