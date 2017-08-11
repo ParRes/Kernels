@@ -196,8 +196,8 @@ int main(int argc, char * argv[])
   int n, radius=2;
   bool star = true;
   try {
-      if (argc < 3){
-        throw "Usage: <# iterations> <array dimension> [<star/grid> <radius>]";
+      if (argc < 3) {
+        throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
       }
 
       // number of times to run the algorithm
@@ -215,15 +215,15 @@ int main(int argc, char * argv[])
       }
 
       // stencil pattern
-      if (argc > 3) {
-          auto stencil = std::string(argv[3]);
+      if (argc > 4) {
+          auto stencil = std::string(argv[4]);
           auto grid = std::string("grid");
           star = (stencil == grid) ? false : true;
       }
 
       // stencil radius
-      if (argc > 4) {
-          radius = std::atoi(argv[4]);
+      if (argc > 5) {
+          radius = std::atoi(argv[5]);
       }
 
       if ( (radius < 1) || (2*radius+1 > n) ) {
@@ -237,6 +237,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
