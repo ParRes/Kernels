@@ -313,7 +313,7 @@ program main
   !$omp&  private(i,j,k)
 
   !$omp master
-  !$omp taskloop shared(A,B)
+  !$omp taskloop firstprivate(n) shared(A,B)
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
@@ -337,7 +337,7 @@ program main
     !$omp taskwait
 
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp taskloop shared(A) firstprivate(n) private(i,j)
+    !$omp taskloop firstprivate(n) private(i,j) shared(A)
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.d0
