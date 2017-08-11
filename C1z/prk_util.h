@@ -72,7 +72,6 @@
 # define OMP_BARRIER PRAGMA(omp barrier)
 # define OMP_FOR(x) PRAGMA(omp for x)
 # define OMP_FOR_REDUCE(x) PRAGMA(omp for reduction (x) )
-// OpenMP SIMD if supported, else not.
 # if (_OPENMP >= 201300)
 #  define OMP_SIMD PRAGMA(omp simd)
 #  define OMP_FOR_SIMD() PRAGMA(omp for simd x)
@@ -81,8 +80,6 @@
 #  define OMP_TASKWAIT PRAGMA(omp taskwait)
 #  define OMP_ORDERED(x) PRAGMA(omp ordered x)
 #  define OMP_TARGET(x) PRAGMA(omp target x)
-#  define OMP_DECLARE_TARGET PRAGMA(omp declare target)
-#  define OMP_END_DECLARE_TARGET PRAGMA(omp end declare target)
 # else
 #  define OMP_SIMD
 #  define OMP_FOR_SIMD() PRAGMA(omp for x)
@@ -91,8 +88,6 @@
 #  define OMP_TASKWAIT
 #  define OMP_ORDERED(x)
 #  define OMP_TARGET(x)
-#  define OMP_DECLARE_TARGET
-#  define OMP_END_DECLARE_TARGET
 # endif
 #else
 # define OMP(x)
@@ -109,8 +104,6 @@
 # define OMP_TASKWAIT
 # define OMP_ORDERED(x)
 # define OMP_TARGET(x)
-# define OMP_DECLARE_TARGET
-# define OMP_END_DECLARE_TARGET
 #endif
 
 #ifdef __cilk
