@@ -173,37 +173,28 @@ program main
   !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
   !$omp&  firstprivate(m,n,mc,nc,ic,jc,lic,ljc)                 &
   !$omp&  private(i,j,k,corner_val)
+  !$omp master
 
-  !$omp do collapse(2)
+  !$omp taskloop firstprivate(m,n) shared(grid)
   do j=1,n
     do i=1,m
       grid(i,j) = 0.0d0
     enddo
   enddo
-  !$omp end do
-  ! it is debatable whether these loops should be parallel
-  !$omp do
+  !$omp end taskloop
+  !$omp taskwait
+
   do j=1,n
     grid(1,j) = real(j-1,REAL64)
   enddo
-  !$omp end do
-  !$omp do
   do i=1,m
     grid(i,1) = real(i-1,REAL64)
   enddo
-  !$omp end do
 
   do k=0,iterations
 
-    !  start timer after a warmup iteration
-    if (k.eq.1) then
-      !$omp barrier
-      !$omp master
-      t0 = prk_get_wtime()
-      !$omp end master
-    endif
+    if (k.eq.1) t0 = prk_get_wtime()
 
-    !$omp master
     do ic=2,m,mc
       do jc=2,n,nc
         !$omp task depend(in:grid(1,1),grid(ic-mc,jc-nc),grid(ic-mc,jc),grid(ic,jc-nc)) depend(out:grid(ic,jc))
@@ -214,14 +205,12 @@ program main
     !$omp task depend(in:grid(lic,ljc)) depend(out:grid(1,1))
     grid(1,1) = -grid(m,n)
     !$omp end task
-    !$omp end master
 
-  enddo ! iterations
+  enddo
 
-  !$omp barrier
-  !$omp master
   t1 = prk_get_wtime()
   pipeline_time = t1 - t0
+
   !$omp end master
 
   !$omp end parallel
