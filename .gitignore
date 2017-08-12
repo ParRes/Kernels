@@ -181,11 +181,14 @@ FORTRAN/stencil-coarray
 FORTRAN/stencil-openmp
 FORTRAN/stencil-openmp-target
 FORTRAN/stencil-pretty
+FORTRAN/stencil-taskloop-openmp
 FORTRAN/transpose
 FORTRAN/transpose-coarray
 FORTRAN/transpose-openmp
 FORTRAN/transpose-openmp-target
 FORTRAN/transpose-pretty
+FORTRAN/transpose-taskloop-openmp
+FORTRAN/transpose-tasks-openmp
 RUST/p2p
 RUST/stencil
 RUST/transpose
