@@ -181,7 +181,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   }
 }
 
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OpenCL stencil execution on 2D grid" << std::endl;
@@ -189,11 +189,10 @@ int main(int argc, char * argv[])
   prk::opencl::listPlatforms();
 
   //////////////////////////////////////////////////////////////////////
-  // process and test input parameters
+  // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int n, radius=2;
+  int iterations, n, radius, tile_size;
   bool star = true;
   try {
       if (argc < 3) {
@@ -214,6 +213,14 @@ int main(int argc, char * argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
+      // default tile size for tiling of local transpose
+      tile_size = 32;
+      if (argc > 3) {
+          tile_size = std::atoi(argv[3]);
+          if (tile_size <= 0) tile_size = n;
+          if (tile_size > n) tile_size = n;
+      }
+
       // stencil pattern
       if (argc > 4) {
           auto stencil = std::string(argv[4]);
@@ -222,6 +229,7 @@ int main(int argc, char * argv[])
       }
 
       // stencil radius
+      radius = 2;
       if (argc > 5) {
           radius = std::atoi(argv[5]);
       }
