@@ -124,15 +124,18 @@ extern "C" {
 #if defined(__INTEL_COMPILER)
 //# define PRAGMA_SIMD PRAGMA(simd)
 // According to https://github.com/LLNL/RAJA/pull/310, this improves lambda performance
-# define PRAGMA_SIMD PRAGMA(simd) PRAGMA(ivdep) PRAGMA(forceinline recursive)
+# define PRAGMA_SIMD PRAGMA(simd) PRAGMA(ivdep)
+# define PRAGMA_INLINE PRAGMA(forceinline recursive)
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
-# define PRAGMA_SIMD PRAGMA(GCC ivdep) PRAGMA(inline)
+# define PRAGMA_SIMD PRAGMA(GCC ivdep)
+# define PRAGMA_INLINE PRAGMA(inline)
 #elif defined(__clang__)
 //# define PRAGMA_SIMD PRAGMA(clang loop vectorize(enable))
 # define PRAGMA_SIMD PRAGMA(clang loop vectorize(assume_safety))
-//# define PRAGMA_SIMD PRAGMA(clang loop vectorize(assume_safety) vectorize_width(4) interleave_count(4))
+# define PRAGMA_INLINE
 #else
 # define PRAGMA_SIMD
+# define PRAGMA_INLINE
 #endif
 
 #ifdef USE_TBB
