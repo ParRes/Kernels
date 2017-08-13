@@ -429,11 +429,13 @@ case "$PRK_TARGET" in
             case "$os" in
                 Linux)
                     ${CC} --version
-                    echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb" >> common/make.defs
+                    export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb"
+                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
                     export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
                     ;;
                 Darwin)
-                    echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb" >> common/make.defs
+                    export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb"
+                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
                     export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
                     ;;
             esac
@@ -493,7 +495,7 @@ case "$PRK_TARGET" in
                 ;;
         esac
         # RAJA
-        echo "RAJAFLAG=-DUSE_RAJA -I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${EXTRAFLAG}" >> common/make.defs
+        echo "RAJAFLAG=-DUSE_RAJA -I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG} ${EXTRAFLAG}" >> common/make.defs
         make -C $PRK_TARGET_PATH stencil-vector-raja transpose-vector-raja
         $PRK_TARGET_PATH/stencil-vector-raja     10 1000
         # RAJA variant 11 should be the best
