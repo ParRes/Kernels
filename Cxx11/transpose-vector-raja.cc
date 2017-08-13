@@ -75,11 +75,42 @@ typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>, 
 #endif
 
 template <typename exec_policy>
+void Initialize(int order, std::vector<double> & A, std::vector<double> & B)
+{
+    RAJA::forallN<exec_policy> ( range(0, order), range(0, order), [=,&A,&B](indx i, indx j) {
+        A[i*order+j] = static_cast<double>(i*order+j);
+        B[i*order+j] = 0.0;
+    });
+}
+
+template <typename outer_policy, typename inner_policy>
+void Initialize(int order, std::vector<double> & A, std::vector<double> & B)
+{
+    RAJA::forall<outer_policy>(indx(0), indx(order), [=,&A,&B](indx i) {
+      RAJA::forall<inner_policy>(indx(0), indx(order), [=,&A,&B](indx j) {
+        A[i*order+j] = static_cast<double>(i*order+j);
+        B[i*order+j] = 0.0;
+      });
+    });
+}
+
+template <typename exec_policy>
 void Transpose(int order, std::vector<double> & A, std::vector<double> & B)
 {
     RAJA::forallN<exec_policy> ( range(0, order), range(0, order), [=,&A,&B](indx i, indx j) {
         B[i*order+j] += A[j*order+i];
         A[j*order+i] += 1.0;
+    });
+}
+
+template <typename outer_policy, typename inner_policy>
+void Transpose(int order, std::vector<double> & A, std::vector<double> & B)
+{
+    RAJA::forall<outer_policy>(indx(0), indx(order), [=,&A,&B](indx i) {
+      RAJA::forall<inner_policy>(indx(0), indx(order), [=,&A,&B](indx j) {
+        B[i*order+j] += A[j*order+i];
+        A[j*order+i] += 1.0;
+      });
     });
 }
 
@@ -180,9 +211,87 @@ int main(int argc, char * argv[])
   std::vector<double> A;
   std::vector<double> B;
   A.resize(order*order);
-  B.resize(order*order,0.0);
-  // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(A.begin(), A.end(), 0.0);
+  B.resize(order*order);
+
+  if (use_for=="seq") {
+    if (use_nested) {
+      if (use_tiled) {
+        if (use_simd) {
+          Initialize<seq_for_simd_tiled>(order, A, B);
+        } else {
+          Initialize<seq_for_seq_tiled>(order, A, B);
+        }
+      } else {
+        if (use_simd) {
+          Initialize<seq_for_simd>(order, A, B);
+        } else {
+          Initialize<seq_for_seq>(order, A, B);
+        }
+      }
+    } else /* !use_nested */ {
+      if (use_simd) {
+        Initialize<RAJA::seq_exec,RAJA::simd_exec>(order, A, B);
+      } else {
+        Initialize<RAJA::seq_exec,RAJA::seq_exec>(order, A, B);
+      }
+    }
+  }
+#ifdef RAJA_ENABLE_OPENMP
+  else if (use_for=="omp") {
+    if (use_nested) {
+      if (use_tiled) {
+        if (use_simd) {
+          Initialize<omp_for_simd_tiled>(order, A, B);
+        } else {
+          Initialize<omp_for_seq_tiled>(order, A, B);
+        }
+      } else {
+        if (use_simd) {
+          Initialize<omp_for_simd>(order, A, B);
+        } else {
+          Initialize<omp_for_seq>(order, A, B);
+        }
+      }
+    } else /* !use_nested */ {
+      if (use_simd) {
+        Initialize<RAJA::omp_parallel_for_exec,RAJA::simd_exec>(order, A, B);
+      } else {
+        Initialize<RAJA::omp_parallel_for_exec,RAJA::seq_exec>(order, A, B);
+      }
+    }
+  }
+#else
+  std::cout << "You are trying to use OpenMP but RAJA does not support it!" << std::endl;
+  std::abort();
+#endif
+#ifdef RAJA_ENABLE_TBB
+  else if (use_for=="tbb") {
+    if (use_nested) {
+      if (use_tiled) {
+        if (use_simd) {
+          Initialize<tbb_for_simd_tiled>(order, A, B);
+        } else {
+          Initialize<tbb_for_seq_tiled>(order, A, B);
+        }
+      } else {
+        if (use_simd) {
+          Initialize<tbb_for_simd>(order, A, B);
+        } else {
+          Initialize<tbb_for_seq>(order, A, B);
+        }
+      }
+    } else /* !use_nested */ {
+      if (use_simd) {
+        Initialize<RAJA::tbb_for_exec,RAJA::simd_exec>(order, A, B);
+      } else {
+        Initialize<RAJA::tbb_for_exec,RAJA::seq_exec>(order, A, B);
+      }
+    }
+  }
+#else
+  std::cout << "You are trying to use TBB but RAJA does not support it!" << std::endl;
+  std::abort();
+#endif
 
   auto trans_time = 0.0;
 
@@ -208,19 +317,9 @@ int main(int argc, char * argv[])
         }
       } else /* !use_nested */ {
         if (use_simd) {
-          RAJA::forall<RAJA::seq_exec>(indx(0), indx(order), [=,&A,&B](indx i) {
-            RAJA::forall<RAJA::simd_exec>(indx(0), indx(order), [=,&A,&B](indx j) {
-              B[i*order+j] += A[j*order+i];
-              A[j*order+i] += 1.0;
-            });
-          });
+          Transpose<RAJA::seq_exec,RAJA::simd_exec>(order, A, B);
         } else {
-          RAJA::forall<RAJA::seq_exec>(indx(0), indx(order), [=,&A,&B](indx i) {
-            RAJA::forall<RAJA::seq_exec>(indx(0), indx(order), [=,&A,&B](indx j) {
-              B[i*order+j] += A[j*order+i];
-              A[j*order+i] += 1.0;
-            });
-          });
+          Transpose<RAJA::seq_exec,RAJA::seq_exec>(order, A, B);
         }
       }
     }
@@ -242,19 +341,9 @@ int main(int argc, char * argv[])
         }
       } else /* !use_nested */ {
         if (use_simd) {
-          RAJA::forall<RAJA::omp_parallel_for_exec>(indx(0), indx(order), [=,&A,&B](indx i) {
-            RAJA::forall<RAJA::simd_exec>(indx(0), indx(order), [=,&A,&B](indx j) {
-              B[i*order+j] += A[j*order+i];
-              A[j*order+i] += 1.0;
-            });
-          });
+          Transpose<RAJA::omp_parallel_for_exec,RAJA::simd_exec>(order, A, B);
         } else {
-          RAJA::forall<RAJA::omp_parallel_for_exec>(indx(0), indx(order), [=,&A,&B](indx i) {
-            RAJA::forall<RAJA::seq_exec>(indx(0), indx(order), [=,&A,&B](indx j) {
-              B[i*order+j] += A[j*order+i];
-              A[j*order+i] += 1.0;
-            });
-          });
+          Transpose<RAJA::omp_parallel_for_exec,RAJA::seq_exec>(order, A, B);
         }
       }
     }
@@ -280,19 +369,9 @@ int main(int argc, char * argv[])
         }
       } else /* !use_nested */ {
         if (use_simd) {
-          RAJA::forall<RAJA::tbb_for_exec>(indx(0), indx(order), [=,&A,&B](indx i) {
-            RAJA::forall<RAJA::simd_exec>(indx(0), indx(order), [=,&A,&B](indx j) {
-              B[i*order+j] += A[j*order+i];
-              A[j*order+i] += 1.0;
-            });
-          });
+          Transpose<RAJA::tbb_for_exec,RAJA::simd_exec>(order, A, B);
         } else {
-          RAJA::forall<RAJA::tbb_for_exec>(indx(0), indx(order), [=,&A,&B](indx i) {
-            RAJA::forall<RAJA::seq_exec>(indx(0), indx(order), [=,&A,&B](indx j) {
-              B[i*order+j] += A[j*order+i];
-              A[j*order+i] += 1.0;
-            });
-          });
+          Transpose<RAJA::tbb_for_exec,RAJA::seq_exec>(order, A, B);
         }
       }
     }
