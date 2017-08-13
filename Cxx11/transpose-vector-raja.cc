@@ -63,7 +63,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations, order;
-  std::string use_for="seq";
+  std::string use_for="seq", use_permute="no";
   auto use_simd=true, use_nested=true, use_tiled=false;
   try {
       if (argc < 3) {
@@ -117,6 +117,13 @@ int main(int argc, char * argv[])
               if (st=="y")   use_tiled=true;
               if (st=="yes") use_tiled=true;
           }
+          auto pp = s.find("permute=");
+          if (pp != std::string::npos) {
+              auto sp = s.substr(8,s.size());
+              //std::cout << pp << "," << pp[0] << "\n";
+              if (sp=="ij") use_permute="ij";
+              if (sp=="ji") use_permute="ji";
+          }
       }
   }
   catch (const char * e) {
@@ -134,6 +141,7 @@ int main(int argc, char * argv[])
   std::cout << "RAJA forallN          = " << (use_nested ? "yes" : "no") << std::endl;
   std::cout << "RAJA use simd         = " << (use_simd ? "yes" : "no") << std::endl;
   std::cout << "RAJA use tiling       = " << (use_tiled ? "yes" : "no") << std::endl;
+  std::cout << "RAJA use permute      = " << use_permute << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -154,34 +162,33 @@ int main(int argc, char * argv[])
 
     // transpose
     if (use_for=="seq") {
-      if (use_simd) {
-        if (use_nested) {
+      if (use_nested) {
+        if (use_simd) {
             RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::simd_exec>>>
                     ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                      [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
             });
         } else {
-            RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
-                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+            });
+        }
+      } else /* !use_nested */ {
+        if (use_simd) {
+            RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type i) {
+                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
                 });
             });
-        }
-      } else {
-        if (use_nested) {
-            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>,
-                                             RAJA::Permute<RAJA::PERM_IJ>>>
-                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-            });
         } else {
-            RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
-                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
+            RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type i) {
+                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
                 });
@@ -191,37 +198,37 @@ int main(int argc, char * argv[])
     }
 #ifdef RAJA_ENABLE_OPENMP
     else if (use_for=="omp") {
-      if (use_simd) {
-        if (use_nested) {
-            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
-                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-            });
+      if (use_nested) {
+        if (use_simd) {
+          RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
+                  ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                    [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
+                  B[i*order+j] += A[j*order+i];
+                  A[j*order+i] += 1.0;
+          });
         } else {
-            RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
-                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-                });
-            });
-        }
-      } else {
-        if (use_nested) {
             RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::seq_exec>>>
                     ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                      [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
             });
+        }
+      } else /* !use_nested */ {
+        if (use_simd) {
+          RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type i) {
+              RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type j) {
+                  B[i*order+j] += A[j*order+i];
+                  A[j*order+i] += 1.0;
+              });
+          });
         } else {
-            RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
-                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-                });
-            });
+          RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type i) {
+              RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type j) {
+                  B[i*order+j] += A[j*order+i];
+                  A[j*order+i] += 1.0;
+              });
+          });
         }
       }
     }
@@ -231,34 +238,55 @@ int main(int argc, char * argv[])
 #endif
 #ifdef RAJA_ENABLE_TBB
     else if (use_for=="tbb") {
-      if (use_simd) {
-        if (use_nested) {
+      if (use_nested) {
+        if (use_tiled) {
+          if (use_simd) {
+            RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>,
+                                               RAJA::Tile< RAJA::TileList<RAJA::tile_fixed<tile_size>,
+                                                                          RAJA::tile_fixed<tile_size>>>>>
+                      ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                        [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
+                      B[i*order+j] += A[j*order+i];
+                      A[j*order+i] += 1.0;
+              });
+          } else {
+            RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>,
+                                               RAJA::Tile< RAJA::TileList<RAJA::tile_fixed<tile_size>,
+                                                                          RAJA::tile_fixed<tile_size>>>>>
+                      ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                        [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
+                      B[i*order+j] += A[j*order+i];
+                      A[j*order+i] += 1.0;
+              });
+          }
+        } else {
+          if (use_simd) {
             RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>>>
                     ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                      [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
             });
-        } else {
-            RAJA::forall<RAJA::tbb_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
-                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
+          } else {
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+            });
+          }
+        }
+      } else /* !use_nested */ {
+        if (use_simd) {
+            RAJA::forall<RAJA::tbb_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type i) {
+                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
                 });
             });
-        }
-      } else {
-        if (use_nested) {
-            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>,
-                                             RAJA::Permute<RAJA::PERM_IJ>>>
-                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-            });
         } else {
-            RAJA::forall<RAJA::tbb_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
-                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
+            RAJA::forall<RAJA::tbb_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type i) {
+                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [=,&A,&B](RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
                 });
@@ -287,7 +315,7 @@ int main(int argc, char * argv[])
   RAJA::ReduceSum<reduce_policy, double> abserr(0.0);
   RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
           ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-            [&](RAJA::Index_type i, RAJA::Index_type j) {
+            [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const auto addit = (iterations+1.) * (iterations/2.);
@@ -319,7 +347,7 @@ int main(int argc, char * argv[])
         RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>,
                                            RAJA::Permute<RAJA::PERM_JI> > >
                 ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                  [&](RAJA::Index_type i, RAJA::Index_type j) {
+                  [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
                 B[i*order+j] += A[j*order+i];
                 A[j*order+i] += 1.0;
         });
@@ -327,7 +355,7 @@ int main(int argc, char * argv[])
                                            RAJA::Tile< RAJA::TileList<RAJA::tile_fixed<tile_size>, RAJA::tile_fixed<tile_size>>,
                                                        RAJA::Permute<RAJA::PERM_IJ> > > >
                 ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                  [&](RAJA::Index_type i, RAJA::Index_type j) {
+                  [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
                 B[i*order+j] += A[j*order+i];
                 A[j*order+i] += 1.0;
         });
@@ -335,7 +363,7 @@ int main(int argc, char * argv[])
                                            RAJA::Tile< RAJA::TileList<RAJA::tile_fixed<tile_size>, RAJA::tile_fixed<tile_size>>,
                                                        RAJA::Permute<RAJA::PERM_JI> > > >
                 ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                  [&](RAJA::Index_type i, RAJA::Index_type j) {
+                  [=,&A,&B](RAJA::Index_type i, RAJA::Index_type j) {
                 B[i*order+j] += A[j*order+i];
                 A[j*order+i] += 1.0;
         });
