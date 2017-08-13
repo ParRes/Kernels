@@ -72,6 +72,10 @@ typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>>  
 typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>>         tbb_for_simd;
 typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>, tiling>  tbb_for_seq_tiled;
 typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>, tiling> tbb_for_simd_tiled;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_dynamic, RAJA::seq_exec>>          tbb_for_dynamic_seq;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_dynamic, RAJA::simd_exec>>         tbb_for_dynamic_simd;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_dynamic, RAJA::seq_exec>, tiling>  tbb_for_dynamic_seq_tiled;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_dynamic, RAJA::simd_exec>, tiling> tbb_for_dynamic_simd_tiled;
 #endif
 
 template <typename exec_policy>
@@ -141,12 +145,12 @@ void Zero(int order, std::vector<double> & A)
 }
 
 template <typename loop_policy, typename reduce_policy>
-double Error(int order, std::vector<double> & B)
+double Error(int iterations, int order, std::vector<double> & B)
 {
       RAJA::ReduceSum<reduce_policy, double> rajaerr(0.0);
       RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
               ( range(0, order), range(0, order),
-                [=,&A,&B](indx i, indx j) {
+                [=,&B](indx i, indx j) {
           const int ij = i*order+j;
           const int ji = j*order+i;
           const auto addit = (iterations+1.) * (iterations/2.);
@@ -195,9 +199,27 @@ int main(int argc, char * argv[])
           if (pf != std::string::npos) {
               auto sf = s.substr(4,s.size());
               //std::cout << pf << "," << sf << "\n";
-              if (sf=="omp")    use_for="omp";
-              if (sf=="openmp") use_for="omp";
-              if (sf=="tbb")    use_for="tbb";
+              if (sf=="omp" || sf=="openmp") {
+#ifdef RAJA_ENABLE_OPENMP
+                  use_for="omp";
+#else
+                  std::cerr << "You are trying to use OpenMP but RAJA does not support it!" << std::endl;
+#endif
+              }
+              if (sf=="tbb") {
+#ifdef RAJA_ENABLE_TBB
+                  use_for="tbb";
+#else
+                  std::cerr << "You are trying to use TBB but RAJA does not support it!" << std::endl;
+#endif
+              }
+              if (sf=="tbbdyn") {
+#ifdef RAJA_ENABLE_TBB
+                  use_for="tbbdyn";
+#else
+                  std::cerr << "You are trying to use TBB but RAJA does not support it!" << std::endl;
+#endif
+              }
           }
           auto ps = s.find("simd=");
           if (ps != std::string::npos) {
@@ -237,9 +259,10 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
   std::cout << "Tile size             = " << tile_size << "(compile-time constant, unlike other impls)" << std::endl;
-  std::string         for_name = "Sequential";
-  if (use_for=="omp") for_name = "OpenMP";
-  if (use_for=="tbb") for_name = "TBB";
+  std::string            for_name = "Sequential";
+  if (use_for=="omp")    for_name = "OpenMP";
+  if (use_for=="tbb")    for_name = "TBB (static)";
+  if (use_for=="tbbdyn") for_name = "TBB (dynamic)";
   std::cout << "RAJA threading        = " << for_name << std::endl;
   std::cout << "RAJA forallN          = " << (use_nested ? "yes" : "no") << std::endl;
   std::cout << "RAJA use simd         = " << (use_simd ? "yes" : "no") << std::endl;
@@ -302,9 +325,6 @@ int main(int argc, char * argv[])
       }
     }
   }
-#else
-  std::cout << "You are trying to use OpenMP but RAJA does not support it!" << std::endl;
-  std::abort();
 #endif
 #ifdef RAJA_ENABLE_TBB
   else if (use_for=="tbb") {
@@ -330,9 +350,29 @@ int main(int argc, char * argv[])
       }
     }
   }
-#else
-  std::cout << "You are trying to use TBB but RAJA does not support it!" << std::endl;
-  std::abort();
+  else if (use_for=="tbbdyn") {
+    if (use_nested) {
+      if (use_tiled) {
+        if (use_simd) {
+          Initialize<tbb_for_dynamic_simd_tiled>(order, A, B);
+        } else {
+          Initialize<tbb_for_dynamic_seq_tiled>(order, A, B);
+        }
+      } else {
+        if (use_simd) {
+          Initialize<tbb_for_dynamic_simd>(order, A, B);
+        } else {
+          Initialize<tbb_for_dynamic_seq>(order, A, B);
+        }
+      }
+    } else /* !use_nested */ {
+      if (use_simd) {
+        Initialize<RAJA::tbb_for_dynamic,RAJA::simd_exec>(order, A, B);
+      } else {
+        Initialize<RAJA::tbb_for_dynamic,RAJA::seq_exec>(order, A, B);
+      }
+    }
+  }
 #endif
 
   auto trans_time = 0.0;
@@ -389,9 +429,6 @@ int main(int argc, char * argv[])
         }
       }
     }
-#else
-    std::cout << "You are trying to use OpenMP but RAJA does not support it!" << std::endl;
-    std::abort();
 #endif
 #ifdef RAJA_ENABLE_TBB
     else if (use_for=="tbb") {
@@ -417,9 +454,29 @@ int main(int argc, char * argv[])
         }
       }
     }
-#else
-    std::cout << "You are trying to use TBB but RAJA does not support it!" << std::endl;
-    std::abort();
+    else if (use_for=="tbbdyn") {
+      if (use_nested) {
+        if (use_tiled) {
+          if (use_simd) {
+            Transpose<tbb_for_dynamic_simd_tiled>(order, A, B);
+          } else {
+            Transpose<tbb_for_dynamic_seq_tiled>(order, A, B);
+          }
+        } else {
+          if (use_simd) {
+            Transpose<tbb_for_dynamic_simd>(order, A, B);
+          } else {
+            Transpose<tbb_for_dynamic_seq>(order, A, B);
+          }
+        }
+      } else /* !use_nested */ {
+        if (use_simd) {
+          Transpose<RAJA::tbb_for_dynamic,RAJA::simd_exec>(order, A, B);
+        } else {
+          Transpose<RAJA::tbb_for_dynamic,RAJA::seq_exec>(order, A, B);
+        }
+      }
+    }
 #endif
   }
   trans_time = prk::wtime() - trans_time;
@@ -431,52 +488,19 @@ int main(int argc, char * argv[])
   double abserr = 1.0;
 
   if (use_for=="seq") {
-      typedef RAJA::seq_reduce reduce_policy;
-      typedef RAJA::seq_exec loop_policy;
-      RAJA::ReduceSum<reduce_policy, double> rajaerr(0.0);
-      RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
-              ( range(0, order), range(0, order),
-                [=,&A,&B](indx i, indx j) {
-          const int ij = i*order+j;
-          const int ji = j*order+i;
-          const auto addit = (iterations+1.) * (iterations/2.);
-          const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-          rajaerr += std::fabs(B[ji] - reference);
-      });
-      abserr = rajaerr;
+      abserr = Error<RAJA::seq_exec,RAJA::seq_reduce>(iterations,order,B);
   }
 #if defined(RAJA_ENABLE_OPENMP)
   else if (use_for=="omp") {
-      typedef RAJA::omp_reduce reduce_policy;
-      typedef RAJA::omp_parallel_for_exec loop_policy;
-      RAJA::ReduceSum<reduce_policy, double> rajaerr(0.0);
-      RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
-              ( range(0, order), range(0, order),
-                [=,&A,&B](indx i, indx j) {
-          const int ij = i*order+j;
-          const int ji = j*order+i;
-          const auto addit = (iterations+1.) * (iterations/2.);
-          const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-          rajaerr += std::fabs(B[ji] - reference);
-      });
-      abserr = rajaerr;
+      abserr = Error<RAJA::omp_parallel_for_exec,RAJA::omp_reduce>(iterations,order,B);
   }
 #endif
 #if defined(RAJA_ENABLE_TBB)
   else if (use_for=="tbb") {
-      typedef RAJA::tbb_reduce reduce_policy;
-      typedef RAJA::tbb_for_exec loop_policy;
-      RAJA::ReduceSum<reduce_policy, double> rajaerr(0.0);
-      RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
-              ( range(0, order), range(0, order),
-                [=,&A,&B](indx i, indx j) {
-          const int ij = i*order+j;
-          const int ji = j*order+i;
-          const auto addit = (iterations+1.) * (iterations/2.);
-          const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-          rajaerr += std::fabs(B[ji] - reference);
-      });
-      abserr = rajaerr;
+      abserr = Error<RAJA::tbb_for_exec,RAJA::tbb_reduce>(iterations,order,B);
+  }
+  else if (use_for=="tbbdyn") {
+      abserr = Error<RAJA::tbb_for_dynamic,RAJA::tbb_reduce>(iterations,order,B);
   }
 #endif
 
