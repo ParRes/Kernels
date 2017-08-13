@@ -62,12 +62,12 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int order;
-  int variant;
+  int iterations, order;
+  std::string use_for="seq";
+  auto use_simd=true, use_nested=true, use_tiled=false;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> <variant>";
+        throw "Usage: <# iterations> <matrix order> <nested={y,n} for={seq,omp,tbb} simd={y,n}>";
       }
 
       // number of times to do the transpose
@@ -85,38 +85,55 @@ int main(int argc, char * argv[])
       }
 
       // RAJA implementation variant
-      variant  = (argc > 3) ? std::atoi(argv[3]) : 1;
+      for (int i=3; i<argc; ++i) {
+          //std::cout << "argv[" << i << "] = " << argv[i] << "\n";
+          auto s  = std::string(argv[i]);
+          auto pf = s.find("for=");
+          if (pf != std::string::npos) {
+              auto sf = s.substr(4,s.size());
+              //std::cout << pf << "," << sf << "\n";
+              if (sf=="omp")    use_for="omp";
+              if (sf=="openmp") use_for="omp";
+              if (sf=="tbb")    use_for="tbb";
+          }
+          auto ps = s.find("simd=");
+          if (ps != std::string::npos) {
+              auto ss = s.substr(5,s.size());
+              //std::cout << ps << "," << ss[0] << "\n";
+              if (ss=="n")  use_simd=false;
+              if (ss=="np") use_simd=false;
+          }
+          auto pn = s.find("nested=");
+          if (pn != std::string::npos) {
+              auto sn = s.substr(7,s.size());
+              //std::cout << pn << "," << sn[0] << "\n";
+              if (sn=="n")  use_nested=false;
+              if (sn=="no") use_nested=false;
+          }
+          auto pt = s.find("tiled=");
+          if (pt != std::string::npos) {
+              auto st = s.substr(6,s.size());
+              //std::cout << pt << "," << st[0] << "\n";
+              if (st=="y")   use_tiled=true;
+              if (st=="yes") use_tiled=true;
+          }
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
-  // Make sure to update these with the implementations below...
-  std::string vname;
-  switch (variant) {
-      case 1: vname = "forall(seq_exec),forall(seq_exec)"; break;
-      case 2: vname = "forallN(seq_exec,seq_exec,PERM_IJ)"; break;
-      case 3: vname = "forallN(seq_exec,seq_exec,PERM_JI)"; break;
-      case 4: vname = "forallN(simd_exec,simd_exec,PERM_IJ)"; break;
-      case 5: vname = "forallN(simd_exec,simd_exec,PERM_JI)"; break;
-      case 6: vname = "forallN(simd_exec,simd_exec,tiled,PERM_IJ)"; break;
-      case 7: vname = "forallN(simd_exec,simd_exec,tiled,PERM_JI)"; break;
-#ifdef RAJA_ENABLE_OPENMP
-      case 10: vname = "forall(omp_parallel_for_exec),forall(simd_exec)"; break;
-      case 11: vname = "forallN(omp_parallel_for_exec,simd_exec)"; break;
-      case 12: vname = "forallN(omp_parallel_for_exec,simd_exec,PERM_IJ)"; break;
-      case 13: vname = "forallN(omp_parallel_for_exec,simd_exec,PERM_JI)"; break;
-      case 14: vname = "forallN(omp_parallel_for_exec,simd_exec,tiled,PERM_IJ)"; break;
-      case 15: vname = "forallN(omp_parallel_for_exec,simd_exec,tiled,PERM_JI)"; break;
-#endif
-      default: std::cout << "Invalid RAJA variant number (" << variant << ")" << std::endl; return 0; break;
-  }
-
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "RAJA variant          = " << vname << std::endl;
   std::cout << "Tile size             = " << tile_size << "(compile-time constant, unlike other impls)" << std::endl;
+  std::string         for_name = "Sequential";
+  if (use_for=="omp") for_name = "OpenMP";
+  if (use_for=="tbb") for_name = "TBB";
+  std::cout << "RAJA threading        = " << for_name << std::endl;
+  std::cout << "RAJA forallN          = " << (use_nested ? "yes" : "no") << std::endl;
+  std::cout << "RAJA use simd         = " << (use_simd ? "yes" : "no") << std::endl;
+  std::cout << "RAJA use tiling       = " << (use_tiled ? "yes" : "no") << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -136,17 +153,25 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     // transpose
-    // If a new variant is added, it must be added above to the vname case-switch...
-    switch (variant) {
-        case 1:
+    if (use_for=="seq") {
+      if (use_simd) {
+        if (use_nested) {
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::simd_exec>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+            });
+        } else {
             RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
-                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
+                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
                 });
             });
-            break;
-        case 2:
+        }
+      } else {
+        if (use_nested) {
             RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>,
                                              RAJA::Permute<RAJA::PERM_IJ>>>
                     ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
@@ -154,109 +179,97 @@ int main(int argc, char * argv[])
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
             });
-            break;
-        case 3:
-            RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>,
-                                               RAJA::Permute<RAJA::PERM_JI> > >
-                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-            });
-            break;
-        case 4:
-            RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::simd_exec, RAJA::simd_exec>,
-                                               RAJA::Permute<RAJA::PERM_IJ> > >
-                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-            });
-            break;
-        case 5:
-            RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::simd_exec, RAJA::simd_exec>,
-                                               RAJA::Permute<RAJA::PERM_JI> > >
-                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-            });
-            break;
-        case 6:
-            RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::simd_exec, RAJA::simd_exec>,
-                                               RAJA::Tile< RAJA::TileList<RAJA::tile_fixed<tile_size>, RAJA::tile_fixed<tile_size>>,
-                                                           RAJA::Permute<RAJA::PERM_IJ> > > >
-                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-            });
-            break;
-        case 7:
-            RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::simd_exec, RAJA::simd_exec>,
-                                               RAJA::Tile< RAJA::TileList<RAJA::tile_fixed<tile_size>, RAJA::tile_fixed<tile_size>>,
-                                                           RAJA::Permute<RAJA::PERM_JI> > > >
-                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-            });
-            break;
-#ifdef RAJA_ENABLE_OPENMP
-        case 10:
-            RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
-                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
+        } else {
+            RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
+                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
                 });
             });
-            break;
-        case 11:
+        }
+      }
+    }
+#ifdef RAJA_ENABLE_OPENMP
+    else if (use_for=="omp") {
+      if (use_simd) {
+        if (use_nested) {
             RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>>
                     ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
                       [&](RAJA::Index_type i, RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
             });
-            break;
-        case 12:
-            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>,RAJA::Permute<RAJA::PERM_IJ>>>
+        } else {
+            RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
+                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+                });
+            });
+        }
+      } else {
+        if (use_nested) {
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::seq_exec>>>
                     ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
                       [&](RAJA::Index_type i, RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
             });
-            break;
-        case 13:
-            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>,RAJA::Permute<RAJA::PERM_JI>>>
-                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+        } else {
+            RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
+                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
                     B[i*order+j] += A[j*order+i];
                     A[j*order+i] += 1.0;
+                });
             });
-            break;
-        case 14:
-            RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>,
-                                               RAJA::Tile< RAJA::TileList<RAJA::tile_fixed<tile_size>, RAJA::tile_fixed<tile_size>>,
-                                                           RAJA::Permute<RAJA::PERM_IJ> > > >
-                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-            });
-            break;
-        case 15:
-            RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>,
-                                               RAJA::Tile< RAJA::TileList<RAJA::tile_fixed<tile_size>, RAJA::tile_fixed<tile_size>>,
-                                                           RAJA::Permute<RAJA::PERM_JI> > > >
-                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
-                      [&](RAJA::Index_type i, RAJA::Index_type j) {
-                    B[i*order+j] += A[j*order+i];
-                    A[j*order+i] += 1.0;
-            });
-            break;
-#endif
+        }
+      }
     }
+#else
+    std::cout << "You are trying to use OpenMP but RAJA does not support it!" << std::endl;
+    std::abort();
+#endif
+#ifdef RAJA_ENABLE_TBB
+    else if (use_for=="tbb") {
+      if (use_simd) {
+        if (use_nested) {
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+            });
+        } else {
+            RAJA::forall<RAJA::tbb_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
+                RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+                });
+            });
+        }
+      } else {
+        if (use_nested) {
+            RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>,
+                                             RAJA::Permute<RAJA::PERM_IJ>>>
+                    ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                      [&](RAJA::Index_type i, RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+            });
+        } else {
+            RAJA::forall<RAJA::tbb_for_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type i) {
+                RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(order), [&](RAJA::Index_type j) {
+                    B[i*order+j] += A[j*order+i];
+                    A[j*order+i] += 1.0;
+                });
+            });
+        }
+      }
+    }
+#else
+    std::cout << "You are trying to use TBB but RAJA does not support it!" << std::endl;
+    std::abort();
+#endif
   }
   trans_time = prk::wtime() - trans_time;
 
@@ -264,7 +277,7 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-#ifdef RAJA_ENABLE_OPENMP
+#if defined(RAJA_ENABLE_OPENMP) && !defined(RAJA_ENABLE_TBB)
   typedef RAJA::omp_reduce reduce_policy;
   typedef RAJA::omp_parallel_for_exec loop_policy;
 #else
@@ -298,8 +311,32 @@ int main(int argc, char * argv[])
               << " exceeds threshold " << epsilon << std::endl;
     return 1;
   }
-
   return 0;
 }
 
 
+#if 0
+        RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>,
+                                           RAJA::Permute<RAJA::PERM_JI> > >
+                ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                  [&](RAJA::Index_type i, RAJA::Index_type j) {
+                B[i*order+j] += A[j*order+i];
+                A[j*order+i] += 1.0;
+        });
+        RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::simd_exec, RAJA::simd_exec>,
+                                           RAJA::Tile< RAJA::TileList<RAJA::tile_fixed<tile_size>, RAJA::tile_fixed<tile_size>>,
+                                                       RAJA::Permute<RAJA::PERM_IJ> > > >
+                ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                  [&](RAJA::Index_type i, RAJA::Index_type j) {
+                B[i*order+j] += A[j*order+i];
+                A[j*order+i] += 1.0;
+        });
+        RAJA::forallN< RAJA::NestedPolicy< RAJA::ExecList<RAJA::simd_exec, RAJA::simd_exec>,
+                                           RAJA::Tile< RAJA::TileList<RAJA::tile_fixed<tile_size>, RAJA::tile_fixed<tile_size>>,
+                                                       RAJA::Permute<RAJA::PERM_JI> > > >
+                ( RAJA::RangeSegment(0, order), RAJA::RangeSegment(0, order),
+                  [&](RAJA::Index_type i, RAJA::Index_type j) {
+                B[i*order+j] += A[j*order+i];
+                A[j*order+i] += 1.0;
+        });
+#endif
