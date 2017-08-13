@@ -114,6 +114,48 @@ void Transpose(int order, std::vector<double> & A, std::vector<double> & B)
     });
 }
 
+template <typename exec_policy, typename LoopBody>
+void Lambda(int order, LoopBody body)
+{
+    RAJA::forallN<exec_policy> ( range(0, order), range(0, order), [=,&A,&B](indx i, indx j) {
+        body;
+    });
+}
+
+template <typename outer_policy, typename inner_policy, typename LoopBody>
+void Lambda(int order, LoopBody body)
+{
+    RAJA::forall<outer_policy>(indx(0), indx(order), [=,&A,&B](indx i) {
+      RAJA::forall<inner_policy>(indx(0), indx(order), [=,&A,&B](indx j) {
+        body;
+      });
+    });
+}
+
+template <typename exec_policy>
+void Zero(int order, std::vector<double> & A)
+{
+    Lambda<typename exec_policy>(order, [=,&A](int i, int j) {
+        A[j*order+i] = 0.0;
+    });
+}
+
+template <typename loop_policy, typename reduce_policy>
+double Error(int order, std::vector<double> & B)
+{
+      RAJA::ReduceSum<reduce_policy, double> rajaerr(0.0);
+      RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
+              ( range(0, order), range(0, order),
+                [=,&A,&B](indx i, indx j) {
+          const int ij = i*order+j;
+          const int ji = j*order+i;
+          const auto addit = (iterations+1.) * (iterations/2.);
+          const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+          rajaerr += std::fabs(B[ji] - reference);
+      });
+      return rajaerr;
+}
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -386,23 +428,58 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-#if defined(RAJA_ENABLE_OPENMP) && !defined(RAJA_ENABLE_TBB)
-  typedef RAJA::omp_reduce reduce_policy;
-  typedef RAJA::omp_parallel_for_exec loop_policy;
-#else
-  typedef RAJA::seq_reduce reduce_policy;
-  typedef RAJA::seq_exec loop_policy;
+  double abserr = 1.0;
+
+  if (use_for=="seq") {
+      typedef RAJA::seq_reduce reduce_policy;
+      typedef RAJA::seq_exec loop_policy;
+      RAJA::ReduceSum<reduce_policy, double> rajaerr(0.0);
+      RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
+              ( range(0, order), range(0, order),
+                [=,&A,&B](indx i, indx j) {
+          const int ij = i*order+j;
+          const int ji = j*order+i;
+          const auto addit = (iterations+1.) * (iterations/2.);
+          const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+          rajaerr += std::fabs(B[ji] - reference);
+      });
+      abserr = rajaerr;
+  }
+#if defined(RAJA_ENABLE_OPENMP)
+  else if (use_for=="omp") {
+      typedef RAJA::omp_reduce reduce_policy;
+      typedef RAJA::omp_parallel_for_exec loop_policy;
+      RAJA::ReduceSum<reduce_policy, double> rajaerr(0.0);
+      RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
+              ( range(0, order), range(0, order),
+                [=,&A,&B](indx i, indx j) {
+          const int ij = i*order+j;
+          const int ji = j*order+i;
+          const auto addit = (iterations+1.) * (iterations/2.);
+          const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+          rajaerr += std::fabs(B[ji] - reference);
+      });
+      abserr = rajaerr;
+  }
 #endif
-  RAJA::ReduceSum<reduce_policy, double> abserr(0.0);
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
-          ( range(0, order), range(0, order),
-            [=,&A,&B](indx i, indx j) {
-      const int ij = i*order+j;
-      const int ji = j*order+i;
-      const auto addit = (iterations+1.) * (iterations/2.);
-      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
-  });
+#if defined(RAJA_ENABLE_TBB)
+  else if (use_for=="tbb") {
+      typedef RAJA::tbb_reduce reduce_policy;
+      typedef RAJA::tbb_for_exec loop_policy;
+      RAJA::ReduceSum<reduce_policy, double> rajaerr(0.0);
+      RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
+              ( range(0, order), range(0, order),
+                [=,&A,&B](indx i, indx j) {
+          const int ij = i*order+j;
+          const int ji = j*order+i;
+          const auto addit = (iterations+1.) * (iterations/2.);
+          const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+          rajaerr += std::fabs(B[ji] - reference);
+      });
+      abserr = rajaerr;
+  }
+#endif
+
 
 #ifdef VERBOSE
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
