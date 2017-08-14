@@ -55,109 +55,102 @@ const int tile_size = 32;
 
 typedef RAJA::Index_type indx;
 typedef RAJA::RangeSegment range;
-typedef RAJA::Tile< RAJA::TileList<RAJA::tile_fixed<tile_size>, RAJA::tile_fixed<tile_size>>> tiling;
+typedef RAJA::TileList<RAJA::tile_fixed<tile_size>, RAJA::tile_fixed<tile_size>> tile;
+typedef RAJA::Tile<tile> tiling;
+typedef RAJA::Tile<tile,RAJA::Permute<RAJA::PERM_IJ>> tiling_ij;
+typedef RAJA::Tile<tile,RAJA::Permute<RAJA::PERM_JI>> tiling_ji;
 
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::simd_exec>>          seq_for_simd;
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>>           seq_for_seq;
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>, tiling>   seq_for_seq_tiled;
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::simd_exec>, tiling>  seq_for_simd_tiled;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::simd_exec>>         seq_for_simd;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>>          seq_for_seq;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>, tiling>  seq_for_seq_tiled;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::simd_exec>, tiling> seq_for_simd_tiled;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>, tiling_ij>  seq_for_seq_tiled_ij;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::simd_exec>, tiling_ij> seq_for_simd_tiled_ij;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>, tiling_ji>  seq_for_seq_tiled_ji;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::simd_exec>, tiling_ji> seq_for_simd_tiled_ji;
 #ifdef RAJA_ENABLE_OPENMP
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::seq_exec>>  omp_for_seq;
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>> omp_for_simd;
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_for_exec, RAJA::seq_exec>, tiling>   omp_for_seq_tiled;
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_for_exec, RAJA::simd_exec>, tiling>  omp_for_simd_tiled;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::seq_exec>>          omp_for_seq;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>>         omp_for_simd;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::seq_exec>, tiling>  omp_for_seq_tiled;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>, tiling> omp_for_simd_tiled;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::seq_exec>, tiling_ij>  omp_for_seq_tiled_ij;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>, tiling_ij> omp_for_simd_tiled_ij;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::seq_exec>, tiling_ji>  omp_for_seq_tiled_ji;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::omp_parallel_for_exec, RAJA::simd_exec>, tiling_ji> omp_for_simd_tiled_ji;
 #endif
 #ifdef RAJA_ENABLE_TBB
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>>          tbb_for_seq;
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>>         tbb_for_simd;
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>, tiling>  tbb_for_seq_tiled;
-typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>, tiling> tbb_for_simd_tiled;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>>             tbb_for_seq;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>>            tbb_for_simd;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>, tiling>     tbb_for_seq_tiled;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>, tiling>    tbb_for_simd_tiled;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>, tiling_ij>  tbb_for_seq_tiled_ij;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>, tiling_ij> tbb_for_simd_tiled_ij;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::seq_exec>, tiling_ji>  tbb_for_seq_tiled_ji;
+typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_exec, RAJA::simd_exec>, tiling_ji> tbb_for_simd_tiled_ji;
 typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_dynamic, RAJA::seq_exec>>          tbb_for_dynamic_seq;
 typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_dynamic, RAJA::simd_exec>>         tbb_for_dynamic_simd;
 typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_dynamic, RAJA::seq_exec>, tiling>  tbb_for_dynamic_seq_tiled;
 typedef RAJA::NestedPolicy<RAJA::ExecList<RAJA::tbb_for_dynamic, RAJA::simd_exec>, tiling> tbb_for_dynamic_simd_tiled;
 #endif
 
-template <typename exec_policy>
-void Initialize(int order, std::vector<double> & A, std::vector<double> & B)
-{
-    RAJA::forallN<exec_policy> ( range(0, order), range(0, order), [=,&A,&B](indx i, indx j) {
-        A[i*order+j] = static_cast<double>(i*order+j);
-        B[i*order+j] = 0.0;
-    });
-}
-
-template <typename outer_policy, typename inner_policy>
-void Initialize(int order, std::vector<double> & A, std::vector<double> & B)
-{
-    RAJA::forall<outer_policy>(indx(0), indx(order), [=,&A,&B](indx i) {
-      RAJA::forall<inner_policy>(indx(0), indx(order), [=,&A,&B](indx j) {
-        A[i*order+j] = static_cast<double>(i*order+j);
-        B[i*order+j] = 0.0;
-      });
-    });
-}
-
-template <typename exec_policy>
-void Transpose(int order, std::vector<double> & A, std::vector<double> & B)
-{
-    RAJA::forallN<exec_policy> ( range(0, order), range(0, order), [=,&A,&B](indx i, indx j) {
-        B[i*order+j] += A[j*order+i];
-        A[j*order+i] += 1.0;
-    });
-}
-
-template <typename outer_policy, typename inner_policy>
-void Transpose(int order, std::vector<double> & A, std::vector<double> & B)
-{
-    RAJA::forall<outer_policy>(indx(0), indx(order), [=,&A,&B](indx i) {
-      RAJA::forall<inner_policy>(indx(0), indx(order), [=,&A,&B](indx j) {
-        B[i*order+j] += A[j*order+i];
-        A[j*order+i] += 1.0;
-      });
-    });
-}
-
 template <typename exec_policy, typename LoopBody>
 void Lambda(int order, LoopBody body)
 {
-    RAJA::forallN<exec_policy> ( range(0, order), range(0, order), [=,&A,&B](indx i, indx j) {
-        body;
-    });
+    RAJA::forallN<exec_policy>( range(0, order), range(0, order), body);
 }
 
-template <typename outer_policy, typename inner_policy, typename LoopBody>
-void Lambda(int order, LoopBody body)
+template <typename exec_policy>
+void Initialize(int order, std::vector<double> & A, std::vector<double> & B)
 {
-    RAJA::forall<outer_policy>(indx(0), indx(order), [=,&A,&B](indx i) {
-      RAJA::forall<inner_policy>(indx(0), indx(order), [=,&A,&B](indx j) {
-        body;
-      });
+    Lambda<exec_policy>(order, [=,&A,&B](int i, int j) {
+        A[i*order+j] = static_cast<double>(i*order+j);
+        B[i*order+j] = 0.0;
     });
 }
 
 template <typename exec_policy>
-void Zero(int order, std::vector<double> & A)
+void Transpose(int order, std::vector<double> & A, std::vector<double> & B)
 {
-    Lambda<typename exec_policy>(order, [=,&A](int i, int j) {
-        A[j*order+i] = 0.0;
+    Lambda<exec_policy>(order, [=,&A,&B](int i, int j) {
+        B[i*order+j] += A[j*order+i];
+        A[j*order+i] += 1.0;
+    });
+}
+
+template <typename outer_policy, typename inner_policy>
+void Initialize(int order, std::vector<double> & A, std::vector<double> & B)
+{
+    RAJA::forall<outer_policy>(0, order, [=,&A,&B](int i) {
+      RAJA::forall<inner_policy>(0, order, [=,&A,&B](int j) {
+        A[i*order+j] = static_cast<double>(i*order+j);
+        B[i*order+j] = 0.0;
+      });
+    });
+}
+
+template <typename outer_policy, typename inner_policy>
+void Transpose(int order, std::vector<double> & A, std::vector<double> & B)
+{
+    RAJA::forall<outer_policy>(0, order, [=,&A,&B](int i) {
+      RAJA::forall<inner_policy>(0, order, [=,&A,&B](int j) {
+        B[i*order+j] += A[j*order+i];
+        A[j*order+i] += 1.0;
+      });
     });
 }
 
 template <typename loop_policy, typename reduce_policy>
 double Error(int iterations, int order, std::vector<double> & B)
 {
-      RAJA::ReduceSum<reduce_policy, double> rajaerr(0.0);
-      RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>>>
-              ( range(0, order), range(0, order),
-                [=,&B](indx i, indx j) {
-          const int ij = i*order+j;
-          const int ji = j*order+i;
-          const auto addit = (iterations+1.) * (iterations/2.);
-          const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-          rajaerr += std::fabs(B[ji] - reference);
+      RAJA::ReduceSum<reduce_policy, double> abserr(0.0);
+      typedef RAJA::NestedPolicy<RAJA::ExecList<loop_policy, RAJA::seq_exec>> exec_policy;
+      RAJA::forallN<exec_policy>( range(0, order), range(0, order), [=,&B](int i, int j) {
+          const auto dij = static_cast<double>(i*order+j);
+          const auto addit = (iterations+1.) * (0.5*iterations);
+          const auto reference = dij*(1.+iterations)+addit;
+          abserr += std::fabs(B[j*order+i] - reference);
       });
-      return rajaerr;
+      return abserr;
 }
 
 int main(int argc, char * argv[])
@@ -169,13 +162,17 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
+  if (argc < 3) {
+      std::cerr << "Usage: <# iterations> <matrix order> ";
+      std::cerr << "<nested={y,n} for={seq,omp,tbb} simd={y,n} tiled={y,n} permute={no,ij,ji}>\n";
+      std::cerr << "(The <args> can be given in any order.)\n";
+      return argc;
+  }
+
   int iterations, order;
   std::string use_for="seq", use_permute="no";
   auto use_simd=true, use_nested=true, use_tiled=false;
   try {
-      if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> <nested={y,n} for={seq,omp,tbb} simd={y,n}>";
-      }
 
       // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
@@ -256,13 +253,14 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Tile size             = " << tile_size << "(compile-time constant, unlike other impls)" << std::endl;
   std::string            for_name = "Sequential";
   if (use_for=="omp")    for_name = "OpenMP";
   if (use_for=="tbb")    for_name = "TBB (static)";
   if (use_for=="tbbdyn") for_name = "TBB (dynamic)";
+
+  std::cout << "Number of iterations  = " << iterations << std::endl;
+  std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Tile size             = " << tile_size << "(compile-time constant, unlike other impls)" << std::endl;
   std::cout << "RAJA threading        = " << for_name << std::endl;
   std::cout << "RAJA forallN          = " << (use_nested ? "yes" : "no") << std::endl;
   std::cout << "RAJA use simd         = " << (use_simd ? "yes" : "no") << std::endl;
@@ -281,10 +279,26 @@ int main(int argc, char * argv[])
   if (use_for=="seq") {
     if (use_nested) {
       if (use_tiled) {
-        if (use_simd) {
-          Initialize<seq_for_simd_tiled>(order, A, B);
-        } else {
-          Initialize<seq_for_seq_tiled>(order, A, B);
+        if (use_permute=="no") {
+          if (use_simd) {
+            Initialize<seq_for_simd_tiled>(order, A, B);
+          } else {
+            Initialize<seq_for_seq_tiled>(order, A, B);
+          }
+        }
+        else if (use_permute=="ij") {
+          if (use_simd) {
+            Initialize<seq_for_simd_tiled_ij>(order, A, B);
+          } else {
+            Initialize<seq_for_seq_tiled_ij>(order, A, B);
+          }
+        }
+        else if (use_permute=="ji") {
+          if (use_simd) {
+            Initialize<seq_for_simd_tiled_ji>(order, A, B);
+          } else {
+            Initialize<seq_for_seq_tiled_ji>(order, A, B);
+          }
         }
       } else {
         if (use_simd) {
@@ -305,10 +319,26 @@ int main(int argc, char * argv[])
   else if (use_for=="omp") {
     if (use_nested) {
       if (use_tiled) {
-        if (use_simd) {
-          Initialize<omp_for_simd_tiled>(order, A, B);
-        } else {
-          Initialize<omp_for_seq_tiled>(order, A, B);
+        if (use_permute=="no") {
+          if (use_simd) {
+            Initialize<omp_for_simd_tiled>(order, A, B);
+          } else {
+            Initialize<omp_for_seq_tiled>(order, A, B);
+          }
+        }
+        else if (use_permute=="ij") {
+          if (use_simd) {
+            Initialize<omp_for_simd_tiled_ij>(order, A, B);
+          } else {
+            Initialize<omp_for_seq_tiled_ij>(order, A, B);
+          }
+        }
+        else if (use_permute=="ji") {
+          if (use_simd) {
+            Initialize<omp_for_simd_tiled_ji>(order, A, B);
+          } else {
+            Initialize<omp_for_seq_tiled_ji>(order, A, B);
+          }
         }
       } else {
         if (use_simd) {
@@ -330,10 +360,26 @@ int main(int argc, char * argv[])
   else if (use_for=="tbb") {
     if (use_nested) {
       if (use_tiled) {
-        if (use_simd) {
-          Initialize<tbb_for_simd_tiled>(order, A, B);
-        } else {
-          Initialize<tbb_for_seq_tiled>(order, A, B);
+        if (use_permute=="no") {
+          if (use_simd) {
+            Initialize<tbb_for_simd_tiled>(order, A, B);
+          } else {
+            Initialize<tbb_for_seq_tiled>(order, A, B);
+          }
+        }
+        else if (use_permute=="ij") {
+          if (use_simd) {
+            Initialize<tbb_for_simd_tiled_ij>(order, A, B);
+          } else {
+            Initialize<tbb_for_seq_tiled_ij>(order, A, B);
+          }
+        }
+        else if (use_permute=="ji") {
+          if (use_simd) {
+            Initialize<tbb_for_simd_tiled_ji>(order, A, B);
+          } else {
+            Initialize<tbb_for_seq_tiled_ji>(order, A, B);
+          }
         }
       } else {
         if (use_simd) {
@@ -385,10 +431,26 @@ int main(int argc, char * argv[])
     if (use_for=="seq") {
       if (use_nested) {
         if (use_tiled) {
-          if (use_simd) {
-            Transpose<seq_for_simd_tiled>(order, A, B);
-          } else {
-            Transpose<seq_for_seq_tiled>(order, A, B);
+          if (use_permute=="no") {
+            if (use_simd) {
+              Transpose<seq_for_simd_tiled>(order, A, B);
+            } else {
+              Transpose<seq_for_seq_tiled>(order, A, B);
+            }
+          }
+          else if (use_permute=="ij") {
+            if (use_simd) {
+              Transpose<seq_for_simd_tiled_ij>(order, A, B);
+            } else {
+              Transpose<seq_for_seq_tiled_ij>(order, A, B);
+            }
+          }
+          else if (use_permute=="ji") {
+            if (use_simd) {
+              Transpose<seq_for_simd_tiled_ji>(order, A, B);
+            } else {
+              Transpose<seq_for_seq_tiled_ji>(order, A, B);
+            }
           }
         } else {
           if (use_simd) {
@@ -409,10 +471,26 @@ int main(int argc, char * argv[])
     else if (use_for=="omp") {
       if (use_nested) {
         if (use_tiled) {
-          if (use_simd) {
-            Transpose<omp_for_simd_tiled>(order, A, B);
-          } else {
-            Transpose<omp_for_seq_tiled>(order, A, B);
+          if (use_permute=="no") {
+            if (use_simd) {
+              Transpose<omp_for_simd_tiled>(order, A, B);
+            } else {
+              Transpose<omp_for_seq_tiled>(order, A, B);
+            }
+          }
+          else if (use_permute=="ij") {
+            if (use_simd) {
+              Transpose<omp_for_simd_tiled_ij>(order, A, B);
+            } else {
+              Transpose<omp_for_seq_tiled_ij>(order, A, B);
+            }
+          }
+          else if (use_permute=="ji") {
+            if (use_simd) {
+              Transpose<omp_for_simd_tiled_ji>(order, A, B);
+            } else {
+              Transpose<omp_for_seq_tiled_ji>(order, A, B);
+            }
           }
         } else {
           if (use_simd) {
@@ -434,10 +512,26 @@ int main(int argc, char * argv[])
     else if (use_for=="tbb") {
       if (use_nested) {
         if (use_tiled) {
-          if (use_simd) {
-            Transpose<tbb_for_simd_tiled>(order, A, B);
-          } else {
-            Transpose<tbb_for_seq_tiled>(order, A, B);
+          if (use_permute=="no") {
+            if (use_simd) {
+              Transpose<tbb_for_simd_tiled>(order, A, B);
+            } else {
+              Transpose<tbb_for_seq_tiled>(order, A, B);
+            }
+          }
+          else if (use_permute=="ij") {
+            if (use_simd) {
+              Transpose<tbb_for_simd_tiled_ij>(order, A, B);
+            } else {
+              Transpose<tbb_for_seq_tiled_ij>(order, A, B);
+            }
+          }
+          else if (use_permute=="ji") {
+            if (use_simd) {
+              Transpose<tbb_for_simd_tiled_ji>(order, A, B);
+            } else {
+              Transpose<tbb_for_seq_tiled_ji>(order, A, B);
+            }
           }
         } else {
           if (use_simd) {
