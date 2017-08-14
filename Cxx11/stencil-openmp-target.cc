@@ -63,7 +63,7 @@
 #include "prk_util.h"
 #include "stencil_target.hpp"
 
-void nothing(const int n, const double * RESTRICT in, double * RESTRICT out)
+void nothing(const int n, const int t, const double * RESTRICT in, double * RESTRICT out)
 {
     std::cout << "You are trying to use a stencil that does not exist." << std::endl;
     std::cout << "Please generate the new stencil using the code generator." << std::endl;
@@ -81,12 +81,11 @@ int main(int argc, char* argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int n, radius;
+  int iterations, n, radius, tile_size;
   bool star = true;
   try {
-      if (argc < 3){
-        throw "Usage: <# iterations> <array dimension> [<star/grid> <radius>]";
+      if (argc < 3) {
+        throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
       }
 
       // number of times to run the algorithm
@@ -103,24 +102,29 @@ int main(int argc, char* argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-      // stencil pattern
+      // default tile size for tiling of local transpose
+      tile_size = 32;
       if (argc > 3) {
-          auto stencil = std::string(argv[3]);
+          tile_size = std::atoi(argv[3]);
+          if (tile_size <= 0) tile_size = n;
+          if (tile_size > n) tile_size = n;
+      }
+
+      // stencil pattern
+      if (argc > 4) {
+          auto stencil = std::string(argv[4]);
           auto grid = std::string("grid");
           star = (stencil == grid) ? false : true;
       }
 
       // stencil radius
       radius = 2;
-      if (argc > 4) {
-          radius = std::atoi(argv[4]);
+      if (argc > 5) {
+          radius = std::atoi(argv[5]);
       }
 
       if ( (radius < 1) || (2*radius+1 > n) ) {
         throw "ERROR: Stencil radius negative or too large";
-      }
-      if ( (radius > 9) ) {
-        throw "ERROR: you need to run the code generator to get an implementation of this stencil";
       }
   }
   catch (const char * e) {
@@ -131,6 +135,7 @@ int main(int argc, char* argv[])
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
@@ -142,10 +147,6 @@ int main(int argc, char* argv[])
           case 3: stencil = star3; break;
           case 4: stencil = star4; break;
           case 5: stencil = star5; break;
-          case 6: stencil = star6; break;
-          case 7: stencil = star7; break;
-          case 8: stencil = star8; break;
-          case 9: stencil = star9; break;
       }
   } else {
       switch (radius) {
@@ -154,10 +155,6 @@ int main(int argc, char* argv[])
           case 3: stencil = grid3; break;
           case 4: stencil = grid4; break;
           case 5: stencil = grid5; break;
-          case 6: stencil = grid6; break;
-          case 7: stencil = grid7; break;
-          case 8: stencil = grid8; break;
-          case 9: stencil = grid9; break;
       }
   }
 
@@ -196,7 +193,7 @@ int main(int argc, char* argv[])
       }
 
       // Apply the stencil operator
-      stencil(n, in, out);
+      stencil(n, tile_size, in, out);
       // add constant to solution to force refresh of neighbor data, if any
       OMP_FOR()
       for (auto i=0; i<n; i++) {
