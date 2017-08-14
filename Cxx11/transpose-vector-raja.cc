@@ -164,8 +164,9 @@ int main(int argc, char * argv[])
 
   if (argc < 3) {
       std::cerr << "Usage: <# iterations> <matrix order> ";
-      std::cerr << "<nested={y,n} for={seq,omp,tbb} simd={y,n} tiled={y,n} permute={no,ij,ji}>\n";
-      std::cerr << "(The <args> can be given in any order.)\n";
+      std::cerr << "<for={seq,omp,tbb,tbbdyn} nested={y,n} tiled={y,n} permute={no,ij,ji} simd={y,n}>\n";
+      std::cerr << "Caveat: tiled/permute only supported for nested=y.\n";
+      std::cerr << "Feature: RAJA args (foo=bar) can be given in any order.\n";
       return argc;
   }
 
@@ -263,9 +264,9 @@ int main(int argc, char * argv[])
   std::cout << "Tile size             = " << tile_size << "(compile-time constant, unlike other impls)" << std::endl;
   std::cout << "RAJA threading        = " << for_name << std::endl;
   std::cout << "RAJA forallN          = " << (use_nested ? "yes" : "no") << std::endl;
-  std::cout << "RAJA use simd         = " << (use_simd ? "yes" : "no") << std::endl;
   std::cout << "RAJA use tiling       = " << (use_tiled ? "yes" : "no") << std::endl;
   std::cout << "RAJA use permute      = " << use_permute << std::endl;
+  std::cout << "RAJA use simd         = " << (use_simd ? "yes" : "no") << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
