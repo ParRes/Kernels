@@ -175,13 +175,13 @@ program main
   !$omp&  private(i,j,k,corner_val)
   !$omp master
 
-  !$omp taskloop firstprivate(m,n) shared(grid)
   do j=1,n
+    !$omp task firstprivate(m,n) private(i,j) shared(grid)
     do i=1,m
       grid(i,j) = 0.0d0
     enddo
+    !$omp end task
   enddo
-  !$omp end taskloop
   !$omp taskwait
 
   do j=1,n
