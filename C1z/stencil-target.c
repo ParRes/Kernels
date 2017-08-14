@@ -175,8 +175,9 @@ int main(int argc, char * argv[])
   // initialize the input and output arrays
   OMP_PARALLEL()
   {
-    OMP_FOR
+    OMP_FOR()
     for (int i=0; i<n; i++) {
+      OMP_SIMD
       for (int j=0; j<n; j++) {
         in[i*n+j]  = (double)(i+j);
         out[i*n+j] = 0.0;
@@ -185,30 +186,23 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  OMP_TARGET( map(tofrom: in[0:n*n], out[0:n*n]) map(from:stencil_time) )
-  OMP_PARALLEL()
+  OMP_TARGET( data map(tofrom: in[0:n*n], out[0:n*n]) )
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          stencil_time = prk_wtime();
-      }
+      if (iter==1) stencil_time = prk_wtime();
 
       // Apply the stencil operator
       stencil(n, in, out);
 
       // Add constant to solution to force refresh of neighbor data, if any
-      OMP_FOR
+      OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
       for (int i=0; i<n; i++) {
         for (int j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
     }
-    OMP_BARRIER
-    OMP_MASTER
     stencil_time = prk_wtime() - stencil_time;
   }
 

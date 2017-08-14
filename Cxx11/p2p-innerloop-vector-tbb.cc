@@ -35,13 +35,13 @@
 ///
 /// PURPOSE: This program tests the efficiency with which point-to-point
 ///          synchronization can be carried out. It does so by executing
-///          a pipelined algorithm on an m*n grid. The first array dimension
+///          a pipelined algorithm on an n*n grid. The first array dimension
 ///          is distributed among the threads (stripwise decomposition).
 ///
 /// USAGE:   The program takes as input the
 ///          dimensions of the grid, and the number of iterations on the grid
 ///
-///                <progname> <iterations> <m> <n>
+///                <progname> <iterations> <n>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -61,72 +61,21 @@
 
 #include "prk_util.h"
 
-void SequentialSweep(int m, int n, std::vector<double> & grid)
-{
-  for (auto i=1; i<m; i++) {
-    for (auto j=1; j<n; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
-
-void ParallelSweep( const size_t xlen, const size_t ylen, std::vector<double> & grid,
-                    std::vector<std::vector<tbb::atomic<char>>> & Count,
-                    const size_t blocking )
-{
-   // Initialize predecessor counts for blocks.
-   size_t m = (xlen+blocking-1)/blocking;
-   size_t n = (ylen+blocking-1)/blocking;
-   for( int i=0; i<m; ++i ) {
-       for( int j=0; j<n; ++j ) {
-           Count[i][j] = (i>0)+(j>0);
-       }
-   }
-   // Roll the wavefront from the origin.
-   typedef std::pair<int,int> block;
-   block origin(0,0);
-   tbb::parallel_do( &origin, &origin+1,
-       [&]( const block& b, tbb::parallel_do_feeder<block>&feeder ) {
-           // Extract bounds on block
-           size_t bi = b.first;
-           size_t bj = b.second;
-           size_t xl = blocking*bi+1;
-           size_t yl = blocking*bj+1;
-           size_t xu = std::min(xl+blocking,xlen+1);
-           size_t yu = std::min(yl+blocking,ylen+1);
-           // Process the block
-           for( size_t i=xl; i<xu; ++i ) {
-               for( size_t j=yl; j<yu; ++j ) {
-                   std::cout << i << "," << j << "=" << grid[i*n+j] << "\n";
-                   grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-               }
-           }
-           // Account for successors
-           if( bj+1<n && --Count[bi][bj+1]==0 ) {
-               feeder.add( block(bi,bj+1) );
-               }
-           if( bi+1<m && --Count[bi+1][bj]==0 ) {
-               feeder.add( block(bi+1,bj) );
-           }
-       }
-   );
-}
-
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/TBB pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/TBB INNERLOOP pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int m, n;
+  int n;
   int mc, nc;
   try {
-      if (argc < 4){
-        throw " <# iterations> <first array dimension> <second array dimension> [<first chunk dimension> <second chunk dimension>]";
+      if (argc < 3){
+        throw " <# iterations> <array dimension>";
       }
 
       // number of times to run the pipeline algorithm
@@ -136,21 +85,11 @@ int main(int argc, char* argv[])
       }
 
       // grid dimensions
-      m = std::atoi(argv[2]);
-      n = std::atoi(argv[3]);
-      if (m < 1 || n < 1) {
+      n = std::atoi(argv[2]);
+      if (n < 1) {
         throw "ERROR: grid dimensions must be positive";
-      } else if ( static_cast<size_t>(m)*static_cast<size_t>(n) > INT_MAX) {
+      } else if ( static_cast<size_t>(n)*static_cast<size_t>(n) > static_cast<size_t>(INT_MAX)) {
         throw "ERROR: grid dimension too large - overflow risk";
-      }
-
-      // grid chunk dimensions
-      mc = (argc > 4) ? std::atoi(argv[4]) : m;
-      nc = (argc > 5) ? std::atoi(argv[5]) : n;
-      if (mc < 1 || mc > m || nc < 1 || nc > n) {
-        std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
-        mc = m;
-        nc = n;
       }
   }
   catch (const char * e) {
@@ -164,8 +103,7 @@ int main(int argc, char* argv[])
 
   std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
-  std::cout << "Grid chunk sizes     = " << mc << ", " << nc << std::endl;
+  std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
   std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
@@ -174,30 +112,26 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  // used by TBB
-  std::vector<std::vector<tbb::atomic<char>>> Count;
-  Count.resize(m/blocking+1);
-  for (auto i=0; i<m/blocking+1; ++i) {
-      Count[i].resize(n/blocking+1, 0);
-  }
-
   // working set
   std::vector<double> grid;
-  grid.resize(m*n,0.0);
+  grid.resize(n*n,0.0);
 
   // set boundary values (bottom and left side of grid)
   for (auto j=0; j<n; j++) {
     grid[0*n+j] = static_cast<double>(j);
-  }
-  for (auto i=0; i<m; i++) {
-    grid[i*n+0] = static_cast<double>(i);
+    grid[j*n+0] = static_cast<double>(j);
   }
 
   for (auto iter = 0; iter<=iterations; iter++){
     if (iter == 1) pipeline_time = prk::wtime();
-    //SequentialSweep(m, n, grid);
-    ParallelSweep(m, n, grid, Count, blocking);
-    grid[0*n+0] = -grid[(m-1)*n+(n-1)];
+    for (auto i=2; i<=2*n-2; i++) {
+      tbb::parallel_for( std::max(2,i-n+2), std::min(i,n)+1, [=,&grid](int j) {
+               const auto x = i-j+2-1;
+               const auto y = j-1;
+               grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+           }, tbb_partitioner );
+    }
+    grid[0*n+0] = -grid[(n-1)*n+(n-1)];
   }
 
   pipeline_time = prk::wtime() - pipeline_time;
@@ -207,9 +141,9 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   const double epsilon = 1.e-8;
-  auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
-    std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
+  auto corner_val = ((iterations+1.)*(n+n-2.));
+  if ( (std::fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+    std::cout << "ERROR: checksum " << grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;
   }
@@ -221,7 +155,7 @@ int main(int argc, char* argv[])
 #endif
   auto avgtime = pipeline_time/iterations;
   std::cout << "Rate (MFlops/s): "
-            << 2.0e-6 * ( (m-1.)*(n-1.) )/avgtime
+            << 2.0e-6 * ( (n-1.)*(n-1.) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
 
   return 0;

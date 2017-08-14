@@ -63,12 +63,11 @@ int main(int argc, char * argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OpenMP TASKLOOP Matrix transpose: B = A^T" << std::endl;
 
-  int iterations;
-  size_t order;
-  size_t tile_size;
+  int iterations, gs;
+  size_t order, tile_size;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [tile size]";
+        throw "Usage: <# iterations> <matrix order> [taskloop grainsize] [tile size]";
       }
 
       // number of times to do the transpose
@@ -83,8 +82,14 @@ int main(int argc, char * argv[])
         throw "ERROR: Matrix Order must be greater than 0";
       }
 
+      // taskloop grainsize
+      gs = (argc > 3) ? std::atoi(argv[3]) : 1;
+      if (gs < 1 || gs > order) {
+        throw "ERROR: grainsize";
+      }
+
       // default tile size for tiling of local transpose
-      tile_size = (argc>4) ? std::atol(argv[3]) : 32;
+      tile_size = (argc>4) ? std::atol(argv[4]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
 
@@ -94,17 +99,16 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  if (tile_size < order) {
-      std::cout << "Tile size             = " << tile_size << std::endl;
-  } else {
-      std::cout << "Untiled" << std::endl;
-  }
+#ifdef _OPENMP
+  std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
+  std::cout << "Taskloop grainsize   = " << gs << std::endl;
+#endif
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
   std::vector<double> A;
@@ -114,18 +118,17 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  _Pragma("omp parallel")
-  _Pragma("omp master")
+  OMP_PARALLEL()
+  OMP_MASTER
   {
-    _Pragma("omp taskloop firstprivate(order) shared(A,B)")
+    OMP_TASKLOOP( firstprivate(order) shared(A,B) grainsize(gs) )
     for (auto i=0;i<order; i++) {
       for (auto j=0;j<order;j++) {
         A[i*order+j] = static_cast<double>(i*order+j);
         B[i*order+j] = 0.0;
       }
     }
-
-    _Pragma("omp taskwait")
+    OMP_TASKWAIT
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -135,7 +138,7 @@ int main(int argc, char * argv[])
 
       // transpose the  matrix
       if (tile_size < order) {
-        _Pragma("omp taskloop firstprivate(order) shared(A,B)")
+        OMP_TASKLOOP( firstprivate(order) shared(A,B) grainsize(gs) )
         for (auto it=0; it<order; it+=tile_size) {
           for (auto jt=0; jt<order; jt+=tile_size) {
             for (auto i=it; i<std::min(order,it+tile_size); i++) {
@@ -147,7 +150,7 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        _Pragma("omp taskloop firstprivate(order) shared(A,B)")
+        OMP_TASKLOOP( firstprivate(order) shared(A,B) grainsize(gs) )
         for (auto i=0;i<order; i++) {
           for (auto j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
@@ -155,7 +158,7 @@ int main(int argc, char * argv[])
           }
         }
       }
-      _Pragma("omp taskwait")
+      OMP_TASKWAIT
     }
     trans_time = prk::wtime() - trans_time;
   }
@@ -166,7 +169,7 @@ int main(int argc, char * argv[])
 
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  _Pragma("omp parallel for reduction(+:abserr)")
+  OMP_PARALLEL_FOR_REDUCE( +:abserr )
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const size_t ij = i*order+j;

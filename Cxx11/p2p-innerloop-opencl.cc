@@ -31,24 +31,31 @@
 
 //////////////////////////////////////////////////////////////////////
 ///
-/// NAME:    transpose
+/// NAME:    Pipeline
 ///
-/// PURPOSE: This program measures the time for the transpose of a
-///          column-major stored matrix into a row-major stored matrix.
+/// PURPOSE: This program tests the efficiency with which point-to-point
+///          synchronization can be carried out. It does so by executing
+///          a pipelined algorithm on an n^2 grid. The first array dimension
+///          is distributed among the threads (stripwise decomposition).
 ///
-/// USAGE:   Program input is the matrix order and the number of times to
-///          repeat the operation:
+/// USAGE:   The program takes as input the
+///          dimensions of the grid, and the number of iterations on the grid
 ///
-///          transpose <matrix_size> <# iterations> [tile size]
-///
-///          An optional parameter specifies the tile size used to divide the
-///          individual matrix blocks for improved cache and TLB performance.
+///                <progname> <iterations> <n>
 ///
 ///          The output consists of diagnostics to make sure the
-///          transpose worked and timing statistics.
+///          algorithm worked, and of timing statistics.
 ///
-/// HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-///          Converted to C++11 by Jeff Hammond, February 2016 and May 2017.
+/// FUNCTIONS CALLED:
+///
+///          Other than standard C functions, the following
+///          functions are used in this program:
+///
+///          wtime()
+///
+/// HISTORY: - Written by Rob Van der Wijngaart, February 2009.
+///            C99-ification by Jeff Hammond, February 2016.
+///            C++11-ification by Jeff Hammond, May 2017.
 ///
 //////////////////////////////////////////////////////////////////////
 
@@ -56,16 +63,16 @@
 #include "prk_opencl.h"
 
 template <typename T>
-void run(cl::Context context, int iterations, int order)
+void run(cl::Context context, int iterations, int n)
 {
   auto precision = (sizeof(T)==8) ? 64 : 32;
 
-  cl::Program program(context, prk::opencl::loadProgram("transpose.cl"), true);
+  cl::Program program(context, prk::opencl::loadProgram("p2p.cl"), true);
 
-  auto function = (precision==64) ? "transpose64" : "transpose32";
+  auto function = (precision==64) ? "p2p64" : "p2p32";
 
   cl_int err;
-  auto kernel = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program, function, &err);
+  auto kernel = cl::make_kernel<int, cl::Buffer>(program, function, &err);
   if(err != CL_SUCCESS){
     std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
     std::cout << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
@@ -77,95 +84,90 @@ void run(cl::Context context, int iterations, int order)
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  const size_t nelems = (size_t)order * (size_t)order;
-  std::vector<T> h_a;
-  std::vector<T> h_b;
-  h_a.resize(nelems);
-  h_b.resize(nelems, (T)0);
-  // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(h_a.begin(), h_a.end(), (T)0);
+  const int nelems = n*n;
+  std::vector<T> h_grid;
+  h_grid.resize(nelems, (T)0);
+  for (auto j=0; j<n; j++) {
+    h_grid[0*n+j] = static_cast<double>(j);
+  }
+  for (auto i=0; i<n; i++) {
+    h_grid[i*n+0] = static_cast<double>(i);
+  }
 
   // copy input from host to device
-  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);
-  cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), true);
+  cl::Buffer d_grid = cl::Buffer(context, begin(h_grid), end(h_grid), true);
 
-  auto trans_time = 0.0;
+  auto pipeline_time = 0.0;
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
-    if (iter==1) trans_time = prk::wtime();
+    if (iter==1) pipeline_time = prk::wtime();
 
-    // transpose the  matrix
-    kernel(cl::EnqueueArgs(queue, cl::NDRange(order,order)), order, d_a, d_b);
+    cl::copy(queue,begin(h_grid), end(h_grid), d_grid);
+    kernel(cl::EnqueueArgs(queue, cl::NDRange(n,n)), n, d_grid);
+    cl::copy(queue,d_grid, begin(h_grid), end(h_grid));
     queue.finish();
-
+    h_grid[0*n+0] = -h_grid[(n-1)*n+(n-1)];
   }
-  trans_time = prk::wtime() - trans_time;
+  pipeline_time = prk::wtime() - pipeline_time;
 
-  // copy output back to host
-  cl::copy(queue, d_b, begin(h_b), end(h_b));
+  cl::copy(d_grid, begin(h_grid), end(h_grid));
 
-  // TODO: replace with std::generate, std::accumulate, or similar
-  const double addit = (iterations+1.0) * (0.5*iterations);
-  double abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
-      const int ij = i*order+j;
-      const int ji = j*order+i;
-      const double reference = static_cast<double>(ij)*(iterations+1)+addit;
-      abserr += std::fabs(static_cast<double>(h_b[ji]) - reference);
-    }
+  //////////////////////////////////////////////////////////////////////
+  // Analyze and output results.
+  //////////////////////////////////////////////////////////////////////
+
+  // error tolerance
+  const T epsilon = (sizeof(T)==8) ? 1.e-8 : 1.e-4f;
+
+  // verify correctness, using top right value
+  T corner_val = ((iterations+1)*(2*n-2));
+  if ( (std::fabs(h_grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+    std::cout << "ERROR: checksum " << h_grid[(n-1)*n+(n-1)]
+              << " does not match verification value " << corner_val << std::endl;
   }
-  //
-  //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
-  //////////////////////////////////////////////////////////////////////
 
 #ifdef VERBOSE
-  std::cout << "Sum of absolute differences: " << abserr << std::endl;
+  std::cout << "Solution validates; verification value = " << corner_val << std::endl;
+#else
+  std::cout << "Solution validates" << std::endl;
 #endif
-
-  const double epsilon = (precision==64) ? 1.0e-8 : 1.0e-4;
-  if (abserr < epsilon) {
-    std::cout << "Solution validates" << std::endl;
-    auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
-  } else {
-    std::cout << "ERROR: Aggregate squared error " << abserr
-              << " exceeds threshold " << epsilon << std::endl;
-  }
+  auto avgtime = pipeline_time/iterations;
+  std::cout << "Rate (MFlops/s): "
+            << 2.0e-6 * ( (n-1.)*(n-1.) )/avgtime
+            << " Avg time (s): " << avgtime << std::endl;
 }
 
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenCL Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/OpenCL INNERLOOP pipeline execution on 2D grid" << std::endl;
 
   prk::opencl::listPlatforms();
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int order;
+  int n;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order>";
+        throw " <# iterations> <array dimension>";
       }
 
-      // number of times to do the transpose
+      // number of times to run the pipeline algorithm
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
-      // order of a the matrix
-      order = std::atol(argv[2]);
-      if (order <= 0) {
-        throw "ERROR: Matrix Order must be greater than 0";
+      // grid dimensions
+      n = std::atoi(argv[2]);
+      if (n < 1) {
+        throw "ERROR: grid dimensions must be positive";
+      } else if ( static_cast<size_t>(n)*static_cast<size_t>(n) > INT_MAX) {
+        throw "ERROR: grid dimension too large - overflow risk";
       }
   }
   catch (const char * e) {
@@ -173,8 +175,8 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Setup OpenCL environment
@@ -190,9 +192,9 @@ int main(int argc, char* argv[])
     std::cout << "CPU Precision         = " << precision << "-bit" << std::endl;
 
     if (precision==64) {
-        run<double>(cpu, iterations, order);
+        run<double>(cpu, iterations, n);
     } else {
-        run<float>(cpu, iterations, order);
+        run<float>(cpu, iterations, n);
     }
   }
 
@@ -204,9 +206,9 @@ int main(int argc, char* argv[])
     std::cout << "GPU Precision         = " << precision << "-bit" << std::endl;
 
     if (precision==64) {
-        run<double>(gpu, iterations, order);
+        run<double>(gpu, iterations, n);
     } else {
-        run<float>(gpu, iterations, order);
+        run<float>(gpu, iterations, n);
     }
   }
 
@@ -219,9 +221,9 @@ int main(int argc, char* argv[])
     std::cout << "ACC Precision         = " << precision << "-bit" << std::endl;
 
     if (precision==64) {
-        run<double>(acc, iterations, order);
+        run<double>(acc, iterations, n);
     } else {
-        run<float>(acc, iterations, order);
+        run<float>(acc, iterations, n);
     }
   }
 

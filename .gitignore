@@ -100,6 +100,7 @@ SERIAL/Stencil/stencil
 SERIAL/Synch_p2p/p2p
 SERIAL/Transpose/transpose
 C1z/p2p
+C1z/p2p-innerloop
 C1z/p2p-innerloop-openmp
 C1z/p2p-tasks-openmp
 C1z/stencil
@@ -108,6 +109,7 @@ C1z/stencil-openmp
 C1z/stencil-target
 C1z/stencil-taskloop
 C1z/transpose
+C1z/transpose-thread
 C1z/transpose-cilk
 C1z/transpose-openmp
 C1z/transpose-target
@@ -119,6 +121,10 @@ Cxx11/p2p-vector-doacross-openmp
 Cxx11/p2p-vector-raja
 Cxx11/p2p-vector-tbb
 Cxx11/p2p-innerloop-openmp
+Cxx11/p2p-doacross-vector-openmp
+Cxx11/p2p-innerloop-opencl
+Cxx11/p2p-innerloop-vector
+Cxx11/p2p-innerloop-vector-openmp
 Cxx11/stencil-opencl
 Cxx11/stencil-openmp-target
 Cxx11/stencil-vector
@@ -142,6 +148,8 @@ Cxx11/transpose-vector-rangefor
 Cxx11/transpose-vector-tbb
 Cxx11/transpose-vector-taskloop
 Cxx11/transpose-kokkos
+Cxx11/transpose-vector-async
+Cxx11/transpose-vector-thread
 Cxx11/grid1.cl
 Cxx11/grid2.cl
 Cxx11/grid3.cl
@@ -173,11 +181,14 @@ FORTRAN/stencil-coarray
 FORTRAN/stencil-openmp
 FORTRAN/stencil-openmp-target
 FORTRAN/stencil-pretty
+FORTRAN/stencil-taskloop-openmp
 FORTRAN/transpose
 FORTRAN/transpose-coarray
 FORTRAN/transpose-openmp
 FORTRAN/transpose-openmp-target
 FORTRAN/transpose-pretty
+FORTRAN/transpose-taskloop-openmp
+FORTRAN/transpose-tasks-openmp
 RUST/p2p
 RUST/stencil
 RUST/transpose

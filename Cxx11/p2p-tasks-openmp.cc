@@ -59,8 +59,6 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <omp.h>
-
 #include "prk_util.h"
 
 inline void sweep_tile(int startm, int endm,
@@ -77,7 +75,11 @@ inline void sweep_tile(int startm, int endm,
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+#ifdef _OPENMP
   std::cout << "C++11/OpenMP TASKS pipeline execution on 2D grid" << std::endl;
+#else
+  std::cout << "C++11/Serial pipeline execution on 2D grid" << std::endl;
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -120,7 +122,9 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
+#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
   std::cout << "Grid chunk sizes     = " << mc << ", " << nc << std::endl;
@@ -131,56 +135,43 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  // working set
   double * grid = new double[m*n];
 
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
+  OMP_MASTER
   {
     int lic = (m/mc-1) * mc + 1;
     int ljc = (n/nc-1) * nc + 1;
 
-    _Pragma("omp for")
-    for (auto i=0; i<n; i++) {
+    OMP_TASKLOOP( firstprivate(m,n) shared(grid) )
+    for (auto i=0; i<m; i++) {
       for (auto j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
       }
     }
+    OMP_TASKWAIT
 
-    // set boundary values (bottom and left side of grid)
-    _Pragma("omp master")
-    {
-      for (auto j=0; j<n; j++) {
-        grid[0*n+j] = static_cast<double>(j);
-      }
-      for (auto i=0; i<m; i++) {
-        grid[i*n+0] = static_cast<double>(i);
-      }
+    for (auto j=0; j<n; j++) {
+      grid[0*n+j] = static_cast<double>(j);
     }
-    _Pragma("omp barrier")
+    for (auto i=0; i<m; i++) {
+      grid[i*n+0] = static_cast<double>(i);
+    }
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
-          pipeline_time = prk::wtime();
-      }
+      if (iter==1) pipeline_time = prk::wtime();
 
-      _Pragma("omp master")
-      {
-        for (auto i=1; i<m; i+=mc) {
-          for (auto j=1; j<n; j+=nc) {
-            _Pragma("omp task depend(in:grid[0],grid[(i-mc)*n+j],grid[i*n+(j-nc)],grid[(i-mc)*n+(j-nc)]) depend(out:grid[i*n+j])")
-            sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, grid);
-          }
+      for (auto i=1; i<m; i+=mc) {
+        for (auto j=1; j<n; j+=nc) {
+          OMP_TASK( firstprivate(m,n) shared(grid) depend(in:grid[0],grid[(i-mc)*n+j],grid[i*n+(j-nc)],grid[(i-mc)*n+(j-nc)]) depend(out:grid[i*n+j]) )
+          sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, grid);
         }
-        _Pragma("omp task depend(in:grid[(lic-1)*n+(ljc)]) depend(out:grid[0])")
-        grid[0*n+0] = -grid[(m-1)*n+(n-1)];
       }
+      OMP_TASK( firstprivate(m,n) shared(grid) depend(in:grid[(lic-1)*n+(ljc)]) depend(out:grid[0]) )
+      grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
-
-    _Pragma("omp barrier")
-    _Pragma("omp master")
+    OMP_TASKWAIT
     pipeline_time = prk::wtime() - pipeline_time;
   }
 
@@ -203,7 +194,7 @@ int main(int argc, char* argv[])
 #endif
   auto avgtime = pipeline_time/iterations;
   std::cout << "Rate (MFlops/s): "
-            << 2.0e-6 * ( (m-1)*(n-1) )/avgtime
+            << 2.0e-6 * ( (m-1.)*(n-1.) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
 
   return 0;

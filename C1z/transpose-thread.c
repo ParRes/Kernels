@@ -55,17 +55,78 @@
 
 #include "prk_util.h"
 
+typedef struct {
+    int starti;
+    int endi;
+    int startj;
+    int endj;
+    int tilesize;
+    int order;
+    double * restrict A;
+    double * restrict B;
+} args_s;
+
+#if defined(HAVE_C11_THREADS)
+int transpose_tile(void * pa)
+#elif defined(HAVE_PTHREADS)
+void * transpose_tile(void * pa)
+#endif
+{
+  args_s * a = (args_s*)pa;
+
+  const int starti    = a->starti;
+  const int endi      = a->endi;
+  const int startj    = a->startj;
+  const int endj      = a->endj;
+  const int tilesize  = a->tilesize;
+  const int order     = a->order;
+  double * restrict A = a->A;
+  double * restrict B = a->B;
+
+#if 0
+  for (int i=starti; i<endi; i++) {
+    for (int j=startj; j<endj; j++) {
+      B[i*order+j] += A[j*order+i];
+      A[j*order+i] += 1.0;
+    }
+  }
+#else
+  for (int it=starti; it<endi; it+=tilesize) {
+    for (int jt=startj; jt<endj; jt+=tilesize) {
+      for (int i=it; i<MIN(endi,it+tilesize); i++) {
+        for (int j=jt; j<MIN(endj,jt+tilesize); j++) {
+          B[i*order+j] += A[j*order+i];
+          A[j*order+i] += 1.0;
+        }
+      }
+    }
+  }
+#endif
+
+#if defined(HAVE_C11_THREADS)
+  thrd_exit(0);
+  return 0;
+#elif defined(HAVE_PTHREADS)
+  pthread_exit(NULL);
+  return NULL;
+#endif
+}
+
 int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
-  printf("C11/OpenMP TARGET Matrix transpose: B = A^T\n");
+#ifdef HAVE_C11_THREADS
+  printf("C11 Threads Matrix transpose: B = A^T\n");
+#else
+  printf("C99/Pthreads Matrix transpose: B = A^T\n");
+#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 3) {
-    printf("Usage: <# iterations> <matrix order> [tile size]\n");
+  if (argc < 4) {
+    printf("Usage: <# iterations> <matrix order> <block size> [tile size]\n");
     return 1;
   }
 
@@ -84,20 +145,35 @@ int main(int argc, char * argv[])
   }
 
   // default tile size for tiling of local transpose
-  int tile_size = (argc>3) ? atoi(argv[3]) : 32;
+  int block_size = (argc>3) ? atoi(argv[3]) : 256;
   // a negative tile size means no tiling of the local transpose
-  if (tile_size <= 0) tile_size = order;
+  if (block_size <= 0) block_size = order;
 
-#ifdef _OPENMP
-  printf("Number of threads (max)   = %d\n", omp_get_max_threads());
-#endif
+  // default tile size for tiling of local transpose
+  int tile_size = (argc>4) ? atoi(argv[4]) : 32;
+  // a negative tile size means no tiling of the local transpose
+  if (tile_size <= 0) tile_size = block_size;
+
+  int num_threads = order/block_size;
+  if (order % block_size) num_threads++;
+  num_threads *= num_threads;
+
+  printf("Number of threads     = %d\n", num_threads);
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
+  printf("Block size            = %d\n", block_size);
   printf("Tile size             = %d\n", tile_size);
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
+
+#if defined(HAVE_C11_THREADS)
+  thrd_t * pool = malloc(num_threads * sizeof(thrd_t));
+#elif defined(HAVE_PTHREADS)
+  pthread_t * pool = malloc(num_threads * sizeof(pthread_t));
+#endif
+  args_s * args = malloc(num_threads * sizeof(args_s));
 
   double trans_time = 0.0;
 
@@ -105,47 +181,53 @@ int main(int argc, char * argv[])
   double * restrict A = prk_malloc(bytes);
   double * restrict B = prk_malloc(bytes);
 
-  // HOST
-  // initialize the input and output arrays
-  OMP_PARALLEL()
   {
-    OMP_FOR()
     for (int i=0;i<order; i++) {
       for (int j=0;j<order;j++) {
         A[i*order+j] = (double)(i*order+j);
         B[i*order+j] = 0.0;
       }
     }
-  }
 
-  // DEVICE
-  OMP_TARGET( data map(tofrom: A[0:order*order], B[0:order*order]) )
-  {
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) trans_time = prk_wtime();
 
-      // transpose the  matrix
-      if (tile_size < order) {
-        OMP_TARGET( teams distribute parallel for simd collapse(2) )
-        for (int it=0; it<order; it+=tile_size) {
-          for (int jt=0; jt<order; jt+=tile_size) {
-            for (int i=it; i<MIN(order,it+tile_size); i++) {
-              for (int j=jt; j<MIN(order,jt+tile_size); j++) {
-                B[i*order+j] += A[j*order+i];
-                A[j*order+i] += 1.0;
-              }
-            }
-          }
+      int tid = 0;
+      for (int ib=0; ib<order; ib+=block_size) {
+        for (int jb=0; jb<order; jb+=block_size) {
+          args[tid].starti   = ib;
+          args[tid].endi     = MIN(order,ib+block_size);
+          args[tid].startj   = jb;
+          args[tid].endj     = MIN(order,jb+block_size);
+          args[tid].tilesize = tile_size;
+          args[tid].order    = order;
+          args[tid].A        = A;
+          args[tid].B        = B;
+#if defined(HAVE_C11_THREADS)
+          int rc = thrd_create(&pool[tid], transpose_tile, &args[tid]);
+          assert(rc==thrd_success);
+#elif defined(HAVE_PTHREADS)
+          int rc = pthread_create(&pool[tid], NULL, transpose_tile, &args[tid]);
+# ifdef VERBOSE
+          if (rc) printf("pthread_create = %d (EINVAL=%d, EAGAIN=%d)\n", rc, EINVAL, EAGAIN);
+# endif
+          assert(rc==0);
+#endif
+          tid++;
         }
-      } else {
-        OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
-        for (int i=0;i<order; i++) {
-          for (int j=0;j<order;j++) {
-            B[i*order+j] += A[j*order+i];
-            A[j*order+i] += 1.0;
-          }
-        }
+      }
+      for (int t=0; t<num_threads; t++) {
+#if defined(HAVE_C11_THREADS)
+        int rc = thrd_join(pool[t],NULL);
+        assert(rc==thrd_success);
+#elif defined(HAVE_PTHREADS)
+        int rc = pthread_join(pool[t],NULL);
+# ifdef VERBOSE
+        if (rc) printf("pthread_join = %d (EINVAL=%d, ESRCH=%d)\n", rc, EINVAL, ESRCH);
+# endif
+#endif
+        assert(rc==0);
       }
     }
     trans_time = prk_wtime() - trans_time;
@@ -157,7 +239,6 @@ int main(int argc, char * argv[])
 
   const double addit = (iterations+1.) * (iterations/2.);
   double abserr = 0.0;
-  OMP_PARALLEL_FOR_REDUCE( +:abserr )
   for (int j=0; j<order; j++) {
     for (int i=0; i<order; i++) {
       const size_t ij = i*order+j;
@@ -169,6 +250,8 @@ int main(int argc, char * argv[])
 
   prk_free(A);
   prk_free(B);
+
+  free(pool);
 
 #ifdef VERBOSE
   printf("Sum of absolute differences: %lf\n", abserr);

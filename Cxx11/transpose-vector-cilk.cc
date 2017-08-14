@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>4) ? std::atoi(argv[3]) : 32;
+      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
 
@@ -94,13 +94,10 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+  std::cout << "Number of workers    = " << __cilkrts_get_nworkers() << std::endl;
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-  if (tile_size < order) {
-      std::cout << "Tile size             = " << tile_size << std::endl;
-  } else {
-      std::cout << "Untiled" << std::endl;
-  }
+  std::cout << "Tile size             = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix

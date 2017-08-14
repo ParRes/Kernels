@@ -40,6 +40,9 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
             sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
         fi
+        #if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+        #    sh ./travis/install-musl.sh $TRAVIS_ROOT
+        #fi
         ;;
     allcxx)
         echo "C++11"

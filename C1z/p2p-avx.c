@@ -61,13 +61,99 @@
 
 #include "prk_util.h"
 
+#include "immintrin.h"
+
+#if 1
+void print_m256d(const char * label, __m256d r)
+{
+  double d[4];
+  _mm256_store_pd(d, r);
+  printf("%s = {%f,%f,%f,%f}\n", label, d[0], d[1], d[2], d[3]);
+}
+#endif
+
 static inline void sweep_tile(int startm, int endm,
                               int startn, int endn,
-                              int n, double grid[])
+                              int n, double g[])
 {
+  const __m256d zero  = _mm256_setzero_pd();
+  const __m256d ones  = _mm256_cmp_pd( _mm256_setzero_pd() , _mm256_setzero_pd() , _CMP_EQ_OQ);
+  const __m256d el1   = _mm256_castsi256_pd( _mm256_set_epi8(0,0,0,0,0,0,0,0,
+                                                             0,0,0,0,0,0,0,0,
+                                                             0,0,0,0,0,0,0,0,
+                                                             255,255,255,255,255,255,255,255) );
+  const __m256d el12  = _mm256_castsi256_pd( _mm256_set_epi8(0,0,0,0,0,0,0,0,
+                                                             0,0,0,0,0,0,0,0,
+                                                             255,255,255,255,255,255,255,255,
+                                                             255,255,255,255,255,255,255,255) );
+  const __m256i mask  = _mm256_set_epi64x(0,0,0,-1);
   for (int i=startm; i<endm; i++) {
-    for (int j=startn; j<endn; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+    int j;
+    for (j=startn; j<endn-3; j+=4) {
+      //g[i*n+j] = g[(i-1)*n+j] + g[i*n+(j-1)] - g[(i-1)*n+(j-1)];
+#if 0
+      // NO UNROLLING
+      __m256d c0 = _mm256_load_pd( &( g[(i-1)*n+(j-1)] ) ); // { g[i-1][j-1] , g[i-1][ j ] , g[i-1][j+1] , g[i-1][j+2] }
+      __m256d c1 = _mm256_load_pd( &( g[  i  *n+(j-1)] ) ); // { g[ i ][j-1] , g[ i ][ j ] , g[ i ][j+1] , g[ i ][j+2] }
+      __m256d j1 = _mm256_and_pd( c1 , el1 );               // { g[ i ][j-1] , 0 , 0 , 0 }
+      __m256d i0 = _mm256_addsub_pd( j1 , c0 );             // { g[ i ][j-1] - g[i-1][j-1] , g[i-1][ j ] , .. }
+      __m256d i1 = _mm256_and_pd( i0 , el12 );              // { g[ i ][j-1] - g[i-1][j-1] , g[ i ][ j ] + g[i-1][ j ] , 0 , 0 }
+      __m256d i2 = _mm256_hadd_pd( i1 , zero );             // { g[ i ][j-1] - g[i-1][j-1] + g[ i ][ j ] + g[i-1][ j ] , .. }
+      _mm256_maskstore_pd( &( g[i*n+j] ) , mask, i2 );      // g[i][j] = { g[i][j-1] - g[i-1][j-1] + g[i][j] + g[i-1][j] }
+#elif 0
+      // NO UNROLLING
+      __m256d c0 = _mm256_load_pd( &( g[(i-1)*n+(j-1)] ) ); // { g[i-1][j-1] , g[i-1][ j ] , g[i-1][j+1] , g[i-1][j+2] }
+      __m256d c1 = _mm256_load_pd( &( g[  i  *n+(j-1)] ) ); // { g[ i ][j-1] , g[ i ][ j ] , g[ i ][j+1] , g[ i ][j+2] }
+      __m256d j1 = _mm256_and_pd( c1 , el1 );               // { g[ i ][j-1] , 0 , 0 , 0 }
+      __m256d i0 = _mm256_addsub_pd( j1 , c0 );             // { g[ i ][j-1] - g[i-1][j-1] , g[i-1][ j ] , .. }
+      __m256d i1 = _mm256_and_pd( i0 , el12 );              // { g[ i ][j-1] - g[i-1][j-1] , g[ i ][ j ] + g[i-1][ j ] , 0 , 0 }
+      __m256d i2 = _mm256_hadd_pd( i1 , zero );             // { g[ i ][j-1] - g[i-1][j-1] + g[ i ][ j ] + g[i-1][ j ] , .. }
+      _mm256_maskstore_pd( &( g[i*n+j] ) , mask, i2 );      // g[i][j] = { g[i][j-1] - g[i-1][j-1] + g[i][j] + g[i-1][j] }
+#elif 0
+      // NO UNROLLING
+      double c0[4] = { g[(i-1)*n+(j-1)] , g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] };
+      double c1[4] = { g[  i  *n+(j-1)] , g[  i  *n+(j+0)] , g[  i  *n+(j+1)] , g[  i  *n+(j+2)] };
+      double j1[4] = { c1[0] , 0 , 0 , 0 };
+      double i0[4] = { j1[0] - c0[0] , j1[1] + c0[1] , j1[2] - c0[2] , j1[3] + c0[3] };
+      double i1[4] = { i0[0] , i0[1] , 0 , 0 };
+      double i2[4] = { i1[0] + i1[1] , 0 , i1[2] + i1[3] , 0 };
+      g[i*n+j] = i2[0];
+#elif 1
+      // WORKS
+      double c0s[4] = { g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] }; // shifted
+      double c0r[4] = { g[(i-1)*n+(j-1)] , g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] }; // regular
+      double i0[4]  = { c0s[0] - c0r[0] , c0s[1] - c0r[1] ,c0s[2] - c0r[2] ,c0s[3] - c0r[3] }; // subtract
+      double c1[4]  = { g[  i  *n+(j-1)] , g[  i  *n+(j+0)] , g[  i  *n+(j+1)] , g[  i  *n+(j+2)] }; // regular
+      double i1[4]  = { c1[0] + i0[0] , 0 , 0 };        // add first element
+      double i2[4]  = { 0 , i1[0] , 0 , 0 };            // shift right
+      double i3[4]  = { 0 , i2[1] + i0[1] , 0 , 0 };    // add second element
+      double i4[4]  = { 0 , 0 , i3[2] , 0 };            // shift right
+      double i5[4]  = { 0 , 0 , i4[2] + i0[2] , 0 };    // add third element
+      double i6[4]  = { 0 , 0 , 0 , i5[2] };            // shift right
+      double i7[4]  = { 0 , 0 , 0 , i6[3] + i0[3] };    // add fourth element
+      g[i*n+j+0] = i1[0];
+      g[i*n+j+1] = i3[1];
+      g[i*n+j+2] = i5[2];
+      g[i*n+j+3] = i7[3];
+      //printf("g[%d][%d]=%f\n",i,j+0,g[i*n+j+0]);
+      //printf("g[%d][%d]=%f\n",i,j+1,g[i*n+j+1]);
+      //printf("g[%d][%d]=%f\n",i,j+2,g[i*n+j+2]);
+      //printf("g[%d][%d]=%f\n",i,j+3,g[i*n+j+3]);
+#else
+      // WORKS
+      g[i*n+j] = g[i*n+j-1] + g[(i-1)*n+j] - g[(i-1)*n+j-1];
+      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
+      g[i*n+j+1] = g[i*n+j] + g[(i-1)*n+j+1] - g[(i-1)*n+j];
+      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
+      g[i*n+j+2] = g[i*n+j+1] + g[(i-1)*n+j+2] - g[(i-1)*n+j+1];
+      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
+      g[i*n+j+3] = g[i*n+j+2] + g[(i-1)*n+j+3] - g[(i-1)*n+j+2];
+      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
+#endif
+    }
+    for (int jj=j; j<endn; j++) {
+      g[i*n+j] = g[i*n+j-1] + g[(i-1)*n+j] - g[(i-1)*n+j-1];
+      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
     }
   }
 }
@@ -141,17 +227,9 @@ int main(int argc, char * argv[])
 
       if (iter==1) pipeline_time = prk_wtime();
 
-      if (mc==m && nc==n) {
-        for (int i=1; i<m; i++) {
-          for (int j=1; j<n; j++) {
-            grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-          }
-        }
-      } else {
-        for (int i=1; i<m; i+=mc) {
-          for (int j=1; j<n; j+=nc) {
-            sweep_tile(i, MIN(m,i+mc), j, MIN(n,j+nc), n, grid);
-          }
+      for (int i=1; i<m; i+=mc) {
+        for (int j=1; j<n; j+=nc) {
+          sweep_tile(i, MIN(m,i+mc), j, MIN(n,j+nc), n, grid);
         }
       }
       grid[0*n+0] = -grid[(m-1)*n+(n-1)];
