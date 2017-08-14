@@ -175,8 +175,10 @@ program main
   !$omp&  private(i,j,k,corner_val)
   !$omp master
 
+  ! TODO: switch this to taskloop once support more widely available
+  !       (GCC-6 does not have it, which breaks Travis builds)
   do j=1,n
-    !$omp task firstprivate(m,n) private(i,j) shared(grid)
+    !$omp task firstprivate(j,n) private(i,m) shared(grid)
     do i=1,m
       grid(i,j) = 0.0d0
     enddo
@@ -197,16 +199,21 @@ program main
 
     do ic=2,m,mc
       do jc=2,n,nc
-        !$omp task depend(in:grid(1,1),grid(ic-mc,jc-nc),grid(ic-mc,jc),grid(ic,jc-nc)) depend(out:grid(ic,jc))
+        !$omp task firstprivate(i,j,jc,mc,nc,m,n) shared(grid)                          &
+        !$omp&     depend(in:grid(1,1),grid(ic-mc,jc-nc),grid(ic-mc,jc),grid(ic,jc-nc)) &
+        !$omp&     depend(out:grid(ic,jc))
         call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
         !$omp end task
       enddo
     enddo
-    !$omp task depend(in:grid(lic,ljc)) depend(out:grid(1,1))
+    !$omp task firstprivate(m,n) shared(grid)                 &
+    !$omp&     depend(in:grid(lic,ljc)) depend(out:grid(1,1))
     grid(1,1) = -grid(m,n)
     !$omp end task
 
   enddo
+
+  !$omp taskwait
 
   t1 = prk_get_wtime()
   pipeline_time = t1 - t0
