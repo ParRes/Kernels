@@ -429,11 +429,13 @@ case "$PRK_TARGET" in
             case "$os" in
                 Linux)
                     ${CC} --version
-                    echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb" >> common/make.defs
+                    export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb"
+                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
                     export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
                     ;;
                 Darwin)
-                    echo "TBBFLAG=-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb" >> common/make.defs
+                    export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb"
+                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
                     export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
                     ;;
             esac
@@ -493,14 +495,22 @@ case "$PRK_TARGET" in
                 ;;
         esac
         # RAJA
-        echo "RAJAFLAG=-DUSE_RAJA -I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${EXTRAFLAG}" >> common/make.defs
+        echo "RAJAFLAG=-DUSE_RAJA -I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG} ${EXTRAFLAG}" >> common/make.defs
         make -C $PRK_TARGET_PATH stencil-vector-raja transpose-vector-raja
         $PRK_TARGET_PATH/stencil-vector-raja     10 1000
         # RAJA variant 11 should be the best
-        $PRK_TARGET_PATH/transpose-vector-raja   10 1024 11
+        $PRK_TARGET_PATH/transpose-vector-raja   10 1024
         # test all the RAJA variants with a smaller problem
-        for v in 1 2 3 4 5 6 7 10 11 12 13 14 15 ; do
-            $PRK_TARGET_PATH/transpose-vector-raja   10 200 $v
+        for f in seq omp tbb ; do
+         for s in y n ; do
+          for t in y n ; do
+           for n in y n ; do
+            for p in no ij ji ; do
+             $PRK_TARGET_PATH/transpose-vector-raja 4 200 nested=$n for=$f simd=$s tiled=$t permute=$p
+            done
+           done
+          done
+         done
         done
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
