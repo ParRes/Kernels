@@ -58,7 +58,7 @@ int main(int argc, char * argv[])
 
   Kokkos::initialize(argc, argv);
 
-  typedef Kokkos::OpenMP Space;
+  typedef Kokkos::PRK_KOKKOS_BACKEND Space;
   typedef Kokkos::TeamPolicy<Space>               team_policy ;
   typedef Kokkos::TeamPolicy<Space>::member_type  member_type ;
 
