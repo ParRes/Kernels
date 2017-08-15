@@ -51,6 +51,11 @@
 
 #include "prk_util.h"
 
+// We build with OpenMP unless it is not available...
+#ifndef PRK_KOKKOS_BACKEND
+#define PRK_KOKKOS_BACKEND OpenMP
+#endif
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;

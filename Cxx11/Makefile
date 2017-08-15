@@ -29,7 +29,6 @@ ifdef USE_PRK_KOKKOS_BACKEND
     KOKKOS_BACKEND_FLAG = -DPRK_KOKKOS_BACKEND=$(USE_PRK_KOKKOS_BACKEND)
 else
     $(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
-    KOKKOS_BACKEND_FLAG = -DPRK_KOKKOS_BACKEND=OpenMP
 endif
 
 OMPFLAGS = $(OPENMPFLAG)
