@@ -61,24 +61,40 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
+#ifdef _OPENMP
 #include "stencil_openmp.hpp"
+#else
+#include "stencil_seq.hpp"
+#endif
 
-int main(int argc, char * argv[])
+void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
+{
+    std::cout << "You are trying to use a stencil that does not exist.\n";
+    std::cout << "Please generate the new stencil using the code generator\n";
+    std::cout << "and add it to the case-switch in the driver." << std::endl;
+    // n will never be zero - this is to silence compiler warnings.
+    if (n==0 || t==0) std::cout << in.size() << out.size() << std::endl;
+    std::abort();
+}
+
+int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+#ifdef _OPENMP
   std::cout << "C++11/OpenMP Stencil execution on 2D grid" << std::endl;
+#else
+  std::cout << "C++11 Stencil execution on 2D grid" << std::endl;
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int n, radius;
+  int iterations, n, radius, tile_size;
   bool star = true;
   try {
-      if (argc < 3){
-        throw "Usage: <# iterations> <array dimension> [<star/grid> <radius>]";
+      if (argc < 3) {
+        throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
       }
 
       // number of times to run the algorithm
@@ -95,17 +111,25 @@ int main(int argc, char * argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-      // stencil pattern
+      // default tile size for tiling of local transpose
+      tile_size = 32;
       if (argc > 3) {
-          auto stencil = std::string(argv[3]);
+          tile_size = std::atoi(argv[3]);
+          if (tile_size <= 0) tile_size = n;
+          if (tile_size > n) tile_size = n;
+      }
+
+      // stencil pattern
+      if (argc > 4) {
+          auto stencil = std::string(argv[4]);
           auto grid = std::string("grid");
           star = (stencil == grid) ? false : true;
       }
 
       // stencil radius
       radius = 2;
-      if (argc > 4) {
-          radius = std::atoi(argv[4]);
+      if (argc > 5) {
+          radius = std::atoi(argv[5]);
       }
 
       if ( (radius < 1) || (2*radius+1 > n) ) {
@@ -117,30 +141,57 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
+#ifdef _OPENMP
+  std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
+#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
+
+  auto stencil = nothing;
+  if (star) {
+      switch (radius) {
+          case 1: stencil = star1; break;
+          case 2: stencil = star2; break;
+          case 3: stencil = star3; break;
+          case 4: stencil = star4; break;
+          case 5: stencil = star5; break;
+      }
+  } else {
+      switch (radius) {
+          case 1: stencil = grid1; break;
+          case 2: stencil = grid2; break;
+          case 3: stencil = grid3; break;
+          case 4: stencil = grid4; break;
+          case 5: stencil = grid5; break;
+      }
+  }
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
+
+  auto stencil_time = 0.0;
 
   std::vector<double> in;
   std::vector<double> out;
   in.resize(n*n);
   out.resize(n*n);
 
-  auto stencil_time = 0.0;
-
   OMP_PARALLEL()
   {
-    OMP_FOR()
-    for (auto i=0; i<n; i++) {
-      for (auto j=0; j<n; j++) {
-        in[i*n+j] = static_cast<double>(i+j);
-        out[i*n+j] = 0.0;
+    OMP_FOR( collapse(2) )
+    for (auto it=0; it<n; it+=tile_size) {
+      for (auto jt=0; jt<n; jt+=tile_size) {
+        for (auto i=it; i<std::min(n,it+tile_size); i++) {
+          PRAGMA_SIMD
+          for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
+            in[i*n+j] = static_cast<double>(i+j);
+            out[i*n+j] = 0.0;
+          }
+        }
       }
     }
 
@@ -153,40 +204,24 @@ int main(int argc, char * argv[])
       }
 
       // Apply the stencil operator
-      if (star) {
-          switch (radius) {
-              case 1: star1(n, in, out); break;
-              case 2: star2(n, in, out); break;
-              case 3: star3(n, in, out); break;
-              case 4: star4(n, in, out); break;
-              case 5: star5(n, in, out); break;
-              case 6: star6(n, in, out); break;
-              case 7: star7(n, in, out); break;
-              case 8: star8(n, in, out); break;
-              case 9: star9(n, in, out); break;
-              default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
+      stencil(n, tile_size, in, out);
+      // Add constant to solution to force refresh of neighbor data, if any
+#ifdef _OPENMP
+      OMP_FOR( collapse(2) )
+      for (auto it=0; it<n; it+=tile_size) {
+        for (auto jt=0; jt<n; jt+=tile_size) {
+          for (auto i=it; i<std::min(n,it+tile_size); i++) {
+            OMP_SIMD
+            for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
+              in[i*n+j] += 1.0;
+            }
           }
-      } else {
-          switch (radius) {
-              case 1: grid1(n, in, out); break;
-              case 2: grid2(n, in, out); break;
-              case 3: grid3(n, in, out); break;
-              case 4: grid4(n, in, out); break;
-              case 5: grid5(n, in, out); break;
-              case 6: grid6(n, in, out); break;
-              case 7: grid7(n, in, out); break;
-              case 8: grid8(n, in, out); break;
-              case 9: grid9(n, in, out); break;
-              default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
-          }
-      }
-      // add constant to solution to force refresh of neighbor data, if any
-      OMP_FOR()
-      for (auto i=0; i<n; i++) {
-        for (auto j=0; j<n; j++) {
-          in[i*n+j] += 1.0;
         }
       }
+
+#else
+      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
+#endif
     }
     OMP_BARRIER
     OMP_MASTER

@@ -61,7 +61,6 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
 // See ParallelSTL.md for important information.
 #if defined(USE_PSTL) && defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
 #include "stencil_pstl.hpp"
@@ -72,21 +71,30 @@
 #include "stencil_stl.hpp"
 #endif
 
-int main(int argc, char * argv[])
+void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
+{
+    std::cout << "You are trying to use a stencil that does not exist.\n";
+    std::cout << "Please generate the new stencil using the code generator\n";
+    std::cout << "and add it to the case-switch in the driver." << std::endl;
+    // n will never be zero - this is to silence compiler warnings.
+    if (n==0 || t==0) std::cout << in.size() << out.size() << std::endl;
+    std::abort();
+}
+
+int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++17/Parallel STL Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // process and test input parameters
+  // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int n, radius;
+  int iterations, n, radius, tile_size;
   bool star = true;
   try {
-      if (argc < 3){
-        throw "Usage: <# iterations> <array dimension> [<star/grid> <radius>]";
+      if (argc < 3) {
+        throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
       }
 
       // number of times to run the algorithm
@@ -103,17 +111,25 @@ int main(int argc, char * argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-      // stencil pattern
+      // default tile size for tiling of local transpose
+      tile_size = 32;
       if (argc > 3) {
-          auto stencil = std::string(argv[3]);
+          tile_size = std::atoi(argv[3]);
+          if (tile_size <= 0) tile_size = n;
+          if (tile_size > n) tile_size = n;
+      }
+
+      // stencil pattern
+      if (argc > 4) {
+          auto stencil = std::string(argv[4]);
           auto grid = std::string("grid");
           star = (stencil == grid) ? false : true;
       }
 
       // stencil radius
       radius = 2;
-      if (argc > 4) {
-          radius = std::atoi(argv[4]);
+      if (argc > 5) {
+          radius = std::atoi(argv[5]);
       }
 
       if ( (radius < 1) || (2*radius+1 > n) ) {
@@ -127,28 +143,45 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
+
+  auto stencil = nothing;
+  if (star) {
+      switch (radius) {
+          case 1: stencil = star1; break;
+          case 2: stencil = star2; break;
+          case 3: stencil = star3; break;
+          case 4: stencil = star4; break;
+          case 5: stencil = star5; break;
+      }
+  } else {
+      switch (radius) {
+          case 1: stencil = grid1; break;
+          case 2: stencil = grid2; break;
+          case 3: stencil = grid3; break;
+          case 4: stencil = grid4; break;
+          case 5: stencil = grid5; break;
+      }
+  }
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  // interior of grid with respect to stencil
-  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
+  auto stencil_time = 0.0;
 
   std::vector<double> in;
   std::vector<double> out;
   in.resize(n*n);
   out.resize(n*n);
 
-  auto stencil_time = 0.0;
-
   // initialize the input and output arrays
   auto range = boost::irange(0,n);
 #if defined(USE_PSTL) && defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
   std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+    std::for_each( pstl::execution::unseq, std::begin(range), std::end(range), [&] (int j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
   __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
@@ -164,42 +197,14 @@ int main(int argc, char * argv[])
   });
 
   for (auto iter = 0; iter<=iterations; iter++) {
-
     if (iter==1) stencil_time = prk::wtime();
-
     // Apply the stencil operator
-    if (star) {
-        switch (radius) {
-            case 1: star1(n, in, out); break;
-            case 2: star2(n, in, out); break;
-            case 3: star3(n, in, out); break;
-            case 4: star4(n, in, out); break;
-            case 5: star5(n, in, out); break;
-            case 6: star6(n, in, out); break;
-            case 7: star7(n, in, out); break;
-            case 8: star8(n, in, out); break;
-            case 9: star9(n, in, out); break;
-            default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
-        }
-    } else {
-        switch (radius) {
-            case 1: grid1(n, in, out); break;
-            case 2: grid2(n, in, out); break;
-            case 3: grid3(n, in, out); break;
-            case 4: grid4(n, in, out); break;
-            case 5: grid5(n, in, out); break;
-            case 6: grid6(n, in, out); break;
-            case 7: grid7(n, in, out); break;
-            case 8: grid8(n, in, out); break;
-            case 9: grid9(n, in, out); break;
-            default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
-        }
-    }
-    // add constant to solution to force refresh of neighbor data, if any
+    stencil(n, tile_size, in, out);
+    // Add constant to solution to force refresh of neighbor data, if any
 #if 0
 #if defined(USE_PSTL) && defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
     std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int j) {
+      std::for_each( pstl::execution::unseq, std::begin(range), std::end(range), [&] (int j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
       __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
@@ -228,6 +233,9 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
+
+  // interior of grid with respect to stencil
+  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
   // compute L1 norm in parallel
   double norm = 0.0;

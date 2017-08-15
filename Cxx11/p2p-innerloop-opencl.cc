@@ -134,7 +134,7 @@ void run(cl::Context context, int iterations, int n)
 #endif
   auto avgtime = pipeline_time/iterations;
   std::cout << "Rate (MFlops/s): "
-            << 2.0e-6 * ( (n-1)*(n-1) )/avgtime
+            << 2.0e-6 * ( (n-1.)*(n-1.) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
 }
 

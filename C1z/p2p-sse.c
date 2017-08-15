@@ -35,13 +35,13 @@
 ///
 /// PURPOSE: This program tests the efficiency with which point-to-point
 ///          synchronization can be carried out. It does so by executing
-///          a pipelined algorithm on an n^2 grid. The first array dimension
+///          a pipelined algorithm on an m*n grid. The first array dimension
 ///          is distributed among the threads (stripwise decomposition).
 ///
 /// USAGE:   The program takes as input the
 ///          dimensions of the grid, and the number of iterations on the grid
 ///
-///                <progname> <iterations> <n>
+///                <progname> <iterations> <m> <n>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -61,21 +61,62 @@
 
 #include "prk_util.h"
 
-int main(int argc, char* argv[])
+#include "immintrin.h"
+
+#if 0
+void print_m128d(const char * label, __m128d r)
+{
+  double d[2];
+  _mm_store_pd(d, r);
+  printf("%s = {%f,%f}\n", label, d[0], d[1]);
+}
+#endif
+
+static inline void sweep_tile(int startm, int endm,
+                              int startn, int endn,
+                              int n, double grid[])
+{
+  for (int i=startm; i<endm; i++) {
+    for (int j=startn; j<endn; j++) {
+#if 0
+      //grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+      //printf("(i,j)=(%d,%d)\n",i,j);
+      __m128d c0 = _mm_load_pd( &( grid[(i-1)*n+(j-1)] ) ); // { grid[(i-1)*n+(j-1)] , grid[(i-1)*n+j] }
+      //print_m128d("c0",c0);
+      __m128d c1 = _mm_load_sd( &( grid[  i  *n+(j-1)] ) ); // { grid[  i  *n+(j-1)] , 0 }
+      //print_m128d("c1",c1);
+      __m128d i0 = _mm_addsub_pd( c1 , c0 );                // { grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)] , grid[i*n+j] + grid[(i-1)*n+j] }
+      //print_m128d("i0",i0);
+      __m128d i1 = _mm_hadd_pd( i0 , _mm_setzero_pd() );    // { grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)] + grid[i*n+j] + grid[(i-1)*n+j] , 0 }
+      //print_m128d("i1",i1);
+      _mm_store_sd( &( grid[i*n+j] ) , i1 );                // grid[i*n+j] = { grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)] + grid[i*n+j] + grid[(i-1)*n+j] }
+#else
+      _mm_store_sd( &( grid[i*n+j] ) ,
+                    _mm_hadd_pd(
+                                 _mm_addsub_pd(
+                                                _mm_load_sd( &( grid[  i  *n+(j-1)] ) ) ,
+                                                _mm_load_pd( &( grid[(i-1)*n+(j-1)] ) )
+                                              ) ,
+                                 _mm_setzero_pd()
+                               )
+                  );
+#endif
+    }
+  }
+}
+
+int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
-#ifdef _OPENMP
-  printf("C11/OpenMP INNERLOOP pipeline execution on 2D grid\n");
-#else
-  printf("C11/Serial INNERLOOP pipeline execution on 2D grid\n");
-#endif
+  printf("C11 pipeline execution on 2D grid\n");
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 3) {
-    printf("Usage: <# iterations> <array dimension>\n");
+  if (argc < 4) {
+    printf("Usage: <# iterations> <first array dimension> <second array dimension>"
+           " [<first chunk dimension> <second chunk dimension>]\n");
     return 1;
   }
 
@@ -87,17 +128,25 @@ int main(int argc, char* argv[])
   }
 
   // grid dimensions
-  int n = atol(argv[2]);
-  if (n < 1) {
-    printf("ERROR: grid dimension must be positive: %d\n", n);
+  int m = atol(argv[2]);
+  int n = atol(argv[3]);
+  if (m < 1 || n < 1) {
+    printf("ERROR: grid dimensions must be positive: %d,%d\n", m, n);
     return 1;
   }
 
-#ifdef _OPENMP
-  printf("Number of threads (max)   = %d\n", omp_get_max_threads());
-#endif
+  // grid chunk dimensions
+  int mc = (argc > 4) ? atol(argv[4]) : m;
+  int nc = (argc > 5) ? atol(argv[5]) : n;
+  if (mc < 1 || mc > m || nc < 1 || nc > n) {
+    printf("WARNING: grid chunk dimensions invalid: %d,%d (ignoring)\n", mc, nc);
+    mc = m;
+    nc = n;
+  }
+
   printf("Number of iterations      = %d\n", iterations);
-  printf("Grid sizes                = %d,%d\n", n, n);
+  printf("Grid sizes                = %d,%d\n", m, n);
+  printf("Grid chunk sizes          = %d,%d\n", mc, nc);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -105,52 +154,33 @@ int main(int argc, char* argv[])
 
   double pipeline_time = 0.0; // silence compiler warning
 
-  size_t bytes = n*n*sizeof(double);
+  size_t bytes = m*n*sizeof(double);
   double * restrict grid = prk_malloc(bytes);
 
-  OMP_PARALLEL()
   {
-    OMP_FOR()
-    for (int i=0; i<n; i++) {
-      OMP_SIMD
+    for (int i=0; i<m; i++) {
       for (int j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
       }
     }
-
-    // set boundary values (bottom and left side of grid)
-    OMP_MASTER
-    {
-      for (int j=0; j<n; j++) {
-        grid[0*n+j] = (double)j;
-      }
-      for (int i=0; i<n; i++) {
-        grid[i*n+0] = (double)i;
-      }
+    for (int j=0; j<n; j++) {
+      grid[0*n+j] = (double)j;
     }
-    OMP_BARRIER
+    for (int i=0; i<m; i++) {
+      grid[i*n+0] = (double)i;
+    }
 
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          pipeline_time = prk_wtime();
-      }
+      if (iter==1) pipeline_time = prk_wtime();
 
-      for (int i=2; i<=2*n-2; i++) {
-        OMP_FOR(simd)
-        for (int j=MAX(2,i-n+2); j<=MIN(i,n); j++) {
-          const int x = i-j+2-1;
-          const int y = j-1;
-          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+      for (int i=1; i<m; i+=mc) {
+        for (int j=1; j<n; j+=nc) {
+          sweep_tile(i, MIN(m,i+mc), j, MIN(n,j+nc), n, grid);
         }
       }
-      OMP_MASTER
-      grid[0*n+0] = -grid[(n-1)*n+(n-1)];
+      grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
-    OMP_BARRIER
-    OMP_MASTER
     pipeline_time = prk_wtime() - pipeline_time;
   }
 
@@ -159,9 +189,9 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   const double epsilon = 1.e-8;
-  const double corner_val = ((iterations+1.)*(n+n-2.));
-  if ( (fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
-    printf("ERROR: checksum %lf does not match verification value %lf\n", grid[(n-1)*n+(n-1)], corner_val);
+  const double corner_val = ((iterations+1.)*(n+m-2.));
+  if ( (fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+    printf("ERROR: checksum %lf does not match verification value %lf\n", grid[(m-1)*n+(n-1)], corner_val);
     return 1;
   }
 
@@ -173,7 +203,7 @@ int main(int argc, char* argv[])
   printf("Solution validates\n" );
 #endif
   double avgtime = pipeline_time/iterations;
-  printf("Rate (MFlops/s): %lf Avg time (s): %lf\n", 2.0e-6 * ( (n-1)*(n-1) )/avgtime, avgtime );
+  printf("Rate (MFlops/s): %lf Avg time (s): %lf\n", 2.0e-6 * ( (m-1)*(n-1) )/avgtime, avgtime );
 
   return 0;
 }

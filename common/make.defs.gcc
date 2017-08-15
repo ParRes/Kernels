@@ -16,7 +16,7 @@ CXX=g++${VERSION} -std=gnu++17
 #
 # -mtune=native is appropriate for most cases.
 # -march=native is appropriate if you want portable binaries.
-DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
+DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -march=knl
 # See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
@@ -49,9 +49,9 @@ TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
 PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG}
 KOKKOSDIR=/opt/kokkos/gcc/openmp
-KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos ${OPENMPFLAG}
+KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
 RAJADIR=/opt/raja/gcc
-RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${OPENMPFLAG} ${CILKFLAG}
+RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 #
 # CUDA flags
 #

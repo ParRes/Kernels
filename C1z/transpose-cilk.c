@@ -84,17 +84,14 @@ int main(int argc, char * argv[])
   }
 
   // default tile size for tiling of local transpose
-  int tile_size = (argc>4) ? atoi(argv[3]) : 32;
+  int tile_size = (argc>3) ? atoi(argv[3]) : 32;
   // a negative tile size means no tiling of the local transpose
   if (tile_size <= 0) tile_size = order;
 
+  printf("Number of workers     = %d\n", __cilkrts_get_nworkers() );
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
-  if (tile_size < order) {
-      printf("Tile size             = %d\n", tile_size);
-  } else {
-      printf("Untiled" );
-  }
+  printf("Tile size             = %d\n", tile_size);
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix

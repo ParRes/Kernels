@@ -9,12 +9,18 @@ CFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 # debugging
 #CFLAGS += -DVERBOSE
 
+ifeq ($(findstring musl,$(CC)),musl)
+CFLAGS += -DUSE_C11_THREADS
+endif
+
+ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm $(CFLAGS)
+
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKFLAGS = $(CILKFLAG)
 
-.PHONY: all clean serial openmp target taskloop cilk
+.PHONY: all clean serial thread openmp target taskloop cilk
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(findstring icc,$(CC)),icc)
@@ -23,11 +29,13 @@ endif
 else
 TARGET = target
 endif
-all: serial openmp cilk taskloop $(TARGET)
+all: serial thread openmp cilk taskloop $(TARGET)
 
 serial: p2p p2p-innerloop stencil transpose
 
-openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+thread: transpose-thread
+
+openmp: p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
 target: stencil-target transpose-target
 
@@ -42,7 +50,7 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-taskloop: %-taskloop.c prk_util.h
-	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
+	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-openmp: %-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
@@ -52,6 +60,12 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 
 %: %.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
+%-openmp.s: %-openmp.c prk_util.h
+	$(CC) $(ASMFLAGS) $(OMPFLAGS) -S $< -o $@
+
+%.s: %.c prk_util.h
+	$(CC) $(ASMFLAGS) -S $< -o $@
 
 clean:
 	-rm -f *.o
@@ -64,6 +78,7 @@ clean:
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-cilk
+	-rm -f *-thread
 
 cleancl:
 	-rm -f star[123456789].cl

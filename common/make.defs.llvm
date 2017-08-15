@@ -4,21 +4,29 @@
 #
 # Base compilers and language options
 #
+LLVM_PATH=/usr/local/Cellar/llvm/4.0.1/bin/
 # C99 is required in some implementations.
-CC=/opt/llvm/4.0.0/bin/clang -std=c11
+CC=${LLVM_PATH}clang -std=c11
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Mfreeform -L/opt/llvm/pgi-flang/lib -Wl,-rpath=/opt/llvm/pgi-flang/lib
 # C++11 may not be required but does no harm here.
-CXX=/opt/llvm/4.0.0/bin/clang++ -std=c++1z
+CXX=${LLVM_PATH}clang++ -std=c++1z
 #
 # Compiler flags
 #
 # -mtune=native is appropriate for most cases.
 # -march=native is appropriate if you want portable binaries.
-DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
-# If you are compiling for KNL on a Xeon login node, use the following:
-# DEFAULT_OPT_FLAGS=-g -O3 -march=knl
-# See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
+#
+DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
+#
+# If you want to be specific, get the architecture options from:
+#   ${LLVM_PATH}llc --version
+# and then get the CPU/ISA options from (e.g. for x86-64):
+#   ${LLVM_PATH}llc -march=x86-64 -mcpu=help
+#
+# These are useful to understand why the compiler does not vectorize loops:
+#   DEFAULT_OPT_FLAGS+=-Rpass-analysis=loop-vectorize
+#   DEFAULT_OPT_FLAGS+=-Rpass=loop-vectorize
 #
 # OpenMP flags
 #
@@ -52,9 +60,9 @@ TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
 PSTLFLAG=
 KOKKOSDIR=/opt/kokkos/clang/openmp
-KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos ${OPENMPFLAG}
+KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
 RAJADIR=/opt/raja/clang
-RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${OPENMPFLAG} $(CILKFLAG)
+RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 #
 # CUDA flags
 #
