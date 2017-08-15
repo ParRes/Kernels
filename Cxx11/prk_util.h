@@ -183,6 +183,16 @@ extern "C" {
 # include "RAJA/RAJA.hpp"
 #endif
 
+#ifdef USE_THRUST
+# ifdef __NVCC__
+#  include "prk_cuda.h"
+#  include <thrust/device_vector.h>
+# endif
+# include <thrust/for_each.h>
+# include <thrust/iterator/counting_iterator.h>
+# include <thrust/execution_policy.h>
+#endif
+
 #define RESTRICT __restrict__
 
 namespace prk {

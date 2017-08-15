@@ -34,8 +34,9 @@ BOOSTFLAGS = $(BOOSTFLAG)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(BOOSTFLAGS)
+THRUSTFLAGS = $(THRUSTFLAG) $(BOOSTFLAGS)
 
-.PHONY: all clean run vector valarray openmp target opencl cilk taskloop tbb pstl rangefor kokkos raja cuda
+.PHONY: all clean run vector valarray openmp target opencl cilk taskloop tbb pstl rangefor kokkos raja thrust cuda
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(findstring icpc,$(CXX)),icpc)
@@ -70,6 +71,8 @@ rangefor: stencil-vector-rangefor transpose-vector-rangefor
 kokkos: stencil-kokkos transpose-kokkos
 
 raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja
+
+thrust: transpose-thrust
 
 cuda: transpose-cuda
 
@@ -109,6 +112,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-kokkos: %-kokkos.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
 
+%-thrust: %-thrust.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(THRUSTFLAGS) -o $@
+
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
@@ -133,6 +139,7 @@ clean:
 	-rm -f *-rangefor
 	-rm -f *-raja
 	-rm -f *-kokkos
+	-rm -f *-thrust
 	-rm -f *-cuda
 	-rm -f transpose-vector-async transpose-vector-thread
 
