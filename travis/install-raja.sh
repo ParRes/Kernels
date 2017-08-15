@@ -39,7 +39,7 @@ ${PRK_CXX} -v
 
 if [ ! -d "$TRAVIS_ROOT/raja" ]; then
     #BRANCH=develop
-    BRANCH=upstream/feature/trws/tbb-backend
+    BRANCH=feature/trws/tbb-backend
     git clone --depth 1 -b ${BRANCH} https://github.com/LLNL/RAJA.git
     cd RAJA
     mkdir build
