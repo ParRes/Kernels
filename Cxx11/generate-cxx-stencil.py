@@ -16,7 +16,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('          for (auto j=jt; j<std::min(n-'+str(radius)+',jt+t); ++j) {\n')
     elif (model=='taskloop'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out, const int gs) {\n')
-        src.write('    OMP_TASKLOOP( collapse(2) firstprivate(n) shared(in,out) grainsize(gs) )\n')
+        src.write('    OMP_TASKLOOP_COLLAPSE(2, firstprivate(n) shared(in,out) grainsize(gs) )\n')
         src.write('    for (auto it='+str(radius)+'; it<n-'+str(radius)+'; it+=t) {\n')
         src.write('      for (auto jt='+str(radius)+'; jt<n-'+str(radius)+'; jt+=t) {\n')
         src.write('        for (auto i=it; i<std::min(n-'+str(radius)+',it+t); ++i) {\n')

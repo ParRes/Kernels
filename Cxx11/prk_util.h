@@ -78,6 +78,11 @@
 #  define OMP_FOR_SIMD PRAGMA(omp for simd)
 #  define OMP_TASK(x) PRAGMA(omp task x)
 #  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
+#  if defined(__INTEL_COMPILER)
+#   define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop x )
+#  else
+#   define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop collapse(n) x )
+#  endif
 #  define OMP_TASKWAIT PRAGMA(omp taskwait)
 #  define OMP_ORDERED(x) PRAGMA(omp ordered x)
 #  define OMP_TARGET(x) PRAGMA(omp target x)
@@ -88,6 +93,7 @@
 #  define OMP_FOR_SIMD PRAGMA(omp for)
 #  define OMP_TASK(x)
 #  define OMP_TASKLOOP(x)
+#  define OMP_TASKLOOP_COLLAPSE(n,x)
 #  define OMP_TASKWAIT
 #  define OMP_ORDERED(x)
 #  define OMP_TARGET(x)
@@ -106,6 +112,7 @@
 # define OMP_FOR_SIMD
 # define OMP_TASK(x)
 # define OMP_TASKLOOP(x)
+# define OMP_TASKLOOP_COLLAPSE(n,x)
 # define OMP_TASKWAIT
 # define OMP_ORDERED(x)
 # define OMP_TARGET(x)
