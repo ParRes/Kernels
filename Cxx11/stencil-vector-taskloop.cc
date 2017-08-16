@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
       // stencil radius
       radius = 2;
       if (argc > 6) {
-          radius = std::atoi(argv[5]);
+          radius = std::atoi(argv[6]);
       }
 
       if ( (radius < 1) || (2*radius+1 > n) ) {
