@@ -41,12 +41,11 @@
 
 // Test standard library _after_ standard headers have been included...
 #if (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
-# error You are using an ancient version GNU libstdc++. \
-        Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
+# error You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
 #endif
 
 #if !(defined(__cplusplus) && (__cplusplus >= 201103L))
-# error You need a C++11 compiler.
+# error You need a C++11 compiler or a newer C++ standard library.
 #endif
 
 #include <string>
