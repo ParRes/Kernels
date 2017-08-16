@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
   OMP_PARALLEL()
   OMP_MASTER
   {
-    OMP_TASKLOOP( collapse(2) firstprivate(n) shared(in,out) grainsize(gs) )
+    OMP_TASKLOOP_COLLAPSE(2, firstprivate(n) shared(in,out) grainsize(gs) )
     for (auto it=0; it<n; it+=tile_size) {
       for (auto jt=0; jt<n; jt+=tile_size) {
         for (auto i=it; i<std::min(n,it+tile_size); i++) {
@@ -204,7 +204,7 @@ int main(int argc, char* argv[])
       OMP_TASKWAIT
 
       // Add constant to solution to force refresh of neighbor data, if any
-      OMP_TASKLOOP( collapse(2) firstprivate(n) shared(in,out) grainsize(gs) )
+      OMP_TASKLOOP_COLLAPSE(2, firstprivate(n) shared(in,out) grainsize(gs) )
       for (auto it=0; it<n; it+=tile_size) {
         for (auto jt=0; jt<n; jt+=tile_size) {
           for (auto i=it; i<std::min(n,it+tile_size); i++) {
