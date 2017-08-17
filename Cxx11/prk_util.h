@@ -32,18 +32,21 @@
 #ifndef PRK_UTIL_H
 #define PRK_UTIL_H
 
-#if !(defined(__cplusplus) && (__cplusplus >= 201103L))
-# error You need a C++11 compiler.
-#endif
-
-#define PRAGMA(x) _Pragma(#x)
-
 #include <cstdio>  // atoi
 #include <cstdlib> // getenv
 #include <cstdint>
 #include <climits>
 #include <cmath>   // fabs
 #include <cassert>
+
+// Test standard library _after_ standard headers have been included...
+#if (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
+# error You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
+#endif
+
+#if !(defined(__cplusplus) && (__cplusplus >= 201103L))
+# error You need a C++11 compiler or a newer C++ standard library.
+#endif
 
 #include <string>
 #include <iostream>
@@ -62,6 +65,8 @@
 #include <atomic>
 #include <numeric>
 #include <algorithm>
+
+#define PRAGMA(x) _Pragma(#x)
 
 #ifdef _OPENMP
 # include <omp.h>
