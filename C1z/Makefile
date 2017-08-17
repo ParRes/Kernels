@@ -53,7 +53,7 @@ taskloop: stencil-taskloop transpose-taskloop
 
 cilk: stencil-cilk transpose-cilk
 
-ispc: transpose-ispc
+ispc: stencil-ispc transpose-ispc
 
 p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
@@ -74,6 +74,9 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) -o $@
 
 %-ispc: %-ispc.o %.ispo
+	$(CC) $(CFLAGS) $^ -o $@
+
+stencil-ispc: stencil-ispc.o stencil_ispc.ispo stencil-util.ispo
 	$(CC) $(CFLAGS) $^ -o $@
 
 %: %.c prk_util.h
