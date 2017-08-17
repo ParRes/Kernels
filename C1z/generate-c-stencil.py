@@ -80,7 +80,7 @@ def instance(src,model,pattern,r):
 def main():
     for model in ['seq','openmp','target','cilk','taskloop','ispc']:
       if (model=='ispc'):
-        src = open('stencil_'+model+'.ispc','w')
+        src = open('stencil-ispc-kernels.ispc','w')
       else:
         src = open('stencil_'+model+'.h','w')
       if (model=='target'):

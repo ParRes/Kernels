@@ -70,13 +70,13 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 %-cilk: %-cilk.c prk_util.h
 	$(CC) $(CFLAGS) $< $(CILKFLAGS) $(EXTRA_CLIBS) -o $@
 
-%.ispo: %.ispc
+%.o: %.ispc
 	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) -o $@
 
-%-ispc: %-ispc.o %.ispo
+%-ispc: %-ispc.o %-ispc-kernels.o
 	$(CC) $(CFLAGS) $^ -o $@
 
-stencil-ispc: stencil-ispc.o stencil_ispc.ispo stencil-util.ispo
+stencil-ispc: stencil-ispc.o stencil-ispc-kernels.o stencil-ispc-utils.o
 	$(CC) $(CFLAGS) $^ -o $@
 
 %: %.c prk_util.h
