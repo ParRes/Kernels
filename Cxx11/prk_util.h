@@ -32,11 +32,11 @@
 #ifndef PRK_UTIL_H
 #define PRK_UTIL_H
 
-#include <cstdio>  // atoi
-#include <cstdlib> // getenv
+#include <cstdio>
+#include <cstdlib> // atoi, getenv
 #include <cstdint>
 #include <climits>
-#include <cmath>   // fabs
+#include <cmath>   // abs, fabs
 #include <cassert>
 
 // Test standard library _after_ standard headers have been included...
