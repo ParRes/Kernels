@@ -19,8 +19,9 @@ OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKFLAGS = $(CILKFLAG)
+ISPCFLAGS = $(ISPCFLAG)
 
-.PHONY: all clean serial thread openmp target taskloop cilk
+.PHONY: all clean serial thread openmp target taskloop cilk ispc
 
 ifeq ($(shell uname -s),Darwin)
 ifneq ($(findstring icc,$(CC)),icc)
@@ -29,7 +30,7 @@ endif
 else
 TARGET = target
 endif
-all: serial thread openmp cilk taskloop $(TARGET)
+all: serial thread openmp cilk taskloop $(TARGET) ispc
 
 serial: p2p p2p-innerloop stencil transpose
 
@@ -42,6 +43,8 @@ target: stencil-target transpose-target
 taskloop: stencil-taskloop transpose-taskloop
 
 cilk: stencil-cilk transpose-cilk
+
+ispc: transpose-ispc
 
 p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
@@ -57,6 +60,12 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 
 %-cilk: %-cilk.c prk_util.h
 	$(CC) $(CFLAGS) $< $(CILKFLAGS) $(EXTRA_CLIBS) -o $@
+
+%.ispo: %.ispc
+	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) -o $@
+
+%-ispc: %-ispc.o %.ispo
+	$(CC) $(CFLAGS) $^ -o $@
 
 %: %.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
@@ -79,6 +88,7 @@ clean:
 	-rm -f *-taskloop
 	-rm -f *-cilk
 	-rm -f *-thread
+	-rm -f *-ispc
 
 cleancl:
 	-rm -f star[123456789].cl

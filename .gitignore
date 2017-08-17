@@ -103,6 +103,7 @@ C1z/p2p
 C1z/p2p-innerloop
 C1z/p2p-innerloop-openmp
 C1z/p2p-tasks-openmp
+C1z/p2p-simd-openmp
 C1z/stencil
 C1z/stencil-cilk
 C1z/stencil-openmp
@@ -114,6 +115,7 @@ C1z/transpose-cilk
 C1z/transpose-openmp
 C1z/transpose-target
 C1z/transpose-taskloop
+C1z/transpose-ispc
 Cxx11/p2p-openmp-target
 Cxx11/p2p-tasks-openmp
 Cxx11/p2p-vector
