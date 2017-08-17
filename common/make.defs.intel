@@ -62,6 +62,11 @@ CUDAFLAGS=-g -O3 -std=c++11
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #
+# ISPC
+#
+ISPC=ispc
+ISPCFLAG=-O3 --target=host --opt=fast-math
+#
 # MPI
 #
 # We assume you have Intel MPI and have setup your environment with e.g.
