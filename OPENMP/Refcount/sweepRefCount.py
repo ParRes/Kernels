@@ -5,7 +5,7 @@ import subprocess
 
 def runCommand(command, logFileName):
     print command
-    subprocess.call(command + " >> " + logFileName, shell=True)
+#    subprocess.call(command + " >> " + logFileName, shell=True)
 
 from optparse import OptionParser          # requires python 2.3
 from socket import gethostname
