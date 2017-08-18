@@ -34,18 +34,29 @@ def generateLogName(testName):
 # (i.e. when there's one thread on each core in a socket).
 affinity = "KMP_AFFINITY=compact,granularity=fine "
 
+# Reduced exploration of sleep
+# Just look at one socket
+sleepSweep= (0,8,16,32,64,128,256,1024,2048,4096,8192)
+coreDelta = 16
+coreSweep = (28, )
+
+sleepSweep=(0,1024)
 hints    = ("none", "uncontended", "contended", "speculative")
 threads  = (1,2)
 maxCores = 4*28
+coreDelta = 8
+coreSweep = [1,2,4,8] + range(16,maxCores+coreDelta,coreDelta) + ([] if maxCores%coreDelta==0 else [maxCores,])
+
 
 for hint in hints:
     for threadsPerCore in threads:
-        logFile = generateLogName("refcount_"+str(threadsPerCore)+"T_"+hint)
-        print "Writing "+logFile
-        env = "KMP_HW_SUBSET="+str(threadsPerCore)+"T " + affinity
-        for coreCount in [1,2,4,8] + range(16,maxCores+8,8) + ([] if maxCores%8==0 else [maxCores,]):
-            if coreCount>maxCores:
-                continue        # Could be smarter, but really this doesn't matter at all
-            command = env+"./refcount " + str(coreCount*threadsPerCore) + " 10000000 1000 "+hint
-            runCommand (command, logFile)
+    	for sleep in sleepSweep:
+ 	    logFile = generateLogName("refcount-"+str(threadsPerCore)+"T-"+hint+"-"+str(sleep))
+ 	    print "Writing "+logFile
+            env = "KMP_HW_SUBSET="+str(threadsPerCore)+"T " + affinity
+            for coreCount in coreSweep:
+                if coreCount>maxCores:
+		    continue        # Could be smarter, but really this doesn't matter at all
+		command = env+"./refcount " + str(coreCount*threadsPerCore) + " 10000000 "+str(sleep) + " " + hint
+		runCommand (command, logFile)
             

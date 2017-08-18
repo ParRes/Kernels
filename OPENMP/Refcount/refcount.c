@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013, Intel Corporation
+Copyright (c) 2013-2017, Intel Corporation
  
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions 
@@ -312,9 +312,11 @@ int main(int argc, char ** argv)
 
   /* initialize the lock on which we will be pounding */
 #if LOCK==2
-  #if _OMP>=201611
+  #if _OPENMP>=201611
+  //  fprintf (stderr, "Lock initialized with hint %d\n", (int)lock_hint);
   omp_init_lock_with_hint(pcounter_lock,lock_hint);
   #else
+  //  fprintf (stderr, "Lock initialized with no hint\n");
   omp_init_lock(pcounter_lock);
   #endif
 #endif
@@ -447,14 +449,13 @@ int main(int argc, char ** argv)
      num_error = 1;
   }
 #if !CONTENDED
-  for (int t=0; t<nthread; t++) {
-    if (omp_get_thread_num()==t) error = MAX(error,num_error);
-  }
+#pragma omp critical
+  error = MAX(error,num_error);
 #else
   error = num_error;
 #endif
 #if CONTENDED
-  }
+  } /* end of omp master region */
 #endif
   } /* end of OpenMP parallel region */
  
@@ -466,10 +467,11 @@ int main(int argc, char ** argv)
     printf("Solution validates\n");
 #endif
 #if CONTENDED
-    updates=iterations;
+    updates=iterations-nthread;	/* Timed iterations; we execute nthread before we start the timer. */
 #else
     updates=iterations*nthread;
 #endif
+
     printf("Rate (MCPUPs/s): %lf time (s): %lf\n", 
            updates/refcount_time*1.e-6, refcount_time);
   }
