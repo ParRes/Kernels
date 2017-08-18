@@ -5,7 +5,7 @@ import subprocess
 
 def runCommand(command, logFileName):
     print command
-    subprocess.call(command + " >> " + logFileName, shell=True)
+#    subprocess.call(command + " >> " + logFileName, shell=True)
 
 from optparse import OptionParser          # requires python 2.3
 from socket import gethostname
@@ -40,7 +40,7 @@ maxCores = 4*28
 
 for hint in hints:
     for threadsPerCore in threads:
-        logFile = generateLogName("refcount_"+str(threadsPerCore)+"T_"+hint)
+        logFile = generateLogName("refcount-"+str(threadsPerCore)+"T-"+hint)
         print "Writing "+logFile
         env = "KMP_HW_SUBSET="+str(threadsPerCore)+"T " + affinity
         for coreCount in [1,2,4,8] + range(16,maxCores+8,8) + ([] if maxCores%8==0 else [maxCores,]):
