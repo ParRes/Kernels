@@ -25,19 +25,19 @@ COARRAY = coarray
 TARGET = target
 endif
 
-all: serial pretty openmp $(COARRAY) $(TARGET)
+all: serial pretty openmp tasks $(COARRAY) $(TARGET)
 
 serial: p2p stencil transpose p2p-innerloop
 
 pretty: stencil-pretty transpose-pretty
 
-openmp: p2p-tasks-openmp p2p-doacross-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
 tasks: p2p-tasks-openmp stencil-taskloop-openmp transpose-tasks-openmp transpose-taskloop-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
-target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
+target: stencil-openmp-target transpose-openmp-target
 
 ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc
 

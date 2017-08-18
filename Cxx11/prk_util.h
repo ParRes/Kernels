@@ -32,18 +32,21 @@
 #ifndef PRK_UTIL_H
 #define PRK_UTIL_H
 
-#if !(defined(__cplusplus) && (__cplusplus >= 201103L))
-# error You need a C++11 compiler.
-#endif
-
-#define PRAGMA(x) _Pragma(#x)
-
-#include <cstdio>  // atoi
-#include <cstdlib> // getenv
+#include <cstdio>
+#include <cstdlib> // atoi, getenv
 #include <cstdint>
 #include <climits>
-#include <cmath>   // fabs
+#include <cmath>   // abs, fabs
 #include <cassert>
+
+// Test standard library _after_ standard headers have been included...
+#if (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
+# error You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
+#endif
+
+#if !(defined(__cplusplus) && (__cplusplus >= 201103L))
+# error You need a C++11 compiler or a newer C++ standard library.
+#endif
 
 #include <string>
 #include <iostream>
@@ -51,6 +54,7 @@
 #include <exception>
 #include <chrono>
 #include <random>
+#include <typeinfo>
 
 #include <list>
 #include <vector>
@@ -62,8 +66,11 @@
 #include <numeric>
 #include <algorithm>
 
+#define PRAGMA(x) _Pragma(#x)
+
 #ifdef _OPENMP
 # include <omp.h>
+# define OMP(x) PRAGMA(omp x)
 # define OMP_PARALLEL(x) PRAGMA(omp parallel x)
 # define OMP_PARALLEL_FOR_REDUCE(x) PRAGMA(omp parallel for reduction (x) )
 # define OMP_MASTER PRAGMA(omp master)
@@ -76,6 +83,11 @@
 #  define OMP_FOR_SIMD PRAGMA(omp for simd)
 #  define OMP_TASK(x) PRAGMA(omp task x)
 #  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
+#  if defined(__INTEL_COMPILER)
+#   define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop x )
+#  else
+#   define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop collapse(n) x )
+#  endif
 #  define OMP_TASKWAIT PRAGMA(omp taskwait)
 #  define OMP_ORDERED(x) PRAGMA(omp ordered x)
 #  define OMP_TARGET(x) PRAGMA(omp target x)
@@ -86,6 +98,7 @@
 #  define OMP_FOR_SIMD PRAGMA(omp for)
 #  define OMP_TASK(x)
 #  define OMP_TASKLOOP(x)
+#  define OMP_TASKLOOP_COLLAPSE(n,x)
 #  define OMP_TASKWAIT
 #  define OMP_ORDERED(x)
 #  define OMP_TARGET(x)
@@ -93,6 +106,7 @@
 #  define OMP_END_DECLARE_TARGET
 # endif
 #else
+# define OMP(x)
 # define OMP_PARALLEL(x)
 # define OMP_PARALLEL_FOR_REDUCE(x)
 # define OMP_MASTER
@@ -103,6 +117,7 @@
 # define OMP_FOR_SIMD
 # define OMP_TASK(x)
 # define OMP_TASKLOOP(x)
+# define OMP_TASKLOOP_COLLAPSE(n,x)
 # define OMP_TASKWAIT
 # define OMP_ORDERED(x)
 # define OMP_TARGET(x)
@@ -112,18 +127,46 @@
 
 #ifdef __cilk
 # include <cilk/cilk.h>
+// Not defined in the header but documented at https://www.cilkplus.org/.
+extern "C" {
+    int __cilkrts_get_nworkers(void);
+}
 #endif
 
-#if defined(__INTEL_COMPILER) && !defined(PRAGMA_OMP_SIMD)
-# define PRAGMA_SIMD PRAGMA(simd)
+#if defined(__INTEL_COMPILER)
+//# define PRAGMA_SIMD PRAGMA(simd)
+// According to https://github.com/LLNL/RAJA/pull/310, this improves lambda performance
+# define PRAGMA_SIMD PRAGMA(simd) PRAGMA(ivdep)
+# define PRAGMA_INLINE PRAGMA(forceinline recursive)
+#elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
+# define PRAGMA_SIMD PRAGMA(GCC ivdep)
+# define PRAGMA_INLINE PRAGMA(inline)
+#elif defined(__clang__)
+//# define PRAGMA_SIMD PRAGMA(clang loop vectorize(enable))
+# define PRAGMA_SIMD PRAGMA(clang loop vectorize(assume_safety))
+# define PRAGMA_INLINE
 #else
 # define PRAGMA_SIMD
+# define PRAGMA_INLINE
 #endif
 
 #ifdef USE_TBB
 # include <tbb/tbb.h>
 # include <tbb/parallel_for.h>
 # include <tbb/blocked_range.h>
+# if ( PRK_TBB_PARTITIONER == 1)
+//#  warning STATIC
+   tbb::static_partitioner tbb_partitioner;
+# elif ( PRK_TBB_PARTITIONER == 2)
+//#  warning AFFINITY
+   tbb::affinity_partitioner tbb_partitioner;
+# elif ( PRK_TBB_PARTITIONER == 3)
+//#  warning SIMPLE
+   tbb::simple_partitioner tbb_partitioner;
+# else
+//#  warning AUTO
+   tbb::auto_partitioner tbb_partitioner;
+# endif
 #endif
 
 #ifdef USE_BOOST
@@ -144,7 +187,6 @@
 #endif
 
 #ifdef USE_KOKKOS
-# include <typeinfo>
 # include <Kokkos_Core.hpp>
 #endif
 

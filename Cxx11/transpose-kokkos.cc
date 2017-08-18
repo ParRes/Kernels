@@ -51,12 +51,28 @@
 
 #include "prk_util.h"
 
+// We build with OpenMP unless it is not available...
+#ifndef PRK_KOKKOS_BACKEND
+#define PRK_KOKKOS_BACKEND OpenMP
+#endif
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/Kokkos Stencil execution on 2D grid" << std::endl;
 
   Kokkos::initialize(argc, argv);
+
+  typedef Kokkos::PRK_KOKKOS_BACKEND Space;
+  typedef Kokkos::TeamPolicy<Space>               team_policy ;
+  typedef Kokkos::TeamPolicy<Space>::member_type  member_type ;
+
+  // row-major 2D array
+  typedef Kokkos::View<double**, Kokkos::LayoutRight, Space> matrix;
+  // column-major 2D array
+  //typedef Kokkos::View<double**, Kokkos::LayoutLeft, Space> matrix;
+  // default 2D array
+  //typedef Kokkos::View<double**, Space> matrix;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -90,27 +106,32 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-
-  std::cout << "Kokkos execution space: " << typeid (Kokkos::DefaultExecutionSpace).name () << std::endl;
+  std::cout << "Kokkos execution space: " << typeid(Kokkos::DefaultExecutionSpace).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  // row-major 2D array
-  typedef Kokkos::View<double**, Kokkos::LayoutRight> matrix;
-  //typedef Kokkos::View<double**, Kokkos::LayoutLeft> matrix;
-  //typedef Kokkos::View<double**> matrix;
   matrix A("A", order, order);
   matrix B("B", order, order);
 
   try {
+#if 0
     Kokkos::parallel_for ( order, KOKKOS_LAMBDA(const int i) {
       for (auto j=0; j<order; ++j){
           A(i,j) = static_cast<double>(i*order+j);
           B(i,j) = 0.0;
       }
     });
+#else
+    Kokkos::parallel_for( team_policy(order, Kokkos::AUTO), KOKKOS_LAMBDA(const member_type& teamMember) {
+      const int i = teamMember.league_rank();
+      Kokkos::parallel_for( Kokkos::TeamThreadRange(teamMember, order), [&](const int j) {
+        A(i,j) = static_cast<double>(i*order+j);
+        B(i,j) = 0.0;
+      });
+    });
+#endif
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -128,12 +149,22 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     try {
+#if 0
       Kokkos::parallel_for ( order, KOKKOS_LAMBDA(const int i) {
         for (auto j=0; j<order; ++j){
           B(i,j) += A(j,i);
           A(j,i) += 1.0;
         }
       });
+#else
+      Kokkos::parallel_for( team_policy(order, Kokkos::AUTO), KOKKOS_LAMBDA(const member_type& teamMember) {
+        const int i = teamMember.league_rank();
+        Kokkos::parallel_for( Kokkos::TeamThreadRange(teamMember, order), [&](const int j) {
+          B(i,j) += A(j,i);
+          A(j,i) += 1.0;
+        });
+      });
+#endif
     }
     catch (const char * e) {
       std::cout << e << std::endl;
@@ -153,8 +184,9 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
+  const double addit = (iterations+1.) * (0.5*iterations);
+  double abserr(0);
+#if 0
   auto range = boost::irange(0,order);
   for (auto i : range) {
     for (auto j : range) {
@@ -163,6 +195,20 @@ int main(int argc, char * argv[])
       abserr += std::fabs(B(j,i) - reference);
     }
   }
+#else
+  Kokkos::parallel_reduce( team_policy(order, Kokkos::AUTO), KOKKOS_LAMBDA(const member_type & teamMember, double & update) {
+    const int i = teamMember.league_rank();
+    double temp(0);
+    Kokkos::parallel_reduce( Kokkos::TeamThreadRange(teamMember, order), [&](const int j, double & inner) {
+      const size_t ij = i*order+j;
+      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+      inner += std::fabs(B(j,i) - reference);
+    }, temp);
+    Kokkos::single( Kokkos::PerTeam( teamMember ), [&] () {
+        update += temp;
+    });
+  }, abserr);
+#endif
 
 #ifdef VERBOSE
   std::cout << "Sum of absolute differences: " << abserr << std::endl;

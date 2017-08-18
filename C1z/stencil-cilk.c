@@ -123,6 +123,7 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+  printf("Number of workers         = %d\n", __cilkrts_get_nworkers() );
   printf("Number of iterations      = %d\n", iterations);
   printf("Grid sizes                = %d\n", n);
   printf("Type of stencil           = %s\n", (star ? "star" : "grid") );

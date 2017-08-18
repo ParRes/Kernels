@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
   }
 
   // default tile size for tiling of local transpose
-  int tile_size = (argc>4) ? atoi(argv[3]) : 32;
+  int tile_size = (argc>3) ? atoi(argv[3]) : 32;
   // a negative tile size means no tiling of the local transpose
   if (tile_size <= 0) tile_size = order;
 
@@ -93,11 +93,7 @@ int main(int argc, char * argv[])
 #endif
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
-  if (tile_size < order) {
-      printf("Tile size             = %d\n", tile_size);
-  } else {
-      printf("Untiled" );
-  }
+  printf("Tile size             = %d\n", tile_size);
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -113,7 +109,7 @@ int main(int argc, char * argv[])
   // initialize the input and output arrays
   OMP_PARALLEL()
   {
-    OMP_FOR
+    OMP_FOR()
     for (int i=0;i<order; i++) {
       for (int j=0;j<order;j++) {
         A[i*order+j] = (double)(i*order+j);
@@ -123,20 +119,15 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  OMP_TARGET( map(tofrom: A[0:order*order], B[0:order*order]) map(from:trans_time) )
-  OMP_PARALLEL()
+  OMP_TARGET( data map(tofrom: A[0:order*order], B[0:order*order]) )
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          trans_time = omp_get_wtime();
-      }
+      if (iter==1) trans_time = prk_wtime();
 
       // transpose the  matrix
       if (tile_size < order) {
-        OMP_FOR
+        OMP_TARGET( teams distribute parallel for simd collapse(2) )
         for (int it=0; it<order; it+=tile_size) {
           for (int jt=0; jt<order; jt+=tile_size) {
             for (int i=it; i<MIN(order,it+tile_size); i++) {
@@ -148,7 +139,7 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        OMP_FOR
+        OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
         for (int i=0;i<order; i++) {
           for (int j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
@@ -157,9 +148,7 @@ int main(int argc, char * argv[])
         }
       }
     }
-    OMP_BARRIER
-    OMP_MASTER
-    trans_time = omp_get_wtime() - trans_time;
+    trans_time = prk_wtime() - trans_time;
   }
 
   //////////////////////////////////////////////////////////////////////

@@ -99,10 +99,12 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
+  std::cout << "Taskloop grainsize   = " << gs << std::endl;
+#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
-  std::cout << "Taskloop grainsize   = " << gs << std::endl;
   std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
@@ -136,7 +138,7 @@ int main(int argc, char * argv[])
 
       // transpose the  matrix
       if (tile_size < order) {
-        OMP_TASKLOOP( firstprivate(order) shared(A,B) grainsize(gs) )
+        OMP_TASKLOOP_COLLAPSE(2, firstprivate(order) shared(A,B) grainsize(gs) )
         for (auto it=0; it<order; it+=tile_size) {
           for (auto jt=0; jt<order; jt+=tile_size) {
             for (auto i=it; i<std::min(order,it+tile_size); i++) {

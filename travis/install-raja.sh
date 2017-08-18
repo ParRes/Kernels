@@ -38,14 +38,15 @@ esac
 ${PRK_CXX} -v
 
 if [ ! -d "$TRAVIS_ROOT/raja" ]; then
-    BRANCH=develop
+    #BRANCH=develop
+    BRANCH=feature/trws/tbb-backend
     git clone --depth 1 -b ${BRANCH} https://github.com/LLNL/RAJA.git
     cd RAJA
     mkdir build
     cd build
     cmake .. -DCMAKE_CXX_COMPILER=${PRK_CXX} -DCMAKE_C_COMPILER=${PRK_CC} \
              -DCMAKE_INSTALL_PREFIX=${TRAVIS_ROOT}/raja \
-             -DRAJA_ENABLE_OPENMP=On
+             -DRAJA_ENABLE_OPENMP=On -DRAJA_ENABLE_TBB=On
     make -j2
     make install -j2
 else
