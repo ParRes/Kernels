@@ -88,6 +88,15 @@ stencil-ispc: stencil-ispc.o stencil-ispc-kernels.o stencil-ispc-utils.o
 %.s: %.c prk_util.h
 	$(CC) $(ASMFLAGS) -S $< -o $@
 
+%.cpp: %.ispc
+	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) --emit-c++ --target=generic-x8 -o $@
+
+%.ll: %.ispc
+	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) --emit-llvm -o $@
+
+%.s: %.ispc
+	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) --emit-asm -o $@
+
 clean:
 	-rm -f *.o
 	-rm -f *.s
