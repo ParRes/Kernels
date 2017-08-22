@@ -6,7 +6,9 @@ CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
 CXXFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 
 # debugging
-#CXXFLAGS += -DVERBOSE
+ifdef VERBOSE
+    CXXFLAGS += -DVERBOSE
+endif
 
 ifeq ($(USE_PRK_TBB_PARTITIONER),static)
     PRK_TBB_PARTITIONER=1
@@ -22,6 +24,13 @@ ifndef PRK_TBB_PARTITIONER
     PRK_TBB_PARTITIONER=0
 endif
 
+# Valid choices are OpenMP, Threads, Serial, Cuda
+ifdef USE_PRK_KOKKOS_BACKEND
+    KOKKOS_BACKEND_FLAG = -DPRK_KOKKOS_BACKEND=$(USE_PRK_KOKKOS_BACKEND)
+else
+    $(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
+endif
+
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
 OPENCLFLAGS = $(OPENCLFLAG)
@@ -35,6 +44,7 @@ PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(BOOSTFLAGS)
 THRUSTFLAGS = $(THRUSTFLAG) $(BOOSTFLAGS)
+KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
 
 .PHONY: all clean run vector valarray openmp target opencl cilk taskloop tbb pstl rangefor kokkos raja thrust cuda
 

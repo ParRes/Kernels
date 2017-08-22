@@ -42,7 +42,7 @@ esac
 
 if [ ! -d "$TRAVIS_ROOT/charm" ]; then
     cd $TRAVIS_ROOT
-    git clone --depth 1 -b v6.8.0-beta2 https://charm.cs.illinois.edu/gerrit/charm.git charm
+    git clone --depth 1 -b v6.8.0 https://charm.cs.illinois.edu/gerrit/charm.git charm
     cd charm
     case "$os" in
         Darwin)

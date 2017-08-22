@@ -419,6 +419,7 @@ int main(int argc, char ** argv)
   }
 #if !CONTENDED
   for (int t=0; t<nthread; t++) {
+#pragma omp critical
     if (omp_get_thread_num()==t) error = MAX(error,num_error);
   }
 #else
