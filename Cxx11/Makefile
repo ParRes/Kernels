@@ -80,7 +80,7 @@ kokkos: stencil-kokkos transpose-kokkos
 
 raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja
 
-cuda: transpose-cuda
+cuda: transpose-cuda transpose-cublas
 
 p2p-innerloop-vector: p2p-innerloop-vector-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -120,6 +120,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
+
+%-cublas: %-cublas.cu prk_util.h prk_cuda.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas -lcblas -o $@
 
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
