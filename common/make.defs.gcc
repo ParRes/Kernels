@@ -58,10 +58,10 @@ THRUSTFLAG=-DUSE_THRUST -I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_C
 # CUDA flags
 #
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
-NVCC=/opt/llvm/cocl/bin/cocl
+#NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-#NVCC=nvcc
-CUDAFLAGS=-g -O3 -std=c++11
+NVCC=nvcc
+CUDAFLAGS=-g -O3 -std=c++11 -arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #

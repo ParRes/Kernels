@@ -82,7 +82,7 @@ kokkos: stencil-kokkos transpose-kokkos
 
 raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja
 
-thrust: transpose-thrust
+thrust: transpose-host-thrust transpose-device-thrust
 
 cuda: transpose-cuda
 

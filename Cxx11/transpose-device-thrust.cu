@@ -49,36 +49,36 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <cstdio>
-#include <cstdlib> // atoi, getenv
-#include <cstdint>
-#include <climits>
-#include <cmath>   // abs, fabs
-#include <cassert>
+#include "prk_util.h"
 
-#include <string>
-#include <iostream>
-#include <iomanip> // std::setprecision
-#include <exception>
-#include <chrono>
-#include <random>
-#include <typeinfo>
+struct x : public thrust::unary_function<void,int>
+{
+    int i;
+    int order;
+    thrust::device_vector<double> & A;
+    thrust::device_vector<double> & B;
 
-#include <list>
-#include <vector>
-#include <valarray>
-#include <array>
-#include <thread>
-#include <future>
-#include <atomic>
-#include <numeric>
-#include <algorithm>
+    x(int i, int order, thrust::device_vector<double> & A, thrust::device_vector<double> & B) :
+        i(i), order(order), A(A), B(B) {}
 
-#include <thrust/fill.h>
-#include <thrust/for_each.h>
-#include <thrust/iterator/counting_iterator.h>
-#include <thrust/execution_policy.h>
-#include <thrust/device_vector.h>
+    __host__ __device__
+    void operator()(int j)
+    {
+        B[i*order+j] += A[j*order+i];
+        A[j*order+i] += 1.0;
+        return;
+    }
+};
+
+//__device__
+void transpose(const int order, thrust::device_vector<double> & A, thrust::device_vector<double> & B)
+{
+    thrust::counting_iterator<int> start(0);
+    thrust::counting_iterator<int> end = start + order;
+    thrust::for_each( thrust::device, start, end, [=,&A,&B] (int i) {
+      thrust::for_each( thrust::device, start, end, x(i,order,A,B) );
+    });
+}
 
 int main(int argc, char * argv[])
 {
@@ -125,8 +125,8 @@ int main(int argc, char * argv[])
   thrust::device_vector<double> A(order*order);
   thrust::device_vector<double> B(order*order);
   // fill A with the sequence 0 to order^2-1 as doubles
-  //thrust::fill(thrust::device, A.begin(), A.end(), 0.0);
-  //std::iota(A.begin(), A.end(), 0.0);
+  thrust::sequence(thrust::device, A.begin(), A.end() );
+  thrust::fill(thrust::device, B.begin(), B.end(), 0.0);
 
   auto range = boost::irange(0,order);
 
@@ -136,10 +136,11 @@ int main(int argc, char * argv[])
 
     if (iter==1) trans_time = prk::wtime();
 
-    // transpose
-#if 0
-    std::for_each( thrust::host, std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( thrust::host, std::begin(range), std::end(range), [&] (int j) {
+#if 1
+    transpose(order, A, B);
+#else
+    thrust::for_each( std::begin(range), std::end(range), [=,&A,&B] (int i) {
+      thrust::for_each( std::begin(range), std::end(range), [=,&A,&B] (int j) {
         B[i*order+j] += A[j*order+i];
         A[j*order+i] += 1.0;
       });
@@ -152,7 +153,6 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-#if 0
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
@@ -181,7 +181,7 @@ int main(int argc, char * argv[])
               << " exceeds threshold " << epsilon << std::endl;
     return 1;
   }
-#endif
+
   return 0;
 }
 

@@ -52,19 +52,23 @@
 #include <iostream>
 #include <iomanip> // std::setprecision
 #include <exception>
-#include <chrono>
-#include <random>
-#include <typeinfo>
-
 #include <list>
 #include <vector>
 #include <valarray>
+
+#include <chrono>
+#include <random>
+#include <typeinfo>
 #include <array>
-#include <thread>
-#include <future>
 #include <atomic>
 #include <numeric>
 #include <algorithm>
+
+// These headers are busted with NVCC and GCC 5.4.0
+#ifndef __NVCC__
+#include <thread>
+#include <future>
+#endif
 
 #define PRAGMA(x) _Pragma(#x)
 
@@ -201,6 +205,7 @@ extern "C" {
 # endif
 # include <thrust/host_vector.h>
 # include <thrust/fill.h>
+# include <thrust/sequence.h>
 # include <thrust/for_each.h>
 # include <thrust/iterator/counting_iterator.h>
 # include <thrust/execution_policy.h>
