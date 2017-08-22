@@ -49,7 +49,36 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include "prk_util.h"
+#include <cstdio>
+#include <cstdlib> // atoi, getenv
+#include <cstdint>
+#include <climits>
+#include <cmath>   // abs, fabs
+#include <cassert>
+
+#include <string>
+#include <iostream>
+#include <iomanip> // std::setprecision
+#include <exception>
+#include <chrono>
+#include <random>
+#include <typeinfo>
+
+#include <list>
+#include <vector>
+#include <valarray>
+#include <array>
+#include <thread>
+#include <future>
+#include <atomic>
+#include <numeric>
+#include <algorithm>
+
+#include <thrust/fill.h>
+#include <thrust/for_each.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/execution_policy.h>
+#include <thrust/device_vector.h>
 
 int main(int argc, char * argv[])
 {
@@ -93,11 +122,11 @@ int main(int argc, char * argv[])
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  thrust::host_vector<double> A(order*order);
-  thrust::host_vector<double> B(order*order);
+  thrust::device_vector<double> A(order*order);
+  thrust::device_vector<double> B(order*order);
   // fill A with the sequence 0 to order^2-1 as doubles
-  thrust::sequence(thrust::host, A.begin(), A.end() );
-  thrust::fill(thrust::host, B.begin(), B.end(), 0.0);
+  //thrust::fill(thrust::device, A.begin(), A.end(), 0.0);
+  //std::iota(A.begin(), A.end(), 0.0);
 
   auto range = boost::irange(0,order);
 
@@ -108,12 +137,14 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     // transpose
-    thrust::for_each( thrust::host, std::begin(range), std::end(range), [&] (int i) {
-      thrust::for_each( thrust::host, std::begin(range), std::end(range), [&] (int j) {
+#if 0
+    std::for_each( thrust::host, std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( thrust::host, std::begin(range), std::end(range), [&] (int j) {
         B[i*order+j] += A[j*order+i];
         A[j*order+i] += 1.0;
       });
     });
+#endif
   }
   trans_time = prk::wtime() - trans_time;
 
@@ -121,6 +152,7 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
+#if 0
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
@@ -149,7 +181,7 @@ int main(int argc, char * argv[])
               << " exceeds threshold " << epsilon << std::endl;
     return 1;
   }
-
+#endif
   return 0;
 }
 

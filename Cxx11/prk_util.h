@@ -197,9 +197,10 @@ extern "C" {
 
 #ifdef USE_THRUST
 # ifdef __NVCC__
-#  include "prk_cuda.h"
 #  include <thrust/device_vector.h>
 # endif
+# include <thrust/host_vector.h>
+# include <thrust/fill.h>
 # include <thrust/for_each.h>
 # include <thrust/iterator/counting_iterator.h>
 # include <thrust/execution_policy.h>

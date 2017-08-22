@@ -122,8 +122,13 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-kokkos: %-kokkos.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
 
+# for host execution
 %-thrust: %-thrust.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(THRUSTFLAGS) -o $@
+
+# for device execution (must compiler as .cu)
+%-thrust: %-thrust.cu prk_util.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< $(THRUSTFLAGS) -o $@
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
