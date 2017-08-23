@@ -108,17 +108,21 @@ int main(int argc, char * argv[])
   const size_t bytes = nelems * sizeof(float);
   float * h_a;
   float * h_b;
+#if 1
   float * h_o;
+  prk::CUDAcheck( cudaMallocHost((float**)&h_o, bytes) );
+#endif
   prk::CUDAcheck( cudaMallocHost((float**)&h_a, bytes) );
   prk::CUDAcheck( cudaMallocHost((float**)&h_b, bytes) );
-  prk::CUDAcheck( cudaMallocHost((float**)&h_o, bytes) );
 
   // fill A with the sequence 0 to order^2-1 as floats
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       h_a[j*order+i] = order*j+i;
       h_b[j*order+i] = 0.0f;
+#if 1
       h_o[j*order+i] = 1.0f;
+#endif
     }
   }
 
@@ -129,8 +133,6 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     float one(1);
-#if 0
-    // THIS IS WRONG
     // B += trans(A) i.e. B = trans(A) + B
     cublasSgeam(h,
                 CUBLAS_OP_T, CUBLAS_OP_N,   // opA, opB
@@ -138,13 +140,6 @@ int main(int argc, char * argv[])
                 &one, h_a, order,           // alpha, A, lda
                 &one, h_b, order,           // beta, B, ldb
                 h_b, order);                // C, ldc (in-place for B)
-#else
-    for (auto i=0;i<order; i++) {
-      for (auto j=0;j<order;j++) {
-        h_b[i*order+j] += h_a[j*order+i];
-      }
-    }
-#endif
     // A += 1.0 i.e. A = 1.0 * 1.0 + A
 #if 0
     // THIS IS BUGGY
@@ -153,27 +148,22 @@ int main(int argc, char * argv[])
                 &one,                       // alpha
                 &one, 0,                    // x, incx
                 h_a, 1);                    // y, incy
-#elif 1
+#else
     // THIS IS CORRECT
     cublasSaxpy(h,
                 order*order,                // n
                 &one,                       // alpha
                 h_o, 1,                     // x, incx
                 h_a, 1);                    // y, incy
-#elif 0
-    // THIS IS WRONG
-    cblas_saxpy(order*order, 1.0f, &one, 0, h_b, 1);
-#else
-    for (auto i=0;i<order; i++) {
-      for (auto j=0;j<order;j++) {
-        h_a[j*order+i] += 1.0;
-      }
-    }
 #endif
-
+    // The performance is ~10% better if this is done every iteration,
+    // instead of only once before the timer is stopped.
     prk::CUDAcheck( cudaDeviceSynchronize() );
   }
   trans_time = prk::wtime() - trans_time;
+
+  prk::CUDAcheck( cudaFreeHost(h_o) );
+  prk::CUDAcheck( cudaFreeHost(h_a) );
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -195,10 +185,6 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  prk::CUDAcheck( cudaFreeHost(h_o) );
-  prk::CUDAcheck( cudaFreeHost(h_b) );
-  prk::CUDAcheck( cudaFreeHost(h_a) );
-
   const auto epsilon = 1.0e-8;
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
@@ -218,6 +204,8 @@ int main(int argc, char * argv[])
               << " exceeds threshold " << epsilon << std::endl;
     return 1;
   }
+
+  prk::CUDAcheck( cudaFreeHost(h_b) );
 
   return 0;
 }
