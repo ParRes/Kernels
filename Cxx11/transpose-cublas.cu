@@ -108,10 +108,6 @@ int main(int argc, char * argv[])
   const size_t bytes = nelems * sizeof(float);
   float * h_a;
   float * h_b;
-#if 1
-  float * h_o;
-  prk::CUDAcheck( cudaMallocHost((float**)&h_o, bytes) );
-#endif
   prk::CUDAcheck( cudaMallocHost((float**)&h_a, bytes) );
   prk::CUDAcheck( cudaMallocHost((float**)&h_b, bytes) );
 
@@ -120,11 +116,41 @@ int main(int argc, char * argv[])
     for (auto i=0; i<order; i++) {
       h_a[j*order+i] = order*j+i;
       h_b[j*order+i] = 0.0f;
-#if 1
-      h_o[j*order+i] = 1.0f;
-#endif
     }
   }
+
+  // copy input from host to device
+  float * d_a;
+  float * d_b;
+  prk::CUDAcheck( cudaMalloc((float**)&d_a, bytes) );
+  prk::CUDAcheck( cudaMalloc((float**)&d_b, bytes) );
+  prk::CUDAcheck( cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::CUDAcheck( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
+
+#if 1
+  // We need a vector of ones because CUBLAS saxpy do does
+  // correctly implement incx=0.
+  float * h_o;
+  prk::CUDAcheck( cudaMallocHost((float**)&h_o, bytes) );
+  for (auto j=0; j<order; j++) {
+    for (auto i=0; i<order; i++) {
+      h_o[j*order+i] = 1.0f;
+    }
+  }
+  float * d_o;
+  prk::CUDAcheck( cudaMalloc((float**)&d_o, bytes) );
+  prk::CUDAcheck( cudaMemcpy(d_o, &(h_o[0]), bytes, cudaMemcpyHostToDevice) );
+#endif
+
+#ifdef USE_HOST_BUFFERS
+  float p_a = h_a;
+  float p_b = h_b;
+  float p_o = h_o;
+#else
+  float * p_a = d_a;
+  float * p_b = d_b;
+  float * p_o = d_o;
+#endif
 
   auto trans_time = 0.0;
 
@@ -137,9 +163,9 @@ int main(int argc, char * argv[])
     cublasSgeam(h,
                 CUBLAS_OP_T, CUBLAS_OP_N,   // opA, opB
                 order, order,               // m, n
-                &one, h_a, order,           // alpha, A, lda
-                &one, h_b, order,           // beta, B, ldb
-                h_b, order);                // C, ldc (in-place for B)
+                &one, p_a, order,           // alpha, A, lda
+                &one, p_b, order,           // beta, B, ldb
+                p_b, order);                // C, ldc (in-place for B)
     // A += 1.0 i.e. A = 1.0 * 1.0 + A
 #if 0
     // THIS IS BUGGY
@@ -147,22 +173,32 @@ int main(int argc, char * argv[])
                 order*order,                // n
                 &one,                       // alpha
                 &one, 0,                    // x, incx
-                h_a, 1);                    // y, incy
+                p_a, 1);                    // y, incy
 #else
     // THIS IS CORRECT
     cublasSaxpy(h,
                 order*order,                // n
                 &one,                       // alpha
-                h_o, 1,                     // x, incx
-                h_a, 1);                    // y, incy
+                p_o, 1,                     // x, incx
+                p_a, 1);                    // y, incy
 #endif
+    // (Host buffer version)
     // The performance is ~10% better if this is done every iteration,
     // instead of only once before the timer is stopped.
     prk::CUDAcheck( cudaDeviceSynchronize() );
   }
   trans_time = prk::wtime() - trans_time;
 
+  // copy output back to host
+  prk::CUDAcheck( cudaMemcpy(&(h_b[0]), d_b, bytes, cudaMemcpyDeviceToHost) );
+
+#if 1
+  prk::CUDAcheck( cudaFree(d_o) );
   prk::CUDAcheck( cudaFreeHost(h_o) );
+#endif
+
+  prk::CUDAcheck( cudaFree(d_b) );
+  prk::CUDAcheck( cudaFree(d_a) );
   prk::CUDAcheck( cudaFreeHost(h_a) );
 
   //////////////////////////////////////////////////////////////////////
