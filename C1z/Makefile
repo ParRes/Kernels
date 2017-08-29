@@ -1,16 +1,17 @@
 include ../common/make.defs
 include ../common/PRKVERSION
 
-CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
+CPPFLAGS = -DPRKVERSION=$(PRKVERSION)
 
-CFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
-#CFLAGS  = $(PRKCPPFLAGS) -g3 -O0
+CFLAGS = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 
 # debugging
-#CFLAGS += -DVERBOSE
+ifdef VERBOSE
+  CFLAGS += -DVERBOSE
+endif
 
 ifeq ($(findstring musl,$(CC)),musl)
-CFLAGS += -DUSE_C11_THREADS
+  CFLAGS += -DUSE_C11_THREADS
 endif
 
 ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm $(CFLAGS)
@@ -23,14 +24,19 @@ ISPCFLAGS = $(ISPCFLAG)
 
 .PHONY: all clean serial thread openmp target taskloop cilk ispc
 
+EXTRA=
 ifeq ($(shell uname -s),Darwin)
-ifneq ($(findstring icc,$(CC)),icc)
-TARGET = target
-endif
+  ifneq ($(findstring icc,$(CC)),icc)
+    EXTRA += target
+  endif
 else
-TARGET = target
+  EXTRA += target
 endif
-all: serial thread openmp cilk taskloop $(TARGET) ispc
+ifdef ($(ISPC))
+  EXTRA += ispc
+endif
+
+all: serial thread openmp cilk taskloop $(EXTRA)
 
 serial: p2p p2p-innerloop stencil transpose
 
@@ -78,6 +84,7 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 
 clean:
 	-rm -f *.o
+	-rm -f *.s
 	-rm -f *.ll # Coriander
 	-rm -f *.optrpt
 	-rm -f *.dwarf
