@@ -31,7 +31,7 @@ else
     $(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
 endif
 
-ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm $(CFLAGS)
+ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm
 
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
@@ -124,8 +124,11 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
-%.s: %.c prk_util.h
-	$(CC) $(ASMFLAGS) -S $< -o $@
+%-raja.s: %-raja.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $(ASMFLAGS) -S $< $(RAJAFLAGS) -o $@
+
+%.s: %.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $(ASMFLAGS) -S $< -o $@
 
 clean:
 	-rm -f *.o
