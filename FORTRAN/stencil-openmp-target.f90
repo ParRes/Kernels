@@ -205,7 +205,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a43)') 'Fortran OpenMP Stencil execution on 2D grid'
+  write(*,'(a43)') 'Fortran OpenMP TARGET Stencil execution on 2D grid'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()

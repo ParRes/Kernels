@@ -78,7 +78,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a44)') 'Fortran OpenMP pipeline execution on 2D grid'
+  write(*,'(a44)') 'Fortran OpenMP TARGET pipeline execution on 2D grid'
 
   if (command_argument_count().lt.3) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
