@@ -144,7 +144,6 @@ program main
 
   t0 = 0
 
-  ! Fill the original matrix, set transpose to known garbage value.
   if (tile_size.lt.order) then
     !$acc parallel loop gang ! collapse(2) leads to incorrect results
     do jt=1,order,tile_size

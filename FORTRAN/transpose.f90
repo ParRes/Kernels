@@ -161,7 +161,6 @@ program main
   !$omp&  private(i,j,it,jt,k)
 #endif
 
-  ! Fill the original matrix, set transpose to known garbage value.
   if (tile_size.lt.order) then
 #if defined(_OPENMP)
 #if defined(__INTEL_COMPILER) && defined(__INTEL_COMPILER_BUILD_DATE) \
@@ -173,7 +172,7 @@ program main
 #endif
     do jt=1,order,tile_size
       do it=1,order,tile_size
-#elif defined(__PGI) || defined(__llvm__)
+#elif defined(PGI)
     ! PGI does not support DO CONCURRENT.
     do jt=1,order,tile_size
       do it=1,order,tile_size
@@ -197,7 +196,7 @@ program main
     !$omp do collapse(2)
     do j=1,order
       do i=1,order
-#elif defined(__PGI) || defined(__llvm__)
+#elif defined(PGI)
     do j=1,order
       do i=1,order
 #else
@@ -243,7 +242,7 @@ program main
 #endif
       do jt=1,order,tile_size
         do it=1,order,tile_size
-#elif defined(__PGI) || defined(__llvm__)
+#elif defined(PGI)
       do jt=1,order,tile_size
         do it=1,order,tile_size
 #else
@@ -266,7 +265,7 @@ program main
       !$omp do collapse(2)
       do j=1,order
         do i=1,order
-#elif defined(__PGI) || defined(__llvm__)
+#elif defined(PGI)
       do j=1,order
         do i=1,order
 #else
@@ -306,7 +305,7 @@ program main
   abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
-#if defined(_OPENMP) && !(defined(__PGI) || defined(__llvm__))
+#if defined(_OPENMP)
   !$omp parallel do collapse(2)                                       &
   !$omp& default(none)                                                &
   !$omp& shared(B)                                                   &
@@ -315,8 +314,7 @@ program main
   !$omp& reduction(+:abserr)
   do j=1,order
     do i=1,order
-#elif defined(__PGI) || defined(__llvm__)
-  ! OpenMP reductions busted in Flang (https://github.com/flang-compiler/flang/issues/56)
+#elif defined(PGI)
   do j=1,order
     do i=1,order
 #else
@@ -328,7 +326,7 @@ program main
       abserr = abserr + abs(B(i,j) - (temp+addit))
     enddo
   enddo
-#if defined(_OPENMP) && !(defined(__PGI) || defined(__llvm__))
+#if defined(_OPENMP)
   !$omp end parallel do
 #endif
 

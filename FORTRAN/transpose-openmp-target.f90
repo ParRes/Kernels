@@ -132,80 +132,33 @@ program main
   write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
   write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Matrix order         = ', order
-  write(*,'(a,i8)') 'Tile size            = ', tile_size
+  !write(*,'(a,i8)') 'Tile size            = ', tile_size
 
   t0 = 0
 
-  !$omp parallel default(none)          &
-  !$omp&  shared(A,B)                   &
-  !$omp&  firstprivate(order,tile_size) &
-  !$omp&  private(i,j,it,jt)
-
-  ! Fill the original matrix, set transpose to known garbage value.
-  if (tile_size.lt.order) then
-    !$omp do collapse(2)
-    do jt=1,order,tile_size
-      do it=1,order,tile_size
-        do j=jt,min(order,jt+tile_size-1)
-          do i=it,min(order,it+tile_size-1)
-              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-              B(i,j) = 0.0
-          enddo
-        enddo
-      enddo
+  !$omp parallel do simd collapse(2)
+  do j=1,order
+    do i=1,order
+      A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+      B(i,j) = 0.0
     enddo
-    !$omp end do
-  else
-    !$omp do collapse(2)
-    do j=1,order
-      do i=1,order
-        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-        B(i,j) = 0.0
-      enddo
-    enddo
-    !$omp end do
-  endif
-  !$omp end parallel
-
+  enddo
+  !$omp end parallel do simd
 
   !$omp target data map(to: A) map(tofrom: B) map(from:trans_time)
+
   do k=0,iterations
 
-    if (k.eq.1) then
-      t0 = omp_get_wtime()
-    endif
+    if (k.eq.1) t0 = omp_get_wtime()
 
-    !$omp target
-    !$omp parallel default(none)            &
-    !$omp&  shared(A,B)                     &
-    !$omp&  firstprivate(order,tile_size)   &
-    !$omp&  private(i,j,it,jt)
-    ! Transpose the matrix; only use tiling if the tile size is smaller than the matrix
-    if (tile_size.lt.order) then
-      !$omp do collapse(2)
-      do jt=1,order,tile_size
-        do it=1,order,tile_size
-          do j=jt,min(order,jt+tile_size-1)
-            do i=it,min(order,it+tile_size-1)
-              B(j,i) = B(j,i) + A(i,j)
-              A(i,j) = A(i,j) + 1.0
-            enddo
-          enddo
-        enddo
+    !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
+    do j=1,order
+      do i=1,order
+        B(j,i) = B(j,i) + A(i,j)
+        A(i,j) = A(i,j) + 1.0
       enddo
-      !$omp end do
-    else
-      !$omp do collapse(2)
-      do j=1,order
-        do i=1,order
-          B(j,i) = B(j,i) + A(i,j)
-          A(i,j) = A(i,j) + 1.0
-        enddo
-      enddo
-      !$omp end do
-    endif
-  !$omp end parallel
-  !$omp end target
+    enddo
+    !$omp end target teams distribute parallel do simd
 
   enddo ! iterations
 
