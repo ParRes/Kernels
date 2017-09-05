@@ -35,8 +35,11 @@ endif
 ifdef ($(ISPC))
   EXTRA += ispc
 endif
+ifdef ($(CILKFLAG))
+  EXTRA += cilk
+endif
 
-all: serial thread openmp cilk taskloop $(EXTRA)
+all: serial thread openmp taskloop $(EXTRA)
 
 serial: p2p p2p-innerloop stencil transpose
 

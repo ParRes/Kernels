@@ -56,8 +56,11 @@ ifeq ($(shell uname -s),Darwin)
 else
   EXTRA += target
 endif
+ifdef ($(CILKFLAG))
+  EXTRA += cilk
+endif
 
-all: vector valarray openmp cilk taskloop tbb pstl rangefor raja kokkos opencl $(EXTRA)
+all: vector valarray openmp taskloop tbb pstl rangefor raja kokkos opencl $(EXTRA)
 
 vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector transpose-vector-async transpose-vector-thread
 
