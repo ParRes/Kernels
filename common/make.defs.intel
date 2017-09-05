@@ -30,10 +30,10 @@ OFFLOADFLAG=-qopenmp-offload=host
 # OpenCL flags
 #
 # MacOS
-OPENCLFLAG=-framework OpenCL
+#OPENCLFLAG=-framework OpenCL
 # Linux
-#OPENCLDIR=/etc/alternatives/opencl-intel-tools
-#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLDIR=/etc/alternatives/opencl-intel-tools
+OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
 # Cilk
 #

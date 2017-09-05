@@ -4,13 +4,14 @@
 #
 # Base compilers and language options
 #
-LLVM_PATH=/usr/local/Cellar/llvm/4.0.1/bin/
+#LLVM_PATH=/usr/local/Cellar/llvm/4.0.1/bin/
+LLVM_PATH=/opt/llvm/HEAD/bin/
 # C99 is required in some implementations.
-CC=${LLVM_PATH}clang -std=c11
+CC=${LLVM_PATH}clang -std=c11 -pthread
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Mfreeform -L/opt/llvm/pgi-flang/lib -Wl,-rpath=/opt/llvm/pgi-flang/lib
 # C++11 may not be required but does no harm here.
-CXX=${LLVM_PATH}clang++ -std=c++1z
+CXX=${LLVM_PATH}clang++ -std=c++1z -pthread
 #
 # Compiler flags
 #
@@ -18,6 +19,7 @@ CXX=${LLVM_PATH}clang++ -std=c++1z
 # -march=native is appropriate if you want portable binaries.
 #
 DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
+DEFAULT_OPT_FLAGS+=-mllvm -polly -mllvm -polly-vectorizer=stripmine
 #
 # If you want to be specific, get the architecture options from:
 #   ${LLVM_PATH}llc --version
@@ -30,8 +32,8 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
 #
 # OpenMP flags
 #
-OPENMPFLAG=-fopenmp -L/opt/llvm/4.0.0/lib -lomp
-OFFLOADFLAG=-fopenmp -L/opt/llvm/4.0.0/lib -lomp
+OPENMPFLAG=-fopenmp #-L/opt/llvm/4.0.0/lib -lomp
+OFFLOADFLAG=-fopenmp #-L/opt/llvm/4.0.0/lib -lomp
 ORNLACCFLAG= # Flang does not support OpenACC
 # Klondike weirdness
 # OPENMPFLAG+=-L/opt/intel/compilers_and_libraries_2018.0.082/linux/compiler/lib/intel64_lin -liomp5
@@ -48,7 +50,7 @@ OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
 # Cilk
 #
-CILKFLAG=
+#CILKFLAG=
 #
 # TBB
 #
@@ -60,17 +62,17 @@ TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
 PSTLFLAG=
 KOKKOSDIR=/opt/kokkos/clang/openmp
-KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
+KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
 RAJADIR=/opt/raja/clang
 RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 #
 # CUDA flags
 #
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
-NVCC=/opt/llvm/cocl/bin/cocl
+#NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-#NVCC=nvcc
-CUDAFLAGS=-g -O3 -std=c++11
+NVCC=nvcc
+CUDAFLAGS=-g -O3 #-std=c++11
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #
