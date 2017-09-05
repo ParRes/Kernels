@@ -35,7 +35,7 @@ endif
 ifdef ($(ISPC))
   EXTRA += ispc
 endif
-ifdef ($(CILKFLAG))
+ifneq ($(CILKFLAG),)
   EXTRA += cilk
 endif
 

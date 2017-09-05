@@ -60,6 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "stencil_target.h"
 
 typedef void (*stencil_t)(const int, const double * restrict, double * restrict);
 
@@ -71,8 +72,6 @@ void nothing(const int n, const double * restrict in, double * restrict out)
     if (n==0) printf("%p %p\n", in, out);
     abort();
 }
-
-#include "stencil_openmp.h"
 
 int main(int argc, char * argv[])
 {
@@ -164,8 +163,6 @@ int main(int argc, char * argv[])
 
   double stencil_time = 0.0;
 
-  // interior of grid with respect to stencil
-  size_t active_points = (n-2*radius)*(n-2*radius);
   size_t bytes = n*n*sizeof(double);
 
   double * restrict in  = prk_malloc(bytes);
@@ -190,7 +187,7 @@ int main(int argc, char * argv[])
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) stencil_time = prk_wtime();
+      if (iter==1) stencil_time = omp_get_wtime();
 
       // Apply the stencil operator
       stencil(n, in, out);
@@ -203,13 +200,15 @@ int main(int argc, char * argv[])
         }
       }
     }
-    stencil_time = prk_wtime() - stencil_time;
+    stencil_time = omp_get_wtime() - stencil_time;
   }
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
+  // interior of grid with respect to stencil
+  size_t active_points = (n-2*radius)*(n-2*radius);
   // compute L1 norm in parallel
   double norm = 0.0;
   OMP_PARALLEL_FOR_REDUCE( +:norm )
