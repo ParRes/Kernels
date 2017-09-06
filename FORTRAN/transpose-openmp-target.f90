@@ -168,21 +168,18 @@ program main
   !$omp end parallel
 
 
-  !$omp target map(to: A) map(tofrom: B) map(from:trans_time)
-  !$omp parallel default(none)                         &
-  !$omp&  shared(A,B,t0,t1,trans_time)                 &
-  !$omp&  firstprivate(order,iterations,tile_size)     &
-  !$omp&  private(i,j,it,jt,k)
+  !$omp target data map(to: A) map(tofrom: B) map(from:trans_time)
   do k=0,iterations
 
-    ! start timer after a warmup iteration
     if (k.eq.1) then
-      !$omp barrier
-      !$omp master
       t0 = omp_get_wtime()
-      !$omp end master
     endif
 
+    !$omp target
+    !$omp parallel default(none)            &
+    !$omp&  shared(A,B)                     &
+    !$omp&  firstprivate(order,tile_size)   &
+    !$omp&  private(i,j,it,jt)
     ! Transpose the matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
       !$omp do collapse(2)
@@ -207,17 +204,16 @@ program main
       enddo
       !$omp end do
     endif
+  !$omp end parallel
+  !$omp end target
 
   enddo ! iterations
 
-  !$omp barrier
-  !$omp master
   t1 = omp_get_wtime()
-  trans_time = t1 - t0
-  !$omp end master
 
-  !$omp end parallel
-  !$omp end target
+  !$omp end target data
+
+  trans_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.

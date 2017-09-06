@@ -45,7 +45,7 @@ pretty: stencil-pretty transpose-pretty
 
 openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
-tasks: p2p-tasks-openmp stencil-tasks-openmp transpose-tasks-openmp
+tasks: p2p-tasks-openmp transpose-tasks-openmp
 
 taskloop: stencil-taskloop-openmp transpose-taskloop-openmp
 

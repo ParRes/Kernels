@@ -321,27 +321,23 @@ program main
 #endif
   !$omp end parallel
 
-  ! DEVICE
-  !$omp target map(to:W, A) map(tofrom: B) map(from:stencil_time)
-  !$omp parallel default(none) &
-  !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size,is_star)   &
-  !$omp&  shared(stencil_time) private(i,j,k)
+  !$omp target data map(to:W, A) map(tofrom: B) map(from:stencil_time)
 
   t0 = 0.0d0
 
   do k=0,iterations
 
-    ! start timer after a warmup iteration
     if (k.eq.1) then
-        !$omp barrier
-        !$omp master
         t0 = omp_get_wtime()
-        !$omp end master
     endif
 
+    ! DEVICE
+    !$omp target
+    !$omp parallel default(none) &
+    !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size,is_star)   &
+    !$omp&  shared(stencil_time) private(i,j,k)
     ! Apply the stencil operator
     call apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
-
     ! add constant to solution to force refresh of neighbor data, if any
     !$omp do
     do j=1,n
@@ -350,17 +346,15 @@ program main
       enddo
     enddo
     !$omp end do
+    !$omp end parallel
+    !$omp end target
 
   enddo ! iterations
 
-  !$omp barrier
-  !$omp master
   t1 = omp_get_wtime()
   stencil_time = t1 - t0
-  !$omp end master
 
-  !$omp end parallel
-  !$omp end target
+  !$omp end target data
 
   ! HOST
   ! compute L1 norm in parallel
