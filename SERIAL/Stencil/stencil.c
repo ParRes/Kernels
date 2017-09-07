@@ -75,6 +75,10 @@ HISTORY: - Written by Rob Van der Wijngaart, February 2009.
   #define FSTR    "%f"
 #endif
 
+#if VERBOSE >= 10
+#include "debug_dump.h"
+#endif
+
 /* define shorthand for indexing a multi-dimensional array                       */
 #define IN(i,j)       in[i+(j)*(n)]
 #define OUT(i,j)      out[i+(j)*(n)]
@@ -181,6 +185,10 @@ int main(int argc, char ** argv) {
   }
 #endif
 
+#if VERBOSE >= 10
+  write_weights(weight);
+#endif
+
   norm = (DTYPE) 0.0;
   f_active_points = (DTYPE) (n-2*RADIUS)*(DTYPE) (n-2*RADIUS);
 
@@ -273,6 +281,10 @@ int main(int argc, char ** argv) {
 
     /* add constant to solution to force refresh of neighbor data, if any       */
     for (j=0; j<n; j++) for (i=0; i<n; i++) IN(i,j)+= 1.0;
+
+#if VERBOSE >= 10
+    write_out(iter, n, out);
+#endif
 
   } /* end of iterations                                                        */
 

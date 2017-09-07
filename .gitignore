@@ -18,6 +18,9 @@ octave-workspace                # Octave crashes
 *.swp                           # Vim
 */*.swp
 */*/*.swp
+*.txt                           # stencil debug dump
+*/*.txt
+*/*/*.txt
 *.dSYM                          # Mac
 */*.dSYM
 */*/*.dSYM

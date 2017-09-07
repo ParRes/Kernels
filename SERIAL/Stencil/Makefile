@@ -6,7 +6,7 @@ include ../../common/SERIAL.defs
 OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
 #description: change above into something that is a decent optimization on you system
 
-USERFLAGS    = 
+USERFLAGS    =
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
@@ -62,7 +62,7 @@ LOOPGEN=0/1             compact/expanded stencil loop body         [0]  \n\
 DOUBLE=0/1              single/double precision                    [1]  \n\
 RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
 STAR=0/1                box/star shaped stencil                    [1]  \n\
-VERBOSE=0/1             omit/include verbose run information       [0]"
+VERBOSE=0/1/10          omit/include verbose run information       [0]"
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG) $(USERFLAGS) \
                $(DOUBLEFLAG)   $(RADIUSFLAG)  $(STARFLAG)  \

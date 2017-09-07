@@ -53,14 +53,18 @@
 #include <time.h>    // clock_gettime, timespec_get
 #include <assert.h>
 
+#if VERBOSE >= 10
+# include "debug_dump.h"
+#endif
+
 #ifndef MIN
-#define MIN(x,y) ((x)<(y)?(x):(y))
+# define MIN(x,y) ((x)<(y)?(x):(y))
 #endif
 #ifndef MAX
-#define MAX(x,y) ((x)>(y)?(x):(y))
+# define MAX(x,y) ((x)>(y)?(x):(y))
 #endif
 #ifndef ABS
-#define ABS(a) ((a) >= 0 ? (a) : -(a))
+# define ABS(a) ((a) >= 0 ? (a) : -(a))
 #endif
 
 #ifdef _OPENMP

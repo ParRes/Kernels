@@ -209,6 +209,9 @@ int main(int argc, char * argv[])
           in[i*n+j] += 1.0;
         }
       }
+#if VERBOSE >= 10
+      write_out(iter, n, out);
+#endif
     }
     OMP_BARRIER
     OMP_MASTER
