@@ -103,12 +103,21 @@ void run(cl::Context context, int iterations, int n)
 
     if (iter==1) pipeline_time = prk::wtime();
 
+#if 0
+    // from host to device
     cl::copy(queue,begin(h_grid), end(h_grid), d_grid);
     kernel(cl::EnqueueArgs(queue, cl::NDRange(n,n)), n, d_grid);
+    // from device to host
     cl::copy(queue,d_grid, begin(h_grid), end(h_grid));
     queue.finish();
-    h_grid[0*n+0] = -h_grid[(n-1)*n+(n-1)];
+    h_grid[0] = -h_grid[n*n-1];
+#else
+    kernel(cl::EnqueueArgs(queue, cl::NDRange(n,n)), n, d_grid);
+#endif
   }
+  // from device to host
+  cl::copy(queue,d_grid, begin(h_grid), end(h_grid));
+  queue.finish();
   pipeline_time = prk::wtime() - pipeline_time;
 
   cl::copy(d_grid, begin(h_grid), end(h_grid));
