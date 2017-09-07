@@ -53,7 +53,7 @@ taskloop: stencil-taskloop transpose-taskloop
 
 cilk: stencil-cilk transpose-cilk
 
-ispc: transpose-ispc
+ispc: stencil-ispc transpose-ispc
 
 p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
@@ -70,10 +70,13 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 %-cilk: %-cilk.c prk_util.h
 	$(CC) $(CFLAGS) $< $(CILKFLAGS) $(EXTRA_CLIBS) -o $@
 
-%.ispo: %.ispc
+%.o: %.ispc
 	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) -o $@
 
-%-ispc: %-ispc.o %.ispo
+%-ispc: %-ispc.o %-ispc-kernels.o
+	$(CC) $(CFLAGS) $^ -o $@
+
+stencil-ispc: stencil-ispc.o stencil-ispc-kernels.o stencil-ispc-utils.o
 	$(CC) $(CFLAGS) $^ -o $@
 
 %: %.c prk_util.h
@@ -84,6 +87,15 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 
 %.s: %.c prk_util.h
 	$(CC) $(ASMFLAGS) -S $< -o $@
+
+%.cpp: %.ispc
+	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) --emit-c++ --target=generic-x8 -o $@
+
+%.ll: %.ispc
+	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) --emit-llvm -o $@
+
+%.s: %.ispc
+	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) --emit-asm -o $@
 
 clean:
 	-rm -f *.o

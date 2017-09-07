@@ -112,6 +112,7 @@ C1z/stencil-cilk
 C1z/stencil-openmp
 C1z/stencil-target
 C1z/stencil-taskloop
+C1z/stencil-ispc
 C1z/transpose
 C1z/transpose-thread
 C1z/transpose-cilk

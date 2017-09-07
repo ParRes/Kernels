@@ -1,8 +1,6 @@
-void star1(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=1; i<n-1; i++) {
-      OMP_SIMD
-      for (int j=1; j<n-1; j++) {
+export void star1(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=1; i<n-1; i++) {
+      for (uniform int j=1; j<n-1; j++) {
         B[i*n+j] += +A[(i+-1)*n+(j+0)] * -0.5
                       +A[(i+0)*n+(j+-1)] * -0.5
                       +A[(i+0)*n+(j+1)] * 0.5
@@ -11,11 +9,9 @@ void star1(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void star2(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=2; i<n-2; i++) {
-      OMP_SIMD
-      for (int j=2; j<n-2; j++) {
+export void star2(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=2; i<n-2; i++) {
+      for (uniform int j=2; j<n-2; j++) {
         B[i*n+j] += +A[(i+-2)*n+(j+0)] * -0.125
                       +A[(i+-1)*n+(j+0)] * -0.25
                       +A[(i+0)*n+(j+-2)] * -0.125
@@ -28,11 +24,9 @@ void star2(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void star3(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=3; i<n-3; i++) {
-      OMP_SIMD
-      for (int j=3; j<n-3; j++) {
+export void star3(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=3; i<n-3; i++) {
+      for (uniform int j=3; j<n-3; j++) {
         B[i*n+j] += +A[(i+-3)*n+(j+0)] * -0.05555555555555555
                       +A[(i+-2)*n+(j+0)] * -0.08333333333333333
                       +A[(i+-1)*n+(j+0)] * -0.16666666666666666
@@ -49,11 +43,9 @@ void star3(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void star4(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=4; i<n-4; i++) {
-      OMP_SIMD
-      for (int j=4; j<n-4; j++) {
+export void star4(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=4; i<n-4; i++) {
+      for (uniform int j=4; j<n-4; j++) {
         B[i*n+j] += +A[(i+-4)*n+(j+0)] * -0.03125
                       +A[(i+-3)*n+(j+0)] * -0.041666666666666664
                       +A[(i+-2)*n+(j+0)] * -0.0625
@@ -74,11 +66,9 @@ void star4(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void star5(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=5; i<n-5; i++) {
-      OMP_SIMD
-      for (int j=5; j<n-5; j++) {
+export void star5(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=5; i<n-5; i++) {
+      for (uniform int j=5; j<n-5; j++) {
         B[i*n+j] += +A[(i+-5)*n+(j+0)] * -0.02
                       +A[(i+-4)*n+(j+0)] * -0.025
                       +A[(i+-3)*n+(j+0)] * -0.03333333333333333
@@ -103,11 +93,9 @@ void star5(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void star6(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=6; i<n-6; i++) {
-      OMP_SIMD
-      for (int j=6; j<n-6; j++) {
+export void star6(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=6; i<n-6; i++) {
+      for (uniform int j=6; j<n-6; j++) {
         B[i*n+j] += +A[(i+-6)*n+(j+0)] * -0.013888888888888888
                       +A[(i+-5)*n+(j+0)] * -0.016666666666666666
                       +A[(i+-4)*n+(j+0)] * -0.020833333333333332
@@ -136,11 +124,9 @@ void star6(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void star7(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=7; i<n-7; i++) {
-      OMP_SIMD
-      for (int j=7; j<n-7; j++) {
+export void star7(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=7; i<n-7; i++) {
+      for (uniform int j=7; j<n-7; j++) {
         B[i*n+j] += +A[(i+-7)*n+(j+0)] * -0.01020408163265306
                       +A[(i+-6)*n+(j+0)] * -0.011904761904761904
                       +A[(i+-5)*n+(j+0)] * -0.014285714285714285
@@ -173,11 +159,9 @@ void star7(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void star8(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=8; i<n-8; i++) {
-      OMP_SIMD
-      for (int j=8; j<n-8; j++) {
+export void star8(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=8; i<n-8; i++) {
+      for (uniform int j=8; j<n-8; j++) {
         B[i*n+j] += +A[(i+-8)*n+(j+0)] * -0.0078125
                       +A[(i+-7)*n+(j+0)] * -0.008928571428571428
                       +A[(i+-6)*n+(j+0)] * -0.010416666666666666
@@ -214,11 +198,9 @@ void star8(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void star9(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=9; i<n-9; i++) {
-      OMP_SIMD
-      for (int j=9; j<n-9; j++) {
+export void star9(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=9; i<n-9; i++) {
+      for (uniform int j=9; j<n-9; j++) {
         B[i*n+j] += +A[(i+-9)*n+(j+0)] * -0.006172839506172839
                       +A[(i+-8)*n+(j+0)] * -0.006944444444444444
                       +A[(i+-7)*n+(j+0)] * -0.007936507936507936
@@ -259,11 +241,9 @@ void star9(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void grid1(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=1; i<n-1; i++) {
-      OMP_SIMD
-      for (int j=1; j<n-1; j++) {
+export void grid1(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=1; i<n-1; i++) {
+      for (uniform int j=1; j<n-1; j++) {
         B[i*n+j] += +A[(i+-1)*n+(j+-1)] * -0.25
                       +A[(i+-1)*n+(j+0)] * -0.25
                       +A[(i+0)*n+(j+-1)] * -0.25
@@ -275,11 +255,9 @@ void grid1(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void grid2(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=2; i<n-2; i++) {
-      OMP_SIMD
-      for (int j=2; j<n-2; j++) {
+export void grid2(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=2; i<n-2; i++) {
+      for (uniform int j=2; j<n-2; j++) {
         B[i*n+j] += +A[(i+-2)*n+(j+-2)] * -0.0625
                       +A[(i+-2)*n+(j+-1)] * -0.020833333333333332
                       +A[(i+-2)*n+(j+0)] * -0.020833333333333332
@@ -305,11 +283,9 @@ void grid2(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void grid3(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=3; i<n-3; i++) {
-      OMP_SIMD
-      for (int j=3; j<n-3; j++) {
+export void grid3(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=3; i<n-3; i++) {
+      for (uniform int j=3; j<n-3; j++) {
         B[i*n+j] += +A[(i+-3)*n+(j+-3)] * -0.027777777777777776
                       +A[(i+-3)*n+(j+-2)] * -0.005555555555555556
                       +A[(i+-3)*n+(j+-1)] * -0.005555555555555556
@@ -357,11 +333,9 @@ void grid3(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void grid4(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=4; i<n-4; i++) {
-      OMP_SIMD
-      for (int j=4; j<n-4; j++) {
+export void grid4(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=4; i<n-4; i++) {
+      for (uniform int j=4; j<n-4; j++) {
         B[i*n+j] += +A[(i+-4)*n+(j+-4)] * -0.015625
                       +A[(i+-4)*n+(j+-3)] * -0.002232142857142857
                       +A[(i+-4)*n+(j+-2)] * -0.002232142857142857
@@ -439,11 +413,9 @@ void grid4(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void grid5(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=5; i<n-5; i++) {
-      OMP_SIMD
-      for (int j=5; j<n-5; j++) {
+export void grid5(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=5; i<n-5; i++) {
+      for (uniform int j=5; j<n-5; j++) {
         B[i*n+j] += +A[(i+-5)*n+(j+-5)] * -0.01
                       +A[(i+-5)*n+(j+-4)] * -0.0011111111111111111
                       +A[(i+-5)*n+(j+-3)] * -0.0011111111111111111
@@ -559,11 +531,9 @@ void grid5(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void grid6(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=6; i<n-6; i++) {
-      OMP_SIMD
-      for (int j=6; j<n-6; j++) {
+export void grid6(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=6; i<n-6; i++) {
+      for (uniform int j=6; j<n-6; j++) {
         B[i*n+j] += +A[(i+-6)*n+(j+-6)] * -0.006944444444444444
                       +A[(i+-6)*n+(j+-5)] * -0.0006313131313131314
                       +A[(i+-6)*n+(j+-4)] * -0.0006313131313131314
@@ -725,11 +695,9 @@ void grid6(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void grid7(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=7; i<n-7; i++) {
-      OMP_SIMD
-      for (int j=7; j<n-7; j++) {
+export void grid7(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=7; i<n-7; i++) {
+      for (uniform int j=7; j<n-7; j++) {
         B[i*n+j] += +A[(i+-7)*n+(j+-7)] * -0.00510204081632653
                       +A[(i+-7)*n+(j+-6)] * -0.0003924646781789639
                       +A[(i+-7)*n+(j+-5)] * -0.0003924646781789639
@@ -945,11 +913,9 @@ void grid7(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void grid8(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=8; i<n-8; i++) {
-      OMP_SIMD
-      for (int j=8; j<n-8; j++) {
+export void grid8(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=8; i<n-8; i++) {
+      for (uniform int j=8; j<n-8; j++) {
         B[i*n+j] += +A[(i+-8)*n+(j+-8)] * -0.00390625
                       +A[(i+-8)*n+(j+-7)] * -0.00026041666666666666
                       +A[(i+-8)*n+(j+-6)] * -0.00026041666666666666
@@ -1227,11 +1193,9 @@ void grid8(const int n, const double * restrict A, double * restrict B) {
      }
 }
 
-void grid9(const int n, const double * restrict A, double * restrict B) {
-    OMP_FOR()
-    for (int i=9; i<n-9; i++) {
-      OMP_SIMD
-      for (int j=9; j<n-9; j++) {
+export void grid9(uniform const int n, uniform const double A[], uniform double B[]) {
+    for (uniform int i=9; i<n-9; i++) {
+      for (uniform int j=9; j<n-9; j++) {
         B[i*n+j] += +A[(i+-9)*n+(j+-9)] * -0.0030864197530864196
                       +A[(i+-9)*n+(j+-8)] * -0.00018155410312273057
                       +A[(i+-9)*n+(j+-7)] * -0.00018155410312273057
