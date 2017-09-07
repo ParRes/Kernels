@@ -178,7 +178,6 @@ program main
   use iso_fortran_env
   use omp_lib
   implicit none
-  real(kind=REAL64) :: _get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen

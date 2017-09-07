@@ -56,7 +56,7 @@ ifeq ($(shell uname -s),Darwin)
 else
   EXTRA += target
 endif
-ifdef ($(CILKFLAG))
+ifneq ($(CILKFLAG),)
   EXTRA += cilk
 endif
 

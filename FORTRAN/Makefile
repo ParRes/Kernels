@@ -15,26 +15,26 @@ FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 .PHONY: all clean serial pretty openmp coarray target ornlacc
 
-EXTRA=
 # Intel
 ifeq ($(findstring ifort,$(FC)),ifort)
   ifeq ($(shell uname -s),Darwin)
-    EXTRA += taskloop
+    EXTRA = taskloop
   else
-    EXTRA += target coarray taskloop
+    EXTRA = target coarray taskloop
   endif
 endif
-# GCC
+# GCC (also matches pgfortran so PGI must come after)
 ifeq ($(findstring gfortran,$(FC)),gfortran)
-  EXTRA += target coarray taskloop ornlacc
+  EXTRA = target coarray taskloop ornlacc
 endif
 # PGI and LLVM Flang
 ifeq ($(findstring pgf,$(FC)),pgf)
-  EXTRA += target ornlacc
+  EXTRA = target ornlacc
+  FCFLAGS += -DPGI
 endif
 ifeq ($(findstring flang,$(FC)),flang)
-  EXTRA += target ornlacc
-  FCFLAGS += -D__PGI
+  EXTRA = target ornlacc
+  FCFLAGS += -DPGI
 endif
 
 all: serial pretty openmp tasks $(EXTRA)

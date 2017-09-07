@@ -78,7 +78,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a44)') 'Fortran OpenMP pipeline execution on 2D grid'
+  write(*,'(a44)') 'Fortran OpenMP TARGET pipeline execution on 2D grid'
 
   if (command_argument_count().lt.3) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -146,10 +146,8 @@ program main
 
     ! DEVICE
     !$omp target
-    !$omp parallel default(none)                            &
-    !$omp&  shared(grid,t0,t1,iterations,pipeline_time)     &
-    !$omp&  firstprivate(m,n)                               &
-    !$omp&  private(i,j,k,corner_val)
+    !$omp parallel default(none) shared(grid) firstprivate(m,n) private(i,j)
+
     !$omp do ordered(2) collapse(2)
     do j=2,n
       do i=2,m
@@ -160,9 +158,10 @@ program main
     enddo
     !$omp end do
 
-    !$omp master
+    ! single vs master vs atomic?
+    !$omp single
     grid(1,1) = -grid(m,n)
-    !$omp end master
+    !$omp single
 
     !$omp parallel
     !$omp target
