@@ -62,9 +62,21 @@
 
 #include "prk_util.h"
 
-typedef Kokkos::View<double**, Kokkos::LayoutRight> matrix;
-//typedef Kokkos::View<double**, Kokkos::LayoutLeft> matrix;
-//typedef Kokkos::View<double**> matrix;
+// We build with OpenMP unless it is not available...
+#ifndef PRK_KOKKOS_BACKEND
+#define PRK_KOKKOS_BACKEND OpenMP
+#endif
+
+typedef Kokkos::PRK_KOKKOS_BACKEND Space;
+typedef Kokkos::TeamPolicy<Space>               team_policy ;
+typedef Kokkos::TeamPolicy<Space>::member_type  member_type ;
+
+// row-major 2D array
+typedef Kokkos::View<double**, Kokkos::LayoutRight, Space> matrix;
+// column-major 2D array
+//typedef Kokkos::View<double**, Kokkos::LayoutLeft, Space> matrix;
+// default 2D array
+//typedef Kokkos::View<double**, Space> matrix;
 
 #include "stencil_kokkos.hpp"
 
@@ -82,7 +94,7 @@ int main(int argc, char* argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/Kokkos Stencil execution on 2D grid" << std::endl;
 
-  Kokkos::initialize (argc, argv);
+  Kokkos::initialize(argc, argv);
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
