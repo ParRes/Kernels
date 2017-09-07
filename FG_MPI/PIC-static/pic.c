@@ -174,7 +174,7 @@ void finishParticlesInitialization(uint64_t n, particle_t *p) {
   double x_coord, y_coord, rel_x, rel_y, cos_theta, cos_phi, r1_sq, r2_sq, base_charge, ID;
   uint64_t x, pi, cumulative_count;
 
-  MPI_Scan(&n, &cumulative_count, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Scan(&n, &cumulative_count, 8, MPI_CHAR, MPI_SUM, MPI_COMM_WORLD);
   ID = (double) (cumulative_count - n + 1);
   int my_ID;
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
@@ -711,11 +711,11 @@ int main(int argc, char ** argv) {
   } // done with standard initialization parameters
   bail_out(error);
 
-  MPI_Bcast(&iterations, 1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&L,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&n,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&k,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-  MPI_Bcast(&m,          1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  MPI_Bcast(&iterations, 8, MPI_CHAR, root, MPI_COMM_WORLD);
+  MPI_Bcast(&L,          8, MPI_CHAR, root, MPI_COMM_WORLD);
+  MPI_Bcast(&n,          8, MPI_CHAR, root, MPI_COMM_WORLD);
+  MPI_Bcast(&k,          8, MPI_CHAR, root, MPI_COMM_WORLD);
+  MPI_Bcast(&m,          8, MPI_CHAR, root, MPI_COMM_WORLD);
 
   grid_patch = (bbox_t){0, L+1, 0, L+1};
 
@@ -787,10 +787,10 @@ int main(int argc, char ** argv) {
   case LINEAR:     MPI_Bcast(&alpha,             1, MPI_DOUBLE,  root, MPI_COMM_WORLD);
                    MPI_Bcast(&beta,              1, MPI_DOUBLE,  root, MPI_COMM_WORLD);
                    break;
-  case PATCH:      MPI_Bcast(&init_patch.left,   1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-                   MPI_Bcast(&init_patch.right,  1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-                   MPI_Bcast(&init_patch.bottom, 1, MPI_UINT64_T, root, MPI_COMM_WORLD);
-                   MPI_Bcast(&init_patch.top,    1, MPI_UINT64_T, root, MPI_COMM_WORLD);
+  case PATCH:      MPI_Bcast(&init_patch.left,   8, MPI_CHAR, root, MPI_COMM_WORLD);
+                   MPI_Bcast(&init_patch.right,  8, MPI_CHAR, root, MPI_COMM_WORLD);
+                   MPI_Bcast(&init_patch.bottom, 8, MPI_CHAR, root, MPI_COMM_WORLD);
+                   MPI_Bcast(&init_patch.top,    8, MPI_CHAR, root, MPI_COMM_WORLD);
                    break;
   }
 
@@ -927,11 +927,11 @@ int main(int argc, char ** argv) {
   }
 #endif
   if (my_ID==root) {
-    MPI_Reduce(&particles_count, &total_particles, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
+    MPI_Reduce(&particles_count, &total_particles, 8, MPI_CHAR, MPI_SUM, root, MPI_COMM_WORLD);
     printf("Number of particles placed         = %llu\n", total_particles);
   }
   else {
-    MPI_Reduce(&particles_count, &total_particles, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
+    MPI_Reduce(&particles_count, &total_particles, 8, MPI_CHAR, MPI_SUM, root, MPI_COMM_WORLD);
   }
 
   /* Allocate space for communication buffers. Adjust appropriately as the simulation proceeds */
@@ -1007,8 +1007,8 @@ int main(int argc, char ** argv) {
 
     /* Communicate the number of particles to be sent/received */
     for (i=0; i<8; i++) {
-      MPI_Isend(&to_send[i], 1, MPI_UINT64_T, nbr[i], 0, MPI_COMM_WORLD, &requests[i]);
-      MPI_Irecv(&to_recv[i], 1, MPI_UINT64_T, nbr[i], 0, MPI_COMM_WORLD, &requests[8+i]);
+      MPI_Isend(&to_send[i], 8, MPI_CHAR, nbr[i], 0, MPI_COMM_WORLD, &requests[i]);
+      MPI_Irecv(&to_recv[i], 8, MPI_CHAR, nbr[i], 0, MPI_COMM_WORLD, &requests[8+i]);
     }
     MPI_Waitall(16, requests, MPI_STATUSES_IGNORE);
 
@@ -1045,9 +1045,9 @@ int main(int argc, char ** argv) {
   }
 
   /* Gather total checksum of particles */
-  MPI_Reduce(&my_checksum, &tot_checksum, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
+  MPI_Reduce(&my_checksum, &tot_checksum, 8, MPI_CHAR, MPI_SUM, root, MPI_COMM_WORLD);
   /* Gather total checksum of correctness flags */
-  MPI_Reduce(&correctness, &correctness_checksum, 1, MPI_UINT64_T, MPI_SUM, root, MPI_COMM_WORLD);
+  MPI_Reduce(&correctness, &correctness_checksum, 8, MPI_CHAR, MPI_SUM, root, MPI_COMM_WORLD);
 
   if ( my_ID == root) {
     if (correctness_checksum != total_particles ) {
