@@ -70,15 +70,13 @@ void SequentialSweep(int m, int n, std::vector<double> & grid)
   }
 }
 
-const int N = 64;
-const int MAX_LEN = 1024;
-tbb::atomic<char> Count[MAX_LEN/N+1][MAX_LEN/N+1];
-double F[MAX_LEN][MAX_LEN];
-
-void ParallelSweep( const char* x, int xlen, const char* y, int ylen ) {
+void ParallelSweep( const size_t xlen, const size_t ylen, std::vector<double> & grid,
+                    std::vector<std::vector<tbb::atomic<char>>> & Count,
+                    const size_t blocking )
+{
    // Initialize predecessor counts for blocks.
-   int m = (xlen+N-1)/N;
-   int n = (ylen+N-1)/N;
+   size_t m = (xlen+blocking-1)/blocking;
+   size_t n = (ylen+blocking-1)/blocking;
    for( int i=0; i<m; ++i ) {
        for( int j=0; j<n; ++j ) {
            Count[i][j] = (i>0)+(j>0);
@@ -88,18 +86,19 @@ void ParallelSweep( const char* x, int xlen, const char* y, int ylen ) {
    typedef std::pair<int,int> block;
    block origin(0,0);
    tbb::parallel_do( &origin, &origin+1,
-       [=]( const block& b, tbb::parallel_do_feeder<block>&feeder ) {
+       [&]( const block& b, tbb::parallel_do_feeder<block>&feeder ) {
            // Extract bounds on block
-           int bi = b.first;
-           int bj = b.second;
-           int xl = N*bi+1;
-           int xu = std::min(xl+N,xlen+1);
-           int yl = N*bj+1;
-           int yu = std::min(yl+N,ylen+1);
+           size_t bi = b.first;
+           size_t bj = b.second;
+           size_t xl = blocking*bi+1;
+           size_t yl = blocking*bj+1;
+           size_t xu = std::min(xl+blocking,xlen+1);
+           size_t yu = std::min(yl+blocking,ylen+1);
            // Process the block
-           for( int i=xl; i<xu; ++i ) {
-               for( int j=yl; j<yu; ++j ) {
-                   F[i][j] = x[i-1]==y[j-1] ? F[i-1][j-1]+1 : std::max(F[i][j-1],F[i-1][j]);
+           for( size_t i=xl; i<xu; ++i ) {
+               for( size_t j=yl; j<yu; ++j ) {
+                   std::cout << i << "," << j << "=" << grid[i*n+j] << "\n";
+                   grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
                }
            }
            // Account for successors
@@ -175,6 +174,13 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
+  // used by TBB
+  std::vector<std::vector<tbb::atomic<char>>> Count;
+  Count.resize(m/blocking+1);
+  for (auto i=0; i<m/blocking+1; ++i) {
+      Count[i].resize(n/blocking+1, 0);
+  }
+
   // working set
   std::vector<double> grid;
   grid.resize(m*n,0.0);
@@ -189,7 +195,8 @@ int main(int argc, char* argv[])
 
   for (auto iter = 0; iter<=iterations; iter++){
     if (iter == 1) pipeline_time = prk::wtime();
-    SequentialSweep(m, n, grid);
+    //SequentialSweep(m, n, grid);
+    ParallelSweep(m, n, grid, Count, blocking);
     grid[0*n+0] = -grid[(m-1)*n+(n-1)];
   }
 
