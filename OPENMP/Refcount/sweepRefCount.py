@@ -5,7 +5,7 @@ import subprocess
 
 def runCommand(command, logFileName):
     print command
-#    subprocess.call(command + " >> " + logFileName, shell=True)
+    subprocess.call(command + " >> " + logFileName, shell=True)
 
 from optparse import OptionParser          # requires python 2.3
 from socket import gethostname
@@ -41,7 +41,8 @@ coreDelta = 16
 coreSweep = (28, )
 
 sleepSweep=(0,1024)
-hints    = ("none", "uncontended", "contended", "speculative")
+hints    = ("none", "uncontended", "contended", "speculative", )
+hints    = ("speculative", )
 threads  = (1,2)
 maxCores = 4*28
 coreDelta = 8
