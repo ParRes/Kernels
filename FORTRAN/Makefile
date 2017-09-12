@@ -15,17 +15,29 @@ FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 .PHONY: all clean serial pretty openmp coarray target ornlacc
 
-ifeq ($(shell uname -s),Darwin)
-ifneq ($(findstring ifort,$(FC)),ifort)
-COARRAY = coarray
-TARGET = target
+# Intel
+ifeq ($(findstring ifort,$(FC)),ifort)
+  ifeq ($(shell uname -s),Darwin)
+    EXTRA = taskloop
+  else
+    EXTRA = target coarray taskloop
+  endif
 endif
-else
-COARRAY = coarray
-TARGET = target
+# GCC (also matches pgfortran so PGI must come after)
+ifeq ($(findstring gfortran,$(FC)),gfortran)
+  EXTRA = target coarray taskloop ornlacc
+endif
+# PGI and LLVM Flang
+ifeq ($(findstring pgf,$(FC)),pgf)
+  EXTRA = target ornlacc
+  FCFLAGS += -DPGI
+endif
+ifeq ($(findstring flang,$(FC)),flang)
+  EXTRA = target ornlacc
+  FCFLAGS += -DPGI
 endif
 
-all: serial pretty openmp tasks $(COARRAY) $(TARGET)
+all: serial pretty openmp tasks $(EXTRA)
 
 serial: p2p stencil transpose p2p-innerloop
 
@@ -33,7 +45,9 @@ pretty: stencil-pretty transpose-pretty
 
 openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
-tasks: p2p-tasks-openmp stencil-taskloop-openmp transpose-tasks-openmp transpose-taskloop-openmp
+tasks: p2p-tasks-openmp transpose-tasks-openmp
+
+taskloop: stencil-taskloop-openmp transpose-taskloop-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 

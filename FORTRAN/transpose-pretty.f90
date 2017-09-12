@@ -72,7 +72,7 @@ program main
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
-#if defined(__PGI)
+#if defined(PGI)
   integer(kind=INT32) :: i
 #endif
   integer(kind=INT32) :: k
@@ -154,14 +154,14 @@ program main
   A = ( transpose(reshape((/ (j, j = 0,o2) /),(/order, order/))) &
         * real(iterations+1,REAL64) ) &
       + real((iterations*(iterations+1))/2,REAL64)
-#if 0 && defined(__PGI)
+#if 0 && defined(PGI)
   ! PGI generates a segfault here...
   abserr = 0.0d0
   forall (j=1:order,i=1:order)
       abserr = abserr + (B(i,j) - A(i,j))**2
   endforall
   abserr = sqrt(abserr)
-#elif defined(__PGI)
+#elif defined(PGI)
   abserr = 0.0d0
   do j=1,order
     do i=1,order

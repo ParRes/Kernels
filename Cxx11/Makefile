@@ -31,6 +31,8 @@ else
     $(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
 endif
 
+ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm
+
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
 OPENCLFLAGS = $(OPENCLFLAG)
@@ -44,17 +46,21 @@ PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
 
-.PHONY: all clean run vector valarray openmp target opencl cilk taskloop tbb pstl rangefor kokkos raja cuda
+.PHONY: all clean vector valarray openmp target opencl cilk taskloop tbb pstl rangefor kokkos raja cuda
 
+EXTRA=
 ifeq ($(shell uname -s),Darwin)
-ifneq ($(findstring icpc,$(CXX)),icpc)
-TARGET = target
-endif
+  ifneq ($(findstring icpc,$(CXX)),icpc)
+    EXTRA += target
+  endif
 else
-TARGET = target
+  EXTRA += target
+endif
+ifneq ($(CILKFLAG),)
+  EXTRA += cilk
 endif
 
-all: vector valarray openmp opencl $(TARGET) cilk taskloop tbb pstl rangefor raja kokkos
+all: vector valarray openmp taskloop tbb pstl rangefor raja kokkos opencl $(EXTRA)
 
 vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector transpose-vector-async transpose-vector-thread
 
@@ -80,7 +86,7 @@ kokkos: stencil-kokkos transpose-kokkos
 
 raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja
 
-cuda: transpose-cuda
+cuda: transpose-cuda transpose-cublas
 
 p2p-innerloop-vector: p2p-innerloop-vector-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -121,11 +127,21 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
+%-cublas: %-cublas.cu prk_util.h prk_cuda.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas -lcblas -o $@
+
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
+%-raja.s: %-raja.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $(ASMFLAGS) -S $< $(RAJAFLAGS) -o $@
+
+%.s: %.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $(ASMFLAGS) -S $< -o $@
+
 clean:
 	-rm -f *.o
+	-rm -f *.s
 	-rm -f *.ll # Coriander
 	-rm -f *.optrpt
 	-rm -f *.dwarf

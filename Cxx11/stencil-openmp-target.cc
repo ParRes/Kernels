@@ -173,6 +173,7 @@ int main(int argc, char* argv[])
   {
     OMP_FOR()
     for (auto i=0; i<n; i++) {
+      OMP_SIMD
       for (auto j=0; j<n; j++) {
         in[i*n+j] = static_cast<double>(i+j);
         out[i*n+j] = 0.0;
@@ -181,29 +182,23 @@ int main(int argc, char* argv[])
   }
 
   // DEVICE
-  OMP_TARGET( map(tofrom: in[0:n*n], out[0:n*n]) map(from:stencil_time) )
-  OMP_PARALLEL()
+  OMP_TARGET( data map(tofrom: in[0:n*n], out[0:n*n]) )
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          stencil_time = omp_get_wtime();
-      }
+      if (iter==1) stencil_time = omp_get_wtime();
 
       // Apply the stencil operator
       stencil(n, tile_size, in, out);
-      // add constant to solution to force refresh of neighbor data, if any
-      OMP_FOR()
+
+      // Add constant to solution to force refresh of neighbor data, if any
+      OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
       for (auto i=0; i<n; i++) {
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
     }
-    OMP_BARRIER
-    OMP_MASTER
     stencil_time = omp_get_wtime() - stencil_time;
   }
 
@@ -213,8 +208,6 @@ int main(int argc, char* argv[])
 
   // interior of grid with respect to stencil
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
-
-  // HOST
   // compute L1 norm in parallel
   double norm = 0.0;
   OMP_PARALLEL_FOR_REDUCE( +:norm )

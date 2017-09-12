@@ -24,9 +24,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('          for (auto j=jt; j<std::min(n-'+str(radius)+',jt+t); ++j) {\n')
     elif (model=='target'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {\n')
-        src.write('    OMP_FOR()\n')
+        src.write('    OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )\n')
         src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      OMP_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='rangefor'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
@@ -154,20 +153,13 @@ def main():
     for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','cilk','raja','kokkos']:
       src = open('stencil_'+model+'.hpp','w')
       src.write('#define RESTRICT __restrict__\n\n')
-      #if (model=='target'):
-      #    src.write('OMP_DECLARE_TARGET\n')
-      # controlled in parent source file
-      #if (model=='raja'):
-      #    src.write('#ifdef RAJA_ENABLE_OPENMP\n')
-      #    src.write('  typedef RAJA::omp_parallel_for_exec thread_exec;\n')
-      #    src.write('#else\n')
-      #    src.write('  typedef RAJA::seq_exec thread_exec;\n')
-      #    src.write('#endif\n')
+      if (model=='target'):
+        src.write('OMP( declare target )\n')
       for pattern in ['star','grid']:
         for r in range(1,6):
           instance(src,model,pattern,r)
-      #if (model=='target'):
-      #    src.write('OMP_END_DECLARE_TARGET\n')
+      if (model=='target'):
+        src.write('OMP( end declare target )\n')
       src.close()
 
 if __name__ == '__main__':

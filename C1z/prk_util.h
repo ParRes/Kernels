@@ -122,9 +122,17 @@ int __cilkrts_get_nworkers(void);
 # define PRAGMA_SIMD
 #endif
 
+#ifdef __linux__
+#include <features.h>
+#endif
+
+// If we are on Linux and we are not using GLIBC, attempt to
+// use C11 threads, because this means we are using MUSL.
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
    !defined(__STDC_NO_THREADS__) && \
-   defined(USE_C11_THREADS)
+   ( defined(USE_C11_THREADS) || \
+     ( defined(__linux__) && !defined(__GNU_LIBRARY__) && !defined(__GLIBC__) ) \
+   )
 # define HAVE_C11_THREADS
 # include <threads.h>
 #else

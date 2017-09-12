@@ -54,20 +54,10 @@
 !            Converted to Fortran by Jeff Hammond, January 2016.
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 program main
   use iso_fortran_env
   use omp_lib
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -88,7 +78,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a44)') 'Fortran OpenMP pipeline execution on 2D grid'
+  write(*,'(a44)') 'Fortran OpenMP TARGET pipeline execution on 2D grid'
 
   if (command_argument_count().lt.3) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -148,20 +138,15 @@ program main
     grid(i,1) = real(i-1,REAL64)
   enddo
 
-  ! DEVICE
-  !$omp target map(tofrom: grid) map(from:pipeline_time)
-  !$omp parallel default(none)                            &
-  !$omp&  shared(grid,t0,t1,iterations,pipeline_time)     &
-  !$omp&  firstprivate(m,n)                               &
-  !$omp&  private(i,j,k,corner_val)
+  !$omp target data map(tofrom: grid) map(from:pipeline_time)
+
   do k=0,iterations
 
-    if (k.eq.1) then
-      !$omp barrier
-      !$omp master
-      t0 = prk_get_wtime()
-      !$omp end master
-    endif
+    if (k.eq.1) t0 = omp_get_wtime()
+
+    ! DEVICE
+    !$omp target
+    !$omp parallel default(none) shared(grid) firstprivate(m,n) private(i,j)
 
     !$omp do ordered(2) collapse(2)
     do j=2,n
@@ -173,22 +158,20 @@ program main
     enddo
     !$omp end do
 
-    !$omp master
+    ! single vs master vs atomic?
+    !$omp single
     grid(1,1) = -grid(m,n)
-    !$omp end master
+    !$omp single
 
-    !$omp barrier
+    !$omp parallel
+    !$omp target
 
   enddo ! iterations
 
-  !$omp barrier
-  !$omp master
-  t1 = prk_get_wtime()
+  t1 = omp_get_wtime()
   pipeline_time = t1 - t0
-  !$omp end master
 
-  !$omp end parallel
-  !$omp end target
+  !$omp end target data
 
   ! ********************************************************************
   ! ** Analyze and output results.

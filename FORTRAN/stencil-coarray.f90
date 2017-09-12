@@ -62,15 +62,6 @@
 !            Izaak "Zaak" Beekman, March 2017
 ! *************************************************************************
 
-#if defined(__PGI) || defined(__llvm__)
-
-program main
-    print*,'PGI does not support Fortran 2008'
-    stop 1
-end program main
-
-#else
-
 function prk_get_wtime() result(t)
   use iso_fortran_env
   implicit none
@@ -580,5 +571,3 @@ program main
   endif
 
 end program main
-
-#endif

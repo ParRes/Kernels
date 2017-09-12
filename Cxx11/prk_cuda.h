@@ -12,6 +12,14 @@
 #include <cuda_device_runtime_api.h>
 #endif
 
+#ifdef __NVCC__
+#include <cublas_v2.h>
+#else
+#error Sorry, no CUBLAS without NVCC.
+#endif
+
+#include <cblas.h>
+
 namespace prk
 {
     void CUDAinfo()
@@ -35,6 +43,16 @@ namespace prk
             return;
         } else {
             std::cerr << "PRK CUDA error: " << cudaGetErrorString(rc) << std::endl;
+            std::abort();
+        }
+    }
+
+    inline void CUDAcheck(cublasStatus_t rc)
+    {
+        if (rc==CUBLAS_STATUS_SUCCESS) {
+            return;
+        } else {
+            std::cerr << "PRK CUBLAS error: " << rc << std::endl;
             std::abort();
         }
     }

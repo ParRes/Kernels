@@ -9,14 +9,20 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     src.write('subroutine '+pattern+str(radius)+'(n, in, out)\n')
     src.write('use iso_fortran_env\n')
     src.write('implicit none\n')
+    if (model=='target'):
+        src.write('!$omp declare target\n')
     src.write('integer(kind=INT32), intent(in) :: n\n')
     src.write('real(kind=REAL64), intent(in) :: in(n,n)\n')
     src.write('real(kind=REAL64), intent(inout) :: out(n,n)\n')
     src.write('integer(kind=INT32) :: i,j\n')
-    if (model=='openmp' or model=='target'):
+    if (model=='openmp'):
         src.write('    !$omp do\n')
         src.write('    do i='+str(radius)+',n-'+str(radius)+'-1\n')
         src.write('      !$omp simd\n')
+        src.write('      do j='+str(radius)+',n-'+str(radius)+'-1\n')
+    if (model=='target'):
+        src.write('    !$omp teams distribute parallel for simd collapse(2) schedule(static,1)\n')
+        src.write('    do i='+str(radius)+',n-'+str(radius)+'-1\n')
         src.write('      do j='+str(radius)+',n-'+str(radius)+'-1\n')
     elif (model=='taskloop'):
         src.write('    !$omp taskloop\n')
