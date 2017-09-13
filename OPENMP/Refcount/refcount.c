@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013, Intel Corporation
+Copyright (c) 2013-2017, Intel Corporation
  
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions 
@@ -91,7 +91,29 @@ void private_stream(double *a, double *b, double *c, size_t size) {
   for (j=0; j<size; j++) a[j] += b[j] + SCALAR*c[j];
   return;
 }
- 
+
+#if LOCK==2 && _OPENMP>=201611
+static omp_lock_hint_t parseLockHint (char const * hint)
+{
+  static struct {char const * name; omp_lock_hint_t value;} keywords[] = {
+    {"none",        omp_lock_hint_none },
+    {"contended",   omp_lock_hint_contended},
+    {"uncontended", omp_lock_hint_uncontended},
+    {"speculative", omp_lock_hint_speculative}
+  };
+
+  if (!hint)
+    return omp_lock_hint_none;
+  int i;
+  for (i=0; i<sizeof(keywords)/sizeof(keywords[0]); i++) {
+    if (strcmp(keywords[i].name, hint) == 0)
+      return keywords[i].value;
+  }
+  printf ("***Unknown lock hint '%s'. Using 'none'***\n", hint);
+  return omp_lock_hint_none;
+} 
+#endif
+
 int main(int argc, char ** argv)
 {
   size_t     iterations;      /* number of rounds of counter pair updates       */
@@ -112,7 +134,10 @@ int main(int argc, char ** argv)
   double     refcount_time;   /* timing parameter                               */
   int        nthread_input;   /* number of threads requested                    */
   int        nthread;         /* actual number of threads used                  */
-  int        lock_hint;       /* indicated type of lock hint (if using locks)   */
+#if _OPENMP>=201611
+  omp_lock_hint_t lock_hint;  /* indicated type of lock hint (if using locks)   */
+  char const * lock_hint_name;
+#endif
   int        error=0;         /* global errors                                  */
  
 /*********************************************************************
@@ -121,14 +146,22 @@ int main(int argc, char ** argv)
 
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("OpenMP exclusive access test RefCount, shared counters\n");
- 
+
+#if LOCK==2 && _OPENMP>=201611
   if (argc != 4 && argc != 5){
-    printf("Usage: %s <# threads> <# counter pair updates> <private stream size> [lock hint]\n", *argv);
-    printf("    lock hint=0:  If using locks, OpenMP assumes queuing lock (default) [Intel compiler only]\n");
-    printf("    lock hint!=0: If using locks, OpenMP assumes uncontended lock [Intel compiler only]\n");
+    printf("Usage: %s <# threads> <# counter pair updates> <private stream size> [lock_hint]\n", *argv);
+    printf("    lock_hint is one of 'contended', 'uncontended', 'speculative', or 'none'\n");
+
     return(1);
   }
- 
+#else 
+  if (argc != 4){
+    printf("Usage: %s <# threads> <# counter pair updates> <private stream size>\n", *argv);
+
+    return(1);
+  }
+ #endif
+
   nthread_input = atoi(*++argv);
   if ((nthread_input < 1) || (nthread_input > MAX_THREADS)) {
     printf("ERROR: Invalid number of threads: %d\n", nthread_input);
@@ -151,8 +184,10 @@ int main(int argc, char ** argv)
   }
 #endif
 
-  if (argc == 5) lock_hint = atoi(*++argv);
-  else           lock_hint = 0;
+#if LOCK==2 && _OPENMP>=201611
+  lock_hint_name = (argc == 5) ? *++argv : "none"; 
+  lock_hint = parseLockHint(lock_hint_name);
+#endif
  
   omp_set_num_threads(nthread_input);
 
@@ -225,12 +260,9 @@ int main(int argc, char ** argv)
 #endif
 #if LOCK==2
     printf("Mutex type                     = lock\n");
-  #if LOCK_HINT
-    if (lock_hint)
-      printf("Lock hint                      = uncontended\n");
-    else
-      printf("Lock hint                      = queueing\n");
-  #endif
+# if _OPENMP>=201611
+    printf("Lock hint                      = %s\n", lock_hint_name);
+# endif
 #elif LOCK==1
     printf("Mutex type                     = atomic\n");
 #else
@@ -280,13 +312,12 @@ int main(int argc, char ** argv)
 
   /* initialize the lock on which we will be pounding */
 #if LOCK==2
-  #if LOCK_HINT
-    if (lock_hint)
-      omp_init_lock_with_hint(pcounter_lock,omp_lock_hint_uncontended);
-    else
-      omp_init_lock_with_hint(pcounter_lock,omp_lock_hint_contended);
+  #if _OPENMP>=201611
+  //  fprintf (stderr, "Lock initialized with hint %d\n", (int)lock_hint);
+  omp_init_lock_with_hint(pcounter_lock,lock_hint);
   #else
-    omp_init_lock(pcounter_lock);
+  //  fprintf (stderr, "Lock initialized with no hint\n");
+  omp_init_lock(pcounter_lock);
   #endif
 #endif
 
@@ -418,15 +449,13 @@ int main(int argc, char ** argv)
      num_error = 1;
   }
 #if !CONTENDED
-  for (int t=0; t<nthread; t++) {
 #pragma omp critical
-    if (omp_get_thread_num()==t) error = MAX(error,num_error);
-  }
+  error = MAX(error,num_error);
 #else
   error = num_error;
 #endif
 #if CONTENDED
-  }
+  } /* end of omp master region */
 #endif
   } /* end of OpenMP parallel region */
  
@@ -438,10 +467,11 @@ int main(int argc, char ** argv)
     printf("Solution validates\n");
 #endif
 #if CONTENDED
-    updates=iterations;
+    updates=iterations-nthread;	/* Timed iterations; we execute nthread before we start the timer. */
 #else
     updates=iterations*nthread;
 #endif
+
     printf("Rate (MCPUPs/s): %lf time (s): %lf\n", 
            updates/refcount_time*1.e-6, refcount_time);
   }
