@@ -63,15 +63,8 @@ HISTORY: Written by Rob Van der Wijngaart, January 2006.
 *******************************************************************/
  
 #include <par-res-kern_general.h>
-#include <inttypes.h>
 #include <par-res-kern_omp.h>
  
-/* shouldn't need the prototype below, since it is defined in <unistd.h>. But it
-   depends on the existence of symbols __USE_BSD or _USE_XOPEN_EXTENDED, neither
-   of which may be present. To avoid warnings, we define the prototype here     */
-#if !defined(__USE_BSD) && !defined(__USE_XOPEN_EXTENDED)
-extern int getpagesize(void);
-#endif
 #define COUNTER1     (*pcounter1)
 #define COUNTER2     (*pcounter2)
 #define SCALAR       3.0
@@ -281,9 +274,9 @@ int main(int argc, char ** argv)
      If the page size equals the whole memory, this will fail, and we reduce
      the space required */
   page_fit = 1;
-  store_size = (size_t) getpagesize();
+  store_size = sysconf(_SC_PAGESIZE);
 #if VERBOSE
-  printf("Page size = %d\n", getpagesize());
+  printf("Page size = %zu\n", store_size);
 #endif
 
   counter_space = (DTYPE *) prk_malloc(store_size+sizeof(DTYPE)+sizeof(omp_lock_t));
