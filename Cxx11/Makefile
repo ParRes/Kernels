@@ -39,14 +39,13 @@ OPENCLFLAGS = $(OPENCLFLAG)
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
 ORNLACCFLAGS = $(ORNLACCFLAG)
-CILKFLAGS = $(CILKFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 BOOSTFLAGS = $(BOOSTFLAG)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
 
-.PHONY: all clean vector valarray openmp target opencl cilk taskloop tbb pstl rangefor kokkos raja cuda
+.PHONY: all clean vector valarray openmp target opencl taskloop tbb pstl rangefor kokkos raja cuda
 
 EXTRA=
 ifeq ($(shell uname -s),Darwin)
@@ -55,9 +54,6 @@ ifeq ($(shell uname -s),Darwin)
   endif
 else
   EXTRA += target
-endif
-ifneq ($(CILKFLAG),)
-  EXTRA += cilk
 endif
 
 all: vector valarray openmp taskloop tbb pstl rangefor raja kokkos opencl $(EXTRA)
@@ -73,8 +69,6 @@ target: stencil-openmp-target transpose-openmp-target
 taskloop: stencil-vector-taskloop transpose-vector-taskloop
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl
-
-cilk: stencil-vector-cilk transpose-vector-cilk
 
 tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
 
@@ -105,9 +99,6 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 
 %-taskloop: %-taskloop.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
-
-%-cilk: %-cilk.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $< $(CILKFLAGS) -o $@
 
 %-tbb: %-tbb.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
@@ -152,7 +143,6 @@ clean:
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-opencl
-	-rm -f *-cilk
 	-rm -f *-tbb
 	-rm -f *-pstl
 	-rm -f *-rangefor
