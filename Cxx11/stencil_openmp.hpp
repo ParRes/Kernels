@@ -1,5 +1,3 @@
-#define RESTRICT __restrict__
-
 void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
     OMP_FOR(collapse(2))
     for (auto it=1; it<n-1; it+=t) {

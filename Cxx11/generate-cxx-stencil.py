@@ -152,14 +152,14 @@ def instance(src,model,pattern,r):
 def main():
     for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','cilk','raja','kokkos']:
       src = open('stencil_'+model+'.hpp','w')
-      src.write('#define RESTRICT __restrict__\n\n')
       if (model=='target'):
-        src.write('OMP( declare target )\n')
+          src.write('#define RESTRICT __restrict__\n\n')
+      #  src.write('OMP( declare target )\n\n')
       for pattern in ['star','grid']:
         for r in range(1,6):
           instance(src,model,pattern,r)
-      if (model=='target'):
-        src.write('OMP( end declare target )\n')
+      #if (model=='target'):
+      #  src.write('OMP( end declare target )\n')
       src.close()
 
 if __name__ == '__main__':

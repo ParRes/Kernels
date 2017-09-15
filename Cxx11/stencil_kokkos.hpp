@@ -1,5 +1,3 @@
-#define RESTRICT __restrict__
-
 void star1(const int n, const int t, matrix & in, matrix & out) {
     Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(1,n-1), KOKKOS_LAMBDA(const int i) {
       PRAGMA_SIMD
