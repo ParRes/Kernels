@@ -1,5 +1,3 @@
-#define RESTRICT __restrict__
-
 void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
     auto inside = boost::irange(1,n-1);
     __gnu_parallel::for_each( std::begin(inside), std::end(inside), [&] (int i) {

@@ -4,7 +4,8 @@
 #
 # Base compilers and language options
 #
-LLVM_PATH=/usr/local/Cellar/llvm/4.0.1/bin/
+LLVM_ROOT=/usr/local/Cellar/llvm/5.0.0/
+LLVM_PATH=${LLVM_ROOT}/bin/
 #LLVM_PATH=/opt/llvm/HEAD/bin/
 # C99 is required in some implementations.
 CC=${LLVM_PATH}clang -std=c11 -pthread
@@ -38,7 +39,7 @@ ORNLACCFLAG= # Flang does not support OpenACC
 # Klondike weirdness
 # OPENMPFLAG+=-L/opt/intel/compilers_and_libraries_2018.0.082/linux/compiler/lib/intel64_lin -liomp5
 # Mac weirdness
-# OPENMPFLAG+=-L/usr/local/Cellar/llvm/4.0.0_1/lib
+OPENMPFLAG+=-L${LLVM_ROOT}/lib
 # LLVM
 # OPENMPFLAG+=-L/opt/llvm/4.0.0/lib -lomp
 #
@@ -46,6 +47,9 @@ ORNLACCFLAG= # Flang does not support OpenACC
 #
 # MacOS
 OPENCLFLAG=-framework OpenCL
+# POCL
+# http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
+#OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
