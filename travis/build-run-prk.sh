@@ -477,20 +477,6 @@ case "$PRK_TARGET" in
             cd ..
         fi
 
-        # C++11 with Cilk
-        if [ "${CC}" = "gcc" ] ; then
-            echo "CILKFLAG=-fcilkplus" >> common/make.defs
-            make -C $PRK_TARGET_PATH stencil-vector-cilk transpose-vector-cilk
-            $PRK_TARGET_PATH/stencil-vector-cilk     10 1000
-            $PRK_TARGET_PATH/transpose-vector-cilk   10 1024 32
-            #echo "Test stencil code generator"
-            for s in star grid ; do
-                for r in 1 2 3 4 5 ; do
-                    $PRK_TARGET_PATH/stencil-vector-cilk 10 200 20 $s $r
-                done
-            done
-        fi
-
         # C++11 with Kokkos, RAJA
         case "$CC" in
             gcc)
