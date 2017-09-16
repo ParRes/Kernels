@@ -1,5 +1,3 @@
-#define RESTRICT __restrict__
-
 void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
     _Cilk_for (auto it=1; it<n-1; it+=t) {
       _Cilk_for (auto jt=1; jt<n-1; jt+=t) {
