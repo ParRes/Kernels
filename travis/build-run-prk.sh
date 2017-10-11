@@ -329,12 +329,6 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/transpose-vector-thread 10 1024 32
         $PRK_TARGET_PATH/transpose-vector-async  10 1024 32
 
-        # C++17 Parallel STL
-        echo "PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
-        make -C $PRK_TARGET_PATH stencil-vector-pstl transpose-vector-pstl
-        $PRK_TARGET_PATH/stencil-vector-pstl     10 1000
-        $PRK_TARGET_PATH/transpose-vector-pstl   10 1024 32
-
         # C++11 with rangefor
         echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
         make -C $PRK_TARGET_PATH rangefor
@@ -465,6 +459,12 @@ case "$PRK_TARGET" in
                 done
             done
         fi
+
+        # C++17 Parallel STL
+        echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
+        make -C $PRK_TARGET_PATH stencil-vector-pstl transpose-vector-pstl
+        $PRK_TARGET_PATH/stencil-vector-pstl     10 1000
+        $PRK_TARGET_PATH/transpose-vector-pstl   10 1024 32
 
         # C++11 with OpenCL
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
