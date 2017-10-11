@@ -461,7 +461,12 @@ case "$PRK_TARGET" in
         done
 
         # C++17 Parallel STL
-        echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
+        if [ "${CC}" = "clang" ] ; then
+            # omp.h not found with clang-3.9 - just work around instead of fixing.
+            echo "PSTLFLAG=-DUSE_PSTL ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
+        else
+            echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
+        fi
         make -C $PRK_TARGET_PATH stencil-vector-pstl transpose-vector-pstl
         $PRK_TARGET_PATH/stencil-vector-pstl     10 1000
         $PRK_TARGET_PATH/transpose-vector-pstl   10 1024 32
