@@ -111,7 +111,7 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     // transpose
-#if defined(USE_PSTL) && defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
+#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
   std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
     std::for_each( pstl::execution::unseq, std::begin(range), std::end(range), [&] (int j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
