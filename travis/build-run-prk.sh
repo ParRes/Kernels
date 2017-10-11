@@ -461,21 +461,24 @@ case "$PRK_TARGET" in
         done
 
         # C++17 Parallel STL
-        if [ "${CC}" = "clang" ] ; then
-            # omp.h not found with clang-3.9 - just work around instead of fixing.
-            echo "PSTLFLAG=-DUSE_PSTL ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
-        else
-            echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
-        fi
-        make -C $PRK_TARGET_PATH stencil-vector-pstl transpose-vector-pstl
-        $PRK_TARGET_PATH/stencil-vector-pstl     10 1000
-        $PRK_TARGET_PATH/transpose-vector-pstl   10 1024 32
-        #echo "Test stencil code generator"
-        for s in star grid ; do
-            for r in 1 2 3 4 5 ; do
-                $PRK_TARGET_PATH/stencil-vector-pstl 10 200 20 $s $r
+        # Skip Clang+Linux because we skip TBB there - see above.
+        if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            if [ "${CC}" = "clang" ] ; then
+                # omp.h not found with clang-3.9 - just work around instead of fixing.
+                echo "PSTLFLAG=-DUSE_PSTL ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
+            else
+                echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
+            fi
+            make -C $PRK_TARGET_PATH stencil-vector-pstl transpose-vector-pstl
+            $PRK_TARGET_PATH/stencil-vector-pstl     10 1000
+            $PRK_TARGET_PATH/transpose-vector-pstl   10 1024 32
+            #echo "Test stencil code generator"
+            for s in star grid ; do
+                for r in 1 2 3 4 5 ; do
+                    $PRK_TARGET_PATH/stencil-vector-pstl 10 200 20 $s $r
+                done
             done
-        done
+        fi
 
         # C++11 with OpenCL
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
