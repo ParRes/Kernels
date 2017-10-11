@@ -324,6 +324,7 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil-vector 10 200 20 $s $r
             done
         done
+
         # C++11 native parallelism
         make -C $PRK_TARGET_PATH transpose-vector-thread transpose-vector-async
         $PRK_TARGET_PATH/transpose-vector-thread 10 1024 32
@@ -338,18 +339,6 @@ case "$PRK_TARGET" in
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
                 $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 20 $s $r
-            done
-        done
-
-        # C++11 with STL (C++17 PSTL disabled)
-        echo "PSTLFLAG=" >> common/make.defs
-        make -C $PRK_TARGET_PATH pstl
-        $PRK_TARGET_PATH/stencil-vector-pstl     10 1000
-        $PRK_TARGET_PATH/transpose-vector-pstl   10 1024 32
-        #echo "Test stencil code generator"
-        for s in star grid ; do
-            for r in 1 2 3 4 5 ; do
-                $PRK_TARGET_PATH/stencil-vector-pstl 10 200 20 $s $r
             done
         done
 
@@ -460,11 +449,28 @@ case "$PRK_TARGET" in
             done
         fi
 
+        # C++11 with STL
+        make -C $PRK_TARGET_PATH stencil-vector-stl transpose-vector-stl
+        $PRK_TARGET_PATH/stencil-vector-stl     10 1000
+        $PRK_TARGET_PATH/transpose-vector-stl   10 1024 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-vector-stl 10 200 20 $s $r
+            done
+        done
+
         # C++17 Parallel STL
         echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
         make -C $PRK_TARGET_PATH stencil-vector-pstl transpose-vector-pstl
         $PRK_TARGET_PATH/stencil-vector-pstl     10 1000
         $PRK_TARGET_PATH/transpose-vector-pstl   10 1024 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-vector-pstl 10 200 20 $s $r
+            done
+        done
 
         # C++11 with OpenCL
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then

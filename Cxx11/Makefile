@@ -41,11 +41,12 @@ OPENCLFLAGS = $(OPENCLFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 BOOSTFLAGS = $(BOOSTFLAG)
+STLFLAGS = $(STLFLAG) $(BOOSTFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
 
-.PHONY: all clean vector valarray openmp target opencl taskloop tbb pstl rangefor kokkos raja cuda
+.PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl rangefor kokkos raja cuda
 
 EXTRA=
 ifeq ($(shell uname -s),Darwin)
@@ -56,7 +57,7 @@ else
   EXTRA += target
 endif
 
-all: vector valarray openmp taskloop tbb pstl rangefor raja kokkos opencl $(EXTRA)
+all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl $(EXTRA)
 
 vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector transpose-vector-async transpose-vector-thread
 
@@ -71,6 +72,8 @@ taskloop: stencil-vector-taskloop transpose-vector-taskloop
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl
 
 tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
+
+stl: stencil-vector-stl transpose-vector-stl
 
 pstl: stencil-vector-pstl transpose-vector-pstl
 
@@ -102,6 +105,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 
 %-tbb: %-tbb.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
+
+%-stl: %-pstl.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(STLFLAGS) -o $@
 
 %-pstl: %-pstl.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(PSTLFLAGS) -o $@
@@ -144,6 +150,7 @@ clean:
 	-rm -f *-taskloop
 	-rm -f *-opencl
 	-rm -f *-tbb
+	-rm -f *-stl
 	-rm -f *-pstl
 	-rm -f *-rangefor
 	-rm -f *-raja

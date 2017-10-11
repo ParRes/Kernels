@@ -56,7 +56,11 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+#if defined(USE_PSTL)
   std::cout << "C++17 Parallel STL Matrix transpose: B = A^T" << std::endl;
+#else
+  std::cout << "C++11 STL Matrix transpose: B = A^T" << std::endl;
+#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -119,7 +123,6 @@ int main(int argc, char * argv[])
   __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
     __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int j) {
 #else
-#warning Parallel STL is NOT being used!
   std::for_each( std::begin(range), std::end(range), [&] (int i) {
     std::for_each( std::begin(range), std::end(range), [&] (int j) {
 #endif

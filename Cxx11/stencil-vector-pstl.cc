@@ -84,7 +84,11 @@ void nothing(const int n, const int t, std::vector<double> & in, std::vector<dou
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+#if defined(USE_PSTL)
   std::cout << "C++17/Parallel STL Stencil execution on 2D grid" << std::endl;
+#else
+  std::cout << "C++11/STL Stencil execution on 2D grid" << std::endl;
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -187,7 +191,6 @@ int main(int argc, char* argv[])
   __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
     __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int j) {
 #else
-#warning Parallel STL is NOT being used!
   std::for_each( std::begin(range), std::end(range), [&] (int i) {
     std::for_each( std::begin(range), std::end(range), [&] (int j) {
 #endif
