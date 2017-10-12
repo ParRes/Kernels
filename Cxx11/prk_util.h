@@ -167,8 +167,12 @@
 # include <boost/range/irange.hpp>
 #endif
 
+#if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
+#define USE_INTEL_PSTL
+#endif
+
 #ifdef USE_PSTL
-# if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
+# ifdef USE_INTEL_PSTL
 #  include <pstl/execution>
 #  include <pstl/algorithm>
 #  include <pstl/numeric>
