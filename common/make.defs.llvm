@@ -4,7 +4,7 @@
 #
 # Base compilers and language options
 #
-LLVM_ROOT=/usr/local/Cellar/llvm/5.0.0/
+LLVM_ROOT=/usr/local/Cellar/llvm/5.0.0
 LLVM_PATH=${LLVM_ROOT}/bin/
 #LLVM_PATH=/opt/llvm/HEAD/bin/
 # C99 is required in some implementations.
