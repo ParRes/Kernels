@@ -5,11 +5,11 @@
 # Base compilers and language options
 #
 # C99 is required in some implementations.
-CC=cc -h c99
+CC=cc -h std=c11
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=ftn -e F
 # C++11 may not be required but does no harm here.
-CXX=CC -hstd=c++11
+CXX=CC -h std=c++14
 #
 # Compiler flags
 #
