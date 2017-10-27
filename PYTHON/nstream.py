@@ -54,7 +54,7 @@ def main():
 
     if len(sys.argv) != 3:
         print('argument count = ', len(sys.argv))
-        sys.exit("Usage: ./transpose <# iterations> <vector length>")
+        sys.exit("Usage: python nstream.py <# iterations> <vector length>")
 
     iterations = int(sys.argv[1])
     if iterations < 1:
@@ -73,7 +73,7 @@ def main():
     #print('Offset               = ', offset)
 
     # ********************************************************************
-    # ** Allocate space for the input and transpose matrix
+    # ** Allocate space for the input and execute STREAM triad
     # ********************************************************************
 
     # 0.0 is a float, which is 64b (53b of precision)
