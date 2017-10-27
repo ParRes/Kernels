@@ -59,7 +59,7 @@ def main():
     # ********************************************************************
 
     print('Parallel Research Kernels version ') #, PRKVERSION
-    print('Python Matrix transpose: B = A^T')
+    print('Python Numpy Matrix transpose: B = A^T')
 
     if len(sys.argv) != 3:
         print('argument count = ', len(sys.argv))
