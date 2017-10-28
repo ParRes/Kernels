@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015, Intel Corporation
+# Copyright (c) 2017, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,25 +31,18 @@
 
 #*******************************************************************
 #
-# NAME:    transpose
+# NAME:    nstream
 #
-# PURPOSE: This program measures the time for the transpose of a
-#          column-major stored matrix into a row-major stored matrix.
+# PURPOSE: TODO
 #
-# USAGE:   Program input is the matrix order and the number of times to
-#          repeat the operation:
+# USAGE:   TODO
 #
-#          transpose <# iterations> <matrix_size>
-#
-#          The output consists of diagnostics to make sure the
-#          transpose worked and timing statistics.
-#
-# HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-#          Converted to Python by Jeff Hammond, February 2016.
+# HISTORY: Converted to Python by Jeff Hammond, October 2017.
 # *******************************************************************
 
 import sys
 from timeit import default_timer as timer
+import numpy
 
 def main():
 
@@ -58,69 +51,75 @@ def main():
     # ********************************************************************
 
     print('Parallel Research Kernels version ') #, PRKVERSION
-    print('Python Matrix transpose: B = A^T')
+    print('Python Numpy STREAM triad: A = B + scalar * C')
 
     if len(sys.argv) != 3:
         print('argument count = ', len(sys.argv))
-        sys.exit("Usage: ./transpose <# iterations> <matrix order>")
+        sys.exit("Usage: python nstream.py <# iterations> <vector length>")
 
     iterations = int(sys.argv[1])
     if iterations < 1:
         sys.exit("ERROR: iterations must be >= 1")
 
-    order = int(sys.argv[2])
-    if order < 1:
-        sys.exit("ERROR: order must be >= 1")
+    length = int(sys.argv[2])
+    if length < 1:
+        sys.exit("ERROR: length must be >= 1")
 
-    print('Matrix order         = ', order)
+    #offset = int(sys.argv[3])
+    #if offset < 0:
+    #    sys.exit("ERROR: offset must be >= 0")
+
     print('Number of iterations = ', iterations)
+    print('Vector length        = ', length)
+    #print('Offset               = ', offset)
 
     # ********************************************************************
-    # ** Allocate space for the input and transpose matrix
+    # ** Allocate space for the input and execute STREAM triad
     # ********************************************************************
 
     # 0.0 is a float, which is 64b (53b of precision)
-    A = [[0.0 for x in range(order)] for x in range(order)]
-    B = [[0.0 for x in range(order)] for x in range(order)]
+    A = numpy.zeros(length)
+    B = numpy.full(length,2.0)
+    C = numpy.full(length,2.0)
 
-    # this is surely not the Pythonic way of doing this
-    for i in range(order):
-        for j in range(order):
-            A[i][j] = float(i*order+j)
+    scalar = 3.0
 
     for k in range(0,iterations+1):
 
         if k<1: t0 = timer()
 
-        for i in range(order):
-            for j in range(order):
-                B[i][j] += A[j][i]
-                A[j][i] += 1.0
+        A += B + scalar * C
 
 
     t1 = timer()
-    trans_time = t1 - t0
+    nstream_time = t1 - t0
 
     # ********************************************************************
     # ** Analyze and output results.
     # ********************************************************************
 
-    addit = (iterations * (iterations+1))/2
-    abserr = 0.0;
-    for i in range(order):
-        for j in range(order):
-            temp    = (order*j+i) * (iterations+1)
-            abserr += abs(B[i][j] - float(temp+addit))
+    ar = 0.0
+    br = 2.0
+    cr = 2.0
+    ref = 0.0
+    for k in range(0,iterations+1):
+        ar += br + scalar * cr
+
+    ar *= length
+
+    asum = numpy.linalg.norm(A, ord=1)
 
     epsilon=1.e-8
-    nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
-    if abserr < epsilon:
-        print('Solution validates')
-        avgtime = trans_time/iterations
-        print('Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime)
-    else:
-        print('error ',abserr, ' exceeds threshold ',epsilon)
+    if abs(ar-asum)/asum > epsilon:
+        print('Failed Validation on output array');
+        print('        Expected checksum: ',ar);
+        print('        Observed checksum: ',asum);
         sys.exit("ERROR: solution did not validate")
+    else:
+        print('Solution validates')
+        avgtime = nstream_time/iterations
+        nbytes = 4.0 * length * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
+        print('Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime)
 
 
 if __name__ == '__main__':
