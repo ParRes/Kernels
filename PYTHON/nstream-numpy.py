@@ -34,11 +34,33 @@
 #
 # NAME:    nstream
 #
-# PURPOSE: TODO
+# PURPOSE: To compute memory bandwidth when adding a vector of a given
+#          number of double precision values to the scalar multiple of
+#          another vector of the same length, and storing the result in
+#          a third vector.
 #
-# USAGE:   TODO
+# USAGE:   The program takes as input the number
+#          of iterations to loop over the triad vectors, the length of the
+#          vectors, and the offset between vectors
 #
-# HISTORY: Converted to Python by Jeff Hammond, October 2017.
+#          <progname> <# iterations> <vector length> <offset>
+#
+#          The output consists of diagnostics to make sure the
+#          algorithm worked, and of timing statistics.
+#
+# NOTES:   Bandwidth is determined as the number of words read, plus the
+#          number of words written, times the size of the words, divided
+#          by the execution time. For a vector length of N, the total
+#          number of words read and written is 4*N*sizeof(double).
+#
+#
+# HISTORY: This code is loosely based on the Stream benchmark by John
+#          McCalpin, but does not follow all the Stream rules. Hence,
+#          reported results should not be associated with Stream in
+#          external publications
+#
+#          Converted to Python by Jeff Hammond, October 2017.
+#
 # *******************************************************************
 
 import sys
