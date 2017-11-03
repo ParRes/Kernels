@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2015, Intel Corporation
 #
@@ -51,7 +51,8 @@
 # *******************************************************************
 
 import sys
-import time
+#from timeit import default_timer as timer
+from time import process_time as timer
 import numpy
 
 def main():
@@ -88,11 +89,11 @@ def main():
 
     for k in range(0,iterations+1):
 
-        if k<1: t0 = time.process_time()
+        if k<1: t0 = timer()
 
         C += numpy.matmul(A,B)
 
-    t1 = time.process_time()
+    t1 = timer()
     dgemm_time = t1 - t0
 
     # ********************************************************************
