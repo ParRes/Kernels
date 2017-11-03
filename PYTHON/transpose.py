@@ -73,8 +73,8 @@ def main():
     if order < 1:
         sys.exit("ERROR: order must be >= 1")
 
-    print('Matrix order         = ', order)
     print('Number of iterations = ', iterations)
+    print('Matrix order         = ', order)
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
