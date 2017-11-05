@@ -130,8 +130,7 @@ def main():
         if k<1: t0 = timer()
 
         # fill vector
-        for row in range(0,size2):
-            vector[row] += row+1
+        vector += numpy.fromfunction(lambda i: i+1.0, (size2,))
 
         # do the actual matrix-vector multiplication
         for row in range(0,size2):
