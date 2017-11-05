@@ -31,8 +31,8 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
             export PATH=/usr/bin:$PATH
         fi
-        which python3
-        python3 --version
+        which python3 || which python
+        python3 --version || python --version
         export PRK_TARGET_PATH=PYTHON
         # Native
         $PRK_TARGET_PATH/p2p.py             10 100 100
