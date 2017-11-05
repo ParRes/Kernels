@@ -102,10 +102,10 @@ def main():
     # Initialize data and perform computation
     # ********************************************************************
 
-    matrix = [0.0 for x in range(nent)]
-    colIndex = [0 for x in range(nent)]
-    vector = [0.0 for x in range(size2)]
-    result = [0.0 for x in range(size2)]
+    matrix   = [0.0 for x in range(nent)]
+    colIndex = [ 0  for x in range(nent)]
+    vector   = [0.0 for x in range(size2)]
+    result   = [0.0 for x in range(size2)]
 
     for row in range(size2):
         i = int(row%size)
@@ -119,7 +119,6 @@ def main():
             colIndex[elm+4] = offset(i,(j-r+size)%size,lsize)
             elm += 4
         # sort colIndex to make sure the compressed row accesses vector elements in increasing order
-        #qsort(&(colIndex[row*stencil_size]), stencil_size, sizeof(s64Int), compare);
         colIndex[row*stencil_size:(row+1)*stencil_size] = sorted(colIndex[row*stencil_size:(row+1)*stencil_size])
         for k in range(0,stencil_size):
             elm = row*stencil_size + k
@@ -135,10 +134,8 @@ def main():
 
         # do the actual matrix-vector multiplication
         for row in range(0,size2):
-            first = stencil_size*row
-            last  = first+stencil_size-1
             temp = 0.0
-            for col in range(first,last+1):
+            for col in range(stencil_size*row,stencil_size*(row+1)):
                 temp += matrix[col] * vector[colIndex[col]]
             result[row] += temp;
 
@@ -149,7 +146,6 @@ def main():
     #* Analyze and output results.
     #******************************************************************************
 
-    # verification test
     reference_sum = 0.5 * nent * (iterations+1) * (iterations+2)
 
     vector_sum = 0.0
@@ -158,7 +154,6 @@ def main():
 
     epsilon = 1.e-8
 
-    # verify correctness
     if abs(vector_sum-reference_sum) < epsilon:
         print('Solution validates')
         flops = 2*nent

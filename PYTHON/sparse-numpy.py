@@ -57,7 +57,6 @@ import sys
 #from timeit import default_timer as timer
 from time import process_time as timer
 import numpy
-import scipy
 
 def offset(i,j,lsize):
     return i+(j<<lsize)
@@ -69,7 +68,7 @@ def main():
     # ********************************************************************
 
     print('Parallel Research Kernels version ') #, PRKVERSION
-    print('Python SciPy Sparse matrix-vector multiplication')
+    print('Python Sparse matrix-vector multiplication')
 
     if len(sys.argv) < 3:
         print('argument count = ', len(sys.argv))
@@ -136,10 +135,8 @@ def main():
 
         # do the actual matrix-vector multiplication
         for row in range(0,size2):
-            temp = 0.0
-            for col in range(stencil_size*row,stencil_size*(row+1)):
-                temp += matrix[col] * vector[colIndex[col]]
-            result[row] += temp;
+            result[row] += numpy.dot(matrix[stencil_size*row:stencil_size*(row+1)],
+                                     vector[colIndex[stencil_size*row:stencil_size*(row+1)]])
 
     t1 = timer()
     sparse_time = t1 - t0
@@ -150,12 +147,11 @@ def main():
 
     reference_sum = 0.5 * nent * (iterations+1) * (iterations+2)
 
-    vector_sum = 0.0
-    for row in range(0,size2):
-        vector_sum += result[row]
+    vector_sum = numpy.linalg.norm(result, ord=1)
 
     epsilon = 1.e-8
 
+    # verify correctness
     if abs(vector_sum-reference_sum) < epsilon:
         print('Solution validates')
         flops = 2*nent
