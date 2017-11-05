@@ -32,20 +32,21 @@
 
 #*******************************************************************
 #
-# NAME:    transpose
+# NAME:    dgemm
 #
-# PURPOSE: This program measures the time for the transpose of a
-#          column-major stored matrix into a row-major stored matrix.
+# PURPOSE: This program tests the efficiency with which a dense matrix
+#          dense multiplication is carried out
 #
-# USAGE:   Program input is the matrix order and the number of times to
-#          repeat the operation:
+# USAGE:   The program takes as input the matrix order,
+#          the number of times the matrix-matrix multiplication 
+#          is carried out.
 #
-#          transpose <# iterations> <matrix_size>
+#          <progname> <# iterations> <matrix order>
 #
-#          The output consists of diagnostics to make sure the
-#          transpose worked and timing statistics.
+#          The output consists of diagnostics to make sure the 
+#          algorithm worked, and of timing statistics.
 #
-# HISTORY: Written by  Rob Van der Wijngaart, February 2009.
+# HISTORY: Written by Rob Van der Wijngaart, February 2009.
 #          Converted to Python by Jeff Hammond, February 2016.
 # *******************************************************************
 
@@ -61,7 +62,7 @@ def main():
     # ********************************************************************
 
     print('Parallel Research Kernels version ') #, PRKVERSION
-    print('Python Numpy Matrix transpose: B = A^T')
+    print('Python Dense matrix-matrix multiplication: C = A x B')
 
     if len(sys.argv) != 3:
         print('argument count = ', len(sys.argv))
@@ -82,38 +83,36 @@ def main():
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    A = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
-    B = numpy.zeros((order,order))
+    A = numpy.fromfunction(lambda i,j: j, (order,order), dtype=float)
+    B = numpy.fromfunction(lambda i,j: j, (order,order), dtype=float)
+    C = numpy.zeros((order,order))
 
     for k in range(0,iterations+1):
 
         if k<1: t0 = timer()
 
-        # this actually forms the transpose of A
-        # B += numpy.transpose(A)
-        # this only uses the transpose _view_ of A
-        B += A.T
-        A += 1.0
-
+        C += numpy.matmul(A,B)
 
     t1 = timer()
-    trans_time = t1 - t0
+    dgemm_time = t1 - t0
 
     # ********************************************************************
     # ** Analyze and output results.
     # ********************************************************************
 
-    A = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
-    abserr = numpy.linalg.norm(numpy.reshape(B-A,order*order),ord=1)
+    checksum = numpy.linalg.norm(numpy.reshape(C,order*order),ord=1)
+
+    ref_checksum = 0.25*order*order*order*(order-1.0)*(order-1.0)
+    ref_checksum *= (iterations+1)
 
     epsilon=1.e-8
-    nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
-    if abserr < epsilon:
+    if abs((checksum - ref_checksum)/ref_checksum) < epsilon:
         print('Solution validates')
-        avgtime = trans_time/iterations
-        print('Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime)
+        avgtime = dgemm_time/iterations
+        nflops = 2.0*order*order*order
+        print('Rate (MF/s): ',1.e-6*nflops/avgtime, ' Avg time (s): ', avgtime)
     else:
-        print('error ',abserr, ' exceeds threshold ',epsilon)
+        print('ERROR: Checksum = ', checksum,', Reference checksum = ', ref_checksum,'\n')
         sys.exit("ERROR: solution did not validate")
 
 
