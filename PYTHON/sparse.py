@@ -120,6 +120,7 @@ def main():
             elm += 4
         # sort colIndex to make sure the compressed row accesses vector elements in increasing order
         #qsort(&(colIndex[row*stencil_size]), stencil_size, sizeof(s64Int), compare);
+        colIndex[row*stencil_size:(row+1)*stencil_size] = sorted(colIndex[row*stencil_size:(row+1)*stencil_size])
         for k in range(0,stencil_size):
             elm = row*stencil_size + k
             matrix[elm] = 1.0/(colIndex[elm]+1)
