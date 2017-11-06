@@ -34,18 +34,19 @@ case "$PRK_TARGET" in
         which python3 || which python || true
         python3 --version || python --version || true
         export PRK_TARGET_PATH=PYTHON
+        export PRK_PYTHON=python
         # Native
-        $PRK_TARGET_PATH/p2p.py             10 100 100
-        $PRK_TARGET_PATH/stencil.py         10 100
-        $PRK_TARGET_PATH/transpose.py       10 100
-        $PRK_TARGET_PATH/nstream.py         10 100000
-        $PRK_TARGET_PATH/dgemm.py           10 100
+        $PRK_PYTHON $PRK_TARGET_PATH/p2p.py             10 100 100
+        $PRK_PYTHON $PRK_TARGET_PATH/stencil.py         10 100
+        $PRK_PYTHON $PRK_TARGET_PATH/transpose.py       10 100
+        $PRK_PYTHON $PRK_TARGET_PATH/nstream.py         10 100000
+        $PRK_PYTHON $PRK_TARGET_PATH/dgemm.py           10 100
         # Numpy
-        $PRK_TARGET_PATH/p2p-numpy.py       10 1024 1024
-        $PRK_TARGET_PATH/stencil-numpy.py   10 1000
-        $PRK_TARGET_PATH/transpose-numpy.py 10 1024
-        $PRK_TARGET_PATH/nstream-numpy.py   10 16777216
-        $PRK_TARGET_PATH/dgemm-numpy.py     10 1024
+        $PRK_PYTHON $PRK_TARGET_PATH/p2p-numpy.py       10 1024 1024
+        $PRK_PYTHON $PRK_TARGET_PATH/stencil-numpy.py   10 1000
+        $PRK_PYTHON $PRK_TARGET_PATH/transpose-numpy.py 10 1024
+        $PRK_PYTHON $PRK_TARGET_PATH/nstream-numpy.py   10 16777216
+        $PRK_PYTHON $PRK_TARGET_PATH/dgemm-numpy.py     10 1024
         ;;
     alloctave)
         echo "Octave"
