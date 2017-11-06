@@ -135,6 +135,7 @@ addons:
     - boost-latest
     packages:
     - python-numpy
+    - python-scipy
     - gcc-5
     - g++-5
     - gfortran-5
