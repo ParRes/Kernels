@@ -635,6 +635,7 @@ case "$PRK_TARGET" in
                 elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
                     export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
                 fi
+                export PRK_LAUNCHER="$PRK_LAUNCHER --oversubscribe"
                 $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/p2p-coarray       10 1024 1024
                 $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/stencil-coarray   10 1000
                 $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/transpose-coarray 10 1024 1
