@@ -565,7 +565,7 @@ case "$PRK_TARGET" in
                 echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
                     # Homebrew installs a symlink in /usr/local/bin
-                    export PRK_CAFC=caf
+                    export PRK_CAFC=/usr/local/bin/caf
                 elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
                     export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
                 fi
