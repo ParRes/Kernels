@@ -47,7 +47,7 @@ if [ ! -d "$TRAVIS_ROOT/raja" ]; then
     cd build
     cmake .. -DCMAKE_CXX_COMPILER=${PRK_CXX} -DCMAKE_C_COMPILER=${PRK_CC} \
              -DCMAKE_INSTALL_PREFIX=${TRAVIS_ROOT}/raja \
-             -DRAJA_ENABLE_TBB=On -DRAJA_ENABLE_OPENMP=${USE_OPENMP}
+             -DENABLE_TBB=On -DENABLE_OPENMP=${USE_OPENMP}
     make -j2
     make install -j2
 else
