@@ -628,6 +628,8 @@ case "$PRK_TARGET" in
             if [ "${CC}" = "gcc" ] ; then
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
                     # Homebrew installs a symlink in /usr/local/bin
+                    ls -l /usr/local/bin/cafrun || true
+                    which cafrun || true
                     export PRK_LAUNCHER="/usr/local/bin/cafrun --oversubscribe"
                     # OpenCoarrays uses Open-MPI on Mac thanks to Homebrew
                     # see https://github.com/open-mpi/ompi/issues/2956
