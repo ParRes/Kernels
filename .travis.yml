@@ -1,5 +1,7 @@
 sudo: false
 language: cpp
+python:
+  - "3.5"
 env:
   matrix:
   - PRK_TARGET=allserial
@@ -163,6 +165,7 @@ install:
 - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
 - export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
 - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
+- pip install -r requirements.txt
 before_script:
 - pwd
 script:
