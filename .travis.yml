@@ -165,7 +165,6 @@ install:
 - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
 - export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
 - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
-- pip install -r requirements.txt
 before_script:
 - pwd
 script:
