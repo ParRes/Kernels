@@ -51,11 +51,6 @@
 
 #include "prk_util.h"
 
-// We build with OpenMP unless it is not available...
-#ifndef PRK_KOKKOS_BACKEND
-#define PRK_KOKKOS_BACKEND OpenMP
-#endif
-
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -63,16 +58,15 @@ int main(int argc, char * argv[])
 
   Kokkos::initialize(argc, argv);
 
-  typedef Kokkos::PRK_KOKKOS_BACKEND Space;
-  typedef Kokkos::TeamPolicy<Space>               team_policy ;
-  typedef Kokkos::TeamPolicy<Space>::member_type  member_type ;
+  typedef Kokkos::TeamPolicy<>               team_policy ;
+  typedef Kokkos::TeamPolicy<>::member_type  member_type ;
 
   // row-major 2D array
-  typedef Kokkos::View<double**, Kokkos::LayoutRight, Space> matrix;
+  typedef Kokkos::View<double**, Kokkos::LayoutRight> matrix;
   // column-major 2D array
-  //typedef Kokkos::View<double**, Kokkos::LayoutLeft, Space> matrix;
+  //typedef Kokkos::View<double**, Kokkos::LayoutLeft> matrix;
   // default 2D array
-  //typedef Kokkos::View<double**, Space> matrix;
+  //typedef Kokkos::View<double**> matrix;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters

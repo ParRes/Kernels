@@ -187,6 +187,8 @@
 
 #ifdef USE_KOKKOS
 # include <Kokkos_Core.hpp>
+# include <Kokkos_Concepts.hpp>
+# include <Kokkos_MemoryTraits.hpp>
 #endif
 
 #ifdef USE_RAJA
