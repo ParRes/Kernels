@@ -115,32 +115,22 @@ int main(int argc, char * argv[])
   matrix A("A", order, order);
   matrix B("B", order, order);
 
-  try {
 #if 0
-    Kokkos::parallel_for ( order, KOKKOS_LAMBDA(const int i) {
-      for (auto j=0; j<order; ++j){
-          A(i,j) = static_cast<double>(i*order+j);
-          B(i,j) = 0.0;
-      }
-    });
-#else
-    Kokkos::parallel_for( team_policy(order, Kokkos::AUTO), KOKKOS_LAMBDA(const member_type& teamMember) {
-      const int i = teamMember.league_rank();
-      Kokkos::parallel_for( Kokkos::TeamThreadRange(teamMember, order), [&](const int j) {
+  Kokkos::parallel_for ( order, KOKKOS_LAMBDA(const int i) {
+    for (auto j=0; j<order; ++j){
         A(i,j) = static_cast<double>(i*order+j);
         B(i,j) = 0.0;
-      });
+    }
+  });
+#else
+  Kokkos::parallel_for( team_policy(order, Kokkos::AUTO), KOKKOS_LAMBDA(const member_type& teamMember) {
+    const int i = teamMember.league_rank();
+    Kokkos::parallel_for( Kokkos::TeamThreadRange(teamMember, order), [&](const int j) {
+      A(i,j) = static_cast<double>(i*order+j);
+      B(i,j) = 0.0;
     });
+  });
 #endif
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-    return 1;
-  }
-  catch (std::exception const & e) {
-    std::cout << e.what() << std::endl;
-    return 1;
-  }
 
   auto trans_time = 0.0;
 
@@ -148,34 +138,23 @@ int main(int argc, char * argv[])
 
     if (iter==1) trans_time = prk::wtime();
 
-    try {
 #if 0
-      Kokkos::parallel_for ( order, KOKKOS_LAMBDA(const int i) {
-        for (auto j=0; j<order; ++j){
-          B(i,j) += A(j,i);
-          A(j,i) += 1.0;
-        }
-      });
+    Kokkos::parallel_for ( order, KOKKOS_LAMBDA(const int i) {
+      for (auto j=0; j<order; ++j){
+        B(i,j) += A(j,i);
+        A(j,i) += 1.0;
+      }
+    });
 #else
-      Kokkos::parallel_for( team_policy(order, Kokkos::AUTO), KOKKOS_LAMBDA(const member_type& teamMember) {
-        const int i = teamMember.league_rank();
-        Kokkos::parallel_for( Kokkos::TeamThreadRange(teamMember, order), [&](const int j) {
-          B(i,j) += A(j,i);
-          A(j,i) += 1.0;
-        });
+    Kokkos::parallel_for( team_policy(order, Kokkos::AUTO), KOKKOS_LAMBDA(const member_type& teamMember) {
+      const int i = teamMember.league_rank();
+      Kokkos::parallel_for( Kokkos::TeamThreadRange(teamMember, order), [&](const int j) {
+        B(i,j) += A(j,i);
+        A(j,i) += 1.0;
       });
+    });
 #endif
     }
-    catch (const char * e) {
-      std::cout << e << std::endl;
-      return 1;
-    }
-    catch (std::exception const & e) {
-      std::cout << e.what() << std::endl;
-      return 1;
-    }
-
-  }
 
   trans_time = prk::wtime() - trans_time;
 
@@ -183,19 +162,8 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
   const double addit = (iterations+1.) * (0.5*iterations);
   double abserr(0);
-#if 0
-  auto range = boost::irange(0,order);
-  for (auto i : range) {
-    for (auto j : range) {
-      const size_t ij = i*order+j;
-      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B(j,i) - reference);
-    }
-  }
-#else
   Kokkos::parallel_reduce( team_policy(order, Kokkos::AUTO), KOKKOS_LAMBDA(const member_type & teamMember, double & update) {
     const int i = teamMember.league_rank();
     double temp(0);
@@ -208,7 +176,6 @@ int main(int argc, char * argv[])
         update += temp;
     });
   }, abserr);
-#endif
 
 #ifdef VERBOSE
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
