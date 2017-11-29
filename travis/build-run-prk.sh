@@ -40,12 +40,14 @@ case "$PRK_TARGET" in
         $PRK_PYTHON $PRK_TARGET_PATH/stencil.py         10 100
         $PRK_PYTHON $PRK_TARGET_PATH/transpose.py       10 100
         $PRK_PYTHON $PRK_TARGET_PATH/nstream.py         10 100000
+        $PRK_PYTHON $PRK_TARGET_PATH/sparse.py          10 10 5
         $PRK_PYTHON $PRK_TARGET_PATH/dgemm.py           10 100
         # Numpy
         $PRK_PYTHON $PRK_TARGET_PATH/p2p-numpy.py       10 1024 1024
         $PRK_PYTHON $PRK_TARGET_PATH/stencil-numpy.py   10 1000
         $PRK_PYTHON $PRK_TARGET_PATH/transpose-numpy.py 10 1024
         $PRK_PYTHON $PRK_TARGET_PATH/nstream-numpy.py   10 16777216
+        $PRK_PYTHON $PRK_TARGET_PATH/sparse-numpy.py    10 10 5
         $PRK_PYTHON $PRK_TARGET_PATH/dgemm-numpy.py     10 1024
         ;;
     alloctave)
