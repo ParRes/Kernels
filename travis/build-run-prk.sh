@@ -572,7 +572,7 @@ case "$PRK_TARGET" in
                 echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
                     # Homebrew installs a symlink in /usr/local/bin
-                    export PRK_CAFC=caf
+                    export PRK_CAFC=/usr/local/bin/caf
                 elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
                     export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
                 fi
@@ -635,17 +635,20 @@ case "$PRK_TARGET" in
             if [ "${CC}" = "gcc" ] ; then
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
                     # Homebrew installs a symlink in /usr/local/bin
-                    export PRK_LAUNCHER=cafrun
+                    ls -l /usr/local/bin/cafrun || true
+                    which cafrun || true
+                    export PRK_LAUNCHER="/usr/local/bin/cafrun"
                     # OpenCoarrays uses Open-MPI on Mac thanks to Homebrew
                     # see https://github.com/open-mpi/ompi/issues/2956
+                    export PRK_OVERSUBSCRIBE="--oversubscribe"
                     export TMPDIR=/tmp
                 elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
                     export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
                 fi
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/p2p-coarray       10 1024 1024
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/stencil-coarray   10 1000
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/transpose-coarray 10 1024 1
-                $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/transpose-coarray 10 1024 32
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-} $PRK_TARGET_PATH/p2p-coarray       10 1024 1024
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-} $PRK_TARGET_PATH/stencil-coarray   10 1000
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-} $PRK_TARGET_PATH/transpose-coarray 10 1024 1
+                $PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-} $PRK_TARGET_PATH/transpose-coarray 10 1024 32
             elif [ "${CC}" = "icc" ] ; then
                 export FOR_COARRAY_NUM_IMAGES=$PRK_MPI_PROCS
                 $PRK_TARGET_PATH/Synch_p2p/p2p-coarray       10 1024 1024
