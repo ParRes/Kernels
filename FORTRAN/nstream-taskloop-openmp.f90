@@ -62,22 +62,10 @@
 !
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 program main
   use iso_fortran_env
-#ifdef _OPENMP
   use omp_lib
-#endif
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -102,11 +90,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-#ifdef _OPENMP
-  write(*,'(a47)') 'Fortran OpenMP STREAM triad: A = B + scalar * C'
-#else
-  write(*,'(a47)') 'Fortran Serial STREAM triad: A = B + scalar * C'
-#endif
+  write(*,'(a47)') 'Fortran OpenMP TASKLOOP STREAM triad: A = B + scalar * C'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -140,9 +124,7 @@ program main
     endif
   endif
 
-#ifdef _OPENMP
   write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
-#endif
   write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Matrix length        = ', length
   write(*,'(a,i8)') 'Offset               = ', offset
@@ -173,56 +155,40 @@ program main
 
   t0 = 0
 
-#ifdef _OPENMP
   !$omp parallel default(none)                           &
   !$omp&  shared(A,B,C,t0,t1)                            &
   !$omp&  firstprivate(length,iterations,offset,scalar)  &
   !$omp&  private(i,k)
-#endif
+  !$omp master
 
-#if defined(_OPENMP)
-  !$omp do
+  !$omp taskloop firstprivate(length,offset) shared(A,B,C) private(i)
   do i=1,length
-#else
-  do concurrent (i=1:length)
-#endif
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
+  !$omp end taskloop
 
-  ! need this because otherwise no barrier between initialization
-  ! and iteration 0 (warmup), which will lead to incorrectness.
-  !$omp barrier
+  !$omp taskwait
 
   do k=0,iterations
-    ! start timer after a warmup iteration
-    if (k.eq.1) then
-#ifdef _OPENMP
-    !$omp barrier
-    !$omp master
-#endif
-    t0 = prk_get_wtime()
-#ifdef _OPENMP
-    !$omp end master
-#endif
-    endif
 
-#if defined(_OPENMP)
-    !$omp do
+    if (k.eq.1) t0 = omp_get_wtime()
+
+    !$omp taskloop firstprivate(length,offset) shared(A,B,C) private(i)
     do i=1,length
-#else
-    do concurrent (i=1:length)
-#endif
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
+    !$omp end taskloop
+
+    !$omp taskwait
+
   enddo ! iterations
 
-  t1 = prk_get_wtime()
+  t1 = omp_get_wtime()
 
-#ifdef _OPENMP
+  !$omp end master
   !$omp end parallel
-#endif
 
   nstream_time = t1 - t0
 
@@ -241,17 +207,11 @@ program main
   ar = ar * length
 
   asum = 0
-#if defined(_OPENMP)
   !$omp parallel do reduction(+:asum)
   do i=1,length
-#else
-  do concurrent (i=1:length)
-#endif
     asum = asum + abs(A(i))
   enddo
-#ifdef _OPENMP
   !$omp end parallel do
-#endif
 
   deallocate( C )
   deallocate( B )
