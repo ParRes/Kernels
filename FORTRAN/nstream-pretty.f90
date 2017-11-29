@@ -85,20 +85,21 @@ program main
   real(kind=REAL64), allocatable ::  A(:)
   real(kind=REAL64), allocatable ::  B(:)
   real(kind=REAL64), allocatable ::  C(:)
+  real(kind=REAL64) :: scalar
   integer(kind=INT64) :: bytes
   ! runtime variables
   integer(kind=INT64) :: i
   integer(kind=INT32) :: k
   real(kind=REAL64) ::  asum, ar, br, cr, ref
-  real(kind=REAL64) ::  t0, t1, nstream_time, avgtime ! timing parameters
-  real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
+  real(kind=REAL64) ::  t0, t1, nstream_time, avgtime
+  real(kind=REAL64), parameter ::  epsilon=1.D-8
 
   ! ********************************************************************
   ! read and test input parameters
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran Pretty STREAM triad: A = B + scalar * C'
+  write(*,'(a47)') 'Fortran Pretty STREAM triad: A = B + scalar * C'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -162,6 +163,8 @@ program main
   B = 2
   C = 2
 
+  scalar = 3
+
   t0 = 0
 
   do k=0,iterations
@@ -193,13 +196,19 @@ program main
   deallocate( B )
   deallocate( A )
 
-  if (asum .gt. epsilon) then
-    write(*,'(a30,a30,f30.15,a30,f30.15)')  &
-        'Failed Validation on output array' &
-        '       Expected checksum: ', ar    &
-        '       Observed checksum: ', asum
-     write(*,'(a30)')  'ERROR: solution did not validate'
+  if (abs(asum-ar) .gt. epsilon) then
+    write(*,'(a35)') 'Failed Validation on output array'
+    write(*,'(a30,f30.15)') '       Expected checksum: ', ar
+    write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+    write(*,'(a35)')  'ERROR: solution did not validate'
     stop 1
+  else
+    write(*,'(a17)') 'Solution validates'
+    avgtime = nstream_time/iterations;
+    bytes = 4.0 * int(length,INT64) * storage_size(A)/8
+    write(*,'(a12,f15.3,1x,a12,e15.6)')    &
+        'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
+        'Avg time (s): ', avgtime
   endif
 
 end program main
