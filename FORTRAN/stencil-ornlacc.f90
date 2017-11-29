@@ -239,7 +239,9 @@ program main
   !$acc data pcopyin(W,A) pcopy(B)
 
   do k=0,iterations
+
     if (k.eq.1) t0 = prk_get_wtime()
+
     !call apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
     if (is_star) then
       if (.not.tiling) then
@@ -322,9 +324,10 @@ program main
   enddo
 
   t1 = prk_get_wtime()
-  stencil_time = t1 - t0
 
   !$acc end data
+
+  stencil_time = t1 - t0
 
   !$acc parallel loop reduction(+:norm)
   do j=r,n-r
