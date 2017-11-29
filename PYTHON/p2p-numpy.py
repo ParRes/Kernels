@@ -62,7 +62,7 @@ def main():
     # ********************************************************************
 
     print('Parallel Research Kernels version ')#, PRKVERSION
-    print('Python pipeline execution on 2D grid')
+    print('Python Numpy pipeline execution on 2D grid')
 
     if len(sys.argv) != 4:
         print('argument count = ', len(sys.argv))

@@ -97,7 +97,7 @@ def main():
     # ********************************************************************
 
     print('Parallel Research Kernels version ') #, PRKVERSION
-    print('Python stencil execution on 2D grid')
+    print('Python Numba stencil execution on 2D grid')
 
     if len(sys.argv) < 3:
         print('argument count = ', len(sys.argv))
