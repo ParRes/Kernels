@@ -40,7 +40,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
             if i-radius>=0: opi='+'
             else: opi=''
             if ( W[j][i] != 0.0):
-                src.write('                 + in(i'+opi+str(i-radius)+',j'+opj+str(j-radius)+') * ('+str(W[j][i])+') &\n')
+                src.write('                 + in(i'+opi+str(i-radius)+',j'+opj+str(j-radius)+') * ('+str(W[j][i])+'d0) &\n')
     src.write('+0.0\n')
     src.write('      end do\n')
     if (model=='openmp' or model=='target' or model=='taskloop'):
