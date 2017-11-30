@@ -317,16 +317,18 @@ case "$PRK_TARGET" in
         echo "CXX=${PRK_CXX} -std=c++11 -pthread" >> common/make.defs
 
         # C++11 without external parallelism
-        make -C $PRK_TARGET_PATH transpose-valarray
+        make -C $PRK_TARGET_PATH transpose-valarray nstream-valarray
         $PRK_TARGET_PATH/transpose-valarray 10 1024 32
+        $PRK_TARGET_PATH/nstream-valarray   10 16777216 32
 
         # C++11 without external parallelism
-        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector
+        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024 100 100
         $PRK_TARGET_PATH/p2p-innerloop-vector    10 1024
         $PRK_TARGET_PATH/stencil-vector          10 1000
         $PRK_TARGET_PATH/transpose-vector        10 1024 32
+        $PRK_TARGET_PATH/nstream-vector          10 16777216 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
@@ -344,6 +346,7 @@ case "$PRK_TARGET" in
         make -C $PRK_TARGET_PATH rangefor
         $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
         $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
+        $PRK_TARGET_PATH/nstream-vector-rangefor     10 16777216 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
@@ -357,11 +360,13 @@ case "$PRK_TARGET" in
             gcc)
                 # Host
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-vector-openmp stencil-vector-openmp transpose-vector-openmp
+                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-vector-openmp stencil-vector-openmp \
+                                         transpose-vector-openmp nstream-vector-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
                 $PRK_TARGET_PATH/p2p-innerloop-vector-openmp      10 1024
                 $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
                 $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
+                $PRK_TARGET_PATH/nstream-vector-openmp            10 16777216 32
                 #echo "Test stencil code generator"
                 for s in star grid ; do
                     for r in 1 2 3 4 5 ; do
@@ -388,6 +393,7 @@ case "$PRK_TARGET" in
                 #$PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
                 #$PRK_TARGET_PATH/stencil-vector-openmp            10 1000
                 #$PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
+                #$PRK_TARGET_PATH/nstream-vector-openmp            10 16777216 32
                 #echo "Test stencil code generator"
                 #for s in star grid ; do
                 #    for r in 1 2 3 4 5 ; do
@@ -398,11 +404,13 @@ case "$PRK_TARGET" in
             icc)
                 # Host
                 echo "OPENMPFLAG=-qopenmp" >> common/make.defs
-                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-vector-openmp transpose-vector-openmp
+                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-vector-openmp \
+                                         transpose-vector-openmp nstream-vector-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
                 $PRK_TARGET_PATH/p2p-innerloop-openmp             10 1024 1024
                 $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
                 $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
+                $PRK_TARGET_PATH/nstream-vector-openmp            10 16777216 32
                 #echo "Test stencil code generator"
                 for s in star grid ; do
                     for r in 1 2 3 4 5 ; do
@@ -445,11 +453,11 @@ case "$PRK_TARGET" in
                     export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
                     ;;
             esac
-            # Only build transpose because stencil is wrong in at least one way (https://travis-ci.org/jeffhammond/PRK/jobs/243395309)
-            make -C $PRK_TARGET_PATH stencil-vector-tbb transpose-vector-tbb
+            make -C $PRK_TARGET_PATH stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
             #$PRK_TARGET_PATH/p2p-vector-tbb     10 1024 1024 64 64
             $PRK_TARGET_PATH/stencil-vector-tbb     10 1000
             $PRK_TARGET_PATH/transpose-vector-tbb   10 1024 32
+            $PRK_TARGET_PATH/nstream-vector-tbb     10 16777216 32
             #echo "Test stencil code generator"
             for s in star grid ; do
                 for r in 1 2 3 4 5 ; do
@@ -459,9 +467,10 @@ case "$PRK_TARGET" in
         fi
 
         # C++11 with STL
-        make -C $PRK_TARGET_PATH stencil-vector-stl transpose-vector-stl
+        make -C $PRK_TARGET_PATH stencil-vector-stl transpose-vector-stl nstream-vector-stl
         $PRK_TARGET_PATH/stencil-vector-stl     10 1000
         $PRK_TARGET_PATH/transpose-vector-stl   10 1024 32
+        $PRK_TARGET_PATH/nstream-vector-stl     10 16777216 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
@@ -478,9 +487,10 @@ case "$PRK_TARGET" in
             else
                 echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
             fi
-            make -C $PRK_TARGET_PATH stencil-vector-pstl transpose-vector-pstl
+            make -C $PRK_TARGET_PATH stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
             $PRK_TARGET_PATH/stencil-vector-pstl     10 1000
             $PRK_TARGET_PATH/transpose-vector-pstl   10 1024 32
+            $PRK_TARGET_PATH/nstream-vector-pstl     10 16777216 32
             #echo "Test stencil code generator"
             for s in star grid ; do
                 for r in 1 2 3 4 5 ; do
@@ -497,6 +507,7 @@ case "$PRK_TARGET" in
             cd $PRK_TARGET_PATH
             ./stencil-opencl     10 1000
             ./transpose-opencl   10 1024 32
+            ./nstream-opencl     10 16777216 32
             #echo "Test stencil code generator"
             for s in star grid ; do
                 for r in 1 2 3 4 5 ; do
@@ -521,7 +532,7 @@ case "$PRK_TARGET" in
                 ;;
         esac
         # RAJA
-        make -C $PRK_TARGET_PATH stencil-vector-raja transpose-vector-raja
+        make -C $PRK_TARGET_PATH stencil-vector-raja transpose-vector-raja nstream-vector-raja
         $PRK_TARGET_PATH/stencil-vector-raja     10 1000
         # RAJA variant 11 should be the best
         $PRK_TARGET_PATH/transpose-vector-raja   10 1024
@@ -537,15 +548,17 @@ case "$PRK_TARGET" in
           done
          done
         done
+        $PRK_TARGET_PATH/nstream-vector-raja     10 16777216 32
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
                 $PRK_TARGET_PATH/stencil-vector-raja 10 200 20 $s $r
             done
         done
         # Kokkos
-        make -C $PRK_TARGET_PATH stencil-kokkos transpose-kokkos
+        make -C $PRK_TARGET_PATH stencil-kokkos transpose-kokkos nstream-kokkos
         $PRK_TARGET_PATH/stencil-kokkos     10 1000
         $PRK_TARGET_PATH/transpose-kokkos   10 1024 32
+        $PRK_TARGET_PATH/nstream-kokkos     10 16777216 32
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
                 $PRK_TARGET_PATH/stencil-kokkos 10 200 20 $s $r

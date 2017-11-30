@@ -161,9 +161,10 @@ program main
   enddo
 
   t1 = prk_get_wtime()
-  pipeline_time = t1 - t0
 
   !$acc end data
+
+  pipeline_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.
