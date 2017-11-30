@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2015, Intel Corporation
 #
@@ -52,7 +52,8 @@
 # *******************************************************************
 
 import sys
-from timeit import default_timer as timer
+#from timeit import default_timer as timer
+from time import process_time as timer
 import numpy
 
 def main():

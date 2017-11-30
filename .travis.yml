@@ -1,5 +1,7 @@
 sudo: false
 language: cpp
+python:
+  - "3.5"
 env:
   matrix:
   - PRK_TARGET=allserial
@@ -135,6 +137,7 @@ addons:
     - boost-latest
     packages:
     - python-numpy
+    - python-scipy
     - gcc-5
     - g++-5
     - gfortran-5

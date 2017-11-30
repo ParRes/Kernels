@@ -30,10 +30,10 @@ OFFLOADFLAG=-qopenmp-offload=host
 # OpenCL flags
 #
 # MacOS
-OPENCLFLAG=-framework OpenCL
+#OPENCLFLAG=-framework OpenCL
 # Linux
-#OPENCLDIR=/etc/alternatives/opencl-intel-tools
-#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLDIR=/etc/alternatives/opencl-intel-tools
+OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
 # Cilk
 #
@@ -55,9 +55,9 @@ RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} $
 # CUDA flags
 #
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
-NVCC=/opt/llvm/cocl/bin/cocl
+#NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-#NVCC=nvcc
+NVCC=nvcc
 CUDAFLAGS=-g -O3 -std=c++11
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
