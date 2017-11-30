@@ -59,7 +59,8 @@ endif
 
 all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl $(EXTRA)
 
-vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector transpose-vector-async transpose-vector-thread
+vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector sparse-vector \
+	transpose-vector-async transpose-vector-thread
 
 valarray: transpose-valarray
 
