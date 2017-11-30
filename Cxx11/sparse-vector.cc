@@ -197,10 +197,8 @@ int main(int argc, char* argv[])
       }
 
       for (size_t row=0; row<size2; row++) {
-          size_t first = stencil_size*row;
-          size_t last = first+stencil_size-1;
           double temp = 0.0;
-          for (size_t col=first; col<=last; col++) {
+          for (size_t col=stencil_size*row; col<stencil_size*(row+1); col++) {
               temp += matrix[col]*vector[colIndex[col]];
           }
           result[row] += temp;
@@ -214,12 +212,14 @@ int main(int argc, char* argv[])
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
-  const double epsilon = 1.0e-8;
   double reference_sum = (0.5*nent) * (iterations+1.) * (iterations+2.);
+
   double vector_sum = 0.0;
   for (size_t row=0; row<size2; row++) {
       vector_sum += result[row];
   }
+
+  const double epsilon = 1.0e-8;
 
   if (std::fabs(vector_sum-reference_sum) > epsilon) {
     std::cout << "ERROR: Vector norm = " << vector_sum
