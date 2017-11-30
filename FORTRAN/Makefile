@@ -39,21 +39,21 @@ endif
 
 all: serial pretty openmp tasks $(EXTRA)
 
-serial: p2p stencil transpose p2p-innerloop
+serial: p2p stencil transpose nstream p2p-innerloop
 
-pretty: stencil-pretty transpose-pretty
+pretty: stencil-pretty transpose-pretty nstream-pretty
 
-openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp nstream-openmp
 
-tasks: p2p-tasks-openmp transpose-tasks-openmp
+tasks: p2p-tasks-openmp transpose-tasks-openmp nstream-tasks-openmp
 
-taskloop: stencil-taskloop-openmp transpose-taskloop-openmp
+taskloop: stencil-taskloop-openmp transpose-taskloop-openmp nstream-taskloop-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
-target: stencil-openmp-target transpose-openmp-target
+target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 
-ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc
+ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc nstream-ornlacc
 
 %: %.f90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -88,7 +88,7 @@ clean:
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
-	-rm -f p2p stencil transpose
+	-rm -f p2p stencil transpose nstream
 	-rm -f p2p-innerloop
 	-rm -f *-pretty
 	-rm -f *-coarray

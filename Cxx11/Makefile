@@ -59,37 +59,55 @@ endif
 
 all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl $(EXTRA)
 
-vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector sparse-vector \
+p2p: p2p-vector p2p-doacross-vector-openmp p2p-innerloop-vector-openmp p2p-tasks-openmp p2p-openmp-target \
+     p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl
+
+stencil: stencil-valarray stencil-vector stencil-vector-async stencil-vector-openmp stencil-openmp-target \
+	 stencil-vector-taskloop stencil-vector-stl stencil-vector-pstl stencil-vector-raja \
+	 stencil-vector-rangefor stencil-vector-tbb stencil-vector-thread stencil-kokkos stencil-opencl
+
+transpose: transpose-valarray transpose-vector transpose-vector-async transpose-vector-openmp transpose-openmp-target \
+	   transpose-vector-taskloop transpose-vector-stl transpose-vector-pstl transpose-vector-raja \
+	   transpose-vector-rangefor transpose-vector-tbb transpose-vector-thread transpose-kokkos transpose-opencl
+
+nstream: nstream-valarray nstream-vector nstream-vector-openmp nstream-openmp-target \
+	 nstream-vector-taskloop nstream-vector-stl nstream-vector-pstl nstream-vector-raja \
+	 nstream-vector-rangefor nstream-vector-tbb nstream-kokkos nstream-opencl
+
+vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector sparse-vector \
 	transpose-vector-async transpose-vector-thread
 
-valarray: transpose-valarray
+valarray: transpose-valarray nstream-valarray
 
-openmp: p2p-innerloop-vector-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
+openmp: p2p-innerloop-vector-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp nstream-vector-openmp
 
-target: stencil-openmp-target transpose-openmp-target
+target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 
-taskloop: stencil-vector-taskloop transpose-vector-taskloop
+taskloop: stencil-vector-taskloop transpose-vector-taskloop nstream-vector-taskloop
 
-opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl
+opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
-tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
+tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
 
-stl: stencil-vector-stl transpose-vector-stl
+stl: stencil-vector-stl transpose-vector-stl nstream-vector-stl
 
-pstl: stencil-vector-pstl transpose-vector-pstl
+pstl: stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
 
-rangefor: stencil-vector-rangefor transpose-vector-rangefor
+rangefor: stencil-vector-rangefor transpose-vector-rangefor nstream-vector-rangefor
 
-kokkos: stencil-kokkos transpose-kokkos
+kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
-raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja
+raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja
 
-cuda: transpose-cuda transpose-cublas
+cuda: transpose-cuda transpose-cublas nstream-vector-cuda
 
 p2p-innerloop-vector: p2p-innerloop-vector-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
 transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
+	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+
+nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h

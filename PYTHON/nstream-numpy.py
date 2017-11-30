@@ -87,11 +87,11 @@ def main():
 
     length = int(sys.argv[2])
     if length < 1:
-        sys.exit("ERROR: length must be >= 1")
+        sys.exit("ERROR: length must be positive")
 
     #offset = int(sys.argv[3])
     #if offset < 0:
-    #    sys.exit("ERROR: offset must be >= 0")
+    #    sys.exit("ERROR: offset must be nonnegative")
 
     print('Number of iterations = ', iterations)
     print('Vector length        = ', length)
