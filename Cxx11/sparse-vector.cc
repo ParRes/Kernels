@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
   vector.resize(size2,0.0);
   result.resize(size2,0.0);
 
-  auto sparse_time = 0.0;
+  double sparse_time(0);
 
   {
     for (size_t row=0; row<size2; row++) {
@@ -182,10 +182,10 @@ int main(int argc, char* argv[])
         colIndex[elm+3] = REVERSE(offset(i,(j+r)%size,lsize),lsize2);
         colIndex[elm+4] = REVERSE(offset(i,(j-r+size)%size,lsize),lsize2);
       }
-      std::sort(&(colIndex[row*stencil_size]),
-                &(colIndex[(row+1)*stencil_size]));
-      for (size_t elm=row*stencil_size; elm<(row+1)*stencil_size; elm++)
-        matrix[elm] = 1.0/(double)(colIndex[elm]+1);
+      std::sort(&(colIndex[row*stencil_size]), &(colIndex[(row+1)*stencil_size]));
+      for (size_t elm=row*stencil_size; elm<(row+1)*stencil_size; elm++) {
+        matrix[elm] = 1.0/(colIndex[elm]+1.);
+      }
     }
 
     for (auto iter = 0; iter<=iterations; iter++) {
@@ -197,7 +197,7 @@ int main(int argc, char* argv[])
       }
 
       for (size_t row=0; row<size2; row++) {
-          double temp = 0.0;
+          double temp(0);
           for (size_t col=stencil_size*row; col<stencil_size*(row+1); col++) {
               temp += matrix[col]*vector[colIndex[col]];
           }
@@ -214,12 +214,12 @@ int main(int argc, char* argv[])
 
   double reference_sum = (0.5*nent) * (iterations+1.) * (iterations+2.);
 
-  double vector_sum = 0.0;
+  double vector_sum(0);
   for (size_t row=0; row<size2; row++) {
       vector_sum += result[row];
   }
 
-  const double epsilon = 1.0e-8;
+  const double epsilon(1.e-8);
 
   if (std::fabs(vector_sum-reference_sum) > epsilon) {
     std::cout << "ERROR: Vector norm = " << vector_sum
