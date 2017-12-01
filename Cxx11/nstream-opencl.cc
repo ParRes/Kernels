@@ -159,8 +159,7 @@ int main(int argc, char* argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
-  size_t length;
+  int iterations, offset, length;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length> [<offset>]";
@@ -171,7 +170,7 @@ int main(int argc, char* argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atol(argv[2]);
+      length = std::atoi(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
