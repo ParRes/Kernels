@@ -2,14 +2,23 @@
 
 [![Build Status](https://travis-ci.org/ParRes/Kernels.svg)](https://travis-ci.org/ParRes/Kernels)
 
+We have a rather massive test matrix running in Travis CI.
+Unfortunately, the Travis CI environment may vary with time and occasionally differs
+from what we are running locally, which makes debugging tricky.
+If the status of the project is not passing, please inspect the details,
+because this may not be an indication of an issue with our project, but rather
+something in Travis CI.
+
 # License
 
-See COPYING for licensing information.
+See [COPYING](https://github.com/ParRes/Kernels/blob/master/COPYING) for licensing information.
 
 # Overview
 
 This suite contains a number of kernel operations, called Parallel
-Research Kernels, plus a simple build environment intended for Linux. 
+Research Kernels, plus a simple build system intended for a Linux-compatible environment.
+Most of the code relies on open standard programming models and thus can be
+executed on many computing systems.
 
 These programs must not be used as benchmarks.  They are operations to 
 explore features of a hardware platform, but they do not define 
@@ -48,24 +57,115 @@ valid path where that compiler is installed.
 Special instructions for building and running codes using Charm++, Grappa, 
 OpenSHMEM, or Fine-Grain MPI are in `README.special`.
 
+We provide examples of working examples for a number of programming environments
+
+| File (in `./common/`) | Environment |  
+|----------------------|-------------------------|  
+| `make.defs.cray`     | Cray compilers on Cray XC systems. |
+| `make.defs.cuda`     | GCC with the CUDA compiler (only used in C++/CUDA implementation). |
+| `make.defs.gcc`      | GCC compiler tool chain, which supports essentially all implementations. |
+| `make.defs.ibmbg`    | IBM Blue Gene/Q compiler toolchain (infrequently tested). |
+| `make.defs.intel`    | Intel compiler tool chain, which supports most implementations. |
+| `make.defs.llvm`     | LLVM compiler tool chain, which supports essentially all implementations. |
+| `make.defs.musl`     | GCC compiler toolchain with MUSL for C11 support, which is required to use C11 threads. |
+| `make.defs.pgi`      | PGI compiler toolchain. |
+
+Some of the C++ implementations require you to install Boost, RAJA, KOKKOS, Parallel STL, respectively,
+and then modify `make.defs` appropriately.  Please see the documentation in the C++ subdirectory.
+
+Because we test essentially everything in Travis CI, you can refer to the `travis` subdirectory
+for install scripts that can be readily modified to install any of the dependencies in your local
+environment.
+
+# Supported Programming Models
+
 The suite of kernels currently has complete parallel implementations in 
 [OpenMP](http://openmp.org/), 
 [MPI](http://www.mpi-forum.org/), Adaptive MPI and 
 [Fine-Grain MPI](http://www.cs.ubc.ca/~humaira/fgmpi.html). 
 There is also a SERIAL reference implementation. 
+
 The suite is currently being extended to include 
 [Charm++](http://charm.cs.illinois.edu/research/charm),
 MPI+OpenMP, 
 [OpenSHMEM](http://openshmem.org/), UPC, and
 [Grappa](http://grappa.io/), 
-Fortran with Co-Arrays,
+Fortran with coarrays,
 as well as three new variations of MPI: 
   1. MPI with one-sided communications (MPIRMA) 
   2. MPI with direct use of shared memory inside coherency domains (MPISHM)
   3. MPI with OpenMP inside coherency domains (MPIOPENMP)
 These extensions are not yet complete.
 
+More recently, we have implemented many single-node programming models in modern languages.
+
+## Modern C++
+
+y = yes
+i = in-progress, incomplete, or incorrect
+
+| Parallelism          | p2p | stencil | transpose | nstream | sparse | 
+|----------------------|-----|---------|-----------|---------|--------|
+| None                 |  y  |    y    |     y     |    y    |    y   |
+| C++11 threads, async |     |         |     y     |         |        |
+| OpenMP               |  y  |    y    |     y     |    y    |        |
+| OpenMP tasks         |  y  |    y    |     y     |    y    |        |
+| OpenMP target        |  y  |    y    |     y     |    y    |        |
+| OpenCL 1.x           |  i  |    y    |     y     |    y    |        |
+| Parallel STL         |  y  |    y    |     y     |    y    |        |
+| TBB                  |  i  |    y    |     y     |    y    |        |
+| Kokkos               |  y  |    y    |     y     |    y    |        |
+| RAJA                 |  y  |    y    |     y     |    y    |        |
+| CUDA, CUBLAS         |     |         |     y     |         |        |
+
+* [TBB](https://www.threadingbuildingblocks.org/)
+* [Kokkos](https://github.com/kokkos/kokkos)
+* [RAJA](https://github.com/LLNL/RAJA) 
+
+## Modern C
+
+| Parallelism          | p2p | stencil | transpose | nstream | sparse | 
+|----------------------|-----|---------|-----------|---------|--------|
+| None                 |  y  |    y    |     y     |         |        |
+| C11 threads          |     |         |     y     |         |        |
+| OpenMP               |  y  |    y    |     y     |         |        |
+| OpenMP tasks         |  y  |    y    |     y     |         |        |
+| OpenMP target        |  y  |    y    |     y     |         |        |
+| Cilk                 |     |    y    |     y     |         |        |
+| ISPC                 |     |         |     y     |         |        |
+
+* [ISPC](https://ispc.github.io/)
+
+## Modern Fortran
+
+| Parallelism          | p2p | stencil | transpose | nstream | sparse | 
+|----------------------|-----|---------|-----------|---------|--------|
+| None                 |  y  |    y    |     y     |    y    |        |
+| Intrinsics           |     |         |     y     |    y    |        |
+| coarrays             |  y  |    y    |     y     |         |        |
+| OpenMP               |  y  |    y    |     y     |    y    |        |
+| OpenMP tasks         |  y  |    y    |     y     |    y    |        |
+| OpenMP target        |  y  |    y    |     y     |    y    |        |
+| OpenACC              |     |    y    |     y     |    y    |        |
+
+By intrinsics, we mean the language built-in features, such as colon notation or the `TRANSPOSE` intrinsic.
+We use `DO CONCURRENT` in a few places.
+
+## Other languages
+
+x = externally supported (in the Chapel repo)
+
+| Parallelism          | p2p | stencil | transpose | nstream | sparse | dgemm |
+|----------------------|-----|---------|-----------|---------|--------|-------|
+| Python 3             |  y  |    y    |     y     |    y    |    y   |   y   |
+| Python 3 w/ Numpy    |  y  |    y    |     y     |    y    |    y   |   y   |
+| Julia                |  y  |    y    |     y     |         |        |       |
+| Octave (Matlab)      |  y  |    y    |     y     |         |        |       |
+| Chapel               |  x  |    x    |     x     |         |        |       |
+
 ## Global make
+
+Please run `make help` in the top directory for the latest information.
 
 To build all available kernels of a certain version, type in the root
 directory:
@@ -73,19 +173,22 @@ directory:
 | Command              | Effect |  
 |----------------------|-------------------------|  
 | `make all`           | builds all kernels. |  
+| `make allserial`     | builds all serial kernels. |  
 | `make allopenmp`     | builds all OpenMP kernels. |  
 | `make allmpi`        | builds all conventional two-sided MPI kernels. |  
 | `make allmpi1`       | builds all MPI kernels. |  
-| `make allfgmpi`      | builds all Fine-Grain MPI kernels. |  
+| `make allfgmpi`      | builds all Fine-Grain MPI kernels. | 
 | `make allampi`       | builds all Adaptive MPI kernels. |  
-| `make allserial`     | builds all serial kernels. |  
 | `make allmpiopenmp`  | builds all hybrid MPI+OpenMP kernels. |  
-| `make allmpirma`     | builds all MPI kernels with one-sided communications. |  
+| `make allmpirma`     | builds all MPI-3 kernels with one-sided communications. |  
+| `make allmpishm`     | builds all kernels with MPI-3 shared memory. | 
 | `make allshmem`      | builds all OpenSHMEM kernels. |  
-| `make allupc`        | builds all Unified Parallel C kernels. |  
-| `make allmpishm`     | builds all kernels with MPI3 shared memory. |  
+| `make allupc`        | builds all Unified Parallel C (UPC) kernels. |  
 | `make allcharm++`    | builds all Charm++ kernels. |  
 | `make allgrappa`     | builds all Grappa kernels. |  
+| `make allfortran`    | builds all Fortran kernels. |
+| `make allc1x`        | builds all C99/C11 kernels. |
+| `make allcxx`        | builds all C++11 kernels. |
 
 The global make process uses a single set of optimization flags for all
 kernels. For more control, the user should consider individual makes
