@@ -12,7 +12,14 @@ fi
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 
-MPI_IMPL=mpich
+case ${TRAVIS_OS_NAME} in
+    osx)
+        MPI_IMPL=openmpi
+        ;;
+    linux)
+        MPI_IMPL=mpich
+        ;;
+esac
 
 echo "PWD=$PWD"
 
