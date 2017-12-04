@@ -149,8 +149,7 @@ matrix:
   - os: linux
     env: PRK_TARGET=allcharm++
   # Sadly, Python is XFAIL because Travis CI's Python 3.4.3 can't find cannot process_time.
-  - compiler: gcc
-    env: PRK_TARGET=allpython
+  - env: PRK_TARGET=allpython
 addons:
   apt:
     sources:
