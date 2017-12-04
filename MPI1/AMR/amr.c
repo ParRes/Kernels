@@ -99,7 +99,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
                  int Num_procs, long L_width_bg, 
                  long L_istart_bg, long L_iend_bg, long L_jstart_bg, long L_jend_bg,
                  long L_istart_r, long L_iend_r, long L_jstart_r, long L_jend_r,
-                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, int comm_r,
+                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, MPI_Comm comm_r,
                  long L_istart_r_gross, long L_iend_r_gross, 
                  long L_jstart_r_gross, long L_jend_r_gross, 
                  long L_width_r_true_gross, long L_istart_r_true_gross, long L_iend_r_true_gross,

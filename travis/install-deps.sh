@@ -12,7 +12,14 @@ fi
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 
-MPI_IMPL=mpich
+case ${TRAVIS_OS_NAME} in
+    osx)
+        MPI_IMPL=openmpi
+        ;;
+    linux)
+        MPI_IMPL=mpich
+        ;;
+esac
 
 echo "PWD=$PWD"
 
@@ -67,7 +74,7 @@ case "$PRK_TARGET" in
         echo "Fortran"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
             brew update || true
-            brew install gcc || brew upgrade gcc || true
+            brew upgrade gcc || brew install gcc || true
         fi
         if [ "${CC}" = "gcc" ] ; then
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
