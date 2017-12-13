@@ -1,17 +1,8 @@
-# Quality Control
-
-[![Build Status](https://travis-ci.org/ParRes/Kernels.svg)](https://travis-ci.org/ParRes/Kernels)
-
-We have a rather massive test matrix running in Travis CI.
-Unfortunately, the Travis CI environment may vary with time and occasionally differs
-from what we are running locally, which makes debugging tricky.
-If the status of the project is not passing, please inspect the details,
-because this may not be an indication of an issue with our project, but rather
-something in Travis CI.
-
-# License
-
-See [COPYING](https://github.com/ParRes/Kernels/blob/master/COPYING) for licensing information.
+[![license](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/ParRes/Kernels/blob/master/COPYING)
+[![Travis-CI Status](https://travis-ci.org/ParRes/Kernels.svg)](https://travis-ci.org/ParRes/Kernels)
+[![GitHub contributors](https://img.shields.io/github/contributors/ParRes/Kernels.svg)]()
+[![GitHub language count](https://img.shields.io/github/languages/count/ParRes/Kernels.svg)]()
+[![GitHub top language](https://img.shields.io/github/languages/top/ParRes/Kernels.svg)]()
 
 # Overview
 
@@ -20,38 +11,21 @@ Research Kernels, plus a simple build system intended for a Linux-compatible env
 Most of the code relies on open standard programming models and thus can be
 executed on many computing systems.
 
-These programs must not be used as benchmarks.  They are operations to 
+These programs should not be used as benchmarks.  They are operations to 
 explore features of a hardware platform, but they do not define 
 fixed problems that can be used to rank systems.  Furthermore 
 they have not been optimimzed for the features of any particular system.
 
-### Note on stream
-
-Note that while our `nstream` operations are based on the well
-known STREAM benchmark by John D. McCalpin, we modified the source 
-code and do not follow the run-rules associated with this benchmark.
-Hence, according to the rules defined in the STREAM license (see 
-clause 3b), you must never report the results of our nstream 
-operations as official "STREAM Benchmark" results. The results must 
-be clearly labled whenever they are published.  Examples of proper 
-labelling include: 
-
-      "tuned STREAM benchmark results" 
-      "based on a variant of the STREAM benchmark code" 
-
-Other comparable, clear, and reasonable labelling is acceptable.
-
-
 # Build Instructions
 
 To build the codes the user needs to make certain changes by editing text
-files. Assuming the source tree is untarred in directory HOME, the
-following file needs to be copied to `HOME/common/make.defs` and edited.
+files. Assuming the source tree is untarred in directory `$PRK`, the
+following file needs to be copied to `$PRK/common/make.defs` and edited.
 
-`HOME/common/make.defs.in` -- This file specifies the names of the C
-compiler (CC), and of the MPI (Message Passing Interface) compiler MPICC
+`$PRK/common/make.defs.in` -- This file specifies the names of the C
+compiler (`CC`), and of the MPI (Message Passing Interface) compiler `MPICC`
 or compile script. If MPI is not going to be used, the user can ignore
-the value of MPICC. The compilers should already be in your path. That
+the value of `MPICC`. The compilers should already be in your path. That
 is, if you define `CC=icc`, then typing `which icc` should show a
 valid path where that compiler is installed.
 Special instructions for building and running codes using Charm++, Grappa, 
@@ -66,14 +40,14 @@ We provide examples of working examples for a number of programming environments
 | `make.defs.gcc`      | GCC compiler tool chain, which supports essentially all implementations. |
 | `make.defs.ibmbg`    | IBM Blue Gene/Q compiler toolchain (infrequently tested). |
 | `make.defs.intel`    | Intel compiler tool chain, which supports most implementations. |
-| `make.defs.llvm`     | LLVM compiler tool chain, which supports essentially all implementations. |
-| `make.defs.musl`     | GCC compiler toolchain with MUSL for C11 support, which is required to use C11 threads. |
-| `make.defs.pgi`      | PGI compiler toolchain. |
+| `make.defs.llvm`     | LLVM compiler tool chain, which supports most implementations. |
+| `make.defs.musl`     | GCC compiler toolchain with MUSL as the C standard library, which is required to use C11 threads. |
+| `make.defs.pgi`      | PGI compiler toolchain (infrequently tested). |
 
 Some of the C++ implementations require you to install Boost, RAJA, KOKKOS, Parallel STL, respectively,
 and then modify `make.defs` appropriately.  Please see the documentation in the C++ subdirectory.
 
-Because we test essentially everything in Travis CI, you can refer to the `travis` subdirectory
+Because we test essentially everything in Travis CI, you can refer to the `$PRK/travis` subdirectory
 for install scripts that can be readily modified to install any of the dependencies in your local
 environment.
 
@@ -102,6 +76,7 @@ More recently, we have implemented many single-node programming models in modern
 ## Modern C++
 
 y = yes
+
 i = in-progress, incomplete, or incorrect
 
 | Parallelism          | p2p | stencil | transpose | nstream | sparse | 
@@ -116,7 +91,8 @@ i = in-progress, incomplete, or incorrect
 | TBB                  |  i  |    y    |     y     |    y    |        |
 | Kokkos               |  y  |    y    |     y     |    y    |        |
 | RAJA                 |  y  |    y    |     y     |    y    |        |
-| CUDA, CUBLAS         |     |         |     y     |         |        |
+| CUDA                 |     |         |     y     |         |        |
+| CUBLAS               |     |         |     y     |         |        |
 
 * [TBB](https://www.threadingbuildingblocks.org/)
 * [Kokkos](https://github.com/kokkos/kokkos)
@@ -249,3 +225,32 @@ To exercise all kernels, type
 ./scripts/small/runall
 ./scripts/wide/runall
 ```
+
+# Quality Control
+
+We have a rather massive test matrix running in Travis CI.
+Unfortunately, the Travis CI environment may vary with time and occasionally differs
+from what we are running locally, which makes debugging tricky.
+If the status of the project is not passing, please inspect the [details](https://travis-ci.org/ParRes/Kernels),
+because this may not be an indication of an issue with our project, but rather
+something in Travis CI.
+
+# License
+
+See [COPYING](https://github.com/ParRes/Kernels/blob/master/COPYING) for licensing information.
+
+## Note on stream
+
+Note that while our `nstream` operations are based on the well
+known STREAM benchmark by John D. McCalpin, we modified the source 
+code and do not follow the run-rules associated with this benchmark.
+Hence, according to the rules defined in the STREAM license (see 
+clause 3b), you must never report the results of our nstream 
+operations as official "STREAM Benchmark" results. The results must 
+be clearly labled whenever they are published.  Examples of proper 
+labelling include: 
+
+      "tuned STREAM benchmark results" 
+      "based on a variant of the STREAM benchmark code" 
+
+Other comparable, clear, and reasonable labelling is acceptable.
