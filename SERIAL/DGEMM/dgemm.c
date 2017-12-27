@@ -88,7 +88,7 @@ int main(int argc, char **argv)
           * RESTRICT C;
   long    order;                /* number of rows and columns of matrices         */
   long    block;                /* tile size of matrices                          */
-  int     shortcut;             /* true if only doing initialization              */
+  int     shortcut = 0;         /* true if only doing initialization              */
 
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial Dense matrix-matrix multiplication: C = A x B\n");
