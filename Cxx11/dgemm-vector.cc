@@ -1,258 +1,194 @@
-/*
-Copyright (c) 2013, Intel Corporation
+///
+/// Copyright (c) 2013, Intel Corporation
+///
+/// Redistribution and use in source and binary forms, with or without
+/// modification, are permitted provided that the following conditions
+/// are met:
+///
+/// * Redistributions of source code must retain the above copyright
+///       notice, this list of conditions and the following disclaimer.
+/// * Redistributions in binary form must reproduce the above
+///       copyright notice, this list of conditions and the following
+///       disclaimer in the documentation and/or other materials provided
+///       with the distribution.
+/// * Neither the name of Intel Corporation nor the names of its
+///       contributors may be used to endorse or promote products
+///       derived from this software without specific prior written
+///       permission.
+///
+/// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+/// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+/// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+/// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+/// COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+/// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+/// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+/// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+/// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+/// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+/// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+/// POSSIBILITY OF SUCH DAMAGE.
 
-Redistribution and use in source and binary forms, with or without 
-modification, are permitted provided that the following conditions 
-are met:
+//////////////////////////////////////////////////////////////////////
+///
+/// NAME:    dgemm
+/// 
+/// PURPOSE: This program tests the efficiency with which a dense matrix
+///          dense multiplication is carried out
+///   
+/// USAGE:   The program takes as input the matrix
+///          order, the number of times the matrix-matrix multiplication 
+///          is carried out, and, optionally, a tile size for matrix
+///          blocking
+/// 
+///          <progname> <# iterations> <matrix order> [<tile size>]
+///   
+///          The output consists of diagnostics to make sure the 
+///          algorithm worked, and of timing statistics.
+/// 
+/// FUNCTIONS CALLED:
+/// 
+///          Other than OpenMP or standard C functions, the following 
+///          functions are used in this program:
+/// 
+///          wtime()
+/// 
+/// HISTORY: Written by Rob Van der Wijngaart, February 2009.
+///          Converted to C++11 by Jeff Hammond, December, 2017.
+///
+//////////////////////////////////////////////////////////////////////
 
-* Redistributions of source code must retain the above copyright 
-      notice, this list of conditions and the following disclaimer.
-* Redistributions in binary form must reproduce the above 
-      copyright notice, this list of conditions and the following 
-      disclaimer in the documentation and/or other materials provided 
-      with the distribution.
-* Neither the name of Intel Corporation nor the names of its 
-      contributors may be used to endorse or promote products 
-      derived from this software without specific prior written 
-      permission.
+#include "prk_util.h"
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
-FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
-ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
-POSSIBILITY OF SUCH DAMAGE.
-*/
-
-/*********************************************************************************
-
-NAME:    dgemm
-
-PURPOSE: This program tests the efficiency with which a dense matrix
-         dense multiplication is carried out
-  
-USAGE:   The program takes as input the matrix
-         order, the number of times the matrix-matrix multiplication 
-         is carried out, and, optionally, a tile size for matrix
-         blocking
-
-         <progname> <# iterations> <matrix order> [<tile size>]
-  
-         The output consists of diagnostics to make sure the 
-         algorithm worked, and of timing statistics.
-
-FUNCTIONS CALLED:
-
-         Other than OpenMP or standard C functions, the following 
-         functions are used in this program:
-
-         wtime()
-
-HISTORY: Written by Rob Van der Wijngaart, February 2009.
-  
-***********************************************************************************/
-
-#include <par-res-kern_general.h>
-
-#if MKL
-  #include <mkl_cblas.h>
-#endif
-
-#define AA_arr(i,j) AA[(i)+(block+BOFFSET)*(j)]
-#define BB_arr(i,j) BB[(i)+(block+BOFFSET)*(j)]
-#define CC_arr(i,j) CC[(i)+(block+BOFFSET)*(j)]
-#define  A_arr(i,j)  A[(i)+(order)*(j)]
-#define  B_arr(i,j)  B[(i)+(order)*(j)]
-#define  C_arr(i,j)  C[(i)+(order)*(j)]
-
-#define forder (1.0*order)
-
-int main(int argc, char **argv)
+int main(int argc, char * argv[])
 {
-  int     iter, i,ii,j,jj,k,kk,ig,jg,kg; /* dummies                               */
-  int     iterations;           /* number of times the multiplication is done     */
-  double  dgemm_time,           /* timing parameters                              */
-          avgtime; 
-  double  checksum = 0.0,       /* checksum of result                             */
-          ref_checksum;
-  double  epsilon = 1.e-8;      /* error tolerance                                */
-  static  
-  double  * RESTRICT A,         /* input (A,B) and output (C) matrices            */
-          * RESTRICT B,
-          * RESTRICT C;
-  long    order;                /* number of rows and columns of matrices         */
-  long    block;                /* tile size of matrices                          */
-  int     shortcut;             /* true if only doing initialization              */
+  //////////////////////////////////////////////////////////////////////
+  /// Read and test input parameters
+  //////////////////////////////////////////////////////////////////////
 
-  printf("Parallel Research Kernels version %s\n", PRKVERSION);
-  printf("Serial Dense matrix-matrix multiplication: C = A x B\n");
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "C++11 Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
-#if !MKL  
-  if (argc != 4 && argc != 3) {
-    printf("Usage: %s <# iterations> <matrix order> [tile size]\n",*argv);
-#else
-  if (argc != 3) {
-    printf("Usage: %s <# iterations> <matrix order>\n",*argv);
-#endif
-    exit(EXIT_FAILURE);
+  int iterations;
+  int order;
+  int tile_size;
+  try {
+      if (argc < 3) {
+        throw "Usage: <# iterations> <matrix order> [tile size]";
+      }
+
+      iterations  = std::atoi(argv[1]);
+      if (iterations < 1) {
+        throw "ERROR: iterations must be >= 1";
+      }
+
+      order = std::atoi(argv[2]);
+      if (order <= 0) {
+        throw "ERROR: Matrix Order must be greater than 0";
+      }
+
+      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
+      if (tile_size <= 0) tile_size = order;
+
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return 1;
   }
 
-  iterations = atoi(*++argv);
-  if (iterations < 1){
-    printf("ERROR: Iterations must be positive : %d \n", iterations);
-    exit(EXIT_FAILURE);
-  }
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
 
-  order = atol(*++argv);
-  if (order < 0) {
-    shortcut = 1;
-    order    = -order;
-  }
-  if (order < 1) {
-    printf("ERROR: Matrix order must be positive: %ld\n", order);
-    exit(EXIT_FAILURE);
-  }
+  //////////////////////////////////////////////////////////////////////
+  /// Allocate space for matrices
+  //////////////////////////////////////////////////////////////////////
 
-#if !MKL
-  if (argc == 4) {
-         block = atoi(*++argv);
-  } else block = DEFAULTBLOCK;
-#endif
+  double dgemm_time(0);
 
-  printf("Matrix order          = %ld\n", order);
-  if (shortcut) 
-    printf("Only doing initialization\n"); 
-  if (block>0)
-    printf("Blocking factor       = %ld\n", block);
-  else
-    printf("No blocking\n");
-  printf("Block offset          = %d\n", BOFFSET);
-  printf("Number of iterations  = %d\n", iterations);
-  printf("Using MKL library     = off\n");
-
-  A = (double *) prk_malloc(order*order*sizeof(double));
-  B = (double *) prk_malloc(order*order*sizeof(double));
-  C = (double *) prk_malloc(order*order*sizeof(double));
-  if (!A || !B || !C) {
-    printf("ERROR: Could not allocate space for global matrices\n");
-    exit(EXIT_FAILURE);
-  }
-
-  for(j = 0; j < order; j++) for(i = 0; i < order; i++) {
-    A_arr(i,j) = B_arr(i,j) = (double) j; 
-    C_arr(i,j) = 0.0;
-  }
-
-#if !MKL
-  double * RESTRICT AA, * RESTRICT BB, * RESTRICT CC;
-
-  if (block > 0) {
-    /* matrix blocks for local temporary copies                                     */
-    AA = (double *) prk_malloc(block*(block+BOFFSET)*3*sizeof(double));
-    if (!AA) {
-      printf("Could not allocate space for matrix tiles\n");
-      exit(EXIT_FAILURE);
+  std::vector<double> A;
+  std::vector<double> B;
+  std::vector<double> C;
+  A.resize(order*order);
+  B.resize(order*order);
+  C.resize(order*order,0.0);
+  for (auto i=0; i<order; ++i) {
+    for (auto j=0; j<order; ++j) {
+       A[i*order+j] = i;
+       B[i*order+j] = i;
     }
-    BB = AA + block*(block+BOFFSET);
-    CC = BB + block*(block+BOFFSET);
-  } 
+  }
 
-  if (shortcut) exit(EXIT_SUCCESS);
+  {
+    for (auto iter = 0; iter<iterations; iter++) {
 
-  for (iter=0; iter<iterations; iter++) {
+      if (iter==1) dgemm_time = prk::wtime();
 
-    /* start timer after a warmup iteration */
-    if (iter == 1)  dgemm_time = wtime();
-
-    if (block > 0) {
-
-      for(jj = 0; jj < order; jj+=block){
-        for(kk = 0; kk < order; kk+=block) {
-  
-          for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-          for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++) 
-            BB_arr(j,k) =  B_arr(kg,jg);
-  
-          for(ii = 0; ii < order; ii+=block){
-  
-            for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++)
-            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-              AA_arr(i,k) = A_arr(ig,kg);
-  
-            for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-              CC_arr(i,j) = 0.0;
-         
-            for (kg=kk,k=0; kg<MIN(kk+block,order); k++,kg++)
-            for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-              CC_arr(i,j) += AA_arr(i,k)*BB_arr(j,k);
-  
-            for (jg=jj,j=0; jg<MIN(jj+block,order); j++,jg++) 
-            for (ig=ii,i=0; ig<MIN(ii+block,order); i++,ig++)
-              C_arr(ig,jg) += CC_arr(i,j);
-  
+      if (0) { //tile_size < order) {
+        for (auto it=0; it<order; it+=tile_size) {
+          for (auto jt=0; jt<order; jt+=tile_size) {
+            for (auto i=it; i<std::min(order,it+tile_size); i++) {
+              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
+                B[i*order+j] += A[j*order+i];
+                A[j*order+i] += 1.0;
+              }
+            }
           }
-        }  
+        }
+      } else {
+        for (auto i=0; i<order; ++i) {
+          for (auto j=0; j<order; ++j) {
+            for (auto k=0; k<order; ++k) {
+                C[i*order+j] += A[i*order+k] * B[k*order+j];
+            }
+          }
+        }
       }
     }
-    else {
-      for (jg=0; jg<order; jg++) 
-      for (kg=0; kg<order; kg++) 
-      for (ig=0; ig<order; ig++) 
-        C_arr(ig,jg) += A_arr(ig,kg)*B_arr(kg,jg);
+    dgemm_time = prk::wtime() - dgemm_time;
+  }
+
+  //////////////////////////////////////////////////////////////////////
+  /// Analyze and output results
+  //////////////////////////////////////////////////////////////////////
+
+  const double forder = static_cast<double>(order);
+  const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * iterations;
+
+  double checksum(0);
+  // TODO: replace with std::generate, std::accumulate, or similar
+  for (auto i=0; i<order; i++) {
+    for (auto j=0; j<order; j++) {
+      checksum += C[i*order+j];
     }
-  } /* end of iterations                                                          */
-#else
-
-  printf("Matrix size           = %dx%d\n", order, order);
-  printf("Using MKL library     = on\n");
-  printf("Number of iterations  = %d\n", iterations);
-
-  for (iter=0; iter<=iterations; iter++) {
-
-    /* start timer after a warmup iteration */
-    if (iter == 1)  dgemm_time = wtime();
-
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, order, order, 
-                order, 1.0, &(A_arr(0,0)), order, &(B_arr(0,0)), order, 
-                1.0, &(C_arr(0,0)), order);
-  } /* end of iterations                                                          */
-#endif
-
-  dgemm_time = wtime() - dgemm_time;
-
-  for(checksum=0.0,j = 0; j < order; j++) for(i = 0; i < order; i++)
-    checksum += C_arr(i,j);
-
-  /* verification test                                                            */
-  ref_checksum = (0.25*forder*forder*forder*(forder-1.0)*(forder-1.0));
-  ref_checksum *= iterations;
-
-  if (ABS((checksum - ref_checksum)/ref_checksum) > epsilon) {
-    printf("ERROR: Checksum = %lf, Reference checksum = %lf\n",
-           checksum, ref_checksum);
-    exit(EXIT_FAILURE);
   }
-  else {
-    printf("Solution validates\n");
+
+  const auto epsilon = 1.0e-8;
+  if (std::abs(checksum-reference) < epsilon) {
+    std::cout << "Solution validates" << std::endl;
+    auto avgtime = dgemm_time/iterations;
+    auto nflops = 2.0 * std::pow(forder,3);
+    std::cout << "Rate (MB/s): " << 1.0e-6 * nflops/avgtime
+              << " Avg time (s): " << avgtime << std::endl;
+  } else { 
+    std::cout << "Reference checksum = " << reference << "\n"
+              << "Actual checksum = " << checksum << std::endl;
 #if VERBOSE
-    printf("Reference checksum = %lf, checksum = %lf\n", 
-           ref_checksum, checksum);
+    for (auto i=0; i<order; ++i)
+      for (auto j=0; j<order; ++j)
+        std::cout << "A(" << i << "," << j << ") = " << A[i*order+j] << "\n";
+    for (auto i=0; i<order; ++i)
+      for (auto j=0; j<order; ++j)
+        std::cout << "B(" << i << "," << j << ") = " << B[i*order+j] << "\n";
+    for (auto i=0; i<order; ++i)
+      for (auto j=0; j<order; ++j)
+        std::cout << "C(" << i << "," << j << ") = " << C[i*order+j] << "\n";
+    std::cout << std::endl;
 #endif
+    return 1;
   }
 
-  double nflops = 2.0*forder*forder*forder;
-  avgtime = dgemm_time/iterations;
-  printf("Rate (MFlops/s): %lf  Avg time (s): %lf\n",
-         1.0E-06 *nflops/avgtime, avgtime);
-
-  exit(EXIT_SUCCESS);
-
+  return 0;
 }
+
+
