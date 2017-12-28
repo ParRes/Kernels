@@ -60,6 +60,40 @@
 
 #include "prk_util.h"
 
+void prk_dgemm(const int order,
+               const std::vector<double> & A,
+               const std::vector<double> & B,
+                     std::vector<double> & C)
+{
+    for (auto i=0; i<order; ++i) {
+      for (auto j=0; j<order; ++j) {
+        for (auto k=0; k<order; ++k) {
+            C[i*order+j] += A[i*order+k] * B[k*order+j];
+        }
+      }
+    }
+}
+
+void prk_dgemm(const int order, const int tile_size,
+               const std::vector<double> & A,
+               const std::vector<double> & B,
+                     std::vector<double> & C)
+{
+    for (auto it=0; it<order; it+=tile_size) {
+      for (auto jt=0; jt<order; jt+=tile_size) {
+        for (auto kt=0; kt<order; kt+=tile_size) {
+          for (auto i=it; i<std::min(order,it+tile_size); ++i) {
+            for (auto j=jt; j<std::min(order,jt+tile_size); ++j) {
+              for (auto k=kt; k<std::min(order,kt+tile_size); ++k) {
+                C[i*order+j] += A[i*order+k] * B[k*order+j];
+              }
+            }
+          }
+        }
+      }
+    }
+}
+
 int main(int argc, char * argv[])
 {
   //////////////////////////////////////////////////////////////////////
@@ -85,6 +119,8 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
+      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        throw "ERROR: matrix dimension too large - overflow risk";
       }
 
       tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
@@ -120,29 +156,14 @@ int main(int argc, char * argv[])
   }
 
   {
-    for (auto iter = 0; iter<iterations; iter++) {
+    for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) dgemm_time = prk::wtime();
 
-      if (0) { //tile_size < order) {
-        for (auto it=0; it<order; it+=tile_size) {
-          for (auto jt=0; jt<order; jt+=tile_size) {
-            for (auto i=it; i<std::min(order,it+tile_size); i++) {
-              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
-                B[i*order+j] += A[j*order+i];
-                A[j*order+i] += 1.0;
-              }
-            }
-          }
-        }
+      if (tile_size < order) {
+          prk_dgemm(order, tile_size, A, B, C);
       } else {
-        for (auto i=0; i<order; ++i) {
-          for (auto j=0; j<order; ++j) {
-            for (auto k=0; k<order; ++k) {
-                C[i*order+j] += A[i*order+k] * B[k*order+j];
-            }
-          }
-        }
+          prk_dgemm(order, A, B, C);
       }
     }
     dgemm_time = prk::wtime() - dgemm_time;
@@ -153,7 +174,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   const double forder = static_cast<double>(order);
-  const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * iterations;
+  const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
 
   double checksum(0);
   // TODO: replace with std::generate, std::accumulate, or similar
