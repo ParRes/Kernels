@@ -74,7 +74,9 @@ nstream: nstream-valarray nstream-vector nstream-vector-openmp nstream-openmp-ta
 	 nstream-vector-taskloop nstream-vector-stl nstream-vector-pstl nstream-vector-raja \
 	 nstream-vector-rangefor nstream-vector-tbb nstream-kokkos nstream-opencl
 
-vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector sparse-vector \
+dgemm: dgemm-vector
+
+vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector sparse-vector dgemm-vector \
 	transpose-vector-async transpose-vector-thread
 
 valarray: transpose-valarray nstream-valarray
