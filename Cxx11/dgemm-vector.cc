@@ -32,27 +32,27 @@
 //////////////////////////////////////////////////////////////////////
 ///
 /// NAME:    dgemm
-/// 
+///
 /// PURPOSE: This program tests the efficiency with which a dense matrix
 ///          dense multiplication is carried out
-///   
-/// USAGE:   The program takes as input the matrix
-///          order, the number of times the matrix-matrix multiplication 
+///
+/// USAGE:   The program takes as input the matrix order,
+///          the number of times the matrix-matrix multiplication
 ///          is carried out, and, optionally, a tile size for matrix
 ///          blocking
-/// 
+///
 ///          <progname> <# iterations> <matrix order> [<tile size>]
-///   
-///          The output consists of diagnostics to make sure the 
+///
+///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
-/// 
+///
 /// FUNCTIONS CALLED:
-/// 
-///          Other than OpenMP or standard C functions, the following 
+///
+///          Other than OpenMP or standard C functions, the following
 ///          functions are used in this program:
-/// 
+///
 ///          wtime()
-/// 
+///
 /// HISTORY: Written by Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, December, 2017.
 ///
@@ -176,13 +176,15 @@ int main(int argc, char * argv[])
   const double forder = static_cast<double>(order);
   const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
 
-  double checksum(0);
-  // TODO: replace with std::generate, std::accumulate, or similar
-  for (auto i=0; i<order; i++) {
-    for (auto j=0; j<order; j++) {
-      checksum += C[i*order+j];
-    }
-  }
+  //using prk_reduce = std::accumulate;
+  //constexpr auto prk_reduce = std::accumulate;
+  //typedef std::accumulate prk_reduce;
+
+
+  // std::reduce is C++17, whereas std::accumulate is C++11
+  //double checksum2 = std::reduce(C.begin(), C.end(), 0.0);
+  //auto checksum = std::accumulate(C.begin(), C.end(), 0.0);
+  auto checksum = prk_reduce(C.begin(), C.end(), 0.0);
 
   const auto epsilon = 1.0e-8;
   if (std::abs(checksum-reference) < epsilon) {
@@ -191,7 +193,7 @@ int main(int argc, char * argv[])
     auto nflops = 2.0 * std::pow(forder,3);
     std::cout << "Rate (MB/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
-  } else { 
+  } else {
     std::cout << "Reference checksum = " << reference << "\n"
               << "Actual checksum = " << checksum << std::endl;
 #if VERBOSE
