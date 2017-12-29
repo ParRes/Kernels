@@ -60,48 +60,26 @@
 
 #include "prk_util.h"
 
-void prk_dgemm(const int order,
-               const std::vector<double> & A,
-               const std::vector<double> & B,
-                     std::vector<double> & C)
-{
-    PRAGMA_SIMD
-    for (auto i=0; i<order; ++i) {
-      PRAGMA_SIMD
-      for (auto j=0; j<order; ++j) {
-        PRAGMA_SIMD
-        for (auto k=0; k<order; ++k) {
-            C[i*order+j] += A[i*order+k] * B[k*order+j];
-        }
-      }
-    }
-}
+#if defined(MKL)
+#include <mkl.h>
+typedef MKL_INT cblas_int;
+#elif defined(ACCELERATE)
+// The location of cblas.h is not in the system include path when -framework Accelerate is provided.
+#include <Accelerate/Accelerate.h>
+typedef int cblas_int;
+#else
+#include <cblas.h>
+typedef int cblas_int;
+#endif
 
-void prk_dgemm(const int order, const int tile_size,
-               const std::vector<double> & A,
-               const std::vector<double> & B,
-                     std::vector<double> & C)
+void prk_dgemm(const int order,
+               const double * RESTRICT A,
+               const double * RESTRICT B,
+                     double * RESTRICT C)
 {
-    for (auto it=0; it<order; it+=tile_size) {
-      for (auto kt=0; kt<order; kt+=tile_size) {
-        for (auto jt=0; jt<order; jt+=tile_size) {
-          // ICC will not hoist these on its own...
-          auto iend = std::min(order,it+tile_size);
-          auto jend = std::min(order,jt+tile_size);
-          auto kend = std::min(order,kt+tile_size);
-          PRAGMA_SIMD
-          for (auto i=it; i<iend; ++i) {
-            PRAGMA_SIMD
-            for (auto k=kt; k<kend; ++k) {
-              PRAGMA_SIMD
-              for (auto j=jt; j<jend; ++j) {
-                C[i*order+j] += A[i*order+k] * B[k*order+j];
-              }
-            }
-          }
-        }
-      }
-    }
+    const cblas_int n = order;
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                n, n, n, 1.0, A, n, B, n, 1.0, C, n);
 }
 
 int main(int argc, char * argv[])
@@ -111,14 +89,13 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 Dense matrix-matrix multiplication: C += A x B" << std::endl;
+  std::cout << "C++11 CBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   int iterations;
   int order;
-  int tile_size;
   try {
-      if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [tile size]";
+      if (argc < 2) {
+        throw "Usage: <# iterations> <matrix order>";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -132,10 +109,6 @@ int main(int argc, char * argv[])
       } else if (order > std::floor(std::sqrt(INT_MAX))) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
-
-      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
-      if (tile_size <= 0) tile_size = order;
-
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -144,7 +117,6 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
-  std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for matrices
@@ -170,11 +142,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) dgemm_time = prk::wtime();
 
-      if (tile_size < order) {
-          prk_dgemm(order, tile_size, A, B, C);
-      } else {
-          prk_dgemm(order, A, B, C);
-      }
+      prk_dgemm(order, &(A[0]), &(B[0]), &(C[0]));
     }
     dgemm_time = prk::wtime() - dgemm_time;
   }
