@@ -65,8 +65,11 @@ void prk_dgemm(const int order,
                const std::vector<double> & B,
                      std::vector<double> & C)
 {
+    PRAGMA_SIMD
     for (auto i=0; i<order; ++i) {
+      PRAGMA_SIMD
       for (auto j=0; j<order; ++j) {
+        PRAGMA_SIMD
         for (auto k=0; k<order; ++k) {
             C[i*order+j] += A[i*order+k] * B[k*order+j];
         }
@@ -80,11 +83,18 @@ void prk_dgemm(const int order, const int tile_size,
                      std::vector<double> & C)
 {
     for (auto it=0; it<order; it+=tile_size) {
-      for (auto jt=0; jt<order; jt+=tile_size) {
-        for (auto kt=0; kt<order; kt+=tile_size) {
-          for (auto i=it; i<std::min(order,it+tile_size); ++i) {
-            for (auto j=jt; j<std::min(order,jt+tile_size); ++j) {
-              for (auto k=kt; k<std::min(order,kt+tile_size); ++k) {
+      for (auto kt=0; kt<order; kt+=tile_size) {
+        for (auto jt=0; jt<order; jt+=tile_size) {
+          // ICC will not hoist these on its own...
+          auto iend = std::min(order,it+tile_size);
+          auto jend = std::min(order,jt+tile_size);
+          auto kend = std::min(order,kt+tile_size);
+          PRAGMA_SIMD
+          for (auto i=it; i<iend; ++i) {
+            PRAGMA_SIMD
+            for (auto k=kt; k<kend; ++k) {
+              PRAGMA_SIMD
+              for (auto j=jt; j<jend; ++j) {
                 C[i*order+j] += A[i*order+k] * B[k*order+j];
               }
             }
@@ -173,18 +183,9 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  const double forder = static_cast<double>(order);
-  const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
-
-  //using prk_reduce = std::accumulate;
-  //constexpr auto prk_reduce = std::accumulate;
-  //typedef std::accumulate prk_reduce;
-
-
-  // std::reduce is C++17, whereas std::accumulate is C++11
-  //double checksum2 = std::reduce(C.begin(), C.end(), 0.0);
-  //auto checksum = std::accumulate(C.begin(), C.end(), 0.0);
-  auto checksum = prk_reduce(C.begin(), C.end(), 0.0);
+  const auto forder = static_cast<double>(order);
+  const auto reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
+  const auto checksum = prk_reduce(C.begin(), C.end(), 0.0);
 
   const auto epsilon = 1.0e-8;
   if (std::abs(checksum-reference) < epsilon) {
