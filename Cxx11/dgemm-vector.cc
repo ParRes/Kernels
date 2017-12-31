@@ -68,9 +68,9 @@ void prk_dgemm(const int order,
     PRAGMA_SIMD
     for (auto i=0; i<order; ++i) {
       PRAGMA_SIMD
-      for (auto j=0; j<order; ++j) {
+      for (auto k=0; k<order; ++k) {
         PRAGMA_SIMD
-        for (auto k=0; k<order; ++k) {
+        for (auto j=0; j<order; ++j) {
             C[i*order+j] += A[i*order+k] * B[k*order+j];
         }
       }
@@ -144,7 +144,11 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
-  std::cout << "Tile size            = " << tile_size << std::endl;
+  if (tile_size < order) {
+      std::cout << "Tile size            = " << tile_size << std::endl;
+  } else {
+      std::cout << "Untiled (IKJ loop order)" << std::endl;
+  }
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for matrices
