@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 {
   int     iter, i,ii,j,jj,k,kk,ig,jg,kg; /* dummies                               */
   int     iterations;           /* number of times the multiplication is done     */
-  double  dgemm_time,           /* timing parameters                              */
+  double  dgemm_time = 0.0,     /* timing parameters                              */
           avgtime; 
   double  checksum = 0.0,       /* checksum of result                             */
           ref_checksum;
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
           * RESTRICT C;
   long    order;                /* number of rows and columns of matrices         */
   long    block;                /* tile size of matrices                          */
-  int     shortcut;             /* true if only doing initialization              */
+  int     shortcut = 0;         /* true if only doing initialization              */
 
   printf("Parallel Research Kernels version %s\n", PRKVERSION);
   printf("Serial Dense matrix-matrix multiplication: C = A x B\n");
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
   }
 
 #if !MKL
-  double * RESTRICT AA, * RESTRICT BB, * RESTRICT CC;
+  double * RESTRICT AA = NULL, * RESTRICT BB = NULL, * RESTRICT CC = NULL;
 
   if (block > 0) {
     /* matrix blocks for local temporary copies                                     */

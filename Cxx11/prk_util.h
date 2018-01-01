@@ -64,6 +64,22 @@
 #include <numeric>
 #include <algorithm>
 
+template<class I, class T>
+const auto prk_reduce(I first, I last, T init) {
+#if (defined(__cplusplus) && (__cplusplus >= 201703L)) && !defined(__GNUC__)
+    return std::reduce(first, last, init);
+#elif (defined(__cplusplus) && (__cplusplus >= 201103L))
+    return std::accumulate(first, last, init);
+#else
+    // unreachable, but preserved as reference implementation
+    T r(0);
+    for (I i=first; i!=last; ++i) {
+        r += *i;
+    }
+    return r;
+#endif
+}
+
 // These headers are busted with NVCC and GCC 5.4.0
 // The <future> header is busted with Cray C++ 8.6.1.
 #if !defined(__NVCC__) && !defined(_CRAYC)
