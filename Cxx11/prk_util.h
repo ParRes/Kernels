@@ -66,7 +66,7 @@
 
 template<class I, class T>
 const auto prk_reduce(I first, I last, T init) {
-#if (defined(__cplusplus) && (__cplusplus >= 201703L))
+#if (defined(__cplusplus) && (__cplusplus >= 201703L)) && !defined(__GNUC__)
     return std::reduce(first, last, init);
 #elif (defined(__cplusplus) && (__cplusplus >= 201103L))
     return std::accumulate(first, last, init);
