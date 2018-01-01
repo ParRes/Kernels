@@ -1,5 +1,5 @@
 !
-! Copyright (c) 2015, Intel Corporation
+! Copyright (c) 2017, Intel Corporation
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -31,21 +31,23 @@
 
 !*******************************************************************
 !
-! NAME:    transpose
+!  NAME:    dgemm
 !
-! PURPOSE: This program measures the time for the transpose of a
-!          column-major stored matrix into a row-major stored matrix.
+!  PURPOSE: This program tests the efficiency with which a dense matrix
+!           dense multiplication is carried out
 !
-! USAGE:   Program input is the matrix order and the number of times to
-!          repeat the operation:
+!  USAGE:   The program takes as input the matrix order and
+!           the number of times the matrix-matrix multiplication
+!           is carried out.
 !
-!          transpose <matrix_size> <# iterations>
+!           <progname> <# iterations> <matrix order>
 !
-!          The output consists of diagnostics to make sure the
-!          transpose worked and timing statistics.
+!           The output consists of diagnostics to make sure the
+!           algorithm worked, and of timing statistics.
 !
-! HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-!          Converted to Fortran by Jeff Hammond, February 2015
+!  HISTORY: Written by Rob Van der Wijngaart, February 2009.
+!           Converted to C++11 by Jeff Hammond, December, 2017.
+!           Converted to Fortran by Jeff Hammond, December, 2017.
 !
 ! *******************************************************************
 
@@ -67,19 +69,21 @@ program main
   integer :: arglen
   character(len=32) :: argtmp
   ! problem definition
-  integer(kind=INT32) ::  iterations                ! number of times to do the transpose
-  integer(kind=INT32) ::  order                     ! order of a the matrix
-  real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
-  real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
-  integer(kind=INT64) ::  bytes                     ! combined size of matrices
+  integer(kind=INT32) ::  iterations                ! number of times to do the kernel
+  integer(kind=INT32) ::  order                     ! order of the matrix
+  real(kind=REAL64) :: forder                       ! order as a double
+  real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold input matrix
+  real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold input matrix
+  real(kind=REAL64), allocatable ::  C(:,:)         ! buffer to hold output matrix
+  integer(kind=INT64) :: nflops
   ! runtime variables
-#if defined(PGI)
+#if 1 || defined(PGI)
   integer(kind=INT32) :: i
 #endif
+  integer(kind=INT64) :: j
   integer(kind=INT32) :: k
-  integer(kind=INT64) :: j, o2                      ! for loop over order**2
-  real(kind=REAL64) ::  abserr                      ! squared error
-  real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
+  real(kind=REAL64) ::  checksum, reference, residuum
+  real(kind=REAL64) ::  t0, t1, dgemm_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
 
   ! ********************************************************************
@@ -87,11 +91,11 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran Pretty Matrix transpose: B = A^T'
+  write(*,'(a61)') 'Fortran Pretty Dense matrix-matrix multiplication: C += A x B'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
+    write(*,'(a62)')    'Usage: ./dgemm-pretty <# iterations> <matrix order>'
     stop 1
   endif
 
@@ -115,7 +119,7 @@ program main
   write(*,'(a,i8)') 'Matrix order         = ', order
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space for the input and output matrices
   ! ********************************************************************
 
   allocate( A(order,order), stat=err)
@@ -130,64 +134,61 @@ program main
     stop 1
   endif
 
+  allocate( C(order,order), stat=err )
+  if (err .ne. 0) then
+    write(*,'(a,i3)') 'allocation of C returned ',err
+    stop 1
+  endif
+
   ! Fill the original matrix
-  o2 = int(order,INT64)**2
-  A = reshape((/ (j, j = 0,o2) /),(/order, order/))
-  B = 0
+  do i=1, order
+    A(:,i) = i-1
+    B(:,i) = i-1
+  enddo
+  C = 0
 
   t0 = 0
 
   do k=0,iterations
-    ! start timer after a warmup iteration
     if (k.eq.1) t0 = prk_get_wtime()
-    B = B + transpose(A)
-    A = A + 1
-  enddo ! iterations
+    C = C + matmul(A,B)
+  enddo
 
   t1 = prk_get_wtime()
-  trans_time = t1 - t0
+  dgemm_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  ! we reuse A here as the reference matrix, to compute the error
-  A = ( transpose(reshape((/ (j, j = 0,o2) /),(/order, order/))) &
-        * real(iterations+1,REAL64) ) &
-      + real((iterations*(iterations+1))/2,REAL64)
-#if 0 && defined(PGI)
-  ! PGI generates a segfault here...
-  abserr = 0.0d0
-  forall (j=1:order,i=1:order)
-      abserr = abserr + (B(i,j) - A(i,j))**2
-  endforall
-  abserr = sqrt(abserr)
-#elif defined(PGI)
-  abserr = 0.0d0
-  do j=1,order
-    do i=1,order
-      abserr = abserr + (B(i,j) - A(i,j))**2
-    enddo
-  enddo
-  abserr = sqrt(abserr)
-#else
-  abserr = norm2(A-B)
-#endif
-
   deallocate( B )
   deallocate( A )
 
-  if (abserr .lt. epsilon) then
+  forder = real(order,REAL64)
+  reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
+  ! TODO: use intrinsic here (except PGI)
+  checksum = 0.0d0
+  do j=1,order
+    do i=1,order
+      checksum = checksum + C(i,j)
+    enddo
+  enddo
+
+  residuum = abs(checksum-reference)/reference
+  if (residuum .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
-    avgtime = trans_time/iterations
-    bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
-    write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',(1.d-6*bytes)/avgtime, &
+    avgtime = dgemm_time/iterations
+    nflops = 2 * forder**3
+    write(*,'(a,f13.6,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
            ' Avg time (s): ', avgtime
   else
-    write(*,'(a,f30.15,a,f30.15)') 'ERROR: Aggregate squared error ',abserr, &
-           'exceeds threshold ',epsilon
+    write(*,'(a,e30.15)') 'Reference checksum = ', reference
+    write(*,'(a,e30.15)') 'Actual checksum    = ', checksum
+    print*,C
     stop 1
   endif
+
+  deallocate( C )
 
 end program main
 

@@ -13,6 +13,12 @@ STARFLAG   = -DSTAR
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
 FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
+ifeq ($(findstring ifort,$(FC)),ifort)
+  BLASFLAGS = $(CBLASFLAG) -heap-arrays
+else
+  BLASFLAGS = $(CBLASFLAG)
+endif
+
 .PHONY: all clean serial pretty openmp coarray target ornlacc
 
 # Intel
@@ -41,7 +47,7 @@ all: serial pretty openmp tasks $(EXTRA)
 
 serial: p2p stencil transpose nstream p2p-innerloop
 
-pretty: stencil-pretty transpose-pretty nstream-pretty
+pretty: stencil-pretty transpose-pretty nstream-pretty dgemm-pretty
 
 openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp nstream-openmp
 
@@ -63,7 +69,7 @@ stencil: stencil.f90 stencil_serial.f90
 	$(FC) $(FCFLAGS) $< -o $@
 
 %-pretty: %-pretty.f90
-	$(FC) $(FCFLAGS) $< -o $@
+	$(FC) $(FCFLAGS) $(BLASFLAGS) $< -o $@
 
 %-openmp: %.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
