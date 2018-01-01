@@ -73,13 +73,15 @@ typedef int cblas_int;
 #endif
 
 void prk_dgemm(const int order,
-               const double * RESTRICT A,
-               const double * RESTRICT B,
-                     double * RESTRICT C)
+               const std::vector<double> & A,
+               const std::vector<double> & B,
+                     std::vector<double> & C)
 {
     const cblas_int n = order;
+    const double alpha = 1.0;
+    const double beta  = 1.0;
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                n, n, n, 1.0, A, n, B, n, 1.0, C, n);
+                n, n, n, alpha, &(A[0]), n, &(B[0]), n, beta, &(C[0]), n);
 }
 
 int main(int argc, char * argv[])
@@ -142,7 +144,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) dgemm_time = prk::wtime();
 
-      prk_dgemm(order, &(A[0]), &(B[0]), &(C[0]));
+      prk_dgemm(order, A, B, C);
     }
     dgemm_time = prk::wtime() - dgemm_time;
   }
