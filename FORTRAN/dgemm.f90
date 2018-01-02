@@ -71,23 +71,23 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
 
   if (tile_size.lt.order) then
 #if defined(_OPENMP)
-    !$omp do collapse(3) private(i,j,k,it,jt,kt)
-    do it=1,order,tile_size
+    !$omp do private(i,j,k,it,jt,kt)
+    do jt=1,order,tile_size
       do kt=1,order,tile_size
-        do jt=1,order,tile_size
+        do it=1,order,tile_size
 #elif defined(PGI)
     ! PGI does not support DO CONCURRENT.
-    do it=1,order,tile_size
+    do jt=1,order,tile_size
       do kt=1,order,tile_size
-        do jt=1,order,tile_size
+        do it=1,order,tile_size
 #else
-    do concurrent (it=1:order:tile_size)
+    do concurrent (jt=1:order:tile_size)
       do concurrent (kt=1:order:tile_size)
-        do concurrent (jt=1:order:tile_size)
+        do concurrent (it=1:order:tile_size)
 #endif
-          do i=it,min(order,it+tile_size-1)
+          do j=jt,min(order,jt+tile_size-1)
             do k=kt,min(order,kt+tile_size-1)
-              do j=jt,min(order,jt+tile_size-1)
+              do i=it,min(order,it+tile_size-1)
                 C(i,j) = C(i,j) + A(i,k) * B(k,j)
               enddo
             enddo
@@ -101,18 +101,18 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
   else
 #if defined(_OPENMP)
     !$omp do private(i,j,k,it,jt,kt)
-    do i=1,order
+    do j=1,order
       do k=1,order
-        do j=1,order
+        do i=1,order
 #elif defined(PGI)
-    do i=1,order
-      do k=1,order
-        do j=1,order
-#else
     ! PGI does not support DO CONCURRENT.
-    do concurrent (i=1:order)
+    do j=1,order
+      do k=1,order
+        do i=1,order
+#else
+    do concurrent (j=1:order)
       do concurrent (k=1:order)
-        do concurrent (j=1:order)
+        do concurrent (i=1:order)
 #endif
           C(i,j) = C(i,j) + A(i,k) * B(k,j)
         enddo
@@ -146,7 +146,7 @@ program main
   integer(kind=INT64) :: nflops
   ! runtime variables
   integer(kind=INT32) :: i,j,k
-  real(kind=REAL64) ::  checksum, reference, residuum
+  real(kind=REAL128) ::  checksum, reference, residuum
   real(kind=REAL64) ::  t0, t1, dgemm_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
 
@@ -188,9 +188,9 @@ program main
       call get_command_argument(3,argtmp,arglen,err)
       if (err.eq.0) read(argtmp,'(i32)') tile_size
   endif
-  if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    write(*,'(a20,i5,a22,i5)') 'WARNING: tile_size ',tile_size,&
-                           ' must be >= 1 and <= ',order
+  if ((tile_size.lt.1).or.(tile_size.gt.order)) then
+    write(*,'(a20,i5,a22,i5)') 'WARNING: tile_size ',tile_size, &
+                               ' must be >= 1 and <= ',order
     tile_size = order ! no tiling
   endif
 
@@ -231,8 +231,8 @@ program main
 
   ! Fill the original matrix
   do i=1, order
-    A(:,i) = i-1
-    B(:,i) = i-1
+    A(:,i) = real(i-1,REAL64)
+    B(:,i) = real(i-1,REAL64)
   enddo
   C = 0
 
@@ -269,14 +269,16 @@ program main
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
   ! TODO: use intrinsic here (except PGI)
   checksum = 0.0d0
+  !$omp parallel do simd reduction(+:checksum)
   do j=1,order
     do i=1,order
       checksum = checksum + C(i,j)
     enddo
   enddo
+  !$omp end parallel do simd
 
-  residuum = abs(checksum-reference)/reference
-  if (residuum .lt. epsilon) then
+  residuum = dabs(checksum-reference)/reference
+  if (residuum .eq. epsilon) then
     write(*,'(a)') 'Solution validates'
     avgtime = dgemm_time/iterations
     nflops = 2 * forder**3
@@ -285,7 +287,6 @@ program main
   else
     write(*,'(a,e30.15)') 'Reference checksum = ', reference
     write(*,'(a,e30.15)') 'Actual checksum    = ', checksum
-    print*,C
     stop 1
   endif
 
