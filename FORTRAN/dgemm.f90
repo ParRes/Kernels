@@ -146,7 +146,7 @@ program main
   integer(kind=INT64) :: nflops
   ! runtime variables
   integer(kind=INT32) :: i,j,k
-  real(kind=REAL128) ::  checksum, reference, residuum
+  real(kind=REAL64) ::  checksum, reference, residuum
   real(kind=REAL64) ::  t0, t1, dgemm_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
 
@@ -277,7 +277,7 @@ program main
   enddo
   !$omp end parallel do simd
 
-  residuum = dabs(checksum-reference)/reference
+  residuum = abs(checksum-reference)/reference
   if (residuum .eq. epsilon) then
     write(*,'(a)') 'Solution validates'
     avgtime = dgemm_time/iterations
