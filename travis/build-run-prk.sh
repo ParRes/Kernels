@@ -338,6 +338,13 @@ case "$PRK_TARGET" in
             done
         done
 
+        # C++11 with CBLAS
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            echo "CBLASFLAG=-DACCELERATE -framework Accelerate" >> common/make.defs
+            make -C $PRK_TARGET_PATH dgemm-cblas
+            $PRK_TARGET_PATH/dgemm-cblas        10 400
+        fi
+
         # C++11 native parallelism
         make -C $PRK_TARGET_PATH transpose-vector-thread transpose-vector-async
         $PRK_TARGET_PATH/transpose-vector-thread 10 1024 32
@@ -632,7 +639,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/dgemm-pretty        10 400
 
         # OpenMP host
-        make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+        make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp \
+                                   nstream-openmp dgemm-openmp
         export OMP_NUM_THREADS=2
         $PRK_TARGET_PATH/p2p-tasks-openmp     10 1024 1024
         $PRK_TARGET_PATH/p2p-innerloop-openmp 10 1024
