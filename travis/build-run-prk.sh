@@ -322,13 +322,15 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/nstream-valarray   10 16777216 32
 
         # C++11 without external parallelism
-        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector
+        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector dgemm-vector
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024 100 100
         $PRK_TARGET_PATH/p2p-innerloop-vector    10 1024
         $PRK_TARGET_PATH/stencil-vector          10 1000
         $PRK_TARGET_PATH/transpose-vector        10 1024 32
         $PRK_TARGET_PATH/nstream-vector          10 16777216 32
+        $PRK_TARGET_PATH/dgemm-vector            10 1024
+        $PRK_TARGET_PATH/dgemm-vector            10 1024 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
@@ -616,6 +618,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/stencil           10 1000
         $PRK_TARGET_PATH/transpose         10 1024 1
         $PRK_TARGET_PATH/transpose         10 1024 32
+        $PRK_TARGET_PATH/dgemm             10 1024
+        $PRK_TARGET_PATH/dgemm             10 1024 32
 
         # Pretty
         make -C ${PRK_TARGET_PATH} stencil-pretty transpose-pretty
@@ -623,6 +627,7 @@ case "$PRK_TARGET" in
         # pretty versions do not support tiling...
         $PRK_TARGET_PATH/stencil-pretty      10 1000
         $PRK_TARGET_PATH/transpose-pretty    10 1024
+        $PRK_TARGET_PATH/dgemm-pretty        10 1024
 
         # OpenMP host
         make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
@@ -633,6 +638,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/stencil-openmp       10 1000
         $PRK_TARGET_PATH/transpose-openmp     10 1024 1
         $PRK_TARGET_PATH/transpose-openmp     10 1024 32
+        $PRK_TARGET_PATH/dgemm-openmp         10 1024
+        $PRK_TARGET_PATH/dgemm-openmp         10 1024 32
 
         # Intel Mac does not support OpenMP target or coarrays
         if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
