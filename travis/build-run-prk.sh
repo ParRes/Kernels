@@ -48,7 +48,7 @@ case "$PRK_TARGET" in
         $PRK_PYTHON $PRK_TARGET_PATH/transpose-numpy.py 10 1024
         $PRK_PYTHON $PRK_TARGET_PATH/nstream-numpy.py   10 16777216
         $PRK_PYTHON $PRK_TARGET_PATH/sparse-numpy.py    10 10 5
-        $PRK_PYTHON $PRK_TARGET_PATH/dgemm-numpy.py     10 1024
+        $PRK_PYTHON $PRK_TARGET_PATH/dgemm-numpy.py     10 400
         ;;
     alloctave)
         echo "Octave"
@@ -329,8 +329,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/stencil-vector          10 1000
         $PRK_TARGET_PATH/transpose-vector        10 1024 32
         $PRK_TARGET_PATH/nstream-vector          10 16777216 32
-        $PRK_TARGET_PATH/dgemm-vector            10 1024
-        $PRK_TARGET_PATH/dgemm-vector            10 1024 32
+        $PRK_TARGET_PATH/dgemm-vector            10 400
+        $PRK_TARGET_PATH/dgemm-vector            10 400 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
@@ -619,8 +619,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/transpose         10 1024 1
         $PRK_TARGET_PATH/transpose         10 1024 32
         $PRK_TARGET_PATH/nstream           10 16777216
-        $PRK_TARGET_PATH/dgemm             10 1024
-        $PRK_TARGET_PATH/dgemm             10 1024 32
+        $PRK_TARGET_PATH/dgemm             10 400
+        $PRK_TARGET_PATH/dgemm             10 400 32
 
         # Pretty
         make -C ${PRK_TARGET_PATH} stencil-pretty transpose-pretty nstream-pretty dgemm-pretty
@@ -629,7 +629,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/stencil-pretty      10 1000
         $PRK_TARGET_PATH/transpose-pretty    10 1024
         $PRK_TARGET_PATH/nstream-pretty      10 16777216
-        $PRK_TARGET_PATH/dgemm-pretty        10 1024
+        $PRK_TARGET_PATH/dgemm-pretty        10 400
 
         # OpenMP host
         make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
@@ -641,8 +641,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/transpose-openmp     10 1024 1
         $PRK_TARGET_PATH/transpose-openmp     10 1024 32
         $PRK_TARGET_PATH/nstream-openmp       10 16777216
-        $PRK_TARGET_PATH/dgemm-openmp         10 1024
-        $PRK_TARGET_PATH/dgemm-openmp         10 1024 32
+        $PRK_TARGET_PATH/dgemm-openmp         10 400
+        $PRK_TARGET_PATH/dgemm-openmp         10 400 32
 
         # Intel Mac does not support OpenMP target or coarrays
         if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
