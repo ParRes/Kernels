@@ -314,7 +314,7 @@ case "$PRK_TARGET" in
         ${PRK_CXX} -v
         # Need to increment this for PSTL
         # The pthread flag is supported by GCC and Clang at least
-        echo "CXX=${PRK_CXX} -std=c++11 -pthread" >> common/make.defs
+        echo "CXX=${PRK_CXX} -std=c++14 -pthread" >> common/make.defs
 
         # C++11 without external parallelism
         make -C $PRK_TARGET_PATH transpose-valarray nstream-valarray
@@ -612,12 +612,13 @@ case "$PRK_TARGET" in
         esac
 
         # Serial
-        make -C ${PRK_TARGET_PATH} p2p p2p-innerloop stencil transpose
+        make -C ${PRK_TARGET_PATH} p2p p2p-innerloop stencil transpose nstream dgemm
         $PRK_TARGET_PATH/p2p               10 1024 1024
         $PRK_TARGET_PATH/p2p-innerloop     10 1024
         $PRK_TARGET_PATH/stencil           10 1000
         $PRK_TARGET_PATH/transpose         10 1024 1
         $PRK_TARGET_PATH/transpose         10 1024 32
+        $PRK_TARGET_PATH/nstream           10 16777216
         $PRK_TARGET_PATH/dgemm             10 1024
         $PRK_TARGET_PATH/dgemm             10 1024 32
 
@@ -627,6 +628,7 @@ case "$PRK_TARGET" in
         # pretty versions do not support tiling...
         $PRK_TARGET_PATH/stencil-pretty      10 1000
         $PRK_TARGET_PATH/transpose-pretty    10 1024
+        $PRK_TARGET_PATH/nstream-pretty      10 16777216
         $PRK_TARGET_PATH/dgemm-pretty        10 1024
 
         # OpenMP host
@@ -638,6 +640,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/stencil-openmp       10 1000
         $PRK_TARGET_PATH/transpose-openmp     10 1024 1
         $PRK_TARGET_PATH/transpose-openmp     10 1024 32
+        $PRK_TARGET_PATH/nstream-openmp       10 16777216
         $PRK_TARGET_PATH/dgemm-openmp         10 1024
         $PRK_TARGET_PATH/dgemm-openmp         10 1024 32
 
@@ -650,6 +653,7 @@ case "$PRK_TARGET" in
             $PRK_TARGET_PATH/stencil-openmp-target       10 1000
             $PRK_TARGET_PATH/transpose-openmp-target     10 1024 1
             $PRK_TARGET_PATH/transpose-openmp-target     10 1024 32
+            $PRK_TARGET_PATH/nstream-openmp-target       10 16777216
 
             # Fortran coarrays
             make -C ${PRK_TARGET_PATH} coarray
