@@ -79,20 +79,21 @@ y = yes
 
 i = in-progress, incomplete, or incorrect
 
-| Parallelism          | p2p | stencil | transpose | nstream | sparse | 
-|----------------------|-----|---------|-----------|---------|--------|
-| None                 |  y  |    y    |     y     |    y    |    y   |
-| C++11 threads, async |     |         |     y     |         |        |
-| OpenMP               |  y  |    y    |     y     |    y    |        |
-| OpenMP tasks         |  y  |    y    |     y     |    y    |        |
-| OpenMP target        |  y  |    y    |     y     |    y    |        |
-| OpenCL 1.x           |  i  |    y    |     y     |    y    |        |
-| Parallel STL         |  y  |    y    |     y     |    y    |        |
-| TBB                  |  i  |    y    |     y     |    y    |        |
-| Kokkos               |  y  |    y    |     y     |    y    |        |
-| RAJA                 |  y  |    y    |     y     |    y    |        |
-| CUDA                 |     |         |     y     |         |        |
-| CUBLAS               |     |         |     y     |         |        |
+| Parallelism          | p2p | stencil | transpose | nstream | sparse | dgemm |
+|----------------------|-----|---------|-----------|---------|--------|-------|
+| None                 |  y  |    y    |     y     |    y    |    y   |   y   |
+| C++11 threads, async |     |         |     y     |         |        |       |
+| OpenMP               |  y  |    y    |     y     |    y    |        |       |
+| OpenMP tasks         |  y  |    y    |     y     |    y    |        |       |
+| OpenMP target        |  y  |    y    |     y     |    y    |        |       |
+| OpenCL 1.x           |  i  |    y    |     y     |    y    |        |       |
+| Parallel STL         |  y  |    y    |     y     |    y    |        |       |
+| TBB                  |  i  |    y    |     y     |    y    |        |       |
+| Kokkos               |  y  |    y    |     y     |    y    |        |       |
+| RAJA                 |  y  |    y    |     y     |    y    |        |       |
+| CUDA                 |     |         |     y     |         |        |       |
+| CUBLAS               |     |         |     y     |         |        |       |
+| CBLAS                |     |         |     y     |         |        |   y   |
 
 * [TBB](https://www.threadingbuildingblocks.org/)
 * [Kokkos](https://github.com/kokkos/kokkos)
