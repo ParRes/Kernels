@@ -623,7 +623,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/dgemm             10 1024 32
 
         # Pretty
-        make -C ${PRK_TARGET_PATH} stencil-pretty transpose-pretty
+        make -C ${PRK_TARGET_PATH} stencil-pretty transpose-pretty nstream-pretty dgemm-pretty
         #$PRK_TARGET_PATH/p2p-pretty          10 1024 1024
         # pretty versions do not support tiling...
         $PRK_TARGET_PATH/stencil-pretty      10 1000
