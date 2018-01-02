@@ -56,16 +56,16 @@
 
 int main(int argc, char * argv[])
 {
-  //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
-  //////////////////////////////////////////////////////////////////////
-
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
 #ifdef _OPENMP
   std::cout << "C++11/OpenMP Matrix transpose: B = A^T" << std::endl;
 #else
   std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
 #endif
+
+  //////////////////////////////////////////////////////////////////////
+  // Read and test input parameters
+  //////////////////////////////////////////////////////////////////////
 
   int iterations;
   int order;
@@ -85,13 +85,14 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
+      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        throw "ERROR: matrix dimension too large - overflow risk";
       }
 
       // default tile size for tiling of local transpose
       tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
-
   }
   catch (const char * e) {
     std::cout << e << std::endl;
