@@ -45,11 +45,11 @@ endif
 
 all: serial pretty openmp tasks $(EXTRA)
 
-serial: p2p stencil transpose nstream p2p-innerloop
+serial: p2p stencil transpose nstream dgemm p2p-innerloop
 
 pretty: stencil-pretty transpose-pretty nstream-pretty dgemm-pretty
 
-openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp nstream-openmp
+openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp nstream-openmp dgemm-openmp
 
 tasks: p2p-tasks-openmp transpose-tasks-openmp nstream-tasks-openmp
 
