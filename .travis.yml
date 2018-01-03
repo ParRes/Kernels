@@ -162,9 +162,9 @@ addons:
     packages:
     - python-numpy
     - python-scipy
-    #- gcc-7
-    #- g++-7
-    #- gfortran-7
+    - gcc-7
+    - g++-7
+    - gfortran-7
     # Required by GUPC
     - libnuma-dev
     # This should provide OpenMP
