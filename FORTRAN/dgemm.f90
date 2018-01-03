@@ -71,7 +71,7 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
 
   if (tile_size.lt.order) then
 #if defined(_OPENMP)
-    !$omp do private(i,j,k,it,jt,kt)
+    !$omp do collapse(3) private(i,j,k,it,jt,kt)
     do jt=1,order,tile_size
       do kt=1,order,tile_size
         do it=1,order,tile_size
@@ -87,9 +87,15 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
 #endif
           do j=jt,min(order,jt+tile_size-1)
             do k=kt,min(order,kt+tile_size-1)
+#if defined(_OPENMP)
+              !$omp simd
+#endif
               do i=it,min(order,it+tile_size-1)
                 C(i,j) = C(i,j) + A(i,k) * B(k,j)
               enddo
+#if defined(_OPENMP)
+              !$omp end simd
+#endif
             enddo
           enddo
         enddo
@@ -103,6 +109,7 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
     !$omp do private(i,j,k,it,jt,kt)
     do j=1,order
       do k=1,order
+        !$omp simd
         do i=1,order
 #elif defined(PGI)
     ! PGI does not support DO CONCURRENT.
@@ -116,6 +123,9 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
 #endif
           C(i,j) = C(i,j) + A(i,k) * B(k,j)
         enddo
+#if defined(_OPENMP)
+        !$omp end simd
+#endif
       enddo
     enddo
 #ifdef _OPENMP
@@ -148,7 +158,7 @@ program main
   integer(kind=INT32) :: i,j,k
   real(kind=REAL64) ::  checksum, reference, residuum
   real(kind=REAL64) ::  t0, t1, dgemm_time, avgtime ! timing parameters
-  real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
+  real(kind=REAL64), parameter ::  epsilon=1.0d-8    ! error tolerance
 
   ! ********************************************************************
   ! read and test input parameters
@@ -226,15 +236,17 @@ program main
 #ifdef _OPENMP
   !$omp parallel default(none)                     &
   !$omp&  shared(A,B,C,t0,t1)                      &
-  !$omp&  firstprivate(order,iterations,tile_size)
+  !$omp&  firstprivate(order,iterations,tile_size) &
+  !$omp&  private(k)
 #endif
 
-  ! Fill the original matrix
+  !$omp do simd
   do i=1, order
     A(:,i) = real(i-1,REAL64)
     B(:,i) = real(i-1,REAL64)
+    C(:,i) = real(0,REAL64)
   enddo
-  C = 0
+  !$omp end do simd
 
   t0 = 0
 
@@ -262,8 +274,8 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  deallocate( B )
   deallocate( A )
+  deallocate( B )
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
@@ -277,8 +289,10 @@ program main
   enddo
   !$omp end parallel do simd
 
+  deallocate( C )
+
   residuum = abs(checksum-reference)/reference
-  if (residuum .eq. epsilon) then
+  if (residuum .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
     avgtime = dgemm_time/iterations
     nflops = 2 * forder**3
@@ -289,8 +303,6 @@ program main
     write(*,'(a,e30.15)') 'Actual checksum    = ', checksum
     stop 1
   endif
-
-  deallocate( C )
 
 end program main
 
