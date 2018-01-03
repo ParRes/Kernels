@@ -655,7 +655,7 @@ case "$PRK_TARGET" in
         # Intel Mac does not support OpenMP target or coarrays
         if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
             # OpenMP target
-            make -C ${PRK_TARGET_PATH} stencil-openmp-target transpose-openmp-target
+            make -C ${PRK_TARGET_PATH} stencil-openmp-target transpose-openmp-target nstream-openmp-target
             export OMP_NUM_THREADS=2
             #$PRK_TARGET_PATH/p2p-openmp-target           10 1024 1024 # most compilers do not support doacross yet
             $PRK_TARGET_PATH/stencil-openmp-target       10 1000
