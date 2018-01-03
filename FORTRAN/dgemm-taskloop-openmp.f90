@@ -70,6 +70,8 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
   integer(kind=INT32) :: i,j,k,it,jt,kt
 
   if (tile_size.lt.order) then
+    ! GCC 7 bug prevents collapse(2+)
+    ! ICC 17 bug breaks this code
     !$omp taskloop default(none)            &
     !$omp& private(i,j,k,it,jt,kt)          &
     !$omp& shared(A,B,C)                    &

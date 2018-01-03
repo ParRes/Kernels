@@ -53,7 +53,7 @@ openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp ns
 
 tasks: p2p-tasks-openmp transpose-tasks-openmp #nstream-tasks-openmp
 
-taskloop: stencil-taskloop-openmp transpose-taskloop-openmp nstream-taskloop-openmp
+taskloop: stencil-taskloop-openmp transpose-taskloop-openmp nstream-taskloop-openmp dgemm-taskloop-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
