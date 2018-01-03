@@ -251,7 +251,16 @@ program main
   t0 = 0
 
   do k=0,iterations
-    if (k.eq.1) t0 = prk_get_wtime()
+    if (k.eq.1) then
+#ifdef _OPENMP
+      !$omp barrier
+      !$omp master
+#endif
+      t0 = prk_get_wtime()
+#ifdef _OPENMP
+      !$omp end master
+#endif
+    endif
     call prk_dgemm(order, tile_size, A, B, C)
   enddo
 
