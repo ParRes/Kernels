@@ -205,7 +205,7 @@ program main
   endif
 
 #ifdef _OPENMP
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
+  write(*,'(a,i8)') 'Number of threads    = ', omp_get_max_threads()
 #endif
   write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Matrix order         = ', order
