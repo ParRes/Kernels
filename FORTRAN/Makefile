@@ -51,7 +51,7 @@ pretty: stencil-pretty transpose-pretty nstream-pretty dgemm-pretty
 
 openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp nstream-openmp dgemm-openmp
 
-tasks: p2p-tasks-openmp transpose-tasks-openmp nstream-tasks-openmp
+tasks: p2p-tasks-openmp transpose-tasks-openmp #nstream-tasks-openmp
 
 taskloop: stencil-taskloop-openmp transpose-taskloop-openmp nstream-taskloop-openmp
 
