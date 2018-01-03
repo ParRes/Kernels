@@ -240,13 +240,13 @@ program main
   !$omp&  private(k)
 #endif
 
-  !$omp do simd
+  !$omp do private(i)
   do i=1, order
     A(:,i) = real(i-1,REAL64)
     B(:,i) = real(i-1,REAL64)
     C(:,i) = real(0,REAL64)
   enddo
-  !$omp end do simd
+  !$omp end do
 
   t0 = 0
 
