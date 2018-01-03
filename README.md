@@ -79,28 +79,29 @@ y = yes
 
 i = in-progress, incomplete, or incorrect
 
-| Parallelism          | p2p | stencil | transpose | nstream | sparse | 
-|----------------------|-----|---------|-----------|---------|--------|
-| None                 |  y  |    y    |     y     |    y    |    y   |
-| C++11 threads, async |     |         |     y     |         |        |
-| OpenMP               |  y  |    y    |     y     |    y    |        |
-| OpenMP tasks         |  y  |    y    |     y     |    y    |        |
-| OpenMP target        |  y  |    y    |     y     |    y    |        |
-| OpenCL 1.x           |  i  |    y    |     y     |    y    |        |
-| Parallel STL         |  y  |    y    |     y     |    y    |        |
-| TBB                  |  i  |    y    |     y     |    y    |        |
-| Kokkos               |  y  |    y    |     y     |    y    |        |
-| RAJA                 |  y  |    y    |     y     |    y    |        |
-| CUDA                 |     |         |     y     |         |        |
-| CUBLAS               |     |         |     y     |         |        |
+| Parallelism          | p2p | stencil | transpose | nstream | sparse | dgemm |
+|----------------------|-----|---------|-----------|---------|--------|-------|
+| None                 |  y  |    y    |     y     |    y    |    y   |   y   |
+| C++11 threads, async |     |         |     y     |         |        |       |
+| OpenMP               |  y  |    y    |     y     |    y    |        |       |
+| OpenMP tasks         |  y  |    y    |     y     |    y    |        |       |
+| OpenMP target        |  y  |    y    |     y     |    y    |        |       |
+| OpenCL 1.x           |  i  |    y    |     y     |    y    |        |       |
+| Parallel STL         |  y  |    y    |     y     |    y    |        |       |
+| TBB                  |  i  |    y    |     y     |    y    |        |       |
+| Kokkos               |  y  |    y    |     y     |    y    |        |       |
+| RAJA                 |  y  |    y    |     y     |    y    |        |       |
+| CUDA                 |     |         |     y     |         |        |       |
+| CUBLAS               |     |         |     y     |         |        |       |
+| CBLAS                |     |         |           |         |        |   y   |
 
 * [TBB](https://www.threadingbuildingblocks.org/)
 * [Kokkos](https://github.com/kokkos/kokkos)
-* [RAJA](https://github.com/LLNL/RAJA) 
+* [RAJA](https://github.com/LLNL/RAJA)
 
 ## Modern C
 
-| Parallelism          | p2p | stencil | transpose | nstream | sparse | 
+| Parallelism          | p2p | stencil | transpose | nstream | sparse |
 |----------------------|-----|---------|-----------|---------|--------|
 | None                 |  y  |    y    |     y     |         |        |
 | C11 threads          |     |         |     y     |         |        |
@@ -114,15 +115,15 @@ i = in-progress, incomplete, or incorrect
 
 ## Modern Fortran
 
-| Parallelism          | p2p | stencil | transpose | nstream | sparse | 
-|----------------------|-----|---------|-----------|---------|--------|
-| None                 |  y  |    y    |     y     |    y    |        |
-| Intrinsics           |     |         |     y     |    y    |        |
-| coarrays             |  y  |    y    |     y     |         |        |
-| OpenMP               |  y  |    y    |     y     |    y    |        |
-| OpenMP tasks         |  y  |    y    |     y     |    y    |        |
-| OpenMP target        |  y  |    y    |     y     |    y    |        |
-| OpenACC              |     |    y    |     y     |    y    |        |
+| Parallelism          | p2p | stencil | transpose | nstream | sparse | dgemm |
+|----------------------|-----|---------|-----------|---------|--------|-------|
+| None                 |  y  |    y    |     y     |    y    |        |   y   |
+| Intrinsics           |     |         |     y     |    y    |        |   y   |
+| coarrays             |  y  |    y    |     y     |         |        |       |
+| OpenMP               |  y  |    y    |     y     |    y    |        |   y   |
+| OpenMP tasks         |  y  |    y    |     y     |    y    |        |       |
+| OpenMP target        |  y  |    y    |     y     |    y    |        |       |
+| OpenACC              |     |    y    |     y     |    y    |        |       |
 
 By intrinsics, we mean the language built-in features, such as colon notation or the `TRANSPOSE` intrinsic.
 We use `DO CONCURRENT` in a few places.

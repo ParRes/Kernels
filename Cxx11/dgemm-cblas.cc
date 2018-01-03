@@ -72,6 +72,23 @@ typedef int cblas_int;
 typedef int cblas_int;
 #endif
 
+#ifdef PRK_DEBUG
+#include <random>
+void prk_dgemm_loops(const int order,
+               const std::vector<double> & A,
+               const std::vector<double> & B,
+                     std::vector<double> & C)
+{
+    for (auto i=0; i<order; ++i) {
+      for (auto j=0; j<order; ++j) {
+        for (auto k=0; k<order; ++k) {
+            C[i*order+j] += A[i*order+k] * B[k*order+j];
+        }
+      }
+    }
+}
+#endif
+
 void prk_dgemm(const int order,
                const std::vector<double> & A,
                const std::vector<double> & B,
@@ -132,12 +149,24 @@ int main(int argc, char * argv[])
   A.resize(order*order);
   B.resize(order*order);
   C.resize(order*order,0.0);
+#ifdef PRK_DEBUG
+  const unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+  std::default_random_engine generator(seed);
+  std::uniform_real_distribution<double> uniform01(0.0, 1.0);
+  for (auto i=0; i<order; ++i) {
+    for (auto j=0; j<order; ++j) {
+       A[i*order+j] = uniform01(generator);
+       B[i*order+j] = uniform01(generator);
+    }
+  }
+#else
   for (auto i=0; i<order; ++i) {
     for (auto j=0; j<order; ++j) {
        A[i*order+j] = i;
        B[i*order+j] = i;
     }
   }
+#endif
 
   {
     for (auto iter = 0; iter<=iterations; iter++) {
@@ -153,12 +182,32 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
+  const auto epsilon = 1.0e-8;
   const auto forder = static_cast<double>(order);
+#ifdef PRK_DEBUG
+  std::vector<double> D;
+  D.resize(order*order,0.0);
+  for (auto iter = 0; iter<=iterations; iter++) {
+    prk_dgemm_loops(order, A, B, D);
+  }
+  double residuum(0);
+  for (auto i=0; i<order; ++i) {
+    for (auto j=0; j<order; ++j) {
+        const auto diff = std::abs(C[i*order+j] - D[i*order+j]);
+        residuum += diff;
+        if (diff > epsilon) {
+            std::cout << i << "," << j << " = " << C[i*order+j] << ", " << D[i*order+j] << "\n";
+        }
+    }
+  }
+  const auto reference = prk_reduce(D.begin(), D.end(), 0.0);
+  const auto checksum  = prk_reduce(C.begin(), C.end(), 0.0);
+#else
   const auto reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
   const auto checksum = prk_reduce(C.begin(), C.end(), 0.0);
-
-  const auto epsilon = 1.0e-8;
   const auto residuum = std::abs(checksum-reference)/reference;
+#endif
+
   if (residuum < epsilon) {
 #if VERBOSE
     std::cout << "Reference checksum = " << reference << "\n"
@@ -173,15 +222,10 @@ int main(int argc, char * argv[])
     std::cout << "Reference checksum = " << reference << "\n"
               << "Actual checksum = " << checksum << std::endl;
 #if VERBOSE
+    std::cout << "i, j, A, B, C, D" << std::endl;
     for (auto i=0; i<order; ++i)
       for (auto j=0; j<order; ++j)
-        std::cout << "A(" << i << "," << j << ") = " << A[i*order+j] << "\n";
-    for (auto i=0; i<order; ++i)
-      for (auto j=0; j<order; ++j)
-        std::cout << "B(" << i << "," << j << ") = " << B[i*order+j] << "\n";
-    for (auto i=0; i<order; ++i)
-      for (auto j=0; j<order; ++j)
-        std::cout << "C(" << i << "," << j << ") = " << C[i*order+j] << "\n";
+        std::cout << i << "," << j << " = " << A[i*order+j] << ", " << B[i*order+j] << ", " << C[i*order+j] << ", " << D[i*order+j] << "\n";
     std::cout << std::endl;
 #endif
     return 1;

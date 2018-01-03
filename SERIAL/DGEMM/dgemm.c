@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 
   if (shortcut) exit(EXIT_SUCCESS);
 
-  for (iter=0; iter<iterations; iter++) {
+  for (iter=0; iter<=iterations; iter++) {
 
     /* start timer after a warmup iteration */
     if (iter == 1)  dgemm_time = wtime();
@@ -233,7 +233,7 @@ int main(int argc, char **argv)
 
   /* verification test                                                            */
   ref_checksum = (0.25*forder*forder*forder*(forder-1.0)*(forder-1.0));
-  ref_checksum *= iterations;
+  ref_checksum *= (iterations+1);
 
   if (ABS((checksum - ref_checksum)/ref_checksum) > epsilon) {
     printf("ERROR: Checksum = %lf, Reference checksum = %lf\n",

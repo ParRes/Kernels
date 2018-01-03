@@ -138,7 +138,8 @@ program main
     grid(i,1) = real(i-1,REAL64)
   enddo
 
-  !$omp target data map(tofrom: grid) map(from:pipeline_time)
+  !$omp target data map(tofrom: grid) map(from:pipeline_time) &
+  !$omp& map(to:iterations,m,n)
 
   do k=0,iterations
 
