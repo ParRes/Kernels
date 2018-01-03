@@ -48,7 +48,7 @@ case "$PRK_TARGET" in
         $PRK_PYTHON $PRK_TARGET_PATH/transpose-numpy.py 10 1024
         $PRK_PYTHON $PRK_TARGET_PATH/nstream-numpy.py   10 16777216
         $PRK_PYTHON $PRK_TARGET_PATH/sparse-numpy.py    10 10 5
-        $PRK_PYTHON $PRK_TARGET_PATH/dgemm-numpy.py     10 1024
+        $PRK_PYTHON $PRK_TARGET_PATH/dgemm-numpy.py     10 400
         ;;
     alloctave)
         echo "Octave"
@@ -322,19 +322,28 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/nstream-valarray   10 16777216 32
 
         # C++11 without external parallelism
-        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector
+        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector dgemm-vector
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024 100 100
         $PRK_TARGET_PATH/p2p-innerloop-vector    10 1024
         $PRK_TARGET_PATH/stencil-vector          10 1000
         $PRK_TARGET_PATH/transpose-vector        10 1024 32
         $PRK_TARGET_PATH/nstream-vector          10 16777216 32
+        $PRK_TARGET_PATH/dgemm-vector            10 400 400 # untiled
+        $PRK_TARGET_PATH/dgemm-vector            10 400 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
                 $PRK_TARGET_PATH/stencil-vector 10 200 20 $s $r
             done
         done
+
+        # C++11 with CBLAS
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            echo "CBLASFLAG=-DACCELERATE -framework Accelerate" >> common/make.defs
+            make -C $PRK_TARGET_PATH dgemm-cblas
+            $PRK_TARGET_PATH/dgemm-cblas        10 400
+        fi
 
         # C++11 native parallelism
         make -C $PRK_TARGET_PATH transpose-vector-thread transpose-vector-async
@@ -610,22 +619,28 @@ case "$PRK_TARGET" in
         esac
 
         # Serial
-        make -C ${PRK_TARGET_PATH} p2p p2p-innerloop stencil transpose
+        make -C ${PRK_TARGET_PATH} p2p p2p-innerloop stencil transpose nstream dgemm
         $PRK_TARGET_PATH/p2p               10 1024 1024
         $PRK_TARGET_PATH/p2p-innerloop     10 1024
         $PRK_TARGET_PATH/stencil           10 1000
         $PRK_TARGET_PATH/transpose         10 1024 1
         $PRK_TARGET_PATH/transpose         10 1024 32
+        $PRK_TARGET_PATH/nstream           10 16777216
+        $PRK_TARGET_PATH/dgemm             10 400 400 # untiled
+        $PRK_TARGET_PATH/dgemm             10 400 32
 
         # Pretty
-        make -C ${PRK_TARGET_PATH} stencil-pretty transpose-pretty
+        make -C ${PRK_TARGET_PATH} stencil-pretty transpose-pretty nstream-pretty dgemm-pretty
         #$PRK_TARGET_PATH/p2p-pretty          10 1024 1024
         # pretty versions do not support tiling...
         $PRK_TARGET_PATH/stencil-pretty      10 1000
         $PRK_TARGET_PATH/transpose-pretty    10 1024
+        $PRK_TARGET_PATH/nstream-pretty      10 16777216
+        $PRK_TARGET_PATH/dgemm-pretty        10 400
 
         # OpenMP host
-        make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+        make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp \
+                                   nstream-openmp dgemm-openmp
         export OMP_NUM_THREADS=2
         $PRK_TARGET_PATH/p2p-tasks-openmp     10 1024 1024
         $PRK_TARGET_PATH/p2p-innerloop-openmp 10 1024
@@ -633,16 +648,20 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/stencil-openmp       10 1000
         $PRK_TARGET_PATH/transpose-openmp     10 1024 1
         $PRK_TARGET_PATH/transpose-openmp     10 1024 32
+        $PRK_TARGET_PATH/nstream-openmp       10 16777216
+        $PRK_TARGET_PATH/dgemm-openmp         10 400 400 # untiled
+        $PRK_TARGET_PATH/dgemm-openmp         10 400 32
 
         # Intel Mac does not support OpenMP target or coarrays
         if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
             # OpenMP target
-            make -C ${PRK_TARGET_PATH} stencil-openmp-target transpose-openmp-target
+            make -C ${PRK_TARGET_PATH} stencil-openmp-target transpose-openmp-target nstream-openmp-target
             export OMP_NUM_THREADS=2
             #$PRK_TARGET_PATH/p2p-openmp-target           10 1024 1024 # most compilers do not support doacross yet
             $PRK_TARGET_PATH/stencil-openmp-target       10 1000
             $PRK_TARGET_PATH/transpose-openmp-target     10 1024 1
             $PRK_TARGET_PATH/transpose-openmp-target     10 1024 32
+            $PRK_TARGET_PATH/nstream-openmp-target       10 16777216
 
             # Fortran coarrays
             make -C ${PRK_TARGET_PATH} coarray
