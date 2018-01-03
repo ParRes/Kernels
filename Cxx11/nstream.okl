@@ -1,0 +1,7 @@
+@kernel void nstream(int N, double * A, const double * B, const double * C) {
+  for (int group = 0; group < N; group += 64; outer) {
+    for (int i = group; i < (group + 64); ++i; inner) {
+      A[i] += B[i] + 3 * C[i];
+    }
+  }
+}
