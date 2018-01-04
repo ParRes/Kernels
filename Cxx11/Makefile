@@ -20,15 +20,12 @@ ifeq ($(USE_PRK_TBB_PARTITIONER),simple)
     PRK_TBB_PARTITIONER=3
 endif
 ifndef PRK_TBB_PARTITIONER
-    $(info PRK help: Consider setting USE_PRK_TBB_PARTITIONER={static,affinity,simple} when invoking make)
     PRK_TBB_PARTITIONER=0
 endif
 
 # Valid choices are OpenMP, Threads, Serial, Cuda
 ifdef USE_PRK_KOKKOS_BACKEND
     KOKKOS_BACKEND_FLAG = -DPRK_KOKKOS_BACKEND=$(USE_PRK_KOKKOS_BACKEND)
-else
-    $(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
 endif
 
 ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm
@@ -63,7 +60,7 @@ else
   EXTRA += target
 endif
 
-all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl $(EXTRA)
+all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl occa $(EXTRA)
 
 p2p: p2p-vector p2p-doacross-vector-openmp p2p-innerloop-vector-openmp p2p-tasks-openmp p2p-openmp-target \
      p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl
@@ -133,6 +130,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
 
 %-tbb: %-tbb.cc prk_util.h
+	$(info PRK help: Consider setting USE_PRK_TBB_PARTITIONER={static,affinity,simple} when invoking make)
 	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
 
 %-stl: %-pstl.cc prk_util.h
@@ -148,6 +146,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
 
 %-kokkos: %-kokkos.cc prk_util.h
+	$(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
 	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
@@ -160,6 +159,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(CBLASFLAGS) -o $@
 
 %-occa: %-occa.cc prk_util.h
+	$(info PRK help: Set OCCA_CXX=$(firstword $(CXX)) to use that compiler for OKL files.)
 	$(CXX) $(CXXFLAGS) $< $(OCCAFLAGS) -o $@
 
 %: %.cc prk_util.h

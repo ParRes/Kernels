@@ -68,9 +68,17 @@ int main(int argc, char * argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OCCA STREAM triad: A = B + scalar * C" << std::endl;
 
-  occa::device device("mode = Serial");
-  //occa::device device("mode = OpenMP");
-  //occa::device device("mode = OpenCL, platformID = 0, deviceID = 0");
+  char* dc = std::getenv("OCCA_DEVICE");
+  if (dc==NULL) {
+      std::cout << "By default, OCCA executes in serial.\n";
+      std::cout << "Set OCCA_DEVICE as follows for parallel execution\n";
+      std::cout << " OCCA_DEVICE=\"mode = OpenMP\"\n";
+      std::cout << " OCCA_DEVICE=\"mode = OpenCL, platformID = 0, deviceID = 0\" (CPU)\n";
+      std::cout << " OCCA_DEVICE=\"mode = OpenCL, platformID = 1, deviceID = 0\" (GPU)\n";
+      std::cout << " OCCA_DEVICE=\"mode = CUDA', deviceID = 0\"\n";
+  }
+  std::string ds = (dc==NULL) ? "mode = Serial" : dc;
+  occa::device device(ds);
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -106,6 +114,7 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
+  std::cout << "OCCA mode            = " << "\"" << ds << "\"" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
