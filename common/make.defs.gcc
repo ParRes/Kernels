@@ -35,6 +35,10 @@ OPENCLFLAG=-framework OpenCL
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
+# OCCA
+#
+OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
 # Cilk
 #
 CILKFLAG=-fcilkplus
@@ -42,7 +46,7 @@ CILKFLAG=-fcilkplus
 # TBB
 #
 TBBDIR=/usr/local/Cellar/tbb/2018_U1
-TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+TBBFLAG=-USE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #

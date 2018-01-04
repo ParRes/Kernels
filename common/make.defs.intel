@@ -35,13 +35,17 @@ OFFLOADFLAG=-qopenmp-offload=host
 OPENCLDIR=/etc/alternatives/opencl-intel-tools
 OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
+# OCCA
+#
+OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
 # Cilk
 #
 CILKFLAG=-intel-extensions # default
 #
 # TBB
 #
-TBBFLAG=-tbb
+TBBFLAG=-USE_TBB -tbb
 #
 # Parallel STL, Boost, etc.
 #
