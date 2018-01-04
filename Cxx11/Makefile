@@ -106,7 +106,7 @@ raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-r
 
 cuda: transpose-cuda transpose-cublas nstream-vector-cuda
 
-occa: nstream-occa
+occa: transpose-occa nstream-occa
 
 p2p-innerloop-vector: p2p-innerloop-vector-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
