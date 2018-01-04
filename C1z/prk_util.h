@@ -113,7 +113,7 @@ int __cilkrts_get_nworkers(void);
 #endif
 
 #if defined(__INTEL_COMPILER)
-# define PRAGMA_SIMD PRAGMA(simd)
+# define PRAGMA_SIMD PRAGMA(vector)
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
 # define PRAGMA_SIMD PRAGMA(GCC ivdep)
 #elif defined(__clang__)
