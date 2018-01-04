@@ -39,13 +39,18 @@ OPENCLFLAGS = $(OPENCLFLAG)
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
 ORNLACCFLAGS = $(ORNLACCFLAG)
-TBBFLAGS = $(TBBFLAG) -DUSE_TBB -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
+TBBFLAGS = $(TBBFLAG) -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
 BOOSTFLAGS = $(BOOSTFLAG)
 STLFLAGS = $(STLFLAG) $(BOOSTFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
+
+ifdef OCCADIR
+  include ${OCCADIR}/scripts/makefile
+endif
+OCCAFLAGS = -DUSE_OCCA -I${OCCADIR}/include -Wl,-rpath=${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl rangefor kokkos raja cuda
 
@@ -104,6 +109,8 @@ raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-r
 
 cuda: transpose-cuda transpose-cublas nstream-vector-cuda
 
+occa: nstream-occa
+
 p2p-innerloop-vector: p2p-innerloop-vector-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
@@ -152,6 +159,9 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 %-cblas: %-cblas.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(CBLASFLAGS) -o $@
 
+%-occa: %-occa.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(OCCAFLAGS) -o $@
+
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
@@ -183,6 +193,7 @@ clean:
 	-rm -f *-cuda
 	-rm -f *-cublas
 	-rm -f *-cblas
+	-rm -f *-occa
 	-rm -f transpose-vector-async transpose-vector-thread
 
 cleancl:

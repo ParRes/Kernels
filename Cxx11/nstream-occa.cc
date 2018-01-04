@@ -68,16 +68,16 @@ int main(int argc, char * argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OCCA STREAM triad: A = B + scalar * C" << std::endl;
 
-  occa::device device("mode: 'Serial'");
-  //occa::device device("mode: 'OpenMP'");
-  //occa::device device("mode: 'OpenCL'");
+  occa::device device("mode = Serial");
+  //occa::device device("mode = OpenMP");
+  //occa::device device("mode = OpenCL, platformID = 0, deviceID = 0");
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations, offset;
-  size_t length;
+  int length;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length> [<offset>]";
@@ -88,7 +88,7 @@ int main(int argc, char * argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atol(argv[2]);
+      length = std::atoi(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
@@ -113,30 +113,43 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> h_A;
-  std::vector<double> h_B;
-  std::vector<double> h_C;
-  h_A.resize(length,0.0);
-  h_B.resize(length,2.0);
-  h_C.resize(length,2.0);
+  double * h_A = new double[length];
+  double * h_B = new double[length];
+  double * h_C = new double[length];
+  for (size_t i=0; i<length; ++i) {
+      h_A[i] = 0.0;
+      h_B[i] = 2.0;
+      h_C[i] = 2.0;
+  }
 
-  // hard-coded in nstream.okl
-  const double scalar(3);
+  double scalar(3);
 
-  occa::memory d_A = device.malloc(length * sizeof(float), h_A);
-  occa::memory d_B = device.malloc(length * sizeof(float), h_B);
-  occa::memory d_C = device.malloc(length * sizeof(float), h_C);
+  occa::memory d_A = device.malloc(length * sizeof(double), h_A);
+  occa::memory d_B = device.malloc(length * sizeof(double), h_B);
+  occa::memory d_C = device.malloc(length * sizeof(double), h_C);
+
+  d_A.copyFrom(h_A);
+  d_B.copyFrom(h_B);
+  d_C.copyFrom(h_C);
 
   occa::kernel nstream = device.buildKernel("nstream.okl", "nstream");
+
   {
     for (auto iter = 0; iter<=iterations; iter++) {
       if (iter==1) nstream_time = prk::wtime();
-      nstream(length, d_A, d_B, d_C);
+      nstream(length, scalar, d_A, d_B, d_C);
       device.finish();
     }
     nstream_time = prk::wtime() - nstream_time;
   }
-  occa::memcpy(h_C, d_C);
+
+  d_A.copyTo(h_A);
+
+  d_A.free();
+  d_B.free();
+  d_C.free();
+  nstream.free();
+  device.free();
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -154,8 +167,12 @@ int main(int argc, char * argv[])
 
   double asum(0);
   for (auto i=0; i<length; i++) {
-      asum += std::fabs(A[i]);
+      asum += std::fabs(h_A[i]);
   }
+
+  delete[] h_A;
+  delete[] h_B;
+  delete[] h_C;
 
   double epsilon=1.e-8;
   if (std::fabs(ar-asum)/asum > epsilon) {
