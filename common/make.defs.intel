@@ -45,7 +45,7 @@ CILKFLAG=-intel-extensions # default
 #
 # TBB
 #
-TBBFLAG=-USE_TBB -tbb
+TBBFLAG=-DUSE_TBB -tbb
 #
 # Parallel STL, Boost, etc.
 #
