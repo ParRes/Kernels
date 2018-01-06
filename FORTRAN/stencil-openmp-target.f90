@@ -320,7 +320,7 @@ program main
 #endif
   !$omp end parallel
 
-  !$omp target data map(to:W, A) map(tofrom: B) map(from:stencil_time)
+  !$omp target data map(to:W, A) map(tofrom: B) map(from:stencil_time) &
   !$omp& map(to:iterations,n)
 
   t0 = 0
