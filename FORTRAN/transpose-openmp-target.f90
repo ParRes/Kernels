@@ -138,7 +138,7 @@ program main
   do j=1,order
     do i=1,order
       A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-      B(i,j) = 0.0
+      B(i,j) = 0
     enddo
   enddo
   !$omp end parallel do simd
@@ -155,7 +155,7 @@ program main
     do j=1,order
       do i=1,order
         B(j,i) = B(j,i) + A(i,j)
-        A(i,j) = A(i,j) + 1.0
+        A(i,j) = A(i,j) + 1
       enddo
     enddo
     !$omp end target teams distribute parallel do simd
