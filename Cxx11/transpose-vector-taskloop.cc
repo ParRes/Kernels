@@ -56,15 +56,16 @@
 
 int main(int argc, char * argv[])
 {
-  //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
-  //////////////////////////////////////////////////////////////////////
-
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OpenMP TASKLOOP Matrix transpose: B = A^T" << std::endl;
 
+  //////////////////////////////////////////////////////////////////////
+  // Read and test input parameters
+  //////////////////////////////////////////////////////////////////////
+
   int iterations, gs;
-  size_t order, tile_size;
+  size_t order;
+  size_t tile_size;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order> [taskloop grainsize] [tile size]";
@@ -80,19 +81,14 @@ int main(int argc, char * argv[])
       order = std::atol(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      }
-
-      // taskloop grainsize
-      gs = (argc > 3) ? std::atoi(argv[3]) : 1;
-      if (gs < 1 || gs > order) {
-        throw "ERROR: grainsize";
+      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        throw "ERROR: matrix dimension too large - overflow risk";
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>4) ? std::atol(argv[4]) : 32;
+      tile_size = (argc>3) ? std::atol(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
-
   }
   catch (const char * e) {
     std::cout << e << std::endl;
