@@ -164,8 +164,8 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     transpose<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-    /// silence "ignoring cudaDeviceSynchronize for now" warning
 #ifndef __CORIANDERCC__
+    // silence "ignoring cudaDeviceSynchronize for now" warning
     prk::CUDAcheck( cudaDeviceSynchronize() );
 #endif
   }

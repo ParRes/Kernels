@@ -18,8 +18,6 @@
 #error Sorry, no CUBLAS without NVCC.
 #endif
 
-#include <cblas.h>
-
 namespace prk
 {
     void CUDAinfo()
@@ -47,6 +45,9 @@ namespace prk
         }
     }
 
+#ifndef __CORIANDERCC__
+    // It seems that Coriander defines cublasStatus_t to cudaError_t
+    // because the compiler complains that this is a redefinition.
     inline void CUDAcheck(cublasStatus_t rc)
     {
         if (rc==CUBLAS_STATUS_SUCCESS) {
@@ -56,6 +57,7 @@ namespace prk
             std::abort();
         }
     }
+#endif
 }
 
 #endif // PRK_CUDA_HPP

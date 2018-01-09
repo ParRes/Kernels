@@ -54,11 +54,12 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
+#include "cublas.h"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/CUDA Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/CUBLAS Matrix transpose: B = A^T" << std::endl;
 
   //prk::CUDAinfo();
 
