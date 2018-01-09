@@ -161,20 +161,17 @@ program main
 
   !$omp parallel default(none)                                  &
   !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
-  !$omp&  firstprivate(m,n,mc,nc,ic,jc,lic,ljc)                 &
-  !$omp&  private(i,j,k,corner_val)
+  !$omp&  firstprivate(m,n,mc,nc,lic,ljc)                       &
+  !$omp&  private(i,j,ic,jc,k,corner_val)
   !$omp master
 
   ! TODO: switch this to taskloop once support more widely available
   !       (GCC-6 does not have it, which breaks Travis builds)
   do j=1,n
-    !$omp task firstprivate(j,n) private(i,m) shared(grid)
     do i=1,m
       grid(i,j) = 0.0d0
     enddo
-    !$omp end task
   enddo
-  !$omp taskwait
 
   do j=1,n
     grid(1,j) = real(j-1,REAL64)

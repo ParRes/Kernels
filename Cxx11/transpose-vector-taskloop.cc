@@ -91,7 +91,7 @@ int main(int argc, char * argv[])
       if (tile_size <= 0) tile_size = order;
 
       // taskloop grainsize
-      gs = (argc > 4) ? std::atoi(argv[4]) : 100;
+      gs = (argc > 4) ? std::atoi(argv[4]) : 32;
       if (gs < 1 || gs > order) {
         throw "ERROR: grainsize";
       }
