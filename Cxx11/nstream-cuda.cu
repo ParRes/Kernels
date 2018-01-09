@@ -164,8 +164,6 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
       nstream<<<dimGrid, dimBlock>>>(length, scalar, d_A, d_B, d_C);
-
-      // determine whether this helps or not (helps in CUBLAS)
 #ifndef __CORIANDERCC__
       // silence "ignoring cudaDeviceSynchronize for now" warning
       prk::CUDA::check( cudaDeviceSynchronize() );
