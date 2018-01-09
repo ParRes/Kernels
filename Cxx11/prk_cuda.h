@@ -22,8 +22,11 @@ namespace prk
 {
     void CUDAinfo()
     {
+#if 0
+        // This is nonsense with NVIDIA hardware, since it says there are 32Ki devices.
         int nDevices;
         cudaGetDeviceCount(&nDevices);
+        std::cout << "Device count: " << nDevices << "\n";
         for (int i = 0; i < nDevices; i++) {
             cudaDeviceProp prop;
             cudaGetDeviceProperties(&prop, i);
@@ -33,6 +36,8 @@ namespace prk
             std::cout << "Memory Bus Width (bits): " << prop.memoryBusWidth << "\n";
 #endif
         }
+        std::cout << std::endl;
+#endif
     }
 
     inline void CUDAcheck(cudaError_t rc)
