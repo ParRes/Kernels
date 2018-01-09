@@ -187,7 +187,6 @@ int main(int argc, char * argv[])
   float ar(0);
   float br(2);
   float cr(2);
-  float ref(0);
   for (auto i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
