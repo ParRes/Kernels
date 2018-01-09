@@ -79,7 +79,7 @@ int main(int argc, char * argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/CUDA Matrix transpose: B = A^T" << std::endl;
 
-  //prk::CUDAinfo();
+  prk::CUDAinfo();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
