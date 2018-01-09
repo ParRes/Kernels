@@ -137,7 +137,7 @@ int main(int argc, char * argv[])
   OMP_MASTER
   {
     OMP_TASKLOOP( firstprivate(length) shared(A,B,C) grainsize(gs) )
-    for (auto i=0; i<length; i++) {
+    for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
       B[i] = 2.0;
       C[i] = 2.0;
@@ -149,7 +149,7 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
       OMP_TASKLOOP( firstprivate(length) shared(A,B,C) grainsize(gs) )
-      for (auto i=0; i<length; i++) {
+      for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }
       OMP_TASKWAIT
@@ -164,7 +164,6 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  double ref(0);
   for (auto i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
@@ -173,7 +172,7 @@ int main(int argc, char * argv[])
 
   double asum(0);
   OMP_PARALLEL_FOR_REDUCE( +:asum )
-  for (auto i=0; i<length; i++) {
+  for (size_t i=0; i<length; i++) {
       asum += std::fabs(A[i]);
   }
 

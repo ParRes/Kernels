@@ -123,7 +123,6 @@ void run(cl::Context context, int iterations, size_t length)
   T ar(0);
   T br(2);
   T cr(2);
-  T ref(0);
   for (auto i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
@@ -131,7 +130,7 @@ void run(cl::Context context, int iterations, size_t length)
   ar *= length;
 
   double asum(0);
-  for (auto i=0; i<length; i++) {
+  for (size_t i=0; i<length; i++) {
       asum += std::fabs(h_a[i]);
   }
 
