@@ -102,7 +102,7 @@ kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
 raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja
 
-cuda: transpose-cuda transpose-cublas nstream-vector-cuda
+cuda: transpose-cuda transpose-cublas nstream-cuda
 
 p2p-innerloop-vector: p2p-innerloop-vector-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@

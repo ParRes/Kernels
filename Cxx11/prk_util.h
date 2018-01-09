@@ -230,6 +230,11 @@ namespace prk {
 #endif
     }
 
+    template <class T1, class T2>
+    static inline auto divceil(T1 numerator, T2 denominator) -> decltype(numerator / denominator) {
+        return ( numerator / denominator + (numerator % denominator > 0) );
+    }
+
 } // namespace prk
 
 #endif /* PRK_UTIL_H */
