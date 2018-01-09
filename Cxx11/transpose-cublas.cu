@@ -113,7 +113,7 @@ int main(int argc, char * argv[])
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       h_a[j*order+i] = order*j+i;
-      h_b[j*order+i] = 0.0f;
+      h_b[j*order+i] = 0.0;
     }
   }
 
@@ -126,13 +126,13 @@ int main(int argc, char * argv[])
   prk::CUDA::check( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
 
 #if 1
-  // We need a vector of ones because CUBLAS daxpy do does
+  // We need a vector of ones because CUBLAS daxpy does not
   // correctly implement incx=0.
   double * h_o;
   prk::CUDA::check( cudaMallocHost((void**)&h_o, bytes) );
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      h_o[j*order+i] = 1;
+      h_o[j*order+i] = 1.0;
     }
   }
   double * d_o;
