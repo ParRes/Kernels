@@ -96,10 +96,6 @@ int main(int argc, char * argv[])
   std::cout << "Matrix order          = " << order << std::endl;
   std::cout << "Number of iterations  = " << iterations << std::endl;
 
-  //////////////////////////////////////////////////////////////////////
-  /// Setup CUDA environment
-  //////////////////////////////////////////////////////////////////////
-
   cublasHandle_t h;
   cublasCreate(&h);
 
