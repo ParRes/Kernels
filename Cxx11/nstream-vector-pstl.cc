@@ -165,7 +165,6 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  double ref(0);
   for (auto i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
@@ -173,7 +172,7 @@ int main(int argc, char * argv[])
   ar *= length;
 
   double asum(0);
-  for (auto i=0; i<length; i++) {
+  for (size_t i=0; i<length; i++) {
       asum += std::fabs(A[i]);
   }
 

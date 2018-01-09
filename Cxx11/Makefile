@@ -104,7 +104,9 @@ kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
 raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja
 
-cuda: transpose-cuda transpose-cublas nstream-vector-cuda
+cuda: transpose-cuda nstream-cuda
+
+cublas: transpose-cublas nstream-cublas
 
 occa: transpose-occa nstream-occa
 
@@ -153,7 +155,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas -lcblas -o $@
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas -o $@
 
 %-cblas: %-cblas.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(CBLASFLAGS) -o $@

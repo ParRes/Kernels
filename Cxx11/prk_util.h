@@ -40,7 +40,7 @@
 #include <cassert>
 
 // Test standard library _after_ standard headers have been included...
-#if (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
+#if !defined(__NVCC__) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
 # error You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
 #endif
 
@@ -232,6 +232,11 @@ namespace prk {
         double r = static_cast<double>(c)/static_cast<double>(d)*static_cast<double>(n);
         return r;
 #endif
+    }
+
+    template <class T1, class T2>
+    static inline auto divceil(T1 numerator, T2 denominator) -> decltype(numerator / denominator) {
+        return ( numerator / denominator + (numerator % denominator > 0) );
     }
 
 } // namespace prk
