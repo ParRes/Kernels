@@ -64,27 +64,20 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
-__global__ void nstream(const size_t n, const float scalar, float * A, const float * B, const float * C)
-{
-    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) {
-        A[i] += B[i] + scalar * C[i];
-    }
-}
-
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/CUBLAS STREAM triad: A = B + scalar * C" << std::endl;
 
-  prk::CUDAinfo();
+  prk::CUDA::info info;
+  info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations, offset;
-  size_t length;
+  int length;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length> [<offset>]";
@@ -95,7 +88,7 @@ int main(int argc, char * argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atol(argv[2]);
+      length = std::atoi(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
@@ -123,18 +116,18 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  const size_t bytes = length * sizeof(float);
-  float * h_A;
-  float * h_B;
-  float * h_C;
+  const size_t bytes = length * sizeof(double);
+  double * h_A;
+  double * h_B;
+  double * h_C;
 #ifndef __CORIANDERCC__
-  prk::CUDAcheck( cudaMallocHost((float**)&h_A, bytes) );
-  prk::CUDAcheck( cudaMallocHost((float**)&h_B, bytes) );
-  prk::CUDAcheck( cudaMallocHost((float**)&h_C, bytes) );
+  prk::CUDA::check( cudaMallocHost((double**)&h_A, bytes) );
+  prk::CUDA::check( cudaMallocHost((double**)&h_B, bytes) );
+  prk::CUDA::check( cudaMallocHost((double**)&h_C, bytes) );
 #else
-  h_A = new float[length];
-  h_B = new float[length];
-  h_C = new float[length];
+  h_A = new double[length];
+  h_B = new double[length];
+  h_C = new double[length];
 #endif
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
@@ -142,17 +135,17 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  float * d_A;
-  float * d_B;
-  float * d_C;
-  prk::CUDAcheck( cudaMalloc((float**)&d_A, bytes) );
-  prk::CUDAcheck( cudaMalloc((float**)&d_B, bytes) );
-  prk::CUDAcheck( cudaMalloc((float**)&d_C, bytes) );
-  prk::CUDAcheck( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDAcheck( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDAcheck( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
+  double * d_A;
+  double * d_B;
+  double * d_C;
+  prk::CUDA::check( cudaMalloc((double**)&d_A, bytes) );
+  prk::CUDA::check( cudaMalloc((double**)&d_B, bytes) );
+  prk::CUDA::check( cudaMalloc((double**)&d_C, bytes) );
+  prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
 
-  float scalar(3);
+  double scalar(3);
 
   const int blockSize = 1024;
   dim3 dimBlock(blockSize, 1, 1);
@@ -163,12 +156,12 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-      float one(1);
-      cublasSaxpy(h, length,
+      double one(1);
+      cublasDaxpy(h, length,
                   &one,                       // alpha
                   d_B, 1,                     // x, incx
                   d_A, 1);                    // y, incy
-      cublasSaxpy(h, length,
+      cublasDaxpy(h, length,
                   &scalar,                    // alpha
                   d_C, 1,                     // x, incx
                   d_A, 1);                    // y, incy
@@ -176,30 +169,30 @@ int main(int argc, char * argv[])
       // determine whether this helps or not (helps in CUBLAS)
 #ifndef __CORIANDERCC__
       // silence "ignoring cudaDeviceSynchronize for now" warning
-      prk::CUDAcheck( cudaDeviceSynchronize() );
+      prk::CUDA::check( cudaDeviceSynchronize() );
 #endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
 
-  prk::CUDAcheck( cudaMemcpy(&(h_A[0]), d_A, bytes, cudaMemcpyDeviceToHost) );
+  prk::CUDA::check( cudaMemcpy(&(h_A[0]), d_A, bytes, cudaMemcpyDeviceToHost) );
 
-  prk::CUDAcheck( cudaFree(d_C) );
-  prk::CUDAcheck( cudaFree(d_B) );
-  prk::CUDAcheck( cudaFree(d_A) );
+  prk::CUDA::check( cudaFree(d_C) );
+  prk::CUDA::check( cudaFree(d_B) );
+  prk::CUDA::check( cudaFree(d_A) );
 
 #ifndef __CORIANDERCC__
-  prk::CUDAcheck( cudaFreeHost(h_B) );
-  prk::CUDAcheck( cudaFreeHost(h_C) );
+  prk::CUDA::check( cudaFreeHost(h_B) );
+  prk::CUDA::check( cudaFreeHost(h_C) );
 #endif
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  float ar(0);
-  float br(2);
-  float cr(2);
+  double ar(0);
+  double br(2);
+  double cr(2);
   for (auto i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
@@ -212,7 +205,7 @@ int main(int argc, char * argv[])
   }
 
 #ifndef __CORIANDERCC__
-  prk::CUDAcheck( cudaFreeHost(h_A) );
+  prk::CUDA::check( cudaFreeHost(h_A) );
 #endif
 
   double epsilon=1.e-8;
@@ -225,7 +218,7 @@ int main(int argc, char * argv[])
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
-      double nbytes = 4.0 * length * sizeof(float);
+      double nbytes = 4.0 * length * sizeof(double);
       std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }
