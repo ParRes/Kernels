@@ -62,7 +62,7 @@
 const int tile_dim = 32;
 const int block_rows = 8;
 
-__global__ void transpose(int order, double * A, double * B)
+__global__ void transpose(int order, prk_float * A, prk_float * B)
 {
     int x = blockIdx.x * tile_dim + threadIdx.x;
     int y = blockIdx.y * tile_dim + threadIdx.y;
@@ -70,7 +70,7 @@ __global__ void transpose(int order, double * A, double * B)
 
     for (int j = 0; j < tile_dim; j+= block_rows) {
         B[x*width + (y+j)] += A[(y+j)*width + x];
-        A[(y+j)*width + x] += 1.0f;
+        A[(y+j)*width + x] += (prk_float)1;
     }
 }
 
@@ -128,29 +128,29 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   const size_t nelems = (size_t)order * (size_t)order;
-  const size_t bytes = nelems * sizeof(double);
-  double * h_a;
-  double * h_b;
+  const size_t bytes = nelems * sizeof(prk_float);
+  prk_float * h_a;
+  prk_float * h_b;
 #ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaMallocHost((double**)&h_a, bytes) );
-  prk::CUDA::check( cudaMallocHost((double**)&h_b, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_a, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_b, bytes) );
 #else
-  h_a = new double[nelems];
-  h_b = new double[nelems];
+  h_a = new prk_float[nelems];
+  h_b = new prk_float[nelems];
 #endif
-  // fill A with the sequence 0 to order^2-1 as doubles
+  // fill A with the sequence 0 to order^2-1
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      h_a[j*order+i] = order*j+i;
-      h_b[j*order+i] = 0.0f;
+      h_a[j*order+i] = static_cast<prk_float>(order*j+i);
+      h_b[j*order+i] = static_cast<prk_float>(0);
     }
   }
 
   // copy input from host to device
-  double * d_a;
-  double * d_b;
-  prk::CUDA::check( cudaMalloc((double**)&d_a, bytes) );
-  prk::CUDA::check( cudaMalloc((double**)&d_b, bytes) );
+  prk_float * d_a;
+  prk_float * d_b;
+  prk::CUDA::check( cudaMalloc((void**)&d_a, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_b, bytes) );
   prk::CUDA::check( cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
 

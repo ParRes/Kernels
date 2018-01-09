@@ -106,37 +106,37 @@ int main(int argc, char * argv[])
   const size_t bytes = nelems * sizeof(double);
   double * h_a;
   double * h_b;
-  prk::CUDA::check( cudaMallocHost((double**)&h_a, bytes) );
-  prk::CUDA::check( cudaMallocHost((double**)&h_b, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_a, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_b, bytes) );
 
   // fill A with the sequence 0 to order^2-1 as doubles
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       h_a[j*order+i] = order*j+i;
-      h_b[j*order+i] = 0.0f;
+      h_b[j*order+i] = 0.0;
     }
   }
 
   // copy input from host to device
   double * d_a;
   double * d_b;
-  prk::CUDA::check( cudaMalloc((double**)&d_a, bytes) );
-  prk::CUDA::check( cudaMalloc((double**)&d_b, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_a, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_b, bytes) );
   prk::CUDA::check( cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
 
 #if 1
-  // We need a vector of ones because CUBLAS daxpy do does
+  // We need a vector of ones because CUBLAS daxpy does not
   // correctly implement incx=0.
   double * h_o;
-  prk::CUDA::check( cudaMallocHost((double**)&h_o, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_o, bytes) );
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      h_o[j*order+i] = 1;
+      h_o[j*order+i] = 1.0;
     }
   }
   double * d_o;
-  prk::CUDA::check( cudaMalloc((double**)&d_o, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_o, bytes) );
   prk::CUDA::check( cudaMemcpy(d_o, &(h_o[0]), bytes, cudaMemcpyHostToDevice) );
 #endif
 

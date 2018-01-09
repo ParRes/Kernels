@@ -121,9 +121,9 @@ int main(int argc, char * argv[])
   double * h_B;
   double * h_C;
 #ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaMallocHost((double**)&h_A, bytes) );
-  prk::CUDA::check( cudaMallocHost((double**)&h_B, bytes) );
-  prk::CUDA::check( cudaMallocHost((double**)&h_C, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
 #else
   h_A = new double[length];
   h_B = new double[length];
@@ -138,9 +138,9 @@ int main(int argc, char * argv[])
   double * d_A;
   double * d_B;
   double * d_C;
-  prk::CUDA::check( cudaMalloc((double**)&d_A, bytes) );
-  prk::CUDA::check( cudaMalloc((double**)&d_B, bytes) );
-  prk::CUDA::check( cudaMalloc((double**)&d_C, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
   prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );

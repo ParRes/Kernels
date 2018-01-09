@@ -64,7 +64,7 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
-__global__ void nstream(const int n, const double scalar, double * A, const double * B, const double * C)
+__global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) {
@@ -127,31 +127,31 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  const size_t bytes = length * sizeof(double);
-  double * h_A;
-  double * h_B;
-  double * h_C;
+  const size_t bytes = length * sizeof(prk_float);
+  prk_float * h_A;
+  prk_float * h_B;
+  prk_float * h_C;
 #ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaMallocHost((double**)&h_A, bytes) );
-  prk::CUDA::check( cudaMallocHost((double**)&h_B, bytes) );
-  prk::CUDA::check( cudaMallocHost((double**)&h_C, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
 #else
-  h_A = new double[length];
-  h_B = new double[length];
-  h_C = new double[length];
+  h_A = new prk_float[length];
+  h_B = new prk_float[length];
+  h_C = new prk_float[length];
 #endif
-  for (size_t i=0; i<length; ++i) {
-    h_A[i] = 0;
-    h_B[i] = 2;
-    h_C[i] = 2;
+  for (auto i=0; i<length; ++i) {
+    h_A[i] = static_cast<prk_float>(0);
+    h_B[i] = static_cast<prk_float>(2);
+    h_C[i] = static_cast<prk_float>(2);
   }
 
-  double * d_A;
-  double * d_B;
-  double * d_C;
-  prk::CUDA::check( cudaMalloc((double**)&d_A, bytes) );
-  prk::CUDA::check( cudaMalloc((double**)&d_B, bytes) );
-  prk::CUDA::check( cudaMalloc((double**)&d_C, bytes) );
+  prk_float * d_A;
+  prk_float * d_B;
+  prk_float * d_C;
+  prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
   prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
@@ -163,7 +163,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-      nstream<<<dimGrid, dimBlock>>>(length, scalar, d_A, d_B, d_C);
+      nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
 #ifndef __CORIANDERCC__
       // silence "ignoring cudaDeviceSynchronize for now" warning
       prk::CUDA::check( cudaDeviceSynchronize() );
@@ -197,7 +197,7 @@ int main(int argc, char * argv[])
   ar *= length;
 
   double asum(0);
-  for (size_t i=0; i<length; i++) {
+  for (auto i=0; i<length; i++) {
       asum += std::fabs(h_A[i]);
   }
 
