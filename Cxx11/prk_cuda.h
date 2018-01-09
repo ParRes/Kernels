@@ -22,6 +22,13 @@
 #error Sorry, no CUBLAS without NVCC.
 #endif
 
+#ifdef __CORIANDERCC__
+// Coriander does not support double
+typedef float prk_float;
+#else
+typedef double prk_float;
+#endif
+
 namespace prk
 {
     namespace CUDA
@@ -58,8 +65,8 @@ namespace prk
 
             public:
                 int maxThreadsPerBlock;
-                std::array<int,3> maxThreadsDim;
-                std::array<int,3> maxGridSize;
+                std::array<unsigned,3> maxThreadsDim;
+                std::array<unsigned,3> maxGridSize;
 
                 info() {
                     prk::CUDA::check( cudaGetDeviceCount(&nDevices) );
