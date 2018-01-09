@@ -116,18 +116,18 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  const size_t bytes = length * sizeof(duble);
-  duble * h_A;
-  duble * h_B;
-  duble * h_C;
+  const size_t bytes = length * sizeof(double);
+  double * h_A;
+  double * h_B;
+  double * h_C;
 #ifndef __CORIANDERCC__
   prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
   prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
   prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
 #else
-  h_A = new duble[length];
-  h_B = new duble[length];
-  h_C = new duble[length];
+  h_A = new double[length];
+  h_B = new double[length];
+  h_C = new double[length];
 #endif
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
@@ -135,9 +135,9 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  duble * d_A;
-  duble * d_B;
-  duble * d_C;
+  double * d_A;
+  double * d_B;
+  double * d_C;
   prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
   prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
   prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
@@ -156,7 +156,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-      duble one(1);
+      double one(1);
       cublasDaxpy(h, length,
                   &one,                       // alpha
                   d_B, 1,                     // x, incx
