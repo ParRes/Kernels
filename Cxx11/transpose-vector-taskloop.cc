@@ -89,6 +89,9 @@ int main(int argc, char * argv[])
       tile_size = (argc>3) ? std::atol(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
+
+      gs = (argc>4) ? std::atoi(argv[4]) : 32;
+      if (gs < 1) gs = 1;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
