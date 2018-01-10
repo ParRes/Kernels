@@ -573,6 +573,13 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil-kokkos 10 200 20 $s $r
             done
         done
+
+        # C++ w/ OCCA
+        echo "OCCADIR=${TRAVIS_ROOT}/occa" >> common/make.defs
+        export OCCA_CXX=${PRK_CXX}
+        make -C $PRK_TARGET_PATH transpose-occa nstream-occa
+        $PRK_TARGET_PATH/transpose-occa   10 1024 32
+        $PRK_TARGET_PATH/nstream-occa     10 16777216 32
         ;;
     allfortran)
         echo "Fortran"
