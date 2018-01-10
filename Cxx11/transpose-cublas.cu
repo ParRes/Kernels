@@ -96,7 +96,8 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations  = " << iterations << std::endl;
 
   cublasHandle_t h;
-  cublasCreate(&h);
+  prk::CUDA::check( cublasInit() );
+  prk::CUDA::check( cublasCreate(&h) );
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
@@ -104,6 +105,7 @@ int main(int argc, char * argv[])
 
   const size_t nelems = (size_t)order * (size_t)order;
   const size_t bytes = nelems * sizeof(double);
+
   double * h_a;
   double * h_b;
   prk::CUDA::check( cudaMallocHost((void**)&h_a, bytes) );
@@ -113,7 +115,7 @@ int main(int argc, char * argv[])
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       h_a[j*order+i] = order*j+i;
-      h_b[j*order+i] = 0.0;
+      h_b[j*order+i] = 0;
     }
   }
 
@@ -125,14 +127,14 @@ int main(int argc, char * argv[])
   prk::CUDA::check( cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
 
-#if 1
+#if CUBLAS_AXPY_BUG
   // We need a vector of ones because CUBLAS daxpy does not
   // correctly implement incx=0.
   double * h_o;
   prk::CUDA::check( cudaMallocHost((void**)&h_o, bytes) );
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      h_o[j*order+i] = 1.0;
+      h_o[j*order+i] = 1;
     }
   }
   double * d_o;
@@ -158,27 +160,28 @@ int main(int argc, char * argv[])
 
     double one(1);
     // B += trans(A) i.e. B = trans(A) + B
-    cublasDgeam(h,
-                CUBLAS_OP_T, CUBLAS_OP_N,   // opA, opB
-                order, order,               // m, n
-                &one, p_a, order,           // alpha, A, lda
-                &one, p_b, order,           // beta, B, ldb
-                p_b, order);                // C, ldc (in-place for B)
+    prk::CUDA::check( cublasDgeam(h,
+                                  CUBLAS_OP_T, CUBLAS_OP_N,   // opA, opB
+                                  order, order,               // m, n
+                                  &one, p_a, order,           // alpha, A, lda
+                                  &one, p_b, order,           // beta, B, ldb
+                                  p_b, order) );              // C, ldc (in-place for B)
+
     // A += 1.0 i.e. A = 1.0 * 1.0 + A
-#if 0
-    // THIS IS BUGGY
-    cublasDaxpy(h,
-                order*order,                // n
-                &one,                       // alpha
-                &one, 0,                    // x, incx
-                p_a, 1);                    // y, incy
-#else
+#if CUBLAS_AXPY_BUG
     // THIS IS CORRECT
-    cublasDaxpy(h,
-                order*order,                // n
-                &one,                       // alpha
-                p_o, 1,                     // x, incx
-                p_a, 1);                    // y, incy
+    prk::CUDA::check( cublasDaxpy(h,
+                      order*order,                // n
+                      &one,                       // alpha
+                      p_o, 1,                     // x, incx
+                      p_a, 1) );                  // y, incy
+#else
+    // THIS IS BUGGY
+    prk::CUDA::check( cublasDaxpy(h,
+                      order*order,                // n
+                      &one,                       // alpha
+                      &one, 0,                    // x, incx
+                      p_a, 1) );                  // y, incy
 #endif
     // (Host buffer version)
     // The performance is ~10% better if this is done every iteration,
@@ -190,14 +193,18 @@ int main(int argc, char * argv[])
   // copy output back to host
   prk::CUDA::check( cudaMemcpy(&(h_b[0]), d_b, bytes, cudaMemcpyDeviceToHost) );
 
-#if 1
+#if CUBLAS_AXPY_BUG
   prk::CUDA::check( cudaFree(d_o) );
   prk::CUDA::check( cudaFreeHost(h_o) );
 #endif
 
   prk::CUDA::check( cudaFree(d_b) );
   prk::CUDA::check( cudaFree(d_a) );
+
   prk::CUDA::check( cudaFreeHost(h_a) );
+
+  prk::CUDA::check( cublasDestroy(&h) );
+  prk::CUDA::check( cublasShutdown() );
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
