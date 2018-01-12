@@ -38,6 +38,7 @@ TARGETFLAGS = $(OFFLOADFLAG)
 OPENCLFLAGS = $(OPENCLFLAG)
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
+SYCLFLAGS = -I$(SYCLDIR)/include -DUSE_SYCL $(BOOSTFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
@@ -58,7 +59,7 @@ else
   EXTRA += target
 endif
 
-all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl $(EXTRA)
+all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl sycl $(EXTRA)
 
 p2p: p2p-vector p2p-doacross-vector-openmp p2p-innerloop-vector-openmp p2p-tasks-openmp p2p-openmp-target \
      p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl
@@ -90,6 +91,8 @@ taskloop: stencil-vector-taskloop transpose-vector-taskloop nstream-vector-taskl
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
+sycl: nstream-sycl
+
 tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
 
 stl: stencil-vector-stl transpose-vector-stl nstream-vector-stl
@@ -117,6 +120,9 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+
+%-sycl: %-sycl.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(SYCLFLAGS) -o $@
 
 %-target: %-target.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@
@@ -176,6 +182,7 @@ clean:
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-opencl
+	-rm -f *-sycl
 	-rm -f *-tbb
 	-rm -f *-stl
 	-rm -f *-pstl
