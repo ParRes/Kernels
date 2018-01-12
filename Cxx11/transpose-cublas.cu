@@ -54,13 +54,15 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
+//#include "cblas.h"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/CUDA Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/CUBLAS Matrix transpose: B = A^T" << std::endl;
 
-  //prk::CUDAinfo();
+  prk::CUDA::info info;
+  info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -73,14 +75,12 @@ int main(int argc, char * argv[])
         throw "Usage: <# iterations> <matrix order>";
       }
 
-      // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
-      // order of a the matrix
-      order = std::atol(argv[2]);
+      order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
       } else if (order > std::floor(std::sqrt(INT_MAX))) {
@@ -95,63 +95,59 @@ int main(int argc, char * argv[])
   std::cout << "Matrix order          = " << order << std::endl;
   std::cout << "Number of iterations  = " << iterations << std::endl;
 
-  //////////////////////////////////////////////////////////////////////
-  /// Setup CUDA environment
-  //////////////////////////////////////////////////////////////////////
-
   cublasHandle_t h;
   cublasCreate(&h);
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
   const size_t nelems = (size_t)order * (size_t)order;
-  const size_t bytes = nelems * sizeof(float);
-  float * h_a;
-  float * h_b;
-  prk::CUDAcheck( cudaMallocHost((float**)&h_a, bytes) );
-  prk::CUDAcheck( cudaMallocHost((float**)&h_b, bytes) );
+  const size_t bytes = nelems * sizeof(double);
+  double * h_a;
+  double * h_b;
+  prk::CUDA::check( cudaMallocHost((void**)&h_a, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_b, bytes) );
 
-  // fill A with the sequence 0 to order^2-1 as floats
+  // fill A with the sequence 0 to order^2-1 as doubles
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       h_a[j*order+i] = order*j+i;
-      h_b[j*order+i] = 0.0f;
+      h_b[j*order+i] = 0.0;
     }
   }
 
   // copy input from host to device
-  float * d_a;
-  float * d_b;
-  prk::CUDAcheck( cudaMalloc((float**)&d_a, bytes) );
-  prk::CUDAcheck( cudaMalloc((float**)&d_b, bytes) );
-  prk::CUDAcheck( cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDAcheck( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
+  double * d_a;
+  double * d_b;
+  prk::CUDA::check( cudaMalloc((void**)&d_a, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_b, bytes) );
+  prk::CUDA::check( cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::CUDA::check( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
 
 #if 1
-  // We need a vector of ones because CUBLAS saxpy do does
+  // We need a vector of ones because CUBLAS daxpy does not
   // correctly implement incx=0.
-  float * h_o;
-  prk::CUDAcheck( cudaMallocHost((float**)&h_o, bytes) );
+  double * h_o;
+  prk::CUDA::check( cudaMallocHost((void**)&h_o, bytes) );
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      h_o[j*order+i] = 1.0f;
+      h_o[j*order+i] = 1.0;
     }
   }
-  float * d_o;
-  prk::CUDAcheck( cudaMalloc((float**)&d_o, bytes) );
-  prk::CUDAcheck( cudaMemcpy(d_o, &(h_o[0]), bytes, cudaMemcpyHostToDevice) );
+  double * d_o;
+  prk::CUDA::check( cudaMalloc((void**)&d_o, bytes) );
+  prk::CUDA::check( cudaMemcpy(d_o, &(h_o[0]), bytes, cudaMemcpyHostToDevice) );
 #endif
 
 #ifdef USE_HOST_BUFFERS
-  float p_a = h_a;
-  float p_b = h_b;
-  float p_o = h_o;
+  double p_a = h_a;
+  double p_b = h_b;
+  double p_o = h_o;
 #else
-  float * p_a = d_a;
-  float * p_b = d_b;
-  float * p_o = d_o;
+  double * p_a = d_a;
+  double * p_b = d_b;
+  double * p_o = d_o;
 #endif
 
   auto trans_time = 0.0;
@@ -160,9 +156,9 @@ int main(int argc, char * argv[])
 
     if (iter==1) trans_time = prk::wtime();
 
-    float one(1);
+    double one(1);
     // B += trans(A) i.e. B = trans(A) + B
-    cublasSgeam(h,
+    cublasDgeam(h,
                 CUBLAS_OP_T, CUBLAS_OP_N,   // opA, opB
                 order, order,               // m, n
                 &one, p_a, order,           // alpha, A, lda
@@ -171,14 +167,14 @@ int main(int argc, char * argv[])
     // A += 1.0 i.e. A = 1.0 * 1.0 + A
 #if 0
     // THIS IS BUGGY
-    cublasSaxpy(h,
+    cublasDaxpy(h,
                 order*order,                // n
                 &one,                       // alpha
                 &one, 0,                    // x, incx
                 p_a, 1);                    // y, incy
 #else
     // THIS IS CORRECT
-    cublasSaxpy(h,
+    cublasDaxpy(h,
                 order*order,                // n
                 &one,                       // alpha
                 p_o, 1,                     // x, incx
@@ -187,34 +183,34 @@ int main(int argc, char * argv[])
     // (Host buffer version)
     // The performance is ~10% better if this is done every iteration,
     // instead of only once before the timer is stopped.
-    prk::CUDAcheck( cudaDeviceSynchronize() );
+    prk::CUDA::check( cudaDeviceSynchronize() );
   }
   trans_time = prk::wtime() - trans_time;
 
   // copy output back to host
-  prk::CUDAcheck( cudaMemcpy(&(h_b[0]), d_b, bytes, cudaMemcpyDeviceToHost) );
+  prk::CUDA::check( cudaMemcpy(&(h_b[0]), d_b, bytes, cudaMemcpyDeviceToHost) );
 
 #if 1
-  prk::CUDAcheck( cudaFree(d_o) );
-  prk::CUDAcheck( cudaFreeHost(h_o) );
+  prk::CUDA::check( cudaFree(d_o) );
+  prk::CUDA::check( cudaFreeHost(h_o) );
 #endif
 
-  prk::CUDAcheck( cudaFree(d_b) );
-  prk::CUDAcheck( cudaFree(d_a) );
-  prk::CUDAcheck( cudaFreeHost(h_a) );
+  prk::CUDA::check( cudaFree(d_b) );
+  prk::CUDA::check( cudaFree(d_a) );
+  prk::CUDA::check( cudaFreeHost(h_a) );
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
   // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
+  const double addit = (iterations+1.) * (iterations/2.);
+  double abserr(0);
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const size_t ij = (size_t)i*(size_t)order+(size_t)j;
       const size_t ji = (size_t)j*(size_t)order+(size_t)i;
-      const float reference = static_cast<float>(ij)*(1.+iterations)+addit;
+      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(h_b[ji] - reference);
     }
   }
@@ -223,11 +219,11 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  const auto epsilon = 1.0e-8;
+  const double epsilon = 1.0e-8;
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(float);
+    auto bytes = (size_t)order * (size_t)order * sizeof(double);
     std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
@@ -243,7 +239,7 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  prk::CUDAcheck( cudaFreeHost(h_b) );
+  prk::CUDA::check( cudaFreeHost(h_b) );
 
   return 0;
 }

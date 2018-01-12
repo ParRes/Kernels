@@ -52,7 +52,6 @@
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
 ///
-///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
 ///          reported results should not be associated with Stream in
@@ -63,21 +62,33 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_cuda.h"
+
+__global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
+{
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        A[i] += B[i] + scalar * C[i];
+    }
+}
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP TARGET STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++11/CUDA STREAM triad: A = B + scalar * C" << std::endl;
+
+  prk::CUDA::info info;
+  info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations, offset;
-  size_t length;
+  int length;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length>";
+        throw "Usage: <# iterations> <vector length> [<offset>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -85,7 +96,7 @@ int main(int argc, char * argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atol(argv[2]);
+      length = std::atoi(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
@@ -100,10 +111,15 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
+
+  const int blockSize = 128;
+  dim3 dimBlock(blockSize, 1, 1);
+  dim3 dimGrid(prk::divceil(length,blockSize), 1, 1);
+
+  info.checkDims(dimBlock, dimGrid);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -111,37 +127,61 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  double * RESTRICT A = new double[length];
-  double * RESTRICT B = new double[length];
-  double * RESTRICT C = new double[length];
-
-  double scalar = 3.0;
-
-  // HOST
-  OMP_PARALLEL()
-  {
-    OMP_FOR_SIMD
-    for (size_t i=0; i<length; i++) {
-      A[i] = 0.0;
-      B[i] = 2.0;
-      C[i] = 2.0;
-    }
+  const size_t bytes = length * sizeof(prk_float);
+  prk_float * h_A;
+  prk_float * h_B;
+  prk_float * h_C;
+#ifndef __CORIANDERCC__
+  prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
+#else
+  h_A = new prk_float[length];
+  h_B = new prk_float[length];
+  h_C = new prk_float[length];
+#endif
+  for (auto i=0; i<length; ++i) {
+    h_A[i] = static_cast<prk_float>(0);
+    h_B[i] = static_cast<prk_float>(2);
+    h_C[i] = static_cast<prk_float>(2);
   }
 
-  // DEVICE
-  OMP_TARGET( data map(tofrom: A[0:length], B[0:length], C[0:length]) map(from:nstream_time) )
+  prk_float * d_A;
+  prk_float * d_B;
+  prk_float * d_C;
+  prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
+  prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
+
+  double scalar(3);
+
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      OMP_TARGET( teams distribute parallel for simd schedule(static,1) )
-      for (size_t i=0; i<length; i++) {
-          A[i] += B[i] + scalar * C[i];
-      }
+      nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+#ifndef __CORIANDERCC__
+      // silence "ignoring cudaDeviceSynchronize for now" warning
+      prk::CUDA::check( cudaDeviceSynchronize() );
+#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
+
+  prk::CUDA::check( cudaMemcpy(&(h_A[0]), d_A, bytes, cudaMemcpyDeviceToHost) );
+
+  prk::CUDA::check( cudaFree(d_C) );
+  prk::CUDA::check( cudaFree(d_B) );
+  prk::CUDA::check( cudaFree(d_A) );
+
+#ifndef __CORIANDERCC__
+  prk::CUDA::check( cudaFreeHost(h_B) );
+  prk::CUDA::check( cudaFreeHost(h_C) );
+#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -157,10 +197,13 @@ int main(int argc, char * argv[])
   ar *= length;
 
   double asum(0);
-  OMP_PARALLEL_FOR_REDUCE( +:asum )
-  for (size_t i=0; i<length; i++) {
-      asum += std::fabs(A[i]);
+  for (auto i=0; i<length; i++) {
+      asum += std::fabs(h_A[i]);
   }
+
+#ifndef __CORIANDERCC__
+  prk::CUDA::check( cudaFreeHost(h_A) );
+#endif
 
   double epsilon=1.e-8;
   if (std::fabs(ar-asum)/asum > epsilon) {

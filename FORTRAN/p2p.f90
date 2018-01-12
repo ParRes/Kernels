@@ -174,9 +174,11 @@ program main
     grid(i,1) = real(i-1,REAL64)
   enddo
 
+  t0 = 0
+
   do k=0,iterations
 
-    !  start timer after a warmup iteration
+    ! start timer after a warmup iteration
     if (k.eq.1) t0 = prk_get_wtime()
 
     if (chunk) then
