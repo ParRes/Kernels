@@ -134,9 +134,9 @@ int main(int argc, char * argv[])
 
   {
     // initialize device buffers from host buffers
-    cl::sycl::buffer<double> d_A { std::begin(h_A), std::end(h_A) };
-    cl::sycl::buffer<double> d_B { std::begin(h_B), std::end(h_B) };
-    cl::sycl::buffer<double> d_C { std::begin(h_C), std::end(h_C) };
+    cl::sycl::buffer<double> d_A { h_A.data(), h_A.size() };
+    cl::sycl::buffer<double> d_B { h_B.data(), h_B.size() };
+    cl::sycl::buffer<double> d_C { h_C.data(), h_C.size() };
 
     for (auto iter = 0; iter<=iterations; iter++) {
    
@@ -156,13 +156,10 @@ int main(int argc, char * argv[])
       q.wait();
     }
 
-    d_A.mark_as_written();
     // Stop timer before buffer+accessor destructors fire,
     // since that will move data, and we do not time that
     // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
-
-    d_A.set_final_data( h_A.begin() );
   }
 
   //////////////////////////////////////////////////////////////////////

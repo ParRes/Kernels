@@ -38,7 +38,7 @@ TARGETFLAGS = $(OFFLOADFLAG)
 OPENCLFLAGS = $(OPENCLFLAG)
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
-SYCLFLAGS = -I$(SYCLDIR)/include -DUSE_SYCL $(BOOSTFLAG)
+SYCLFLAGS = $(SYCLFLAG) $(BOOSTFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
@@ -122,7 +122,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-sycl: %-sycl.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $< $(SYCLFLAGS) -o $@
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-target: %-target.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@
