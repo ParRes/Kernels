@@ -53,6 +53,8 @@ OPENCLFLAG=-framework OpenCL
 # Linux
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+SYCLDIR=./triSYCL
 #
 # TBB
 #
