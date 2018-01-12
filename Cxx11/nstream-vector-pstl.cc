@@ -132,14 +132,15 @@ int main(int argc, char * argv[])
     std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int i) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
-    __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
+    __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (size_t i) {
 #else
-    std::for_each( std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
 #endif
-          A[i] = 0.0;
-          B[i] = 2.0;
-          C[i] = 2.0;
-      });
+        A[i] = 0;
+        B[i] = 2;
+        C[i] = 2;
+    });
+
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
@@ -148,9 +149,9 @@ int main(int argc, char * argv[])
       std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int i) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
-      __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
+      __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (size_t i) {
 #else
-      std::for_each( std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
 #endif
           A[i] += B[i] + scalar * C[i];
       });
