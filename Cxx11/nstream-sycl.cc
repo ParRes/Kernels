@@ -64,8 +64,6 @@
 
 #include "prk_util.h"
 
-// See ParallelSTL.md for important information.
-
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -149,7 +147,7 @@ int main(int argc, char * argv[])
         auto B = d_B.get_access<cl::sycl::access::mode::read>(h);
         auto C = d_C.get_access<cl::sycl::access::mode::read>(h);
 
-        h.parallel_for<class nothing>(cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
+        h.parallel_for<class nstream>(cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
             A[i] += B[i] + scalar * C[i];
         });
       });
