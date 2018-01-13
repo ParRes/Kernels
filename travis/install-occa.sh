@@ -39,7 +39,8 @@ ${PRK_CXX} -v
 
 if [ ! -d "$TRAVIS_ROOT/occa" ]; then
     BRANCH=develop
-    git clone --recursive --depth 1 -b ${BRANCH} https://github.com/libocca/occa.git $TRAVIS_ROOT/occa
+    git clone --recursive --depth 1 -b ${BRANCH} https://github.com/libocca/occa.git
+    mv occa $TRAVIS_ROOT/occa
     CXX=${PRK_CXX} OCCA_CUDA_ENABLED=0 OCCA_FORTRAN_ENABLED=0 make -f makefile -C $TRAVIS_ROOT/occa
 else
     echo "OCCA installed..."
