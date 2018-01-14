@@ -190,33 +190,44 @@ int main(int argc, char* argv[])
         auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
         auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
        
-#if 0
         // Apply the stencil operator
-        h.parallel_for<class star2>(cl::sycl::range<2> {n-2, n-2}, cl::sycl::id<2> {2, 2},
+        h.parallel_for<class star2>(cl::sycl::range<2> {n-4, n-4}, cl::sycl::id<2> {2, 2},
                                     [=] (cl::sycl::item<2> it) {
             cl::sycl::id<2> xy = it.get_id();
+#if 1
             cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
             cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
             cl::sycl::id<2> dx2(cl::sycl::range<2> {2,0});
             cl::sycl::id<2> dy2(cl::sycl::range<2> {0,2});
-            out[xy] += +in[xy-dx2] * -0.125
-                       +in[xy-dx1] * -0.25
-                       +in[xy-dy2] * -0.125
+#endif
+            //printf("%zu,%zu\n",xy[0],xy[1]);
+            out[xy] += 0.0
+#if 1
                        +in[xy-dx1] * -0.25
                        +in[xy+dx1] *  0.25
-                       +in[xy+dx2] *  0.125
+                       +in[xy-dy1] * -0.25
                        +in[xy+dy1] *  0.25
-                       +in[xy+dx2] *  0.125;
-        });
+                       +in[xy-dx2] * -0.125
+                       +in[xy+dx2] *  0.125
+                       +in[xy-dy2] * -0.125
+                       +in[xy+dy2] *  0.125
 #endif
+                       ;
+        });
+      });
 
+      q.submit([&](cl::sycl::handler& h) {
+
+        // accessor methods
+        auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
+        auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+       
         // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add>(cl::sycl::range<2> {n, n}, cl::sycl::id<2> {1, 1},
+        h.parallel_for<class add>(cl::sycl::range<2> {n, n}, cl::sycl::id<2> {0, 0},
                                   [=] (cl::sycl::item<2> it) {
             cl::sycl::id<2> xy = it.get_id();
-            out[xy] += 1.0;
+            in[xy] += 1.0;
         });
-
       });
       q.wait();
     }
