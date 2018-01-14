@@ -1,6 +1,6 @@
 
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2017, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -61,6 +61,45 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "stencil_sycl.hpp"
+
+void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double, 2> d_in, cl::sycl::buffer<double, 2> d_out)
+{
+    std::cout << "You are trying to use a stencil that does not exist.\n";
+    std::cout << "Please generate the new stencil using the code generator\n";
+    std::cout << "and add it to the case-switch in the driver." << std::endl;
+    std::abort();
+}
+
+void star2(cl::sycl::queue & q, const size_t n,
+           cl::sycl::buffer<double, 2> d_in,
+           cl::sycl::buffer<double, 2> d_out)
+{
+   q.submit([&](cl::sycl::handler& h) {
+
+     // accessor methods
+     auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
+     auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+
+     // Apply the stencil operator
+     h.parallel_for<class star2>(cl::sycl::range<2> {n-4, n-4}, cl::sycl::id<2> {2, 2},
+                                 [=] (cl::sycl::item<2> it) {
+         cl::sycl::id<2> xy = it.get_id();
+         cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
+         cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
+         cl::sycl::id<2> dx2(cl::sycl::range<2> {2,0});
+         cl::sycl::id<2> dy2(cl::sycl::range<2> {0,2});
+         out[xy] += +in[xy-dx1] * -0.25
+                    +in[xy+dx1] *  0.25
+                    +in[xy-dy1] * -0.25
+                    +in[xy+dy1] *  0.25
+                    +in[xy-dx2] * -0.125
+                    +in[xy+dx2] *  0.125
+                    +in[xy-dy2] * -0.125
+                    +in[xy+dy2] *  0.125;
+     });
+   });
+}
 
 int main(int argc, char* argv[])
 {
@@ -131,26 +170,24 @@ int main(int argc, char* argv[])
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
-#if 0
   auto stencil = nothing;
   if (star) {
       switch (radius) {
-          case 1: stencil = star1; break;
+          //case 1: stencil = star1; break;
           case 2: stencil = star2; break;
-          case 3: stencil = star3; break;
-          case 4: stencil = star4; break;
-          case 5: stencil = star5; break;
+          //case 3: stencil = star3; break;
+          //case 4: stencil = star4; break;
+          //case 5: stencil = star5; break;
       }
   } else {
       switch (radius) {
-          case 1: stencil = grid1; break;
-          case 2: stencil = grid2; break;
-          case 3: stencil = grid3; break;
-          case 4: stencil = grid4; break;
-          case 5: stencil = grid5; break;
+          //case 1: stencil = grid1; break;
+          //case 2: stencil = grid2; break;
+          //case 3: stencil = grid3; break;
+          //case 4: stencil = grid4; break;
+          //case 5: stencil = grid5; break;
       }
   }
-#endif
 
   // SYCL device queue
   cl::sycl::queue q;
@@ -184,37 +221,7 @@ int main(int argc, char* argv[])
    
       if (iter==1) stencil_time = prk::wtime();
 
-      q.submit([&](cl::sycl::handler& h) {
-
-        // accessor methods
-        auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-        auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
-       
-        // Apply the stencil operator
-        h.parallel_for<class star2>(cl::sycl::range<2> {n-4, n-4}, cl::sycl::id<2> {2, 2},
-                                    [=] (cl::sycl::item<2> it) {
-            cl::sycl::id<2> xy = it.get_id();
-#if 1
-            cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
-            cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
-            cl::sycl::id<2> dx2(cl::sycl::range<2> {2,0});
-            cl::sycl::id<2> dy2(cl::sycl::range<2> {0,2});
-#endif
-            //printf("%zu,%zu\n",xy[0],xy[1]);
-            out[xy] += 0.0
-#if 1
-                       +in[xy-dx1] * -0.25
-                       +in[xy+dx1] *  0.25
-                       +in[xy-dy1] * -0.25
-                       +in[xy+dy1] *  0.25
-                       +in[xy-dx2] * -0.125
-                       +in[xy+dx2] *  0.125
-                       +in[xy-dy2] * -0.125
-                       +in[xy+dy2] *  0.125
-#endif
-                       ;
-        });
-      });
+      star2(q, n, d_in, d_out);
 
       q.submit([&](cl::sycl::handler& h) {
 
