@@ -71,6 +71,7 @@ void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double, 2> d_
     std::abort();
 }
 
+#if 0
 void star2(cl::sycl::queue & q, const size_t n,
            cl::sycl::buffer<double, 2> d_in,
            cl::sycl::buffer<double, 2> d_out)
@@ -100,6 +101,7 @@ void star2(cl::sycl::queue & q, const size_t n,
      });
    });
 }
+#endif
 
 int main(int argc, char* argv[])
 {
@@ -141,6 +143,7 @@ int main(int argc, char* argv[])
           if (tile_size <= 0) tile_size = n;
           if (tile_size > n) tile_size = n;
       }
+#endif
 
       // stencil pattern
       if (argc > 4) {
@@ -158,7 +161,6 @@ int main(int argc, char* argv[])
       if ( (radius < 1) || (2*radius+1 > n) ) {
         throw "ERROR: Stencil radius negative or too large";
       }
-#endif
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -173,11 +175,11 @@ int main(int argc, char* argv[])
   auto stencil = nothing;
   if (star) {
       switch (radius) {
-          //case 1: stencil = star1; break;
+          case 1: stencil = star1; break;
           case 2: stencil = star2; break;
-          //case 3: stencil = star3; break;
-          //case 4: stencil = star4; break;
-          //case 5: stencil = star5; break;
+          case 3: stencil = star3; break;
+          case 4: stencil = star4; break;
+          case 5: stencil = star5; break;
       }
   } else {
       switch (radius) {
@@ -212,8 +214,6 @@ int main(int argc, char* argv[])
 
   {
     // initialize device buffers from host buffers
-    //cl::sycl::buffer<double> d_in  { h_in.data(),  h_in.size() };
-    //cl::sycl::buffer<double> d_out { h_out.data(), h_out.size() };
     cl::sycl::buffer<double, 2> d_in  { h_in.data() , cl::sycl::range<2> {n, n} };
     cl::sycl::buffer<double, 2> d_out { h_out.data(), cl::sycl::range<2> {n, n} };
 
@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
         auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
        
         // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add>(cl::sycl::range<2> {n, n}, cl::sycl::id<2> {0, 0},
+        h.parallel_for<class add>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
                                   [=] (cl::sycl::item<2> it) {
             cl::sycl::id<2> xy = it.get_id();
             in[xy] += 1.0;
