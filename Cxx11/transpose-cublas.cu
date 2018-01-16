@@ -54,7 +54,8 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
-//#include "cblas.h"
+
+#define CUBLAS_AXPY_BUG 1
 
 int main(int argc, char * argv[])
 {
@@ -96,7 +97,7 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations  = " << iterations << std::endl;
 
   cublasHandle_t h;
-  prk::CUDA::check( cublasInit() );
+  //prk::CUDA::check( cublasInit() );
   prk::CUDA::check( cublasCreate(&h) );
 
   //////////////////////////////////////////////////////////////////////
@@ -145,11 +146,15 @@ int main(int argc, char * argv[])
 #ifdef USE_HOST_BUFFERS
   double p_a = h_a;
   double p_b = h_b;
+#if CUBLAS_AXPY_BUG
   double p_o = h_o;
+#endif
 #else
   double * p_a = d_a;
   double * p_b = d_b;
+#if CUBLAS_AXPY_BUG
   double * p_o = d_o;
+#endif
 #endif
 
   auto trans_time = 0.0;
@@ -203,8 +208,8 @@ int main(int argc, char * argv[])
 
   prk::CUDA::check( cudaFreeHost(h_a) );
 
-  prk::CUDA::check( cublasDestroy(&h) );
-  prk::CUDA::check( cublasShutdown() );
+  prk::CUDA::check( cublasDestroy(h) );
+  //prk::CUDA::check( cublasShutdown() );
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results

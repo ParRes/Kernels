@@ -108,7 +108,7 @@ int main(int argc, char * argv[])
   std::cout << "Offset               = " << offset << std::endl;
 
   cublasHandle_t h;
-  prk::CUDA::check( cublasInit() );
+  //prk::CUDA::check( cublasInit() );
   prk::CUDA::check( cublasCreate(&h) );
 
   //////////////////////////////////////////////////////////////////////
@@ -173,8 +173,8 @@ int main(int argc, char * argv[])
   prk::CUDA::check( cudaFreeHost(h_B) );
   prk::CUDA::check( cudaFreeHost(h_C) );
 
-  prk::CUDA::check( cublasDestroy(&h) );
-  prk::CUDA::check( cublasShutdown() );
+  prk::CUDA::check( cublasDestroy(h) );
+  //prk::CUDA::check( cublasShutdown() );
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
