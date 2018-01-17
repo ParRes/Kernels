@@ -167,9 +167,11 @@ program main
   enddo
   !$omp end do
 
+  t0 = 0
+
   do k=0,iterations
 
-    !  start timer after a warmup iteration
+    ! start timer after a warmup iteration
     if (k.eq.1) then
       !$omp barrier
       !$omp master

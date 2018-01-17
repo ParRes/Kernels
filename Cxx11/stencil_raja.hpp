@@ -1,5 +1,3 @@
-#define RESTRICT __restrict__
-
 void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
     RAJA::forall<thread_exec>(RAJA::Index_type(1), RAJA::Index_type(n-1), [&](RAJA::Index_type i) {
       RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(1), RAJA::Index_type(n-1), [&](RAJA::Index_type j) {

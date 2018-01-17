@@ -1,5 +1,3 @@
-#define RESTRICT __restrict__
-
 void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
   tbb::blocked_range2d<int> range(1, n-1, t, 1, n-1, t);
   tbb::parallel_for( range, [&](decltype(range)& r ) {

@@ -57,13 +57,6 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         #src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
         src.write('    RAJA::forall<thread_exec>(RAJA::Index_type('+str(radius)+'), RAJA::Index_type(n-'+str(radius)+'), [&](RAJA::Index_type i) {\n')
         src.write('      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type('+str(radius)+'), RAJA::Index_type(n-'+str(radius)+'), [&](RAJA::Index_type j) {\n')
-    elif (model=='cilk'):
-        src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    _Cilk_for (auto it='+str(radius)+'; it<n-'+str(radius)+'; it+=t) {\n')
-        src.write('      _Cilk_for (auto jt='+str(radius)+'; jt<n-'+str(radius)+'; jt+=t) {\n')
-        src.write('        for (auto i=it; i<std::min(n-'+str(radius)+',it+t); ++i) {\n')
-        src.write('          PRAGMA_SIMD\n')
-        src.write('          for (auto j=jt; j<std::min(n-'+str(radius)+',jt+t); ++j) {\n')
     elif (model=='tbb'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('  tbb::blocked_range2d<int> range('+str(radius)+', n-'+str(radius)+', t, '+str(radius)+', n-'+str(radius)+', t);\n')
@@ -150,16 +143,16 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','cilk','raja','kokkos']:
+    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','raja','kokkos']:
       src = open('stencil_'+model+'.hpp','w')
-      src.write('#define RESTRICT __restrict__\n\n')
       if (model=='target'):
-        src.write('OMP( declare target )\n')
+          src.write('#define RESTRICT __restrict__\n\n')
+      #  src.write('OMP( declare target )\n\n')
       for pattern in ['star','grid']:
         for r in range(1,6):
           instance(src,model,pattern,r)
-      if (model=='target'):
-        src.write('OMP( end declare target )\n')
+      #if (model=='target'):
+      #  src.write('OMP( end declare target )\n')
       src.close()
 
 if __name__ == '__main__':

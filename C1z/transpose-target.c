@@ -110,7 +110,7 @@ int main(int argc, char * argv[])
   {
     OMP_FOR()
     for (int i=0;i<order; i++) {
-      PRAGMA_SIMD
+      OMP_SIMD
       for (int j=0;j<order;j++) {
         A[i*order+j] = (double)(i*order+j);
         B[i*order+j] = 0.0;

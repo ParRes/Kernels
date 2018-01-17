@@ -143,6 +143,8 @@ program main
     grid(i,1) = real(i-1,REAL64)
   enddo
 
+  t0 = 0
+
   !$acc data pcopy(grid)
   do k=0,iterations
 
@@ -161,9 +163,10 @@ program main
   enddo
 
   t1 = prk_get_wtime()
-  pipeline_time = t1 - t0
 
   !$acc end data
+
+  pipeline_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.

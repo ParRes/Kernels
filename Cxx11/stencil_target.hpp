@@ -1,6 +1,5 @@
 #define RESTRICT __restrict__
 
-OMP( declare target )
 void star1(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {
     OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
     for (auto i=1; i<n-1; ++i) {
@@ -396,4 +395,3 @@ void grid5(const int n, const int t, const double * RESTRICT in, double * RESTRI
      }
 }
 
-OMP( end declare target )

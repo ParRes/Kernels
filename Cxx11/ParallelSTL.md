@@ -2,6 +2,7 @@ Parallel STL support is not mature.  Currently, we support two implementations:
 
 * Intel 18.0+
   - https://software.intel.com/en-us/articles/parallel-stl-parallel-algorithms-in-standard-template-library has details
+  - https://github.com/intel/parallelstl.git is the open-source implementation that works with GCC and Clang (TBB is required).
 
 * GCC 7.2+
   - std::execution is not supported.

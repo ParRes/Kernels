@@ -40,7 +40,7 @@
 #include <cassert>
 
 // Test standard library _after_ standard headers have been included...
-#if (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
+#if !defined(__NVCC__) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
 # error You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
 #endif
 
@@ -64,8 +64,25 @@
 #include <numeric>
 #include <algorithm>
 
+template<class I, class T>
+const T prk_reduce(I first, I last, T init) {
+#if (defined(__cplusplus) && (__cplusplus >= 201703L)) && !defined(__GNUC__)
+    return std::reduce(first, last, init);
+#elif (defined(__cplusplus) && (__cplusplus >= 201103L))
+    return std::accumulate(first, last, init);
+#else
+    // unreachable, but preserved as reference implementation
+    T r(0);
+    for (I i=first; i!=last; ++i) {
+        r += *i;
+    }
+    return r;
+#endif
+}
+
 // These headers are busted with NVCC and GCC 5.4.0
-#ifndef __NVCC__
+// The <future> header is busted with Cray C++ 8.6.1.
+#if !defined(__NVCC__) && !defined(_CRAYC)
 #include <thread>
 #include <future>
 #endif
@@ -129,24 +146,14 @@
 # define OMP_END_DECLARE_TARGET
 #endif
 
-#ifdef __cilk
-# include <cilk/cilk.h>
-// Not defined in the header but documented at https://www.cilkplus.org/.
-extern "C" {
-    int __cilkrts_get_nworkers(void);
-}
-#endif
-
 #if defined(__INTEL_COMPILER)
-//# define PRAGMA_SIMD PRAGMA(simd)
+# define PRAGMA_SIMD PRAGMA(vector) PRAGMA(ivdep)
 // According to https://github.com/LLNL/RAJA/pull/310, this improves lambda performance
-# define PRAGMA_SIMD PRAGMA(simd) PRAGMA(ivdep)
 # define PRAGMA_INLINE PRAGMA(forceinline recursive)
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
 # define PRAGMA_SIMD PRAGMA(GCC ivdep)
 # define PRAGMA_INLINE PRAGMA(inline)
 #elif defined(__clang__)
-//# define PRAGMA_SIMD PRAGMA(clang loop vectorize(enable))
 # define PRAGMA_SIMD PRAGMA(clang loop vectorize(assume_safety))
 # define PRAGMA_INLINE
 #else
@@ -177,8 +184,12 @@ extern "C" {
 # include <boost/range/irange.hpp>
 #endif
 
+#if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
+#define USE_INTEL_PSTL
+#endif
+
 #ifdef USE_PSTL
-# if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
+# ifdef USE_INTEL_PSTL
 #  include <pstl/execution>
 #  include <pstl/algorithm>
 #  include <pstl/numeric>
@@ -192,6 +203,8 @@ extern "C" {
 
 #ifdef USE_KOKKOS
 # include <Kokkos_Core.hpp>
+# include <Kokkos_Concepts.hpp>
+# include <Kokkos_MemoryTraits.hpp>
 #endif
 
 #ifdef USE_RAJA
@@ -215,6 +228,11 @@ namespace prk {
         double r = static_cast<double>(c)/static_cast<double>(d)*static_cast<double>(n);
         return r;
 #endif
+    }
+
+    template <class T1, class T2>
+    static inline auto divceil(T1 numerator, T2 denominator) -> decltype(numerator / denominator) {
+        return ( numerator / denominator + (numerator % denominator > 0) );
     }
 
 } // namespace prk
