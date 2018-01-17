@@ -108,27 +108,24 @@ int main(int argc, char * argv[])
   std::cout << "Offset               = " << offset << std::endl;
 
   cublasHandle_t h;
-  cublasCreate(&h);
+  //prk::CUDA::check( cublasInit() );
+  prk::CUDA::check( cublasCreate(&h) );
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time(0);
 
   const size_t bytes = length * sizeof(double);
+
   double * h_A;
   double * h_B;
   double * h_C;
-#ifndef __CORIANDERCC__
   prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
   prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
   prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
-#else
-  h_A = new double[length];
-  h_B = new double[length];
-  h_C = new double[length];
-#endif
+
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
     h_B[i] = 2;
@@ -141,36 +138,28 @@ int main(int argc, char * argv[])
   prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
   prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
   prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
+
   prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
 
   double scalar(3);
-
-  const int blockSize = 1024;
-  dim3 dimBlock(blockSize, 1, 1);
-  dim3 dimGrid(prk::divceil(length,blockSize), 1, 1);
-
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
       double one(1);
-      cublasDaxpy(h, length,
-                  &one,                       // alpha
-                  d_B, 1,                     // x, incx
-                  d_A, 1);                    // y, incy
-      cublasDaxpy(h, length,
-                  &scalar,                    // alpha
-                  d_C, 1,                     // x, incx
-                  d_A, 1);                    // y, incy
+      prk::CUDA::check( cublasDaxpy(h, length,
+                                    &one,        // alpha
+                                    d_B, 1,      // x, incx
+                                    d_A, 1) );   // y, incy
+      prk::CUDA::check( cublasDaxpy(h, length,
+                                    &scalar,     // alpha
+                                    d_C, 1,      // x, incx
+                                    d_A, 1) );   // y, incy
 
-      // determine whether this helps or not (helps in CUBLAS)
-#ifndef __CORIANDERCC__
-      // silence "ignoring cudaDeviceSynchronize for now" warning
       prk::CUDA::check( cudaDeviceSynchronize() );
-#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
@@ -181,10 +170,11 @@ int main(int argc, char * argv[])
   prk::CUDA::check( cudaFree(d_B) );
   prk::CUDA::check( cudaFree(d_A) );
 
-#ifndef __CORIANDERCC__
   prk::CUDA::check( cudaFreeHost(h_B) );
   prk::CUDA::check( cudaFreeHost(h_C) );
-#endif
+
+  prk::CUDA::check( cublasDestroy(h) );
+  //prk::CUDA::check( cublasShutdown() );
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -204,9 +194,7 @@ int main(int argc, char * argv[])
       asum += std::fabs(h_A[i]);
   }
 
-#ifndef __CORIANDERCC__
   prk::CUDA::check( cudaFreeHost(h_A) );
-#endif
 
   double epsilon=1.e-8;
   if (std::fabs(ar-asum)/asum > epsilon) {
