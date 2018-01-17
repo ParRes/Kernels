@@ -322,7 +322,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/nstream-valarray   10 16777216 32
 
         # C++11 without external parallelism
-        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector dgemm-vector
+        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector \
+                                 dgemm-vector sparse-vector
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024 100 100
         $PRK_TARGET_PATH/p2p-innerloop-vector    10 1024
@@ -331,6 +332,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/nstream-vector          10 16777216 32
         $PRK_TARGET_PATH/dgemm-vector            10 400 400 # untiled
         $PRK_TARGET_PATH/dgemm-vector            10 400 32
+        $PRK_TARGET_PATH/sparse-vector           10 10 5
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
