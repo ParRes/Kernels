@@ -68,6 +68,10 @@ KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPE
 RAJADIR=/opt/raja/clang
 RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 #
+# CBLAS for C++ DGEMM
+#
+CBLASFLAG=-DACCELERATE -framework Accelerate
+#
 # CUDA flags
 #
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander

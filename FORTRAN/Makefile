@@ -13,6 +13,12 @@ STARFLAG   = -DSTAR
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
 FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
+ifeq ($(findstring ifort,$(FC)),ifort)
+  BLASFLAGS = $(CBLASFLAG) -heap-arrays
+else
+  BLASFLAGS = $(CBLASFLAG)
+endif
+
 .PHONY: all clean serial pretty openmp coarray target ornlacc
 
 # Intel
@@ -39,21 +45,21 @@ endif
 
 all: serial pretty openmp tasks $(EXTRA)
 
-serial: p2p stencil transpose p2p-innerloop
+serial: p2p stencil transpose nstream dgemm p2p-innerloop
 
-pretty: stencil-pretty transpose-pretty
+pretty: stencil-pretty transpose-pretty nstream-pretty dgemm-pretty
 
-openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp nstream-openmp dgemm-openmp
 
 tasks: p2p-tasks-openmp transpose-tasks-openmp
 
-taskloop: stencil-taskloop-openmp transpose-taskloop-openmp
+taskloop: stencil-taskloop-openmp transpose-taskloop-openmp nstream-taskloop-openmp dgemm-taskloop-openmp
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
-target: stencil-openmp-target transpose-openmp-target
+target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target
 
-ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc
+ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc nstream-ornlacc
 
 %: %.f90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -63,7 +69,7 @@ stencil: stencil.f90 stencil_serial.f90
 	$(FC) $(FCFLAGS) $< -o $@
 
 %-pretty: %-pretty.f90
-	$(FC) $(FCFLAGS) $< -o $@
+	$(FC) $(FCFLAGS) $(BLASFLAGS) $< -o $@
 
 %-openmp: %.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
@@ -88,7 +94,7 @@ clean:
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
-	-rm -f p2p stencil transpose
+	-rm -f p2p stencil transpose nstream
 	-rm -f p2p-innerloop
 	-rm -f *-pretty
 	-rm -f *-coarray

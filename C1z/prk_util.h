@@ -113,7 +113,7 @@ int __cilkrts_get_nworkers(void);
 #endif
 
 #if defined(__INTEL_COMPILER)
-# define PRAGMA_SIMD PRAGMA(simd)
+# define PRAGMA_SIMD PRAGMA(vector)
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
 # define PRAGMA_SIMD PRAGMA(GCC ivdep)
 #elif defined(__clang__)
@@ -181,8 +181,12 @@ static inline double prk_wtime(void)
   return t;
 }
 
-// GCC claims to be C11 without knowing if glibc is compliant...
-#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+// GCC claims to be C11 without knowing if glibc is compliant.
+// glibc added support for timespec_get in version 2.16.
+// (https://gcc.gnu.org/wiki/C11Status)
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
+      defined(__GLIBC__) && defined(__GLIBC_MINOR__) && \
+      (((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 16)) || (__GLIBC__ > 2))
 
 static inline double prk_wtime(void)
 {

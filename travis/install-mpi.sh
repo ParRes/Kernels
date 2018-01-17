@@ -24,10 +24,10 @@ case "$os" in
         brew update
         case "$MPI_IMPL" in
             mpich)
-                brew install mpich || brew upgrade mpich
+                brew upgrade mpich || brew install mpich || true
                 ;;
             openmpi)
-                brew install openmpi || brew upgrade openmpi
+                brew upgrade openmpi || brew install openmpi || true
                 ;;
             *)
                 echo "Unknown MPI implementation: $MPI_IMPL"
