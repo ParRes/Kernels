@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
 
   int iterations;
   size_t n;
-  int radius = 2;
+  size_t radius = 2;
   bool star = true;
   try {
       if (argc < 3) {
@@ -200,22 +200,35 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
-  std::vector<double> h_in;
   std::vector<double> h_out;
-  h_in.resize(n*n);
-  h_out.resize(n*n);
+  h_out.resize(n*n,0.0);
 
   for (auto i=0; i<n; i++) {
     for (auto j=0; j<n; j++) {
-      h_in[i*n+j] = static_cast<double>(i+j);
       h_out[i*n+j] = 0.0;
     }
   }
 
   {
     // initialize device buffers from host buffers
-    cl::sycl::buffer<double, 2> d_in  { h_in.data() , cl::sycl::range<2> {n, n} };
+    cl::sycl::buffer<double, 2> d_in  { cl::sycl::range<2> {n, n} };
     cl::sycl::buffer<double, 2> d_out { h_out.data(), cl::sycl::range<2> {n, n} };
+
+    q.submit([&](cl::sycl::handler& h) {
+
+      // accessor methods
+      auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
+
+      // Add constant to solution to force refresh of neighbor data, if any
+      h.parallel_for<class init>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
+                                [=] (cl::sycl::item<2> it) {
+          cl::sycl::id<2> xy = it.get_id();
+          auto i = xy[0];
+          auto j = xy[1];
+          in[xy] = static_cast<double>(i+j);
+      });
+    });
+    q.wait();
 
     for (auto iter = 0; iter<=iterations; iter++) {
    
@@ -226,7 +239,7 @@ int main(int argc, char* argv[])
       q.submit([&](cl::sycl::handler& h) {
 
         // accessor methods
-        auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
+        auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
         auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
        
         // Add constant to solution to force refresh of neighbor data, if any
@@ -246,7 +259,7 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   // interior of grid with respect to stencil
-  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
+  auto active_points = (n-2L*radius)*(n-2L*radius);
 
   // compute L1 norm in parallel
   double norm = 0.0;
@@ -270,8 +283,8 @@ int main(int argc, char* argv[])
     std::cout << "L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
 #endif
-    const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
-    size_t flops = (2L*(size_t)stencil_size+1L) * active_points;
+    const size_t stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
+    size_t flops = (2L*stencil_size+1L) * active_points;
     auto avgtime = stencil_time/iterations;
     std::cout << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
