@@ -1,41 +1,59 @@
 include ../common/make.defs
 include ../common/PRKVERSION
 
-CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
+CPPFLAGS = -DPRKVERSION=$(PRKVERSION)
 
-CFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
-#CFLAGS  = $(PRKCPPFLAGS) -g3 -O0
+CFLAGS = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 
 # debugging
-#CFLAGS += -DVERBOSE
+ifdef VERBOSE
+  CFLAGS += -DVERBOSE
+endif
+
+ifeq ($(findstring musl,$(CC)),musl)
+  CFLAGS += -DUSE_C11_THREADS
+endif
+
+ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm $(CFLAGS)
 
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKFLAGS = $(CILKFLAG)
+ISPCFLAGS = $(ISPCFLAG)
 
-.PHONY: all clean serial thread openmp target taskloop cilk
+.PHONY: all clean serial thread openmp target taskloop cilk ispc
 
+EXTRA=
 ifeq ($(shell uname -s),Darwin)
-ifneq ($(findstring icc,$(CC)),icc)
-TARGET = target
-endif
+  ifneq ($(findstring icc,$(CC)),icc)
+    EXTRA += target
+  endif
 else
-TARGET = target
+  EXTRA += target
 endif
-all: serial thread openmp cilk taskloop $(TARGET)
+ifdef ($(ISPC))
+  EXTRA += ispc
+endif
+ifneq ($(CILKFLAG),)
+  EXTRA += cilk
+endif
+
+all: serial thread openmp taskloop $(EXTRA)
 
 serial: p2p p2p-innerloop stencil transpose
 
 thread: transpose-thread
 
-openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+openmp: p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
 target: stencil-target transpose-target
 
 taskloop: stencil-taskloop transpose-taskloop
 
 cilk: stencil-cilk transpose-cilk
+
+ispc: transpose-ispc
 
 p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
@@ -44,7 +62,7 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-taskloop: %-taskloop.c prk_util.h
-	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
+	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-openmp: %-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
@@ -52,11 +70,24 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 %-cilk: %-cilk.c prk_util.h
 	$(CC) $(CFLAGS) $< $(CILKFLAGS) $(EXTRA_CLIBS) -o $@
 
+%.ispo: %.ispc
+	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) -o $@
+
+%-ispc: %-ispc.o %.ispo
+	$(CC) $(CFLAGS) $^ -o $@
+
 %: %.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
+%-openmp.s: %-openmp.c prk_util.h
+	$(CC) $(ASMFLAGS) $(OMPFLAGS) -S $< -o $@
+
+%.s: %.c prk_util.h
+	$(CC) $(ASMFLAGS) -S $< -o $@
+
 clean:
 	-rm -f *.o
+	-rm -f *.s
 	-rm -f *.ll # Coriander
 	-rm -f *.optrpt
 	-rm -f *.dwarf
@@ -67,6 +98,7 @@ clean:
 	-rm -f *-taskloop
 	-rm -f *-cilk
 	-rm -f *-thread
+	-rm -f *-ispc
 
 cleancl:
 	-rm -f star[123456789].cl

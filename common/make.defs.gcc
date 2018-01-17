@@ -6,17 +6,18 @@
 #
 VERSION=-7
 # C99 is required in some implementations.
-CC=gcc${VERSION} -std=c11
+CC=gcc${VERSION} -std=c11 -pthread -Wall
+#EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=gfortran${VERSION} -std=f2008 -cpp
+FC=gfortran${VERSION} -std=f2008 -cpp -Wall
 # C++11 may not be required but does no harm here.
-CXX=g++${VERSION} -std=gnu++17
+CXX=g++${VERSION} -std=gnu++17 -pthread -Wall
 #
 # Compiler flags
 #
 # -mtune=native is appropriate for most cases.
 # -march=native is appropriate if you want portable binaries.
-DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
+DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -march=knl
 # See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
@@ -41,17 +42,21 @@ CILKFLAG=-fcilkplus
 #
 # TBB
 #
-TBBDIR=/usr/local/Cellar/tbb/2017_U7
+TBBDIR=/usr/local/Cellar/tbb/2018_U2
 TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
-PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG}
-KOKKOSDIR=/opt/kokkos/gcc/openmp
-KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos ${OPENMPFLAG}
+BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
+PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include
+KOKKOSDIR=/opt/kokkos/gcc
+KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
 RAJADIR=/opt/raja/gcc
-RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${OPENMPFLAG} ${CILKFLAG}
+RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+#
+# CBLAS for C++ DGEMM
+#
+CBLASFLAG=-DACCELERATE -framework Accelerate
 #
 # CUDA flags
 #
@@ -63,10 +68,15 @@ CUDAFLAGS=-g -O3 -std=c++11
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #
+# ISPC
+#
+ISPC=ispc
+ISPCFLAG=-O3 --target=host --opt=fast-math
+#
 # MPI
 #
 # We assume you have installed an implementation of MPI-3 that is in your path.
-MPICC=mpicc
+MPICC=mpicc -std=c99
 #
 # Fortran 2008 coarrays
 #

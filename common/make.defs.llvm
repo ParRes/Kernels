@@ -4,57 +4,73 @@
 #
 # Base compilers and language options
 #
+LLVM_ROOT=/usr/local/Cellar/llvm/5.0.0
+LLVM_PATH=${LLVM_ROOT}/bin/
+#LLVM_PATH=/opt/llvm/HEAD/bin/
 # C99 is required in some implementations.
-CC=/opt/llvm/4.0.0/bin/clang -std=c11
+CC=${LLVM_PATH}clang -std=c11 -pthread
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Mfreeform -L/opt/llvm/pgi-flang/lib -Wl,-rpath=/opt/llvm/pgi-flang/lib
 # C++11 may not be required but does no harm here.
-CXX=/opt/llvm/4.0.0/bin/clang++ -std=c++1z
+CXX=${LLVM_PATH}clang++ -std=c++1z -pthread
 #
 # Compiler flags
 #
 # -mtune=native is appropriate for most cases.
 # -march=native is appropriate if you want portable binaries.
-DEFAULT_OPT_FLAGS=-g -O3 -mtune=native
-# If you are compiling for KNL on a Xeon login node, use the following:
-# DEFAULT_OPT_FLAGS=-g -O3 -march=knl
-# See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
+#
+DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
+#DEFAULT_OPT_FLAGS+=-mllvm -polly -mllvm -polly-vectorizer=stripmine
+#
+# If you want to be specific, get the architecture options from:
+#   ${LLVM_PATH}llc --version
+# and then get the CPU/ISA options from (e.g. for x86-64):
+#   ${LLVM_PATH}llc -march=x86-64 -mcpu=help
+#
+# These are useful to understand why the compiler does not vectorize loops:
+#   DEFAULT_OPT_FLAGS+=-Rpass-analysis=loop-vectorize
+#   DEFAULT_OPT_FLAGS+=-Rpass=loop-vectorize
 #
 # OpenMP flags
 #
-OPENMPFLAG=-fopenmp -L/opt/llvm/4.0.0/lib -lomp
-OFFLOADFLAG=-fopenmp -L/opt/llvm/4.0.0/lib -lomp
+OPENMPFLAG=-fopenmp
+OFFLOADFLAG=-fopenmp
 ORNLACCFLAG= # Flang does not support OpenACC
 # Klondike weirdness
 # OPENMPFLAG+=-L/opt/intel/compilers_and_libraries_2018.0.082/linux/compiler/lib/intel64_lin -liomp5
 # Mac weirdness
-# OPENMPFLAG+=-L/usr/local/Cellar/llvm/4.0.0_1/lib
+OPENMPFLAG+=-L${LLVM_ROOT}/lib
+# LLVM
+# OPENMPFLAG+=-L/opt/llvm/4.0.0/lib -lomp
 #
 # OpenCL flags
 #
 # MacOS
-#OPENCLFLAG=-framework OpenCL
+OPENCLFLAG=-framework OpenCL
+# POCL
+# http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
+#OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
-OPENCLDIR=/etc/alternatives/opencl-intel-tools
-OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
-#
-# Cilk
-#
-CILKFLAG=
+#OPENCLDIR=/etc/alternatives/opencl-intel-tools
+#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
 # TBB
 #
-TBBDIR=/usr/local/Cellar/tbb/2017_U7
+TBBDIR=/usr/local/Cellar/tbb/2018_U1
 TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
-PSTLFLAG=
-KOKKOSDIR=/opt/kokkos/clang/openmp
-KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos ${OPENMPFLAG}
+BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
+PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include
+KOKKOSDIR=/opt/kokkos/clang
+KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
 RAJADIR=/opt/raja/clang
-RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${OPENMPFLAG} $(CILKFLAG)
+RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+#
+# CBLAS for C++ DGEMM
+#
+CBLASFLAG=-DACCELERATE -framework Accelerate
 #
 # CUDA flags
 #
@@ -65,6 +81,11 @@ NVCC=/opt/llvm/cocl/bin/cocl
 CUDAFLAGS=-g -O3 -std=c++11
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# ISPC
+#
+ISPC=ispc
+ISPCFLAG=-O3 --target=host --opt=fast-math
 #
 # MPI
 #

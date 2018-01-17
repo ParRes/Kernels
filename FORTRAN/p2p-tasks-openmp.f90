@@ -54,15 +54,6 @@
 !            Converted to Fortran by Jeff Hammond, January 2016.
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 subroutine sweep_tile(startm,endm,startn,endn,m,n,grid)
   use iso_fortran_env
   implicit none
@@ -82,7 +73,6 @@ program main
   use iso_fortran_env
   use omp_lib
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -171,57 +161,50 @@ program main
 
   !$omp parallel default(none)                                  &
   !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
-  !$omp&  firstprivate(m,n,mc,nc,ic,jc,lic,ljc)                 &
-  !$omp&  private(i,j,k,corner_val)
+  !$omp&  firstprivate(m,n,mc,nc,lic,ljc)                       &
+  !$omp&  private(i,j,ic,jc,k,corner_val)
+  !$omp master
 
-  !$omp do collapse(2)
+  ! TODO: switch this to taskloop once support more widely available
+  !       (GCC-6 does not have it, which breaks Travis builds)
   do j=1,n
     do i=1,m
       grid(i,j) = 0.0d0
     enddo
   enddo
-  !$omp end do
-  ! it is debatable whether these loops should be parallel
-  !$omp do
+
   do j=1,n
     grid(1,j) = real(j-1,REAL64)
   enddo
-  !$omp end do
-  !$omp do
   do i=1,m
     grid(i,1) = real(i-1,REAL64)
   enddo
-  !$omp end do
 
   do k=0,iterations
 
-    !  start timer after a warmup iteration
-    if (k.eq.1) then
-      !$omp barrier
-      !$omp master
-      t0 = prk_get_wtime()
-      !$omp end master
-    endif
+    if (k.eq.1) t0 = omp_get_wtime()
 
-    !$omp master
     do ic=2,m,mc
       do jc=2,n,nc
-        !$omp task depend(in:grid(1,1),grid(ic-mc,jc-nc),grid(ic-mc,jc),grid(ic,jc-nc)) depend(out:grid(ic,jc))
+        !$omp task firstprivate(i,j,jc,mc,nc,m,n) shared(grid)                          &
+        !$omp&     depend(in:grid(1,1),grid(ic-mc,jc-nc),grid(ic-mc,jc),grid(ic,jc-nc)) &
+        !$omp&     depend(out:grid(ic,jc))
         call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
         !$omp end task
       enddo
     enddo
-    !$omp task depend(in:grid(lic,ljc)) depend(out:grid(1,1))
+    !$omp task firstprivate(m,n) shared(grid)                 &
+    !$omp&     depend(in:grid(lic,ljc)) depend(out:grid(1,1))
     grid(1,1) = -grid(m,n)
     !$omp end task
-    !$omp end master
 
-  enddo ! iterations
+  enddo
 
-  !$omp barrier
-  !$omp master
-  t1 = prk_get_wtime()
+  !$omp taskwait
+
+  t1 = omp_get_wtime()
   pipeline_time = t1 - t0
+
   !$omp end master
 
   !$omp end parallel

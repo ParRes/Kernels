@@ -65,62 +65,74 @@
 
 #ifdef _OPENMP
 # include <omp.h>
+# define OMP(x) PRAGMA(omp x)
 # define OMP_PARALLEL(x) PRAGMA(omp parallel x)
 # define OMP_PARALLEL_FOR_REDUCE(x) PRAGMA(omp parallel for reduction (x) )
 # define OMP_MASTER PRAGMA(omp master)
 # define OMP_BARRIER PRAGMA(omp barrier)
-# define OMP_FOR PRAGMA(omp for)
+# define OMP_FOR(x) PRAGMA(omp for x)
 # define OMP_FOR_REDUCE(x) PRAGMA(omp for reduction (x) )
-// OpenMP SIMD if supported, else not.
 # if (_OPENMP >= 201300)
 #  define OMP_SIMD PRAGMA(omp simd)
-#  define OMP_FOR_SIMD PRAGMA(omp for simd)
+#  define OMP_FOR_SIMD() PRAGMA(omp for simd x)
 #  define OMP_TASK(x) PRAGMA(omp task x)
 #  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
 #  define OMP_TASKWAIT PRAGMA(omp taskwait)
+#  define OMP_ORDERED(x) PRAGMA(omp ordered x)
 #  define OMP_TARGET(x) PRAGMA(omp target x)
-#  define OMP_DECLARE_TARGET PRAGMA(omp declare target)
-#  define OMP_END_DECLARE_TARGET PRAGMA(omp end declare target)
 # else
 #  define OMP_SIMD
-#  define OMP_FOR_SIMD PRAGMA(omp for)
+#  define OMP_FOR_SIMD() PRAGMA(omp for x)
 #  define OMP_TASK(x)
 #  define OMP_TASKLOOP(x)
 #  define OMP_TASKWAIT
+#  define OMP_ORDERED(x)
 #  define OMP_TARGET(x)
-#  define OMP_DECLARE_TARGET
-#  define OMP_END_DECLARE_TARGET
 # endif
 #else
+# define OMP(x)
 # define OMP_PARALLEL(x)
 # define OMP_PARALLEL_FOR_REDUCE(x)
 # define OMP_MASTER
 # define OMP_BARRIER
-# define OMP_FOR
+# define OMP_FOR(x)
 # define OMP_FOR_REDUCE(x)
 # define OMP_SIMD
-# define OMP_FOR_SIMD
+# define OMP_FOR_SIMD()
 # define OMP_TASK(x)
 # define OMP_TASKLOOP(x)
 # define OMP_TASKWAIT
+# define OMP_ORDERED(x)
 # define OMP_TARGET(x)
-# define OMP_DECLARE_TARGET
-# define OMP_END_DECLARE_TARGET
 #endif
 
 #ifdef __cilk
 # include <cilk/cilk.h>
+// Not defined in the header but documented at https://www.cilkplus.org/.
+int __cilkrts_get_nworkers(void);
 #endif
 
-#if defined(__INTEL_COMPILER) && !defined(PRAGMA_OMP_SIMD)
-# define PRAGMA_SIMD PRAGMA(simd)
+#if defined(__INTEL_COMPILER)
+# define PRAGMA_SIMD PRAGMA(vector)
+#elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
+# define PRAGMA_SIMD PRAGMA(GCC ivdep)
+#elif defined(__clang__)
+# define PRAGMA_SIMD PRAGMA(clang loop vectorize(enable))
 #else
 # define PRAGMA_SIMD
 #endif
 
+#ifdef __linux__
+#include <features.h>
+#endif
+
+// If we are on Linux and we are not using GLIBC, attempt to
+// use C11 threads, because this means we are using MUSL.
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
    !defined(__STDC_NO_THREADS__) && \
-   defined(USE_C11_THREADS)
+   ( defined(USE_C11_THREADS) || \
+     ( defined(__linux__) && !defined(__GNU_LIBRARY__) && !defined(__GLIBC__) ) \
+   )
 # define HAVE_C11_THREADS
 # include <threads.h>
 #else
@@ -169,8 +181,12 @@ static inline double prk_wtime(void)
   return t;
 }
 
-// GCC claims to be C11 without knowing if glibc is compliant...
-#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+// GCC claims to be C11 without knowing if glibc is compliant.
+// glibc added support for timespec_get in version 2.16.
+// (https://gcc.gnu.org/wiki/C11Status)
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
+      defined(__GLIBC__) && defined(__GLIBC_MINOR__) && \
+      (((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 16)) || (__GLIBC__ > 2))
 
 static inline double prk_wtime(void)
 {

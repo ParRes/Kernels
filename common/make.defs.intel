@@ -10,10 +10,11 @@
 #
 # C99 is required in some implementations.
 CC=icc -std=c11 -pthread
+#EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=ifort -std08 -fpp
 # C++11 may not be required but does no harm here.
-CXX=icpc -std=c++17 -pthread
+CXX=icpc -std=c++14 -pthread
 #
 # Compiler flags
 #
@@ -30,10 +31,10 @@ OFFLOADFLAG=-qopenmp-offload=host
 # OpenCL flags
 #
 # MacOS
-OPENCLFLAG=-framework OpenCL
+#OPENCLFLAG=-framework OpenCL
 # Linux
-#OPENCLDIR=/etc/alternatives/opencl-intel-tools
-#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLDIR=/etc/alternatives/opencl-intel-tools
+OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
 # Cilk
 #
@@ -45,22 +46,31 @@ TBBFLAG=-tbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
+BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
 PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG}
-KOKKOSDIR=/opt/kokkos/intel/openmp
-KOKKOSFLAG=-DUSE_KOKKOS -I$(KOKKOSDIR)/include -L$(KOKKOSDIR)/lib -lkokkos ${OPENMPFLAG}
+KOKKOSDIR=/opt/kokkos/intel
+KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
 RAJADIR=/opt/raja/intel
-RAJAFLAG=-DUSE_RAJA -I$(RAJADIR)/include -L$(RAJADIR)/lib -lRAJA ${OPENMPFLAG}
+RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+#
+# CBLAS for C++ DGEMM
+#
+CBLASFLAG=-DMKL -mkl
 #
 # CUDA flags
 #
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
-NVCC=/opt/llvm/cocl/bin/cocl
+#NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-#NVCC=nvcc
+NVCC=nvcc
 CUDAFLAGS=-g -O3 -std=c++11
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# ISPC
+#
+ISPC=ispc
+ISPCFLAG=-O3 --target=host --opt=fast-math
 #
 # MPI
 #

@@ -49,129 +49,106 @@
 ///
 /// HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, February 2016 and May 2017.
+///          C11-ification by Jeff Hammond, June 2017.
 ///
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
 
+int ispc_num_threads(void);
+void initialize(const int order, double A[], double B[]);
+void transpose(const int order, double A[], double B[]);
+void transpose_tiled(const int order, double A[], double B[], const int tile_size);
+
 int main(int argc, char * argv[])
 {
+  printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+  printf("ISPC Matrix transpose: B = A^T\n");
+
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/Cilk Matrix transpose: B = A^T" << std::endl;
-
-  int iterations;
-  int order;
-  int tile_size;
-  try {
-      if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [tile size]";
-      }
-
-      // number of times to do the transpose
-      iterations  = std::atoi(argv[1]);
-      if (iterations < 1) {
-        throw "ERROR: iterations must be >= 1";
-      }
-
-      // order of a the matrix
-      order = std::atoi(argv[2]);
-      if (order <= 0) {
-        throw "ERROR: Matrix Order must be greater than 0";
-      }
-
-      // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
-      // a negative tile size means no tiling of the local transpose
-      if (tile_size <= 0) tile_size = order;
-
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
+  if (argc < 3) {
+    printf("Usage: <# iterations> <matrix order> [tile size]\n");
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Tile size             = " << tile_size << std::endl;
+  // number of times to do the transpose
+  int iterations = atoi(argv[1]);
+  if (iterations < 1) {
+    printf("ERROR: iterations must be >= 1\n");
+    return 1;
+  }
+
+  // order of a the matrix
+  int order = atoi(argv[2]);
+  if (order <= 0) {
+    printf("ERROR: Matrix Order must be greater than 0\n");
+    return 1;
+  }
+
+  // default tile size for tiling of local transpose
+  int tile_size = (argc>4) ? atoi(argv[3]) : 32;
+  // a negative tile size means no tiling of the local transpose
+  if (tile_size <= 0) tile_size = order;
+
+  printf("ISPC threads          = %d\n", ispc_num_threads());
+  printf("Number of iterations  = %d\n", iterations);
+  printf("Matrix order          = %d\n", order);
+  printf("Tile size             = %d\n", tile_size);
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> A;
-  std::vector<double> B;
-  A.resize(order*order);
-  B.resize(order*order);
+  double trans_time = 0.0;
 
-  auto trans_time = 0.0;
+  size_t bytes = order*order*sizeof(double);
+  double * restrict A = prk_malloc(bytes);
+  double * restrict B = prk_malloc(bytes);
 
-  _Cilk_for (auto i=0; i<order; i++) {
-    _Cilk_for (auto j=0;j<order;j++) {
-      A[i*order+j] = static_cast<double>(i*order+j);
-      B[i*order+j] = 0.0;
-    }
-  }
+  initialize(order,A,B);
 
-  for (auto iter = 0; iter<=iterations; iter++) {
-
-    if (iter==1) trans_time = prk::wtime();
-
-    // transpose the  matrix
-    if (tile_size < order) {
-      _Cilk_for (auto it=0; it<order; it+=tile_size) {
-        _Cilk_for (auto jt=0; jt<order; jt+=tile_size) {
-          for (auto i=it; i<std::min(order,it+tile_size); i++) {
-            for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
-              B[i*order+j] += A[j*order+i];
-              A[j*order+i] += 1.0;
-            }
-          }
-        }
-      }
+  for (int iter = 0; iter<=iterations; iter++) {
+    if (iter==1) trans_time = prk_wtime();
+    if (tile_size<order) {
+        transpose_tiled(order,A,B,tile_size);
     } else {
-      _Cilk_for (auto i=0;i<order; i++) {
-        _Cilk_for (auto j=0;j<order;j++) {
-          B[i*order+j] += A[j*order+i];
-          A[j*order+i] += 1.0;
-        }
-      }
+        transpose(order,A,B);
     }
   }
-  trans_time = prk::wtime() - trans_time;
+  trans_time = prk_wtime() - trans_time;
 
   //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
+  // Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
-      const int ij = i*order+j;
-      const int ji = j*order+i;
-      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+  const double addit = (iterations+1.) * (iterations/2.);
+  double abserr = 0.0;
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
+      const size_t ij = i*order+j;
+      const size_t ji = j*order+i;
+      const double reference = (double)(ij)*(1.+iterations)+addit;
+      abserr += fabs(B[ji] - reference);
     }
   }
+
+  prk_free(A);
+  prk_free(B);
 
 #ifdef VERBOSE
-  std::cout << "Sum of absolute differences: " << abserr << std::endl;
+  printf("Sum of absolute differences: %lf\n", abserr);
 #endif
 
-  const auto epsilon = 1.0e-8;
+  const double epsilon = 1.0e-8;
   if (abserr < epsilon) {
-    std::cout << "Solution validates" << std::endl;
-    auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+    printf("Solution validates\n");
+    const double avgtime = trans_time/iterations;
+    printf("Rate (MB/s): %lf Avg time (s): %lf\n", 2.0e-6 * bytes/avgtime, avgtime );
   } else {
-    std::cout << "ERROR: Aggregate squared error " << abserr
-              << " exceeds threshold " << epsilon << std::endl;
+    printf("ERROR: Aggregate squared error %lf exceeds threshold %lf\n", abserr, epsilon );
     return 1;
   }
 

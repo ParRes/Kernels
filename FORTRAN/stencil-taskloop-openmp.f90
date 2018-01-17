@@ -60,15 +60,6 @@
 !
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 subroutine initialize_w(is_star,r,W)
   use iso_fortran_env
   implicit none
@@ -187,7 +178,6 @@ program main
   use iso_fortran_env
   use omp_lib
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -313,7 +303,7 @@ program main
   !$omp&  private(i,j,k)
 
   !$omp master
-  !$omp taskloop shared(A,B)
+  !$omp taskloop firstprivate(n) shared(A,B)
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
@@ -329,7 +319,7 @@ program main
   do k=0,iterations
 
     if (k.eq.1) then
-       t0 = prk_get_wtime()
+       t0 = omp_get_wtime()
     endif
 
     ! Apply the stencil operator
@@ -337,7 +327,7 @@ program main
     !$omp taskwait
 
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp taskloop shared(A) firstprivate(n) private(i,j)
+    !$omp taskloop firstprivate(n) private(i,j) shared(A)
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.d0
@@ -349,7 +339,7 @@ program main
 
   enddo ! iterations
 
-  t1 = prk_get_wtime()
+  t1 = omp_get_wtime()
 
   !$omp end master
   !$omp end parallel

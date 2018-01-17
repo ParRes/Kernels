@@ -61,10 +61,18 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
 #include "stencil_target.hpp"
 
-int main(int argc, char * argv[])
+void nothing(const int n, const int t, const double * RESTRICT in, double * RESTRICT out)
+{
+    std::cout << "You are trying to use a stencil that does not exist." << std::endl;
+    std::cout << "Please generate the new stencil using the code generator." << std::endl;
+    // n will never be zero - this is to silence compiler warnings.
+    if (n==0) std::cout << in << out << std::endl;
+    std::abort();
+}
+
+int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OpenMP TARGET Stencil execution on 2D grid" << std::endl;
@@ -73,12 +81,11 @@ int main(int argc, char * argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int n, radius;
+  int iterations, n, radius, tile_size;
   bool star = true;
   try {
-      if (argc < 3){
-        throw "Usage: <# iterations> <array dimension> [<star/grid> <radius>]";
+      if (argc < 3) {
+        throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
       }
 
       // number of times to run the algorithm
@@ -95,24 +102,29 @@ int main(int argc, char * argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-      // stencil pattern
+      // default tile size for tiling of local transpose
+      tile_size = 32;
       if (argc > 3) {
-          auto stencil = std::string(argv[3]);
+          tile_size = std::atoi(argv[3]);
+          if (tile_size <= 0) tile_size = n;
+          if (tile_size > n) tile_size = n;
+      }
+
+      // stencil pattern
+      if (argc > 4) {
+          auto stencil = std::string(argv[4]);
           auto grid = std::string("grid");
           star = (stencil == grid) ? false : true;
       }
 
       // stencil radius
       radius = 2;
-      if (argc > 4) {
-          radius = std::atoi(argv[4]);
+      if (argc > 5) {
+          radius = std::atoi(argv[5]);
       }
 
       if ( (radius < 1) || (2*radius+1 > n) ) {
         throw "ERROR: Stencil radius negative or too large";
-      }
-      if ( (radius > 9) ) {
-        throw "ERROR: you need to run the code generator to get an implementation of this stencil";
       }
   }
   catch (const char * e) {
@@ -123,17 +135,37 @@ int main(int argc, char * argv[])
   std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
+
+  auto stencil = nothing;
+  if (star) {
+      switch (radius) {
+          case 1: stencil = star1; break;
+          case 2: stencil = star2; break;
+          case 3: stencil = star3; break;
+          case 4: stencil = star4; break;
+          case 5: stencil = star5; break;
+      }
+  } else {
+      switch (radius) {
+          case 1: stencil = grid1; break;
+          case 2: stencil = grid2; break;
+          case 3: stencil = grid3; break;
+          case 4: stencil = grid4; break;
+          case 5: stencil = grid5; break;
+      }
+  }
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
+  auto stencil_time = 0.0;
+
   double * RESTRICT in  = new double[n*n];
   double * RESTRICT out = new double[n*n];
-
-  auto stencil_time = 0.0;
 
   // HOST
   // initialize the input and output arrays
@@ -141,6 +173,7 @@ int main(int argc, char * argv[])
   {
     OMP_FOR()
     for (auto i=0; i<n; i++) {
+      OMP_SIMD
       for (auto j=0; j<n; j++) {
         in[i*n+j] = static_cast<double>(i+j);
         out[i*n+j] = 0.0;
@@ -149,53 +182,23 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  OMP_TARGET( map(tofrom: in[0:n*n], out[0:n*n]) map(from:stencil_time) )
-  OMP_PARALLEL()
+  OMP_TARGET( data map(tofrom: in[0:n*n], out[0:n*n]) )
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          stencil_time = omp_get_wtime();
-      }
+      if (iter==1) stencil_time = omp_get_wtime();
 
-    // Apply the stencil operator
-    if (star) {
-        switch (radius) {
-            case 1: star1(n, in, out); break;
-            case 2: star2(n, in, out); break;
-            case 3: star3(n, in, out); break;
-            case 4: star4(n, in, out); break;
-            case 5: star5(n, in, out); break;
-            case 6: star6(n, in, out); break;
-            case 7: star7(n, in, out); break;
-            case 8: star8(n, in, out); break;
-            case 9: star9(n, in, out); break;
-        }
-    } else {
-        switch (radius) {
-            case 1: grid1(n, in, out); break;
-            case 2: grid2(n, in, out); break;
-            case 3: grid3(n, in, out); break;
-            case 4: grid4(n, in, out); break;
-            case 5: grid5(n, in, out); break;
-            case 6: grid6(n, in, out); break;
-            case 7: grid7(n, in, out); break;
-            case 8: grid8(n, in, out); break;
-            case 9: grid9(n, in, out); break;
-        }
-    }
-      // add constant to solution to force refresh of neighbor data, if any
-      OMP_FOR()
+      // Apply the stencil operator
+      stencil(n, tile_size, in, out);
+
+      // Add constant to solution to force refresh of neighbor data, if any
+      OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
       for (auto i=0; i<n; i++) {
         for (auto j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
     }
-    OMP_BARRIER
-    OMP_MASTER
     stencil_time = omp_get_wtime() - stencil_time;
   }
 
@@ -205,8 +208,6 @@ int main(int argc, char * argv[])
 
   // interior of grid with respect to stencil
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
-
-  // HOST
   // compute L1 norm in parallel
   double norm = 0.0;
   OMP_PARALLEL_FOR_REDUCE( +:norm )

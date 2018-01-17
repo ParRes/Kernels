@@ -166,6 +166,8 @@ int main(int argc, char* argv[])
       order = std::atol(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
+      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        throw "ERROR: matrix dimension too large - overflow risk";
       }
   }
   catch (const char * e) {

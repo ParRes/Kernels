@@ -97,8 +97,14 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  const char* envvar = std::getenv("TBB_NUM_THREADS");
+  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
+  tbb::task_scheduler_init init(num_threads);
+
+  std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
+  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -119,13 +125,11 @@ int main(int argc, char* argv[])
   for (auto iter = 0; iter<=iterations; iter++){
     if (iter == 1) pipeline_time = prk::wtime();
     for (auto i=2; i<=2*n-2; i++) {
-      tbb::parallel_for( std::max(2,i-n+2), std::min(i,n)+1,
-           [=,&grid](int j) {
+      tbb::parallel_for( std::max(2,i-n+2), std::min(i,n)+1, [=,&grid](int j) {
                const auto x = i-j+2-1;
                const auto y = j-1;
                grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-           }
-      );
+           }, tbb_partitioner );
     }
     grid[0*n+0] = -grid[(n-1)*n+(n-1)];
   }

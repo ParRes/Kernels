@@ -56,12 +56,12 @@
 
 int main(int argc, char * argv[])
 {
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
+
   //////////////////////////////////////////////////////////////////////
   // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
-
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
 
   int iterations;
   int order;
@@ -81,6 +81,8 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
+      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        throw "ERROR: matrix dimension too large - overflow risk";
       }
 
       // default tile size for tiling of local transpose

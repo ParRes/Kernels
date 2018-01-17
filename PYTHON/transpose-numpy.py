@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Copyright (c) 2015, Intel Corporation
 #
@@ -49,7 +50,8 @@
 # *******************************************************************
 
 import sys
-from timeit import default_timer as timer
+#from timeit import default_timer as timer
+from time import process_time as timer
 import numpy
 
 def main():
@@ -59,22 +61,22 @@ def main():
     # ********************************************************************
 
     print('Parallel Research Kernels version ') #, PRKVERSION
-    print('Python Matrix transpose: B = A^T')
+    print('Python Numpy Matrix transpose: B = A^T')
 
     if len(sys.argv) != 3:
         print('argument count = ', len(sys.argv))
         sys.exit("Usage: ./transpose <# iterations> <matrix order>")
 
-    # iterations
     iterations = int(sys.argv[1])
-    if iterations < 1: sys.exit("ERROR: iterations must be >= 1")
+    if iterations < 1:
+        sys.exit("ERROR: iterations must be >= 1")
 
-    # matrix order
     order = int(sys.argv[2])
-    if order < 1: sys.exit("ERROR: order must be >= 1")
+    if order < 1:
+        sys.exit("ERROR: order must be >= 1")
 
-    print('Matrix order         = ', order)
     print('Number of iterations = ', iterations)
+    print('Matrix order         = ', order)
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
@@ -84,7 +86,7 @@ def main():
     B = numpy.zeros((order,order))
 
     for k in range(0,iterations+1):
-        # start timer after a warmup iteration
+
         if k<1: t0 = timer()
 
         # this actually forms the transpose of A

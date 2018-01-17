@@ -60,6 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "stencil_target.h"
 
 typedef void (*stencil_t)(const int, const double * restrict, double * restrict);
 
@@ -71,8 +72,6 @@ void nothing(const int n, const double * restrict in, double * restrict out)
     if (n==0) printf("%p %p\n", in, out);
     abort();
 }
-
-#include "stencil_openmp.h"
 
 int main(int argc, char * argv[])
 {
@@ -164,8 +163,6 @@ int main(int argc, char * argv[])
 
   double stencil_time = 0.0;
 
-  // interior of grid with respect to stencil
-  size_t active_points = (n-2*radius)*(n-2*radius);
   size_t bytes = n*n*sizeof(double);
 
   double * restrict in  = prk_malloc(bytes);
@@ -175,8 +172,9 @@ int main(int argc, char * argv[])
   // initialize the input and output arrays
   OMP_PARALLEL()
   {
-    OMP_FOR
+    OMP_FOR()
     for (int i=0; i<n; i++) {
+      OMP_SIMD
       for (int j=0; j<n; j++) {
         in[i*n+j]  = (double)(i+j);
         out[i*n+j] = 0.0;
@@ -185,30 +183,23 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  OMP_TARGET( map(tofrom: in[0:n*n], out[0:n*n]) map(from:stencil_time) )
-  OMP_PARALLEL()
+  OMP_TARGET( data map(tofrom: in[0:n*n], out[0:n*n]) )
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          stencil_time = omp_get_wtime();
-      }
+      if (iter==1) stencil_time = omp_get_wtime();
 
       // Apply the stencil operator
       stencil(n, in, out);
 
       // Add constant to solution to force refresh of neighbor data, if any
-      OMP_FOR
+      OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
       for (int i=0; i<n; i++) {
         for (int j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
     }
-    OMP_BARRIER
-    OMP_MASTER
     stencil_time = omp_get_wtime() - stencil_time;
   }
 
@@ -216,6 +207,8 @@ int main(int argc, char * argv[])
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
+  // interior of grid with respect to stencil
+  size_t active_points = (n-2*radius)*(n-2*radius);
   // compute L1 norm in parallel
   double norm = 0.0;
   OMP_PARALLEL_FOR_REDUCE( +:norm )

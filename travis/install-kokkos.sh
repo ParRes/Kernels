@@ -48,7 +48,7 @@ esac
 ${PRK_CXX} -v
 
 if [ ! -d "$TRAVIS_ROOT/kokkos" ]; then
-    git clone --depth 1 https://github.com/kokkos/kokkos.git
+    git clone -b develop --depth 1 https://github.com/kokkos/kokkos.git
     cd kokkos
     mkdir build
     cd build

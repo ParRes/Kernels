@@ -60,7 +60,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11/TBB Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -78,13 +78,15 @@ int main(int argc, char * argv[])
       }
 
       // order of a the matrix
-      order = std::atol(argv[2]);
+      order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
+      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        throw "ERROR: matrix dimension too large - overflow risk";
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atol(argv[3]) : 32;
+      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
   }
@@ -93,78 +95,49 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Tile size             = " << tile_size << std::endl;
+  const char* envvar = std::getenv("TBB_NUM_THREADS");
+  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
+  tbb::task_scheduler_init init(num_threads);
 
-  tbb::task_scheduler_init init(tbb::task_scheduler_init::automatic);
+  std::cout << "Number of threads    = " << num_threads << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
+  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
+
+  auto trans_time = 0.0;
 
   std::vector<double> A;
   std::vector<double> B;
   A.resize(order*order);
   B.resize(order*order);
 
-  auto trans_time = 0.0;
-
-#if USE_BLOCKED_RANGE_1D
-  tbb::blocked_range<int> range(0, order, tile_size);
-  tbb::parallel_for( range,
-                     [&](decltype(range)& r) {
-                             for(auto i=r.begin(); i!=r.end(); ++i) {
-                                 PRAGMA_SIMD
-                                 for (auto j=0; j<order; ++j ) {
-                                     A[i*order+j] = static_cast<double>(i*order+j);
-                                     B[i*order+j] = 0.0;
-                                 }
-                             }
-                        }
-                   );
-#else
   tbb::blocked_range2d<int> range(0, order, tile_size, 0, order, tile_size);
-  tbb::parallel_for( range,
-                     [&](decltype(range)& r) {
-                             for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                                 PRAGMA_SIMD
-                                 for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                                     A[i*order+j] = static_cast<double>(i*order+j);
-                                     B[i*order+j] = 0.0;
-                                 }
-                             }
-                        }
-                   );
-#endif
+  tbb::parallel_for( range, [&](decltype(range)& r) {
+                     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                         PRAGMA_SIMD
+                         for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                             A[i*order+j] = static_cast<double>(i*order+j);
+                             B[i*order+j] = 0.0;
+                         }
+                     }
+                   }, tbb_partitioner);
 
   for (auto iter = 0; iter<=iterations; iter++) {
     if (iter==1) trans_time = prk::wtime();
-#if USE_BLOCKED_RANGE_1D
-    tbb::parallel_for( range,
-                       [&](decltype(range)& r) {
-                               for(auto i=r.begin(); i!=r.end(); ++i) {
-                                   PRAGMA_SIMD
-                                   for (auto j=0; j<order; ++j ) {
-                                        B[i*order+j] += A[j*order+i];
-                                        A[j*order+i] += 1.0;
-                                   }
-                               }
-                          }
-                     );
-#else
-    tbb::parallel_for( range,
-                       [&](decltype(range)& r) {
-                               for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                                   PRAGMA_SIMD
-                                   for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                                        B[i*order+j] += A[j*order+i];
-                                        A[j*order+i] += 1.0;
-                                   }
-                               }
-                          }
-                     );
-#endif
+    tbb::parallel_for( range, [&](decltype(range)& r) {
+                       for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                           PRAGMA_SIMD
+                           for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                B[i*order+j] += A[j*order+i];
+                                A[j*order+i] += 1.0;
+                           }
+                       }
+                     }, tbb_partitioner);
   }
   trans_time = prk::wtime() - trans_time;
 
@@ -173,7 +146,9 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
+  double abserr(0);
+#if 0
+  // Use this if, for whatever reason, TBB reductions are not reliable.
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const int ij = i*order+j;
@@ -182,6 +157,22 @@ int main(int argc, char * argv[])
       abserr += std::fabs(B[ji] - reference);
     }
   }
+#else
+  abserr = tbb::parallel_reduce( range, double(0),
+                                 [&](decltype(range)& r, double temp) -> double {
+                                     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                                         for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                             const int ij = i*order+j;
+                                             const int ji = j*order+i;
+                                             const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+                                             temp += std::fabs(B[ji] - reference);
+                                         }
+                                     }
+                                     return temp;
+                                 },
+                                 [] (const double x1, const double x2) { return x1+x2; },
+                                 tbb_partitioner );
+#endif
 
 #ifdef VERBOSE
   std::cout << "Sum of absolute differences: " << abserr << std::endl;

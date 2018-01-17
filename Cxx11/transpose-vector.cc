@@ -56,12 +56,12 @@
 
 int main(int argc, char * argv[])
 {
-  //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
-  //////////////////////////////////////////////////////////////////////
-
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
+
+  //////////////////////////////////////////////////////////////////////
+  // Read and test input parameters
+  //////////////////////////////////////////////////////////////////////
 
   int iterations;
   int order;
@@ -81,25 +81,26 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
+      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        throw "ERROR: matrix dimension too large - overflow risk";
       }
 
       // default tile size for tiling of local transpose
       tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
-
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Tile size             = " << tile_size << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
   auto trans_time = 0.0;
@@ -145,7 +146,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
+  double abserr(0);
   // TODO: replace with std::generate, std::accumulate, or similar
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
