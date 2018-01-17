@@ -46,6 +46,7 @@
 !
 ! HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 !          Converted to Fortran by Jeff Hammond, February 2015
+!
 ! *******************************************************************
 
 function prk_get_wtime() result(t)

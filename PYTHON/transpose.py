@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Copyright (c) 2015, Intel Corporation
 #
@@ -49,7 +50,8 @@
 # *******************************************************************
 
 import sys
-from timeit import default_timer as timer
+#from timeit import default_timer as timer
+from time import process_time as timer
 
 def main():
 
@@ -62,7 +64,7 @@ def main():
 
     if len(sys.argv) != 3:
         print('argument count = ', len(sys.argv))
-        sys.exit("Usage: ./transpose <# iterations> <matrix n>")
+        sys.exit("Usage: ./transpose <# iterations> <matrix order>")
 
     iterations = int(sys.argv[1])
     if iterations < 1:
@@ -72,12 +74,12 @@ def main():
     if order < 1:
         sys.exit("ERROR: order must be >= 1")
 
+    print('Number of iterations = ', iterations)
+    print('Matrix order         = ', order)
+
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
-
-    print('Matrix order         = ', order)
-    print('Number of iterations = ', iterations)
 
     # 0.0 is a float, which is 64b (53b of precision)
     A = [[0.0 for x in range(order)] for x in range(order)]
@@ -89,9 +91,8 @@ def main():
             A[i][j] = float(i*order+j)
 
     for k in range(0,iterations+1):
-        # start timer after a warmup iteration
-        if k<1:
-            t0 = timer()
+
+        if k<1: t0 = timer()
 
         for i in range(order):
             for j in range(order):

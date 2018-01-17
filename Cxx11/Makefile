@@ -40,12 +40,14 @@ OPENCLFLAGS = $(OPENCLFLAG)
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
 ORNLACCFLAGS = $(ORNLACCFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
+CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
 BOOSTFLAGS = $(BOOSTFLAG)
+STLFLAGS = $(STLFLAG) $(BOOSTFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
 
-.PHONY: all clean vector valarray openmp target opencl taskloop tbb pstl rangefor kokkos raja cuda
+.PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl rangefor kokkos raja cuda
 
 EXTRA=
 ifeq ($(shell uname -s),Darwin)
@@ -56,36 +58,61 @@ else
   EXTRA += target
 endif
 
-all: vector valarray openmp taskloop tbb pstl rangefor raja kokkos opencl $(EXTRA)
+all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl $(EXTRA)
 
-vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector transpose-vector-async transpose-vector-thread
+p2p: p2p-vector p2p-doacross-vector-openmp p2p-innerloop-vector-openmp p2p-tasks-openmp p2p-openmp-target \
+     p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl
 
-valarray: transpose-valarray
+stencil: stencil-valarray stencil-vector stencil-vector-async stencil-vector-openmp stencil-openmp-target \
+	 stencil-vector-taskloop stencil-vector-stl stencil-vector-pstl stencil-vector-raja \
+	 stencil-vector-rangefor stencil-vector-tbb stencil-vector-thread stencil-kokkos stencil-opencl
 
-openmp: p2p-innerloop-vector-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp
+transpose: transpose-valarray transpose-vector transpose-vector-async transpose-vector-openmp transpose-openmp-target \
+	   transpose-vector-taskloop transpose-vector-stl transpose-vector-pstl transpose-vector-raja \
+	   transpose-vector-rangefor transpose-vector-tbb transpose-vector-thread transpose-kokkos transpose-opencl
 
-target: stencil-openmp-target transpose-openmp-target
+nstream: nstream-valarray nstream-vector nstream-vector-openmp nstream-openmp-target \
+	 nstream-vector-taskloop nstream-vector-stl nstream-vector-pstl nstream-vector-raja \
+	 nstream-vector-rangefor nstream-vector-tbb nstream-kokkos nstream-opencl
 
-taskloop: stencil-vector-taskloop transpose-vector-taskloop
+dgemm: dgemm-vector dgemm-cblas
 
-opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl
+vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector sparse-vector dgemm-vector \
+	transpose-vector-async transpose-vector-thread
 
-tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb
+valarray: transpose-valarray nstream-valarray
 
-pstl: stencil-vector-pstl transpose-vector-pstl
+openmp: p2p-innerloop-vector-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp nstream-vector-openmp
 
-rangefor: stencil-vector-rangefor transpose-vector-rangefor
+target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 
-kokkos: stencil-kokkos transpose-kokkos
+taskloop: stencil-vector-taskloop transpose-vector-taskloop nstream-vector-taskloop
 
-raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja
+opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
-cuda: transpose-cuda transpose-cublas
+tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
+
+stl: stencil-vector-stl transpose-vector-stl nstream-vector-stl
+
+pstl: stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
+
+rangefor: stencil-vector-rangefor transpose-vector-rangefor nstream-vector-rangefor
+
+kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
+
+raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja
+
+cuda: transpose-cuda nstream-cuda
+
+cublas: transpose-cublas nstream-cublas
 
 p2p-innerloop-vector: p2p-innerloop-vector-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
 transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
+	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+
+nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
@@ -103,6 +130,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 %-tbb: %-tbb.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
 
+%-stl: %-pstl.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(STLFLAGS) -o $@
+
 %-pstl: %-pstl.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(PSTLFLAGS) -o $@
 
@@ -119,7 +149,10 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas -lcblas -o $@
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas -o $@
+
+%-cblas: %-cblas.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(CBLASFLAGS) -o $@
 
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -144,11 +177,14 @@ clean:
 	-rm -f *-taskloop
 	-rm -f *-opencl
 	-rm -f *-tbb
+	-rm -f *-stl
 	-rm -f *-pstl
 	-rm -f *-rangefor
 	-rm -f *-raja
 	-rm -f *-kokkos
 	-rm -f *-cuda
+	-rm -f *-cublas
+	-rm -f *-cblas
 	-rm -f transpose-vector-async transpose-vector-thread
 
 cleancl:

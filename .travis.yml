@@ -1,5 +1,7 @@
 sudo: false
 language: cpp
+python:
+  - "3.5"
 env:
   matrix:
   - PRK_TARGET=allserial
@@ -46,6 +48,28 @@ compiler:
 - clang
 matrix:
   exclude:
+  # There is nothing inherently wrong with GCC@OSX but Travis CI MacOS throughput is low, so focus on Clang@OSX.
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allserial
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allc1z
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allcxx
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allshmem
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allampi
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allcharm++
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allmpi
   # Clang does not support OpenMP yet and not willing to build from source.  Save this for Mac where we can Brew it.
   - os: linux
     compiler: clang
@@ -124,6 +148,8 @@ matrix:
     env: PRK_TARGET=allmpi
   - os: linux
     env: PRK_TARGET=allcharm++
+  # Sadly, Python is XFAIL because Travis CI's Python 3.4.3 can't find cannot process_time.
+  - env: PRK_TARGET=allpython
 addons:
   apt:
     sources:
@@ -135,12 +161,10 @@ addons:
     - boost-latest
     packages:
     - python-numpy
-    - gcc-5
-    - g++-5
-    - gfortran-5
-    - gcc-6
-    - g++-6
-    - gfortran-6
+    - python-scipy
+    - gcc-7
+    - g++-7
+    - gfortran-7
     # Required by GUPC
     - libnuma-dev
     # This should provide OpenMP
@@ -151,26 +175,26 @@ addons:
     # C++ code needs range headers
     - libboost-all-dev
 before_install:
-- pwd
-- export TRAVIS_HOME=$PWD
-- export TRAVIS_ROOT=$TRAVIS_HOME/PRK-deps
-- mkdir -p $TRAVIS_ROOT
-- sh ./travis/install-intel.sh $TRAVIS_ROOT $PRK_TARGET
-- source ~/.bashrc
+  - pwd
+  - export TRAVIS_HOME=$PWD
+  - export TRAVIS_ROOT=$TRAVIS_HOME/PRK-deps
+  - mkdir -p $TRAVIS_ROOT
+  #- sh ./travis/install-intel.sh $TRAVIS_ROOT $PRK_TARGET
+  #- source ~/.bashrc
 install:
-- export PATH=$TRAVIS_ROOT/bin:$PATH
-- export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
-- export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
-- sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
+  - export PATH=$TRAVIS_ROOT/bin:$PATH
+  - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
+  - export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
+  - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
 before_script:
-- pwd
+  - pwd
 script:
-- sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
+  - sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
 after_failure:
-- echo "Sad panda"
-- find . -name config.log -exec grep -L "configure: exit 0" {} ";" | xargs cat
-#- find . -name CMakeOutput.log -exec cat {} ";"
-#- find . -name CMakeError.log -exec cat {} ";"
+  - echo "Sad panda"
+  - find . -name config.log -exec grep -L "configure: exit 0" {} ";" | xargs cat
+  #- find . -name CMakeOutput.log -exec cat {} ";"
+  #- find . -name CMakeError.log -exec cat {} ";"
 notifications:
   email:
     recipients:

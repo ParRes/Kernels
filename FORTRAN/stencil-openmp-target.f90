@@ -320,15 +320,14 @@ program main
 #endif
   !$omp end parallel
 
-  !$omp target data map(to:W, A) map(tofrom: B) map(from:stencil_time)
+  !$omp target data map(to:W, A) map(tofrom: B) map(from:stencil_time) &
+  !$omp& map(to:iterations,n)
 
-  t0 = 0.0d0
+  t0 = 0
 
   do k=0,iterations
 
-    if (k.eq.1) then
-        t0 = omp_get_wtime()
-    endif
+    if (k.eq.1) t0 = omp_get_wtime()
 
     ! DEVICE
     ! Apply the stencil operator

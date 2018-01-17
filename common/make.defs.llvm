@@ -4,7 +4,7 @@
 #
 # Base compilers and language options
 #
-LLVM_ROOT=/usr/local/Cellar/llvm/5.0.0/
+LLVM_ROOT=/usr/local/Cellar/llvm/5.0.0
 LLVM_PATH=${LLVM_ROOT}/bin/
 #LLVM_PATH=/opt/llvm/HEAD/bin/
 # C99 is required in some implementations.
@@ -56,17 +56,21 @@ OPENCLFLAG=-framework OpenCL
 #
 # TBB
 #
-TBBDIR=/usr/local/Cellar/tbb/2017_U7
+TBBDIR=/usr/local/Cellar/tbb/2018_U1
 TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.64.0_1/include
-PSTLFLAG=
-KOKKOSDIR=/opt/kokkos/clang/openmp
+BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
+PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include
+KOKKOSDIR=/opt/kokkos/clang
 KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
 RAJADIR=/opt/raja/clang
 RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+#
+# CBLAS for C++ DGEMM
+#
+CBLASFLAG=-DACCELERATE -framework Accelerate
 #
 # CUDA flags
 #
