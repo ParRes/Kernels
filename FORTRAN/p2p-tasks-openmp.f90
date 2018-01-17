@@ -54,15 +54,6 @@
 !            Converted to Fortran by Jeff Hammond, January 2016.
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 subroutine sweep_tile(startm,endm,startn,endn,m,n,grid)
   use iso_fortran_env
   implicit none
@@ -82,7 +73,6 @@ program main
   use iso_fortran_env
   use omp_lib
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -171,20 +161,17 @@ program main
 
   !$omp parallel default(none)                                  &
   !$omp&  shared(grid,t0,t1,iterations,pipeline_time)           &
-  !$omp&  firstprivate(m,n,mc,nc,ic,jc,lic,ljc)                 &
-  !$omp&  private(i,j,k,corner_val)
+  !$omp&  firstprivate(m,n,mc,nc,lic,ljc)                       &
+  !$omp&  private(i,j,ic,jc,k,corner_val)
   !$omp master
 
   ! TODO: switch this to taskloop once support more widely available
   !       (GCC-6 does not have it, which breaks Travis builds)
   do j=1,n
-    !$omp task firstprivate(j,n) private(i,m) shared(grid)
     do i=1,m
       grid(i,j) = 0.0d0
     enddo
-    !$omp end task
   enddo
-  !$omp taskwait
 
   do j=1,n
     grid(1,j) = real(j-1,REAL64)
@@ -195,7 +182,7 @@ program main
 
   do k=0,iterations
 
-    if (k.eq.1) t0 = prk_get_wtime()
+    if (k.eq.1) t0 = omp_get_wtime()
 
     do ic=2,m,mc
       do jc=2,n,nc
@@ -215,7 +202,7 @@ program main
 
   !$omp taskwait
 
-  t1 = prk_get_wtime()
+  t1 = omp_get_wtime()
   pipeline_time = t1 - t0
 
   !$omp end master

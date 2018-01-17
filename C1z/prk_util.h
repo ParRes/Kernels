@@ -113,7 +113,7 @@ int __cilkrts_get_nworkers(void);
 #endif
 
 #if defined(__INTEL_COMPILER)
-# define PRAGMA_SIMD PRAGMA(simd)
+# define PRAGMA_SIMD PRAGMA(vector)
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
 # define PRAGMA_SIMD PRAGMA(GCC ivdep)
 #elif defined(__clang__)
@@ -122,9 +122,17 @@ int __cilkrts_get_nworkers(void);
 # define PRAGMA_SIMD
 #endif
 
+#ifdef __linux__
+#include <features.h>
+#endif
+
+// If we are on Linux and we are not using GLIBC, attempt to
+// use C11 threads, because this means we are using MUSL.
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
    !defined(__STDC_NO_THREADS__) && \
-   defined(USE_C11_THREADS)
+   ( defined(USE_C11_THREADS) || \
+     ( defined(__linux__) && !defined(__GNU_LIBRARY__) && !defined(__GLIBC__) ) \
+   )
 # define HAVE_C11_THREADS
 # include <threads.h>
 #else
@@ -173,8 +181,12 @@ static inline double prk_wtime(void)
   return t;
 }
 
-// GCC claims to be C11 without knowing if glibc is compliant...
-#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+// GCC claims to be C11 without knowing if glibc is compliant.
+// glibc added support for timespec_get in version 2.16.
+// (https://gcc.gnu.org/wiki/C11Status)
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
+      defined(__GLIBC__) && defined(__GLIBC_MINOR__) && \
+      (((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 16)) || (__GLIBC__ > 2))
 
 static inline double prk_wtime(void)
 {

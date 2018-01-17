@@ -1,5 +1,3 @@
-#define RESTRICT __restrict__
-
 void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out, const int gs) {
     OMP_TASKLOOP_COLLAPSE(2, firstprivate(n) shared(in,out) grainsize(gs) )
     for (auto it=1; it<n-1; it+=t) {

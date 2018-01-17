@@ -106,11 +106,11 @@ int main(int argc, char * argv[])
   double * restrict B = prk_malloc(bytes);
 
   // HOST
-  // initialize the input and output arrays
   OMP_PARALLEL()
   {
     OMP_FOR()
     for (int i=0;i<order; i++) {
+      OMP_SIMD
       for (int j=0;j<order;j++) {
         A[i*order+j] = (double)(i*order+j);
         B[i*order+j] = 0.0;
@@ -123,7 +123,7 @@ int main(int argc, char * argv[])
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) trans_time = prk_wtime();
+      if (iter==1) trans_time = omp_get_wtime();
 
       // transpose the  matrix
       if (tile_size < order) {
@@ -148,7 +148,7 @@ int main(int argc, char * argv[])
         }
       }
     }
-    trans_time = prk_wtime() - trans_time;
+    trans_time = omp_get_wtime() - trans_time;
   }
 
   //////////////////////////////////////////////////////////////////////

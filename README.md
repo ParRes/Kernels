@@ -1,71 +1,148 @@
-# Quality Control
-
-[![Build Status](https://travis-ci.org/ParRes/Kernels.svg)](https://travis-ci.org/ParRes/Kernels)
-
-# License
-
-See COPYING for licensing information.
+[![license](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/ParRes/Kernels/blob/master/COPYING)
+[![Travis-CI Status](https://travis-ci.org/ParRes/Kernels.svg)](https://travis-ci.org/ParRes/Kernels)
+[![GitHub contributors](https://img.shields.io/github/contributors/ParRes/Kernels.svg)]()
+[![GitHub language count](https://img.shields.io/github/languages/count/ParRes/Kernels.svg)]()
+[![GitHub top language](https://img.shields.io/github/languages/top/ParRes/Kernels.svg)]()
 
 # Overview
 
 This suite contains a number of kernel operations, called Parallel
-Research Kernels, plus a simple build environment intended for Linux. 
+Research Kernels, plus a simple build system intended for a Linux-compatible environment.
+Most of the code relies on open standard programming models and thus can be
+executed on many computing systems.
 
-These programs must not be used as benchmarks.  They are operations to 
+These programs should not be used as benchmarks.  They are operations to 
 explore features of a hardware platform, but they do not define 
 fixed problems that can be used to rank systems.  Furthermore 
 they have not been optimimzed for the features of any particular system.
 
-### Note on stream
-
-Note that while our `nstream` operations are based on the well
-known STREAM benchmark by John D. McCalpin, we modified the source 
-code and do not follow the run-rules associated with this benchmark.
-Hence, according to the rules defined in the STREAM license (see 
-clause 3b), you must never report the results of our nstream 
-operations as official "STREAM Benchmark" results. The results must 
-be clearly labled whenever they are published.  Examples of proper 
-labelling include: 
-
-      "tuned STREAM benchmark results" 
-      "based on a variant of the STREAM benchmark code" 
-
-Other comparable, clear, and reasonable labelling is acceptable.
-
-
 # Build Instructions
 
 To build the codes the user needs to make certain changes by editing text
-files. Assuming the source tree is untarred in directory HOME, the
-following file needs to be copied to `HOME/common/make.defs` and edited.
+files. Assuming the source tree is untarred in directory `$PRK`, the
+following file needs to be copied to `$PRK/common/make.defs` and edited.
 
-`HOME/common/make.defs.in` -- This file specifies the names of the C
-compiler (CC), and of the MPI (Message Passing Interface) compiler MPICC
+`$PRK/common/make.defs.in` -- This file specifies the names of the C
+compiler (`CC`), and of the MPI (Message Passing Interface) compiler `MPICC`
 or compile script. If MPI is not going to be used, the user can ignore
-the value of MPICC. The compilers should already be in your path. That
+the value of `MPICC`. The compilers should already be in your path. That
 is, if you define `CC=icc`, then typing `which icc` should show a
 valid path where that compiler is installed.
 Special instructions for building and running codes using Charm++, Grappa, 
 OpenSHMEM, or Fine-Grain MPI are in `README.special`.
+
+We provide examples of working examples for a number of programming environments
+
+| File (in `./common/`) | Environment |  
+|----------------------|-------------------------|  
+| `make.defs.cray`     | Cray compilers on Cray XC systems. |
+| `make.defs.cuda`     | GCC with the CUDA compiler (only used in C++/CUDA implementation). |
+| `make.defs.gcc`      | GCC compiler tool chain, which supports essentially all implementations. |
+| `make.defs.ibmbg`    | IBM Blue Gene/Q compiler toolchain (infrequently tested). |
+| `make.defs.intel`    | Intel compiler tool chain, which supports most implementations. |
+| `make.defs.llvm`     | LLVM compiler tool chain, which supports most implementations. |
+| `make.defs.musl`     | GCC compiler toolchain with MUSL as the C standard library, which is required to use C11 threads. |
+| `make.defs.pgi`      | PGI compiler toolchain (infrequently tested). |
+
+Some of the C++ implementations require you to install Boost, RAJA, KOKKOS, Parallel STL, respectively,
+and then modify `make.defs` appropriately.  Please see the documentation in the C++ subdirectory.
+
+Because we test essentially everything in Travis CI, you can refer to the `$PRK/travis` subdirectory
+for install scripts that can be readily modified to install any of the dependencies in your local
+environment.
+
+# Supported Programming Models
 
 The suite of kernels currently has complete parallel implementations in 
 [OpenMP](http://openmp.org/), 
 [MPI](http://www.mpi-forum.org/), Adaptive MPI and 
 [Fine-Grain MPI](http://www.cs.ubc.ca/~humaira/fgmpi.html). 
 There is also a SERIAL reference implementation. 
+
 The suite is currently being extended to include 
 [Charm++](http://charm.cs.illinois.edu/research/charm),
 MPI+OpenMP, 
 [OpenSHMEM](http://openshmem.org/), UPC, and
 [Grappa](http://grappa.io/), 
-Fortran with Co-Arrays,
+Fortran with coarrays,
 as well as three new variations of MPI: 
   1. MPI with one-sided communications (MPIRMA) 
   2. MPI with direct use of shared memory inside coherency domains (MPISHM)
   3. MPI with OpenMP inside coherency domains (MPIOPENMP)
 These extensions are not yet complete.
 
+More recently, we have implemented many single-node programming models in modern languages.
+
+## Modern C++
+
+y = yes
+
+i = in-progress, incomplete, or incorrect
+
+| Parallelism          | p2p | stencil | transpose | nstream | sparse | dgemm |
+|----------------------|-----|---------|-----------|---------|--------|-------|
+| None                 |  y  |    y    |     y     |    y    |    y   |   y   |
+| C++11 threads, async |     |         |     y     |         |        |       |
+| OpenMP               |  y  |    y    |     y     |    y    |        |       |
+| OpenMP tasks         |  y  |    y    |     y     |    y    |        |       |
+| OpenMP target        |  y  |    y    |     y     |    y    |        |       |
+| OpenCL 1.x           |  i  |    y    |     y     |    y    |        |       |
+| Parallel STL         |  y  |    y    |     y     |    y    |        |       |
+| TBB                  |  i  |    y    |     y     |    y    |        |       |
+| Kokkos               |  y  |    y    |     y     |    y    |        |       |
+| RAJA                 |  y  |    y    |     y     |    y    |        |       |
+| CUDA                 |     |         |     y     |         |        |       |
+| CUBLAS               |     |         |     y     |         |        |       |
+| CBLAS                |     |         |           |         |        |   y   |
+
+* [TBB](https://www.threadingbuildingblocks.org/)
+* [Kokkos](https://github.com/kokkos/kokkos)
+* [RAJA](https://github.com/LLNL/RAJA)
+
+## Modern C
+
+| Parallelism          | p2p | stencil | transpose | nstream | sparse |
+|----------------------|-----|---------|-----------|---------|--------|
+| None                 |  y  |    y    |     y     |         |        |
+| C11 threads          |     |         |     y     |         |        |
+| OpenMP               |  y  |    y    |     y     |         |        |
+| OpenMP tasks         |  y  |    y    |     y     |         |        |
+| OpenMP target        |  y  |    y    |     y     |         |        |
+| Cilk                 |     |    y    |     y     |         |        |
+| ISPC                 |     |         |     y     |         |        |
+
+* [ISPC](https://ispc.github.io/)
+
+## Modern Fortran
+
+| Parallelism          | p2p | stencil | transpose | nstream | sparse | dgemm |
+|----------------------|-----|---------|-----------|---------|--------|-------|
+| None                 |  y  |    y    |     y     |    y    |        |   y   |
+| Intrinsics           |     |         |     y     |    y    |        |   y   |
+| coarrays             |  y  |    y    |     y     |         |        |       |
+| OpenMP               |  y  |    y    |     y     |    y    |        |   y   |
+| OpenMP tasks         |  y  |    y    |     y     |    y    |        |       |
+| OpenMP target        |  y  |    y    |     y     |    y    |        |       |
+| OpenACC              |     |    y    |     y     |    y    |        |       |
+
+By intrinsics, we mean the language built-in features, such as colon notation or the `TRANSPOSE` intrinsic.
+We use `DO CONCURRENT` in a few places.
+
+## Other languages
+
+x = externally supported (in the Chapel repo)
+
+| Parallelism          | p2p | stencil | transpose | nstream | sparse | dgemm |
+|----------------------|-----|---------|-----------|---------|--------|-------|
+| Python 3             |  y  |    y    |     y     |    y    |    y   |   y   |
+| Python 3 w/ Numpy    |  y  |    y    |     y     |    y    |    y   |   y   |
+| Julia                |  y  |    y    |     y     |         |        |       |
+| Octave (Matlab)      |  y  |    y    |     y     |         |        |       |
+| Chapel               |  x  |    x    |     x     |         |        |       |
+
 ## Global make
+
+Please run `make help` in the top directory for the latest information.
 
 To build all available kernels of a certain version, type in the root
 directory:
@@ -73,19 +150,22 @@ directory:
 | Command              | Effect |  
 |----------------------|-------------------------|  
 | `make all`           | builds all kernels. |  
+| `make allserial`     | builds all serial kernels. |  
 | `make allopenmp`     | builds all OpenMP kernels. |  
 | `make allmpi`        | builds all conventional two-sided MPI kernels. |  
 | `make allmpi1`       | builds all MPI kernels. |  
-| `make allfgmpi`      | builds all Fine-Grain MPI kernels. |  
+| `make allfgmpi`      | builds all Fine-Grain MPI kernels. | 
 | `make allampi`       | builds all Adaptive MPI kernels. |  
-| `make allserial`     | builds all serial kernels. |  
 | `make allmpiopenmp`  | builds all hybrid MPI+OpenMP kernels. |  
-| `make allmpirma`     | builds all MPI kernels with one-sided communications. |  
+| `make allmpirma`     | builds all MPI-3 kernels with one-sided communications. |  
+| `make allmpishm`     | builds all kernels with MPI-3 shared memory. | 
 | `make allshmem`      | builds all OpenSHMEM kernels. |  
-| `make allupc`        | builds all Unified Parallel C kernels. |  
-| `make allmpishm`     | builds all kernels with MPI3 shared memory. |  
+| `make allupc`        | builds all Unified Parallel C (UPC) kernels. |  
 | `make allcharm++`    | builds all Charm++ kernels. |  
 | `make allgrappa`     | builds all Grappa kernels. |  
+| `make allfortran`    | builds all Fortran kernels. |
+| `make allc1x`        | builds all C99/C11 kernels. |
+| `make allcxx`        | builds all C++11 kernels. |
 
 The global make process uses a single set of optimization flags for all
 kernels. For more control, the user should consider individual makes
@@ -146,3 +226,32 @@ To exercise all kernels, type
 ./scripts/small/runall
 ./scripts/wide/runall
 ```
+
+# Quality Control
+
+We have a rather massive test matrix running in Travis CI.
+Unfortunately, the Travis CI environment may vary with time and occasionally differs
+from what we are running locally, which makes debugging tricky.
+If the status of the project is not passing, please inspect the [details](https://travis-ci.org/ParRes/Kernels),
+because this may not be an indication of an issue with our project, but rather
+something in Travis CI.
+
+# License
+
+See [COPYING](https://github.com/ParRes/Kernels/blob/master/COPYING) for licensing information.
+
+## Note on stream
+
+Note that while our `nstream` operations are based on the well
+known STREAM benchmark by John D. McCalpin, we modified the source 
+code and do not follow the run-rules associated with this benchmark.
+Hence, according to the rules defined in the STREAM license (see 
+clause 3b), you must never report the results of our nstream 
+operations as official "STREAM Benchmark" results. The results must 
+be clearly labled whenever they are published.  Examples of proper 
+labelling include: 
+
+      "tuned STREAM benchmark results" 
+      "based on a variant of the STREAM benchmark code" 
+
+Other comparable, clear, and reasonable labelling is acceptable.

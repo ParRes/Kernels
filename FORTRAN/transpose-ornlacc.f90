@@ -144,7 +144,6 @@ program main
 
   t0 = 0
 
-  ! Fill the original matrix, set transpose to known garbage value.
   if (tile_size.lt.order) then
     !$acc parallel loop gang ! collapse(2) leads to incorrect results
     do jt=1,order,tile_size
@@ -173,9 +172,7 @@ program main
   !$acc data pcopyin(A) pcopy(B)
   do k=0,iterations
 
-    if (k.eq.1) then
-      t0 = prk_get_wtime()
-    endif
+    if (k.eq.1) t0 = prk_get_wtime()
 
     ! Transpose the matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
@@ -206,9 +203,10 @@ program main
   enddo ! iterations
 
   t1 = prk_get_wtime()
-  trans_time = t1 - t0
 
   !$acc end data
+
+  trans_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.

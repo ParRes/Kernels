@@ -103,10 +103,9 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
   integer(kind=INT32) :: i, j, ii, jj, it, jt
   if (is_star) then
     if (.not.tiling) then
-      !$omp do
+      !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
       do j=r,n-r-1
         do i=r,n-r-1
-            ! do not use Intel Fortran unroll directive here (slows down)
             do jj=-r,r
               B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
             enddo
@@ -118,9 +117,9 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
             enddo
         enddo
       enddo
-      !$omp end do
+      !$omp end target teams distribute parallel do simd
     else ! tiling
-      !$omp do collapse(2)
+      !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -138,11 +137,11 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do
+      !$omp end target teams distribute parallel do simd
     endif ! tiling
   else ! grid
     if (.not.tiling) then
-      !$omp do
+      !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
       do j=r,n-r-1
         do i=r,n-r-1
           do jj=-r,r
@@ -152,9 +151,9 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do
+      !$omp end target teams distribute parallel do simd
     else ! tiling
-      !$omp do collapse(2)
+      !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -168,7 +167,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do
+      !$omp end target teams distribute parallel do simd
     endif ! tiling
   endif ! star
 end subroutine apply_stencil
@@ -205,7 +204,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a43)') 'Fortran OpenMP Stencil execution on 2D grid'
+  write(*,'(a43)') 'Fortran OpenMP TARGET Stencil execution on 2D grid'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -321,46 +320,35 @@ program main
 #endif
   !$omp end parallel
 
-  ! DEVICE
-  !$omp target map(to:W, A) map(tofrom: B) map(from:stencil_time)
-  !$omp parallel default(none) &
-  !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size,is_star)   &
-  !$omp&  shared(stencil_time) private(i,j,k)
+  !$omp target data map(to:W, A) map(tofrom: B) map(from:stencil_time) &
+  !$omp& map(to:iterations,n)
 
-  t0 = 0.0d0
+  t0 = 0
 
   do k=0,iterations
 
-    ! start timer after a warmup iteration
-    if (k.eq.1) then
-        !$omp barrier
-        !$omp master
-        t0 = omp_get_wtime()
-        !$omp end master
-    endif
+    if (k.eq.1) t0 = omp_get_wtime()
 
+    ! DEVICE
     ! Apply the stencil operator
     call apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
 
+    ! DEVICE
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp do
+    !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.d0
       enddo
     enddo
-    !$omp end do
+    !$omp end target teams distribute parallel do simd
 
   enddo ! iterations
 
-  !$omp barrier
-  !$omp master
   t1 = omp_get_wtime()
   stencil_time = t1 - t0
-  !$omp end master
 
-  !$omp end parallel
-  !$omp end target
+  !$omp end target data
 
   ! HOST
   ! compute L1 norm in parallel

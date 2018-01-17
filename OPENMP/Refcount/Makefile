@@ -45,10 +45,6 @@ ifndef LOCK
 endif
 #description: default counter update is protected with a lock
 
-ifndef LOCK_HINT
-  LOCK_HINT=0
-endif
-
 ifndef INTEGER
   INTEGER=0
 endif
@@ -76,16 +72,14 @@ DEPENDENTFLAG=-DDEPENDENT=$(DEPENDENT)
 INTEGERFLAG  =-DINTEGER=$(INTEGER)
 CONTENDEDFLAG=-DCONTENDED=$(CONTENDED)
 LOCKFLAG     =-DLOCK=$(LOCK)
-LOCKHINTFLAG =-DLOCK_HINT=$(LOCK_HINT)
 STREAMFLAG   =-DSTREAM=$(STREAM)
 VERBOSEFLAG  =-DVERBOSE=$(VERBOSE)
-NTHREADFLAG  = -DMAXTHREADS=$(MAXTHREADS)
+NTHREADFLAG  =-DMAXTHREADS=$(MAXTHREADS)
 
 OPTIONSSTRING="Make options:\n\
 OPTION         MEANING                                    DEFAULT\n\
 CONTENDED=0/1  uncontended/contended counters               [1]  \n\
 LOCK=0/1/2     no locks/atomics/OpenMP locks                [2]  \n\
-LOCK_HINT=0/1  do not/use Intel lock hints                  [0]  \n\
 INTEGER=0/1    counter data type integer/floating point     [1]  \n\
 DEPENDENT=0/1  independent/intertwined counter pair updates [0]  \n\
 STREAM=0/1     disallow/allow independent thread work       [1]  \n\

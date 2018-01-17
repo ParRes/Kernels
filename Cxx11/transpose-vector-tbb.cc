@@ -60,7 +60,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11/TBB Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -78,13 +78,15 @@ int main(int argc, char * argv[])
       }
 
       // order of a the matrix
-      order = std::atol(argv[2]);
+      order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
+      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        throw "ERROR: matrix dimension too large - overflow risk";
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atol(argv[3]) : 32;
+      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
   }
@@ -104,15 +106,15 @@ int main(int argc, char * argv[])
   std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
+
+  auto trans_time = 0.0;
 
   std::vector<double> A;
   std::vector<double> B;
   A.resize(order*order);
   B.resize(order*order);
-
-  auto trans_time = 0.0;
 
   tbb::blocked_range2d<int> range(0, order, tile_size, 0, order, tile_size);
   tbb::parallel_for( range, [&](decltype(range)& r) {
