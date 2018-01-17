@@ -173,7 +173,8 @@ program main
   enddo
   !$omp end parallel do simd
 
-  !$omp target data map(tofrom: A) map(to: B,C) map(from:nstream_time)
+  !$omp target data map(tofrom: A) map(to: B,C) map(from:nstream_time) &
+  !$omp& map(to:iterations,length)
 
   do k=0,iterations
 
@@ -188,10 +189,9 @@ program main
   enddo ! iterations
 
   t1 = omp_get_wtime()
+  nstream_time = t1 - t0
 
   !$omp end target data
-
-  nstream_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.

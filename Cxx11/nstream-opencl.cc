@@ -123,7 +123,6 @@ void run(cl::Context context, int iterations, size_t length)
   T ar(0);
   T br(2);
   T cr(2);
-  T ref(0);
   for (auto i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
@@ -131,7 +130,7 @@ void run(cl::Context context, int iterations, size_t length)
   ar *= length;
 
   double asum(0);
-  for (auto i=0; i<length; i++) {
+  for (size_t i=0; i<length; i++) {
       asum += std::fabs(h_a[i]);
   }
 
@@ -159,8 +158,7 @@ int main(int argc, char* argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
-  size_t length;
+  int iterations, offset, length;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length> [<offset>]";
@@ -171,7 +169,7 @@ int main(int argc, char* argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atol(argv[2]);
+      length = std::atoi(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }

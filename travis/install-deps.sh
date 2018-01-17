@@ -12,7 +12,14 @@ fi
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 
-MPI_IMPL=mpich
+case ${TRAVIS_OS_NAME} in
+    osx)
+        MPI_IMPL=openmpi
+        ;;
+    linux)
+        MPI_IMPL=mpich
+        ;;
+esac
 
 echo "PWD=$PWD"
 
@@ -67,7 +74,21 @@ case "$PRK_TARGET" in
         echo "Fortran"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
             brew update || true
-            brew install gcc || brew upgrade gcc || true
+            brew upgrade gcc || brew install gcc || true
+            #
+            # Workaround Homebrew issues in Travis CI...
+            #
+            #==> Installing gcc
+            #==> Downloading https://homebrew.bintray.com/bottles/gcc-7.2.0.sierra.bottle.tar.gz
+            #==> Pouring gcc-7.2.0.sierra.bottle.tar.gz
+            #Error: The `brew link` step did not complete successfully
+            #The formula built, but is not symlinked into /usr/local
+            #Could not symlink include/c++
+            #Target /usr/local/include/c++
+            #already exists. You may want to remove it:
+            #  rm '/usr/local/include/c++'
+            brew link --overwrite --dry-run gcc
+            brew link --overwrite gcc || true
         fi
         if [ "${CC}" = "gcc" ] ; then
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT

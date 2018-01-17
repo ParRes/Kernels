@@ -31,15 +31,24 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
             export PATH=/usr/bin:$PATH
         fi
-        which python
-        python --version
+        which python3 || which python || true
+        python3 --version || python --version || true
         export PRK_TARGET_PATH=PYTHON
-        python $PRK_TARGET_PATH/p2p.py             10 100 100
-        python $PRK_TARGET_PATH/p2p-numpy.py       10 1024 1024
-        python $PRK_TARGET_PATH/stencil.py         10 100
-        python $PRK_TARGET_PATH/stencil-numpy.py   10 1000
-        python $PRK_TARGET_PATH/transpose.py       10 100
-        python $PRK_TARGET_PATH/transpose-numpy.py 10 1024
+        export PRK_PYTHON=python
+        # Native
+        $PRK_PYTHON $PRK_TARGET_PATH/p2p.py             10 100 100
+        $PRK_PYTHON $PRK_TARGET_PATH/stencil.py         10 100
+        $PRK_PYTHON $PRK_TARGET_PATH/transpose.py       10 100
+        $PRK_PYTHON $PRK_TARGET_PATH/nstream.py         10 100000
+        $PRK_PYTHON $PRK_TARGET_PATH/sparse.py          10 10 5
+        $PRK_PYTHON $PRK_TARGET_PATH/dgemm.py           10 100
+        # Numpy
+        $PRK_PYTHON $PRK_TARGET_PATH/p2p-numpy.py       10 1024 1024
+        $PRK_PYTHON $PRK_TARGET_PATH/stencil-numpy.py   10 1000
+        $PRK_PYTHON $PRK_TARGET_PATH/transpose-numpy.py 10 1024
+        $PRK_PYTHON $PRK_TARGET_PATH/nstream-numpy.py   10 16777216
+        $PRK_PYTHON $PRK_TARGET_PATH/sparse-numpy.py    10 10 5
+        $PRK_PYTHON $PRK_TARGET_PATH/dgemm-numpy.py     10 400
         ;;
     alloctave)
         echo "Octave"
@@ -313,19 +322,30 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/nstream-valarray   10 16777216 32
 
         # C++11 without external parallelism
-        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector
+        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector \
+                                 dgemm-vector sparse-vector
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024 100 100
         $PRK_TARGET_PATH/p2p-innerloop-vector    10 1024
         $PRK_TARGET_PATH/stencil-vector          10 1000
         $PRK_TARGET_PATH/transpose-vector        10 1024 32
         $PRK_TARGET_PATH/nstream-vector          10 16777216 32
+        $PRK_TARGET_PATH/dgemm-vector            10 400 400 # untiled
+        $PRK_TARGET_PATH/dgemm-vector            10 400 32
+        $PRK_TARGET_PATH/sparse-vector           10 10 5
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
                 $PRK_TARGET_PATH/stencil-vector 10 200 20 $s $r
             done
         done
+
+        # C++11 with CBLAS
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            echo "CBLASFLAG=-DACCELERATE -framework Accelerate" >> common/make.defs
+            make -C $PRK_TARGET_PATH dgemm-cblas
+            $PRK_TARGET_PATH/dgemm-cblas        10 400
+        fi
 
         # C++11 native parallelism
         make -C $PRK_TARGET_PATH transpose-vector-thread transpose-vector-async
@@ -601,22 +621,28 @@ case "$PRK_TARGET" in
         esac
 
         # Serial
-        make -C ${PRK_TARGET_PATH} p2p p2p-innerloop stencil transpose
+        make -C ${PRK_TARGET_PATH} p2p p2p-innerloop stencil transpose nstream dgemm
         $PRK_TARGET_PATH/p2p               10 1024 1024
         $PRK_TARGET_PATH/p2p-innerloop     10 1024
         $PRK_TARGET_PATH/stencil           10 1000
         $PRK_TARGET_PATH/transpose         10 1024 1
         $PRK_TARGET_PATH/transpose         10 1024 32
+        $PRK_TARGET_PATH/nstream           10 16777216
+        $PRK_TARGET_PATH/dgemm             10 400 400 # untiled
+        $PRK_TARGET_PATH/dgemm             10 400 32
 
         # Pretty
-        make -C ${PRK_TARGET_PATH} stencil-pretty transpose-pretty
+        make -C ${PRK_TARGET_PATH} stencil-pretty transpose-pretty nstream-pretty dgemm-pretty
         #$PRK_TARGET_PATH/p2p-pretty          10 1024 1024
         # pretty versions do not support tiling...
         $PRK_TARGET_PATH/stencil-pretty      10 1000
         $PRK_TARGET_PATH/transpose-pretty    10 1024
+        $PRK_TARGET_PATH/nstream-pretty      10 16777216
+        $PRK_TARGET_PATH/dgemm-pretty        10 400
 
         # OpenMP host
-        make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+        make -C ${PRK_TARGET_PATH} p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp \
+                                   nstream-openmp dgemm-openmp
         export OMP_NUM_THREADS=2
         $PRK_TARGET_PATH/p2p-tasks-openmp     10 1024 1024
         $PRK_TARGET_PATH/p2p-innerloop-openmp 10 1024
@@ -624,16 +650,20 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/stencil-openmp       10 1000
         $PRK_TARGET_PATH/transpose-openmp     10 1024 1
         $PRK_TARGET_PATH/transpose-openmp     10 1024 32
+        $PRK_TARGET_PATH/nstream-openmp       10 16777216
+        $PRK_TARGET_PATH/dgemm-openmp         10 400 400 # untiled
+        $PRK_TARGET_PATH/dgemm-openmp         10 400 32
 
         # Intel Mac does not support OpenMP target or coarrays
         if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
             # OpenMP target
-            make -C ${PRK_TARGET_PATH} stencil-openmp-target transpose-openmp-target
+            make -C ${PRK_TARGET_PATH} stencil-openmp-target transpose-openmp-target nstream-openmp-target
             export OMP_NUM_THREADS=2
             #$PRK_TARGET_PATH/p2p-openmp-target           10 1024 1024 # most compilers do not support doacross yet
             $PRK_TARGET_PATH/stencil-openmp-target       10 1000
             $PRK_TARGET_PATH/transpose-openmp-target     10 1024 1
             $PRK_TARGET_PATH/transpose-openmp-target     10 1024 32
+            $PRK_TARGET_PATH/nstream-openmp-target       10 16777216
 
             # Fortran coarrays
             make -C ${PRK_TARGET_PATH} coarray
@@ -710,13 +740,20 @@ case "$PRK_TARGET" in
             export PRK_MPICC="$MPI_ROOT/bin/mpicc -std=c99"
             export PRK_LAUNCHER=$MPI_ROOT/bin/mpirun
         fi
+        # We use Open-MPI on Mac now...
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            # see https://github.com/open-mpi/ompi/issues/2956
+            export PRK_OVERSUBSCRIBE="--oversubscribe"
+            export TMPDIR=/tmp
+        fi
+
         # Inline the Homebrew OpenMP stuff here so versions do not diverge.
         # Note that -cc= likely only works with MPICH.
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
-            GCC_VERSION=6
-            brew install gcc@$GCC_VERSION || brew upgrade gcc@$GCC_VERSION
-            export PRK_MPICC="${PRK_MPICC} -cc=/usr/local/opt/gcc@${GCC_VERSION}/bin/gcc-${GCC_VERSION}"
-        fi
+        #if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
+        #    GCC_VERSION=6
+        #    brew upgrade gcc@$GCC_VERSION || brew install gcc@$GCC_VERSION
+        #    export PRK_MPICC="${PRK_MPICC} -cc=/usr/local/opt/gcc@${GCC_VERSION}/bin/gcc-${GCC_VERSION}"
+        #fi
         #if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
         #    CLANG_VERSION=3.9
         #    brew install llvm@$CLANG_VERSION || brew upgrade llvm@$CLANG_VERSION
@@ -740,27 +777,27 @@ case "$PRK_TARGET" in
         echo "MPICC=$PRK_MPICC" >> common/make.defs
         echo "OPENMPFLAG=-fopenmp" >> common/make.defs
 
-
         echo "MPI-1"
         make allmpi1
         export PRK_TARGET_PATH=MPI1
         export PRK_MPI_PROCS=4
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Reduce/reduce       10 16777216
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Nstream/nstream     10 16777216 32
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Sparse/sparse       10 10 5
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/DGEMM/dgemm         10 1024 32 1
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Random/random       32 20
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_global/global 10 16384
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 2 GEOMETRIC 0.99
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 0 1 SINUSOIDAL
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 LINEAR 1.0 3.0
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 PATCH 0 200 100 200
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 FINE_GRAIN 2
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 HIGH_WATER
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 NO_TALK
+        export PRK_RUN="$PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-}"
+        $PRK_RUN $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
+        $PRK_RUN $PRK_TARGET_PATH/Stencil/stencil     10 1000
+        $PRK_RUN $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
+        $PRK_RUN $PRK_TARGET_PATH/Reduce/reduce       10 16777216
+        $PRK_RUN $PRK_TARGET_PATH/Nstream/nstream     10 16777216 32
+        $PRK_RUN $PRK_TARGET_PATH/Sparse/sparse       10 10 5
+        $PRK_RUN $PRK_TARGET_PATH/DGEMM/dgemm         10 1024 32 1
+        $PRK_RUN $PRK_TARGET_PATH/Random/random       32 20
+        $PRK_RUN $PRK_TARGET_PATH/Synch_global/global 10 16384
+        $PRK_RUN $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 2 GEOMETRIC 0.99
+        $PRK_RUN $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 0 1 SINUSOIDAL
+        $PRK_RUN $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 LINEAR 1.0 3.0
+        $PRK_RUN $PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 PATCH 0 200 100 200
+        $PRK_RUN $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 FINE_GRAIN 2
+        $PRK_RUN $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 HIGH_WATER
+        $PRK_RUN $PRK_TARGET_PATH/AMR/amr             10 1000 100 2 2 1 5 NO_TALK
 
         # MPI+OpenMP is just too much of a pain with Clang right now.
         if [ "${CC}" = "gcc" ] ; then
@@ -769,28 +806,31 @@ case "$PRK_TARGET" in
             export PRK_TARGET_PATH=MPIOPENMP
             export PRK_MPI_PROCS=2
             export OMP_NUM_THREADS=2
-            $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       $OMP_NUM_THREADS 10 1024 1024
-            $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     $OMP_NUM_THREADS 10 1000
-            $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose $OMP_NUM_THREADS 10 1024 32
-            $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Nstream/nstream     $OMP_NUM_THREADS 10 16777216 32
+            export PRK_RUN="$PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-}"
+            $PRK_RUN $PRK_TARGET_PATH/Synch_p2p/p2p       $OMP_NUM_THREADS 10 1024 1024
+            $PRK_RUN $PRK_TARGET_PATH/Stencil/stencil     $OMP_NUM_THREADS 10 1000
+            $PRK_RUN $PRK_TARGET_PATH/Transpose/transpose $OMP_NUM_THREADS 10 1024 32
+            $PRK_RUN $PRK_TARGET_PATH/Nstream/nstream     $OMP_NUM_THREADS 10 16777216 32
         fi
 
         echo "MPI-RMA"
         make allmpirma
         export PRK_TARGET_PATH=MPIRMA
         export PRK_MPI_PROCS=4
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
+        export PRK_RUN="$PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-}"
+        $PRK_RUN $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
+        $PRK_RUN $PRK_TARGET_PATH/Stencil/stencil     10 1000
+        $PRK_RUN $PRK_TARGET_PATH/Transpose/transpose 10 1024 32
 
         echo "MPI+MPI"
         make allmpishm
         export PRK_TARGET_PATH=MPISHM
         export PRK_MPI_PROCS=4
+        export PRK_RUN="$PRK_RUN -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-}"
         export PRK_MPISHM_RANKS=$(($PRK_MPI_PROCS/2))
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p                         10 1024 1024
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Stencil/stencil     $PRK_MPISHM_RANKS 10 1000
-        $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Transpose/transpose $PRK_MPISHM_RANKS 10 1024 32
+        $PRK_RUN $PRK_TARGET_PATH/Synch_p2p/p2p                         10 1024 1024
+        $PRK_RUN $PRK_TARGET_PATH/Stencil/stencil     $PRK_MPISHM_RANKS 10 1000
+        $PRK_RUN $PRK_TARGET_PATH/Transpose/transpose $PRK_MPISHM_RANKS 10 1024 32
         ;;
     allshmem)
         echo "SHMEM"

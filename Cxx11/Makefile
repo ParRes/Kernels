@@ -40,6 +40,7 @@ OPENCLFLAGS = $(OPENCLFLAG)
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
 ORNLACCFLAGS = $(ORNLACCFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
+CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
 BOOSTFLAGS = $(BOOSTFLAG)
 STLFLAGS = $(STLFLAG) $(BOOSTFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
@@ -74,7 +75,9 @@ nstream: nstream-valarray nstream-vector nstream-vector-openmp nstream-openmp-ta
 	 nstream-vector-taskloop nstream-vector-stl nstream-vector-pstl nstream-vector-raja \
 	 nstream-vector-rangefor nstream-vector-tbb nstream-kokkos nstream-opencl
 
-vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector \
+dgemm: dgemm-vector dgemm-cblas
+
+vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector sparse-vector dgemm-vector \
 	transpose-vector-async transpose-vector-thread
 
 valarray: transpose-valarray nstream-valarray
@@ -99,7 +102,9 @@ kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
 raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja
 
-cuda: transpose-cuda transpose-cublas nstream-vector-cuda
+cuda: transpose-cuda nstream-cuda
+
+cublas: transpose-cublas nstream-cublas
 
 p2p-innerloop-vector: p2p-innerloop-vector-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -144,7 +149,10 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas -lcblas -o $@
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas -o $@
+
+%-cblas: %-cblas.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(CBLASFLAGS) -o $@
 
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -175,6 +183,8 @@ clean:
 	-rm -f *-raja
 	-rm -f *-kokkos
 	-rm -f *-cuda
+	-rm -f *-cublas
+	-rm -f *-cblas
 	-rm -f transpose-vector-async transpose-vector-thread
 
 cleancl:

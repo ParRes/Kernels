@@ -40,7 +40,7 @@
 #include <cassert>
 
 // Test standard library _after_ standard headers have been included...
-#if (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
+#if !defined(__NVCC__) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
 # error You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
 #endif
 
@@ -63,6 +63,22 @@
 #include <atomic>
 #include <numeric>
 #include <algorithm>
+
+template<class I, class T>
+const T prk_reduce(I first, I last, T init) {
+#if (defined(__cplusplus) && (__cplusplus >= 201703L)) && !defined(__GNUC__)
+    return std::reduce(first, last, init);
+#elif (defined(__cplusplus) && (__cplusplus >= 201103L))
+    return std::accumulate(first, last, init);
+#else
+    // unreachable, but preserved as reference implementation
+    T r(0);
+    for (I i=first; i!=last; ++i) {
+        r += *i;
+    }
+    return r;
+#endif
+}
 
 // These headers are busted with NVCC and GCC 5.4.0
 // The <future> header is busted with Cray C++ 8.6.1.
@@ -187,6 +203,8 @@
 
 #ifdef USE_KOKKOS
 # include <Kokkos_Core.hpp>
+# include <Kokkos_Concepts.hpp>
+# include <Kokkos_MemoryTraits.hpp>
 #endif
 
 #ifdef USE_RAJA
@@ -210,6 +228,11 @@ namespace prk {
         double r = static_cast<double>(c)/static_cast<double>(d)*static_cast<double>(n);
         return r;
 #endif
+    }
+
+    template <class T1, class T2>
+    static inline auto divceil(T1 numerator, T2 denominator) -> decltype(numerator / denominator) {
+        return ( numerator / denominator + (numerator % denominator > 0) );
     }
 
 } // namespace prk
