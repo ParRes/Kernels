@@ -578,13 +578,13 @@ case "$PRK_TARGET" in
 
         # C++ w/ OCCA
         # OCCA sets  -Wl,-rpath=${OCCA_LIB}, which chokes Mac's ld.
-        if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-            echo "OCCADIR=${TRAVIS_ROOT}/occa" >> common/make.defs
-            export OCCA_CXX=${PRK_CXX}
-            make -C $PRK_TARGET_PATH transpose-occa nstream-occa
-            $PRK_TARGET_PATH/transpose-occa   10 1024 32
-            $PRK_TARGET_PATH/nstream-occa     10 16777216 32
-        fi
+        #if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+        #    echo "OCCADIR=${TRAVIS_ROOT}/occa" >> common/make.defs
+        #    export OCCA_CXX=${PRK_CXX}
+        #    make -C $PRK_TARGET_PATH transpose-occa nstream-occa
+        #    $PRK_TARGET_PATH/transpose-occa   10 1024 32
+        #    $PRK_TARGET_PATH/nstream-occa     10 16777216 32
+        #fi
         ;;
     allfortran)
         echo "Fortran"
