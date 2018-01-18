@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2017, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -47,8 +47,7 @@
 ///          The output consists of diagnostics to make sure the
 ///          transpose worked and timing statistics.
 ///
-/// HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-///          Converted to C++11 by Jeff Hammond, February 2016 and May 2017.
+///          Converted to C++11 by Jeff Hammond, January 2018.
 ///
 //////////////////////////////////////////////////////////////////////
 
@@ -57,10 +56,22 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP TARGET Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/OCCA Matrix transpose: B = A^T" << std::endl;
+
+  char* dc = std::getenv("OCCA_DEVICE");
+  if (dc==NULL) {
+      std::cout << "By default, OCCA executes in serial.\n";
+      std::cout << "Set OCCA_DEVICE as follows for parallel execution\n";
+      std::cout << " OCCA_DEVICE=\"mode = OpenMP\"\n";
+      std::cout << " OCCA_DEVICE=\"mode = OpenCL, platformID = 0, deviceID = 0\" (CPU)\n";
+      std::cout << " OCCA_DEVICE=\"mode = OpenCL, platformID = 1, deviceID = 0\" (GPU)\n";
+      std::cout << " OCCA_DEVICE=\"mode = CUDA', deviceID = 0\"\n";
+  }
+  std::string ds = (dc==NULL) ? "mode = Serial" : dc;
+  occa::device device(ds);
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -93,10 +104,10 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of threads     = " << omp_get_max_threads() << std::endl;
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Tile size             = " << tile_size << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
+  std::cout << "OCCA mode            = " << "\"" << ds << "\"" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -104,54 +115,38 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  double * RESTRICT A = new double[order*order];
-  double * RESTRICT B = new double[order*order];
-
-  // HOST
-  OMP_PARALLEL()
-  {
-    OMP_FOR()
-    for (auto i=0;i<order; i++) {
-      PRAGMA_SIMD
-      for (auto j=0;j<order;j++) {
-        A[i*order+j] = static_cast<double>(i*order+j);
-        B[i*order+j] = 0.0;
-      }
+  double * h_A = new double[order*order];
+  double * h_B = new double[order*order];
+  for (auto i=0;i<order; i++) {
+    for (auto j=0;j<order;j++) {
+      h_A[i*order+j] = static_cast<double>(i*order+j);
+      h_B[i*order+j] = 0.0;
     }
   }
 
-  // DEVICE
-  OMP_TARGET( data map(tofrom: A[0:order*order], B[0:order*order]) map(from:trans_time) )
+  occa::memory d_A = device.malloc(order * order * sizeof(double), h_A);
+  occa::memory d_B = device.malloc(order * order * sizeof(double), h_B);
+
+  d_A.copyFrom(h_A);
+  d_B.copyFrom(h_B);
+
+  occa::kernel transpose = device.buildKernel("transpose.okl", "transpose");
+
   {
     for (auto iter = 0; iter<=iterations; iter++) {
-
-      if (iter==1) trans_time = omp_get_wtime();
-
-      // transpose the  matrix
-      if (tile_size < order) {
-        OMP_TARGET( teams distribute parallel for simd collapse(2) )
-        for (auto it=0; it<order; it+=tile_size) {
-          for (auto jt=0; jt<order; jt+=tile_size) {
-            for (auto i=it; i<std::min(order,it+tile_size); i++) {
-              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
-                B[i*order+j] += A[j*order+i];
-                A[j*order+i] += 1.0;
-              }
-            }
-          }
-        }
-      } else {
-        OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
-        for (auto i=0;i<order; i++) {
-          for (auto j=0;j<order;j++) {
-            B[i*order+j] += A[j*order+i];
-            A[j*order+i] += 1.0;
-          }
-        }
-      }
+      if (iter==1) trans_time = prk::wtime();
+      transpose(order, d_A, d_B);
+      device.finish();
     }
-    trans_time = omp_get_wtime() - trans_time;
+    trans_time = prk::wtime() - trans_time;
   }
+
+  d_B.copyTo(h_B);
+
+  d_A.free();
+  d_B.free();
+  transpose.free();
+  device.free();
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results
@@ -159,15 +154,17 @@ int main(int argc, char * argv[])
 
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  OMP_PARALLEL_FOR_REDUCE( +:abserr )
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      abserr += std::fabs(h_B[ji] - reference);
     }
   }
+
+  delete[] h_A;
+  delete[] h_B;
 
 #ifdef VERBOSE
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
