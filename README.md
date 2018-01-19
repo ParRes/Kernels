@@ -91,8 +91,8 @@ i = in-progress, incomplete, or incorrect
 | TBB                  |  i  |    y    |     y     |    y    |        |       |
 | Kokkos               |  y  |    y    |     y     |    y    |        |       |
 | RAJA                 |  y  |    y    |     y     |    y    |        |       |
-| CUDA                 |     |         |     y     |         |        |       |
-| CUBLAS               |     |         |     y     |         |        |       |
+| CUDA                 |     |         |     y     |    y    |        |       |
+| CUBLAS               |     |         |     y     |    y    |        |       |
 | CBLAS                |     |         |           |         |        |   y   |
 
 * [TBB](https://www.threadingbuildingblocks.org/)
