@@ -322,7 +322,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/nstream-valarray   10 16777216 32
 
         # C++11 without external parallelism
-        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector dgemm-vector
+        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector \
+                                 dgemm-vector sparse-vector
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024 100 100
         $PRK_TARGET_PATH/p2p-innerloop-vector    10 1024
@@ -331,6 +332,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/nstream-vector          10 16777216 32
         $PRK_TARGET_PATH/dgemm-vector            10 400 400 # untiled
         $PRK_TARGET_PATH/dgemm-vector            10 400 32
+        $PRK_TARGET_PATH/sparse-vector           10 10 5
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
@@ -453,12 +455,12 @@ case "$PRK_TARGET" in
                 Linux)
                     ${CC} --version
                     export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb"
-                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
+                    echo "TBBFLAG=-DUSE_TBB ${TBBFLAG}" >> common/make.defs
                     export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
                     ;;
                 Darwin)
                     export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb"
-                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
+                    echo "TBBFLAG=-DUSE_TBB ${TBBFLAG}" >> common/make.defs
                     export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
                     ;;
             esac
@@ -573,6 +575,16 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil-kokkos 10 200 20 $s $r
             done
         done
+
+        # C++ w/ OCCA
+        # OCCA sets  -Wl,-rpath=${OCCA_LIB}, which chokes Mac's ld.
+        #if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+        #    echo "OCCADIR=${TRAVIS_ROOT}/occa" >> common/make.defs
+        #    export OCCA_CXX=${PRK_CXX}
+        #    make -C $PRK_TARGET_PATH transpose-occa nstream-occa
+        #    $PRK_TARGET_PATH/transpose-occa   10 1024 32
+        #    $PRK_TARGET_PATH/nstream-occa     10 16777216 32
+        #fi
         ;;
     allfortran)
         echo "Fortran"
