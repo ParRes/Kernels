@@ -109,8 +109,14 @@ int main(int argc, char * argv[])
   std::cout << "Block size            = " << block_size << std::endl;
   std::cout << "Tile size             = " << tile_size << std::endl;
 
+  if (num_futures > 300) {
+      std::cout << "These settings may lead to resource exhaustion.\n"
+                << "Please use a larger block size.\n";
+      return 1;
+  }
+
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
   std::vector<double> A;

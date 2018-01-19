@@ -89,6 +89,10 @@ int main(int argc, char * argv[])
         throw "ERROR: block size must be greater than 0";
       }
 
+      if (order / block_size > 16) {
+          throw "ERROR: this will create more than 256 threads";
+      }
+
       // default tile size for tiling of local transpose
       tile_size = (argc>4) ? std::atoi(argv[4]) : 32;
       // a negative tile size means no tiling of the local transpose
@@ -108,6 +112,12 @@ int main(int argc, char * argv[])
   std::cout << "Matrix order          = " << order << std::endl;
   std::cout << "Block size            = " << block_size << std::endl;
   std::cout << "Tile size             = " << tile_size << std::endl;
+
+  if (num_threads > 300) {
+      std::cout << "These settings may lead to resource exhaustion.\n"
+                << "Please use a larger block size.\n";
+      return 1;
+  }
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
