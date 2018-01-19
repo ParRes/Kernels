@@ -87,6 +87,7 @@ i = in-progress, incomplete, or incorrect
 | OpenMP tasks         |  y  |    y    |     y     |    y    |        |       |
 | OpenMP target        |  y  |    y    |     y     |    y    |        |       |
 | OpenCL 1.x           |  i  |    y    |     y     |    y    |        |       |
+| SYCL                 |     |    y    |     y     |    y    |        |       |
 | Parallel STL         |  y  |    y    |     y     |    y    |        |       |
 | TBB                  |  i  |    y    |     y     |    y    |        |       |
 | Kokkos               |  y  |    y    |     y     |    y    |        |       |
