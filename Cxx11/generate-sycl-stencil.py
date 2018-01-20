@@ -10,7 +10,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     src.write('           cl::sycl::buffer<double, 2> d_in,\n')
     src.write('           cl::sycl::buffer<double, 2> d_out) {\n')
     src.write('  q.submit([&](cl::sycl::handler& h) {\n')
-    src.write('    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);       \n')
+    src.write('    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);\n')
     src.write('    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);\n')
     src.write('    h.parallel_for<class '+pattern+str(radius)+'>(cl::sycl::range<2> {n-2*'+str(radius)+',n-2*'+str(radius)+'}, cl::sycl::id<2> {'+str(radius)+','+str(radius)+'},\n')
     src.write('                                [=] (cl::sycl::item<2> it) {\n')

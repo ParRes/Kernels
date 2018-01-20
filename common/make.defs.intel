@@ -41,8 +41,13 @@ OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 SYCLDIR=./triSYCL
-SYCLCXX=${CXX}
+SYCLCXX=${CXX} ${OPENMPFLAG}
 SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+# ProGTX
+# https://github.com/ProGTX/sycl-gtx
+SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
+SYCLCXX=${CXX} ${OPENMPFLAG}
+SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # OCCA
 #

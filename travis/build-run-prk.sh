@@ -585,6 +585,27 @@ case "$PRK_TARGET" in
         #    $PRK_TARGET_PATH/transpose-occa   10 1024 32
         #    $PRK_TARGET_PATH/nstream-occa     10 16777216 32
         #fi
+
+        # C++ w/ SYCL
+        echo "SYCLDIR=${TRAVIS_ROOT}/triSYCL" >> common/make.defs
+        if [ "${CC}" = "clang" ] ; then
+            # SYCL will compile without OpenMP
+            echo "SYCLCXX=${CXX}" >> common/make.defs
+        else
+            echo "SYCLCXX=${CXX} -fopenmp" >> common/make.defs
+        fi
+        echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include" >> common/make.defs
+        make -C $PRK_TARGET_PATH stencil-vector-sycl transpose-vector-sycl nstream-vector-sycl
+        $PRK_TARGET_PATH/stencil-vector-sycl     10 1000
+        $PRK_TARGET_PATH/transpose-vector-sycl   10 1024 32
+        $PRK_TARGET_PATH/nstream-vector-sycl     10 16777216 32
+        #echo "Test stencil code generator"
+        for s in star ; do # grid ; do # grid not supported yet
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-vector-sycl 10 200 20 $s $r
+            done
+        done
+
         ;;
     allfortran)
         echo "Fortran"
