@@ -64,16 +64,10 @@
 
 #include "prk_util.h"
 
-// See ParallelSTL.md for important information.
-
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-#if defined(USE_PSTL)
-  std::cout << "C++17 STREAM triad: A = B + scalar * C" << std::endl;
-#else
-  std::cout << "C++11 STL STREAM triad: A = B + scalar * C" << std::endl;
-#endif
+  std::cout << "C++11/SYCL STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -110,52 +104,59 @@ int main(int argc, char * argv[])
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
 
+  // SYCL device queue
+  cl::sycl::queue q;
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A;
-  std::vector<double> B;
-  std::vector<double> C;
-  A.resize(length);
-  B.resize(length);
-  C.resize(length);
+  std::vector<double> h_A;
+  std::vector<double> h_B;
+  std::vector<double> h_C;
+  h_A.resize(length);
+  h_B.resize(length);
+  h_C.resize(length);
 
   auto range = boost::irange(static_cast<size_t>(0), length);
 
-  double scalar(3);
+  const double scalar(3);
+
+  std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
+      h_A[i] = 0;
+      h_B[i] = 2;
+      h_C[i] = 2;
+  });
 
   {
-#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
-    std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int i) {
-#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
-                        && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
-    __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (size_t i) {
-#else
-    std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
-#endif
-        A[i] = 0;
-        B[i] = 2;
-        C[i] = 2;
-    });
+    // initialize device buffers from host buffers
+    cl::sycl::buffer<double> d_A { h_A.data(), h_A.size() };
+    cl::sycl::buffer<double> d_B { h_B.data(), h_B.size() };
+    cl::sycl::buffer<double> d_C { h_C.data(), h_C.size() };
 
     for (auto iter = 0; iter<=iterations; iter++) {
-
+   
       if (iter==1) nstream_time = prk::wtime();
+   
+      q.submit([&](cl::sycl::handler& h) {
 
-#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
-      std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int i) {
-#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
-                        && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
-      __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (size_t i) {
-#else
-      std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
-#endif
-          A[i] += B[i] + scalar * C[i];
+        // accessor methods
+        auto A = d_A.get_access<cl::sycl::access::mode::read_write>(h);
+        auto B = d_B.get_access<cl::sycl::access::mode::read>(h);
+        auto C = d_C.get_access<cl::sycl::access::mode::read>(h);
+
+        h.parallel_for<class nstream>(cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
+            A[i] += B[i] + scalar * C[i];
+        });
       });
+      q.wait();
     }
+
+    // Stop timer before buffer+accessor destructors fire,
+    // since that will move data, and we do not time that
+    // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
   }
 
@@ -174,7 +175,7 @@ int main(int argc, char * argv[])
 
   double asum(0);
   for (size_t i=0; i<length; i++) {
-      asum += std::fabs(A[i]);
+      asum += std::fabs(h_A[i]);
   }
 
   double epsilon(1.e-8);
