@@ -50,7 +50,8 @@ ifdef OCCADIR
 endif
 OCCAFLAGS = -DUSE_OCCA -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
-.PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl rangefor kokkos raja cuda
+.PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl \
+	rangefor kokkos raja cuda cublas sycl boost-compute
 
 EXTRA=
 ifeq ($(shell uname -s),Darwin)
@@ -61,7 +62,7 @@ else
   EXTRA += target
 endif
 
-all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl sycl occa $(EXTRA)
+all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl sycl occa boost-compute $(EXTRA)
 
 p2p: p2p-vector p2p-doacross-vector-openmp p2p-innerloop-vector-openmp p2p-tasks-openmp p2p-openmp-target \
      p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl
@@ -113,6 +114,10 @@ cublas: transpose-cublas nstream-cublas
 
 occa: transpose-occa nstream-occa
 
+boost-compute: nstream-vector-boost-compute
+# busted
+#nstream-valarray-boost-compute
+
 p2p-innerloop-vector: p2p-innerloop-vector-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
@@ -149,6 +154,9 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 
 %-rangefor: %-rangefor.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) -o $@
+
+%-boost-compute: %-boost-compute.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) $(OPENCLFLAGS) -o $@
 
 %-raja: %-raja.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
@@ -203,6 +211,7 @@ clean:
 	-rm -f *-cublas
 	-rm -f *-cblas
 	-rm -f *-occa
+	-rm -f *-boost-compute
 	-rm -f transpose-vector-async transpose-vector-thread
 
 cleancl:
