@@ -70,7 +70,7 @@ int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
 #if defined(USE_PSTL)
-  std::cout << "C++17 STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++17 Parallel STL STREAM triad: A = B + scalar * C" << std::endl;
 #else
   std::cout << "C++11 STL STREAM triad: A = B + scalar * C" << std::endl;
 #endif
