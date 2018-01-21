@@ -182,8 +182,7 @@ int main(int argc, char * argv[])
   const auto epsilon = 1.0e-8;
   const auto forder = static_cast<double>(order);
 #ifdef PRK_DEBUG
-  std::vector<double> D;
-  D.resize(order*order,0.0);
+  std::vector<double> D(order*order,0.0);;
   for (auto iter = 0; iter<=iterations; iter++) {
     prk_dgemm_loops(order, A, B, D);
   }
