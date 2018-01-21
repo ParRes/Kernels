@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2017, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -47,8 +47,7 @@
 ///          The output consists of diagnostics to make sure the
 ///          transpose worked and timing statistics.
 ///
-/// HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-///          Converted to C++11 by Jeff Hammond, February 2016 and May 2017.
+///          Converted to C++11 by Jeff Hammond, January 2018.
 ///
 //////////////////////////////////////////////////////////////////////
 
@@ -57,27 +56,37 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP TASKLOOP Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/OCCA Matrix transpose: B = A^T" << std::endl;
+
+  char* dc = std::getenv("OCCA_DEVICE");
+  if (dc==NULL) {
+      std::cout << "By default, OCCA executes in serial.\n";
+      std::cout << "Set OCCA_DEVICE as follows for parallel execution\n";
+      std::cout << " OCCA_DEVICE=\"mode = OpenMP\"\n";
+      std::cout << " OCCA_DEVICE=\"mode = OpenCL, platformID = 0, deviceID = 0\" (CPU)\n";
+      std::cout << " OCCA_DEVICE=\"mode = OpenCL, platformID = 1, deviceID = 0\" (GPU)\n";
+      std::cout << " OCCA_DEVICE=\"mode = CUDA', deviceID = 0\"\n";
+  }
+  std::string ds = (dc==NULL) ? "mode = Serial" : dc;
+  occa::device device(ds);
 
   //////////////////////////////////////////////////////////////////////
   // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, gs;
+  int iterations;
   int order;
   int tile_size;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [taskloop grainsize] [tile size]";
+        throw "Usage: <# iterations> <matrix order> [tile size]";
       }
 
-      // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
-      // order of a the matrix
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
@@ -89,93 +98,73 @@ int main(int argc, char * argv[])
       tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
-
-      // taskloop grainsize
-      gs = (argc > 4) ? std::atoi(argv[4]) : 32;
-      if (gs < 1 || gs > order) {
-        throw "ERROR: grainsize";
-      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
-#ifdef _OPENMP
-  std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
-  std::cout << "Taskloop grainsize   = " << gs << std::endl;
-#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
   std::cout << "Tile size            = " << tile_size << std::endl;
+  std::cout << "OCCA mode            = " << "\"" << ds << "\"" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> A(order*order);
-  std::vector<double> B(order*order);
-
   auto trans_time = 0.0;
 
-  OMP_PARALLEL()
-  OMP_MASTER
-  {
-    OMP_TASKLOOP( firstprivate(order) shared(A,B) grainsize(gs) )
-    for (auto i=0;i<order; i++) {
-      for (auto j=0;j<order;j++) {
-        A[i*order+j] = static_cast<double>(i*order+j);
-        B[i*order+j] = 0.0;
-      }
+  double * h_A = new double[order*order];
+  double * h_B = new double[order*order];
+  for (auto i=0;i<order; i++) {
+    for (auto j=0;j<order;j++) {
+      h_A[i*order+j] = static_cast<double>(i*order+j);
+      h_B[i*order+j] = 0.0;
     }
-    OMP_TASKWAIT
+  }
 
+  occa::memory d_A = device.malloc(order * order * sizeof(double), h_A);
+  occa::memory d_B = device.malloc(order * order * sizeof(double), h_B);
+
+  d_A.copyFrom(h_A);
+  d_B.copyFrom(h_B);
+
+  occa::kernel transpose = device.buildKernel("transpose.okl", "transpose");
+
+  {
     for (auto iter = 0; iter<=iterations; iter++) {
-
       if (iter==1) trans_time = prk::wtime();
-
-      // transpose the  matrix
-      if (tile_size < order) {
-        OMP_TASKLOOP_COLLAPSE(2, firstprivate(order) shared(A,B) grainsize(gs) )
-        for (auto it=0; it<order; it+=tile_size) {
-          for (auto jt=0; jt<order; jt+=tile_size) {
-            for (auto i=it; i<std::min(order,it+tile_size); i++) {
-              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
-                B[i*order+j] += A[j*order+i];
-                A[j*order+i] += 1.0;
-              }
-            }
-          }
-        }
-      } else {
-        OMP_TASKLOOP( firstprivate(order) shared(A,B) grainsize(gs) )
-        for (auto i=0;i<order; i++) {
-          for (auto j=0;j<order;j++) {
-            B[i*order+j] += A[j*order+i];
-            A[j*order+i] += 1.0;
-          }
-        }
-      }
-      OMP_TASKWAIT
+      transpose(order, d_A, d_B);
+      device.finish();
     }
     trans_time = prk::wtime() - trans_time;
   }
 
+  d_B.copyTo(h_B);
+
+  d_A.free();
+  d_B.free();
+  transpose.free();
+  device.free();
+
   //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
+  // Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  OMP_PARALLEL_FOR_REDUCE( +:abserr )
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      const size_t ij = i*order+j;
-      const size_t ji = j*order+i;
+      const int ij = i*order+j;
+      const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      abserr += std::fabs(h_B[ji] - reference);
     }
   }
+
+  delete[] h_A;
+  delete[] h_B;
 
 #ifdef VERBOSE
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
@@ -185,7 +174,7 @@ int main(int argc, char * argv[])
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(double);
+    auto bytes = order * order * sizeof(double);
     std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {

@@ -36,13 +36,25 @@ OFFLOADFLAG=-qopenmp-offload=host
 OPENCLDIR=/etc/alternatives/opencl-intel-tools
 OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
+# SYCL flags
+#
+# triSYCL
+# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+SYCLDIR=./triSYCL
+SYCLCXX=${CXX}
+SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+#
+# OCCA
+#
+OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
 # Cilk
 #
 CILKFLAG=-intel-extensions # default
 #
 # TBB
 #
-TBBFLAG=-tbb
+TBBFLAG=-DUSE_TBB -tbb
 #
 # Parallel STL, Boost, etc.
 #
