@@ -113,10 +113,8 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> A;
-  std::vector<double> B;
-  A.resize(order*order);
-  B.resize(order*order);
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order);
 
   auto trans_time = 0.0;
 

@@ -107,10 +107,8 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<T> h_in;
-  std::vector<T> h_out;
-  h_in.resize(n*n, (T)0);
-  h_out.resize(n*n, (T)0);
+  std::vector<T> h_in(n*n,  T(0));
+  std::vector<T> h_out(n*n, T(0));
 
   auto stencil_time = 0.0;
 

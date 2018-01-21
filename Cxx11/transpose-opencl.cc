@@ -78,10 +78,9 @@ void run(cl::Context context, int iterations, int order)
   //////////////////////////////////////////////////////////////////////
 
   const size_t nelems = (size_t)order * (size_t)order;
-  std::vector<T> h_a;
-  std::vector<T> h_b;
-  h_a.resize(nelems);
-  h_b.resize(nelems, (T)0);
+  std::vector<T> h_a(nelems);
+  std::vector<T> h_b(nelems, T(0));
+
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(h_a.begin(), h_a.end(), (T)0);
 

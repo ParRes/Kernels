@@ -88,12 +88,9 @@ void run(cl::Context context, int iterations, size_t length)
 
   auto nstream_time = 0.0;
 
-  std::vector<T> h_a;
-  std::vector<T> h_b;
-  std::vector<T> h_c;
-  h_a.resize(length, (T)0);
-  h_b.resize(length, (T)2);
-  h_c.resize(length, (T)2);
+  std::vector<T> h_a(length, T(0));
+  std::vector<T> h_b(length, T(2));
+  std::vector<T> h_c(length, T(2));
 
   // copy input from host to device
   cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);

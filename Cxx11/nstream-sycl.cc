@@ -113,12 +113,9 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> h_A;
-  std::vector<double> h_B;
-  std::vector<double> h_C;
-  h_A.resize(length);
-  h_B.resize(length);
-  h_C.resize(length);
+  std::vector<double> h_A(length);
+  std::vector<double> h_B(length);
+  std::vector<double> h_C(length);
 
   auto range = boost::irange(static_cast<size_t>(0), length);
 
@@ -137,9 +134,9 @@ int main(int argc, char * argv[])
     cl::sycl::buffer<double> d_C { h_C.data(), h_C.size() };
 
     for (auto iter = 0; iter<=iterations; iter++) {
-   
+
       if (iter==1) nstream_time = prk::wtime();
-   
+
       q.submit([&](cl::sycl::handler& h) {
 
         // accessor methods
