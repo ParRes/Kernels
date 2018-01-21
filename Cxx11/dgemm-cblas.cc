@@ -143,12 +143,9 @@ int main(int argc, char * argv[])
 
   double dgemm_time(0);
 
-  std::vector<double> A;
-  std::vector<double> B;
-  std::vector<double> C;
-  A.resize(order*order);
-  B.resize(order*order);
-  C.resize(order*order,0.0);
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order);
+  std::vector<double> C(order*order,0.0);
 #ifdef PRK_DEBUG
   const unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
   std::default_random_engine generator(seed);
