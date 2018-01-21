@@ -112,9 +112,7 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  // working set
-  std::vector<double> grid;
-  grid.resize(n*n,0.0);
+  std::vector<double> grid(n*n,0.0);
 
   // set boundary values (bottom and left side of grid)
   for (auto j=0; j<n; j++) {

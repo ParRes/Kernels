@@ -96,10 +96,8 @@ int main(int argc, char * argv[])
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> h_A;
-  std::vector<double> h_B;
-  h_A.resize(order*order);
-  h_B.resize(order*order,0.0);
+  std::vector<double> h_A(order*order);
+  std::vector<double> h_B(order*order,0.0);
 
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(h_A.begin(), h_A.end(), 0.0);

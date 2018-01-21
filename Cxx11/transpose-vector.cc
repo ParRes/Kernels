@@ -103,10 +103,9 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  std::vector<double> A;
-  std::vector<double> B;
-  A.resize(order*order);
-  B.resize(order*order,0.0);
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order,0.0);
+
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 

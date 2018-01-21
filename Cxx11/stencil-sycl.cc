@@ -200,14 +200,7 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
-  std::vector<double> h_out;
-  h_out.resize(n*n,0.0);
-
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
-      h_out[i*n+j] = 0.0;
-    }
-  }
+  std::vector<double> h_out(n*n,0.0);
 
   {
     // initialize device buffers from host buffers

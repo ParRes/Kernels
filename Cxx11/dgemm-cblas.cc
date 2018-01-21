@@ -143,12 +143,9 @@ int main(int argc, char * argv[])
 
   double dgemm_time(0);
 
-  std::vector<double> A;
-  std::vector<double> B;
-  std::vector<double> C;
-  A.resize(order*order);
-  B.resize(order*order);
-  C.resize(order*order,0.0);
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order);
+  std::vector<double> C(order*order,0.0);
 #ifdef PRK_DEBUG
   const unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
   std::default_random_engine generator(seed);
@@ -185,8 +182,7 @@ int main(int argc, char * argv[])
   const auto epsilon = 1.0e-8;
   const auto forder = static_cast<double>(order);
 #ifdef PRK_DEBUG
-  std::vector<double> D;
-  D.resize(order*order,0.0);
+  std::vector<double> D(order*order,0.0);;
   for (auto iter = 0; iter<=iterations; iter++) {
     prk_dgemm_loops(order, A, B, D);
   }
