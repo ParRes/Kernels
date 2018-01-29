@@ -1,6 +1,6 @@
 
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2017, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -61,32 +61,64 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "stencil_seq.hpp"
+#include "stencil_sycl.hpp"
 
-void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
+void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double, 2> d_in, cl::sycl::buffer<double, 2> d_out)
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
     std::cout << "and add it to the case-switch in the driver." << std::endl;
-    // n will never be zero - this is to silence compiler warnings.
-    if (n==0 || t==0) std::cout << in.size() << out.size() << std::endl;
     std::abort();
 }
+
+#if 0
+void star2(cl::sycl::queue & q, const size_t n,
+           cl::sycl::buffer<double, 2> d_in,
+           cl::sycl::buffer<double, 2> d_out)
+{
+   q.submit([&](cl::sycl::handler& h) {
+
+     // accessor methods
+     auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
+     auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+
+     // Apply the stencil operator
+     h.parallel_for<class star2>(cl::sycl::range<2> {n-4, n-4}, cl::sycl::id<2> {2, 2},
+                                 [=] (cl::sycl::item<2> it) {
+         cl::sycl::id<2> xy = it.get_id();
+         cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
+         cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
+         cl::sycl::id<2> dx2(cl::sycl::range<2> {2,0});
+         cl::sycl::id<2> dy2(cl::sycl::range<2> {0,2});
+         out[xy] += +in[xy-dx1] * -0.25
+                    +in[xy+dx1] *  0.25
+                    +in[xy-dy1] * -0.25
+                    +in[xy+dy1] *  0.25
+                    +in[xy-dx2] * -0.125
+                    +in[xy+dx2] *  0.125
+                    +in[xy-dy2] * -0.125
+                    +in[xy+dy2] *  0.125;
+     });
+   });
+}
+#endif
 
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/SYCL Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, n, radius, tile_size;
+  int iterations;
+  size_t n;
+  size_t radius = 2;
   bool star = true;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
+        throw "Usage: <# iterations> <array dimension>";
       }
 
       // number of times to run the algorithm
@@ -103,6 +135,7 @@ int main(int argc, char* argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
+#if 0
       // default tile size for tiling of local transpose
       tile_size = 32;
       if (argc > 3) {
@@ -110,6 +143,7 @@ int main(int argc, char* argv[])
           if (tile_size <= 0) tile_size = n;
           if (tile_size > n) tile_size = n;
       }
+#endif
 
       // stencil pattern
       if (argc > 4) {
@@ -135,7 +169,6 @@ int main(int argc, char* argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
-  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
@@ -150,13 +183,16 @@ int main(int argc, char* argv[])
       }
   } else {
       switch (radius) {
-          case 1: stencil = grid1; break;
-          case 2: stencil = grid2; break;
-          case 3: stencil = grid3; break;
-          case 4: stencil = grid4; break;
-          case 5: stencil = grid5; break;
+          //case 1: stencil = grid1; break;
+          //case 2: stencil = grid2; break;
+          //case 3: stencil = grid3; break;
+          //case 4: stencil = grid4; break;
+          //case 5: stencil = grid5; break;
       }
   }
+
+  // SYCL device queue
+  cl::sycl::queue q;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -164,29 +200,49 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
-  std::vector<double> in(n*n);
-  std::vector<double> out(n*n);
+  std::vector<double> h_out(n*n,0.0);
 
   {
-    for (auto it=0; it<n; it+=tile_size) {
-      for (auto jt=0; jt<n; jt+=tile_size) {
-        for (auto i=it; i<std::min(n,it+tile_size); i++) {
-          PRAGMA_SIMD
-          for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
-            in[i*n+j] = static_cast<double>(i+j);
-            out[i*n+j] = 0.0;
-          }
-        }
-      }
-    }
+    // initialize device buffers from host buffers
+    cl::sycl::buffer<double, 2> d_in  { cl::sycl::range<2> {n, n} };
+    cl::sycl::buffer<double, 2> d_out { h_out.data(), cl::sycl::range<2> {n, n} };
+
+    q.submit([&](cl::sycl::handler& h) {
+
+      // accessor methods
+      auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
+
+      // Add constant to solution to force refresh of neighbor data, if any
+      h.parallel_for<class init>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
+                                [=] (cl::sycl::item<2> it) {
+          cl::sycl::id<2> xy = it.get_id();
+          auto i = xy[0];
+          auto j = xy[1];
+          in[xy] = static_cast<double>(i+j);
+      });
+    });
+    q.wait();
 
     for (auto iter = 0; iter<=iterations; iter++) {
-
+   
       if (iter==1) stencil_time = prk::wtime();
-      // Apply the stencil operator
-      stencil(n, tile_size, in, out);
-      // Add constant to solution to force refresh of neighbor data, if any
-      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
+
+      star2(q, n, d_in, d_out);
+
+      q.submit([&](cl::sycl::handler& h) {
+
+        // accessor methods
+        auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
+        auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+       
+        // Add constant to solution to force refresh of neighbor data, if any
+        h.parallel_for<class add>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
+                                  [=] (cl::sycl::item<2> it) {
+            cl::sycl::id<2> xy = it.get_id();
+            in[xy] += 1.0;
+        });
+      });
+      q.wait();
     }
     stencil_time = prk::wtime() - stencil_time;
   }
@@ -196,13 +252,13 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   // interior of grid with respect to stencil
-  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
+  auto active_points = (n-2L*radius)*(n-2L*radius);
 
   // compute L1 norm in parallel
   double norm = 0.0;
   for (auto i=radius; i<n-radius; i++) {
     for (auto j=radius; j<n-radius; j++) {
-      norm += std::fabs(out[i*n+j]);
+      norm += std::fabs(h_out[i*n+j]);
     }
   }
   norm /= active_points;
@@ -220,8 +276,8 @@ int main(int argc, char* argv[])
     std::cout << "L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
 #endif
-    const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
-    size_t flops = (2L*(size_t)stencil_size+1L) * active_points;
+    const size_t stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
+    size_t flops = (2L*stencil_size+1L) * active_points;
     auto avgtime = stencil_time/iterations;
     std::cout << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
               << " Avg time (s): " << avgtime << std::endl;

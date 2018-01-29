@@ -35,6 +35,7 @@ TARGETFLAGS = $(OFFLOADFLAG)
 OPENCLFLAGS = $(OPENCLFLAG)
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
+SYCLFLAGS = $(SYCLFLAG) $(BOOSTFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 TBBFLAGS = $(TBBFLAG) -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
@@ -47,7 +48,7 @@ KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
 ifdef OCCADIR
   include ${OCCADIR}/scripts/makefile
 endif
-OCCAFLAGS = -DUSE_OCCA -I${OCCADIR}/include -Wl,-rpath=${OCCADIR}/lib -L${OCCADIR}/lib -locca
+OCCAFLAGS = -DUSE_OCCA -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl rangefor kokkos raja cuda
 
@@ -60,7 +61,7 @@ else
   EXTRA += target
 endif
 
-all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl occa $(EXTRA)
+all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl sycl occa $(EXTRA)
 
 p2p: p2p-vector p2p-doacross-vector-openmp p2p-innerloop-vector-openmp p2p-tasks-openmp p2p-openmp-target \
      p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl
@@ -92,6 +93,8 @@ taskloop: stencil-vector-taskloop transpose-vector-taskloop nstream-vector-taskl
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
+sycl: stencil-sycl transpose-sycl nstream-sycl
+
 tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
 
 stl: stencil-vector-stl transpose-vector-stl nstream-vector-stl
@@ -121,6 +124,9 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+
+%-sycl: %-sycl.cc prk_util.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-target: %-target.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@
@@ -186,6 +192,7 @@ clean:
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-opencl
+	-rm -f *-sycl
 	-rm -f *-tbb
 	-rm -f *-stl
 	-rm -f *-pstl
