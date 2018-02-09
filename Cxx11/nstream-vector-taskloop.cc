@@ -67,11 +67,7 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-#ifdef _OPENMP
   std::cout << "C++11/OpenMP TASKLOOP STREAM triad: A = B + scalar * C" << std::endl;
-#else
-  std::cout << "C++11 STREAM triad: A = B + scalar * C" << std::endl;
-#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
