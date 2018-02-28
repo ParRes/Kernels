@@ -64,19 +64,21 @@
 
 __global__ void p2p(int n, prk_float * grid)
 {
-  auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+  auto j = blockIdx.x * blockDim.x + threadIdx.x;
   //auto y = blockIdx.y * blockDim.y + threadIdx.y;
+
+  //printf("j=%d\n",j);
 
   for (auto i=2; i<=2*n-2; i++) {
     //for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
-    if ((std::max(2,i-n+2) <= idx) && (idx<=std::min(i,n))) {
+    if ((std::max(2,i-n+2) <= j) && (j<=std::min(i,n))) {
       const auto x = i-j+2-1;
       const auto y = j-1;
       grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
     }
     __syncthreads();
   }
-  if (idx==0) {
+  if (j==0) {
     grid[0*n+0] = -grid[(n-1)*n+(n-1)];
   }
   __syncthreads();
@@ -123,6 +125,10 @@ int main(int argc, char* argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
 
+  dim3 dimGrid(n, 1, 1);
+  dim3 dimBlock(1, 1, 1);
+  info.checkDims(dimBlock, dimGrid);
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
@@ -159,6 +165,7 @@ int main(int argc, char* argv[])
 
     if (iter==1) pipeline_time = prk::wtime();
 
+#if HOST
     for (auto i=2; i<=2*n-2; i++) {
       for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
         const auto x = i-j+2-1;
@@ -167,6 +174,13 @@ int main(int argc, char* argv[])
       }
     }
     h_grid[0*n+0] = -h_grid[(n-1)*n+(n-1)];
+#else
+    p2p<<<dimGrid, dimBlock>>>(n, d_grid);
+#ifndef __CORIANDERCC__
+    // silence "ignoring cudaDeviceSynchronize for now" warning
+    prk::CUDA::check( cudaDeviceSynchronize() );
+#endif
+#endif // HOST
   }
   pipeline_time = prk::wtime() - pipeline_time;
 
