@@ -64,14 +64,22 @@
 
 __global__ void p2p(int n, prk_float * grid)
 {
+  auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+  //auto y = blockIdx.y * blockDim.y + threadIdx.y;
+
   for (auto i=2; i<=2*n-2; i++) {
-    for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
+    //for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
+    if ((std::max(2,i-n+2) <= idx) && (idx<=std::min(i,n))) {
       const auto x = i-j+2-1;
       const auto y = j-1;
       grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
     }
+    __syncthreads();
   }
-  grid[0*n+0] = -grid[(n-1)*n+(n-1)];
+  if (idx==0) {
+    grid[0*n+0] = -grid[(n-1)*n+(n-1)];
+  }
+  __syncthreads();
 }
 
 int main(int argc, char* argv[])
