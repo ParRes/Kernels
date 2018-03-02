@@ -112,12 +112,9 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A;
-  std::vector<double> B;
-  std::vector<double> C;
-  A.resize(length,0.0);
-  B.resize(length,2.0);
-  C.resize(length,2.0);
+  std::vector<double> A(length,0.0);
+  std::vector<double> B(length,2.0);
+  std::vector<double> C(length,2.0);
 
   auto range = boost::irange(static_cast<size_t>(0), length);
 

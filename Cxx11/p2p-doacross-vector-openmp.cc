@@ -108,9 +108,7 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  // working set
-  std::vector<double> grid;
-  grid.resize(m*n);
+  std::vector<double> grid(m*n);;
 
   OMP_PARALLEL()
   {

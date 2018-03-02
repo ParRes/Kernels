@@ -349,8 +349,8 @@ case "$PRK_TARGET" in
 
         # C++11 native parallelism
         make -C $PRK_TARGET_PATH transpose-vector-thread transpose-vector-async
-        $PRK_TARGET_PATH/transpose-vector-thread 10 1024 32
-        $PRK_TARGET_PATH/transpose-vector-async  10 1024 32
+        $PRK_TARGET_PATH/transpose-vector-thread 10 1024 512 32
+        $PRK_TARGET_PATH/transpose-vector-async  10 1024 512 32
 
         # C++11 with rangefor
         echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
@@ -455,12 +455,12 @@ case "$PRK_TARGET" in
                 Linux)
                     ${CC} --version
                     export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb"
-                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
+                    echo "TBBFLAG=-DUSE_TBB ${TBBFLAG}" >> common/make.defs
                     export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
                     ;;
                 Darwin)
                     export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb"
-                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
+                    echo "TBBFLAG=-DUSE_TBB ${TBBFLAG}" >> common/make.defs
                     export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
                     ;;
             esac
@@ -575,6 +575,16 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil-kokkos 10 200 20 $s $r
             done
         done
+
+        # C++ w/ OCCA
+        # OCCA sets  -Wl,-rpath=${OCCA_LIB}, which chokes Mac's ld.
+        #if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+        #    echo "OCCADIR=${TRAVIS_ROOT}/occa" >> common/make.defs
+        #    export OCCA_CXX=${PRK_CXX}
+        #    make -C $PRK_TARGET_PATH transpose-occa nstream-occa
+        #    $PRK_TARGET_PATH/transpose-occa   10 1024 32
+        #    $PRK_TARGET_PATH/nstream-occa     10 16777216 32
+        #fi
         ;;
     allfortran)
         echo "Fortran"

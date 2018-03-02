@@ -71,13 +71,11 @@ int main(int argc, char * argv[])
         throw "Usage: <# iterations> <matrix order> [tile size]";
       }
 
-      // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
-      // order of a the matrix
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
@@ -105,10 +103,9 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  std::vector<double> A;
-  std::vector<double> B;
-  A.resize(order*order);
-  B.resize(order*order,0.0);
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order,0.0);
+
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 

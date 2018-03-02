@@ -89,6 +89,10 @@ int main(int argc, char * argv[])
         throw "ERROR: block size must be greater than 0";
       }
 
+      if (order / block_size > 16) {
+          throw "ERROR: this will create more than 256 threads";
+      }
+
       // default tile size for tiling of local transpose
       tile_size = (argc>4) ? std::atoi(argv[4]) : 32;
       // a negative tile size means no tiling of the local transpose
@@ -109,14 +113,19 @@ int main(int argc, char * argv[])
   std::cout << "Block size            = " << block_size << std::endl;
   std::cout << "Tile size             = " << tile_size << std::endl;
 
+  if (num_threads > 300) {
+      std::cout << "These settings may lead to resource exhaustion.\n"
+                << "Please use a larger block size.\n";
+      return 1;
+  }
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> A;
-  std::vector<double> B;
-  B.resize(order*order,0.0);
-  A.resize(order*order);
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order,0.0);
+
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 
