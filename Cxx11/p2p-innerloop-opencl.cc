@@ -102,7 +102,7 @@ void run(cl::Context context, int iterations, int n)
     if (iter==1) pipeline_time = prk::wtime();
 
     cl::copy(queue,begin(h_grid), end(h_grid), d_grid);
-    kernel(cl::EnqueueArgs(queue, cl::NDRange(n,n)), n, d_grid);
+    kernel(cl::EnqueueArgs(queue, cl::NDRange(2*n)), n, d_grid);
     cl::copy(queue,d_grid, begin(h_grid), end(h_grid));
     queue.finish();
     h_grid[0*n+0] = -h_grid[(n-1)*n+(n-1)];
