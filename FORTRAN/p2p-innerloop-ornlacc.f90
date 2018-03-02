@@ -104,6 +104,11 @@ program main
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') n
 
+  if (n .gt. 16384) then
+    write(*,'(a,i5)') 'WARNING: grid size exceeds 16384: ', n
+    write(*,'(a)')    'PGI 17.10 + CUDA 9.0 generates illegal address'
+  endif
+
   if (iterations .lt. 1) then
     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
@@ -126,9 +131,7 @@ program main
     stop 1
   endif
 
-  !$acc parallel loop gang
   do j=1,n
-    !$acc loop vector
     do i=1,n
       grid(i,j) = 0.0d0
     enddo
@@ -141,26 +144,30 @@ program main
   enddo
 
   !$acc data pcopy(grid)
+
   do k=0,iterations
 
     if (k.eq.1) t0 = prk_get_wtime()
 
     do i=2,2*n-2
-      !$acc parallel loop gang
+      !$acc parallel loop independent
       do j=max(2,i-n+2),min(i,n)
         x = i-j+2
         y = j
         grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1)
       enddo
     enddo
+    !$acc kernels
     grid(1,1) = -grid(n,n)
+    !$acc end kernels
 
   enddo
 
   t1 = prk_get_wtime()
-  pipeline_time = t1 - t0
 
   !$acc end data
+
+  pipeline_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.
