@@ -20,8 +20,11 @@ CXX=icpc -std=c++14 -pthread
 #
 # -xHOST is appropriate for most cases.
 DEFAULT_OPT_FLAGS=-g -O3 -xHOST
+#
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -xMIC-AVX512
+#
+DEFAULT_OPT_FLAGS+=-qopt-report=5
 #
 # OpenMP flags
 #
