@@ -100,11 +100,11 @@ int main(int argc, char * argv[])
   }
 
 #ifdef _OPENMP
-  std::cout << "Number of threads     = " << omp_get_max_threads() << std::endl;
+  std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
 #endif
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Tile size             = " << tile_size << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix

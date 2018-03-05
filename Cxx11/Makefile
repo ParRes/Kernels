@@ -48,7 +48,7 @@ KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
 ifdef OCCADIR
   include ${OCCADIR}/scripts/makefile
 endif
-OCCAFLAGS = -DUSE_OCCA -I${OCCADIR}/include -Wl,-rpath=${OCCADIR}/lib -L${OCCADIR}/lib -locca
+OCCAFLAGS = -DUSE_OCCA -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl rangefor kokkos raja cuda
 
