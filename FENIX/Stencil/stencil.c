@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013, Intel Corporation
+  Copyright (c) 2013, Intel Corporation
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
@@ -77,6 +77,7 @@ HISTORY: - Written by Rob Van der Wijngaart, November 2006.
 #include <par-res-kern_fenix.h>
 #include <random_draw.h>
 #include <unistd.h>
+#include <netdb.h>
 
 #if DOUBLE
   #define DTYPE     double
@@ -177,6 +178,7 @@ int main(int argc, char ** argv) {
   int    num_fenix_init=1;/* number of times Fenix_Init is called                */
   int    num_fenix_init_loc;/* number of times Fenix_Init was called             */
   int    fenix_status;
+  MPI_Status ignore;
   random_draw_t dice;
 
   /*******************************************************************************
@@ -185,6 +187,41 @@ int main(int argc, char ** argv) {
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+#if FT_HARNESS
+  /*******************************************************************************
+  ** Collect and print into allowing the FT harness to do its job
+  ********************************************************************************/
+  char hn[254];
+  char *dn;
+  struct hostent *hp;
+
+  gethostname(hn, 254);
+  hp = gethostbyname(hn);
+  int hostname_length;
+  int *pid = (int *) prk_malloc(sizeof(int)*Num_procs);
+  int mypid = getpid();
+  int  my_hostname_length = strlen(hp->h_name);
+  MPI_Allreduce(&my_hostname_length, &hostname_length, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+  if (my_ID==root) {
+    char **hostname = (char **) prk_malloc(sizeof(char *)*Num_procs);
+    for (int i=1; i<Num_procs; i++) {
+      hostname[i] = (char *)  prk_malloc(sizeof(char)*(hostname_length+1));
+      MPI_Recv(hostname[i], hostname_length+1, MPI_CHAR, i, 777, MPI_COMM_WORLD, &ignore);
+      MPI_Recv(&pid[i], 1, MPI_INT, i, 888, MPI_COMM_WORLD, &ignore);
+    }
+    hostname[0] = hp->h_name;
+    pid[0] = mypid;
+    for (int i=0; i<Num_procs; i++) printf("__HOSTNAME__ %s __PID__ %d __RANK__ %d\n",hostname[i], pid[i], i);
+  }
+  else {
+    MPI_Send(hp->h_name, my_hostname_length, MPI_CHAR, root, 777, MPI_COMM_WORLD);
+    MPI_Send(&mypid, 1, MPI_INT, root, 888, MPI_COMM_WORLD);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   /*******************************************************************************
   ** process, test, and broadcast input parameters
@@ -319,26 +356,30 @@ int main(int argc, char ** argv) {
                          (num_fenix_init-1)*kill_ranks, spare_ranks);
     error = 1;
   }
-  else if(my_ID==root) printf("Total injected failures  = %d times %d errors\n", 
+  else if(my_ID==root) printf("Total injected failures  = %d batches of %d errors\n", 
                            num_fenix_init-1, kill_ranks);
   bail_out(error);
   if ((num_fenix_init-1)*kill_ranks>=Num_procs-spare_ranks) if (my_ID==root)
   printf("WARNING: All active ranks will be replaced by recovered ranks; timings not valid\n");
 
-  fail_iter = (int *) prk_malloc(sizeof(int)*num_fenix_init);
+  /* allocate space for list of failure iterations, plus 1                     */
+  fail_iter = (int *) prk_malloc(sizeof(int)*(num_fenix_init));
   if (!fail_iter) {
     printf("ERROR: Rank %d could not allocate space for array fail_iter\n", my_ID);
     error = 1;
   }
   bail_out(error);
+  /* set first failure iteration to large number; possibly to be overwritten   */
+  fail_iter[0] = iterations+1;
 
   /* reinitialize random number generator to obtain identical error series     */
   LCG_init(&dice);
   /* now record the actual failure iterations                                  */
-  for (fail_iter_s=iter=0; iter<num_fenix_init; iter++) {
+  for (fail_iter_s=iter=0; iter<num_fenix_init-1; iter++) {
     fail_iter_s += random_draw(kill_period, &dice);
     fail_iter[iter] = fail_iter_s;
   }
+  iter = 0;
 
   /* Here is where we initialize Fenix and mark the return point after failure */
   Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
@@ -351,12 +392,18 @@ int main(int argc, char ** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
-  /* if rank is recovered, set iter to a negative number, to be increased
+#if FT_HARNESS
+  if (my_ID==root && fenix_status==FENIX_ROLE_INITIAL_RANK) printf("__FINISHED_FENIX_INIT__\n");
+#endif
+
+  /* if rank is recovered, set iter to a large number, to be reduced
      to the actual value corresponding to the current iter value among
      survivor ranks; handle number of Fenix_Init calls similarly               */
   switch (fenix_status){
-    case FENIX_ROLE_INITIAL_RANK:   iter_init = num_fenix_init_loc = 0;    break;
-    case FENIX_ROLE_RECOVERED_RANK: iter_init = num_fenix_init_loc = iterations+1;   break;
+    case FENIX_ROLE_INITIAL_RANK:   iter_init = num_fenix_init_loc = 0;              
+                                    break;
+    case FENIX_ROLE_RECOVERED_RANK: iter_init = num_fenix_init_loc = iterations+1;   
+                                    break;
     case FENIX_ROLE_SURVIVOR_RANK:  iter_init = iter;  num_fenix_init_loc++;
   }
 
@@ -493,6 +540,10 @@ int main(int argc, char ** argv) {
       stencil_time = wtime();
     }
 
+#if FT_HARNESS
+    if (my_ID==root && iter==0) printf("__STARTED_ITERATIONS__\n");
+#endif
+
     /* inject failure if appropriate                                                */
     if (iter == fail_iter[num_fenix_init]) {
       pid_t pid = getpid();
@@ -500,7 +551,13 @@ int main(int argc, char ** argv) {
 #if VERBOSE
         printf("Rank %d, pid %d commits suicide in iter %d\n", my_ID, pid, iter);
 #endif
-        kill(pid, SIGKILL);
+	//#ifdef __USE_POSIX
+#if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _POSIX_SOURCE
+       kill(pid, SIGKILL); 
+#endif
+#if defined __USE_BSD || defined __USE_XOPEN_EXTENDED
+       killpg(pid, SIGKILL); 
+#endif
       }
 #if VERBOSE
       else printf("Rank %d, pid %d is survivor rank in iter %d\n", my_ID, pid, iter);
@@ -529,7 +586,7 @@ int main(int argc, char ** argv) {
     }
   }
   root = Num_procs-1;
-  MPI_Reduce(&local_norm, &norm, 1, MPI_DTYPE, MPI_SUM, root, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_norm, &norm, 1, MPI_DTYPE, MPI_SUM, MPI_COMM_WORLD);
 
   /*******************************************************************************
   ** Analyze and output results.
@@ -553,6 +610,7 @@ int main(int argc, char ** argv) {
 #endif
     }
   }
+  MPI_Barrier(MPI_COMM_WORLD);
   bail_out(error);
 
   if (my_ID == root) {

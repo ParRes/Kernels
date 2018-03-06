@@ -44,6 +44,11 @@ ifndef LOOPGEN
 endif
 #description: default is compact (non-expanded) form of loop body
 
+ifndef FT_HARNESS
+  FT_HARNESS=0
+endif
+#description: by default we do not emit output for the Fault Tolerance harness
+
 ifndef VERBOSE
   VERBOSE=0
 endif
@@ -55,6 +60,7 @@ RADIUSFLAG      = -DRADIUS=$(RADIUS)
 LOOPGENFLAG     = -DLOOPGEN=$(LOOPGEN)
 DOUBLEFLAG      = -DDOUBLE=$(DOUBLE)
 STARFLAG        = -DSTAR=$(STAR)
+HARNESSFLAG     = -DFT_HARNESS=$(FT_HARNESS)
 
 OPTIONSSTRING="Make options:\n\
 OPTION                  MEANING                                  DEFAULT\n\
@@ -63,10 +69,11 @@ LOOPGEN=0/1             compact/expanded stencil loop body         [0]  \n\
 DOUBLE=0/1              single/double precision                    [1]  \n\
 RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
 STAR=0/1                box/star shaped stencil                    [1]  \n\
+FT_HARNESS=0/1          do not/do emit FT harness output           [1]  \n\
 VERBOSE=0/1             omit/include verbose run information       [0]"
 
 TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG)$(USERFLAGS) $(LOOPGENFLAG)\
-               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG) 
+               $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG)  $(HARNESSFLAG) 
 PROGRAM     = stencil
 OBJS        = $(PROGRAM).o $(COMOBJS)
 
