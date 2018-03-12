@@ -61,17 +61,31 @@
 
 #include "prk_util.h"
 
-inline void sweep_tile(int startm, int endm,
-                       int startn, int endn,
-                       int n, double grid[])
+inline void sweep_tile_sequential(int startm, int endm,
+                                  int startn, int endn,
+                                  int n, double grid[])
 {
   for (auto i=startm; i<endm; i++) {
     for (auto j=startn; j<endn; j++) {
-      //std::cerr << "i,j=" << i << "," << j << "\n";
       grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
     }
   }
 }
+
+#if 0
+inline void sweep_tile_hyperplane(int startm, int endm,
+                                  int startn, int endn,
+                                  int n, double grid[])
+{
+  for (auto i=2; i<=2*n-2; i++) {
+    for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
+      const auto x = i-j+1;
+      const auto y = j-1;
+      grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+    }
+  }
+}
+#endif
 
 int main(int argc, char* argv[])
 {
@@ -131,16 +145,6 @@ int main(int argc, char* argv[])
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
   std::cout << "Grid chunk sizes     = " << nc << std::endl;
 
-#if 0
-  for (int i=2; i<=2*(nb+1)-2; i++) {
-    for (int j=std::max(2,i-(nb+1)+2); j<=std::min(i,nb+1); j++) {
-      const int ib = nc*(i-j+1);
-      const int jb = nc*(j-1);
-      std::cerr << "ib,jb=" << ib << "," << jb << "\n";
-    }
-  }
-#endif
-
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
@@ -185,19 +189,16 @@ int main(int argc, char* argv[])
           for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
             const auto x = i-j+1;
             const auto y = j-1;
-            std::cerr << "i,j=" << x << "," << y << "\n";
             grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
           }
         }
       } else {
-        std::cerr << "=====================\n";
         for (int i=2; i<=2*(nb+1)-2; i++) {
           OMP_FOR()
           for (int j=std::max(2,i-(nb+1)+2); j<=std::min(i,nb+1); j++) {
             const int ib = nc*(i-j+1-1)+1;
             const int jb = nc*(j-1-1)+1;
-            //std::cerr << "ib,jb=" << ib << "," << jb << "\n";
-            sweep_tile(ib, std::min(n,ib+nc), jb, std::min(n,jb+nc), n, grid);
+            sweep_tile_sequential(ib, std::min(n,ib+nc), jb, std::min(n,jb+nc), n, grid);
           }
         }
       }
