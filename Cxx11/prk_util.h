@@ -212,6 +212,14 @@ const T prk_reduce(I first, I last, T init) {
 # include "RAJA/RAJA.hpp"
 #endif
 
+#ifdef USE_SYCL
+# include "CL/sycl.hpp"
+#endif
+
+#ifdef USE_OCCA
+# include "occa.hpp"
+#endif
+
 #define RESTRICT __restrict__
 
 namespace prk {

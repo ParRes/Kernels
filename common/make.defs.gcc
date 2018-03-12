@@ -6,21 +6,25 @@
 #
 VERSION=-7
 # C99 is required in some implementations.
-CC=gcc${VERSION} -std=c11 -pthread -Wall
+CC=gcc${VERSION} -std=c11 -pthread
 #EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=gfortran${VERSION} -std=f2008 -cpp -Wall
+FC=gfortran${VERSION} -std=f2008 -cpp
 # C++11 may not be required but does no harm here.
-CXX=g++${VERSION} -std=gnu++17 -pthread -Wall
+CXX=g++${VERSION} -std=gnu++17 -pthread
 #
 # Compiler flags
 #
 # -mtune=native is appropriate for most cases.
 # -march=native is appropriate if you want portable binaries.
 DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
+#
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -march=knl
 # See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
+#
+DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
+DEFAULT_OPT_FLAGS+=-Wall
 #
 # OpenMP flags
 #
@@ -36,6 +40,18 @@ OPENCLFLAG=-framework OpenCL
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
+# SYCL flags
+#
+# triSYCL
+# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+SYCLDIR=./triSYCL
+SYCLCXX=${CXX}
+SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+#
+# OCCA
+#
+OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
 # Cilk
 #
 CILKFLAG=-fcilkplus
@@ -43,7 +59,7 @@ CILKFLAG=-fcilkplus
 # TBB
 #
 TBBDIR=/usr/local/Cellar/tbb/2018_U2
-TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #

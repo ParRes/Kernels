@@ -54,10 +54,28 @@ OPENCLFLAG=-framework OpenCL
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
+# SYCL flags
+#
+# CodePlay ComputeCpp
+SYCLDIR=/opt/sycl/latest
+SYCLCXX=${SYCLDIR}/bin/compute++
+SYCLFLAG=-DUSE_SYCL -sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+# This makes a huge difference in e.g. nstream...
+SYCLFLAG+=-no-serial-memop
+#
+# triSYCL
+# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+#SYCLDIR=./triSYCL
+#SYCLCXX=${CXX}
+#SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+#
+# OCCA
+OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
 # TBB
 #
 TBBDIR=/usr/local/Cellar/tbb/2018_U1
-TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #

@@ -20,15 +20,12 @@ ifeq ($(USE_PRK_TBB_PARTITIONER),simple)
     PRK_TBB_PARTITIONER=3
 endif
 ifndef PRK_TBB_PARTITIONER
-    $(info PRK help: Consider setting USE_PRK_TBB_PARTITIONER={static,affinity,simple} when invoking make)
     PRK_TBB_PARTITIONER=0
 endif
 
 # Valid choices are OpenMP, Threads, Serial, Cuda
 ifdef USE_PRK_KOKKOS_BACKEND
     KOKKOS_BACKEND_FLAG = -DPRK_KOKKOS_BACKEND=$(USE_PRK_KOKKOS_BACKEND)
-else
-    $(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
 endif
 
 ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm
@@ -38,14 +35,20 @@ TARGETFLAGS = $(OFFLOADFLAG)
 OPENCLFLAGS = $(OPENCLFLAG)
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
+SYCLFLAGS = $(SYCLFLAG) $(BOOSTFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
-TBBFLAGS = $(TBBFLAG) -DUSE_TBB -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
+TBBFLAGS = $(TBBFLAG) -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
 BOOSTFLAGS = $(BOOSTFLAG)
 STLFLAGS = $(STLFLAG) $(BOOSTFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
+
+ifdef OCCADIR
+  include ${OCCADIR}/scripts/makefile
+endif
+OCCAFLAGS = -DUSE_OCCA -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl rangefor kokkos raja cuda
 
@@ -58,7 +61,7 @@ else
   EXTRA += target
 endif
 
-all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl $(EXTRA)
+all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl sycl occa $(EXTRA)
 
 p2p: p2p-vector p2p-doacross-vector-openmp p2p-innerloop-vector-openmp p2p-tasks-openmp p2p-openmp-target \
      p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl
@@ -90,6 +93,8 @@ taskloop: stencil-vector-taskloop transpose-vector-taskloop nstream-vector-taskl
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
+sycl: stencil-sycl transpose-sycl nstream-sycl
+
 tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
 
 stl: stencil-vector-stl transpose-vector-stl nstream-vector-stl
@@ -106,6 +111,8 @@ cuda: transpose-cuda nstream-cuda
 
 cublas: transpose-cublas nstream-cublas
 
+occa: transpose-occa nstream-occa
+
 p2p-innerloop-vector: p2p-innerloop-vector-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
@@ -118,6 +125,9 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
+%-sycl: %-sycl.cc prk_util.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
 %-target: %-target.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@
 
@@ -128,6 +138,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
 
 %-tbb: %-tbb.cc prk_util.h
+	$(info PRK help: Consider setting USE_PRK_TBB_PARTITIONER={static,affinity,simple} when invoking make)
 	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
 
 %-stl: %-pstl.cc prk_util.h
@@ -143,6 +154,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
 
 %-kokkos: %-kokkos.cc prk_util.h
+	$(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
 	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
@@ -153,6 +165,10 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 
 %-cblas: %-cblas.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(CBLASFLAGS) -o $@
+
+%-occa: %-occa.cc prk_util.h
+	$(info PRK help: Set OCCA_CXX=$(firstword $(CXX)) to use that compiler for OKL files.)
+	$(CXX) $(CXXFLAGS) $< $(OCCAFLAGS) -o $@
 
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -176,6 +192,7 @@ clean:
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-opencl
+	-rm -f *-sycl
 	-rm -f *-tbb
 	-rm -f *-stl
 	-rm -f *-pstl
@@ -185,6 +202,7 @@ clean:
 	-rm -f *-cuda
 	-rm -f *-cublas
 	-rm -f *-cblas
+	-rm -f *-occa
 	-rm -f transpose-vector-async transpose-vector-thread
 
 cleancl:

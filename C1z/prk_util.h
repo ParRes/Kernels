@@ -46,7 +46,13 @@
 #include <stdio.h>   // atoi
 #include <stdlib.h>  // getenv
 #include <stdint.h>
+#if defined(__PGIC__)
+typedef _Bool bool;
+const bool true=1;
+const bool false=0;
+#else
 #include <stdbool.h> // bool
+#endif
 #include <string.h>
 #include <limits.h>
 #include <math.h>    // fabs
@@ -81,6 +87,7 @@
 #  define OMP_ORDERED(x) PRAGMA(omp ordered x)
 #  define OMP_TARGET(x) PRAGMA(omp target x)
 # else
+#  warning No OpenMP 4+ features!
 #  define OMP_SIMD
 #  define OMP_FOR_SIMD() PRAGMA(omp for x)
 #  define OMP_TASK(x)

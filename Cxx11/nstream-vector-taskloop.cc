@@ -67,11 +67,7 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-#ifdef _OPENMP
-  std::cout << "C++11/OpenMP STREAM triad: A = B + scalar * C" << std::endl;
-#else
-  std::cout << "C++11 STREAM triad: A = B + scalar * C" << std::endl;
-#endif
+  std::cout << "C++11/OpenMP TASKLOOP STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -100,7 +96,7 @@ int main(int argc, char * argv[])
         throw "ERROR: grainsize";
       }
 
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
+      offset = (argc>4) ? std::atoi(argv[4]) : 0;
       if (length <= 0) {
         throw "ERROR: offset must be nonnegative";
       }
@@ -124,12 +120,9 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A;
-  std::vector<double> B;
-  std::vector<double> C;
-  A.resize(length);
-  B.resize(length);
-  C.resize(length);
+  std::vector<double> A(length);
+  std::vector<double> B(length);
+  std::vector<double> C(length);
 
   double scalar = 3.0;
 

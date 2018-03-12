@@ -52,6 +52,7 @@
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
 ///
+///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
 ///          reported results should not be associated with Stream in
@@ -62,103 +63,21 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_opencl.h"
 
-template <typename T>
-void run(cl::Context context, int iterations, size_t length)
-{
-  auto precision = (sizeof(T)==8) ? 64 : 32;
-
-  cl::Program program(context, prk::opencl::loadProgram("nstream.cl"), true);
-
-  auto function = (precision==64) ? "nstream64" : "nstream32";
-
-  cl_int err;
-  auto kernel = cl::make_kernel<int, T, cl::Buffer, cl::Buffer, cl::Buffer>(program, function, &err);
-  if(err != CL_SUCCESS){
-    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
-    std::cout << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
-  }
-
-  cl::CommandQueue queue(context);
-
-  //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and nstream matrix
-  //////////////////////////////////////////////////////////////////////
-
-  auto nstream_time = 0.0;
-
-  std::vector<T> h_a(length, T(0));
-  std::vector<T> h_b(length, T(2));
-  std::vector<T> h_c(length, T(2));
-
-  // copy input from host to device
-  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);
-  cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), true);
-  cl::Buffer d_c = cl::Buffer(context, begin(h_c), end(h_c), true);
-
-  double scalar = 3.0;
-
-  for (auto iter = 0; iter<=iterations; iter++) {
-
-    if (iter==1) nstream_time = prk::wtime();
-
-    // nstream the  matrix
-    kernel(cl::EnqueueArgs(queue, cl::NDRange(length)), length, scalar, d_a, d_b, d_c);
-    queue.finish();
-
-  }
-  nstream_time = prk::wtime() - nstream_time;
-
-  // copy output back to host
-  cl::copy(queue, d_a, begin(h_a), end(h_a));
-
-  //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
-  //////////////////////////////////////////////////////////////////////
-
-  T ar(0);
-  T br(2);
-  T cr(2);
-  for (auto i=0; i<=iterations; i++) {
-      ar += br + scalar * cr;
-  }
-
-  ar *= length;
-
-  double asum(0);
-  for (size_t i=0; i<length; i++) {
-      asum += std::fabs(h_a[i]);
-  }
-
-  const double epsilon = (precision==64) ? 1.0e-8 : 1.0e-4;
-  if (std::fabs(ar-asum)/asum > epsilon) {
-      std::cout << "Failed Validation on output array\n"
-                << "       Expected checksum: " << ar << "\n"
-                << "       Observed checksum: " << asum << std::endl;
-      std::cout << "ERROR: solution did not validate" << std::endl;
-  } else {
-      std::cout << "Solution validates" << std::endl;
-      double avgtime = nstream_time/iterations;
-      double nbytes = 4.0 * length * sizeof(T);
-      std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
-                << " Avg time (s): " << avgtime << std::endl;
-  }
-}
-
-int main(int argc, char* argv[])
+int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenCL STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++11/SYCL STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset, length;
+  int iterations, offset;
+  size_t length;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>]";
+        throw "Usage: <# iterations> <vector length>";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -166,7 +85,7 @@ int main(int argc, char* argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atoi(argv[2]);
+      length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
@@ -185,54 +104,93 @@ int main(int argc, char* argv[])
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
 
+  // SYCL device queue
+  cl::sycl::queue q;
+
   //////////////////////////////////////////////////////////////////////
-  /// Setup OpenCL environment
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  cl_int err = CL_SUCCESS;
+  auto nstream_time = 0.0;
 
-  cl::Context cpu(CL_DEVICE_TYPE_CPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(cpu) )
+  std::vector<double> h_A(length);
+  std::vector<double> h_B(length);
+  std::vector<double> h_C(length);
+
+  auto range = boost::irange(static_cast<size_t>(0), length);
+
+  const double scalar(3);
+
+  std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
+      h_A[i] = 0;
+      h_B[i] = 2;
+      h_C[i] = 2;
+  });
+
   {
-    const int precision = prk::opencl::precision(cpu);
+    // initialize device buffers from host buffers
+    cl::sycl::buffer<double> d_A { h_A.data(), h_A.size() };
+    cl::sycl::buffer<double> d_B { h_B.data(), h_B.size() };
+    cl::sycl::buffer<double> d_C { h_C.data(), h_C.size() };
 
-    std::cout << "CPU Precision        = " << precision << "-bit" << std::endl;
+    for (auto iter = 0; iter<=iterations; iter++) {
 
-    if (precision==64) {
-        run<double>(cpu, iterations, length);
-    } else {
-        run<float>(cpu, iterations, length);
+      if (iter==1) nstream_time = prk::wtime();
+
+      q.submit([&](cl::sycl::handler& h) {
+
+        // accessor methods
+        auto A = d_A.get_access<cl::sycl::access::mode::read_write>(h);
+        auto B = d_B.get_access<cl::sycl::access::mode::read>(h);
+        auto C = d_C.get_access<cl::sycl::access::mode::read>(h);
+
+        h.parallel_for<class nstream>(cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
+            A[i] += B[i] + scalar * C[i];
+        });
+      });
+      q.wait();
     }
+
+    // Stop timer before buffer+accessor destructors fire,
+    // since that will move data, and we do not time that
+    // for other device-oriented programming models.
+    nstream_time = prk::wtime() - nstream_time;
   }
 
-  cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(gpu) )
-  {
-    const int precision = prk::opencl::precision(gpu);
+  //////////////////////////////////////////////////////////////////////
+  /// Analyze and output results
+  //////////////////////////////////////////////////////////////////////
 
-    std::cout << "GPU Precision        = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(gpu, iterations, length);
-    } else {
-        run<float>(gpu, iterations, length);
-    }
+  double ar(0);
+  double br(2);
+  double cr(2);
+  for (auto i=0; i<=iterations; i++) {
+      ar += br + scalar * cr;
   }
 
-  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(acc) )
-  {
+  ar *= length;
 
-    const int precision = prk::opencl::precision(acc);
+  double asum(0);
+  for (size_t i=0; i<length; i++) {
+      asum += std::fabs(h_A[i]);
+  }
 
-    std::cout << "ACC Precision        = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(acc, iterations, length);
-    } else {
-        run<float>(acc, iterations, length);
-    }
+  double epsilon(1.e-8);
+  if (std::fabs(ar-asum)/asum > epsilon) {
+      std::cout << "Failed Validation on output array\n"
+                << "       Expected checksum: " << ar << "\n"
+                << "       Observed checksum: " << asum << std::endl;
+      std::cout << "ERROR: solution did not validate" << std::endl;
+      return 1;
+  } else {
+      std::cout << "Solution validates" << std::endl;
+      double avgtime = nstream_time/iterations;
+      double nbytes = 4.0 * length * sizeof(double);
+      std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
+                << " Avg time (s): " << avgtime << std::endl;
   }
 
   return 0;
 }
+
+

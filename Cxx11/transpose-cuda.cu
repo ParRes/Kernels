@@ -56,6 +56,7 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
+#if TILED
 // The kernel was derived from https://github.com/parallel-forall/code-samples/blob/master/series/cuda-cpp/transpose/transpose.cu,
 // which is the reason for the additional copyright noted above.
 
@@ -73,6 +74,18 @@ __global__ void transpose(int order, prk_float * A, prk_float * B)
         A[(y+j)*width + x] += (prk_float)1;
     }
 }
+#else
+__global__ void transpose(unsigned order, prk_float * A, prk_float * B)
+{
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if ((i<order) && (j<order)) {
+        B[i*order+j] += A[j*order+i];
+        A[j*order+i] += (prk_float)1;
+    }
+}
+#endif
 
 int main(int argc, char * argv[])
 {
@@ -105,10 +118,18 @@ int main(int argc, char * argv[])
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
+#if TILED
       if (order % tile_dim != 0) {
           std::cout << "Sorry, but order (" << order << ") must be evenly divible by " << tile_dim
                     << " or the results are going to be wrong.\n";
       }
+#endif
+#ifdef __CORIANDERCC__
+      // This has not been analyzed, but it is an empirical fact.
+      if (order > 1234) {
+          std::cout << "The results are probably going to be wrong, because order>1234.\n";
+      }
+#endif
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -118,8 +139,13 @@ int main(int argc, char * argv[])
   std::cout << "Matrix order          = " << order << std::endl;
   std::cout << "Number of iterations  = " << iterations << std::endl;
 
+#if TILED
   dim3 dimGrid(order/tile_dim, order/tile_dim, 1);
   dim3 dimBlock(tile_dim, block_rows, 1);
+#else
+  dim3 dimGrid(order, order, 1);
+  dim3 dimBlock(1, 1, 1);
+#endif
 
   info.checkDims(dimBlock, dimGrid);
 
