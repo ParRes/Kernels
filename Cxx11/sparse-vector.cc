@@ -158,15 +158,10 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> matrix;
-  std::vector<size_t> colIndex;
-  std::vector<double> vector;
-  std::vector<double> result;
-
-  matrix.resize(nent,0.0);
-  colIndex.resize(nent,0);
-  vector.resize(size2,0.0);
-  result.resize(size2,0.0);
+  std::vector<double> matrix(nent,0.0);
+  std::vector<size_t> colIndex(nent,0);
+  std::vector<double> vector(size2,0.0);
+  std::vector<double> result(size2,0.0);
 
   double sparse_time(0);
 

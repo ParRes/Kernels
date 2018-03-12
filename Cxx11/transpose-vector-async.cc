@@ -109,14 +109,19 @@ int main(int argc, char * argv[])
   std::cout << "Block size            = " << block_size << std::endl;
   std::cout << "Tile size             = " << tile_size << std::endl;
 
+  if (num_futures > 300) {
+      std::cout << "These settings may lead to resource exhaustion.\n"
+                << "Please use a larger block size.\n";
+      return 1;
+  }
+
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> A;
-  std::vector<double> B;
-  B.resize(order*order,0.0);
-  A.resize(order*order);
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order,0.0);
+
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 

@@ -70,7 +70,7 @@ int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
 #if defined(USE_PSTL)
-  std::cout << "C++17 STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++17 Parallel STL STREAM triad: A = B + scalar * C" << std::endl;
 #else
   std::cout << "C++11 STL STREAM triad: A = B + scalar * C" << std::endl;
 #endif
@@ -116,12 +116,9 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A;
-  std::vector<double> B;
-  std::vector<double> C;
-  A.resize(length);
-  B.resize(length);
-  C.resize(length);
+  std::vector<double> A(length);
+  std::vector<double> B(length);
+  std::vector<double> C(length);
 
   auto range = boost::irange(static_cast<size_t>(0), length);
 
@@ -132,14 +129,15 @@ int main(int argc, char * argv[])
     std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int i) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
-    __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
+    __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (size_t i) {
 #else
-    std::for_each( std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
 #endif
-          A[i] = 0.0;
-          B[i] = 2.0;
-          C[i] = 2.0;
-      });
+        A[i] = 0;
+        B[i] = 2;
+        C[i] = 2;
+    });
+
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
@@ -148,9 +146,9 @@ int main(int argc, char * argv[])
       std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int i) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
-      __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
+      __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (size_t i) {
 #else
-      std::for_each( std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
 #endif
           A[i] += B[i] + scalar * C[i];
       });

@@ -154,19 +154,19 @@ fn main()
   let t1 = timer.elapsed();
   let dt = (t1.checked_sub(t0)).unwrap();
   let dtt : u64 = dt.as_secs() * 1_000_000_000 + dt.subsec_nanos() as u64;
-  let transpose_time : f64 = dtt as f64 / 1.0e9_f64 as f64;
+  let transpose_time : f64 = dtt as f64 * 1.0e-9;
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  let addit : usize = (iterations as usize + 1) * (iterations as usize / 2);
+  let addit : usize = ((iterations as usize + 1) * (iterations as usize)) / 2;
   let mut abserr : f64 = 0.0;
   for i in 0..order {
     for j in 0..order {
       let ij = i*order+j;
       let ji = j*order+i;
-      let reference : f64 = (ij*(1+iterations as usize)+addit) as f64;
+      let reference : f64 = (ij*(iterations as usize + 1)+addit) as f64;
       abserr += (b[ji] - reference).abs();
     }
   }

@@ -69,6 +69,7 @@ case "$PRK_TARGET" in
         sh ./travis/install-cmake.sh $TRAVIS_ROOT
         sh ./travis/install-raja.sh $TRAVIS_ROOT
         sh ./travis/install-kokkos.sh $TRAVIS_ROOT
+        #sh ./travis/install-occa.sh $TRAVIS_ROOT
         ;;
     allfortran)
         echo "Fortran"

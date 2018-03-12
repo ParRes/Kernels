@@ -156,12 +156,9 @@ int main(int argc, char * argv[])
 
   double dgemm_time(0);
 
-  std::vector<double> A;
-  std::vector<double> B;
-  std::vector<double> C;
-  A.resize(order*order);
-  B.resize(order*order);
-  C.resize(order*order,0.0);
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order);
+  std::vector<double> C(order*order,0.0);
   for (auto i=0; i<order; ++i) {
     for (auto j=0; j<order; ++j) {
        A[i*order+j] = i;

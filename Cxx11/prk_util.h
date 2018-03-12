@@ -223,6 +223,13 @@ const T prk_reduce(I first, I last, T init) {
 # include <thrust/for_each.h>
 # include <thrust/iterator/counting_iterator.h>
 # include <thrust/execution_policy.h>
+
+#ifdef USE_SYCL
+# include "CL/sycl.hpp"
+#endif
+
+#ifdef USE_OCCA
+# include "occa.hpp"
 #endif
 
 #define RESTRICT __restrict__
