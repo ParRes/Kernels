@@ -181,9 +181,9 @@ const T prk_reduce(I first, I last, T init) {
 #endif
 
 #if defined(USE_BOOST)
-# include <boost/range/irange.hpp>
-# include <boost/compute.hpp>
-# include <boost/compute/container/valarray.hpp>
+# include "boost/range/irange.hpp"
+# include "boost/compute.hpp"
+# include "boost/compute/container/valarray.hpp"
 #endif
 
 #if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)

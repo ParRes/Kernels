@@ -352,8 +352,14 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/transpose-vector-thread 10 1024 512 32
         $PRK_TARGET_PATH/transpose-vector-async  10 1024 512 32
 
-        # C++11 with rangefor
-        echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
+        # Boost.Compute is available from Homebrew but not Apt...
+        if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+            echo "BOOSTFLAG=-DUSE_BOOST -I${TRAVIS_ROOT}/compute/include" >> common/make.defs
+        else
+            echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
+        fi
+
+        # C++11 with rangefor and Boost.Ranges
         make -C $PRK_TARGET_PATH rangefor
         $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
         $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
@@ -364,6 +370,10 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 20 $s $r
             done
         done
+
+        # C++11 with Boost.Compute
+        make -C $PRK_TARGET_PATH nstream-vector-boost-compute
+        $PRK_TARGET_PATH/nstream-vector-boost-compute     10 16777216 32
 
         # C++11 with OpenMP
         export OMP_NUM_THREADS=2
