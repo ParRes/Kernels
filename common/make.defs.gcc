@@ -18,7 +18,9 @@ CXX=g++${VERSION} -std=gnu++17 -pthread
 # -mtune=native is appropriate for most cases.
 # -march=native is appropriate if you want portable binaries.
 DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
-#
+#DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math -fsanitize=undefined,leak
+#DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math -fsanitize=address
+#DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math -fsanitize=thread
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -march=knl
 # See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
@@ -50,7 +52,7 @@ SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
 #
 # OCCA
 #
-OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
 #
 # Cilk
 #
