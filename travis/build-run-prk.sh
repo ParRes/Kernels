@@ -355,6 +355,7 @@ case "$PRK_TARGET" in
         # Boost.Compute is available from Homebrew but not Apt...
         if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
             echo "BOOSTFLAG=-DUSE_BOOST -I${TRAVIS_ROOT}/compute/include" >> common/make.defs
+            find ${TRAVIS_ROOT}/compute/include
         else
             echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
         fi
