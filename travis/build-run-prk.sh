@@ -352,30 +352,6 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/transpose-vector-thread 10 1024 512 32
         $PRK_TARGET_PATH/transpose-vector-async  10 1024 512 32
 
-        # Boost.Compute is available from Homebrew but not Apt...
-        if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-            echo "BOOSTFLAG=-DUSE_BOOST -I${TRAVIS_ROOT}/compute/include" >> common/make.defs
-            find ${TRAVIS_ROOT}/compute/include
-        else
-            echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
-        fi
-
-        # C++11 with rangefor and Boost.Ranges
-        make -C $PRK_TARGET_PATH rangefor
-        $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
-        $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
-        $PRK_TARGET_PATH/nstream-vector-rangefor     10 16777216 32
-        #echo "Test stencil code generator"
-        for s in star grid ; do
-            for r in 1 2 3 4 5 ; do
-                $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 20 $s $r
-            done
-        done
-
-        # C++11 with Boost.Compute
-        make -C $PRK_TARGET_PATH nstream-vector-boost-compute
-        $PRK_TARGET_PATH/nstream-vector-boost-compute     10 16777216 32
-
         # C++11 with OpenMP
         export OMP_NUM_THREADS=2
         case "$CC" in
@@ -537,6 +513,31 @@ case "$PRK_TARGET" in
                 done
             done
             cd ..
+        fi
+
+        # Boost.Compute moved after OpenCL to reuse those flags...
+
+        # C++11 with rangefor and Boost.Ranges
+        echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
+        make -C $PRK_TARGET_PATH rangefor
+        $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
+        $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
+        $PRK_TARGET_PATH/nstream-vector-rangefor     10 16777216 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 20 $s $r
+            done
+        done
+
+        # C++11 with Boost.Compute
+        # Only test Mac because:
+        # (1) We only test OpenCL on MacOS in Travis.
+        # (2) Boost.Compute is not available from APT.
+        # If we ever address 1, we need to enable the Boost.Compute install for Linux.
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            make -C $PRK_TARGET_PATH nstream-vector-boost-compute
+            $PRK_TARGET_PATH/nstream-vector-boost-compute     10 16777216 32
         fi
 
         # C++11 with Kokkos, RAJA
