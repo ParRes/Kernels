@@ -63,7 +63,11 @@
 #include "prk_util.h"
 #include "stencil_sycl.hpp"
 
-void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double, 2> d_in, cl::sycl::buffer<double, 2> d_out)
+#if USE_2D_INDEXING
+void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double, 2> & d_in, cl::sycl::buffer<double, 2> & d_out)
+#else
+void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double> & d_in, cl::sycl::buffer<double> & d_out)
+#endif
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
@@ -198,27 +202,39 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
+  std::vector<double> h_in(n*n,0.0);
   std::vector<double> h_out(n*n,0.0);
 
   // SYCL device queue
   cl::sycl::queue q;
   {
     // initialize device buffers from host buffers
+#if USE_2D_INDEXING
     cl::sycl::buffer<double, 2> d_in  { cl::sycl::range<2> {n, n} };
     cl::sycl::buffer<double, 2> d_out { h_out.data(), cl::sycl::range<2> {n, n} };
+#else
+    // FIXME: if I don't initialize this buffer from host, the results are wrong.  Why?
+    //cl::sycl::buffer<double> d_in  { cl::sycl::range<1> {n*n} };
+    cl::sycl::buffer<double> d_in  { h_in.data(),  h_in.size() };
+    cl::sycl::buffer<double> d_out { h_out.data(), h_out.size() };
+#endif
 
     q.submit([&](cl::sycl::handler& h) {
 
       // accessor methods
       auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
 
-      // Add constant to solution to force refresh of neighbor data, if any
-      h.parallel_for<class init>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
-                                [=] (cl::sycl::item<2> it) {
+      h.parallel_for<class init>(cl::sycl::range<2> {n, n}, [=] (cl::sycl::item<2> it) {
+#if USE_2D_INDEXING
           cl::sycl::id<2> xy = it.get_id();
-          auto i = xy[0];
-          auto j = xy[1];
+          auto i = it[0];
+          auto j = it[1];
           in[xy] = static_cast<double>(i+j);
+#else
+          auto i = it[0];
+          auto j = it[1];
+          in[i*n+j] = static_cast<double>(i+j);
+#endif
       });
     });
     q.wait();
@@ -233,13 +249,22 @@ int main(int argc, char* argv[])
 
         // accessor methods
         auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
-        auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
 
         // Add constant to solution to force refresh of neighbor data, if any
         h.parallel_for<class add>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
                                   [=] (cl::sycl::item<2> it) {
+#if USE_2D_INDEXING
             cl::sycl::id<2> xy = it.get_id();
             in[xy] += 1.0;
+#else
+#if 0 // This is noticeably slower :-(
+            auto i = it[0];
+            auto j = it[1];
+            in[i*n+j] += 1.0;
+#else
+            in[it[0]*n+it[1]] += 1.0;
+#endif
+#endif
         });
       });
       q.wait();

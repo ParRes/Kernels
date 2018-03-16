@@ -89,12 +89,11 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
 
-  // SYCL device queue
-  cl::sycl::queue q;
-
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
+
+  auto trans_time = 0.0;
 
   std::vector<double> h_A(order*order);
   std::vector<double> h_B(order*order,0.0);
@@ -102,10 +101,8 @@ int main(int argc, char * argv[])
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(h_A.begin(), h_A.end(), 0.0);
 
-  auto range = boost::irange(static_cast<size_t>(0),order);
-
-  auto trans_time = 0.0;
-
+  // SYCL device queue
+  cl::sycl::queue q;
   {
     // initialize device buffers from host buffers
 #if USE_2D_INDEXING
@@ -117,9 +114,9 @@ int main(int argc, char * argv[])
 #endif
 
     for (auto iter = 0; iter<=iterations; iter++) {
- 
+
       if (iter==1) trans_time = prk::wtime();
- 
+
       q.submit([&](cl::sycl::handler& h) {
 
         // accessor methods
@@ -148,6 +145,8 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
+
+  auto range = boost::irange(static_cast<size_t>(0),order);
 
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
