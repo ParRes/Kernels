@@ -322,11 +322,12 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/nstream-valarray   10 16777216 32
 
         # C++11 without external parallelism
-        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector \
+        make -C $PRK_TARGET_PATH p2p-vector p2p-hyperplane-vector stencil-vector transpose-vector nstream-vector \
                                  dgemm-vector sparse-vector
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024 100 100
-        $PRK_TARGET_PATH/p2p-innerloop-vector    10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane-vector   10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane-vector   10 1024 64
         $PRK_TARGET_PATH/stencil-vector          10 1000
         $PRK_TARGET_PATH/transpose-vector        10 1024 32
         $PRK_TARGET_PATH/nstream-vector          10 16777216 32
