@@ -371,10 +371,11 @@ case "$PRK_TARGET" in
             gcc)
                 # Host
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-vector-openmp stencil-vector-openmp \
+                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-hyperplane-vector-openmp stencil-vector-openmp \
                                          transpose-vector-openmp nstream-vector-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-innerloop-vector-openmp      10 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-vector-openmp     10 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-vector-openmp     10 1024 64
                 $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
                 $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
                 $PRK_TARGET_PATH/nstream-vector-openmp            10 16777216 32
@@ -585,6 +586,30 @@ case "$PRK_TARGET" in
         #    $PRK_TARGET_PATH/transpose-occa   10 1024 32
         #    $PRK_TARGET_PATH/nstream-occa     10 16777216 32
         #fi
+
+        # C++ w/ SYCL
+        # triSYCL requires Boost.  We are having Boost issues with Travis Linux builds.
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            SYCLDIR=${TRAVIS_ROOT}/triSYCL
+            if [ "${CC}" = "clang" ] ; then
+                # SYCL will compile without OpenMP
+                echo "SYCLCXX=${PRK_CXX} -pthread -std=c++14" >> common/make.defs
+            else
+                echo "SYCLCXX=${PRK_CXX} -fopenmp -std=c++14" >> common/make.defs
+            fi
+            echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include" >> common/make.defs
+            make -C $PRK_TARGET_PATH stencil-sycl transpose-sycl nstream-sycl
+            $PRK_TARGET_PATH/stencil-sycl     10 1000
+            $PRK_TARGET_PATH/transpose-sycl   10 1024 32
+            $PRK_TARGET_PATH/nstream-sycl     10 16777216 32
+            #echo "Test stencil code generator"
+            for s in star ; do # grid ; do # grid not supported yet
+                for r in 1 2 3 4 5 ; do
+                    $PRK_TARGET_PATH/stencil-sycl 10 200 20 $s $r
+                done
+            done
+        fi
+
         ;;
     allfortran)
         echo "Fortran"
