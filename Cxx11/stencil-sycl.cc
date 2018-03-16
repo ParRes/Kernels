@@ -227,7 +227,7 @@ int main(int argc, char* argv[])
    
       if (iter==1) stencil_time = prk::wtime();
 
-      star2(q, n, d_in, d_out);
+      stencil(q, n, d_in, d_out);
 
       q.submit([&](cl::sycl::handler& h) {
 
