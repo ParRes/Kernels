@@ -70,7 +70,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      PRAGMA_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='cuda'):
-        src.write('__global__ void '+pattern+str(radius)+'(const int n, const double * in, double * out) {\n')
+        src.write('__global__ void '+pattern+str(radius)+'(const int n, const prk_float * in, prk_float * out) {\n')
         src.write('    const int i = blockIdx.x * blockDim.x + threadIdx.x;\n')
         src.write('    const int j = blockIdx.y * blockDim.y + threadIdx.y;\n')
         src.write('    if ( ('+str(radius)+' <= i) && (i < n-'+str(radius)+') && ('+str(radius)+' <= j) && (j < n-'+str(radius)+') ) {\n')

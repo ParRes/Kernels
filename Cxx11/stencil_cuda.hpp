@@ -1,4 +1,4 @@
-__global__ void star1(const int n, const double * in, double * out) {
+__global__ void star1(const int n, const prk_float * in, prk_float * out) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if ( (1 <= i) && (i < n-1) && (1 <= j) && (j < n-1) ) {
@@ -9,7 +9,7 @@ __global__ void star1(const int n, const double * in, double * out) {
      }
 }
 
-__global__ void star2(const int n, const double * in, double * out) {
+__global__ void star2(const int n, const prk_float * in, prk_float * out) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if ( (2 <= i) && (i < n-2) && (2 <= j) && (j < n-2) ) {
@@ -24,7 +24,7 @@ __global__ void star2(const int n, const double * in, double * out) {
      }
 }
 
-__global__ void star3(const int n, const double * in, double * out) {
+__global__ void star3(const int n, const prk_float * in, prk_float * out) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if ( (3 <= i) && (i < n-3) && (3 <= j) && (j < n-3) ) {
@@ -43,7 +43,7 @@ __global__ void star3(const int n, const double * in, double * out) {
      }
 }
 
-__global__ void star4(const int n, const double * in, double * out) {
+__global__ void star4(const int n, const prk_float * in, prk_float * out) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if ( (4 <= i) && (i < n-4) && (4 <= j) && (j < n-4) ) {
@@ -66,7 +66,7 @@ __global__ void star4(const int n, const double * in, double * out) {
      }
 }
 
-__global__ void star5(const int n, const double * in, double * out) {
+__global__ void star5(const int n, const prk_float * in, prk_float * out) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if ( (5 <= i) && (i < n-5) && (5 <= j) && (j < n-5) ) {
@@ -93,7 +93,7 @@ __global__ void star5(const int n, const double * in, double * out) {
      }
 }
 
-__global__ void grid1(const int n, const double * in, double * out) {
+__global__ void grid1(const int n, const prk_float * in, prk_float * out) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if ( (1 <= i) && (i < n-1) && (1 <= j) && (j < n-1) ) {
@@ -107,7 +107,7 @@ __global__ void grid1(const int n, const double * in, double * out) {
      }
 }
 
-__global__ void grid2(const int n, const double * in, double * out) {
+__global__ void grid2(const int n, const prk_float * in, prk_float * out) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if ( (2 <= i) && (i < n-2) && (2 <= j) && (j < n-2) ) {
@@ -135,7 +135,7 @@ __global__ void grid2(const int n, const double * in, double * out) {
      }
 }
 
-__global__ void grid3(const int n, const double * in, double * out) {
+__global__ void grid3(const int n, const prk_float * in, prk_float * out) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if ( (3 <= i) && (i < n-3) && (3 <= j) && (j < n-3) ) {
@@ -185,7 +185,7 @@ __global__ void grid3(const int n, const double * in, double * out) {
      }
 }
 
-__global__ void grid4(const int n, const double * in, double * out) {
+__global__ void grid4(const int n, const prk_float * in, prk_float * out) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if ( (4 <= i) && (i < n-4) && (4 <= j) && (j < n-4) ) {
@@ -265,7 +265,7 @@ __global__ void grid4(const int n, const double * in, double * out) {
      }
 }
 
-__global__ void grid5(const int n, const double * in, double * out) {
+__global__ void grid5(const int n, const prk_float * in, prk_float * out) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
     if ( (5 <= i) && (i < n-5) && (5 <= j) && (j < n-5) ) {
