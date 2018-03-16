@@ -51,6 +51,8 @@
 
 #include "prk_util.h"
 
+#define USE_2D_INDEXING 1
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -106,8 +108,8 @@ int main(int argc, char * argv[])
   {
     // initialize device buffers from host buffers
 #if USE_2D_INDEXING
-    cl::sycl::buffer<double,2> d_A( cl::sycl::range<2>{order,order} ); // FIXME: does not initialize with host array
-    cl::sycl::buffer<double,2> d_B( cl::sycl::range<2>{order,order} ); // FIXME: does not initialize with host array
+    cl::sycl::buffer<double,2> d_A( h_A.data(), cl::sycl::range<2>{order,order} );
+    cl::sycl::buffer<double,2> d_B( h_B.data(), cl::sycl::range<2>{order,order} );
 #else
     cl::sycl::buffer<double> d_A { h_A.data(), h_A.size() };
     cl::sycl::buffer<double> d_B { h_B.data(), h_B.size() };
@@ -126,7 +128,10 @@ int main(int argc, char * argv[])
         // transpose
         h.parallel_for<class transpose>(cl::sycl::range<2>{order,order}, [=] (cl::sycl::item<2> it) {
 #if USE_2D_INDEXING
-#error 2D indexing is not implemented yet.  Fix this!
+          cl::sycl::id<2> ij{it[0],it[1]};
+          cl::sycl::id<2> ji{it[1],it[0]};
+          B[ij] += A[ji];
+          A[ji] += 1.0;
 #else
           B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
           A[it[1] * order + it[0]] += 1.0;
