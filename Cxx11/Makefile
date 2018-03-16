@@ -64,7 +64,7 @@ endif
 
 all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl sycl occa boost-compute $(EXTRA)
 
-p2p: p2p-vector p2p-doacross-vector-openmp p2p-innerloop-vector-openmp p2p-tasks-openmp p2p-openmp-target \
+p2p: p2p-vector p2p-doacross-vector-openmp p2p-hyperplane-vector-openmp p2p-tasks-openmp p2p-openmp-target \
      p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl
 
 stencil: stencil-valarray stencil-vector stencil-vector-async stencil-vector-openmp stencil-openmp-target \
@@ -81,12 +81,12 @@ nstream: nstream-valarray nstream-vector nstream-vector-openmp nstream-openmp-ta
 
 dgemm: dgemm-vector dgemm-cblas
 
-vector: p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector sparse-vector dgemm-vector \
+vector: p2p-vector p2p-hyperplane-vector stencil-vector transpose-vector nstream-vector sparse-vector dgemm-vector \
 	transpose-vector-async transpose-vector-thread
 
 valarray: transpose-valarray nstream-valarray
 
-openmp: p2p-innerloop-vector-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp nstream-vector-openmp
+openmp: p2p-hyperplane-vector-openmp p2p-tasks-openmp stencil-vector-openmp transpose-vector-openmp nstream-vector-openmp
 
 target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 
@@ -118,7 +118,7 @@ boost-compute: nstream-vector-boost-compute
 # busted
 #nstream-valarray-boost-compute
 
-p2p-innerloop-vector: p2p-innerloop-vector-openmp.cc prk_util.h
+p2p-hyperplane-vector: p2p-hyperplane-vector-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
 transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
