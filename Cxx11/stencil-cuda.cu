@@ -171,14 +171,8 @@ int main(int argc, char* argv[])
       }
   }
 
-#if 0
-  dim3 dimGrid(n/tile_size, n/tile_size, 1);
+  dim3 dimGrid(prk::divceil(n,tile_size),prk::divceil(n,tile_size),1);
   dim3 dimBlock(tile_size, tile_size, 1);
-#else
-  dim3 dimGrid(n, n, 1);
-  dim3 dimBlock(1, 1, 1);
-#endif
-
   info.checkDims(dimBlock, dimGrid);
 
   //////////////////////////////////////////////////////////////////////

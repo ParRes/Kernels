@@ -102,7 +102,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int order;
+  int order, tile_size;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order>";
@@ -125,6 +125,14 @@ int main(int argc, char * argv[])
           std::cout << "Sorry, but order (" << order << ") must be evenly divible by " << tile_dim
                     << " or the results are going to be wrong.\n";
       }
+#else
+      // default tile size for tiling of local transpose
+      tile_size = 32;
+      if (argc > 3) {
+          tile_size = std::atoi(argv[3]);
+          if (tile_size <= 0) tile_size = order;
+          if (tile_size > order) tile_size = order;
+      }
 #endif
 #ifdef __CORIANDERCC__
       // This has not been analyzed, but it is an empirical fact.
@@ -138,15 +146,20 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Matrix order          = " << order << std::endl;
   std::cout << "Number of iterations  = " << iterations << std::endl;
+  std::cout << "Matrix order          = " << order << std::endl;
+#if TILED
+  std::cout << "Tile size            = " << tile_dim << std::endl;
+#else
+  std::cout << "Tile size            = " << tile_size << std::endl;
+#endif
 
 #if TILED
   dim3 dimGrid(order/tile_dim, order/tile_dim, 1);
   dim3 dimBlock(tile_dim, block_rows, 1);
 #else
-  dim3 dimGrid(order, order, 1);
-  dim3 dimBlock(1, 1, 1);
+  dim3 dimGrid(prk::divceil(order,tile_size),prk::divceil(order,tile_size),1);
+  dim3 dimBlock(tile_size, tile_size, 1);
 #endif
 
   info.checkDims(dimBlock, dimGrid);
