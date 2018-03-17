@@ -60,6 +60,8 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#define USE_2D_INDEXING 0
+
 #include "prk_util.h"
 #include "stencil_sycl.hpp"
 
@@ -74,38 +76,6 @@ void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double> & d_i
     std::cout << "and add it to the case-switch in the driver." << std::endl;
     std::abort();
 }
-
-#if 0
-void star2(cl::sycl::queue & q, const size_t n,
-           cl::sycl::buffer<double, 2> d_in,
-           cl::sycl::buffer<double, 2> d_out)
-{
-   q.submit([&](cl::sycl::handler& h) {
-
-     // accessor methods
-     auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-     auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
-
-     // Apply the stencil operator
-     h.parallel_for<class star2>(cl::sycl::range<2> {n-4, n-4}, cl::sycl::id<2> {2, 2},
-                                 [=] (cl::sycl::item<2> it) {
-         cl::sycl::id<2> xy = it.get_id();
-         cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
-         cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
-         cl::sycl::id<2> dx2(cl::sycl::range<2> {2,0});
-         cl::sycl::id<2> dy2(cl::sycl::range<2> {0,2});
-         out[xy] += +in[xy-dx1] * -0.25
-                    +in[xy+dx1] *  0.25
-                    +in[xy-dy1] * -0.25
-                    +in[xy+dy1] *  0.25
-                    +in[xy-dx2] * -0.125
-                    +in[xy+dx2] *  0.125
-                    +in[xy-dy2] * -0.125
-                    +in[xy+dy2] *  0.125;
-     });
-   });
-}
-#endif
 
 int main(int argc, char* argv[])
 {
@@ -244,6 +214,8 @@ int main(int argc, char* argv[])
       if (iter==1) stencil_time = prk::wtime();
 
       stencil(q, n, d_in, d_out);
+      // This is only necessary with triSYCL
+      q.wait();
 
       q.submit([&](cl::sycl::handler& h) {
 
@@ -251,7 +223,7 @@ int main(int argc, char* argv[])
         auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
 
         // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
+        h.parallel_for<class add>(cl::sycl::range<2> {n, n}, cl::sycl::id<2> {0, 0},
                                   [=] (cl::sycl::item<2> it) {
 #if USE_2D_INDEXING
             cl::sycl::id<2> xy = it.get_id();
@@ -271,6 +243,14 @@ int main(int argc, char* argv[])
     }
     stencil_time = prk::wtime() - stencil_time;
   }
+
+#if 0
+  for (auto i=0; i<n; i++) {
+    for (auto j=0; j<n; j++) {
+        std::cerr << i << "," << j << "," << h_out[i*n+j] << "\n";
+    }
+  }
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
