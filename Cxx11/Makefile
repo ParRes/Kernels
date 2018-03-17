@@ -68,7 +68,8 @@ p2p: p2p-vector p2p-doacross-vector-openmp p2p-hyperplane-vector-openmp p2p-task
 
 stencil: stencil-valarray stencil-vector stencil-vector-async stencil-vector-openmp stencil-openmp-target \
 	 stencil-vector-taskloop stencil-vector-stl stencil-vector-pstl stencil-vector-raja \
-	 stencil-vector-rangefor stencil-vector-tbb stencil-vector-thread stencil-kokkos stencil-opencl
+	 stencil-vector-rangefor stencil-vector-tbb stencil-vector-thread stencil-kokkos stencil-opencl \
+	 stencil-cuda
 
 transpose: transpose-valarray transpose-vector transpose-vector-async transpose-vector-openmp transpose-openmp-target \
 	   transpose-vector-taskloop transpose-vector-stl transpose-vector-pstl transpose-vector-raja \
@@ -107,7 +108,7 @@ kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
 raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja
 
-cuda: transpose-cuda nstream-cuda
+cuda: stencil-cuda transpose-cuda nstream-cuda
 
 cublas: transpose-cublas nstream-cublas
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import sys
 import fileinput
@@ -69,6 +69,11 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>('+str(radius)+',n-'+str(radius)+'), KOKKOS_LAMBDA(const int i) {\n')
         src.write('      PRAGMA_SIMD\n')
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
+    elif (model=='cuda'):
+        src.write('__global__ void '+pattern+str(radius)+'(const int n, const prk_float * in, prk_float * out) {\n')
+        src.write('    const int i = blockIdx.x * blockDim.x + threadIdx.x;\n')
+        src.write('    const int j = blockIdx.y * blockDim.y + threadIdx.y;\n')
+        src.write('    if ( ('+str(radius)+' <= i) && (i < n-'+str(radius)+') && ('+str(radius)+' <= j) && (j < n-'+str(radius)+') ) {\n')
     else:
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    for (auto it='+str(radius)+'; it<n-'+str(radius)+'; it+=t) {\n')
@@ -110,6 +115,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     elif (model=='target'):
         src.write('       }\n')
         src.write('     }\n')
+    elif (model=='cuda'):
+        src.write('     }\n')
     else:
         src.write('           }\n')
         src.write('         }\n')
@@ -143,7 +150,7 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','raja','kokkos']:
+    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','raja','kokkos','cuda']:
       src = open('stencil_'+model+'.hpp','w')
       if (model=='target'):
           src.write('#define RESTRICT __restrict__\n\n')
