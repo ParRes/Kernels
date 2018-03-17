@@ -113,12 +113,12 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t n;
-  size_t radius = 2;
+  size_t n, tile_size;
   bool star = true;
+  size_t radius = 2;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <array dimension>";
+        throw "Usage: <# iterations> <array dimension> [<tile size> <star/grid> <stencil radius>]";
       }
 
       // number of times to run the algorithm
@@ -135,7 +135,6 @@ int main(int argc, char* argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-#if 0
       // default tile size for tiling of local transpose
       tile_size = 32;
       if (argc > 3) {
@@ -143,7 +142,6 @@ int main(int argc, char* argv[])
           if (tile_size <= 0) tile_size = n;
           if (tile_size > n) tile_size = n;
       }
-#endif
 
       // stencil pattern
       if (argc > 4) {
@@ -181,18 +179,18 @@ int main(int argc, char* argv[])
           case 4: stencil = star4; break;
           case 5: stencil = star5; break;
       }
-  } else {
+  }
+#if 0
+  else {
       switch (radius) {
-          //case 1: stencil = grid1; break;
-          //case 2: stencil = grid2; break;
-          //case 3: stencil = grid3; break;
-          //case 4: stencil = grid4; break;
-          //case 5: stencil = grid5; break;
+          case 1: stencil = grid1; break;
+          case 2: stencil = grid2; break;
+          case 3: stencil = grid3; break;
+          case 4: stencil = grid4; break;
+          case 5: stencil = grid5; break;
       }
   }
-
-  // SYCL device queue
-  cl::sycl::queue q;
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -202,6 +200,8 @@ int main(int argc, char* argv[])
 
   std::vector<double> h_out(n*n,0.0);
 
+  // SYCL device queue
+  cl::sycl::queue q;
   {
     // initialize device buffers from host buffers
     cl::sycl::buffer<double, 2> d_in  { cl::sycl::range<2> {n, n} };
@@ -224,7 +224,7 @@ int main(int argc, char* argv[])
     q.wait();
 
     for (auto iter = 0; iter<=iterations; iter++) {
-   
+
       if (iter==1) stencil_time = prk::wtime();
 
       stencil(q, n, d_in, d_out);
@@ -234,7 +234,7 @@ int main(int argc, char* argv[])
         // accessor methods
         auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
         auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
-       
+
         // Add constant to solution to force refresh of neighbor data, if any
         h.parallel_for<class add>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
                                   [=] (cl::sycl::item<2> it) {
