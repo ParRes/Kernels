@@ -436,6 +436,19 @@ case "$PRK_TARGET" in
                 ;;
         esac
 
+        # C++11 with rangefor and Boost.Ranges
+        echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
+        make -C $PRK_TARGET_PATH rangefor
+        $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
+        $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
+        $PRK_TARGET_PATH/nstream-vector-rangefor     10 16777216 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 20 $s $r
+            done
+        done
+
         # C++11 with TBB
         # Skip Clang because older Clang from Linux chokes on max_align_t (https://travis-ci.org/jeffhammond/PRK/jobs/243395307)
         if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
@@ -518,19 +531,6 @@ case "$PRK_TARGET" in
         fi
 
         # Boost.Compute moved after OpenCL to reuse those flags...
-
-        # C++11 with rangefor and Boost.Ranges
-        echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
-        make -C $PRK_TARGET_PATH rangefor
-        $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
-        $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
-        $PRK_TARGET_PATH/nstream-vector-rangefor     10 16777216 32
-        #echo "Test stencil code generator"
-        for s in star grid ; do
-            for r in 1 2 3 4 5 ; do
-                $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 20 $s $r
-            done
-        done
 
         # C++11 with Boost.Compute
         # Only test Mac because:
