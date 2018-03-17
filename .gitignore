@@ -43,17 +43,6 @@ func.c                          # PRK C89 stencil generated code
 *.output                        # ALCF Cobalt scheduler
 *.error                         # ALCF Cobalt scheduler
 
-FORTRAN/Stencil/stencil
-FORTRAN/Stencil/stencil-coarray
-FORTRAN/Stencil/stencil-omp
-FORTRAN/Stencil/stencil-pretty
-FORTRAN/Synch_p2p/p2p
-FORTRAN/Synch_p2p/p2p-coarray
-FORTRAN/Synch_p2p/p2p-omp
-FORTRAN/Transpose/transpose
-FORTRAN/Transpose/transpose-coarray
-FORTRAN/Transpose/transpose-omp
-FORTRAN/Transpose/transpose-pretty
 MPI1/AMR/amr
 MPI1/Branch/branch
 MPI1/DGEMM/dgemm
@@ -127,7 +116,7 @@ Cxx11/p2p-innerloop-openmp
 Cxx11/p2p-doacross-vector-openmp
 Cxx11/p2p-innerloop-opencl
 Cxx11/p2p-innerloop-vector
-Cxx11/p2p-innerloop-vector-openmp
+Cxx11/p2p-hyperplane-vector-openmp
 Cxx11/p2p-innerloop-vector-tbb
 Cxx11/nstream-kokkos
 Cxx11/nstream-opencl
@@ -186,6 +175,14 @@ Cxx11/star6.cl
 Cxx11/star7.cl
 Cxx11/star8.cl
 Cxx11/star9.cl
+FORTRAN/dgemm-taskloop-openmp
+FORTRAN/dgemm-pretty
+FORTRAN/dgemm-openmp
+FORTRAN/dgemm
+FORTRAN/nstream
+FORTRAN/nstream-openmp
+FORTRAN/nstream-pretty
+FORTRAN/nstream-taskloop-openmp
 FORTRAN/p2p
 FORTRAN/p2p-innerloop
 FORTRAN/p2p-coarray

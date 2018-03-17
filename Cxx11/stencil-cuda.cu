@@ -1,6 +1,6 @@
 
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2013, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -61,64 +61,45 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "stencil_sycl.hpp"
+#include "prk_cuda.h"
+#include "stencil_cuda.hpp"
 
-void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double, 2> d_in, cl::sycl::buffer<double, 2> d_out)
+__global__ void nothing(const int n, const prk_float * in, prk_float * out)
 {
-    std::cout << "You are trying to use a stencil that does not exist.\n";
-    std::cout << "Please generate the new stencil using the code generator\n";
-    std::cout << "and add it to the case-switch in the driver." << std::endl;
-    std::abort();
+    //printf("You are trying to use a stencil that does not exist.\n");
+    //printf("Please generate the new stencil using the code generator.\n");
+    // n will never be zero - this is to silence compiler warnings.
+    //if (n==0) printf("in=%p out=%p\n", in, out);
+    //abort();
 }
 
-#if 0
-void star2(cl::sycl::queue & q, const size_t n,
-           cl::sycl::buffer<double, 2> d_in,
-           cl::sycl::buffer<double, 2> d_out)
+__global__ void add(const int n, prk_float * in)
 {
-   q.submit([&](cl::sycl::handler& h) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
 
-     // accessor methods
-     auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-     auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
-
-     // Apply the stencil operator
-     h.parallel_for<class star2>(cl::sycl::range<2> {n-4, n-4}, cl::sycl::id<2> {2, 2},
-                                 [=] (cl::sycl::item<2> it) {
-         cl::sycl::id<2> xy = it.get_id();
-         cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
-         cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
-         cl::sycl::id<2> dx2(cl::sycl::range<2> {2,0});
-         cl::sycl::id<2> dy2(cl::sycl::range<2> {0,2});
-         out[xy] += +in[xy-dx1] * -0.25
-                    +in[xy+dx1] *  0.25
-                    +in[xy-dy1] * -0.25
-                    +in[xy+dy1] *  0.25
-                    +in[xy-dx2] * -0.125
-                    +in[xy+dx2] *  0.125
-                    +in[xy-dy2] * -0.125
-                    +in[xy+dy2] *  0.125;
-     });
-   });
+    if ((i<n) && (j<n)) {
+        in[i*n+j] += (prk_float)1;
+    }
 }
-#endif
 
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/SYCL Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/CUDA Stencil execution on 2D grid" << std::endl;
+
+  prk::CUDA::info info;
+  info.print();
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  size_t n, tile_size;
+  int iterations, n, radius, tile_size;
   bool star = true;
-  size_t radius = 2;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <array dimension> [<tile size> <star/grid> <stencil radius>]";
+        throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
       }
 
       // number of times to run the algorithm
@@ -167,6 +148,7 @@ int main(int argc, char* argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
@@ -179,9 +161,7 @@ int main(int argc, char* argv[])
           case 4: stencil = star4; break;
           case 5: stencil = star5; break;
       }
-  }
-#if 0
-  else {
+  } else {
       switch (radius) {
           case 1: stencil = grid1; break;
           case 2: stencil = grid2; break;
@@ -190,7 +170,10 @@ int main(int argc, char* argv[])
           case 5: stencil = grid5; break;
       }
   }
-#endif
+
+  dim3 dimGrid(prk::divceil(n,tile_size),prk::divceil(n,tile_size),1);
+  dim3 dimBlock(tile_size, tile_size, 1);
+  info.checkDims(dimBlock, dimGrid);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -198,63 +181,68 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
-  std::vector<double> h_out(n*n,0.0);
+  const size_t nelems = (size_t)n * (size_t)n;
+  const size_t bytes = nelems * sizeof(prk_float);
+  prk_float * h_in;
+  prk_float * h_out;
+#ifndef __CORIANDERCC__
+  prk::CUDA::check( cudaMallocHost((void**)&h_in, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_out, bytes) );
+#else
+  h_in = new prk_float[nelems];
+  h_out = new prk_float[nelems];
+#endif
 
-  // SYCL device queue
-  cl::sycl::queue q;
-  {
-    // initialize device buffers from host buffers
-    cl::sycl::buffer<double, 2> d_in  { cl::sycl::range<2> {n, n} };
-    cl::sycl::buffer<double, 2> d_out { h_out.data(), cl::sycl::range<2> {n, n} };
-
-    q.submit([&](cl::sycl::handler& h) {
-
-      // accessor methods
-      auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
-
-      // Add constant to solution to force refresh of neighbor data, if any
-      h.parallel_for<class init>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
-                                [=] (cl::sycl::item<2> it) {
-          cl::sycl::id<2> xy = it.get_id();
-          auto i = xy[0];
-          auto j = xy[1];
-          in[xy] = static_cast<double>(i+j);
-      });
-    });
-    q.wait();
-
-    for (auto iter = 0; iter<=iterations; iter++) {
-
-      if (iter==1) stencil_time = prk::wtime();
-
-      stencil(q, n, d_in, d_out);
-
-      q.submit([&](cl::sycl::handler& h) {
-
-        // accessor methods
-        auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
-        auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
-
-        // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
-                                  [=] (cl::sycl::item<2> it) {
-            cl::sycl::id<2> xy = it.get_id();
-            in[xy] += 1.0;
-        });
-      });
-      q.wait();
+  for (auto i=0; i<n; i++) {
+    for (auto j=0; j<n; j++) {
+      h_in[i*n+j]  = static_cast<prk_float>(i+j);
+      h_out[i*n+j] = static_cast<prk_float>(0);
     }
-    stencil_time = prk::wtime() - stencil_time;
   }
+
+  // copy input from host to device
+  prk_float * d_in;
+  prk_float * d_out;
+  prk::CUDA::check( cudaMalloc((void**)&d_in, bytes) );
+  prk::CUDA::check( cudaMalloc((void**)&d_out, bytes) );
+  prk::CUDA::check( cudaMemcpy(d_in, &(h_in[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::CUDA::check( cudaMemcpy(d_out, &(h_out[0]), bytes, cudaMemcpyHostToDevice) );
+
+  for (auto iter = 0; iter<=iterations; iter++) {
+
+    if (iter==1) stencil_time = prk::wtime();
+
+    // Apply the stencil operator
+    stencil<<<dimGrid, dimBlock>>>(n, d_in, d_out);
+
+    // Add constant to solution to force refresh of neighbor data, if any
+    add<<<dimGrid, dimBlock>>>(n, d_in);
+
+#ifndef __CORIANDERCC__
+    // silence "ignoring cudaDeviceSynchronize for now" warning
+    prk::CUDA::check( cudaDeviceSynchronize() );
+#endif
+  }
+  stencil_time = prk::wtime() - stencil_time;
+
+  // copy output back to host
+  prk::CUDA::check( cudaMemcpy(&(h_out[0]), d_out, bytes, cudaMemcpyDeviceToHost) );
+
+#ifdef VERBOSE
+  // copy input back to host - debug only
+  prk::CUDA::check( cudaMemcpy(&(h_in[0]), d_in, bytes, cudaMemcpyDeviceToHost) );
+#endif
+
+  prk::CUDA::check( cudaFree(d_out) );
+  prk::CUDA::check( cudaFree(d_in) );
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
   // interior of grid with respect to stencil
-  auto active_points = (n-2L*radius)*(n-2L*radius);
-
-  // compute L1 norm in parallel
+  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
+  // compute L1 norm
   double norm = 0.0;
   for (auto i=radius; i<n-radius; i++) {
     for (auto j=radius; j<n-radius; j++) {
@@ -276,8 +264,8 @@ int main(int argc, char* argv[])
     std::cout << "L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
 #endif
-    const size_t stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
-    size_t flops = (2L*stencil_size+1L) * active_points;
+    const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
+    size_t flops = (2L*(size_t)stencil_size+1L) * active_points;
     auto avgtime = stencil_time/iterations;
     std::cout << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
