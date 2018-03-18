@@ -129,6 +129,8 @@ Cxx11/nstream-vector-rangefor
 Cxx11/nstream-vector-stl
 Cxx11/nstream-vector-taskloop
 Cxx11/nstream-vector-tbb
+Cxx11/nstream-valarray-boost-compute
+Cxx11/nstream-vector-boost-compute
 Cxx11/sparse-vector
 Cxx11/stencil-opencl
 Cxx11/stencil-openmp-target
