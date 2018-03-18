@@ -79,6 +79,8 @@ y = yes
 
 i = in-progress, incomplete, or incorrect
 
+f = see footnotes
+
 | Parallelism          | p2p | stencil | transpose | nstream | sparse | dgemm |
 |----------------------|-----|---------|-----------|---------|--------|-------|
 | None                 |  y  |    y    |     y     |    y    |    y   |   y   |
