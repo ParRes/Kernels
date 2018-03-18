@@ -182,6 +182,9 @@ const T prk_reduce(I first, I last, T init) {
 
 #if defined(USE_BOOST)
 # include "boost/range/irange.hpp"
+#endif
+
+#if defined(USE_BOOST_COMPUTE)
 # include "boost/compute.hpp"
 # include "boost/compute/container/valarray.hpp"
 #endif

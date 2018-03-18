@@ -61,7 +61,7 @@ TBBFLAG=-DUSE_TBB -tbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
+BOOSTFLAG=-DUSE_BOOST -DUSE_BOOST_COMPUTE -I/usr/local/Cellar/boost/1.65.1/include
 PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG}
 KOKKOSDIR=/opt/kokkos/intel
 KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl

@@ -25,7 +25,7 @@ ORNLACCFLAG=-h acc
 # Parallel STL, Boost, etc.
 #
 # NERSC: "module load boost"
-BOOSTFLAG=-DUSE_BOOST -I$${BOOST_DIR}/include
+BOOSTFLAG=-DUSE_BOOST -DUSE_BOOST_COMPUTE -I$${BOOST_DIR}/include
 #
 # MPI
 #

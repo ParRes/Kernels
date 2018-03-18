@@ -436,8 +436,14 @@ case "$PRK_TARGET" in
                 ;;
         esac
 
+        # Boost.Compute found after OpenCL, and only available in Travis with MacOS.
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            echo "BOOSTFLAG=-DUSE_BOOST -DUSE_BOOST_COMPUTE" >> common/make.defs
+        else
+            echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
+        fi
+
         # C++11 with rangefor and Boost.Ranges
-        echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
         make -C $PRK_TARGET_PATH rangefor
         $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
         $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
