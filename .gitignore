@@ -116,6 +116,7 @@ Cxx11/p2p-innerloop-openmp
 Cxx11/p2p-doacross-vector-openmp
 Cxx11/p2p-innerloop-opencl
 Cxx11/p2p-innerloop-vector
+Cxx11/p2p-hyperplane-vector
 Cxx11/p2p-hyperplane-vector-openmp
 Cxx11/p2p-innerloop-vector-tbb
 Cxx11/nstream-kokkos
