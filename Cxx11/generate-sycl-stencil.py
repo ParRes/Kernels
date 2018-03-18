@@ -5,28 +5,30 @@ import fileinput
 import string
 import os
 
-def codegen(src,pattern,stencil_size,radius,W,model,dim):
-    src.write('void '+pattern+str(radius)+'(cl::sycl::queue & q, const size_t n,\n')
+def codegen(src,pattern,stencil_size,radius,model,dim):
+    src.write('void '+pattern+str(radius)+'(cl::sycl::queue & q, const size_t n, ')
     if (dim==2):
-        src.write('           cl::sycl::buffer<double, 2> & d_in,\n')
-        src.write('           cl::sycl::buffer<double, 2> & d_out) {\n')
+        src.write('cl::sycl::buffer<double, 2> & d_in, ')
+        src.write('cl::sycl::buffer<double, 2> & d_out)\n')
     else:
-        src.write('           cl::sycl::buffer<double> & d_in,\n')
-        src.write('           cl::sycl::buffer<double> & d_out) {\n')
+        src.write('cl::sycl::buffer<double> & d_in, ')
+        src.write('cl::sycl::buffer<double> & d_out)\n')
+    src.write('{\n')
     src.write('  q.submit([&](cl::sycl::handler& h) {\n')
     src.write('    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);\n')
     src.write('    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);\n')
     if (dim==2):
-        src.write('    h.parallel_for<class '+pattern+str(radius)+'_'+str(dim)+'d>(cl::sycl::range<2> {n-2*'+str(radius)+',n-2*'+str(radius)+'}, cl::sycl::id<2> {'+str(radius)+','+str(radius)+'},\n')
-        src.write('                                [=] (cl::sycl::item<2> it) {\n')
-        src.write('        cl::sycl::id<2> xy = it.get_id();\n')
         for r in range(1,radius+1):
-            src.write('        cl::sycl::id<2> dx'+str(r)+'(cl::sycl::range<2> {'+str(r)+',0});\n')
-            src.write('        cl::sycl::id<2> dy'+str(r)+'(cl::sycl::range<2> {0,'+str(r)+'});\n')
+            src.write('    cl::sycl::id<2> dx'+str(r)+'({'+str(r)+',0});\n')
+            src.write('    cl::sycl::id<2> dy'+str(r)+'({0,'+str(r)+'});\n')
+    src.write('    h.parallel_for<class '+pattern+str(radius)+'_'+str(dim)+'d>(')
+    src.write('{n-'+str(2*radius)+',n-'+str(2*radius)+'}, ')
+    src.write('{'+str(radius)+','+str(radius)+'}, ')
+    src.write('[=] (auto it) {\n')
+    if (dim==2):
+        src.write('        cl::sycl::id<2> xy = it.get_id();\n')
         src.write('        out[xy] += ')
     else:
-        src.write('    h.parallel_for<class '+pattern+str(radius)+'_'+str(dim)+'d>(cl::sycl::range<2> {n-2*'+str(radius)+',n-2*'+str(radius)+'}, cl::sycl::id<2> {'+str(radius)+','+str(radius)+'},\n')
-        src.write('                                [=] (cl::sycl::item<2> it) {\n')
         # 1D indexing the slow way
         #src.write('        auto i = it[0];\n')
         #src.write('        auto j = it[1];\n')
@@ -78,30 +80,12 @@ def codegen(src,pattern,stencil_size,radius,W,model,dim):
     src.write('}\n\n')
 
 def instance(src,model,pattern,r):
-
-    W = [[0.0e0 for x in range(2*r+1)] for x in range(2*r+1)]
     if pattern == 'star':
         stencil_size = 4*r+1
-        for i in range(1,r+1):
-            W[r][r+i] = +1./(2*i*r)
-            W[r+i][r] = +1./(2*i*r)
-            W[r][r-i] = -1./(2*i*r)
-            W[r-i][r] = -1./(2*i*r)
-
     else:
         stencil_size = (2*r+1)**2
-        for j in range(1,r+1):
-            for i in range(-j+1,j):
-                W[r+i][r+j] = +1./(4*j*(2*j-1)*r)
-                W[r+i][r-j] = -1./(4*j*(2*j-1)*r)
-                W[r+j][r+i] = +1./(4*j*(2*j-1)*r)
-                W[r-j][r+i] = -1./(4*j*(2*j-1)*r)
-
-            W[r+j][r+j]    = +1./(4*j*r)
-            W[r-j][r-j]    = -1./(4*j*r)
-
-    codegen(src,pattern,stencil_size,r,W,model,1)
-    codegen(src,pattern,stencil_size,r,W,model,2)
+    codegen(src,pattern,stencil_size,r,model,1)
+    codegen(src,pattern,stencil_size,r,model,2)
 
 def main():
     for model in ['sycl']:
