@@ -62,6 +62,8 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#define LAMBDA_MAKE_TUPLE 1
+
 #include "prk_util.h"
 
 namespace compute = boost::compute;
@@ -104,16 +106,12 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  //compute::compute::device device = compute::compute::system::default_device();
   auto device = compute::system::default_device();
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
   std::cout << "Boost.Compute device = " << device.name() << std::endl;
-
-  compute::context context(device);
-  compute::command_queue queue(context, device);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -126,6 +124,8 @@ int main(int argc, char * argv[])
 
   const float scalar(3);
 
+  compute::context context(device);
+  compute::command_queue queue(context, device);
   {
     compute::vector<float> d_A(length, context);
     compute::vector<float> d_B(length, context);
@@ -140,47 +140,22 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-#if STUPID_HACK_IMPLEMENTATION
-      compute::transform(d_B.begin(), d_B.end(), d_A.begin(), d_A.begin(), compute::plus<float>(), queue);
-      compute::transform(d_C.begin(), d_C.end(), d_A.begin(), d_A.begin(), compute::plus<float>(), queue);
-      compute::transform(d_C.begin(), d_C.end(), d_A.begin(), d_A.begin(), compute::plus<float>(), queue);
-      compute::transform(d_C.begin(), d_C.end(), d_A.begin(), d_A.begin(), compute::plus<float>(), queue);
-#else
-
-#if LAMBDA_MAKE_TUPLE
       // Aout and Ain are necessary because A += .. does not work
       auto Aout = compute::lambda::get<0>(boost::compute::_1);
       auto Ain  = compute::lambda::get<1>(boost::compute::_1);
       auto B    = compute::lambda::get<2>(boost::compute::_1);
       auto C    = compute::lambda::get<3>(boost::compute::_1);
-#endif
 
-      compute::for_each(
-          compute::make_zip_iterator(
-              boost::make_tuple(
-                  d_A.begin(), d_A.begin(), d_B.begin(), d_C.begin()
-              )
-          ),
-          compute::make_zip_iterator(
-              boost::make_tuple(
-                  d_A.end(), d_A.end(), d_B.end(), d_C.end()
-              )
-          ),
-#if LAMBDA_MAKE_TUPLE
-          // += does not work here
-          compute::lambda::make_tuple(
-              Aout = Ain + B + scalar * C
-          ),
-#else
-          // += does not work here
-          compute::lambda::get<0>(_1) = compute::lambda::get<1>(_1)
-                                      + compute::lambda::get<2>(_1)
-                                      + compute::lambda::get<3>(_1) * scalar,
-#endif
-          queue
-      );
-#endif
+      auto begin = compute::make_zip_iterator( boost::make_tuple( d_A.begin(), d_A.begin(), d_B.begin(), d_C.begin()));
+      auto end   = compute::make_zip_iterator( boost::make_tuple( d_A.end(),   d_A.end(),   d_B.end(),   d_C.end()));
 
+      compute::for_each(begin, end,
+                        compute::lambda::make_tuple
+                        (
+                            Aout = Ain + B + scalar * C
+                        ),
+                        queue
+                       );
       queue.finish();
     }
 
