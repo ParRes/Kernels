@@ -473,10 +473,12 @@ case "$PRK_TARGET" in
                     ;;
             esac
             make -C $PRK_TARGET_PATH stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
-            #$PRK_TARGET_PATH/p2p-vector-tbb     10 1024 1024 64 64
-            $PRK_TARGET_PATH/stencil-vector-tbb     10 1000
-            $PRK_TARGET_PATH/transpose-vector-tbb   10 1024 32
-            $PRK_TARGET_PATH/nstream-vector-tbb     10 16777216 32
+            $PRK_TARGET_PATH/p2p-innerloop-vector-tbb     10 1024
+            $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 1
+            $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 32
+            $PRK_TARGET_PATH/stencil-vector-tbb           10 1000
+            $PRK_TARGET_PATH/transpose-vector-tbb         10 1024 32
+            $PRK_TARGET_PATH/nstream-vector-tbb           10 16777216 32
             #echo "Test stencil code generator"
             for s in star grid ; do
                 for r in 1 2 3 4 5 ; do
