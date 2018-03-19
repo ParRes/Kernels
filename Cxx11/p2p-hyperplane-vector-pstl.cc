@@ -90,7 +90,11 @@ inline void sweep_tile_hyperplane(int startm, int endm,
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/TBB HYPERPLANE pipeline execution on 2D grid" << std::endl;
+#if defined(USE_PSTL)
+  std::cout << "C++17 PSTL HYPERPLANE pipeline execution on 2D grid" << std::endl;
+#else
+  std::cout << "C++11 STL HYPERPLANE pipeline execution on 2D grid" << std::endl;
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -131,15 +135,9 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  const char* envvar = std::getenv("TBB_NUM_THREADS");
-  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
-  tbb::task_scheduler_init init(num_threads);
-
-  std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
   std::cout << "Grid chunk sizes     = " << nc << std::endl;
-  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -161,9 +159,17 @@ int main(int argc, char* argv[])
 
     if (nc==1) {
       for (auto i=2; i<=2*n-2; i++) {
-        //OMP_FOR_SIMD
-        //for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
-        tbb::parallel_for( std::max(2,i-n+2), std::min(i,n)+1, [=,&grid](int j) {
+        const auto begin = std::max(2,i-n+2);
+        const auto end   = std::min(i,n)+1;
+        auto range = boost::irange(begin,end);
+#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
+        std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (auto j) {
+#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
+                        && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
+        __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (auto j) {
+#else
+        std::for_each( std::begin(range), std::end(range), [&] (auto j) {
+#endif
           const auto x = i-j+1;
           const auto y = j-1;
           grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
@@ -171,9 +177,17 @@ int main(int argc, char* argv[])
       }
     } else {
       for (int i=2; i<=2*(nb+1)-2; i++) {
-        //OMP_FOR()
-        //for (int j=std::max(2,i-(nb+1)+2); j<=std::min(i,nb+1); j++) {
-        tbb::parallel_for( std::max(2,i-(nb+1)+2), std::min(i,nb+1)+1, [=,&grid](int j) {
+        const auto begin = std::max(2,i-(nb+1)+2);
+        const auto end   = std::min(i,nb+1)+1;
+        auto range = boost::irange(begin,end);
+#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
+        std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (auto j) {
+#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
+                        && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
+        __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (auto j) {
+#else
+        std::for_each( std::begin(range), std::end(range), [&] (auto j) {
+#endif
           const int ib = nc*(i-j)+1;
           const int jb = nc*(j-2)+1;
           sweep_tile_sequential(ib, std::min(n,ib+nc), jb, std::min(n,jb+nc), n, grid);
