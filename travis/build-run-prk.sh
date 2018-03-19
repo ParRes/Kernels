@@ -623,10 +623,11 @@ case "$PRK_TARGET" in
                 echo "SYCLCXX=${PRK_CXX} -fopenmp -std=c++14" >> common/make.defs
             fi
             echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include" >> common/make.defs
-            make -C $PRK_TARGET_PATH stencil-sycl transpose-sycl nstream-sycl
-            $PRK_TARGET_PATH/stencil-sycl     10 1000
-            $PRK_TARGET_PATH/transpose-sycl   10 1024 32
-            $PRK_TARGET_PATH/nstream-sycl     10 16777216 32
+            make -C $PRK_TARGET_PATH p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl
+            $PRK_TARGET_PATH/p2p-hyperplane-sycl 10 50 1 # 100 takes too long :-o
+            $PRK_TARGET_PATH/stencil-sycl        10 1000
+            $PRK_TARGET_PATH/transpose-sycl      10 1024 32
+            $PRK_TARGET_PATH/nstream-sycl        10 16777216 32
             #echo "Test stencil code generator"
             for s in star ; do # grid ; do # grid not supported yet
                 for r in 1 2 3 4 5 ; do
