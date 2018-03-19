@@ -210,3 +210,6 @@ FORTRAN/transpose-tasks-openmp
 RUST/p2p
 RUST/stencil
 RUST/transpose
+p2p-hyperplane-vector-stl
+p2p-hyperplane-vector-pstl
+p2p-hyperplane-vector-tbb
