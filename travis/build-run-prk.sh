@@ -624,7 +624,7 @@ case "$PRK_TARGET" in
             fi
             echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include" >> common/make.defs
             make -C $PRK_TARGET_PATH p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl
-            $PRK_TARGET_PATH/p2p-hyperplane-sycl 10 50 1 # 100 takes too long :-o
+            #$PRK_TARGET_PATH/p2p-hyperplane-sycl 10 50 1 # 100 takes too long :-o
             $PRK_TARGET_PATH/stencil-sycl        10 1000
             $PRK_TARGET_PATH/transpose-sycl      10 1024 32
             $PRK_TARGET_PATH/nstream-sycl        10 16777216 32
