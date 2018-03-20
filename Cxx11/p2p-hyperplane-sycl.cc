@@ -156,44 +156,56 @@ int main(int argc, char* argv[])
 
   cl::sycl::queue q;
   {
-    cl::sycl::buffer<double> d_grid { h_grid.data(), h_grid.size() };
-
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) pipeline_time = prk::wtime();
 
-      for (int i=2; i<=2*n-2; i++) {
+      {
+        cl::sycl::buffer<double> d_grid { h_grid.data(), h_grid.size() };
 
-        cl::sycl::id<1> I{unsigned(i)};
-        cl::sycl::id<1> One{1};
+        for (int i=2; i<=2*n-2; i++) {
 
-        q.submit([&](cl::sycl::handler& h) {
+          cl::sycl::id<1> I{unsigned(i)};
+          cl::sycl::id<1> One{1};
 
-          auto grid = d_grid.get_access<cl::sycl::access::mode::read_write>(h);
+          q.submit([&](cl::sycl::handler& h) {
 
-          unsigned begin = std::max(2,i-n+2);
-          unsigned end   = std::min(i,n)+1;
-          unsigned range = end-begin;
+            auto grid = d_grid.get_access<cl::sycl::access::mode::read_write>(h);
 
-          h.parallel_for<class p2p>(cl::sycl::range<1>{range}, cl::sycl::id<1>{begin}, [=] (cl::sycl::item<1> J) {
-            cl::sycl::id<1> N{unsigned(n)};
-            cl::sycl::id<1> X{I-J+One};
-            cl::sycl::id<1> Y{J-One};
-            cl::sycl::id<1> Xold{X-One}; // x-1
-            cl::sycl::id<1> Yold{Y-One}; // y-1
-            cl::sycl::id<1> index0{X*N+Y};
-            cl::sycl::id<1> index1{Xold*N+Y};
-            cl::sycl::id<1> index2{X*N+Yold};
-            cl::sycl::id<1> index3{Xold*N+Yold};
-            grid[index0] = grid[index1] + grid[index2] - grid[index3];
+            unsigned begin = std::max(2,i-n+2);
+            unsigned end   = std::min(i,n)+1;
+            unsigned range = end-begin;
+
+            h.parallel_for<class p2p>(cl::sycl::range<1>{range}, cl::sycl::id<1>{begin}, [=] (cl::sycl::item<1> j) {
+              auto J = j.get_id();
+              cl::sycl::id<1> N{unsigned(n)};
+              cl::sycl::id<1> X{I-J+One};
+              cl::sycl::id<1> Y{J-One};
+              cl::sycl::id<1> Xold{X-One}; // x-1
+              cl::sycl::id<1> Yold{Y-One}; // y-1
+              cl::sycl::id<1> index0{X*N+Y};
+              cl::sycl::id<1> index1{Xold*N+Y};
+              cl::sycl::id<1> index2{X*N+Yold};
+              cl::sycl::id<1> index3{Xold*N+Yold};
+              grid[index0] = grid[index1] + grid[index2] - grid[index3];
+              //std::cout << "I,J=" << I[0] << "," << J[0] << "\n";
+            });
           });
-        });
-        q.wait();
+          q.wait();
+        }
       }
       h_grid[0*n+0] = -h_grid[(n-1)*n+(n-1)];
     }
     pipeline_time = prk::wtime() - pipeline_time;
   }
+
+#if 0
+  for (int i=0; i<n; ++i) {
+      for (int j=0; j<n; ++j) {
+          std::cout << i << "," << j << "=" << h_grid[i*n+j] << "\n";
+      }
+  }
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
