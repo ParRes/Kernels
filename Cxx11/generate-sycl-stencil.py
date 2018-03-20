@@ -22,9 +22,9 @@ def codegen(src,pattern,stencil_size,radius,model,dim):
             src.write('    cl::sycl::id<2> dx'+str(r)+'(cl::sycl::range<2> {'+str(r)+',0});\n')
             src.write('    cl::sycl::id<2> dy'+str(r)+'(cl::sycl::range<2> {0,'+str(r)+'});\n')
     src.write('    h.parallel_for<class '+pattern+str(radius)+'_'+str(dim)+'d>(')
-    src.write('{n-'+str(2*radius)+',n-'+str(2*radius)+'}, ')
-    src.write('{'+str(radius)+','+str(radius)+'}, ')
-    src.write('[=] (auto it) {\n')
+    src.write('cl::sycl::range<2> {n-'+str(2*radius)+',n-'+str(2*radius)+'}, ')
+    src.write('cl::sycl::id<2> {'+str(radius)+','+str(radius)+'}, ')
+    src.write('[=] (cl::sycl::item<2> it) {\n')
     if (dim==2):
         src.write('        cl::sycl::id<2> xy = it.get_id();\n')
         src.write('        out[xy] += ')
