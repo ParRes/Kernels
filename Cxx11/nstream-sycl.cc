@@ -123,6 +123,10 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
     std::cout << e.what() << std::endl;
     return;
   }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return;
+  }
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -262,9 +266,15 @@ int main(int argc, char * argv[])
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
+    return 1;
   }
   catch (std::exception e) {
     std::cout << e.what() << std::endl;
+    return 1;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return 1;
   }
 
   return 0;
