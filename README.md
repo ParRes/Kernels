@@ -79,6 +79,8 @@ y = yes
 
 i = in-progress, incomplete, or incorrect
 
+f = see footnotes
+
 | Parallelism          | p2p | stencil | transpose | nstream | sparse | dgemm |
 |----------------------|-----|---------|-----------|---------|--------|-------|
 | None                 |  y  |    y    |     y     |    y    |    y   |   y   |
@@ -88,14 +90,17 @@ i = in-progress, incomplete, or incorrect
 | OpenMP target        |  y  |    y    |     y     |    y    |        |       |
 | OpenCL 1.x           |  i  |    y    |     y     |    y    |        |       |
 | SYCL                 |     |    y    |     y     |    y    |        |       |
+| Boost.Compute        |     |         |           |    y    |        |       |
 | Parallel STL         |  y  |    y    |     y     |    y    |        |       |
 | TBB                  |  i  |    y    |     y     |    y    |        |       |
 | Kokkos               |  y  |    y    |     y     |    y    |        |       |
 | RAJA                 |  y  |    y    |     y     |    y    |        |       |
-| CUDA                 |     |         |     y     |    y    |        |       |
+| CUDA                 |  i  |    y    |     y     |    y    |        |       |
 | CUBLAS               |     |         |     y     |    y    |        |       |
 | CBLAS                |     |         |           |         |        |   y   |
 
+* [SYCL](http://sycl.tech/)
+* [Boost.Compute](http://boostorg.github.io/compute/)
 * [TBB](https://www.threadingbuildingblocks.org/)
 * [Kokkos](https://github.com/kokkos/kokkos)
 * [RAJA](https://github.com/LLNL/RAJA)

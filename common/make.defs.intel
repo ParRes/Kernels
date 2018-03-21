@@ -20,8 +20,11 @@ CXX=icpc -std=c++14 -pthread
 #
 # -xHOST is appropriate for most cases.
 DEFAULT_OPT_FLAGS=-g -O3 -xHOST
+#
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -xMIC-AVX512
+#
+DEFAULT_OPT_FLAGS+=-qopt-report=5
 #
 # OpenMP flags
 #
@@ -41,8 +44,13 @@ OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 SYCLDIR=./triSYCL
-SYCLCXX=${CXX}
+SYCLCXX=${CXX} ${OPENMPFLAG}
 SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+# ProGTX
+# https://github.com/ProGTX/sycl-gtx
+SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
+SYCLCXX=${CXX} ${OPENMPFLAG}
+SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # OCCA
 #
@@ -58,7 +66,7 @@ TBBFLAG=-DUSE_TBB -tbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
+BOOSTFLAG=-DUSE_BOOST -DUSE_BOOST_COMPUTE -I/usr/local/Cellar/boost/1.65.1/include
 PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG}
 KOKKOSDIR=/opt/kokkos/intel
 KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl

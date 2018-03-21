@@ -35,7 +35,7 @@
 ///
 /// PURPOSE: This program tests the efficiency with which point-to-point
 ///          synchronization can be carried out. It does so by executing
-///          a pipelined algorithm on an n*n grid. The first array dimension
+///          a pipelined algorithm on an n^2 grid. The first array dimension
 ///          is distributed among the threads (stripwise decomposition).
 ///
 /// USAGE:   The program takes as input the
@@ -61,20 +61,46 @@
 
 #include "prk_util.h"
 
+inline void sweep_tile_sequential(int startm, int endm,
+                                  int startn, int endn,
+                                  int n, std::vector<double> & grid)
+{
+  for (auto i=startm; i<endm; i++) {
+    for (auto j=startn; j<endn; j++) {
+      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+    }
+  }
+}
+
+#if 0
+inline void sweep_tile_hyperplane(int startm, int endm,
+                                  int startn, int endn,
+                                  int n, std::vector<double> & grid)
+{
+  for (auto i=2; i<=2*n-2; i++) {
+    for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
+      const auto x = i-j+1;
+      const auto y = j-1;
+      grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+    }
+  }
+}
+#endif
+
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/TBB INNERLOOP pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/TBB HYPERPLANE pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int n;
+  int n, nc, nb;
   try {
       if (argc < 3) {
-        throw " <# iterations> <array dimension>";
+        throw " <# iterations> <array dimension> [<chunk dimension>]";
       }
 
       // number of times to run the pipeline algorithm
@@ -90,6 +116,15 @@ int main(int argc, char* argv[])
       } else if ( static_cast<size_t>(n)*static_cast<size_t>(n) > static_cast<size_t>(INT_MAX)) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
+
+      // grid chunk dimensions
+      nc = (argc > 3) ? std::atoi(argv[3]) : 1;
+      nc = std::max(1,nc);
+      nc = std::min(n,nc);
+
+      // number of grid blocks
+      nb = (n-1)/nc;
+      if ((n-1)%nc) nb++;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -103,6 +138,7 @@ int main(int argc, char* argv[])
   std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
+  std::cout << "Grid chunk sizes     = " << nc << std::endl;
   std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
@@ -119,16 +155,30 @@ int main(int argc, char* argv[])
     grid[j*n+0] = static_cast<double>(j);
   }
 
-  for (auto iter = 0; iter<=iterations; iter++){
+  for (auto iter = 0; iter<=iterations; iter++) {
 
-    if (iter == 1) pipeline_time = prk::wtime();
+    if (iter==1) pipeline_time = prk::wtime();
 
-    for (auto i=2; i<=2*n-2; i++) {
-      tbb::parallel_for( std::max(2,i-n+2), std::min(i,n)+1, [=,&grid](int j) {
-               const auto x = i-j+2-1;
-               const auto y = j-1;
-               grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-           }, tbb_partitioner );
+    if (nc==1) {
+      for (auto i=2; i<=2*n-2; i++) {
+        //OMP_FOR_SIMD
+        //for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
+        tbb::parallel_for( std::max(2,i-n+2), std::min(i,n)+1, [=,&grid](int j) {
+          const auto x = i-j+1;
+          const auto y = j-1;
+          grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+        });
+      }
+    } else {
+      for (int i=2; i<=2*(nb+1)-2; i++) {
+        //OMP_FOR()
+        //for (int j=std::max(2,i-(nb+1)+2); j<=std::min(i,nb+1); j++) {
+        tbb::parallel_for( std::max(2,i-(nb+1)+2), std::min(i,nb+1)+1, [=,&grid](int j) {
+          const int ib = nc*(i-j)+1;
+          const int jb = nc*(j-2)+1;
+          sweep_tile_sequential(ib, std::min(n,ib+nc), jb, std::min(n,jb+nc), n, grid);
+        });
+      }
     }
     grid[0*n+0] = -grid[(n-1)*n+(n-1)];
   }
@@ -140,7 +190,7 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   const double epsilon = 1.e-8;
-  auto corner_val = ((iterations+1.)*(n+n-2.));
+  auto corner_val = ((iterations+1.)*(2.*n-2.));
   if ( (std::fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;

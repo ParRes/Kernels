@@ -66,8 +66,13 @@ SYCLFLAG+=-no-serial-memop
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 #SYCLDIR=./triSYCL
-#SYCLCXX=${CXX}
+#SYCLCXX=${CXX} ${OPENMPFLAG}
 #SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+# ProGTX
+# https://github.com/ProGTX/sycl-gtx
+SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
+SYCLCXX=${CXX} ${OPENMPFLAG}
+SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # OCCA
 OCCADIR=${HOME}/prk-repo/Cxx11/occa
@@ -79,7 +84,7 @@ TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
+BOOSTFLAG=-DUSE_BOOST -DUSE_BOOST_COMPUTE -I/usr/local/Cellar/boost/1.65.1/include
 PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include
 KOKKOSDIR=/opt/kokkos/clang
 KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
