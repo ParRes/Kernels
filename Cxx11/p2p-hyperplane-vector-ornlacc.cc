@@ -61,40 +61,10 @@
 
 #include "prk_util.h"
 
-inline void sweep_tile_sequential(int startm, int endm,
-                                  int startn, int endn,
-                                  int n, double grid[])
-{
-  for (auto i=startm; i<endm; i++) {
-    for (auto j=startn; j<endn; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
-
-#if 0
-inline void sweep_tile_hyperplane(int startm, int endm,
-                                  int startn, int endn,
-                                  int n, double grid[])
-{
-  for (auto i=2; i<=2*n-2; i++) {
-    for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
-      const auto x = i-j+1;
-      const auto y = j-1;
-      grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-    }
-  }
-}
-#endif
-
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-#ifdef _OPENMP
-  std::cout << "C++11/OpenMP HYPERPLANE pipeline execution on 2D grid" << std::endl;
-#else
-  std::cout << "C++11/Serial HYPERPLANE pipeline execution on 2D grid" << std::endl;
-#endif
+  std::cout << "C++11/ORNL-ACC HYPERPLANE pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -138,9 +108,6 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-#ifdef _OPENMP
-  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
-#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
   std::cout << "Grid chunk sizes     = " << nc << std::endl;
@@ -149,19 +116,19 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  auto pipeline_time = 0.0;
 
   double * grid = new double[n*n];
 
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
       grid[i*n+j] = 0.0;
     }
   }
-  for (auto j=0; j<n; j++) {
+  for (int j=0; j<n; j++) {
     grid[0*n+j] = static_cast<double>(j);
   }
-  for (auto i=0; i<n; i++) {
+  for (int i=0; i<n; i++) {
     grid[i*n+0] = static_cast<double>(i);
   }
 
@@ -173,7 +140,7 @@ int main(int argc, char* argv[])
 
       if (nc==1) {
         for (int i=2; i<=2*n-2; i++) {
-          //OMP_FOR_SIMD
+          #pragma acc parallel loop independent
           for (int j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
             const int x = i-j+1;
             const int y = j-1;
@@ -182,15 +149,24 @@ int main(int argc, char* argv[])
         }
       } else {
         for (int i=2; i<=2*(nb+1)-2; i++) {
-          //OMP_FOR()
+          #pragma acc parallel loop gang
           for (int j=std::max(2,i-(nb+1)+2); j<=std::min(i,nb+1); j++) {
-            const int ib = nc*(i-j+1-1)+1;
-            const int jb = nc*(j-1-1)+1;
-            sweep_tile_sequential(ib, std::min(n,ib+nc), jb, std::min(n,jb+nc), n, grid);
+            const int ib = nc*(i-j)+1;
+            const int jb = nc*(j-2)+1;
+            //sweep_tile_sequential(ib, std::min(n,ib+nc), jb, std::min(n,jb+nc), n, grid);
+            #pragma acc loop vector
+            for (int i=ib; i<std::min(n,ib+nc); i++) {
+              for (int j=jb; j<std::min(n,jb+nc); j++) {
+                grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+              }
+            }
           }
         }
       }
-      grid[0*n+0] = -grid[(n-1)*n+(n-1)];
+      #pragma acc kernels
+      {
+        grid[0*n+0] = -grid[(n-1)*n+(n-1)];
+      }
     }
     pipeline_time = prk::wtime() - pipeline_time;
   }
