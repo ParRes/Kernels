@@ -148,7 +148,8 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
       double nbytes = 4.0 * length * sizeof(T);
-      std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
+      std::cout << 8*sizeof(T) << "B "
+                << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }
 }
