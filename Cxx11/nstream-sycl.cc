@@ -66,6 +66,10 @@
 
 #include "prk_util.h"
 
+// need to declare kernel class as template
+// to prevent name mangling conflict below
+template <typename T> class nstream;
+
 template <typename T>
 void run(cl::sycl::queue & q, int iterations, size_t length)
 {
@@ -99,7 +103,7 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
         auto B = d_B.template get_access<cl::sycl::access::mode::read>(h);
         auto C = d_C.template get_access<cl::sycl::access::mode::read>(h);
 
-        h.parallel_for<class nstream>(cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
+        h.parallel_for<class nstream<T>>(cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
             A[i] += B[i] + scalar * C[i];
         });
       });
@@ -111,8 +115,8 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
     // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
   }
-  catch (const char * e) {
-    std::cout << e << std::endl;
+  catch (cl::sycl::exception e) {
+    std::cout << e.what() << std::endl;
     return;
   }
 
@@ -195,27 +199,31 @@ int main(int argc, char * argv[])
 
   try {
     cl::sycl::queue cpu(cl::sycl::cpu_selector{});
-    {
+    if (1) {
         auto device      = cpu.get_device();
         auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
+        //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
 
+        run<float>(cpu, iterations, length);
         run<double>(cpu, iterations, length);
     }
 
     cl::sycl::queue gpu(cl::sycl::gpu_selector{});
-    {
+    if (1) {
         auto device      = gpu.get_device();
         auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
+        //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
 
+        run<float>(gpu, iterations, length);
         run<double>(gpu, iterations, length);
     }
   }
-  catch (const char * e) {
-    std::cout << e << std::endl;
+  catch (cl::sycl::exception e) {
+    std::cout << e.what() << std::endl;
     return 1;
   }
 
