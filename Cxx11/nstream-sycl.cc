@@ -199,8 +199,10 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    cl::sycl::queue cpu(cl::sycl::cpu_selector{});
+
+    // CPU requires spir64 target
     if (1) {
+        cl::sycl::queue cpu(cl::sycl::cpu_selector{});
         auto device      = cpu.get_device();
         auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
@@ -211,8 +213,9 @@ int main(int argc, char * argv[])
         run<double>(cpu, iterations, length);
     }
 
-    cl::sycl::queue gpu(cl::sycl::gpu_selector{});
-    if (1) {
+    // NVIDIA GPU requires ptx64 target and does not work very well
+    if (0) {
+        cl::sycl::queue gpu(cl::sycl::gpu_selector{});
         auto device      = gpu.get_device();
         auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
@@ -225,7 +228,6 @@ int main(int argc, char * argv[])
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
-    return 1;
   }
 
   return 0;
