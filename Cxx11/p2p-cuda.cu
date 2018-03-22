@@ -62,18 +62,41 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
+__global__ void p2p_1h(int n, int i, prk_float * grid)
+{
+  int j = blockIdx.x * blockDim.x + threadIdx.x;
+  //int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+  int start = std::max(2,i-n+2);
+  int end   = std::min(i,n);
+  int range = end - start;
+
+#if 0
+  printf("tid/j=%d\n", j);
+  printf("start=%d\n", start);
+  printf("end  =%d\n", end);
+  printf("range=%d\n", range);
+#endif
+
+  if ((start <= j) && (j<=end)) {
+    const int x = i-j+2-1;
+    const int y = j-1;
+    grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+  }
+}
+
 __global__ void p2p(int n, prk_float * grid)
 {
-  auto j = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.x * blockDim.x + threadIdx.x;
   //auto y = blockIdx.y * blockDim.y + threadIdx.y;
 
   //printf("j=%d\n",j);
 
-  for (auto i=2; i<=2*n-2; i++) {
-    //for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
+  for (int i=2; i<=2*n-2; i++) {
+    // for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++)
     if ((std::max(2,i-n+2) <= j) && (j<=std::min(i,n))) {
-      const auto x = i-j+2-1;
-      const auto y = j-1;
+      const int x = i-j+2-1;
+      const int y = j-1;
       grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
     }
     __syncthreads();
@@ -125,9 +148,11 @@ int main(int argc, char* argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
 
+#if 0
   dim3 dimGrid(n, 1, 1);
   dim3 dimBlock(1, 1, 1);
   info.checkDims(dimBlock, dimGrid);
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -175,7 +200,13 @@ int main(int argc, char* argv[])
     }
     h_grid[0*n+0] = -h_grid[(n-1)*n+(n-1)];
 #else
-    p2p<<<dimGrid, dimBlock>>>(n, d_grid);
+    prk::CUDA::check( cudaMemcpy(d_grid, &(h_grid[0]), bytes, cudaMemcpyHostToDevice) );
+    for (auto i=2; i<=2*n-2; i++) {
+      p2p_1h<<<n,n>>>(n, i, d_grid);
+    }
+    prk::CUDA::check( cudaMemcpy(&(h_grid[0]), d_grid, bytes, cudaMemcpyDeviceToHost) );
+    h_grid[0*n+0] = -h_grid[(n-1)*n+(n-1)];
+    //p2p<<<dimGrid, dimBlock>>>(n, d_grid);
 #ifndef __CORIANDERCC__
     // silence "ignoring cudaDeviceSynchronize for now" warning
     prk::CUDA::check( cudaDeviceSynchronize() );
