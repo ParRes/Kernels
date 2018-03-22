@@ -117,6 +117,7 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
+<<<<<<< HEAD
     return;
   }
   catch (std::exception e) {
@@ -125,6 +126,8 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
   }
   catch (const char * e) {
     std::cout << e << std::endl;
+=======
+>>>>>>> fix name mangling issue - thanks Rod@CodePlay!
     return;
   }
 
@@ -207,14 +210,22 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
+<<<<<<< HEAD
 
     if (1) {
         cl::sycl::queue host(cl::sycl::host_selector{});
 #ifndef TRISYCL
         auto device      = host.get_device();
+=======
+    cl::sycl::queue cpu(cl::sycl::cpu_selector{});
+    if (1) {
+        auto device      = cpu.get_device();
+        auto platform    = device.get_platform();
+>>>>>>> fix name mangling issue - thanks Rod@CodePlay!
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         auto platform    = device.get_platform();
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
+<<<<<<< HEAD
 #endif
 
         run<float>(host, iterations, length);
@@ -226,9 +237,22 @@ int main(int argc, char * argv[])
         cl::sycl::queue cpu(cl::sycl::cpu_selector{});
 #ifndef TRISYCL
         auto device      = cpu.get_device();
+=======
+        //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
+
+        run<float>(cpu, iterations, length);
+        run<double>(cpu, iterations, length);
+    }
+
+    cl::sycl::queue gpu(cl::sycl::gpu_selector{});
+    if (1) {
+        auto device      = gpu.get_device();
+        auto platform    = device.get_platform();
+>>>>>>> fix name mangling issue - thanks Rod@CodePlay!
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         auto platform    = device.get_platform();
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
+<<<<<<< HEAD
         bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
 #else
         bool has_spir = true; // ?
@@ -262,10 +286,17 @@ int main(int argc, char * argv[])
           run<double>(gpu, iterations, length);
 #endif
         }
+=======
+        //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
+
+        run<float>(gpu, iterations, length);
+        run<double>(gpu, iterations, length);
+>>>>>>> fix name mangling issue - thanks Rod@CodePlay!
     }
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
+<<<<<<< HEAD
     return 1;
   }
   catch (std::exception e) {
@@ -274,6 +305,8 @@ int main(int argc, char * argv[])
   }
   catch (const char * e) {
     std::cout << e << std::endl;
+=======
+>>>>>>> fix name mangling issue - thanks Rod@CodePlay!
     return 1;
   }
 
