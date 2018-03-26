@@ -44,6 +44,7 @@ STLFLAGS = $(STLFLAG) $(BOOSTFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
+ORNLACCFLAGS = $(ORNLACCFLAG)
 
 ifdef OCCADIR
   include ${OCCADIR}/scripts/makefile
@@ -66,7 +67,7 @@ all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl sy
 
 p2p: p2p-vector p2p-doacross-vector-openmp p2p-hyperplane-vector-openmp p2p-tasks-openmp p2p-openmp-target \
      p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl p2p-hyperplane-vector-tbb \
-     p2p-hyperplane-sycl
+     p2p-hyperplane-sycl p2p-hyperplane-vector-ornlacc
 
 stencil: stencil-valarray stencil-vector stencil-vector-async stencil-vector-openmp stencil-openmp-target \
 	 stencil-vector-taskloop stencil-vector-stl stencil-vector-pstl stencil-vector-raja \
@@ -116,6 +117,8 @@ cuda: stencil-cuda transpose-cuda nstream-cuda
 cublas: transpose-cublas nstream-cublas
 
 occa: transpose-occa nstream-occa
+
+ornlacc: p2p-hyperplane-vector-ornlacc
 
 boost-compute: nstream-vector-boost-compute
 # busted
@@ -180,6 +183,9 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 %-occa: %-occa.cc prk_util.h
 	$(info PRK help: Set OCCA_CXX=$(firstword $(CXX)) to use that compiler for OKL files.)
 	$(CXX) $(CXXFLAGS) $< $(OCCAFLAGS) -o $@
+
+%-ornlacc: %-ornlacc.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(ORNLACCFLAGS) -o $@
 
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@

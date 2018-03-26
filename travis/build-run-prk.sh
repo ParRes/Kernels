@@ -384,6 +384,11 @@ case "$PRK_TARGET" in
                         $PRK_TARGET_PATH/stencil-vector-openmp 10 200 20 $s $r
                     done
                 done
+                # ORNL-ACC
+                echo "ORNLACCFLAG=-fopenacc" >> common/make.defs
+                make -C $PRK_TARGET_PATH p2p-hyperplane-vector-ornlacc
+                $PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024 64
                 ;;
             clang)
                 # Host

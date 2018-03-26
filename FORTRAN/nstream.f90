@@ -183,13 +183,24 @@ program main
 #if defined(_OPENMP)
   !$omp do
   do i=1,length
-#else
-  do concurrent (i=1:length)
-#endif
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
+  !$omp end do
+#elif defined(PGI)
+  forall (i=1:length)
+    A(i) = 0
+    B(i) = 2
+    C(i) = 2
+  end forall
+#else
+  do concurrent (i=1:length)
+    A(i) = 0
+    B(i) = 2
+    C(i) = 2
+  enddo
+#endif
 
   ! need this because otherwise no barrier between initialization
   ! and iteration 0 (warmup), which will lead to incorrectness.
@@ -211,11 +222,18 @@ program main
 #if defined(_OPENMP)
     !$omp do
     do i=1,length
-#else
-    do concurrent (i=1:length)
-#endif
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
+    !$omp end do
+#elif defined(PGI)
+    forall (i=1:length)
+      A(i) = A(i) + B(i) + scalar * C(i)
+    end forall
+#else
+    do concurrent (i=1:length)
+      A(i) = A(i) + B(i) + scalar * C(i)
+    enddo
+#endif
   enddo ! iterations
 
   t1 = prk_get_wtime()
@@ -241,16 +259,16 @@ program main
   ar = ar * length
 
   asum = 0
-#if defined(_OPENMP)
+#if defined(_OPENMP) || defined(PGI)
   !$omp parallel do reduction(+:asum)
   do i=1,length
-#else
-  do concurrent (i=1:length)
-#endif
     asum = asum + abs(A(i))
   enddo
-#ifdef _OPENMP
   !$omp end parallel do
+#else
+  do concurrent (i=1:length)
+    asum = asum + abs(A(i))
+  enddo
 #endif
 
   deallocate( C )
