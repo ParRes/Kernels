@@ -245,12 +245,20 @@ int main(int argc, char ** argv) {
       printf("Usage: %s <# iterations> <array dimension> <checkpointing> <spare ranks>",
              *argv);
       printf("<kill set size> <kill period>\n");
+#if VERBOSE
+      printf("Actual call: ");
+      for (int parm=0; parm<argc; parm++) printf("%s ", argv[parm]); printf("\n");
+#endif
       error = 1;
       goto ENDOFTESTS;
     }
 #else
     if (argc != 5){
-      printf("Usage: %s <# iterations> <array dimension> <checkpointing> <spare ranks>", *argv);
+      printf("Usage: %s <# iterations> <array dimension> <checkpointing> <spare ranks>\n", *argv);
+#if VERBOSE
+      printf("Actual call: ");
+      for (int parm=0; parm<argc; parm++) printf("%s ", argv[parm]); printf("\n");
+#endif
       error = 1;
       goto ENDOFTESTS;
     }
