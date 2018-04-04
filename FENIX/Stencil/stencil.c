@@ -242,15 +242,15 @@ int main(int argc, char ** argv) {
 
 #if !FT_HARNESS
     if (argc != 7){
-      printf("Usage: %s <# iterations> <array dimension> <spare ranks> <kill set size> ",
+      printf("Usage: %s <# iterations> <array dimension> <checkpointing> <spare ranks>",
              *argv);
-      printf("<kill period> <checkpointing>\n");
+      printf("<kill set size> <kill period>\n");
       error = 1;
       goto ENDOFTESTS;
     }
 #else
     if (argc != 5){
-      printf("Usage: %s <# iterations> <array dimension> <spare ranks> <checkpointing> ", *argv);
+      printf("Usage: %s <# iterations> <array dimension> <checkpointing> <spare ranks>", *argv);
       error = 1;
       goto ENDOFTESTS;
     }
@@ -284,7 +284,14 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;
     }
 
-    spare_ranks  = atoi(argv[3]);
+    checkpointing = atoi(argv[3]);
+    if (checkpointing) {
+      printf("ERROR: Fenix checkpointing not yet implemented\n");
+      error = 1;
+      goto ENDOFTESTS;     
+    }
+
+    spare_ranks  = atoi(argv[4]);
     if (spare_ranks < 0 || spare_ranks >= Num_procs){
       printf("ERROR: Illegal number of spare ranks : %d \n", spare_ranks);
       error = 1;
@@ -292,29 +299,20 @@ int main(int argc, char ** argv) {
     }
 
 #if !FT_HARNESS
-    kill_ranks = atoi(argv[4]);
+    kill_ranks = atoi(argv[5]);
     if (kill_ranks < 0 || kill_ranks > spare_ranks) {
       printf("ERROR: Number of ranks in kill set invalid: %d\n", kill_ranks);
       error = 1;
       goto ENDOFTESTS;     
     }
 
-    kill_period = atoi(argv[5]);
+    kill_period = atoi(argv[6]);
     if (kill_period < 1) {
       printf("ERROR: rank kill period must be positive: %d\n", kill_period);
       error = 1;
       goto ENDOFTESTS;     
     }
-
-    checkpointing = atoi(argv[6]);
-#else
-    checkpointing = atoi(argv[4]);
 #endif
-    if (checkpointing) {
-      printf("ERROR: Fenix checkpointing not yet implemented\n");
-      error = 1;
-      goto ENDOFTESTS;     
-    }
 
     ENDOFTESTS:;
   }
@@ -353,6 +351,10 @@ int main(int argc, char ** argv) {
     printf("Loop body representation = compact\n");
 #endif
     printf("Number of iterations     = %d\n", iterations);
+    if (checkpointing)
+      printf("Data recovery            = Fenix checkpointing\n");
+    else
+      printf("Data recovery            = analytical\n");
 #if !FT_HARNESS
     printf("Error injection          = internal\n");
     printf("Kill set size            = %d\n", kill_ranks);
@@ -360,10 +362,6 @@ int main(int argc, char ** argv) {
 #else
     printf("Error injection          = external\n");
 #endif
-    if (checkpointing)
-      printf("Data recovery            = Fenix checkpointing\n");
-    else
-      printf("Data recovery            = analytical\n");
   }
 
 #if !FT_HARNESS

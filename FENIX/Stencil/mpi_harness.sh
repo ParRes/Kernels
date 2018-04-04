@@ -1,12 +1,14 @@
-if [ $# -ne 3 ]; then
-  echo Usage: $0 NUMRANKS NUMSPARES NUMKILLS
+if [ $# -ne 5 ]; then
+  echo Usage: $0 executable \#ranks \#spare_ranks \#rank_kills \"executable parameters\" \(surrounded by string quotes\)
   exit
 fi
 
 PID=$$
-NUMRANKS=$1
-NUMSPARES=$2
-NUMKILLS=$3
+EXE=$1
+NUMRANKS=$2
+NUMSPARES=$3
+NUMKILLS=$4
+PARMS=$5
 
 echo Running FT harness for Stencil code, "#ranks=$NUMRANKS, #spares=$NUMSPARES #kills=$NUMKILLS"
 
@@ -22,7 +24,7 @@ fi
 #start program and collect list of (hostname, pid) pairs in a file
 rm -f __thislog.$PID
 touch __thislog.$PID
- ~/ulfm-install/bin/mpirun -np $NUMRANKS ./stencil 100 10000 $NUMSPARES 0 | tee __thislog.$PID &
+ ~/ulfm-install/bin/mpirun -np $NUMRANKS $EXE $PARMS $NUMSPARES | tee __thislog.$PID &
 rm -f __hostpidlist.$PID 
 touch __hostpidlist.$PID
 listlength=`wc -l __hostpidlist.$PID | awk '{ print $1 }'`
