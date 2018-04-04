@@ -82,7 +82,7 @@ nstream: nstream-valarray nstream-vector nstream-vector-openmp nstream-openmp-ta
 	 nstream-vector-taskloop nstream-vector-stl nstream-vector-pstl nstream-vector-raja \
 	 nstream-vector-rangefor nstream-vector-tbb nstream-kokkos nstream-opencl
 
-dgemm: dgemm-vector dgemm-cblas
+dgemm: dgemm-vector dgemm-cblas dgemm-cublas
 
 vector: p2p-vector p2p-hyperplane-vector stencil-vector transpose-vector nstream-vector sparse-vector dgemm-vector \
 	transpose-vector-async transpose-vector-thread
@@ -114,7 +114,7 @@ raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-r
 
 cuda: stencil-cuda transpose-cuda nstream-cuda
 
-cublas: transpose-cublas nstream-cublas
+cublas: transpose-cublas nstream-cublas dgemm-cublas
 
 occa: transpose-occa nstream-occa
 
