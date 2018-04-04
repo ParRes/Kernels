@@ -317,7 +317,9 @@ int main(int argc, char ** argv) {
   factor(Num_procs-spare_ranks, &Num_procsx, &Num_procsy);
 
   if (my_ID == root) {
-    printf("Number of ranks          = %d\n", Num_procs);
+    printf("Total number of ranks    = %d\n", Num_procs);
+    printf("Number of active ranks   = %d\n", Num_procs-spare_ranks);
+    printf("Number of spare ranks    = %d\n", spare_ranks);
     printf("Grid size                = %d\n", n);
     printf("Radius of stencil        = %d\n", RADIUS);
     printf("Tiles in x/y-direction   = %d/%d\n", Num_procsx, Num_procsy);
@@ -333,9 +335,13 @@ int main(int argc, char ** argv) {
     printf("Loop body representation = compact\n");
 #endif
     printf("Number of iterations     = %d\n", iterations);
-    printf("Number of spare ranks    = %d\n", spare_ranks);
+#if !FT_HARNESS
+    printf("Error injection          = internal\n");
     printf("Kill set size            = %d\n", kill_ranks);
     printf("Fault period             = %d\n", kill_period);
+#else
+    printf("Error injection          = external\n");
+#endif
     if (checkpointing)
       printf("Data recovery            = Fenix checkpointing\n");
     else
@@ -542,27 +548,28 @@ int main(int argc, char ** argv) {
 
 #if FT_HARNESS
     if (my_ID==root && iter==0) printf("__STARTED_ITERATIONS__\n");
-#endif
+#else
 
     /* inject failure if appropriate                                                */
     if (iter == fail_iter[num_fenix_init]) {
       pid_t pid = getpid();
       if (my_ID < kill_ranks) {
-#if VERBOSE
+  #if VERBOSE
         printf("Rank %d, pid %d commits suicide in iter %d\n", my_ID, pid, iter);
-#endif
+  #endif
 	//#ifdef __USE_POSIX
-#if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _POSIX_SOURCE
+  #if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _POSIX_SOURCE
        kill(pid, SIGKILL); 
-#endif
-#if defined __USE_BSD || defined __USE_XOPEN_EXTENDED
+  #endif
+  #if defined __USE_BSD || defined __USE_XOPEN_EXTENDED
        killpg(pid, SIGKILL); 
-#endif
+  #endif
       }
-#if VERBOSE
+  #if VERBOSE
       else printf("Rank %d, pid %d is survivor rank in iter %d\n", my_ID, pid, iter);
-#endif
+  #endif
     }
+#endif
 
     time_step(Num_procsx, Num_procsy, my_IDx, my_IDy,
 	     right_nbr, left_nbr, top_nbr, bottom_nbr,

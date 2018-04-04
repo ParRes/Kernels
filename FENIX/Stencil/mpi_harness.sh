@@ -21,8 +21,10 @@ fi
 
 #start program and collect list of (hostname, pid) pairs in a file
 rm -f __thislog.$PID
+touch __thislog.$PID
  ~/ulfm-install/bin/mpirun -np $NUMRANKS ./stencil 100 10000 $NUMSPARES 1 20000 0 | tee __thislog.$PID &
 rm -f __hostpidlist.$PID 
+touch __hostpidlist.$PID
 listlength=`wc -l __hostpidlist.$PID | awk '{ print $1 }'`
 while [ $listlength -lt $NUMRANKS ]; do
   listlength=`wc -l __hostpidlist.$PID | awk '{ print $1 }'`
@@ -42,8 +44,8 @@ done
 #wait for the root rank of the running program to give the STARTKILL signal
 STARTKILL=0
 while [ $STARTKILL -eq 0 ]; do
-#  STARTKILL=`cat __thislog.$PID | grep __FINISHED_FENIX_INIT__ | wc -l | awk '{ print $1 }'`
-  STARTKILL=`cat __thislog.$PID | grep __STARTED_ITERATIONS__ | wc -l | awk '{ print $1 }'`
+  STARTKILL=`cat __thislog.$PID | grep __FINISHED_FENIX_INIT__ | wc -l | awk '{ print $1 }'`
+#  STARTKILL=`cat __thislog.$PID | grep __STARTED_ITERATIONS__ | wc -l | awk '{ print $1 }'`
 done
 
 #do the actual killing of ranks
