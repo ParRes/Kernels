@@ -116,7 +116,7 @@ int main(int argc, char * argv[])
       }
 
       if (argc > 3) {
-        input_copy = std::atoi(argv[2]);
+        input_copy = std::atoi(argv[3]);
       }
   }
   catch (const char * e) {
