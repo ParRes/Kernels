@@ -60,14 +60,28 @@ OPENCLFLAG=-framework OpenCL
 SYCLDIR=/opt/sycl/latest
 SYCLCXX=${SYCLDIR}/bin/compute++
 SYCLFLAG=-DUSE_SYCL -sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+SYCLFLAG+=-std=c++14
 # This makes a huge difference in e.g. nstream...
-SYCLFLAG+=-no-serial-memop
+#SYCLFLAG+=-no-serial-memop
+# CentOS7 and Ubuntu14 built for this
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+# PRK header rejects GCC4
+#SYCLFLAG+=--gcc-toolchain=/swtools/gcc/5.4.0
+# If not found automatically
+#SYCLFLAG+=${OPENCLFLAG}
+# NVIDIA target
+#SYCLFLAG+=-sycl-target ptx64
 #
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 #SYCLDIR=./triSYCL
-#SYCLCXX=${CXX}
+#SYCLCXX=${CXX} ${OPENMPFLAG}
 #SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+# ProGTX
+# https://github.com/ProGTX/sycl-gtx
+SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
+SYCLCXX=${CXX} ${OPENMPFLAG}
+SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # OCCA
 OCCADIR=${HOME}/prk-repo/Cxx11/occa
@@ -79,7 +93,7 @@ TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
+BOOSTFLAG=-DUSE_BOOST -DUSE_BOOST_COMPUTE -I/usr/local/Cellar/boost/1.65.1/include
 PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include
 KOKKOSDIR=/opt/kokkos/clang
 KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
