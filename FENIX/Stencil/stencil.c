@@ -167,11 +167,13 @@ int main(int argc, char ** argv) {
   DTYPE  weight[2*RADIUS+1][2*RADIUS+1]; /* weights of points in the stencil     */
   MPI_Request request[8];
   int    spare_ranks;     /* number of ranks to keep in reserve                  */
+#if !FT_HARNESS
   int    kill_ranks;      /* number of ranks that die with each failure          */
   int    *kill_set;       /* instance of set of ranks to be killed               */
   int    kill_period;     /* average number of iterations between failures       */
   int    *fail_iter;      /* list of iterations when a failure will be triggered */
   int    fail_iter_s=0;   /* latest  */
+#endif
   DTYPE  init_add;        /* used to offset initial solutions                    */
   int    checkpointing;   /* indicates if data is restored using Fenix or
                              analytically                                        */
@@ -179,7 +181,9 @@ int main(int argc, char ** argv) {
   int    num_fenix_init_loc;/* number of times Fenix_Init was called             */
   int    fenix_status;
   MPI_Status ignore;
+#if !FT_HARNESS
   random_draw_t dice;
+#endif
 
   /*******************************************************************************
   ** Initialize the MPI environment
@@ -236,6 +240,7 @@ int main(int argc, char ** argv) {
     goto ENDOFTESTS;
 #endif
 
+#if !FT_HARNESS
     if (argc != 7){
       printf("Usage: %s <# iterations> <array dimension> <spare ranks> <kill set size> ",
              *argv);
@@ -243,6 +248,13 @@ int main(int argc, char ** argv) {
       error = 1;
       goto ENDOFTESTS;
     }
+#else
+    if (argc != 5){
+      printf("Usage: %s <# iterations> <array dimension> <spare ranks> <checkpointing> ", *argv);
+      error = 1;
+      goto ENDOFTESTS;
+    }
+#endif
 
     iterations  = atoi(argv[1]);
     if (iterations < 1){
@@ -279,6 +291,7 @@ int main(int argc, char ** argv) {
       goto ENDOFTESTS;     
     }
 
+#if !FT_HARNESS
     kill_ranks = atoi(argv[4]);
     if (kill_ranks < 0 || kill_ranks > spare_ranks) {
       printf("ERROR: Number of ranks in kill set invalid: %d\n", kill_ranks);
@@ -294,6 +307,9 @@ int main(int argc, char ** argv) {
     }
 
     checkpointing = atoi(argv[6]);
+#else
+    checkpointing = atoi(argv[4]);
+#endif
     if (checkpointing) {
       printf("ERROR: Fenix checkpointing not yet implemented\n");
       error = 1;
@@ -309,8 +325,10 @@ int main(int argc, char ** argv) {
   MPI_Bcast(&n,             1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&spare_ranks,   1, MPI_INT, root, MPI_COMM_WORLD);
+#if !FT_HARNESS
   MPI_Bcast(&kill_ranks,    1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&kill_period,   1, MPI_INT, root, MPI_COMM_WORLD);
+#endif
   MPI_Bcast(&checkpointing, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   /* determine best way to create a 2D grid of ranks (closest to square)     */
@@ -348,6 +366,7 @@ int main(int argc, char ** argv) {
       printf("Data recovery            = analytical\n");
   }
 
+#if !FT_HARNESS
   /* initialize the random number generator for each rank; we do that before
      starting Fenix, so that all ranks, including spares, are initialized      */
   LCG_init(&dice);
@@ -385,6 +404,7 @@ int main(int argc, char ** argv) {
     fail_iter_s += random_draw(kill_period, &dice);
     fail_iter[iter] = fail_iter_s;
   }
+#endif
   iter = 0;
 
   /* Here is where we initialize Fenix and mark the return point after failure */

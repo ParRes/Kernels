@@ -22,7 +22,7 @@ fi
 #start program and collect list of (hostname, pid) pairs in a file
 rm -f __thislog.$PID
 touch __thislog.$PID
- ~/ulfm-install/bin/mpirun -np $NUMRANKS ./stencil 100 10000 $NUMSPARES 1 20000 0 | tee __thislog.$PID &
+ ~/ulfm-install/bin/mpirun -np $NUMRANKS ./stencil 100 10000 $NUMSPARES 0 | tee __thislog.$PID &
 rm -f __hostpidlist.$PID 
 touch __hostpidlist.$PID
 listlength=`wc -l __hostpidlist.$PID | awk '{ print $1 }'`
