@@ -60,8 +60,17 @@ OPENCLFLAG=-framework OpenCL
 SYCLDIR=/opt/sycl/latest
 SYCLCXX=${SYCLDIR}/bin/compute++
 SYCLFLAG=-DUSE_SYCL -sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+SYCLFLAG+=-std=c++14
 # This makes a huge difference in e.g. nstream...
-SYCLFLAG+=-no-serial-memop
+#SYCLFLAG+=-no-serial-memop
+# CentOS7 and Ubuntu14 built for this
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+# PRK header rejects GCC4
+#SYCLFLAG+=--gcc-toolchain=/swtools/gcc/5.4.0
+# If not found automatically
+#SYCLFLAG+=${OPENCLFLAG}
+# NVIDIA target
+#SYCLFLAG+=-sycl-target ptx64
 #
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
