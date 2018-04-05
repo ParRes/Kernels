@@ -221,6 +221,7 @@ clean:
 	-rm -f *-cblas
 	-rm -f *-occa
 	-rm -f *-boost-compute
+	-rm -f *-ornlacc
 	-rm -f transpose-vector-async transpose-vector-thread
 
 cleancl:
