@@ -43,8 +43,8 @@ USAGE:   The program takes as input the linear dimension of the grid,
          a file containing instructions for eliminating ranks at certain 
          times, and a flag indicating how data recovery should take place.
 
-               <progname> <# iterations> <grid size> <spare ranks> \
-                          <kill set size> <kill period> <checkpointing>
+               <progname> <# iterations> <grid size> <checkpointing> \
+                          <spare ranks> <kill set size> <kill period> 
 
          The output consists of diagnostics to make sure the
          algorithm worked, and of timing statistics.
@@ -242,23 +242,23 @@ int main(int argc, char ** argv) {
 
 #if !FT_HARNESS
     if (argc != 7){
-      printf("Usage: %s <# iterations> <array dimension> <checkpointing> <spare ranks>",
+      printf("Usage: %s <# iterations> <array dimension> <checkpointing> <spare ranks> ",
              *argv);
       printf("<kill set size> <kill period>\n");
-#if VERBOSE
+  #if VERBOSE
       printf("Actual call: ");
       for (int parm=0; parm<argc; parm++) printf("%s ", argv[parm]); printf("\n");
-#endif
+  #endif
       error = 1;
       goto ENDOFTESTS;
     }
 #else
     if (argc != 5){
       printf("Usage: %s <# iterations> <array dimension> <checkpointing> <spare ranks>\n", *argv);
-#if VERBOSE
+  #if VERBOSE
       printf("Actual call: ");
       for (int parm=0; parm<argc; parm++) printf("%s ", argv[parm]); printf("\n");
-#endif
+  #endif
       error = 1;
       goto ENDOFTESTS;
     }
@@ -400,6 +400,7 @@ int main(int argc, char ** argv) {
     error = 1;
   }
   bail_out(error);
+
   /* set first failure iteration to large number; possibly to be overwritten   */
   fail_iter[0] = iterations+1;
 
@@ -583,7 +584,6 @@ int main(int argc, char ** argv) {
   #if VERBOSE
         printf("Rank %d, pid %d commits suicide in iter %d\n", my_ID, pid, iter);
   #endif
-	//#ifdef __USE_POSIX
   #if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _POSIX_SOURCE
        kill(pid, SIGKILL); 
   #endif

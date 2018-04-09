@@ -32,7 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 /*******************************************************************
 
-NAME:    transpose
+NAME:    Transpose_FT
 
 PURPOSE: This program tests the efficiency with which a square matrix
          can be transposed and stored in another matrix. The matrices
@@ -41,7 +41,8 @@ PURPOSE: This program tests the efficiency with which a square matrix
 USAGE:   Program inputs are the matrix order, the number of times to 
          repeat the operation, and the communication mode
 
-         transpose <# iterations> <matrix order> [tile size]
+         transpose <# iterations> <matrix order> <checkpointing> \
+                   <spare ranks> <kill set size> <kill period> [tile size] 
 
          An optional parameter specifies the tile size used to divide the 
          individual matrix blocks for improved cache and TLB performance. 
@@ -125,6 +126,7 @@ o The original and transposed matrices are called A and B
 #include <par-res-kern_fenix.h>
 #include <random_draw.h>
 #include <unistd.h>
+#include <netdb.h>
 
 #define A(i,j)        A_p[(i+istart)+order*(j)]
 #define B(i,j)        B_p[(i+istart)+order*(j)]
@@ -147,49 +149,54 @@ void time_step(long Block_order,
 
 int main(int argc, char ** argv)
 {
-  long Block_order;        /* number of columns owned by rank       */
-  long Block_size;         /* size of a single block                */
-  long Colblock_size;      /* size of column block                  */
-  int Tile_order=32;       /* default Tile order                    */
-  int tiling;              /* boolean: true if tiling is used       */
-  int Num_procs;           /* number of ranks                       */
-  long order;              /* order of overall matrix               */
-  int send_to, recv_from;  /* ranks with which to communicate       */
+  long Block_order;        /* number of columns owned by rank                     */
+  long Block_size;         /* size of a single block                              */
+  long Colblock_size;      /* size of column block                                */
+  int Tile_order=32;       /* default Tile order                                  */
+  int tiling;              /* boolean: true if tiling is used                     */
+  int Num_procs;           /* number of ranks                                     */
+  long order;              /* order of overall matrix                             */
+  int send_to, recv_from;  /* ranks with which to communicate                     */
 #if !SYNCHRONOUS
   MPI_Request send_req;
   MPI_Request recv_req;
 #endif
-  long bytes;              /* combined size of matrices             */
-  int my_ID;               /* rank                                  */
-  int root=0;              /* rank of root                          */
-  int iterations;          /* number of times to do the transpose   */
-  int i, j, it, jt, istart;/* dummies                               */
-  int iter, iter_init;     /* index of iteration                    */
-  int phase;               /* phase inside staged communication     */
-  int colstart;            /* starting column for owning rank       */
-  int error;               /* error flag                            */
-  double * RESTRICT A_p;   /* original matrix column block          */
-  double * RESTRICT B_p;   /* transposed matrix column block        */
-  double * RESTRICT Work_in_p;/* workspace for transpose function   */
-  double * RESTRICT Work_out_p;/* workspace for transpose function  */
-  double abserr,           /* absolute error                        */
-         abserr_tot;       /* aggregate absolute error              */
-  double epsilon = 1.e-8;  /* error tolerance                       */
-  double transpose_time,   /* timing parameters                     */
+  long bytes;              /* combined size of matrices                           */
+  int my_ID;               /* rank                                                */
+  int root=0;              /* rank of root                                        */
+  int iterations;          /* number of times to do the transpose                 */
+  int i, j, it, jt, istart;/* dummies                                             */
+  int iter, iter_init;     /* index of iteration                                  */
+  int phase;               /* phase inside staged communication                   */
+  int colstart;            /* starting column for owning rank                     */
+  int error=0;             /* error flag                                          */
+  double * RESTRICT A_p;   /* original matrix column block                        */
+  double * RESTRICT B_p;   /* transposed matrix column block                      */
+  double * RESTRICT Work_in_p;/* workspace for transpose function                 */
+  double * RESTRICT Work_out_p;/* workspace for transpose function                */
+  double abserr,           /* absolute error                                      */
+         abserr_tot;       /* aggregate absolute error                            */
+  double epsilon = 1.e-8;  /* error tolerance                                     */
+  double transpose_time,   /* timing parameters                                   */
          avgtime;
   int    spare_ranks;      /* number of ranks to keep in reserve                  */
+#if !FT_HARNESS
   int    kill_ranks;       /* number of ranks that die with each failure          */
-  int    *kill_set;        /* instance of set of ranks to be killed        */
+  int    *kill_set;        /* instance of set of ranks to be killed               */
   int    kill_period;      /* average number of iterations between failures       */
   int    *fail_iter;       /* list of iterations when a failure will be triggered */
   int    fail_iter_s=0;    /* latest  */
-  double init_add, addit;  /* used to offset initial solutions       */
+#endif
+  double init_add, addit;  /* used to offset initial solutions                    */
   int    checkpointing;    /* indicates if data is restored using Fenix or
-                             analytically                            */
-  int    num_fenix_init=1; /* number of times Fenix_Init is called   */
-  int    num_fenix_init_loc;/* number of times Fenix_Init was called */
+                              analytically                                        */
+  int    num_fenix_init=1; /* number of times Fenix_Init is called                */
+  int    num_fenix_init_loc;/* number of times Fenix_Init was called              */
   int    fenix_status;
+  MPI_Status ignore;
+#if !FT_HARNESS
   random_draw_t dice;
+#endif
 
 /*********************************************************************
 ** Initialize the MPI environment
@@ -198,39 +205,103 @@ int main(int argc, char ** argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
+#if FT_HARNESS
+  /*******************************************************************************
+  ** Collect and print into allowing the FT harness to do its job
+  ********************************************************************************/
+  char hn[254];
+  char *dn;
+  struct hostent *hp;
+
+  gethostname(hn, 254);
+  hp = gethostbyname(hn);
+  int hostname_length;
+  int *pid = (int *) prk_malloc(sizeof(int)*Num_procs);
+  int mypid = getpid();
+  int  my_hostname_length = strlen(hp->h_name);
+  MPI_Allreduce(&my_hostname_length, &hostname_length, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+  if (my_ID==root) {
+    char **hostname = (char **) prk_malloc(sizeof(char *)*Num_procs);
+    for (int i=1; i<Num_procs; i++) {
+      hostname[i] = (char *)  prk_malloc(sizeof(char)*(hostname_length+1));
+      MPI_Recv(hostname[i], hostname_length+1, MPI_CHAR, i, 777, MPI_COMM_WORLD, &ignore);
+      MPI_Recv(&pid[i], 1, MPI_INT, i, 888, MPI_COMM_WORLD, &ignore);
+    }
+    hostname[0] = hp->h_name;
+    pid[0] = mypid;
+    for (int i=0; i<Num_procs; i++) printf("__HOSTNAME__ %s __PID__ %d __RANK__ %d\n",hostname[i], pid[i], i);
+  }
+  else {
+    MPI_Send(hp->h_name, my_hostname_length, MPI_CHAR, root, 777, MPI_COMM_WORLD);
+    MPI_Send(&mypid, 1, MPI_INT, root, 888, MPI_COMM_WORLD);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
 /*********************************************************************
 ** process, test and broadcast input parameters
 *********************************************************************/
-  error = 0;
+
   if (my_ID == root) {
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI matrix transpose with Fenix fault tolerance: B = A^T\n");
 
+#if !FT_HARNESS
     if (argc != 7 && argc != 8){
-      printf("Usage: %s <# iterations> <matrix order> <spare ranks> ",
+      printf("Usage: %s <# iterations> <matrix order> <checkpointing> ",
                                                                *argv);
-      printf("<kill set size> <kill period> <checkpointing> [Tile size]\n",
-                                                               *argv);
-      error = 1; goto ENDOFTESTS;
+      printf("<spare ranks> <kill set size> <kill period> [Tile size]\n");
+  #if VERBOSE
+      printf("Actual call: ");
+      for (int parm=0; parm<argc; parm++) printf("%s ", argv[parm]); printf("\n");
+  #endif
+      error = 1; 
+      goto ENDOFTESTS;
     }
-
+#else
+    if (argc != 5 && argc != 6){
+      printf("Usage: %s <# iterations> <matrix order> <checkpointing> ",
+                                                               *argv);
+      printf("<spare ranks> [Tile size]\n");
+  #if VERBOSE
+      printf("Actual call: ");
+      for (int parm=0; parm<argc; parm++) printf("%s ", argv[parm]); printf("\n");
+  #endif
+      error = 1; 
+      goto ENDOFTESTS;
+    }
+#endif
+    
     iterations  = atoi(argv[1]);
     if(iterations < 1){
       printf("ERROR: iterations must be >= 1 : %d \n",iterations);
-      error = 1; goto ENDOFTESTS;
+      error = 1; 
+      goto ENDOFTESTS;
     }
 
     order = atol(argv[2]);
-    spare_ranks  = atoi(argv[3]);
+
+    checkpointing = atoi(argv[3]);
+    if (checkpointing) {
+      printf("ERROR: Fenix checkpointing not yet implemented\n");
+      error = 1;
+      goto ENDOFTESTS;     
+    }
+
+    spare_ranks  = atoi(argv[4]);
     if (order < Num_procs-spare_ranks) {
       printf("ERROR: matrix order %ld should at least # procs %d\n",
              order, Num_procs-spare_ranks);
-      error = 1; goto ENDOFTESTS;
+      error = 1; 
+      goto ENDOFTESTS;
     }
     if (order%(Num_procs-spare_ranks)) {
       printf("ERROR: matrix order %ld should be divisible by # procs %d\n",
              order, Num_procs-spare_ranks);
-      error = 1; goto ENDOFTESTS;
+      error = 1; 
+      goto ENDOFTESTS;
     }
 
     if (spare_ranks < 0 || spare_ranks >= Num_procs){
@@ -239,28 +310,25 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;     
     }
 
-    kill_ranks = atoi(argv[4]);
+    int max_par = 6;
+#if !FT_HARNESS
+    kill_ranks = atoi(argv[5]);
     if (kill_ranks < 0 || kill_ranks > spare_ranks) {
       printf("ERROR: Number of ranks in kill set invalid: %d\n", kill_ranks);
       error = 1;
       goto ENDOFTESTS;     
     }
 
-    kill_period = atoi(argv[5]);
+    kill_period = atoi(argv[6]);
     if (kill_period < 1) {
       printf("ERROR: rank kill period must be positive: %d\n", kill_period);
       error = 1;
       goto ENDOFTESTS;     
     }
+    max_par = 8;
+#endif
 
-    checkpointing = atoi(argv[6]);
-    if (checkpointing) {
-      printf("ERROR: Fenix checkpointing not yet implemented\n");
-      error = 1;
-      goto ENDOFTESTS;     
-    }
-
-    if (argc == 8) Tile_order = atoi(argv[7]);
+    if (argc == max_par) Tile_order = atoi(argv[max_par-1]);
 
     ENDOFTESTS:;
   }
@@ -271,30 +339,39 @@ int main(int argc, char ** argv)
   MPI_Bcast(&iterations,    1, MPI_INT,  root, MPI_COMM_WORLD);
   MPI_Bcast(&Tile_order,    1, MPI_INT,  root, MPI_COMM_WORLD);
   MPI_Bcast(&spare_ranks,   1, MPI_INT, root, MPI_COMM_WORLD);
+#if !FT_HARNESS
   MPI_Bcast(&kill_ranks,    1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&kill_period,   1, MPI_INT, root, MPI_COMM_WORLD);
+#endif
   MPI_Bcast(&checkpointing, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   if (my_ID == root) {
-    printf("Number of ranks       = %d\n", Num_procs);
-    printf("Matrix order          = %ld\n", order);
-    printf("Number of iterations  = %d\n", iterations);
+    printf("Total number of ranks  = %d\n", Num_procs);
+    printf("Number of active ranks = %d\n", Num_procs-spare_ranks);
+    printf("Number of spare ranks  = %d\n", spare_ranks);
+    printf("Matrix order           = %ld\n", order);
+    printf("Number of iterations   = %d\n", iterations);
     if ((Tile_order > 0) && (Tile_order < order))
-          printf("Tile size             = %d\n", Tile_order);
+          printf("Tile size              = %d\n", Tile_order);
     else  printf("Untiled\n");
 #if !SYNCHRONOUS
     printf("Non-");
 #endif
     printf("Blocking messages\n");
-    printf("Number of spare ranks = %d\n", spare_ranks);
-    printf("Kill set size         = %d\n", kill_ranks);
-    printf("Fault period          = %d\n", kill_period);
     if (checkpointing)
-      printf("Data recovery         = Fenix checkpointing\n");
+      printf("Data recovery          = Fenix checkpointing\n");
     else
-      printf("Data recovery         = analytical\n");
+      printf("Data recovery          = analytical\n");
+#if !FT_HARNESS
+    printf("Error injection        = internal\n");
+    printf("Kill set size          = %d\n", kill_ranks);
+    printf("Fault period           = %d\n", kill_period);
+#else
+    printf("Error injection        = external\n");
+#endif
   }
 
+#if !FT_HARNESS
   /* initialize the random number generator for each rank; we do that before
      starting Fenix, so that all ranks, including spares, are initialized      */
   LCG_init(&dice);
@@ -329,6 +406,8 @@ int main(int argc, char ** argv)
     fail_iter_s += random_draw(kill_period, &dice);
     fail_iter[iter] = fail_iter_s;
   }
+#endif
+  iter = 0;
 
   /* Here is where we initialize Fenix and mark the return point after failure */
   Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
@@ -340,6 +419,10 @@ int main(int argc, char ** argv)
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+#if FT_HARNESS
+  if (my_ID==root && fenix_status==FENIX_ROLE_INITIAL_RANK) printf("__FINISHED_FENIX_INIT__\n");
+#endif
 
   /* if rank is recovered, set iter to a negative number, to be increased
      to the actual value corresponding to the current iter value among
@@ -430,19 +513,28 @@ int main(int argc, char ** argv)
       transpose_time = wtime();
     }
 
+#if FT_HARNESS
+    if (my_ID==root && iter==0) printf("__STARTED_ITERATIONS__\n");
+#else
     /* inject failure if appropriate                                                */
     if (iter == fail_iter[num_fenix_init]) {
       pid_t pid = getpid();
       if (my_ID < kill_ranks) {
-#if VERBOSE
+  #if VERBOSE
         printf("Rank %d, pid %d commits suicide in iter %d\n", my_ID, pid, iter);
-#endif
+  #endif
+  #if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _POSIX_SOURCE
         kill(pid, SIGKILL);
+  #endif
+  #if defined __USE_BSD || defined __USE_XOPEN_EXTENDED
+       killpg(pid, SIGKILL); 
+  #endif
       }
-#if VERBOSE
+  #if VERBOSE
       else printf("Rank %d, pid %d is survivor rank in iter %d\n", my_ID, pid, iter);
-#endif
+  #endif
     }
+#endif
 
     time_step(Block_order, Block_size, Colblock_size, Tile_order, tiling,
               Num_procs, order, my_ID, colstart, A_p, B_p, Work_in_p, Work_out_p);

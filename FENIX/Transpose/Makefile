@@ -31,6 +31,11 @@ ifndef SYNCHRONOUS
 endif
 #description: turn on synchronous (blocking) communications
 
+ifndef FT_HARNESS
+  FT_HARNESS=0
+endif
+#description: by default we do not emit output for the Fault Tolerance harness
+
 ifndef VERBOSE
   VERBOSE=0
 endif
@@ -39,14 +44,17 @@ endif
 VERBOSEFLAG = -DVERBOSE=$(VERBOSE)
 RESTRICTFLAG= -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
 BLOCKFLAG   = -DSYNCHRONOUS=$(SYNCHRONOUS)
+HARNESSFLAG = -DFT_HARNESS=$(FT_HARNESS)
 
 OPTIONSSTRING="Make options:\n\
 OPTION                 MEANING                                      DEFAULT\n\
 RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing)     [0]  \n\
-VERBOSE=0/1            omit/include verbose run information           [0]  \n\
-SYNCHRONOUS=0/1        Use a/synchronous communications               [0]"
+SYNCHRONOUS=0/1        use a/synchronous communications               [0]  \n\
+FT_HARNESS=0/1         do not/do emit FT harness output               [1]  \n\
+VERBOSE=0/1            omit/include verbose run information           [0]"
 
-TUNEFLAGS    = $(VERBOSEFLAG) $(USERFLAGS) $(RESTRICTFLAG) $(BLOCKFLAG)
+TUNEFLAGS    = $(VERBOSEFLAG) $(USERFLAGS) $(RESTRICTFLAG) $(BLOCKFLAG) \
+               $(HARNESSFLAG)
 PROGRAM      = transpose
 OBJS         = $(PROGRAM).o $(COMOBJS)
 

@@ -71,6 +71,7 @@ HISTORY: - Written by Rob Van der Wijngaart, March 2006.
 #include <par-res-kern_fenix.h>
 #include <random_draw.h>
 #include <unistd.h>
+#include <netdb.h>
 
 #define ARRAY(i,j) vector[i+1+(j)*(segment_size+1)]
 
@@ -105,17 +106,22 @@ int main(int argc, char ** argv)
   double *inbuf, *outbuf; /* communication buffers used when aggregating         */
   long   total_length;    /* total required length to store grid values          */
   int    spare_ranks;     /* number of ranks to keep in reserve                  */
+#if !FT_HARNESS
   int    kill_ranks;      /* number of ranks that die with each failure          */
   int    *kill_set;       /* instance of set of ranks to be killed               */
   int    kill_period;     /* average number of iterations between failures       */
   int    *fail_iter;      /* list of iterations when a failure will be triggered */
   int    fail_iter_s=0;   /* latest  */
+#endif
   int    checkpointing;   /* indicates if data is restored using Fenix or
                              analytically                                        */
   int    num_fenix_init=1;/* number of times Fenix_Init is called                */
   int    num_fenix_init_loc;/* number of times Fenix_Init was called             */
   int    fenix_status;
+  MPI_Status ignore;
+#if !FT_HARNESS
   random_draw_t dice;
+#endif
 
 /*********************************************************************************
 ** Initialize the MPI environment
@@ -123,6 +129,41 @@ int main(int argc, char ** argv)
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+#if FT_HARNESS
+  /*******************************************************************************
+  ** Collect and print into allowing the FT harness to do its job
+  ********************************************************************************/
+  char hn[254];
+  char *dn;
+  struct hostent *hp;
+
+  gethostname(hn, 254);
+  hp = gethostbyname(hn);
+  int hostname_length;
+  int *pid = (int *) prk_malloc(sizeof(int)*Num_procs);
+  int mypid = getpid();
+  int  my_hostname_length = strlen(hp->h_name);
+  MPI_Allreduce(&my_hostname_length, &hostname_length, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+  if (my_ID==root) {
+    char **hostname = (char **) prk_malloc(sizeof(char *)*Num_procs);
+    for (int i=1; i<Num_procs; i++) {
+      hostname[i] = (char *)  prk_malloc(sizeof(char)*(hostname_length+1));
+      MPI_Recv(hostname[i], hostname_length+1, MPI_CHAR, i, 777, MPI_COMM_WORLD, &ignore);
+      MPI_Recv(&pid[i], 1, MPI_INT, i, 888, MPI_COMM_WORLD, &ignore);
+    }
+    hostname[0] = hp->h_name;
+    pid[0] = mypid;
+    for (int i=0; i<Num_procs; i++) printf("__HOSTNAME__ %s __PID__ %d __RANK__ %d\n",hostname[i], pid[i], i);
+  }
+  else {
+    MPI_Send(hp->h_name, my_hostname_length, MPI_CHAR, root, 777, MPI_COMM_WORLD);
+    MPI_Send(&mypid, 1, MPI_INT, root, 888, MPI_COMM_WORLD);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
 /*********************************************************************
 ** process, test and broadcast input parameter
@@ -132,13 +173,31 @@ int main(int argc, char ** argv)
     printf("Parallel Research Kernels version %s\n", PRKVERSION);
     printf("MPI pipeline execution on 2D grid with Fenix fault tolerance\n");
 
+#if !FT_HARNESS
     if (argc != 8 && argc != 9){
       printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension> ",
              *argv);
-      printf("<spare ranks><kill set size> <kill period> <checkpointing> [group factor]\n");
+      printf("<checkpointing> <spare ranks> <kill set size> <kill period> [group factor]\n");
+  #if VERBOSE
+      printf("Actual call: ");
+      for (int parm=0; parm<argc; parm++) printf("%s ", argv[parm]); printf("\n");
+  #endif
       error = 1;
       goto ENDOFTESTS;
     }
+#else
+    if (argc != 6 && argc != 7){
+      printf("Usage: %s  <#iterations> <1st array dimension> <2nd array dimension> ",
+             *argv);
+      printf("<checkpointing> <spare ranks> [group factor]\n");
+  #if VERBOSE
+      printf("Actual call: ");
+      for (int parm=0; parm<argc; parm++) printf("%s ", argv[parm]); printf("\n");
+  #endif
+      error = 1;
+      goto ENDOFTESTS;
+    }
+#endif
 
     iterations = atoi(argv[1]);
     if (iterations < 1){
@@ -155,43 +214,47 @@ int main(int argc, char ** argv)
       goto ENDOFTESTS;
     }
 
-    spare_ranks  = atoi(argv[4]);
+    checkpointing = atoi(argv[4]);
+    if (checkpointing) {
+      printf("ERROR: Fenix checkpointing not yet implemented\n");
+      error = 4;
+      goto ENDOFTESTS;     
+    }
+
+    spare_ranks  = atoi(argv[5]);
     if (spare_ranks < 0 || spare_ranks >= Num_procs){
       printf("ERROR: Illegal number of spare ranks : %d \n", spare_ranks);
-      error = 4;
+      error = 5;
       goto ENDOFTESTS;     
     }
 
     if (m<=Num_procs-spare_ranks) {
       printf("ERROR: First grid dimension %ld must be >= number of ranks %d\n", 
              m, Num_procs);
-      error = 5;
+      error = 6;
       goto ENDOFTESTS;
     }
 
-    kill_ranks = atoi(argv[5]);
+    int max_par = 7;
+#if !FT_HARNESS
+    kill_ranks = atoi(argv[6]);
     if (kill_ranks < 0 || kill_ranks > spare_ranks) {
       printf("ERROR: Number of ranks in kill set invalid: %d\n", kill_ranks);
       error = 6;
       goto ENDOFTESTS;     
     }
 
-    kill_period = atoi(argv[6]);
+    kill_period = atoi(argv[7]);
     if (kill_period < 1) {
       printf("ERROR: rank kill period must be positive: %d\n", kill_period);
-      error = 7;
+      error = 1;
       goto ENDOFTESTS;     
     }
-
-    checkpointing = atoi(argv[7]);
-    if (checkpointing) {
-      printf("ERROR: Fenix checkpointing not yet implemented\n");
-      error = 8;
-      goto ENDOFTESTS;     
-    }
-
-    if (argc==9) {
-      grp = atoi(argv[8]);
+    max_par = 9;
+#endif
+   
+    if (argc==max_par) {
+      grp = atoi(argv[max_par-1]);
       if (grp < 1) grp = 1;
       else if (grp >= n) grp = n-1;
     }
@@ -207,25 +270,34 @@ int main(int argc, char ** argv)
   MPI_Bcast(&grp,           1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&iterations,    1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&spare_ranks,   1, MPI_INT, root, MPI_COMM_WORLD);
+#if !FT_HARNESS
   MPI_Bcast(&kill_ranks,    1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Bcast(&kill_period,   1, MPI_INT, root, MPI_COMM_WORLD);
+#endif
   MPI_Bcast(&checkpointing, 1, MPI_INT, root, MPI_COMM_WORLD);
 
   if (my_ID == root) {
-    printf("Number of ranks          = %d\n",Num_procs);
+    printf("Total number of ranks    = %d\n",Num_procs);
+    printf("Number of active ranks   = %d\n", Num_procs-spare_ranks);
+    printf("Number of spare ranks    = %d\n", spare_ranks);
     printf("Grid sizes               = %ld, %ld\n", m, n);
     printf("Number of iterations     = %d\n", iterations);
     if (grp > 1)
     printf("Group factor             = %d (cheating!)\n", grp);
-    printf("Number of spare ranks    = %d\n", spare_ranks);
-    printf("Kill set size            = %d\n", kill_ranks);
-    printf("Fault period             = %d\n", kill_period);
     if (checkpointing)
       printf("Data recovery            = Fenix checkpointing\n");
     else
       printf("Data recovery            = analytical\n");
+#if !FT_HARNESS
+    printf("Error injection          = internal\n");
+    printf("Kill set size            = %d\n", kill_ranks);
+    printf("Fault period             = %d\n", kill_period);
+#else
+    printf("Error injection          = external\n");
+#endif
   }
 
+#if !FT_HARNESS
   /* initialize the random number generator for each rank; we do that before
      starting Fenix, so that all ranks, including spares, are initialized      */
   LCG_init(&dice);
@@ -246,12 +318,16 @@ int main(int argc, char ** argv)
   if ((num_fenix_init-1)*kill_ranks>=Num_procs-spare_ranks) if (my_ID==root)
   printf("WARNING: All active ranks will be replaced by recovered ranks; timings not valid\n");
 
+  /* allocate space for list of failure iterations, plus 1                     */
   fail_iter = (int *) prk_malloc(sizeof(int)*num_fenix_init);
   if (!fail_iter) {
     printf("ERROR: Rank %d could not allocate space for array fail_iter\n", my_ID);
     error = 10;
   }
   bail_out(error);
+
+  /* set first failure iteration to large number; possibly to be overwritten   */
+  fail_iter[0] = iterations+1;
 
   /* reinitialize random number generator to obtain identical error series     */
   LCG_init(&dice);
@@ -260,6 +336,8 @@ int main(int argc, char ** argv)
     fail_iter_s += random_draw(kill_period, &dice);
     fail_iter[iter] = fail_iter_s;
   }
+#endif
+  iter = 0;
 
   /* Here is where we initialize Fenix and mark the return point after failure */
   Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
@@ -271,6 +349,10 @@ int main(int argc, char ** argv)
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+#if FT_HARNESS
+  if (my_ID==root && fenix_status==FENIX_ROLE_INITIAL_RANK) printf("__FINISHED_FENIX_INIT__\n");
+#endif
 
   /* if rank is recovered, set iter to a negative number, to be increased
      to the actual value corresponding to the current iter value among
@@ -362,19 +444,28 @@ int main(int argc, char ** argv)
       pipeline_time = wtime();
     }
 
+#if FT_HARNESS
+    if (my_ID==root && iter==0) printf("__STARTED_ITERATIONS__\n");
+#else
     /* inject failure if appropriate                                                */
     if (iter == fail_iter[num_fenix_init]) {
       pid_t pid = getpid();
       if (my_ID < kill_ranks) {
-#if VERBOSE
+  #if VERBOSE
         printf("Rank %d, pid %d commits suicide in iter %d\n", my_ID, pid, iter);
-#endif
+  #endif
+  #if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _POSIX_SOURCE
         kill(pid, SIGKILL);
+  #endif
+  #if defined __USE_BSD || defined __USE_XOPEN_EXTENDED
+       killpg(pid, SIGKILL); 
+  #endif
       }
-#if VERBOSE
+  #if VERBOSE
       else printf("Rank %d, pid %d is survivor rank in iter %d\n", my_ID, pid, iter);
-#endif
+  #endif
     }
+#endif
 
     time_step(my_ID, root, final, m, n, start, end, segment_size,
               Num_procs, grp, vector, inbuf, outbuf);

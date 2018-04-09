@@ -32,7 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 /*******************************************************************
 
-NAME:    AMR
+NAME:    FT_AMR
 
 PURPOSE: This program tests the efficiency with which a space-invariant,
          linear, symmetric filter (stencil) can be applied to a square
@@ -60,6 +60,7 @@ HISTORY: - Written by Rob Van der Wijngaart, February September 2016.
 #include <par-res-kern_fenix.h>
 #include <random_draw.h>
 #include <unistd.h>
+#include <netdb.h>
 
 #if DOUBLE
   #define DTYPE     double
@@ -338,11 +339,13 @@ int main(int argc, char ** argv) {
   int    color_bg;          /* color used to create BG communicator                */
   int    rank_spread;       /* number of ranks for refinement in fine_grain        */
   int    spare_ranks;       /* number of ranks to keep in reserve                  */
+#if !FT_HARNESS
   int    kill_ranks;        /* number of ranks that die with each failure          */
   int    *kill_set;         /* instance of set of ranks to be killed               */
   int    kill_period;       /* average number of iterations between failures       */
   int    *fail_iter;        /* list of iterations when a failure will be triggered */
   int    fail_iter_s=0;     /* latest  */
+#endif
   DTYPE  init_add;          /* used to offset initial solutions                    */
   int    checkpointing;     /* indicates if data is restored using Fenix or
                                analytically                                        */
@@ -350,7 +353,10 @@ int main(int argc, char ** argv) {
   int    num_fenix_init_loc;/* number of times Fenix_Init was called               */
   int    num_failures;      /* total number of times failures were injected        */
   int    fenix_status;
+  MPI_Status ignore;
+#if !FT_HARNESS
   random_draw_t dice;
+#endif
   int    first_through;     /* if true, IN_R field must be interpolated from BG IN 
                                field, even if not at refinement activation point   */
 
@@ -360,6 +366,41 @@ int main(int argc, char ** argv) {
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+#if FT_HARNESS
+  /*******************************************************************************
+  ** Collect and print into allowing the FT harness to do its job
+  ********************************************************************************/
+  char hn[254];
+  char *dn;
+  struct hostent *hp;
+
+  gethostname(hn, 254);
+  hp = gethostbyname(hn);
+  int hostname_length;
+  int *pid = (int *) prk_malloc(sizeof(int)*Num_procs);
+  int mypid = getpid();
+  int  my_hostname_length = strlen(hp->h_name);
+  MPI_Allreduce(&my_hostname_length, &hostname_length, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+  if (my_ID==root) {
+    char **hostname = (char **) prk_malloc(sizeof(char *)*Num_procs);
+    for (int i=1; i<Num_procs; i++) {
+      hostname[i] = (char *)  prk_malloc(sizeof(char)*(hostname_length+1));
+      MPI_Recv(hostname[i], hostname_length+1, MPI_CHAR, i, 777, MPI_COMM_WORLD, &ignore);
+      MPI_Recv(&pid[i], 1, MPI_INT, i, 888, MPI_COMM_WORLD, &ignore);
+    }
+    hostname[0] = hp->h_name;
+    pid[0] = mypid;
+    for (int i=0; i<Num_procs; i++) printf("__HOSTNAME__ %s __PID__ %d __RANK__ %d\n",hostname[i], pid[i], i);
+  }
+  else {
+    MPI_Send(hp->h_name, my_hostname_length, MPI_CHAR, root, 777, MPI_COMM_WORLD);
+    MPI_Send(&mypid, 1, MPI_INT, root, 888, MPI_COMM_WORLD);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   /*********************************************************************************
   ** process, test, and broadcast input parameters    
@@ -375,18 +416,41 @@ int main(int argc, char ** argv) {
     goto ENDOFINPUTTESTS;
 #endif
 
+#if !FT_HARNESS
     if (argc != 13 && argc != 14){
       printf("Usage: %s <# iterations> <background grid size> <refinement size>\n",
              *argv);
       printf("       <refinement level> <refinement period> <refinement duration>\n");
-      printf("       <refinement sub-iterations> <spare ranks> <kill set size>\n");
-      printf("       <kill period> <checkpointing> <load balancer>\n");
+      printf("       <refinement sub-iterations> <checkpointing> <spare ranks>\n");
+      printf("       <kill set size> <kill period> <load balancer>\n");
       printf("       load balancer: FINE_GRAIN [refinement rank spread]\n");
       printf("                      NO_TALK\n");
       printf("                      HIGH_WATER\n");
+  #if VERBOSE
+      printf("Actual call: ");
+      for (int parm=0; parm<argc; parm++) printf("%s ", argv[parm]); printf("\n");
+  #endif
       error = 1;
       goto ENDOFINPUTTESTS;
     }
+#else
+    if (argc != 11 && argc != 12){
+      printf("Usage: %s <# iterations> <background grid size> <refinement size>\n",
+             *argv);
+      printf("       <refinement level> <refinement period> <refinement duration>\n");
+      printf("       <refinement sub-iterations> <checkpointing> <spare ranks>\n");
+      printf("       <load balancer>\n");
+      printf("       load balancer: FINE_GRAIN [refinement rank spread]\n");
+      printf("                      NO_TALK\n");
+      printf("                      HIGH_WATER\n");
+  #if VERBOSE
+      printf("Actual call: ");
+      for (int parm=0; parm<argc; parm++) printf("%s ", argv[parm]); printf("\n");
+  #endif
+      error = 1;
+      goto ENDOFINPUTTESTS;
+    }
+#endif
 
     iterations  = atoi(argv[1]); 
     if (iterations < 1){
@@ -444,35 +508,39 @@ int main(int argc, char ** argv) {
       goto ENDOFINPUTTESTS;
     }
 
-    spare_ranks  = atoi(argv[8]);
-    if (spare_ranks < 0 || spare_ranks >= Num_procs){
-      printf("ERROR: Illegal number of spare ranks : %d \n", spare_ranks);
-      error = 1;
-      goto ENDOFINPUTTESTS;     
-    }
-
-    kill_ranks = atoi(argv[9]);
-    if (kill_ranks < 0 || kill_ranks > spare_ranks) {
-      printf("ERROR: Number of ranks in kill set invalid: %d\n", kill_ranks);
-      error = 1;
-      goto ENDOFINPUTTESTS;     
-    }
-
-    kill_period = atoi(argv[10]);
-    if (kill_period < 1) {
-      printf("ERROR: rank kill period must be positive: %d\n", kill_period);
-      error = 1;
-      goto ENDOFINPUTTESTS;     
-    }
-
-    checkpointing = atoi(argv[11]);
+    checkpointing = atoi(argv[8]);
     if (checkpointing) {
       printf("ERROR: Fenix checkpointing not yet implemented\n");
       error = 1;
       goto ENDOFINPUTTESTS;     
     }
 
-    c_load_balance = argv[12];
+    spare_ranks  = atoi(argv[9]);
+    if (spare_ranks < 0 || spare_ranks >= Num_procs){
+      printf("ERROR: Illegal number of spare ranks : %d \n", spare_ranks);
+      error = 1;
+      goto ENDOFINPUTTESTS;     
+    }
+
+    int max_par = 12;
+#if !FT_HARNESS
+    kill_ranks = atoi(argv[10]);
+    if (kill_ranks < 0 || kill_ranks > spare_ranks) {
+      printf("ERROR: Number of ranks in kill set invalid: %d\n", kill_ranks);
+      error = 1;
+      goto ENDOFINPUTTESTS;     
+    }
+
+    kill_period = atoi(argv[11]);
+    if (kill_period < 1) {
+      printf("ERROR: rank kill period must be positive: %d\n", kill_period);
+      error = 1;
+      goto ENDOFINPUTTESTS;     
+    }
+    max_par = 14;
+#endif
+
+    c_load_balance = argv[max_par-2];
     if      (!strcmp("FINE_GRAIN", c_load_balance)) load_balance=fine_grain;
     else if (!strcmp("NO_TALK",    c_load_balance)) load_balance=no_talk;
     else if (!strcmp("HIGH_WATER", c_load_balance)) load_balance=high_water;
@@ -489,8 +557,8 @@ int main(int argc, char ** argv) {
       goto ENDOFINPUTTESTS;
     }
 
-    if (load_balance==fine_grain && argc==14) {
-      rank_spread = atoi(argv[13]);
+    if (load_balance==fine_grain && argc==max_par) {
+      rank_spread = atoi(argv[max_par-1]);
       if (rank_spread<1 || rank_spread>Num_procs) {
 	printf("ERROR: Invalid number of ranks to spread refinement work: %d\n", rank_spread);
 	error = 1;
@@ -542,10 +610,13 @@ int main(int argc, char ** argv) {
   MPI_Bcast(&rank_spread,    1, MPI_INT,   root, MPI_COMM_WORLD);
   MPI_Bcast(&expand,         1, MPI_LONG,  root, MPI_COMM_WORLD);
   MPI_Bcast(&spare_ranks,    1, MPI_INT,   root, MPI_COMM_WORLD);
+#if !FT_HARNESS 
   MPI_Bcast(&kill_ranks,     1, MPI_INT,   root, MPI_COMM_WORLD);
   MPI_Bcast(&kill_period,    1, MPI_INT,   root, MPI_COMM_WORLD);
+#endif
   MPI_Bcast(&checkpointing,  1, MPI_INT,   root, MPI_COMM_WORLD);
 
+#if !FT_HARNESS
   /* initialize the random number generator for each rank; we do that before
      starting Fenix, so that all ranks, including spares, are initialized      */
   LCG_init(&dice);
@@ -580,6 +651,8 @@ int main(int argc, char ** argv) {
     fail_iter_s += random_draw(kill_period, &dice);
     fail_iter[iter] = fail_iter_s;
   }
+#endif
+  iter = 0;
 
   /* Here is where we initialize Fenix and mark the return point after failure */
   Fenix_Init(&fenix_status, MPI_COMM_WORLD, NULL, &argc, &argv, spare_ranks, 
@@ -591,6 +664,10 @@ int main(int argc, char ** argv) {
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+#if FT_HARNESS
+  if (my_ID==root && fenix_status==FENIX_ROLE_INITIAL_RANK) printf("__FINISHED_FENIX_INIT__\n");
+#endif
 
   /* if rank is recovered, set iter to a large value, to be reduced
      to the actual value corresponding to the current iter value among
@@ -810,7 +887,9 @@ int main(int argc, char ** argv) {
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (my_ID == root && fenix_status == FENIX_ROLE_INITIAL_RANK) {
-    printf("Number of ranks                 = %d\n", Num_procs + spare_ranks);
+    printf("Total number of ranks           = %d\n", Num_procs + spare_ranks);
+    printf("Number of active ranks          = %d\n", Num_procs);
+    printf("Number of spare ranks           = %d\n", spare_ranks);
     printf("Background grid size            = %ld\n", n);
     printf("Radius of stencil               = %d\n", RADIUS);
     printf("Tiles in x/y-direction on BG    = %d/%d\n", Num_procs_bgx, Num_procs_bgy);
@@ -849,15 +928,19 @@ int main(int argc, char ** argv) {
     printf("   Period                       = %d\n", period);
     printf("   Duration                     = %d\n", duration);
     printf("   Sub-iterations               = %d\n", sub_iterations);
-    printf("Number of spare ranks           = %d\n", spare_ranks);
-    printf("Kill set size                   = %d\n", kill_ranks);
-    printf("Fault period                    = %d\n", kill_period);
-    printf("Total injected failures         = %d times %d errors\n", 
-                                              num_failures, kill_ranks);
     if (checkpointing)
       printf("Data recovery                   = Fenix checkpointing\n");
     else
       printf("Data recovery                   = analytical\n");
+#if !FT_HARNESS
+    printf("Error injection                 = internal\n");
+    printf("Kill set size                   = %d\n", kill_ranks);
+    printf("Fault period                    = %d\n", kill_period);
+    printf("Total injected failures         = %d times %d errors\n", 
+                                              num_failures, kill_ranks);
+#else
+    printf("Error injection                 = external\n");
+#endif
   }
 
   /* reserve space for refinement input/output fields; first compute extents */
@@ -1094,41 +1177,50 @@ int main(int argc, char ** argv) {
       stencil_time = wtime();
     }
 
+#if FT_HARNESS
+    if (my_ID==root && iter==0) printf("__STARTED_ITERATIONS__\n");
+#else
     /* inject failure if appropriate                                                */
     if (iter == fail_iter[num_fenix_init]) {
       pid_t pid = getpid();
       if (my_ID < kill_ranks) {
-#if VERBOSE
+  #if VERBOSE
         printf("Rank %d, pid %d commits suicide in iter %d\n", my_ID, pid, iter);
-#endif
+  #endif
+  #if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _POSIX_SOURCE
         kill(pid, SIGKILL);
+  #endif
+  #if defined __USE_BSD || defined __USE_XOPEN_EXTENDED
+       killpg(pid, SIGKILL); 
+  #endif
       }
-#if VERBOSE
+  #if VERBOSE
       else printf("Rank %d, pid %d is survivor rank in iter %d\n", my_ID, pid, iter);
+  #endif
+    }
 #endif
-    }  
 
-     time_step(Num_procs, Num_procs_bg, Num_procs_bgx, Num_procs_bgy,
-	       Num_procs_r, Num_procs_rx, Num_procs_ry,
-	       my_ID, my_ID_bg, my_ID_bgx, my_ID_bgy, my_ID_r, my_ID_rx, my_ID_ry,
-	       right_nbr_bg, left_nbr_bg, top_nbr_bg, bottom_nbr_bg,
-	       right_nbr_r, left_nbr_r, top_nbr_r, bottom_nbr_r,
-	       top_buf_out_bg, top_buf_in_bg, bottom_buf_out_bg, bottom_buf_in_bg,
-	       right_buf_out_bg, right_buf_in_bg, left_buf_out_bg, left_buf_in_bg,
-	       top_buf_out_r, top_buf_in_r, bottom_buf_out_r, bottom_buf_in_r,
-	       right_buf_out_r, right_buf_in_r, left_buf_out_r, left_buf_in_r,
-	       n, refine_level, G_istart_r, G_iend_r, G_jstart_r, G_jend_r,
-	       L_istart_bg, L_iend_bg, L_jstart_bg, L_jend_bg, L_width_bg, L_height_bg,
-	       L_istart_r, L_iend_r, L_jstart_r, L_jend_r,
-	       L_istart_r_gross, L_iend_r_gross, L_jstart_r_gross, L_jend_r_gross,
-	       L_istart_r_true_gross, L_iend_r_true_gross,
-	       L_jstart_r_true_gross, L_jend_r_true_gross,
-	       L_istart_r_true, L_iend_r_true, L_jstart_r_true, L_jend_r_true,
-	       L_width_r, L_height_r, L_width_r_true_gross, L_height_r_true_gross, 
-	       L_width_r_true, L_height_r_true,
-	       n_r, n_r_true, expand, period, duration, sub_iterations, iter, h_r,
-	       num_interpolations, in_bg, out_bg, in_r, out_r, weight, weight_r,
-	       load_balance, request_bg, request_r, comm_r, comm_bg, first_through);
+    time_step(Num_procs, Num_procs_bg, Num_procs_bgx, Num_procs_bgy,
+              Num_procs_r, Num_procs_rx, Num_procs_ry,
+              my_ID, my_ID_bg, my_ID_bgx, my_ID_bgy, my_ID_r, my_ID_rx, my_ID_ry,
+              right_nbr_bg, left_nbr_bg, top_nbr_bg, bottom_nbr_bg,
+              right_nbr_r, left_nbr_r, top_nbr_r, bottom_nbr_r,
+              top_buf_out_bg, top_buf_in_bg, bottom_buf_out_bg, bottom_buf_in_bg,
+              right_buf_out_bg, right_buf_in_bg, left_buf_out_bg, left_buf_in_bg,
+              top_buf_out_r, top_buf_in_r, bottom_buf_out_r, bottom_buf_in_r,
+              right_buf_out_r, right_buf_in_r, left_buf_out_r, left_buf_in_r,
+              n, refine_level, G_istart_r, G_iend_r, G_jstart_r, G_jend_r,
+              L_istart_bg, L_iend_bg, L_jstart_bg, L_jend_bg, L_width_bg, L_height_bg,
+              L_istart_r, L_iend_r, L_jstart_r, L_jend_r,
+              L_istart_r_gross, L_iend_r_gross, L_jstart_r_gross, L_jend_r_gross,
+              L_istart_r_true_gross, L_iend_r_true_gross,
+              L_jstart_r_true_gross, L_jend_r_true_gross,
+              L_istart_r_true, L_iend_r_true, L_jstart_r_true, L_jend_r_true,
+              L_width_r, L_height_r, L_width_r_true_gross, L_height_r_true_gross, 
+              L_width_r_true, L_height_r_true,
+              n_r, n_r_true, expand, period, duration, sub_iterations, iter, h_r,
+              num_interpolations, in_bg, out_bg, in_r, out_r, weight, weight_r,
+              load_balance, request_bg, request_r, comm_r, comm_bg, first_through);
 
   } /* end of iterations                                                         */
 

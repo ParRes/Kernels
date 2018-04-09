@@ -1,30 +1,37 @@
-if [ $# -ne 5 ]; then
-  echo Usage: $0 executable \#ranks \#spare_ranks \#rank_kills \"executable parameters\" \(surrounded by string quotes\)
+if [ $# -ne 4 ]; then
+  echo Usage: $0 \#total_ranks  \#rank_kills executable \"executable parameters\" \(surrounded by string quotes\)
+  exit
+fi
+
+if [ x$ULFM_PATH == x ]; then
+  echo Set environment variable ULFM_PATH to where Fault Tolerant MPI is installed
   exit
 fi
 
 PID=$$
-EXE=$1
-NUMRANKS=$2
-NUMSPARES=$3
-NUMKILLS=$4
-PARMS=$5
-
-echo Running FT harness for Stencil code, "#ranks=$NUMRANKS, #spares=$NUMSPARES #kills=$NUMKILLS"
+NUMRANKS=$1
+NUMKILLS=$2
+EXE=$3
+PARMS=$4
 
 #test sanity of input
-if [ $NUMSPARES -lt $NUMKILLS ]; then
-  echo Attempting to kill more ranks \($NUMKILLS\) than we have spares available \($NUMSPARES\)
-  exit
-elif [ $NUMRANKS -le $NUMSPARES ]; then
-  echo Attempting to reserve too many spare ranks \($NUMSPARES\) of the total number \($NUMRANKS\)
+if [ $NUMRANKS -le $NUMKILLS ]; then
+  echo ERROR: Attempting to kill $NUMKILLS ranks out of $NUMRANKS
   exit
 fi
+
+#issue warning about validity of timings
+echo "WARNING: Make sure #spare_ranks is at least as large as #rank_kills AND"
+echo "         #rank_kills is SMALLER than 50% of #total_ranks, or timings may be invalid"
+
+echo Running error injection harness for $EXE code, "#ranks=$NUMRANKS #kills=$NUMKILLS"
 
 #start program and collect list of (hostname, pid) pairs in a file
 rm -f __thislog.$PID
 touch __thislog.$PID
- ~/ulfm-install/bin/mpirun -np $NUMRANKS $EXE $PARMS $NUMSPARES | tee __thislog.$PID &
+$ULFM_PATH/bin/mpirun -np $NUMRANKS $EXE $PARMS | tee __thislog.$PID &
+# ~/ulfm-install/bin/mpirun -np $NUMRANKS $EXE $PARMS | tee __thislog.$PID &
+
 rm -f __hostpidlist.$PID 
 touch __hostpidlist.$PID
 listlength=`wc -l __hostpidlist.$PID | awk '{ print $1 }'`
@@ -54,6 +61,7 @@ done
 localhostname=`hostname -A`
 i=0
 while [ $i -lt $NUMKILLS ]; do
+  sleep 1
 #  mpi_proc=`expr $NUMRANKS - $i - 1`
   mpi_proc=$i
   if [ $localhostname == ${host[$mpi_proc]} ]; then
@@ -64,7 +72,6 @@ while [ $i -lt $NUMKILLS ]; do
     ssh ${host[$mpi_proc]} kill -9 ${pid[$mpi_proc]}
   fi
   i=`expr $i + 1`
-  sleep 1
 done
 
 rm -f __thislog.$PID __hostpidlist.$PID
