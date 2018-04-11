@@ -122,6 +122,9 @@ int main(int argc, char* argv[])
           tile_size = std::atoi(argv[3]);
           if (tile_size <= 0) tile_size = n;
           if (tile_size > n) tile_size = n;
+          if (tile_size > 32) {
+              std::cout << "Warning: tile_size > 32 may lead to incorrect results (observed for CUDA 9.0 on GV100).\n";
+          }
       }
 
       // stencil pattern
