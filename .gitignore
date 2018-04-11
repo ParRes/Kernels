@@ -210,6 +210,7 @@ FORTRAN/nstream-openmp
 FORTRAN/nstream-pretty
 FORTRAN/nstream-taskloop-openmp
 FORTRAN/nstream-openmp-target
+FORTRAN/nstream-ornlacc
 FORTRAN/p2p
 FORTRAN/p2p-innerloop
 FORTRAN/p2p-coarray
