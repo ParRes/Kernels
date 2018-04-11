@@ -31,6 +31,15 @@ ORNLACCFLAG+=-Mlarge_arrays
 OPENCLDIR=/etc/alternatives/opencl-intel-tools
 OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
+# Parallel STL, Boost, etc.
+#
+BOOSTFLAG=-DUSE_BOOST -I.
+PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG}
+KOKKOSDIR=./kokkos
+KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
+RAJADIR=./raja
+RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+#
 # CUDA flags
 #
 # Linux w/ NVIDIA CUDA
