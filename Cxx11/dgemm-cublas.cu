@@ -89,7 +89,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11/CUBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   prk::CUDA::info info;
-  info.print();
+  //info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -116,7 +116,7 @@ int main(int argc, char * argv[])
       }
 
       if (argc > 3) {
-        input_copy = std::atoi(argv[2]);
+        input_copy = std::atoi(argv[3]);
       }
   }
   catch (const char * e) {
@@ -182,29 +182,46 @@ int main(int argc, char * argv[])
 
   }
 
+  double xfer(0);
+  double comp(0);
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) dgemm_time = prk::wtime();
 
       if (input_copy) {
+        double t0 = prk::wtime();
+#if ASYNC
+        prk::CUDA::check( cudaMemcpyAsync(d_a, h_a, bytes, cudaMemcpyHostToDevice) );
+        prk::CUDA::check( cudaMemcpyAsync(d_b, h_b, bytes, cudaMemcpyHostToDevice) );
+        prk::CUDA::check( cudaDeviceSynchronize() );
+#else
         prk::CUDA::check( cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice) );
         prk::CUDA::check( cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice) );
+#endif
+        double t1 = prk::wtime();
+        if (iter==1) xfer += (t1-t0);
       }
 
-      double one(1);
-      prk::CUDA::check( cublasDgemm(h,
-                                    CUBLAS_OP_N, CUBLAS_OP_N, // opA, opB
-                                    order, order, order,      // m, n, k
-                                    &one,                     // alpha
-                                    d_a, order,               // A, lda
-                                    d_b, order,               // B, ldb
-                                    &one,                     // beta
-                                    d_c, order) );            // C, ldc
-      prk::CUDA::check( cudaDeviceSynchronize() );
+      {
+        double t0 = prk::wtime();
+        double one(1);
+        prk::CUDA::check( cublasDgemm(h,
+                                      CUBLAS_OP_N, CUBLAS_OP_N, // opA, opB
+                                      order, order, order,      // m, n, k
+                                      &one,                     // alpha
+                                      d_a, order,               // A, lda
+                                      d_b, order,               // B, ldb
+                                      &one,                     // beta
+                                      d_c, order) );            // C, ldc
+        prk::CUDA::check( cudaDeviceSynchronize() );
+        double t1 = prk::wtime();
+        if (iter==1) comp += (t1-t0);
+      }
     }
     dgemm_time = prk::wtime() - dgemm_time;
   }
+  std::cout << "xfer, comp = " << xfer << "," << comp << std::endl;
 
   // copy output back to host
   prk::CUDA::check( cudaMemcpy(&(h_c[0]), d_c, bytes, cudaMemcpyDeviceToHost) );
