@@ -134,10 +134,10 @@ program main
     endif
   endif
 
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix length        = ', length
-  write(*,'(a,i8)') 'Offset               = ', offset
+  write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
+  write(*,'(a,i12)') 'Number of iterations = ', iterations
+  write(*,'(a,i12)') 'Matrix length        = ', length
+  write(*,'(a,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -189,9 +189,10 @@ program main
   enddo ! iterations
 
   t1 = omp_get_wtime()
-  nstream_time = t1 - t0
 
   !$omp end target data
+
+  nstream_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.

@@ -133,9 +133,9 @@ program main
     endif
   endif
 
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix length        = ', length
-  write(*,'(a,i8)') 'Offset               = ', offset
+  write(*,'(a,i12)') 'Number of iterations = ', iterations
+  write(*,'(a,i12)') 'Vector length        = ', length
+  write(*,'(a,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
