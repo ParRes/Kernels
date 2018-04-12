@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
     grid[i*n+0] = static_cast<double>(i);
   }
 
-  #pragma acc data pcopy(grid[n*n])
+  #pragma acc data pcopy(grid[0:n*n])
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
