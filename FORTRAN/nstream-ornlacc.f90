@@ -133,9 +133,9 @@ program main
     endif
   endif
 
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix length        = ', length
-  write(*,'(a,i8)') 'Offset               = ', offset
+  write(*,'(a,i12)') 'Number of iterations = ', iterations
+  write(*,'(a,i12)') 'Vector length        = ', length
+  write(*,'(a,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -162,13 +162,6 @@ program main
   scalar = 3
 
   t0 = 0
-
-#ifdef _OPENMP
-!$omp parallel default(none)                           &
-!$omp&  shared(A,B,C,t0,t1)                            &
-!$omp&  firstprivate(length,iterations,offset,scalar)  &
-!$omp&  private(i,k)
-#endif
 
   !$acc parallel loop gang
   do i=1,length
