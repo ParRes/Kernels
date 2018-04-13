@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2018, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -167,12 +167,12 @@ void prk_dgemm(const int order, const int batches,
 
 int main(int argc, char * argv[])
 {
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "C++11 CBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
+
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
-
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 CBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   int iterations;
   int order;
