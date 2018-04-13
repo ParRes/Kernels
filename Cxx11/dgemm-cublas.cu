@@ -229,7 +229,7 @@ int main(int argc, char * argv[])
   double * h_c;
   prk::CUDA::check( cudaMallocHost((void**)&h_a, bytes) );
   prk::CUDA::check( cudaMallocHost((void**)&h_b, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_c, bytes) );
+  prk::CUDA::check( cudaMallocHost((void**)&h_c, matrices*bytes) );
 
   // device buffers
   double * d_a;
@@ -249,9 +249,10 @@ int main(int argc, char * argv[])
     }
 
     for (int b=0; b<matrices; ++b) {
-      prk::CUDA::check( cudaMemcpy(&(d_a[b*order*order]), h_a, bytes, cudaMemcpyHostToDevice) );
-      prk::CUDA::check( cudaMemcpy(&(d_b[b*order*order]), h_b, bytes, cudaMemcpyHostToDevice) );
+      prk::CUDA::check( cudaMemcpyAsync(&(d_a[b*order*order]), h_a, bytes, cudaMemcpyHostToDevice) );
+      prk::CUDA::check( cudaMemcpyAsync(&(d_b[b*order*order]), h_b, bytes, cudaMemcpyHostToDevice) );
     }
+    prk::CUDA::check( cudaDeviceSynchronize() );
 
     init<<<dimGrid, dimBlock>>>(order, matrices, d_c);
 
@@ -267,8 +268,11 @@ int main(int argc, char * argv[])
       if (iter==1) dgemm_time = prk::wtime();
 
       if (input_copy) {
-        prk::CUDA::check( cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice) );
-        prk::CUDA::check( cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice) );
+        for (int b=0; b<matrices; ++b) {
+          prk::CUDA::check( cudaMemcpyAsync(&(d_a[b*order*order]), h_a, bytes, cudaMemcpyHostToDevice) );
+          prk::CUDA::check( cudaMemcpyAsync(&(d_b[b*order*order]), h_b, bytes, cudaMemcpyHostToDevice) );
+        }
+        prk::CUDA::check( cudaDeviceSynchronize() );
       }
 
       if (batches == 0) {
@@ -283,7 +287,7 @@ int main(int argc, char * argv[])
   }
 
   // copy output back to host
-  prk::CUDA::check( cudaMemcpy(&(h_c[0]), d_c, bytes, cudaMemcpyDeviceToHost) );
+  prk::CUDA::check( cudaMemcpyAsync(&(h_c[0]), d_c, matrices*bytes, cudaMemcpyDeviceToHost) );
 
   prk::CUDA::check( cudaFree(d_c) );
   prk::CUDA::check( cudaFree(d_b) );
@@ -294,15 +298,21 @@ int main(int argc, char * argv[])
 
   prk::CUDA::check( cublasDestroy(h) );
 
+  prk::CUDA::check( cudaDeviceSynchronize() );
+
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  const auto epsilon = 1.0e-8;
-  const auto forder = static_cast<double>(order);
-  const auto reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
-  const auto checksum = prk_reduce( &(h_c[0]), &(h_c[nelems]), 0.0);
-  const auto residuum = std::abs(checksum-reference)/reference;
+  const double epsilon = 1.0e-8;
+  const double forder = static_cast<double>(order);
+  const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
+  double residuum(0);
+  for (int b=0; b<matrices; ++b) {
+      const auto checksum = prk_reduce( &(h_c[b*order*order+0]), &(h_c[b*order*order+nelems]), 0.0);
+      residuum += std::abs(checksum-reference)/reference;
+  }
+  residuum/=matrices;
 
   if (residuum < epsilon) {
 #if VERBOSE
@@ -310,13 +320,13 @@ int main(int argc, char * argv[])
               << "Actual checksum = " << checksum << std::endl;
 #endif
     std::cout << "Solution validates" << std::endl;
-    auto avgtime = dgemm_time/iterations;
+    auto avgtime = dgemm_time/iterations/matrices;
     auto nflops = 2.0 * std::pow(forder,3);
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "Reference checksum = " << reference << "\n"
-              << "Actual checksum = " << checksum << std::endl;
+              << "Residuum           = " << residuum << std::endl;
     return 1;
   }
 
