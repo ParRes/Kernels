@@ -41,7 +41,7 @@
 ///          is carried out, and, optionally, a tile size for matrix
 ///          blocking
 ///
-///          <progname> <# iterations> <matrix order> [<tile size>]
+///          <progname> <# iterations> <matrix order> [<batches>]
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -51,7 +51,8 @@
 ///          Other than OpenMP or standard C functions, the following
 ///          functions are used in this program:
 ///
-///          wtime()
+///          cblas_dgemm()
+///          cblas_dgemm_batch()
 ///
 /// HISTORY: Written by Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, December, 2017.
@@ -79,9 +80,9 @@ void prk_dgemm_loops(const int order,
                const std::vector<double> & B,
                      std::vector<double> & C)
 {
-    for (auto i=0; i<order; ++i) {
-      for (auto j=0; j<order; ++j) {
-        for (auto k=0; k<order; ++k) {
+    for (int i=0; i<order; ++i) {
+      for (int j=0; j<order; ++j) {
+        for (int k=0; k<order; ++k) {
             C[i*order+j] += A[i*order+k] * B[k*order+j];
         }
       }
@@ -97,8 +98,71 @@ void prk_dgemm(const int order,
     const cblas_int n = order;
     const double alpha = 1.0;
     const double beta  = 1.0;
+
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                 n, n, n, alpha, &(A[0]), n, &(B[0]), n, beta, &(C[0]), n);
+}
+
+void prk_dgemm(const int order, const int batches,
+               const std::vector<std::vector<double>> & A,
+               const std::vector<std::vector<double>> & B,
+                     std::vector<std::vector<double>> & C)
+{
+    const cblas_int n = order;
+    const double alpha = 1.0;
+    const double beta  = 1.0;
+
+    for (int b=0; b<batches; ++b) {
+        cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                    n, n, n, alpha, &(A[b][0]), n, &(B[b][0]), n, beta, &(C[b][0]), n);
+    }
+}
+
+void prk_dgemm(const int order, const int batches,
+               double** & A,
+               double** & B,
+               double** & C)
+{
+    const cblas_int n = order;
+    const double alpha = 1.0;
+    const double beta  = 1.0;
+
+    const cblas_int group_count = 1;
+    const cblas_int group_size[group_count] = { batches };
+
+    const CBLAS_TRANSPOSE transa_array[group_count] = { CblasNoTrans };
+    const CBLAS_TRANSPOSE transb_array[group_count] = { CblasNoTrans };
+
+    const cblas_int n_array[group_count] = { n };
+
+    const double alpha_array[group_count] = { alpha };
+    const double beta_array[group_count]  = { beta };
+
+    cblas_dgemm_batch(CblasRowMajor, transa_array, transb_array,
+                      n_array, n_array, n_array,
+                      alpha_array,
+                      (const double**) A, n_array,
+                      (const double**) B, n_array,
+                      beta_array,
+                      C, n_array,
+                      group_count, group_size);
+
+//  cblas_dgemm_batch(CblasRowMajor,
+//                    const CBLAS_TRANSPOSE* transa_array,
+//                    const CBLAS_TRANSPOSE* transb_array,
+//                    const MKL_INT* m_array,
+//                    const MKL_INT* n_array,
+//                    const MKL_INT* k_array,
+//                    const double* alpha_array,
+//                    const double **a_array,
+//                    const MKL_INT* lda_array,
+//                    const double **b_array,
+//                    const MKL_INT* ldb_array,
+//                    const double* beta_array,
+//                    double **c_array,
+//                    const MKL_INT* ldc_array,
+//                    const MKL_INT group_count,
+//                    const MKL_INT* group_size);
 }
 
 int main(int argc, char * argv[])
@@ -112,9 +176,10 @@ int main(int argc, char * argv[])
 
   int iterations;
   int order;
+  int batches = 0;
   try {
       if (argc < 2) {
-        throw "Usage: <# iterations> <matrix order>";
+        throw "Usage: <# iterations> <matrix order> [<batches>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -128,6 +193,10 @@ int main(int argc, char * argv[])
       } else if (order > std::floor(std::sqrt(INT_MAX))) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
+
+      if (argc>3) {
+        batches = std::atoi(argv[3]);
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -136,6 +205,13 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
+  if (batches == 0) {
+      std::cout << "No batching" << std::endl;
+  } else if (batches < 0) {
+      std::cout << "Batch size           = " << -batches << " (loop over legacy BLAS)" << std::endl;
+  } else if (batches > 0) {
+      std::cout << "Batch size           = " <<  batches << " (batched BLAS)" << std::endl;
+  }
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for matrices
@@ -143,34 +219,44 @@ int main(int argc, char * argv[])
 
   double dgemm_time(0);
 
-  std::vector<double> A(order*order);
-  std::vector<double> B(order*order);
-  std::vector<double> C(order*order,0.0);
-#ifdef PRK_DEBUG
-  const unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  std::default_random_engine generator(seed);
-  std::uniform_real_distribution<double> uniform01(0.0, 1.0);
-  for (auto i=0; i<order; ++i) {
-    for (auto j=0; j<order; ++j) {
-       A[i*order+j] = uniform01(generator);
-       B[i*order+j] = uniform01(generator);
+  const int matrices = (batches==0 ? 1 : abs(batches));
+
+  std::vector<double> const M(order*order,0);
+  std::vector<std::vector<double>> A(matrices,M);
+  std::vector<std::vector<double>> B(matrices,M);
+  std::vector<std::vector<double>> C(matrices,M);
+  for (int b=0; b<matrices; ++b) {
+    for (int i=0; i<order; ++i) {
+      for (int j=0; j<order; ++j) {
+         A[b][i*order+j] = i;
+         B[b][i*order+j] = i;
+         C[b][i*order+j] = 0;
+      }
     }
   }
-#else
-  for (auto i=0; i<order; ++i) {
-    for (auto j=0; j<order; ++j) {
-       A[i*order+j] = i;
-       B[i*order+j] = i;
-    }
+
+  double ** pA = new double*[matrices];
+  double ** pB = new double*[matrices];
+  double ** pC = new double*[matrices];
+
+  for (int b=0; b<matrices; ++b) {
+     pA[b] = A[b].data();
+     pB[b] = B[b].data();
+     pC[b] = C[b].data();
   }
-#endif
 
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) dgemm_time = prk::wtime();
 
-      prk_dgemm(order, A, B, C);
+      if (batches == 0) {
+          prk_dgemm(order, A[0], B[0], C[0]);
+      } else if (batches < 0) {
+          prk_dgemm(order, matrices, A, B, C);
+      } else if (batches > 0) {
+          prk_dgemm(order, matrices, pA, pB, pC);
+      }
     }
     dgemm_time = prk::wtime() - dgemm_time;
   }
@@ -179,30 +265,15 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  const auto epsilon = 1.0e-8;
-  const auto forder = static_cast<double>(order);
-#ifdef PRK_DEBUG
-  std::vector<double> D(order*order,0.0);;
-  for (auto iter = 0; iter<=iterations; iter++) {
-    prk_dgemm_loops(order, A, B, D);
-  }
+  const double epsilon = 1.0e-8;
+  const double forder = static_cast<double>(order);
+  const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
   double residuum(0);
-  for (auto i=0; i<order; ++i) {
-    for (auto j=0; j<order; ++j) {
-        const auto diff = std::abs(C[i*order+j] - D[i*order+j]);
-        residuum += diff;
-        if (diff > epsilon) {
-            std::cout << i << "," << j << " = " << C[i*order+j] << ", " << D[i*order+j] << "\n";
-        }
-    }
+  for (int b=0; b<matrices; ++b) {
+      const auto checksum = prk_reduce(C[b].begin(), C[b].end(), 0.0);
+      residuum += std::abs(checksum-reference)/reference;
   }
-  const auto reference = prk_reduce(D.begin(), D.end(), 0.0);
-  const auto checksum  = prk_reduce(C.begin(), C.end(), 0.0);
-#else
-  const auto reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
-  const auto checksum = prk_reduce(C.begin(), C.end(), 0.0);
-  const auto residuum = std::abs(checksum-reference)/reference;
-#endif
+  residuum/=matrices;
 
   if (residuum < epsilon) {
 #if VERBOSE
@@ -210,17 +281,17 @@ int main(int argc, char * argv[])
               << "Actual checksum = " << checksum << std::endl;
 #endif
     std::cout << "Solution validates" << std::endl;
-    auto avgtime = dgemm_time/iterations;
+    auto avgtime = dgemm_time/iterations/matrices;
     auto nflops = 2.0 * std::pow(forder,3);
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "Reference checksum = " << reference << "\n"
-              << "Actual checksum = " << checksum << std::endl;
+              << "Residuum           = " << residuum << std::endl;
 #if VERBOSE
     std::cout << "i, j, A, B, C, D" << std::endl;
-    for (auto i=0; i<order; ++i)
-      for (auto j=0; j<order; ++j)
+    for (int i=0; i<order; ++i)
+      for (int j=0; j<order; ++j)
         std::cout << i << "," << j << " = " << A[i*order+j] << ", " << B[i*order+j] << ", " << C[i*order+j] << ", " << D[i*order+j] << "\n";
     std::cout << std::endl;
 #endif
