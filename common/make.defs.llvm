@@ -4,7 +4,7 @@
 #
 # Base compilers and language options
 #
-LLVM_ROOT=/usr/local/Cellar/llvm/5.0.0
+LLVM_ROOT=/usr/local/Cellar/llvm/6.0.0
 LLVM_PATH=${LLVM_ROOT}/bin/
 #LLVM_PATH=/opt/llvm/HEAD/bin/
 # C99 is required in some implementations.
@@ -74,21 +74,21 @@ SYCLFLAG+=-std=c++14
 #
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
-#SYCLDIR=./triSYCL
-#SYCLCXX=${CXX} ${OPENMPFLAG}
-#SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+SYCLDIR=./triSYCL
+SYCLCXX=${CXX} ${OPENMPFLAG}
+SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
 # ProGTX
 # https://github.com/ProGTX/sycl-gtx
-SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
-SYCLCXX=${CXX} ${OPENMPFLAG}
-SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
+#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
+#SYCLCXX=${CXX} ${OPENMPFLAG}
+#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # OCCA
 OCCADIR=${HOME}/prk-repo/Cxx11/occa
 #
 # TBB
 #
-TBBDIR=/usr/local/Cellar/tbb/2018_U1
+TBBDIR=/usr/local/Cellar/tbb/2018_U3
 TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
