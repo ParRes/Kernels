@@ -112,6 +112,9 @@ void prk_dgemm(const int order, const int batches,
     const double alpha = 1.0;
     const double beta  = 1.0;
 
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
     for (int b=0; b<batches; ++b) {
         cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                     n, n, n, alpha, &(A[b][0]), n, &(B[b][0]), n, beta, &(C[b][0]), n);
