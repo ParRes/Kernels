@@ -112,8 +112,23 @@ void prk_dgemm(const int order, const int batches,
     const double alpha = 1.0;
     const double beta  = 1.0;
 
+    for (int b=0; b<batches; ++b) {
+        cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                    n, n, n, alpha, &(A[b][0]), n, &(B[b][0]), n, beta, &(C[b][0]), n);
+    }
+}
+
+void prk_dgemm(const int order, const int batches, const int nt,
+               const std::vector<std::vector<double>> & A,
+               const std::vector<std::vector<double>> & B,
+                     std::vector<std::vector<double>> & C)
+{
+    const cblas_int n = order;
+    const double alpha = 1.0;
+    const double beta  = 1.0;
+
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static) num_threads(nt)
 #endif
     for (int b=0; b<batches; ++b) {
         cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
@@ -141,6 +156,7 @@ void prk_dgemm(const int order, const int batches,
     const double alpha_array[group_count] = { alpha };
     const double beta_array[group_count]  = { beta };
 
+#ifdef MKL
     cblas_dgemm_batch(CblasRowMajor, transa_array, transb_array,
                       n_array, n_array, n_array,
                       alpha_array,
@@ -149,23 +165,18 @@ void prk_dgemm(const int order, const int batches,
                       beta_array,
                       C, n_array,
                       group_count, group_size);
-
-//  cblas_dgemm_batch(CblasRowMajor,
-//                    const CBLAS_TRANSPOSE* transa_array,
-//                    const CBLAS_TRANSPOSE* transb_array,
-//                    const MKL_INT* m_array,
-//                    const MKL_INT* n_array,
-//                    const MKL_INT* k_array,
-//                    const double* alpha_array,
-//                    const double **a_array,
-//                    const MKL_INT* lda_array,
-//                    const double **b_array,
-//                    const MKL_INT* ldb_array,
-//                    const double* beta_array,
-//                    double **c_array,
-//                    const MKL_INT* ldc_array,
-//                    const MKL_INT group_count,
-//                    const MKL_INT* group_size);
+#else // e.g. Accelerate does not have batched BLAS
+    for (int b=0; b<batches; ++b) {
+        cblas_dgemm(CblasRowMajor,
+                    transa_array[0], transb_array[0],
+                    n_array[0], n_array[0], n_array[0],
+                    alpha_array[0],
+                    A[b], n_array[0],
+                    B[b], n_array[0],
+                    beta_array[0],
+                    C[b], n_array[0]);
+    }
+#endif
 }
 
 int main(int argc, char * argv[])
@@ -180,9 +191,10 @@ int main(int argc, char * argv[])
   int iterations;
   int order;
   int batches = 0;
+  int batch_threads = 1;
   try {
       if (argc < 2) {
-        throw "Usage: <# iterations> <matrix order> [<batches>]";
+        throw "Usage: <# iterations> <matrix order> [<batches> <batch threads>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -200,6 +212,14 @@ int main(int argc, char * argv[])
       if (argc>3) {
         batches = std::atoi(argv[3]);
       }
+
+      if (argc>4) {
+        batch_threads = std::atoi(argv[4]);
+      } else {
+#ifdef _OPENMP
+        batch_threads = omp_get_max_threads();
+#endif
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -210,10 +230,19 @@ int main(int argc, char * argv[])
   std::cout << "Matrix order         = " << order << std::endl;
   if (batches == 0) {
       std::cout << "No batching" << std::endl;
-  } else if (batches < 0) {
-      std::cout << "Batch size           = " << -batches << " (loop over legacy BLAS)" << std::endl;
   } else if (batches > 0) {
+#ifdef MKL
       std::cout << "Batch size           = " <<  batches << " (batched BLAS)" << std::endl;
+#else
+      std::cout << "Batch size           = " << std::abs(batches) << " (loop over legacy BLAS sequentially)" << std::endl;
+#endif
+  } else if (batches < 0) {
+      if (batch_threads > 1) {
+          std::cout << "Batch size           = " << std::abs(batches) << " (loop over legacy BLAS with "
+                    << batch_threads << " threads)" << std::endl;
+      } else {
+          std::cout << "Batch size           = " << std::abs(batches) << " (loop over legacy BLAS sequentially)" << std::endl;
+      }
   }
 
   //////////////////////////////////////////////////////////////////////
@@ -256,7 +285,7 @@ int main(int argc, char * argv[])
       if (batches == 0) {
           prk_dgemm(order, A[0], B[0], C[0]);
       } else if (batches < 0) {
-          prk_dgemm(order, matrices, A, B, C);
+          prk_dgemm(order, matrices, batch_threads, A, B, C);
       } else if (batches > 0) {
           prk_dgemm(order, matrices, pA, pB, pC);
       }
