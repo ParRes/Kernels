@@ -25,7 +25,7 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
 # DEFAULT_OPT_FLAGS=-g -O3 -march=knl
 # See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
 #
-DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
+#DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
 DEFAULT_OPT_FLAGS+=-Wall
 #
 # OpenMP flags
