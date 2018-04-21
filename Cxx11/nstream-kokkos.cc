@@ -141,7 +141,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-      Kokkos::parallel_for ( length, KOKKOS_LAMBDA(const int i) {
+      Kokkos::parallel_for( length, KOKKOS_LAMBDA(const int i) {
           A[i] += B[i] + scalar * C[i];
       });
     }
@@ -180,6 +180,8 @@ int main(int argc, char * argv[])
       std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }
+
+  Kokkos::finalize();
 
   return 0;
 }
