@@ -117,8 +117,8 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     for (auto it : itrange) {
+      auto irange = boost::irange(it,std::min(order,it+tile_size));
       for (auto jt : jtrange) {
-        auto irange = boost::irange(it,std::min(order,it+tile_size));
         auto jrange = boost::irange(jt,std::min(order,jt+tile_size));
         for (auto i : irange) {
           for (auto j : jrange) {
