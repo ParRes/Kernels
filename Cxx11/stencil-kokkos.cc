@@ -66,14 +66,14 @@ typedef Kokkos::View<double**, Kokkos::LayoutRight> matrix;
 //typedef Kokkos::View<double**, Kokkos::LayoutLeft> matrix;
 //typedef Kokkos::View<double**> matrix;
 
+typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>> MDRP;
+
 #include "stencil_kokkos.hpp"
 
 void nothing(const int n, const int t, matrix & in, matrix & out)
 {
     std::cout << "You are trying to use a stencil that does not exist." << std::endl;
     std::cout << "Please generate the new stencil using the code generator." << std::endl;
-    // n will never be zero - this is to silence compiler warnings.
-    if (n==0) std::cout << in.size() << out.size() << std::endl;
     std::abort();
 }
 
@@ -176,22 +176,27 @@ int main(int argc, char* argv[])
   matrix in("in", n, n);
   matrix out("out", n, n);
 
-  try {
-    Kokkos::parallel_for ( n,[&] (int i) {
-      for (auto j=0; j<n; ++j){
-          in(i,j) = static_cast<double>(i+j);
-          out(i,j) = 0.0;
-      }
-    });
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-    return 1;
-  }
-  catch (std::exception const & e) {
-    std::cout << e.what() << std::endl;
-    return 1;
-  }
+  auto z2     = {0,0};
+  auto n2     = {n,n};
+  auto tile2  = {tile_size,tile_size};
+  auto full   = Kokkos::MDRangePolicy<Kokkos::Rank<2>>(z2,n2,tile2);
+  //auto r2     = {radius,radius};
+  //auto nr2    = {n-radius,n-radius};
+  //auto inside = Kokkos::MDRangePolicy<Kokkos::Rank<2>>(r2,nr2,tile2);
+
+#if 0
+  Kokkos::parallel_for ( n,[&] (int i) {
+    for (auto j=0; j<n; ++j){
+        in(i,j)  = static_cast<double>(i+j);
+        out(i,j) = 0.0;
+    }
+  });
+#else
+  Kokkos::parallel_for(full, KOKKOS_LAMBDA(int i, int j) {
+      in(i,j)  = static_cast<double>(i+j);
+      out(i,j) = 0.0;
+  });
+#endif
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -199,10 +204,8 @@ int main(int argc, char* argv[])
     // Apply the stencil operator
     stencil(n, tile_size, in, out);
     // Add constant to solution to force refresh of neighbor data, if any
-    Kokkos::parallel_for ( n,[&] (int i) {
-      for (auto j=0; j<n; ++j){
+    Kokkos::parallel_for(full, KOKKOS_LAMBDA(int i, int j) {
         in(i,j) += 1.0;
-      }
     });
   }
 
@@ -215,10 +218,12 @@ int main(int argc, char* argv[])
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
   // compute L1 norm in parallel
   double norm = 0.0;
-  auto inside = boost::irange(radius,n-radius);
-  for (auto i : inside) {
-    for (auto j : inside) {
-      norm += std::fabs(out(i,j));
+  {
+    auto inside = boost::irange(radius,n-radius);
+    for (auto i : inside) {
+      for (auto j : inside) {
+        norm += std::fabs(out(i,j));
+      }
     }
   }
   norm /= active_points;
@@ -243,7 +248,7 @@ int main(int argc, char* argv[])
               << " Avg time (s): " << avgtime << std::endl;
   }
 
-  Kokkos::finalize();
+  //Kokkos::finalize();
 
   return 0;
 }
