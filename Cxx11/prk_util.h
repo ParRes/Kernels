@@ -40,7 +40,7 @@
 #include <cassert>
 
 // Test standard library _after_ standard headers have been included...
-#if !defined(__NVCC__) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
+#if !defined(__NVCC__) && !defined(__PGI) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
 # error You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
 #endif
 
@@ -180,8 +180,13 @@ const T prk_reduce(I first, I last, T init) {
 # endif
 #endif
 
-#ifdef USE_BOOST
-# include <boost/range/irange.hpp>
+#if defined(USE_BOOST)
+# include "boost/range/irange.hpp"
+#endif
+
+#if defined(USE_BOOST_COMPUTE)
+# include "boost/compute.hpp"
+# include "boost/compute/container/valarray.hpp"
 #endif
 
 #if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)

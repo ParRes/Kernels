@@ -18,6 +18,9 @@ octave-workspace                # Octave crashes
 *.swp                           # Vim
 */*.swp
 */*/*.swp
+*.swo                           # Vim
+*/*.swo
+*/*/*.swo
 *.dSYM                          # Mac
 */*.dSYM
 */*/*.dSYM
@@ -42,6 +45,10 @@ func.c                          # PRK C89 stencil generated code
 *.cobaltlog                     # ALCF Cobalt scheduler
 *.output                        # ALCF Cobalt scheduler
 *.error                         # ALCF Cobalt scheduler
+
+*.log
+*.log2
+*.log3
 
 MPI1/AMR/amr
 MPI1/Branch/branch
@@ -106,6 +113,8 @@ C1z/transpose-target
 C1z/transpose-taskloop
 C1z/transpose-ispc
 Cxx11/dgemm-vector
+Cxx11/dgemm-cblas
+Cxx11/dgemm-cublas
 Cxx11/p2p-openmp-target
 Cxx11/p2p-tasks-openmp
 Cxx11/p2p-vector
@@ -116,8 +125,13 @@ Cxx11/p2p-innerloop-openmp
 Cxx11/p2p-doacross-vector-openmp
 Cxx11/p2p-innerloop-opencl
 Cxx11/p2p-innerloop-vector
+Cxx11/p2p-hyperplane-vector
 Cxx11/p2p-hyperplane-vector-openmp
 Cxx11/p2p-innerloop-vector-tbb
+Cxx11/p2p-hyperplane-vector-stl
+Cxx11/p2p-hyperplane-vector-pstl
+Cxx11/p2p-hyperplane-vector-tbb
+Cxx11/p2p-hyperplane-sycl
 Cxx11/nstream-kokkos
 Cxx11/nstream-opencl
 Cxx11/nstream-valarray
@@ -129,6 +143,12 @@ Cxx11/nstream-vector-rangefor
 Cxx11/nstream-vector-stl
 Cxx11/nstream-vector-taskloop
 Cxx11/nstream-vector-tbb
+Cxx11/nstream-valarray-boost-compute
+Cxx11/nstream-vector-boost-compute
+Cxx11/nstream-cublas
+Cxx11/nstream-cuda
+Cxx11/nstream-openmp-target
+Cxx11/nstream-sycl
 Cxx11/sparse-vector
 Cxx11/stencil-opencl
 Cxx11/stencil-openmp-target
@@ -142,7 +162,10 @@ Cxx11/stencil-vector-rangefor
 Cxx11/stencil-vector-tbb
 Cxx11/stencil-vector-taskloop
 Cxx11/stencil-kokkos
+Cxx11/stencil-cuda
+Cxx11/stencil-sycl
 Cxx11/transpose-opencl
+Cxx11/transpose-sycl
 Cxx11/transpose-openmp-target
 Cxx11/transpose-valarray
 Cxx11/transpose-vector
@@ -157,6 +180,8 @@ Cxx11/transpose-vector-rangefor
 Cxx11/transpose-vector-tbb
 Cxx11/transpose-vector-taskloop
 Cxx11/transpose-kokkos
+Cxx11/transpose-cublas
+Cxx11/transpose-cuda
 Cxx11/grid1.cl
 Cxx11/grid2.cl
 Cxx11/grid3.cl
@@ -178,11 +203,14 @@ Cxx11/star9.cl
 FORTRAN/dgemm-taskloop-openmp
 FORTRAN/dgemm-pretty
 FORTRAN/dgemm-openmp
+FORTRAN/dgemm-openmp-target
 FORTRAN/dgemm
 FORTRAN/nstream
 FORTRAN/nstream-openmp
 FORTRAN/nstream-pretty
 FORTRAN/nstream-taskloop-openmp
+FORTRAN/nstream-openmp-target
+FORTRAN/nstream-ornlacc
 FORTRAN/p2p
 FORTRAN/p2p-innerloop
 FORTRAN/p2p-coarray
@@ -191,19 +219,25 @@ FORTRAN/p2p-tasks-openmp
 FORTRAN/p2p-doacross-openmp
 FORTRAN/p2p-innerloop-openmp
 FORTRAN/p2p-datapar-openmp
+FORTRAN/p2p-innerloop-ornlacc
+FORTRAN/p2p-ornlacc
 FORTRAN/stencil
 FORTRAN/stencil-coarray
 FORTRAN/stencil-openmp
 FORTRAN/stencil-openmp-target
 FORTRAN/stencil-pretty
+FORTRAN/stencil-ornlacc
 FORTRAN/stencil-taskloop-openmp
+FORTRAN/stencil-ornlacc
 FORTRAN/transpose
 FORTRAN/transpose-coarray
 FORTRAN/transpose-openmp
 FORTRAN/transpose-openmp-target
 FORTRAN/transpose-pretty
+FORTRAN/transpose-ornlacc
 FORTRAN/transpose-taskloop-openmp
 FORTRAN/transpose-tasks-openmp
+FORTRAN/transpose-ornlacc
 RUST/p2p
 RUST/stencil
 RUST/transpose
