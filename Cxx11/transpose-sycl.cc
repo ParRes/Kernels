@@ -151,16 +151,14 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  auto range = boost::irange(static_cast<size_t>(0),order);
-
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  for (auto i : range) {
-    for (auto j : range) {
-      const int ij = i*order+j;
-      const int ji = j*order+i;
-      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+  for (int i=0; i<order; ++i) {
+    for (int j=0; i<order; ++j) {
+      size_t const ij = (size_t)i*order+(size_t)j;
+      size_t const ji = (size_t)j*order+(size_t)i;
+      double const reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(h_B[ji] - reference);
     }
   }
