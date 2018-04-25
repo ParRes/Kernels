@@ -152,10 +152,10 @@ int main(int argc, char * argv[])
   // TODO: replace with std::generate, std::accumulate, or similar
   double const addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
-  for (int i=0; i<order; ++i) {
-    for (int j=0; i<order; ++j) {
-      size_t const ij = (size_t)i*order+(size_t)j;
-      size_t const ji = (size_t)j*order+(size_t)i;
+  for (size_t i=0; i<order; ++i) {
+    for (size_t j=0; j<order; ++j) {
+      size_t const ij = i*order+j;
+      size_t const ji = j*order+i;
       double const reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(h_B[ji] - reference);
     }
