@@ -113,18 +113,11 @@ int main(int argc, char * argv[])
 
   double nstream_time(0);
 
-  std::vector<double> h_A(length);
-  std::vector<double> h_B(length);
-  std::vector<double> h_C(length);
+  std::vector<double> h_A(length,0);
+  std::vector<double> h_B(length,2);
+  std::vector<double> h_C(length,2);
 
   double const scalar(3);
-
-  //std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
-  std::for_each( std::begin(h_A), std::end(h_A), [&] (size_t i) {
-      h_A[i] = 0;
-      h_B[i] = 2;
-      h_C[i] = 2;
-  });
 
   {
     // initialize device buffers from host buffers
