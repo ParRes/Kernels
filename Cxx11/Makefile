@@ -43,7 +43,7 @@ BOOSTFLAGS = $(BOOSTFLAG)
 STLFLAGS = $(STLFLAG) $(BOOSTFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
-KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
+KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 
 ifdef OCCADIR
@@ -162,7 +162,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) -o $@
 
 %-boost-compute: %-boost-compute.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) $(OPENCLFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) -DUSE_BOOST_COMPUTE $(OPENCLFLAGS) -o $@
 
 %-raja: %-raja.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
