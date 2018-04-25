@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2018, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -54,140 +54,136 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/Kokkos Matrix transpose: B = A^T" << std::endl;
 
   Kokkos::initialize(argc, argv);
+  {
+    // row-major 2D array
+    typedef Kokkos::View<double**, Kokkos::LayoutRight> matrix;
+    // column-major 2D array
+    //typedef Kokkos::View<double**, Kokkos::LayoutLeft> matrix;
+    // default 2D array
+    //typedef Kokkos::View<double**> matrix;
 
-  typedef Kokkos::TeamPolicy<>               team_policy ;
-  typedef Kokkos::TeamPolicy<>::member_type  member_type ;
+    //////////////////////////////////////////////////////////////////////
+    /// Read and test input parameters
+    //////////////////////////////////////////////////////////////////////
 
-  // row-major 2D array
-  typedef Kokkos::View<double**, Kokkos::LayoutRight> matrix;
-  // column-major 2D array
-  //typedef Kokkos::View<double**, Kokkos::LayoutLeft> matrix;
-  // default 2D array
-  //typedef Kokkos::View<double**> matrix;
+    int iterations;
+    int order;
+    int tile_size;
+    bool permute = false;
+    try {
+        if (argc < 3) {
+          throw "Usage: <# iterations> <matrix order> [<tile_size> <permute=0/1>]";
+        }
 
-  //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
-  //////////////////////////////////////////////////////////////////////
+        iterations  = std::atoi(argv[1]);
+        if (iterations < 1) {
+          throw "ERROR: iterations must be >= 1";
+        }
 
-  int iterations;
-  int order;
-  try {
-      if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order>";
-      }
+        order = std::atoi(argv[2]);
+        if (order <= 0) {
+          throw "ERROR: Matrix Order must be greater than 0";
+        } else if (order > std::floor(std::sqrt(INT_MAX))) {
+          throw "ERROR: matrix dimension too large - overflow risk";
+        }
 
-      // number of times to do the transpose
-      iterations  = std::atoi(argv[1]);
-      if (iterations < 1) {
-        throw "ERROR: iterations must be >= 1";
-      }
+        // default tile size for tiling of local transpose
+        tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
+        // a negative tile size means no tiling of the local transpose
+        if (tile_size <= 0) tile_size = order;
 
-      // order of a the matrix
-      order = std::atoi(argv[2]);
-      if (order <= 0) {
-        throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
-        throw "ERROR: matrix dimension too large - overflow risk";
-      }
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-    return 1;
-  }
+        auto permute_input = (argc>4) ? std::atoi(argv[4]) : 0;
+        if (permute_input != 0 && permute_input != 1) {
+          throw "ERROR: permute must be 0 (no) or 1 (yes)";
+        }
+        permute = (permute_input == 1);
+    }
+    catch (const char * e) {
+      std::cout << e << std::endl;
+      return 1;
+    }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Kokkos execution space: " << typeid(Kokkos::DefaultExecutionSpace).name() << std::endl;
+    std::cout << "Number of iterations = " << iterations << std::endl;
+    std::cout << "Matrix order         = " << order << std::endl;
+    std::cout << "Tile size            = " << tile_size << std::endl;
+    std::cout << "Permute loops        = " << (permute ? "yes" : "no") << std::endl;
+    std::cout << "Kokkos execution space: " << typeid(Kokkos::DefaultExecutionSpace).name() << std::endl;
 
-  //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
-  //////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////
+    // Allocate space and perform the computation
+    //////////////////////////////////////////////////////////////////////
 
-  matrix A("A", order, order);
-  matrix B("B", order, order);
+    matrix A("A", order, order);
+    matrix B("B", order, order);
 
-#if 0
-  Kokkos::parallel_for ( order, KOKKOS_LAMBDA(const int i) {
-    for (auto j=0; j<order; ++j){
+    auto order2 = {order,order};
+    auto tile2  = {tile_size,tile_size};
+
+    auto policy    = Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0},order2,tile2);
+    typedef Kokkos::Rank<2,Kokkos::Iterate::Right,Kokkos::Iterate::Left > rl;
+    typedef Kokkos::Rank<2,Kokkos::Iterate::Left, Kokkos::Iterate::Right> lr;
+    auto policy_lr = Kokkos::MDRangePolicy<rl>({0,0},order2,tile2);
+    auto policy_rl = Kokkos::MDRangePolicy<lr>({0,0},order2,tile2);
+
+    Kokkos::parallel_for(policy, KOKKOS_LAMBDA(int i, int j) {
         A(i,j) = static_cast<double>(i*order+j);
         B(i,j) = 0.0;
-    }
-  });
-#else
-  Kokkos::parallel_for( team_policy(order, Kokkos::AUTO), KOKKOS_LAMBDA(const member_type& teamMember) {
-    const int i = teamMember.league_rank();
-    Kokkos::parallel_for( Kokkos::TeamThreadRange(teamMember, order), [&](const int j) {
-      A(i,j) = static_cast<double>(i*order+j);
-      B(i,j) = 0.0;
     });
-  });
-#endif
 
-  auto trans_time = 0.0;
+    double trans_time(0);
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; ++iter) {
 
-    if (iter==1) trans_time = prk::wtime();
+      if (iter==1) trans_time = prk::wtime();
 
-#if 0
-    Kokkos::parallel_for ( order, KOKKOS_LAMBDA(const int i) {
-      for (auto j=0; j<order; ++j){
-        B(i,j) += A(j,i);
-        A(j,i) += 1.0;
+      if (permute) {
+          Kokkos::parallel_for(policy_rl, KOKKOS_LAMBDA(int i, int j) {
+              B(i,j) += A(j,i);
+              A(j,i) += 1.0;
+          });
+      } else {
+          Kokkos::parallel_for(policy_lr, KOKKOS_LAMBDA(int i, int j) {
+              B(i,j) += A(j,i);
+              A(j,i) += 1.0;
+          });
       }
-    });
-#else
-    Kokkos::parallel_for( team_policy(order, Kokkos::AUTO), KOKKOS_LAMBDA(const member_type& teamMember) {
-      const int i = teamMember.league_rank();
-      Kokkos::parallel_for( Kokkos::TeamThreadRange(teamMember, order), [&](const int j) {
-        B(i,j) += A(j,i);
-        A(j,i) += 1.0;
-      });
-    });
-#endif
     }
 
-  trans_time = prk::wtime() - trans_time;
+    trans_time = prk::wtime() - trans_time;
 
-  //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
-  //////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////
+    /// Analyze and output results
+    //////////////////////////////////////////////////////////////////////
 
-  const double addit = (iterations+1.) * (0.5*iterations);
-  double abserr(0);
-  Kokkos::parallel_reduce( team_policy(order, Kokkos::AUTO), KOKKOS_LAMBDA(const member_type & teamMember, double & update) {
-    const int i = teamMember.league_rank();
-    double temp(0);
-    Kokkos::parallel_reduce( Kokkos::TeamThreadRange(teamMember, order), [&](const int j, double & inner) {
-      const size_t ij = i*order+j;
-      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      inner += std::fabs(B(j,i) - reference);
-    }, temp);
-    Kokkos::single( Kokkos::PerTeam( teamMember ), [&] () {
-        update += temp;
-    });
-  }, abserr);
+    double const addit = (iterations+1.) * (0.5*iterations);
+    double abserr(0);
+    Kokkos::parallel_reduce(policy, KOKKOS_LAMBDA(int i, int j, double & update) {
+        size_t const ij = i*order+j;
+        double const reference = static_cast<double>(ij)*(1.+iterations)+addit;
+        update += std::fabs(B(j,i) - reference);
+    }, abserr);
 
 #ifdef VERBOSE
-  std::cout << "Sum of absolute differences: " << abserr << std::endl;
+    std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  const auto epsilon = 1.0e-8;
-  if (abserr < epsilon) {
-    std::cout << "Solution validates" << std::endl;
-    auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
-  } else {
-    std::cout << "ERROR: Aggregate squared error " << abserr
-              << " exceeds threshold " << epsilon << std::endl;
-    return 1;
-  }
+    double epsilon(1.0e-8);
+    if (abserr < epsilon) {
+      std::cout << "Solution validates" << std::endl;
+      auto avgtime = trans_time/iterations;
+      auto bytes = (size_t)order * (size_t)order * sizeof(double);
+      std::cout << "Rate (MB/s): " << 1.0e-6 * (2.*bytes)/avgtime
+                << " Avg time (s): " << avgtime << std::endl;
+    } else {
+      std::cout << "ERROR: Aggregate squared error " << abserr
+                << " exceeds threshold " << epsilon << std::endl;
+      return 1;
+    }
 
+  }
   Kokkos::finalize();
 
   return 0;
