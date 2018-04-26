@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2018, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -181,21 +181,12 @@ const T prk_reduce(I first, I last, T init) {
 #endif
 
 #if defined(USE_RANGES)
-# if defined(RANGE) && (RANGE==BOOST)
+# if defined(USE_BOOST_IRANGE)
 #  include "boost/range/irange.hpp"
-# elif defined(RANGE) && (RANGE==TS)
-// TODO this is overkill and needs pruning
-#  include "range/v3/core.hpp"
+# elif defined(USE_RANGES_TS)
 #  include "range/v3/view/iota.hpp"
-#  include "range/v3/view/slice.hpp"
-#  include "range/v3/view/cycle.hpp"
-#  include "range/v3/view/repeat.hpp"
-#  include "range/v3/view/repeat_n.hpp"
-#  include "range/v3/view/reverse.hpp"
-#  include "range/v3/view/sliding.hpp"
 # else
-#  error You have not provided a version of ranges to use. \
-         Please choose RANGE={TS,BOOST}.
+#  error You have not provided a version of ranges to use.
 # endif
 #endif
 
@@ -262,11 +253,6 @@ namespace prk {
     static inline auto divceil(T1 numerator, T2 denominator) -> decltype(numerator / denominator) {
         return ( numerator / denominator + (numerator % denominator > 0) );
     }
-
-    class irange {
-
-
-    };
 
 } // namespace prk
 

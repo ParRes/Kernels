@@ -136,8 +136,8 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
+  auto const addit = (iterations+1.) * (iterations/2.);
+  double abserr(0);
   auto irange = boost::irange(0,order);
   auto jrange = boost::irange(0,order);
   for (auto i : irange) {

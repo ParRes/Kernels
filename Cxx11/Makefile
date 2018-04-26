@@ -28,7 +28,8 @@ ifdef USE_PRK_KOKKOS_BACKEND
     KOKKOS_BACKEND_FLAG = -DPRK_KOKKOS_BACKEND=$(USE_PRK_KOKKOS_BACKEND)
 endif
 
-ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm
+#ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm
+ASMFLAGS = -fverbose-asm
 
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)

@@ -116,7 +116,11 @@ int main(int argc, char * argv[])
   std::vector<double> B(length,2.0);
   std::vector<double> C(length,2.0);
 
-  auto range = boost::irange(static_cast<size_t>(0), length);
+#if defined(USE_BOOST_IRANGE)
+  auto range = boost::irange(0u, length);
+#elif defined(USE_RANGES_TS)
+  auto range = ranges::view::iota(0u, length);
+#endif
 
   double scalar(3);
 
