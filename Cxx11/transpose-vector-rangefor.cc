@@ -109,17 +109,17 @@ int main(int argc, char * argv[])
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 
-  auto itrange = boost::irange(0,order,tile_size);
-  auto jtrange = boost::irange(0,order,tile_size);
+  auto itrange = prk::range(0,order,tile_size);
+  auto jtrange = prk::range(0,order,tile_size);
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
     for (auto it : itrange) {
-      auto irange = boost::irange(it,std::min(order,it+tile_size));
+      auto irange = prk::range(it,std::min(order,it+tile_size));
       for (auto jt : jtrange) {
-        auto jrange = boost::irange(jt,std::min(order,jt+tile_size));
+        auto jrange = prk::range(jt,std::min(order,jt+tile_size));
         for (auto i : irange) {
           for (auto j : jrange) {
             B[i*order+j] += A[j*order+i];
@@ -136,10 +136,10 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
-  auto irange = boost::irange(0,order);
-  auto jrange = boost::irange(0,order);
+  auto const addit = (iterations+1.) * (iterations/2.);
+  double abserr(0);
+  auto irange = prk::range(0,order);
+  auto jrange = prk::range(0,order);
   for (auto i : irange) {
     for (auto j : jrange) {
       const int ij = i*order+j;

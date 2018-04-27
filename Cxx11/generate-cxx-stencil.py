@@ -29,24 +29,24 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='rangefor'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    for (auto i : inside) {\n')
         src.write('      PRAGMA_SIMD\n')
         src.write('      for (auto j : inside) {\n')
     elif (model=='stl'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    std::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
         #src.write('      PRAGMA_SIMD\n')
         src.write('      std::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='pgnu'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    __gnu_parallel::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
         src.write('      std::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='pstl'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    std::for_each( std::execution::par, std::begin(inside), std::end(inside), [&] (int i) {\n')
         src.write('      std::for_each( std::execution::unseq, std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='raja'):

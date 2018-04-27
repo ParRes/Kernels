@@ -28,7 +28,8 @@ ifdef USE_PRK_KOKKOS_BACKEND
     KOKKOS_BACKEND_FLAG = -DPRK_KOKKOS_BACKEND=$(USE_PRK_KOKKOS_BACKEND)
 endif
 
-ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm
+#ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm
+ASMFLAGS = -fverbose-asm
 
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
@@ -40,8 +41,9 @@ ORNLACCFLAGS = $(ORNLACCFLAG)
 TBBFLAGS = $(TBBFLAG) -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
 BOOSTFLAGS = $(BOOSTFLAG)
-STLFLAGS = $(STLFLAG) $(BOOSTFLAGS)
-PSTLFLAGS = $(PSTLFLAG) $(BOOSTFLAGS)
+RANGEFLAGS = -DUSE_RANGES $(RANGEFLAG)
+STLFLAGS = $(STLFLAG) $(RANGEFLAGS)
+PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
@@ -159,7 +161,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(PSTLFLAGS) -o $@
 
 %-rangefor: %-rangefor.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) $< $(RANGEFLAGS) -o $@
 
 %-boost-compute: %-boost-compute.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) -DUSE_BOOST_COMPUTE $(OPENCLFLAGS) -o $@

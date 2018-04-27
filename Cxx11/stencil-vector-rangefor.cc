@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
   std::vector<double> out(n*n);
 
   // initialize the input and output arrays
-  auto range = boost::irange(0,n);
+  auto range = prk::range(0,n);
   for (auto i : range) {
     for (auto j : range) {
       in[i*n+j] = static_cast<double>(i+j);
@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
 
   // compute L1 norm in parallel
   double norm = 0.0;
-  auto inside = boost::irange(radius,n-radius);
+  auto inside = prk::range(radius,n-radius);
   for (auto i : inside) {
     for (auto j : inside) {
       norm += std::fabs(out[i*n+j]);

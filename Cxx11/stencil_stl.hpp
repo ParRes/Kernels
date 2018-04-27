@@ -1,5 +1,5 @@
 void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    auto inside = boost::irange(1,n-1);
+    auto inside = prk::range(1,n-1);
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
             out[i*n+j] += +in[(i+-1)*n+(j+0)] * -0.5
@@ -11,7 +11,7 @@ void star1(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void star2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    auto inside = boost::irange(2,n-2);
+    auto inside = prk::range(2,n-2);
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
             out[i*n+j] += +in[(i+-2)*n+(j+0)] * -0.125
@@ -27,7 +27,7 @@ void star2(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void star3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    auto inside = boost::irange(3,n-3);
+    auto inside = prk::range(3,n-3);
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
             out[i*n+j] += +in[(i+-3)*n+(j+0)] * -0.0555555555556
@@ -47,7 +47,7 @@ void star3(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void star4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    auto inside = boost::irange(4,n-4);
+    auto inside = prk::range(4,n-4);
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
             out[i*n+j] += +in[(i+-4)*n+(j+0)] * -0.03125
@@ -71,7 +71,7 @@ void star4(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void star5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    auto inside = boost::irange(5,n-5);
+    auto inside = prk::range(5,n-5);
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
             out[i*n+j] += +in[(i+-5)*n+(j+0)] * -0.02
@@ -99,7 +99,7 @@ void star5(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void grid1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    auto inside = boost::irange(1,n-1);
+    auto inside = prk::range(1,n-1);
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
             out[i*n+j] += +in[(i+-1)*n+(j+-1)] * -0.25
@@ -114,7 +114,7 @@ void grid1(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void grid2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    auto inside = boost::irange(2,n-2);
+    auto inside = prk::range(2,n-2);
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
             out[i*n+j] += +in[(i+-2)*n+(j+-2)] * -0.0625
@@ -143,7 +143,7 @@ void grid2(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void grid3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    auto inside = boost::irange(3,n-3);
+    auto inside = prk::range(3,n-3);
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
             out[i*n+j] += +in[(i+-3)*n+(j+-3)] * -0.0277777777778
@@ -194,7 +194,7 @@ void grid3(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void grid4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    auto inside = boost::irange(4,n-4);
+    auto inside = prk::range(4,n-4);
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
             out[i*n+j] += +in[(i+-4)*n+(j+-4)] * -0.015625
@@ -275,7 +275,7 @@ void grid4(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void grid5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    auto inside = boost::irange(5,n-5);
+    auto inside = prk::range(5,n-5);
     std::for_each( std::begin(inside), std::end(inside), [&] (int i) {
       std::for_each( std::begin(inside), std::end(inside), [&] (int j) {
             out[i*n+j] += +in[(i+-5)*n+(j+-5)] * -0.01

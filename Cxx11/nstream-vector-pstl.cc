@@ -120,7 +120,7 @@ int main(int argc, char * argv[])
   std::vector<double> B(length);
   std::vector<double> C(length);
 
-  auto range = boost::irange(static_cast<size_t>(0), length);
+  auto range = prk::range(static_cast<size_t>(0), length);
 
   double scalar(3);
 
