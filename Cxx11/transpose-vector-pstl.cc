@@ -105,7 +105,7 @@ int main(int argc, char * argv[])
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 
-  auto range = boost::irange(0,order);
+  auto range = prk::range(0,order);
 
   auto trans_time = 0.0;
 

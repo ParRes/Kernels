@@ -183,16 +183,10 @@ const T prk_reduce(I first, I last, T init) {
 #if defined(USE_RANGES)
 # if defined(USE_BOOST_IRANGE)
 #  include "boost/range/irange.hpp"
-template <class S, class E>
-auto prk_range(S start, E end) {
-    return boost::irange(static_cast<decltype(end)>(start), end);
-}
 # elif defined(USE_RANGES_TS)
 #  include "range/v3/view/iota.hpp"
-template <class S, class E>
-auto prk_range(S start, E end) {
-    return ranges::view::iota(static_cast<decltype(end)>(start), end);
-}
+#  include "range/v3/view/slice.hpp"
+#  include "range/v3/view/stride.hpp"
 # else
 #  error You have not provided a version of ranges to use.
 # endif
@@ -268,6 +262,20 @@ namespace prk {
         return boost::irange(static_cast<decltype(end)>(start), end);
 #elif defined(USE_RANGES_TS)
         return ranges::view::iota(static_cast<decltype(end)>(start), end);
+#endif
+    }
+
+    template <class S, class E, class B>
+    auto range(S start, E end, B blocking) {
+#if defined(USE_BOOST_IRANGE)
+        return boost::irange(static_cast<decltype(end)>(start), end, decltype(end)>(blocking) );
+#elif defined(USE_RANGES_TS)
+        // NOTE:
+        // iota(s) | slice(s,e) | stride(b)  is faster than
+        // iota(s,e) | stride(b) for some reason.
+        return ranges::view::iota(static_cast<decltype(end)>(start)) |
+               ranges::view::slice(static_cast<decltype(end)>(start), end) |
+               ranges::view::stride(static_cast<decltype(end)>(blocking));
 #endif
     }
 

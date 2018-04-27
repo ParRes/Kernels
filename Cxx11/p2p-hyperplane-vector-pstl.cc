@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
       for (auto i=2; i<=2*n-2; i++) {
         const auto begin = std::max(2,i-n+2);
         const auto end   = std::min(i,n)+1;
-        auto range = boost::irange(begin,end);
+        auto range = prk::range(begin,end);
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
         std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (auto j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
@@ -179,7 +179,7 @@ int main(int argc, char* argv[])
       for (int i=2; i<=2*(nb+1)-2; i++) {
         const auto begin = std::max(2,i-(nb+1)+2);
         const auto end   = std::min(i,nb+1)+1;
-        auto range = boost::irange(begin,end);
+        auto range = prk::range(begin,end);
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
         std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (auto j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
