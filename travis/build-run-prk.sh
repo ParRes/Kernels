@@ -18,7 +18,7 @@ case "$os" in
         export MPI_ROOT=/usr/local
         ;;
     Linux)
-        export MPI_ROOT=$TRAVIS_ROOT
+        export MPI_ROOT=${TRAVIS_ROOT}
         ;;
 esac
 
@@ -68,7 +68,7 @@ case "$PRK_TARGET" in
                 export JULIA_PATH=/usr/local/bin/
                 ;;
             Linux)
-                export JULIA_PATH=$TRAVIS_ROOT/julia/bin/
+                export JULIA_PATH=${TRAVIS_ROOT}/julia/bin/
                 ;;
         esac
         ${JULIA_PATH}julia --version
@@ -445,7 +445,7 @@ case "$PRK_TARGET" in
         echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
 
         #echo "RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}" >> common/make.defs
-        echo "RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include" >> common/make.defs
+        echo "RANGEFLAG=-DUSE_RANGES_TS -I${TRAVIS_ROOT}/range-v3/include" >> common/make.defs
 
         # C++11 with rangefor and Boost.Ranges
         make -C $PRK_TARGET_PATH rangefor
@@ -510,9 +510,9 @@ case "$PRK_TARGET" in
         if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             if [ "${CC}" = "clang" ] ; then
                 # omp.h not found with clang-3.9 - just work around instead of fixing.
-                echo "PSTLFLAG=-DUSE_PSTL ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include ${RANGEFLAG}" >> common/make.defs
+                echo "PSTLFLAG=-DUSE_PSTL ${TBBFLAG} -DUSE_INTEL_PSTL -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
             else
-                echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include ${RANGEFLAG}" >> common/make.defs
+                echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
             fi
             make -C $PRK_TARGET_PATH p2p-hyperplane-vector-pstl stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
             $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 1
@@ -665,7 +665,7 @@ case "$PRK_TARGET" in
                     # Homebrew installs a symlink in /usr/local/bin
                     export PRK_CAFC=/usr/local/bin/caf
                 elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-                    export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
+                    export PRK_CAFC=${TRAVIS_ROOT}/opencoarrays/bin/caf
                 fi
                 echo "CAFC=$PRK_CAFC -std=f2008 -cpp" >> common/make.defs
                 echo "COARRAYFLAG=-fcoarray=single" >> common/make.defs
@@ -744,7 +744,7 @@ case "$PRK_TARGET" in
                     export PRK_OVERSUBSCRIBE="--oversubscribe"
                     export TMPDIR=/tmp
                 elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-                    export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
+                    export PRK_LAUNCHER=${TRAVIS_ROOT}/opencoarrays/bin/cafrun
                 fi
                 $PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-} $PRK_TARGET_PATH/p2p-coarray       10 1024 1024
                 $PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-} $PRK_TARGET_PATH/stencil-coarray   10 1000
@@ -900,13 +900,13 @@ case "$PRK_TARGET" in
     allshmem)
         echo "SHMEM"
         # This should be fixed by rpath (https://github.com/regrant/sandia-shmem/issues/83)
-        export LD_LIBRARY_PATH=$TRAVIS_ROOT/sandia-openshmem/lib:$TRAVIS_ROOT/libfabric/lib:$LD_LIBRARY_PATH
-        export SHMEM_ROOT=$TRAVIS_ROOT/sandia-openshmem
+        export LD_LIBRARY_PATH=${TRAVIS_ROOT}/sandia-openshmem/lib:${TRAVIS_ROOT}/libfabric/lib:$LD_LIBRARY_PATH
+        export SHMEM_ROOT=${TRAVIS_ROOT}/sandia-openshmem
         echo "SHMEMTOP=$SHMEM_ROOT\nSHMEMCC=$SHMEM_ROOT/bin/oshcc" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=SHMEM
         export PRK_SHMEM_PROCS=4
-        export OSHRUN_LAUNCHER=$TRAVIS_ROOT/hydra/bin/mpirun
+        export OSHRUN_LAUNCHER=${TRAVIS_ROOT}/hydra/bin/mpirun
         export PRK_LAUNCHER=$SHMEM_ROOT/bin/oshrun
         $PRK_LAUNCHER -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
         $PRK_LAUNCHER -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
@@ -920,14 +920,14 @@ case "$PRK_TARGET" in
                 case "$CC" in
                     gcc)
                         # If building from source (impossible)
-                        #export UPC_ROOT=$TRAVIS_ROOT/gupc
+                        #export UPC_ROOT=${TRAVIS_ROOT}/gupc
                         # If installing deb file
-                        export UPC_ROOT=$TRAVIS_ROOT/gupc/usr/local/gupc
+                        export UPC_ROOT=${TRAVIS_ROOT}/gupc/usr/local/gupc
                         ;;
                     clang)
                         echo "Clang UPC is not supported."
                         exit 9
-                        export UPC_ROOT=$TRAVIS_ROOT/clupc
+                        export UPC_ROOT=${TRAVIS_ROOT}/clupc
                         ;;
                 esac
                 echo "UPCC=$UPC_ROOT/bin/upc" >> common/make.defs
@@ -936,7 +936,7 @@ case "$PRK_TARGET" in
                 make $PRK_TARGET
                 ;;
             bupc)
-                export UPC_ROOT=$TRAVIS_ROOT/bupc-$CC
+                export UPC_ROOT=${TRAVIS_ROOT}/bupc-$CC
                 echo "UPCC=$UPC_ROOT/bin/upcc" >> common/make.defs
                 # -N $nodes -n UPC threads -c $cores_per_node
                 # -localhost is only for UDP
@@ -946,7 +946,7 @@ case "$PRK_TARGET" in
                         ;;
                     ofi)
                         export GASNET_SSH_SERVERS="localhost"
-                        export LD_LIBRARY_PATH="$TRAVIS_ROOT/libfabric/lib:$LD_LIBRARY_PATH"
+                        export LD_LIBRARY_PATH="${TRAVIS_ROOT}/libfabric/lib:$LD_LIBRARY_PATH"
                         export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -v -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
                         ;;
                     mpi)
@@ -977,12 +977,12 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm/multicore-linux64
+                #export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-linux-x86_64
+                export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-linux-x86_64-smp
+                #export CHARM_ROOT=${TRAVIS_ROOT}/charm/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
@@ -1001,12 +1001,12 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm/multicore-linux64
+                #export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-linux-x86_64
+                export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-linux-x86_64-smp
+                #export CHARM_ROOT=${TRAVIS_ROOT}/charm/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
@@ -1035,7 +1035,7 @@ case "$PRK_TARGET" in
         ;;
     allfgmpi)
         echo "Fine-Grain MPI (FG-MPI)"
-        export FGMPI_ROOT=$TRAVIS_ROOT/fgmpi
+        export FGMPI_ROOT=${TRAVIS_ROOT}/fgmpi
         echo "FGMPITOP=$FGMPI_ROOT\nFGMPICC=$FGMPI_ROOT/bin/mpicc -std=c99" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=FG_MPI
@@ -1059,11 +1059,11 @@ case "$PRK_TARGET" in
     allgrappa)
         echo "Grappa"
         ########################
-        #. $TRAVIS_ROOT/grappa/bin/settings.sh
-        export GRAPPA_PREFIX=$TRAVIS_ROOT/grappa
-        export SCRIPT_PATH=$TRAVIS_ROOT/grappa/bin
+        #. ${TRAVIS_ROOT}/grappa/bin/settings.sh
+        export GRAPPA_PREFIX=${TRAVIS_ROOT}/grappa
+        export SCRIPT_PATH=${TRAVIS_ROOT}/grappa/bin
         ########################
-        echo "GRAPPATOP=$TRAVIS_ROOT/grappa" >> common/make.defs
+        echo "GRAPPATOP=${TRAVIS_ROOT}/grappa" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=GRAPPA
         export PRK_MPI_PROCS=2
@@ -1086,7 +1086,7 @@ case "$PRK_TARGET" in
         ;;
     alllegion)
         echo "Legion"
-        echo "LEGIONTOP=$TRAVIS_ROOT/legion" > common/make.defs
+        echo "LEGIONTOP=${TRAVIS_ROOT}/legion" > common/make.defs
         make $PRK_TARGET -k
         ;;
 esac
