@@ -183,8 +183,16 @@ const T prk_reduce(I first, I last, T init) {
 #if defined(USE_RANGES)
 # if defined(USE_BOOST_IRANGE)
 #  include "boost/range/irange.hpp"
+template <class S, class E>
+auto prk_range(S start, E end) {
+    return boost::irange(static_cast<decltype(end)>(start), end);
+}
 # elif defined(USE_RANGES_TS)
 #  include "range/v3/view/iota.hpp"
+template <class S, class E>
+auto prk_range(S start, E end) {
+    return ranges::view::iota(static_cast<decltype(end)>(start), end);
+}
 # else
 #  error You have not provided a version of ranges to use.
 # endif
@@ -252,6 +260,15 @@ namespace prk {
     template <class T1, class T2>
     static inline auto divceil(T1 numerator, T2 denominator) -> decltype(numerator / denominator) {
         return ( numerator / denominator + (numerator % denominator > 0) );
+    }
+
+    template <class S, class E>
+    auto range(S start, E end) {
+#if defined(USE_BOOST_IRANGE)
+        return boost::irange(static_cast<decltype(end)>(start), end);
+#elif defined(USE_RANGES_TS)
+        return ranges::view::iota(static_cast<decltype(end)>(start), end);
+#endif
     }
 
 } // namespace prk
