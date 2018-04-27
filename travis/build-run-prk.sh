@@ -442,11 +442,10 @@ case "$PRK_TARGET" in
         esac
 
         # Boost.Compute found after OpenCL, and only available in Travis with MacOS.
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-            echo "BOOSTFLAG=-DUSE_BOOST -DUSE_BOOST_COMPUTE" >> common/make.defs
-        else
-            echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
-        fi
+        echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
+
+        #echo "RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}" >> common/make.defs
+        echo "RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include" >> common/make.defs
 
         # C++11 with rangefor and Boost.Ranges
         make -C $PRK_TARGET_PATH rangefor
@@ -511,9 +510,9 @@ case "$PRK_TARGET" in
         if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             if [ "${CC}" = "clang" ] ; then
                 # omp.h not found with clang-3.9 - just work around instead of fixing.
-                echo "PSTLFLAG=-DUSE_PSTL ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
+                echo "PSTLFLAG=-DUSE_PSTL ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include ${RANGEFLAG}" >> common/make.defs
             else
-                echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
+                echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include ${RANGEFLAG}" >> common/make.defs
             fi
             make -C $PRK_TARGET_PATH p2p-hyperplane-vector-pstl stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
             $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 1
