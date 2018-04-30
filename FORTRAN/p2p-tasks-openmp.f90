@@ -187,7 +187,7 @@ program main
     do ic=2,m,mc
       do jc=2,n,nc
         !$omp task firstprivate(i,j,jc,mc,nc,m,n) shared(grid)  &
-        !$omp&     depend(grid(ic-mc,jc),grid(ic,jc-nc))        &
+        !$omp&     depend(in:grid(ic-mc,jc),grid(ic,jc-nc))     &
         !$omp&     depend(out:grid(ic,jc))
         call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
         !$omp end task
