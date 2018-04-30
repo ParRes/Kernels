@@ -164,14 +164,13 @@ int main(int argc, char* argv[])
 
       for (auto i=1; i<m; i+=mc) {
         for (auto j=1; j<n; j+=nc) {
-          OMP_TASK( firstprivate(m,n) shared(grid) depend(in:grid[0],grid[(i-mc)*n+j],grid[i*n+(j-nc)],grid[(i-mc)*n+(j-nc)]) depend(out:grid[i*n+j]) )
+          OMP_TASK( firstprivate(m,n) shared(grid) depend(grid[(i-mc)*n+j],grid[i*n+(j-nc)]) depend(out:grid[i*n+j]) )
           sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, grid);
         }
       }
-      OMP_TASK( firstprivate(m,n) shared(grid) depend(in:grid[(lic-1)*n+(ljc)]) depend(out:grid[0]) )
+      OMP_TASKWAIT
       grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
-    OMP_TASKWAIT
     pipeline_time = prk::wtime() - pipeline_time;
   }
 
