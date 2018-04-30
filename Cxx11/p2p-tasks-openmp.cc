@@ -65,8 +65,8 @@ inline void sweep_tile(int startm, int endm,
                        int startn, int endn,
                        int n, double * RESTRICT grid)
 {
-  for (auto i=startm; i<endm; i++) {
-    for (auto j=startn; j<endn; j++) {
+  for (int i=startm; i<endm; i++) {
+    for (int j=startn; j<endn; j++) {
       grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
     }
   }
@@ -135,35 +135,32 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  double * grid = new double[m*n];
+  double * RESTRICT grid = new double[m*n];
 
   OMP_PARALLEL()
   OMP_MASTER
   {
-    int lic = (m/mc-1) * mc + 1;
-    int ljc = (n/nc-1) * nc + 1;
-
     OMP_TASKLOOP( firstprivate(m,n) shared(grid) )
-    for (auto i=0; i<m; i++) {
-      for (auto j=0; j<n; j++) {
+    for (int i=0; i<m; i++) {
+      for (int j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
       }
     }
     OMP_TASKWAIT
 
-    for (auto j=0; j<n; j++) {
+    for (int j=0; j<n; j++) {
       grid[0*n+j] = static_cast<double>(j);
     }
-    for (auto i=0; i<m; i++) {
+    for (int i=0; i<m; i++) {
       grid[i*n+0] = static_cast<double>(i);
     }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) pipeline_time = prk::wtime();
 
-      for (auto i=1; i<m; i+=mc) {
-        for (auto j=1; j<n; j+=nc) {
+      for (int i=1; i<m; i+=mc) {
+        for (int j=1; j<n; j+=nc) {
           OMP_TASK( firstprivate(m,n) shared(grid) depend(in:grid[(i-mc)*n+j],grid[i*n+(j-nc)]) depend(out:grid[i*n+j]) )
           sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, grid);
         }
