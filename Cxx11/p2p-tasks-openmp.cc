@@ -63,7 +63,7 @@
 
 inline void sweep_tile(int startm, int endm,
                        int startn, int endn,
-                       int n, double grid[])
+                       int n, double * RESTRICT grid)
 {
   for (auto i=startm; i<endm; i++) {
     for (auto j=startn; j<endn; j++) {

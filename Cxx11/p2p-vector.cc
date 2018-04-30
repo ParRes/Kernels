@@ -63,7 +63,7 @@
 
 inline void sweep_tile(int startm, int endm,
                        int startn, int endn,
-                       int n, std::vector<double> & grid)
+                       int n, double * RESTRICT grid)
 {
   for (auto i=startm; i<endm; i++) {
     for (auto j=startn; j<endn; j++) {
@@ -143,16 +143,18 @@ int main(int argc, char* argv[])
 
       if (iter==1) pipeline_time = prk::wtime();
 
+      double * RESTRICT pgrid = grid.data();
+
       if (mc==m && nc==n) {
         for (auto i=1; i<m; i++) {
           for (auto j=1; j<n; j++) {
-            grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+            pgrid[i*n+j] = pgrid[(i-1)*n+j] + pgrid[i*n+(j-1)] - pgrid[(i-1)*n+(j-1)];
           }
         }
       } else /* chunking */ {
         for (auto i=1; i<m; i+=mc) {
           for (auto j=1; j<n; j+=nc) {
-            sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, grid);
+            sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, pgrid);
           }
         }
       }
