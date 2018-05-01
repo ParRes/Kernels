@@ -268,7 +268,7 @@ namespace prk {
     template <class S, class E, class B>
     auto range(S start, E end, B blocking) {
 #if defined(USE_BOOST_IRANGE)
-        return boost::irange(static_cast<decltype(end)>(start), end, decltype(end)>(blocking) );
+        return boost::irange(static_cast<decltype(end)>(start), end, static_cast<decltype(end)>(blocking) );
 #elif defined(USE_RANGES_TS)
         // NOTE:
         // iota(s) | slice(s,e) | stride(b)  is faster than
