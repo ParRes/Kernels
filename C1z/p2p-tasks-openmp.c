@@ -63,7 +63,7 @@
 
 static inline void sweep_tile(int startm, int endm,
                               int startn, int endn,
-                              int n, double grid[])
+                              int n, double grid[restrict])
 {
   for (int i=startm; i<endm; i++) {
     for (int j=startn; j<endn; j++) {
@@ -134,9 +134,6 @@ int main(int argc, char * argv[])
   OMP_PARALLEL()
   OMP_MASTER
   {
-    int lic = (m/mc-1) * mc + 1;
-    int ljc = (n/nc-1) * nc + 1;
-
     OMP_TASKLOOP( firstprivate(n) shared(grid) )
     for (int i=0; i<m; i++) {
       for (int j=0; j<n; j++) {
@@ -158,14 +155,13 @@ int main(int argc, char * argv[])
 
       for (int i=1; i<m; i+=mc) {
         for (int j=1; j<n; j+=nc) {
-          OMP_TASK( depend(in:grid[0],grid[(i-mc)*n+j],grid[i*n+(j-nc)],grid[(i-mc)*n+(j-nc)]) depend(out:grid[i*n+j]) )
+          OMP_TASK( depend(in:grid[(i-mc)*n+j],grid[i*n+(j-nc)]) depend(out:grid[i*n+j]) )
           sweep_tile(i, MIN(m,i+mc), j, MIN(n,j+nc), n, grid);
         }
       }
-      OMP_TASK( depend(in:grid[(lic-1)*n+(ljc)]) depend(out:grid[0]) )
+      OMP_TASKWAIT
       grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
-    OMP_TASKWAIT
     pipeline_time = prk_wtime() - pipeline_time;
   }
 
