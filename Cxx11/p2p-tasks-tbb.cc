@@ -76,27 +76,6 @@ inline void sweep_tile(int startm, int endm,
   }
 }
 
-class block_node_body {
-  const int startm, endm;
-  const int startn, endn;
-  const int n;
-  double * const grid;
-
-public:
-
-  block_node_body( int _startm, int _endm,
-                       int _startn, int _endn,
-                       int _n, double _grid[] ) : 
-  grid(_grid), 
-  startm(_startm), endm(_endm),
-  startn(_startn), endn(_endn),
-  n(_n) { }
-
-  void operator()( const tbb::flow::continue_msg & ) {
-    sweep_tile(startm, endm, startn, endn, n, grid);
-  }
-};
-
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -187,7 +166,9 @@ int main(int argc, char* argv[])
   });
   for (int i=0; i<num_blocks_m; i+=1) {
     for (int j=0; j<num_blocks_n; j+=1) {
-      block_node_t *tmp = new block_node_t(g, block_node_body((i*mc)+1, std::min(m,(i*mc)+mc+1), (j*nc)+1, std::min(n,(j*nc)+nc+1), n, grid));
+        block_node_t *tmp = new block_node_t(g, [=](const tbb::flow::continue_msg &){
+            sweep_tile((i*mc)+1, std::min(m,(i*mc)+mc+1), (j*nc)+1, std::min(n,(j*nc)+nc+1), n, grid);
+        });
 #if TBB_PREVIEW_FLOW_GRAPH_TRACE
         sprintf(buffer, "block [ %d, %d ]", i, j );
         tmp->set_name( buffer );
