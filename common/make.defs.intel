@@ -63,6 +63,7 @@ CILKFLAG=-intel-extensions # default
 # TBB
 #
 TBBFLAG=-DUSE_TBB -tbb
+#TBBFLAG=-DUSE_TBB -tbb_preview -DTBB_PREVIEW_FLOW_GRAPH_TRACE
 #
 # Parallel STL, Boost, etc.
 #
