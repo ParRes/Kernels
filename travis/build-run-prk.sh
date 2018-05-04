@@ -480,6 +480,7 @@ case "$PRK_TARGET" in
             $PRK_TARGET_PATH/p2p-innerloop-vector-tbb     10 1024
             $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 1
             $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 32
+            $PRK_TARGET_PATH/p2p-tasks-tbb                10 1024 1024 32 32
             $PRK_TARGET_PATH/stencil-vector-tbb           10 1000
             $PRK_TARGET_PATH/transpose-vector-tbb         10 1024 32
             $PRK_TARGET_PATH/nstream-vector-tbb           10 16777216 32
