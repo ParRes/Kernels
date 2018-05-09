@@ -233,6 +233,8 @@ const T prk_reduce(I first, I last, T init) {
 # include <thrust/fill.h>
 # include <thrust/sequence.h>
 # include <thrust/for_each.h>
+# include <thrust/transform.h>
+# include <thrust/transform_reduce.h>
 # include <thrust/iterator/counting_iterator.h>
 # include <thrust/execution_policy.h>
 # include <thrust/functional.h>

@@ -122,13 +122,18 @@ int main(int argc, char * argv[])
     thrust::fill(thrust::host, B.begin(), B.end(), 2.0);
     thrust::fill(thrust::host, C.begin(), C.end(), 2.0);
 
+    auto nstream = [=] __host__ __device__ (thrust::tuple<double&,double,double> t) {
+        thrust::get<0>(t) +=  thrust::get<1>(t) + scalar * thrust::get<2>(t);
+    };
+
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      thrust::for_each( thrust::host, std::begin(range), std::end(range), [&] (size_t i) {
-          A[i] += B[i] + scalar * C[i];
-      });
+      thrust::for_each( thrust::host,
+                        thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
+                        thrust::make_zip_iterator(thrust::make_tuple(A.end()  , B.end()  , C.end())),
+                        nstream);
     }
     nstream_time = prk::wtime() - nstream_time;
   }
@@ -146,10 +151,12 @@ int main(int argc, char * argv[])
 
   ar *= length;
 
-  double asum(0);
-  for (size_t i=0; i<length; i++) {
-      asum += std::fabs(A[i]);
-  }
+  //double asum = thrust::reduce(A.begin(), A.end(), 0.0, thrust::plus<double>());
+  double asum = thrust::transform_reduce(A.begin(),
+                                         A.end(),
+                                         [=] __host__ __device__ (double x) -> double { return std::fabs(x); },
+                                         0.0,
+                                         thrust::plus<double>());
 
   double epsilon(1.e-8);
   if (std::fabs(ar-asum)/asum > epsilon) {
