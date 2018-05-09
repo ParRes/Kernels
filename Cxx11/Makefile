@@ -45,8 +45,8 @@ RANGEFLAGS = -DUSE_RANGES $(RANGEFLAG)
 STLFLAGS = $(STLFLAG) $(RANGEFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
-THRUSTFLAGS = $(THRUSTFLAG) $(BOOSTFLAGS)
-KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(BOOSTFLAGS)
+THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS) -DUSE_THRUST
+KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(RANGEFLAGS)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 
 ifdef OCCADIR
@@ -117,7 +117,8 @@ raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-r
 
 cuda: stencil-cuda transpose-cuda nstream-cuda
 
-thrust: transpose-host-thrust transpose-device-thrust
+thrust: nstream-host-thrust nstream-device-thrust \
+        transpose-host-thrust transpose-device-thrust
 
 cuda: transpose-cuda
 

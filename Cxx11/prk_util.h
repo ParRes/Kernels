@@ -64,7 +64,6 @@
 #include <numeric>
 #include <algorithm>
 
-#ifndef __NVCC__
 template<class I, class T>
 const T prk_reduce(I first, I last, T init) {
 #if (defined(__cplusplus) && (__cplusplus >= 201703L)) && !defined(__GNUC__)
@@ -236,6 +235,8 @@ const T prk_reduce(I first, I last, T init) {
 # include <thrust/for_each.h>
 # include <thrust/iterator/counting_iterator.h>
 # include <thrust/execution_policy.h>
+# include <thrust/functional.h>
+#endif
 
 #ifdef USE_SYCL
 # include "CL/sycl.hpp"
