@@ -60,8 +60,6 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#define USE_2D_INDEXING 1
-
 #include "prk_util.h"
 #include "stencil_sycl.hpp"
 

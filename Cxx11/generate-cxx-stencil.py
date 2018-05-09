@@ -29,24 +29,24 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
     elif (model=='rangefor'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    for (auto i : inside) {\n')
         src.write('      PRAGMA_SIMD\n')
         src.write('      for (auto j : inside) {\n')
     elif (model=='stl'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    std::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
         #src.write('      PRAGMA_SIMD\n')
         src.write('      std::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='pgnu'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    __gnu_parallel::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
         src.write('      std::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='pstl'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    std::for_each( std::execution::par, std::begin(inside), std::end(inside), [&] (int i) {\n')
         src.write('      std::for_each( std::execution::unseq, std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='raja'):
@@ -66,9 +66,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('      for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {\n')
     elif (model=='kokkos'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, matrix & in, matrix & out) {\n')
-        src.write('    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>('+str(radius)+',n-'+str(radius)+'), KOKKOS_LAMBDA(const int i) {\n')
-        src.write('      PRAGMA_SIMD\n')
-        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
+        src.write('    auto inside = Kokkos::MDRangePolicy<Kokkos::Rank<2>>({'+str(radius)+','+str(radius)+'},{n-'+str(radius)+',n-'+str(radius)+'},{t,t});\n')
+        src.write('    Kokkos::parallel_for(inside, KOKKOS_LAMBDA(int i, int j) {\n')
     elif (model=='cuda'):
         src.write('__global__ void '+pattern+str(radius)+'(const int n, const prk_float * in, prk_float * out) {\n')
         src.write('    const int i = blockIdx.x * blockDim.x + threadIdx.x;\n')
@@ -82,7 +81,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('          PRAGMA_SIMD\n')
         src.write('          for (auto j=jt; j<std::min(n-'+str(radius)+',jt+t); ++j) {\n')
     if (model=='kokkos'):
-        src.write('            out(i,j) += ')
+        src.write('              out(i,j) += ')
     else:
         src.write('            out[i*n+j] += ')
     k = 0
@@ -106,7 +105,6 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('       });\n')
         src.write('     });\n')
     elif (model=='kokkos'):
-        src.write('       }\n')
         src.write('     });\n')
     elif (model=='tbb'):
         src.write('      }\n')

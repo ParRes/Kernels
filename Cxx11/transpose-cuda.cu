@@ -149,9 +149,9 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
 #if TILED
-  std::cout << "Tile size            = " << tile_dim << std::endl;
+  std::cout << "Tile size             = " << tile_dim << std::endl;
 #else
-  std::cout << "Tile size            = " << tile_size << std::endl;
+  std::cout << "Tile size             = " << tile_size << std::endl;
 #endif
 
 #if TILED
@@ -224,9 +224,8 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
+  const double addit = (iterations+1.) * (iterations/2.);
+  double abserr(0);
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const size_t ij = (size_t)i*(size_t)order+(size_t)j;
@@ -249,7 +248,7 @@ int main(int argc, char * argv[])
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(double);
+    auto bytes = (size_t)order * (size_t)order * sizeof(prk_float);
     std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {

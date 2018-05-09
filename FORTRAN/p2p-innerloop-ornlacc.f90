@@ -107,6 +107,7 @@ program main
   if (n .gt. 16384) then
     write(*,'(a,i5)') 'WARNING: grid size exceeds 16384: ', n
     write(*,'(a)')    'PGI 17.10 + CUDA 9.0 generates illegal address'
+    write(*,'(a)')    'unless you compiled with -Mlarge_arrays.'
   endif
 
   if (iterations .lt. 1) then

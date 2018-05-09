@@ -51,8 +51,6 @@
 
 #include "prk_util.h"
 
-#define USE_2D_INDEXING 1
-
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -95,7 +93,7 @@ int main(int argc, char * argv[])
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  auto trans_time = 0.0;
+  double trans_time(0);
 
   std::vector<double> h_A(order*order);
   std::vector<double> h_B(order*order,0.0);
@@ -115,7 +113,7 @@ int main(int argc, char * argv[])
     cl::sycl::buffer<double> d_B { h_B.data(), h_B.size() };
 #endif
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; ++iter) {
 
       if (iter==1) trans_time = prk::wtime();
 
@@ -151,16 +149,14 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  auto range = boost::irange(static_cast<size_t>(0),order);
-
   // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
-  for (auto i : range) {
-    for (auto j : range) {
-      const int ij = i*order+j;
-      const int ji = j*order+i;
-      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+  double const addit = (iterations+1.) * (iterations/2.);
+  double abserr(0);
+  for (size_t i=0; i<order; ++i) {
+    for (size_t j=0; j<order; ++j) {
+      size_t const ij = i*order+j;
+      size_t const ji = j*order+i;
+      double const reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(h_B[ji] - reference);
     }
   }
@@ -169,12 +165,12 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  const auto epsilon = 1.0e-8;
+  double const epsilon(1.0e-8);
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
     auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
+    std::cout << "Rate (MB/s): " << 1.0e-6 * (2.*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "ERROR: Aggregate squared error " << abserr

@@ -66,7 +66,7 @@
 
 __global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
 {
-    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) {
         A[i] += B[i] + scalar * C[i];
     }
@@ -156,8 +156,7 @@ int main(int argc, char * argv[])
   prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
 
-  double scalar(3);
-
+  prk_float scalar(3);
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -215,7 +214,7 @@ int main(int argc, char * argv[])
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
-      double nbytes = 4.0 * length * sizeof(double);
+      double nbytes = 4.0 * length * sizeof(prk_float);
       std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }

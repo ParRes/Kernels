@@ -45,12 +45,12 @@ OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 SYCLDIR=./triSYCL
 SYCLCXX=${CXX} ${OPENMPFLAG}
-SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+SYCLFLAG=-DUSE_SYCL -std=gnu++14 -I$(SYCLDIR)/include
 # ProGTX
 # https://github.com/ProGTX/sycl-gtx
-SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
-SYCLCXX=${CXX} ${OPENMPFLAG}
-SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
+#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
+#SYCLCXX=${CXX} ${OPENMPFLAG}
+#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # OCCA
 #
@@ -63,11 +63,14 @@ CILKFLAG=-intel-extensions # default
 # TBB
 #
 TBBFLAG=-DUSE_TBB -tbb
+#TBBFLAG=-DUSE_TBB -tbb_preview -DTBB_PREVIEW_FLOW_GRAPH_TRACE
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -DUSE_BOOST_COMPUTE -I/usr/local/Cellar/boost/1.65.1/include
-PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG}
+#BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
+RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} ${RANGEFLAG}
 KOKKOSDIR=/opt/kokkos/intel
 KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
 RAJADIR=/opt/raja/intel

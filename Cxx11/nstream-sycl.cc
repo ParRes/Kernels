@@ -111,21 +111,13 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time(0);
 
-  std::vector<double> h_A(length);
-  std::vector<double> h_B(length);
-  std::vector<double> h_C(length);
+  std::vector<double> h_A(length,0);
+  std::vector<double> h_B(length,2);
+  std::vector<double> h_C(length,2);
 
-  auto range = boost::irange(static_cast<size_t>(0), length);
-
-  const double scalar(3);
-
-  std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
-      h_A[i] = 0;
-      h_B[i] = 2;
-      h_C[i] = 2;
-  });
+  double const scalar(3);
 
   {
     // initialize device buffers from host buffers
@@ -133,7 +125,7 @@ int main(int argc, char * argv[])
     cl::sycl::buffer<double> d_B { h_B.data(), h_B.size() };
     cl::sycl::buffer<double> d_C { h_C.data(), h_C.size() };
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; ++iter) {
 
       if (iter==1) nstream_time = prk::wtime();
 
@@ -164,14 +156,14 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; ++i) {
       ar += br + scalar * cr;
   }
 
   ar *= length;
 
   double asum(0);
-  for (size_t i=0; i<length; i++) {
+  for (size_t i=0; i<length; ++i) {
       asum += std::fabs(h_A[i]);
   }
 

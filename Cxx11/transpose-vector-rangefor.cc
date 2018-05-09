@@ -39,7 +39,10 @@
 /// USAGE:   Program input is the matrix order and the number of times to
 ///          repeat the operation:
 ///
-///          transpose <matrix_size> <# iterations>
+///          transpose <matrix_size> <# iterations> [tile size]
+///
+///          An optional parameter specifies the tile size used to divide the
+///          individual matrix blocks for improved cache and TLB performance.
 ///
 ///          The output consists of diagnostics to make sure the
 ///          transpose worked and timing statistics.
@@ -57,61 +60,72 @@ int main(int argc, char * argv[])
   std::cout << "C++11/range-for Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
   int order;
+  int tile_size;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order>";
+        throw "Usage: <# iterations> <matrix order> [tile size]";
       }
 
-      // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
-      // order of a the matrix
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
       } else if (order > std::floor(std::sqrt(INT_MAX))) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
+
+      // default tile size for tiling of local transpose
+      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
+      // a negative tile size means no tiling of the local transpose
+      if (tile_size <= 0) tile_size = order;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
+
+  auto trans_time = 0.0;
 
   std::vector<double> A(order*order);
   std::vector<double> B(order*order,0.0);
+
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 
-  auto irange = boost::irange(0,order);
-  auto jrange = boost::irange(0,order);
-
-  auto trans_time = 0.0;
+  auto itrange = prk::range(0,order,tile_size);
+  auto jtrange = prk::range(0,order,tile_size);
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
-    // transpose
-    for (auto i : irange) {
-      for (auto j : jrange) {
-        B[i*order+j] += A[j*order+i];
-        A[j*order+i] += 1.0;
+    for (auto it : itrange) {
+      auto irange = prk::range(it,std::min(order,it+tile_size));
+      for (auto jt : jtrange) {
+        auto jrange = prk::range(jt,std::min(order,jt+tile_size));
+        for (auto i : irange) {
+          for (auto j : jrange) {
+            B[i*order+j] += A[j*order+i];
+            A[j*order+i] += 1.0;
+          }
+        }
       }
     }
   }
@@ -122,8 +136,10 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
+  auto const addit = (iterations+1.) * (iterations/2.);
+  double abserr(0);
+  auto irange = prk::range(0,order);
+  auto jrange = prk::range(0,order);
   for (auto i : irange) {
     for (auto j : jrange) {
       const int ij = i*order+j;
