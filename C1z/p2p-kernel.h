@@ -1,4 +1,4 @@
-#if 0
+#if 1
 
 inline void sweep_tile(int startm, int endm,
                        int startn, int endn,

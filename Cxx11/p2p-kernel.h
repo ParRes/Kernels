@@ -1,6 +1,6 @@
 #define RESTRICT __restrict__
 
-#if 0
+#if 1
 
 inline void sweep_tile(int startm, int endm,
                        int startn, int endn,
@@ -8,17 +8,6 @@ inline void sweep_tile(int startm, int endm,
 {
   for (int i=startm; i<endm; i++) {
     for (int j=startn; j<endn; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
-
-inline void sweep_tile(int startm, int endm,
-                       int startn, int endn,
-                       int n, double grid[])
-{
-  for (auto i=startm; i<endm; i++) {
-    for (auto j=startn; j<endn; j++) {
       grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
     }
   }
