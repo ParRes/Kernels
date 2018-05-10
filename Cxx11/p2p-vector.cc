@@ -60,23 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
-inline void sweep_tile(int startm, int endm,
-                       int startn, int endn,
-                       int n, double * RESTRICT grid)
-{
-    for (int i=startm; i<endm; i++) {
-        double olda = grid[  i  *n+(startn-1)];
-        double oldb = grid[(i-1)*n+(startn-1)];
-        for (int j=startn; j<endn; j++) {
-            double const newb = grid[(i-1)*n+j];
-            double const newa = newb - oldb + olda;
-            grid[i*n+j] = newa;
-            olda = newa;
-            oldb = newb;
-        }
-    }
-}
+#include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
 {
