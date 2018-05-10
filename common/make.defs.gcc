@@ -78,6 +78,8 @@ KOKKOSDIR=/opt/kokkos/gcc
 KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
 RAJADIR=/opt/raja/gcc
 RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+THRUSTDIR=/Users/jrhammon/Work/NVIDIA/thrust
+THRUSTFLAG=-DUSE_THRUST -I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
 #
 # CBLAS for C++ DGEMM
 #
@@ -86,10 +88,10 @@ CBLASFLAG=-DACCELERATE -framework Accelerate
 # CUDA flags
 #
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
-NVCC=/opt/llvm/cocl/bin/cocl
+#NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-#NVCC=nvcc
-CUDAFLAGS=-g -O3 -std=c++11
+NVCC=nvcc
+CUDAFLAGS=-g -O3 -std=c++11 -arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #

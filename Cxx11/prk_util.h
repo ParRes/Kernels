@@ -225,6 +225,21 @@ const T prk_reduce(I first, I last, T init) {
 # include "RAJA/RAJA.hpp"
 #endif
 
+#ifdef USE_THRUST
+# ifdef __NVCC__
+#  include <thrust/device_vector.h>
+# endif
+# include <thrust/host_vector.h>
+# include <thrust/fill.h>
+# include <thrust/sequence.h>
+# include <thrust/for_each.h>
+# include <thrust/transform.h>
+# include <thrust/transform_reduce.h>
+# include <thrust/iterator/counting_iterator.h>
+# include <thrust/execution_policy.h>
+# include <thrust/functional.h>
+#endif
+
 #ifdef USE_SYCL
 # include "CL/sycl.hpp"
 #endif

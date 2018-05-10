@@ -45,7 +45,8 @@ RANGEFLAGS = -DUSE_RANGES $(RANGEFLAG)
 STLFLAGS = $(STLFLAG) $(RANGEFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
-KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
+THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS) -DUSE_THRUST
+KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(RANGEFLAGS)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 
 ifdef OCCADIR
@@ -54,7 +55,7 @@ endif
 OCCAFLAGS = -DUSE_OCCA -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl \
-	rangefor kokkos raja cuda cublas sycl boost-compute
+	rangefor kokkos raja cuda cublas sycl boost-compute thrust
 
 EXTRA=
 ifeq ($(shell uname -s),Darwin)
@@ -116,6 +117,11 @@ raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-r
 
 cuda: stencil-cuda transpose-cuda nstream-cuda
 
+thrust: nstream-host-thrust nstream-device-thrust \
+        transpose-host-thrust transpose-device-thrust
+
+cuda: transpose-cuda
+
 cublas: transpose-cublas nstream-cublas dgemm-cublas
 
 occa: transpose-occa nstream-occa
@@ -173,6 +179,14 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
 	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
 
+# for host execution
+%-thrust: %-thrust.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(THRUSTFLAGS) -o $@
+
+# for device execution (must compiler as .cu)
+%-thrust: %-thrust.cu prk_util.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< $(THRUSTFLAGS) -o $@
+
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
@@ -218,6 +232,7 @@ clean:
 	-rm -f *-rangefor
 	-rm -f *-raja
 	-rm -f *-kokkos
+	-rm -f *-thrust
 	-rm -f *-cuda
 	-rm -f *-cublas
 	-rm -f *-cblas
