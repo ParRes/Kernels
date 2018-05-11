@@ -20,6 +20,11 @@ if [ $NUMRANKS -le $NUMKILLS ]; then
   exit
 fi
 
+if [ ! -x "$EXE" ]; then
+  echo ERROR: Executable $EXE not found
+  exit
+fi
+
 #issue warning about validity of timings
 echo "WARNING: Make sure #spare_ranks is at least as large as #rank_kills AND"
 echo "         #rank_kills is SMALLER than 50% of #total_ranks, or timings may be invalid"
@@ -62,8 +67,8 @@ localhostname=`hostname -A`
 i=0
 while [ $i -lt $NUMKILLS ]; do
   sleep 1
-#  mpi_proc=`expr $NUMRANKS - $i - 1`
-  mpi_proc=$i
+  mpi_proc=`expr $NUMRANKS - $i - 1`
+#  mpi_proc=$i
   if [ $localhostname == ${host[$mpi_proc]} ]; then
     echo  killing local process ${pid[$mpi_proc]}
     kill -9 ${pid[$mpi_proc]}

@@ -207,7 +207,7 @@ int main(int argc, char ** argv) {
   int mypid = getpid();
   int  my_hostname_length = strlen(hp->h_name);
   MPI_Allreduce(&my_hostname_length, &hostname_length, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  printf("My pid=%d, hostname=%s, hostnamelength=%d, maxlength=%d\n", pid, hp->h_name, my_hostname_length, hostname_length);
+  //  printf("My pid=%d, hostname=%s, hostnamelength=%d, maxlength=%d\n", pid, hp->h_name, my_hostname_length, hostname_length);
 
   if (my_ID==root) {
     char **hostname = (char **) prk_malloc(sizeof(char *)*Num_procs);
