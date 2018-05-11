@@ -1,5 +1,5 @@
-if [ $# -ne 4 ]; then
-  echo Usage: $0 \#total_ranks  \#rank_kills executable \"executable parameters\" \(surrounded by string quotes\)
+if [ $# -ne 5 ]; then
+  echo Usage: $0 \#total_ranks  \#rank_kills MTBF executable \"executable parameters\" \(surrounded by string quotes\)
   exit
 fi
 
@@ -8,11 +8,17 @@ if [ x$ULFM_PATH == x ]; then
   exit
 fi
 
+if [ ! -x ./generate_times ]; then
+  echo ERROR: Files \"generate times\" does not exist; please type \"make\"
+  exit
+fi
+
 PID=$$
 NUMRANKS=$1
 NUMKILLS=$2
-EXE=$3
-PARMS=$4
+MTBF=$3
+EXE=$4
+PARMS=$5
 
 #test sanity of input
 if [ $NUMRANKS -le $NUMKILLS ]; then
@@ -29,7 +35,7 @@ fi
 echo "WARNING: Make sure #spare_ranks is at least as large as #rank_kills AND"
 echo "         #rank_kills is SMALLER than 50% of #total_ranks, or timings may be invalid"
 
-echo Running error injection harness for $EXE code, "#ranks=$NUMRANKS #kills=$NUMKILLS"
+echo Running error injection harness for $EXE code, "#ranks=$NUMRANKS #kills=$NUMKILLS MTBF=${MTBF}s"
 
 #start program and collect list of (hostname, pid) pairs in a file
 rm -f __thislog.$PID
@@ -62,13 +68,21 @@ while [ $STARTKILL -eq 0 ]; do
 #  STARTKILL=`cat __thislog.$PID | grep __STARTED_ITERATIONS__ | wc -l | awk '{ print $1 }'`
 done
 
-#do the actual killing of ranks
+#do the actual killing of ranks; first create the array of time intervals
+declare -a nextkill
+./generate_times $NUMKILLS $MTBF > __kill_times.$PID
+i=0
+while read -r line; do 
+  nextkill[$i]=`echo $line`
+  i=`expr $i + 1`
+done < __kill_times.$PID
+
 localhostname=`hostname -A`
 i=0
 while [ $i -lt $NUMKILLS ]; do
-  sleep 1
-  mpi_proc=`expr $NUMRANKS - $i - 1`
-#  mpi_proc=$i
+  sleep ${nextkill[$i]}
+#  mpi_proc=`expr $NUMRANKS - $i - 1`
+  mpi_proc=$i
   if [ $localhostname == ${host[$mpi_proc]} ]; then
     echo  killing local process ${pid[$mpi_proc]}
     kill -9 ${pid[$mpi_proc]}
@@ -79,5 +93,6 @@ while [ $i -lt $NUMKILLS ]; do
   i=`expr $i + 1`
 done
 
-rm -f __thislog.$PID __hostpidlist.$PID
+rm -f __thislog.$PID __hostpidlist.$PID __kill_times.$PID
 wait
+echo w00t, all done
