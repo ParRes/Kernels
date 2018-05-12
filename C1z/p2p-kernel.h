@@ -1,8 +1,8 @@
 #if 1
 
-inline void sweep_tile(int startm, int endm,
-                       int startn, int endn,
-                       int n, double * restrict grid)
+static inline void sweep_tile(int startm, int endm,
+                              int startn, int endn,
+                              int n, double * restrict grid)
 {
   for (int i=startm; i<endm; i++) {
     for (int j=startn; j<endn; j++) {
@@ -13,9 +13,9 @@ inline void sweep_tile(int startm, int endm,
 
 #else
 
-inline void sweep_tile(int startm, int endm,
-                       int startn, int endn,
-                       int n, double * restrict grid)
+static inline void sweep_tile(int startm, int endm,
+                              int startn, int endn,
+                              int n, double * restrict grid)
 {
     for (int i=startm; i<endm; i++) {
         double olda = grid[  i  *n+(startn-1)];
