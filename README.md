@@ -92,7 +92,7 @@ f = see footnotes
 | SYCL                 |     |    y    |     y     |    y    |        |       |
 | Boost.Compute        |     |         |           |    y    |        |       |
 | Parallel STL         |  y  |    y    |     y     |    y    |        |       |
-| Thrust               |  y  |         |           |         |        |       |
+| Thrust               |     |         |           |    y    |        |       |
 | TBB                  |  y  |    y    |     y     |    y    |        |       |
 | Kokkos               |  y  |    y    |     y     |    y    |        |       |
 | RAJA                 |  y  |    y    |     y     |    y    |        |       |
