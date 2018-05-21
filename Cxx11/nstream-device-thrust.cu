@@ -63,6 +63,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_cuda.h"
 
 int main(int argc, char * argv[])
 {
@@ -134,6 +135,7 @@ int main(int argc, char * argv[])
                         thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
                         thrust::make_zip_iterator(thrust::make_tuple(A.end()  , B.end()  , C.end())),
                         nstream);
+      prk::CUDA::check( cudaDeviceSynchronize() );
     }
     nstream_time = prk::wtime() - nstream_time;
   }
