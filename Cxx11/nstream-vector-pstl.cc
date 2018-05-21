@@ -126,9 +126,10 @@ int main(int argc, char * argv[])
 
   {
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
-    std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (size_t i) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
+#warning GNU parallel
     __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (size_t i) {
 #else
     std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
@@ -143,7 +144,7 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
-      std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( pstl::execution::par_unseq, std::begin(range), std::end(range), [&] (size_t i) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
       __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (size_t i) {
