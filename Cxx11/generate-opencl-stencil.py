@@ -61,7 +61,8 @@ def main(precision):
     src.write('{\n')
     src.write('    const int i = get_global_id(0);\n')
     src.write('    const int j = get_global_id(1);\n')
-    src.write('    if ( ('+str(r)+' <= i) && (i < n-'+str(r)+') && ('+str(r)+' <= j) && (j < n-'+str(r)+') ) {\n')
+    #src.write('    if ( ('+str(r)+' <= i) && (i < n-'+str(r)+') && ('+str(r)+' <= j) && (j < n-'+str(r)+') ) {\n')
+    src.write('    {\n')
     src.write('        out[i*n+j] += ')
     k = 0
     kmax = stencil_size-1;

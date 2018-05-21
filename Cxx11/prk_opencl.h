@@ -1,4 +1,4 @@
-// Taken from https://github.com/HandsOnOpenCL/Exercises-Solutions/blob/master/Exercises/Cpp_common/util.hpp
+// Derived from https://github.com/HandsOnOpenCL/Exercises-Solutions/blob/master/Exercises/Cpp_common/util.hpp
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -96,6 +96,18 @@ namespace prk {
         has64 &= stringContains(e,"cl_khr_fp64");
       }
       return ( has64 ? 64 : 32 );
+    }
+
+    std::tuple<size_t,size_t,size_t> work_item_sizes(cl::Context context) {
+      size_t size[3] = {0,0,0};
+      std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+      for (auto j : devices) {
+        auto e = j.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>();
+        size[0] = std::max(e[0],size[0]);
+        size[1] = std::max(e[1],size[1]);
+        size[2] = std::max(e[2],size[2]);
+      }
+      return ( std::make_tuple(size[0],size[1],size[2]) );
     }
 
     bool available(cl::Context context) {

@@ -63,7 +63,7 @@
 #include "prk_opencl.h"
 
 template <typename T>
-void run(cl::Context context, int iterations, int n, int radius, bool star)
+void run(cl::Context context, int iterations, int n, int radius, int tile_size, bool star)
 {
   auto precision = (sizeof(T)==8) ? 64 : 32;
 
@@ -123,12 +123,28 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   cl::Buffer d_in = cl::Buffer(context, begin(h_in), end(h_in), true);
   cl::Buffer d_out = cl::Buffer(context, begin(h_out), end(h_out), true);
 
+#if 0
+  // WRONG
+  auto const local_size_3  = prk::opencl::work_group_size(context);
+  std::cout << "JEFF " << std::get<0>(local_size_3) << "," << std::get<1>(local_size_3) << "," << std::get<2>(local_size_3) << "\n";
+  auto const local_size    = cl::NDRange(std::max(size_t(tile_size),std::get<0>(local_size_3)),
+                                         std::max(size_t(tile_size),std::get<1>(local_size_3)));
+#elif 0
+  // NOT OPTIMAL (null range is better)
+  auto const local_size    = cl::NDRange(1,1);
+#else
+  auto const local_size    = cl::NullRange;
+#endif
+
+  auto const global_offset = cl::NDRange(radius,radius);
+  auto const global_size   = cl::NDRange(n-radius,n-radius);
+
   for (auto iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) stencil_time = prk::wtime();
 
     // Apply the stencil operator
-    kernel1(cl::EnqueueArgs(queue, cl::NDRange(n,n)), n, d_in, d_out);
+    kernel1(cl::EnqueueArgs(queue, global_offset, global_size, local_size), n, d_in, d_out);
     // Add constant to solution to force refresh of neighbor data, if any
     kernel2(cl::EnqueueArgs(queue, cl::NDRange(n,n)), n, d_in);
     queue.finish();
@@ -211,8 +227,8 @@ int main(int argc, char* argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-      // default tile size for tiling of local transpose
-      tile_size = 32;
+      // default tile size for tiling
+      tile_size = 1;
       if (argc > 3) {
           tile_size = std::atoi(argv[3]);
           if (tile_size <= 0) tile_size = n;
@@ -258,12 +274,12 @@ int main(int argc, char* argv[])
   {
     const int precision = prk::opencl::precision(cpu);
 
-    std::cout << "CPU Precision         = " << precision << "-bit" << std::endl;
+    std::cout << "CPU Precision        = " << precision << "-bit" << std::endl;
 
     if (precision==64) {
-        run<double>(cpu, iterations, n, radius, star);
+        run<double>(cpu, iterations, n, radius, tile_size, star);
     } else {
-        run<float>(cpu, iterations, n, radius, star);
+        run<float>(cpu, iterations, n, radius, tile_size, star);
     }
   }
 
@@ -272,12 +288,12 @@ int main(int argc, char* argv[])
   {
     const int precision = prk::opencl::precision(gpu);
 
-    std::cout << "GPU Precision         = " << precision << "-bit" << std::endl;
+    std::cout << "GPU Precision        = " << precision << "-bit" << std::endl;
 
     if (precision==64) {
-        run<double>(gpu, iterations, n, radius, star);
+        run<double>(gpu, iterations, n, radius, tile_size, star);
     } else {
-        run<float>(gpu, iterations, n, radius, star);
+        run<float>(gpu, iterations, n, radius, tile_size, star);
     }
   }
 
@@ -287,12 +303,12 @@ int main(int argc, char* argv[])
 
     const int precision = prk::opencl::precision(acc);
 
-    std::cout << "ACC Precision         = " << precision << "-bit" << std::endl;
+    std::cout << "ACC Precision        = " << precision << "-bit" << std::endl;
 
     if (precision==64) {
-        run<double>(acc, iterations, n, radius, star);
+        run<double>(acc, iterations, n, radius, tile_size, star);
     } else {
-        run<float>(acc, iterations, n, radius, star);
+        run<float>(acc, iterations, n, radius, tile_size, star);
     }
   }
 
