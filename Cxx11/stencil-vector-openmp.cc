@@ -204,10 +204,15 @@ int main(int argc, char* argv[])
       // Apply the stencil operator
       stencil(n, tile_size, in, out);
       // Add constant to solution to force refresh of neighbor data, if any
-      OMP_FOR( simd collapse(2) )
-      for (auto it=0; it<n; it++) {
-        for (auto jt=0; jt<n; jt++) {
-          in[i*n+j] += 1.0;
+      OMP_FOR( collapse(2) )
+      for (auto it=0; it<n; it+=tile_size) {
+        for (auto jt=0; jt<n; jt+=tile_size) {
+          for (auto i=it; i<std::min(n,it+tile_size); i++) {
+            PRAGMA_SIMD
+            for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
+              in[i*n+j] += 1.0;
+            }
+          }
         }
       }
     }
