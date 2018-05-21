@@ -227,7 +227,7 @@ int main(int argc, char* argv[])
             cl::sycl::id<2> xy = it.get_id();
             in[xy] += 1.0;
 #else
-#if 0 // This is noticeably slower :-(
+#if 0 // This is noticeably slower...
             auto i = it[0];
             auto j = it[1];
             in[i*n+j] += 1.0;
