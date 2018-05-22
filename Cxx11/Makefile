@@ -170,7 +170,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(RANGEFLAGS) -o $@
 
 %-boost-compute: %-boost-compute.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) -DUSE_BOOST_COMPUTE $(OPENCLFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) $(OPENCLFLAGS) -o $@
 
 %-raja: %-raja.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
