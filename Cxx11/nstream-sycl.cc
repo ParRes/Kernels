@@ -200,6 +200,17 @@ int main(int argc, char * argv[])
 
   try {
 
+    if (1) {
+        cl::sycl::queue host(cl::sycl::host_selector{});
+        auto device      = host.get_device();
+        auto platform    = device.get_platform();
+        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
+        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
+
+        run<float>(host, iterations, length);
+        run<double>(host, iterations, length);
+    }
+
     // CPU requires spir64 target
     if (1) {
         cl::sycl::queue cpu(cl::sycl::cpu_selector{});
@@ -227,6 +238,9 @@ int main(int argc, char * argv[])
     }
   }
   catch (cl::sycl::exception e) {
+    std::cout << e.what() << std::endl;
+  }
+  catch (std::exception e) {
     std::cout << e.what() << std::endl;
   }
 
