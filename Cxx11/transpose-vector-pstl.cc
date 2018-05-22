@@ -50,6 +50,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_pstl.h"
 
 // See ParallelSTL.md for important information.
 

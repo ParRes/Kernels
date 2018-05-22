@@ -50,6 +50,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_thrust.h"
 
 int main(int argc, char * argv[])
 {

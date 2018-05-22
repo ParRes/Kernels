@@ -60,6 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_tbb.h"
 
 void SequentialSweep(int m, int n, std::vector<double> & grid)
 {

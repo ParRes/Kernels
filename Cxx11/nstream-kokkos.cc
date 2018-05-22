@@ -63,6 +63,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_kokkos.h"
 
 // We build with OpenMP unless it is not available...
 #ifndef PRK_KOKKOS_BACKEND

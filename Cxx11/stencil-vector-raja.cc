@@ -61,6 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_raja.h"
 
 // This must be before the stencil header, which uses this.
 #ifdef RAJA_ENABLE_OPENMP

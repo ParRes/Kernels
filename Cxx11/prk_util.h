@@ -81,26 +81,6 @@
 # include "prk_openmp.h"
 #endif
 
-#ifdef USE_TBB
-# include "prk_tbb.h"
-#endif
-
-#ifdef USE_PSTL
-# include "prk_pstl.h"
-#endif
-
-#ifdef USE_KOKKOS
-# include "prk_kokkos.h"
-#endif
-
-#ifdef USE_RAJA
-# include "prk_raja.h"
-#endif
-
-#ifdef USE_THRUST
-# include "prk_thrust.h"
-#endif
-
 #define RESTRICT __restrict__
 
 namespace prk {

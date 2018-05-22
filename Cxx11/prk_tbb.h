@@ -36,6 +36,7 @@
 # include <tbb/tbb.h>
 # include <tbb/parallel_for.h>
 # include <tbb/blocked_range.h>
+# include <tbb/flow_graph.h>
 # if ( PRK_TBB_PARTITIONER == 1)
 //#  warning STATIC
    tbb::static_partitioner tbb_partitioner;

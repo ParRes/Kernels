@@ -61,6 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_kokkos.h"
 
 typedef Kokkos::View<double**, Kokkos::LayoutRight> matrix;
 //typedef Kokkos::View<double**, Kokkos::LayoutLeft> matrix;
