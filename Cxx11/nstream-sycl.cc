@@ -62,6 +62,8 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#include "CL/sycl.hpp"
+
 #include "prk_util.h"
 
 int main(int argc, char * argv[])
