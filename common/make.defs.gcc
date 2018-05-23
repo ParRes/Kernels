@@ -31,6 +31,7 @@ DEFAULT_OPT_FLAGS+=-Wall
 # OpenMP flags
 #
 OPENMPFLAG=-fopenmp
+OPENMPSIMDFLAG=-fopenmp-simd
 OFFLOADFLAG=-foffload="-O3 -v"
 ORNLACCFLAG=-fopenacc
 #
@@ -48,7 +49,7 @@ OPENCLFLAG=-framework OpenCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 SYCLDIR=./triSYCL
 SYCLCXX=${CXX} -std=c++17 ${OPENMPFLAG}
-SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+SYCLFLAG=-I$(SYCLDIR)/include
 # ProGTX
 # https://github.com/ProGTX/sycl-gtx
 #SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
@@ -70,17 +71,16 @@ TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
+BOOSTFLAG=-I/usr/local/Cellar/boost/1.65.1/include
 #RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
 RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
-#PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} ${RANGEFLAG}
-PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include ${RANGEFLAG}
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include ${RANGEFLAG}
 KOKKOSDIR=/opt/kokkos/gcc
-KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
 RAJADIR=/opt/raja/gcc
-RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 THRUSTDIR=/Users/jrhammon/Work/NVIDIA/thrust
-THRUSTFLAG=-DUSE_THRUST -I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
+THRUSTFLAG=-I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
 #
 # CBLAS for C++ DGEMM
 #

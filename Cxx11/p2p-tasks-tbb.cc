@@ -61,10 +61,8 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_tbb.h"
 #include "p2p-kernel.h"
-
-#include "tbb/flow_graph.h"
-#include "tbb/parallel_for.h"
 
 int main(int argc, char* argv[])
 {

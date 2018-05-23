@@ -50,6 +50,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_kokkos.h"
 
 int main(int argc, char * argv[])
 {

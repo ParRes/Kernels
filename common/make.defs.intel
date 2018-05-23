@@ -29,6 +29,7 @@ DEFAULT_OPT_FLAGS+=-qopt-report=5
 # OpenMP flags
 #
 OPENMPFLAG=-qopenmp
+OPENMPSIMDFLAG=-qopenmp-simd
 OFFLOADFLAG=-qopenmp-offload=host
 #
 # OpenCL flags
@@ -45,7 +46,7 @@ OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 SYCLDIR=./triSYCL
 SYCLCXX=${CXX} ${OPENMPFLAG}
-SYCLFLAG=-DUSE_SYCL -std=gnu++14 -I$(SYCLDIR)/include
+SYCLFLAG=-std=gnu++14 -I$(SYCLDIR)/include
 # ProGTX
 # https://github.com/ProGTX/sycl-gtx
 #SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
@@ -54,7 +55,7 @@ SYCLFLAG=-DUSE_SYCL -std=gnu++14 -I$(SYCLDIR)/include
 #
 # OCCA
 #
-OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
 #
 # Cilk
 #
@@ -62,19 +63,21 @@ CILKFLAG=-intel-extensions # default
 #
 # TBB
 #
-TBBFLAG=-DUSE_TBB -tbb
-#TBBFLAG=-DUSE_TBB -tbb_preview -DTBB_PREVIEW_FLOW_GRAPH_TRACE
+TBBFLAG=-tbb
+#TBBFLAG=-tbb_preview -DTBB_PREVIEW_FLOW_GRAPH_TRACE
 #
 # Parallel STL, Boost, etc.
 #
-#BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
+BOOSTFLAG=-I/usr/local/Cellar/boost/1.65.1/include
 RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
-RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
-PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} ${RANGEFLAG}
+#RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG}
 KOKKOSDIR=/opt/kokkos/intel
-KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
 RAJADIR=/opt/raja/intel
-RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+#THRUSTDIR=/opt/nvidia/thrust
+#THRUSTFLAG=-I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
 #
 # CBLAS for C++ DGEMM
 #
@@ -85,7 +88,7 @@ CBLASFLAG=-DMKL -mkl
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
 #NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-NVCC=nvcc
+NVCC=nvcc -arch=sm_50
 CUDAFLAGS=-g -O3 -std=c++11
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
