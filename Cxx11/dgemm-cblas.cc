@@ -95,7 +95,7 @@ void prk_dgemm(const int order,
                const std::vector<double> & B,
                      std::vector<double> & C)
 {
-    const cblas_int n = order;
+    const int n = order;
     const double alpha = 1.0;
     const double beta  = 1.0;
 
@@ -108,7 +108,7 @@ void prk_dgemm(const int order, const int batches,
                const std::vector<std::vector<double>> & B,
                      std::vector<std::vector<double>> & C)
 {
-    const cblas_int n = order;
+    const int n = order;
     const double alpha = 1.0;
     const double beta  = 1.0;
 
@@ -123,7 +123,7 @@ void prk_dgemm(const int order, const int batches, const int nt,
                const std::vector<std::vector<double>> & B,
                      std::vector<std::vector<double>> & C)
 {
-    const cblas_int n = order;
+    const int n = order;
     const double alpha = 1.0;
     const double beta  = 1.0;
 
@@ -141,17 +141,17 @@ void prk_dgemm(const int order, const int batches,
                double** & B,
                double** & C)
 {
-    const cblas_int n = order;
+    const int n = order;
     const double alpha = 1.0;
     const double beta  = 1.0;
 
-    const cblas_int group_count = 1;
-    const cblas_int group_size[group_count] = { batches };
+    const int group_count = 1;
+    const int group_size[group_count] = { batches };
 
     const CBLAS_TRANSPOSE transa_array[group_count] = { CblasNoTrans };
     const CBLAS_TRANSPOSE transb_array[group_count] = { CblasNoTrans };
 
-    const cblas_int n_array[group_count] = { n };
+    const int n_array[group_count] = { n };
 
     const double alpha_array[group_count] = { alpha };
     const double beta_array[group_count]  = { beta };
