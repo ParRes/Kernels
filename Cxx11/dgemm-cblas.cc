@@ -63,14 +63,14 @@
 
 #if defined(MKL)
 #include <mkl.h>
-typedef MKL_INT cblas_int;
+#ifdef MKL_ILP64
+#error Use the MKL library for 32-bit integers!
+#endif
 #elif defined(ACCELERATE)
 // The location of cblas.h is not in the system include path when -framework Accelerate is provided.
 #include <Accelerate/Accelerate.h>
-typedef int cblas_int;
 #else
 #include <cblas.h>
-typedef int cblas_int;
 #endif
 
 #ifdef PRK_DEBUG
@@ -182,7 +182,7 @@ void prk_dgemm(const int order, const int batches,
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 CBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
+  std::cout << "C++11/CBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -193,7 +193,7 @@ int main(int argc, char * argv[])
   int batches = 0;
   int batch_threads = 1;
   try {
-      if (argc < 2) {
+      if (argc < 3) {
         throw "Usage: <# iterations> <matrix order> [<batches> <batch threads>]";
       }
 

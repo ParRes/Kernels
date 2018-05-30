@@ -344,7 +344,8 @@ case "$PRK_TARGET" in
         # C++11 with CBLAS
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             echo "CBLASFLAG=-DACCELERATE -framework Accelerate" >> common/make.defs
-            make -C $PRK_TARGET_PATH dgemm-cblas
+            make -C $PRK_TARGET_PATH transpose-cblas dgemm-cblas
+            $PRK_TARGET_PATH/transpose-cblas    10 1024
             $PRK_TARGET_PATH/dgemm-cblas        10 400
         fi
 
