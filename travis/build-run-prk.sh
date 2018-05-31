@@ -647,9 +647,9 @@ case "$PRK_TARGET" in
             SYCLDIR=${TRAVIS_ROOT}/triSYCL
             if [ "${CC}" = "clang" ] ; then
                 # SYCL will compile without OpenMP
-                echo "SYCLCXX=${PRK_CXX} -pthread -std=c++17" >> common/make.defs
+                echo "SYCLCXX=${PRK_CXX} -pthread -std=c++1z" >> common/make.defs
             else
-                echo "SYCLCXX=${PRK_CXX} -fopenmp -std=c++17" >> common/make.defs
+                echo "SYCLCXX=${PRK_CXX} -fopenmp -std=c++1z" >> common/make.defs
             fi
             echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include" >> common/make.defs
             make -C $PRK_TARGET_PATH p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl
