@@ -47,6 +47,7 @@
 #  include <parallel/algorithm>
 #  include <parallel/numeric>
 # endif
+namespace exec = std::execution;
 #endif
 
 #endif /* PRK_PSTL_H */

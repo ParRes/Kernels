@@ -47,8 +47,8 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     elif (model=='pstl'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
-        src.write('    std::for_each( std::execution::par, std::begin(inside), std::end(inside), [&] (int i) {\n')
-        src.write('      std::for_each( std::execution::unseq, std::begin(inside), std::end(inside), [&] (int j) {\n')
+        src.write('    std::for_each( exec::par, std::begin(inside), std::end(inside), [&] (int i) {\n')
+        src.write('      std::for_each( exec::unseq, std::begin(inside), std::end(inside), [&] (int j) {\n')
     elif (model=='raja'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
         #src.write('    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>\n')
