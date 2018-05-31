@@ -98,7 +98,7 @@ f = see footnotes
 | RAJA                 |  y  |    y    |     y     |    y    |        |       |
 | CUDA                 |  i  |    y    |     y     |    y    |        |       |
 | CUBLAS               |     |         |     y     |    y    |        |   y   |
-| CBLAS                |     |         |           |         |        |   y   |
+| CBLAS                |     |         |     y     |         |        |   y   |
 | OpenACC              |  y  |         |           |         |        |       |
 
 * [SYCL](http://sycl.tech/)
