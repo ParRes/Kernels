@@ -42,7 +42,7 @@ USAGE:   Program input is three command line arguments that give the
          matrix order, the number of times to repeat the operation 
          (iterations), and the number of threads to use:
 
-         transpose <# threads> <matrix_size> <# iterations> [tile size]
+         transpose <# threads> <# iterations> <matrix_size> [tile size]
 
          An optional parameter specifies the tile size used to divide the
          individual matrix blocks for improved cache and TLB performance. 

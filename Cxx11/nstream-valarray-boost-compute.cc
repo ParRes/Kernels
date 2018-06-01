@@ -62,6 +62,8 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#include "boost/compute.hpp"
+
 #include "prk_util.h"
 
 namespace compute = boost::compute;

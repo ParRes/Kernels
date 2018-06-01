@@ -60,6 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
 {
@@ -132,7 +133,7 @@ int main(int argc, char* argv[])
     grid[i*n+0] = static_cast<double>(i);
   }
 
-  #pragma acc data pcopy(grid)
+  #pragma acc data pcopy(grid[0:n*n])
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -153,7 +154,7 @@ int main(int argc, char* argv[])
           for (int j=std::max(2,i-(nb+1)+2); j<=std::min(i,nb+1); j++) {
             const int ib = nc*(i-j)+1;
             const int jb = nc*(j-2)+1;
-            //sweep_tile_sequential(ib, std::min(n,ib+nc), jb, std::min(n,jb+nc), n, grid);
+            //sweep_tile(ib, std::min(n,ib+nc), jb, std::min(n,jb+nc), n, grid);
             #pragma acc loop vector
             for (int i=ib; i<std::min(n,ib+nc); i++) {
               for (int j=jb; j<std::min(n,jb+nc); j++) {

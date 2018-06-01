@@ -141,11 +141,11 @@ program main
   endif
 
 #ifdef _OPENMP
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
+  write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
 #endif
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix length        = ', length
-  write(*,'(a,i8)') 'Offset               = ', offset
+  write(*,'(a,i12)') 'Number of iterations = ', iterations
+  write(*,'(a,i12)') 'Vector length        = ', length
+  write(*,'(a,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -212,10 +212,10 @@ program main
 #ifdef _OPENMP
     !$omp barrier
     !$omp master
-#endif
-    t0 = prk_get_wtime()
-#ifdef _OPENMP
+    t0 = omp_get_wtime()
     !$omp end master
+#else
+    t0 = prk_get_wtime()
 #endif
     endif
 
@@ -236,7 +236,11 @@ program main
 #endif
   enddo ! iterations
 
+#ifdef _OPENMP
+  t1 = omp_get_wtime()
+#else
   t1 = prk_get_wtime()
+#endif
 
 #ifdef _OPENMP
   !$omp end parallel
