@@ -62,7 +62,7 @@ SYCLFLAG=-I$(SYCLDIR)/include
 #
 # Cilk
 #
-CILKFLAG=-fcilkplus
+#CILKFLAG=-fcilkplus
 #
 # TBB
 #
