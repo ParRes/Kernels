@@ -124,6 +124,8 @@ cuda: transpose-cuda
 
 cublas: transpose-cublas nstream-cublas dgemm-cublas
 
+cblas: transpose-cblas dgemm-cblas
+
 occa: transpose-occa nstream-occa
 
 ornlacc: p2p-hyperplane-vector-ornlacc

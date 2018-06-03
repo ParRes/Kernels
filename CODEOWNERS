@@ -2,7 +2,7 @@
 # Each line is a file pattern followed by one or more owners.
 
 # These owners will be the default owners for everything in the repo.
-*       @jeffhammond @rfvander
+*       @jeffhammond
 
 # Order is important. The last matching pattern has the most precedence.
 # So if a pull request only touches javascript files, only these owners
@@ -15,8 +15,8 @@ Cxx11/*                     @jeffhammond
 FENIX/*                     @rfvander @marcgamell
 FG_MPI/*                    @rfvander
 FORTRAN/*                   @jeffhammond
-GRAPPA/*                    @nelsonje
 FORTRAN/*coarray.f90        @afanfa @zbeekman @jeffhammond
+GRAPPA/*                    @nelsonje
 JULIA/*                     @kpamnany @jeffhammond
 LEGION/*                    @magnatelee @elliottslaughter @apokayi @rfvander
 MPI1/*                      @rfvander
