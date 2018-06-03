@@ -49,21 +49,20 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include "CL/sycl.hpp"
-
 #include "prk_util.h"
+#include "prk_thrust.h"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/SYCL Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/Thrust Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t order;
+  int order;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order>";
@@ -95,71 +94,43 @@ int main(int argc, char * argv[])
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  double trans_time(0);
-
-  std::vector<double> h_A(order*order);
-  std::vector<double> h_B(order*order,0.0);
-
+  thrust::host_vector<double> A(order*order);
+  thrust::host_vector<double> B(order*order);
   // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(h_A.begin(), h_A.end(), 0.0);
+  thrust::sequence(thrust::host, A.begin(), A.end() );
+  thrust::fill(thrust::host, B.begin(), B.end(), 0.0);
 
-  // SYCL device queue
-  cl::sycl::queue q;
-  {
-    // initialize device buffers from host buffers
-#if USE_2D_INDEXING
-    cl::sycl::buffer<double,2> d_A( h_A.data(), cl::sycl::range<2>{order,order} );
-    cl::sycl::buffer<double,2> d_B( h_B.data(), cl::sycl::range<2>{order,order} );
-#else
-    cl::sycl::buffer<double> d_A { h_A.data(), h_A.size() };
-    cl::sycl::buffer<double> d_B { h_B.data(), h_B.size() };
-#endif
+  auto range = boost::irange(0,order);
 
-    for (int iter = 0; iter<=iterations; ++iter) {
+  auto trans_time = 0.0;
 
-      if (iter==1) trans_time = prk::wtime();
+  for (auto iter = 0; iter<=iterations; iter++) {
 
-      q.submit([&](cl::sycl::handler& h) {
+    if (iter==1) trans_time = prk::wtime();
 
-        // accessor methods
-        auto A = d_A.get_access<cl::sycl::access::mode::read_write>(h);
-        auto B = d_B.get_access<cl::sycl::access::mode::read_write>(h);
-
-        // transpose
-        h.parallel_for<class transpose>(cl::sycl::range<2>{order,order}, [=] (cl::sycl::item<2> it) {
-#if USE_2D_INDEXING
-          cl::sycl::id<2> ij{it[0],it[1]};
-          cl::sycl::id<2> ji{it[1],it[0]};
-          B[ij] += A[ji];
-          A[ji] += 1.0;
-#else
-          B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
-          A[it[1] * order + it[0]] += 1.0;
-#endif
-        });
+    // transpose
+    thrust::for_each( thrust::host, std::begin(range), std::end(range), [&] (int i) {
+      thrust::for_each( thrust::host, std::begin(range), std::end(range), [&] (int j) {
+        B[i*order+j] += A[j*order+i];
+        A[j*order+i] += 1.0;
       });
-      q.wait();
-    }
-
-    // Stop timer before buffer+accessor destructors fire,
-    // since that will move data, and we do not time that
-    // for other device-oriented programming models.
-    trans_time = prk::wtime() - trans_time;
+    });
   }
+  trans_time = prk::wtime() - trans_time;
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
   // TODO: replace with std::generate, std::accumulate, or similar
-  double const addit = (iterations+1.) * (iterations/2.);
-  double abserr(0);
-  for (size_t i=0; i<order; ++i) {
-    for (size_t j=0; j<order; ++j) {
-      size_t const ij = i*order+j;
-      size_t const ji = j*order+i;
-      double const reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(h_B[ji] - reference);
+  const auto addit = (iterations+1.) * (iterations/2.);
+  auto abserr = 0.0;
+  for (auto i : range) {
+    for (auto j : range) {
+      const int ij = i*order+j;
+      const int ji = j*order+i;
+      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+      abserr += std::fabs(B[ji] - reference);
     }
   }
 
@@ -167,12 +138,12 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  double const epsilon(1.0e-8);
+  const auto epsilon = 1.0e-8;
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
     auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2.*bytes)/avgtime
+    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "ERROR: Aggregate squared error " << abserr

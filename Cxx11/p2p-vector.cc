@@ -60,17 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
-inline void sweep_tile(int startm, int endm,
-                       int startn, int endn,
-                       int n, std::vector<double> & grid)
-{
-  for (auto i=startm; i<endm; i++) {
-    for (auto j=startn; j<endn; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
+#include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
 {
@@ -132,31 +122,39 @@ int main(int argc, char* argv[])
 
   {
     // set boundary values (bottom and left side of grid)
-    for (auto j=0; j<n; j++) {
+    for (int j=0; j<n; j++) {
       grid[0*n+j] = static_cast<double>(j);
     }
-    for (auto i=0; i<m; i++) {
+    for (int i=0; i<m; i++) {
       grid[i*n+0] = static_cast<double>(i);
     }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) pipeline_time = prk::wtime();
 
+      double * RESTRICT pgrid = grid.data();
+
       if (mc==m && nc==n) {
-        for (auto i=1; i<m; i++) {
-          for (auto j=1; j<n; j++) {
-            grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+        for (int i=1; i<m; i++) {
+          double olda = grid[  i  *n];
+          double oldb = grid[(i-1)*n];
+          for (int j=1; j<n; j++) {
+            double const newb = grid[(i-1)*n+j];
+            double const newa = newb - oldb + olda;
+            grid[i*n+j] = newa;
+            olda = newa;
+            oldb = newb;
           }
         }
-      } else /* chunking */ {
-        for (auto i=1; i<m; i+=mc) {
-          for (auto j=1; j<n; j+=nc) {
-            sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, grid);
+      } else {
+        for (int i=1; i<m; i+=mc) {
+          for (int j=1; j<n; j+=nc) {
+            sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, pgrid);
           }
         }
       }
-      grid[0*n+0] = -grid[(m-1)*n+(n-1)];
+      pgrid[0*n+0] = -pgrid[(m-1)*n+(n-1)];
     }
     pipeline_time = prk::wtime() - pipeline_time;
   }

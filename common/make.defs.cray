@@ -27,6 +27,10 @@ ORNLACCFLAG=-h acc
 # NERSC: "module load boost"
 BOOSTFLAG=-DUSE_BOOST -DUSE_BOOST_COMPUTE -I$${BOOST_DIR}/include
 #
+# CBLAS for C++ DGEMM
+#
+CBLASFLAG= # LibSci likely included by default
+#
 # MPI
 #
 # cc wraps gcc, icc or craycc, depending on your PrgEng module.

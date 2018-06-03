@@ -112,6 +112,12 @@ C1z/transpose-openmp
 C1z/transpose-target
 C1z/transpose-taskloop
 C1z/transpose-ispc
+Cxx11/boost
+Cxx11/compute
+Cxx11/triSYCL
+Cxx11/occa
+Cxx11/pstl
+Cxx11/range-v3
 Cxx11/dgemm-vector
 Cxx11/dgemm-cblas
 Cxx11/dgemm-cublas
@@ -179,7 +185,11 @@ Cxx11/transpose-vector-raja
 Cxx11/transpose-vector-rangefor
 Cxx11/transpose-vector-tbb
 Cxx11/transpose-vector-taskloop
+Cxx11/transpose-vector-async
+Cxx11/transpose-vector-thread
 Cxx11/transpose-kokkos
+Cxx11/transpose-device-thrust
+Cxx11/transpose-host-thrust
 Cxx11/transpose-cublas
 Cxx11/transpose-cuda
 Cxx11/grid1.cl

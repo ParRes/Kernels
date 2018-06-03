@@ -56,20 +56,25 @@
 /// HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 ///            C99-ification by Jeff Hammond, February 2016.
 ///            C++11-ification by Jeff Hammond, May 2017.
+///            TBB implementation by Pablo Reble, April 2018.
 ///
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_raja.h"
+#include "prk_tbb.h"
+#include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/RAJA pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/TBB Flow Graph pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
+
+  using namespace tbb::flow;
+  //graph g;
 
   int iterations;
   int m, n;
@@ -108,70 +113,125 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  const char* envvar = std::getenv("TBB_NUM_THREADS");
+  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
+  tbb::task_scheduler_init init(num_threads);
+
+  std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
   std::cout << "Grid chunk sizes     = " << mc << ", " << nc << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // Allocate space and perform the computation
+  // Create Grid and allocate space
   //////////////////////////////////////////////////////////////////////
+  // calculate number of tiles in n and m direction to create grid.
+  int num_blocks_n = (n / nc);
+  if(n%nc != 0) num_blocks_n++;
+  int num_blocks_m = (m / mc);
+  if(m%mc != 0) num_blocks_m++;
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  std::vector<double> grid(m*n,0.0);
+  double * grid = new double[m*n];
 
-  // set boundary values (bottom and left side of grid)
-  for (auto j=0; j<n; j++) {
-    grid[0*n+j] = static_cast<double>(j);
-  }
-  for (auto i=0; i<m; i++) {
-    grid[i*n+0] = static_cast<double>(i);
-  }
+  typedef tbb::flow::continue_node< tbb::flow::continue_msg > block_node_t;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
-
-    if (iter==1) pipeline_time = prk::wtime();
-
-#if 0
-    RAJA::Layout<2> index_converter(n, m);
-    RAJA::IndexSet p2p_indexset{};
-    RAJA::computeIndexSet(p2p_indexset); // I guess I need to implement this
-    // add one segment, probably a RangeStrideSegment, per anti diagonal
-    // that gives out an index to directly access grid, rather than an i,j pair
-    RAJA::forall<RAJA::IndexSet::ExecPolicy<RAJA::omp_parallel_exec<RAJA::seq_exec>,RAJA::omp_for_exec>(p2p_indexset,
-        [=](RAJA::Index_type in) {
-
-        // Option 1: use a layout to get indices back
-        RAJA::Index_type i,j;
-        RAJA::index_converter.toIndices(in, i, j);
-        grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-        // Option 2: use indices directly
-        //grid[in] = grid[in - n] + grid[in - 1] - grid[in - n - 1];
-    });
-#else
-    for (auto j=1; j<n; j++) {
-      RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
-        auto x = i;
-        auto y = j-i+1;
-        grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-      });
-    }
-    for (auto j=n-2; j>=1; j--) {
-      RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
-        auto x = n+i-j-1;
-        auto y = n-i;
-        grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-      });
-    }
+  graph g;
+  block_node_t *nodes[ num_blocks_n * num_blocks_m ];
+  // To enable tracing support for Flow Graph Analyzer
+  // set following MACRO and link against TBB preview library (-ltbb_preview)
+#if TBB_PREVIEW_FLOW_GRAPH_TRACE
+  char buffer[1024];
+  g.set_name("Pipeline");
 #endif
 
-    // copy top right corner value to bottom left corner to create dependency; we
-    // need a barrier to make sure the latest value is used. This also guarantees
-    // that the flags for the next iteration (if any) are not getting clobbered
+  bool first_iter=true;
+  block_node_t b(g, [&](const tbb::flow::continue_msg &){
     grid[0*n+0] = -grid[(m-1)*n+(n-1)];
+    if(first_iter) pipeline_time = prk::wtime();
+      first_iter = false;
+  });
+  for (int i=0; i<num_blocks_m; i+=1) {
+    for (int j=0; j<num_blocks_n; j+=1) {
+        block_node_t *tmp = new block_node_t(g, [=](const tbb::flow::continue_msg &){
+            sweep_tile((i*mc)+1, std::min(m,(i*mc)+mc+1), (j*nc)+1, std::min(n,(j*nc)+nc+1), n, grid);
+        });
+#if TBB_PREVIEW_FLOW_GRAPH_TRACE
+        sprintf(buffer, "block [ %d, %d ]", i, j );
+        tmp->set_name( buffer );
+#endif
+        nodes[i*num_blocks_n + j] = tmp;
+        if (i>0)
+          make_edge(*nodes[(i-1)*num_blocks_n + j ], *tmp );
+        if (j>0)
+          make_edge(*nodes[ i   *num_blocks_n + j-1], *tmp );
+        // Transitive dependencies from OpenMP task version:
+        //make_edge( *tmp, b );
+        //if (i>0 && j>0)
+        //  make_edge(*nodes[(i-1)*num_blocks_n + j-1], *tmp );
+    }
+  }
+  auto start = true;
+  source_node<continue_msg> s(g, [&](continue_msg &v) -> bool {
+    if(start) { 
+      v = continue_msg();
+      start = false;
+      return true;
+    }
+    return false;
+  }, false);
+  
+  limiter_node<continue_msg> l(g, iterations+1, 1);
+
+  make_edge( s, l );
+  make_edge( l, *nodes[0] );
+  make_edge( *nodes[(num_blocks_n * num_blocks_m) - 1], b);
+  make_edge( b, l );
+
+#if TBB_PREVIEW_FLOW_GRAPH_TRACE
+  s.set_name("Source");
+  b.set_name("Iteration Barrier");
+  l.set_name("Limiter");
+#endif
+
+  //////////////////////////////////////////////////////////////////////
+  // Perform the computation
+  //////////////////////////////////////////////////////////////////////
+
+  {
+
+    tbb::blocked_range2d<int> range(0, m, mc, 0, n, nc);
+    tbb::parallel_for( range, [&](decltype(range)& r) {
+      for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+        for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+          grid[i*n+j] = 0.0;
+        }
+      }
+    }, tbb_partitioner);
+    for (auto j=0; j<n; j++) {
+      grid[0*n+j] = static_cast<double>(j);
+    }
+    for (auto i=0; i<m; i++) {
+      grid[i*n+0] = static_cast<double>(i);
+    }
+
+    s.activate();
+    g.wait_for_all();
+    
+    pipeline_time = prk::wtime() - pipeline_time;
+
   }
 
-  pipeline_time = prk::wtime() - pipeline_time;
+  //////////////////////////////////////////////////////////////////////
+  // Cleanup Flow Graph
+  //////////////////////////////////////////////////////////////////////
+
+  for (int i=0; i<num_blocks_m; i+=1) {
+    for (int j=0; j<num_blocks_n; j+=1) {
+      delete nodes[i*num_blocks_n + j];
+    }
+  }
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.

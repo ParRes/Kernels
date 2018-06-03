@@ -184,8 +184,8 @@ program main
 
     if (k.eq.1) t0 = omp_get_wtime()
 
-    do ic=2,m,mc
-      do jc=2,n,nc
+    do jc=2,n,nc
+      do ic=2,m,mc
         !$omp task firstprivate(i,j,jc,mc,nc,m,n) shared(grid)  &
         !$omp&     depend(in:grid(ic-mc,jc),grid(ic,jc-nc))     &
         !$omp&     depend(out:grid(ic,jc))

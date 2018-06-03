@@ -60,32 +60,8 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
-inline void sweep_tile_sequential(int startm, int endm,
-                                  int startn, int endn,
-                                  int n, std::vector<double> & grid)
-{
-  for (auto i=startm; i<endm; i++) {
-    for (auto j=startn; j<endn; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
-
-#if 0
-inline void sweep_tile_hyperplane(int startm, int endm,
-                                  int startn, int endn,
-                                  int n, std::vector<double> & grid)
-{
-  for (auto i=2; i<=2*n-2; i++) {
-    for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
-      const auto x = i-j+1;
-      const auto y = j-1;
-      grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-    }
-  }
-}
-#endif
+#include "prk_pstl.h"
+#include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
 {
@@ -190,7 +166,7 @@ int main(int argc, char* argv[])
 #endif
           const int ib = nc*(i-j)+1;
           const int jb = nc*(j-2)+1;
-          sweep_tile_sequential(ib, std::min(n,ib+nc), jb, std::min(n,jb+nc), n, grid);
+          sweep_tile(ib, std::min(n,ib+nc), jb, std::min(n,jb+nc), n, grid);
         });
       }
     }

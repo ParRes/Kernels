@@ -63,12 +63,12 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_tbb.h"
+#include "prk_cuda.h"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/TBB STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++11/Thrust STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -101,15 +101,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  const char* envvar = std::getenv("TBB_NUM_THREADS");
-  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
-  tbb::task_scheduler_init init(num_threads);
-
-  std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
-  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -117,32 +111,31 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A(length);
-  std::vector<double> B(length);
-  std::vector<double> C(length);
+  thrust::device_vector<double> A(length);
+  thrust::device_vector<double> B(length);
+  thrust::device_vector<double> C(length);
+
+  auto range = prk::range(static_cast<size_t>(0), length);
 
   double scalar(3);
-
-  tbb::blocked_range<size_t> range(0, length);
-
   {
-    tbb::parallel_for( range, [&](decltype(range)& r) {
-                       for (auto i=r.begin(); i!=r.end(); ++i ) {
-                           A[i] = 0.0;
-                           B[i] = 2.0;
-                           C[i] = 2.0;
-                       }
-                     }, tbb_partitioner);
+    thrust::fill(thrust::device, A.begin(), A.end(), 0.0);
+    thrust::fill(thrust::device, B.begin(), B.end(), 2.0);
+    thrust::fill(thrust::device, C.begin(), C.end(), 2.0);
+
+    auto nstream = [=] __host__ __device__ (thrust::tuple<double&,double,double> t) {
+        thrust::get<0>(t) +=  thrust::get<1>(t) + scalar * thrust::get<2>(t);
+    };
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      tbb::parallel_for( range, [&](decltype(range)& r) {
-                         for (auto i=r.begin(); i!=r.end(); ++i ) {
-                             A[i] += B[i] + scalar * C[i];
-                         }
-                       }, tbb_partitioner);
+      thrust::for_each( thrust::device,
+                        thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
+                        thrust::make_zip_iterator(thrust::make_tuple(A.end()  , B.end()  , C.end())),
+                        nstream);
+      prk::CUDA::check( cudaDeviceSynchronize() );
     }
     nstream_time = prk::wtime() - nstream_time;
   }
@@ -160,16 +153,12 @@ int main(int argc, char * argv[])
 
   ar *= length;
 
-  double asum(0);
-  asum = tbb::parallel_reduce( range, double(0),
-                               [&](decltype(range)& r, double temp) -> double {
-                                   for (auto i=r.begin(); i!=r.end(); ++i ) {
-                                       temp += std::fabs(A[i]);
-                                   }
-                                   return temp;
-                               },
-                               [] (const double x1, const double x2) { return x1+x2; },
-                               tbb_partitioner );
+  //double asum = thrust::reduce(A.begin(), A.end(), 0.0, thrust::plus<double>());
+  double asum = thrust::transform_reduce(A.begin(),
+                                         A.end(),
+                                         [=] __host__ __device__ (double x) -> double { return fabs(x); },
+                                         0.0,
+                                         thrust::plus<double>());
 
   double epsilon(1.e-8);
   if (std::fabs(ar-asum)/asum > epsilon) {
