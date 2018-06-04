@@ -116,8 +116,8 @@ int main(int argc, char * argv[])
 
     // transpose
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
-  std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( pstl::execution::unseq, std::begin(range), std::end(range), [&] (int j) {
+  std::for_each( exec::par, std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( exec::unseq, std::begin(range), std::end(range), [&] (int j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
   __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
