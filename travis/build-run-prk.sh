@@ -575,13 +575,15 @@ case "$PRK_TARGET" in
                 ;;
         esac
         # RAJA
-        make -C $PRK_TARGET_PATH stencil-vector-raja transpose-vector-raja nstream-vector-raja \
-                                 stencil-raja transpose-raja nstream-raja
+        make -C $PRK_TARGET_PATH p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja \
+                                 p2p-raja stencil-raja transpose-raja nstream-raja
         # New (Views)
+        $PRK_TARGET_PATH/p2p-raja                10 1024 1024
         $PRK_TARGET_PATH/stencil-raja            10 1000
         $PRK_TARGET_PATH/transpose-raja          10 1024
         $PRK_TARGET_PATH/nstream-raja            10 16777216 32
         # Old (STL)
+        $PRK_TARGET_PATH/p2p-vector-raja         10 1024 1024
         $PRK_TARGET_PATH/stencil-vector-raja     10 1000
         $PRK_TARGET_PATH/transpose-vector-raja   10 1024
         for f in seq omp tbb ; do
