@@ -139,14 +139,16 @@ int main(int argc, char* argv[])
     if (iter==1) pipeline_time = prk::wtime();
 
     for (int j=1; j<n; j++) {
-      RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
+      RAJA::RangeSegment range(1, j+1);
+      RAJA::forall<thread_exec>(range, [=](RAJA::Index_type i) {
         auto x = i;
         auto y = j-i+1;
         grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1);
       });
     }
     for (int j=n-2; j>=1; j--) {
-      RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
+      RAJA::RangeSegment range(1, j+1);
+      RAJA::forall<thread_exec>(range, [=](RAJA::Index_type i) {
         auto x = n+i-j-1;
         auto y = n-i;
         grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1);
