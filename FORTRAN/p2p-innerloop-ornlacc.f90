@@ -132,6 +132,8 @@ program main
     stop 1
   endif
 
+  t0 = 0;
+
   do j=1,n
     do i=1,n
       grid(i,j) = 0.0d0

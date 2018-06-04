@@ -64,13 +64,6 @@
 #include <numeric>
 #include <algorithm>
 
-// These headers are busted with NVCC and GCC 5.4.0
-// The <future> header is busted with Cray C++ 8.6.1.
-#if !defined(__NVCC__) && !defined(_CRAYC)
-#include <thread>
-#include <future>
-#endif
-
 #include "prk_simd.h"
 
 #ifdef USE_RANGES
