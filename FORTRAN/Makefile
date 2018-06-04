@@ -65,7 +65,7 @@ ornlacc: p2p-ornlacc p2p-innerloop-ornlacc stencil-ornlacc transpose-ornlacc nst
 	$(FC) $(FCFLAGS) $< -o $@
 
 stencil: stencil.f90 stencil_serial.f90
-	$(FC) $(FCFLAGS) -c stencil_serial.f90 -o stencil_serial.o
+	#$(FC) $(FCFLAGS) -c stencil_serial.f90 -o stencil_serial.o
 	$(FC) $(FCFLAGS) $< -o $@
 
 %-pretty: %-pretty.f90
