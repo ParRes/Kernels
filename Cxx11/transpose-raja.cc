@@ -112,17 +112,20 @@ int main(int argc, char * argv[])
   double * RESTRICT Amem = new double[order*order];
   double * RESTRICT Bmem = new double[order*order];
 
-  RAJA::View<double, RAJA::Layout<2>> A(Amem, order, order);
-  RAJA::View<double, RAJA::Layout<2>> B(Bmem, order, order);
+  matrix A(Amem, order, order);
+  matrix B(Bmem, order, order);
 
-  using policy = RAJA::nested::Policy< RAJA::nested::For<0, RAJA::omp_parallel_for_exec>,
-                                       RAJA::nested::For<1, RAJA::simd_exec> >;
-  using permute_policy = RAJA::nested::Policy< RAJA::nested::For<1, RAJA::omp_parallel_for_exec>,
-                                               RAJA::nested::For<0, RAJA::simd_exec> >;
+  using regular_policy = RAJA::KernelPolicy< RAJA::statement::For<0, thread_exec,
+                                             RAJA::statement::For<1, RAJA::simd_exec,
+                                             RAJA::statement::Lambda<0> > > >;
+  using permute_policy = RAJA::KernelPolicy< RAJA::statement::For<1, thread_exec,
+                                             RAJA::statement::For<0, RAJA::simd_exec,
+                                             RAJA::statement::Lambda<0> > > >;
 
   RAJA::RangeSegment range(0, order);
+  auto range2d = RAJA::make_tuple(range, range);
 
-  RAJA::nested::forall(policy{}, RAJA::make_tuple(range, range), [=](int i, int j) {
+  RAJA::kernel<regular_policy>(range2d, [=](int i, int j) {
       A(i,j) = static_cast<double>(i*order+j);
       B(i,j) = 0.0;
   });
@@ -132,12 +135,12 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     if (permute) {
-        RAJA::nested::forall(permute_policy{}, RAJA::make_tuple(range, range), [=](int i, int j) {
+        RAJA::kernel<permute_policy>(range2d, [=](int i, int j) {
             B(i,j) += A(j,i);
             A(j,i) += 1.0;
         });
     } else {
-        RAJA::nested::forall(policy{}, RAJA::make_tuple(range, range), [=](int i, int j) {
+        RAJA::kernel<regular_policy>(range2d, [=](int i, int j) {
             B(i,j) += A(j,i);
             A(j,i) += 1.0;
         });
@@ -149,12 +152,13 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  using reduce_policy = RAJA::nested::Policy< RAJA::nested::For<0, RAJA::omp_parallel_for_exec>,
-                                              RAJA::nested::For<1, RAJA::seq_exec> >;
+  using reduce_policy = RAJA::KernelPolicy< RAJA::statement::For<0, thread_exec,
+                                            RAJA::statement::For<1, RAJA::seq_exec,
+                                            RAJA::statement::Lambda<0> > > >;
 
   double const addit = (iterations+1.) * (0.5*iterations);
-  RAJA::ReduceSum<RAJA::omp_reduce, double> abserr(0.0);
-  RAJA::nested::forall(reduce_policy{}, RAJA::make_tuple(range, range), [=](int i, int j) {
+  RAJA::ReduceSum<reduce_exec, double> abserr(0.0);
+  RAJA::kernel<reduce_policy>(range2d, [=](int i, int j) {
       double const ij = static_cast<double>(i*order+j);
       double const reference = ij*(1.+iterations)+addit;
       abserr += std::fabs(B(j,i) - reference);

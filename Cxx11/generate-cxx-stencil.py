@@ -57,6 +57,11 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         #src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
         src.write('    RAJA::forall<thread_exec>(RAJA::Index_type('+str(radius)+'), RAJA::Index_type(n-'+str(radius)+'), [&](RAJA::Index_type i) {\n')
         src.write('      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type('+str(radius)+'), RAJA::Index_type(n-'+str(radius)+'), [&](RAJA::Index_type j) {\n')
+    elif (model=='rajaview'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, matrix & in, matrix & out) {\n')
+        src.write('    RAJA::RangeSegment inner1('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    auto inner2 = RAJA::make_tuple(inner1, inner1);\n')
+        src.write('    RAJA::kernel<regular_policy>(inner2, [=](int i, int j) {\n')
     elif (model=='tbb'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
         src.write('  tbb::blocked_range2d<int> range('+str(radius)+', n-'+str(radius)+', t, '+str(radius)+', n-'+str(radius)+', t);\n')
@@ -80,7 +85,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('        for (auto i=it; i<std::min(n-'+str(radius)+',it+t); ++i) {\n')
         src.write('          PRAGMA_SIMD\n')
         src.write('          for (auto j=jt; j<std::min(n-'+str(radius)+',jt+t); ++j) {\n')
-    if (model=='kokkos'):
+    if (model=='kokkos' or model=='rajaview'):
         src.write('              out(i,j) += ')
     else:
         src.write('            out[i*n+j] += ')
@@ -90,7 +95,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         for i in range(0,2*radius+1):
             if ( W[j][i] != 0.0):
                 k+=1
-                if (model=='kokkos'):
+                if (model=='kokkos' or model=='rajaview'):
                     src.write('+in(i+'+str(j-radius)+',j+'+str(i-radius)+') * '+str(W[j][i]))
                 else:
                     src.write('+in[(i+'+str(j-radius)+')*n+(j+'+str(i-radius)+')] * '+str(W[j][i]))
@@ -98,14 +103,16 @@ def codegen(src,pattern,stencil_size,radius,W,model):
                 if (k>0 and k<kmax): src.write('                          ')
     src.write(';\n')
     if (model=='stl' or model=='pgnu' or model=='pstl'):
-        src.write('       });\n')
-        src.write('     });\n')
+        src.write('      });\n')
+        src.write('    });\n')
     elif (model=='raja'):
         #src.write('     });\n')
-        src.write('       });\n')
-        src.write('     });\n')
+        src.write('      });\n')
+        src.write('    });\n')
+    elif (model=='rajaview'):
+        src.write('    });\n')
     elif (model=='kokkos'):
-        src.write('     });\n')
+        src.write('    });\n')
     elif (model=='tbb'):
         src.write('      }\n')
         src.write('    }\n')
@@ -148,10 +155,14 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','raja','kokkos','cuda']:
+    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','raja','rajaview','kokkos','cuda']:
       src = open('stencil_'+model+'.hpp','w')
       if (model=='target'):
           src.write('#define RESTRICT __restrict__\n\n')
+      if (model=='rajaview'):
+          src.write('using regular_policy = RAJA::KernelPolicy< RAJA::statement::For<0, thread_exec,')
+          src.write('                                           RAJA::statement::For<1, RAJA::simd_exec,')
+          src.write('                                           RAJA::statement::Lambda<0> > > >;')
       #  src.write('OMP( declare target )\n\n')
       for pattern in ['star','grid']:
         for r in range(1,6):
