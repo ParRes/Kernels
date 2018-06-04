@@ -74,7 +74,7 @@ void print_m128d(const char * label, __m128d r)
 
 static inline void sweep_tile(int startm, int endm,
                               int startn, int endn,
-                              int n, double grid[])
+                              int n, double grid[restrict])
 {
   for (int i=startm; i<endm; i++) {
     for (int j=startn; j<endn; j++) {

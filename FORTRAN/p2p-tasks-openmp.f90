@@ -184,23 +184,18 @@ program main
 
     if (k.eq.1) t0 = omp_get_wtime()
 
-    do ic=2,m,mc
-      do jc=2,n,nc
-        !$omp task firstprivate(i,j,jc,mc,nc,m,n) shared(grid)                          &
-        !$omp&     depend(in:grid(1,1),grid(ic-mc,jc-nc),grid(ic-mc,jc),grid(ic,jc-nc)) &
+    do jc=2,n,nc
+      do ic=2,m,mc
+        !$omp task firstprivate(i,j,jc,mc,nc,m,n) shared(grid)  &
+        !$omp&     depend(in:grid(ic-mc,jc),grid(ic,jc-nc))     &
         !$omp&     depend(out:grid(ic,jc))
         call sweep_tile(ic,min(m,ic+mc-1),jc,min(n,jc+nc-1),m,n,grid)
         !$omp end task
       enddo
     enddo
-    !$omp task firstprivate(m,n) shared(grid)                 &
-    !$omp&     depend(in:grid(lic,ljc)) depend(out:grid(1,1))
+    !$omp taskwait
     grid(1,1) = -grid(m,n)
-    !$omp end task
-
   enddo
-
-  !$omp taskwait
 
   t1 = omp_get_wtime()
   pipeline_time = t1 - t0

@@ -59,7 +59,7 @@ coarray: p2p-coarray stencil-coarray transpose-coarray
 
 target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target
 
-ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc nstream-ornlacc
+ornlacc: p2p-ornlacc p2p-innerloop-ornlacc stencil-ornlacc transpose-ornlacc nstream-ornlacc
 
 %: %.f90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -94,7 +94,7 @@ clean:
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
-	-rm -f p2p stencil transpose nstream
+	-rm -f p2p stencil transpose nstream dgemm
 	-rm -f p2p-innerloop
 	-rm -f *-pretty
 	-rm -f *-coarray

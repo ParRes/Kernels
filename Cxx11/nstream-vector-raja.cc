@@ -63,6 +63,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_raja.h"
 
 #if defined(RAJA_ENABLE_OPENMP)
   typedef RAJA::omp_parallel_for_exec thread_exec;

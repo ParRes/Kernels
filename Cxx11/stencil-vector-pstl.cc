@@ -61,6 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_pstl.h"
 // See ParallelSTL.md for important information.
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
 #include "stencil_pstl.hpp"
@@ -180,7 +181,7 @@ int main(int argc, char* argv[])
   std::vector<double> out(n*n);
 
   // initialize the input and output arrays
-  auto range = boost::irange(0,n);
+  auto range = prk::range(0,n);
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
   std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
     std::for_each( pstl::execution::unseq, std::begin(range), std::end(range), [&] (int j) {
@@ -240,7 +241,7 @@ int main(int argc, char* argv[])
 
   // compute L1 norm in parallel
   double norm = 0.0;
-  auto inside = boost::irange(radius,n-radius);
+  auto inside = prk::range(radius,n-radius);
   for (auto i : inside) {
     for (auto j : inside) {
       norm += std::fabs(out[i*n+j]);

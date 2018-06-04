@@ -49,6 +49,8 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#include "CL/sycl.hpp"
+
 #include "prk_util.h"
 
 int main(int argc, char * argv[])
@@ -89,12 +91,11 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
 
-  // SYCL device queue
-  cl::sycl::queue q;
-
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
+
+  double trans_time(0);
 
   std::vector<double> h_A(order*order);
   std::vector<double> h_B(order*order,0.0);
@@ -102,24 +103,22 @@ int main(int argc, char * argv[])
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(h_A.begin(), h_A.end(), 0.0);
 
-  auto range = boost::irange(static_cast<size_t>(0),order);
-
-  auto trans_time = 0.0;
-
+  // SYCL device queue
+  cl::sycl::queue q;
   {
     // initialize device buffers from host buffers
 #if USE_2D_INDEXING
-    cl::sycl::buffer<double,2> d_A( cl::sycl::range<2>{order,order} ); // FIXME: does not initialize with host array
-    cl::sycl::buffer<double,2> d_B( cl::sycl::range<2>{order,order} ); // FIXME: does not initialize with host array
+    cl::sycl::buffer<double,2> d_A( h_A.data(), cl::sycl::range<2>{order,order} );
+    cl::sycl::buffer<double,2> d_B( h_B.data(), cl::sycl::range<2>{order,order} );
 #else
     cl::sycl::buffer<double> d_A { h_A.data(), h_A.size() };
     cl::sycl::buffer<double> d_B { h_B.data(), h_B.size() };
 #endif
 
-    for (auto iter = 0; iter<=iterations; iter++) {
- 
+    for (int iter = 0; iter<=iterations; ++iter) {
+
       if (iter==1) trans_time = prk::wtime();
- 
+
       q.submit([&](cl::sycl::handler& h) {
 
         // accessor methods
@@ -129,7 +128,10 @@ int main(int argc, char * argv[])
         // transpose
         h.parallel_for<class transpose>(cl::sycl::range<2>{order,order}, [=] (cl::sycl::item<2> it) {
 #if USE_2D_INDEXING
-#error 2D indexing is not implemented yet.  Fix this!
+          cl::sycl::id<2> ij{it[0],it[1]};
+          cl::sycl::id<2> ji{it[1],it[0]};
+          B[ij] += A[ji];
+          A[ji] += 1.0;
 #else
           B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
           A[it[1] * order + it[0]] += 1.0;
@@ -150,13 +152,13 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
-  for (auto i : range) {
-    for (auto j : range) {
-      const int ij = i*order+j;
-      const int ji = j*order+i;
-      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+  double const addit = (iterations+1.) * (iterations/2.);
+  double abserr(0);
+  for (size_t i=0; i<order; ++i) {
+    for (size_t j=0; j<order; ++j) {
+      size_t const ij = i*order+j;
+      size_t const ji = j*order+i;
+      double const reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(h_B[ji] - reference);
     }
   }
@@ -165,12 +167,12 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  const auto epsilon = 1.0e-8;
+  double const epsilon(1.0e-8);
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
     auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
+    std::cout << "Rate (MB/s): " << 1.0e-6 * (2.*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "ERROR: Aggregate squared error " << abserr

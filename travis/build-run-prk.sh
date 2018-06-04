@@ -18,7 +18,7 @@ case "$os" in
         export MPI_ROOT=/usr/local
         ;;
     Linux)
-        export MPI_ROOT=$TRAVIS_ROOT
+        export MPI_ROOT=${TRAVIS_ROOT}
         ;;
 esac
 
@@ -68,7 +68,7 @@ case "$PRK_TARGET" in
                 export JULIA_PATH=/usr/local/bin/
                 ;;
             Linux)
-                export JULIA_PATH=$TRAVIS_ROOT/julia/bin/
+                export JULIA_PATH=${TRAVIS_ROOT}/julia/bin/
                 ;;
         esac
         ${JULIA_PATH}julia --version
@@ -314,7 +314,7 @@ case "$PRK_TARGET" in
         ${PRK_CXX} -v
         # Need to increment this for PSTL
         # The pthread flag is supported by GCC and Clang at least
-        echo "CXX=${PRK_CXX} -std=c++11 -pthread" >> common/make.defs
+        echo "CXX=${PRK_CXX} -std=c++14 -pthread" >> common/make.defs
 
         # C++11 without external parallelism
         make -C $PRK_TARGET_PATH transpose-valarray nstream-valarray
@@ -322,11 +322,12 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/nstream-valarray   10 16777216 32
 
         # C++11 without external parallelism
-        make -C $PRK_TARGET_PATH p2p-vector p2p-innerloop-vector stencil-vector transpose-vector nstream-vector \
+        make -C $PRK_TARGET_PATH p2p-vector p2p-hyperplane-vector stencil-vector transpose-vector nstream-vector \
                                  dgemm-vector sparse-vector
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024
         $PRK_TARGET_PATH/p2p-vector              10 1024 1024 100 100
-        $PRK_TARGET_PATH/p2p-innerloop-vector    10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane-vector   10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane-vector   10 1024 64
         $PRK_TARGET_PATH/stencil-vector          10 1000
         $PRK_TARGET_PATH/transpose-vector        10 1024 32
         $PRK_TARGET_PATH/nstream-vector          10 16777216 32
@@ -343,7 +344,8 @@ case "$PRK_TARGET" in
         # C++11 with CBLAS
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             echo "CBLASFLAG=-DACCELERATE -framework Accelerate" >> common/make.defs
-            make -C $PRK_TARGET_PATH dgemm-cblas
+            make -C $PRK_TARGET_PATH transpose-cblas dgemm-cblas
+            $PRK_TARGET_PATH/transpose-cblas    10 1024
             $PRK_TARGET_PATH/dgemm-cblas        10 400
         fi
 
@@ -352,29 +354,17 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/transpose-vector-thread 10 1024 512 32
         $PRK_TARGET_PATH/transpose-vector-async  10 1024 512 32
 
-        # C++11 with rangefor
-        echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
-        make -C $PRK_TARGET_PATH rangefor
-        $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
-        $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
-        $PRK_TARGET_PATH/nstream-vector-rangefor     10 16777216 32
-        #echo "Test stencil code generator"
-        for s in star grid ; do
-            for r in 1 2 3 4 5 ; do
-                $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 20 $s $r
-            done
-        done
-
         # C++11 with OpenMP
         export OMP_NUM_THREADS=2
         case "$CC" in
             gcc)
                 # Host
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-vector-openmp stencil-vector-openmp \
+                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-hyperplane-vector-openmp stencil-vector-openmp \
                                          transpose-vector-openmp nstream-vector-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-innerloop-vector-openmp      10 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-vector-openmp     10 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-vector-openmp     10 1024 64
                 $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
                 $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
                 $PRK_TARGET_PATH/nstream-vector-openmp            10 16777216 32
@@ -395,6 +385,11 @@ case "$PRK_TARGET" in
                         $PRK_TARGET_PATH/stencil-vector-openmp 10 200 20 $s $r
                     done
                 done
+                # ORNL-ACC
+                echo "ORNLACCFLAG=-fopenacc" >> common/make.defs
+                make -C $PRK_TARGET_PATH p2p-hyperplane-vector-ornlacc
+                $PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024 64
                 ;;
             clang)
                 # Host
@@ -447,6 +442,24 @@ case "$PRK_TARGET" in
                 ;;
         esac
 
+        # Boost.Compute found after OpenCL, and only available in Travis with MacOS.
+        echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
+
+        #echo "RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}" >> common/make.defs
+        echo "RANGEFLAG=-DUSE_RANGES_TS -I${TRAVIS_ROOT}/range-v3/include" >> common/make.defs
+
+        # C++11 with rangefor and Boost.Ranges
+        make -C $PRK_TARGET_PATH rangefor
+        $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
+        $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
+        $PRK_TARGET_PATH/nstream-vector-rangefor     10 16777216 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 20 $s $r
+            done
+        done
+
         # C++11 with TBB
         # Skip Clang because older Clang from Linux chokes on max_align_t (https://travis-ci.org/jeffhammond/PRK/jobs/243395307)
         if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
@@ -464,11 +477,14 @@ case "$PRK_TARGET" in
                     export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
                     ;;
             esac
-            make -C $PRK_TARGET_PATH stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
-            #$PRK_TARGET_PATH/p2p-vector-tbb     10 1024 1024 64 64
-            $PRK_TARGET_PATH/stencil-vector-tbb     10 1000
-            $PRK_TARGET_PATH/transpose-vector-tbb   10 1024 32
-            $PRK_TARGET_PATH/nstream-vector-tbb     10 16777216 32
+            make -C $PRK_TARGET_PATH p2p-innerloop-vector-tbb p2p-hyperplane-vector-tbb p2p-tasks-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
+            $PRK_TARGET_PATH/p2p-innerloop-vector-tbb     10 1024
+            $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 1
+            $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 32
+            $PRK_TARGET_PATH/p2p-tasks-tbb                10 1024 1024 32 32
+            $PRK_TARGET_PATH/stencil-vector-tbb           10 1000
+            $PRK_TARGET_PATH/transpose-vector-tbb         10 1024 32
+            $PRK_TARGET_PATH/nstream-vector-tbb           10 16777216 32
             #echo "Test stencil code generator"
             for s in star grid ; do
                 for r in 1 2 3 4 5 ; do
@@ -478,10 +494,12 @@ case "$PRK_TARGET" in
         fi
 
         # C++11 with STL
-        make -C $PRK_TARGET_PATH stencil-vector-stl transpose-vector-stl nstream-vector-stl
-        $PRK_TARGET_PATH/stencil-vector-stl     10 1000
-        $PRK_TARGET_PATH/transpose-vector-stl   10 1024 32
-        $PRK_TARGET_PATH/nstream-vector-stl     10 16777216 32
+        make -C $PRK_TARGET_PATH p2p-hyperplane-vector-stl stencil-vector-stl transpose-vector-stl nstream-vector-stl
+        $PRK_TARGET_PATH/p2p-hyperplane-vector-stl    10 1024 1
+        $PRK_TARGET_PATH/p2p-hyperplane-vector-stl    10 1024 32
+        $PRK_TARGET_PATH/stencil-vector-stl           10 1000
+        $PRK_TARGET_PATH/transpose-vector-stl         10 1024 32
+        $PRK_TARGET_PATH/nstream-vector-stl           10 16777216 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
@@ -494,14 +512,16 @@ case "$PRK_TARGET" in
         if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             if [ "${CC}" = "clang" ] ; then
                 # omp.h not found with clang-3.9 - just work around instead of fixing.
-                echo "PSTLFLAG=-DUSE_PSTL ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
+                echo "PSTLFLAG=-DUSE_PSTL ${TBBFLAG} -DUSE_INTEL_PSTL -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
             else
-                echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I$TRAVIS_ROOT/pstl/include" >> common/make.defs
+                echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
             fi
-            make -C $PRK_TARGET_PATH stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
-            $PRK_TARGET_PATH/stencil-vector-pstl     10 1000
-            $PRK_TARGET_PATH/transpose-vector-pstl   10 1024 32
-            $PRK_TARGET_PATH/nstream-vector-pstl     10 16777216 32
+            make -C $PRK_TARGET_PATH p2p-hyperplane-vector-pstl stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
+            $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 1
+            $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 32
+            $PRK_TARGET_PATH/stencil-vector-pstl           10 1000
+            $PRK_TARGET_PATH/transpose-vector-pstl         10 1024 32
+            $PRK_TARGET_PATH/nstream-vector-pstl           10 16777216 32
             #echo "Test stencil code generator"
             for s in star grid ; do
                 for r in 1 2 3 4 5 ; do
@@ -526,6 +546,18 @@ case "$PRK_TARGET" in
                 done
             done
             cd ..
+        fi
+
+        # Boost.Compute moved after OpenCL to reuse those flags...
+
+        # C++11 with Boost.Compute
+        # Only test Mac because:
+        # (1) We only test OpenCL on MacOS in Travis.
+        # (2) Boost.Compute is not available from APT.
+        # If we ever address 1, we need to enable the Boost.Compute install for Linux.
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            make -C $PRK_TARGET_PATH nstream-vector-boost-compute
+            $PRK_TARGET_PATH/nstream-vector-boost-compute     10 16777216 32
         fi
 
         # C++11 with Kokkos, RAJA
@@ -585,6 +617,31 @@ case "$PRK_TARGET" in
         #    $PRK_TARGET_PATH/transpose-occa   10 1024 32
         #    $PRK_TARGET_PATH/nstream-occa     10 16777216 32
         #fi
+
+        # C++ w/ SYCL
+        # triSYCL requires Boost.  We are having Boost issues with Travis Linux builds.
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            SYCLDIR=${TRAVIS_ROOT}/triSYCL
+            if [ "${CC}" = "clang" ] ; then
+                # SYCL will compile without OpenMP
+                echo "SYCLCXX=${PRK_CXX} -pthread -std=c++14" >> common/make.defs
+            else
+                echo "SYCLCXX=${PRK_CXX} -fopenmp -std=c++14" >> common/make.defs
+            fi
+            echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include" >> common/make.defs
+            make -C $PRK_TARGET_PATH p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl
+            #$PRK_TARGET_PATH/p2p-hyperplane-sycl 10 50 1 # 100 takes too long :-o
+            $PRK_TARGET_PATH/stencil-sycl        10 1000
+            $PRK_TARGET_PATH/transpose-sycl      10 1024 32
+            $PRK_TARGET_PATH/nstream-sycl        10 16777216 32
+            #echo "Test stencil code generator"
+            for s in star ; do # grid ; do # grid not supported yet
+                for r in 1 2 3 4 5 ; do
+                    $PRK_TARGET_PATH/stencil-sycl 10 200 20 $s $r
+                done
+            done
+        fi
+
         ;;
     allfortran)
         echo "Fortran"
@@ -610,7 +667,7 @@ case "$PRK_TARGET" in
                     # Homebrew installs a symlink in /usr/local/bin
                     export PRK_CAFC=/usr/local/bin/caf
                 elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-                    export PRK_CAFC=$TRAVIS_ROOT/opencoarrays/bin/caf
+                    export PRK_CAFC=${TRAVIS_ROOT}/opencoarrays/bin/caf
                 fi
                 echo "CAFC=$PRK_CAFC -std=f2008 -cpp" >> common/make.defs
                 echo "COARRAYFLAG=-fcoarray=single" >> common/make.defs
@@ -689,7 +746,7 @@ case "$PRK_TARGET" in
                     export PRK_OVERSUBSCRIBE="--oversubscribe"
                     export TMPDIR=/tmp
                 elif [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-                    export PRK_LAUNCHER=$TRAVIS_ROOT/opencoarrays/bin/cafrun
+                    export PRK_LAUNCHER=${TRAVIS_ROOT}/opencoarrays/bin/cafrun
                 fi
                 $PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-} $PRK_TARGET_PATH/p2p-coarray       10 1024 1024
                 $PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-} $PRK_TARGET_PATH/stencil-coarray   10 1000
@@ -845,13 +902,13 @@ case "$PRK_TARGET" in
     allshmem)
         echo "SHMEM"
         # This should be fixed by rpath (https://github.com/regrant/sandia-shmem/issues/83)
-        export LD_LIBRARY_PATH=$TRAVIS_ROOT/sandia-openshmem/lib:$TRAVIS_ROOT/libfabric/lib:$LD_LIBRARY_PATH
-        export SHMEM_ROOT=$TRAVIS_ROOT/sandia-openshmem
+        export LD_LIBRARY_PATH=${TRAVIS_ROOT}/sandia-openshmem/lib:${TRAVIS_ROOT}/libfabric/lib:$LD_LIBRARY_PATH
+        export SHMEM_ROOT=${TRAVIS_ROOT}/sandia-openshmem
         echo "SHMEMTOP=$SHMEM_ROOT\nSHMEMCC=$SHMEM_ROOT/bin/oshcc" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=SHMEM
         export PRK_SHMEM_PROCS=4
-        export OSHRUN_LAUNCHER=$TRAVIS_ROOT/hydra/bin/mpirun
+        export OSHRUN_LAUNCHER=${TRAVIS_ROOT}/hydra/bin/mpirun
         export PRK_LAUNCHER=$SHMEM_ROOT/bin/oshrun
         $PRK_LAUNCHER -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Synch_p2p/p2p       10 1024 1024
         $PRK_LAUNCHER -n $PRK_SHMEM_PROCS $PRK_TARGET_PATH/Stencil/stencil     10 1000
@@ -865,14 +922,14 @@ case "$PRK_TARGET" in
                 case "$CC" in
                     gcc)
                         # If building from source (impossible)
-                        #export UPC_ROOT=$TRAVIS_ROOT/gupc
+                        #export UPC_ROOT=${TRAVIS_ROOT}/gupc
                         # If installing deb file
-                        export UPC_ROOT=$TRAVIS_ROOT/gupc/usr/local/gupc
+                        export UPC_ROOT=${TRAVIS_ROOT}/gupc/usr/local/gupc
                         ;;
                     clang)
                         echo "Clang UPC is not supported."
                         exit 9
-                        export UPC_ROOT=$TRAVIS_ROOT/clupc
+                        export UPC_ROOT=${TRAVIS_ROOT}/clupc
                         ;;
                 esac
                 echo "UPCC=$UPC_ROOT/bin/upc" >> common/make.defs
@@ -881,7 +938,7 @@ case "$PRK_TARGET" in
                 make $PRK_TARGET
                 ;;
             bupc)
-                export UPC_ROOT=$TRAVIS_ROOT/bupc-$CC
+                export UPC_ROOT=${TRAVIS_ROOT}/bupc-$CC
                 echo "UPCC=$UPC_ROOT/bin/upcc" >> common/make.defs
                 # -N $nodes -n UPC threads -c $cores_per_node
                 # -localhost is only for UDP
@@ -891,7 +948,7 @@ case "$PRK_TARGET" in
                         ;;
                     ofi)
                         export GASNET_SSH_SERVERS="localhost"
-                        export LD_LIBRARY_PATH="$TRAVIS_ROOT/libfabric/lib:$LD_LIBRARY_PATH"
+                        export LD_LIBRARY_PATH="${TRAVIS_ROOT}/libfabric/lib:$LD_LIBRARY_PATH"
                         export PRK_LAUNCHER="$UPC_ROOT/bin/upcrun -v -N 1 -n $PRK_UPC_PROCS -c $PRK_UPC_PROCS"
                         ;;
                     mpi)
@@ -922,12 +979,12 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm/multicore-linux64
+                #export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-linux-x86_64
+                export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-linux-x86_64-smp
+                #export CHARM_ROOT=${TRAVIS_ROOT}/charm/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
@@ -946,12 +1003,12 @@ case "$PRK_TARGET" in
         os=`uname`
         case "$os" in
             Darwin)
-                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-darwin-x86_64-smp
+                export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-darwin-x86_64-smp
                 ;;
             Linux)
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64
-                export CHARM_ROOT=$TRAVIS_ROOT/charm/netlrts-linux-x86_64-smp
-                #export CHARM_ROOT=$TRAVIS_ROOT/charm/multicore-linux64
+                #export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-linux-x86_64
+                export CHARM_ROOT=${TRAVIS_ROOT}/charm/netlrts-linux-x86_64-smp
+                #export CHARM_ROOT=${TRAVIS_ROOT}/charm/multicore-linux64
                 ;;
         esac
         echo "CHARMTOP=$CHARM_ROOT" >> common/make.defs
@@ -980,7 +1037,7 @@ case "$PRK_TARGET" in
         ;;
     allfgmpi)
         echo "Fine-Grain MPI (FG-MPI)"
-        export FGMPI_ROOT=$TRAVIS_ROOT/fgmpi
+        export FGMPI_ROOT=${TRAVIS_ROOT}/fgmpi
         echo "FGMPITOP=$FGMPI_ROOT\nFGMPICC=$FGMPI_ROOT/bin/mpicc -std=c99" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=FG_MPI
@@ -1004,11 +1061,11 @@ case "$PRK_TARGET" in
     allgrappa)
         echo "Grappa"
         ########################
-        #. $TRAVIS_ROOT/grappa/bin/settings.sh
-        export GRAPPA_PREFIX=$TRAVIS_ROOT/grappa
-        export SCRIPT_PATH=$TRAVIS_ROOT/grappa/bin
+        #. ${TRAVIS_ROOT}/grappa/bin/settings.sh
+        export GRAPPA_PREFIX=${TRAVIS_ROOT}/grappa
+        export SCRIPT_PATH=${TRAVIS_ROOT}/grappa/bin
         ########################
-        echo "GRAPPATOP=$TRAVIS_ROOT/grappa" >> common/make.defs
+        echo "GRAPPATOP=${TRAVIS_ROOT}/grappa" >> common/make.defs
         make $PRK_TARGET
         export PRK_TARGET_PATH=GRAPPA
         export PRK_MPI_PROCS=2
@@ -1031,7 +1088,7 @@ case "$PRK_TARGET" in
         ;;
     alllegion)
         echo "Legion"
-        echo "LEGIONTOP=$TRAVIS_ROOT/legion" > common/make.defs
+        echo "LEGIONTOP=${TRAVIS_ROOT}/legion" > common/make.defs
         make $PRK_TARGET -k
         ;;
 esac
