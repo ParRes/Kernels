@@ -67,7 +67,7 @@ program main
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
-  integer(kind=INT32) ::  it, jt, tile_size
+  !integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp         ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
@@ -102,16 +102,16 @@ program main
   endif
 
   ! same default as the C implementation
-  tile_size = 32
-  if (command_argument_count().gt.2) then
-      call get_command_argument(3,argtmp,arglen,err)
-      if (err.eq.0) read(argtmp,'(i32)') tile_size
-  endif
-  if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
-                           ' must be >= 1 and <= ',order
-    tile_size = order ! no tiling
-  endif
+  !tile_size = 32
+  !if (command_argument_count().gt.2) then
+  !    call get_command_argument(3,argtmp,arglen,err)
+  !    if (err.eq.0) read(argtmp,'(i32)') tile_size
+  !endif
+  !if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
+  !  write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
+  !                         ' must be >= 1 and <= ',order
+  !  tile_size = order ! no tiling
+  !endif
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix

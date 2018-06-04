@@ -62,6 +62,7 @@
 !
 ! *******************************************************************
 
+#ifndef _OPENMP
 function prk_get_wtime() result(t)
   use iso_fortran_env
   implicit none
@@ -70,6 +71,7 @@ function prk_get_wtime() result(t)
   call system_clock(count = c, count_rate = r)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
+#endif
 
 program main
   use iso_fortran_env
@@ -77,7 +79,9 @@ program main
   use omp_lib
 #endif
   implicit none
+#ifndef _OPENMP
   real(kind=REAL64) :: prk_get_wtime
+#endif
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -288,7 +292,7 @@ program main
   else
     write(*,'(a17)') 'Solution validates'
     avgtime = nstream_time/iterations;
-    bytes = 4.0 * int(length,INT64) * storage_size(A)/8
+    bytes = 4 * int(length,INT64) * storage_size(A)/8
     write(*,'(a12,f15.3,1x,a12,e15.6)')    &
         'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
         'Avg time (s): ', avgtime
