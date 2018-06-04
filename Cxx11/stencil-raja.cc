@@ -62,15 +62,15 @@
 
 #include "prk_util.h"
 #include "prk_raja.h"
-#include "stencil_raja.hpp"
+#include "stencil_rajaview.hpp"
 
-void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
+void nothing(const int n, const int t, matrix & in, matrix & out)
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
     std::cout << "and add it to the case-switch in the driver." << std::endl;
     // n will never be zero - this is to silence compiler warnings.
-    if (n==0 || t==0) std::cout << in.size() << out.size() << std::endl;
+    //if (n==0 || t==0) std::cout << in.size() << out.size() << std::endl;
     std::abort();
 }
 
@@ -165,24 +165,26 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
-  std::vector<double> in(n*n);
-  std::vector<double> out(n*n);
+  double * RESTRICT imem = new double[n*n];
+  double * RESTRICT omem = new double[n*n];
 
-#if 0
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-          ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
-            [&](RAJA::Index_type i, RAJA::Index_type j) {
-      in[i*n+j] = static_cast<double>(i+j);
-      out[i*n+j] = 0.0;
+  RAJA::View<double, RAJA::Layout<2>> in(imem, n, n);
+  RAJA::View<double, RAJA::Layout<2>> out(omem, n, n);
+
+  using regular_policy = RAJA::KernelPolicy< RAJA::statement::For<0, thread_exec,
+                                             RAJA::statement::For<1, RAJA::simd_exec,
+                                             RAJA::statement::Lambda<0> > > >;
+  using permute_policy = RAJA::KernelPolicy< RAJA::statement::For<1, thread_exec,
+                                             RAJA::statement::For<0, RAJA::simd_exec,
+                                             RAJA::statement::Lambda<0> > > >;
+
+  RAJA::RangeSegment range(0, n);
+  auto grid = RAJA::make_tuple(range, range);
+
+  RAJA::kernel<regular_policy>(grid, [=](int i, int j) {
+      in(i,j)  = static_cast<double>(i+j);
+      out(i,j) = 0.0;
   });
-#else
-  RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type i) {
-    RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type j) {
-      in[i*n+j] = static_cast<double>(i+j);
-      out[i*n+j] = 0.0;
-    });
-  });
-#endif
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -190,19 +192,9 @@ int main(int argc, char* argv[])
     // Apply the stencil operator
     stencil(n, tile_size, in, out);
     // Add constant to solution to force refresh of neighbor data, if any
-#if 0
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-        in[i*n+j] += 1.0;
+    RAJA::kernel<regular_policy>(grid, [=](int i, int j) {
+        in(i,j) += 1.0;
     });
-#else
-    RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type j) {
-        in[i*n+j] += 1.0;
-      });
-    });
-#endif
   }
 
   stencil_time = prk::wtime() - stencil_time;
@@ -225,7 +217,7 @@ int main(int argc, char* argv[])
 #endif
           ( RAJA::RangeSegment(radius,n-radius), RAJA::RangeSegment(radius,n-radius),
             [&](RAJA::Index_type i, RAJA::Index_type j) {
-      reduced_norm += std::fabs(out[i*n+j]);
+      reduced_norm += std::fabs(out(i,j));
   });
   double norm = reduced_norm / active_points;
 

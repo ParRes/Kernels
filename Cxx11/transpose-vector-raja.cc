@@ -270,7 +270,7 @@ int main(int argc, char * argv[])
   std::cout << "RAJA use simd         = " << (use_simd ? "yes" : "no") << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
   std::vector<double> A(order*order);
@@ -421,9 +421,9 @@ int main(int argc, char * argv[])
   }
 #endif
 
-  auto trans_time = 0.0;
+  double trans_time(0);
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
@@ -598,17 +598,16 @@ int main(int argc, char * argv[])
   }
 #endif
 
-
 #ifdef VERBOSE
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  const auto epsilon = 1.0e-8;
+  double epsilon(1.0e-8);
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
     auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
+    std::cout << "Rate (MB/s): " << 1.0e-6 * (2.*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "ERROR: Aggregate squared error " << abserr

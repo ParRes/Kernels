@@ -40,8 +40,7 @@ esac
 ${PRK_CXX} -v
 
 if [ ! -d "$TRAVIS_ROOT/raja" ]; then
-    #BRANCH=develop # forallN deprecated
-    BRANCH=master
+    BRANCH=develop
     git clone --recursive --depth 1 -b ${BRANCH} https://github.com/LLNL/RAJA.git
     cd RAJA
     mkdir build

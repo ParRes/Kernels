@@ -592,11 +592,17 @@ case "$PRK_TARGET" in
                 ;;
         esac
         # RAJA
-        make -C $PRK_TARGET_PATH stencil-vector-raja transpose-vector-raja nstream-vector-raja
+        make -C $PRK_TARGET_PATH p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja \
+                                 p2p-raja stencil-raja transpose-raja nstream-raja
+        # New (Views)
+        $PRK_TARGET_PATH/p2p-raja                10 1024 1024
+        $PRK_TARGET_PATH/stencil-raja            10 1000
+        $PRK_TARGET_PATH/transpose-raja          10 1024
+        $PRK_TARGET_PATH/nstream-raja            10 16777216 32
+        # Old (STL)
+        $PRK_TARGET_PATH/p2p-vector-raja         10 1024 1024
         $PRK_TARGET_PATH/stencil-vector-raja     10 1000
-        # RAJA variant 11 should be the best
         $PRK_TARGET_PATH/transpose-vector-raja   10 1024
-        # test all the RAJA variants with a smaller problem
         for f in seq omp tbb ; do
          for s in y n ; do
           for t in y n ; do
@@ -612,6 +618,7 @@ case "$PRK_TARGET" in
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
                 $PRK_TARGET_PATH/stencil-vector-raja 10 200 20 $s $r
+                $PRK_TARGET_PATH/stencil-raja        10 200 20 $s $r
             done
         done
         # Kokkos

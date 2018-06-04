@@ -120,25 +120,31 @@ int main(int argc, char * argv[])
 
   double nstream_time(0);
 
-  std::vector<double> A(length);
-  std::vector<double> B(length);
-  std::vector<double> C(length);
+  double * RESTRICT Amem = new double[length];
+  double * RESTRICT Bmem = new double[length];
+  double * RESTRICT Cmem = new double[length];
+
+  RAJA::View<double, RAJA::Layout<1>> A(Amem, length);
+  RAJA::View<double, RAJA::Layout<1>> B(Bmem, length);
+  RAJA::View<double, RAJA::Layout<1>> C(Cmem, length);
+
+  RAJA::RangeSegment range(0, length);
 
   double scalar(3);
 
   {
-    RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
-        A[i] = 0.0;
-        B[i] = 2.0;
-        C[i] = 2.0;
+    RAJA::forall<thread_exec>(range, [=](RAJA::Index_type i) {
+        A(i) = 0.0;
+        B(i) = 2.0;
+        C(i) = 2.0;
     });
 
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
-          A[i] += B[i] + scalar * C[i];
+      RAJA::forall<thread_exec>(range, [=](RAJA::Index_type i) {
+          A(i) += B(i) + scalar * C(i);
       });
     }
     nstream_time = prk::wtime() - nstream_time;
@@ -159,7 +165,7 @@ int main(int argc, char * argv[])
 
   RAJA::ReduceSum<RAJA::seq_reduce, double> reduced_asum(0.0);
   RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
-      reduced_asum += std::fabs(A[i]);
+      reduced_asum += std::fabs(A(i));
   });
   double asum(reduced_asum);
 

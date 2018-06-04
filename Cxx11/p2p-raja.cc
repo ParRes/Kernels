@@ -118,57 +118,43 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  std::vector<double> grid(m*n,0.0);
+  double * RESTRICT Amem = new double[m*n];
+  matrix grid(Amem, m, n);
 
+  for (int i=0; i<m; i++) {
+    for (int j=0; j<n; j++) {
+      grid(i,j) = 0.0;
+    }
+  }
   // set boundary values (bottom and left side of grid)
-  for (auto j=0; j<n; j++) {
-    grid[0*n+j] = static_cast<double>(j);
+  for (int j=0; j<n; j++) {
+    grid(0,j) = static_cast<double>(j);
   }
-  for (auto i=0; i<m; i++) {
-    grid[i*n+0] = static_cast<double>(i);
+  for (int i=0; i<m; i++) {
+    grid(i,0) = static_cast<double>(i);
   }
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) pipeline_time = prk::wtime();
 
-#if 0
-    RAJA::Layout<2> index_converter(n, m);
-    RAJA::IndexSet p2p_indexset{};
-    RAJA::computeIndexSet(p2p_indexset); // I guess I need to implement this
-    // add one segment, probably a RangeStrideSegment, per anti diagonal
-    // that gives out an index to directly access grid, rather than an i,j pair
-    RAJA::forall<RAJA::IndexSet::ExecPolicy<RAJA::omp_parallel_exec<RAJA::seq_exec>,RAJA::omp_for_exec>(p2p_indexset,
-        [=](RAJA::Index_type in) {
-
-        // Option 1: use a layout to get indices back
-        RAJA::Index_type i,j;
-        RAJA::index_converter.toIndices(in, i, j);
-        grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-        // Option 2: use indices directly
-        //grid[in] = grid[in - n] + grid[in - 1] - grid[in - n - 1];
-    });
-#else
-    for (auto j=1; j<n; j++) {
-      RAJA::forall<thread_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
+    for (int j=1; j<n; j++) {
+      RAJA::RangeSegment range(1, j+1);
+      RAJA::forall<thread_exec>(range, [=](RAJA::Index_type i) {
         auto x = i;
         auto y = j-i+1;
-        grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+        grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1);
       });
     }
-    for (auto j=n-2; j>=1; j--) {
-      RAJA::forall<thread_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
+    for (int j=n-2; j>=1; j--) {
+      RAJA::RangeSegment range(1, j+1);
+      RAJA::forall<thread_exec>(range, [=](RAJA::Index_type i) {
         auto x = n+i-j-1;
         auto y = n-i;
-        grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+        grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1);
       });
     }
-#endif
-
-    // copy top right corner value to bottom left corner to create dependency; we
-    // need a barrier to make sure the latest value is used. This also guarantees
-    // that the flags for the next iteration (if any) are not getting clobbered
-    grid[0*n+0] = -grid[(m-1)*n+(n-1)];
+    grid(0,0) = -grid(m-1,n-1);
   }
 
   pipeline_time = prk::wtime() - pipeline_time;
@@ -179,8 +165,8 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
-    std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
+  if ( (std::fabs(grid(m-1,n-1) - corner_val)/corner_val) > epsilon) {
+    std::cout << "ERROR: checksum " << grid(m-1,n-1)
               << " does not match verification value " << corner_val << std::endl;
     return 1;
   }
