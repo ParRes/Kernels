@@ -57,7 +57,7 @@ case "$PRK_TARGET" in
             sh ./travis/install-gcc.sh $TRAVIS_ROOT
         fi
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
-            sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
+            sh ./travis/install-clang.sh $TRAVIS_ROOT
         fi
         sh ./travis/install-tbb.sh $TRAVIS_ROOT
         sh ./travis/install-pstl.sh $TRAVIS_ROOT

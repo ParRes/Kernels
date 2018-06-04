@@ -265,9 +265,9 @@ case "$PRK_TARGET" in
         case $CXX in
             g++)
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "x$PRK_CXX" = "x" ] ; then
-                  for version in "-9" "-8" "-7" "-6" "-5" "" ; do
+                  for version in "9" "8" "7" "6" "5" "" ; do
                     if [ -f "`which /usr/local/opt/gcc@${version}/bin/g++-${version}`" ]; then
-                        export PRK_CXX="`which /usr/local/opt/llvm@${version}/bin/clang++`"
+                        export PRK_CXX="`which /usr/local/opt/gcc@${version}/bin/g++-${version}`"
                         echo "Found C++: $PRK_CXX"
                         break
                     fi
@@ -289,16 +289,16 @@ case "$PRK_TARGET" in
             clang++)
                 # Homebrew does not always place the best/latest Clang/LLVM in the default path
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "x$PRK_CXX" = "x" ] ; then
-                  for version in "" "4.1" "4" "4.0" "-3.9" "-3.8" "-3.7" "-3.6" ; do
-                    if [ -f "`which /usr/local/opt/llvm@${version}/bin/clang++`" ]; then
-                        export PRK_CXX="`which /usr/local/opt/llvm@${version}/bin/clang++`"
+                  for version in "" "@6" "@5" "@4" ; do
+                    if [ -f "`which /usr/local/opt/llvm${version}/bin/clang++`" ]; then
+                        export PRK_CXX="`which /usr/local/opt/llvm${version}/bin/clang++`"
                         echo "Found C++: $PRK_CXX"
                         break
                     fi
                   done
                 fi
                 if [ "x$PRK_CXX" = "x" ] ; then
-                  for version in "-5" "-4.1" "-4" "-4.0" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
+                  for version in "-6" "-5" "-4.1" "-4" "-4.0" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
                     if [ -f "`which ${CXX}${version}`" ]; then
                         export PRK_CXX="${CXX}${version}"
                         echo "Found C++: $PRK_CXX"
@@ -392,20 +392,37 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024 64
                 ;;
             clang)
-                # Host
-                echo "Skipping Clang since OpenMP support probably missing"
-                #echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                #make -C $PRK_TARGET_PATH openmp
-                #$PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
-                #$PRK_TARGET_PATH/stencil-vector-openmp            10 1000
-                #$PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
-                #$PRK_TARGET_PATH/nstream-vector-openmp            10 16777216 32
-                #echo "Test stencil code generator"
-                #for s in star grid ; do
-                #    for r in 1 2 3 4 5 ; do
-                #        $PRK_TARGET_PATH/stencil-vector-openmp 10 200 20 $s $r
-                #    done
-                #done
+                if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+                    # Host
+                    echo "OPENMPFLAG=-fopenmp" >> common/make.defs
+                    make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-hyperplane-vector-openmp stencil-vector-openmp \
+                                             transpose-vector-openmp nstream-vector-openmp
+                    $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
+                    $PRK_TARGET_PATH/p2p-hyperplane-vector-openmp     10 1024
+                    $PRK_TARGET_PATH/p2p-hyperplane-vector-openmp     10 1024 64
+                    $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
+                    $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
+                    $PRK_TARGET_PATH/nstream-vector-openmp            10 16777216 32
+                    #echo "Test stencil code generator"
+                    for s in star grid ; do
+                        for r in 1 2 3 4 5 ; do
+                            $PRK_TARGET_PATH/stencil-vector-openmp 10 200 20 $s $r
+                        done
+                    done
+                    # Offload
+                    #echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
+                    #make -C $PRK_TARGET_PATH target
+                    #$PRK_TARGET_PATH/stencil-openmp-target     10 1000
+                    #$PRK_TARGET_PATH/transpose-openmp-target   10 1024 32
+                    ##echo "Test stencil code generator"
+                    #for s in star grid ; do
+                    #    for r in 1 2 3 4 5 ; do
+                    #        $PRK_TARGET_PATH/stencil-vector-openmp 10 200 20 $s $r
+                    #    done
+                    #done
+                else
+                    echo "Skipping Clang since OpenMP support probably missing"
+                fi
                 ;;
             icc)
                 # Host
