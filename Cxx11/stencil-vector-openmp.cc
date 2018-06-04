@@ -204,22 +204,17 @@ int main(int argc, char* argv[])
       // Apply the stencil operator
       stencil(n, tile_size, in, out);
       // Add constant to solution to force refresh of neighbor data, if any
-#ifdef _OPENMP
       OMP_FOR( collapse(2) )
       for (auto it=0; it<n; it+=tile_size) {
         for (auto jt=0; jt<n; jt+=tile_size) {
           for (auto i=it; i<std::min(n,it+tile_size); i++) {
-            OMP_SIMD
+            PRAGMA_SIMD
             for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
               in[i*n+j] += 1.0;
             }
           }
         }
       }
-
-#else
-      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
-#endif
     }
     OMP_BARRIER
     OMP_MASTER

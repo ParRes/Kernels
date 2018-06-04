@@ -186,7 +186,7 @@ int main(int argc, char * argv[])
 
   const auto forder = static_cast<double>(order);
   const auto reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
-  const auto checksum = prk_reduce(C.begin(), C.end(), 0.0);
+  const auto checksum = prk::reduce(C.begin(), C.end(), 0.0);
 
   const auto epsilon = 1.0e-8;
   const auto residuum = std::abs(checksum-reference)/reference;

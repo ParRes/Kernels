@@ -4,7 +4,7 @@
 #
 # Base compilers and language options
 #
-VERSION=-7
+VERSION=-8
 # C99 is required in some implementations.
 CC=gcc${VERSION} -std=c11 -pthread
 #EXTRA_CLIBS=-lrt
@@ -18,17 +18,20 @@ CXX=g++${VERSION} -std=gnu++17 -pthread
 # -mtune=native is appropriate for most cases.
 # -march=native is appropriate if you want portable binaries.
 DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
-#
+#DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math -fsanitize=undefined,leak
+#DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math -fsanitize=address
+#DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math -fsanitize=thread
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -march=knl
 # See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
 #
-DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
+#DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
 DEFAULT_OPT_FLAGS+=-Wall
 #
 # OpenMP flags
 #
 OPENMPFLAG=-fopenmp
+OPENMPSIMDFLAG=-fopenmp-simd
 OFFLOADFLAG=-foffload="-O3 -v"
 ORNLACCFLAG=-fopenacc
 #
@@ -45,12 +48,17 @@ OPENCLFLAG=-framework OpenCL
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 SYCLDIR=./triSYCL
-SYCLCXX=${CXX}
-SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+SYCLCXX=${CXX} -std=c++17 ${OPENMPFLAG}
+SYCLFLAG=-I$(SYCLDIR)/include
+# ProGTX
+# https://github.com/ProGTX/sycl-gtx
+#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
+#SYCLCXX=${CXX} ${OPENMPFLAG}
+#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # OCCA
 #
-OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
 #
 # Cilk
 #
@@ -58,17 +66,21 @@ CILKFLAG=-fcilkplus
 #
 # TBB
 #
-TBBDIR=/usr/local/Cellar/tbb/2018_U2
+TBBDIR=/usr/local/Cellar/tbb/2018_U3_1
 TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
-PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include
+BOOSTFLAG=-I/usr/local/Cellar/boost/1.65.1/include
+#RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include ${RANGEFLAG}
 KOKKOSDIR=/opt/kokkos/gcc
-KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
 RAJADIR=/opt/raja/gcc
-RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+THRUSTDIR=/Users/jrhammon/Work/NVIDIA/thrust
+THRUSTFLAG=-I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
 #
 # CBLAS for C++ DGEMM
 #
@@ -77,10 +89,10 @@ CBLASFLAG=-DACCELERATE -framework Accelerate
 # CUDA flags
 #
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
-NVCC=/opt/llvm/cocl/bin/cocl
+#NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-#NVCC=nvcc
-CUDAFLAGS=-g -O3 -std=c++11
+NVCC=nvcc
+CUDAFLAGS=-g -O3 -std=c++11 -arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #

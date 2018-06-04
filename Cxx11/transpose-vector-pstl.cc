@@ -50,6 +50,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_pstl.h"
 
 // See ParallelSTL.md for important information.
 
@@ -105,7 +106,7 @@ int main(int argc, char * argv[])
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 
-  auto range = boost::irange(0,order);
+  auto range = prk::range(0,order);
 
   auto trans_time = 0.0;
 
@@ -115,8 +116,8 @@ int main(int argc, char * argv[])
 
     // transpose
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
-  std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( pstl::execution::unseq, std::begin(range), std::end(range), [&] (int j) {
+  std::for_each( exec::par, std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( exec::unseq, std::begin(range), std::end(range), [&] (int j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
   __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {

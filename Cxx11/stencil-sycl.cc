@@ -60,48 +60,22 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#include "CL/sycl.hpp"
+
 #include "prk_util.h"
 #include "stencil_sycl.hpp"
 
-void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double, 2> d_in, cl::sycl::buffer<double, 2> d_out)
+#if USE_2D_INDEXING
+void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double, 2> & d_in, cl::sycl::buffer<double, 2> & d_out)
+#else
+void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double> & d_in, cl::sycl::buffer<double> & d_out)
+#endif
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
     std::cout << "and add it to the case-switch in the driver." << std::endl;
     std::abort();
 }
-
-#if 0
-void star2(cl::sycl::queue & q, const size_t n,
-           cl::sycl::buffer<double, 2> d_in,
-           cl::sycl::buffer<double, 2> d_out)
-{
-   q.submit([&](cl::sycl::handler& h) {
-
-     // accessor methods
-     auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-     auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
-
-     // Apply the stencil operator
-     h.parallel_for<class star2>(cl::sycl::range<2> {n-4, n-4}, cl::sycl::id<2> {2, 2},
-                                 [=] (cl::sycl::item<2> it) {
-         cl::sycl::id<2> xy = it.get_id();
-         cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
-         cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
-         cl::sycl::id<2> dx2(cl::sycl::range<2> {2,0});
-         cl::sycl::id<2> dy2(cl::sycl::range<2> {0,2});
-         out[xy] += +in[xy-dx1] * -0.25
-                    +in[xy+dx1] *  0.25
-                    +in[xy-dy1] * -0.25
-                    +in[xy+dy1] *  0.25
-                    +in[xy-dx2] * -0.125
-                    +in[xy+dx2] *  0.125
-                    +in[xy-dy2] * -0.125
-                    +in[xy+dy2] *  0.125;
-     });
-   });
-}
-#endif
 
 int main(int argc, char* argv[])
 {
@@ -113,12 +87,12 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t n;
-  size_t radius = 2;
+  size_t n, tile_size;
   bool star = true;
+  size_t radius = 2;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <array dimension>";
+        throw "Usage: <# iterations> <array dimension> [<tile size> <star/grid> <stencil radius>]";
       }
 
       // number of times to run the algorithm
@@ -135,7 +109,6 @@ int main(int argc, char* argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-#if 0
       // default tile size for tiling of local transpose
       tile_size = 32;
       if (argc > 3) {
@@ -143,7 +116,6 @@ int main(int argc, char* argv[])
           if (tile_size <= 0) tile_size = n;
           if (tile_size > n) tile_size = n;
       }
-#endif
 
       // stencil pattern
       if (argc > 4) {
@@ -181,18 +153,18 @@ int main(int argc, char* argv[])
           case 4: stencil = star4; break;
           case 5: stencil = star5; break;
       }
-  } else {
+  }
+#if 0
+  else {
       switch (radius) {
-          //case 1: stencil = grid1; break;
-          //case 2: stencil = grid2; break;
-          //case 3: stencil = grid3; break;
-          //case 4: stencil = grid4; break;
-          //case 5: stencil = grid5; break;
+          case 1: stencil = grid1; break;
+          case 2: stencil = grid2; break;
+          case 3: stencil = grid3; break;
+          case 4: stencil = grid4; break;
+          case 5: stencil = grid5; break;
       }
   }
-
-  // SYCL device queue
-  cl::sycl::queue q;
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -200,52 +172,85 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
+  std::vector<double> h_in(n*n,0.0);
   std::vector<double> h_out(n*n,0.0);
 
+  // SYCL device queue
+  cl::sycl::queue q;
   {
     // initialize device buffers from host buffers
+#if USE_2D_INDEXING
     cl::sycl::buffer<double, 2> d_in  { cl::sycl::range<2> {n, n} };
     cl::sycl::buffer<double, 2> d_out { h_out.data(), cl::sycl::range<2> {n, n} };
+#else
+    // FIXME: if I don't initialize this buffer from host, the results are wrong.  Why?
+    //cl::sycl::buffer<double> d_in  { cl::sycl::range<1> {n*n} };
+    cl::sycl::buffer<double> d_in  { h_in.data(),  h_in.size() };
+    cl::sycl::buffer<double> d_out { h_out.data(), h_out.size() };
+#endif
 
     q.submit([&](cl::sycl::handler& h) {
 
       // accessor methods
       auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
 
-      // Add constant to solution to force refresh of neighbor data, if any
-      h.parallel_for<class init>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
-                                [=] (cl::sycl::item<2> it) {
+      h.parallel_for<class init>(cl::sycl::range<2> {n, n}, [=] (cl::sycl::item<2> it) {
+#if USE_2D_INDEXING
           cl::sycl::id<2> xy = it.get_id();
-          auto i = xy[0];
-          auto j = xy[1];
+          auto i = it[0];
+          auto j = it[1];
           in[xy] = static_cast<double>(i+j);
+#else
+          auto i = it[0];
+          auto j = it[1];
+          in[i*n+j] = static_cast<double>(i+j);
+#endif
       });
     });
     q.wait();
 
     for (auto iter = 0; iter<=iterations; iter++) {
-   
+
       if (iter==1) stencil_time = prk::wtime();
 
-      star2(q, n, d_in, d_out);
+      stencil(q, n, d_in, d_out);
+      // This is only necessary with triSYCL
+      q.wait();
 
       q.submit([&](cl::sycl::handler& h) {
 
         // accessor methods
         auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
-        auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
-       
+
         // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add>(cl::sycl::range<2> {n, n}, //cl::sycl::id<2> {0, 0},
+        h.parallel_for<class add>(cl::sycl::range<2> {n, n}, cl::sycl::id<2> {0, 0},
                                   [=] (cl::sycl::item<2> it) {
+#if USE_2D_INDEXING
             cl::sycl::id<2> xy = it.get_id();
             in[xy] += 1.0;
+#else
+#if 0 // This is noticeably slower :-(
+            auto i = it[0];
+            auto j = it[1];
+            in[i*n+j] += 1.0;
+#else
+            in[it[0]*n+it[1]] += 1.0;
+#endif
+#endif
         });
       });
       q.wait();
     }
     stencil_time = prk::wtime() - stencil_time;
   }
+
+#if 0
+  for (auto i=0; i<n; i++) {
+    for (auto j=0; j<n; j++) {
+        std::cerr << i << "," << j << "," << h_out[i*n+j] << "\n";
+    }
+  }
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.

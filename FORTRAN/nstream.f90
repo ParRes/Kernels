@@ -62,6 +62,7 @@
 !
 ! *******************************************************************
 
+#ifndef _OPENMP
 function prk_get_wtime() result(t)
   use iso_fortran_env
   implicit none
@@ -70,6 +71,7 @@ function prk_get_wtime() result(t)
   call system_clock(count = c, count_rate = r)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
+#endif
 
 program main
   use iso_fortran_env
@@ -77,7 +79,9 @@ program main
   use omp_lib
 #endif
   implicit none
+#ifndef _OPENMP
   real(kind=REAL64) :: prk_get_wtime
+#endif
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -141,11 +145,11 @@ program main
   endif
 
 #ifdef _OPENMP
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
+  write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
 #endif
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix length        = ', length
-  write(*,'(a,i8)') 'Offset               = ', offset
+  write(*,'(a,i12)') 'Number of iterations = ', iterations
+  write(*,'(a,i12)') 'Vector length        = ', length
+  write(*,'(a,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -183,13 +187,24 @@ program main
 #if defined(_OPENMP)
   !$omp do
   do i=1,length
-#else
-  do concurrent (i=1:length)
-#endif
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
+  !$omp end do
+#elif defined(PGI)
+  forall (i=1:length)
+    A(i) = 0
+    B(i) = 2
+    C(i) = 2
+  end forall
+#else
+  do concurrent (i=1:length)
+    A(i) = 0
+    B(i) = 2
+    C(i) = 2
+  enddo
+#endif
 
   ! need this because otherwise no barrier between initialization
   ! and iteration 0 (warmup), which will lead to incorrectness.
@@ -201,24 +216,35 @@ program main
 #ifdef _OPENMP
     !$omp barrier
     !$omp master
-#endif
-    t0 = prk_get_wtime()
-#ifdef _OPENMP
+    t0 = omp_get_wtime()
     !$omp end master
+#else
+    t0 = prk_get_wtime()
 #endif
     endif
 
 #if defined(_OPENMP)
     !$omp do
     do i=1,length
-#else
-    do concurrent (i=1:length)
-#endif
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
+    !$omp end do
+#elif defined(PGI)
+    forall (i=1:length)
+      A(i) = A(i) + B(i) + scalar * C(i)
+    end forall
+#else
+    do concurrent (i=1:length)
+      A(i) = A(i) + B(i) + scalar * C(i)
+    enddo
+#endif
   enddo ! iterations
 
+#ifdef _OPENMP
+  t1 = omp_get_wtime()
+#else
   t1 = prk_get_wtime()
+#endif
 
 #ifdef _OPENMP
   !$omp end parallel
@@ -241,16 +267,16 @@ program main
   ar = ar * length
 
   asum = 0
-#if defined(_OPENMP)
+#if defined(_OPENMP) || defined(PGI)
   !$omp parallel do reduction(+:asum)
   do i=1,length
-#else
-  do concurrent (i=1:length)
-#endif
     asum = asum + abs(A(i))
   enddo
-#ifdef _OPENMP
   !$omp end parallel do
+#else
+  do concurrent (i=1:length)
+    asum = asum + abs(A(i))
+  enddo
 #endif
 
   deallocate( C )
@@ -266,7 +292,7 @@ program main
   else
     write(*,'(a17)') 'Solution validates'
     avgtime = nstream_time/iterations;
-    bytes = 4.0 * int(length,INT64) * storage_size(A)/8
+    bytes = 4 * int(length,INT64) * storage_size(A)/8
     write(*,'(a12,f15.3,1x,a12,e15.6)')    &
         'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
         'Avg time (s): ', avgtime

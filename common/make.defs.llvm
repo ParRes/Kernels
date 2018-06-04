@@ -4,7 +4,7 @@
 #
 # Base compilers and language options
 #
-LLVM_ROOT=/usr/local/Cellar/llvm/5.0.0
+LLVM_ROOT=/usr/local/Cellar/llvm/6.0.0
 LLVM_PATH=${LLVM_ROOT}/bin/
 #LLVM_PATH=/opt/llvm/HEAD/bin/
 # C99 is required in some implementations.
@@ -34,8 +34,9 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
 # OpenMP flags
 #
 OPENMPFLAG=-fopenmp
+OPENMPSIMDFLAG=-fopenmp-simd
 OFFLOADFLAG=-fopenmp
-ORNLACCFLAG= # Flang does not support OpenACC
+#ORNLACCFLAG= # Flang does not support OpenACC
 # Klondike weirdness
 # OPENMPFLAG+=-L/opt/intel/compilers_and_libraries_2018.0.082/linux/compiler/lib/intel64_lin -liomp5
 # Mac weirdness
@@ -60,31 +61,50 @@ OPENCLFLAG=-framework OpenCL
 SYCLDIR=/opt/sycl/latest
 SYCLCXX=${SYCLDIR}/bin/compute++
 SYCLFLAG=-DUSE_SYCL -sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+SYCLFLAG+=-std=c++14
 # This makes a huge difference in e.g. nstream...
-SYCLFLAG+=-no-serial-memop
+#SYCLFLAG+=-no-serial-memop
+# CentOS7 and Ubuntu14 built for this
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+# PRK header rejects GCC4
+#SYCLFLAG+=--gcc-toolchain=/swtools/gcc/5.4.0
+# If not found automatically
+#SYCLFLAG+=${OPENCLFLAG}
+# NVIDIA target
+#SYCLFLAG+=-sycl-target ptx64
 #
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
-#SYCLDIR=./triSYCL
-#SYCLCXX=${CXX}
-#SYCLFLAG=-DUSE_SYCL -I$(SYCLDIR)/include
+SYCLDIR=./triSYCL
+SYCLCXX=${CXX} ${OPENMPFLAG}
+SYCLFLAG=-std=gnu++14 -I$(SYCLDIR)/include $(DEFAULT_OPT_FLAGS)
+# ProGTX
+# https://github.com/ProGTX/sycl-gtx
+#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
+#SYCLCXX=${CXX} ${OPENMPFLAG}
+#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # OCCA
+#
 OCCADIR=${HOME}/prk-repo/Cxx11/occa
 #
 # TBB
 #
-TBBDIR=/usr/local/Cellar/tbb/2018_U1
+TBBDIR=/usr/local/Cellar/tbb/2018_U3_1
 TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-DUSE_BOOST -I/usr/local/Cellar/boost/1.65.1/include
-PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include
+BOOSTFLAG=-I/usr/local/Cellar/boost/1.65.1/include
+#RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include ${RANGEFLAG}
 KOKKOSDIR=/opt/kokkos/clang
-KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
 RAJADIR=/opt/raja/clang
-RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+#THRUSTDIR=/opt/nvidia/thrust
+#THRUSTFLAG=-I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
 #
 # CBLAS for C++ DGEMM
 #
@@ -95,7 +115,7 @@ CBLASFLAG=-DACCELERATE -framework Accelerate
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
 NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-#NVCC=nvcc
+#NVCC=nvcc -arch=sm_50
 CUDAFLAGS=-g -O3 -std=c++11
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED

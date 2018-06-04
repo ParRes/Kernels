@@ -27,6 +27,8 @@ case "$os" in
                 brew upgrade mpich || brew install mpich || true
                 ;;
             openmpi)
+                brew upgrade gcc || brew install gcc || true
+                brew link --overwrite gcc || true
                 brew upgrade openmpi || brew install openmpi || true
                 ;;
             *)
