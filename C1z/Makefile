@@ -22,7 +22,7 @@ ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKFLAGS = $(CILKFLAG)
 ISPCFLAGS = $(ISPCFLAG)
 
-.PHONY: all clean serial thread openmp target taskloop cilk ispc
+.PHONY: all clean serial thread openmp target taskloop ispc # cilk
 
 EXTRA=
 ifeq ($(shell uname -s),Darwin)
