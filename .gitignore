@@ -251,6 +251,6 @@ FORTRAN/transpose-ornlacc
 FORTRAN/transpose-taskloop-openmp
 FORTRAN/transpose-tasks-openmp
 FORTRAN/transpose-ornlacc
-RUST/p2p
-RUST/stencil
-RUST/transpose
+RUST/p2p/Cargo.lock
+RUST/stencil/Cargo.lock
+RUST/transpose/Cargo.lock

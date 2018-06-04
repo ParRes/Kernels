@@ -100,11 +100,10 @@ case "$PRK_TARGET" in
         echo "Rust"
         which rustc
         rustc --version
-        make $PRK_TARGET
         export PRK_TARGET_PATH=RUST
-        ./$PRK_TARGET_PATH/p2p               10 100 100
-        ./$PRK_TARGET_PATH/stencil           10 100
-        ./$PRK_TARGET_PATH/transpose         10 100
+        cd $TRAVIS_HOME/$PRK_TARGET_PATH/p2p       && cargo run 10 100 100
+        cd $TRAVIS_HOME/$PRK_TARGET_PATH/stencil   && cargo run 10 100
+        cd $TRAVIS_HOME/$PRK_TARGET_PATH/transpose && cargo run 10 100
         ;;
     allc1z)
         echo "C1z"
