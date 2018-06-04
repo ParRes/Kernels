@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2018, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -50,15 +50,26 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_thrust.h"
+
+#if defined(MKL)
+#include <mkl.h>
+#ifdef MKL_ILP64
+#error Use the MKL library for 32-bit integers!
+#endif
+#elif defined(ACCELERATE)
+// The location of cblas.h is not in the system include path when -framework Accelerate is provided.
+#include <Accelerate/Accelerate.h>
+#else
+#include <cblas.h>
+#endif
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/Thrust Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/CBLAS Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -68,13 +79,11 @@ int main(int argc, char * argv[])
         throw "Usage: <# iterations> <matrix order>";
       }
 
-      // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
-      // order of a the matrix
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
@@ -87,46 +96,58 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
-
-  thrust::host_vector<double> A(order*order);
-  thrust::host_vector<double> B(order*order);
-  // fill A with the sequence 0 to order^2-1 as doubles
-  thrust::sequence(thrust::host, A.begin(), A.end() );
-  thrust::fill(thrust::host, B.begin(), B.end(), 0.0);
-
-  auto range = boost::irange(0,order);
 
   auto trans_time = 0.0;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order,0.0);
+  std::vector<double> T(order*order);
+  double one[1] = {1.0};
 
-    if (iter==1) trans_time = prk::wtime();
+  // fill A with the sequence 0 to order^2-1 as doubles
+  std::iota(A.begin(), A.end(), 0.0);
 
-    // transpose
-    thrust::for_each( thrust::host, std::begin(range), std::end(range), [&] (int i) {
-      thrust::for_each( thrust::host, std::begin(range), std::end(range), [&] (int j) {
-        B[i*order+j] += A[j*order+i];
-        A[j*order+i] += 1.0;
-      });
-    });
+  {
+    for (auto iter = 0; iter<=iterations; iter++) {
+
+      if (iter==1) trans_time = prk::wtime();
+
+      // T = transpose(A)
+#if defined(MKL)
+      mkl_domatcopy('R','T', order, order, 1.0, &(A[0]), order, &(T[0]), order);
+#elif defined(ACCELERATE)
+      vDSP_mtransD(&(A[0]), 1, &(T[0]), 1, order, order);
+#else
+#warning No CBLAS transpose extension available!
+      for (auto i=0;i<order; i++) {
+        for (auto j=0;j<order;j++) {
+          T2[i*order+j] = A[j*order+i];
+        }
+      }
+#endif
+      // B += T
+      cblas_daxpy(order*order, 1.0, &(T[0]), 1, &(B[0]), 1);
+      // A += 1
+      cblas_daxpy(order*order, 1.0, one, 0, &(A[0]), 1);
+    }
+    trans_time = prk::wtime() - trans_time;
   }
-  trans_time = prk::wtime() - trans_time;
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
-  for (auto i : range) {
-    for (auto j : range) {
+  double abserr(0);
+  // TODO: replace with std::generate, std::accumulate, or similar
+  for (auto j=0; j<order; j++) {
+    for (auto i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;

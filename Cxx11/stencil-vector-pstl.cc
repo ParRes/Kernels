@@ -61,6 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_pstl.h"
 // See ParallelSTL.md for important information.
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
 #include "stencil_pstl.hpp"

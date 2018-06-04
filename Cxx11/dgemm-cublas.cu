@@ -309,7 +309,7 @@ int main(int argc, char * argv[])
   const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
   double residuum(0);
   for (int b=0; b<matrices; ++b) {
-      const auto checksum = prk_reduce( &(h_c[b*order*order+0]), &(h_c[b*order*order+nelems]), 0.0);
+      const auto checksum = prk::reduce( &(h_c[b*order*order+0]), &(h_c[b*order*order+nelems]), 0.0);
       residuum += std::abs(checksum-reference)/reference;
   }
   residuum/=matrices;

@@ -112,6 +112,12 @@ C1z/transpose-openmp
 C1z/transpose-target
 C1z/transpose-taskloop
 C1z/transpose-ispc
+Cxx11/boost
+Cxx11/compute
+Cxx11/triSYCL
+Cxx11/occa
+Cxx11/pstl
+Cxx11/range-v3
 Cxx11/dgemm-vector
 Cxx11/dgemm-cblas
 Cxx11/dgemm-cublas
