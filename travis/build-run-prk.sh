@@ -101,9 +101,9 @@ case "$PRK_TARGET" in
         which rustc
         rustc --version
         export PRK_TARGET_PATH=RUST
-        cd $PRK_TARGET_PATH/p2p       && cargo run 10 100 100 && cd ..
-        cd $PRK_TARGET_PATH/stencil   && cargo run 10 100     && cd ..
-        cd $PRK_TARGET_PATH/transpose && cargo run 10 100     && cd ..
+        cd $TRAVIS_HOME/$PRK_TARGET_PATH/p2p       && cargo run 10 100 100
+        cd $TRAVIS_HOME/$PRK_TARGET_PATH/stencil   && cargo run 10 100
+        cd $TRAVIS_HOME/$PRK_TARGET_PATH/transpose && cargo run 10 100
         ;;
     allc1z)
         echo "C1z"
