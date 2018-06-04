@@ -304,7 +304,7 @@ program main
   if (residuum .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
     avgtime = dgemm_time/iterations
-    nflops = 2 * forder**3
+    nflops = 2 * int(order,INT64)**3
     write(*,'(a,f13.6,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
            ' Avg time (s): ', avgtime
   else
