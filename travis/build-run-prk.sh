@@ -1015,7 +1015,8 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=CHARM++
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
-        export PRK_LAUNCHER_ARGS="+p$PRK_CHARM_PROCS ++local"
+        #export PRK_LAUNCHER_ARGS="+p$PRK_CHARM_PROCS ++local"
+        export PRK_LAUNCHER_ARGS="+autoProvision"
         # For Charm++, the last argument is the overdecomposition factor -->               \|/
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       $PRK_LAUNCHER_ARGS 10 1024 1024  1
         $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     $PRK_LAUNCHER_ARGS 10 1000       1
