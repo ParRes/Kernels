@@ -1,4 +1,8 @@
-using regular_policy = RAJA::KernelPolicy< RAJA::statement::For<0, thread_exec,                                           RAJA::statement::For<1, RAJA::simd_exec,                                           RAJA::statement::Lambda<0> > > >;void star1(const int n, const int t, matrix & in, matrix & out) {
+using regular_policy = RAJA::KernelPolicy< RAJA::statement::For<0, thread_exec,
+                                           RAJA::statement::For<1, RAJA::simd_exec,
+                                           RAJA::statement::Lambda<0> > > >;
+
+void star1(const int n, const int t, matrix & in, matrix & out) {
     RAJA::RangeSegment inner1(1,n-1);
     auto inner2 = RAJA::make_tuple(inner1, inner1);
     RAJA::kernel<regular_policy>(inner2, [=](int i, int j) {

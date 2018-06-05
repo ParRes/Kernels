@@ -160,9 +160,9 @@ def main():
       if (model=='target'):
           src.write('#define RESTRICT __restrict__\n\n')
       if (model=='rajaview'):
-          src.write('using regular_policy = RAJA::KernelPolicy< RAJA::statement::For<0, thread_exec,')
-          src.write('                                           RAJA::statement::For<1, RAJA::simd_exec,')
-          src.write('                                           RAJA::statement::Lambda<0> > > >;')
+          src.write('using regular_policy = RAJA::KernelPolicy< RAJA::statement::For<0, thread_exec,\n')
+          src.write('                                           RAJA::statement::For<1, RAJA::simd_exec,\n')
+          src.write('                                           RAJA::statement::Lambda<0> > > >;\n\n')
       #  src.write('OMP( declare target )\n\n')
       for pattern in ['star','grid']:
         for r in range(1,6):
