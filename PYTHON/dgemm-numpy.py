@@ -51,9 +51,13 @@
 # *******************************************************************
 
 import sys
-#from timeit import default_timer as timer
-from time import process_time as timer
+print('Python version = ', str(sys.version_info.major)+'.'+str(sys.version_info.minor))
+if sys.version_info >= (3, 3):
+    from time import process_time as timer
+else:
+    from timeit import default_timer as timer
 import numpy
+print('Numpy version  = ', numpy.version.version)
 
 def main():
 
@@ -91,7 +95,8 @@ def main():
 
         if k<1: t0 = timer()
 
-        C += numpy.matmul(A,B)
+        #C += numpy.matmul(A,B) # requires Numpy 1.10 or later
+        C += numpy.dot(A,B)
 
     t1 = timer()
     dgemm_time = t1 - t0
