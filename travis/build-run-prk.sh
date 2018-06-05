@@ -916,7 +916,7 @@ case "$PRK_TARGET" in
         make allmpishm
         export PRK_TARGET_PATH=MPISHM
         export PRK_MPI_PROCS=4
-        export PRK_RUN="$PRK_RUN -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-}"
+        export PRK_RUN="$PRK_LAUNCHER -n $PRK_MPI_PROCS ${PRK_OVERSUBSCRIBE:-}"
         export PRK_MPISHM_RANKS=$(($PRK_MPI_PROCS/2))
         $PRK_RUN $PRK_TARGET_PATH/Synch_p2p/p2p                         10 1024 1024
         $PRK_RUN $PRK_TARGET_PATH/Stencil/stencil     $PRK_MPISHM_RANKS 10 1000
