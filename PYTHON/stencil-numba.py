@@ -63,6 +63,7 @@ else:
     from timeit import default_timer as timer
 from numba import jit
 import numpy
+print('Numpy version  = ', numpy.version.version)
 
 @jit
 def grid(n,r,W,A,B):

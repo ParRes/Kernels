@@ -60,6 +60,7 @@ if sys.version_info >= (3, 3):
 else:
     from timeit import default_timer as timer
 import numpy
+print('Numpy version  = ', numpy.version.version)
 
 def offset(i,j,lsize):
     return i+(j<<lsize)

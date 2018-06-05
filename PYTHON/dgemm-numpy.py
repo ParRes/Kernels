@@ -57,6 +57,7 @@ if sys.version_info >= (3, 3):
 else:
     from timeit import default_timer as timer
 import numpy
+print('Numpy version  = ', numpy.version.version)
 
 def main():
 
@@ -94,7 +95,8 @@ def main():
 
         if k<1: t0 = timer()
 
-        C += numpy.matmul(A,B)
+        #C += numpy.matmul(A,B) # requires Numpy 1.10 or later
+        C += numpy.dot(A,B)
 
     t1 = timer()
     dgemm_time = t1 - t0
