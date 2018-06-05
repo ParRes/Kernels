@@ -1015,8 +1015,11 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=CHARM++
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
-        #export PRK_LAUNCHER_ARGS="+p$PRK_CHARM_PROCS ++local"
-        export PRK_LAUNCHER_ARGS="+autoProvision +isomalloc_sync"
+        if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+            export PRK_LAUNCHER_ARGS="+autoProvision +isomalloc_sync"
+        else
+            export PRK_LAUNCHER_ARGS="+p$PRK_CHARM_PROCS ++local"
+        fi
         # For Charm++, the last argument is the overdecomposition factor -->               \|/
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       $PRK_LAUNCHER_ARGS 10 1024 1024  1
         $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     $PRK_LAUNCHER_ARGS 10 1000       1
@@ -1040,8 +1043,11 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=AMPI
         export PRK_CHARM_PROCS=4
         export PRK_LAUNCHER=$CHARM_ROOT/bin/charmrun
-        #export PRK_LAUNCHER_ARGS="+p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS +isomalloc_sync ++local"
-        export PRK_LAUNCHER_ARGS="+autoProvision +isomalloc_sync"
+        if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+            export PRK_LAUNCHER_ARGS="+autoProvision +isomalloc_sync"
+        else
+            export PRK_LAUNCHER_ARGS="+p$PRK_CHARM_PROCS +vp$PRK_CHARM_PROCS +isomalloc_sync ++local"
+        fi
         export PRK_LOAD_BALANCER_ARGS="+balancer RefineLB"
         $PRK_LAUNCHER $PRK_TARGET_PATH/Synch_p2p/p2p       $PRK_LAUNCHER_ARGS 10 1024 1024
         $PRK_LAUNCHER $PRK_TARGET_PATH/Stencil/stencil     $PRK_LAUNCHER_ARGS 10 1000
