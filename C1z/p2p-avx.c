@@ -74,8 +74,9 @@ void print_m256d(const char * label, __m256d r)
 
 static inline void sweep_tile(int startm, int endm,
                               int startn, int endn,
-                              int n, double grid[restrict])
+                              int n, double g[restrict])
 {
+#if 0
   const __m256d zero  = _mm256_setzero_pd();
   const __m256d ones  = _mm256_cmp_pd( _mm256_setzero_pd() , _mm256_setzero_pd() , _CMP_EQ_OQ);
   const __m256d el1   = _mm256_castsi256_pd( _mm256_set_epi8(0,0,0,0,0,0,0,0,
@@ -87,6 +88,7 @@ static inline void sweep_tile(int startm, int endm,
                                                              255,255,255,255,255,255,255,255,
                                                              255,255,255,255,255,255,255,255) );
   const __m256i mask  = _mm256_set_epi64x(0,0,0,-1);
+#endif
   for (int i=startm; i<endm; i++) {
     int j;
     for (j=startn; j<endn-3; j+=4) {
@@ -181,16 +183,16 @@ int main(int argc, char * argv[])
   }
 
   // grid dimensions
-  int m = atol(argv[2]);
-  int n = atol(argv[3]);
+  int m = atoi(argv[2]);
+  int n = atoi(argv[3]);
   if (m < 1 || n < 1) {
     printf("ERROR: grid dimensions must be positive: %d,%d\n", m, n);
     return 1;
   }
 
   // grid chunk dimensions
-  int mc = (argc > 4) ? atol(argv[4]) : m;
-  int nc = (argc > 5) ? atol(argv[5]) : n;
+  int mc = (argc > 4) ? atoi(argv[4]) : m;
+  int nc = (argc > 5) ? atoi(argv[5]) : n;
   if (mc < 1 || mc > m || nc < 1 || nc > n) {
     printf("WARNING: grid chunk dimensions invalid: %d,%d (ignoring)\n", mc, nc);
     mc = m;
