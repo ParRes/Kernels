@@ -18,7 +18,8 @@ ifeq ($(findstring musl,$(CC)),musl)
   CFLAGS += -DUSE_C11_THREADS
 endif
 
-ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm $(CFLAGS)
+#ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm $(CFLAGS)
+ASMFLAGS = -fverbose-asm $(CFLAGS)
 
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
