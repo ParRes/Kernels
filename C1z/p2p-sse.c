@@ -78,7 +78,7 @@ static inline void sweep_tile(int startm, int endm,
 {
   for (int i=startm; i<endm; i++) {
     for (int j=startn; j<endn; j++) {
-#if 0
+#if 1
       //grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
       //printf("(i,j)=(%d,%d)\n",i,j);
       __m128d c0 = _mm_load_pd( &( grid[(i-1)*n+(j-1)] ) ); // { grid[(i-1)*n+(j-1)] , grid[(i-1)*n+j] }
@@ -91,6 +91,7 @@ static inline void sweep_tile(int startm, int endm,
       //print_m128d("i1",i1);
       _mm_store_sd( &( grid[i*n+j] ) , i1 );                // grid[i*n+j] = { grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)] + grid[i*n+j] + grid[(i-1)*n+j] }
 #else
+      // SEGFAULT with GCC
       _mm_store_sd( &( grid[i*n+j] ) ,
                     _mm_hadd_pd(
                                  _mm_addsub_pd(
