@@ -74,7 +74,7 @@ void print_m256d(const char * label, __m256d r)
 
 static inline void sweep_tile(int startm, int endm,
                               int startn, int endn,
-                              int n, double g[])
+                              int n, double grid[restrict])
 {
   const __m256d zero  = _mm256_setzero_pd();
   const __m256d ones  = _mm256_cmp_pd( _mm256_setzero_pd() , _mm256_setzero_pd() , _CMP_EQ_OQ);
