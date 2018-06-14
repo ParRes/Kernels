@@ -74,29 +74,29 @@ void print_m128d(const char * label, __m128d r)
 
 static inline void sweep_tile(int startm, int endm,
                               int startn, int endn,
-                              int n, double grid[restrict])
+                              int n, double g[restrict])
 {
   for (int i=startm; i<endm; i++) {
     for (int j=startn; j<endn; j++) {
 #if 1
-      //grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
+      //g[i*n+j] = g[(i-1)*n+j] + g[i*n+(j-1)] - g[(i-1)*n+(j-1)];
+      __m128d c0 = _mm_load_pd( &( g[(i-1)*n+(j-1)] ) ); // { g[(i-1)*n+(j-1)] , g[(i-1)*n+j] }
+      __m128d c1 = _mm_load_sd( &( g[  i  *n+(j-1)] ) ); // { g[  i  *n+(j-1)] , 0 }
+      __m128d i0 = _mm_addsub_pd( c1 , c0 );             // { g[i*n+(j-1)] - g[(i-1)*n+(j-1)] , g[i*n+j] + g[(i-1)*n+j] }
+      __m128d i1 = _mm_hadd_pd( i0 , _mm_setzero_pd() ); // { g[i*n+(j-1)] - g[(i-1)*n+(j-1)] + g[i*n+j] + g[(i-1)*n+j] , 0 }
+      _mm_store_sd( &( g[i*n+j] ) , i1 );                // g[i*n+j] = { g[i*n+(j-1)] - g[(i-1)*n+(j-1)] + g[i*n+j] + g[(i-1)*n+j] }
       //printf("(i,j)=(%d,%d)\n",i,j);
-      __m128d c0 = _mm_load_pd( &( grid[(i-1)*n+(j-1)] ) ); // { grid[(i-1)*n+(j-1)] , grid[(i-1)*n+j] }
       //print_m128d("c0",c0);
-      __m128d c1 = _mm_load_sd( &( grid[  i  *n+(j-1)] ) ); // { grid[  i  *n+(j-1)] , 0 }
       //print_m128d("c1",c1);
-      __m128d i0 = _mm_addsub_pd( c1 , c0 );                // { grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)] , grid[i*n+j] + grid[(i-1)*n+j] }
       //print_m128d("i0",i0);
-      __m128d i1 = _mm_hadd_pd( i0 , _mm_setzero_pd() );    // { grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)] + grid[i*n+j] + grid[(i-1)*n+j] , 0 }
       //print_m128d("i1",i1);
-      _mm_store_sd( &( grid[i*n+j] ) , i1 );                // grid[i*n+j] = { grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)] + grid[i*n+j] + grid[(i-1)*n+j] }
 #else
       // SEGFAULT with GCC
-      _mm_store_sd( &( grid[i*n+j] ) ,
+      _mm_store_sd( &( g[i*n+j] ) ,
                     _mm_hadd_pd(
                                  _mm_addsub_pd(
-                                                _mm_load_sd( &( grid[  i  *n+(j-1)] ) ) ,
-                                                _mm_load_pd( &( grid[(i-1)*n+(j-1)] ) )
+                                                _mm_load_sd( &( g[  i  *n+(j-1)] ) ) ,
+                                                _mm_load_pd( &( g[(i-1)*n+(j-1)] ) )
                                               ) ,
                                  _mm_setzero_pd()
                                )
