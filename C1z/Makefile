@@ -48,6 +48,8 @@ all: serial thread openmp taskloop $(EXTRA)
 
 serial: nstream p2p p2p-hyperplane stencil transpose
 
+vector: p2p-sse p2p-avx p2p-avx-tasks-openmp
+
 thread: transpose-thread
 
 openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp stencil-openmp transpose-openmp p2p-hyperplane-openmp
@@ -128,6 +130,7 @@ clean:
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
 	-rm -f nstream p2p p2p-hyperplane stencil transpose
+	-rm -f p2p-sse p2p-avx p2p-avx3 p2p-avx-tasks-openmp
 	-rm -f *-openmp
 	-rm -f *-mpi
 	-rm -f *-target
