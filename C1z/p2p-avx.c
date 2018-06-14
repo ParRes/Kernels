@@ -61,9 +61,8 @@
 
 #include "prk_util.h"
 
-#include "immintrin.h"
-
 #if 1
+#include "immintrin.h"
 void print_m256d(const char * label, __m256d r)
 {
   double d[4];
@@ -111,25 +110,16 @@ static inline void sweep_tile(int startm, int endm,
       __m256d i1 = _mm256_and_pd( i0 , el12 );              // { g[ i ][j-1] - g[i-1][j-1] , g[ i ][ j ] + g[i-1][ j ] , 0 , 0 }
       __m256d i2 = _mm256_hadd_pd( i1 , zero );             // { g[ i ][j-1] - g[i-1][j-1] + g[ i ][ j ] + g[i-1][ j ] , .. }
       _mm256_maskstore_pd( &( g[i*n+j] ) , mask, i2 );      // g[i][j] = { g[i][j-1] - g[i-1][j-1] + g[i][j] + g[i-1][j] }
-#elif 0
-      // NO UNROLLING
-      double c0[4] = { g[(i-1)*n+(j-1)] , g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] };
-      double c1[4] = { g[  i  *n+(j-1)] , g[  i  *n+(j+0)] , g[  i  *n+(j+1)] , g[  i  *n+(j+2)] };
-      double j1[4] = { c1[0] , 0 , 0 , 0 };
-      double i0[4] = { j1[0] - c0[0] , j1[1] + c0[1] , j1[2] - c0[2] , j1[3] + c0[3] };
-      double i1[4] = { i0[0] , i0[1] , 0 , 0 };
-      double i2[4] = { i1[0] + i1[1] , 0 , i1[2] + i1[3] , 0 };
-      g[i*n+j] = i2[0];
 #elif 1
       // WORKS
-      double c0s[4] = { g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] }; // shifted
-      double c0r[4] = { g[(i-1)*n+(j-1)] , g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] }; // regular
-      double i0[4]  = { c0s[0] - c0r[0] , c0s[1] - c0r[1] ,c0s[2] - c0r[2] ,c0s[3] - c0r[3] }; // subtract
+      double c0r[4] = { g[(i-1)*n+(j-1)] , g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] }; // regular
+      double c0s[4] = { g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] , g[(i-1)*n+(j+3)] }; // shifted
       double c1[4]  = { g[  i  *n+(j-1)] , g[  i  *n+(j+0)] , g[  i  *n+(j+1)] , g[  i  *n+(j+2)] }; // regular
+      double i0[4]  = { c0s[0] - c0r[0] , c0s[1] - c0r[1] , c0s[2] - c0r[2] , c0s[3] - c0r[3] }; // subtract
       double i1[4]  = { c1[0] + i0[0] , 0 , 0 };        // add first element
       double i2[4]  = { 0 , i1[0] , 0 , 0 };            // shift right
       double i3[4]  = { 0 , i2[1] + i0[1] , 0 , 0 };    // add second element
-      double i4[4]  = { 0 , 0 , i3[2] , 0 };            // shift right
+      double i4[4]  = { 0 , 0 , i3[1] , 0 };            // shift right
       double i5[4]  = { 0 , 0 , i4[2] + i0[2] , 0 };    // add third element
       double i6[4]  = { 0 , 0 , 0 , i5[2] };            // shift right
       double i7[4]  = { 0 , 0 , 0 , i6[3] + i0[3] };    // add fourth element
@@ -137,20 +127,18 @@ static inline void sweep_tile(int startm, int endm,
       g[i*n+j+1] = i3[1];
       g[i*n+j+2] = i5[2];
       g[i*n+j+3] = i7[3];
-      //printf("g[%d][%d]=%f\n",i,j+0,g[i*n+j+0]);
-      //printf("g[%d][%d]=%f\n",i,j+1,g[i*n+j+1]);
-      //printf("g[%d][%d]=%f\n",i,j+2,g[i*n+j+2]);
-      //printf("g[%d][%d]=%f\n",i,j+3,g[i*n+j+3]);
 #else
-      // WORKS
-      g[i*n+j] = g[i*n+j-1] + g[(i-1)*n+j] - g[(i-1)*n+j-1];
-      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
-      g[i*n+j+1] = g[i*n+j] + g[(i-1)*n+j+1] - g[(i-1)*n+j];
-      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
+      // REFERENCE
+      g[i*n+j+0] = g[i*n+j-1] + g[(i-1)*n+j+0] - g[(i-1)*n+j-1];
+      g[i*n+j+1] = g[i*n+j+0] + g[(i-1)*n+j+1] - g[(i-1)*n+j+0];
       g[i*n+j+2] = g[i*n+j+1] + g[(i-1)*n+j+2] - g[(i-1)*n+j+1];
-      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
       g[i*n+j+3] = g[i*n+j+2] + g[(i-1)*n+j+3] - g[(i-1)*n+j+2];
-      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
+#endif
+#ifdef VERBOSE
+      printf("g[%d][%d]=%f\n",i,j+0,g[i*n+j+0]);
+      printf("g[%d][%d]=%f\n",i,j+1,g[i*n+j+1]);
+      printf("g[%d][%d]=%f\n",i,j+2,g[i*n+j+2]);
+      printf("g[%d][%d]=%f\n",i,j+3,g[i*n+j+3]);
 #endif
     }
     for (int jj=j; j<endn; j++) {
@@ -242,6 +230,11 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
+
+  if ( isnan(grid[(m-1)*n+(n-1)]) || isinf(grid[(m-1)*n+(n-1)]) ) {
+    printf("ERROR: solution is NaN or Inf!!!! (%lf)\n", grid[(m-1)*n+(n-1)]);
+    return 1;
+  }
 
   const double epsilon = 1.e-8;
   const double corner_val = ((iterations+1.)*(n+m-2.));
