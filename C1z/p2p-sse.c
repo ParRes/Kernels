@@ -59,6 +59,10 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#ifndef __SSE3__
+#error Your compiler does not support SSE3!  Use -msse3 or equivalent.
+#endif
+
 #include "prk_util.h"
 
 #include "immintrin.h"

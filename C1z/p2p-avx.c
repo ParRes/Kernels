@@ -59,6 +59,10 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#ifndef __AVX__
+#error Your compiler does not support AVX!  Use -mavx or equivalent.
+#endif
+
 #include "prk_util.h"
 
 #if 1
