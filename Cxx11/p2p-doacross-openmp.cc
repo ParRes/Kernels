@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  std::vector<double> grid(m*n);;
+  double * RESTRICT grid = new double[m*n];
 
   OMP_PARALLEL()
   {
