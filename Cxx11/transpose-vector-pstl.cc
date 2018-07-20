@@ -58,9 +58,9 @@ int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
 #if defined(USE_PSTL)
-  std::cout << "C++17 Parallel STL Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++17/PSTL Matrix transpose: B = A^T" << std::endl;
 #else
-  std::cout << "C++11 STL Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/STL Matrix transpose: B = A^T" << std::endl;
 #endif
 
   //////////////////////////////////////////////////////////////////////
@@ -93,8 +93,8 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
