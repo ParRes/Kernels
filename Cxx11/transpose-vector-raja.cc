@@ -260,14 +260,14 @@ int main(int argc, char * argv[])
   if (use_for=="tbb")    for_name = "TBB (static)";
   if (use_for=="tbbdyn") for_name = "TBB (dynamic)";
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Tile size             = " << tile_size << "(compile-time constant, unlike other impls)" << std::endl;
-  std::cout << "RAJA threading        = " << for_name << std::endl;
-  std::cout << "RAJA forallN          = " << (use_nested ? "yes" : "no") << std::endl;
-  std::cout << "RAJA use tiling       = " << (use_tiled ? "yes" : "no") << std::endl;
-  std::cout << "RAJA use permute      = " << use_permute << std::endl;
-  std::cout << "RAJA use simd         = " << (use_simd ? "yes" : "no") << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Tile size            = " << tile_size << "(compile-time constant, unlike other impls)" << std::endl;
+  std::cout << "RAJA threading       = " << for_name << std::endl;
+  std::cout << "RAJA forallN         = " << (use_nested ? "yes" : "no") << std::endl;
+  std::cout << "RAJA use tiling      = " << (use_tiled ? "yes" : "no") << std::endl;
+  std::cout << "RAJA use permute     = " << use_permute << std::endl;
+  std::cout << "RAJA use simd        = " << (use_simd ? "yes" : "no") << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
