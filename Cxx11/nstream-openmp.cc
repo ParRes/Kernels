@@ -117,9 +117,9 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A(length);
-  std::vector<double> B(length);
-  std::vector<double> C(length);
+  double * RESTRICT A = new double[length];
+  double * RESTRICT B = new double[length];
+  double * RESTRICT C = new double[length];
 
   double scalar = 3.0;
 

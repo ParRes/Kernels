@@ -359,18 +359,18 @@ case "$PRK_TARGET" in
             gcc)
                 # Host
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-hyperplane-vector-openmp stencil-vector-openmp \
-                                         transpose-vector-openmp nstream-vector-openmp
+                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp \
+                                         transpose-openmp nstream-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-hyperplane-vector-openmp     10 1024
-                $PRK_TARGET_PATH/p2p-hyperplane-vector-openmp     10 1024 64
-                $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
-                $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
-                $PRK_TARGET_PATH/nstream-vector-openmp            10 16777216 32
+                $PRK_TARGET_PATH/p2p-hyperplane-openmp     10 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-openmp     10 1024 64
+                $PRK_TARGET_PATH/stencil-openmp            10 1000
+                $PRK_TARGET_PATH/transpose-openmp          10 1024 32
+                $PRK_TARGET_PATH/nstream-openmp            10 16777216 32
                 #echo "Test stencil code generator"
                 for s in star grid ; do
                     for r in 1 2 3 4 5 ; do
-                        $PRK_TARGET_PATH/stencil-vector-openmp 10 200 20 $s $r
+                        $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
                     done
                 done
                 # Offload
@@ -381,7 +381,7 @@ case "$PRK_TARGET" in
                 #echo "Test stencil code generator"
                 for s in star grid ; do
                     for r in 1 2 3 4 5 ; do
-                        $PRK_TARGET_PATH/stencil-vector-openmp 10 200 20 $s $r
+                        $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
                     done
                 done
                 # ORNL-ACC
@@ -394,18 +394,18 @@ case "$PRK_TARGET" in
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
                     # Host
                     echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                    make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-hyperplane-vector-openmp stencil-vector-openmp \
-                                             transpose-vector-openmp nstream-vector-openmp
+                    make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp \
+                                             transpose-openmp nstream-openmp
                     $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
-                    $PRK_TARGET_PATH/p2p-hyperplane-vector-openmp     10 1024
-                    $PRK_TARGET_PATH/p2p-hyperplane-vector-openmp     10 1024 64
-                    $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
-                    $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
-                    $PRK_TARGET_PATH/nstream-vector-openmp            10 16777216 32
+                    $PRK_TARGET_PATH/p2p-hyperplane-openmp     10 1024
+                    $PRK_TARGET_PATH/p2p-hyperplane-openmp     10 1024 64
+                    $PRK_TARGET_PATH/stencil-openmp            10 1000
+                    $PRK_TARGET_PATH/transpose-openmp          10 1024 32
+                    $PRK_TARGET_PATH/nstream-openmp            10 16777216 32
                     #echo "Test stencil code generator"
                     for s in star grid ; do
                         for r in 1 2 3 4 5 ; do
-                            $PRK_TARGET_PATH/stencil-vector-openmp 10 200 20 $s $r
+                            $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
                         done
                     done
                     # Offload
@@ -416,7 +416,7 @@ case "$PRK_TARGET" in
                     ##echo "Test stencil code generator"
                     #for s in star grid ; do
                     #    for r in 1 2 3 4 5 ; do
-                    #        $PRK_TARGET_PATH/stencil-vector-openmp 10 200 20 $s $r
+                    #        $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
                     #    done
                     #done
                 else
@@ -426,17 +426,17 @@ case "$PRK_TARGET" in
             icc)
                 # Host
                 echo "OPENMPFLAG=-qopenmp" >> common/make.defs
-                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-vector-openmp \
-                                         transpose-vector-openmp nstream-vector-openmp
+                make -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp \
+                                         transpose-openmp nstream-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
                 $PRK_TARGET_PATH/p2p-innerloop-openmp             10 1024 1024
-                $PRK_TARGET_PATH/stencil-vector-openmp            10 1000
-                $PRK_TARGET_PATH/transpose-vector-openmp          10 1024 32
-                $PRK_TARGET_PATH/nstream-vector-openmp            10 16777216 32
+                $PRK_TARGET_PATH/stencil-openmp            10 1000
+                $PRK_TARGET_PATH/transpose-openmp          10 1024 32
+                $PRK_TARGET_PATH/nstream-openmp            10 16777216 32
                 #echo "Test stencil code generator"
                 for s in star grid ; do
                     for r in 1 2 3 4 5 ; do
-                        $PRK_TARGET_PATH/stencil-vector-openmp 10 200 20 $s $r
+                        $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
                     done
                 done
                 # Offload - not supported on MacOS

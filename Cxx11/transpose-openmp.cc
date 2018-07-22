@@ -112,8 +112,8 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  std::vector<double> A(order*order);
-  std::vector<double> B(order*order);
+  double * RESTRICT A = new double[order*order];
+  double * RESTRICT B = new double[order*order];
 
   OMP_PARALLEL()
   {
