@@ -1,4 +1,4 @@
-void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star1(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {
     OMP_FOR(collapse(2))
     for (auto it=1; it<n-1; it+=t) {
       for (auto jt=1; jt<n-1; jt+=t) {
@@ -15,7 +15,7 @@ void star1(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star2(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {
     OMP_FOR(collapse(2))
     for (auto it=2; it<n-2; it+=t) {
       for (auto jt=2; jt<n-2; jt+=t) {
@@ -36,7 +36,7 @@ void star2(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star3(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {
     OMP_FOR(collapse(2))
     for (auto it=3; it<n-3; it+=t) {
       for (auto jt=3; jt<n-3; jt+=t) {
@@ -61,7 +61,7 @@ void star3(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star4(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {
     OMP_FOR(collapse(2))
     for (auto it=4; it<n-4; it+=t) {
       for (auto jt=4; jt<n-4; jt+=t) {
@@ -90,7 +90,7 @@ void star4(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star5(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {
     OMP_FOR(collapse(2))
     for (auto it=5; it<n-5; it+=t) {
       for (auto jt=5; jt<n-5; jt+=t) {
@@ -123,7 +123,7 @@ void star5(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid1(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {
     OMP_FOR(collapse(2))
     for (auto it=1; it<n-1; it+=t) {
       for (auto jt=1; jt<n-1; jt+=t) {
@@ -143,7 +143,7 @@ void grid1(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid2(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {
     OMP_FOR(collapse(2))
     for (auto it=2; it<n-2; it+=t) {
       for (auto jt=2; jt<n-2; jt+=t) {
@@ -177,7 +177,7 @@ void grid2(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid3(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {
     OMP_FOR(collapse(2))
     for (auto it=3; it<n-3; it+=t) {
       for (auto jt=3; jt<n-3; jt+=t) {
@@ -233,7 +233,7 @@ void grid3(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid4(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {
     OMP_FOR(collapse(2))
     for (auto it=4; it<n-4; it+=t) {
       for (auto jt=4; jt<n-4; jt+=t) {
@@ -319,7 +319,7 @@ void grid4(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid5(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {
     OMP_FOR(collapse(2))
     for (auto it=5; it<n-5; it+=t) {
       for (auto jt=5; jt<n-5; jt+=t) {

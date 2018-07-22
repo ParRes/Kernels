@@ -254,3 +254,8 @@ FORTRAN/transpose-ornlacc
 RUST/p2p/Cargo.lock
 RUST/stencil/Cargo.lock
 RUST/transpose/Cargo.lock
+nstream-openmp
+p2p-doacross-openmp
+p2p-hyperplane-openmp
+stencil-openmp
+transpose-openmp
