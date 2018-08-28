@@ -151,22 +151,22 @@ function main()
     if pattern == "star"
         stencil_size = 4*r+1
         for i=1:r
-            W[r+1,r+i+1] = +1./(2*i*r)
-            W[r+i+1,r+1] = +1./(2*i*r)
-            W[r+1,r-i+1] = -1./(2*i*r)
-            W[r-i+1,r+1] = -1./(2*i*r)
+            W[r+1,r+i+1] =  1.0/(2*i*r)
+            W[r+i+1,r+1] =  1.0/(2*i*r)
+            W[r+1,r-i+1] = -1.0/(2*i*r)
+            W[r-i+1,r+1] = -1.0/(2*i*r)
         end
     else
         stencil_size = (2*r+1)^2
         for j=1:r
             for i=-j+1:j-1
-                W[r+i+1,r+j+1] = +1./(4*j*(2*j-1)*r)
-                W[r+i+1,r-j+1] = -1./(4*j*(2*j-1)*r)
-                W[r+j+1,r+i+1] = +1./(4*j*(2*j-1)*r)
-                W[r-j+1,r+i+1] = -1./(4*j*(2*j-1)*r)
+                W[r+i+1,r+j+1] =  1.0/(4*j*(2*j-1)*r)
+                W[r+i+1,r-j+1] = -1.0/(4*j*(2*j-1)*r)
+                W[r+j+1,r+i+1] =  1.0/(4*j*(2*j-1)*r)
+                W[r-j+1,r+i+1] = -1.0/(4*j*(2*j-1)*r)
             end
-            W[r+j+1,r+j+1]    = +1./(4*j*r)
-            W[r-j+1,r-j+1]    = -1./(4*j*r)
+            W[r+j+1,r+j+1]    =  1.0/(4*j*r)
+            W[r-j+1,r-j+1]    = -1.0/(4*j*r)
         end
     end
 
