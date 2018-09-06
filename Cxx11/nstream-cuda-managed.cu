@@ -87,6 +87,7 @@ int main(int argc, char * argv[])
   int iterations, offset;
   int length;
   enum { timed, untimed, none } prefetch;
+  std::string prefetch_name;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length> [<offset>] [<prefetch={timed,untimed,none}>]";
@@ -108,15 +109,22 @@ int main(int argc, char * argv[])
       }
 
       prefetch = none;
+#if 0
       auto prefetch_s = std::string(argv[4]);
       auto timed_s = std::string("grid");
       auto untimed_s = std::string("grid");
       auto none_s = std::string("grid");
       if (prefetch_s == timed_s) {
           prefetch = timed;
+          prefetch_name = "timed";
       } else if (prefetch_s == untimed_s) {
           prefetch = untimed;
+          prefetch_name = "untimed";
+      } else {
+          prefetch = none;
+          prefetch_name = "none";
       }
+#endif
 
   }
   catch (const char * e) {
@@ -127,6 +135,7 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
+  std::cout << "Prefetch             = " << prefetch_name << std::endl;
 
   const int blockSize = 128;
   dim3 dimBlock(blockSize, 1, 1);
@@ -160,35 +169,13 @@ int main(int argc, char * argv[])
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1 && prefetch==untimed) {
-        int gpu_id = 0;
-        cudaMemPrefetchAsync(d_A, bytes, gpu_id);
-        cudaMemPrefetchAsync(d_B, bytes, gpu_id);
-        cudaMemPrefetchAsync(d_C, bytes, gpu_id);
-      }
-
       if (iter==1) nstream_time = prk::wtime();
-
-      if (iter==1 && prefetch==timed) {
-        int gpu_id = 0;
-        cudaMemPrefetchAsync(d_A, bytes, gpu_id);
-        cudaMemPrefetchAsync(d_B, bytes, gpu_id);
-        cudaMemPrefetchAsync(d_C, bytes, gpu_id);
-      }
 
       nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
       prk::CUDA::check( cudaDeviceSynchronize() );
     }
 
-    if (prefetch==timed) {
-      cudaMemPrefetchAsync(d_A, bytes, cudaCpuDeviceId);
-    }
-
     nstream_time = prk::wtime() - nstream_time;
-
-    if (prefetch==untimed) {
-      cudaMemPrefetchAsync(d_A, bytes, cudaCpuDeviceId);
-    }
   }
 
   prk::CUDA::check( cudaFree(d_C) );
