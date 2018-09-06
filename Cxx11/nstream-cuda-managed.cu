@@ -86,9 +86,10 @@ int main(int argc, char * argv[])
 
   int iterations, offset;
   int length;
+  enum { timed, untimed, none } prefetch;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>]";
+        throw "Usage: <# iterations> <vector length> [<offset>] [<prefetch={timed,untimed,none}>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -105,6 +106,18 @@ int main(int argc, char * argv[])
       if (length <= 0) {
         throw "ERROR: offset must be nonnegative";
       }
+
+      prefetch = none;
+      auto prefetch_s = std::string(argv[4]);
+      auto timed_s = std::string("grid");
+      auto untimed_s = std::string("grid");
+      auto none_s = std::string("grid");
+      if (prefetch_s == timed_s) {
+          prefetch = timed;
+      } else if (prefetch_s == untimed_s) {
+          prefetch = untimed;
+      }
+
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -128,59 +141,58 @@ int main(int argc, char * argv[])
   double nstream_time(0);
 
   const size_t bytes = length * sizeof(prk_float);
-  prk_float * h_A;
-  prk_float * h_B;
-  prk_float * h_C;
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
-#else
-  h_A = new prk_float[length];
-  h_B = new prk_float[length];
-  h_C = new prk_float[length];
-#endif
-  for (auto i=0; i<length; ++i) {
-    h_A[i] = static_cast<prk_float>(0);
-    h_B[i] = static_cast<prk_float>(2);
-    h_C[i] = static_cast<prk_float>(2);
-  }
 
   prk_float * d_A;
   prk_float * d_B;
   prk_float * d_C;
-  prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::CUDA::check( cudaMallocManaged((void**)&d_A, bytes) );
+  prk::CUDA::check( cudaMallocManaged((void**)&d_B, bytes) );
+  prk::CUDA::check( cudaMallocManaged((void**)&d_C, bytes) );
+
+  // initialize on CPU to ensure pages are faulted there
+  for (auto i=0; i<length; ++i) {
+    d_A[i] = static_cast<prk_float>(0);
+    d_B[i] = static_cast<prk_float>(2);
+    d_C[i] = static_cast<prk_float>(2);
+  }
 
   prk_float scalar(3);
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
+      if (iter==1 && prefetch==untimed) {
+        int gpu_id = 0;
+        cudaMemPrefetchAsync(d_A, bytes, gpu_id);
+        cudaMemPrefetchAsync(d_B, bytes, gpu_id);
+        cudaMemPrefetchAsync(d_C, bytes, gpu_id);
+      }
+
       if (iter==1) nstream_time = prk::wtime();
 
-      nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
-#ifndef __CORIANDERCC__
-      // silence "ignoring cudaDeviceSynchronize for now" warning
-      prk::CUDA::check( cudaDeviceSynchronize() );
-#endif
-    }
-    nstream_time = prk::wtime() - nstream_time;
-  }
+      if (iter==1 && prefetch==timed) {
+        int gpu_id = 0;
+        cudaMemPrefetchAsync(d_A, bytes, gpu_id);
+        cudaMemPrefetchAsync(d_B, bytes, gpu_id);
+        cudaMemPrefetchAsync(d_C, bytes, gpu_id);
+      }
 
-  prk::CUDA::check( cudaMemcpy(&(h_A[0]), d_A, bytes, cudaMemcpyDeviceToHost) );
+      nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+      prk::CUDA::check( cudaDeviceSynchronize() );
+    }
+
+    if (prefetch==timed) {
+      cudaMemPrefetchAsync(d_A, bytes, cudaCpuDeviceId);
+    }
+
+    nstream_time = prk::wtime() - nstream_time;
+
+    if (prefetch==untimed) {
+      cudaMemPrefetchAsync(d_A, bytes, cudaCpuDeviceId);
+    }
+  }
 
   prk::CUDA::check( cudaFree(d_C) );
   prk::CUDA::check( cudaFree(d_B) );
-  prk::CUDA::check( cudaFree(d_A) );
-
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_B) );
-  prk::CUDA::check( cudaFreeHost(h_C) );
-#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -197,12 +209,10 @@ int main(int argc, char * argv[])
 
   double asum(0);
   for (auto i=0; i<length; i++) {
-      asum += std::fabs(h_A[i]);
+      asum += std::fabs(d_A[i]);
   }
 
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_A) );
-#endif
+  prk::CUDA::check( cudaFree(d_A) );
 
   double epsilon=1.e-8;
   if (std::fabs(ar-asum)/asum > epsilon) {

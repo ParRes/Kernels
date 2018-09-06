@@ -116,7 +116,7 @@ kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja \
       p2p-raja stencil-raja transpose-raja nstream-raja
 
-cuda: stencil-cuda transpose-cuda nstream-cuda
+cuda: stencil-cuda transpose-cuda nstream-cuda nstream-cuda-managed
 
 thrust: nstream-host-thrust nstream-device-thrust \
         transpose-host-thrust transpose-device-thrust
@@ -191,6 +191,9 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< $(THRUSTFLAGS) -o $@
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
+
+%-cuda-managed: %-cuda-managed.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
