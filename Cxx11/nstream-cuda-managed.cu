@@ -81,8 +81,9 @@ __global__ void nstream2(const unsigned n, const prk_float scalar, prk_float * A
 
 __global__ void fault_pages(const unsigned n, prk_float * A, prk_float * B, prk_float * C)
 {
-    const unsigned inc = 4096/sizeof(prk_float);
-    for (unsigned int i = 0; i < n; i += inc) {
+    //const unsigned inc = 4096/sizeof(prk_float);
+    //for (unsigned int i = 0; i < n; i += inc) {
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
         A[i] = (prk_float)0;
         B[i] = (prk_float)2;
         C[i] = (prk_float)2;
@@ -124,8 +125,8 @@ int main(int argc, char * argv[])
         throw "ERROR: offset must be nonnegative";
       }
 
-      ordered_fault = prk::parse_boolean(std::string(argv[4]));
-      grid_stride   = prk::parse_boolean(std::string(argv[5]));
+      ordered_fault = (argc>4) ? prk::parse_boolean(std::string(argv[4])) : false;
+      grid_stride   = (argc>5) ? prk::parse_boolean(std::string(argv[5])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -135,10 +136,10 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
-  std::cout << "Ordered fault        = " << ordered_fault << std::endl;
-  std::cout << "Grid stride          = " << grid_stride   << std::endl;
+  std::cout << "Ordered fault        = " << (ordered_fault ? "yes" : "no") << std::endl;
+  std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
 
-  const int blockSize = 128;
+  const int blockSize = 256;
   dim3 dimBlock(blockSize, 1, 1);
   dim3 dimGrid(prk::divceil(length,blockSize), 1, 1);
 
@@ -166,13 +167,22 @@ int main(int argc, char * argv[])
     d_C[i] = static_cast<prk_float>(2);
   }
 
+  if (ordered_fault) {
+      fault_pages<<<1,1>>>(static_cast<unsigned>(length), d_A, d_B, d_C);
+      prk::CUDA::check( cudaDeviceSynchronize() );
+  }
+
   prk_float scalar(3);
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+      if (grid_stride) {
+          nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+      } else {
+          nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+      }
       prk::CUDA::check( cudaDeviceSynchronize() );
     }
 
