@@ -79,7 +79,7 @@ __global__ void nstream2(const unsigned n, const prk_float scalar, prk_float * A
     }
 }
 
-__global__ void fault_pages(const unsigned n, prk_float * A, const prk_float * B, const prk_float * C)
+__global__ void fault_pages(const unsigned n, prk_float * A, prk_float * B, prk_float * C)
 {
     const unsigned inc = 4096/sizeof(prk_float);
     for (unsigned int i = 0; i < n; i += inc) {
@@ -124,8 +124,8 @@ int main(int argc, char * argv[])
         throw "ERROR: offset must be nonnegative";
       }
 
-      ordered_fault = prk::parse_boolean(std::strng(argv[4]);
-      grid_stride   = prk::parse_boolean(std::strng(argv[4]);
+      ordered_fault = prk::parse_boolean(std::string(argv[4]));
+      grid_stride   = prk::parse_boolean(std::string(argv[5]));
   }
   catch (const char * e) {
     std::cout << e << std::endl;
