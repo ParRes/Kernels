@@ -72,6 +72,23 @@ __global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A,
     }
 }
 
+__global__ void nstream2(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
+{
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
+        A[i] += B[i] + scalar * C[i];
+    }
+}
+
+__global__ void fault_pages(const unsigned n, prk_float * A, const prk_float * B, const prk_float * C)
+{
+    const unsigned inc = 4096/sizeof(prk_float);
+    for (unsigned int i = 0; i < n; i += inc) {
+        A[i] = (prk_float)0;
+        B[i] = (prk_float)2;
+        C[i] = (prk_float)2;
+    }
+}
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -86,11 +103,10 @@ int main(int argc, char * argv[])
 
   int iterations, offset;
   int length;
-  enum { timed, untimed, none } prefetch;
-  std::string prefetch_name;
+  bool ordered_fault, grid_stride;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>] [<prefetch={timed,untimed,none}>]";
+        throw "Usage: <# iterations> <vector length> [<offset>] [<ordered_fault>] [<grid_stride>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -108,24 +124,8 @@ int main(int argc, char * argv[])
         throw "ERROR: offset must be nonnegative";
       }
 
-      prefetch = none;
-#if 0
-      auto prefetch_s = std::string(argv[4]);
-      auto timed_s = std::string("grid");
-      auto untimed_s = std::string("grid");
-      auto none_s = std::string("grid");
-      if (prefetch_s == timed_s) {
-          prefetch = timed;
-          prefetch_name = "timed";
-      } else if (prefetch_s == untimed_s) {
-          prefetch = untimed;
-          prefetch_name = "untimed";
-      } else {
-          prefetch = none;
-          prefetch_name = "none";
-      }
-#endif
-
+      ordered_fault = prk::parse_boolean(std::strng(argv[4]);
+      grid_stride   = prk::parse_boolean(std::strng(argv[4]);
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -135,7 +135,8 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
-  std::cout << "Prefetch             = " << prefetch_name << std::endl;
+  std::cout << "Ordered fault        = " << ordered_fault << std::endl;
+  std::cout << "Grid stride          = " << grid_stride   << std::endl;
 
   const int blockSize = 128;
   dim3 dimBlock(blockSize, 1, 1);

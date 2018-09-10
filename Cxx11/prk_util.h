@@ -113,6 +113,16 @@ namespace prk {
         return ( numerator / denominator + (numerator % denominator > 0) );
     }
 
+    bool parse_boolean(std::string & s)
+    {
+        if (s=="t" || s=="T" || s=="y" || s=="Y" || s=="1") {
+            return true;
+        } else {
+            return false;
+        }
+
+    }
+
 } // namespace prk
 
 #endif /* PRK_UTIL_H */
