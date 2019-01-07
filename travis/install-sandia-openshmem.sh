@@ -28,9 +28,9 @@ if [ ! -d "$SHMEM_ROOT" ]; then
     ../configure --with-libfabric=$TRAVIS_ROOT/libfabric \
                  --disable-fortran \
                  --enable-error-checking \
-                 --enable-remote-virtual-addressing \
                  --enable-pmi-simple \
                  --prefix=$SHMEM_ROOT
+                 #--enable-remote-virtual-addressing \
     make
     make check | true
     make install
