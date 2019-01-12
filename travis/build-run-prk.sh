@@ -591,6 +591,7 @@ case "$PRK_TARGET" in
                 ;;
         esac
         # RAJA
+        if [ 0 = 1 ] ; then
         make -C $PRK_TARGET_PATH p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja \
                                  p2p-raja stencil-raja transpose-raja nstream-raja
         # New (Views)
@@ -620,6 +621,7 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil-raja        10 200 20 $s $r
             done
         done
+        fi
         # Kokkos
         make -C $PRK_TARGET_PATH stencil-kokkos transpose-kokkos nstream-kokkos
         $PRK_TARGET_PATH/stencil-kokkos     10 1000
