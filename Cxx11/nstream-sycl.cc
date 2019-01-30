@@ -83,7 +83,7 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
   std::vector<T> h_B(length);
   std::vector<T> h_C(length);
 
-  auto range = boost::irange(static_cast<size_t>(0), length);
+  auto range = prk::range(static_cast<size_t>(0), length);
 
   const T scalar(3);
 
