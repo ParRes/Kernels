@@ -42,6 +42,7 @@ OPENCLFLAG=-framework OpenCL
 # Linux
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #
 # SYCL flags
 #
