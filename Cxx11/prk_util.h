@@ -76,6 +76,12 @@
 
 #define RESTRICT __restrict__
 
+#if (defined(__cplusplus) && (__cplusplus >= 201703L))
+#define PRK_UNUSED [[maybe_unused]]
+#else
+#define PRK_UNUSED
+#endif
+
 namespace prk {
 
     template<class I, class T>

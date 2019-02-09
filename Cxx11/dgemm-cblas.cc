@@ -73,6 +73,10 @@
 #include <cblas.h>
 #endif
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #ifdef PRK_DEBUG
 #include <random>
 void prk_dgemm_loops(const int order,
@@ -146,7 +150,7 @@ void prk_dgemm(const int order, const int batches,
     const double beta  = 1.0;
 
     const int group_count = 1;
-    const int group_size[group_count] = { batches };
+    PRK_UNUSED const int group_size[group_count] = { batches };
 
     const CBLAS_TRANSPOSE transa_array[group_count] = { CblasNoTrans };
     const CBLAS_TRANSPOSE transb_array[group_count] = { CblasNoTrans };
