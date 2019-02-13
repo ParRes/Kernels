@@ -93,7 +93,7 @@ void run(cl::Context context, int iterations, size_t length)
   std::vector<T> h_c(length, T(2));
 
   // copy input from host to device
-  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);
+  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), false);
   cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), true);
   cl::Buffer d_c = cl::Buffer(context, begin(h_c), end(h_c), true);
 
