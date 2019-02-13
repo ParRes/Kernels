@@ -85,8 +85,8 @@ void run(cl::Context context, int iterations, int order)
   std::iota(h_a.begin(), h_a.end(), (T)0);
 
   // copy input from host to device
-  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);
-  cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), true);
+  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), false);
+  cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), false);
 
   auto trans_time = 0.0;
 
