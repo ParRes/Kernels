@@ -80,7 +80,7 @@ const bool false=0;
 # define OMP_FOR_REDUCE(x) PRAGMA(omp for reduction (x) )
 # if (_OPENMP >= 201300)
 #  define OMP_SIMD PRAGMA(omp simd)
-#  define OMP_FOR_SIMD() PRAGMA(omp for simd x)
+#  define OMP_FOR_SIMD(x) PRAGMA(omp for simd x)
 #  define OMP_TASK(x) PRAGMA(omp task x)
 #  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
 #  define OMP_TASKWAIT PRAGMA(omp taskwait)
@@ -89,7 +89,7 @@ const bool false=0;
 # else
 #  warning No OpenMP 4+ features!
 #  define OMP_SIMD
-#  define OMP_FOR_SIMD() PRAGMA(omp for x)
+#  define OMP_FOR_SIMD(x) PRAGMA(omp for x)
 #  define OMP_TASK(x)
 #  define OMP_TASKLOOP(x)
 #  define OMP_TASKWAIT
@@ -105,7 +105,7 @@ const bool false=0;
 # define OMP_FOR(x)
 # define OMP_FOR_REDUCE(x)
 # define OMP_SIMD
-# define OMP_FOR_SIMD()
+# define OMP_FOR_SIMD(x)
 # define OMP_TASK(x)
 # define OMP_TASKLOOP(x)
 # define OMP_TASKWAIT
