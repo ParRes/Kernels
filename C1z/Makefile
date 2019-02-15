@@ -41,11 +41,11 @@ endif
 
 all: serial thread openmp taskloop $(EXTRA)
 
-serial: p2p p2p-innerloop stencil transpose
+serial: nstream p2p p2p-innerloop stencil transpose
 
 thread: transpose-thread
 
-openmp: p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
 target: stencil-target transpose-target
 
@@ -62,6 +62,9 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-taskloop: %-taskloop.c prk_util.h
+	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
+
+nstream-openmp: nstream.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-openmp: %-openmp.c prk_util.h
