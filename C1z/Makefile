@@ -10,6 +10,10 @@ ifdef VERBOSE
   CFLAGS += -DVERBOSE
 endif
 
+ifdef MMAP
+  CFLAGS += -DMMAP
+endif
+
 ifeq ($(findstring musl,$(CC)),musl)
   CFLAGS += -DUSE_C11_THREADS
 endif
@@ -95,7 +99,7 @@ clean:
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
-	-rm -f p2p p2p-innerloop stencil transpose
+	-rm -f nstream p2p p2p-innerloop stencil transpose
 	-rm -f *-openmp
 	-rm -f *-target
 	-rm -f *-taskloop
