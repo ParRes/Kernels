@@ -246,11 +246,48 @@ static inline int prk_get_alignment(void)
     return a;
 }
 
+#ifdef MMAP
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#endif
+
 void * prk_malloc(size_t bytes)
 {
     int alignment = prk_get_alignment();
 
-#if defined(__INTEL_COMPILER)
+#if defined(MMAP)
+
+    char mmap_path[255] = {0};
+    char * mmap_env = getenv("PRK_MMAP_PATH");
+    fprintf(stderr, "PRK_MMAP_PATH=%s\n", mmap_env);
+    if (mmap_env==NULL) {
+        strcpy(mmap_path, "/tmp/prk_mmap");
+    } else {
+        strcpy(mmap_path, mmap_env);
+    }
+
+    fprintf(stderr, "mmap_path=%s\n", mmap_path);
+    int fd = open(mmap_path, O_CREAT); // | O_DIRECT);
+    if (fd == -1) {
+        fprintf(stderr, "open returned %d\n", fd);
+        abort();
+    }
+
+    int flags = 0; //MAP_UNINITIALIZED; // | MAP_POPULATE
+    //flags |= MAP_HUGETLB | MAP_HUGE_2MB;
+    //flags |= MAP_SYNC;
+
+    off_t offset = bytes;
+    void * ptr = mmap(NULL, bytes, PROT_READ | PROT_WRITE, flags, fd, offset);
+    if (ptr==MAP_FAILED) {
+        fprintf(stderr, "mmap returned %p\n", ptr);
+        abort();
+    }
+    return ptr;
+
+#elif defined(__INTEL_COMPILER)
 
     return (void*)_mm_malloc( bytes, alignment);
 
@@ -291,7 +328,9 @@ void * prk_malloc(size_t bytes)
 
 static inline void prk_free(void * p)
 {
-#if defined(__INTEL_COMPILER)
+#if defined(MMAP)
+
+#elif defined(__INTEL_COMPILER)
     _mm_free(p);
 #else
     free(p);
