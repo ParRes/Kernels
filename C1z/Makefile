@@ -62,6 +62,9 @@ ispc: transpose-ispc
 p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
+%-mpi: %-mpi.c prk_util.h
+	$(MPICC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
 %-target: %-target.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) $(EXTRA_CLIBS) -o $@
 
