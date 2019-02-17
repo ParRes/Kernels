@@ -86,7 +86,7 @@ int main(int argc, char * argv[])
 
   if (argc < 3) {
     if (me==0) printf("Usage: <# iterations> <vector length>\n");
-    MPI_Abort(MPI_COMM_WORLD,1);
+    MPI_Finalize();
     return 1;
   }
 
@@ -94,24 +94,40 @@ int main(int argc, char * argv[])
   int iterations = atoi(argv[1]);
   if (iterations < 1) {
     if (me==0) printf("ERROR: iterations must be >= 1\n");
-    MPI_Abort(MPI_COMM_WORLD,1);
+    MPI_Finalize();
     return 1;
   }
 
   // length of a the matrix
-  int length = atoi(argv[2]);
+  size_t length = atol(argv[2]);
   if (length <= 0) {
     if (me==0) printf("ERROR: Matrix length must be greater than 0\n");
-    MPI_Abort(MPI_COMM_WORLD,1);
+    MPI_Finalize();
     return 1;
   }
 
   if (me==0) {
       printf("Number of processes  = %d\n", np);
       printf("Number of iterations = %d\n", iterations);
-      printf("Vector length        = %d\n", length);
+      printf("Vector length        = %zu\n", length);
       //printf("Offset               = %d\n", offset);
   }
+
+  size_t local_length;
+  if (length % np == 0) {
+      local_length = length / np;
+  } else {
+      double x = (double)length / np;
+      size_t y = (size_t)ceil(x);
+      if (me != (np-1)) {
+          local_length = y;
+      } else {
+          local_length = length - y*(np-1);
+      }
+  }
+  //printf("Vector length (%4d) = %zu\n", me, local_length);
+  fflush(stdout);
+  MPI_Barrier(MPI_COMM_WORLD);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -119,12 +135,13 @@ int main(int argc, char * argv[])
 
   double nstream_time = 0.0;
 
-  size_t bytes = length*sizeof(double);
-  double * restrict A = prk_malloc(bytes);
-  double * restrict B = prk_malloc(bytes);
-  double * restrict C = prk_malloc(bytes);
+  double * restrict A;
+  double * restrict B;
+  double * restrict C;
 
   MPI_Win wA, wB, wC;
+
+  size_t bytes = local_length*sizeof(double);
 
   MPI_Win_allocate_shared(bytes, sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void**)&A, &wA);
   MPI_Win_allocate_shared(bytes, sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void**)&B, &wB);
@@ -132,7 +149,7 @@ int main(int argc, char * argv[])
 
   double scalar = 3.0;
 
-  for (size_t i=0; i<length; i++) {
+  for (size_t i=0; i<local_length; i++) {
     A[i] = 0.0;
     B[i] = 2.0;
     C[i] = 2.0;
@@ -146,7 +163,7 @@ int main(int argc, char * argv[])
         nstream_time = MPI_Wtime();
     }
 
-    for (size_t i=0; i<length; i++) {
+    for (size_t i=0; i<local_length; i++) {
         A[i] += B[i] + scalar * C[i];
     }
   }
@@ -162,14 +179,14 @@ int main(int argc, char * argv[])
   double ar = 0.0;
   double br = 2.0;
   double cr = 2.0;
-  for (size_t i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
-  ar *= length;
+  ar *= local_length;
 
   double asum = 0.0;
-  for (size_t i=0; i<length; i++) {
+  for (size_t i=0; i<local_length; i++) {
       asum += fabs(A[i]);
   }
 
