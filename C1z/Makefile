@@ -51,6 +51,8 @@ thread: transpose-thread
 
 openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
 
+mpi: nstream-mpi
+
 target: stencil-target transpose-target
 
 taskloop: stencil-taskloop transpose-taskloop
@@ -104,6 +106,7 @@ clean:
 	-rm -rf *.dSYM # Mac
 	-rm -f nstream p2p p2p-innerloop stencil transpose
 	-rm -f *-openmp
+	-rm -f *-mpi
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-cilk
