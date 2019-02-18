@@ -77,7 +77,7 @@ int main(int argc, char * argv[])
 
   if (me==0) {
       printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
-      printf("C++11/MPI STREAM triad: A = B + scalar * C\n");
+      printf("C11/MPI STREAM triad: A = B + scalar * C\n");
   }
 
   //////////////////////////////////////////////////////////////////////
