@@ -69,9 +69,9 @@ int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
 #ifdef _OPENMP
-  printf("C++11/OpenMP STREAM triad: A = B + scalar * C\n");
+  printf("C11/OpenMP STREAM triad: A = B + scalar * C\n");
 #else
-  printf("C++11 STREAM triad: A = B + scalar * C\n");
+  printf("C11 STREAM triad: A = B + scalar * C\n");
 #endif
 
   //////////////////////////////////////////////////////////////////////
