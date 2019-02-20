@@ -38,13 +38,11 @@
 
 #define PRAGMA(x) _Pragma(#x)
 
-// All of this is to get posix_memalign defined...
-// #define _POSIX_C_SOURCE (200112L)
-#define _POSIX_C_SOURCE (200809L)
-#define _XOPEN_SOURCE 600
-
 #include <stdio.h>   // atoi
 #include <stdlib.h>  // getenv
+
+int posix_memalign(void **memptr, size_t alignment, size_t size);
+
 #include <stdint.h>
 #if defined(__PGIC__)
 typedef _Bool bool;

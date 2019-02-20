@@ -122,6 +122,7 @@ clean:
 	-rm -f *-cilk
 	-rm -f *-thread
 	-rm -f *-ispc
+	-rm -f nstream-mmap nstream-memkind
 
 cleancl:
 	-rm -f star[123456789].cl

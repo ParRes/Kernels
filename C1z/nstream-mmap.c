@@ -65,11 +65,11 @@
 
 #include "prk_util.h"
 
+#include <unistd.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
-#include <fcntl.h>
-#include <unistd.h>
 
 int main(int argc, char * argv[])
 {
@@ -147,15 +147,15 @@ int main(int argc, char * argv[])
   }
 
   int flags = 0;
-  //flags |= MAP_PRIVATE;
-  flags |= MAP_SHARED;
+  flags |= MAP_PRIVATE;
+  //flags |= MAP_SHARED;
   //flags |= MAP_POPULATE
   //flags |= MAP_UNINITIALIZED;
   //flags |= MAP_HUGETLB | MAP_HUGE_2MB;
   //flags |= MAP_SYNC;
 
   double * ptr = (double*)mmap(NULL, 3*bytes, PROT_READ | PROT_WRITE, flags, fd, 0);
-  //double * ptr = (double*)mmap(NULL, 3*bytes, PROT_READ | PROT_WRITE, flags | MAP_ANON, -1, 0);
+  //double * ptr = (double*)mmap(NULL, 3*bytes, PROT_READ | PROT_WRITE, flags | MAP_ANONYMOUS, -1, 0);
   if (ptr==MAP_FAILED || ptr==NULL) {
       fprintf(stderr, "mmap returned %p, errno=%d\n", ptr, errno);
       char error_name[255] = {0};
@@ -165,8 +165,8 @@ int main(int argc, char * argv[])
   }
 
   double * restrict A = &ptr[0];
-  double * restrict B = &ptr[bytes];
-  double * restrict C = &ptr[bytes*2];
+  double * restrict B = &ptr[length];
+  double * restrict C = &ptr[length*2];
 
   double scalar = 3.0;
 
