@@ -65,6 +65,12 @@
 
 #include "prk_util.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
@@ -111,9 +117,56 @@ int main(int argc, char * argv[])
   double nstream_time = 0.0;
 
   size_t bytes = length*sizeof(double);
-  double * restrict A = prk_malloc(bytes);
-  double * restrict B = prk_malloc(bytes);
-  double * restrict C = prk_malloc(bytes);
+
+  char mmap_path[255] = {0};
+  char * mmap_env = getenv("PRK_MMAP_PATH");
+  fprintf(stderr, "PRK_MMAP_PATH=%s\n", mmap_env);
+  if (mmap_env==NULL) {
+      strcpy(mmap_path, "/tmp/prk_mmap");
+  } else {
+      strcpy(mmap_path, mmap_env);
+  }
+
+  fprintf(stderr, "mmap_path=%s\n", mmap_path);
+  int fd = open(mmap_path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+  if (fd == -1) {
+      fprintf(stderr, "open returned %d\n", fd);
+      char error_name[255] = {0};
+      prk_lookup_posix_error(errno, error_name, 255);
+      printf("error name: %s\n", error_name);
+      abort();
+  }
+
+  int rc = ftruncate(fd, 3*bytes);
+  if (rc == -1) {
+      fprintf(stderr, "ftruncate returned %d\n", rc);
+      char error_name[255] = {0};
+      prk_lookup_posix_error(errno, error_name, 255);
+      printf("error name: %s\n", error_name);
+      abort();
+  }
+
+  int flags = 0;
+  //flags |= MAP_PRIVATE;
+  flags |= MAP_SHARED;
+  //flags |= MAP_POPULATE
+  //flags |= MAP_UNINITIALIZED;
+  //flags |= MAP_HUGETLB | MAP_HUGE_2MB;
+  //flags |= MAP_SYNC;
+
+  double * ptr = (double*)mmap(NULL, 3*bytes, PROT_READ | PROT_WRITE, flags, fd, 0);
+  //double * ptr = (double*)mmap(NULL, 3*bytes, PROT_READ | PROT_WRITE, flags | MAP_ANON, -1, 0);
+  if (ptr==MAP_FAILED || ptr==NULL) {
+      fprintf(stderr, "mmap returned %p, errno=%d\n", ptr, errno);
+      char error_name[255] = {0};
+      prk_lookup_posix_error(errno, error_name, 255);
+      printf("error name: %s\n", error_name);
+      abort();
+  }
+
+  double * restrict A = &ptr[0];
+  double * restrict B = &ptr[bytes];
+  double * restrict C = &ptr[bytes*2];
 
   double scalar = 3.0;
 
@@ -175,6 +228,15 @@ int main(int argc, char * argv[])
       double avgtime = nstream_time/iterations;
       double nbytes = 4.0 * length * sizeof(double);
       printf("Rate (MB/s): %lf Avg time (s): %lf\n", 1.e-6*nbytes/avgtime, avgtime);
+  }
+
+  int err = munmap(ptr, 3*bytes);
+  if (err) {
+      printf("munmap failed! (err=%d, errno=%d)\n", err, errno);
+  }
+  err = close(fd);
+  if (err) {
+      printf("close failed! (err=%d, errno=%d)\n", err, errno);
   }
 
   return 0;

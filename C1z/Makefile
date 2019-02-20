@@ -10,8 +10,8 @@ ifdef VERBOSE
   CFLAGS += -DVERBOSE
 endif
 
-ifdef MMAP
-  CFLAGS += -DMMAP
+ifdef PRK_USE_MMAP
+  CFLAGS += -DPRK_USE_MMAP
 endif
 
 ifeq ($(findstring musl,$(CC)),musl)
@@ -53,6 +53,10 @@ openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp ste
 
 mpi: nstream-mpi
 
+memkind: nstream-memkind
+
+mmap: nstream-mmap
+
 target: stencil-target transpose-target
 
 taskloop: stencil-taskloop transpose-taskloop
@@ -66,6 +70,12 @@ p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 
 %-mpi: %-mpi.c prk_util.h
 	$(MPICC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
+%-memkind: %-memkind.c prk_util.h
+	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) $(MEMKINDFLAGS) -o $@
+
+%-mmap: %-mmap.c prk_util.h
+	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 %-target: %-target.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) $(EXTRA_CLIBS) -o $@
