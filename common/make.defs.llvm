@@ -129,3 +129,6 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 #
 # We assume you have installed an implementation of MPI-3 that is in your path.
 MPICC=mpicc
+
+MEMKINDDIR=/home/parallels/PRK/deps
+MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib
