@@ -122,7 +122,7 @@ int main(int argc, char * argv[])
       pool_path = "/pmem";
   }
   printf("MEMKIND pool path = %s\n", pool_path);
-  memkind * memkind_handle;
+  struct memkind * memkind_handle;
   int err = memkind_create_pmem(pool_path, 3*bytes+MEMKIND_PMEM_MIN_SIZE, &memkind_handle);
   if (err) {
     printf("MEMKIND failed to create create a memory pool! (err=%d, errno=%d)\n", err, errno);
