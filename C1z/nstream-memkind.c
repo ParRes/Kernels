@@ -66,6 +66,9 @@
 #include "prk_util.h"
 
 #include <memkind.h>
+#ifndef MEMKIND_PMEM_MIN_SIZE
+# define MEMKIND_PMEM_MIN_SIZE (1024 * 1024 * 16)
+#endif
 
 int main(int argc, char * argv[])
 {
@@ -93,7 +96,7 @@ int main(int argc, char * argv[])
   }
 
   // length of a the matrix
-  int length = atoi(argv[2]);
+  size_t length = atol(argv[2]);
   if (length <= 0) {
     printf("ERROR: Matrix length must be greater than 0\n");
     return 1;
@@ -103,7 +106,7 @@ int main(int argc, char * argv[])
   printf("Number of threads    = %d\n", omp_get_max_threads());
 #endif
   printf("Number of iterations = %d\n", iterations);
-  printf("Vector length        = %d\n", length);
+  printf("Vector length        = %zu\n", length);
   //printf("Offset               = %d\n", offset);
 
   //////////////////////////////////////////////////////////////////////
@@ -116,18 +119,18 @@ int main(int argc, char * argv[])
 
   char * pool_path = getenv("PRK_MEMKIND_POOL_PATH");
   if (pool_path == NULL) {
-      pool_path = "/tmp";
+      pool_path = "/pmem";
   }
   printf("MEMKIND pool path = %s\n", pool_path);
   memkind * memkind_handle;
-  int err = memkind_create_pmem(pool_path, 3*bytes+4096, &memkind_handle);
+  int err = memkind_create_pmem(pool_path, 3*bytes+MEMKIND_PMEM_MIN_SIZE, &memkind_handle);
   if (err) {
     printf("MEMKIND failed to create create a memory pool! (err=%d, errno=%d)\n", err, errno);
   }
 
-  double * restrict A = prk_malloc(bytes);
-  double * restrict B = prk_malloc(bytes);
-  double * restrict C = prk_malloc(bytes);
+  double * restrict A = memkind_malloc(memkind_handle, bytes);
+  double * restrict B = memkind_malloc(memkind_handle, bytes);
+  double * restrict C = memkind_malloc(memkind_handle, bytes);
 
   double scalar = 3.0;
 
@@ -165,7 +168,7 @@ int main(int argc, char * argv[])
   double ar = 0.0;
   double br = 2.0;
   double cr = 2.0;
-  for (size_t i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
@@ -193,7 +196,7 @@ int main(int argc, char * argv[])
 
   err = memkind_destroy_kind(memkind_handle);
   if (err) {
-      ARMCII_Error("MEMKIND failed to create destroy a memory pool! (err=%d, errno=%d)\n", err, errno);
+      printf("MEMKIND failed to create destroy a memory pool! (err=%d, errno=%d)\n", err, errno);
   }
 
   return 0;
