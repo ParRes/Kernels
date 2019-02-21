@@ -126,12 +126,14 @@ Cxx11/compute
 Cxx11/triSYCL
 Cxx11/occa
 Cxx11/pstl
+Cxx11/parallelstl
 Cxx11/range-v3
 Cxx11/dgemm-vector
 Cxx11/dgemm-cblas
 Cxx11/dgemm-cublas
 Cxx11/p2p-openmp-target
 Cxx11/p2p-tasks-openmp
+Cxx11/p2p-tasks-tbb
 Cxx11/p2p-vector
 Cxx11/p2p-vector-doacross-openmp
 Cxx11/p2p-vector-raja
