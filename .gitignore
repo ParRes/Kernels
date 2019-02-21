@@ -101,7 +101,9 @@ C1z/nstream
 C1z/nstream-openmp
 C1z/nstream-mpi
 C1z/nstream-memkind
+C1z/nstream-memkind-openmp
 C1z/nstream-mmap
+C1z/nstream-mmap-openmp
 C1z/p2p
 C1z/p2p-innerloop
 C1z/p2p-innerloop-openmp
