@@ -70,6 +70,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <asm-generic/mman.h>
 
 int main(int argc, char * argv[])
 {
@@ -147,11 +148,13 @@ int main(int argc, char * argv[])
   }
 
   int flags = 0;
-  flags |= MAP_PRIVATE;
-  //flags |= MAP_SHARED;
-  //flags |= MAP_POPULATE
+  //flags |= MAP_PRIVATE;
+  flags |= MAP_SHARED;
+  //flags |= MAP_NORESERVE;
+  flags |= MAP_POPULATE;
   //flags |= MAP_UNINITIALIZED;
-  //flags |= MAP_HUGETLB | MAP_HUGE_2MB;
+  //flags |= MAP_HUGETLB;
+  //flags |= MAP_HUGE_2MB;
   //flags |= MAP_SYNC;
 
   double * ptr = (double*)mmap(NULL, 3*bytes, PROT_READ | PROT_WRITE, flags, fd, 0);

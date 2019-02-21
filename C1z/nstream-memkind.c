@@ -123,14 +123,33 @@ int main(int argc, char * argv[])
   }
   printf("MEMKIND pool path = %s\n", pool_path);
   struct memkind * memkind_handle;
-  int err = memkind_create_pmem(pool_path, 3*bytes+MEMKIND_PMEM_MIN_SIZE, &memkind_handle);
+  int err = memkind_create_pmem(pool_path, 0, &memkind_handle);
   if (err) {
-    printf("MEMKIND failed to create create a memory pool! (err=%d, errno=%d)\n", err, errno);
+    printf("MEMKIND failed to create a memory pool! (err=%d, errno=%d)\n", err, errno);
   }
 
+  size_t usable_size = 0;
+
   double * restrict A = memkind_malloc(memkind_handle, bytes);
+  if (A==NULL) {
+    printf("MEMKIND failed to allocate A! (errno=%d)\n", errno);
+  }
+  usable_size = memkind_malloc_usable_size(memkind_handle, A);
+  printf("A usage size = %zu\n", usable_size);
+
   double * restrict B = memkind_malloc(memkind_handle, bytes);
+  if (B==NULL) {
+    printf("MEMKIND failed to allocate B! (errno=%d)\n", errno);
+  }
+  usable_size = memkind_malloc_usable_size(memkind_handle, B);
+  printf("B usage size = %zu\n", usable_size);
+
   double * restrict C = memkind_malloc(memkind_handle, bytes);
+  if (C==NULL) {
+    printf("MEMKIND failed to allocate C! (errno=%d)\n", errno);
+  }
+  usable_size = memkind_malloc_usable_size(memkind_handle, C);
+  printf("C usage size = %zu\n", usable_size);
 
   double scalar = 3.0;
 
@@ -193,6 +212,10 @@ int main(int argc, char * argv[])
       double nbytes = 4.0 * length * sizeof(double);
       printf("Rate (MB/s): %lf Avg time (s): %lf\n", 1.e-6*nbytes/avgtime, avgtime);
   }
+
+  memkind_free(memkind_handle, A);
+  memkind_free(memkind_handle, B);
+  memkind_free(memkind_handle, C);
 
   err = memkind_destroy_kind(memkind_handle);
   if (err) {
