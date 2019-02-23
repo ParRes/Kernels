@@ -203,6 +203,8 @@ int main(int argc, char* argv[])
     } else {
         run<float>(cpu, iterations, length);
     }
+  } else {
+    std::cerr << "No CPU" << std::endl;
   }
 
   cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
@@ -217,6 +219,8 @@ int main(int argc, char* argv[])
     } else {
         run<float>(gpu, iterations, length);
     }
+  } else {
+    std::cerr << "No GPU" << std::endl;
   }
 
   cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
@@ -232,6 +236,8 @@ int main(int argc, char* argv[])
     } else {
         run<float>(acc, iterations, length);
     }
+  } else {
+    std::cerr << "No ACC" << std::endl;
   }
 
   return 0;
