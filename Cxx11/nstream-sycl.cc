@@ -225,26 +225,39 @@ int main(int argc, char * argv[])
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         auto platform    = device.get_platform();
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
+        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
+#else
+        bool has_spir = true; // ?
 #endif
-
-        run<float>(cpu, iterations, length);
-        run<double>(cpu, iterations, length);
+        if (has_spir) {
+          run<float>(cpu, iterations, length);
+          run<double>(cpu, iterations, length);
+        }
     }
 
     // NVIDIA GPU requires ptx64 target and does not work very well
-    if (0) {
+    if (1) {
         cl::sycl::queue gpu(cl::sycl::gpu_selector{});
 #ifndef TRISYCL
         auto device      = gpu.get_device();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         auto platform    = device.get_platform();
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
+        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
+#else
+        bool has_spir = true; // ?
 #endif
-
-        run<float>(gpu, iterations, length);
-        run<double>(gpu, iterations, length);
+        if (has_spir) {
+          run<float>(gpu, iterations, length);
+          run<double>(gpu, iterations, length);
+        } else {
+          std::cout << "SYCL GPU device lacks SPIR-V support." << std::endl;
+#ifdef __COMPUTECPP__
+          std::cout << "You are using ComputeCpp so we will try it anyways..." << std::endl;
+          run<float>(gpu, iterations, length);
+          run<double>(gpu, iterations, length);
+#endif
+        }
     }
   }
   catch (cl::sycl::exception e) {
