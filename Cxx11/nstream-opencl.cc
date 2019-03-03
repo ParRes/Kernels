@@ -190,6 +190,8 @@ int main(int argc, char* argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
+  prk::opencl::listPlatforms();
+
   cl_int err = CL_SUCCESS;
 
   cl::Context cpu(CL_DEVICE_TYPE_CPU, NULL, NULL, NULL, &err);
