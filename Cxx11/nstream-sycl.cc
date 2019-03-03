@@ -66,6 +66,11 @@
 
 #include "prk_util.h"
 
+#if 0
+#include "prk_opencl.h"
+#define USE_OPENCL 1
+#endif
+
 // need to declare kernel class as template
 // to prevent name mangling conflict below
 template <typename T> class nstream;
@@ -89,9 +94,9 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
 
   try {
 
-    cl::sycl::buffer<T> d_A { h_A.data(), h_A.size() };
-    cl::sycl::buffer<T> d_B { h_B.data(), h_B.size() };
-    cl::sycl::buffer<T> d_C { h_C.data(), h_C.size() };
+    cl::sycl::buffer<T,1> d_A { h_A.data(), cl::sycl::range<1>(h_A.size()) };
+    cl::sycl::buffer<T,1> d_B { h_B.data(), cl::sycl::range<1>(h_B.size()) };
+    cl::sycl::buffer<T,1> d_C { h_C.data(), cl::sycl::range<1>(h_C.size()) };
 
     for (int iter = 0; iter<=iterations; ++iter) {
 
@@ -117,6 +122,11 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
+    std::cout << e.get_file_name() << std::endl;
+    std::cout << e.get_line_number() << std::endl;
+    std::cout << e.get_description() << std::endl;
+    std::cout << e.get_cl_error_message() << std::endl;
+    std::cout << e.get_cl_code() << std::endl;
     return;
   }
   catch (std::exception e) {
@@ -206,8 +216,11 @@ int main(int argc, char * argv[])
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
-  try {
+#ifdef USE_OPENCL
+  prk::opencl::listPlatforms();
+#endif
 
+  try {
     if (1) {
         cl::sycl::queue host(cl::sycl::host_selector{});
 #ifndef TRISYCL
@@ -219,7 +232,20 @@ int main(int argc, char * argv[])
         run<float>(host, iterations, length);
         run<double>(host, iterations, length);
     }
+  }
+  catch (cl::sycl::exception e) {
+    std::cout << e.what() << std::endl;
+    std::cout << e.get_file_name() << std::endl;
+    std::cout << e.get_line_number() << std::endl;
+    std::cout << e.get_description() << std::endl;
+    std::cout << e.get_cl_error_message() << std::endl;
+    std::cout << e.get_cl_code() << std::endl;
+  }
+  catch (std::exception e) {
+    std::cout << e.what() << std::endl;
+  }
 
+  try {
     // CPU requires spir64 target
     if (1) {
         cl::sycl::queue cpu(cl::sycl::cpu_selector{});
@@ -232,7 +258,20 @@ int main(int argc, char * argv[])
         run<float>(cpu, iterations, length);
         run<double>(cpu, iterations, length);
     }
+  }
+  catch (cl::sycl::exception e) {
+    std::cout << e.what() << std::endl;
+    std::cout << e.get_file_name() << std::endl;
+    std::cout << e.get_line_number() << std::endl;
+    std::cout << e.get_description() << std::endl;
+    std::cout << e.get_cl_error_message() << std::endl;
+    std::cout << e.get_cl_code() << std::endl;
+  }
+  catch (std::exception e) {
+    std::cout << e.what() << std::endl;
+  }
 
+  try {
     // NVIDIA GPU requires ptx64 target and does not work very well
     if (1) {
         cl::sycl::queue gpu(cl::sycl::gpu_selector{});
@@ -260,6 +299,11 @@ int main(int argc, char * argv[])
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
+    std::cout << e.get_file_name() << std::endl;
+    std::cout << e.get_line_number() << std::endl;
+    std::cout << e.get_description() << std::endl;
+    std::cout << e.get_cl_error_message() << std::endl;
+    std::cout << e.get_cl_code() << std::endl;
     return 1;
   }
   catch (std::exception e) {
@@ -269,9 +313,6 @@ int main(int argc, char * argv[])
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
-  }
-  catch (std::exception e) {
-    std::cout << e.what() << std::endl;
   }
 
   return 0;
