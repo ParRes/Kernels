@@ -65,10 +65,15 @@
 #include "prk_util.h"
 #include "stencil_sycl.hpp"
 
+template <typename T> class init;
+template <typename T> class add;
+
 #if USE_2D_INDEXING
-void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double, 2> & d_in, cl::sycl::buffer<double, 2> & d_out)
+template <typename T>
+void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)
 #else
-void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double> & d_in, cl::sycl::buffer<double> & d_out)
+template <typename T>
+void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
 #endif
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
@@ -77,7 +82,163 @@ void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<double> & d_i
     std::abort();
 }
 
-int main(int argc, char* argv[])
+template <typename T>
+void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star, size_t radius)
+{
+  auto stencil = nothing<T>;
+  if (star) {
+      switch (radius) {
+          case 1: stencil = star1; break;
+          case 2: stencil = star2; break;
+          case 3: stencil = star3; break;
+          case 4: stencil = star4; break;
+          case 5: stencil = star5; break;
+      }
+  }
+#if 0
+  else {
+      switch (radius) {
+          case 1: stencil = grid1; break;
+          case 2: stencil = grid2; break;
+          case 3: stencil = grid3; break;
+          case 4: stencil = grid4; break;
+          case 5: stencil = grid5; break;
+      }
+  }
+#endif
+
+  //////////////////////////////////////////////////////////////////////
+  // Allocate space and perform the computation
+  //////////////////////////////////////////////////////////////////////
+
+  double stencil_time(0);
+
+  std::vector<T> h_in(n*n,0);
+  std::vector<T> h_out(n*n,0);
+
+  try {
+
+    // initialize device buffers from host buffers
+#if USE_2D_INDEXING
+    cl::sycl::buffer<T, 2> d_in  { cl::sycl::range<2> {n, n} };
+    cl::sycl::buffer<T, 2> d_out { h_out.data(), cl::sycl::range<2> {n, n} };
+#else
+    // FIXME: if I don't initialize this buffer from host, the results are wrong.  Why?
+    //cl::sycl::buffer<T> d_in  { cl::sycl::range<1> {n*n} };
+    cl::sycl::buffer<T> d_in  { h_in.data(),  h_in.size() };
+    cl::sycl::buffer<T> d_out { h_out.data(), h_out.size() };
+#endif
+
+    q.submit([&](cl::sycl::handler& h) {
+
+      // accessor methods
+      auto in  = d_in.template get_access<cl::sycl::access::mode::read_write>(h);
+
+      h.parallel_for<class init<T>>(cl::sycl::range<2> {n, n}, [=] (cl::sycl::item<2> it) {
+#if USE_2D_INDEXING
+          cl::sycl::id<2> xy = it.get_id();
+          auto i = it[0];
+          auto j = it[1];
+          in[xy] = static_cast<T>(i+j);
+#else
+          auto i = it[0];
+          auto j = it[1];
+          in[i*n+j] = static_cast<T>(i+j);
+#endif
+      });
+    });
+    q.wait();
+
+    for (auto iter = 0; iter<=iterations; iter++) {
+
+      if (iter==1) stencil_time = prk::wtime();
+
+      stencil(q, n, d_in, d_out);
+#ifdef TRISYCL
+      q.wait();
+#endif
+
+      q.submit([&](cl::sycl::handler& h) {
+
+        // accessor methods
+        auto in  = d_in.template get_access<cl::sycl::access::mode::read_write>(h);
+
+        // Add constant to solution to force refresh of neighbor data, if any
+        h.parallel_for<class add<T>>(cl::sycl::range<2> {n, n}, cl::sycl::id<2> {0, 0},
+                                  [=] (cl::sycl::item<2> it) {
+#if USE_2D_INDEXING
+            cl::sycl::id<2> xy = it.get_id();
+            in[xy] += static_cast<T>(1);
+#else
+#if 0 // This is noticeably slower :-(
+            auto i = it[0];
+            auto j = it[1];
+            in[i*n+j] += 1.0;
+#else
+            in[it[0]*n+it[1]] += static_cast<T>(1);
+#endif
+#endif
+        });
+      });
+      q.wait();
+    }
+    stencil_time = prk::wtime() - stencil_time;
+  }
+  catch (cl::sycl::exception e) {
+    std::cout << e.what() << std::endl;
+    return;
+  }
+  catch (std::exception e) {
+    std::cout << e.what() << std::endl;
+    return;
+  }
+
+#if 0
+  for (auto i=0; i<n; i++) {
+    for (auto j=0; j<n; j++) {
+        std::cerr << i << "," << j << "," << h_out[i*n+j] << "\n";
+    }
+  }
+#endif
+
+  //////////////////////////////////////////////////////////////////////
+  // Analyze and output results.
+  //////////////////////////////////////////////////////////////////////
+
+  // interior of grid with respect to stencil
+  auto active_points = (n-2L*radius)*(n-2L*radius);
+
+  // compute L1 norm in parallel
+  double norm(0);
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
+      norm += std::fabs(h_out[i*n+j]);
+    }
+  }
+  norm /= active_points;
+
+  // verify correctness
+  const double epsilon = 1.0e-8;
+  const double reference_norm = 2*(iterations+1);
+  if (std::fabs(norm-reference_norm) > epsilon) {
+    std::cout << "ERROR: L1 norm = " << norm
+              << " Reference L1 norm = " << reference_norm << std::endl;
+  } else {
+    std::cout << "Solution validates" << std::endl;
+#ifdef VERBOSE
+    std::cout << "L1 norm = " << norm
+              << " Reference L1 norm = " << reference_norm << std::endl;
+#endif
+    const size_t stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
+    size_t flops = (2L*stencil_size+1L) * active_points;
+    double avgtime = stencil_time/iterations;
+    std::cout << 8*sizeof(T) << "B "
+              << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
+              << " Avg time (s): " << avgtime << std::endl;
+  }
+}
+
+int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/SYCL Stencil execution on 2D grid" << std::endl;
@@ -144,149 +305,63 @@ int main(int argc, char* argv[])
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
-  auto stencil = nothing;
-  if (star) {
-      switch (radius) {
-          case 1: stencil = star1; break;
-          case 2: stencil = star2; break;
-          case 3: stencil = star3; break;
-          case 4: stencil = star4; break;
-          case 5: stencil = star5; break;
-      }
-  }
-#if 0
-  else {
-      switch (radius) {
-          case 1: stencil = grid1; break;
-          case 2: stencil = grid2; break;
-          case 3: stencil = grid3; break;
-          case 4: stencil = grid4; break;
-          case 5: stencil = grid5; break;
-      }
-  }
-#endif
-
   //////////////////////////////////////////////////////////////////////
-  // Allocate space and perform the computation
+  /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  try {
 
-  std::vector<double> h_in(n*n,0.0);
-  std::vector<double> h_out(n*n,0.0);
-
-  // SYCL device queue
-  cl::sycl::queue q;
-  {
-    // initialize device buffers from host buffers
-#if USE_2D_INDEXING
-    cl::sycl::buffer<double, 2> d_in  { cl::sycl::range<2> {n, n} };
-    cl::sycl::buffer<double, 2> d_out { h_out.data(), cl::sycl::range<2> {n, n} };
-#else
-    // FIXME: if I don't initialize this buffer from host, the results are wrong.  Why?
-    //cl::sycl::buffer<double> d_in  { cl::sycl::range<1> {n*n} };
-    cl::sycl::buffer<double> d_in  { h_in.data(),  h_in.size() };
-    cl::sycl::buffer<double> d_out { h_out.data(), h_out.size() };
+    if (1) {
+        cl::sycl::queue host(cl::sycl::host_selector{});
+#ifndef TRISYCL
+        auto device      = host.get_device();
+        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
+        auto platform    = device.get_platform();
+        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
 #endif
 
-    q.submit([&](cl::sycl::handler& h) {
-
-      // accessor methods
-      auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
-
-      h.parallel_for<class init>(cl::sycl::range<2> {n, n}, [=] (cl::sycl::item<2> it) {
-#if USE_2D_INDEXING
-          cl::sycl::id<2> xy = it.get_id();
-          auto i = it[0];
-          auto j = it[1];
-          in[xy] = static_cast<double>(i+j);
-#else
-          auto i = it[0];
-          auto j = it[1];
-          in[i*n+j] = static_cast<double>(i+j);
-#endif
-      });
-    });
-    q.wait();
-
-    for (auto iter = 0; iter<=iterations; iter++) {
-
-      if (iter==1) stencil_time = prk::wtime();
-
-      stencil(q, n, d_in, d_out);
-      // This is only necessary with triSYCL
-      q.wait();
-
-      q.submit([&](cl::sycl::handler& h) {
-
-        // accessor methods
-        auto in  = d_in.get_access<cl::sycl::access::mode::read_write>(h);
-
-        // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add>(cl::sycl::range<2> {n, n}, cl::sycl::id<2> {0, 0},
-                                  [=] (cl::sycl::item<2> it) {
-#if USE_2D_INDEXING
-            cl::sycl::id<2> xy = it.get_id();
-            in[xy] += 1.0;
-#else
-#if 0 // This is noticeably slower :-(
-            auto i = it[0];
-            auto j = it[1];
-            in[i*n+j] += 1.0;
-#else
-            in[it[0]*n+it[1]] += 1.0;
-#endif
-#endif
-        });
-      });
-      q.wait();
+        run<float>(host, iterations, n, tile_size, star, radius);
+        run<double>(host, iterations, n, tile_size, star, radius);
     }
-    stencil_time = prk::wtime() - stencil_time;
-  }
 
-#if 0
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
-        std::cerr << i << "," << j << "," << h_out[i*n+j] << "\n";
+    // CPU requires spir64 target
+    if (1) {
+        cl::sycl::queue cpu(cl::sycl::cpu_selector{});
+#ifndef TRISYCL
+        auto device      = cpu.get_device();
+        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
+        auto platform    = device.get_platform();
+        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
+        //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
+#endif
+
+        run<float>(cpu, iterations, n, tile_size, star, radius);
+        run<double>(cpu, iterations, n, tile_size, star, radius);
+    }
+
+    // NVIDIA GPU requires ptx64 target and does not work very well
+    if (0) {
+        cl::sycl::queue gpu(cl::sycl::gpu_selector{});
+#ifndef TRISYCL
+        auto device      = gpu.get_device();
+        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
+        auto platform    = device.get_platform();
+        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
+        //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
+#endif
+
+        run<float>(gpu, iterations, n, tile_size, star, radius);
+        run<double>(gpu, iterations, n, tile_size, star, radius);
     }
   }
-#endif
-
-  //////////////////////////////////////////////////////////////////////
-  // Analyze and output results.
-  //////////////////////////////////////////////////////////////////////
-
-  // interior of grid with respect to stencil
-  auto active_points = (n-2L*radius)*(n-2L*radius);
-
-  // compute L1 norm in parallel
-  double norm = 0.0;
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
-      norm += std::fabs(h_out[i*n+j]);
-    }
+  catch (cl::sycl::exception e) {
+    std::cout << e.what() << std::endl;
   }
-  norm /= active_points;
-
-  // verify correctness
-  const double epsilon = 1.0e-8;
-  double reference_norm = 2.*(iterations+1.);
-  if (std::fabs(norm-reference_norm) > epsilon) {
-    std::cout << "ERROR: L1 norm = " << norm
-              << " Reference L1 norm = " << reference_norm << std::endl;
-    return 1;
-  } else {
-    std::cout << "Solution validates" << std::endl;
-#ifdef VERBOSE
-    std::cout << "L1 norm = " << norm
-              << " Reference L1 norm = " << reference_norm << std::endl;
-#endif
-    const size_t stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
-    size_t flops = (2L*stencil_size+1L) * active_points;
-    auto avgtime = stencil_time/iterations;
-    std::cout << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+  catch (std::exception e) {
+    std::cout << e.what() << std::endl;
   }
 
   return 0;
 }
+
+
