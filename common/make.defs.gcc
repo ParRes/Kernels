@@ -44,7 +44,21 @@ OPENCLFLAG=-framework OpenCL
 # Linux
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 METALFLAG=-framework MetalPerformanceShaders
+#
+# SYCL flags
+#
+# triSYCL
+# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+SYCLDIR=./triSYCL
+SYCLCXX=${CXX} -std=c++17 ${OPENMPFLAG}
+SYCLFLAG=-I$(SYCLDIR)/include
+# ProGTX
+# https://github.com/ProGTX/sycl-gtx
+#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
+#SYCLCXX=${CXX} ${OPENMPFLAG}
+#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # OCCA
 #
@@ -87,7 +101,7 @@ SYCLFLAG=-I${SYCLDIR}/include ${BOOSTFLAG}
 #
 # CBLAS for C++ DGEMM
 #
-CBLASFLAG=-DACCELERATE -framework Accelerate
+CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 #
 # CUDA flags
 #
@@ -117,3 +131,5 @@ COARRAYFLAG=-fcoarray=single -lcaf_single
 # multi-node
 # COARRAYFLAG=-fcoarray=lib -lcaf_mpi
 
+MEMKINDDIR=/home/parallels/PRK/deps
+MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib

@@ -81,6 +81,7 @@ RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 #
 # CBLAS for C++ DGEMM
 #
+#CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 CBLASFLAG=-DMKL -mkl
 #
 # CUDA flags
@@ -115,3 +116,5 @@ COARRAYFLAG=-coarray
 # multi-node
 # COARRAYFLAG=-coarray=distributed
 
+MEMKINDDIR=/home/parallels/PRK/deps
+MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib

@@ -40,6 +40,10 @@ KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPE
 RAJADIR=./raja
 RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 #
+# CBLAS for C++ DGEMM
+#
+CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+#
 # CUDA flags
 #
 # Linux w/ NVIDIA CUDA
