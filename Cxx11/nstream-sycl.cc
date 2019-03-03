@@ -119,6 +119,10 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
     std::cout << e.what() << std::endl;
     return;
   }
+  catch (std::exception e) {
+    std::cout << e.what() << std::endl;
+    return;
+  }
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
