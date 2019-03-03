@@ -2,8 +2,8 @@ template <typename T>
 void star1(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
 {
   q.submit([&](cl::sycl::handler& h) {
-    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+    auto in  = d_in.template get_access<cl::sycl::access::mode::read>(h);
+    auto out = d_out.template get_access<cl::sycl::access::mode::read_write>(h);
     h.parallel_for<class star1_1d>(cl::sycl::range<2> {n-2,n-2}, cl::sycl::id<2> {1,1}, [=] (cl::sycl::item<2> it) {
         out[it[0]*n+it[1]] += +in[it[0]*n+(it[1]+1)] * static_cast<T>(0.5)
                               +in[it[0]*n+(it[1]-1)] * static_cast<T>(-0.5)
@@ -17,8 +17,8 @@ template <typename T>
 void star1(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)
 {
   q.submit([&](cl::sycl::handler& h) {
-    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+    auto in  = d_in.template get_access<cl::sycl::access::mode::read>(h);
+    auto out = d_out.template get_access<cl::sycl::access::mode::read_write>(h);
     cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
     cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
     h.parallel_for<class star1_2d>(cl::sycl::range<2> {n-2,n-2}, cl::sycl::id<2> {1,1}, [=] (cl::sycl::item<2> it) {
@@ -35,8 +35,8 @@ template <typename T>
 void star2(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
 {
   q.submit([&](cl::sycl::handler& h) {
-    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+    auto in  = d_in.template get_access<cl::sycl::access::mode::read>(h);
+    auto out = d_out.template get_access<cl::sycl::access::mode::read_write>(h);
     h.parallel_for<class star2_1d>(cl::sycl::range<2> {n-4,n-4}, cl::sycl::id<2> {2,2}, [=] (cl::sycl::item<2> it) {
         out[it[0]*n+it[1]] += +in[it[0]*n+(it[1]+1)] * static_cast<T>(0.25)
                               +in[it[0]*n+(it[1]-1)] * static_cast<T>(-0.25)
@@ -54,8 +54,8 @@ template <typename T>
 void star2(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)
 {
   q.submit([&](cl::sycl::handler& h) {
-    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+    auto in  = d_in.template get_access<cl::sycl::access::mode::read>(h);
+    auto out = d_out.template get_access<cl::sycl::access::mode::read_write>(h);
     cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
     cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
     cl::sycl::id<2> dx2(cl::sycl::range<2> {2,0});
@@ -78,8 +78,8 @@ template <typename T>
 void star3(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
 {
   q.submit([&](cl::sycl::handler& h) {
-    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+    auto in  = d_in.template get_access<cl::sycl::access::mode::read>(h);
+    auto out = d_out.template get_access<cl::sycl::access::mode::read_write>(h);
     h.parallel_for<class star3_1d>(cl::sycl::range<2> {n-6,n-6}, cl::sycl::id<2> {3,3}, [=] (cl::sycl::item<2> it) {
         out[it[0]*n+it[1]] += +in[it[0]*n+(it[1]+1)] * static_cast<T>(0.166666666667)
                               +in[it[0]*n+(it[1]-1)] * static_cast<T>(-0.166666666667)
@@ -101,8 +101,8 @@ template <typename T>
 void star3(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)
 {
   q.submit([&](cl::sycl::handler& h) {
-    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+    auto in  = d_in.template get_access<cl::sycl::access::mode::read>(h);
+    auto out = d_out.template get_access<cl::sycl::access::mode::read_write>(h);
     cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
     cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
     cl::sycl::id<2> dx2(cl::sycl::range<2> {2,0});
@@ -131,8 +131,8 @@ template <typename T>
 void star4(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
 {
   q.submit([&](cl::sycl::handler& h) {
-    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+    auto in  = d_in.template get_access<cl::sycl::access::mode::read>(h);
+    auto out = d_out.template get_access<cl::sycl::access::mode::read_write>(h);
     h.parallel_for<class star4_1d>(cl::sycl::range<2> {n-8,n-8}, cl::sycl::id<2> {4,4}, [=] (cl::sycl::item<2> it) {
         out[it[0]*n+it[1]] += +in[it[0]*n+(it[1]+1)] * static_cast<T>(0.125)
                               +in[it[0]*n+(it[1]-1)] * static_cast<T>(-0.125)
@@ -158,8 +158,8 @@ template <typename T>
 void star4(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)
 {
   q.submit([&](cl::sycl::handler& h) {
-    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+    auto in  = d_in.template get_access<cl::sycl::access::mode::read>(h);
+    auto out = d_out.template get_access<cl::sycl::access::mode::read_write>(h);
     cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
     cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
     cl::sycl::id<2> dx2(cl::sycl::range<2> {2,0});
@@ -194,8 +194,8 @@ template <typename T>
 void star5(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
 {
   q.submit([&](cl::sycl::handler& h) {
-    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+    auto in  = d_in.template get_access<cl::sycl::access::mode::read>(h);
+    auto out = d_out.template get_access<cl::sycl::access::mode::read_write>(h);
     h.parallel_for<class star5_1d>(cl::sycl::range<2> {n-10,n-10}, cl::sycl::id<2> {5,5}, [=] (cl::sycl::item<2> it) {
         out[it[0]*n+it[1]] += +in[it[0]*n+(it[1]+1)] * static_cast<T>(0.1)
                               +in[it[0]*n+(it[1]-1)] * static_cast<T>(-0.1)
@@ -225,8 +225,8 @@ template <typename T>
 void star5(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)
 {
   q.submit([&](cl::sycl::handler& h) {
-    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);
-    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);
+    auto in  = d_in.template get_access<cl::sycl::access::mode::read>(h);
+    auto out = d_out.template get_access<cl::sycl::access::mode::read_write>(h);
     cl::sycl::id<2> dx1(cl::sycl::range<2> {1,0});
     cl::sycl::id<2> dy1(cl::sycl::range<2> {0,1});
     cl::sycl::id<2> dx2(cl::sycl::range<2> {2,0});

@@ -16,8 +16,8 @@ def codegen(src,pattern,stencil_size,radius,model,dim):
         src.write('cl::sycl::buffer<T> & d_out)\n')
     src.write('{\n')
     src.write('  q.submit([&](cl::sycl::handler& h) {\n')
-    src.write('    auto in  = d_in.get_access<cl::sycl::access::mode::read>(h);\n')
-    src.write('    auto out = d_out.get_access<cl::sycl::access::mode::read_write>(h);\n')
+    src.write('    auto in  = d_in.template get_access<cl::sycl::access::mode::read>(h);\n')
+    src.write('    auto out = d_out.template get_access<cl::sycl::access::mode::read_write>(h);\n')
     if (dim==2):
         for r in range(1,radius+1):
             src.write('    cl::sycl::id<2> dx'+str(r)+'(cl::sycl::range<2> {'+str(r)+',0});\n')
