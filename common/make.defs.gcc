@@ -46,6 +46,7 @@ OPENCLFLAG=-framework OpenCL
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 <<<<<<< HEAD
 OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
+METALFLAG=-framework MetalPerformanceShaders
 #
 # SYCL flags
 #
