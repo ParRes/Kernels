@@ -79,9 +79,9 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
 
   double nstream_time(0);
 
-  std::vector<T> h_A(length);
-  std::vector<T> h_B(length);
-  std::vector<T> h_C(length);
+  std::vector<T> h_A(length,0);
+  std::vector<T> h_B(length,2);
+  std::vector<T> h_C(length,2);
 
   auto range = prk::range(static_cast<size_t>(0), length);
 
@@ -124,9 +124,9 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  double ar(0);
-  double br(2);
-  double cr(2);
+  T ar(0);
+  T br(2);
+  T cr(2);
   for (int i=0; i<=iterations; ++i) {
       ar += br + scalar * cr;
   }
@@ -138,7 +138,7 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
       asum += std::fabs(h_A[i]);
   }
 
-  double epsilon(1.e-8);
+  const double epsilon(1.e-8);
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << "       Expected checksum: " << ar << "\n"
@@ -202,10 +202,12 @@ int main(int argc, char * argv[])
 
     if (1) {
         cl::sycl::queue host(cl::sycl::host_selector{});
+#ifndef TRISYCL
         auto device      = host.get_device();
-        auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
+        auto platform    = device.get_platform();
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
+#endif
 
         run<float>(host, iterations, length);
         run<double>(host, iterations, length);
@@ -214,11 +216,13 @@ int main(int argc, char * argv[])
     // CPU requires spir64 target
     if (1) {
         cl::sycl::queue cpu(cl::sycl::cpu_selector{});
+#ifndef TRISYCL
         auto device      = cpu.get_device();
-        auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
+        auto platform    = device.get_platform();
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
         //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
+#endif
 
         run<float>(cpu, iterations, length);
         run<double>(cpu, iterations, length);
@@ -227,11 +231,13 @@ int main(int argc, char * argv[])
     // NVIDIA GPU requires ptx64 target and does not work very well
     if (0) {
         cl::sycl::queue gpu(cl::sycl::gpu_selector{});
+#ifndef TRISYCL
         auto device      = gpu.get_device();
-        auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
+        auto platform    = device.get_platform();
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
         //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
+#endif
 
         run<float>(gpu, iterations, length);
         run<double>(gpu, iterations, length);
