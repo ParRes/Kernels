@@ -1,13 +1,5 @@
+// declare the kernel name used in SYCL parallel_for
 template <typename T> class star1_1d;
-template <typename T> class star1_2d;
-template <typename T> class star2_1d;
-template <typename T> class star2_2d;
-template <typename T> class star3_1d;
-template <typename T> class star3_2d;
-template <typename T> class star4_1d;
-template <typename T> class star4_2d;
-template <typename T> class star5_1d;
-template <typename T> class star5_2d;
 
 template <typename T>
 void star1(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
@@ -23,6 +15,9 @@ void star1(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::
     });
   });
 }
+
+// declare the kernel name used in SYCL parallel_for
+template <typename T> class star1_2d;
 
 template <typename T>
 void star1(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)
@@ -42,6 +37,9 @@ void star1(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, c
   });
 }
 
+// declare the kernel name used in SYCL parallel_for
+template <typename T> class star2_1d;
+
 template <typename T>
 void star2(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
 {
@@ -60,6 +58,9 @@ void star2(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::
     });
   });
 }
+
+// declare the kernel name used in SYCL parallel_for
+template <typename T> class star2_2d;
 
 template <typename T>
 void star2(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)
@@ -85,6 +86,9 @@ void star2(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, c
   });
 }
 
+// declare the kernel name used in SYCL parallel_for
+template <typename T> class star3_1d;
+
 template <typename T>
 void star3(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
 {
@@ -107,6 +111,9 @@ void star3(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::
     });
   });
 }
+
+// declare the kernel name used in SYCL parallel_for
+template <typename T> class star3_2d;
 
 template <typename T>
 void star3(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)
@@ -138,6 +145,9 @@ void star3(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, c
   });
 }
 
+// declare the kernel name used in SYCL parallel_for
+template <typename T> class star4_1d;
+
 template <typename T>
 void star4(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
 {
@@ -164,6 +174,9 @@ void star4(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::
     });
   });
 }
+
+// declare the kernel name used in SYCL parallel_for
+template <typename T> class star4_2d;
 
 template <typename T>
 void star4(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)
@@ -201,6 +214,9 @@ void star4(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, c
   });
 }
 
+// declare the kernel name used in SYCL parallel_for
+template <typename T> class star5_1d;
+
 template <typename T>
 void star5(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
 {
@@ -231,6 +247,9 @@ void star5(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::
     });
   });
 }
+
+// declare the kernel name used in SYCL parallel_for
+template <typename T> class star5_2d;
 
 template <typename T>
 void star5(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)

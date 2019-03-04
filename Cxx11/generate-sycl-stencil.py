@@ -6,6 +6,8 @@ import string
 import os
 
 def codegen(src,pattern,stencil_size,radius,model,dim):
+    src.write('// declare the kernel name used in SYCL parallel_for\n')
+    src.write('template <typename T> class '+pattern+str(radius)+'_'+str(dim)+'d;\n\n')
     src.write('template <typename T>\n')
     src.write('void '+pattern+str(radius)+'(cl::sycl::queue & q, const size_t n, ')
     if (dim==2):
@@ -91,11 +93,6 @@ def instance(src,model,pattern,r):
 def main():
     for model in ['sycl']:
       src = open('stencil_'+model+'.hpp','w')
-      for pattern in ['star']:
-        for r in range(1,6):
-          src.write('template <typename T> class '+pattern+str(r)+'_1d;\n')
-          src.write('template <typename T> class '+pattern+str(r)+'_2d;\n')
-      src.write('\n')
       #for pattern in ['star','grid']:
       for pattern in ['star']:
         for r in range(1,6):
