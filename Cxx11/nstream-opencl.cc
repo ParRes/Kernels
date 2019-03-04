@@ -141,7 +141,8 @@ void run(cl::Context context, int iterations, size_t length)
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
       double nbytes = 4.0 * length * sizeof(T);
-      std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
+      std::cout << precision << "B "
+                << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }
 }
@@ -200,9 +201,8 @@ int main(int argc, char* argv[])
 
     if (precision==64) {
         run<double>(cpu, iterations, length);
-    } else {
-        run<float>(cpu, iterations, length);
     }
+    run<float>(cpu, iterations, length);
   } else {
     std::cerr << "No CPU" << std::endl;
   }
@@ -216,9 +216,8 @@ int main(int argc, char* argv[])
 
     if (precision==64) {
         run<double>(gpu, iterations, length);
-    } else {
-        run<float>(gpu, iterations, length);
     }
+    run<float>(gpu, iterations, length);
   } else {
     std::cerr << "No GPU" << std::endl;
   }
@@ -233,9 +232,8 @@ int main(int argc, char* argv[])
 
     if (precision==64) {
         run<double>(acc, iterations, length);
-    } else {
-        run<float>(acc, iterations, length);
     }
+    run<float>(acc, iterations, length);
   } else {
     std::cerr << "No ACC" << std::endl;
   }
