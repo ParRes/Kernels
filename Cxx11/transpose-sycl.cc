@@ -75,8 +75,8 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
   try {
 
 #if USE_2D_INDEXING
-    cl::sycl::buffer<double,2> d_A( h_A.data(), cl::sycl::range<2>{order,order} );
-    cl::sycl::buffer<double,2> d_B( h_B.data(), cl::sycl::range<2>{order,order} );
+    cl::sycl::buffer<T,2> d_A( h_A.data(), cl::sycl::range<2>{order,order} );
+    cl::sycl::buffer<T,2> d_B( h_B.data(), cl::sycl::range<2>{order,order} );
 #else
     cl::sycl::buffer<T> d_A { h_A.data(), h_A.size() };
     cl::sycl::buffer<T> d_B { h_B.data(), h_B.size() };
