@@ -77,7 +77,7 @@ HISTORY: - Written by Tom St. John, July 2015.
 #endif
 
 /* define shorthand for indexing multi-dimensional arrays with offsets           */
-#define INDEXIN(i,j)  (i+RADIUS+(j+RADIUS)*(width[0]+2*RADIUS))
+#define INDEXIN(i,j)  (i+RADIUS+(long)(j+RADIUS)*(long)(width[0]+2*RADIUS))
 /* need to add offset of RADIUS to j to account for ghost points                 */
 #define IN(i,j)       in[INDEXIN(i-istart,j-jstart)]
 #define INDEXOUT(i,j) (i+(j)*(width[0]))
