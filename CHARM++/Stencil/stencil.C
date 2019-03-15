@@ -4,7 +4,7 @@
 #define EPSILON       1.e-8
 #define COEFX         1.0
 #define COEFY         1.0
-#define INDEXIN(i,j)  (i+RADIUS+(width+2*RADIUS)*(j+RADIUS))
+#define INDEXIN(i,j)  (i+RADIUS+(long)(width+2*RADIUS)*(long)(j+RADIUS))
 #define IN(i,j)       in[INDEXIN(i-istart,j-jstart)]
 #define INDEXOUT(i,j) (i+width*(j))
 #define OUT(i,j)      out[INDEXOUT(i-istart,j-jstart)]
