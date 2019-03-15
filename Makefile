@@ -72,14 +72,14 @@ help:
 	@echo "       \"make allfreaks\"    (re-)builds the above four targets"
 	@echo "       optionally, specify   \"matrix_rank=<n> number_of_functions=<m>\""
 	@echo "       optionally, specify   \"default_opt_flags=<list of optimization flags>\""
-	@echo "       \"make allshared\"    (re-)builds the shared-memory targets (C89, C1z, C++11, Fortran, RUST)"
+	@echo "       \"make allshared\"    (re-)builds the shared-memory targets (C89, C1z, C++11, Fortran)"
 	@echo "       \"make clean\"        removes all objects and executables"
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
 all: alldarwin allfreaks allshared
 alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran allfenix
 allfreaks: allcharm++ allampi allgrappa alllegion
-allshared: allserial allopenmp allfortran allcxx allc1z allrust
+allshared: allserial allopenmp allfortran allcxx allc1z
 allnew: allfortran allcxx allc1z
 
 allmpi1:
@@ -332,7 +332,6 @@ clean:
 	make -C FORTRAN clean
 	make -C Cxx11 clean
 	make -C C1z clean
-	make -C RUST clean
 	rm -f stats.json
 
 veryclean: clean
