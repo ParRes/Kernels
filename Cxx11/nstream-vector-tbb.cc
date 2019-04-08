@@ -126,6 +126,7 @@ int main(int argc, char * argv[])
   tbb::blocked_range<size_t> range(0, length);
 
   {
+#if 0
     tbb::parallel_for( range, [&](decltype(range)& r) {
                        for (auto i=r.begin(); i!=r.end(); ++i ) {
                            A[i] = 0.0;
@@ -133,16 +134,29 @@ int main(int argc, char * argv[])
                            C[i] = 2.0;
                        }
                      }, tbb_partitioner);
+#else
+    tbb::parallel_for( std::begin(range), std::end(range), [&](size_t i) {
+                           A[i] = 0.0;
+                           B[i] = 2.0;
+                           C[i] = 2.0;
+                       }, tbb_partitioner);
+#endif
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
+#if 0
       tbb::parallel_for( range, [&](decltype(range)& r) {
                          for (auto i=r.begin(); i!=r.end(); ++i ) {
                              A[i] += B[i] + scalar * C[i];
                          }
                        }, tbb_partitioner);
+#else
+      tbb::parallel_for( std::begin(range), std::end(range), [&](size_t i) {
+                             A[i] += B[i] + scalar * C[i];
+                         }, tbb_partitioner);
+#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
