@@ -133,6 +133,7 @@ int main(int argc, char * argv[])
   double scalar(3);
 
   {
+    //RAJA::forall<thread_exec>(0, length, [=](RAJA::Index_type i) {
     RAJA::forall<thread_exec>(range, [=](RAJA::Index_type i) {
         A(i) = 0.0;
         B(i) = 2.0;
@@ -143,6 +144,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
+      //RAJA::forall<thread_exec>(0, length, [=](RAJA::Index_type i) {
       RAJA::forall<thread_exec>(range, [=](RAJA::Index_type i) {
           A(i) += B(i) + scalar * C(i);
       });
