@@ -92,15 +92,17 @@ THRUSTFLAG=-I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 SYCLDIR=./triSYCL
 SYCLCXX=${CXX} -std=c++17 ${OPENMPFLAG}
-SYCLFLAG=-I${SYCLDIR}/include ${BOOSTFLAG}
+SYCLFLAG=-I${SYCLDIR}/include ${BOOSTFLAG} -DTRISYCL
 # ProGTX
 # https://github.com/ProGTX/sycl-gtx
 #SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
 #SYCLCXX=${CXX} ${OPENMPFLAG}
 #SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
+SYCLFLAG+=${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
+BLASFLAG=-DACCELERATE -framework Accelerate
 CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 #
 # CUDA flags
