@@ -14,9 +14,7 @@ FCFLAGS  = $(DEFAULT_OPT_FLAGS)
 FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 ifeq ($(findstring ifort,$(FC)),ifort)
-  BLASFLAGS = $(CBLASFLAG) -heap-arrays
-else
-  BLASFLAGS = $(CBLASFLAG)
+  BLASFLAGS += -heap-arrays
 endif
 
 .PHONY: all clean serial pretty openmp coarray target ornlacc
@@ -68,8 +66,11 @@ stencil: stencil.f90 stencil_serial.f90
 	#$(FC) $(FCFLAGS) -c stencil_serial.f90 -o stencil_serial.o
 	$(FC) $(FCFLAGS) $< -o $@
 
-%-pretty: %-pretty.f90
+dgemm-pretty: dgemm-pretty.f90
 	$(FC) $(FCFLAGS) $(BLASFLAGS) $< -o $@
+
+%-pretty: %-pretty.f90
+	$(FC) $(FCFLAGS) $< -o $@
 
 %-openmp: %.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
