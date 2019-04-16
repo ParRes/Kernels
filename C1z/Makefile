@@ -49,7 +49,7 @@ serial: nstream p2p p2p-innerloop stencil transpose
 
 thread: transpose-thread
 
-openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp p2p-hyperplane-openmp
 
 mpi: nstream-mpi
 
