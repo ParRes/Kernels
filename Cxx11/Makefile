@@ -81,7 +81,7 @@ transpose: transpose-valarray transpose-vector transpose-vector-async transpose-
 	   transpose-vector-taskloop transpose-vector-stl transpose-vector-pstl transpose-vector-raja \
 	   transpose-vector-rangefor transpose-vector-tbb transpose-vector-thread transpose-kokkos transpose-opencl
 
-nstream: nstream-valarray nstream-vector nstream-openmp nstream-openmp-target \
+#nstream: nstream-valarray nstream-vector nstream-openmp nstream-openmp-target \
 	 nstream-vector-taskloop nstream-vector-stl nstream-vector-pstl nstream-vector-raja \
 	 nstream-vector-rangefor nstream-vector-tbb nstream-kokkos nstream-opencl
 
