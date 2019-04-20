@@ -101,9 +101,10 @@ namespace prk {
 #if defined(__INTEL_COMPILER)
 
     template <typename T>
-    T * malloc(size_t bytes)
+    T * malloc(size_t n)
     {
         const int alignment = prk::get_alignment();
+        const size_t bytes = n * sizeof(T);
         return (T*)_mm_malloc( bytes, alignment);
     }
 
@@ -189,15 +190,18 @@ namespace prk {
         public:
 
         vector(size_t n) {
+            //this->data_ = new T[n];
             this->data_ = prk::malloc<T>(n);
         }
 
         vector(size_t n, T v) {
+            //this->data_ = new T[n];
             this->data_ = prk::malloc<T>(n);
             for (size_t i=0; i<n; ++i) this->data_[i] = v;
         }
 
         ~vector() {
+            //delete[] this->data_;
             prk::free(this->data_);
         }
 
