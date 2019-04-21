@@ -63,7 +63,7 @@
 #include "prk_util.h"
 #include "stencil_taskloop.hpp"
 
-void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out, const int gs)
+void nothing(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out, const int gs)
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
@@ -174,8 +174,8 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
-  std::vector<double> in(n*n);;
-  std::vector<double> out(n*n);;
+  prk::vector<double> in(n*n);;
+  prk::vector<double> out(n*n);;
 
   OMP_PARALLEL()
   OMP_MASTER
