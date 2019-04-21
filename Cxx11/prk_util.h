@@ -180,7 +180,7 @@ namespace prk {
 #endif
     }
 
-    template <class T>
+    template <typename T>
     class vector {
 
         private:
@@ -189,26 +189,65 @@ namespace prk {
 
         public:
 
-        vector(size_t n) {
-            //this->data_ = new T[n];
-            this->data_ = prk::malloc<T>(n);
-        }
+            vector(size_t n) {
+                //this->data_ = new T[n];
+                this->data_ = prk::malloc<T>(n);
+            }
 
-        vector(size_t n, T v) {
-            //this->data_ = new T[n];
-            this->data_ = prk::malloc<T>(n);
-            for (size_t i=0; i<n; ++i) this->data_[i] = v;
-        }
+            vector(size_t n, T v) {
+                //this->data_ = new T[n];
+                this->data_ = prk::malloc<T>(n);
+                for (size_t i=0; i<n; ++i) this->data_[i] = v;
+            }
 
-        ~vector() {
-            //delete[] this->data_;
-            prk::free(this->data_);
-        }
+            ~vector() {
+                //delete[] this->data_;
+                prk::free(this->data_);
+            }
 
-        T & operator[] (size_t n) {
-            return this->data_[n];
-        }
+            T * data() {
+                return this->data_;
+            }
 
+            size_t size() {
+                return this->size_;
+            }
+
+#if 0
+            T const & operator[] (int n) const {
+                return this->data_[n];
+            }
+
+            T & operator[] (int n) {
+                return this->data_[n];
+            }
+#endif
+
+            T const & operator[] (size_t n) const {
+                return this->data_[n];
+            }
+
+            T & operator[] (size_t n) {
+                return this->data_[n];
+            }
+
+            T * begin() {
+                return &(this->data_[0]);
+            }
+
+            T * end() {
+                return &(this->data_[this->size_]);
+            }
+
+#if 0
+            T & begin() {
+                return this->data_[0];
+            }
+
+            T & end() {
+                return this->data_[this->size_];
+            }
+#endif
     };
 
     static inline double wtime(void)
