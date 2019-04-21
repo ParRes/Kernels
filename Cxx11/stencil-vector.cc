@@ -61,7 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "stencil_seq.hpp"
+#include "stencil_vector.hpp"
 
 void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
 {
