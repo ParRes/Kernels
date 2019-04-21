@@ -113,8 +113,8 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> A(order*order);
-  std::vector<double> B(order*order);
+  prk::vector<double> A(order*order);
+  prk::vector<double> B(order*order);
 
   auto trans_time = 0.0;
 
