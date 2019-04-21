@@ -117,9 +117,9 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A(length);
-  std::vector<double> B(length);
-  std::vector<double> C(length);
+  prk::vector<double> A(length);
+  prk::vector<double> B(length);
+  prk::vector<double> C(length);
 
   double scalar(3);
 

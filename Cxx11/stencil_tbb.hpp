@@ -1,4 +1,4 @@
-void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star1(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
   tbb::blocked_range2d<int> range(1, n-1, t, 1, n-1, t);
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
@@ -13,7 +13,7 @@ void star1(const int n, const int t, std::vector<double> & in, std::vector<doubl
   }, tbb_partitioner );
 }
 
-void star2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star2(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
   tbb::blocked_range2d<int> range(2, n-2, t, 2, n-2, t);
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
@@ -32,7 +32,7 @@ void star2(const int n, const int t, std::vector<double> & in, std::vector<doubl
   }, tbb_partitioner );
 }
 
-void star3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star3(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
   tbb::blocked_range2d<int> range(3, n-3, t, 3, n-3, t);
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
@@ -55,7 +55,7 @@ void star3(const int n, const int t, std::vector<double> & in, std::vector<doubl
   }, tbb_partitioner );
 }
 
-void star4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star4(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
   tbb::blocked_range2d<int> range(4, n-4, t, 4, n-4, t);
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
@@ -82,7 +82,7 @@ void star4(const int n, const int t, std::vector<double> & in, std::vector<doubl
   }, tbb_partitioner );
 }
 
-void star5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star5(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
   tbb::blocked_range2d<int> range(5, n-5, t, 5, n-5, t);
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
@@ -113,7 +113,7 @@ void star5(const int n, const int t, std::vector<double> & in, std::vector<doubl
   }, tbb_partitioner );
 }
 
-void grid1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid1(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
   tbb::blocked_range2d<int> range(1, n-1, t, 1, n-1, t);
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
@@ -131,7 +131,7 @@ void grid1(const int n, const int t, std::vector<double> & in, std::vector<doubl
   }, tbb_partitioner );
 }
 
-void grid2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid2(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
   tbb::blocked_range2d<int> range(2, n-2, t, 2, n-2, t);
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
@@ -163,7 +163,7 @@ void grid2(const int n, const int t, std::vector<double> & in, std::vector<doubl
   }, tbb_partitioner );
 }
 
-void grid3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid3(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
   tbb::blocked_range2d<int> range(3, n-3, t, 3, n-3, t);
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
@@ -217,7 +217,7 @@ void grid3(const int n, const int t, std::vector<double> & in, std::vector<doubl
   }, tbb_partitioner );
 }
 
-void grid4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid4(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
   tbb::blocked_range2d<int> range(4, n-4, t, 4, n-4, t);
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
@@ -301,7 +301,7 @@ void grid4(const int n, const int t, std::vector<double> & in, std::vector<doubl
   }, tbb_partitioner );
 }
 
-void grid5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid5(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
   tbb::blocked_range2d<int> range(5, n-5, t, 5, n-5, t);
   tbb::parallel_for( range, [&](decltype(range)& r ) {
     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
