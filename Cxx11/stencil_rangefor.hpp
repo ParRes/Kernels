@@ -1,4 +1,4 @@
-void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star1(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     auto inside = prk::range(1,n-1);
     for (auto i : inside) {
       PRAGMA_SIMD
@@ -13,7 +13,7 @@ void star1(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star2(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     auto inside = prk::range(2,n-2);
     for (auto i : inside) {
       PRAGMA_SIMD
@@ -32,7 +32,7 @@ void star2(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star3(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     auto inside = prk::range(3,n-3);
     for (auto i : inside) {
       PRAGMA_SIMD
@@ -55,7 +55,7 @@ void star3(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star4(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     auto inside = prk::range(4,n-4);
     for (auto i : inside) {
       PRAGMA_SIMD
@@ -82,7 +82,7 @@ void star4(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star5(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     auto inside = prk::range(5,n-5);
     for (auto i : inside) {
       PRAGMA_SIMD
@@ -113,7 +113,7 @@ void star5(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid1(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     auto inside = prk::range(1,n-1);
     for (auto i : inside) {
       PRAGMA_SIMD
@@ -131,7 +131,7 @@ void grid1(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid2(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     auto inside = prk::range(2,n-2);
     for (auto i : inside) {
       PRAGMA_SIMD
@@ -163,7 +163,7 @@ void grid2(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid3(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     auto inside = prk::range(3,n-3);
     for (auto i : inside) {
       PRAGMA_SIMD
@@ -217,7 +217,7 @@ void grid3(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid4(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     auto inside = prk::range(4,n-4);
     for (auto i : inside) {
       PRAGMA_SIMD
@@ -301,7 +301,7 @@ void grid4(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid5(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     auto inside = prk::range(5,n-5);
     for (auto i : inside) {
       PRAGMA_SIMD
