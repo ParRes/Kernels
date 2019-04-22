@@ -66,7 +66,7 @@ else
   EXTRA += target
 endif
 
-all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl sycl boost-compute $(EXTRA)
+all: sequential vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl sycl boost-compute $(EXTRA)
 
 #p2p: p2p-vector p2p-doacross-openmp p2p-hyperplane-openmp p2p-tasks-openmp p2p-openmp-target \
      p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl p2p-hyperplane-vector-tbb \
@@ -86,6 +86,8 @@ all: vector valarray openmp taskloop tbb stl pstl rangefor raja kokkos opencl sy
 	 nstream-vector-rangefor nstream-vector-tbb nstream-kokkos nstream-opencl
 
 #dgemm: dgemm-vector dgemm-cblas dgemm-cublas
+
+sequential: p2p stencil transpose nstream dgemm sparse
 
 vector: p2p-vector p2p-hyperplane-vector stencil-vector transpose-vector nstream-vector sparse-vector dgemm-vector \
 	transpose-vector-async transpose-vector-thread
