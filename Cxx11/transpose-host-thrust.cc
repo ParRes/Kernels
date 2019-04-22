@@ -100,7 +100,7 @@ int main(int argc, char * argv[])
   thrust::sequence(thrust::host, A.begin(), A.end() );
   thrust::fill(thrust::host, B.begin(), B.end(), 0.0);
 
-  auto range = boost::irange(0,order);
+  auto range = prk::range(0,order);
 
   auto trans_time = 0.0;
 
