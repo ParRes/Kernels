@@ -17,10 +17,13 @@ CXX=g++${VERSION} -std=gnu++17 -pthread
 #
 # -mtune=native is appropriate for most cases.
 # -march=native is appropriate if you want portable binaries.
-DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
-#DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math -fsanitize=undefined,leak
-#DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math -fsanitize=address
-#DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math -fsanitize=thread
+DEFAULT_OPT_FLAGS=-O3 -mtune=native -ffast-math
+#DEFAULT_OPT_FLAGS=-O0
+DEFAULT_OPT_FLAGS+=-g3
+#DEFAULT_OPT_FLAGS+=-fsanitize=undefined
+#DEFAULT_OPT_FLAGS+=-fsanitize=undefined,leak
+#DEFAULT_OPT_FLAGS+=-fsanitize=address
+#DEFAULT_OPT_FLAGS+=-fsanitize=thread
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -march=knl
 # See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
@@ -84,7 +87,7 @@ KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
 RAJADIR=/opt/raja/gcc
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 THRUSTDIR=/Users/jrhammon/Work/NVIDIA/thrust
-THRUSTFLAG=-I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
+THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # SYCL flags
 #
@@ -97,7 +100,7 @@ SYCLFLAG=-I${SYCLDIR}/include ${BOOSTFLAG} -DTRISYCL
 # https://github.com/ProGTX/sycl-gtx
 #SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
 #SYCLCXX=${CXX} ${OPENMPFLAG}
-#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
+#SYCLFLAG=-I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 SYCLFLAG+=${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
