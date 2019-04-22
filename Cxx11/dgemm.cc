@@ -83,8 +83,8 @@ void prk_dgemm(const int order, const int tile_size,
                      prk::vector<double> & C)
 {
     for (auto it=0; it<order; it+=tile_size) {
-      for (auto kt=0; kt<order; kt+=tile_size) {
-        for (auto jt=0; jt<order; jt+=tile_size) {
+      for (auto jt=0; jt<order; jt+=tile_size) {
+        for (auto kt=0; kt<order; kt+=tile_size) {
           // ICC will not hoist these on its own...
           auto iend = std::min(order,it+tile_size);
           auto jend = std::min(order,jt+tile_size);
