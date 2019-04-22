@@ -84,14 +84,14 @@
 
 namespace prk {
 
-    int get_alignment(void)
+    const int get_alignment(void)
     {
         /* a := alignment */
 #ifdef PRK_ALIGNMENT
         int a = PRK_ALIGNMENT;
 #else
-        char* temp = getenv("PRK_ALIGNMENT");
-        int a = (temp!=NULL) ? atoi(temp) : 64;
+        const char* temp = std::getenv("PRK_ALIGNMENT");
+        int a = (temp!=nullptr) ? std::atoi(temp) : 64;
         if (a < 8) a = 8;
         assert( (a & (~a+1)) == a ); /* is power of 2? */
 #endif
@@ -101,7 +101,7 @@ namespace prk {
 #if defined(__INTEL_COMPILER)
 
     template <typename T>
-    T * malloc(size_t n)
+    T * malloc<T>(size_t n)
     {
         const int alignment = prk::get_alignment();
         const size_t bytes = n * sizeof(T);
@@ -109,24 +109,26 @@ namespace prk {
     }
 
     template <typename T>
-    void free(T * p)
+    void free<T>(T * p)
     {
         _mm_free(p);
+        p = nullptr;
     }
 
 #else // !__INTEL_COMPILER
 
     template <typename T>
-    void * malloc(size_t bytes)
+    T * malloc(size_t n)
     {
-        const int alignment = prk_get_alignment();
+        const int alignment = prk::get_alignment();
+        const size_t bytes = n * sizeof(T);
 
         // We cannot use C11 aligned_alloc on Mac.
         // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69680 */
         // GCC claims to be C11 without knowing if glibc is compliant...
 #if !defined(__GNUC__) && \
     !defined(__APPLE__) && \
-     defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+     defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && 0 \
 
         // From ISO C11:
         //
@@ -140,16 +142,16 @@ namespace prk {
         //  Thus, if we do not round up the bytes to be a multiple
         //  of the alignment, we violate ISO C.
 
-        size_t padded = bytes;
-        size_t excess = bytes % alignment;
+        const size_t padded = bytes;
+        const size_t excess = bytes % alignment;
         if (excess>0) padded += (alignment - excess);
         return aligned_alloc(alignment,padded);
 
 #else
 
-        T * ptr = NULL;
-        int ret = posix_memalign(&ptr,alignment,bytes);
-        if (ret!=0) ptr = NULL;
+        T * ptr = nullptr;
+        const int ret = posix_memalign((void**)&ptr,alignment,bytes);
+        if (ret!=0) ptr = nullptr;
         return ptr;
 
 #endif
@@ -157,9 +159,10 @@ namespace prk {
     }
 
     template <typename T>
-    void free(void * p)
+    void free(T * p)
     {
-        free(p);
+        std::free(p);
+        p = nullptr;
     }
 
 #endif // __INTEL_COMPILER
@@ -192,17 +195,23 @@ namespace prk {
             vector(size_t n) {
                 //this->data_ = new T[n];
                 this->data_ = prk::malloc<T>(n);
+                this->size_ = n;
             }
 
             vector(size_t n, T v) {
                 //this->data_ = new T[n];
                 this->data_ = prk::malloc<T>(n);
                 for (size_t i=0; i<n; ++i) this->data_[i] = v;
+                this->size_ = n;
             }
 
             ~vector() {
                 //delete[] this->data_;
-                prk::free(this->data_);
+                prk::free<T>(this->data_);
+            }
+
+            void operator~() {
+                this->~vector();
             }
 
             T * data() {
