@@ -222,6 +222,7 @@ clean:
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
+	-rm -f nstream transpose stencil p2p sparse dgemm
 	-rm -f *-vector
 	-rm -f *-valarray
 	-rm -f *-openmp
