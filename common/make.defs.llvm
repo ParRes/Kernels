@@ -105,11 +105,12 @@ KOKKOSDIR=/opt/kokkos/clang
 KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
 RAJADIR=/opt/raja/clang
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
-#THRUSTDIR=/opt/nvidia/thrust
-#THRUSTFLAG=-I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
+THRUSTDIR=/opt/nvidia/thrust
+THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
+BLASFLAG=-DACCELERATE -framework Accelerate
 CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 #
 # CUDA flags
