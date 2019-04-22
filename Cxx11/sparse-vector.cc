@@ -105,7 +105,8 @@ int main(int argc, char* argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, lsize, radius, stencil_size;
+  int iterations, lsize;
+  unsigned radius, stencil_size;
   size_t size, size2, nent;
   double sparsity;
   try {
