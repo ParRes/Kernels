@@ -73,8 +73,8 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, gs, offset;
-  size_t length;
+  int iterations;
+  size_t length, gs, offset;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length>";
