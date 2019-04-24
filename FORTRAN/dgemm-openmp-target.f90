@@ -181,7 +181,6 @@ program main
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
-  ! TODO: use intrinsic here (except PGI)
   checksum = 0.0d0
   !$omp parallel do simd reduction(+:checksum)
   do j=1,order
