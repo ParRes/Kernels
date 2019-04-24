@@ -90,6 +90,7 @@ dgemm-pretty: dgemm-pretty.f90
 clean:
 	-rm -f *.o
 	-rm -f *.i90
+	-rm -f *.dbg
 	-rm -f *__genmod.f90 # Intel Fortran
 	-rm -f *__genmod.mod # Intel Fortran
 	-rm -f *.optrpt

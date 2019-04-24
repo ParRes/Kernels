@@ -75,11 +75,6 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
     do jt=1,order,tile_size
       do kt=1,order,tile_size
         do it=1,order,tile_size
-#elif defined(PGI)
-    ! PGI does not support DO CONCURRENT.
-    do jt=1,order,tile_size
-      do kt=1,order,tile_size
-        do it=1,order,tile_size
 #else
     do concurrent (jt=1:order:tile_size)
       do concurrent (kt=1:order:tile_size)
@@ -110,11 +105,6 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
     do j=1,order
       do k=1,order
         !$omp simd
-        do i=1,order
-#elif defined(PGI)
-    ! PGI does not support DO CONCURRENT.
-    do j=1,order
-      do k=1,order
         do i=1,order
 #else
     do concurrent (j=1:order)
@@ -288,7 +278,6 @@ program main
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
-  ! TODO: use intrinsic here (except PGI)
   checksum = 0.0d0
   !$omp parallel do simd reduction(+:checksum)
   do j=1,order
