@@ -139,6 +139,7 @@ int main(int argc, char * argv[])
           C[i] = 2.0;
       });
       Kokkos::fence();
+
       for (int iter = 0; iter<=iterations; ++iter) {
 
         if (iter==1) {
@@ -169,8 +170,9 @@ int main(int argc, char * argv[])
 
     double asum(0);
     Kokkos::parallel_reduce(length, KOKKOS_LAMBDA(size_t const i, double & inner) {
-      inner += std::fabs(A(i));
+        inner += std::fabs(A(i));
     }, asum);
+    Kokkos::fence();
 
     double epsilon(1.e-8);
     if (std::fabs(ar-asum)/asum > epsilon) {

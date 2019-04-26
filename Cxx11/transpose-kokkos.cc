@@ -117,6 +117,8 @@ int main(int argc, char * argv[])
     // Allocate space and perform the computation
     //////////////////////////////////////////////////////////////////////
 
+    double trans_time(0);
+
     matrix A("A", order, order);
     matrix B("B", order, order);
 
@@ -129,31 +131,35 @@ int main(int argc, char * argv[])
     auto policy_lr = Kokkos::MDRangePolicy<rl>({0,0},order2,tile2);
     auto policy_rl = Kokkos::MDRangePolicy<lr>({0,0},order2,tile2);
 
-    Kokkos::parallel_for(policy, KOKKOS_LAMBDA(int i, int j) {
-        A(i,j) = static_cast<double>(i*order+j);
-        B(i,j) = 0.0;
-    });
+    {
+      Kokkos::parallel_for(policy, KOKKOS_LAMBDA(int i, int j) {
+          A(i,j) = static_cast<double>(i*order+j);
+          B(i,j) = 0.0;
+      });
+      Kokkos::fence();
 
-    double trans_time(0);
+      for (int iter = 0; iter<=iterations; ++iter) {
 
-    for (int iter = 0; iter<=iterations; ++iter) {
+        if (iter==1) {
+          Kokkos::fence();
+          trans_time = prk::wtime();
+        }
 
-      if (iter==1) trans_time = prk::wtime();
-
-      if (permute) {
-          Kokkos::parallel_for(policy_rl, KOKKOS_LAMBDA(int i, int j) {
-              B(i,j) += A(j,i);
-              A(j,i) += 1.0;
-          });
-      } else {
-          Kokkos::parallel_for(policy_lr, KOKKOS_LAMBDA(int i, int j) {
-              B(i,j) += A(j,i);
-              A(j,i) += 1.0;
-          });
+        if (permute) {
+            Kokkos::parallel_for(policy_rl, KOKKOS_LAMBDA(int i, int j) {
+                B(i,j) += A(j,i);
+                A(j,i) += 1.0;
+            });
+        } else {
+            Kokkos::parallel_for(policy_lr, KOKKOS_LAMBDA(int i, int j) {
+                B(i,j) += A(j,i);
+                A(j,i) += 1.0;
+            });
+        }
       }
+      Kokkos::fence();
+      trans_time = prk::wtime() - trans_time;
     }
-
-    trans_time = prk::wtime() - trans_time;
 
     //////////////////////////////////////////////////////////////////////
     /// Analyze and output results
