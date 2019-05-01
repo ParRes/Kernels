@@ -152,6 +152,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/p2p             10 1024 1024
         $PRK_TARGET_PATH/p2p             10 1024 1024 100 100
         $PRK_TARGET_PATH/p2p-innerloop   10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane  10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane  10 1024 32
         $PRK_TARGET_PATH/stencil         10 1000
         $PRK_TARGET_PATH/transpose       10 1024 32
         #echo "Test stencil code generator"
@@ -174,6 +176,8 @@ case "$PRK_TARGET" in
                 ${MAKE} -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
                 $PRK_TARGET_PATH/p2p-innerloop-openmp     10 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024 32
                 $PRK_TARGET_PATH/stencil-openmp           10 1000
                 $PRK_TARGET_PATH/transpose-openmp         10 1024 32
                 #echo "Test stencil code generator"
