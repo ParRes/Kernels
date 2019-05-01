@@ -24,7 +24,7 @@ ifeq ($(findstring ifort,$(FC)),ifort)
   ifeq ($(shell uname -s),Darwin)
     EXTRA = taskloop
   else
-    EXTRA = target coarray taskloop
+    EXTRA = taskloop target coarray
   endif
 endif
 # GCC (also matches pgfortran so PGI must come after)
