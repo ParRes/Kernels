@@ -84,7 +84,7 @@
 
 namespace prk {
 
-    const int get_alignment(void)
+    int get_alignment(void)
     {
         /* a := alignment */
 #ifdef PRK_ALIGNMENT
