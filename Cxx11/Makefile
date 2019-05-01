@@ -66,7 +66,6 @@ else
   EXTRA += target
 endif
 ifneq ($(findstring pgc++,$(CXX)),pgc++)
-    @echo CXX=$(CXX)
   EXTRA += tbb pstl
 endif
 

@@ -101,7 +101,7 @@ namespace prk {
 #if defined(__INTEL_COMPILER)
 
     template <typename T>
-    T * malloc<T>(size_t n)
+    T * malloc(size_t n)
     {
         const int alignment = prk::get_alignment();
         const size_t bytes = n * sizeof(T);
@@ -109,7 +109,7 @@ namespace prk {
     }
 
     template <typename T>
-    void free<T>(T * p)
+    void free(T * p)
     {
         _mm_free(p);
         p = nullptr;
