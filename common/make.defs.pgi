@@ -9,7 +9,7 @@ CC=pgcc -c11
 FC=pgfortran -Mpreprocess -Mfreeform
 #FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Wl,-rpath=/opt/llvm/pgi-flang/lib
 # C++11 may not be required but does no harm here.
-CXX=pgc++ --c++11
+CXX=pgc++ --c++17
 #
 # Compiler flags
 #
@@ -18,9 +18,10 @@ DEFAULT_OPT_FLAGS=-O2 -tp=haswell
 # OpenMP flags
 #
 OPENMPFLAG=-mp #-Minfo=mp,vect
-OFFLOADFLAG=-mp #-Minfo=mp,vect
-#ORNLACCFLAG=-acc -ta=multicore -Minfo=accel
-ORNLACCFLAG=-acc -ta=tesla:cc70 -Minfo=accel
+OPENMPSIMDFLAG=-mp #-Minfo=mp,vect
+OFFLOADFLAG=-mp -ta=multicore #-Minfo=mp,vect
+ORNLACCFLAG=-acc -ta=multicore #-Minfo=accel
+#ORNLACCFLAG=-acc -ta=tesla:cc70 -Minfo=accel
 ORNLACCFLAG+=-Mlarge_arrays
 #
 # OpenCL flags
@@ -31,18 +32,45 @@ ORNLACCFLAG+=-Mlarge_arrays
 OPENCLDIR=/etc/alternatives/opencl-intel-tools
 OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
+# SYCL flags
+#
+# triSYCL
+# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+SYCLDIR=./triSYCL
+SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
+SYCLFLAG=-I$(SYCLDIR)/include
+# ProGTX
+# https://github.com/ProGTX/sycl-gtx
+#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
+#SYCLCXX=${CXX} ${OPENMPFLAG}
+#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
+#
+# OCCA
+#
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
+# TBB
+#
+TBBDIR=./tbb
+TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+#
 # Parallel STL, Boost, etc.
 #
 BOOSTFLAG=-DUSE_BOOST -I.
-PSTLFLAG=-DUSE_PSTL ${OPENMPFLAG} ${TBBFLAG}
-KOKKOSDIR=./kokkos
-KOKKOSFLAG=-DUSE_KOKKOS -I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
-RAJADIR=./raja
-RAJAFLAG=-DUSE_RAJA -I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+#RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include ${RANGEFLAG}
+KOKKOSDIR=/opt/kokkos/pgi
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
+RAJADIR=/opt/raja/pgi
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+THRUSTDIR=/opt/nvidia/thrust
+THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
-CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+BLASFLAG=
+CBLASFLAG=
 #
 # CUDA flags
 #
@@ -78,4 +106,4 @@ CUDAFLAGS+=-D_AVX512ERINTRIN_H_INCLUDED
 # MPI
 #
 # Needs PATH and LD_LIBRARY_PATH set appropriately...
-MPICC=/opt/pgi/linux86-64/2017/mpi/openmpi/bin/mpicc
+MPICC=/opt/pgi/linux86-64/2019/mpi/openmpi/bin/mpicc
