@@ -67,9 +67,9 @@ int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
 #if defined(USE_PSTL)
-  std::cout << "C++17 PSTL HYPERPLANE pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++17/PSTL HYPERPLANE pipeline execution on 2D grid" << std::endl;
 #else
-  std::cout << "C++11 STL HYPERPLANE pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/STL HYPERPLANE pipeline execution on 2D grid" << std::endl;
 #endif
 
   //////////////////////////////////////////////////////////////////////
@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
         const auto end   = std::min(i,n)+1;
         auto range = prk::range(begin,end);
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
-        std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (auto j) {
+        std::for_each( exec::par, std::begin(range), std::end(range), [&] (auto j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
         __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (auto j) {
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
         const auto end   = std::min(i,nb+1)+1;
         auto range = prk::range(begin,end);
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
-        std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (auto j) {
+        std::for_each( exec::par, std::begin(range), std::end(range), [&] (auto j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
         __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (auto j) {

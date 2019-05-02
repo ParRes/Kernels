@@ -181,7 +181,6 @@ program main
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
-  ! TODO: use intrinsic here (except PGI)
   checksum = 0.0d0
   !$omp parallel do simd reduction(+:checksum)
   do j=1,order
@@ -197,7 +196,7 @@ program main
   if (residuum .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
     avgtime = dgemm_time/iterations
-    nflops = 2 * forder**3
+    nflops = 2 * int(order,INT64)**3
     write(*,'(a,f13.6,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
            ' Avg time (s): ', avgtime
   else

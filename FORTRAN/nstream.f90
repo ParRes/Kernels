@@ -62,6 +62,7 @@
 !
 ! *******************************************************************
 
+#ifndef _OPENMP
 function prk_get_wtime() result(t)
   use iso_fortran_env
   implicit none
@@ -70,6 +71,7 @@ function prk_get_wtime() result(t)
   call system_clock(count = c, count_rate = r)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
+#endif
 
 program main
   use iso_fortran_env
@@ -77,7 +79,9 @@ program main
   use omp_lib
 #endif
   implicit none
+#ifndef _OPENMP
   real(kind=REAL64) :: prk_get_wtime
+#endif
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -188,7 +192,7 @@ program main
     C(i) = 2
   enddo
   !$omp end do
-#elif defined(PGI)
+#elif 0
   forall (i=1:length)
     A(i) = 0
     B(i) = 2
@@ -225,7 +229,7 @@ program main
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
     !$omp end do
-#elif defined(PGI)
+#elif 0
     forall (i=1:length)
       A(i) = A(i) + B(i) + scalar * C(i)
     end forall
@@ -263,7 +267,7 @@ program main
   ar = ar * length
 
   asum = 0
-#if defined(_OPENMP) || defined(PGI)
+#if defined(_OPENMP)
   !$omp parallel do reduction(+:asum)
   do i=1,length
     asum = asum + abs(A(i))
@@ -288,7 +292,7 @@ program main
   else
     write(*,'(a17)') 'Solution validates'
     avgtime = nstream_time/iterations;
-    bytes = 4.0 * int(length,INT64) * storage_size(A)/8
+    bytes = 4 * int(length,INT64) * storage_size(A)/8
     write(*,'(a12,f15.3,1x,a12,e15.6)')    &
         'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
         'Avg time (s): ', avgtime

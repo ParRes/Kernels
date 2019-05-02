@@ -35,16 +35,24 @@
 #ifdef USE_THRUST
 # ifdef __NVCC__
 #  include <thrust/device_vector.h>
+# elif defined(_OPENMP)
+#define THRUST_DEVICE_SYSTEM THRUST_DEVICE_SYSTEM_OMP
+#  include <thrust/system/omp/execution_policy.h>
+//#  include <thrust/system/omp/vector.h>
+#else
+#define THRUST_DEVICE_SYSTEM THRUST_DEVICE_SYSTEM_CPP
+#  include <thrust/system/omp/execution_policy.h>
+//#  include <thrust/system/cpp/vector.h>
 # endif
 # include <thrust/host_vector.h>
 # include <thrust/fill.h>
-# include <thrust/sequence.h>
-# include <thrust/for_each.h>
 # include <thrust/transform.h>
 # include <thrust/transform_reduce.h>
+# include <thrust/functional.h>
+# include <thrust/sequence.h>
+# include <thrust/for_each.h>
 # include <thrust/iterator/counting_iterator.h>
 # include <thrust/execution_policy.h>
-# include <thrust/functional.h>
 #endif
 
 #endif /* PRK_THRUST_H */

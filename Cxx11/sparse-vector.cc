@@ -105,7 +105,8 @@ int main(int argc, char* argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, lsize, radius, stencil_size;
+  int iterations, lsize;
+  unsigned radius, stencil_size;
   size_t size, size2, nent;
   double sparsity;
   try {
@@ -124,7 +125,7 @@ int main(int argc, char* argv[])
       if (lsize < 1) {
         throw "ERROR: grid dimension must be positive";
       }
-      size_t lsize2 = 2*lsize;
+      //size_t lsize2 = 2*lsize;
       size = 1L<<lsize;
       size2 = size*size;
 

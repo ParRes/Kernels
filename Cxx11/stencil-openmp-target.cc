@@ -65,11 +65,8 @@
 
 void nothing(const int n, const int t, const double * RESTRICT in, double * RESTRICT out)
 {
-    std::cout << "You are trying to use a stencil that does not exist." << std::endl;
-    std::cout << "Please generate the new stencil using the code generator." << std::endl;
-    // n will never be zero - this is to silence compiler warnings.
-    if (n==0) std::cout << in << out << std::endl;
-    std::abort();
+    // use arguments to silence compiler warnings
+    out[0] = in[0] + n + t;
 }
 
 int main(int argc, char* argv[])

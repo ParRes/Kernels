@@ -10,6 +10,10 @@ ifdef VERBOSE
   CFLAGS += -DVERBOSE
 endif
 
+ifdef PRK_USE_MMAP
+  CFLAGS += -DPRK_USE_MMAP
+endif
+
 ifeq ($(findstring musl,$(CC)),musl)
   CFLAGS += -DUSE_C11_THREADS
 endif
@@ -22,7 +26,7 @@ ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKFLAGS = $(CILKFLAG)
 ISPCFLAGS = $(ISPCFLAG)
 
-.PHONY: all clean serial thread openmp target taskloop cilk ispc
+.PHONY: all clean serial thread openmp target taskloop ispc # cilk
 
 EXTRA=
 ifeq ($(shell uname -s),Darwin)
@@ -41,11 +45,17 @@ endif
 
 all: serial thread openmp taskloop $(EXTRA)
 
-serial: p2p p2p-innerloop stencil transpose
+serial: nstream p2p p2p-innerloop stencil transpose
 
 thread: transpose-thread
 
-openmp: p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp p2p-hyperplane-openmp
+
+mpi: nstream-mpi
+
+memkind: nstream-memkind nstream-memkind-openmp
+
+mmap: nstream-mmap nstream-mmap-openmp
 
 target: stencil-target transpose-target
 
@@ -58,10 +68,31 @@ ispc: transpose-ispc
 p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
+p2p-hyperplane: p2p-hyperplane-openmp.c prk_util.h
+	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
+%-mpi: %-mpi.c prk_util.h
+	$(MPICC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
+%-memkind: %-memkind.c prk_util.h
+	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) $(MEMKINDFLAGS) -o $@
+
+%-memkind-openmp: %-memkind.c prk_util.h
+	$(CC) $(CFLAGS) $(OMPFLAGS) $< $(EXTRA_CLIBS) $(MEMKINDFLAGS) -o $@
+
+%-mmap: %-mmap.c prk_util.h
+	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
+%-mmap-openmp: %-mmap.c prk_util.h
+	$(CC) $(CFLAGS) $(OMPFLAGS) $< $(EXTRA_CLIBS) -o $@
+
 %-target: %-target.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-taskloop: %-taskloop.c prk_util.h
+	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
+
+nstream-openmp: nstream.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-openmp: %-openmp.c prk_util.h
@@ -92,13 +123,16 @@ clean:
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
-	-rm -f p2p p2p-innerloop stencil transpose
+	-rm -f nstream p2p p2p-innerloop stencil transpose
 	-rm -f *-openmp
+	-rm -f *-mpi
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-cilk
 	-rm -f *-thread
 	-rm -f *-ispc
+	-rm -f nstream-mmap nstream-memkind
+	-rm -f nstream-mmap-openmp nstream-memkind-openmp
 
 cleancl:
 	-rm -f star[123456789].cl

@@ -57,7 +57,7 @@ case "$PRK_TARGET" in
             sh ./travis/install-gcc.sh $TRAVIS_ROOT
         fi
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
-            sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
+            sh ./travis/install-clang.sh $TRAVIS_ROOT
         fi
         sh ./travis/install-tbb.sh $TRAVIS_ROOT
         sh ./travis/install-pstl.sh $TRAVIS_ROOT
@@ -66,9 +66,9 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             sh ./travis/install-boost.sh $TRAVIS_ROOT
         fi
-        # CMake 3.3 or higher is required.  You are running version 2.8.7.
+        # CMake 3.10 or higher is required.
         sh ./travis/install-cmake.sh $TRAVIS_ROOT
-        sh ./travis/install-raja.sh $TRAVIS_ROOT
+        #sh ./travis/install-raja.sh $TRAVIS_ROOT
         sh ./travis/install-kokkos.sh $TRAVIS_ROOT
         #sh ./travis/install-occa.sh $TRAVIS_ROOT
         sh ./travis/install-sycl.sh $TRAVIS_ROOT
@@ -94,6 +94,7 @@ case "$PRK_TARGET" in
             brew link --overwrite gcc || true
         fi
         if [ "${CC}" = "gcc" ] ; then
+            sh ./travis/install-cmake.sh $TRAVIS_ROOT
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
         fi
         ;;
