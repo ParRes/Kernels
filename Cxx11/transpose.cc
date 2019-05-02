@@ -57,11 +57,7 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-#ifdef _OPENMP
-  std::cout << "C++11/OpenMP Matrix transpose: B = A^T" << std::endl;
-#else
   std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
-#endif
 
   //////////////////////////////////////////////////////////////////////
   // Read and test input parameters
@@ -75,13 +71,11 @@ int main(int argc, char * argv[])
         throw "Usage: <# iterations> <matrix order> [tile size]";
       }
 
-      // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
-      // order of a the matrix
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
@@ -99,49 +93,32 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-#ifdef _OPENMP
-  std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
-#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
   std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
   auto trans_time = 0.0;
 
-  std::vector<double> A(order*order);
-  std::vector<double> B(order*order);
+  prk::vector<double> A(order*order);
+  prk::vector<double> B(order*order,0.0);
 
-  OMP_PARALLEL()
+  // fill A with the sequence 0 to order^2-1 as doubles
+  std::iota(A.begin(), A.end(), 0.0);
+
   {
-    OMP_FOR()
-    for (auto i=0;i<order; i++) {
-      PRAGMA_SIMD
-      for (auto j=0;j<order;j++) {
-        A[i*order+j] = static_cast<double>(i*order+j);
-        B[i*order+j] = 0.0;
-      }
-    }
-
     for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          trans_time = prk::wtime();
-      }
+      if (iter==1) trans_time = prk::wtime();
 
       // transpose the  matrix
       if (tile_size < order) {
-        OMP_FOR()
         for (auto it=0; it<order; it+=tile_size) {
           for (auto jt=0; jt<order; jt+=tile_size) {
-            PRAGMA_SIMD
             for (auto i=it; i<std::min(order,it+tile_size); i++) {
-              PRAGMA_SIMD
               for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
                 B[i*order+j] += A[j*order+i];
                 A[j*order+i] += 1.0;
@@ -150,9 +127,7 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        OMP_FOR()
         for (auto i=0;i<order; i++) {
-        PRAGMA_SIMD
           for (auto j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
             A[j*order+i] += 1.0;
@@ -160,8 +135,6 @@ int main(int argc, char * argv[])
         }
       }
     }
-    OMP_BARRIER
-    OMP_MASTER
     trans_time = prk::wtime() - trans_time;
   }
 
@@ -170,8 +143,8 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
-  OMP_PARALLEL_FOR_REDUCE( +:abserr )
+  double abserr(0);
+  // TODO: replace with std::generate, std::accumulate, or similar
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
       const int ij = i*order+j;

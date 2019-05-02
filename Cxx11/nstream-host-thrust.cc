@@ -115,8 +115,6 @@ int main(int argc, char * argv[])
   thrust::host_vector<double> B(length);
   thrust::host_vector<double> C(length);
 
-  auto range = prk::range(static_cast<size_t>(0), length);
-
   double scalar(3);
   {
     thrust::fill(thrust::host, A.begin(), A.end(), 0.0);

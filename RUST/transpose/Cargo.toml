@@ -1,0 +1,6 @@
+[package]
+name = "transpose"
+version = "0.1.0"
+authors = ["Jeff Hammond <jeff.r.hammond@intel.com>"]
+
+[dependencies]

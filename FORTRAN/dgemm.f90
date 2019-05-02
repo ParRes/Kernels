@@ -75,11 +75,6 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
     do jt=1,order,tile_size
       do kt=1,order,tile_size
         do it=1,order,tile_size
-#elif defined(PGI)
-    ! PGI does not support DO CONCURRENT.
-    do jt=1,order,tile_size
-      do kt=1,order,tile_size
-        do it=1,order,tile_size
 #else
     do concurrent (jt=1:order:tile_size)
       do concurrent (kt=1:order:tile_size)
@@ -110,11 +105,6 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
     do j=1,order
       do k=1,order
         !$omp simd
-        do i=1,order
-#elif defined(PGI)
-    ! PGI does not support DO CONCURRENT.
-    do j=1,order
-      do k=1,order
         do i=1,order
 #else
     do concurrent (j=1:order)
@@ -173,7 +163,7 @@ program main
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./dgemm-pretty <# iterations> <matrix order> [<tile_size>]'
+    write(*,'(a66)')    'Usage: ./dgemm-pretty <# iterations> <matrix order> [<tile_size>]'
     stop 1
   endif
 
@@ -288,7 +278,6 @@ program main
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
-  ! TODO: use intrinsic here (except PGI)
   checksum = 0.0d0
   !$omp parallel do simd reduction(+:checksum)
   do j=1,order
@@ -304,7 +293,7 @@ program main
   if (residuum .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
     avgtime = dgemm_time/iterations
-    nflops = 2 * forder**3
+    nflops = 2 * int(order,INT64)**3
     write(*,'(a,f13.6,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
            ' Avg time (s): ', avgtime
   else
