@@ -1,4 +1,4 @@
-void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star1(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     for (auto it=1; it<n-1; it+=t) {
       for (auto jt=1; jt<n-1; jt+=t) {
         for (auto i=it; i<std::min(n-1,it+t); ++i) {
@@ -14,7 +14,7 @@ void star1(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star2(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     for (auto it=2; it<n-2; it+=t) {
       for (auto jt=2; jt<n-2; jt+=t) {
         for (auto i=it; i<std::min(n-2,it+t); ++i) {
@@ -34,7 +34,7 @@ void star2(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star3(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     for (auto it=3; it<n-3; it+=t) {
       for (auto jt=3; jt<n-3; jt+=t) {
         for (auto i=it; i<std::min(n-3,it+t); ++i) {
@@ -58,7 +58,7 @@ void star3(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star4(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     for (auto it=4; it<n-4; it+=t) {
       for (auto jt=4; jt<n-4; jt+=t) {
         for (auto i=it; i<std::min(n-4,it+t); ++i) {
@@ -86,7 +86,7 @@ void star4(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void star5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void star5(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     for (auto it=5; it<n-5; it+=t) {
       for (auto jt=5; jt<n-5; jt+=t) {
         for (auto i=it; i<std::min(n-5,it+t); ++i) {
@@ -118,7 +118,7 @@ void star5(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid1(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     for (auto it=1; it<n-1; it+=t) {
       for (auto jt=1; jt<n-1; jt+=t) {
         for (auto i=it; i<std::min(n-1,it+t); ++i) {
@@ -137,7 +137,7 @@ void grid1(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid2(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     for (auto it=2; it<n-2; it+=t) {
       for (auto jt=2; jt<n-2; jt+=t) {
         for (auto i=it; i<std::min(n-2,it+t); ++i) {
@@ -170,7 +170,7 @@ void grid2(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid3(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     for (auto it=3; it<n-3; it+=t) {
       for (auto jt=3; jt<n-3; jt+=t) {
         for (auto i=it; i<std::min(n-3,it+t); ++i) {
@@ -225,7 +225,7 @@ void grid3(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid4(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     for (auto it=4; it<n-4; it+=t) {
       for (auto jt=4; jt<n-4; jt+=t) {
         for (auto i=it; i<std::min(n-4,it+t); ++i) {
@@ -310,7 +310,7 @@ void grid4(const int n, const int t, std::vector<double> & in, std::vector<doubl
      }
 }
 
-void grid5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
+void grid5(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {
     for (auto it=5; it<n-5; it+=t) {
       for (auto jt=5; jt<n-5; jt+=t) {
         for (auto i=it; i<std::min(n-5,it+t); ++i) {

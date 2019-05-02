@@ -159,10 +159,10 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> matrix(nent,0.0);
-  std::vector<size_t> colIndex(nent,0);
-  std::vector<double> vector(size2,0.0);
-  std::vector<double> result(size2,0.0);
+  prk::vector<double> matrix(nent,0.0);
+  prk::vector<size_t> colIndex(nent,0);
+  prk::vector<double> vector(size2,0.0);
+  prk::vector<double> result(size2,0.0);
 
   double sparse_time(0);
 

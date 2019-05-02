@@ -180,23 +180,29 @@ int main(int argc, char* argv[])
     auto tile2  = {tile_size,tile_size};
     auto full   = Kokkos::MDRangePolicy<Kokkos::Rank<2>>(z2,n2,tile2);
 
-    Kokkos::parallel_for(full, KOKKOS_LAMBDA(int i, int j) {
-        in(i,j)  = static_cast<double>(i+j);
-        out(i,j) = 0.0;
-    });
-
-    for (int iter = 0; iter<=iterations; ++iter) {
-
-      if (iter==1) stencil_time = prk::wtime();
-
-      stencil(n, tile_size, in, out);
-
+    {
       Kokkos::parallel_for(full, KOKKOS_LAMBDA(int i, int j) {
-          in(i,j) += 1.0;
+          in(i,j)  = static_cast<double>(i+j);
+          out(i,j) = 0.0;
       });
-    }
+      Kokkos::fence();
 
-    stencil_time = prk::wtime() - stencil_time;
+      for (int iter = 0; iter<=iterations; ++iter) {
+
+        if (iter==1) {
+          Kokkos::fence();
+          stencil_time = prk::wtime();
+        }
+
+        stencil(n, tile_size, in, out);
+
+        Kokkos::parallel_for(full, KOKKOS_LAMBDA(int i, int j) {
+            in(i,j) += 1.0;
+        });
+      }
+      Kokkos::fence();
+      stencil_time = prk::wtime() - stencil_time;
+    }
 
     //////////////////////////////////////////////////////////////////////
     // Analyze and output results.
@@ -211,6 +217,7 @@ int main(int argc, char* argv[])
     Kokkos::parallel_reduce(inside, KOKKOS_LAMBDA(int i, int j, double & norm) {
         norm += std::fabs(out(i,j));
     }, norm);
+    Kokkos::fence();
     norm /= active_points;
 
     // verify correctness

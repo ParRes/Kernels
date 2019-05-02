@@ -14,7 +14,7 @@ CC=icc -std=c11 -pthread
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=ifort -std08 -fpp
 # C++11 may not be required but does no harm here.
-CXX=icpc -std=c++14 -pthread
+CXX=icpc -std=c++17 -pthread
 #
 # Compiler flags
 #
@@ -24,7 +24,7 @@ DEFAULT_OPT_FLAGS=-g -O3 -xHOST
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -xMIC-AVX512
 #
-DEFAULT_OPT_FLAGS+=-qopt-report=5
+#DEFAULT_OPT_FLAGS+=-qopt-report=5
 #
 # OpenMP flags
 #
@@ -36,6 +36,9 @@ OFFLOADFLAG=-qopenmp-offload=host
 #
 # MacOS
 #OPENCLFLAG=-framework OpenCL
+# POCL
+# http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
+#OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
 OPENCLDIR=/etc/alternatives/opencl-intel-tools
 OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
@@ -51,7 +54,7 @@ SYCLFLAG=-std=gnu++14 -I$(SYCLDIR)/include
 # https://github.com/ProGTX/sycl-gtx
 #SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
 #SYCLCXX=${CXX} ${OPENMPFLAG}
-#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
+#SYCLFLAG=-I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # OCCA
 #
@@ -76,8 +79,8 @@ KOKKOSDIR=/opt/kokkos/intel
 KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
 RAJADIR=/opt/raja/intel
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
-#THRUSTDIR=/opt/nvidia/thrust
-#THRUSTFLAG=-I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
+THRUSTDIR=/opt/nvidia/thrust
+THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
@@ -89,8 +92,9 @@ CBLASFLAG=-DMKL -mkl
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
 #NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-NVCC=nvcc -arch=sm_50
+NVCC=nvcc
 CUDAFLAGS=-g -O3 -std=c++11
+CUDAFLAGS+=-arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #
@@ -115,6 +119,8 @@ MPICC=mpiicc -std=c99
 COARRAYFLAG=-coarray
 # multi-node
 # COARRAYFLAG=-coarray=distributed
-
+#
+# MEMKIND (used in C1z)
+#
 MEMKINDDIR=/home/parallels/PRK/deps
 MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib

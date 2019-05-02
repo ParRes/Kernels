@@ -75,9 +75,15 @@ SYCLFLAG+=-std=c++14
 #
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+<<<<<<< HEAD
 SYCLDIR=./triSYCL
 SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
 SYCLFLAG=-std=gnu++14 -I$(SYCLDIR)/include
+=======
+#SYCLDIR=./triSYCL
+#SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
+#SYCLFLAG=-std=gnu++14 -I$(SYCLDIR)/include
+>>>>>>> origin/master
 # ProGTX
 # https://github.com/ProGTX/sycl-gtx
 #SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
@@ -86,7 +92,7 @@ SYCLFLAG=-std=gnu++14 -I$(SYCLDIR)/include
 #
 # OCCA
 #
-OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
 #
 # TBB
 #
@@ -105,11 +111,12 @@ KOKKOSDIR=/opt/kokkos/clang
 KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
 RAJADIR=/opt/raja/clang
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
-#THRUSTDIR=/opt/nvidia/thrust
-#THRUSTFLAG=-I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
+THRUSTDIR=/opt/nvidia/thrust
+THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
+BLASFLAG=-DACCELERATE -framework Accelerate
 CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 #
 # CUDA flags

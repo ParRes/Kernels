@@ -53,7 +53,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('       }\n')
         src.write('     }\n')
     elif (model=='taskloop'):
-        src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out, const int gs) {\n')
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out, const int gs) {\n')
         src.write('    OMP_TASKLOOP_COLLAPSE(2, firstprivate(n) shared(in,out) grainsize(gs) )\n')
         src.write('    for (auto it='+str(radius)+'; it<n-'+str(radius)+'; it+=t) {\n')
         src.write('      for (auto jt='+str(radius)+'; jt<n-'+str(radius)+'; jt+=t) {\n')
@@ -74,7 +74,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('       }\n')
         src.write('     }\n')
     elif (model=='rangefor'):
-        src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {\n')
         src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    for (auto i : inside) {\n')
         src.write('      PRAGMA_SIMD\n')
@@ -128,7 +128,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         bodygen(src,pattern,stencil_size,radius,W,model)
         src.write('    });\n')
     elif (model=='tbb'):
-        src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {\n')
         src.write('  tbb::blocked_range2d<int> range('+str(radius)+', n-'+str(radius)+', t, '+str(radius)+', n-'+str(radius)+', t);\n')
         src.write('  tbb::parallel_for( range, [&](decltype(range)& r ) {\n')
         src.write('    for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {\n')
@@ -151,8 +151,20 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('    if ( ('+str(radius)+' <= i) && (i < n-'+str(radius)+') && ('+str(radius)+' <= j) && (j < n-'+str(radius)+') ) {\n')
         bodygen(src,pattern,stencil_size,radius,W,model)
         src.write('     }\n')
-    else:
+    elif (model=='vector'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('    for (auto it='+str(radius)+'; it<n-'+str(radius)+'; it+=t) {\n')
+        src.write('      for (auto jt='+str(radius)+'; jt<n-'+str(radius)+'; jt+=t) {\n')
+        src.write('        for (auto i=it; i<std::min(n-'+str(radius)+',it+t); ++i) {\n')
+        src.write('          PRAGMA_SIMD\n')
+        src.write('          for (auto j=jt; j<std::min(n-'+str(radius)+',jt+t); ++j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('           }\n')
+        src.write('         }\n')
+        src.write('       }\n')
+        src.write('     }\n')
+    else:
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {\n')
         src.write('    for (auto it='+str(radius)+'; it<n-'+str(radius)+'; it+=t) {\n')
         src.write('      for (auto jt='+str(radius)+'; jt<n-'+str(radius)+'; jt+=t) {\n')
         src.write('        for (auto i=it; i<std::min(n-'+str(radius)+',it+t); ++i) {\n')
@@ -191,7 +203,7 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','raja','rajaview','kokkos','cuda']:
+    for model in ['seq','vector','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','raja','rajaview','kokkos','cuda']:
       src = open('stencil_'+model+'.hpp','w')
       if (model=='target'):
           src.write('#define RESTRICT __restrict__\n\n')

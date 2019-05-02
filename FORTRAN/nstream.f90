@@ -192,7 +192,7 @@ program main
     C(i) = 2
   enddo
   !$omp end do
-#elif defined(PGI)
+#elif 0
   forall (i=1:length)
     A(i) = 0
     B(i) = 2
@@ -229,7 +229,7 @@ program main
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
     !$omp end do
-#elif defined(PGI)
+#elif 0
     forall (i=1:length)
       A(i) = A(i) + B(i) + scalar * C(i)
     end forall
@@ -267,7 +267,7 @@ program main
   ar = ar * length
 
   asum = 0
-#if defined(_OPENMP) || defined(PGI)
+#if defined(_OPENMP)
   !$omp parallel do reduction(+:asum)
   do i=1,length
     asum = asum + abs(A(i))

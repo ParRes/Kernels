@@ -20,7 +20,7 @@
 /// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 /// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 /// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-/// FOR in PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+/// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
 /// COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 /// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
 /// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -61,33 +61,32 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_tbb.h"
-#include "stencil_tbb.hpp"
+#include "stencil_seq.hpp"
 
 void nothing(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out)
 {
-    std::cout << "You are trying to use a stencil that does not exist." << std::endl;
-    std::cout << "Please generate the new stencil using the code generator." << std::endl;
+    std::cout << "You are trying to use a stencil that does not exist.\n";
+    std::cout << "Please generate the new stencil using the code generator\n";
+    std::cout << "and add it to the case-switch in the driver." << std::endl;
     // n will never be zero - this is to silence compiler warnings.
-    if (n==0) std::cout << in.size() << out.size() << std::endl;
+    if (n==0 || t==0) std::cout << in.size() << out.size() << std::endl;
     std::abort();
 }
 
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/TBB Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11 Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int n, radius, tile_size;
+  int iterations, n, radius, tile_size;
   bool star = true;
   try {
-      if (argc < 3){
-        throw "Usage: <# iterations> <array dimension> [tile_size] [<star/grid> <radius>]";
+      if (argc < 3) {
+        throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
       }
 
       // number of times to run the algorithm
@@ -104,11 +103,12 @@ int main(int argc, char* argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-      // linear grid dimension
+      // default tile size for tiling of local transpose
       tile_size = 32;
       if (argc > 3) {
-        tile_size  = std::atoi(argv[3]);
-        if (tile_size < 1 || tile_size > n) tile_size = n;
+          tile_size = std::atoi(argv[3]);
+          if (tile_size <= 0) tile_size = n;
+          if (tile_size > n) tile_size = n;
       }
 
       // stencil pattern
@@ -133,17 +133,11 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  const char* envvar = std::getenv("TBB_NUM_THREADS");
-  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
-  tbb::task_scheduler_init init(num_threads);
-
-  std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
   std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
-  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   auto stencil = nothing;
   if (star) {
@@ -173,33 +167,29 @@ int main(int argc, char* argv[])
   prk::vector<double> in(n*n);
   prk::vector<double> out(n*n);
 
-  tbb::blocked_range2d<int> range(0, n, tile_size, 0, n, tile_size);
-  tbb::parallel_for( range, [&](decltype(range)& r) {
-                     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                         PRAGMA_SIMD
-                         for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                             in[i*n+j] = static_cast<double>(i+j);
-                             out[i*n+j] = 0.0;
-                         }
-                     }
-                   }, tbb_partitioner );
+  {
+    for (auto it=0; it<n; it+=tile_size) {
+      for (auto jt=0; jt<n; jt+=tile_size) {
+        for (auto i=it; i<std::min(n,it+tile_size); i++) {
+          PRAGMA_SIMD
+          for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
+            in[i*n+j] = static_cast<double>(i+j);
+            out[i*n+j] = 0.0;
+          }
+        }
+      }
+    }
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+    for (auto iter = 0; iter<=iterations; iter++) {
 
-    if (iter==1) stencil_time = prk::wtime();
-    // Apply the stencil operator
-    stencil(n, tile_size, in, out);
-    // Add constant to solution to force refresh of neighbor data, if any
-    tbb::parallel_for( range, [&](decltype(range)& r) {
-                       for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                           PRAGMA_SIMD
-                           for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                               in[i*n+j] += 1.0;
-                           }
-                       }
-                     }, tbb_partitioner);
+      if (iter==1) stencil_time = prk::wtime();
+      // Apply the stencil operator
+      stencil(n, tile_size, in, out);
+      // Add constant to solution to force refresh of neighbor data, if any
+      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
+    }
+    stencil_time = prk::wtime() - stencil_time;
   }
-  stencil_time = prk::wtime() - stencil_time;
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
@@ -210,26 +200,11 @@ int main(int argc, char* argv[])
 
   // compute L1 norm in parallel
   double norm = 0.0;
-#if 0
-  // Use this if, for whatever reason, TBB reductions are not reliable.
   for (auto i=radius; i<n-radius; i++) {
     for (auto j=radius; j<n-radius; j++) {
       norm += std::fabs(out[i*n+j]);
     }
   }
-#else
-  norm = tbb::parallel_reduce( range, double(0),
-                               [&](decltype(range)& r, double temp) -> double {
-                                   for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                                       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                                           temp += std::fabs(out[i*n+j]);
-                                       }
-                                   }
-                                   return temp;
-                               },
-                               [] (const double x1, const double x2) { return x1+x2; },
-                               tbb_partitioner );
-#endif
   norm /= active_points;
 
   // verify correctness
@@ -246,7 +221,7 @@ int main(int argc, char* argv[])
               << " Reference L1 norm = " << reference_norm << std::endl;
 #endif
     const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
-    size_t flops = (2L*stencil_size+1L) * active_points;
+    size_t flops = (2L*(size_t)stencil_size+1L) * active_points;
     auto avgtime = stencil_time/iterations;
     std::cout << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
               << " Avg time (s): " << avgtime << std::endl;

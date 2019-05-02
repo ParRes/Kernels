@@ -56,6 +56,7 @@ const bool false=0;
 #include <math.h>    // fabs
 #include <time.h>    // clock_gettime, timespec_get
 #include <assert.h>
+#include <errno.h>
 
 #ifndef MIN
 #define MIN(x,y) ((x)<(y)?(x):(y))
@@ -142,7 +143,6 @@ int __cilkrts_get_nworkers(void);
 # include <threads.h>
 #else
 # define HAVE_PTHREADS
-# include <errno.h>
 # include <pthread.h>
 #endif
 

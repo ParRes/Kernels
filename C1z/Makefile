@@ -49,7 +49,7 @@ serial: nstream p2p p2p-innerloop stencil transpose
 
 thread: transpose-thread
 
-openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp p2p-hyperplane-openmp
 
 mpi: nstream-mpi
 
@@ -66,6 +66,9 @@ cilk: stencil-cilk transpose-cilk
 ispc: transpose-ispc
 
 p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
+	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
+p2p-hyperplane: p2p-hyperplane-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 %-mpi: %-mpi.c prk_util.h

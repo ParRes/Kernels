@@ -35,7 +35,7 @@
 ///
 /// PURPOSE: This program tests the efficiency with which point-to-point
 ///          synchronization can be carried out. It does so by executing
-///          a pipelined algorithm on an n*n grid. The first array dimension
+///          a pipelined algorithm on an n^2 grid. The first array dimension
 ///          is distributed among the threads (stripwise decomposition).
 ///
 /// USAGE:   The program takes as input the
@@ -54,109 +54,148 @@
 ///          wtime()
 ///
 /// HISTORY: - Written by Rob Van der Wijngaart, February 2009.
-///            C99-ification by Jeff Hammond, February 2016.
-///            C++11-ification by Jeff Hammond, May 2017.
+///          - C99-ification by Jeff Hammond, February 2016.
+///          - C11-ification by Jeff Hammond, June 2017.
 ///
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_tbb.h"
+#include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/TBB INNERLOOP pipeline execution on 2D grid" << std::endl;
+  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+#ifdef _OPENMP
+  printf("C11/OpenMP HYPERPLANE pipeline execution on 2D grid\n");
+#else
+  printf("C11/Serial HYPERPLANE pipeline execution on 2D grid\n");
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int n;
-  try {
-      if (argc < 3) {
-        throw " <# iterations> <array dimension>";
-      }
-
-      // number of times to run the pipeline algorithm
-      iterations  = std::atoi(argv[1]);
-      if (iterations < 1) {
-        throw "ERROR: iterations must be >= 1";
-      }
-
-      // grid dimensions
-      n = std::atoi(argv[2]);
-      if (n < 1) {
-        throw "ERROR: grid dimensions must be positive";
-      } else if ( static_cast<size_t>(n)*static_cast<size_t>(n) > static_cast<size_t>(INT_MAX)) {
-        throw "ERROR: grid dimension too large - overflow risk";
-      }
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
+  if (argc < 3) {
+    printf("Usage: <# iterations> <array dimension> <chunk size>\n");
     return 1;
   }
 
-  const char* envvar = std::getenv("TBB_NUM_THREADS");
-  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
-  tbb::task_scheduler_init init(num_threads);
+  // number of times to run the pipeline algorithm
+  int iterations = atoi(argv[1]);
+  if (iterations < 1) {
+    printf("ERROR: iterations must be >= 1\n");
+    return 1;
+  }
 
-  std::cout << "Number of threads    = " << num_threads << std::endl;
-  std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
-  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
+  // grid dimensions
+  int n = atoi(argv[2]);
+  if (n < 1) {
+    printf("ERROR: grid dimension must be positive: %d\n", n);
+    return 1;
+  }
+
+  // grid chunk dimensions
+  int nc = (argc > 3) ? atoi(argv[3]) : 1;
+  nc = MAX(1,nc);
+  nc = MIN(n,nc);
+
+  // number of grid blocks
+  int nb = (n-1)/nc;
+  if ((n-1)%nc) nb++;
+
+#ifdef _OPENMP
+  printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
+  printf("Number of iterations      = %d\n", iterations);
+  printf("Grid sizes                = %d,%d\n", n, n);
+  printf("Grid chunk sizes, blocks  = %d,%d\n", nc, nb);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time = 0.0; // silence compiler warning
 
-  prk::vector<double> grid(n*n,0.0);
+  size_t bytes = n*n*sizeof(double);
+  double * restrict grid = prk_malloc(bytes);
 
-  // set boundary values (bottom and left side of grid)
-  for (auto j=0; j<n; j++) {
-    grid[0*n+j] = static_cast<double>(j);
-    grid[j*n+0] = static_cast<double>(j);
-  }
-
-  for (auto iter = 0; iter<=iterations; iter++){
-
-    if (iter == 1) pipeline_time = prk::wtime();
-
-    for (auto i=2; i<=2*n-2; i++) {
-      tbb::parallel_for( std::max(2,i-n+2), std::min(i,n)+1, [=,&grid](int j) {
-               const auto x = i-j+2-1;
-               const auto y = j-1;
-               grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-           }, tbb_partitioner );
+  OMP_PARALLEL()
+  {
+    OMP_FOR()
+    for (int i=0; i<n; i++) {
+      OMP_SIMD
+      for (int j=0; j<n; j++) {
+        grid[i*n+j] = 0.0;
+      }
     }
-    grid[0*n+0] = -grid[(n-1)*n+(n-1)];
-  }
 
-  pipeline_time = prk::wtime() - pipeline_time;
+    // set boundary values (bottom and left side of grid)
+    OMP_MASTER
+    {
+      for (int j=0; j<n; j++) {
+        grid[0*n+j] = (double)j;
+      }
+      for (int i=0; i<n; i++) {
+        grid[i*n+0] = (double)i;
+      }
+    }
+    OMP_BARRIER
+
+    for (int iter = 0; iter<=iterations; iter++) {
+
+      if (iter==1) {
+          OMP_BARRIER
+          OMP_MASTER
+          pipeline_time = prk_wtime();
+      }
+
+      if (nc==1) {
+        for (int i=2; i<=2*n-2; i++) {
+          OMP_FOR_SIMD()
+          for (int j=MAX(2,i-n+2); j<=MIN(i,n); j++) {
+            const int x = i-j+1;
+            const int y = j-1;
+            grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+          }
+        }
+      } else {
+        for (int i=2; i<=2*(nb+1)-2; i++) {
+          OMP_FOR()
+          for (int j=MAX(2,i-(nb+1)+2); j<=MIN(i,nb+1); j++) {
+            const int ib = nc*(i-j+1-1)+1;
+            const int jb = nc*(j-1-1)+1;
+            sweep_tile(ib, MIN(n,ib+nc), jb, MIN(n,jb+nc), n, grid);
+          }
+        }
+      }
+      OMP_MASTER
+      grid[0*n+0] = -grid[(n-1)*n+(n-1)];
+    }
+    OMP_BARRIER
+    OMP_MASTER
+    pipeline_time = prk_wtime() - pipeline_time;
+  }
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
   const double epsilon = 1.e-8;
-  auto corner_val = ((iterations+1.)*(n+n-2.));
-  if ( (std::fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
-    std::cout << "ERROR: checksum " << grid[(n-1)*n+(n-1)]
-              << " does not match verification value " << corner_val << std::endl;
+  const double corner_val = ((iterations+1.)*(n+n-2.));
+  if ( (fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+    printf("ERROR: checksum %lf does not match verification value %lf\n", grid[(n-1)*n+(n-1)], corner_val);
     return 1;
   }
 
+  prk_free(grid);
+
 #ifdef VERBOSE
-  std::cout << "Solution validates; verification value = " << corner_val << std::endl;
+  printf("Solution validates; verification value = %lf\n", corner_val );
 #else
-  std::cout << "Solution validates" << std::endl;
+  printf("Solution validates\n" );
 #endif
-  auto avgtime = pipeline_time/iterations;
-  std::cout << "Rate (MFlops/s): "
-            << 2.0e-6 * ( (n-1.)*(n-1.) )/avgtime
-            << " Avg time (s): " << avgtime << std::endl;
+  double avgtime = pipeline_time/iterations;
+  printf("Rate (MFlops/s): %lf Avg time (s): %lf\n", 2.0e-6 * ( (n-1)*(n-1) )/avgtime, avgtime );
 
   return 0;
 }

@@ -172,10 +172,6 @@ program main
 #endif
     do jt=1,order,tile_size
       do it=1,order,tile_size
-#elif defined(PGI)
-    ! PGI does not support DO CONCURRENT.
-    do jt=1,order,tile_size
-      do it=1,order,tile_size
 #else
     do concurrent (jt=1:order:tile_size)
       do concurrent (it=1:order:tile_size)
@@ -196,11 +192,7 @@ program main
     !$omp do collapse(2)
     do j=1,order
       do i=1,order
-#elif defined(PGI)
-    do j=1,order
-      do i=1,order
 #else
-    ! PGI does not support DO CONCURRENT.
     do concurrent (j=1:order)
       do concurrent (i=1:order)
 #endif
@@ -242,9 +234,6 @@ program main
 #endif
       do jt=1,order,tile_size
         do it=1,order,tile_size
-#elif defined(PGI)
-      do jt=1,order,tile_size
-        do it=1,order,tile_size
 #else
       do concurrent (jt=1:order:tile_size)
         do concurrent (it=1:order:tile_size)
@@ -263,9 +252,6 @@ program main
     else
 #if defined(_OPENMP)
       !$omp do collapse(2)
-      do j=1,order
-        do i=1,order
-#elif defined(PGI)
       do j=1,order
         do i=1,order
 #else
@@ -312,9 +298,6 @@ program main
   !$omp& firstprivate(order,iterations,addit)                        &
   !$omp& private(i,j,temp)                                           &
   !$omp& reduction(+:abserr)
-  do j=1,order
-    do i=1,order
-#elif defined(PGI)
   do j=1,order
     do i=1,order
 #else

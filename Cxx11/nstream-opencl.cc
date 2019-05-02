@@ -93,7 +93,7 @@ void run(cl::Context context, int iterations, size_t length)
   std::vector<T> h_c(length, T(2));
 
   // copy input from host to device
-  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);
+  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), false);
   cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), true);
   cl::Buffer d_c = cl::Buffer(context, begin(h_c), end(h_c), true);
 
@@ -203,6 +203,8 @@ int main(int argc, char* argv[])
         run<double>(cpu, iterations, length);
     }
     run<float>(cpu, iterations, length);
+  } else {
+    std::cerr << "No CPU" << std::endl;
   }
 
   cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
@@ -216,6 +218,8 @@ int main(int argc, char* argv[])
         run<double>(gpu, iterations, length);
     }
     run<float>(gpu, iterations, length);
+  } else {
+    std::cerr << "No GPU" << std::endl;
   }
 
   cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
@@ -230,6 +234,8 @@ int main(int argc, char* argv[])
         run<double>(acc, iterations, length);
     }
     run<float>(acc, iterations, length);
+  } else {
+    std::cerr << "No ACC" << std::endl;
   }
 
   return 0;

@@ -52,7 +52,6 @@
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
 ///
-///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
 ///          reported results should not be associated with Stream in
@@ -63,12 +62,11 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_tbb.h"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/TBB STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++11 STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -78,7 +76,7 @@ int main(int argc, char * argv[])
   size_t length;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length>";
+        throw "Usage: <# iterations> <vector length> [<offset>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -101,15 +99,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  const char* envvar = std::getenv("TBB_NUM_THREADS");
-  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
-  tbb::task_scheduler_init init(num_threads);
-
-  std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
-  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -117,46 +109,20 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  prk::vector<double> A(length);
-  prk::vector<double> B(length);
-  prk::vector<double> C(length);
+  prk::vector<double> A(length,0.0);
+  prk::vector<double> B(length,2.0);
+  prk::vector<double> C(length,2.0);
 
-  double scalar(3);
-
-  tbb::blocked_range<size_t> range(0, length);
+  double scalar = 3.0;
 
   {
-#if 0
-    tbb::parallel_for( range, [&](decltype(range)& r) {
-                       for (auto i=r.begin(); i!=r.end(); ++i ) {
-                           A[i] = 0.0;
-                           B[i] = 2.0;
-                           C[i] = 2.0;
-                       }
-                     }, tbb_partitioner);
-#else
-    tbb::parallel_for( std::begin(range), std::end(range), [&](size_t i) {
-                           A[i] = 0.0;
-                           B[i] = 2.0;
-                           C[i] = 2.0;
-                       }, tbb_partitioner);
-#endif
-
     for (auto iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-#if 0
-      tbb::parallel_for( range, [&](decltype(range)& r) {
-                         for (auto i=r.begin(); i!=r.end(); ++i ) {
-                             A[i] += B[i] + scalar * C[i];
-                         }
-                       }, tbb_partitioner);
-#else
-      tbb::parallel_for( std::begin(range), std::end(range), [&](size_t i) {
-                             A[i] += B[i] + scalar * C[i];
-                         }, tbb_partitioner);
-#endif
+      for (size_t i=0; i<length; i++) {
+          A[i] += B[i] + scalar * C[i];
+      }
     }
     nstream_time = prk::wtime() - nstream_time;
   }
@@ -175,17 +141,11 @@ int main(int argc, char * argv[])
   ar *= length;
 
   double asum(0);
-  asum = tbb::parallel_reduce( range, double(0),
-                               [&](decltype(range)& r, double temp) -> double {
-                                   for (auto i=r.begin(); i!=r.end(); ++i ) {
-                                       temp += std::fabs(A[i]);
-                                   }
-                                   return temp;
-                               },
-                               [] (const double x1, const double x2) { return x1+x2; },
-                               tbb_partitioner );
+  for (size_t i=0; i<length; i++) {
+      asum += std::fabs(A[i]);
+  }
 
-  double epsilon(1.e-8);
+  double epsilon=1.e-8;
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << "       Expected checksum: " << ar << "\n"

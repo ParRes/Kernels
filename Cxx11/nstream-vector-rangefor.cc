@@ -112,9 +112,9 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A(length,0.0);
-  std::vector<double> B(length,2.0);
-  std::vector<double> C(length,2.0);
+  prk::vector<double> A(length,0.0);
+  prk::vector<double> B(length,2.0);
+  prk::vector<double> C(length,2.0);
 
   auto range = prk::range(0,length);
 

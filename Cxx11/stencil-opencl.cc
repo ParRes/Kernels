@@ -124,7 +124,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
 
   // copy input from host to device
   cl::Buffer d_in = cl::Buffer(context, begin(h_in), end(h_in), true);
-  cl::Buffer d_out = cl::Buffer(context, begin(h_out), end(h_out), true);
+  cl::Buffer d_out = cl::Buffer(context, begin(h_out), end(h_out), false);
 
   for (auto iter = 0; iter<=iterations; iter++) {
 

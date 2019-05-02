@@ -31,6 +31,9 @@ octave-workspace                # Octave crashes
 */*__genmod.mod
 *.patch
 */*.patch
+*.dbg                           # Flang
+*/*.dbg
+*/*/*.dbg
 
 common/make.defs
 scripts/small/runfgmpi
@@ -277,3 +280,7 @@ FORTRAN/transpose-ornlacc
 RUST/p2p/Cargo.lock
 RUST/stencil/Cargo.lock
 RUST/transpose/Cargo.lock
+nstream
+../C1z/p2p-avx
+../C1z/p2p-sse
+../C1z/p2p-hyperplane-openmp
