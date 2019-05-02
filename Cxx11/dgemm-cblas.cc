@@ -73,6 +73,10 @@
 #include <cblas.h>
 #endif
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #ifdef PRK_DEBUG
 #include <random>
 void prk_dgemm_loops(const int order,
@@ -100,7 +104,7 @@ void prk_dgemm(const int order,
     const double beta  = 1.0;
 
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                n, n, n, alpha, &(A[0]), n, &(B[0]), n, beta, &(C[0]), n);
+                n, n, n, alpha, A.data(), n, B.data(), n, beta, C.data(), n);
 }
 
 void prk_dgemm(const int order, const int batches,
@@ -128,11 +132,11 @@ void prk_dgemm(const int order, const int batches, const int nt,
     const double beta  = 1.0;
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) num_threads(nt)
+#pragma omp parallel for schedule(dynamic) num_threads(nt)
 #endif
     for (int b=0; b<batches; ++b) {
         cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                    n, n, n, alpha, &(A[b][0]), n, &(B[b][0]), n, beta, &(C[b][0]), n);
+                    n, n, n, alpha, A[b].data(), n, B[b].data(), n, beta, C[b].data(), n);
     }
 }
 
@@ -146,7 +150,7 @@ void prk_dgemm(const int order, const int batches,
     const double beta  = 1.0;
 
     const int group_count = 1;
-    const int group_size[group_count] = { batches };
+    PRK_UNUSED const int group_size[group_count] = { batches };
 
     const CBLAS_TRANSPOSE transa_array[group_count] = { CblasNoTrans };
     const CBLAS_TRANSPOSE transb_array[group_count] = { CblasNoTrans };
@@ -238,8 +242,7 @@ int main(int argc, char * argv[])
 #endif
   } else if (batches < 0) {
       if (batch_threads > 1) {
-          std::cout << "Batch size           = " << std::abs(batches) << " (loop over legacy BLAS with "
-                    << batch_threads << " threads)" << std::endl;
+          std::cout << "Batch size           = " << std::abs(batches) << " (loop over legacy BLAS with " << batch_threads << " threads)" << std::endl;
       } else {
           std::cout << "Batch size           = " << std::abs(batches) << " (loop over legacy BLAS sequentially)" << std::endl;
       }

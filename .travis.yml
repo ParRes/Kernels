@@ -135,6 +135,10 @@ matrix:
   # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
   - os: osx
     env: PRK_TARGET=allfgmpi
+  # SOS@OFI has not worked on MacOS in a while :-(
+  - os: osx
+    compiler: clang
+    env: PRK_TARGET=allshmem
   allow_failures:
   # Travis trusty breaks this
   - os: linux
@@ -145,11 +149,10 @@ matrix:
   - os: linux
     env: PRK_TARGET=allfgmpi
   - os: linux
+    compiler: clang
     env: PRK_TARGET=allmpi
   - os: linux
     env: PRK_TARGET=allcharm++
-  # Sadly, Python is XFAIL because Travis CI's Python 3.4.3 can't find cannot process_time.
-  - env: PRK_TARGET=allpython
 addons:
   apt:
     sources:

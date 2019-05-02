@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
 #if defined(USE_PSTL)
-  std::cout << "C++17/Parallel STL Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++17/PSTL Stencil execution on 2D grid" << std::endl;
 #else
   std::cout << "C++11/STL Stencil execution on 2D grid" << std::endl;
 #endif

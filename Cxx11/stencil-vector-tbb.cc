@@ -64,7 +64,7 @@
 #include "prk_tbb.h"
 #include "stencil_tbb.hpp"
 
-void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
+void nothing(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out)
 {
     std::cout << "You are trying to use a stencil that does not exist." << std::endl;
     std::cout << "Please generate the new stencil using the code generator." << std::endl;
@@ -170,8 +170,8 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
-  std::vector<double> in(n*n);
-  std::vector<double> out(n*n);
+  prk::vector<double> in(n*n);
+  prk::vector<double> out(n*n);
 
   tbb::blocked_range2d<int> range(0, n, tile_size, 0, n, tile_size);
   tbb::parallel_for( range, [&](decltype(range)& r) {

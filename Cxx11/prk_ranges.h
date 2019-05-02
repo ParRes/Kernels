@@ -33,7 +33,7 @@
 #define PRK_RANGES_H
 
 #if defined(USE_RANGES)
-# if defined(USE_RANGES_IRANGE)
+# if defined(USE_BOOST_IRANGE)
 #  include "boost/range/irange.hpp"
 # elif defined(USE_RANGES_TS)
 #  include "range/v3/view/iota.hpp"

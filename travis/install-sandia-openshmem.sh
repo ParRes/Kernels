@@ -16,7 +16,7 @@ if [ ! -d "$SHMEM_ROOT" ]; then
     # HEAD
     #git clone --depth 1 https://github.com/Sandia-OpenSHMEM/SOS.git sandia-shmem
     #cd sandia-shmem
-    VERSION=1.4.0
+    VERSION=1.4.2
     #git clone -b v$VERSION --depth 1 https://github.com/Sandia-OpenSHMEM/SOS.git SOS-$VERSION
     wget https://github.com/Sandia-OpenSHMEM/SOS/archive/v$VERSION.tar.gz
     tar -xzf v$VERSION.tar.gz
@@ -28,9 +28,9 @@ if [ ! -d "$SHMEM_ROOT" ]; then
     ../configure --with-libfabric=$TRAVIS_ROOT/libfabric \
                  --disable-fortran \
                  --enable-error-checking \
-                 --enable-remote-virtual-addressing \
                  --enable-pmi-simple \
                  --prefix=$SHMEM_ROOT
+                 #--enable-remote-virtual-addressing \
     make
     make check | true
     make install

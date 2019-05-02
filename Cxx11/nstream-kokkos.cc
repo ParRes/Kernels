@@ -118,7 +118,7 @@ int main(int argc, char * argv[])
     std::cout << "Number of iterations = " << iterations << std::endl;
     std::cout << "Vector length        = " << length << std::endl;
     std::cout << "Offset               = " << offset << std::endl;
-    std::cout << "Kokkos execution space: " << typeid(Kokkos::DefaultExecutionSpace).name() << std::endl;
+    std::cout << "Kokkos execution space: " << Kokkos::DefaultExecutionSpace::name() << std::endl;
 
     //////////////////////////////////////////////////////////////////////
     // Allocate space and perform the computation
@@ -138,15 +138,20 @@ int main(int argc, char * argv[])
           B[i] = 2.0;
           C[i] = 2.0;
       });
+      Kokkos::fence();
 
       for (int iter = 0; iter<=iterations; ++iter) {
 
-        if (iter==1) nstream_time = prk::wtime();
+        if (iter==1) {
+          Kokkos::fence();
+          nstream_time = prk::wtime();
+        }
 
         Kokkos::parallel_for(length, KOKKOS_LAMBDA(size_t const i) {
             A[i] += B[i] + scalar * C[i];
         });
       }
+      Kokkos::fence();
       nstream_time = prk::wtime() - nstream_time;
     }
 
@@ -165,8 +170,9 @@ int main(int argc, char * argv[])
 
     double asum(0);
     Kokkos::parallel_reduce(length, KOKKOS_LAMBDA(size_t const i, double & inner) {
-      inner += std::fabs(A(i));
+        inner += std::fabs(A(i));
     }, asum);
+    Kokkos::fence();
 
     double epsilon(1.e-8);
     if (std::fabs(ar-asum)/asum > epsilon) {
