@@ -73,11 +73,8 @@ program main
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
-#if defined(PGI)
-  integer(kind=INT32) :: i
-#endif
-  integer(kind=INT32) :: k
-  integer(kind=INT64) :: j, o2                      ! for loop over order**2
+  integer(kind=INT32) :: i,j,k
+  integer(kind=INT64) :: j2, o2                      ! for loop over order**2
   real(kind=REAL64) ::  abserr                      ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
@@ -132,7 +129,7 @@ program main
 
   ! Fill the original matrix
   o2 = int(order,INT64)**2
-  A = reshape((/ (j, j = 0,o2) /),(/order, order/))
+  A = reshape((/ (j2, j2 = 0,o2) /),(/order, order/))
   B = 0
 
   t0 = 0
@@ -152,17 +149,10 @@ program main
   ! ********************************************************************
 
   ! we reuse A here as the reference matrix, to compute the error
-  A = ( transpose(reshape((/ (j, j = 0,o2) /),(/order, order/))) &
+  A = ( transpose(reshape((/ (j2, j2 = 0,o2) /),(/order, order/))) &
         * real(iterations+1,REAL64) ) &
       + real((iterations*(iterations+1))/2,REAL64)
-#if 0 && defined(PGI)
-  ! PGI generates a segfault here...
-  abserr = 0.0d0
-  forall (j=1:order,i=1:order)
-      abserr = abserr + (B(i,j) - A(i,j))**2
-  endforall
-  abserr = sqrt(abserr)
-#elif defined(PGI)
+#if defined(PGI)
   abserr = 0.0d0
   do j=1,order
     do i=1,order

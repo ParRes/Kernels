@@ -38,6 +38,8 @@
 # define PRAGMA_SIMD PRAGMA(vector) PRAGMA(ivdep)
 // According to https://github.com/LLNL/RAJA/pull/310, this improves lambda performance
 # define PRAGMA_INLINE PRAGMA(forceinline recursive)
+#elif defined(__PGI)
+# define PRAGMA_SIMD PRAGMA(vector) PRAGMA(ivdep)
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
 # define PRAGMA_SIMD PRAGMA(GCC ivdep)
 # define PRAGMA_INLINE PRAGMA(inline)

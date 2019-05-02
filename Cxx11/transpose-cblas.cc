@@ -105,9 +105,9 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  std::vector<double> A(order*order);
-  std::vector<double> B(order*order,0.0);
-  std::vector<double> T(order*order);
+  prk::vector<double> A(order*order);
+  prk::vector<double> B(order*order,0.0);
+  prk::vector<double> T(order*order);
   double one[1] = {1.0};
 
   // fill A with the sequence 0 to order^2-1 as doubles

@@ -119,8 +119,7 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<float> h_A;
-  h_A.resize(length);
+  std::vector<float> h_A(length);
 
   const float scalar(3);
 
