@@ -285,17 +285,9 @@ program main
   call initialize_w(is_star,r,W)
 
   ! initialize the input and output arrays
-#if defined(PGI)
-  forall (i=1:n, j=1:n)
-#else
   do concurrent (i=1:n, j=1:n)
-#endif
     A(i,j) = cx*(i-1)+cy*(j-1)
-#if defined(PGI)
-  endforall
-#else
   enddo
-#endif
   !B(r+1:n-r,r+1:n-r) = 0 ! minimal
   B = 0 ! sufficient
 

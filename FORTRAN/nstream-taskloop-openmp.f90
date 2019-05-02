@@ -226,7 +226,7 @@ program main
   else
     write(*,'(a17)') 'Solution validates'
     avgtime = nstream_time/iterations;
-    bytes = 4.0 * int(length,INT64) * storage_size(A)/8
+    bytes = 4 * int(length,INT64) * storage_size(A)/8
     write(*,'(a12,f15.3,1x,a12,e15.6)')    &
         'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
         'Avg time (s): ', avgtime

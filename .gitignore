@@ -29,6 +29,11 @@ octave-workspace                # Octave crashes
 */*/*.optrpt
 *__genmod.*                     # Intel Fortran compiler
 */*__genmod.mod
+*.patch
+*/*.patch
+*.dbg                           # Flang
+*/*.dbg
+*/*/*.dbg
 
 common/make.defs
 scripts/small/runfgmpi
@@ -95,6 +100,13 @@ SERIAL/Sparse/sparse
 SERIAL/Stencil/stencil
 SERIAL/Synch_p2p/p2p
 SERIAL/Transpose/transpose
+C1z/nstream
+C1z/nstream-openmp
+C1z/nstream-mpi
+C1z/nstream-memkind
+C1z/nstream-memkind-openmp
+C1z/nstream-mmap
+C1z/nstream-mmap-openmp
 C1z/p2p
 C1z/p2p-innerloop
 C1z/p2p-innerloop-openmp
@@ -117,21 +129,25 @@ Cxx11/compute
 Cxx11/triSYCL
 Cxx11/occa
 Cxx11/pstl
+Cxx11/parallelstl
 Cxx11/range-v3
 Cxx11/dgemm-vector
 Cxx11/dgemm-cblas
 Cxx11/dgemm-cublas
 Cxx11/p2p-openmp-target
 Cxx11/p2p-tasks-openmp
+Cxx11/p2p-tasks-tbb
 Cxx11/p2p-vector
 Cxx11/p2p-vector-doacross-openmp
 Cxx11/p2p-vector-raja
 Cxx11/p2p-vector-tbb
 Cxx11/p2p-innerloop-openmp
 Cxx11/p2p-doacross-vector-openmp
+Cxx11/p2p-doacross-openmp
 Cxx11/p2p-innerloop-opencl
 Cxx11/p2p-innerloop-vector
 Cxx11/p2p-hyperplane-vector
+Cxx11/p2p-hyperplane-openmp
 Cxx11/p2p-hyperplane-vector-openmp
 Cxx11/p2p-innerloop-vector-tbb
 Cxx11/p2p-hyperplane-vector-stl
@@ -145,6 +161,7 @@ Cxx11/nstream-vector
 Cxx11/nstream-vector-openmp
 Cxx11/nstream-vector-pstl
 Cxx11/nstream-vector-raja
+Cxx11/nstream-raja
 Cxx11/nstream-vector-rangefor
 Cxx11/nstream-vector-stl
 Cxx11/nstream-vector-taskloop
@@ -164,12 +181,15 @@ Cxx11/stencil-vector-cilk
 Cxx11/stencil-vector-stl
 Cxx11/stencil-vector-pstl
 Cxx11/stencil-vector-raja
+Cxx11/stencil-openmp
+Cxx11/stencil-raja
 Cxx11/stencil-vector-rangefor
 Cxx11/stencil-vector-tbb
 Cxx11/stencil-vector-taskloop
 Cxx11/stencil-kokkos
 Cxx11/stencil-cuda
 Cxx11/stencil-sycl
+Cxx11/transpose-openmp
 Cxx11/transpose-opencl
 Cxx11/transpose-sycl
 Cxx11/transpose-openmp-target
@@ -182,6 +202,7 @@ Cxx11/transpose-vector-cilk
 Cxx11/transpose-vector-stl
 Cxx11/transpose-vector-pstl
 Cxx11/transpose-vector-raja
+Cxx11/transpose-raja
 Cxx11/transpose-vector-rangefor
 Cxx11/transpose-vector-tbb
 Cxx11/transpose-vector-taskloop
@@ -210,6 +231,14 @@ Cxx11/star6.cl
 Cxx11/star7.cl
 Cxx11/star8.cl
 Cxx11/star9.cl
+Cxx11/star10.cl
+Cxx11/hipSYCL
+Cxx11/cpp-proposals-pub
+Cxx11/ornl-mdspan
+Cxx11/boost.tgz
+Cxx11/boost.tbz
+Cxx11/OpenCL-CLHPP
+Cxx11/GSL
 FORTRAN/dgemm-taskloop-openmp
 FORTRAN/dgemm-pretty
 FORTRAN/dgemm-openmp
@@ -248,6 +277,10 @@ FORTRAN/transpose-ornlacc
 FORTRAN/transpose-taskloop-openmp
 FORTRAN/transpose-tasks-openmp
 FORTRAN/transpose-ornlacc
-RUST/p2p
-RUST/stencil
-RUST/transpose
+RUST/p2p/Cargo.lock
+RUST/stencil/Cargo.lock
+RUST/transpose/Cargo.lock
+nstream
+../C1z/p2p-avx
+../C1z/p2p-sse
+../C1z/p2p-hyperplane-openmp

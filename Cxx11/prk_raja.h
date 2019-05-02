@@ -37,4 +37,15 @@
 # include "RAJA/RAJA.hpp"
 #endif
 
+#ifdef RAJA_ENABLE_OPENMP
+  typedef RAJA::omp_parallel_for_exec thread_exec;
+  typedef RAJA::omp_reduce reduce_exec;
+#else
+  #warning No RAJA support for OpenMP!
+  typedef RAJA::seq_exec thread_exec;
+  typedef RAJA::seq_reduce reduce_exec;
+#endif
+
+typedef RAJA::View<double, RAJA::Layout<2>> matrix;
+
 #endif /* PRK_RAJA_H */

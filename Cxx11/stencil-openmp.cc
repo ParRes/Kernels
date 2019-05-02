@@ -67,13 +67,13 @@
 #include "stencil_seq.hpp"
 #endif
 
-void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
+void nothing(const int n, const int t, const double * RESTRICT in, double * RESTRICT out)
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
     std::cout << "and add it to the case-switch in the driver." << std::endl;
     // n will never be zero - this is to silence compiler warnings.
-    if (n==0 || t==0) std::cout << in.size() << out.size() << std::endl;
+    if (n==0 || t==0) std::cout << in << out << std::endl;
     std::abort();
 }
 
@@ -175,8 +175,8 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
-  std::vector<double> in(n*n);
-  std::vector<double> out(n*n);
+  double * RESTRICT in  = new double[n*n];
+  double * RESTRICT out = new double[n*n];
 
   OMP_PARALLEL()
   {
@@ -227,7 +227,6 @@ int main(int argc, char* argv[])
 
   // interior of grid with respect to stencil
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
-
   // compute L1 norm in parallel
   double norm = 0.0;
   OMP_PARALLEL_FOR_REDUCE( +:norm )

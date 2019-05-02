@@ -73,8 +73,8 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, gs, offset;
-  size_t length;
+  int iterations;
+  size_t length, gs, offset;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length>";
@@ -120,9 +120,9 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A(length);
-  std::vector<double> B(length);
-  std::vector<double> C(length);
+  prk::vector<double> A(length);
+  prk::vector<double> B(length);
+  prk::vector<double> C(length);
 
   double scalar = 3.0;
 

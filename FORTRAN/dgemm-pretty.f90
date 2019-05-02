@@ -77,11 +77,7 @@ program main
   real(kind=REAL64), allocatable ::  C(:,:)         ! buffer to hold output matrix
   integer(kind=INT64) :: nflops
   ! runtime variables
-#if 1 || defined(PGI)
-  integer(kind=INT32) :: i
-#endif
-  integer(kind=INT64) :: j
-  integer(kind=INT32) :: k
+  integer(kind=INT32) :: i,j,k
   real(kind=REAL64) ::  checksum, reference, residuum
   real(kind=REAL64) ::  t0, t1, dgemm_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
@@ -166,7 +162,6 @@ program main
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
-  ! TODO: use intrinsic here (except PGI)
   checksum = 0.0d0
   do j=1,order
     do i=1,order
@@ -178,7 +173,7 @@ program main
   if (residuum .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
     avgtime = dgemm_time/iterations
-    nflops = 2 * forder**3
+    nflops = 2 * int(order,INT64)**3
     write(*,'(a,f13.6,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
            ' Avg time (s): ', avgtime
   else

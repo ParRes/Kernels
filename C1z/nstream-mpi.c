@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2019, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -59,130 +59,156 @@
 ///          external publications
 ///
 ///          Converted to C++11 by Jeff Hammond, November 2017.
+///          Converted to C11 by Jeff Hammond, February 2019.
 ///
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
 
+#include <mpi.h>
+
 int main(int argc, char * argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-#ifdef _OPENMP
-  std::cout << "C++11/OpenMP STREAM triad: A = B + scalar * C" << std::endl;
-#else
-  std::cout << "C++11 STREAM triad: A = B + scalar * C" << std::endl;
-#endif
+  int me, np;
+
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &me);
+  MPI_Comm_size(MPI_COMM_WORLD, &np);
+
+  if (me==0) {
+      printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+      printf("C11/MPI STREAM triad: A = B + scalar * C\n");
+  }
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
-  size_t length;
-  try {
-      if (argc < 3) {
-        throw "Usage: <# iterations> <vector length>";
-      }
-
-      iterations  = std::atoi(argv[1]);
-      if (iterations < 1) {
-        throw "ERROR: iterations must be >= 1";
-      }
-
-      length = std::atol(argv[2]);
-      if (length <= 0) {
-        throw "ERROR: vector length must be positive";
-      }
-
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
-      }
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
+  if (argc < 3) {
+    if (me==0) printf("Usage: <# iterations> <vector length>\n");
+    MPI_Finalize();
     return 1;
   }
 
-#ifdef _OPENMP
-  std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
-#endif
-  std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
+  // number of times to do the transpose
+  int iterations = atoi(argv[1]);
+  if (iterations < 1) {
+    if (me==0) printf("ERROR: iterations must be >= 1\n");
+    MPI_Finalize();
+    return 1;
+  }
+
+  // length of a the matrix
+  size_t length = atol(argv[2]);
+  if (length <= 0) {
+    if (me==0) printf("ERROR: Matrix length must be greater than 0\n");
+    MPI_Finalize();
+    return 1;
+  }
+
+  if (me==0) {
+      printf("Number of processes  = %d\n", np);
+      printf("Number of iterations = %d\n", iterations);
+      printf("Vector length        = %zu\n", length);
+      //printf("Offset               = %d\n", offset);
+  }
+
+  size_t local_length;
+  if (length % np == 0) {
+      local_length = length / np;
+  } else {
+      double x = (double)length / np;
+      size_t y = (size_t)ceil(x);
+      if (me != (np-1)) {
+          local_length = y;
+      } else {
+          local_length = length - y*(np-1);
+      }
+  }
+  //printf("Vector length (%4d) = %zu\n", me, local_length);
+  fflush(stdout);
+  MPI_Barrier(MPI_COMM_WORLD);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time = 0.0;
 
-  std::vector<double> A(length);
-  std::vector<double> B(length);
-  std::vector<double> C(length);
+  double * restrict A;
+  double * restrict B;
+  double * restrict C;
+
+  MPI_Win wA, wB, wC;
+
+  size_t bytes = local_length*sizeof(double);
+
+  MPI_Win_allocate_shared(bytes, sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void**)&A, &wA);
+  MPI_Win_allocate_shared(bytes, sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void**)&B, &wB);
+  MPI_Win_allocate_shared(bytes, sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void**)&C, &wC);
 
   double scalar = 3.0;
 
-  OMP_PARALLEL()
-  {
-    OMP_FOR_SIMD
-    for (size_t i=0; i<length; i++) {
-      A[i] = 0.0;
-      B[i] = 2.0;
-      C[i] = 2.0;
-    }
-
-    for (auto iter = 0; iter<=iterations; iter++) {
-
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          nstream_time = prk::wtime();
-      }
-
-      OMP_FOR_SIMD
-      for (size_t i=0; i<length; i++) {
-          A[i] += B[i] + scalar * C[i];
-      }
-    }
-    OMP_BARRIER
-    OMP_MASTER
-    nstream_time = prk::wtime() - nstream_time;
+  for (size_t i=0; i<local_length; i++) {
+    A[i] = 0.0;
+    B[i] = 2.0;
+    C[i] = 2.0;
   }
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  for (int iter = 0; iter<=iterations; iter++) {
+
+    if (iter==1) {
+        MPI_Barrier(MPI_COMM_WORLD);
+        nstream_time = MPI_Wtime();
+    }
+
+    for (size_t i=0; i<local_length; i++) {
+        A[i] += B[i] + scalar * C[i];
+    }
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  nstream_time = MPI_Wtime() - nstream_time;
+
+  MPI_Allreduce(MPI_IN_PLACE, &nstream_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  double ar(0);
-  double br(2);
-  double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  double ar = 0.0;
+  double br = 2.0;
+  double cr = 2.0;
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
-  ar *= length;
+  ar *= local_length;
 
-  double asum(0);
-  OMP_PARALLEL_FOR_REDUCE( +:asum )
-  for (size_t i=0; i<length; i++) {
-      asum += std::fabs(A[i]);
+  double asum = 0.0;
+  for (size_t i=0; i<local_length; i++) {
+      asum += fabs(A[i]);
   }
 
   double epsilon=1.e-8;
-  if (std::fabs(ar-asum)/asum > epsilon) {
-      std::cout << "Failed Validation on output array\n"
-                << "       Expected checksum: " << ar << "\n"
-                << "       Observed checksum: " << asum << std::endl;
-      std::cout << "ERROR: solution did not validate" << std::endl;
+  if (fabs(ar-asum)/asum > epsilon) {
+      printf("Failed Validation on output array\n"
+             "       Expected checksum: %lf\n"
+             "       Observed checksum: %lf\n"
+             "ERROR: solution did not validate\n", ar, asum);
       return 1;
   } else {
-      std::cout << "Solution validates" << std::endl;
+      if (me==0) printf("Solution validates\n");
       double avgtime = nstream_time/iterations;
       double nbytes = 4.0 * length * sizeof(double);
-      std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
-                << " Avg time (s): " << avgtime << std::endl;
+      if (me==0) printf("Rate (MB/s): %lf Avg time (s): %lf\n", 1.e-6*nbytes/avgtime, avgtime);
   }
+
+  MPI_Win_free(&wA);
+  MPI_Win_free(&wB);
+  MPI_Win_free(&wC);
+
+  MPI_Finalize();
 
   return 0;
 }

@@ -62,15 +62,6 @@
 
 #include "prk_util.h"
 #include "prk_raja.h"
-
-// This must be before the stencil header, which uses this.
-#ifdef RAJA_ENABLE_OPENMP
-  typedef RAJA::omp_parallel_for_exec thread_exec;
-#else
-#warning No OpenMP!
-  typedef RAJA::seq_exec thread_exec;
-#endif
-
 #include "stencil_raja.hpp"
 
 void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)

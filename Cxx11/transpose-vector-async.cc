@@ -54,6 +54,13 @@
 
 #include "prk_util.h"
 
+// These headers are busted with NVCC and GCC 5.4.0
+// The <future> header is busted with Cray C++ 8.6.1.
+#if !defined(__NVCC__) && !defined(_CRAYC)
+#include <thread>
+#include <future>
+#endif
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -119,8 +126,8 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> A(order*order);
-  std::vector<double> B(order*order,0.0);
+  prk::vector<double> A(order*order);
+  prk::vector<double> B(order*order,0.0);
 
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);

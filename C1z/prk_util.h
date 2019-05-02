@@ -38,13 +38,11 @@
 
 #define PRAGMA(x) _Pragma(#x)
 
-// All of this is to get posix_memalign defined...
-// #define _POSIX_C_SOURCE (200112L)
-#define _POSIX_C_SOURCE (200809L)
-#define _XOPEN_SOURCE 600
-
 #include <stdio.h>   // atoi
 #include <stdlib.h>  // getenv
+
+int posix_memalign(void **memptr, size_t alignment, size_t size);
+
 #include <stdint.h>
 #if defined(__PGIC__)
 typedef _Bool bool;
@@ -58,6 +56,7 @@ const bool false=0;
 #include <math.h>    // fabs
 #include <time.h>    // clock_gettime, timespec_get
 #include <assert.h>
+#include <errno.h>
 
 #ifndef MIN
 #define MIN(x,y) ((x)<(y)?(x):(y))
@@ -80,7 +79,7 @@ const bool false=0;
 # define OMP_FOR_REDUCE(x) PRAGMA(omp for reduction (x) )
 # if (_OPENMP >= 201300)
 #  define OMP_SIMD PRAGMA(omp simd)
-#  define OMP_FOR_SIMD() PRAGMA(omp for simd x)
+#  define OMP_FOR_SIMD(x) PRAGMA(omp for simd x)
 #  define OMP_TASK(x) PRAGMA(omp task x)
 #  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
 #  define OMP_TASKWAIT PRAGMA(omp taskwait)
@@ -89,7 +88,7 @@ const bool false=0;
 # else
 #  warning No OpenMP 4+ features!
 #  define OMP_SIMD
-#  define OMP_FOR_SIMD() PRAGMA(omp for x)
+#  define OMP_FOR_SIMD(x) PRAGMA(omp for x)
 #  define OMP_TASK(x)
 #  define OMP_TASKLOOP(x)
 #  define OMP_TASKWAIT
@@ -105,7 +104,7 @@ const bool false=0;
 # define OMP_FOR(x)
 # define OMP_FOR_REDUCE(x)
 # define OMP_SIMD
-# define OMP_FOR_SIMD()
+# define OMP_FOR_SIMD(x)
 # define OMP_TASK(x)
 # define OMP_TASKLOOP(x)
 # define OMP_TASKWAIT
@@ -144,7 +143,6 @@ int __cilkrts_get_nworkers(void);
 # include <threads.h>
 #else
 # define HAVE_PTHREADS
-# include <errno.h>
 # include <pthread.h>
 #endif
 
@@ -296,6 +294,54 @@ static inline void prk_free(void * p)
 #else
     free(p);
 #endif
+}
+
+static inline void prk_lookup_posix_error(int e, char * n, int l)
+{
+    switch (e) {
+        case EACCES:
+            strncpy(n,"EACCES",l);
+            break;
+        case EAGAIN:
+            strncpy(n,"EAGAIN",l);
+            break;
+        case EBADF:
+            strncpy(n,"EBADF",l);
+            break;
+        case EEXIST:
+            strncpy(n,"EEXIST",l);
+            break;
+        case EINVAL:
+            strncpy(n,"EINVAL",l);
+            break;
+        case ENFILE:
+            strncpy(n,"ENFILE",l);
+            break;
+        case ENODEV:
+            strncpy(n,"ENODEV",l);
+            break;
+        case ENOMEM:
+            strncpy(n,"ENOMEM",l);
+            break;
+        case EPERM:
+            strncpy(n,"EPERM",l);
+            break;
+        case ETXTBSY:
+            strncpy(n,"ETXTBSY",l);
+            break;
+        case EOPNOTSUPP:
+            strncpy(n,"EOPNOTSUPP",l);
+            break;
+        /*
+        case E:
+            strncpy(n,"E",l);
+            break;
+        */
+        default:
+            printf("error code %d unknown\n", e);
+            strncpy(n,"UNKNOWN",l);
+            break;
+    }
 }
 
 #endif /* PRK_UTIL_H */

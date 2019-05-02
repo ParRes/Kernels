@@ -60,11 +60,12 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/OpenMP DOACROSS pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11 pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -92,15 +93,24 @@ int main(int argc, char* argv[])
       } else if ( static_cast<size_t>(m)*static_cast<size_t>(n) > INT_MAX) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
+
+      // grid chunk dimensions
+      mc = (argc > 4) ? std::atoi(argv[4]) : m;
+      nc = (argc > 5) ? std::atoi(argv[5]) : n;
+      if (mc < 1 || mc > m || nc < 1 || nc > n) {
+        std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
+        mc = m;
+        nc = n;
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
-  std::cout << "Number of threads (max)   = " << omp_get_max_threads() << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
+  std::cout << "Grid chunk sizes     = " << mc << ", " << nc << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -108,51 +118,44 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  std::vector<double> grid(m*n);;
+  prk::vector<double> grid(m*n,0.0);;
 
-  OMP_PARALLEL()
   {
-    OMP_FOR()
-    for (auto i=0; i<n; i++) {
-      for (auto j=0; j<n; j++) {
-        grid[i*n+j] = 0.0;
-      }
-    }
-
     // set boundary values (bottom and left side of grid)
-    OMP_MASTER
-    {
-      for (auto j=0; j<n; j++) {
-        grid[0*n+j] = static_cast<double>(j);
-      }
-      for (auto i=0; i<m; i++) {
-        grid[i*n+0] = static_cast<double>(i);
-      }
+    for (int j=0; j<n; j++) {
+      grid[0*n+j] = static_cast<double>(j);
     }
-    OMP_BARRIER
+    for (int i=0; i<m; i++) {
+      grid[i*n+0] = static_cast<double>(i);
+    }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          pipeline_time = prk::wtime();
-      }
+      if (iter==1) pipeline_time = prk::wtime();
 
-      OMP_FOR( collapse(2) ordered(2) )
-      for (auto i=1; i<m; i++) {
-        for (auto j=1; j<n; j++) {
-          OMP_ORDERED( depend(sink: i-1,j) depend(sink: i,j-1) depend(sink: i-1,j-1) )
-          grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-          OMP_ORDERED( depend (source) )
+      double * RESTRICT pgrid = grid.data();
+
+      if (mc==m && nc==n) {
+        for (int i=1; i<m; i++) {
+          double olda = grid[  i  *n];
+          double oldb = grid[(i-1)*n];
+          for (int j=1; j<n; j++) {
+            double const newb = grid[(i-1)*n+j];
+            double const newa = newb - oldb + olda;
+            grid[i*n+j] = newa;
+            olda = newa;
+            oldb = newb;
+          }
+        }
+      } else {
+        for (int i=1; i<m; i+=mc) {
+          for (int j=1; j<n; j+=nc) {
+            sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, pgrid);
+          }
         }
       }
-
-      OMP_MASTER
-      grid[0*n+0] = -grid[(m-1)*n+(n-1)];
+      pgrid[0*n+0] = -pgrid[(m-1)*n+(n-1)];
     }
-    OMP_BARRIER
-    OMP_MASTER
     pipeline_time = prk::wtime() - pipeline_time;
   }
 
