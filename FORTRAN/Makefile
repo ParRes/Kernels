@@ -14,9 +14,7 @@ FCFLAGS  = $(DEFAULT_OPT_FLAGS)
 FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
 
 ifeq ($(findstring ifort,$(FC)),ifort)
-  BLASFLAGS = $(CBLASFLAG) -heap-arrays
-else
-  BLASFLAGS = $(CBLASFLAG)
+  BLASFLAGS += -heap-arrays
 endif
 
 .PHONY: all clean serial pretty openmp coarray target ornlacc
@@ -26,7 +24,7 @@ ifeq ($(findstring ifort,$(FC)),ifort)
   ifeq ($(shell uname -s),Darwin)
     EXTRA = taskloop
   else
-    EXTRA = target coarray taskloop
+    EXTRA = taskloop target coarray
   endif
 endif
 # GCC (also matches pgfortran so PGI must come after)
@@ -59,17 +57,20 @@ coarray: p2p-coarray stencil-coarray transpose-coarray
 
 target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target
 
-ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc nstream-ornlacc
+ornlacc: p2p-ornlacc p2p-innerloop-ornlacc stencil-ornlacc transpose-ornlacc nstream-ornlacc
 
 %: %.f90
 	$(FC) $(FCFLAGS) $< -o $@
 
 stencil: stencil.f90 stencil_serial.f90
-	$(FC) $(FCFLAGS) -c stencil_serial.f90 -o stencil_serial.o
+	#$(FC) $(FCFLAGS) -c stencil_serial.f90 -o stencil_serial.o
 	$(FC) $(FCFLAGS) $< -o $@
 
-%-pretty: %-pretty.f90
+dgemm-pretty: dgemm-pretty.f90
 	$(FC) $(FCFLAGS) $(BLASFLAGS) $< -o $@
+
+%-pretty: %-pretty.f90
+	$(FC) $(FCFLAGS) $< -o $@
 
 %-openmp: %.f90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
@@ -89,12 +90,13 @@ stencil: stencil.f90 stencil_serial.f90
 clean:
 	-rm -f *.o
 	-rm -f *.i90
+	-rm -f *.dbg
 	-rm -f *__genmod.f90 # Intel Fortran
 	-rm -f *__genmod.mod # Intel Fortran
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
-	-rm -f p2p stencil transpose nstream
+	-rm -f p2p stencil transpose nstream dgemm
 	-rm -f p2p-innerloop
 	-rm -f *-pretty
 	-rm -f *-coarray

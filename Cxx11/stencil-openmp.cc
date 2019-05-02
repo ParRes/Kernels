@@ -67,13 +67,13 @@
 #include "stencil_seq.hpp"
 #endif
 
-void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
+void nothing(const int n, const int t, const double * RESTRICT in, double * RESTRICT out)
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
     std::cout << "and add it to the case-switch in the driver." << std::endl;
     // n will never be zero - this is to silence compiler warnings.
-    if (n==0 || t==0) std::cout << in.size() << out.size() << std::endl;
+    if (n==0 || t==0) std::cout << in << out << std::endl;
     std::abort();
 }
 
@@ -175,10 +175,8 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
-  std::vector<double> in;
-  std::vector<double> out;
-  in.resize(n*n);
-  out.resize(n*n);
+  double * RESTRICT in  = new double[n*n];
+  double * RESTRICT out = new double[n*n];
 
   OMP_PARALLEL()
   {
@@ -206,22 +204,17 @@ int main(int argc, char* argv[])
       // Apply the stencil operator
       stencil(n, tile_size, in, out);
       // Add constant to solution to force refresh of neighbor data, if any
-#ifdef _OPENMP
       OMP_FOR( collapse(2) )
       for (auto it=0; it<n; it+=tile_size) {
         for (auto jt=0; jt<n; jt+=tile_size) {
           for (auto i=it; i<std::min(n,it+tile_size); i++) {
-            OMP_SIMD
+            PRAGMA_SIMD
             for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
               in[i*n+j] += 1.0;
             }
           }
         }
       }
-
-#else
-      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
-#endif
     }
     OMP_BARRIER
     OMP_MASTER
@@ -234,7 +227,6 @@ int main(int argc, char* argv[])
 
   // interior of grid with respect to stencil
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
-
   // compute L1 norm in parallel
   double norm = 0.0;
   OMP_PARALLEL_FOR_REDUCE( +:norm )

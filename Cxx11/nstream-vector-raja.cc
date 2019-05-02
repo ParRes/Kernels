@@ -63,6 +63,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_raja.h"
 
 #if defined(RAJA_ENABLE_OPENMP)
   typedef RAJA::omp_parallel_for_exec thread_exec;
@@ -117,16 +118,13 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time(0);
 
-  std::vector<double> A;
-  std::vector<double> B;
-  std::vector<double> C;
-  A.resize(length);
-  B.resize(length);
-  C.resize(length);
+  std::vector<double> A(length);
+  std::vector<double> B(length);
+  std::vector<double> C(length);
 
-  double scalar = 3.0;
+  double scalar(3);
 
   {
     RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
@@ -135,7 +133,7 @@ int main(int argc, char * argv[])
         C[i] = 2.0;
     });
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
@@ -153,7 +151,7 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 

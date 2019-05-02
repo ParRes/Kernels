@@ -78,7 +78,6 @@ program main
   real(kind=REAL64), allocatable :: grid(:,:)           ! array holding grid values
   ! runtime variables
   integer(kind=INT32) :: i, j, k
-  integer ::  me, nt
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
 

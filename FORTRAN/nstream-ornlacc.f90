@@ -133,9 +133,9 @@ program main
     endif
   endif
 
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix length        = ', length
-  write(*,'(a,i8)') 'Offset               = ', offset
+  write(*,'(a,i12)') 'Number of iterations = ', iterations
+  write(*,'(a,i12)') 'Vector length        = ', length
+  write(*,'(a,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -162,13 +162,6 @@ program main
   scalar = 3
 
   t0 = 0
-
-#ifdef _OPENMP
-!$omp parallel default(none)                           &
-!$omp&  shared(A,B,C,t0,t1)                            &
-!$omp&  firstprivate(length,iterations,offset,scalar)  &
-!$omp&  private(i,k)
-#endif
 
   !$acc parallel loop gang
   do i=1,length
@@ -227,7 +220,7 @@ program main
   else
     write(*,'(a17)') 'Solution validates'
     avgtime = nstream_time/iterations;
-    bytes = 4.0 * int(length,INT64) * storage_size(A)/8
+    bytes = 4 * int(length,INT64) * storage_size(A)/8
     write(*,'(a12,f15.3,1x,a12,e15.6)')    &
         'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
         'Avg time (s): ', avgtime

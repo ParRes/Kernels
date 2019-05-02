@@ -71,14 +71,12 @@ int main(int argc, char * argv[])
         throw "Usage: <# iterations> <matrix order> [tile size]";
       }
 
-      // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
-      // order of a the matrix
-      order = std::atol(argv[2]);
+      order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
       } else if (order > std::floor(std::sqrt(INT_MAX))) {
@@ -86,7 +84,7 @@ int main(int argc, char * argv[])
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atol(argv[3]) : 32;
+      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
   }
@@ -101,7 +99,7 @@ int main(int argc, char * argv[])
   std::cout << "Tile size             = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
   auto trans_time = 0.0;

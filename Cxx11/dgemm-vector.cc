@@ -156,12 +156,9 @@ int main(int argc, char * argv[])
 
   double dgemm_time(0);
 
-  std::vector<double> A;
-  std::vector<double> B;
-  std::vector<double> C;
-  A.resize(order*order);
-  B.resize(order*order);
-  C.resize(order*order,0.0);
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order);
+  std::vector<double> C(order*order,0.0);
   for (auto i=0; i<order; ++i) {
     for (auto j=0; j<order; ++j) {
        A[i*order+j] = i;
@@ -189,7 +186,7 @@ int main(int argc, char * argv[])
 
   const auto forder = static_cast<double>(order);
   const auto reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
-  const auto checksum = prk_reduce(C.begin(), C.end(), 0.0);
+  const auto checksum = prk::reduce(C.begin(), C.end(), 0.0);
 
   const auto epsilon = 1.0e-8;
   const auto residuum = std::abs(checksum-reference)/reference;

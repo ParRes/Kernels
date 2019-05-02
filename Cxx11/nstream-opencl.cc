@@ -88,15 +88,12 @@ void run(cl::Context context, int iterations, size_t length)
 
   auto nstream_time = 0.0;
 
-  std::vector<T> h_a;
-  std::vector<T> h_b;
-  std::vector<T> h_c;
-  h_a.resize(length, (T)0);
-  h_b.resize(length, (T)2);
-  h_c.resize(length, (T)2);
+  std::vector<T> h_a(length, T(0));
+  std::vector<T> h_b(length, T(2));
+  std::vector<T> h_c(length, T(2));
 
   // copy input from host to device
-  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);
+  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), false);
   cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), true);
   cl::Buffer d_c = cl::Buffer(context, begin(h_c), end(h_c), true);
 
@@ -144,7 +141,8 @@ void run(cl::Context context, int iterations, size_t length)
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
       double nbytes = 4.0 * length * sizeof(T);
-      std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
+      std::cout << precision << "B "
+                << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }
 }
@@ -203,9 +201,10 @@ int main(int argc, char* argv[])
 
     if (precision==64) {
         run<double>(cpu, iterations, length);
-    } else {
-        run<float>(cpu, iterations, length);
     }
+    run<float>(cpu, iterations, length);
+  } else {
+    std::cerr << "No CPU" << std::endl;
   }
 
   cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
@@ -217,9 +216,10 @@ int main(int argc, char* argv[])
 
     if (precision==64) {
         run<double>(gpu, iterations, length);
-    } else {
-        run<float>(gpu, iterations, length);
     }
+    run<float>(gpu, iterations, length);
+  } else {
+    std::cerr << "No GPU" << std::endl;
   }
 
   cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
@@ -232,9 +232,10 @@ int main(int argc, char* argv[])
 
     if (precision==64) {
         run<double>(acc, iterations, length);
-    } else {
-        run<float>(acc, iterations, length);
     }
+    run<float>(acc, iterations, length);
+  } else {
+    std::cerr << "No ACC" << std::endl;
   }
 
   return 0;

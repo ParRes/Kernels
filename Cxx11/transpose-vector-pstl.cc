@@ -50,6 +50,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_pstl.h"
 
 // See ParallelSTL.md for important information.
 
@@ -57,9 +58,9 @@ int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
 #if defined(USE_PSTL)
-  std::cout << "C++17 Parallel STL Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++17/PSTL Matrix transpose: B = A^T" << std::endl;
 #else
-  std::cout << "C++11 STL Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/STL Matrix transpose: B = A^T" << std::endl;
 #endif
 
   //////////////////////////////////////////////////////////////////////
@@ -92,21 +93,20 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<double> A;
-  std::vector<double> B;
-  B.resize(order*order,0.0);
-  A.resize(order*order);
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order,0.0);
+
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 
-  auto range = boost::irange(0,order);
+  auto range = prk::range(0,order);
 
   auto trans_time = 0.0;
 
@@ -116,8 +116,8 @@ int main(int argc, char * argv[])
 
     // transpose
 #if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
-  std::for_each( pstl::execution::par, std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( pstl::execution::unseq, std::begin(range), std::end(range), [&] (int j) {
+  std::for_each( exec::par, std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( exec::unseq, std::begin(range), std::end(range), [&] (int j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
   __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {

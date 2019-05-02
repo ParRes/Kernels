@@ -60,6 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_tbb.h"
 
 int main(int argc, char* argv[])
 {
@@ -72,9 +73,8 @@ int main(int argc, char* argv[])
 
   int iterations;
   int n;
-  int mc, nc;
   try {
-      if (argc < 3){
+      if (argc < 3) {
         throw " <# iterations> <array dimension>";
       }
 
@@ -112,9 +112,7 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  // working set
-  std::vector<double> grid;
-  grid.resize(n*n,0.0);
+  prk::vector<double> grid(n*n,0.0);
 
   // set boundary values (bottom and left side of grid)
   for (auto j=0; j<n; j++) {
@@ -123,7 +121,9 @@ int main(int argc, char* argv[])
   }
 
   for (auto iter = 0; iter<=iterations; iter++){
+
     if (iter == 1) pipeline_time = prk::wtime();
+
     for (auto i=2; i<=2*n-2; i++) {
       tbb::parallel_for( std::max(2,i-n+2), std::min(i,n)+1, [=,&grid](int j) {
                const auto x = i-j+2-1;

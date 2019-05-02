@@ -60,6 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_raja.h"
 
 int main(int argc, char* argv[])
 {
@@ -117,9 +118,7 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  // working set
-  std::vector<double> grid;
-  grid.resize(m*n,0.0);
+  std::vector<double> grid(m*n,0.0);
 
   // set boundary values (bottom and left side of grid)
   for (auto j=0; j<n; j++) {
@@ -151,14 +150,14 @@ int main(int argc, char* argv[])
     });
 #else
     for (auto j=1; j<n; j++) {
-      RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
+      RAJA::forall<thread_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
         auto x = i;
         auto y = j-i+1;
         grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
       });
     }
     for (auto j=n-2; j>=1; j--) {
-      RAJA::forall<RAJA::omp_parallel_for_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
+      RAJA::forall<thread_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
         auto x = n+i-j-1;
         auto y = n-i;
         grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];

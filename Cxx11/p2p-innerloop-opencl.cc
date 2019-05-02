@@ -84,9 +84,7 @@ void run(cl::Context context, int iterations, int n)
   /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  const int nelems = n*n;
-  std::vector<T> h_grid;
-  h_grid.resize(nelems, (T)0);
+  std::vector<T> h_grid(n*n, T(0));
   for (auto j=0; j<n; j++) {
     h_grid[0*n+j] = static_cast<double>(j);
   }
@@ -95,7 +93,7 @@ void run(cl::Context context, int iterations, int n)
   }
 
   // copy input from host to device
-  cl::Buffer d_grid = cl::Buffer(context, begin(h_grid), end(h_grid), true);
+  cl::Buffer d_grid = cl::Buffer(context, begin(h_grid), end(h_grid), false);
 
   auto pipeline_time = 0.0;
 

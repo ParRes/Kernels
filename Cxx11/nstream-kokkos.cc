@@ -63,6 +63,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_kokkos.h"
 
 // We build with OpenMP unless it is not available...
 #ifndef PRK_KOKKOS_BACKEND
@@ -75,111 +76,121 @@ int main(int argc, char * argv[])
   std::cout << "C++11/Kokkos STREAM triad: A = B + scalar * C" << std::endl;
 
   Kokkos::initialize(argc, argv);
-
-  typedef Kokkos::PRK_KOKKOS_BACKEND Space;
-  //typedef Kokkos::TeamPolicy<Space>               team_policy;
-  //typedef Kokkos::TeamPolicy<Space>::member_type  member_type;
-
-  typedef Kokkos::View<double*, Space> vector;
-
-  //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
-  //////////////////////////////////////////////////////////////////////
-
-  int iterations, offset;
-  size_t length;
-  try {
-      if (argc < 3) {
-        throw "Usage: <# iterations> <vector length>";
-      }
-
-      iterations  = std::atoi(argv[1]);
-      if (iterations < 1) {
-        throw "ERROR: iterations must be >= 1";
-      }
-
-      length = std::atol(argv[2]);
-      if (length <= 0) {
-        throw "ERROR: vector length must be positive";
-      }
-
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
-      }
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-    return 1;
-  }
-
-  std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
-  std::cout << "Kokkos execution space: " << typeid(Kokkos::DefaultExecutionSpace).name() << std::endl;
-
-  //////////////////////////////////////////////////////////////////////
-  // Allocate space and perform the computation
-  //////////////////////////////////////////////////////////////////////
-
-  auto nstream_time = 0.0;
-
-  vector A("A", length);
-  vector B("B", length);
-  vector C("C", length);
-
-  double scalar(3);
-
   {
-    Kokkos::parallel_for ( length, KOKKOS_LAMBDA(const int i) {
-        A[i] = 0.0;
-        B[i] = 2.0;
-        C[i] = 2.0;
-    });
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    typedef Kokkos::PRK_KOKKOS_BACKEND Space;
+    //typedef Kokkos::TeamPolicy<Space>               team_policy;
+    //typedef Kokkos::TeamPolicy<Space>::member_type  member_type;
 
-      if (iter==1) nstream_time = prk::wtime();
+    typedef Kokkos::View<double*, Space> vector;
 
-      Kokkos::parallel_for ( length, KOKKOS_LAMBDA(const int i) {
-          A[i] += B[i] + scalar * C[i];
-      });
+    //////////////////////////////////////////////////////////////////////
+    /// Read and test input parameters
+    //////////////////////////////////////////////////////////////////////
+
+    int iterations, offset;
+    size_t length;
+    try {
+        if (argc < 3) {
+          throw "Usage: <# iterations> <vector length>";
+        }
+
+        iterations  = std::atoi(argv[1]);
+        if (iterations < 1) {
+          throw "ERROR: iterations must be >= 1";
+        }
+
+        length = std::atol(argv[2]);
+        if (length <= 0) {
+          throw "ERROR: vector length must be positive";
+        }
+
+        offset = (argc>3) ? std::atoi(argv[3]) : 0;
+        if (length <= 0) {
+          throw "ERROR: offset must be nonnegative";
+        }
     }
-    nstream_time = prk::wtime() - nstream_time;
-  }
-
-  //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
-  //////////////////////////////////////////////////////////////////////
-
-  double ar(0);
-  double br(2);
-  double cr(2);
-  for (auto i=0; i<=iterations; i++) {
-      ar += br + scalar * cr;
-  }
-
-  ar *= length;
-
-  double asum(0);
-  Kokkos::parallel_reduce( length, KOKKOS_LAMBDA(const int i, double & inner) {
-    inner += std::fabs(A(i));
-  }, asum);
-
-  double epsilon(1.e-8);
-  if (std::fabs(ar-asum)/asum > epsilon) {
-      std::cout << "Failed Validation on output array\n"
-                << "       Expected checksum: " << ar << "\n"
-                << "       Observed checksum: " << asum << std::endl;
-      std::cout << "ERROR: solution did not validate" << std::endl;
+    catch (const char * e) {
+      std::cout << e << std::endl;
       return 1;
-  } else {
-      std::cout << "Solution validates" << std::endl;
-      double avgtime = nstream_time/iterations;
-      double nbytes = 4.0 * length * sizeof(double);
-      std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
-                << " Avg time (s): " << avgtime << std::endl;
+    }
+
+    std::cout << "Number of iterations = " << iterations << std::endl;
+    std::cout << "Vector length        = " << length << std::endl;
+    std::cout << "Offset               = " << offset << std::endl;
+    std::cout << "Kokkos execution space: " << Kokkos::DefaultExecutionSpace::name() << std::endl;
+
+    //////////////////////////////////////////////////////////////////////
+    // Allocate space and perform the computation
+    //////////////////////////////////////////////////////////////////////
+
+    double nstream_time(0);
+
+    vector A("A", length);
+    vector B("B", length);
+    vector C("C", length);
+
+    const double scalar(3);
+
+    {
+      Kokkos::parallel_for(length, KOKKOS_LAMBDA(size_t const i) {
+          A[i] = 0.0;
+          B[i] = 2.0;
+          C[i] = 2.0;
+      });
+      Kokkos::fence();
+
+      for (int iter = 0; iter<=iterations; ++iter) {
+
+        if (iter==1) {
+          Kokkos::fence();
+          nstream_time = prk::wtime();
+        }
+
+        Kokkos::parallel_for(length, KOKKOS_LAMBDA(size_t const i) {
+            A[i] += B[i] + scalar * C[i];
+        });
+      }
+      Kokkos::fence();
+      nstream_time = prk::wtime() - nstream_time;
+    }
+
+    //////////////////////////////////////////////////////////////////////
+    /// Analyze and output results
+    //////////////////////////////////////////////////////////////////////
+
+    double ar(0);
+    double br(2);
+    double cr(2);
+    for (int i=0; i<=iterations; i++) {
+        ar += br + scalar * cr;
+    }
+
+    ar *= length;
+
+    double asum(0);
+    Kokkos::parallel_reduce(length, KOKKOS_LAMBDA(size_t const i, double & inner) {
+        inner += std::fabs(A(i));
+    }, asum);
+    Kokkos::fence();
+
+    double epsilon(1.e-8);
+    if (std::fabs(ar-asum)/asum > epsilon) {
+        std::cout << "Failed Validation on output array\n"
+                  << "       Expected checksum: " << ar << "\n"
+                  << "       Observed checksum: " << asum << std::endl;
+        std::cout << "ERROR: solution did not validate" << std::endl;
+        return 1;
+    } else {
+        std::cout << "Solution validates" << std::endl;
+        double avgtime = nstream_time/iterations;
+        double nbytes = 4.0 * length * sizeof(double);
+        std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
+                  << " Avg time (s): " << avgtime << std::endl;
+    }
+
   }
+  Kokkos::finalize();
 
   return 0;
 }

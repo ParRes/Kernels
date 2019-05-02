@@ -63,15 +63,12 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_cuda.h"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-#ifdef _OPENMP
-  std::cout << "C++11/OpenMP STREAM triad: A = B + scalar * C" << std::endl;
-#else
-  std::cout << "C++11 STREAM triad: A = B + scalar * C" << std::endl;
-#endif
+  std::cout << "C++11/Thrust STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -104,9 +101,6 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-#ifdef _OPENMP
-  std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
-#endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
@@ -117,39 +111,32 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A;
-  std::vector<double> B;
-  std::vector<double> C;
-  A.resize(length);
-  B.resize(length);
-  C.resize(length);
+  thrust::device_vector<double> A(length);
+  thrust::device_vector<double> B(length);
+  thrust::device_vector<double> C(length);
 
-  double scalar = 3.0;
+  auto range = prk::range(static_cast<size_t>(0), length);
 
-  OMP_PARALLEL()
+  double scalar(3);
   {
-    OMP_FOR_SIMD
-    for (size_t i=0; i<length; i++) {
-      A[i] = 0.0;
-      B[i] = 2.0;
-      C[i] = 2.0;
-    }
+    thrust::fill(thrust::device, A.begin(), A.end(), 0.0);
+    thrust::fill(thrust::device, B.begin(), B.end(), 2.0);
+    thrust::fill(thrust::device, C.begin(), C.end(), 2.0);
+
+    auto nstream = [=] __host__ __device__ (thrust::tuple<double&,double,double> t) {
+        thrust::get<0>(t) +=  thrust::get<1>(t) + scalar * thrust::get<2>(t);
+    };
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          OMP_BARRIER
-          OMP_MASTER
-          nstream_time = prk::wtime();
-      }
+      if (iter==1) nstream_time = prk::wtime();
 
-      OMP_FOR_SIMD
-      for (size_t i=0; i<length; i++) {
-          A[i] += B[i] + scalar * C[i];
-      }
+      thrust::for_each( thrust::device,
+                        thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
+                        thrust::make_zip_iterator(thrust::make_tuple(A.end()  , B.end()  , C.end())),
+                        nstream);
+      prk::CUDA::check( cudaDeviceSynchronize() );
     }
-    OMP_BARRIER
-    OMP_MASTER
     nstream_time = prk::wtime() - nstream_time;
   }
 
@@ -166,13 +153,14 @@ int main(int argc, char * argv[])
 
   ar *= length;
 
-  double asum(0);
-  OMP_PARALLEL_FOR_REDUCE( +:asum )
-  for (size_t i=0; i<length; i++) {
-      asum += std::fabs(A[i]);
-  }
+  //double asum = thrust::reduce(A.begin(), A.end(), 0.0, thrust::plus<double>());
+  double asum = thrust::transform_reduce(A.begin(),
+                                         A.end(),
+                                         [=] __host__ __device__ (double x) -> double { return fabs(x); },
+                                         0.0,
+                                         thrust::plus<double>());
 
-  double epsilon=1.e-8;
+  double epsilon(1.e-8);
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << "       Expected checksum: " << ar << "\n"

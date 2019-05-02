@@ -61,15 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
-// This must be before the stencil header, which uses this.
-#ifdef RAJA_ENABLE_OPENMP
-  typedef RAJA::omp_parallel_for_exec thread_exec;
-#else
-#warning No OpenMP!
-  typedef RAJA::seq_exec thread_exec;
-#endif
-
+#include "prk_raja.h"
 #include "stencil_raja.hpp"
 
 void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
@@ -173,10 +165,8 @@ int main(int argc, char* argv[])
 
   auto stencil_time = 0.0;
 
-  std::vector<double> in;
-  std::vector<double> out;
-  in.resize(n*n);
-  out.resize(n*n);
+  std::vector<double> in(n*n);
+  std::vector<double> out(n*n);
 
 #if 0
   RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>

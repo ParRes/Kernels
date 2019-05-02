@@ -83,7 +83,10 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
       std::string command("./generate-opencl-stencil.py ");
       command += ( star ? "star " : "grid " );
       command += std::to_string(radius);
-      std::system( command.c_str() );
+      int rc = std::system( command.c_str() );
+      if (rc != 0) {
+          std::cerr << command.c_str() << " returned " << rc << std::endl;
+      }
   }
   source = prk::opencl::loadProgram(filename1);
   cl::Program program1(context, source, true);
@@ -107,10 +110,8 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<T> h_in;
-  std::vector<T> h_out;
-  h_in.resize(n*n, (T)0);
-  h_out.resize(n*n, (T)0);
+  std::vector<T> h_in(n*n,  T(0));
+  std::vector<T> h_out(n*n, T(0));
 
   auto stencil_time = 0.0;
 
@@ -123,7 +124,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
 
   // copy input from host to device
   cl::Buffer d_in = cl::Buffer(context, begin(h_in), end(h_in), true);
-  cl::Buffer d_out = cl::Buffer(context, begin(h_out), end(h_out), true);
+  cl::Buffer d_out = cl::Buffer(context, begin(h_out), end(h_out), false);
 
   for (auto iter = 0; iter<=iterations; iter++) {
 
