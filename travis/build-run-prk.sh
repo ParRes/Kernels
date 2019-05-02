@@ -512,8 +512,7 @@ case "$PRK_TARGET" in
                     export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
                     ;;
             esac
-            ${MAKE} -C $PRK_TARGET_PATH p2p-innerloop-vector-tbb p2p-hyperplane-vector-tbb p2p-tasks-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
-            $PRK_TARGET_PATH/p2p-innerloop-vector-tbb     10 1024
+            ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-tbb p2p-tasks-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
             $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 1
             $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 32
             $PRK_TARGET_PATH/p2p-tasks-tbb                10 1024 1024 32 32
