@@ -79,9 +79,8 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
 
   double nstream_time(0);
 
-  std::vector<T> h_A(length,0);
-
   const T scalar(3);
+  std::vector<T> h_A(length,0);
 
   try {
 
@@ -91,10 +90,14 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
 
     q.submit([&](cl::sycl::handler& h) {
         cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> C(d_C, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
         h.fill(A,(T)0);
+    });
+    q.submit([&](cl::sycl::handler& h) {
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
         h.fill(B,(T)2);
+    });
+    q.submit([&](cl::sycl::handler& h) {
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> C(d_C, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
         h.fill(C,(T)2);
     });
     q.wait();
@@ -105,9 +108,15 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
 
       q.submit([&](cl::sycl::handler& h) {
 
+#if 1
         cl::sycl::accessor<T, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
         cl::sycl::accessor<T, 1, cl::sycl::access::mode::read,       cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
         cl::sycl::accessor<T, 1, cl::sycl::access::mode::read,       cl::sycl::access::target::global_buffer> C(d_C, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+#else
+        auto A = d_A.template get_access<cl::sycl::access::mode::read_write>(h);
+        auto B = d_B.template get_access<cl::sycl::access::mode::read>(h);
+        auto C = d_C.template get_access<cl::sycl::access::mode::read>(h);
+#endif
 
         h.parallel_for<class nstream<T>>(cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
             A[i] += B[i] + scalar * C[i];
@@ -216,7 +225,7 @@ int main(int argc, char * argv[])
 
   try {
 
-    if (1) {
+    if (length<100000) {
         cl::sycl::queue host(cl::sycl::host_selector{});
 #ifndef TRISYCL
         auto device      = host.get_device();
@@ -227,10 +236,12 @@ int main(int argc, char * argv[])
 
         run<float>(host, iterations, length);
         run<double>(host, iterations, length);
+    } else {
+        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
     }
 
     // CPU requires spir64 target
-    if (0) {
+    if (1) {
         cl::sycl::queue cpu(cl::sycl::cpu_selector{});
 #ifndef TRISYCL
         auto device      = cpu.get_device();
@@ -264,7 +275,7 @@ int main(int argc, char * argv[])
           run<double>(gpu, iterations, length);
         } else {
           std::cout << "SYCL GPU device lacks SPIR-V support." << std::endl;
-#ifdef __COMPUTECPP__
+#if 0 //def __COMPUTECPP__
           std::cout << "You are using ComputeCpp so we will try it anyways..." << std::endl;
           run<float>(gpu, iterations, length);
           run<double>(gpu, iterations, length);
