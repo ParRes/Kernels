@@ -63,8 +63,9 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "CL/sycl.hpp"
-
 #include "prk_util.h"
+
+#define PREBUILD_KERNEL 1
 
 // need to declare kernel class as template
 // to prevent name mangling conflict below
@@ -83,6 +84,11 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
   std::vector<T> h_A(length,0);
 
   try {
+
+#if PREBUILD_KERNEL
+    cl::sycl::program kernel(q.get_context());
+    kernel.build_with_kernel_type<nstream<T>>();
+#endif
 
     cl::sycl::buffer<T> d_A { cl::sycl::range<1>{length} };
     cl::sycl::buffer<T> d_B { cl::sycl::range<1>{length} };
@@ -118,7 +124,11 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
         auto C = d_C.template get_access<cl::sycl::access::mode::read>(h);
 #endif
 
-        h.parallel_for<class nstream<T>>(cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
+        h.parallel_for<class nstream<T>>(
+#if PREBUILD_KERNEL
+                kernel.get_kernel<nstream<T>>(),
+#endif
+                cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
             A[i] += B[i] + scalar * C[i];
         });
       });
@@ -267,18 +277,27 @@ int main(int argc, char * argv[])
         auto platform    = device.get_platform();
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
         bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
+        bool has_fp64 = device.has_extension(cl::sycl::string_class("cl_khr_fp64"));
 #else
         bool has_spir = true; // ?
+        bool has_fp64 = true;
 #endif
+        if (!has_fp64) {
+          std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
+        }
         if (has_spir) {
           run<float>(gpu, iterations, length);
-          run<double>(gpu, iterations, length);
+          if (has_fp64) {
+            run<double>(gpu, iterations, length);
+          }
         } else {
           std::cout << "SYCL GPU device lacks SPIR-V support." << std::endl;
-#if 0 //def __COMPUTECPP__
+#ifdef __COMPUTECPP__
           std::cout << "You are using ComputeCpp so we will try it anyways..." << std::endl;
           run<float>(gpu, iterations, length);
-          run<double>(gpu, iterations, length);
+          if (has_fp64) {
+            run<double>(gpu, iterations, length);
+          }
 #endif
         }
     }
