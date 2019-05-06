@@ -148,7 +148,7 @@ case "$PRK_TARGET" in
         echo "EXTRA_CLIBS=-lm -lpthread" >> common/make.defs
 
         # C11 without external parallelism
-        ${MAKE} -C $PRK_TARGET_PATH p2p stencil transpose p2p-innerloop
+        ${MAKE} -C $PRK_TARGET_PATH p2p stencil transpose p2p-innerloop p2p-hyperplane
         $PRK_TARGET_PATH/p2p             10 1024 1024
         $PRK_TARGET_PATH/p2p             10 1024 1024 100 100
         $PRK_TARGET_PATH/p2p-innerloop   10 1024
