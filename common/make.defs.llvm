@@ -61,7 +61,7 @@ OPENMPFLAG+=-L${LLVM_ROOT}/lib
 SYCLDIR=/opt/sycl/latest
 SYCLCXX=${SYCLDIR}/bin/compute++
 SYCLFLAG=-DUSE_SYCL -sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
-SYCLFLAG+=-std=c++14
+SYCLFLAG+=-std=c++14 -O3
 # This makes a huge difference in e.g. nstream...
 #SYCLFLAG+=-no-serial-memop
 # CentOS7 and Ubuntu14 built for this
