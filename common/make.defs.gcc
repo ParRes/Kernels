@@ -47,7 +47,6 @@ OPENCLFLAG=-framework OpenCL
 # Linux
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
-<<<<<<< HEAD
 OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 METALFLAG=-framework MetalPerformanceShaders
 #
@@ -63,7 +62,6 @@ SYCLFLAG=-I$(SYCLDIR)/include
 #SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
 #SYCLCXX=${CXX} ${OPENMPFLAG}
 #SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
-METALFLAG=-framework MetalPerformanceShaders
 #
 # OCCA
 #

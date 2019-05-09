@@ -45,7 +45,7 @@ endif
 
 all: serial thread openmp taskloop $(EXTRA)
 
-serial: nstream p2p p2p-innerloop stencil transpose
+serial: nstream p2p p2p-innerloop p2p-hyperplane stencil transpose
 
 thread: transpose-thread
 
