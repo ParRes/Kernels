@@ -224,7 +224,6 @@ int main(int argc, char * argv[])
 #endif
 
   try {
-
     if (1) {
         cl::sycl::queue host(cl::sycl::host_selector{});
 #ifndef TRISYCL
@@ -233,7 +232,6 @@ int main(int argc, char * argv[])
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
 #endif
-
         run<float>(host, iterations, order);
         run<double>(host, iterations, order);
     }
@@ -287,6 +285,7 @@ int main(int argc, char * argv[])
             run<double>(gpu, iterations, order);
           }
 #endif
+        }
     }
   }
   catch (cl::sycl::exception e) {

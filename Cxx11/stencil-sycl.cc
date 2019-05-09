@@ -384,6 +384,7 @@ int main(int argc, char * argv[])
             run<double>(gpu, iterations, n, tile_size, star, radius);
           }
 #endif
+        }
     }
   }
   catch (cl::sycl::exception e) {
