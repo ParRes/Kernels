@@ -65,8 +65,6 @@
 #include "CL/sycl.hpp"
 #include "prk_util.h"
 
-#define PREBUILD_KERNEL 1
-
 #if 0
 #include "prk_opencl.h"
 #define USE_OPENCL 1

@@ -52,8 +52,6 @@
 #include "CL/sycl.hpp"
 #include "prk_util.h"
 
-#define PREBUILD_KERNEL 1
-
 // need to declare kernel class as template
 // to prevent name mangling conflict below
 template <typename T> class iota;
