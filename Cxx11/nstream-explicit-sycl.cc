@@ -70,8 +70,6 @@
 #define USE_OPENCL 1
 #endif
 
-// need to declare kernel class as template
-// to prevent name mangling conflict below
 template <typename T> class nstream;
 
 template <typename T>
@@ -146,11 +144,13 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
+#ifdef __COMPUTECPP__
     std::cout << e.get_file_name() << std::endl;
     std::cout << e.get_line_number() << std::endl;
     std::cout << e.get_description() << std::endl;
     std::cout << e.get_cl_error_message() << std::endl;
     std::cout << e.get_cl_code() << std::endl;
+#endif
     return;
   }
   catch (std::exception e) {
@@ -313,11 +313,13 @@ int main(int argc, char * argv[])
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
+#ifdef __COMPUTECPP__
     std::cout << e.get_file_name() << std::endl;
     std::cout << e.get_line_number() << std::endl;
     std::cout << e.get_description() << std::endl;
     std::cout << e.get_cl_error_message() << std::endl;
     std::cout << e.get_cl_code() << std::endl;
+#endif
     return 1;
   }
   catch (std::exception e) {
