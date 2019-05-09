@@ -50,8 +50,9 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "CL/sycl.hpp"
-
 #include "prk_util.h"
+
+#define PREBUILD_KERNEL 1
 
 // need to declare kernel class as template
 // to prevent name mangling conflict below
@@ -67,12 +68,17 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
   double trans_time(0);
 
   std::vector<T> h_A(order*order);
-  std::vector<T> h_B(order*order,static_cast<T>(0));
+  std::vector<T> h_B(order*order,(T)0);
 
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(h_A.begin(), h_A.end(), static_cast<T>(0));
 
   try {
+
+#if PREBUILD_KERNEL
+    cl::sycl::program kernel(q.get_context());
+    kernel.build_with_kernel_type<transpose<T>>();
+#endif
 
 #if USE_2D_INDEXING
     cl::sycl::buffer<T,2> d_A( h_A.data(), cl::sycl::range<2>{order,order} );
@@ -92,16 +98,19 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
         auto A = d_A.template get_access<cl::sycl::access::mode::read_write>(h);
         auto B = d_B.template get_access<cl::sycl::access::mode::read_write>(h);
 
-        // transpose
-        h.parallel_for<class transpose<T>>(cl::sycl::range<2>{order,order}, [=] (cl::sycl::item<2> it) {
+        h.parallel_for<class transpose<T>>(
+#if PREBUILD_KERNEL
+                kernel.get_kernel<transpose<T>>(),
+#endif
+                cl::sycl::range<2>{order,order}, [=] (cl::sycl::item<2> it) {
 #if USE_2D_INDEXING
           cl::sycl::id<2> ij{it[0],it[1]};
           cl::sycl::id<2> ji{it[1],it[0]};
           B[ij] += A[ji];
-          A[ji] += static_cast<T>(1);
+          A[ji] += (T)1;
 #else
           B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
-          A[it[1] * order + it[0]] += static_cast<T>(1);
+          A[it[1] * order + it[0]] += (T)1;
 #endif
         });
       });
@@ -238,7 +247,6 @@ int main(int argc, char * argv[])
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
         //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
 #endif
-
         run<float>(gpu, iterations, order);
         run<double>(gpu, iterations, order);
     }

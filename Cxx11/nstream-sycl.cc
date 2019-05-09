@@ -63,8 +63,9 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "CL/sycl.hpp"
-
 #include "prk_util.h"
+
+#define PREBUILD_KERNEL 1
 
 #if 0
 #include "prk_opencl.h"
@@ -84,15 +85,18 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
 
   double nstream_time(0);
 
+  const T scalar(3);
+
   std::vector<T> h_A(length,0);
   std::vector<T> h_B(length,2);
   std::vector<T> h_C(length,2);
 
-  auto range = prk::range(static_cast<size_t>(0), length);
-
-  const T scalar(3);
-
   try {
+
+#if PREBUILD_KERNEL
+    cl::sycl::program kernel(q.get_context());
+    kernel.build_with_kernel_type<nstream<T>>();
+#endif
 
     cl::sycl::buffer<T,1> d_A { h_A.data(), cl::sycl::range<1>(h_A.size()) };
     cl::sycl::buffer<T,1> d_B { h_B.data(), cl::sycl::range<1>(h_B.size()) };
@@ -108,7 +112,11 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
         auto B = d_B.template get_access<cl::sycl::access::mode::read>(h);
         auto C = d_C.template get_access<cl::sycl::access::mode::read>(h);
 
-        h.parallel_for<class nstream<T>>(cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
+        h.parallel_for<class nstream<T>>(
+#if PREBUILD_KERNEL
+                kernel.get_kernel<nstream<T>>(),
+#endif
+                cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
             A[i] += B[i] + scalar * C[i];
         });
       });
@@ -221,7 +229,7 @@ int main(int argc, char * argv[])
 #endif
 
   try {
-    if (1) {
+    if (length<100000) {
         cl::sycl::queue host(cl::sycl::host_selector{});
 #ifndef TRISYCL
         auto device      = host.get_device();
@@ -231,21 +239,10 @@ int main(int argc, char * argv[])
 #endif
         run<float>(host, iterations, length);
         run<double>(host, iterations, length);
+    } else {
+        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
     }
-  }
-  catch (cl::sycl::exception e) {
-    std::cout << e.what() << std::endl;
-    std::cout << e.get_file_name() << std::endl;
-    std::cout << e.get_line_number() << std::endl;
-    std::cout << e.get_description() << std::endl;
-    std::cout << e.get_cl_error_message() << std::endl;
-    std::cout << e.get_cl_code() << std::endl;
-  }
-  catch (std::exception e) {
-    std::cout << e.what() << std::endl;
-  }
 
-  try {
     // CPU requires spir64 target
     if (1) {
         cl::sycl::queue cpu(cl::sycl::cpu_selector{});
@@ -254,24 +251,16 @@ int main(int argc, char * argv[])
         auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
+        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
+#else
+        bool has_spir = true; // ?
 #endif
-        run<float>(cpu, iterations, length);
-        run<double>(cpu, iterations, length);
+        if (has_spir) {
+          run<float>(cpu, iterations, length);
+          run<double>(cpu, iterations, length);
+        }
     }
-  }
-  catch (cl::sycl::exception e) {
-    std::cout << e.what() << std::endl;
-    std::cout << e.get_file_name() << std::endl;
-    std::cout << e.get_line_number() << std::endl;
-    std::cout << e.get_description() << std::endl;
-    std::cout << e.get_cl_error_message() << std::endl;
-    std::cout << e.get_cl_code() << std::endl;
-  }
-  catch (std::exception e) {
-    std::cout << e.what() << std::endl;
-  }
 
-  try {
     // NVIDIA GPU requires ptx64 target and does not work very well
     if (1) {
         cl::sycl::queue gpu(cl::sycl::gpu_selector{});
@@ -281,18 +270,27 @@ int main(int argc, char * argv[])
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
         bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
+        bool has_fp64 = device.has_extension(cl::sycl::string_class("cl_khr_fp64"));
 #else
         bool has_spir = true; // ?
+        bool has_fp64 = true;
 #endif
+        if (!has_fp64) {
+          std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
+        }
         if (has_spir) {
           run<float>(gpu, iterations, length);
-          run<double>(gpu, iterations, length);
+          if (has_fp64) {
+            run<double>(gpu, iterations, length);
+          }
         } else {
           std::cout << "SYCL GPU device lacks SPIR-V support." << std::endl;
 #ifdef __COMPUTECPP__
           std::cout << "You are using ComputeCpp so we will try it anyways..." << std::endl;
           run<float>(gpu, iterations, length);
-          run<double>(gpu, iterations, length);
+          if (has_fp64) {
+            run<double>(gpu, iterations, length);
+          }
 #endif
         }
     }
