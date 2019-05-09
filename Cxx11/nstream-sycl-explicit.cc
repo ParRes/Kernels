@@ -88,8 +88,6 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
   const T scalar(3);
 
   std::vector<T> h_A(length,0);
-  std::vector<T> h_B(length,2);
-  std::vector<T> h_C(length,2);
 
   try {
 
@@ -98,9 +96,23 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
     kernel.build_with_kernel_type<nstream<T>>();
 #endif
 
-    cl::sycl::buffer<T,1> d_A { h_A.data(), cl::sycl::range<1>(h_A.size()) };
-    cl::sycl::buffer<T,1> d_B { h_B.data(), cl::sycl::range<1>(h_B.size()) };
-    cl::sycl::buffer<T,1> d_C { h_C.data(), cl::sycl::range<1>(h_C.size()) };
+    cl::sycl::buffer<T> d_A { cl::sycl::range<1>{length} };
+    cl::sycl::buffer<T> d_B { cl::sycl::range<1>{length} };
+    cl::sycl::buffer<T> d_C { cl::sycl::range<1>{length} };
+
+    q.submit([&](cl::sycl::handler& h) {
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        h.fill(A,(T)0);
+    });
+    q.submit([&](cl::sycl::handler& h) {
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        h.fill(B,(T)2);
+    });
+    q.submit([&](cl::sycl::handler& h) {
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> C(d_C, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        h.fill(C,(T)2);
+    });
+    q.wait();
 
     for (int iter = 0; iter<=iterations; ++iter) {
 
@@ -108,9 +120,9 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
 
       q.submit([&](cl::sycl::handler& h) {
 
-        auto A = d_A.template get_access<cl::sycl::access::mode::read_write>(h);
-        auto B = d_B.template get_access<cl::sycl::access::mode::read>(h);
-        auto C = d_C.template get_access<cl::sycl::access::mode::read>(h);
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read,       cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read,       cl::sycl::access::target::global_buffer> C(d_C, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
 
         h.parallel_for<class nstream<T>>(
 #if PREBUILD_KERNEL
@@ -127,6 +139,12 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
     // since that will move data, and we do not time that
     // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
+
+    q.submit([&](cl::sycl::handler& h) {
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        h.copy(A,h_A.data());
+    });
+    q.wait();
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
