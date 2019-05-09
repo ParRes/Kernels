@@ -54,7 +54,6 @@
 
 #define PREBUILD_KERNEL 1
 
-
 // need to declare kernel class as template
 // to prevent name mangling conflict below
 template <typename T> class transpose;
@@ -248,7 +247,6 @@ int main(int argc, char * argv[])
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
         //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
 #endif
-
         run<float>(gpu, iterations, order);
         run<double>(gpu, iterations, order);
     }
