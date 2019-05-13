@@ -118,8 +118,8 @@ rangefor: stencil-vector-rangefor transpose-vector-rangefor nstream-vector-range
 
 kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
-raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja \
-      p2p-raja stencil-raja transpose-raja nstream-raja
+raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
+      p2p-raja transpose-raja nstream-raja stencil-raja # transpose-vector-raja
 
 cuda: stencil-cuda transpose-cuda nstream-cuda
 
