@@ -173,7 +173,7 @@ case "$PRK_TARGET" in
             g*)
                 # Host
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+                ${MAKE} -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp p2p-hyperplane-openmp stencil-openmp transpose-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
                 $PRK_TARGET_PATH/p2p-innerloop-openmp     10 1024
                 $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024
