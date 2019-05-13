@@ -111,12 +111,9 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('    });\n')
     elif (model=='raja'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
-        #src.write('    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>\n')
-        #src.write('            ( RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),'
-        #                        'RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),\n')
-        #src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
-        src.write('    RAJA::forall<thread_exec>(RAJA::Index_type('+str(radius)+'), RAJA::Index_type(n-'+str(radius)+'), [&](RAJA::Index_type i) {\n')
-        src.write('      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type('+str(radius)+'), RAJA::Index_type(n-'+str(radius)+'), [&](RAJA::Index_type j) {\n')
+        src.write('    RAJA::RangeSegment inside('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {\n')
+        src.write('      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {\n')
         bodygen(src,pattern,stencil_size,radius,W,model)
         src.write('      });\n')
         src.write('    });\n')

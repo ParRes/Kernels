@@ -121,10 +121,14 @@ int main(int argc, char* argv[])
   double * RESTRICT Amem = new double[m*n];
   matrix grid(Amem, m, n);
 
-  for (int i=0; i<m; i++) {
-    for (int j=0; j<n; j++) {
-      grid(i,j) = 0.0;
-    }
+  {
+    RAJA::RangeSegment range(0,m);
+    RAJA::forall<thread_exec>(range, [=](RAJA::Index_type i) {
+    //for (int i=0; i<m; i++) {
+      for (int j=0; j<n; j++) {
+        grid(i,j) = 0.0;
+      }
+    });
   }
   // set boundary values (bottom and left side of grid)
   for (int j=0; j<n; j++) {

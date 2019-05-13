@@ -166,7 +166,8 @@ int main(int argc, char * argv[])
   ar *= length;
 
   RAJA::ReduceSum<RAJA::seq_reduce, double> reduced_asum(0.0);
-  RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+  //RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+  RAJA::forall<RAJA::seq_exec>(range, [=](RAJA::Index_type i) {
       reduced_asum += std::fabs(A(i));
   });
   double asum(reduced_asum);
