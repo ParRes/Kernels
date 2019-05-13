@@ -108,14 +108,14 @@ int main(int argc, char * argv[])
 
   auto range = prk::range(0,order);
 
-  auto trans_time = 0.0;
+  double trans_time(0);
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
     // transpose
-#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
+#if defined(USE_PSTL) && ( defined(USE_INTEL_PSTL) || ( defined(__GNUC__) && (__GNUC__ >= 9) ) )
   std::for_each( exec::par, std::begin(range), std::end(range), [&] (int i) {
     std::for_each( exec::unseq, std::begin(range), std::end(range), [&] (int j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
