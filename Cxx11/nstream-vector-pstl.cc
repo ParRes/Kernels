@@ -126,7 +126,7 @@ int main(int argc, char * argv[])
   double scalar(3);
 
   {
-#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
+#if defined(USE_PSTL) && ( defined(USE_INTEL_PSTL) || ( defined(__GNUC__) && (__GNUC__ >= 9) ) )
     std::for_each( exec::par_unseq, std::begin(range), std::end(range), [&] (size_t i) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
@@ -140,11 +140,11 @@ int main(int argc, char * argv[])
         C[i] = 2;
     });
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
+#if defined(USE_PSTL) && ( defined(USE_INTEL_PSTL) || ( defined(__GNUC__) && (__GNUC__ >= 9) ) )
       std::for_each( exec::par_unseq, std::begin(range), std::end(range), [&] (size_t i) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
