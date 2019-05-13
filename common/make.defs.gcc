@@ -4,7 +4,7 @@
 #
 # Base compilers and language options
 #
-VERSION=-8
+VERSION=-9
 # C99 is required in some implementations.
 CC=gcc${VERSION} -std=c11 -pthread
 #EXTRA_CLIBS=-lrt
@@ -74,15 +74,16 @@ METALFLAG=-framework MetalPerformanceShaders
 #
 # TBB
 #
-TBBDIR=/usr/local/Cellar/tbb/2019_U3_1
-TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+TBBDIR=/usr/local/Cellar/tbb/2019_U5_1
+TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-I/usr/local/Cellar/boost/1.68.0_1/include
-#RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
-RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
-PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include ${RANGEFLAG}
+BOOSTFLAG=-I/usr/local/Cellar/boost/1.69.0_2/include
+RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+#RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG}
+#PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include ${RANGEFLAG}
 KOKKOSDIR=/opt/kokkos/gcc
 KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
 RAJADIR=/opt/raja/gcc
@@ -95,7 +96,7 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 SYCLDIR=./triSYCL
-SYCLCXX=${CXX} -std=c++17 ${OPENMPFLAG}
+SYCLCXX=${CXX} -O3 -Wall -std=c++17 ${OPENMPFLAG}
 SYCLFLAG=-I${SYCLDIR}/include ${BOOSTFLAG} -DTRISYCL
 # ProGTX
 # https://github.com/ProGTX/sycl-gtx
