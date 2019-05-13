@@ -82,6 +82,13 @@
 #define PRK_UNUSED
 #endif
 
+// for SYCL
+#ifdef TRISYCL
+#define PREBUILD_KERNEL 0
+#else
+#define PREBUILD_KERNEL 1
+#endif
+
 namespace prk {
 
     int get_alignment(void)

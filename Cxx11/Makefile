@@ -105,7 +105,7 @@ taskloop: stencil-vector-taskloop transpose-vector-taskloop nstream-vector-taskl
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
-sycl: p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl
+sycl: p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl transpose-explicit-sycl nstream-explicit-sycl
 
 tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb \
      p2p-hyperplane-vector-tbb p2p-tasks-tbb

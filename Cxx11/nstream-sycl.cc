@@ -63,11 +63,13 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "CL/sycl.hpp"
-
 #include "prk_util.h"
 
-// need to declare kernel class as template
-// to prevent name mangling conflict below
+#if 0
+#include "prk_opencl.h"
+#define USE_OPENCL 1
+#endif
+
 template <typename T> class nstream;
 
 template <typename T>
@@ -79,19 +81,22 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
 
   double nstream_time(0);
 
+  const T scalar(3);
+
   std::vector<T> h_A(length,0);
   std::vector<T> h_B(length,2);
   std::vector<T> h_C(length,2);
 
-  auto range = prk::range(static_cast<size_t>(0), length);
-
-  const T scalar(3);
-
   try {
 
-    cl::sycl::buffer<T> d_A { h_A.data(), h_A.size() };
-    cl::sycl::buffer<T> d_B { h_B.data(), h_B.size() };
-    cl::sycl::buffer<T> d_C { h_C.data(), h_C.size() };
+#if PREBUILD_KERNEL
+    cl::sycl::program kernel(q.get_context());
+    kernel.build_with_kernel_type<nstream<T>>();
+#endif
+
+    cl::sycl::buffer<T,1> d_A { h_A.data(), cl::sycl::range<1>(h_A.size()) };
+    cl::sycl::buffer<T,1> d_B { h_B.data(), cl::sycl::range<1>(h_B.size()) };
+    cl::sycl::buffer<T,1> d_C { h_C.data(), cl::sycl::range<1>(h_C.size()) };
 
     for (int iter = 0; iter<=iterations; ++iter) {
 
@@ -103,7 +108,11 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
         auto B = d_B.template get_access<cl::sycl::access::mode::read>(h);
         auto C = d_C.template get_access<cl::sycl::access::mode::read>(h);
 
-        h.parallel_for<class nstream<T>>(cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
+        h.parallel_for<class nstream<T>>(
+#if PREBUILD_KERNEL
+                kernel.get_kernel<nstream<T>>(),
+#endif
+                cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
             A[i] += B[i] + scalar * C[i];
         });
       });
@@ -117,10 +126,21 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
+#ifdef __COMPUTECPP__
+    std::cout << e.get_file_name() << std::endl;
+    std::cout << e.get_line_number() << std::endl;
+    std::cout << e.get_description() << std::endl;
+    std::cout << e.get_cl_error_message() << std::endl;
+    std::cout << e.get_cl_code() << std::endl;
+#endif
     return;
   }
   catch (std::exception e) {
     std::cout << e.what() << std::endl;
+    return;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
     return;
   }
 
@@ -202,19 +222,23 @@ int main(int argc, char * argv[])
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
-  try {
+#ifdef USE_OPENCL
+  prk::opencl::listPlatforms();
+#endif
 
-    if (1) {
+  try {
+    if (length<100000) {
         cl::sycl::queue host(cl::sycl::host_selector{});
 #ifndef TRISYCL
         auto device      = host.get_device();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         auto platform    = device.get_platform();
+        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
 #endif
-
         run<float>(host, iterations, length);
         run<double>(host, iterations, length);
+    } else {
+        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
     }
 
     // CPU requires spir64 target
@@ -222,8 +246,8 @@ int main(int argc, char * argv[])
         cl::sycl::queue cpu(cl::sycl::cpu_selector{});
 #ifndef TRISYCL
         auto device      = cpu.get_device();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         auto platform    = device.get_platform();
+        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
         bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
 #else
@@ -240,31 +264,53 @@ int main(int argc, char * argv[])
         cl::sycl::queue gpu(cl::sycl::gpu_selector{});
 #ifndef TRISYCL
         auto device      = gpu.get_device();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         auto platform    = device.get_platform();
+        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
         bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
+        bool has_fp64 = device.has_extension(cl::sycl::string_class("cl_khr_fp64"));
 #else
         bool has_spir = true; // ?
+        bool has_fp64 = true;
 #endif
+        if (!has_fp64) {
+          std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
+        }
         if (has_spir) {
           run<float>(gpu, iterations, length);
-          run<double>(gpu, iterations, length);
+          if (has_fp64) {
+            run<double>(gpu, iterations, length);
+          }
         } else {
           std::cout << "SYCL GPU device lacks SPIR-V support." << std::endl;
 #ifdef __COMPUTECPP__
           std::cout << "You are using ComputeCpp so we will try it anyways..." << std::endl;
           run<float>(gpu, iterations, length);
-          run<double>(gpu, iterations, length);
+          if (has_fp64) {
+            run<double>(gpu, iterations, length);
+          }
 #endif
         }
     }
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
+#ifdef __COMPUTECPP__
+    std::cout << e.get_file_name() << std::endl;
+    std::cout << e.get_line_number() << std::endl;
+    std::cout << e.get_description() << std::endl;
+    std::cout << e.get_cl_error_message() << std::endl;
+    std::cout << e.get_cl_code() << std::endl;
+#endif
+    return 1;
   }
   catch (std::exception e) {
     std::cout << e.what() << std::endl;
+    return 1;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return 1;
   }
 
   return 0;
