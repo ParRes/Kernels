@@ -57,6 +57,7 @@
 #define USE_OPENCL 1
 #endif
 
+template <typename T> class iota;
 template <typename T> class transpose;
 
 template <typename T>
@@ -68,11 +69,7 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
 
   double trans_time(0);
 
-  std::vector<T> h_A(order*order);
   std::vector<T> h_B(order*order,(T)0);
-
-  // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(h_A.begin(), h_A.end(), static_cast<T>(0));
 
   try {
 
@@ -82,12 +79,35 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
 #endif
 
 #if USE_2D_INDEXING
-    cl::sycl::buffer<T,2> d_A( h_A.data(), cl::sycl::range<2>{order,order} );
-    cl::sycl::buffer<T,2> d_B( h_B.data(), cl::sycl::range<2>{order,order} );
+    cl::sycl::buffer<T,2> d_A( cl::sycl::range<2>{order,order} );
+    cl::sycl::buffer<T,2> d_B( cl::sycl::range<2>{order,order} );
 #else
-    cl::sycl::buffer<T> d_A { h_A.data(), h_A.size() };
-    cl::sycl::buffer<T> d_B { h_B.data(), h_B.size() };
+    cl::sycl::buffer<T> d_A { cl::sycl::range<1>{order*order}  };
+    cl::sycl::buffer<T> d_B { cl::sycl::range<1>{order*order}  };
 #endif
+
+    q.submit([&](cl::sycl::handler& h) {
+#if USE_2D_INDEXING
+        cl::sycl::accessor<T, 2, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<2>(order,order), cl::sycl::id<2>(0,0));
+        h.parallel_for<class iota<T>>(cl::sycl::range<2>{order,order}, [=] (cl::sycl::item<2> i) {
+            A[i] = i[0] * order + i[1];
+        });
+#else
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(order*order), cl::sycl::id<1>(0));
+        h.parallel_for<class iota<T>>(cl::sycl::range<1>{order*order}, [=] (cl::sycl::item<1> i) {
+            A[i] = i[0];
+        });
+#endif
+    });
+    q.submit([&](cl::sycl::handler& h) {
+#if USE_2D_INDEXING
+        cl::sycl::accessor<T, 2, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<2>(order,order), cl::sycl::id<2>(0,0));
+#else
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(order*order), cl::sycl::id<1>(0));
+#endif
+        h.fill(B,(T)0);
+    });
+    q.wait();
 
     for (int iter = 0; iter<=iterations; ++iter) {
 
@@ -95,9 +115,13 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
 
       q.submit([&](cl::sycl::handler& h) {
 
-        // accessor methods
-        auto A = d_A.template get_access<cl::sycl::access::mode::read_write>(h);
-        auto B = d_B.template get_access<cl::sycl::access::mode::read_write>(h);
+#if USE_2D_INDEXING
+        cl::sycl::accessor<T, 2, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<2>(order,order), cl::sycl::id<2>(0,0));
+        cl::sycl::accessor<T, 2, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<2>(order,order), cl::sycl::id<2>(0,0));
+#else
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(order*order), cl::sycl::id<1>(0));
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(order*order), cl::sycl::id<1>(0));
+#endif
 
         h.parallel_for<class transpose<T>>(
 #if PREBUILD_KERNEL
@@ -122,6 +146,16 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
     // since that will move data, and we do not time that
     // for other device-oriented programming models.
     trans_time = prk::wtime() - trans_time;
+
+    q.submit([&](cl::sycl::handler& h) {
+#if USE_2D_INDEXING
+        cl::sycl::accessor<T, 2, cl::sycl::access::mode::read, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<2>(order,order), cl::sycl::id<2>(0,0));
+#else
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(order*order), cl::sycl::id<1>(0));
+#endif
+        h.copy(B,h_B.data());
+    });
+    q.wait();
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;

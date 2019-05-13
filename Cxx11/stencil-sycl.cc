@@ -61,9 +61,13 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "CL/sycl.hpp"
-
 #include "prk_util.h"
 #include "stencil_sycl.hpp"
+
+#if 0
+#include "prk_opencl.h"
+#define USE_OPENCL 1
+#endif
 
 template <typename T> class init;
 template <typename T> class add;
@@ -186,23 +190,26 @@ void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool s
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
+#ifdef __COMPUTECPP__
+    std::cout << e.get_file_name() << std::endl;
+    std::cout << e.get_line_number() << std::endl;
+    std::cout << e.get_description() << std::endl;
+    std::cout << e.get_cl_error_message() << std::endl;
+    std::cout << e.get_cl_code() << std::endl;
+#endif
     return;
   }
   catch (std::exception e) {
     std::cout << e.what() << std::endl;
     return;
   }
-
-#if 0
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
-        std::cerr << i << "," << j << "," << h_out[i*n+j] << "\n";
-    }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return;
   }
-#endif
 
   //////////////////////////////////////////////////////////////////////
-  // Analyze and output results.
+  /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
   // interior of grid with respect to stencil
@@ -309,14 +316,18 @@ int main(int argc, char * argv[])
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
+#ifdef USE_OPENCL
+  prk::opencl::listPlatforms();
+#endif
+
   try {
 
     if (1) {
         cl::sycl::queue host(cl::sycl::host_selector{});
 #ifndef TRISYCL
         auto device      = host.get_device();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         auto platform    = device.get_platform();
+        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
 #endif
 
@@ -329,14 +340,17 @@ int main(int argc, char * argv[])
         cl::sycl::queue cpu(cl::sycl::cpu_selector{});
 #ifndef TRISYCL
         auto device      = cpu.get_device();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         auto platform    = device.get_platform();
+        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
+        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
+#else
+        bool has_spir = true; // ?
 #endif
-
-        run<float>(cpu, iterations, n, tile_size, star, radius);
-        run<double>(cpu, iterations, n, tile_size, star, radius);
+        if (has_spir) {
+          run<float>(cpu, iterations, n, tile_size, star, radius);
+          run<double>(cpu, iterations, n, tile_size, star, radius);
+        }
     }
 
     // NVIDIA GPU requires ptx64 target and does not work very well
@@ -344,21 +358,53 @@ int main(int argc, char * argv[])
         cl::sycl::queue gpu(cl::sycl::gpu_selector{});
 #ifndef TRISYCL
         auto device      = gpu.get_device();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         auto platform    = device.get_platform();
+        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        //std::cout << "cl_khr_spir:   " << device.has_extension(cl::sycl::string_class("cl_khr_spir")) << std::endl;
+        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
+        bool has_fp64 = device.has_extension(cl::sycl::string_class("cl_khr_fp64"));
+#else
+        bool has_spir = true; // ?
+        bool has_fp64 = true;
 #endif
-
-        run<float>(gpu, iterations, n, tile_size, star, radius);
-        run<double>(gpu, iterations, n, tile_size, star, radius);
+        if (!has_fp64) {
+          std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
+        }
+        if (has_spir) {
+          run<float>(gpu, iterations, n, tile_size, star, radius);
+          if (has_fp64) {
+            run<double>(gpu, iterations, n, tile_size, star, radius);
+          }
+        } else {
+          std::cout << "SYCL GPU device lacks SPIR-V support." << std::endl;
+#ifdef __COMPUTECPP__
+          std::cout << "You are using ComputeCpp so we will try it anyways..." << std::endl;
+          run<float>(gpu, iterations, n, tile_size, star, radius);
+          if (has_fp64) {
+            run<double>(gpu, iterations, n, tile_size, star, radius);
+          }
+#endif
+        }
     }
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
+#ifdef __COMPUTECPP__
+    std::cout << e.get_file_name() << std::endl;
+    std::cout << e.get_line_number() << std::endl;
+    std::cout << e.get_description() << std::endl;
+    std::cout << e.get_cl_error_message() << std::endl;
+    std::cout << e.get_cl_code() << std::endl;
+#endif
+    return 1;
   }
   catch (std::exception e) {
     std::cout << e.what() << std::endl;
+    return 1;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return 1;
   }
 
   return 0;

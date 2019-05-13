@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2017, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -31,21 +31,34 @@
 
 //////////////////////////////////////////////////////////////////////
 ///
-/// NAME:    transpose
+/// NAME:    nstream
 ///
-/// PURPOSE: This program measures the time for the transpose of a
-///          column-major stored matrix into a row-major stored matrix.
+/// PURPOSE: To compute memory bandwidth when adding a vector of a given
+///          number of double precision values to the scalar multiple of
+///          another vector of the same length, and storing the result in
+///          a third vector.
 ///
-/// USAGE:   Program input is the matrix order and the number of times to
-///          repeat the operation:
+/// USAGE:   The program takes as input the number
+///          of iterations to loop over the triad vectors, the length of the
+///          vectors, and the offset between vectors
 ///
-///          transpose <matrix_size> <# iterations>
+///          <progname> <# iterations> <vector length> <offset>
 ///
 ///          The output consists of diagnostics to make sure the
-///          transpose worked and timing statistics.
+///          algorithm worked, and of timing statistics.
 ///
-/// HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-///          Converted to C++11 by Jeff Hammond, February 2016 and May 2017.
+/// NOTES:   Bandwidth is determined as the number of words read, plus the
+///          number of words written, times the size of the words, divided
+///          by the execution time. For a vector length of N, the total
+///          number of words read and written is 4*N*sizeof(double).
+///
+///
+/// HISTORY: This code is loosely based on the Stream benchmark by John
+///          McCalpin, but does not follow all the Stream rules. Hence,
+///          reported results should not be associated with Stream in
+///          external publications
+///
+///          Converted to C++11 by Jeff Hammond, November 2017.
 ///
 //////////////////////////////////////////////////////////////////////
 
@@ -57,62 +70,62 @@
 #define USE_OPENCL 1
 #endif
 
-template <typename T> class transpose;
+template <typename T> class nstream;
 
 template <typename T>
-void run(cl::sycl::queue & q, int iterations, size_t order)
+void run(cl::sycl::queue & q, int iterations, size_t length)
 {
   //////////////////////////////////////////////////////////////////////
-  // Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double trans_time(0);
+  double nstream_time(0);
 
-  std::vector<T> h_A(order*order);
-  std::vector<T> h_B(order*order,(T)0);
+  const T scalar(3);
 
-  // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(h_A.begin(), h_A.end(), static_cast<T>(0));
+  std::vector<T> h_A(length,0);
 
   try {
 
 #if PREBUILD_KERNEL
     cl::sycl::program kernel(q.get_context());
-    kernel.build_with_kernel_type<transpose<T>>();
+    kernel.build_with_kernel_type<nstream<T>>();
 #endif
 
-#if USE_2D_INDEXING
-    cl::sycl::buffer<T,2> d_A( h_A.data(), cl::sycl::range<2>{order,order} );
-    cl::sycl::buffer<T,2> d_B( h_B.data(), cl::sycl::range<2>{order,order} );
-#else
-    cl::sycl::buffer<T> d_A { h_A.data(), h_A.size() };
-    cl::sycl::buffer<T> d_B { h_B.data(), h_B.size() };
-#endif
+    cl::sycl::buffer<T> d_A { cl::sycl::range<1>{length} };
+    cl::sycl::buffer<T> d_B { cl::sycl::range<1>{length} };
+    cl::sycl::buffer<T> d_C { cl::sycl::range<1>{length} };
+
+    q.submit([&](cl::sycl::handler& h) {
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        h.fill(A,(T)0);
+    });
+    q.submit([&](cl::sycl::handler& h) {
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        h.fill(B,(T)2);
+    });
+    q.submit([&](cl::sycl::handler& h) {
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> C(d_C, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        h.fill(C,(T)2);
+    });
+    q.wait();
 
     for (int iter = 0; iter<=iterations; ++iter) {
 
-      if (iter==1) trans_time = prk::wtime();
+      if (iter==1) nstream_time = prk::wtime();
 
       q.submit([&](cl::sycl::handler& h) {
 
-        // accessor methods
-        auto A = d_A.template get_access<cl::sycl::access::mode::read_write>(h);
-        auto B = d_B.template get_access<cl::sycl::access::mode::read_write>(h);
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read,       cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read,       cl::sycl::access::target::global_buffer> C(d_C, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
 
-        h.parallel_for<class transpose<T>>(
+        h.parallel_for<class nstream<T>>(
 #if PREBUILD_KERNEL
-                kernel.get_kernel<transpose<T>>(),
+                kernel.get_kernel<nstream<T>>(),
 #endif
-                cl::sycl::range<2>{order,order}, [=] (cl::sycl::item<2> it) {
-#if USE_2D_INDEXING
-          cl::sycl::id<2> ij{it[0],it[1]};
-          cl::sycl::id<2> ji{it[1],it[0]};
-          B[ij] += A[ji];
-          A[ji] += (T)1;
-#else
-          B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
-          A[it[1] * order + it[0]] += (T)1;
-#endif
+                cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
+            A[i] += B[i] + scalar * C[i];
         });
       });
       q.wait();
@@ -121,7 +134,13 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
     // Stop timer before buffer+accessor destructors fire,
     // since that will move data, and we do not time that
     // for other device-oriented programming models.
-    trans_time = prk::wtime() - trans_time;
+    nstream_time = prk::wtime() - nstream_time;
+
+    q.submit([&](cl::sycl::handler& h) {
+        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        h.copy(A,h_A.data());
+    });
+    q.wait();
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
@@ -147,64 +166,65 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
-  const T addit = (iterations+1.) * (iterations/2.);
-  double abserr(0);
-  for (size_t i=0; i<order; ++i) {
-    for (size_t j=0; j<order; ++j) {
-      size_t const ij = i*order+j;
-      size_t const ji = j*order+i;
-      const T reference = static_cast<T>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(h_B[ji] - reference);
-    }
+  T ar(0);
+  T br(2);
+  T cr(2);
+  for (int i=0; i<=iterations; ++i) {
+      ar += br + scalar * cr;
   }
 
-#ifdef VERBOSE
-  std::cout << "Sum of absolute differences: " << abserr << std::endl;
-#endif
+  ar *= length;
 
-  const double epsilon(1.0e-8);
-  if (abserr < epsilon) {
-    std::cout << "Solution validates" << std::endl;
-    double avgtime = trans_time/iterations;
-    double bytes = (size_t)order * (size_t)order * sizeof(T);
-    std::cout << 8*sizeof(T) << "B "
-              << "Rate (MB/s): " << 1.0e-6 * (2.*bytes)/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+  double asum(0);
+  for (size_t i=0; i<length; ++i) {
+      asum += std::fabs(h_A[i]);
+  }
+
+  const double epsilon(1.e-8);
+  if (std::fabs(ar-asum)/asum > epsilon) {
+      std::cout << "Failed Validation on output array\n"
+                << "       Expected checksum: " << ar << "\n"
+                << "       Observed checksum: " << asum << std::endl;
+      std::cout << "ERROR: solution did not validate" << std::endl;
   } else {
-    std::cout << "ERROR: Aggregate squared error " << abserr
-              << " exceeds threshold " << epsilon << std::endl;
+      std::cout << "Solution validates" << std::endl;
+      double avgtime = nstream_time/iterations;
+      double nbytes = 4.0 * length * sizeof(T);
+      std::cout << 8*sizeof(T) << "B "
+                << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
+                << " Avg time (s): " << avgtime << std::endl;
   }
 }
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/SYCL Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/SYCL STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  size_t order;
+  int iterations, offset;
+  size_t length;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order>";
+        throw "Usage: <# iterations> <vector length>";
       }
 
-      // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
-      // order of a the matrix
-      order = std::atoi(argv[2]);
-      if (order <= 0) {
-        throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
-        throw "ERROR: matrix dimension too large - overflow risk";
+      length = std::atol(argv[2]);
+      if (length <= 0) {
+        throw "ERROR: vector length must be positive";
+      }
+
+      offset = (argc>3) ? std::atoi(argv[3]) : 0;
+      if (length <= 0) {
+        throw "ERROR: offset must be nonnegative";
       }
   }
   catch (const char * e) {
@@ -212,8 +232,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Vector length        = " << length << std::endl;
+  std::cout << "Offset               = " << offset << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Setup SYCL environment
@@ -224,7 +245,7 @@ int main(int argc, char * argv[])
 #endif
 
   try {
-    if (1) {
+    if (length<100000) {
         cl::sycl::queue host(cl::sycl::host_selector{});
 #ifndef TRISYCL
         auto device      = host.get_device();
@@ -232,8 +253,10 @@ int main(int argc, char * argv[])
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
         std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
 #endif
-        run<float>(host, iterations, order);
-        run<double>(host, iterations, order);
+        run<float>(host, iterations, length);
+        run<double>(host, iterations, length);
+    } else {
+        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
     }
 
     // CPU requires spir64 target
@@ -249,13 +272,13 @@ int main(int argc, char * argv[])
         bool has_spir = true; // ?
 #endif
         if (has_spir) {
-          run<float>(cpu, iterations, order);
-          run<double>(cpu, iterations, order);
+          run<float>(cpu, iterations, length);
+          run<double>(cpu, iterations, length);
         }
     }
 
     // NVIDIA GPU requires ptx64 target and does not work very well
-    if (0) {
+    if (1) {
         cl::sycl::queue gpu(cl::sycl::gpu_selector{});
 #ifndef TRISYCL
         auto device      = gpu.get_device();
@@ -272,17 +295,17 @@ int main(int argc, char * argv[])
           std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
         }
         if (has_spir) {
-          run<float>(gpu, iterations, order);
+          run<float>(gpu, iterations, length);
           if (has_fp64) {
-            run<double>(gpu, iterations, order);
+            run<double>(gpu, iterations, length);
           }
         } else {
           std::cout << "SYCL GPU device lacks SPIR-V support." << std::endl;
 #ifdef __COMPUTECPP__
           std::cout << "You are using ComputeCpp so we will try it anyways..." << std::endl;
-          run<float>(gpu, iterations, order);
+          run<float>(gpu, iterations, length);
           if (has_fp64) {
-            run<double>(gpu, iterations, order);
+            run<double>(gpu, iterations, length);
           }
 #endif
         }
