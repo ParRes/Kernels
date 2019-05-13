@@ -54,7 +54,7 @@
 #include <exception>
 #include <list>
 #include <vector>
-#include <valarray>
+//#include <valarray>
 
 #include <chrono>
 #include <random>
