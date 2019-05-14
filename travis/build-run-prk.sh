@@ -655,13 +655,14 @@ case "$PRK_TARGET" in
 
         # C++ w/ SYCL
         # triSYCL requires Boost.  We are having Boost issues with Travis Linux builds.
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+        #if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+        if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
             SYCLDIR=${TRAVIS_ROOT}/triSYCL
             if [ "${CC}" = "clang" ] ; then
                 # SYCL will compile without OpenMP
-                echo "SYCLCXX=${PRK_CXX} -pthread -std=c++1z" >> common/make.defs
+                echo "SYCLCXX=${PRK_CXX} -pthread -O3 -std=c++1z" >> common/make.defs
             else
-                echo "SYCLCXX=${PRK_CXX} -fopenmp -std=c++1z" >> common/make.defs
+                echo "SYCLCXX=${PRK_CXX} -fopenmp -O3 -std=c++1z" >> common/make.defs
             fi
             echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include" >> common/make.defs
             ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl
