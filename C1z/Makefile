@@ -57,7 +57,7 @@ memkind: nstream-memkind nstream-memkind-openmp
 
 mmap: nstream-mmap nstream-mmap-openmp
 
-target: stencil-target transpose-target
+target: nstream-target stencil-target transpose-target
 
 taskloop: stencil-taskloop transpose-taskloop
 

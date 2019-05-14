@@ -102,6 +102,7 @@ SERIAL/Synch_p2p/p2p
 SERIAL/Transpose/transpose
 C1z/nstream
 C1z/nstream-openmp
+C1z/nstream-target
 C1z/nstream-mpi
 C1z/nstream-memkind
 C1z/nstream-memkind-openmp
