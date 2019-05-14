@@ -148,10 +148,10 @@ case "$PRK_TARGET" in
         echo "EXTRA_CLIBS=-lm -lpthread" >> common/make.defs
 
         # C11 without external parallelism
-        ${MAKE} -C $PRK_TARGET_PATH p2p stencil transpose p2p-innerloop p2p-hyperplane
+        ${MAKE} -C $PRK_TARGET_PATH nstream p2p stencil transpose p2p-hyperplane
+        $PRK_TARGET_PATH/nstream         10 16777216 32
         $PRK_TARGET_PATH/p2p             10 1024 1024
         $PRK_TARGET_PATH/p2p             10 1024 1024 100 100
-        $PRK_TARGET_PATH/p2p-innerloop   10 1024
         $PRK_TARGET_PATH/p2p-hyperplane  10 1024
         $PRK_TARGET_PATH/p2p-hyperplane  10 1024 32
         $PRK_TARGET_PATH/stencil         10 1000
@@ -170,12 +170,15 @@ case "$PRK_TARGET" in
         # C11 with OpenMP
         export OMP_NUM_THREADS=2
         case "$CC" in
+            clang*)
+                echo "Skipping Clang since OpenMP support probably missing"
+                ;;
             g*)
                 # Host
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp p2p-hyperplane-openmp stencil-openmp transpose-openmp
+                ${MAKE} -C $PRK_TARGET_PATH nstream-openmp p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp transpose-openmp
+                $PRK_TARGET_PATH/nstream-openmp           10 16777216 32
                 $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-innerloop-openmp     10 1024
                 $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024
                 $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024 32
                 $PRK_TARGET_PATH/stencil-openmp           10 1000
@@ -198,27 +201,14 @@ case "$PRK_TARGET" in
                     done
                 done
                 ;;
-            clang*)
-                # Host
-                echo "Skipping Clang since OpenMP support probably missing"
-                #echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                #${MAKE} -C $PRK_TARGET_PATH openmp
-                #$PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
-                #$PRK_TARGET_PATH/stencil-openmp           10 1000
-                #$PRK_TARGET_PATH/transpose-penmp          10 1024 32
-                #echo "Test stencil code generator"
-                #for s in star grid ; do
-                #    for r in 1 2 3 4 5 ; do
-                #        $PRK_TARGET_PATH/stencil-penmp 10 200 $s $r
-                #    done
-                #done
-                ;;
             ic*)
                 # Host
                 echo "OPENMPFLAG=-qopenmp" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp
+                ${MAKE} -C $PRK_TARGET_PATH nstream-openmp p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp transpose-openmp
+                $PRK_TARGET_PATH/nstream-openmp           10 16777216 32
                 $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-innerloop-openmp     10 1024 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024 32
                 $PRK_TARGET_PATH/stencil-openmp           10 1000
                 $PRK_TARGET_PATH/transpose-openmp         10 1024 32
                 #echo "Test stencil code generator"
@@ -247,18 +237,19 @@ case "$PRK_TARGET" in
         esac
 
         # C11 with Cilk
-        if [ "${CC}" = "gcc" ] ; then
-            echo "CILKFLAG=-fcilkplus" >> common/make.defs
-            ${MAKE} -C $PRK_TARGET_PATH stencil-cilk transpose-cilk
-            $PRK_TARGET_PATH/stencil-cilk     10 1000
-            $PRK_TARGET_PATH/transpose-cilk   10 1024 32
-            #echo "Test stencil code generator"
-            for s in star grid ; do
-                for r in 1 2 3 4 5 ; do
-                    $PRK_TARGET_PATH/stencil-cilk 10 200 $s $r
-                done
-            done
-        fi
+        #if [ "${CC}" = "gcc" ] ; then
+        #    echo "CILKFLAG=-fcilkplus" >> common/make.defs
+        #    ${MAKE} -C $PRK_TARGET_PATH stencil-cilk transpose-cilk
+        #    $PRK_TARGET_PATH/stencil-cilk     10 1000
+        #    $PRK_TARGET_PATH/transpose-cilk   10 1024 32
+        #    #echo "Test stencil code generator"
+        #    for s in star grid ; do
+        #        for r in 1 2 3 4 5 ; do
+        #            $PRK_TARGET_PATH/stencil-cilk 10 200 $s $r
+        #        done
+        #    done
+        #fi
+
         # Use MUSL for GCC+Linux only
         if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "$CC" = "gcc" ] ; then
             ${MAKE} -C $PRK_TARGET_PATH clean

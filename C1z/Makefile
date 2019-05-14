@@ -45,11 +45,11 @@ endif
 
 all: serial thread openmp taskloop $(EXTRA)
 
-serial: nstream p2p p2p-innerloop p2p-hyperplane stencil transpose
+serial: nstream p2p p2p-hyperplane stencil transpose
 
 thread: transpose-thread
 
-openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp p2p-hyperplane-openmp
+openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp stencil-openmp transpose-openmp p2p-hyperplane-openmp
 
 mpi: nstream-mpi
 
@@ -65,13 +65,13 @@ cilk: stencil-cilk transpose-cilk
 
 ispc: transpose-ispc
 
-p2p-innerloop: p2p-innerloop-openmp.c prk_util.h
-	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
-
 p2p-hyperplane: p2p-hyperplane-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 nstream: nstream-openmp.c prk_util.h
+	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
+stencil: stencil-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 transpose: transpose-openmp.c prk_util.h
@@ -126,7 +126,7 @@ clean:
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
-	-rm -f nstream p2p p2p-innerloop stencil transpose
+	-rm -f nstream p2p p2p-hyperplane stencil transpose
 	-rm -f *-openmp
 	-rm -f *-mpi
 	-rm -f *-target
