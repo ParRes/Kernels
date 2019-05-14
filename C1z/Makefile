@@ -59,7 +59,7 @@ mmap: nstream-mmap nstream-mmap-openmp
 
 target: nstream-target stencil-target transpose-target
 
-taskloop: stencil-taskloop transpose-taskloop
+taskloop: nstream-taskloop stencil-taskloop transpose-taskloop
 
 cilk: stencil-cilk transpose-cilk
 
