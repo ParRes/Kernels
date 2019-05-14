@@ -108,8 +108,12 @@ C1z/nstream-memkind-openmp
 C1z/nstream-mmap
 C1z/nstream-mmap-openmp
 C1z/p2p
+C1z/p2p-avx
+C1z/p2p-sse
 C1z/p2p-innerloop
 C1z/p2p-innerloop-openmp
+C1z/p2p-hyperplane
+C1z/p2p-hyperplane-openmp
 C1z/p2p-tasks-openmp
 C1z/p2p-simd-openmp
 C1z/stencil
@@ -280,7 +284,3 @@ FORTRAN/transpose-ornlacc
 RUST/p2p/Cargo.lock
 RUST/stencil/Cargo.lock
 RUST/transpose/Cargo.lock
-nstream
-../C1z/p2p-avx
-../C1z/p2p-sse
-../C1z/p2p-hyperplane-openmp
