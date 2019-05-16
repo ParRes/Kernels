@@ -187,9 +187,9 @@ CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 # CUDA flags
 #
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
-NVCC=/opt/llvm/cocl/bin/cocl
+#NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-#NVCC=nvcc -arch=sm_50
+NVCC=nvcc -arch=sm_50
 CUDAFLAGS=-g -O3 -std=c++11
 CUDAFLAGS+=-arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
