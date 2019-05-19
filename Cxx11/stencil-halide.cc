@@ -61,22 +61,12 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "stencil_seq.hpp"
-
-void nothing(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out)
-{
-    std::cout << "You are trying to use a stencil that does not exist.\n";
-    std::cout << "Please generate the new stencil using the code generator\n";
-    std::cout << "and add it to the case-switch in the driver." << std::endl;
-    // n will never be zero - this is to silence compiler warnings.
-    if (n==0 || t==0) std::cout << in.size() << out.size() << std::endl;
-    std::abort();
-}
+#include "Halide.h"
 
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/Halide Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -139,54 +129,48 @@ int main(int argc, char* argv[])
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
-  auto stencil = nothing;
-  if (star) {
-      switch (radius) {
-          case 1: stencil = star1; break;
-          case 2: stencil = star2; break;
-          case 3: stencil = star3; break;
-          case 4: stencil = star4; break;
-          case 5: stencil = star5; break;
-      }
-  } else {
-      switch (radius) {
-          case 1: stencil = grid1; break;
-          case 2: stencil = grid2; break;
-          case 3: stencil = grid3; break;
-          case 4: stencil = grid4; break;
-          case 5: stencil = grid5; break;
-      }
-  }
+  const Halide::Target target = Halide::get_jit_target_from_environment();
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  double stencil_time(0);
 
-  prk::vector<double> in(n*n);
-  prk::vector<double> out(n*n);
+  Halide::Buffer<double> in(n,n);
+  Halide::Buffer<double> out(n,n);
+
+  Halide::Var x("x");
+  Halide::Var y("y");
+
+  Halide::Expr c1(0.25);
+  Halide::Expr c2(0.125);
+  Halide::Func stencil;
+  stencil(x,y) = c1 * ( in(x+1,y) + in(x-1,y) + in(x,y+1) + in(x,y+1) )
+               + c2 * ( in(x+2,y) + in(x-2,y) + in(x,y+2) + in(x,y+2) );
 
   {
-    for (auto it=0; it<n; it+=tile_size) {
-      for (auto jt=0; jt<n; jt+=tile_size) {
-        for (auto i=it; i<std::min(n,it+tile_size); i++) {
-          PRAGMA_SIMD
-          for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
-            in[i*n+j] = static_cast<double>(i+j);
-            out[i*n+j] = 0.0;
-          }
-        }
+    for (auto i=0; i<n; ++i) {
+      for (auto j=0; j<n; ++j) {
+        in(i,j)  = 1.0*(i+j);
+        out(i,j) = 0.0;
       }
     }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) stencil_time = prk::wtime();
+
       // Apply the stencil operator
-      stencil(n, tile_size, in, out);
+      //stencil(n, tile_size, in, out);
+      out = stencil.realize(n,n);
+
       // Add constant to solution to force refresh of neighbor data, if any
-      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
+      for (int i=0; i<n; ++i) {
+        for (int j=0; j<n; ++j) {
+          in(i,j) += 1.0;
+        }
+      }
     }
     stencil_time = prk::wtime() - stencil_time;
   }
@@ -202,7 +186,7 @@ int main(int argc, char* argv[])
   double norm = 0.0;
   for (auto i=radius; i<n-radius; i++) {
     for (auto j=radius; j<n-radius; j++) {
-      norm += std::fabs(out[i*n+j]);
+      norm += std::fabs(out(i,j));
     }
   }
   norm /= active_points;
