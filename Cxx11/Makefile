@@ -134,7 +134,8 @@ oneapi: onemkl dpcpp sycl sycl-usm sycl-explicit
 occa: transpose-occa nstream-occa
 
 ornlacc: p2p-hyperplane-ornlacc
-halide: nstream-halide
+
+halide: nstream-halide stencil-halide
 
 boost-compute: nstream-boost-compute
 # busted
