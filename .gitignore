@@ -184,13 +184,11 @@ Cxx11/p2p-vector-raja
 Cxx11/p2p-tbb
 Cxx11/p2p-innerloop-openmp
 Cxx11/p2p-doacross-openmp
-Cxx11/p2p-doacross-openmp
 Cxx11/p2p-innerloop-opencl
 Cxx11/p2p-innerloop-vector
+Cxx11/p2p-innerloop-tbb
 Cxx11/p2p-hyperplane-vector
 Cxx11/p2p-hyperplane-openmp
-Cxx11/p2p-hyperplane-openmp
-Cxx11/p2p-innerloop-tbb
 Cxx11/p2p-hyperplane-stl
 Cxx11/p2p-hyperplane-pstl
 Cxx11/p2p-hyperplane-tbb
@@ -224,6 +222,8 @@ Cxx11/nstream-celerity
 Cxx11/nstream-hpx
 Cxx11/nstream-upcxx
 Cxx11/nstream-executors
+Cxx11/nstream-occa
+Cxx11/nstream-halide
 Cxx11/pic
 Cxx11/pic-dpcpp
 Cxx11/pic-sycl
@@ -258,6 +258,8 @@ Cxx11/stencil-sycl-usm
 Cxx11/stencil-sycl-explicit
 Cxx11/stencil-sycl-explicit-usm
 Cxx11/stencil-dpcpp
+Cxx11/stencil-occa
+Cxx11/stencil-halide
 Cxx11/transpose
 Cxx11/transpose-openmp
 Cxx11/transpose-mpi
@@ -288,6 +290,8 @@ Cxx11/transpose-device-thrust
 Cxx11/transpose-host-thrust
 Cxx11/transpose-cublas
 Cxx11/transpose-cuda
+Cxx11/transpose-occa
+Cxx11/transpose-halide
 Cxx11/grid1.cl
 Cxx11/grid2.cl
 Cxx11/grid3.cl
