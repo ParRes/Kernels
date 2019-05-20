@@ -17,5 +17,6 @@ case "$os" in
         # Boost.Compute is a header-only library
         #git clone --depth 1 https://github.com/kylelutz/compute.git ${TRAVIS_ROOT}/compute
         #git clone --depth 1 https://github.com/boostorg/compute.git ${TRAVIS_ROOT}/compute
+        git clone --depth 1 https://github.com/boostorg/core.git ${TRAVIS_ROOT}/core
         ;;
 esac

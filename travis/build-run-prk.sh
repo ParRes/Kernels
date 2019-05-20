@@ -482,16 +482,18 @@ case "$PRK_TARGET" in
         esac
 
         # Boost.Compute runs after OpenCL, and only available in Travis with MacOS.
-        case "$os" in
-            FreeBSD)
-                echo "BOOSTFLAG=-DUSE_BOOST -I/usr/local/include" >> common/make.defs
-                echo "RANGEFLAG=-DUSE_BOOST_IRANGE -I/usr/local/include" >> common/make.defs
-                ;;
-            *)
-                echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
-                echo "RANGEFLAG=-DUSE_RANGES_TS -I${TRAVIS_ROOT}/range-v3/include" >> common/make.defs
-                ;;
-        esac
+        #case "$os" in
+        #    FreeBSD)
+        #        echo "BOOSTFLAG=-DUSE_BOOST -I/usr/local/include" >> common/make.defs
+        #        echo "RANGEFLAG=-DUSE_BOOST_IRANGE -I/usr/local/include" >> common/make.defs
+        #        ;;
+        #    *)
+        #        echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
+        #        echo "RANGEFLAG=-DUSE_RANGES_TS -I${TRAVIS_ROOT}/range-v3/include" >> common/make.defs
+        #        ;;
+        #esac
+        echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
+        echo "RANGEFLAG=-DUSE_BOOST_IRANGE" >> common/make.defs
 
         # C++11 with rangefor and Boost.Ranges
         ${MAKE} -C $PRK_TARGET_PATH rangefor
@@ -683,7 +685,7 @@ case "$PRK_TARGET" in
             else
                 echo "SYCLCXX=${PRK_CXX} -fopenmp -O3 -std=c++1z" >> common/make.defs
             fi
-            echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include" >> common/make.defs
+            echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include -I${TRAVIS_ROOT}/core/include" >> common/make.defs
             ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl
             #$PRK_TARGET_PATH/p2p-hyperplane-sycl 10 50 1 # 100 takes too long :-o
             $PRK_TARGET_PATH/stencil-sycl        10 1000
