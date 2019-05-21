@@ -16,8 +16,8 @@ case "$os" in
         # We do not test Boost.Compute on Linux because of OpenCL issues...
         # Boost.Compute is a header-only library
         #git clone --depth 1 https://github.com/kylelutz/compute.git ${TRAVIS_ROOT}/compute
-        #git clone --depth 1 https://github.com/boostorg/compute.git ${TRAVIS_ROOT}/compute
-        git clone --depth 1 https://github.com/boostorg/core.git ${TRAVIS_ROOT}/core
-        git clone --depth 1 https://github.com/boostorg/config.git ${TRAVIS_ROOT}/config
+        for sp in core config multi_array optional log compute preprocessor circular_buffer type_index utility ; do
+            git clone --depth 1 https://github.com/boostorg/${sp}.git ${TRAVIS_ROOT}/${sp}
+        done
         ;;
 esac
