@@ -674,8 +674,31 @@ case "$PRK_TARGET" in
             else
                 echo "SYCLCXX=${PRK_CXX} -fopenmp -O3 -std=c++17" >> common/make.defs
             fi
-            find ${TRAVIS_ROOT}/core/include -name workaround.hpp
-            echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include -I${TRAVIS_ROOT}/core/include" >> common/make.defs
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/circular_buffer/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/compute/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/config/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/core/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/log/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/array/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/multi_array/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/optional/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/preprocessor/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/type_index/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/utility/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/assert/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/static_assert/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/exception/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/throw_exception/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/concept_check/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/type_traits/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/iterator/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/mpl/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/detail/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/functional/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/move/include"
+            PRK_BOOST_INCLUDE="${PRK_BOOST_INCLUDE} -I${TRAVIS_ROOT}/range/include"
+            echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include" $PRK_BOOST_INCLUDE >> common/make.defs
+
             ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl
             #$PRK_TARGET_PATH/p2p-hyperplane-sycl 10 50 1 # 100 takes too long :-o
             $PRK_TARGET_PATH/stencil-sycl        10 1000
