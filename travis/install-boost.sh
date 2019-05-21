@@ -18,5 +18,6 @@ case "$os" in
         #git clone --depth 1 https://github.com/kylelutz/compute.git ${TRAVIS_ROOT}/compute
         #git clone --depth 1 https://github.com/boostorg/compute.git ${TRAVIS_ROOT}/compute
         git clone --depth 1 https://github.com/boostorg/core.git ${TRAVIS_ROOT}/core
+        git clone --depth 1 https://github.com/boostorg/config.git ${TRAVIS_ROOT}/config
         ;;
 esac
