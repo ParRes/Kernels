@@ -62,11 +62,7 @@ case "$PRK_TARGET" in
         sh ./travis/install-tbb.sh $TRAVIS_ROOT
         sh ./travis/install-pstl.sh $TRAVIS_ROOT
         sh ./travis/install-ranges.sh $TRAVIS_ROOT
-        # Boost is whitelisted and obtained from package manager
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-            sh ./travis/install-boost.sh $TRAVIS_ROOT
-        fi
-        # CMake 3.10 or higher is required.
+        sh ./travis/install-boost.sh $TRAVIS_ROOT
         sh ./travis/install-cmake.sh $TRAVIS_ROOT
         #sh ./travis/install-raja.sh $TRAVIS_ROOT
         sh ./travis/install-kokkos.sh $TRAVIS_ROOT
