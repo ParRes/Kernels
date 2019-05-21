@@ -674,7 +674,7 @@ case "$PRK_TARGET" in
             else
                 echo "SYCLCXX=${PRK_CXX} -fopenmp -O3 -std=c++17" >> common/make.defs
             fi
-            find ${TRAVIS_ROOT}/core/include -name null_deleter.hpp
+            find ${TRAVIS_ROOT}/core/include -name workaround.hpp
             echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include -I${TRAVIS_ROOT}/core/include" >> common/make.defs
             ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl
             #$PRK_TARGET_PATH/p2p-hyperplane-sycl 10 50 1 # 100 takes too long :-o
