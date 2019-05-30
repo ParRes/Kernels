@@ -132,8 +132,8 @@ int main(int argc, char * argv[])
         OMP_TARGET( teams distribute parallel for simd collapse(2) )
         for (auto it=0; it<order; it+=tile_size) {
           for (auto jt=0; jt<order; jt+=tile_size) {
-            for (auto i=it; i<std::min(order,it+tile_size); i++) {
-              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
+            for (auto i=it; i<MIN(order,it+tile_size); i++) {
+              for (auto j=jt; j<MIN(order,jt+tile_size); j++) {
                 B[i*order+j] += A[j*order+i];
                 A[j*order+i] += 1.0;
               }
