@@ -12,7 +12,7 @@ CC=${LLVM_PATH}clang -std=c11 -pthread
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Mfreeform -L/opt/llvm/pgi-flang/lib -Wl,-rpath=/opt/llvm/pgi-flang/lib
 # C++11 may not be required but does no harm here.
-CXX=${LLVM_PATH}clang++ -std=c++1z -pthread
+CXX=${LLVM_PATH}clang++ -std=c++17 -pthread
 #
 # Compiler flags
 #
@@ -57,11 +57,16 @@ OPENMPFLAG+=-L${LLVM_ROOT}/lib
 #
 # SYCL flags
 #
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+SYCLDIR=/opt/isycl
+SYCLCXX=${SYCLDIR}/bin/clang++
+SYCLFLAG=-fsycl -lsycl -lOpenCL -Wl,-rpath=${SYCLDIR}/lib
+SYCLFLAG+=-std=c++17 -O3
 # CodePlay ComputeCpp
-SYCLDIR=/opt/sycl/latest
-SYCLCXX=${SYCLDIR}/bin/compute++
-SYCLFLAG=-DUSE_SYCL -sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
-SYCLFLAG+=-std=c++14 -O3
+#SYCLDIR=/opt/sycl/latest
+#SYCLCXX=${SYCLDIR}/bin/compute++
+#SYCLFLAG=-DUSE_SYCL -sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+#SYCLFLAG+=-std=c++14 -O3
 # This makes a huge difference in e.g. nstream...
 #SYCLFLAG+=-no-serial-memop
 # CentOS7 and Ubuntu14 built for this
@@ -90,6 +95,7 @@ SYCLFLAG+=-std=c++14 -O3
 #
 # TBB
 #
+#TBBDIR=/usr/lib/x86_64-linux-gnu
 TBBDIR=/usr/local/Cellar/tbb/2018_U3_1
 TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #TBBDIR=/opt/intel/compilers_and_libraries_2019.2.159/linux/tbb
