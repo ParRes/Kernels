@@ -195,7 +195,7 @@ void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool s
     }
     stencil_time = prk::wtime() - stencil_time;
   }
-  catch (cl::sycl::exception e) {
+  catch (cl::sycl::exception & e) {
     std::cout << e.what() << std::endl;
 #ifdef __COMPUTECPP__
     std::cout << e.get_file_name() << std::endl;
@@ -206,7 +206,7 @@ void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool s
 #endif
     return;
   }
-  catch (std::exception e) {
+  catch (std::exception & e) {
     std::cout << e.what() << std::endl;
     return;
   }
@@ -400,7 +400,7 @@ int main(int argc, char * argv[])
     }
 #endif
   }
-  catch (cl::sycl::exception e) {
+  catch (cl::sycl::exception & e) {
     std::cout << e.what() << std::endl;
 #ifdef __COMPUTECPP__
     std::cout << e.get_file_name() << std::endl;
@@ -411,7 +411,7 @@ int main(int argc, char * argv[])
 #endif
     return 1;
   }
-  catch (std::exception e) {
+  catch (std::exception & e) {
     std::cout << e.what() << std::endl;
     return 1;
   }
