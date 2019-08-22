@@ -227,6 +227,7 @@ int main(int argc, char * argv[])
 #endif
 
   try {
+#if SYCL_TRY_CPU_QUEUE
     if (length<100000) {
         cl::sycl::queue host(cl::sycl::host_selector{});
 #ifndef TRISYCL
@@ -240,11 +241,13 @@ int main(int argc, char * argv[])
     } else {
         std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
     }
+#endif
 
     // CPU requires spir64 target
+#if SYCL_TRY_CPU_QUEUE
     if (1) {
         cl::sycl::queue cpu(cl::sycl::cpu_selector{});
-#ifndef TRISYCL
+#if !defined(TRISYCL) && !defined(__HIPSYCL__)
         auto device      = cpu.get_device();
         auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
@@ -258,11 +261,12 @@ int main(int argc, char * argv[])
           run<double>(cpu, iterations, length);
         }
     }
-
+#endif
     // NVIDIA GPU requires ptx64 target and does not work very well
+#if SYCL_TRY_GPU_QUEUE
     if (1) {
         cl::sycl::queue gpu(cl::sycl::gpu_selector{});
-#ifndef TRISYCL
+#if !defined(TRISYCL) && !defined(__HIPSYCL__)
         auto device      = gpu.get_device();
         auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
@@ -292,6 +296,7 @@ int main(int argc, char * argv[])
 #endif
         }
     }
+#endif
   }
   catch (cl::sycl::exception e) {
     std::cout << e.what() << std::endl;
