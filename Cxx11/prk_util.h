@@ -103,7 +103,7 @@
 #define SYCL_TRY_CPU_QUEUE 0
 #endif
 
-#if !defined(__HIPSYCL__) || !defined(HIPSYCL_PLATFORM_CPU)
+#if !defined(__HIPSYCL__) || !defined(HIPSYCL_PLATFORM_GPU)
 #define SYCL_TRY_GPU_QUEUE 1
 #else
 #define SYCL_TRY_GPU_QUEUE 0
