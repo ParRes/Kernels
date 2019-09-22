@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  OMP_TARGET( data map(tofrom: A[0:length], B[0:length], C[0:length]) map(from:nstream_time) )
+  OMP_TARGET( data map(tofrom: A[0:length], B[0:length], C[0:length]) )
   {
     for (auto iter = 0; iter<=iterations; iter++) {
 
