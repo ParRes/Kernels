@@ -149,8 +149,7 @@ program main
   enddo
   !$omp end parallel do
 
-  !$omp target data map(to: A,B) map(tofrom: C) map(from:dgemm_time) &
-  !$omp& map(to:iterations,order)
+  !$omp target data map(to: A,B) map(tofrom: C) map(to:order)
 
   t0 = 0
 

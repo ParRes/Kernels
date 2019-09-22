@@ -163,8 +163,7 @@ program main
   enddo
   !$omp end parallel do simd
 
-  !$omp target data map(tofrom: A) map(to: B,C) map(from:nstream_time) &
-  !$omp& map(to:iterations,length)
+  !$omp target data map(tofrom: A) map(to: B,C) map(to:length)
 
   do k=0,iterations
 
