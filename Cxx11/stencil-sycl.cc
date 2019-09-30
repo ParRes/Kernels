@@ -64,6 +64,7 @@
 #include "prk_util.h"
 #include "stencil_sycl.hpp"
 
+
 #if 0
 #include "prk_opencl.h"
 #define USE_OPENCL 1
@@ -83,7 +84,13 @@ void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
     std::cout << "and add it to the case-switch in the driver." << std::endl;
+    // There seems to be an issue with the clang CUDA/HIP toolchains not having
+    // std::abort() available
+#if defined(HIPSYCL_PLATFORM_CUDA) || defined(HIPSYCL_PLATFORM_HCC)
+    abort();
+#else
     std::abort();
+#endif
 }
 
 template <typename T>
@@ -188,7 +195,7 @@ void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool s
     }
     stencil_time = prk::wtime() - stencil_time;
   }
-  catch (cl::sycl::exception e) {
+  catch (cl::sycl::exception & e) {
     std::cout << e.what() << std::endl;
 #ifdef __COMPUTECPP__
     std::cout << e.get_file_name() << std::endl;
@@ -199,7 +206,7 @@ void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool s
 #endif
     return;
   }
-  catch (std::exception e) {
+  catch (std::exception & e) {
     std::cout << e.what() << std::endl;
     return;
   }
@@ -322,9 +329,10 @@ int main(int argc, char * argv[])
 
   try {
 
+#if SYCL_TRY_CPU_QUEUE
     if (1) {
         cl::sycl::queue host(cl::sycl::host_selector{});
-#ifndef TRISYCL
+#if !defined(TRISYCL) && !defined(__HIPSYCL__)
         auto device      = host.get_device();
         auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
@@ -334,11 +342,13 @@ int main(int argc, char * argv[])
         run<float>(host, iterations, n, tile_size, star, radius);
         run<double>(host, iterations, n, tile_size, star, radius);
     }
+#endif
 
     // CPU requires spir64 target
+#if SYCL_TRY_CPU_QUEUE
     if (1) {
         cl::sycl::queue cpu(cl::sycl::cpu_selector{});
-#ifndef TRISYCL
+#if !defined(TRISYCL) && !defined(__HIPSYCL__)
         auto device      = cpu.get_device();
         auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
@@ -352,11 +362,13 @@ int main(int argc, char * argv[])
           run<double>(cpu, iterations, n, tile_size, star, radius);
         }
     }
+#endif
 
     // NVIDIA GPU requires ptx64 target and does not work very well
+#if SYCL_TRY_GPU_QUEUE
     if (0) {
         cl::sycl::queue gpu(cl::sycl::gpu_selector{});
-#ifndef TRISYCL
+#if !defined(TRISYCL) && !defined(__HIPSYCL__)
         auto device      = gpu.get_device();
         auto platform    = device.get_platform();
         std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
@@ -386,8 +398,9 @@ int main(int argc, char * argv[])
 #endif
         }
     }
+#endif
   }
-  catch (cl::sycl::exception e) {
+  catch (cl::sycl::exception & e) {
     std::cout << e.what() << std::endl;
 #ifdef __COMPUTECPP__
     std::cout << e.get_file_name() << std::endl;
@@ -398,7 +411,7 @@ int main(int argc, char * argv[])
 #endif
     return 1;
   }
-  catch (std::exception e) {
+  catch (std::exception & e) {
     std::cout << e.what() << std::endl;
     return 1;
   }

@@ -82,12 +82,34 @@
 #define PRK_UNUSED
 #endif
 
+
 // for SYCL
-#ifdef TRISYCL
+
+// prebuilt kernels are not required/not fully supported on hipSYCL and triSYCL
+#if defined(TRISYCL) || defined(__HIPSYCL__)
 #define PREBUILD_KERNEL 0
 #else
 #define PREBUILD_KERNEL 1
 #endif
+
+// not all SYCL implementations may support all device types.
+// If an implementation does not find any devices based on a
+// device selector, it will throw an exception.
+// These macros can be used to check if there's any chance
+// of an implementation targeting a CPU and GPU.
+#if !defined(__HIPSYCL__) || defined(HIPSYCL_PLATFORM_CPU)
+#define SYCL_TRY_CPU_QUEUE 1
+#else
+#define SYCL_TRY_CPU_QUEUE 0
+#endif
+
+// !defined(HIPSYCL_PLATFORM_CPU) = !( defined(HIPSYCL_PLATFORM_CUDA) || defined(HIPSYCL_PLATFORM_HCC) )
+#if !defined(__HIPSYCL__) || !defined(HIPSYCL_PLATFORM_CPU)
+#define SYCL_TRY_GPU_QUEUE 1
+#else
+#define SYCL_TRY_GPU_QUEUE 0
+#endif
+
 
 namespace prk {
 

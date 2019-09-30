@@ -143,7 +143,7 @@ program main
   enddo
   !$omp end parallel do simd
 
-  !$omp target data map(to: A) map(tofrom: B) map(from:trans_time)
+  !$omp target data map(to: A) map(tofrom: B)
 
   t0 = 0
 
