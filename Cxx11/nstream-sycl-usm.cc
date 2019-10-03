@@ -85,10 +85,6 @@ void run(sycl::queue & q, int iterations, size_t length)
 
   const T scalar(3);
 
-  //std::vector<T> h_A(length,0);
-  //std::vector<T> h_B(length,2);
-  //std::vector<T> h_C(length,2);
-
   T * A;
   T * B;
   T * C;
@@ -102,10 +98,6 @@ void run(sycl::queue & q, int iterations, size_t length)
     sycl::program kernel(ctx);
     kernel.build_with_kernel_type<nstream<T>>();
 #endif
-
-    //sycl::buffer<T,1> d_A { h_A.data(), sycl::range<1>(h_A.size()) };
-    //sycl::buffer<T,1> d_B { h_B.data(), sycl::range<1>(h_B.size()) };
-    //sycl::buffer<T,1> d_C { h_C.data(), sycl::range<1>(h_C.size()) };
 
     A = static_cast<T*>(sycl::malloc_shared(length * sizeof(T), dev, ctx));
     B = static_cast<T*>(sycl::malloc_shared(length * sizeof(T), dev, ctx));
@@ -122,10 +114,6 @@ void run(sycl::queue & q, int iterations, size_t length)
       if (iter==1) nstream_time = prk::wtime();
 
       q.submit([&](sycl::handler& h) {
-
-        //auto A = d_A.template get_access<sycl::access::mode::read_write>(h);
-        //auto B = d_B.template get_access<sycl::access::mode::read>(h);
-        //auto C = d_C.template get_access<sycl::access::mode::read>(h);
 
         h.parallel_for<class nstream<T>>(
 #if PREBUILD_KERNEL
