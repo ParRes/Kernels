@@ -65,6 +65,8 @@
 #include "CL/sycl.hpp"
 #include "prk_util.h"
 
+namespace sycl = cl::sycl;
+
 #if 0
 #include "prk_opencl.h"
 #define USE_OPENCL 1
@@ -73,7 +75,7 @@
 template <typename T> class nstream;
 
 template <typename T>
-void run(cl::sycl::queue & q, int iterations, size_t length)
+void run(sycl::queue & q, int iterations, size_t length)
 {
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -87,25 +89,28 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
 
   try {
 
+    auto ctx = q.get_context();
+    auto dev = q.get_device();
+
 #if PREBUILD_KERNEL
-    cl::sycl::program kernel(q.get_context());
+    sycl::program kernel(ctx);
     kernel.build_with_kernel_type<nstream<T>>();
 #endif
 
-    cl::sycl::buffer<T> d_A { cl::sycl::range<1>{length} };
-    cl::sycl::buffer<T> d_B { cl::sycl::range<1>{length} };
-    cl::sycl::buffer<T> d_C { cl::sycl::range<1>{length} };
+    sycl::buffer<T> d_A { sycl::range<1>{length} };
+    sycl::buffer<T> d_B { sycl::range<1>{length} };
+    sycl::buffer<T> d_C { sycl::range<1>{length} };
 
-    q.submit([&](cl::sycl::handler& h) {
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+    q.submit([&](sycl::handler& h) {
+        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(length), sycl::id<1>(0));
         h.fill(A,(T)0);
     });
-    q.submit([&](cl::sycl::handler& h) {
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+    q.submit([&](sycl::handler& h) {
+        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(length), sycl::id<1>(0));
         h.fill(B,(T)2);
     });
-    q.submit([&](cl::sycl::handler& h) {
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> C(d_C, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+    q.submit([&](sycl::handler& h) {
+        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> C(d_C, h, sycl::range<1>(length), sycl::id<1>(0));
         h.fill(C,(T)2);
     });
     q.wait();
@@ -114,17 +119,18 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
 
       if (iter==1) nstream_time = prk::wtime();
 
-      q.submit([&](cl::sycl::handler& h) {
+      q.submit([&](sycl::handler& h) {
 
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read,       cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read,       cl::sycl::access::target::global_buffer> C(d_C, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::read_write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::read,       sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::read,       sycl::access::target::global_buffer> C(d_C, h, sycl::range<1>(length), sycl::id<1>(0));
 
         h.parallel_for<class nstream<T>>(
 #if PREBUILD_KERNEL
                 kernel.get_kernel<nstream<T>>(),
 #endif
-                cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
+                sycl::range<1>{length}, [=] (sycl::id<1> it) {
+            const size_t i = it[0];
             A[i] += B[i] + scalar * C[i];
         });
       });
@@ -136,13 +142,13 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
     // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
 
-    q.submit([&](cl::sycl::handler& h) {
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(length), cl::sycl::id<1>(0));
+    q.submit([&](sycl::handler& h) {
+        sycl::accessor<T, 1, sycl::access::mode::read, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(length), sycl::id<1>(0));
         h.copy(A,h_A.data());
     });
     q.wait();
   }
-  catch (cl::sycl::exception & e) {
+  catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
 #ifdef __COMPUTECPP__
     std::cout << e.get_file_name() << std::endl;
@@ -247,12 +253,12 @@ int main(int argc, char * argv[])
   try {
 #if SYCL_TRY_CPU_QUEUE
     if (length<100000) {
-        cl::sycl::queue host(cl::sycl::host_selector{});
+        sycl::queue host(sycl::host_selector{});
 #ifndef TRISYCL
         auto device      = host.get_device();
         auto platform    = device.get_platform();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
+        std::cout << "SYCL Device:   " << device.get_info<sycl::info::device::name>() << std::endl;
+        std::cout << "SYCL Platform: " << platform.get_info<sycl::info::platform::name>() << std::endl;
 #endif
         run<float>(host, iterations, length);
         run<double>(host, iterations, length);
@@ -264,13 +270,13 @@ int main(int argc, char * argv[])
     // CPU requires spir64 target
 #if SYCL_TRY_CPU_QUEUE
     if (1) {
-        cl::sycl::queue cpu(cl::sycl::cpu_selector{});
+        sycl::queue cpu(sycl::cpu_selector{});
 #if !defined(TRISYCL) && !defined(__HIPSYCL__)
         auto device      = cpu.get_device();
         auto platform    = device.get_platform();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
+        std::cout << "SYCL Device:   " << device.get_info<sycl::info::device::name>() << std::endl;
+        std::cout << "SYCL Platform: " << platform.get_info<sycl::info::platform::name>() << std::endl;
+        bool has_spir = device.has_extension(sycl::string_class("cl_khr_spir"));
 #else
         bool has_spir = true; // ?
 #endif
@@ -284,14 +290,14 @@ int main(int argc, char * argv[])
     // NVIDIA GPU requires ptx64 target and does not work very well
 #if SYCL_TRY_GPU_QUEUE
     if (1) {
-        cl::sycl::queue gpu(cl::sycl::gpu_selector{});
+        sycl::queue gpu(sycl::gpu_selector{});
 #if !defined(TRISYCL) && !defined(__HIPSYCL__)
         auto device      = gpu.get_device();
         auto platform    = device.get_platform();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
-        bool has_fp64 = device.has_extension(cl::sycl::string_class("cl_khr_fp64"));
+        std::cout << "SYCL Device:   " << device.get_info<sycl::info::device::name>() << std::endl;
+        std::cout << "SYCL Platform: " << platform.get_info<sycl::info::platform::name>() << std::endl;
+        bool has_spir = device.has_extension(sycl::string_class("cl_khr_spir"));
+        bool has_fp64 = device.has_extension(sycl::string_class("cl_khr_fp64"));
 #else
         bool has_spir = true; // ?
         bool has_fp64 = true;
@@ -317,7 +323,7 @@ int main(int argc, char * argv[])
     }
 #endif
   }
-  catch (cl::sycl::exception & e) {
+  catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
 #ifdef __COMPUTECPP__
     std::cout << e.get_file_name() << std::endl;

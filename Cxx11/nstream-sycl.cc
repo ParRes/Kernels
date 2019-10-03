@@ -65,7 +65,7 @@
 #include "CL/sycl.hpp"
 #include "prk_util.h"
 
-namespace sycl = sycl;
+namespace sycl = cl::sycl;
 
 #if 0
 #include "prk_opencl.h"
@@ -268,6 +268,7 @@ int main(int argc, char * argv[])
         }
     }
 #endif
+
     // NVIDIA GPU requires ptx64 target and does not work very well
 #if SYCL_TRY_GPU_QUEUE
     if (1) {
