@@ -69,7 +69,7 @@ ifneq ($(findstring pgc++,$(CXX)),pgc++)
   EXTRA += tbb pstl
 endif
 
-all: sequential vector valarray openmp taskloop stl rangefor kokkos opencl sycl boost-compute $(EXTRA) # raja
+all: sequential vector valarray openmp taskloop stl rangefor opencl sycl boost-compute $(EXTRA)
 
 #p2p: p2p-vector p2p-doacross-openmp p2p-hyperplane-openmp p2p-tasks-openmp p2p-openmp-target \
      p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl p2p-hyperplane-vector-tbb \
@@ -106,6 +106,8 @@ taskloop: stencil-vector-taskloop transpose-vector-taskloop nstream-vector-taskl
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
 sycl: p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl transpose-explicit-sycl nstream-explicit-sycl
+
+sycl-usm: nstream-sycl-usm
 
 tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb \
      p2p-hyperplane-vector-tbb p2p-tasks-tbb
@@ -150,9 +152,12 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
-	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+	$(SYCLCXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-sycl: %-sycl.cc prk_util.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
+%-sycl-usm: %-sycl-usm.cc prk_util.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-target: %-target.cc prk_util.h
@@ -235,6 +240,7 @@ clean:
 	-rm -f *-taskloop
 	-rm -f *-opencl
 	-rm -f *-sycl
+	-rm -f *-sycl-usm
 	-rm -f *-tbb
 	-rm -f *-stl
 	-rm -f *-pstl
