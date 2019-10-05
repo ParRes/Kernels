@@ -42,6 +42,10 @@ endif
 ifneq ($(CILKFLAG),)
   EXTRA += cilk
 endif
+ifeq ($(findstring xlc,$(CC)),xlc)
+  EXTRA = target
+  CFLAGS += -DXLC
+endif
 
 all: serial thread openmp taskloop $(EXTRA)
 

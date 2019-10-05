@@ -22,7 +22,7 @@ DEFAULT_OPT_FLAGS=-O3
 # You can also use -qopenmp.  -openmp is deprecated.
 OPENMPFLAG=-qsmp=omp
 OPENMPSIMDFLAG=-qsmp=omp
-OFFLOADFLAG=-qoffload
+OFFLOADFLAG=-qoffload -qtgtarch=sm_70
 #
 # OpenCL flags
 #
