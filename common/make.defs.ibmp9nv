@@ -106,8 +106,8 @@ KOKKOSDIR=${HOME}/KOKKOS/install-cuda
 KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos -ldl
 RAJADIR=
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
-THRUSTDIR=/opt/nvidia/thrust
-THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
+THRUSTDIR=/usr/local/cuda-10.1/targets/ppc64le-linux/include
+THRUSTFLAG=-I${THRUSTDIR}
 #
 # CBLAS for C++ DGEMM
 #
