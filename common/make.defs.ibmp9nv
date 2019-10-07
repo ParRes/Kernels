@@ -11,7 +11,7 @@ CC=xlc_r -qlanglvl=stdc99
 FC=xlf2008_r
 XLFPP=-WF,
 # C++11 may not be required but does no harm here.
-CXX=xlcxx_r
+CXX=xlc++_r -qlanglvl=extended1y
 #
 # Compiler flags
 #
@@ -30,8 +30,8 @@ OFFLOADFLAG=-qoffload -qtgtarch=sm_70
 # http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
 #OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
-#OPENCLDIR=/etc/alternatives/opencl-intel-tools
-#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL -Wno-deprecated-declarations
+OPENCLDIR=/usr
+OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL -Wno-deprecated-declarations
 #
 # SYCL flags
 #
@@ -48,18 +48,62 @@ SYCLFLAG=-std=gnu++17 -I$(SYCLDIR)/include -DTRISYCL
 #
 # TBB
 #
-TBBDIR=.
-TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
-#TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -L${TBBDIR}/lib/intel64_lin/gcc4.7 -ltbb
+TBBDIR=${HOME}/TBB
+TBBLIBDIR=${HOME}/TBB/build/linux_ppc64le_xl_cc4.8.5_libc2.17_kernel4.14.0_release
+TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBLIBDIR} -ltbb
 #
 # Parallel STL, Boost, etc.
 #
+BOOSTROOT=${HOME}/boost_1_71_0/include
 BOOSTFLAG=
+BOOSTFLAG+=-I${BOOSTROOT}/circular_buffer/include
+BOOSTFLAG+=-I${BOOSTROOT}/compute/include
+BOOSTFLAG+=-I${BOOSTROOT}/algorithm/include
+BOOSTFLAG+=-I${BOOSTROOT}/config/include
+BOOSTFLAG+=-I${BOOSTROOT}/core/include
+BOOSTFLAG+=-I${BOOSTROOT}/log/include
+BOOSTFLAG+=-I${BOOSTROOT}/array/include
+BOOSTFLAG+=-I${BOOSTROOT}/multi_array/include
+BOOSTFLAG+=-I${BOOSTROOT}/optional/include
+BOOSTFLAG+=-I${BOOSTROOT}/preprocessor/include
+BOOSTFLAG+=-I${BOOSTROOT}/type_index/include
+BOOSTFLAG+=-I${BOOSTROOT}/utility/include
+BOOSTFLAG+=-I${BOOSTROOT}/assert/include
+BOOSTFLAG+=-I${BOOSTROOT}/static_assert/include
+BOOSTFLAG+=-I${BOOSTROOT}/exception/include
+BOOSTFLAG+=-I${BOOSTROOT}/throw_exception/include
+BOOSTFLAG+=-I${BOOSTROOT}/concept_check/include
+BOOSTFLAG+=-I${BOOSTROOT}/type_traits/include
+BOOSTFLAG+=-I${BOOSTROOT}/iterator/include
+BOOSTFLAG+=-I${BOOSTROOT}/mpl/include
+BOOSTFLAG+=-I${BOOSTROOT}/detail/include
+BOOSTFLAG+=-I${BOOSTROOT}/functional/include
+BOOSTFLAG+=-I${BOOSTROOT}/move/include
+BOOSTFLAG+=-I${BOOSTROOT}/range/include
+BOOSTFLAG+=-I${BOOSTROOT}/function/include
+BOOSTFLAG+=-I${BOOSTROOT}/integer/include
+BOOSTFLAG+=-I${BOOSTROOT}/container_hash/include
+BOOSTFLAG+=-I${BOOSTROOT}/bind/include
+BOOSTFLAG+=-I${BOOSTROOT}/chrono/include
+BOOSTFLAG+=-I${BOOSTROOT}/predef/include
+BOOSTFLAG+=-I${BOOSTROOT}/ratio/include
+BOOSTFLAG+=-I${BOOSTROOT}/function_types/include
+BOOSTFLAG+=-I${BOOSTROOT}/tuple/include
+BOOSTFLAG+=-I${BOOSTROOT}/lexical_cast/include
+BOOSTFLAG+=-I${BOOSTROOT}/numeric/conversion/include
+BOOSTFLAG+=-I${BOOSTROOT}/container/include
+BOOSTFLAG+=-I${BOOSTROOT}/math/include
+BOOSTFLAG+=-I${BOOSTROOT}/fusion/include
+BOOSTFLAG+=-I${BOOSTROOT}/typeof/include
+BOOSTFLAG+=-I${BOOSTROOT}/uuid/include
+BOOSTFLAG+=-I${BOOSTROOT}/smart_ptr/include
+BOOSTFLAG+=-I${BOOSTROOT}/proto/include
+BOOSTFLAG+=-DBOOST_COMPUTE_USE_CPP11
 RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
-RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+#RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
 PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include ${RANGEFLAG} -Wno-\#pragma-messages
-KOKKOSDIR=
-KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
+KOKKOSDIR=${HOME}/KOKKOS/install-cuda
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos -ldl
 RAJADIR=
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 THRUSTDIR=/opt/nvidia/thrust
@@ -73,5 +117,5 @@ CBLASFLAG=-DESSL
 # CUDA flags
 #
 # Linux w/ NVIDIA CUDA
-NVCC=nvcc -arch=sm_50
-CUDAFLAGS=-g -O3 -std=c++11
+NVCC=/usr/local/cuda-10.1/bin/nvcc -arch=sm_70
+CUDAFLAGS=-g -O3 -std=c++11 --expt-extended-lambda
