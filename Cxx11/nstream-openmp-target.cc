@@ -129,9 +129,9 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  OMP_TARGET( data map(tofrom: A[0:length], B[0:length], C[0:length]) )
+  OMP_TARGET( data map(tofrom: A[0:length]) map(to: B[0:length], C[0:length]) )
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
