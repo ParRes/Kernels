@@ -13,7 +13,7 @@ sudo pkg install clang flang libpgmath
 
 ## C++ dependencies
 
-sudo pkg install opencl-2.2_1 
+sudo pkg install opencl-2.2_1
 sudo pkg install devel/clinfo devel/ocl-icd lang/beignet lang/pocl
 sudo pkg install tbb
 sudo pkg install boost-all
