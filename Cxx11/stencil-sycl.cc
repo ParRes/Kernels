@@ -78,13 +78,7 @@ void nothing(sycl::queue & q, const size_t n, sycl::buffer<T> & d_in, sycl::buff
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
     std::cout << "and add it to the case-switch in the driver." << std::endl;
-    // There seems to be an issue with the clang CUDA/HIP toolchains not having
-    // std::abort() available
-#if defined(HIPSYCL_PLATFORM_CUDA) || defined(HIPSYCL_PLATFORM_HCC)
-    abort();
-#else
-    std::abort();
-#endif
+    prk::abort();
 }
 
 template <typename T>
