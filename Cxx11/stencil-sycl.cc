@@ -185,7 +185,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
-    prk::print_exception_details(e);
+    prk::SYCL::print_exception_details(e);
     return;
   }
   catch (std::exception & e) {
@@ -313,7 +313,7 @@ int main(int argc, char * argv[])
 #if SYCL_TRY_CPU_QUEUE
     if (n<10000) {
         sycl::queue q(sycl::host_selector{});
-        prk::print_device_platform(q);
+        prk::SYCL::print_device_platform(q);
         run<float>(q, iterations, n, tile_size, star, radius);
         run<double>(q, iterations, n, tile_size, star, radius);
     } else {
@@ -325,8 +325,8 @@ int main(int argc, char * argv[])
 #if SYCL_TRY_CPU_QUEUE
     if (1) {
         sycl::queue q(sycl::cpu_selector{});
-        prk::print_device_platform(q);
-        bool has_spir = prk::has_spir(q);
+        prk::SYCL::print_device_platform(q);
+        bool has_spir = prk::SYCL::has_spir(q);
         if (has_spir) {
           run<float>(q, iterations, n, tile_size, star, radius);
           run<double>(q, iterations, n, tile_size, star, radius);
@@ -338,10 +338,10 @@ int main(int argc, char * argv[])
 #if SYCL_TRY_GPU_QUEUE
     if (1) {
         sycl::queue q(sycl::gpu_selector{});
-        prk::print_device_platform(q);
-        bool has_spir = prk::has_spir(q);
-        bool has_fp64 = prk::has_fp64(q);
-        bool has_ptx  = prk::has_ptx(q);
+        prk::SYCL::print_device_platform(q);
+        bool has_spir = prk::SYCL::has_spir(q);
+        bool has_fp64 = prk::SYCL::has_fp64(q);
+        bool has_ptx  = prk::SYCL::has_ptx(q);
         if (!has_fp64) {
           std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
         }
@@ -356,7 +356,7 @@ int main(int argc, char * argv[])
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
-    prk::print_exception_details(e);
+    prk::SYCL::print_exception_details(e);
     return 1;
   }
   catch (std::exception & e) {

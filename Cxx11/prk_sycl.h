@@ -1,6 +1,7 @@
 #ifndef PRK_SYCL_HPP
 #define PRK_SYCL_HPP
 
+#include <cstdlib>
 #include <iostream>
 
 #include "CL/sycl.hpp"
@@ -39,51 +40,6 @@ namespace sycl = cl::sycl;
 
 namespace prk {
 
-    void print_device_platform(const sycl::queue & q) {
-#if !defined(TRISYCL) && !defined(__HIPSYCL__)
-        auto device      = q.get_device();
-        auto platform    = device.get_platform();
-        std::cout << "SYCL Device:   " << device.get_info<sycl::info::device::name>() << std::endl;
-        std::cout << "SYCL Platform: " << platform.get_info<sycl::info::platform::name>() << std::endl;
-#endif
-    }
-
-    bool has_spir(const sycl::queue & q) {
-#if !defined(TRISYCL) && !defined(__HIPSYCL__)
-        auto device = q.get_device();
-        return device.has_extension(sycl::string_class("cl_khr_spir"));
-#else
-        return true;
-#endif
-    }
-
-    bool has_ptx(const sycl::queue & q) {
-#ifdef __COMPUTECPP__
-        return true;
-#else
-        return false;
-#endif
-    }
-
-    bool has_fp64(const sycl::queue & q) {
-#if !defined(TRISYCL) && !defined(__HIPSYCL__)
-        auto device      = q.get_device();
-        return device.has_extension(sycl::string_class("cl_khr_fp64"));
-#else
-        return true;
-#endif
-    }
-
-    void print_exception_details(sycl::exception & e) {
-#ifdef __COMPUTECPP__
-        std::cout << e.get_file_name() << std::endl;
-        std::cout << e.get_line_number() << std::endl;
-        std::cout << e.get_description() << std::endl;
-        std::cout << e.get_cl_error_message() << std::endl;
-        std::cout << e.get_cl_code() << std::endl;
-#endif
-    }
-
     // There seems to be an issue with the clang CUDA/HIP toolchains not having
     // std::abort() available
     void abort(void) {
@@ -93,6 +49,55 @@ namespace prk {
         std::abort();
 #endif
     }
+
+    namespace SYCL {
+
+        void print_device_platform(const sycl::queue & q) {
+#if !defined(TRISYCL) && !defined(__HIPSYCL__)
+            auto device      = q.get_device();
+            auto platform    = device.get_platform();
+            std::cout << "SYCL Device:   " << device.get_info<sycl::info::device::name>() << std::endl;
+            std::cout << "SYCL Platform: " << platform.get_info<sycl::info::platform::name>() << std::endl;
+#endif
+        }
+
+        bool has_spir(const sycl::queue & q) {
+#if !defined(TRISYCL) && !defined(__HIPSYCL__)
+            auto device = q.get_device();
+            return device.has_extension(sycl::string_class("cl_khr_spir"));
+#else
+            return true;
+#endif
+        }
+
+        bool has_ptx(const sycl::queue & q) {
+#ifdef __COMPUTECPP__
+            return true;
+#else
+            return false;
+#endif
+        }
+
+        bool has_fp64(const sycl::queue & q) {
+#if !defined(TRISYCL) && !defined(__HIPSYCL__)
+            auto device      = q.get_device();
+            return device.has_extension(sycl::string_class("cl_khr_fp64"));
+#else
+            return true;
+#endif
+        }
+
+        void print_exception_details(sycl::exception & e) {
+#ifdef __COMPUTECPP__
+            std::cout << e.get_file_name() << std::endl;
+            std::cout << e.get_line_number() << std::endl;
+            std::cout << e.get_description() << std::endl;
+            std::cout << e.get_cl_error_message() << std::endl;
+            std::cout << e.get_cl_code() << std::endl;
+#endif
+        }
+
+    } // namespace SYCL
 
 } // namespace prk
 
