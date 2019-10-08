@@ -4,7 +4,7 @@
 #
 # Base compilers and language options
 #
-#LLVM_ROOT=/usr/local/Cellar/llvm/6.0.0
+#LLVM_ROOT=/usr/local/Cellar/llvm/9.0.0
 #LLVM_PATH=${LLVM_ROOT}/bin/
 #LLVM_PATH=/opt/llvm/HEAD/bin/
 # C99 is required in some implementations.
@@ -30,6 +30,10 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
 # These are useful to understand why the compiler does not vectorize loops:
 #   DEFAULT_OPT_FLAGS+=-Rpass-analysis=loop-vectorize
 #   DEFAULT_OPT_FLAGS+=-Rpass=loop-vectorize
+#DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
+DEFAULT_OPT_FLAGS+=-Wall #-Werror
+DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
+#DEFAULT_OPT_FLAGS+=-mavx -mfma
 #
 # OpenMP flags
 #
@@ -82,7 +86,7 @@ SYCLFLAG+=-std=c++17 -O3
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 #SYCLDIR=./triSYCL
 #SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
-#SYCLFLAG=-std=gnu++14 -I$(SYCLDIR)/include
+#SYCLFLAG=-std=c++17 -I$(SYCLDIR)/include -DTRISYCL
 # ProGTX
 # https://github.com/ProGTX/sycl-gtx
 #SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
@@ -96,14 +100,14 @@ SYCLFLAG+=-std=c++17 -O3
 # TBB
 #
 #TBBDIR=/usr/lib/x86_64-linux-gnu
-TBBDIR=/usr/local/Cellar/tbb/2018_U3_1
+TBBDIR=/usr/local/Cellar/tbb/2019_U8
 TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #TBBDIR=/opt/intel/compilers_and_libraries_2019.2.159/linux/tbb
 #TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -L${TBBDIR}/lib/intel64_lin/gcc4.7 -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-#BOOSTFLAG=-I/usr/local/Cellar/boost/1.65.1/include
+#BOOSTFLAG=-I/usr/local/Cellar/boost/1.71.0/include
 #RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
 RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
 PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include ${RANGEFLAG} -Wno-\#pragma-messages
@@ -128,6 +132,16 @@ NVCC=/opt/llvm/cocl/bin/cocl
 CUDAFLAGS=-g -O3 -std=c++11
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# Halide
+#
+HALIDECXX=c++
+HALIDEDIR=/opt/halide
+HALIDEFLAG=-I${HALIDEDIR}/include
+HALIDEFLAG+=-L${HALIDEDIR}/lib -lhalide
+#HALIDEFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
+HALIDEFLAG+=-std=c++17 -g3
 #
 # ISPC
 #
