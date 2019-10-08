@@ -49,19 +49,14 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include "CL/sycl.hpp"
+#include "prk_sycl.h"
 #include "prk_util.h"
-
-#if 0
-#include "prk_opencl.h"
-#define USE_OPENCL 1
-#endif
 
 template <typename T> class iota;
 template <typename T> class transpose;
 
 template <typename T>
-void run(cl::sycl::queue & q, int iterations, size_t order)
+void run(sycl::queue & q, int iterations, size_t order)
 {
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
@@ -73,37 +68,39 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
 
   try {
 
+    auto ctx = q.get_context();
+
 #if PREBUILD_KERNEL
-    cl::sycl::program kernel(q.get_context());
+    sycl::program kernel(ctx);
     kernel.build_with_kernel_type<transpose<T>>();
 #endif
 
 #if USE_2D_INDEXING
-    cl::sycl::buffer<T,2> d_A( cl::sycl::range<2>{order,order} );
-    cl::sycl::buffer<T,2> d_B( cl::sycl::range<2>{order,order} );
+    sycl::buffer<T,2> d_A( sycl::range<2>{order,order} );
+    sycl::buffer<T,2> d_B( sycl::range<2>{order,order} );
 #else
-    cl::sycl::buffer<T> d_A { cl::sycl::range<1>{order*order}  };
-    cl::sycl::buffer<T> d_B { cl::sycl::range<1>{order*order}  };
+    sycl::buffer<T> d_A { sycl::range<1>{order*order}  };
+    sycl::buffer<T> d_B { sycl::range<1>{order*order}  };
 #endif
 
-    q.submit([&](cl::sycl::handler& h) {
+    q.submit([&](sycl::handler& h) {
 #if USE_2D_INDEXING
-        cl::sycl::accessor<T, 2, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<2>(order,order), cl::sycl::id<2>(0,0));
-        h.parallel_for<class iota<T>>(cl::sycl::range<2>{order,order}, [=] (cl::sycl::item<2> i) {
+        sycl::accessor<T, 2, sycl::access::mode::write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<2>(order,order), sycl::id<2>(0,0));
+        h.parallel_for<class iota<T>>(sycl::range<2>{order,order}, [=] (sycl::item<2> i) {
             A[i] = i[0] * order + i[1];
         });
 #else
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(order*order), cl::sycl::id<1>(0));
-        h.parallel_for<class iota<T>>(cl::sycl::range<1>{order*order}, [=] (cl::sycl::item<1> i) {
+        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(order*order), sycl::id<1>(0));
+        h.parallel_for<class iota<T>>(sycl::range<1>{order*order}, [=] (sycl::item<1> i) {
             A[i] = i[0];
         });
 #endif
     });
-    q.submit([&](cl::sycl::handler& h) {
+    q.submit([&](sycl::handler& h) {
 #if USE_2D_INDEXING
-        cl::sycl::accessor<T, 2, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<2>(order,order), cl::sycl::id<2>(0,0));
+        sycl::accessor<T, 2, sycl::access::mode::write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<2>(order,order), sycl::id<2>(0,0));
 #else
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(order*order), cl::sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(order*order), sycl::id<1>(0));
 #endif
         h.fill(B,(T)0);
     });
@@ -113,24 +110,24 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
 
       if (iter==1) trans_time = prk::wtime();
 
-      q.submit([&](cl::sycl::handler& h) {
+      q.submit([&](sycl::handler& h) {
 
 #if USE_2D_INDEXING
-        cl::sycl::accessor<T, 2, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<2>(order,order), cl::sycl::id<2>(0,0));
-        cl::sycl::accessor<T, 2, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<2>(order,order), cl::sycl::id<2>(0,0));
+        sycl::accessor<T, 2, sycl::access::mode::read_write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<2>(order,order), sycl::id<2>(0,0));
+        sycl::accessor<T, 2, sycl::access::mode::read_write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<2>(order,order), sycl::id<2>(0,0));
 #else
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> A(d_A, h, cl::sycl::range<1>(order*order), cl::sycl::id<1>(0));
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(order*order), cl::sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::read_write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(order*order), sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::read_write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(order*order), sycl::id<1>(0));
 #endif
 
         h.parallel_for<class transpose<T>>(
 #if PREBUILD_KERNEL
                 kernel.get_kernel<transpose<T>>(),
 #endif
-                cl::sycl::range<2>{order,order}, [=] (cl::sycl::item<2> it) {
+                sycl::range<2>{order,order}, [=] (sycl::item<2> it) {
 #if USE_2D_INDEXING
-          cl::sycl::id<2> ij{it[0],it[1]};
-          cl::sycl::id<2> ji{it[1],it[0]};
+          sycl::id<2> ij{it[0],it[1]};
+          sycl::id<2> ji{it[1],it[0]};
           B[ij] += A[ji];
           A[ji] += (T)1;
 #else
@@ -147,25 +144,19 @@ void run(cl::sycl::queue & q, int iterations, size_t order)
     // for other device-oriented programming models.
     trans_time = prk::wtime() - trans_time;
 
-    q.submit([&](cl::sycl::handler& h) {
+    q.submit([&](sycl::handler& h) {
 #if USE_2D_INDEXING
-        cl::sycl::accessor<T, 2, cl::sycl::access::mode::read, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<2>(order,order), cl::sycl::id<2>(0,0));
+        sycl::accessor<T, 2, sycl::access::mode::read, sycl::access::target::global_buffer> B(d_B, h, sycl::range<2>(order,order), sycl::id<2>(0,0));
 #else
-        cl::sycl::accessor<T, 1, cl::sycl::access::mode::read, cl::sycl::access::target::global_buffer> B(d_B, h, cl::sycl::range<1>(order*order), cl::sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::read, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(order*order), sycl::id<1>(0));
 #endif
         h.copy(B,h_B.data());
     });
     q.wait();
   }
-  catch (cl::sycl::exception & e) {
+  catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
-#ifdef __COMPUTECPP__
-    std::cout << e.get_file_name() << std::endl;
-    std::cout << e.get_line_number() << std::endl;
-    std::cout << e.get_description() << std::endl;
-    std::cout << e.get_cl_error_message() << std::endl;
-    std::cout << e.get_cl_code() << std::endl;
-#endif
+    prk::print_exception_details(e);
     return;
   }
   catch (std::exception & e) {
@@ -259,84 +250,52 @@ int main(int argc, char * argv[])
 
   try {
 #if SYCL_TRY_CPU_QUEUE
-    if (1) {
-        cl::sycl::queue host(cl::sycl::host_selector{});
-#if !defined(TRISYCL) && !defined(__HIPSYCL__)
-        auto device      = host.get_device();
-        auto platform    = device.get_platform();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-#endif
-        run<float>(host, iterations, order);
-        run<double>(host, iterations, order);
+    if (order<10000) {
+        sycl::queue q(sycl::host_selector{});
+        prk::print_device_platform(q);
+        run<float>(q, iterations, order);
+        run<double>(q, iterations, order);
+    } else {
+        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
     }
 #endif
 
     // CPU requires spir64 target
 #if SYCL_TRY_CPU_QUEUE
     if (1) {
-        cl::sycl::queue cpu(cl::sycl::cpu_selector{});
-#if !defined(TRISYCL) && !defined(__HIPSYCL__)
-        auto device      = cpu.get_device();
-        auto platform    = device.get_platform();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
-#else
-        bool has_spir = true; // ?
-#endif
+        sycl::queue q(sycl::cpu_selector{});
+        prk::print_device_platform(q);
+        bool has_spir = prk::has_spir(q);
         if (has_spir) {
-          run<float>(cpu, iterations, order);
-          run<double>(cpu, iterations, order);
+          run<float>(q, iterations, order);
+          run<double>(q, iterations, order);
         }
     }
 #endif
 
-    // NVIDIA GPU requires ptx64 target and does not work very well
+    // NVIDIA GPU requires ptx64 target
 #if SYCL_TRY_GPU_QUEUE
-    if (0) {
-        cl::sycl::queue gpu(cl::sycl::gpu_selector{});
-#if !defined(TRISYCL) && !defined(__HIPSYCL__)
-        auto device      = gpu.get_device();
-        auto platform    = device.get_platform();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
-        bool has_fp64 = device.has_extension(cl::sycl::string_class("cl_khr_fp64"));
-#else
-        bool has_spir = true; // ?
-        bool has_fp64 = true;
-#endif
+    if (1) {
+        sycl::queue q(sycl::gpu_selector{});
+        prk::print_device_platform(q);
+        bool has_spir = prk::has_spir(q);
+        bool has_fp64 = prk::has_fp64(q);
+        bool has_ptx  = prk::has_ptx(q);
         if (!has_fp64) {
           std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
         }
-        if (has_spir) {
-          run<float>(gpu, iterations, order);
+        if (has_spir || has_ptx) {
+          run<float>(q, iterations, order);
           if (has_fp64) {
-            run<double>(gpu, iterations, order);
+            run<double>(q, iterations, order);
           }
-        } else {
-          std::cout << "SYCL GPU device lacks SPIR-V support." << std::endl;
-#ifdef __COMPUTECPP__
-          std::cout << "You are using ComputeCpp so we will try it anyways..." << std::endl;
-          run<float>(gpu, iterations, order);
-          if (has_fp64) {
-            run<double>(gpu, iterations, order);
-          }
-#endif
         }
     }
 #endif
   }
-  catch (cl::sycl::exception & e) {
+  catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
-#ifdef __COMPUTECPP__
-    std::cout << e.get_file_name() << std::endl;
-    std::cout << e.get_line_number() << std::endl;
-    std::cout << e.get_description() << std::endl;
-    std::cout << e.get_cl_error_message() << std::endl;
-    std::cout << e.get_cl_code() << std::endl;
-#endif
+    prk::print_exception_details(e);
     return 1;
   }
   catch (std::exception & e) {
