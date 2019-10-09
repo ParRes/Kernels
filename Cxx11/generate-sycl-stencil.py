@@ -7,11 +7,15 @@ import os
 
 def codegen(src,pattern,stencil_size,radius,model,dim,usm):
     src.write('// declare the kernel name used in SYCL parallel_for\n')
-    src.write('template <typename T> class '+pattern+str(radius)+'_'+str(dim)+'d;\n\n')
+    if (usm):
+        kernel_name = pattern+str(radius)+'_usm'
+    else:
+        kernel_name = pattern+str(radius)+'_'+str(dim)+'d'
+    src.write('template <typename T> class '+kernel_name+';\n\n')
     src.write('template <typename T>\n')
     src.write('void '+pattern+str(radius)+'(sycl::queue & q, const size_t n, ')
     if (usm):
-        src.write('T * in, ')
+        src.write('const T * in, ')
         src.write('T * out)\n')
     elif (dim==2):
         src.write('sycl::buffer<T, 2> & d_in, ')
@@ -28,7 +32,7 @@ def codegen(src,pattern,stencil_size,radius,model,dim,usm):
         for r in range(1,radius+1):
             src.write('    sycl::id<2> dx'+str(r)+'(sycl::range<2> {'+str(r)+',0});\n')
             src.write('    sycl::id<2> dy'+str(r)+'(sycl::range<2> {0,'+str(r)+'});\n')
-    src.write('    h.parallel_for<class '+pattern+str(radius)+'_'+str(dim)+'d<T>>(')
+    src.write('    h.parallel_for<class '+kernel_name+'<T>>(')
     src.write('sycl::range<2> {n-'+str(2*radius)+',n-'+str(2*radius)+'}, ')
     src.write('sycl::id<2> {'+str(radius)+','+str(radius)+'}, ')
     src.write('[=] (sycl::item<2> it) {\n')

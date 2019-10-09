@@ -40,13 +40,13 @@ void star1(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buf
 }
 
 // declare the kernel name used in SYCL parallel_for
-template <typename T> class star1_1d;
+template <typename T> class star1_usm;
 
 template <typename T>
-void star1(sycl::queue & q, const size_t n, T * in, T * out)
+void star1(sycl::queue & q, const size_t n, const T * in, T * out)
 {
   q.submit([&](sycl::handler& h) {
-    h.parallel_for<class star1_1d<T>>(sycl::range<2> {n-2,n-2}, sycl::id<2> {1,1}, [=] (sycl::item<2> it) {
+    h.parallel_for<class star1_usm<T>>(sycl::range<2> {n-2,n-2}, sycl::id<2> {1,1}, [=] (sycl::item<2> it) {
         const auto i = it[0];
         const auto j = it[1];
         out[i*n+j] += +in[i*n+(j+1)] * static_cast<T>(0.5)
@@ -109,13 +109,13 @@ void star2(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buf
 }
 
 // declare the kernel name used in SYCL parallel_for
-template <typename T> class star2_1d;
+template <typename T> class star2_usm;
 
 template <typename T>
-void star2(sycl::queue & q, const size_t n, T * in, T * out)
+void star2(sycl::queue & q, const size_t n, const T * in, T * out)
 {
   q.submit([&](sycl::handler& h) {
-    h.parallel_for<class star2_1d<T>>(sycl::range<2> {n-4,n-4}, sycl::id<2> {2,2}, [=] (sycl::item<2> it) {
+    h.parallel_for<class star2_usm<T>>(sycl::range<2> {n-4,n-4}, sycl::id<2> {2,2}, [=] (sycl::item<2> it) {
         const auto i = it[0];
         const auto j = it[1];
         out[i*n+j] += +in[i*n+(j+1)] * static_cast<T>(0.25)
@@ -192,13 +192,13 @@ void star3(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buf
 }
 
 // declare the kernel name used in SYCL parallel_for
-template <typename T> class star3_1d;
+template <typename T> class star3_usm;
 
 template <typename T>
-void star3(sycl::queue & q, const size_t n, T * in, T * out)
+void star3(sycl::queue & q, const size_t n, const T * in, T * out)
 {
   q.submit([&](sycl::handler& h) {
-    h.parallel_for<class star3_1d<T>>(sycl::range<2> {n-6,n-6}, sycl::id<2> {3,3}, [=] (sycl::item<2> it) {
+    h.parallel_for<class star3_usm<T>>(sycl::range<2> {n-6,n-6}, sycl::id<2> {3,3}, [=] (sycl::item<2> it) {
         const auto i = it[0];
         const auto j = it[1];
         out[i*n+j] += +in[i*n+(j+1)] * static_cast<T>(0.166666666667)
@@ -289,13 +289,13 @@ void star4(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buf
 }
 
 // declare the kernel name used in SYCL parallel_for
-template <typename T> class star4_1d;
+template <typename T> class star4_usm;
 
 template <typename T>
-void star4(sycl::queue & q, const size_t n, T * in, T * out)
+void star4(sycl::queue & q, const size_t n, const T * in, T * out)
 {
   q.submit([&](sycl::handler& h) {
-    h.parallel_for<class star4_1d<T>>(sycl::range<2> {n-8,n-8}, sycl::id<2> {4,4}, [=] (sycl::item<2> it) {
+    h.parallel_for<class star4_usm<T>>(sycl::range<2> {n-8,n-8}, sycl::id<2> {4,4}, [=] (sycl::item<2> it) {
         const auto i = it[0];
         const auto j = it[1];
         out[i*n+j] += +in[i*n+(j+1)] * static_cast<T>(0.125)
@@ -400,13 +400,13 @@ void star5(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buf
 }
 
 // declare the kernel name used in SYCL parallel_for
-template <typename T> class star5_1d;
+template <typename T> class star5_usm;
 
 template <typename T>
-void star5(sycl::queue & q, const size_t n, T * in, T * out)
+void star5(sycl::queue & q, const size_t n, const T * in, T * out)
 {
   q.submit([&](sycl::handler& h) {
-    h.parallel_for<class star5_1d<T>>(sycl::range<2> {n-10,n-10}, sycl::id<2> {5,5}, [=] (sycl::item<2> it) {
+    h.parallel_for<class star5_usm<T>>(sycl::range<2> {n-10,n-10}, sycl::id<2> {5,5}, [=] (sycl::item<2> it) {
         const auto i = it[0];
         const auto j = it[1];
         out[i*n+j] += +in[i*n+(j+1)] * static_cast<T>(0.1)
