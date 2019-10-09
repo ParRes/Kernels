@@ -110,10 +110,10 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   T * in;
   T * out;
 
-  try {
+  auto ctx = q.get_context();
+  auto dev = q.get_device();
 
-    auto ctx = q.get_context();
-    auto dev = q.get_device();
+  try {
 
     in  = static_cast<T*>(sycl::malloc_shared(n * n * sizeof(T), dev, ctx));
     out = static_cast<T*>(sycl::malloc_shared(n * n * sizeof(T), dev, ctx));
