@@ -62,10 +62,10 @@ OPENMPFLAG+=-L${LLVM_ROOT}/lib
 # SYCL flags
 #
 # Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
-SYCLDIR=/opt/isycl
-SYCLCXX=${SYCLDIR}/bin/clang++
-SYCLFLAG=-fsycl -lsycl -lOpenCL -Wl,-rpath=${SYCLDIR}/lib
-SYCLFLAG+=-std=c++17 -O3
+#SYCLDIR=/opt/isycl
+#SYCLCXX=${SYCLDIR}/bin/clang++
+#SYCLFLAG=-fsycl -lsycl -lOpenCL -Wl,-rpath=${SYCLDIR}/lib
+#SYCLFLAG+=-std=c++17 -O3
 # CodePlay ComputeCpp
 #SYCLDIR=/opt/sycl/latest
 #SYCLCXX=${SYCLDIR}/bin/compute++
@@ -84,9 +84,9 @@ SYCLFLAG+=-std=c++17 -O3
 #
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
-#SYCLDIR=./triSYCL
-#SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
-#SYCLFLAG=-std=c++17 -I$(SYCLDIR)/include -DTRISYCL
+SYCLDIR=./triSYCL
+SYCLCXX=${CXX} $(DEFAULT_OPT_FLAGS)
+SYCLFLAG=-std=c++17 -I$(SYCLDIR)/include -DTRISYCL
 # ProGTX
 # https://github.com/ProGTX/sycl-gtx
 #SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx

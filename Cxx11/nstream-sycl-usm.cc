@@ -107,7 +107,6 @@ void run(sycl::queue & q, int iterations, size_t length)
       if (iter==1) nstream_time = prk::wtime();
 
       q.submit([&](sycl::handler& h) {
-
         h.parallel_for<class nstream<T>>(
 #if PREBUILD_KERNEL
                 kernel.get_kernel<nstream<T>>(),
