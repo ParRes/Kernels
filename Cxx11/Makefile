@@ -109,7 +109,7 @@ sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl
 
 sycl-usm: nstream-sycl-usm stencil-sycl-usm transpose-sycl-usm
 
-sycl-explicit: nstream-sycl-explicit transpose-usm-explicit
+sycl-explicit: nstream-sycl-explicit transpose-sycl-explicit
 
 tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb \
      p2p-hyperplane-vector-tbb p2p-tasks-tbb
@@ -160,6 +160,9 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-sycl-usm: %-sycl-usm.cc prk_util.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
+%-sycl-explicit: %-sycl-explicit.cc prk_util.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-target: %-target.cc prk_util.h
@@ -242,6 +245,7 @@ clean:
 	-rm -f *-taskloop
 	-rm -f *-opencl
 	-rm -f *-sycl
+	-rm -f *-sycl-explicit
 	-rm -f *-sycl-usm
 	-rm -f *-tbb
 	-rm -f *-stl
