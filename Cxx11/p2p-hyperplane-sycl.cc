@@ -59,8 +59,7 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include "CL/sycl.hpp"
-
+#include "prk_sycl.h"
 #include "prk_util.h"
 #include "p2p-kernel.h"
 
@@ -131,9 +130,9 @@ int main(int argc, char* argv[])
     h_grid[j*n+0] = static_cast<double>(j);
   }
 
-  cl::sycl::queue q;
+  sycl::queue q;
   {
-    cl::sycl::buffer<double> d_grid { h_grid.data(), h_grid.size() };
+    sycl::buffer<double> d_grid { h_grid.data(), h_grid.size() };
 
     for (auto iter = 0; iter<=iterations; iter++) {
 
@@ -141,36 +140,36 @@ int main(int argc, char* argv[])
 
       for (int i=2; i<=2*n-2; i++) {
 
-        cl::sycl::id<1> I{unsigned(i)};
-        cl::sycl::id<1> One{1};
+        sycl::id<1> I{unsigned(i)};
+        sycl::id<1> One{1};
 
-        q.submit([&](cl::sycl::handler& h) {
+        q.submit([&](sycl::handler& h) {
 
-          auto grid = d_grid.get_access<cl::sycl::access::mode::read_write>(h);
+          auto grid = d_grid.get_access<sycl::access::mode::read_write>(h);
 
           unsigned begin = std::max(2,i-n+2);
           unsigned end   = std::min(i,n)+1;
           unsigned range = end-begin;
 
-          h.parallel_for<class sweep>(cl::sycl::range<1>{range}, cl::sycl::id<1>{begin}, [=] (cl::sycl::item<1> j) {
+          h.parallel_for<class sweep>(sycl::range<1>{range}, sycl::id<1>{begin}, [=] (sycl::item<1> j) {
             auto J = j.get_id();
-            cl::sycl::id<1> N{unsigned(n)};
-            cl::sycl::id<1> X{I-J+One};
-            cl::sycl::id<1> Y{J-One};
-            cl::sycl::id<1> Xold{X-One}; // x-1
-            cl::sycl::id<1> Yold{Y-One}; // y-1
-            cl::sycl::id<1> index0{X*N+Y};
-            cl::sycl::id<1> index1{Xold*N+Y};
-            cl::sycl::id<1> index2{X*N+Yold};
-            cl::sycl::id<1> index3{Xold*N+Yold};
+            sycl::id<1> N{unsigned(n)};
+            sycl::id<1> X{I-J+One};
+            sycl::id<1> Y{J-One};
+            sycl::id<1> Xold{X-One}; // x-1
+            sycl::id<1> Yold{Y-One}; // y-1
+            sycl::id<1> index0{X*N+Y};
+            sycl::id<1> index1{Xold*N+Y};
+            sycl::id<1> index2{X*N+Yold};
+            sycl::id<1> index3{Xold*N+Yold};
             grid[index0] = grid[index1] + grid[index2] - grid[index3];
           });
         });
         q.wait();
       }
-      q.submit([&](cl::sycl::handler& h) {
+      q.submit([&](sycl::handler& h) {
 
-        auto grid = d_grid.get_access<cl::sycl::access::mode::read_write>(h);
+        auto grid = d_grid.get_access<sycl::access::mode::read_write>(h);
 
         h.single_task<class corner>([=] {
             grid[0*n+0] = -grid[(n-1)*n+(n-1)];

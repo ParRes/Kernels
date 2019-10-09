@@ -67,13 +67,8 @@
 template <typename T> class init;
 template <typename T> class add;
 
-#if USE_2D_INDEXING
 template <typename T>
-void nothing(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buffer<T, 2> & d_out)
-#else
-template <typename T>
-void nothing(sycl::queue & q, const size_t n, sycl::buffer<T> & d_in, sycl::buffer<T> & d_out)
-#endif
+void nothing(sycl::queue & q, const size_t n, const T * in, T *out)
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
@@ -112,38 +107,23 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
 
   double stencil_time(0);
 
-  std::vector<T> h_in(n*n,0);
-  std::vector<T> h_out(n*n,0);
+  T * in;
+  T * out;
+
+  auto ctx = q.get_context();
+  auto dev = q.get_device();
 
   try {
 
-    // initialize device buffers from host buffers
-#if USE_2D_INDEXING
-    sycl::buffer<T, 2> d_in  { sycl::range<2> {n, n} };
-    sycl::buffer<T, 2> d_out { h_out.data(), sycl::range<2> {n, n} };
-#else
-    // FIXME: if I don't initialize this buffer from host, the results are wrong.  Why?
-    //sycl::buffer<T> d_in  { sycl::range<1> {n*n} };
-    sycl::buffer<T> d_in  { h_in.data(),  h_in.size() };
-    sycl::buffer<T> d_out { h_out.data(), h_out.size() };
-#endif
+    in  = static_cast<T*>(sycl::malloc_shared(n * n * sizeof(T), dev, ctx));
+    out = static_cast<T*>(sycl::malloc_shared(n * n * sizeof(T), dev, ctx));
 
     q.submit([&](sycl::handler& h) {
 
-      // accessor methods
-      auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
-
-      h.parallel_for<class init<T>>(sycl::range<2> {n, n}, [=] (sycl::item<2> it) {
-#if USE_2D_INDEXING
-          sycl::id<2> xy = it.get_id();
-          auto i = it[0];
-          auto j = it[1];
-          in[xy] = static_cast<T>(i+j);
-#else
-          auto i = it[0];
-          auto j = it[1];
+      h.parallel_for<class init<T>>(sycl::range<2> {n, n}, [=] (sycl::id<2> it) {
+          const auto i = it[0];
+          const auto j = it[1];
           in[i*n+j] = static_cast<T>(i+j);
-#endif
       });
     });
     q.wait();
@@ -152,36 +132,21 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
 
       if (iter==1) stencil_time = prk::wtime();
 
-      stencil(q, n, d_in, d_out);
-#ifdef TRISYCL
-      q.wait();
-#endif
+      stencil(q, n, in, out);
 
       q.submit([&](sycl::handler& h) {
-
-        // accessor methods
-        auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
-
         // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0},
-                                  [=] (sycl::item<2> it) {
-#if USE_2D_INDEXING
-            sycl::id<2> xy = it.get_id();
-            in[xy] += static_cast<T>(1);
-#else
-#if 0 // This is noticeably slower :-(
-            auto i = it[0];
-            auto j = it[1];
-            in[i*n+j] += 1.0;
-#else
-            in[it[0]*n+it[1]] += static_cast<T>(1);
-#endif
-#endif
+        h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0}, [=] (sycl::id<2> it) {
+            const auto i = it[0];
+            const auto j = it[1];
+            in[i*n+j] += static_cast<T>(1);
         });
       });
       q.wait();
     }
     stencil_time = prk::wtime() - stencil_time;
+
+    sycl::free(in, ctx);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -208,10 +173,12 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   double norm(0);
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
-      norm += std::fabs(h_out[i*n+j]);
+      norm += std::fabs(out[i*n+j]);
     }
   }
   norm /= active_points;
+
+  sycl::free(out, ctx);
 
   // verify correctness
   const double epsilon = 1.0e-8;

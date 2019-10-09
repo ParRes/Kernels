@@ -63,28 +63,26 @@ void run(sycl::queue & q, int iterations, size_t order)
 
   double trans_time(0);
 
-  std::vector<T> h_A(order*order);
-  std::vector<T> h_B(order*order,(T)0);
+  auto ctx = q.get_context();
+  auto dev = q.get_device();
 
-  // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(h_A.begin(), h_A.end(), static_cast<T>(0));
+  T * A = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), dev, ctx));
+  T * B = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), dev, ctx));
+
+  for (auto i=0;i<order; i++) {
+    for (auto j=0;j<order;j++) {
+      A[i*order+j] = static_cast<double>(i*order+j);
+      B[i*order+j] = 0.0;
+    }
+  }
 
   try {
-
-    auto ctx = q.get_context();
 
 #if PREBUILD_KERNEL
     sycl::program kernel(ctx);
     kernel.build_with_kernel_type<transpose<T>>();
 #endif
 
-#if USE_2D_INDEXING
-    sycl::buffer<T,2> d_A( h_A.data(), sycl::range<2>{order,order} );
-    sycl::buffer<T,2> d_B( h_B.data(), sycl::range<2>{order,order} );
-#else
-    sycl::buffer<T> d_A { h_A.data(), h_A.size() };
-    sycl::buffer<T> d_B { h_B.data(), h_B.size() };
-#endif
 
     for (int iter = 0; iter<=iterations; ++iter) {
 
@@ -92,15 +90,11 @@ void run(sycl::queue & q, int iterations, size_t order)
 
       q.submit([&](sycl::handler& h) {
 
-        // accessor methods
-        auto A = d_A.template get_access<sycl::access::mode::read_write>(h);
-        auto B = d_B.template get_access<sycl::access::mode::read_write>(h);
-
         h.parallel_for<class transpose<T>>(
 #if PREBUILD_KERNEL
                 kernel.get_kernel<transpose<T>>(),
 #endif
-                sycl::range<2>{order,order}, [=] (sycl::item<2> it) {
+                sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
 #if USE_2D_INDEXING
           sycl::id<2> ij{it[0],it[1]};
           sycl::id<2> ji{it[1],it[0]};
@@ -134,6 +128,9 @@ void run(sycl::queue & q, int iterations, size_t order)
     return;
   }
 
+  sycl::free(A, ctx);
+  sycl::free(B, ctx);
+
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
@@ -146,7 +143,7 @@ void run(sycl::queue & q, int iterations, size_t order)
       size_t const ij = i*order+j;
       size_t const ji = j*order+i;
       const T reference = static_cast<T>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(h_B[ji] - reference);
+      abserr += std::fabs(B[ji] - reference);
     }
   }
 
