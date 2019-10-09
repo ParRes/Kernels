@@ -279,13 +279,13 @@ program main
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
   checksum = 0.0d0
-  !$omp parallel do simd reduction(+:checksum)
+  !$omp parallel do reduction(+:checksum)
   do j=1,order
     do i=1,order
       checksum = checksum + C(i,j)
     enddo
   enddo
-  !$omp end parallel do simd
+  !$omp end parallel do
 
   deallocate( C )
 

@@ -64,6 +64,7 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
+#include "prk_thrust.h"
 
 int main(int argc, char * argv[])
 {
@@ -114,8 +115,6 @@ int main(int argc, char * argv[])
   thrust::device_vector<double> A(length);
   thrust::device_vector<double> B(length);
   thrust::device_vector<double> C(length);
-
-  auto range = prk::range(static_cast<size_t>(0), length);
 
   double scalar(3);
   {

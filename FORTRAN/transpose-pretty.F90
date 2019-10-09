@@ -152,7 +152,7 @@ program main
   A = ( transpose(reshape((/ (j2, j2 = 0,o2) /),(/order, order/))) &
         * real(iterations+1,REAL64) ) &
       + real((iterations*(iterations+1))/2,REAL64)
-#if defined(PGI)
+#if defined(PGI) || defined(XLF)
   abserr = 0.0d0
   do j=1,order
     do i=1,order

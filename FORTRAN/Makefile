@@ -8,10 +8,10 @@ ifndef RADIUS
   RADIUS=2
 endif
 
-STARFLAG   = -DSTAR
+STARFLAG = $(XLFPP)-DSTAR
 
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
-FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
+FCFLAGS += $(XLFPP)-DRADIUS=$(RADIUS) $(STARFLAG)
 
 ifeq ($(findstring ifort,$(FC)),ifort)
   BLASFLAGS += -heap-arrays
@@ -40,6 +40,10 @@ ifeq ($(findstring flang,$(FC)),flang)
   EXTRA = target ornlacc
   FCFLAGS += -DPGI
 endif
+ifeq ($(findstring xlf,$(FC)),xlf)
+  EXTRA = target
+  FCFLAGS += $(XLFPP)-DXLF
+endif
 
 all: serial pretty openmp tasks $(EXTRA)
 
@@ -59,32 +63,32 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgem
 
 ornlacc: p2p-ornlacc p2p-innerloop-ornlacc stencil-ornlacc transpose-ornlacc nstream-ornlacc
 
-%: %.f90
+%: %.F90
 	$(FC) $(FCFLAGS) $< -o $@
 
-stencil: stencil.f90 stencil_serial.f90
-	#$(FC) $(FCFLAGS) -c stencil_serial.f90 -o stencil_serial.o
+stencil: stencil.F90 stencil_serial.F90
+	#$(FC) $(FCFLAGS) -c stencil_serial.F90 -o stencil_serial.o
 	$(FC) $(FCFLAGS) $< -o $@
 
-dgemm-pretty: dgemm-pretty.f90
+dgemm-pretty: dgemm-pretty.F90
 	$(FC) $(FCFLAGS) $(BLASFLAGS) $< -o $@
 
-%-pretty: %-pretty.f90
+%-pretty: %-pretty.F90
 	$(FC) $(FCFLAGS) $< -o $@
 
-%-openmp: %.f90
+%-openmp: %.F90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
-%-openmp: %-openmp.f90
+%-openmp: %-openmp.F90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
-%-coarray: %-coarray.f90
+%-coarray: %-coarray.F90
 	$(CAFC) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
 
-%-target: %-target.f90
+%-target: %-target.F90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< -o $@
 
-%-ornlacc: %-ornlacc.f90
+%-ornlacc: %-ornlacc.F90
 	$(FC) $(FCFLAGS) $(ORNLACCFLAG) $< -o $@
 
 clean:

@@ -94,7 +94,6 @@ end subroutine initialize_w
 subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
   use iso_fortran_env
   implicit none
-  !$omp declare target
   logical, intent(in) :: is_star, tiling
   integer(kind=INT32), intent(in) :: tile_size, r, n
   real(kind=REAL64), intent(in) :: W(-r:r,-r:r)

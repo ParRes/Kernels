@@ -44,7 +44,7 @@
 # define OMP_FOR(x) PRAGMA(omp for x)
 # define OMP_FOR_REDUCE(x) PRAGMA(omp for reduction (x) )
 // OpenMP SIMD if supported, else not.
-# if (_OPENMP >= 201300)
+# if (_OPENMP >= 201300) || (__ibmxl_version__ >= 16)
 #  define OMP_SIMD PRAGMA(omp simd)
 #  define OMP_FOR_SIMD PRAGMA(omp for simd)
 #  define OMP_TASK(x) PRAGMA(omp task x)
