@@ -140,7 +140,7 @@ void run(sycl::queue & q, int iterations, size_t length)
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  T ar(0);
+  double ar(0);
   T br(2);
   T cr(2);
   for (int i=0; i<=iterations; ++i) {
@@ -157,6 +157,7 @@ void run(sycl::queue & q, int iterations, size_t length)
   const double epsilon(1.e-8);
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
