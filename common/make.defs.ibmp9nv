@@ -31,7 +31,7 @@ OFFLOADFLAG=-qoffload -qtgtarch=sm_70
 #OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
 OPENCLDIR=/usr
-OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL -Wno-deprecated-declarations
+OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL -Wno-deprecated-declarations -qsuppress=1500-029
 #
 # SYCL flags
 #
