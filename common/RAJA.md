@@ -9,3 +9,6 @@ cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/RAJA/install-cuda \
          -DENABLE_CUDA=On -DCUDA_ARCH=sm_70
  && make -j install
 ```
+
+Optional extras: `-qsuppress=1500-030` or `-qmaxmem=-1`
+
