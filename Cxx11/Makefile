@@ -69,7 +69,7 @@ ifneq ($(findstring pgc++,$(CXX)),pgc++)
   EXTRA += tbb pstl
 endif
 
-all: sequential vector valarray openmp taskloop stl rangefor opencl sycl boost-compute $(EXTRA)
+all: sequential vector valarray openmp taskloop stl rangefor opencl sycl $(EXTRA)
 
 #p2p: p2p-vector p2p-doacross-openmp p2p-hyperplane-openmp p2p-tasks-openmp p2p-openmp-target \
      p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl p2p-hyperplane-vector-tbb \
@@ -154,7 +154,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
-	$(SYCLCXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-sycl: %-sycl.cc prk_util.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
