@@ -31,7 +31,7 @@ OFFLOADFLAG=-qoffload -qtgtarch=sm_70
 #OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
 OPENCLDIR=/usr
-OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL -Wno-deprecated-declarations -qsuppress=1500-029
+OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL -Wno-deprecated-declarations -qsuppress=1500-029 -qstrict
 #
 # OCCA
 #
@@ -107,7 +107,7 @@ THRUSTFLAG=-I${THRUSTDIR}
 SYCLDIR=./triSYCL
 #SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
 #SYCLCXX=${CXX} $(DEFAULT_OPT_FLAGS)
-SYCLCXX=g++ -O3 -std=c++17
+SYCLCXX=g++ -O3 -std=gnu++11
 SYCLFLAG=-I$(SYCLDIR)/include -DTRISYCL
 SYCLFLAG+=$(BOOSTFLAG)
 #
