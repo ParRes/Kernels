@@ -15,7 +15,7 @@ CXX=xlc++_r -qlanglvl=extended1y
 #
 # Compiler flags
 #
-DEFAULT_OPT_FLAGS=-O3
+DEFAULT_OPT_FLAGS=-O3 -qsuppress=1500-036
 #
 # OpenMP flags
 #
@@ -33,15 +33,6 @@ OFFLOADFLAG=-qoffload -qtgtarch=sm_70
 OPENCLDIR=/usr
 OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL -Wno-deprecated-declarations -qsuppress=1500-029
 #
-# SYCL flags
-#
-# triSYCL
-# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
-SYCLDIR=./triSYCL
-#SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
-SYCLCXX=${CXX} $(DEFAULT_OPT_FLAGS)
-SYCLFLAG=-std=gnu++17 -I$(SYCLDIR)/include -DTRISYCL
-#
 # OCCA
 #
 #OCCADIR=${HOME}/prk-repo/Cxx11/occa
@@ -54,7 +45,7 @@ TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBLIBDIR} -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTROOT=${HOME}/boost_1_71_0/include
+BOOSTROOT=${HOME}/boost/libs
 BOOSTFLAG=
 BOOSTFLAG+=-I${BOOSTROOT}/circular_buffer/include
 BOOSTFLAG+=-I${BOOSTROOT}/compute/include
@@ -108,6 +99,17 @@ RAJADIR=
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 THRUSTDIR=/usr/local/cuda-10.1/targets/ppc64le-linux/include
 THRUSTFLAG=-I${THRUSTDIR}
+#
+# SYCL flags
+#
+# triSYCL
+# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+SYCLDIR=./triSYCL
+#SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
+#SYCLCXX=${CXX} $(DEFAULT_OPT_FLAGS)
+SYCLCXX=g++ -O3 -std=c++17
+SYCLFLAG=-I$(SYCLDIR)/include -DTRISYCL
+SYCLFLAG+=$(BOOSTFLAG)
 #
 # CBLAS for C++ DGEMM
 #
