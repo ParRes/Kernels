@@ -118,4 +118,7 @@ CBLASFLAG=-DESSL
 #
 # Linux w/ NVIDIA CUDA
 NVCC=/usr/local/cuda-10.1/bin/nvcc
-CUDAFLAGS=-g -O3 -std=c++11 --expt-extended-lambda -arch=sm_70
+CUDAFLAGS=-g -O3 -std=c++11
+CUDAFLAGS+=--expt-extended-lambda
+CUDAFLAGS+=-arch=sm_70
+CUDAFLAGS+=-Xcudafe --diag_suppress=esa_on_defaulted_function_ignored
