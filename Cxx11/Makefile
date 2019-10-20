@@ -195,7 +195,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 
 ifeq ($(PRK_KOKKOS_BACKEND),Cuda)
 %-kokkos: %-kokkos.cc prk_util.h
-	${KOKKOSDIR}/bin/nvcc_wrapper $(CUDAFLAGS) $< $(KOKKOSFLAG) -DUSE_KOKKOS -DPRK_KOKKOS_BACKEND=Cuda -o $@
+	${KOKKOSDIR}/bin/nvcc_wrapper $(CPPFLAGS) $(CUDAFLAGS) $< $(KOKKOSFLAG) -DUSE_KOKKOS -DPRK_KOKKOS_BACKEND=Cuda -o $@
 else
 %-kokkos: %-kokkos.cc prk_util.h
 	$(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
