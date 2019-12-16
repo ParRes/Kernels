@@ -68,9 +68,9 @@ __global__ void init(int order, double * A, double * B, double * C)
     int j = blockIdx.y * blockDim.y + threadIdx.y;
 
     if ((i<order) && (j<order)) {
-      A[b*order*order+i*order+j] = i;
-      B[b*order*order+i*order+j] = i;
-      C[b*order*order+i*order+j] = 0;
+      A[i*order+j] = i;
+      B[i*order+j] = i;
+      C[i*order+j] = 0;
     }
 }
 
@@ -80,7 +80,7 @@ __global__ void init(int order, double * C)
     int j = blockIdx.y * blockDim.y + threadIdx.y;
 
     if ((i<order) && (j<order)) {
-      C[b*order*order+i*order+j] = 0;
+      C[i*order+j] = 0;
     }
 }
 
@@ -114,7 +114,6 @@ int main(int argc, char * argv[])
 
     int iterations;
     int order;
-    int input_copy = 0;
     try {
         if (argc < 2) {
           throw "Usage: <# iterations> <matrix order>";
@@ -180,14 +179,16 @@ int main(int argc, char * argv[])
             dgemm_time = prk::wtime();
         }
 
+        double alpha = 1.0;
+        double beta  = 1.0;
         prk::CUDA::check( cublasDgemm(h,
                                       CUBLAS_OP_N, CUBLAS_OP_N, // opA, opB
                                       order, order, order,      // m, n, k
                                       &alpha,                   // alpha
-                                      pA, order,                // A, lda
-                                      pB, order,                // B, ldb
+                                      d_a, order,               // A, lda
+                                      d_b, order,               // B, ldb
                                       &beta,                    // beta
-                                      pC, order) );             // C, ldc
+                                      d_c, order) );            // C, ldc
 
         prk::CUDA::check( cudaDeviceSynchronize() );
       }
@@ -214,7 +215,7 @@ int main(int argc, char * argv[])
     const double forder = static_cast<double>(order);
     const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
     double residuum(0);
-    const auto checksum = prk::reduce( &(h_c[b*order*order+0]), &(h_c[b*order*order+nelems]), 0.0);
+    const auto checksum = prk::reduce( &(h_c[0]), &(h_c[nelems]), 0.0);
     residuum += std::abs(checksum-reference)/reference;
 
     // take the global max to make sure everyone passes...
