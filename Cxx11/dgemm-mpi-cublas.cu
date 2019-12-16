@@ -86,9 +86,6 @@ __global__ void init(int order, double * C)
 
 int main(int argc, char * argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "MPI/C++11/CUBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
-
   {
     prk::MPI::state mpi(argc,argv);
 
@@ -96,7 +93,12 @@ int main(int argc, char * argv[])
     int me = prk::MPI::rank();
 
     prk::CUDA::info cuda;
-    cuda.print();
+
+    if (me == 0) {
+      std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+      std::cout << "MPI/C++11/CUBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
+      cuda.print();
+    }
 
     int ngpu = cuda.num_gpus();
 
@@ -136,8 +138,10 @@ int main(int argc, char * argv[])
       return 1;
     }
 
-    std::cout << "Number of iterations = " << iterations << std::endl;
-    std::cout << "Matrix order         = " << order << std::endl;
+    if (me == 0) {
+      std::cout << "Number of iterations = " << iterations << std::endl;
+      std::cout << "Matrix order         = " << order << std::endl;
+    }
 
     cublasHandle_t h;
     prk::CUDA::check( cublasCreate(&h) );
