@@ -160,9 +160,10 @@ int main(int argc, char * argv[])
   int iterations;
   int order;
   int batches = 0;
+  int use_ngpu = 1;
   try {
       if (argc < 2) {
-        throw "Usage: <# iterations> <matrix order> [<batches>]";
+        throw "Usage: <# iterations> <matrix order> [<batches>] [<use_ngpu>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -180,24 +181,35 @@ int main(int argc, char * argv[])
       if (argc>3) {
         batches = std::atoi(argv[3]);
       }
+
+      if (argc>4) {
+        use_ngpu = std::atoi(argv[4]);
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
-  std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Number of iterations  = " << iterations << std::endl;
+  std::cout << "Matrix order          = " << order << std::endl;
   if (batches == 0) {
       std::cout << "No batching" << std::endl;
   } else if (batches < 0) {
-      std::cout << "Batch size           = " << -batches << " (loop over legacy BLAS)" << std::endl;
+      std::cout << "Batch size            = " << -batches << " (loop over legacy BLAS)" << std::endl;
   } else if (batches > 0) {
-      std::cout << "Batch size           = " <<  batches << " (batched BLAS)" << std::endl;
+      std::cout << "Batch size            = " <<  batches << " (batched BLAS)" << std::endl;
+  }
+  std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
+
+  int haz_ngpu = info.num_gpus();
+  std::cout << "Number of GPUs found  = " << haz_ngpu << std::endl;
+
+  if (use_ngpu > haz_ngpu) {
+      std::cout << "You cannot use more GPUs (" << use_ngpu << ") than you have (" << haz_ngpu << ")" << std::endl;
   }
 
-  int ngpus = info.num_gpus();
-  std::cout << "Number of GPUs found = " << ngpus << std::endl;
+  int ngpus = use_ngpu;
 
   std::vector<cublasHandle_t> contexts(ngpus);
   for (int i=0; i<ngpus; ++i) {
