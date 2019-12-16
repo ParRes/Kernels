@@ -348,8 +348,8 @@ int main(int argc, char * argv[])
     }
 
     if (residuum < epsilon) {
+      prk::MPI::barrier();
       if (me==0) {
-        prk::MPI::barrier();
         std::cout << "Solution validates" << std::endl;
       }
       auto time = dgemm_time/iterations/matrices;
