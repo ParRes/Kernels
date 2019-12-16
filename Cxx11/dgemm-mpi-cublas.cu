@@ -41,7 +41,7 @@
 ///          is carried out, and, optionally, a tile size for matrix
 ///          blocking
 ///
-///          <progname> <# iterations> <matrix order> [<batches>]
+///          <progname> <# iterations> <matrix order>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -52,7 +52,6 @@
 ///          functions are used in this program:
 ///
 ///          cblasDgemm()
-///          cublasDgemmStridedBatched()
 ///
 /// HISTORY: Written by Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, December, 2017.
@@ -63,87 +62,26 @@
 #include "prk_cuda.h"
 #include "prk_mpi.h"
 
-__global__ void init(int order, const int matrices, double * A, double * B, double * C)
+__global__ void init(int order, double * A, double * B, double * C)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
 
-    for (int b=0; b<matrices; ++b) {
-      if ((i<order) && (j<order)) {
-        A[b*order*order+i*order+j] = i;
-        B[b*order*order+i*order+j] = i;
-        C[b*order*order+i*order+j] = 0;
-      }
+    if ((i<order) && (j<order)) {
+      A[b*order*order+i*order+j] = i;
+      B[b*order*order+i*order+j] = i;
+      C[b*order*order+i*order+j] = 0;
     }
 }
 
-__global__ void init(int order, const int matrices, double * C)
+__global__ void init(int order, double * C)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
 
-    for (int b=0; b<matrices; ++b) {
-      if ((i<order) && (j<order)) {
-        C[b*order*order+i*order+j] = 0;
-      }
+    if ((i<order) && (j<order)) {
+      C[b*order*order+i*order+j] = 0;
     }
-}
-
-void prk_dgemm(const cublasHandle_t & h,
-               const int order,
-               const int batches,
-               double * A,
-               double * B,
-               double * C)
-{
-    const double alpha = 1.0;
-    const double beta  = 1.0;
-
-    for (int b=0; b<batches; ++b) {
-        double * pA = &(A[b*order*order]);
-        double * pB = &(B[b*order*order]);
-        double * pC = &(C[b*order*order]);
-        prk::CUDA::check( cublasDgemm(h,
-                                      CUBLAS_OP_N, CUBLAS_OP_N, // opA, opB
-                                      order, order, order,      // m, n, k
-                                      &alpha,                   // alpha
-                                      pA, order,                // A, lda
-                                      pB, order,                // B, ldb
-                                      &beta,                    // beta
-                                      pC, order) );             // C, ldc
-    }
-}
-
-void prk_bgemm(const cublasHandle_t & h,
-               const int order,
-               const int batches,
-               double * A,
-               double * B,
-               double * C)
-{
-    const double alpha = 1.0;
-    const double beta  = 1.0;
-
-    prk::CUDA::check( cublasDgemmStridedBatched(h,
-                                                CUBLAS_OP_N, CUBLAS_OP_N,
-                                                order, order, order,
-                                                &alpha,
-                                                (const double *)A, order, order*order,
-                                                (const double *)B, order, order*order,
-                                                &beta,
-                                                C, order, order*order,
-                                                batches) );
-
-    //  cublasStatus_t cublasDgemmBatched(cublasHandle_t handle,
-    //                                    cublasOperation_t transa,
-    //                                    cublasOperation_t transb,
-    //                                    int m, int n, int k,
-    //                                    const double          *alpha,
-    //                                    const double          *Aarray[], int lda,
-    //                                    const double          *Barray[], int ldb,
-    //                                    const double          *beta,
-    //                                    double          *Carray[], int ldc,
-    //                                    int batchCount)
 }
 
 int main(int argc, char * argv[])
@@ -173,11 +111,10 @@ int main(int argc, char * argv[])
 
     int iterations;
     int order;
-    int batches = 0;
     int input_copy = 0;
     try {
         if (argc < 2) {
-          throw "Usage: <# iterations> <matrix order> [<batches>] [<copy input every iteration [0/1]>]";
+          throw "Usage: <# iterations> <matrix order>";
         }
 
         iterations  = std::atoi(argv[1]);
@@ -191,14 +128,6 @@ int main(int argc, char * argv[])
         } else if (order > std::floor(std::sqrt(INT_MAX))) {
           throw "ERROR: matrix dimension too large - overflow risk";
         }
-
-        if (argc>3) {
-          batches = std::atoi(argv[3]);
-        }
-
-        if (argc > 4) {
-          input_copy = std::atoi(argv[3]);
-        }
     }
     catch (const char * e) {
       std::cout << e << std::endl;
@@ -207,14 +136,6 @@ int main(int argc, char * argv[])
 
     std::cout << "Number of iterations = " << iterations << std::endl;
     std::cout << "Matrix order         = " << order << std::endl;
-    if (batches == 0) {
-        std::cout << "No batching" << std::endl;
-    } else if (batches < 0) {
-        std::cout << "Batch size           = " << -batches << " (loop over legacy BLAS)" << std::endl;
-    } else if (batches > 0) {
-        std::cout << "Batch size           = " <<  batches << " (batched BLAS)" << std::endl;
-    }
-    std::cout << "Input copy           = " << (input_copy ? "yes" : "no") << std::endl;
 
     cublasHandle_t h;
     prk::CUDA::check( cublasCreate(&h) );
@@ -231,48 +152,22 @@ int main(int argc, char * argv[])
 
     double dgemm_time(0);
 
-    const int matrices = (batches==0 ? 1 : abs(batches));
     const size_t nelems = (size_t)order * (size_t)order;
     const size_t bytes = nelems * sizeof(double);
 
     // host buffers
-    double * h_a;
-    double * h_b;
     double * h_c;
-    prk::CUDA::check( cudaMallocHost((void**)&h_a, bytes) );
-    prk::CUDA::check( cudaMallocHost((void**)&h_b, bytes) );
-    prk::CUDA::check( cudaMallocHost((void**)&h_c, matrices*bytes) );
+    prk::CUDA::check( cudaMallocHost((void**)&h_c, bytes) );
 
     // device buffers
     double * d_a;
     double * d_b;
     double * d_c;
-    prk::CUDA::check( cudaMalloc((void**)&d_a, matrices*bytes) );
-    prk::CUDA::check( cudaMalloc((void**)&d_b, matrices*bytes) );
-    prk::CUDA::check( cudaMalloc((void**)&d_c, matrices*bytes) );
+    prk::CUDA::check( cudaMalloc((void**)&d_a, bytes) );
+    prk::CUDA::check( cudaMalloc((void**)&d_b, bytes) );
+    prk::CUDA::check( cudaMalloc((void**)&d_c, bytes) );
 
-    if (input_copy) {
-
-      for (int i=0; i<order; ++i) {
-        for (int j=0; j<order; ++j) {
-           h_a[i*order+j] = i;
-           h_b[i*order+j] = i;
-        }
-      }
-
-      for (int b=0; b<matrices; ++b) {
-        prk::CUDA::check( cudaMemcpyAsync(&(d_a[b*order*order]), h_a, bytes, cudaMemcpyHostToDevice) );
-        prk::CUDA::check( cudaMemcpyAsync(&(d_b[b*order*order]), h_b, bytes, cudaMemcpyHostToDevice) );
-      }
-      prk::CUDA::check( cudaDeviceSynchronize() );
-
-      init<<<dimGrid, dimBlock>>>(order, matrices, d_c);
-
-    } else {
-
-      init<<<dimGrid, dimBlock>>>(order, matrices, d_a, d_b, d_c);
-
-    }
+    init<<<dimGrid, dimBlock>>>(order, d_a, d_b, d_c);
 
     {
       for (auto iter = 0; iter<=iterations; iter++) {
@@ -282,21 +177,15 @@ int main(int argc, char * argv[])
             dgemm_time = prk::wtime();
         }
 
-        if (input_copy) {
-          for (int b=0; b<matrices; ++b) {
-            prk::CUDA::check( cudaMemcpyAsync(&(d_a[b*order*order]), h_a, bytes, cudaMemcpyHostToDevice) );
-            prk::CUDA::check( cudaMemcpyAsync(&(d_b[b*order*order]), h_b, bytes, cudaMemcpyHostToDevice) );
-          }
-          prk::CUDA::check( cudaDeviceSynchronize() );
-        }
+        prk::CUDA::check( cublasDgemm(h,
+                                      CUBLAS_OP_N, CUBLAS_OP_N, // opA, opB
+                                      order, order, order,      // m, n, k
+                                      &alpha,                   // alpha
+                                      pA, order,                // A, lda
+                                      pB, order,                // B, ldb
+                                      &beta,                    // beta
+                                      pC, order) );             // C, ldc
 
-        if (batches == 0) {
-          prk_dgemm(h, order, matrices, d_a, d_b, d_c);
-        } else if (batches < 0) {
-          prk_dgemm(h, order, matrices, d_a, d_b, d_c);
-        } else if (batches > 0) {
-          prk_bgemm(h, order, matrices, d_a, d_b, d_c);
-        }
         prk::CUDA::check( cudaDeviceSynchronize() );
       }
       prk::MPI::barrier();
@@ -304,14 +193,11 @@ int main(int argc, char * argv[])
     }
 
     // copy output back to host
-    prk::CUDA::check( cudaMemcpyAsync(&(h_c[0]), d_c, matrices*bytes, cudaMemcpyDeviceToHost) );
+    prk::CUDA::check( cudaMemcpyAsync(&(h_c[0]), d_c, bytes, cudaMemcpyDeviceToHost) );
 
     prk::CUDA::check( cudaFree(d_c) );
     prk::CUDA::check( cudaFree(d_b) );
     prk::CUDA::check( cudaFree(d_a) );
-
-    prk::CUDA::check( cudaFreeHost(h_a) );
-    prk::CUDA::check( cudaFreeHost(h_b) );
 
     prk::CUDA::check( cublasDestroy(h) );
 
@@ -325,11 +211,8 @@ int main(int argc, char * argv[])
     const double forder = static_cast<double>(order);
     const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
     double residuum(0);
-    for (int b=0; b<matrices; ++b) {
-        const auto checksum = prk::reduce( &(h_c[b*order*order+0]), &(h_c[b*order*order+nelems]), 0.0);
-        residuum += std::abs(checksum-reference)/reference;
-    }
-    residuum/=matrices;
+    const auto checksum = prk::reduce( &(h_c[b*order*order+0]), &(h_c[b*order*order+nelems]), 0.0);
+    residuum += std::abs(checksum-reference)/reference;
 
     // take the global max to make sure everyone passes...
     residuum = prk::MPI::max(residuum);
@@ -352,7 +235,7 @@ int main(int argc, char * argv[])
       if (me==0) {
         std::cout << "Solution validates" << std::endl;
       }
-      auto time = dgemm_time/iterations/matrices;
+      auto time = dgemm_time/iterations;
       auto nflops = 2.0 * std::pow(forder,3);
       auto rate = 1.0e-6 * nflops/time;
 
