@@ -132,7 +132,7 @@ thrust: nstream-host-thrust nstream-device-thrust \
 
 cuda: transpose-cuda
 
-cublas: transpose-cublas nstream-cublas dgemm-cublas
+cublas: transpose-cublas nstream-cublas dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas
 
 cblas: transpose-cblas dgemm-cblas
 
@@ -212,6 +212,9 @@ endif
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
+
+%-mpi-cublas: %-mpi-cublas.cu prk_util.h prk_cuda.h prk_mpi.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas $(MPIFLAGS) -o $@
 
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas -o $@
