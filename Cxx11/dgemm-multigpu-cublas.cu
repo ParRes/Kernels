@@ -260,6 +260,7 @@ int main(int argc, char * argv[])
     if (iter==1) dgemm_time = prk::wtime();
 
     for (int i=0; i<ngpus; ++i) {
+        prk::CUDA::check( cudaSetDevice(i) );
         if (batches == 0) {
             prk_dgemm(contexts[i], order, matrices, d_a[i], d_b[i], d_c[i]);
         } else if (batches < 0) {
