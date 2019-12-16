@@ -112,7 +112,6 @@ void prk_dgemm(const cublasHandle_t & h,
                                       &beta,                    // beta
                                       pC, order) );             // C, ldc
     }
-    prk::CUDA::check( cudaDeviceSynchronize() );
 }
 
 void prk_bgemm(const cublasHandle_t & h,
@@ -134,7 +133,6 @@ void prk_bgemm(const cublasHandle_t & h,
                                                 &beta,
                                                 C, order, order*order,
                                                 batches) );
-    prk::CUDA::check( cudaDeviceSynchronize() );
 
     //  cublasStatus_t cublasDgemmBatched(cublasHandle_t handle,
     //                                    cublasOperation_t transa,
@@ -154,12 +152,20 @@ int main(int argc, char * argv[])
   std::cout << "MPI/C++11/CUBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   {
-    prk::MPI::state mpi;
+    prk::MPI::state mpi(argc,argv);
+
+    int np = prk::MPI::size();
+    int me = prk::MPI::rank();
 
     prk::CUDA::info cuda;
     cuda.print();
 
     int ngpu = cuda.ngpus();
+
+    if (ngpu != np) {
+        std::cout << "Please run with one MPI process per GPU (single-node only)" << std::endl;
+        return (np-ngpu);
+    }
 
     //////////////////////////////////////////////////////////////////////
     /// Read and test input parameters
@@ -271,7 +277,10 @@ int main(int argc, char * argv[])
     {
       for (auto iter = 0; iter<=iterations; iter++) {
 
-        if (iter==1) dgemm_time = prk::wtime();
+        if (iter==1) {
+            prk::MPI::barrier();
+            dgemm_time = prk::wtime();
+        }
 
         if (input_copy) {
           for (int b=0; b<matrices; ++b) {
@@ -288,7 +297,9 @@ int main(int argc, char * argv[])
         } else if (batches > 0) {
           prk_bgemm(h, order, matrices, d_a, d_b, d_c);
         }
+        prk::CUDA::check( cudaDeviceSynchronize() );
       }
+      prk::MPI::barrier();
       dgemm_time = prk::wtime() - dgemm_time;
     }
 
@@ -320,20 +331,42 @@ int main(int argc, char * argv[])
     }
     residuum/=matrices;
 
-    if (residuum < epsilon) {
-#if VERBOSE
-      std::cout << "Reference checksum = " << reference << "\n"
-                << "Actual checksum = " << checksum << std::endl;
+    // take the global max to make sure everyone passes...
+    residuum = prk::MPI::max(residuum);
+
+#ifndef VERBOSE
+    if (residuum >= epsilon)
 #endif
-      std::cout << "Solution validates" << std::endl;
-      auto avgtime = dgemm_time/iterations/matrices;
+    {
+      for (int r=0; r<np; ++r) {
+        prk::MPI::barrier();
+        if (r==me) {
+          std::cout << "Reference checksum = " << reference << "\n"
+                    << "Actual checksum = " << checksum << std::endl;
+        }
+      }
+    }
+
+    if (residuum < epsilon)
+      if (me==0) {
+        prk::MPI::barrier();
+        std::cout << "Solution validates" << std::endl;
+      }
+      auto time = dgemm_time/iterations/matrices;
       auto nflops = 2.0 * std::pow(forder,3);
-      std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
-                << " Avg time (s): " << avgtime << std::endl;
-    } else {
-      std::cout << "Reference checksum = " << reference << "\n"
-                << "Residuum           = " << residuum << std::endl;
-      return 1;
+      auto rate = 1.0e-6 * nflops/time;
+
+      double minrate(0), maxrate(0), avgrate(0);
+      prk::MPI::stats(rate, &minrate, &maxrate, &avgrate):
+
+      double mintime(0), maxtime(0), avgtime(0);
+      prk::MPI::stats(time, &mintime, &maxtime, &avgtime):
+
+      if (me==0) {
+        std::cout << "MIN Rate (MF/s): " << minrate << " Avg time (s): " << maxtime << std::endl;
+        std::cout << "MAX Rate (MF/s): " << maxrate << " Avg time (s): " << mintime << std::endl;
+        std::cout << "AVG Rate (MF/s): " << avgrate << " Avg time (s): " << avgtime << std::endl;
+      }
     }
 
     prk::CUDA::check( cudaFreeHost(h_c) );

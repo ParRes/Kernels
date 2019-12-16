@@ -35,41 +35,65 @@ namespace prk
 
         class state {
 
-            private:
-                int world_size;
-                int world_rank;
-
-            public:
-                int me(void) { return world_rank; }
-                int np(void) { return world_size; }
-
-
             state(void) {
-                MPI_Init(NULL,NULL);
-                MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-                MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+                int is_init, is_final;
+                MPI_Initialized(&is_init);
+                MPI_Finalized(&is_final);
+                if (!is_init && !is_final) {
+                    MPI_Init(NULL,NULL);
+                }
             }
 
             state(int argc, char** argv) {
-                MPI_Init(&argc, &argv);
-                MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-                MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+                int is_init, is_final;
+                MPI_Initialized(&is_init);
+                MPI_Finalized(&is_final);
+                if (!is_init && !is_final) {
+                    MPI_Init(argc,argv);
+                }
             }
 
             ~state(void) {
-                MPI_Finalize();
+                int is_init, is_final;
+                MPI_Initialized(&is_init);
+                MPI_Finalized(&is_final);
+                if (is_init && !is_final) {
+                    MPI_Finalize();
+                }
             }
 
         };
 
-        void barrier(void) {
-            prk::MPI::check( MPI_Barrier(MPI_COMM_WORLD) );
+        void rank(MPI_Comm comm = MPI_COMM_WORLD) {
+            prk::MPI::check( MPI_Comm_rank(comm) );
         }
 
-        void barrier(MPI_Comm comm) {
+        void size(MPI_Comm comm = MPI_COMM_WORLD) {
+            prk::MPI::check( MPI_Comm_size(comm) );
+        }
+
+        void barrier(MPI_Comm comm = MPI_COMM_WORLD) {
             prk::MPI::check( MPI_Barrier(comm) );
         }
 
+        double min(double in, MPI_Comm comm = MPI_COMM_WORLD) {
+            double out;
+            prk::MPI::check( MPI_Allreduce(&in, &out, 1, MPI_DOUBLE, MPI_MIN, comm) );
+            return out;
+        }
+
+        double max(double in, MPI_Comm comm = MPI_COMM_WORLD) {
+            double out;
+            prk::MPI::check( MPI_Allreduce(&in, &out, 1, MPI_DOUBLE, MPI_MAX, comm) );
+            return out;
+        }
+
+        void stats(double in, double * min, double * max, double * avg, MPI_Comm comm = MPI_COMM_WORLD) {
+            prk::MPI::check( MPI_Allreduce(&in, min, 1, MPI_DOUBLE, MPI_MIN, comm) );
+            prk::MPI::check( MPI_Allreduce(&in, max, 1, MPI_DOUBLE, MPI_MAX, comm) );
+            prk::MPI::check( MPI_Allreduce(&in, avg, 1, MPI_DOUBLE, MPI_SUM, comm) );
+            avg /= size(comm);
+        }
 
     } // MPI namespace
 
