@@ -203,7 +203,7 @@ int main(int argc, char * argv[])
   std::vector<cublasHandle_t> contexts(ngpus);
   for (int i=0; i<ngpus; ++i) {
       prk::CUDA::check( cudaSetDevice(i) );
-      prk::CUDA::check( cublasCreate(contexts[i]) );
+      prk::CUDA::check( cublasCreate(&contexts[i]) );
   }
 
   const int tile_size = 32;
@@ -223,7 +223,7 @@ int main(int argc, char * argv[])
   const size_t bytes = nelems * sizeof(double);
 
   // host buffers
-  std::vector<double*> d_c(ngpus,nullptr);
+  std::vector<double*> h_c(ngpus,nullptr);
   for (int i=0; i<ngpus; ++i) {
       prk::CUDA::check( cudaMallocHost((void**)&h_c[i], matrices*bytes) );
   }
@@ -237,7 +237,7 @@ int main(int argc, char * argv[])
       prk::CUDA::check( cudaMalloc((void**)&d_a[i], matrices*bytes) );
       prk::CUDA::check( cudaMalloc((void**)&d_b[i], matrices*bytes) );
       prk::CUDA::check( cudaMalloc((void**)&d_c[i], matrices*bytes) );
-      init<<<dimGrid, dimBlock>>>(order, matrices, d_a, d_b, d_c);
+      init<<<dimGrid, dimBlock>>>(order, matrices, d_a[i], d_b[i], d_c[i]);
   }
   for (int i=0; i<ngpus; ++i) {
       prk::CUDA::check( cudaSetDevice(i) );
@@ -283,11 +283,12 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
+  const double epsilon = 1.0e-8;
+  const double forder = static_cast<double>(order);
+  const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
+
   double residuum(0);
   for (int i=0; i<ngpus; ++i) {
-      const double epsilon = 1.0e-8;
-      const double forder = static_cast<double>(order);
-      const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
       for (int b=0; b<matrices; ++b) {
           const auto checksum = prk::reduce( &(h_c[i][b*order*order+0]), &(h_c[i][b*order*order+nelems]), 0.0);
           residuum += std::abs(checksum-reference)/reference;

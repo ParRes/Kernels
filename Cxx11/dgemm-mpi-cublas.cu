@@ -342,12 +342,12 @@ int main(int argc, char * argv[])
         prk::MPI::barrier();
         if (r==me) {
           std::cout << "Reference checksum = " << reference << "\n"
-                    << "Actual checksum = " << checksum << std::endl;
+                    << "Actual checksum = " << residuum << std::endl;
         }
       }
     }
 
-    if (residuum < epsilon)
+    if (residuum < epsilon) {
       if (me==0) {
         prk::MPI::barrier();
         std::cout << "Solution validates" << std::endl;
@@ -356,11 +356,13 @@ int main(int argc, char * argv[])
       auto nflops = 2.0 * std::pow(forder,3);
       auto rate = 1.0e-6 * nflops/time;
 
-      double minrate(0), maxrate(0), avgrate(0);
-      prk::MPI::stats(rate, &minrate, &maxrate, &avgrate):
+      double minrate = prk::MPI::min(rate);
+      double maxrate = prk::MPI::max(rate);
+      double avgrate = prk::MPI::avg(rate);
 
-      double mintime(0), maxtime(0), avgtime(0);
-      prk::MPI::stats(time, &mintime, &maxtime, &avgtime):
+      double mintime = prk::MPI::min(time);
+      double maxtime = prk::MPI::max(time);
+      double avgtime = prk::MPI::avg(time);
 
       if (me==0) {
         std::cout << "MIN Rate (MF/s): " << minrate << " Avg time (s): " << maxtime << std::endl;
