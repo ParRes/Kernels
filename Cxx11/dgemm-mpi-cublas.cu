@@ -98,7 +98,7 @@ int main(int argc, char * argv[])
     prk::CUDA::info cuda;
     cuda.print();
 
-    int ngpu = cuda.ngpus();
+    int ngpu = cuda.num_gpus();
 
     if (ngpu != np) {
         std::cout << "Please run with one MPI process per GPU (single-node only)" << std::endl;

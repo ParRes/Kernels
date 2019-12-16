@@ -196,8 +196,7 @@ int main(int argc, char * argv[])
       std::cout << "Batch size           = " <<  batches << " (batched BLAS)" << std::endl;
   }
 
-  int ngpus = 0;
-  prk::CUDA::check( cudaGetDeviceCount(&ngpus) );
+  int ngpus = info.num_gpus();
   std::cout << "Number of GPUs found = " << ngpus << std::endl;
 
   std::vector<cublasHandle_t> contexts(ngpus);
