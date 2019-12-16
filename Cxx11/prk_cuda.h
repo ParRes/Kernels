@@ -83,6 +83,8 @@ namespace prk
                     }
                 }
 
+                int ngpus() { return nDevices; }
+
                 void print() {
                     for (auto i=0; i<nDevices; ++i) {
                         std::cout << "device name: " << vDevices[i].name << "\n";
