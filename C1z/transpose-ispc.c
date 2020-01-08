@@ -55,7 +55,7 @@
 
 #include "prk_util.h"
 
-int ispc_num_threads(void);
+//int ispc_num_threads(void);
 void initialize(const int order, double A[], double B[]);
 void transpose(const int order, double A[], double B[]);
 void transpose_tiled(const int order, double A[], double B[], const int tile_size);
@@ -93,7 +93,7 @@ int main(int argc, char * argv[])
   // a negative tile size means no tiling of the local transpose
   if (tile_size <= 0) tile_size = order;
 
-  printf("ISPC threads          = %d\n", ispc_num_threads());
+  //printf("ISPC threads          = %d\n", ispc_num_threads());
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
   printf("Tile size             = %d\n", tile_size);
