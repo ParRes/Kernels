@@ -9,7 +9,7 @@
 namespace sycl = cl::sycl;
 
 // prebuilt kernels are not required/not fully supported on hipSYCL and triSYCL
-#if defined(TRISYCL) || defined(__HIPSYCL__)
+#if defined(TRISYCL) || defined(__HIPSYCL__) || defined(DPCPP)
 #define PREBUILD_KERNEL 0
 #else
 #define PREBUILD_KERNEL 1

@@ -48,6 +48,7 @@ OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 SYCLCXX=dpcpp
 SYCLFLAG=-fsycl -fsycl-unnamed-lambda
 SYCLFLAG+=-std=c++17 -O3
+SYCLFLAG+=-DDPCPP
 #
 #
 # OCCA
