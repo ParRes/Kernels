@@ -19,16 +19,14 @@ export void initialize(uniform const int order,
   }
 }
 
-#if 0
+#if 1
 export void transpose(uniform const int order,
                       uniform double A[],
                       uniform double B[])
 {
-  foreach (i = 0 ... order) {
-    for (uniform int j=0;j<order;j++) {
-      B[i*order+j] += A[j*order+i];
-      A[j*order+i] += 1.0;
-    }
+  foreach(i = 0 ... order, j = 0 ... order) {
+    B[i*order+j] += A[j*order+i];
+    A[j*order+i] += 1.0;
   }
 }
 #else
@@ -37,7 +35,7 @@ export void transpose(uniform const int order,
                       uniform double B[])
 {
   for (uniform int i=0;i<order; i++) {
-    for (uniform int j=0;j<order;j++) {
+    for (varying int j=programIndex;j<order;j+=programCount) {
       B[i*order+j] += A[j*order+i];
       A[j*order+i] += 1.0;
     }
