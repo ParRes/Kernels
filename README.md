@@ -89,10 +89,10 @@ f = see footnotes
 | OpenMP tasks         |  y  |    y    |     y     |    y    |        |       |
 | OpenMP target        |  y  |    y    |     y     |    y    |        |       |
 | OpenCL 1.x           |  i  |    y    |     y     |    y    |        |       |
-| SYCL                 |     |    y    |     y     |    y    |        |       |
+| SYCL                 |  i  |    y    |     y     |    y    |        |       |
 | Boost.Compute        |     |         |           |    y    |        |       |
 | Parallel STL         |  y  |    y    |     y     |    y    |        |       |
-| Thrust               |     |         |           |    y    |        |       |
+| Thrust               |     |         |     i     |    y    |        |       |
 | TBB                  |  y  |    y    |     y     |    y    |        |       |
 | Kokkos               |  y  |    y    |     y     |    y    |        |       |
 | RAJA                 |  y  |    y    |     y     |    y    |        |       |
@@ -111,13 +111,19 @@ f = see footnotes
 
 | Parallelism          | p2p | stencil | transpose | nstream | sparse |
 |----------------------|-----|---------|-----------|---------|--------|
-| None                 |  y  |    y    |     y     |         |        |
+| None                 |  y  |    y    |     y     |    y    |        |
 | C11 threads          |     |         |     y     |         |        |
-| OpenMP               |  y  |    y    |     y     |         |        |
-| OpenMP tasks         |  y  |    y    |     y     |         |        |
-| OpenMP target        |  y  |    y    |     y     |         |        |
+| OpenMP               |  y  |    y    |     y     |    y    |        |
+| OpenMP tasks         |  y  |    y    |     y     |    y    |        |
+| OpenMP target        |  y  |    y    |     y     |    y    |        |
 | Cilk                 |     |    y    |     y     |         |        |
 | ISPC                 |     |         |     y     |         |        |
+| MPI                  |     |         |           |    y    |        |
+
+There are versions of nstream with OpenMP that support memory allocation
+using [mmap](http://man7.org/linux/man-pages/man2/mmap.2.html)
+and [memkind](https://github.com/memkind/memkind), which can be used
+for testing novel memory systems, including persistent memory.
 
 * [ISPC](https://ispc.github.io/)
 
