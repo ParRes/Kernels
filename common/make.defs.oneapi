@@ -62,7 +62,7 @@ TBBFLAG=-tbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-I/usr/local/Cellar/boost/1.65.1/include
+BOOSTFLAG=
 RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
 #RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
 PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG}
