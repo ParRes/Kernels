@@ -219,8 +219,8 @@ int main(int argc, char * argv[])
   prk::opencl::listPlatforms();
 #endif
 
-  try {
 #if SYCL_TRY_CPU_QUEUE
+  try {
     if (length<100000) {
         sycl::queue q(sycl::host_selector{});
         prk::SYCL::print_device_platform(q);
@@ -229,10 +229,22 @@ int main(int argc, char * argv[])
     } else {
         std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
     }
+  }
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+  }
+  catch (std::exception & e) {
+    std::cout << e.what() << std::endl;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+  }
 #endif
 
     // CPU requires spir64 target
 #if SYCL_TRY_CPU_QUEUE
+  try {
     if (1) {
         sycl::queue q(sycl::cpu_selector{});
         prk::SYCL::print_device_platform(q);
@@ -242,10 +254,22 @@ int main(int argc, char * argv[])
           run<double>(q, iterations, length);
         }
     }
+  }
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+  }
+  catch (std::exception & e) {
+    std::cout << e.what() << std::endl;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+  }
 #endif
 
     // NVIDIA GPU requires ptx64 target
 #if SYCL_TRY_GPU_QUEUE
+  try {
     if (1) {
         sycl::queue q(sycl::gpu_selector{});
         prk::SYCL::print_device_platform(q);
@@ -262,21 +286,18 @@ int main(int argc, char * argv[])
           }
         }
     }
-#endif
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
     prk::SYCL::print_exception_details(e);
-    return 1;
   }
   catch (std::exception & e) {
     std::cout << e.what() << std::endl;
-    return 1;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
-    return 1;
   }
+#endif
 
   return 0;
 }
