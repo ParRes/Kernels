@@ -109,10 +109,10 @@ transpose: transpose-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(CILKFLAGS) $(EXTRA_CLIBS) -o $@
 
 %.ispo: %.ispc
-	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) -o $@
+	$(ISPC) $(CPPFLAGS) $< $(ISPCFLAGS) --pic -o $@
 
-%-ispc: %-ispc.o %.ispo
-	$(CC) $(CFLAGS) $^ -o $@
+%-ispc: %.ispo %-ispc.c
+	$(CC) $(CFLAGS) $^ $(OMPFLAGS) -o $@
 
 %: %.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@

@@ -55,7 +55,6 @@
 
 #include "prk_util.h"
 
-//int ispc_num_threads(void);
 void initialize(const int order, double A[], double B[]);
 void transpose(const int order, double A[], double B[]);
 void transpose_tiled(const int order, double A[], double B[], const int tile_size);
@@ -63,7 +62,11 @@ void transpose_tiled(const int order, double A[], double B[], const int tile_siz
 int main(int argc, char * argv[])
 {
   printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
-  printf("ISPC Matrix transpose: B = A^T\n");
+#ifdef _OPENMP
+  printf("ISPC + OpenMP Matrix transpose: B = A^T\n");
+#else
+  printf("ISPC (single threaded) Matrix transpose: B = A^T\n");
+#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -113,9 +116,9 @@ int main(int argc, char * argv[])
   for (int iter = 0; iter<=iterations; iter++) {
     if (iter==1) trans_time = prk_wtime();
     if (tile_size<order) {
-        transpose_tiled(order,A,B,tile_size);
+      transpose_tiled(order,A,B,tile_size);
     } else {
-        transpose(order,A,B);
+      transpose(order,A,B);
     }
   }
   trans_time = prk_wtime() - trans_time;
@@ -155,4 +158,71 @@ int main(int argc, char * argv[])
   return 0;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
+// Signature of ispc-generated 'task' functions
+typedef void (*TaskFuncType)(void *data,
+    int threadIndex,
+    int threadCount,
+    int taskIndex,
+    int taskCount,
+    int taskIndex0,
+    int taskIndex1,
+    int taskIndex2,
+    int taskCount0,
+    int taskCount1,
+    int taskCount2);
+
+void ISPCLaunch(void **taskGroupPtr,
+                void *_func,
+                void *data,
+                int count0,
+                int count1,
+                int count2)
+{
+  const int count = count0 * count1 * count2;
+  TaskFuncType func = (TaskFuncType)_func;
+
+  OMP_PARALLEL()
+  {
+#ifdef _OPENMP
+    const int threadIndex = omp_get_thread_num();
+    const int threadCount = omp_get_num_threads();
+#else
+    const int threadIndex = 0;
+    const int threadCount = 1;
+#endif
+
+    OMP_FOR(schedule(runtime))
+    for (int i = 0; i < count; i++) {
+      int taskIndex0 = i % count0;
+      int taskIndex1 = (i / count0) % count1;
+      int taskIndex2 = i / (count0 * count1);
+
+      func(data,
+           threadIndex,
+           threadCount,
+           i,
+           count,
+           taskIndex0,
+           taskIndex1,
+           taskIndex2,
+           count0,
+           count1,
+           count2);
+    }
+  }
+}
+
+void ISPCSync(void *h)
+{
+  free(h);
+}
+
+void *ISPCAlloc(void **taskGroupPtr, int64_t size, int32_t alignment)
+{
+  *taskGroupPtr = aligned_alloc(alignment, size);
+  return *taskGroupPtr;
+}
