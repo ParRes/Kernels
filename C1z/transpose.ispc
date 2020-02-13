@@ -13,6 +13,9 @@ task void initialize_task(
   uniform const int i = taskIndex0;
   varying const int j = (taskIndex1 * programCount) + programIndex;
 
+  if (j >= order)
+    return;
+
   A[i * order + j] = (double)(i * order + j);
   B[i * order + j] = 0.0;
 }
@@ -21,7 +24,8 @@ export void initialize(
     uniform const int order, uniform double A[], uniform double B[])
 {
 #if USE_TASKS
-  launch[order, order / programCount] initialize_task(order, A, B);
+  uniform const int N = ceil(order / (uniform float)programCount);
+  launch[order, N] initialize_task(order, A, B);
 #else
   foreach (i = 0 ... order, j = 0 ... order) {
     A[i * order + j] = (double)(i * order + j);
@@ -36,6 +40,9 @@ task void transpose_task(
   uniform const int i = taskIndex0;
   varying const int j = (taskIndex1 * programCount) + programIndex;
 
+  if (j >= order)
+    return;
+
   B[i * order + j] += A[j * order + i];
   A[j * order + i] += 1.0;
 }
@@ -44,7 +51,8 @@ export void transpose(
     uniform const int order, uniform double A[], uniform double B[])
 {
 #if USE_TASKS
-  launch[order, order / programCount] transpose_task(order, A, B);
+  uniform const int N = ceil(order / (uniform float)programCount);
+  launch[order, N] transpose_task(order, A, B);
 #else
   foreach (i = 0 ... order, j = 0 ... order) {
     B[i * order + j] += A[j * order + i];
