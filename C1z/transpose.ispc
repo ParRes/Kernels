@@ -7,31 +7,13 @@
 
 #define USE_TASKS 1
 
-task void initialize_task(
-    uniform const int order, uniform double A[], uniform double B[])
-{
-  uniform const int i = taskIndex0;
-  varying const int j = (taskIndex1 * programCount) + programIndex;
-
-  if (j >= order)
-    return;
-
-  A[i * order + j] = (double)(i * order + j);
-  B[i * order + j] = 0.0;
-}
-
 export void initialize(
     uniform const int order, uniform double A[], uniform double B[])
 {
-#if USE_TASKS
-  uniform const int N = ceil(order / (uniform float)programCount);
-  launch[order, N] initialize_task(order, A, B);
-#else
   foreach (i = 0 ... order, j = 0 ... order) {
     A[i * order + j] = (double)(i * order + j);
     B[i * order + j] = 0.0;
   }
-#endif
 }
 
 task void transpose_task(
