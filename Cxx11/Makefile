@@ -242,6 +242,7 @@ clean:
 	-rm -f *.o
 	-rm -f *.s
 	-rm -f *.ll # Coriander
+	-rm -f pgipar* # PGI?
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
