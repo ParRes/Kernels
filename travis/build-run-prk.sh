@@ -465,11 +465,11 @@ case "$PRK_TARGET" in
         # Boost.Compute runs after OpenCL, and only available in Travis with MacOS.
         case "$os" in
             FreeBSD)
-                echo "BOOSTFLAG=-DUSE_BOOST -I/usr/local/include" >> common/make.defs
+                echo "BOOSTFLAG=-I/usr/local/include" >> common/make.defs
                 echo "RANGEFLAG=-DUSE_BOOST_IRANGE -I/usr/local/include" >> common/make.defs
                 ;;
             *)
-                echo "BOOSTFLAG=-DUSE_BOOST" >> common/make.defs
+                echo "BOOSTFLAG=-I/usr/include" >> common/make.defs
                 echo "RANGEFLAG=-DUSE_RANGES_TS -I${TRAVIS_ROOT}/range-v3/include" >> common/make.defs
                 ;;
         esac
