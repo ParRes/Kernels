@@ -69,7 +69,7 @@ OPENMPFLAG+=-L${LLVM_ROOT}/lib
 # CodePlay ComputeCpp
 #SYCLDIR=/opt/sycl/latest
 #SYCLCXX=${SYCLDIR}/bin/compute++
-#SYCLFLAG=-DUSE_SYCL -sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+#SYCLFLAG=-sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
 #SYCLFLAG+=-std=c++14 -O3
 # This makes a huge difference in e.g. nstream...
 #SYCLFLAG+=-no-serial-memop
@@ -87,11 +87,6 @@ OPENMPFLAG+=-L${LLVM_ROOT}/lib
 SYCLDIR=./triSYCL
 SYCLCXX=${CXX} $(DEFAULT_OPT_FLAGS)
 SYCLFLAG=-std=c++17 -I$(SYCLDIR)/include -DTRISYCL
-# ProGTX
-# https://github.com/ProGTX/sycl-gtx
-#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
-#SYCLCXX=${CXX} ${OPENMPFLAG}
-#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # OCCA
 #
