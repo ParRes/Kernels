@@ -101,9 +101,9 @@ SYCLFLAG=-std=c++17 -I$(SYCLDIR)/include -DTRISYCL
 #
 #TBBDIR=/usr/lib/x86_64-linux-gnu
 TBBDIR=/usr/local/Cellar/tbb/2019_U8
-TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #TBBDIR=/opt/intel/compilers_and_libraries_2019.2.159/linux/tbb
-#TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -L${TBBDIR}/lib/intel64_lin/gcc4.7 -ltbb
+#TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -L${TBBDIR}/lib/intel64_lin/gcc4.7 -ltbb
 #
 # Parallel STL, Boost, etc.
 #
