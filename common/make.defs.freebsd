@@ -54,7 +54,7 @@ OPENCLFLAG+=-Wno-deprecated-declarations
 # TBB
 #
 TBBDIR=/usr/local
-TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #

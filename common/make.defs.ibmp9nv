@@ -41,7 +41,7 @@ OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL -Wno-deprecated-declarat
 #
 TBBDIR=${HOME}/TBB
 TBBLIBDIR=${HOME}/TBB/build/linux_ppc64le_xl_cc4.8.5_libc2.17_kernel4.14.0_release
-TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBLIBDIR} -ltbb
+TBBFLAG=-I${TBBDIR}/include -L${TBBLIBDIR} -ltbb
 #
 # Parallel STL, Boost, etc.
 #
