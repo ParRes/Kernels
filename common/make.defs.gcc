@@ -57,11 +57,7 @@ METALFLAG=-framework MetalPerformanceShaders
 #SYCLDIR=./triSYCL
 #SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
 #SYCLFLAG=-std=c++17 -I$(SYCLDIR)/include -DTRISYCL
-# ProGTX
-# https://github.com/ProGTX/sycl-gtx
-#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
-#SYCLCXX=${CXX} ${OPENMPFLAG}
-#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
+#
 METALFLAG=-framework MetalPerformanceShaders
 #
 # OCCA
