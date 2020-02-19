@@ -10,7 +10,10 @@ case "$os" in
     Darwin)
         echo "Mac"
         brew update
-        brew upgrade python numpy || brew install python numpy
+        brew unlink python@2 || brew uninstall python@2
+        brew upgrade python || brew install python
+        brew upgrade numpy || brew install numpy
+        brew link --overwrite python
         ;;
     Linux)
         echo "Linux"
