@@ -281,6 +281,7 @@ FORTRAN/transpose-coarray
 FORTRAN/transpose-openmp
 FORTRAN/transpose-openmp-target
 FORTRAN/transpose-pretty
+FORTRAN/transpose-ornlacc
 FORTRAN/transpose-taskloop-openmp
 FORTRAN/transpose-tasks-openmp
 FORTRAN/transpose-ornlacc
