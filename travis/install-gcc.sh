@@ -10,9 +10,9 @@ if [ "${CC}" = "gcc" ] || [ "${CXX}" = "g++" ] ; then
     case "$os" in
         Darwin)
             echo "Mac"
-            brew update
+            brew update || true
             # this is 5.3.0 or later
-            brew install gcc --force-bottle
+            brew upgrade gcc || brew install gcc --force-bottle || true
             ;;
         DisableLinux)
             echo "Linux"

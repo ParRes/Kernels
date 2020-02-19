@@ -99,7 +99,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
                  int Num_procs, long L_width_bg, 
                  long L_istart_bg, long L_iend_bg, long L_jstart_bg, long L_jend_bg,
                  long L_istart_r, long L_iend_r, long L_jstart_r, long L_jend_r,
-                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, int comm_r,
+                 long G_istart_r, long G_jstart_r, MPI_Comm comm_bg, MPI_Comm comm_r,
                  long L_istart_r_gross, long L_iend_r_gross, 
                  long L_jstart_r_gross, long L_jend_r_gross, 
                  long L_width_r_true_gross, long L_istart_r_true_gross, long L_iend_r_true_gross,
@@ -646,7 +646,7 @@ int main(int argc, char ** argv) {
     }
 
     if (L_width_bg < RADIUS || L_height_bg < RADIUS) {
-      printf("ERROR: rank %d's BG work tile smaller than stencil radius: %d\n",
+      printf("ERROR: rank %d's BG work tile smaller than stencil radius: %ld\n",
              my_ID, MIN(L_width_bg, L_height_bg));
       error = 1;
       goto ENDOFBG;
@@ -871,7 +871,7 @@ int main(int argc, char ** argv) {
     /* FIX THIS; don't want to bail out, just because a rank doesn't have a large
        enough refinement tile to work with. Can merge until tile is large enough */
     if (L_width_r_true[g] < RADIUS || L_height_r_true[g] < RADIUS) {
-      printf("ERROR: rank %d's work tile %d smaller than stencil radius: %d\n", 
+      printf("ERROR: rank %d's work tile %d smaller than stencil radius: %ld\n",
 	     my_ID, g, MIN(L_width_r_true[g],L_height_r_true[g]));
       error = 1;
     }

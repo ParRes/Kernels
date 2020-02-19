@@ -1,28 +1,25 @@
 sudo: false
 language: cpp
+python:
+  - "3.5"
 env:
   matrix:
   - PRK_TARGET=allserial
+  - PRK_TARGET=allc1z
   - PRK_TARGET=allcxx
   - PRK_TARGET=allpython
-  - PRK_TARGET=alloctave
+  # Octave is working but it takes forever to brew (~20 minutes).
+  #- PRK_TARGET=alloctave
   - PRK_TARGET=alljulia
   - PRK_TARGET=allrust
   - PRK_TARGET=allopenmp
-  - PRK_TARGET=allfortranserial
-  - PRK_TARGET=allfortranopenmp
-  - PRK_TARGET=allfortrantarget
-  - PRK_TARGET=allfortranpretty
-  - PRK_TARGET=allfortrancoarray
-  - PRK_TARGET=allmpi1
-  - PRK_TARGET=allmpirma
-  - PRK_TARGET=allmpishm
-  - PRK_TARGET=allmpiomp
+  - PRK_TARGET=allfortran
+  - PRK_TARGET=allmpi
   - PRK_TARGET=allshmem
   - PRK_TARGET=allampi
   - PRK_TARGET=allfgmpi
   - PRK_TARGET=allcharm++
-  - PRK_TARGET=allgrappa
+  #- PRK_TARGET=allgrappa
   - PRK_TARGET=allupc UPC_IMPL=gupc
   - PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
   # This works but we don't need to test it.
@@ -49,38 +46,40 @@ os:
 compiler:
 - gcc
 - clang
-#- touch ~/use-intel-compilers ; gcc
 matrix:
   exclude:
-  # Intel for Mac not setup yet
+  # There is nothing inherently wrong with GCC@OSX but Travis CI MacOS throughput is low, so focus on Clang@OSX.
   - os: osx
-    compiler: touch ~/use-intel-compilers ; gcc
+    compiler: gcc
+    env: PRK_TARGET=allserial
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allc1z
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allcxx
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allshmem
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allampi
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allcharm++
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allmpi
   # Clang does not support OpenMP yet and not willing to build from source.  Save this for Mac where we can Brew it.
   - os: linux
     compiler: clang
     env: PRK_TARGET=allopenmp
-  - os: linux
-    compiler: clang
-    env: PRK_TARGET=allmpiomp
-  # Mac/Clang OpenMP broken because Brew no longer supports "clang-omp"
-  - os: osx
-    compiler: clang
-    env: PRK_TARGET=allopenmp
-  - os: osx
-    compiler: clang
-    env: PRK_TARGET=allmpiomp
   # dealing with broken GCC on Mac not worth it here
   - os: osx
     compiler: gcc
     env: PRK_TARGET=allopenmp
-  - os: osx
-    compiler: gcc
-    env: PRK_TARGET=allmpiomp
   # Clang UPC requires source build, which probably takes too long
   - compiler: clang
-    env: PRK_TARGET=allupc UPC_IMPL=gupc
-  # Intel does not make sense with Intrepid GCC/Clang UPC
-  - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allupc UPC_IMPL=gupc
   # Source build impossible (too much time+stdout)
   - os: osx
@@ -104,15 +103,7 @@ matrix:
     env: PRK_TARGET=allhpx3
   # LLVM Fortran is not ready.
   - compiler: clang
-    env: PRK_TARGET=allfortranserial
-  - compiler: clang
-    env: PRK_TARGET=allfortranopenmp
-  - compiler: clang
-    env: PRK_TARGET=allfortrantarget
-  - compiler: clang
-    env: PRK_TARGET=allfortranpretty
-  - compiler: clang
-    env: PRK_TARGET=allfortrancoarray
+    env: PRK_TARGET=allfortran
   # Skip Linux because we rely on Homebrew for these
   - os: linux
     env: PRK_TARGET=alloctave
@@ -128,22 +119,6 @@ matrix:
     env: PRK_TARGET=alljulia
   - compiler: gcc
     env: PRK_TARGET=allrust
-  # ICC
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allpython
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=alloctave
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=alljulia
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allrust
-  # MPI implementations of Transpose hang with Intel compilers (why?!?!)
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpi1
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpiomp
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpishm
   # UPC over MPICH on Mac hangs - may be async progress issue
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
@@ -152,105 +127,77 @@ matrix:
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
-  # Grappa with Intel unlikely to succeed, especially if Clang doesn't.
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allgrappa
-  allow_failures:
-  ## will fail if numpy package cannot be acquired via apt
-  #- env: PRK_TARGET=allpython
-  #- os: linux
-  #  env: PRK_TARGET=alljulia
-  ## GUPC will fail when libnuma cannot be acquired via apt
-  #- env: PRK_TARGET=allupc UPC_IMPL=gupc
-  # we have lots of Grappa issues...
+  # Charm++ on Mac is not working for us.
+  - os: osx
+    env: PRK_TARGET=allcharm++
+  # We have lots of Grappa issues.  Need to resolve outside of Travis.
   - env: PRK_TARGET=allgrappa
   # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
   - os: osx
     env: PRK_TARGET=allfgmpi
+  # SOS@OFI has not worked on MacOS in a while :-(
+  - os: osx
+    compiler: clang
+    env: PRK_TARGET=allshmem
+  allow_failures:
+  # Travis trusty breaks this
+  - os: linux
+    env: PRK_TARGET=allupc UPC_IMPL=gupc
+  # Travis tests failing due to runtime problems
+  - os: linux
+    env: PRK_TARGET=allampi
   - os: linux
     env: PRK_TARGET=allfgmpi
-  # Linux may not have GCC-6...
-  #- os: linux
-  #  compiler: gcc
-  #  env: PRK_TARGET=allfortrancoarray
-  # BUPC has trouble with flags
-  #- os: linux
-  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
-  #- os: linux
-  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
-  #- os: linux
-  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
-  # Travis tests failing due to runtime problems
-  - os: osx
-    env: PRK_TARGET=allampi
-  - os: linux
-    env: PRK_TARGET=allampi
-  - os: osx
-    env: PRK_TARGET=allcharm++
   - os: linux
     compiler: clang
-    env: PRK_TARGET=allampi
+    env: PRK_TARGET=allmpi
+  - os: linux
+    env: PRK_TARGET=allcharm++
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
-    # clang-3.8 comes from this
-    - llvm-toolchain-precise
-    #  Boost is for Grappa and HPX
-    #- boost-latest
+    # works on Precise and Trusty
+    # see https://docs.travis-ci.com/user/languages/c/ for details
+    - llvm-toolchain-precise-3.8
+    #  Boost is for Grappa, HPX, C++ rangefor, pstl
+    - boost-latest
     packages:
     - python-numpy
-    - gcc-5
-    - g++-5
-    - gfortran-5
-    - gcc-6
-    - g++-6
-    - gfortran-6
+    - python-scipy
+    - gcc-7
+    - g++-7
+    - gfortran-7
     # Required by GUPC
     - libnuma-dev
     # This should provide OpenMP
     - clang-3.8
+    - clang-3.9
     # Grappa and HPX use CMake
     - cmake
-    # Boost is for Grappa and HPX-3 - reactivate with them
-    # Grappa needs these (according to their .travis.yml)
-    #- libboost-date-time1.55-dev
-    #- libboost-exception1.55-dev
-    #- libboost-filesystem1.55-dev
-    #- libboost-iostreams1.55-dev
-    #- libboost-math1.55-dev
-    #- libboost-random1.55-dev
-    #- libboost-regex1.55-dev
-    #- libboost-serialization1.55-dev
-    #- libboost-signals1.55-dev
-    #- libboost-system1.55-dev
-    #- libboost-test1.55-dev
-    #- libboost-timer1.55-dev
-    # HPX-3 needs these - not whitelisted yet
-    #- libboost_chrono1.55-dev
-    #- libboost_program_options1.55-dev
-    #- libboost_thread1.55-dev
+    # C++ code needs range headers
+    - libboost-all-dev
 before_install:
-- pwd
-- export TRAVIS_HOME=$PWD
-- export TRAVIS_ROOT=$TRAVIS_HOME/PRK-deps
-- mkdir -p $TRAVIS_ROOT
-- sh ./travis/install-intel.sh $TRAVIS_ROOT $PRK_TARGET
-- source ~/.bashrc
+  - pwd
+  - export TRAVIS_HOME=$PWD
+  - export TRAVIS_ROOT=$TRAVIS_HOME/PRK-deps
+  - mkdir -p $TRAVIS_ROOT
+  #- sh ./travis/install-intel.sh $TRAVIS_ROOT $PRK_TARGET
+  #- source ~/.bashrc
 install:
-- export PATH=$TRAVIS_ROOT/bin:$PATH
-- export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
-- export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
-- sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
+  - export PATH=$TRAVIS_ROOT/bin:$PATH
+  - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
+  - export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
+  - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
 before_script:
-- pwd
+  - pwd
 script:
-- sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
+  - sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
 after_failure:
-- echo "Sad panda"
-- find . -name config.log -exec grep -L "configure: exit 0" {} ";" | xargs cat
-#- find . -name CMakeOutput.log -exec cat {} ";"
-#- find . -name CMakeError.log -exec cat {} ";"
+  - echo "Sad panda"
+  - find . -name config.log -exec grep -L "configure: exit 0" {} ";" | xargs cat
+  #- find . -name CMakeOutput.log -exec cat {} ";"
+  #- find . -name CMakeError.log -exec cat {} ";"
 notifications:
   email:
     recipients:

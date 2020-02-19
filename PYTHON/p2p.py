@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Copyright (c) 2015, Intel Corporation
 #
@@ -51,7 +52,11 @@
 # *******************************************************************
 
 import sys
-from timeit import default_timer as timer
+print('Python version = ', str(sys.version_info.major)+'.'+str(sys.version_info.minor))
+if sys.version_info >= (3, 3):
+    from time import process_time as timer
+else:
+    from timeit import default_timer as timer
 
 def main():
 

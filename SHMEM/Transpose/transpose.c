@@ -111,6 +111,8 @@ o The original and transposed matrices are called A and B
 #include <par-res-kern_general.h>
 #include <par-res-kern_shmem.h>
 
+#include <math.h>
+
 #define A(i,j)        A_p[(i+istart)+order*(j)]
 #define B(i,j)        B_p[(i+istart)+order*(j)]
 #define Work_in(phase, i,j)  Work_in_p[phase-1][i+Block_order*(j)]
@@ -175,7 +177,6 @@ int main(int argc, char ** argv)
   trans_time       = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double));
   arguments        = (int *)    prk_shmem_align(prk_get_alignment(),3*sizeof(int));
   abserr           = (double *) prk_shmem_align(prk_get_alignment(),2*sizeof(double));
-  abserr_tot       = abserr + 1;
   if (!pSync_bcast || !pSync_reduce || !pWrk || !local_trans_time ||
       !trans_time || !arguments || !abserr) {
     printf("Rank %d could not allocate scalar work space on symm heap\n", my_ID);
@@ -417,33 +418,35 @@ int main(int argc, char ** argv)
 
   abserr[0] = 0.0;
   istart = 0;
-  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
+  double addit = 0.5 * ( (iterations+1.) * (double)iterations );
   for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
-      abserr[0] += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
+      abserr[0] += fabs(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
   }
 
   shmem_barrier_all();
-  shmem_double_sum_to_all(abserr_tot, abserr, 1, 0, 0, Num_procs, pWrk, pSync_reduce);
+  shmem_double_sum_to_all(&(abserr[1]), &(abserr[0]), 1, 0, 0, Num_procs, pWrk, pSync_reduce);
 
-  if (my_ID == root) {
-    if (abserr_tot[0] <= epsilon) {
+  if (abserr[1] <= epsilon) {
+    avgtime = trans_time[0]/(double)iterations;
+    if (my_ID == root) {
       printf("Solution validates\n");
-      avgtime = trans_time[0]/(double)iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
-#if VERBOSE
-      printf("Summed errors: %f \n", abserr[0]);
+#ifdef VERBOSE
+      printf("Summed errors: %30.15lf \n", abserr[1]);
 #endif
     }
-    else {
-      printf("ERROR: Aggregate squared error %e exceeds threshold %e\n", abserr[0], epsilon);
-      error = 1;
+  } else {
+    error = 1;
+    if (my_ID == root) {
+      printf("ERROR: Aggregate squared error %30.15lf exceeds threshold %30.15lf\n", abserr[1], epsilon);
     }
+    fflush(stdout);
+    printf("ERROR: PE=%d, error = %30.15lf\n", my_ID, abserr[0]);
   }
 
   bail_out(error);
 
-  if (Num_procs>1) 
-    {
+  if (Num_procs>1) {
 #if !BARRIER_SYNCH
       prk_shmem_free(recv_flag);
       prk_shmem_free(send_flag);

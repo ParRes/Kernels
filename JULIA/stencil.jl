@@ -61,6 +61,21 @@
 #
 # *******************************************************************
 
+function do_add(A, n)
+    for i=1:n
+        for j=1:n
+            A[i,j] += 1.0
+        end
+    end
+end
+
+function do_init(A, n)
+    for i=1:n
+        for j=1:n
+            A[i,j] = i+j-2
+        end
+    end
+end
 
 function do_star(A, W, B, r, n)
     for j=r:n-r-1
@@ -151,38 +166,37 @@ function main()
     if pattern == "star"
         stencil_size = 4*r+1
         for i=1:r
-            W[r+1,r+i+1] = +1./(2*i*r)
-            W[r+i+1,r+1] = +1./(2*i*r)
-            W[r+1,r-i+1] = -1./(2*i*r)
-            W[r-i+1,r+1] = -1./(2*i*r)
+            W[r+1,r+i+1] =  1.0/(2*i*r)
+            W[r+i+1,r+1] =  1.0/(2*i*r)
+            W[r+1,r-i+1] = -1.0/(2*i*r)
+            W[r-i+1,r+1] = -1.0/(2*i*r)
         end
     else
         stencil_size = (2*r+1)^2
         for j=1:r
             for i=-j+1:j-1
-                W[r+i+1,r+j+1] = +1./(4*j*(2*j-1)*r)
-                W[r+i+1,r-j+1] = -1./(4*j*(2*j-1)*r)
-                W[r+j+1,r+i+1] = +1./(4*j*(2*j-1)*r)
-                W[r-j+1,r+i+1] = -1./(4*j*(2*j-1)*r)
+                W[r+i+1,r+j+1] =  1.0/(4*j*(2*j-1)*r)
+                W[r+i+1,r-j+1] = -1.0/(4*j*(2*j-1)*r)
+                W[r+j+1,r+i+1] =  1.0/(4*j*(2*j-1)*r)
+                W[r-j+1,r+i+1] = -1.0/(4*j*(2*j-1)*r)
             end
-            W[r+j+1,r+j+1]    = +1./(4*j*r)
-            W[r-j+1,r-j+1]    = -1./(4*j*r)
+            W[r+j+1,r+j+1]    =  1.0/(4*j*r)
+            W[r-j+1,r-j+1]    = -1.0/(4*j*r)
         end
     end
 
-    A = zeros(Float64,n,n)
-    for i=1:n
-        for j=1:n
-            A[i,j] = i+j-2
-        end
-    end
-    B = zeros(Float64,n,n)
-
+    precompile(do_init, (Array{Float64,2}, Int64))
     if pattern == "star"
         precompile(do_star, (Array{Float64,2}, Array{Float64,2}, Array{Float64,2}, Int64, Int64))
     else
         precompile(do_stencil, (Array{Float64,2}, Array{Float64,2}, Array{Float64,2}, Int64, Int64))
     end
+    precompile(do_add, (Array{Float64,2}, Int64))
+
+    A = zeros(Float64,n,n)
+    B = zeros(Float64,n,n)
+
+    do_init(A, n)
 
     t0 = time_ns()
 
@@ -192,7 +206,7 @@ function main()
         else
             do_stencil(A, W, B, r, n)
         end
-        A += 1.0
+        do_add(A, n)
     end
 
     t1 = time_ns()

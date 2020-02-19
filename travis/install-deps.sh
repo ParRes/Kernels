@@ -12,7 +12,14 @@ fi
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 
-MPI_IMPL=mpich
+case ${TRAVIS_OS_NAME} in
+    osx)
+        MPI_IMPL=openmpi
+        ;;
+    linux)
+        MPI_IMPL=mpich
+        ;;
+esac
 
 echo "PWD=$PWD"
 
@@ -32,48 +39,73 @@ case "$PRK_TARGET" in
         echo "Rust"
         sh ./travis/install-rust.sh $TRAVIS_ROOT
         ;;
-    allcxx)
-        echo "C++11"
+    allc1z)
+        echo "C1z"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
             sh ./travis/install-gcc.sh $TRAVIS_ROOT
         fi
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
             sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
         fi
-        sh ./travis/install-tbb.sh $TRAVIS_ROOT
+        #if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
+        #    sh ./travis/install-musl.sh $TRAVIS_ROOT
+        #fi
         ;;
-    allfortran*)
+    allcxx)
+        echo "C++11"
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
+            sh ./travis/install-gcc.sh $TRAVIS_ROOT
+        fi
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+            sh ./travis/install-clang.sh $TRAVIS_ROOT
+        fi
+        sh ./travis/install-tbb.sh $TRAVIS_ROOT
+        sh ./travis/install-pstl.sh $TRAVIS_ROOT
+        sh ./travis/install-ranges.sh $TRAVIS_ROOT
+        # Boost is whitelisted and obtained from package manager
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            sh ./travis/install-boost.sh $TRAVIS_ROOT
+        fi
+        # CMake 3.10 or higher is required.
+        sh ./travis/install-cmake.sh $TRAVIS_ROOT
+        #sh ./travis/install-raja.sh $TRAVIS_ROOT
+        sh ./travis/install-kokkos.sh $TRAVIS_ROOT
+        #sh ./travis/install-occa.sh $TRAVIS_ROOT
+        sh ./travis/install-sycl.sh $TRAVIS_ROOT
+        ;;
+    allfortran)
         echo "Fortran"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
-            set +e
-            brew update
-            p=gcc
-            if [ "x`brew ls --versions $p`" = "x" ] ; then
-                echo "$p is not installed - installing it"
-                brew install $p
-            else
-                echo "$p is installed - upgrading it"
-                brew upgrade $p
-            fi
-            brew list gcc
-            set -e
+            brew update || true
+            brew upgrade gcc || brew install gcc || true
+            #
+            # Workaround Homebrew issues in Travis CI...
+            #
+            #==> Installing gcc
+            #==> Downloading https://homebrew.bintray.com/bottles/gcc-7.2.0.sierra.bottle.tar.gz
+            #==> Pouring gcc-7.2.0.sierra.bottle.tar.gz
+            #Error: The `brew link` step did not complete successfully
+            #The formula built, but is not symlinked into /usr/local
+            #Could not symlink include/c++
+            #Target /usr/local/include/c++
+            #already exists. You may want to remove it:
+            #  rm '/usr/local/include/c++'
+            brew link --overwrite --dry-run gcc
+            brew link --overwrite gcc || true
         fi
-        if [ "${PRK_TARGET}" = "allfortrancoarray" ] && [ "${CC}" = "gcc" ] ; then
+        if [ "${CC}" = "gcc" ] ; then
+            sh ./travis/install-cmake.sh $TRAVIS_ROOT
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
         fi
         ;;
     allopenmp)
         echo "OpenMP"
         if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
-            sh ./travis/install-clang.sh $TRAVIS_ROOT omp
+            sh ./travis/install-clang.sh $TRAVIS_ROOT 3.9
         fi
         ;;
-    allmpi*)
-        echo "Any normal MPI"
-        # only install clang-omp when necessary
-        if [ "${PRK_TARGET}" = "allmpiomp" ] ; then
-            sh ./travis/install-clang.sh $TRAVIS_ROOT omp
-        fi
+    allmpi)
+        echo "Traditional MPI"
         # install except when Intel MPI used
         if [ ! -f ~/use-intel-compilers ] ; then
             sh ./travis/install-mpi.sh $TRAVIS_ROOT $MPI_IMPL 0

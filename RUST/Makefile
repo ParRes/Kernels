@@ -1,13 +1,3 @@
-include ../common/RUST.defs
-include ../common/PRKVERSION
-
-ifndef RADIUS
-  RADIUS=2
-endif
-
-RUSTC    = rustc
-RCFLAGS  = -g
-
 # Enable verbose printing
 #RCFLAGS += --cfg "VERBOSE"
 
@@ -18,17 +8,15 @@ RCFLAGS  = -g
 # Stencil shape: star is default, uncomment to switch to grid
 #RCFLAGS += --cfg grid
 
-.PHONY: all clean run
+.PHONY: all clean
 
-all: p2p stencil transpose
-
-%: %.rs
-	$(RUSTC) $(RCFLAGS) $< -o $@
+all:
+	cd p2p && cargo build
+	cd stencil && cargo build
+	cd transpose && cargo build
 
 clean:
-	-rm -f *.o
-	-rm -f *.optrpt
-	-rm -f *.dwarf
-	-rm -rf *.dSYM
-	-rm -f p2p stencil transpose
+	cd p2p && cargo clean
+	cd stencil && cargo clean
+	cd transpose && cargo clean
 
