@@ -33,7 +33,7 @@ case $CXX in
         fi
         ;;
     clang++)
-        for version in "-5" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
+        for version in "-11" "-10" "-9" "-8" "-7" "-6" "-5" "" ; do
           if [ -f "`which ${CXX}${version}`" ]; then
               export PRK_CXX="${CXX}${version}"
               echo "Found C++: $PRK_CXX"
@@ -53,10 +53,9 @@ if [ ! -d "$TRAVIS_ROOT/kokkos" ]; then
     mkdir build
     cd build
     ../generate_makefile.bash --prefix=${TRAVIS_ROOT}/kokkos \
-                              --compiler=${PRK_CXX} ${KOKKOS_BACKEND} \
-                              --make-j=2
-    make
-    make install
+                              --compiler=${PRK_CXX} ${KOKKOS_BACKEND}
+    make -j2
+    make -j2 install
 else
     echo "KOKKOS installed..."
     find $TRAVIS_ROOT/kokkos -name Kokkos_Core.hpp
