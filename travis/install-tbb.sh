@@ -6,8 +6,8 @@ set -x
 TRAVIS_ROOT="$1"
 
 WEBSITE=https://github.com/01org/tbb/releases/download
-VERSION=2017_U7
-DIRECTORY=tbb2017_20170604oss
+VERSION=2018_U1
+DIRECTORY=tbb2018_20170919oss
 
 case "${TRAVIS_OS_NAME}" in
     osx)
@@ -23,8 +23,5 @@ case "${TRAVIS_OS_NAME}" in
         ;;
 esac
 export TBBROOT=${PWD}/${DIRECTORY}
-ls -l ${TBBROOT}
 mv ${TBBROOT} ${TRAVIS_ROOT}/tbb
-ls -l ${TRAVIS_ROOT}/tbb
-find ${TRAVIS_ROOT}/tbb -name "*.h"
-find ${TRAVIS_ROOT}/tbb -name "libtbb*"
+find ${TRAVIS_ROOT}/tbb -name "libtbb.so"

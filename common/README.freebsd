@@ -1,0 +1,26 @@
+This is a rather terse summary of what is required to build the PRKs on FreeBSD.
+
+# Necessary Packages
+
+BSD make isn't GNU make, which the PRK assumes.
+
+sudo pkg install gmake
+
+I assume GCC works fine as it does on Linux but I tested LLVM.
+OpenMP target is not supported by LLVM 6.0.1 so those compilations will fail.
+
+sudo pkg install clang flang libpgmath
+
+## C++ dependencies
+
+sudo pkg install opencl-2.2_1
+sudo pkg install devel/clinfo devel/ocl-icd lang/beignet lang/pocl
+sudo pkg install tbb
+sudo pkg install boost-all
+
+You will need to acquire triSYCL and Intel Parallel STL via GitHub.
+One minor issue with triSYCL was addressed by patching triSYCL.
+I suspect this issue disappears with LLVM 7.0 but you can look up
+the issue with `std::optional` on GitHub if necessary.
+
+RAJA and Kokkos were not tested.

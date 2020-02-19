@@ -31,7 +31,7 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     esac
 
     cd $TRAVIS_ROOT
-    git clone --depth 10 https://github.com/uwsampa/grappa.git grappa-source
+    git clone --depth 1 https://github.com/uwsampa/grappa.git grappa-source
     cd grappa-source
     # DEBUG
     #find /usr -name gcc\* -type f
@@ -58,7 +58,7 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
                  #-DMPI_CXX_LIBRARIES="-lmpicxx -lmpi" \
                  #-DMPI_CXX_INCLUDE_PATH="$MPI_ROOT/include" \
     fi
-    make -j4
+    make -j2
     make install
 else
     echo "Grappa installed..."

@@ -53,75 +53,20 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
-struct Initialize
-{
-    public:
-        void operator()( const tbb::blocked_range2d<int>& r ) const {
-            for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                    A_[i*n_+j] = static_cast<double>(i*n_+j);
-                    B_[i*n_+j] = 0.0;
-                }
-            }
-        }
-
-        Initialize(size_t n, std::vector<double> & A, std::vector<double> & B) : n_(n), A_(A), B_(B) { }
-
-    private:
-        size_t n_;
-        std::vector<double> & A_;
-        std::vector<double> & B_;
-
-};
-
-struct Transpose
-{
-    public:
-        void operator()( const tbb::blocked_range2d<int>& r ) const {
-            for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {
-                    B_[i*n_+j] += A_[j*n_+i];
-                    A_[j*n_+i] += 1.0;
-                }
-            }
-        }
-
-        Transpose(size_t n, std::vector<double> & A, std::vector<double> & B) : n_(n), A_(A), B_(B) { }
-
-    private:
-        size_t n_;
-        std::vector<double> & A_;
-        std::vector<double> & B_;
-
-};
-
-void ParallelInitialize(size_t order, size_t tile_size, std::vector<double> & A, std::vector<double> & B)
-{
-    Initialize t(order, A, B);
-    const tbb::blocked_range2d<int> r(0, order, tile_size, 0, order, tile_size);
-    parallel_for(r,t);
-}
-
-void ParallelTranspose(size_t order, size_t tile_size, std::vector<double> & A, std::vector<double> & B)
-{
-    Transpose t(order, A, B);
-    const tbb::blocked_range2d<int> r(0, order, tile_size, 0, order, tile_size);
-    parallel_for(r,t);
-}
+#include "prk_tbb.h"
 
 int main(int argc, char * argv[])
 {
-  //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
-  //////////////////////////////////////////////////////////////////////
-
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/TBB Matrix transpose: B = A^T" << std::endl;
 
+  //////////////////////////////////////////////////////////////////////
+  // Read and test input parameters
+  //////////////////////////////////////////////////////////////////////
+
   int iterations;
-  size_t order;
-  size_t tile_size;
+  int order;
+  int tile_size;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order> [tile size]";
@@ -134,13 +79,15 @@ int main(int argc, char * argv[])
       }
 
       // order of a the matrix
-      order = std::atol(argv[2]);
+      order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
+      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        throw "ERROR: matrix dimension too large - overflow risk";
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>4) ? std::atol(argv[3]) : 32;
+      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
   }
@@ -149,32 +96,47 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  if (tile_size < order) {
-      std::cout << "Tile size             = " << tile_size << std::endl;
-  } else {
-      std::cout << "Untiled" << std::endl;
-  }
+  const char* envvar = std::getenv("TBB_NUM_THREADS");
+  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
+  tbb::task_scheduler_init init(num_threads);
 
-  tbb::task_scheduler_init init(tbb::task_scheduler_init::automatic);
+  std::cout << "Number of threads    = " << num_threads << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
+  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
-
-  std::vector<double> A;
-  std::vector<double> B;
-  A.resize(order*order);
-  B.resize(order*order);
 
   auto trans_time = 0.0;
 
-  ParallelInitialize(order, tile_size, A, B);
+  prk::vector<double> A(order*order);
+  prk::vector<double> B(order*order);
+
+  tbb::blocked_range2d<int> range(0, order, tile_size, 0, order, tile_size);
+  tbb::parallel_for( range, [&](decltype(range)& r) {
+                     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                         PRAGMA_SIMD
+                         for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                             A[i*order+j] = static_cast<double>(i*order+j);
+                             B[i*order+j] = 0.0;
+                         }
+                     }
+                   }, tbb_partitioner);
 
   for (auto iter = 0; iter<=iterations; iter++) {
     if (iter==1) trans_time = prk::wtime();
-    ParallelTranspose(order, tile_size, A, B);
+    tbb::parallel_for( range, [&](decltype(range)& r) {
+                       for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                           PRAGMA_SIMD
+                           for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                B[i*order+j] += A[j*order+i];
+                                A[j*order+i] += 1.0;
+                           }
+                       }
+                     }, tbb_partitioner);
   }
   trans_time = prk::wtime() - trans_time;
 
@@ -183,15 +145,33 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
+  double abserr(0);
+#if 0
+  // Use this if, for whatever reason, TBB reductions are not reliable.
   for (auto j=0; j<order; j++) {
     for (auto i=0; i<order; i++) {
-      const size_t ij = i*order+j;
-      const size_t ji = j*order+i;
+      const int ij = i*order+j;
+      const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += std::fabs(B[ji] - reference);
     }
   }
+#else
+  abserr = tbb::parallel_reduce( range, double(0),
+                                 [&](decltype(range)& r, double temp) -> double {
+                                     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                                         for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                             const int ij = i*order+j;
+                                             const int ji = j*order+i;
+                                             const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+                                             temp += std::fabs(B[ji] - reference);
+                                         }
+                                     }
+                                     return temp;
+                                 },
+                                 [] (const double x1, const double x2) { return x1+x2; },
+                                 tbb_partitioner );
+#endif
 
 #ifdef VERBOSE
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
