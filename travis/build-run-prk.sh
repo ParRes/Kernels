@@ -809,7 +809,7 @@ case "$PRK_TARGET" in
             brew install llvm || brew upgrade llvm
             LLVMPATH="$(brew --cellar llvm)/$(brew list --versions llvm | tr ' ' '\n' | tail -1)"
             echo "LLVMPATH=${LLVMPATH}"
-            echo "CC=${LLVMPATH}/bin/${CLANG} -std=c99" >> common/make.defs
+            echo "CC=${LLVMPATH}/bin/clang -std=c99" >> common/make.defs
             echo "OPENMPFLAG=-fopenmp" \
                             " -L${LLVMPATH}/lib -lomp" \
                             " ${LLVMPATH}/lib/libomp.dylib" \
