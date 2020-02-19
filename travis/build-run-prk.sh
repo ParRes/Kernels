@@ -806,16 +806,17 @@ case "$PRK_TARGET" in
     allopenmp)
         echo "OpenMP"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
-            CLANG_VERSION=3.9
-            brew install llvm@$CLANG_VERSION || brew upgrade llvm@$CLANG_VERSION
-            echo "CC=/usr/local/opt/llvm@${CLANG_VERSION}/bin/clang-${CLANG_VERSION} -std=c99" >> common/make.defs
+            brew install llvm || brew upgrade llvm
+            LLVMPATH="$(brew --cellar llvm)/$(brew list --versions llvm | tr ' ' '\n' | tail -1)"
+            echo "LLVMPATH=${LLVMPATH}"
+            echo "CC=${LLVMPATH}/bin/${CLANG} -std=c99" >> common/make.defs
             echo "OPENMPFLAG=-fopenmp" \
-                            " -L/usr/local/opt/llvm@$CLANG_VERSION/lib -lomp" \
-                            " /usr/local/opt/llvm@$CLANG_VERSION/lib/libomp.dylib" \
-                            " -Wl,-rpath -Wl,/usr/local/opt/llvm@$CLANG_VERSION/lib" >> common/make.defs
-            export LD_RUN_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$LD_RUN_PATH
-            export LD_LIBRARY_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$LD_LIBRARY_PATH
-            export DYLD_LIBRARY_PATH=/usr/local/opt/llvm@$CLANG_VERSION/lib:$DYLD_LIBRARY_PATH
+                            " -L${LLVMPATH}/lib -lomp" \
+                            " ${LLVMPATH}/lib/libomp.dylib" \
+                            " -Wl,-rpath -Wl,${LLVMPATH}/lib" >> common/make.defs
+            export LD_RUN_PATH=${LLVMPATH}/lib:$LD_RUN_PATH
+            export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
+            export DYLD_LIBRARY_PATH=${LLVMPATH}/lib:$DYLD_LIBRARY_PATH
         else
             echo "CC=$CC -std=c99" >> common/make.defs
             echo "OPENMPFLAG=-fopenmp" >> common/make.defs
