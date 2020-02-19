@@ -28,8 +28,8 @@ env:
   #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
   #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=ofi PRK_FLAGS="-Wc,-O3"
   # Chapel kernels are not merged yet.  Activate these when they are.
-  #- PRK_TARGET=allchapel CHPL_COMM=none
-  #- PRK_TARGET=allchapel CHPL_COMM=gasnet
+  - PRK_TARGET=allchapel CHPL_COMM=none
+  - PRK_TARGET=allchapel CHPL_COMM=gasnet
   # HPX-3 kernels are not merged yet.  Activate these when they are.
   #- PRK_TARGET=allhpx3
   # HPX-5 kernels are not merged yet.  Activate these when they are.
@@ -89,8 +89,17 @@ matrix:
   # Revisit this once Grappa is working with Clang
   - compiler: gcc
     env: PRK_TARGET=allgrappa
-  # Mac + Chapel + GASNet does not work and I do not care
+  # Chapel + GASNet does not work in Travis
   - os: osx
+    env: PRK_TARGET=allchapel CHPL_COMM=gasnet
+  #- os: linux
+  #  env: PRK_TARGET=allchapel CHPL_COMM=gasnet
+  # Linux Clang/GCC too old ("no member named 'max_align_t' in the global namespace")
+  - os: linux
+    compiler: clang
+    env: PRK_TARGET=allchapel CHPL_COMM=none
+  - os: linux
+    compiler: clang
     env: PRK_TARGET=allchapel CHPL_COMM=gasnet
   # UPC GASNet OFI conduit is busted, perhaps due to SSH spawner
   - env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=ofi PRK_FLAGS="-Wc,-O3"

@@ -1128,7 +1128,20 @@ case "$PRK_TARGET" in
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_global/global 10 16384
         ;;
     allchapel)
-        echo "Nothing to do yet"
+        echo "Chapel"
+        make $PRK_TARGET
+        export PRK_TARGET_PATH=CHAPEL
+        if [ "$CHPL_COMM" = "none" ] ; then
+            NL=1
+        else
+            NL=2
+            #export SSH_SERVERS="localhost:0,localhost:1"
+            #export GASNET_SSH_SERVERS=${SSH_SERVERS}
+            export GASNET_SPAWNFN=L
+        fi
+        $PRK_TARGET_PATH/Synch_p2p/p2p       --numLocales=$NL --iterations=10 --m=1024 --n=1024
+        $PRK_TARGET_PATH/Stencil/stencil     --numLocales=$NL --iterations=10 --order=1000
+        $PRK_TARGET_PATH/Transpose/transpose --numLocales=$NL --iterations=10 --order=1024 --tileSize=32
         ;;
     allhpx3)
         echo "Nothing to do yet"

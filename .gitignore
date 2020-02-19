@@ -57,6 +57,23 @@ func.c                          # PRK C89 stencil generated code
 
 MPI1/AMR/amr
 MPI1/Branch/branch
+MPI1/Branch/func.c
+
+# auto-generated files
+func.c
+*.incl
+
+# scripts
+common/make.defs
+scripts/small/runfgmpi
+scripts/wide/runfgmpi
+
+# binaries
+CHAPEL/Stencil/stencil
+CHAPEL/Synch_p2p/p2p
+CHAPEL/Transpose/transpose
+MPI1/Branch/branch
+MPI1/Branch/func.c
 MPI1/DGEMM/dgemm
 MPI1/Nstream/nstream
 MPI1/PIC-static/pic
@@ -73,7 +90,10 @@ MPIOPENMP/Synch_p2p/p2p
 MPIOPENMP/Transpose/transpose
 MPIRMA/Stencil/stencil
 MPIRMA/Synch_p2p/p2p
+MPIRMA/Stencil/stencil
 MPIRMA/Transpose/transpose
+MPISHM/Stencil/loop_body_compact.incl
+MPISHM/Stencil/loop_body_star.incl
 MPISHM/Stencil/stencil
 MPISHM/Synch_p2p/p2p
 MPISHM/Transpose/transpose
@@ -91,6 +111,9 @@ OPENMP/Synch_p2p/p2p
 OPENMP/Transpose/transpose
 SERIAL/AMR/amr
 SERIAL/Branch/branch
+SERIAL/Branch/func.c
+SERIAL/Branch/branch
+SERIAL/Branch/func.c
 SERIAL/DGEMM/dgemm
 SERIAL/Nstream/nstream
 SERIAL/PIC/pic

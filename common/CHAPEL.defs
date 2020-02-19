@@ -1,0 +1,6 @@
+include ../../common/make.defs
+ifeq ($(CHAPELPATH),)
+    CHPL=chpl
+else
+    CHPL=$(CHAPELPATH)/chpl
+endif
