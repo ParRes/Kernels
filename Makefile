@@ -336,6 +336,7 @@ clean:
 	make -C FORTRAN clean
 	make -C Cxx11 clean
 	make -C C1z clean
+	make -C CHAPEL clean
 	rm -f stats.json
 
 veryclean: clean
