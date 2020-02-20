@@ -1,4 +1,6 @@
-CHPL      = chpl
+include ../common/Chapel.defs
+
+CHPL      = ${CHAPEL_PATH}chpl
 CHPLFLAGS = --fast
 
 ifeq ($(CHPL_LLVM),llvm)

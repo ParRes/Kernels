@@ -254,7 +254,7 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "$CC" = "gcc" ] ; then
             ${MAKE} -C $PRK_TARGET_PATH clean
             ./travis/install-musl.sh ${TRAVIS_ROOT} ${PRK_CC}
-            echo "PRKVERSION=\"'2.16'\"" > common/make.defs
+            echo "PRKVERSION=\"'2.16'\"" >> common/make.defs
             echo "CC=${TRAVIS_ROOT}/musl/bin/musl-gcc -static -std=c11 -DUSE_C11_THREADS" >> common/make.defs
             echo "EXTRA_CLIBS=-lm -lpthread" >> common/make.defs
             ${MAKE} -C $PRK_TARGET_PATH transpose-thread
@@ -1130,6 +1130,7 @@ case "$PRK_TARGET" in
         ;;
     allchapel)
         echo "Chapel"
+        echo "CHAPEL_PATH=${TRAVIS_ROOT}/chapel/bin" >> common/make.defs
         make $PRK_TARGET
         ./$PRK_TARGET_PATH/p2p-serial-fast           --iterations=10 --m=1024 --n=1024
         ./$PRK_TARGET_PATH/stencil-defaultdist       --iterations=10 --order=1000
@@ -1153,7 +1154,7 @@ case "$PRK_TARGET" in
         ;;
     alllegion)
         echo "Legion"
-        echo "LEGIONTOP=${TRAVIS_ROOT}/legion" > common/make.defs
+        echo "LEGIONTOP=${TRAVIS_ROOT}/legion" >> common/make.defs
         ${MAKE} $PRK_TARGET -k
         ;;
 esac

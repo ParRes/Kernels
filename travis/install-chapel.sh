@@ -27,6 +27,6 @@ else
     ln -s chapel-${CHAPEL_RELEASE} chapel
     cd chapel
     make
-    ln -s `find $PWD -type f -name chpl` $TRAVIS_HOME/bin/chpl
-    export PATH=$TRAVIS_HOME/bin:$PATH
+    make install || echo "oops"
+    find $TRAVIS_ROOT -type f -name chpl
 fi
