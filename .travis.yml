@@ -91,6 +91,10 @@ matrix:
   # Mac + Chapel + GASNet does not work and I do not care
   - os: osx
     env: PRK_TARGET=allchapel CHPL_COMM=gasnet
+  - compiler: gcc
+    env: PRK_TARGET=allchapel CHPL_COMM=none
+  - compiler: gcc
+    env: PRK_TARGET=allchapel CHPL_COMM=gasnet
   # UPC GASNet OFI conduit is busted, perhaps due to SSH spawner
   - env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=ofi PRK_FLAGS="-Wc,-O3"
   # probably because of old GCC (4.6)
