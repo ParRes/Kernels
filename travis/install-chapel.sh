@@ -21,7 +21,7 @@ else
         CHPL_LLVM=none
     fi
     cd $TRAVIS_ROOT
-    CHAPEL_RELEASE=1.15.0
+    CHAPEL_RELEASE=1.20.0
     wget -q --no-check-certificate https://github.com/chapel-lang/chapel/releases/download/${CHAPEL_RELEASE}/chapel-${CHAPEL_RELEASE}.tar.gz
     tar -xzf chapel-${CHAPEL_RELEASE}.tar.gz
     ln -s chapel-${CHAPEL_RELEASE} chapel
