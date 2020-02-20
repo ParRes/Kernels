@@ -254,7 +254,7 @@ case "$PRK_TARGET" in
         if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "$CC" = "gcc" ] ; then
             ${MAKE} -C $PRK_TARGET_PATH clean
             ./travis/install-musl.sh ${TRAVIS_ROOT} ${PRK_CC}
-            echo "PRKVERSION=\"'2.16'\"" > common/make.defs
+            echo "PRKVERSION=\"'2.16'\"" >> common/make.defs
             echo "CC=${TRAVIS_ROOT}/musl/bin/musl-gcc -static -std=c11 -DUSE_C11_THREADS" >> common/make.defs
             echo "EXTRA_CLIBS=-lm -lpthread" >> common/make.defs
             ${MAKE} -C $PRK_TARGET_PATH transpose-thread
@@ -1129,7 +1129,22 @@ case "$PRK_TARGET" in
         $PRK_LAUNCHER -n $PRK_MPI_PROCS $PRK_TARGET_PATH/Synch_global/global 10 16384
         ;;
     allchapel)
-        echo "Nothing to do yet"
+        echo "Chapel"
+        echo "CHAPEL_PATH=${TRAVIS_ROOT}/chapel/bin" >> common/make.defs
+        make $PRK_TARGET
+        ./$PRK_TARGET_PATH/p2p-serial-fast           --iterations=10 --m=1024 --n=1024
+        ./$PRK_TARGET_PATH/stencil-defaultdist       --iterations=10 --order=1000
+        ./$PRK_TARGET_PATH/stencil-stencildist       --iterations=10 --order=1000
+        ./$PRK_TARGET_PATH/stencil-blockdist         --iterations=10 --order=1000
+        ./$PRK_TARGET_PATH/transpose                 --iterations=10 --order=1024 --tileSize=64
+        ./$PRK_TARGET_PATH/nstream                   --iterations=10 --length=16777216
+        ./$PRK_TARGET_PATH/sparse                    --iterations=10 --lsize=5
+        ./$PRK_TARGET_PATH/dgemm                     --iterations=10 --order=1024 --blockSize=32
+        # save for later
+        #./$PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 2 GEOMETRIC 0.99
+        #./$PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 0 1 SINUSOIDAL
+        #./$PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 LINEAR 1.0 3.0
+        #./$PRK_TARGET_PATH/PIC-static/pic      10 1000 1000000 1 0 PATCH 0 200 100 200
         ;;
     allhpx3)
         echo "Nothing to do yet"
@@ -1139,7 +1154,7 @@ case "$PRK_TARGET" in
         ;;
     alllegion)
         echo "Legion"
-        echo "LEGIONTOP=${TRAVIS_ROOT}/legion" > common/make.defs
+        echo "LEGIONTOP=${TRAVIS_ROOT}/legion" >> common/make.defs
         ${MAKE} $PRK_TARGET -k
         ;;
 esac
