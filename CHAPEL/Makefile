@@ -1,5 +1,16 @@
-CHPL      = chpl --fast
-CHPLFLAGS =
+CHPL      = chpl
+CHPLFLAGS = --fast
+
+ifeq ($(CHPL_LLVM),llvm)
+    echo "CHPL_LLVM=llvm"
+    CHPLFLAGS += --llvm
+else
+    ifeq ($(CHPL_LLVM),system)
+	echo "CHPL_LLVM=system"
+	CHPLFLAGS += --llvm
+    endif
+endif
+
 
 .PHONY: serial bigthree allstencil all clean
 
