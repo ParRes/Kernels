@@ -1,4 +1,4 @@
-CHPL      = chpl
+CHPL      = chpl --fast
 CHPLFLAGS =
 
 .PHONY: serial bigthree allstencil all clean
