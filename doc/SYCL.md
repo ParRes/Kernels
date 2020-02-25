@@ -88,5 +88,6 @@ Use the hipSYCL Clang C/C++ compilers for consistency.
 ```sh
 cmake3 .. -DBOOST_INCLUDEDIR=/usr/include/boost169/ \
           -DCMAKE_PREFIX_PATH=/opt/hipSYCL/lib -DHIPSYCL_PLATFORM=cpu \
-          -DCMAKE_CXX_COMPILER=/opt/hipSYCL/llvm/bin/clang++ -DCMAKE_C_COMPILER=/opt/hipSYCL/llvm/bin/clang
+          -DCMAKE_CXX_COMPILER=/opt/hipSYCL/llvm/bin/clang++ \
+          -DCMAKE_C_COMPILER=/opt/hipSYCL/llvm/bin/clang
 ```
