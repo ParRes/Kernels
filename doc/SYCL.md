@@ -83,7 +83,10 @@ yum install boost169.x86_64 boost169-jam.x86_64 boost169-build.noarch \
             boost169-devel.x86_64 boost169-mpich-devel.x86_64 boost169-static.x86_64
 ```
 
+The documentation is wrong about how you specify where hipSYCL lives.  Below works.
+Use the hipSYCL Clang C/C++ compilers for consistency.
 ```sh
 cmake3 .. -DBOOST_INCLUDEDIR=/usr/include/boost169/ \
-          -DCMAKE_PREFIX_PATH=/opt/hipSYCL/lib -DHIPSYCL_PLATFORM=cpu
+          -DCMAKE_PREFIX_PATH=/opt/hipSYCL/lib -DHIPSYCL_PLATFORM=cpu \
+          -DCMAKE_CXX_COMPILER=/opt/hipSYCL/llvm/bin/clang++ -DCMAKE_C_COMPILER=/opt/hipSYCL/llvm/bin/clang
 ```
