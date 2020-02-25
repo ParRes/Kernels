@@ -77,10 +77,13 @@ Dependencies (may be incomplete):
 ```sh
 yum install cmake3.x86_64 cmake3-doc.noarch
 yum install hipSYCL.x86_64 hipSYCL-base.x86_64
-yum install mpich-3.2.x86_64 mpich-3.2-devel.x86_64 mpich-3.2-doc.noarch mpich-3.2-autoload.x86_64
-yum install boost169.x86_64 boost169-jam.x86_64 boost169-build.noarch boost169-devel.x86_64 boost169-mpich-devel.x86_64 boost169-static.x86_64
+yum install mpich-3.2.x86_64 mpich-3.2-devel.x86_64 mpich-3.2-doc.noarch \
+            mpich-3.2-autoload.x86_64
+yum install boost169.x86_64 boost169-jam.x86_64 boost169-build.noarch \
+            boost169-devel.x86_64 boost169-mpich-devel.x86_64 boost169-static.x86_64
 ```
 
 ```sh
-cmake3 .. -DBOOST_INCLUDEDIR=/usr/include/boost169/ -DCMAKE_PREFIX_PATH=/opt/hipSYCL/lib -DHIPSYCL_PLATFORM=cpu
+cmake3 .. -DBOOST_INCLUDEDIR=/usr/include/boost169/ \
+          -DCMAKE_PREFIX_PATH=/opt/hipSYCL/lib -DHIPSYCL_PLATFORM=cpu
 ```
