@@ -84,10 +84,16 @@ yum install boost169.x86_64 boost169-jam.x86_64 boost169-build.noarch \
 ```
 
 The documentation is wrong about how you specify where hipSYCL lives.  Below works.
+
 Use the hipSYCL Clang C/C++ compilers for consistency.
 ```sh
 cmake3 .. -DBOOST_INCLUDEDIR=/usr/include/boost169/ \
           -DCMAKE_PREFIX_PATH=/opt/hipSYCL/lib -DHIPSYCL_PLATFORM=cpu \
           -DCMAKE_CXX_COMPILER=/opt/hipSYCL/llvm/bin/clang++ \
           -DCMAKE_C_COMPILER=/opt/hipSYCL/llvm/bin/clang
+```
+
+In order for the tests to run properly, one has to specify the location of the LLVM OpenMP runtime, e.g. as follows:
+```sh
+export LD_LIBRARY_PATH=/opt/hipSYCL/llvm/lib:$LD_LIBRARY_PATH
 ```
