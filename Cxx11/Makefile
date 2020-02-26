@@ -197,7 +197,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
 
 %-hpx: %-hpx.cc prk_util.h prk_hpx.h
-	$(CXX) $(CXXFLAGS) $< $(HPXFLAGS) -o $@
+	$(HPXCXX) --exe=$@ $(CXXFLAGS) $(HPXFLAGS) $<
 
 ifeq ($(PRK_KOKKOS_BACKEND),Cuda)
 %-kokkos: %-kokkos.cc prk_util.h
