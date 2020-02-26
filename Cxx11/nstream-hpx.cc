@@ -120,7 +120,7 @@ int main(int argc, char * argv[])
   double scalar(3);
 
   {
-    std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
+    hpx::parallel::for_each(hpx::parallel::execution::seq, std::begin(range), std::end(range), [&] (size_t i) {
         A[i] = 0;
         B[i] = 2;
         C[i] = 2;
@@ -130,7 +130,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-      std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
+      hpx::parallel::for_each(hpx::parallel::execution::seq, std::begin(range), std::end(range), [&] (size_t i) {
           A[i] += B[i] + scalar * C[i];
       });
     }
