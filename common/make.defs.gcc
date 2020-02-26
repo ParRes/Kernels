@@ -44,6 +44,9 @@ ORNLACCFLAG=-fopenacc
 #
 # MacOS
 OPENCLFLAG=-framework OpenCL
+# POCL
+# http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
+#OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
@@ -52,13 +55,33 @@ METALFLAG=-framework MetalPerformanceShaders
 #
 # SYCL flags
 #
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#SYCLDIR=/opt/isycl
+#SYCLCXX=${SYCLDIR}/bin/clang++
+#SYCLFLAG=-fsycl -lsycl -lOpenCL -Wl,-rpath=${SYCLDIR}/lib
+#SYCLFLAG+=-std=c++17 -O3
+# CodePlay ComputeCpp
+#SYCLDIR=/opt/sycl/latest
+#SYCLCXX=${SYCLDIR}/bin/compute++
+#SYCLFLAG=-DUSE_SYCL -sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+#SYCLFLAG+=-std=c++14 -O3
+# This makes a huge difference in e.g. nstream...
+#SYCLFLAG+=-no-serial-memop
+# CentOS7 and Ubuntu14 built for this
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+# PRK header rejects GCC4
+#SYCLFLAG+=--gcc-toolchain=/swtools/gcc/5.4.0
+# If not found automatically
+#SYCLFLAG+=${OPENCLFLAG}
+# NVIDIA target
+#SYCLFLAG+=-sycl-target ptx64
+#
 # triSYCL
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 #SYCLDIR=./triSYCL
 #SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
 #SYCLFLAG=-std=c++17 -I$(SYCLDIR)/include -DTRISYCL
 #
-METALFLAG=-framework MetalPerformanceShaders
 #
 # OCCA
 #
@@ -71,7 +94,7 @@ METALFLAG=-framework MetalPerformanceShaders
 # TBB
 #
 #TBBDIR=/usr/lib/x86_64-linux-gnu
-TBBDIR=/usr/local/Cellar/tbb/2019_U8
+TBBDIR=/usr/local/Cellar/tbb/2020_U0
 TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #TBBDIR=/opt/intel/compilers_and_libraries_2019.2.159/linux/tbb
 #TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -L${TBBDIR}/lib/intel64_lin/gcc4.7 -ltbb
@@ -79,6 +102,9 @@ TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 # Parallel STL, Boost, etc.
 #
 #BOOSTFLAG=-I/usr/local/Cellar/boost/1.71.0/include
+BOOSTROOT=/usr/local/Cellar/boost/1.72.0/include
+BOOSTFLAG+=-I${BOOSTROOT}
+BOOSTFLAG+=-DBOOST_COMPUTE_USE_CPP11
 RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
 #RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
 PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG}
@@ -89,6 +115,11 @@ RAJADIR=/opt/raja/gcc
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 THRUSTDIR=/Users/jrhammon/Work/NVIDIA/thrust
 THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
+# HPX is more complicated...
+HWLOCFLAG=-I/usr/local/include
+HPXDIR=./hpx
+HPXCXX=${HPXDIR}/bin/hpxcxx
+HPXFLAG=-Wno-unused-local-typedef ${HWLOCFLAG}
 #
 # CBLAS for C++ DGEMM
 #
@@ -104,6 +135,16 @@ NVCC=nvcc
 CUDAFLAGS=-g -O3 -std=c++11 -arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# Halide
+#
+HALIDECXX=c++
+HALIDEDIR=/opt/halide
+HALIDEFLAG=-I${HALIDEDIR}/include
+HALIDEFLAG+=-L${HALIDEDIR}/lib -lhalide
+#HALIDEFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
+HALIDEFLAG+=-std=c++17 -g3
 #
 # ISPC
 #

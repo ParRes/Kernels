@@ -1134,9 +1134,6 @@ case "$PRK_TARGET" in
     allhpx3)
         echo "Nothing to do yet"
         ;;
-    allhpx5)
-        echo "Nothing to do yet"
-        ;;
     alllegion)
         echo "Legion"
         echo "LEGIONTOP=${TRAVIS_ROOT}/legion" > common/make.defs

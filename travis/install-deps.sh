@@ -170,15 +170,10 @@ case "$PRK_TARGET" in
         echo "Chapel"
         sh ./travis/install-chapel.sh $TRAVIS_ROOT
         ;;
-    allhpx3)
-        echo "HPX-3"
+    allhpx)
+        echo "HPX"
         sh ./travis/install-cmake.sh $TRAVIS_ROOT
         sh ./travis/install-hpx3.sh $TRAVIS_ROOT
-        ;;
-    allhpx5)
-        echo "HPX-5"
-        sh ./travis/install-autotools.sh $TRAVIS_ROOT
-        sh ./travis/install-hpx5.sh $TRAVIS_ROOT
         ;;
     alllegion)
         echo "Legion"
