@@ -45,6 +45,7 @@ STLFLAGS = $(STLFLAG) $(RANGEFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS) -DUSE_PSTL
 RAJAFLAGS = $(RAJAFLAG) -DUSE_RAJA
 HPXFLAGS = -DUSE_HPX $(HPXFLAG) $(BOOSTFLAG) $(RANGEFLAGS)
+UPCXXFLAGS = $(CPPFLAGS) -DUSE_UPCXX $(UPCXXFLAG) $(BOOSTFLAG) $(RANGEFLAGS)
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS) -DUSE_THRUST
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(RANGEFLAGS) -DUSE_KOKKOS
 SYCLFLAGS = $(SYCLFLAG) -DUSE_SYCL -DUSE_2D_INDEXING=0
@@ -125,6 +126,8 @@ kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
 hpx: nstream-hpx
 
+upcxx: nstream-upcxx
+
 raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
       p2p-raja transpose-raja nstream-raja stencil-raja # transpose-vector-raja
 
@@ -195,6 +198,9 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 
 %-raja: %-raja.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
+
+%-upcxx: %-upcxx.cc prk_util.h prk_upcxx.h
+	$(UPCXX) $(UPCXXFLAGS) $< -o $@
 
 %-hpx: %-hpx.cc prk_util.h prk_hpx.h
 	$(HPXCXX) --exe=$@ $(CXXFLAGS) $(HPXFLAGS) $<
