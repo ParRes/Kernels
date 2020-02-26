@@ -99,6 +99,11 @@ RAJADIR=/opt/raja/intel
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 THRUSTDIR=/opt/nvidia/thrust
 THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
+# HPX is more complicated...
+HWLOCFLAG=-I/usr/local/include
+HPXDIR=./hpx
+HPXCXX=${HPXDIR}/bin/hpxcxx
+HPXFLAG=-Wno-unused-local-typedef ${HWLOCFLAG}
 #
 # CBLAS for C++ DGEMM
 #
