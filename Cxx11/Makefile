@@ -44,6 +44,7 @@ RANGEFLAGS = $(RANGEFLAG) -DUSE_RANGES
 STLFLAGS = $(STLFLAG) $(RANGEFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS) -DUSE_PSTL
 RAJAFLAGS = $(RAJAFLAG) -DUSE_RAJA
+HPXFLAGS = -I$(HPXDIR)/include -DUSE_HPX -L$(HPXDIR)/lib $(BOOSTFLAG) $(HWLOCFLAG) $(RANGEFLAGS)
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS) -DUSE_THRUST
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(RANGEFLAGS) -DUSE_KOKKOS
 SYCLFLAGS = $(SYCLFLAG) -DUSE_SYCL -DUSE_2D_INDEXING=0
@@ -122,6 +123,8 @@ rangefor: stencil-vector-rangefor transpose-vector-rangefor nstream-vector-range
 
 kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
+hpx: nstream-hpx
+
 raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
       p2p-raja transpose-raja nstream-raja stencil-raja # transpose-vector-raja
 
@@ -193,6 +196,9 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 %-raja: %-raja.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
 
+%-hpx: %-hpx.cc prk_util.h prk_hpx.h
+	$(CXX) $(CXXFLAGS) $< $(HPXFLAGS) -o $@
+
 ifeq ($(PRK_KOKKOS_BACKEND),Cuda)
 %-kokkos: %-kokkos.cc prk_util.h
 	${KOKKOSDIR}/bin/nvcc_wrapper $(CPPFLAGS) $(CUDAFLAGS) $< $(KOKKOSFLAG) -DUSE_KOKKOS -DPRK_KOKKOS_BACKEND=Cuda -o $@
@@ -262,6 +268,7 @@ clean:
 	-rm -f *-rangefor
 	-rm -f *-raja
 	-rm -f *-kokkos
+	-rm -f *-hpx
 	-rm -f *-thrust
 	-rm -f *-cuda
 	-rm -f *-cublas
