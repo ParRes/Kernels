@@ -79,6 +79,17 @@ __global__ void nstream2(const unsigned n, const prk_float scalar, prk_float * A
     }
 }
 
+__global__ void fault_pages(const unsigned n, prk_float * A, prk_float * B, prk_float * C)
+{
+    //const unsigned inc = 4096/sizeof(prk_float);
+    //for (unsigned int i = 0; i < n; i += inc) {
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
+        A[i] = (prk_float)0;
+        B[i] = (prk_float)2;
+        C[i] = (prk_float)2;
+    }
+}
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -93,10 +104,10 @@ int main(int argc, char * argv[])
 
   int iterations, offset;
   int length;
-  bool grid_stride;
+  bool grid_stridem, ordered_fault;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>] [<grid_stride>]";
+        throw "Usage: <# iterations> <vector length> [<offset>] [<grid_stride>] [<ordered_fault>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -113,7 +124,8 @@ int main(int argc, char * argv[])
       if (length <= 0) {
         throw "ERROR: offset must be nonnegative";
       }
-      grid_stride   = (argc>4) ? prk::parse_boolean(std::string(argv[5])) : false;
+      grid_stride   = (argc>4) ? prk::parse_boolean(std::string(argv[4])) : false;
+      ordered_fault = (argc>5) ? prk::parse_boolean(std::string(argv[5])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -124,6 +136,7 @@ int main(int argc, char * argv[])
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
   std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
+  std::cout << "Ordered fault        = " << (ordered_fault ? "yes" : "no") << std::endl;
 
   const int blockSize = 256;
   dim3 dimBlock(blockSize, 1, 1);
@@ -138,33 +151,25 @@ int main(int argc, char * argv[])
   double nstream_time(0);
 
   const size_t bytes = length * sizeof(prk_float);
-  prk_float * h_A;
-  prk_float * h_B;
-  prk_float * h_C;
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
-#else
-  h_A = new prk_float[length];
-  h_B = new prk_float[length];
-  h_C = new prk_float[length];
-#endif
+
+  prk_float * A;
+  prk_float * B;
+  prk_float * C;
+  prk::CUDA::check( cudaMallocManaged((void**)&A, bytes) );
+  prk::CUDA::check( cudaMallocManaged((void**)&B, bytes) );
+  prk::CUDA::check( cudaMallocManaged((void**)&C, bytes) );
+
+  // initialize on CPU to ensure pages are faulted there
   for (int i=0; i<length; ++i) {
-    h_A[i] = static_cast<prk_float>(0);
-    h_B[i] = static_cast<prk_float>(2);
-    h_C[i] = static_cast<prk_float>(2);
+    A[i] = static_cast<prk_float>(0);
+    B[i] = static_cast<prk_float>(2);
+    C[i] = static_cast<prk_float>(2);
   }
 
-  prk_float * d_A;
-  prk_float * d_B;
-  prk_float * d_C;
-  prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
+  if (ordered_fault) {
+      fault_pages<<<1,1>>>(static_cast<unsigned>(length), A, B, C);
+      prk::CUDA::check( cudaDeviceSynchronize() );
+  }
 
   prk_float scalar(3);
   {
@@ -173,28 +178,17 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
       if (grid_stride) {
-          nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+          nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, A, B, C);
       } else {
-          nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+          nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, A, B, C);
       }
-#ifndef __CORIANDERCC__
-      // silence "ignoring cudaDeviceSynchronize for now" warning
       prk::CUDA::check( cudaDeviceSynchronize() );
-#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
 
-  prk::CUDA::check( cudaMemcpy(&(h_A[0]), d_A, bytes, cudaMemcpyDeviceToHost) );
-
   prk::CUDA::check( cudaFree(d_C) );
   prk::CUDA::check( cudaFree(d_B) );
-  prk::CUDA::check( cudaFree(d_A) );
-
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_B) );
-  prk::CUDA::check( cudaFreeHost(h_C) );
-#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -211,12 +205,10 @@ int main(int argc, char * argv[])
 
   double asum(0);
   for (int i=0; i<length; i++) {
-      asum += std::fabs(h_A[i]);
+      asum += std::fabs(A[i]);
   }
 
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_A) );
-#endif
+  prk::CUDA::check( cudaFree(A) );
 
   double epsilon=1.e-8;
   if (std::fabs(ar-asum)/asum > epsilon) {
