@@ -72,6 +72,13 @@ __global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A,
     }
 }
 
+__global__ void nstream2(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
+{
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
+        A[i] += B[i] + scalar * C[i];
+    }
+}
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -86,9 +93,10 @@ int main(int argc, char * argv[])
 
   int iterations, offset;
   int length;
+  bool grid_stride;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>]";
+        throw "Usage: <# iterations> <vector length> [<offset>] [<grid_stride>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -105,6 +113,7 @@ int main(int argc, char * argv[])
       if (length <= 0) {
         throw "ERROR: offset must be nonnegative";
       }
+      grid_stride   = (argc>4) ? prk::parse_boolean(std::string(argv[5])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -114,8 +123,9 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
+  std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
 
-  const int blockSize = 128;
+  const int blockSize = 256;
   dim3 dimBlock(blockSize, 1, 1);
   dim3 dimGrid(prk::divceil(length,blockSize), 1, 1);
 
@@ -140,7 +150,7 @@ int main(int argc, char * argv[])
   h_B = new prk_float[length];
   h_C = new prk_float[length];
 #endif
-  for (auto i=0; i<length; ++i) {
+  for (int i=0; i<length; ++i) {
     h_A[i] = static_cast<prk_float>(0);
     h_B[i] = static_cast<prk_float>(2);
     h_C[i] = static_cast<prk_float>(2);
@@ -158,11 +168,15 @@ int main(int argc, char * argv[])
 
   prk_float scalar(3);
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+      if (grid_stride) {
+          nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+      } else {
+          nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+      }
 #ifndef __CORIANDERCC__
       // silence "ignoring cudaDeviceSynchronize for now" warning
       prk::CUDA::check( cudaDeviceSynchronize() );
@@ -189,14 +203,14 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
   ar *= length;
 
   double asum(0);
-  for (auto i=0; i<length; i++) {
+  for (int i=0; i<length; i++) {
       asum += std::fabs(h_A[i]);
   }
 

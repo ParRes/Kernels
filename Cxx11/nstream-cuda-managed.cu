@@ -104,10 +104,10 @@ int main(int argc, char * argv[])
 
   int iterations, offset;
   int length;
-  bool ordered_fault, grid_stride;
+  bool grid_stridem, ordered_fault;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>] [<ordered_fault>] [<grid_stride>]";
+        throw "Usage: <# iterations> <vector length> [<offset>] [<grid_stride>] [<ordered_fault>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -124,9 +124,8 @@ int main(int argc, char * argv[])
       if (length <= 0) {
         throw "ERROR: offset must be nonnegative";
       }
-
-      ordered_fault = (argc>4) ? prk::parse_boolean(std::string(argv[4])) : false;
-      grid_stride   = (argc>5) ? prk::parse_boolean(std::string(argv[5])) : false;
+      grid_stride   = (argc>4) ? prk::parse_boolean(std::string(argv[4])) : false;
+      ordered_fault = (argc>5) ? prk::parse_boolean(std::string(argv[5])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -136,8 +135,8 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Offset               = " << offset << std::endl;
-  std::cout << "Ordered fault        = " << (ordered_fault ? "yes" : "no") << std::endl;
   std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
+  std::cout << "Ordered fault        = " << (ordered_fault ? "yes" : "no") << std::endl;
 
   const int blockSize = 256;
   dim3 dimBlock(blockSize, 1, 1);
@@ -153,39 +152,38 @@ int main(int argc, char * argv[])
 
   const size_t bytes = length * sizeof(prk_float);
 
-  prk_float * d_A;
-  prk_float * d_B;
-  prk_float * d_C;
-  prk::CUDA::check( cudaMallocManaged((void**)&d_A, bytes) );
-  prk::CUDA::check( cudaMallocManaged((void**)&d_B, bytes) );
-  prk::CUDA::check( cudaMallocManaged((void**)&d_C, bytes) );
+  prk_float * A;
+  prk_float * B;
+  prk_float * C;
+  prk::CUDA::check( cudaMallocManaged((void**)&A, bytes) );
+  prk::CUDA::check( cudaMallocManaged((void**)&B, bytes) );
+  prk::CUDA::check( cudaMallocManaged((void**)&C, bytes) );
 
   // initialize on CPU to ensure pages are faulted there
-  for (auto i=0; i<length; ++i) {
-    d_A[i] = static_cast<prk_float>(0);
-    d_B[i] = static_cast<prk_float>(2);
-    d_C[i] = static_cast<prk_float>(2);
+  for (int i=0; i<length; ++i) {
+    A[i] = static_cast<prk_float>(0);
+    B[i] = static_cast<prk_float>(2);
+    C[i] = static_cast<prk_float>(2);
   }
 
   if (ordered_fault) {
-      fault_pages<<<1,1>>>(static_cast<unsigned>(length), d_A, d_B, d_C);
+      fault_pages<<<1,1>>>(static_cast<unsigned>(length), A, B, C);
       prk::CUDA::check( cudaDeviceSynchronize() );
   }
 
   prk_float scalar(3);
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
       if (grid_stride) {
-          nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+          nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, A, B, C);
       } else {
-          nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+          nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, A, B, C);
       }
       prk::CUDA::check( cudaDeviceSynchronize() );
     }
-
     nstream_time = prk::wtime() - nstream_time;
   }
 
@@ -199,22 +197,23 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
   ar *= length;
 
   double asum(0);
-  for (auto i=0; i<length; i++) {
-      asum += std::fabs(d_A[i]);
+  for (int i=0; i<length; i++) {
+      asum += std::fabs(A[i]);
   }
 
-  prk::CUDA::check( cudaFree(d_A) );
+  prk::CUDA::check( cudaFree(A) );
 
   double epsilon=1.e-8;
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
