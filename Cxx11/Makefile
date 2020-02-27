@@ -127,8 +127,6 @@ raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
 
 cuda: stencil-cuda transpose-cuda nstream-cuda
 
-cublas: transpose-cublas nstream-cublas dgemm-cublas
-
 thrust: nstream-host-thrust nstream-device-thrust \
         transpose-host-thrust transpose-device-thrust
 
