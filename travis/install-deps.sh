@@ -35,6 +35,10 @@ case "$PRK_TARGET" in
         echo "Julia"
         sh ./travis/install-julia.sh $TRAVIS_ROOT
         ;;
+    allpython)
+        echo "Python"
+        sh ./travis/install-python.sh $TRAVIS_ROOT
+        ;;
     allrust)
         echo "Rust"
         sh ./travis/install-rust.sh $TRAVIS_ROOT

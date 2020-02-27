@@ -76,13 +76,13 @@ def instance(src,model,pattern,r):
 def main():
     for model in ['seq','openmp','target','cilk','taskloop']:
       src = open('stencil_'+model+'.h','w')
-      if (model=='target'):
-          src.write('OMP( declare target )\n')
+      #if (model=='target'):
+      #    src.write('OMP( declare target )\n')
       for pattern in ['star','grid']:
         for r in range(1,10):
           instance(src,model,pattern,r)
-      if (model=='target'):
-          src.write('OMP( end declare target )\n')
+      #if (model=='target'):
+      #    src.write('OMP( end declare target )\n')
       src.close()
 
 if __name__ == '__main__':

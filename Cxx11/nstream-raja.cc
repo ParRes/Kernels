@@ -166,7 +166,8 @@ int main(int argc, char * argv[])
   ar *= length;
 
   RAJA::ReduceSum<RAJA::seq_reduce, double> reduced_asum(0.0);
-  RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+  //RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+  RAJA::forall<RAJA::seq_exec>(range, [=](RAJA::Index_type i) {
       reduced_asum += std::fabs(A(i));
   });
   double asum(reduced_asum);
@@ -174,6 +175,7 @@ int main(int argc, char * argv[])
   double epsilon=1.e-8;
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;

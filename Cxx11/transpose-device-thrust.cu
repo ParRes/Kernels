@@ -50,6 +50,8 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_cuda.h"
+#include "prk_thrust.h"
 
 struct x : public thrust::unary_function<void,int>
 {

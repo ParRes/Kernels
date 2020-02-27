@@ -1,0 +1,117 @@
+#
+# This file shows the Intel toolchain options for PRKs using
+# OpenMP, MPI and/or Fortran coarrays only.
+#
+# Base compilers and language options
+#
+# We assume you have Intel MPI and have setup your environment with e.g.
+# .  /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+# in your .bashrc.
+#
+# C99 is required in some implementations.
+CC=icx -std=c11 -pthread
+#EXTRA_CLIBS=-lrt
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+FC=ifx -fpp
+# C++11 may not be required but does no harm here.
+CXX=icpx -std=gnu++17 -pthread
+#
+# Compiler flags
+#
+# -xHOST is appropriate for most cases.
+DEFAULT_OPT_FLAGS=-g -O3 -xHOST
+#
+# If you are compiling for KNL on a Xeon login node, use the following:
+# DEFAULT_OPT_FLAGS=-g -O3 -xMIC-AVX512
+#
+#DEFAULT_OPT_FLAGS+=-qopt-report=5
+#
+# OpenMP flags
+#
+OPENMPFLAG=-fiopenmp
+OPENMPSIMDFLAG=-fiopenmp
+OFFLOADFLAG=-fopenmp-targets=spir64
+#
+# OpenCL flags
+#
+# MacOS
+#OPENCLFLAG=-framework OpenCL
+# POCL
+# http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
+#OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
+# Linux
+OPENCLDIR=/etc/alternatives/opencl-intel-tools
+OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+#
+# SYCL flags
+#
+SYCLCXX=dpcpp
+SYCLFLAG=-fsycl -fsycl-unnamed-lambda
+SYCLFLAG+=-std=c++17 -O3
+SYCLFLAG+=-DDPCPP
+#
+#
+# OCCA
+#
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
+# TBB
+#
+TBBFLAG=-tbb
+#TBBFLAG=-tbb_preview -DTBB_PREVIEW_FLOW_GRAPH_TRACE
+#
+# Parallel STL, Boost, etc.
+#
+BOOSTFLAG=
+RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+#RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG}
+KOKKOSDIR=/opt/kokkos/intel
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
+RAJADIR=/opt/raja/intel
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+THRUSTDIR=/opt/nvidia/thrust
+THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
+#
+# CBLAS for C++ DGEMM
+#
+#CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+CBLASFLAG=-DMKL -mkl
+#
+# CUDA flags
+#
+# Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
+#NVCC=/opt/llvm/cocl/bin/cocl
+# Linux w/ NVIDIA CUDA
+NVCC=nvcc
+CUDAFLAGS=-g -O3 -std=c++11
+CUDAFLAGS+=-arch=sm_50
+# https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
+CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# ISPC
+#
+ISPC=ispc
+ISPCFLAG=-O3 --target=host --opt=fast-math
+#
+# MPI
+#
+# We assume you have Intel MPI and have setup your environment with e.g.
+# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
+# in your .bashrc.
+#
+# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
+MPICC=mpiicc -std=c99
+#
+# Fortran 2008 coarrays
+#
+# see https://github.com/ParRes/Kernels/blob/master/FORTRAN/README.md for details
+# single-node
+COARRAYFLAG=-coarray
+# multi-node
+# COARRAYFLAG=-coarray=distributed
+#
+# MEMKIND (used in C1z)
+#
+MEMKINDDIR=/home/parallels/PRK/deps
+MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib

@@ -117,7 +117,7 @@ void run(cl::Context context, int iterations, size_t length)
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  T ar(0);
+  double ar(0);
   T br(2);
   T cr(2);
   for (auto i=0; i<=iterations; i++) {
@@ -134,6 +134,7 @@ void run(cl::Context context, int iterations, size_t length)
   const double epsilon = (precision==64) ? 1.0e-8 : 1.0e-4;
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
@@ -189,6 +190,8 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
+
+  prk::opencl::listPlatforms();
 
   cl_int err = CL_SUCCESS;
 

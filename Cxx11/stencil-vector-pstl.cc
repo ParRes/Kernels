@@ -63,7 +63,7 @@
 #include "prk_util.h"
 #include "prk_pstl.h"
 // See ParallelSTL.md for important information.
-#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
+#if defined(USE_PSTL) && ( defined(USE_INTEL_PSTL) || ( defined(__GNUC__) && (__GNUC__ >= 9) ) )
 #include "stencil_pstl.hpp"
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
@@ -175,14 +175,14 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  double stencil_time(0);
 
   std::vector<double> in(n*n);
   std::vector<double> out(n*n);
 
   // initialize the input and output arrays
   auto range = prk::range(0,n);
-#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
+#if defined(USE_PSTL) && ( defined(USE_INTEL_PSTL) || ( defined(__GNUC__) && (__GNUC__ >= 9) ) )
   std::for_each( exec::par, std::begin(range), std::end(range), [&] (int i) {
     std::for_each( exec::unseq, std::begin(range), std::end(range), [&] (int j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
@@ -198,35 +198,18 @@ int main(int argc, char* argv[])
     });
   });
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
     if (iter==1) stencil_time = prk::wtime();
     // Apply the stencil operator
     stencil(n, tile_size, in, out);
     // Add constant to solution to force refresh of neighbor data, if any
-#if 0
-#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
-    std::for_each( exec::par, std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( exec::unseq, std::begin(range), std::end(range), [&] (int j) {
-#elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
-                        && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
-      __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int i) {
-        __gnu_parallel::for_each( std::begin(range), std::end(range), [&] (int j) {
-#else
-    std::for_each( std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::begin(range), std::end(range), [&] (int j) {
-#endif
-        in[i*n+j] += 1.0;
-      });
-    });
-#else
-#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
+#if defined(USE_PSTL) && ( defined(USE_INTEL_PSTL) || ( defined(__GNUC__) && (__GNUC__ >= 9) ) )
     std::transform( exec::par_unseq, in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
     __gnu_parallel::transform( in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
 #else
     std::transform( in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
-#endif
 #endif
   }
 

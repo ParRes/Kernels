@@ -129,9 +129,9 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  OMP_TARGET( data map(tofrom: A[0:length], B[0:length], C[0:length]) map(from:nstream_time) )
+  OMP_TARGET( data map(tofrom: A[0:length]) map(to: B[0:length], C[0:length]) )
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
@@ -165,6 +165,7 @@ int main(int argc, char * argv[])
   double epsilon=1.e-8;
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;

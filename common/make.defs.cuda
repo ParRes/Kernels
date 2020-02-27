@@ -132,6 +132,7 @@ CUDAFLAGS+=-D_AVX512ERINTRIN_H_INCLUDED
 #
 # We assume you have installed an implementation of MPI-3 that is in your path.
 MPICC=mpicc
+MPIFLAGS=-lmpi
 #
 # Fortran 2008 coarrays
 #

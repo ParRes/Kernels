@@ -1,6 +1,7 @@
 void star1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forall<thread_exec>(RAJA::Index_type(1), RAJA::Index_type(n-1), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(1), RAJA::Index_type(n-1), [&](RAJA::Index_type j) {
+    RAJA::RangeSegment inside(1,n-1);
+    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {
             out[i*n+j] += +in[(i)*n+(j-1)] * -0.5
                           +in[(i-1)*n+(j)] * -0.5
                           +in[(i+1)*n+(j)] * 0.5
@@ -10,8 +11,9 @@ void star1(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void star2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forall<thread_exec>(RAJA::Index_type(2), RAJA::Index_type(n-2), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(2), RAJA::Index_type(n-2), [&](RAJA::Index_type j) {
+    RAJA::RangeSegment inside(2,n-2);
+    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {
             out[i*n+j] += +in[(i)*n+(j-2)] * -0.125
                           +in[(i)*n+(j-1)] * -0.25
                           +in[(i-2)*n+(j)] * -0.125
@@ -25,8 +27,9 @@ void star2(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void star3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forall<thread_exec>(RAJA::Index_type(3), RAJA::Index_type(n-3), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(3), RAJA::Index_type(n-3), [&](RAJA::Index_type j) {
+    RAJA::RangeSegment inside(3,n-3);
+    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {
             out[i*n+j] += +in[(i)*n+(j-3)] * -0.0555555555556
                           +in[(i)*n+(j-2)] * -0.0833333333333
                           +in[(i)*n+(j-1)] * -0.166666666667
@@ -44,8 +47,9 @@ void star3(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void star4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forall<thread_exec>(RAJA::Index_type(4), RAJA::Index_type(n-4), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(4), RAJA::Index_type(n-4), [&](RAJA::Index_type j) {
+    RAJA::RangeSegment inside(4,n-4);
+    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {
             out[i*n+j] += +in[(i)*n+(j-4)] * -0.03125
                           +in[(i)*n+(j-3)] * -0.0416666666667
                           +in[(i)*n+(j-2)] * -0.0625
@@ -67,8 +71,9 @@ void star4(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void star5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forall<thread_exec>(RAJA::Index_type(5), RAJA::Index_type(n-5), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(5), RAJA::Index_type(n-5), [&](RAJA::Index_type j) {
+    RAJA::RangeSegment inside(5,n-5);
+    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {
             out[i*n+j] += +in[(i)*n+(j-5)] * -0.02
                           +in[(i)*n+(j-4)] * -0.025
                           +in[(i)*n+(j-3)] * -0.0333333333333
@@ -94,8 +99,9 @@ void star5(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void grid1(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forall<thread_exec>(RAJA::Index_type(1), RAJA::Index_type(n-1), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(1), RAJA::Index_type(n-1), [&](RAJA::Index_type j) {
+    RAJA::RangeSegment inside(1,n-1);
+    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {
             out[i*n+j] += +in[(i-1)*n+(j-1)] * -0.25
                           +in[(i)*n+(j-1)] * -0.25
                           +in[(i-1)*n+(j)] * -0.25
@@ -108,8 +114,9 @@ void grid1(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void grid2(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forall<thread_exec>(RAJA::Index_type(2), RAJA::Index_type(n-2), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(2), RAJA::Index_type(n-2), [&](RAJA::Index_type j) {
+    RAJA::RangeSegment inside(2,n-2);
+    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {
             out[i*n+j] += +in[(i-2)*n+(j-2)] * -0.0625
                           +in[(i-1)*n+(j-2)] * -0.0208333333333
                           +in[(i)*n+(j-2)] * -0.0208333333333
@@ -136,8 +143,9 @@ void grid2(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void grid3(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forall<thread_exec>(RAJA::Index_type(3), RAJA::Index_type(n-3), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(3), RAJA::Index_type(n-3), [&](RAJA::Index_type j) {
+    RAJA::RangeSegment inside(3,n-3);
+    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {
             out[i*n+j] += +in[(i-3)*n+(j-3)] * -0.0277777777778
                           +in[(i-2)*n+(j-3)] * -0.00555555555556
                           +in[(i-1)*n+(j-3)] * -0.00555555555556
@@ -186,8 +194,9 @@ void grid3(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void grid4(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forall<thread_exec>(RAJA::Index_type(4), RAJA::Index_type(n-4), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(4), RAJA::Index_type(n-4), [&](RAJA::Index_type j) {
+    RAJA::RangeSegment inside(4,n-4);
+    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {
             out[i*n+j] += +in[(i-4)*n+(j-4)] * -0.015625
                           +in[(i-3)*n+(j-4)] * -0.00223214285714
                           +in[(i-2)*n+(j-4)] * -0.00223214285714
@@ -266,8 +275,9 @@ void grid4(const int n, const int t, std::vector<double> & in, std::vector<doubl
 }
 
 void grid5(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {
-    RAJA::forall<thread_exec>(RAJA::Index_type(5), RAJA::Index_type(n-5), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(5), RAJA::Index_type(n-5), [&](RAJA::Index_type j) {
+    RAJA::RangeSegment inside(5,n-5);
+    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {
             out[i*n+j] += +in[(i-5)*n+(j-5)] * -0.01
                           +in[(i-4)*n+(j-5)] * -0.00111111111111
                           +in[(i-3)*n+(j-5)] * -0.00111111111111

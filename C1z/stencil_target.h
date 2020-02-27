@@ -1,4 +1,3 @@
-OMP( declare target )
 void star1(const int n, const double * restrict in, double * restrict out) {
     OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
     for (int i=1; i<n-1; i++) {
@@ -1562,4 +1561,3 @@ void grid9(const int n, const double * restrict in, double * restrict out) {
      }
 }
 
-OMP( end declare target )
