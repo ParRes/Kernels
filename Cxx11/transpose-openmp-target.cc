@@ -111,9 +111,9 @@ int main(int argc, char * argv[])
   OMP_PARALLEL()
   {
     OMP_FOR()
-    for (auto i=0;i<order; i++) {
+    for (int i=0;i<order; i++) {
       PRAGMA_SIMD
-      for (auto j=0;j<order;j++) {
+      for (int j=0;j<order;j++) {
         A[i*order+j] = static_cast<double>(i*order+j);
         B[i*order+j] = 0.0;
       }
@@ -121,19 +121,19 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  OMP_TARGET( data map(tofrom: A[0:order*order], B[0:order*order]) map(from:trans_time) )
+  OMP_TARGET( data map(tofrom: A[0:order*order], B[0:order*order]) )
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) trans_time = omp_get_wtime();
 
       // transpose the  matrix
       if (tile_size < order) {
         OMP_TARGET( teams distribute parallel for simd collapse(2) )
-        for (auto it=0; it<order; it+=tile_size) {
-          for (auto jt=0; jt<order; jt+=tile_size) {
-            for (auto i=it; i<std::min(order,it+tile_size); i++) {
-              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
+        for (int it=0; it<order; it+=tile_size) {
+          for (int jt=0; jt<order; jt+=tile_size) {
+            for (int i=it; i<MIN(order,it+tile_size); i++) {
+              for (int j=jt; j<MIN(order,jt+tile_size); j++) {
                 B[i*order+j] += A[j*order+i];
                 A[j*order+i] += 1.0;
               }
@@ -142,8 +142,8 @@ int main(int argc, char * argv[])
         }
       } else {
         OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
-        for (auto i=0;i<order; i++) {
-          for (auto j=0;j<order;j++) {
+        for (int i=0;i<order; i++) {
+          for (int j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
             A[j*order+i] += 1.0;
           }
@@ -160,8 +160,8 @@ int main(int argc, char * argv[])
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
   OMP_PARALLEL_FOR_REDUCE( +:abserr )
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;

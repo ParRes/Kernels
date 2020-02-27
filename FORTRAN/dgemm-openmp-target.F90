@@ -51,86 +51,10 @@
 !
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
-subroutine prk_dgemm(order, tile_size, A, B, C)
-  use iso_fortran_env
-  implicit none
-  integer(kind=INT32), intent(in) :: order, tile_size
-  real(kind=REAL64), intent(in) ::  A(order,order)
-  real(kind=REAL64), intent(in) ::  B(order,order)
-  real(kind=REAL64), intent(inout) ::  C(order,order)
-  integer(kind=INT32) :: i,j,k,it,jt,kt
-
-  if (tile_size.lt.order) then
-#if defined(_OPENMP)
-    !$omp do collapse(3) private(i,j,k,it,jt,kt)
-    do jt=1,order,tile_size
-      do kt=1,order,tile_size
-        do it=1,order,tile_size
-#else
-    do concurrent (jt=1:order:tile_size)
-      do concurrent (kt=1:order:tile_size)
-        do concurrent (it=1:order:tile_size)
-#endif
-          do j=jt,min(order,jt+tile_size-1)
-            do k=kt,min(order,kt+tile_size-1)
-#if defined(_OPENMP)
-              !$omp simd
-#endif
-              do i=it,min(order,it+tile_size-1)
-                C(i,j) = C(i,j) + A(i,k) * B(k,j)
-              enddo
-#if defined(_OPENMP)
-              !$omp end simd
-#endif
-            enddo
-          enddo
-        enddo
-      enddo
-    enddo
-#ifdef _OPENMP
-    !$omp end do
-#endif
-  else
-#if defined(_OPENMP)
-    !$omp do private(i,j,k,it,jt,kt)
-    do j=1,order
-      do k=1,order
-        !$omp simd
-        do i=1,order
-#else
-    do concurrent (j=1:order)
-      do concurrent (k=1:order)
-        do concurrent (i=1:order)
-#endif
-          C(i,j) = C(i,j) + A(i,k) * B(k,j)
-        enddo
-#if defined(_OPENMP)
-        !$omp end simd
-#endif
-      enddo
-    enddo
-#ifdef _OPENMP
-    !$omp end do
-#endif
-  endif
-end subroutine prk_dgemm
-
 program main
   use iso_fortran_env
-#ifdef _OPENMP
   use omp_lib
-#endif
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -145,7 +69,7 @@ program main
   real(kind=REAL64), allocatable ::  C(:,:)         ! buffer to hold output matrix
   integer(kind=INT64) :: nflops
   ! runtime variables
-  integer(kind=INT32) :: i,j,k
+  integer(kind=INT32) :: i,j,k,q
   real(kind=REAL64) ::  checksum, reference, residuum
   real(kind=REAL64) ::  t0, t1, dgemm_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.0d-8    ! error tolerance
@@ -155,15 +79,11 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-#ifdef _OPENMP
-  write(*,'(a61)') 'Fortran OpenMP Dense matrix-matrix multiplication: C += A x B'
-#else
-  write(*,'(a61)') 'Fortran Serial Dense matrix-matrix multiplication: C += A x B'
-#endif
+  write(*,'(a70)') 'Fortran OpenMP TARGET Dense matrix-matrix multiplication: C += A x B'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a66)')    'Usage: ./dgemm-pretty <# iterations> <matrix order> [<tile_size>]'
+    write(*,'(a62)')    'Usage: ./dgemm-pretty <# iterations> <matrix order> [<tile_size>]'
     stop 1
   endif
 
@@ -194,9 +114,7 @@ program main
     tile_size = order ! no tiling
   endif
 
-#ifdef _OPENMP
   write(*,'(a,i8)') 'Number of threads    = ', omp_get_max_threads()
-#endif
   write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Matrix order         = ', order
   write(*,'(a,i8)') 'Tile size            = ', tile_size
@@ -223,51 +141,35 @@ program main
     stop 1
   endif
 
-#ifdef _OPENMP
-  !$omp parallel default(none)                     &
-  !$omp&  shared(A,B,C,t0,t1)                      &
-  !$omp&  firstprivate(order,iterations,tile_size) &
-  !$omp&  private(k)
-#endif
-
-  !$omp do private(i)
+  !$omp parallel do
   do i=1, order
     A(:,i) = real(i-1,REAL64)
     B(:,i) = real(i-1,REAL64)
     C(:,i) = real(0,REAL64)
   enddo
-  !$omp end do
+  !$omp end parallel do
+
+  !$omp target data map(to: A,B) map(tofrom: C) map(to:order)
 
   t0 = 0
 
-  do k=0,iterations
-    if (k.eq.1) then
-#ifdef _OPENMP
-      !$omp barrier
-      !$omp master
-#endif
-      t0 = prk_get_wtime()
-#ifdef _OPENMP
-      !$omp end master
-#endif
-    endif
-    call prk_dgemm(order, tile_size, A, B, C)
+  do q=0,iterations
+    if (q.eq.1) t0 = omp_get_wtime()
+    !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
+    do j=1,order
+      do i=1,order
+        do k=1,order
+          C(i,j) = C(i,j) + A(i,k) * B(k,j)
+        enddo
+      enddo
+    enddo
+    !$omp end target teams distribute parallel do simd
   enddo
 
-#ifdef _OPENMP
-  !$omp barrier
-  !$omp master
-#endif
-  t1 = prk_get_wtime()
-#ifdef _OPENMP
-  !$omp end master
-#endif
-
-#ifdef _OPENMP
-  !$omp end parallel
-#endif
-
+  t1 = omp_get_wtime()
   dgemm_time = t1 - t0
+
+  !$omp end target data
 
   ! ********************************************************************
   ! ** Analyze and output results.

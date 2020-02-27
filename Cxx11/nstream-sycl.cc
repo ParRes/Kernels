@@ -62,16 +62,13 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include "CL/sycl.hpp"
-
+#include "prk_sycl.h"
 #include "prk_util.h"
 
-// need to declare kernel class as template
-// to prevent name mangling conflict below
 template <typename T> class nstream;
 
 template <typename T>
-void run(cl::sycl::queue & q, int iterations, size_t length)
+void run(sycl::queue & q, int iterations, size_t length)
 {
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -79,31 +76,41 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
 
   double nstream_time(0);
 
+  const T scalar(3);
+
   std::vector<T> h_A(length,0);
   std::vector<T> h_B(length,2);
   std::vector<T> h_C(length,2);
 
-  auto range = prk::range(static_cast<size_t>(0), length);
-
-  const T scalar(3);
-
   try {
 
-    cl::sycl::buffer<T> d_A { h_A.data(), h_A.size() };
-    cl::sycl::buffer<T> d_B { h_B.data(), h_B.size() };
-    cl::sycl::buffer<T> d_C { h_C.data(), h_C.size() };
+    auto ctx = q.get_context();
+
+#if PREBUILD_KERNEL
+    sycl::program kernel(ctx);
+    kernel.build_with_kernel_type<nstream<T>>();
+#endif
+
+    sycl::buffer<T,1> d_A { h_A.data(), sycl::range<1>(h_A.size()) };
+    sycl::buffer<T,1> d_B { h_B.data(), sycl::range<1>(h_B.size()) };
+    sycl::buffer<T,1> d_C { h_C.data(), sycl::range<1>(h_C.size()) };
 
     for (int iter = 0; iter<=iterations; ++iter) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      q.submit([&](cl::sycl::handler& h) {
+      q.submit([&](sycl::handler& h) {
 
-        auto A = d_A.template get_access<cl::sycl::access::mode::read_write>(h);
-        auto B = d_B.template get_access<cl::sycl::access::mode::read>(h);
-        auto C = d_C.template get_access<cl::sycl::access::mode::read>(h);
+        auto A = d_A.template get_access<sycl::access::mode::read_write>(h);
+        auto B = d_B.template get_access<sycl::access::mode::read>(h);
+        auto C = d_C.template get_access<sycl::access::mode::read>(h);
 
-        h.parallel_for<class nstream<T>>(cl::sycl::range<1>{length}, [=] (cl::sycl::item<1> i) {
+        h.parallel_for<class nstream<T>>(
+#if PREBUILD_KERNEL
+                kernel.get_kernel<nstream<T>>(),
+#endif
+                sycl::range<1>{length}, [=] (sycl::id<1> it) {
+            const size_t i = it[0];
             A[i] += B[i] + scalar * C[i];
         });
       });
@@ -115,12 +122,17 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
     // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
   }
-  catch (cl::sycl::exception e) {
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+    return;
+  }
+  catch (std::exception & e) {
     std::cout << e.what() << std::endl;
     return;
   }
-  catch (std::exception e) {
-    std::cout << e.what() << std::endl;
+  catch (const char * e) {
+    std::cout << e << std::endl;
     return;
   }
 
@@ -128,7 +140,7 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  T ar(0);
+  double ar(0);
   T br(2);
   T cr(2);
   for (int i=0; i<=iterations; ++i) {
@@ -145,6 +157,7 @@ void run(cl::sycl::queue & q, int iterations, size_t length)
   const double epsilon(1.e-8);
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
@@ -202,70 +215,89 @@ int main(int argc, char * argv[])
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
-  try {
-
-    if (1) {
-        cl::sycl::queue host(cl::sycl::host_selector{});
-#ifndef TRISYCL
-        auto device      = host.get_device();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        auto platform    = device.get_platform();
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
+#ifdef USE_OPENCL
+  prk::opencl::listPlatforms();
 #endif
 
-        run<float>(host, iterations, length);
-        run<double>(host, iterations, length);
+#if SYCL_TRY_CPU_QUEUE
+  try {
+    if (length<100000) {
+        sycl::queue q(sycl::host_selector{});
+        prk::SYCL::print_device_platform(q);
+        run<float>(q, iterations, length);
+        run<double>(q, iterations, length);
+    } else {
+        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
     }
+  }
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+  }
+  catch (std::exception & e) {
+    std::cout << e.what() << std::endl;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+  }
+#endif
 
     // CPU requires spir64 target
+#if SYCL_TRY_CPU_QUEUE
+  try {
     if (1) {
-        cl::sycl::queue cpu(cl::sycl::cpu_selector{});
-#ifndef TRISYCL
-        auto device      = cpu.get_device();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        auto platform    = device.get_platform();
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
-#else
-        bool has_spir = true; // ?
-#endif
+        sycl::queue q(sycl::cpu_selector{});
+        prk::SYCL::print_device_platform(q);
+        bool has_spir = prk::SYCL::has_spir(q);
         if (has_spir) {
-          run<float>(cpu, iterations, length);
-          run<double>(cpu, iterations, length);
+          run<float>(q, iterations, length);
+          run<double>(q, iterations, length);
         }
     }
+  }
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+  }
+  catch (std::exception & e) {
+    std::cout << e.what() << std::endl;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+  }
+#endif
 
-    // NVIDIA GPU requires ptx64 target and does not work very well
+    // NVIDIA GPU requires ptx64 target
+#if SYCL_TRY_GPU_QUEUE
+  try {
     if (1) {
-        cl::sycl::queue gpu(cl::sycl::gpu_selector{});
-#ifndef TRISYCL
-        auto device      = gpu.get_device();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        auto platform    = device.get_platform();
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
-#else
-        bool has_spir = true; // ?
-#endif
-        if (has_spir) {
-          run<float>(gpu, iterations, length);
-          run<double>(gpu, iterations, length);
-        } else {
-          std::cout << "SYCL GPU device lacks SPIR-V support." << std::endl;
-#ifdef __COMPUTECPP__
-          std::cout << "You are using ComputeCpp so we will try it anyways..." << std::endl;
-          run<float>(gpu, iterations, length);
-          run<double>(gpu, iterations, length);
-#endif
+        sycl::queue q(sycl::gpu_selector{});
+        prk::SYCL::print_device_platform(q);
+        bool has_spir = prk::SYCL::has_spir(q);
+        bool has_fp64 = prk::SYCL::has_fp64(q);
+        bool has_ptx  = prk::SYCL::has_ptx(q);
+        if (!has_fp64) {
+          std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
+        }
+        if (has_spir || has_ptx) {
+          run<float>(q, iterations, length);
+          if (has_fp64) {
+            run<double>(q, iterations, length);
+          }
         }
     }
   }
-  catch (cl::sycl::exception e) {
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+  }
+  catch (std::exception & e) {
     std::cout << e.what() << std::endl;
   }
-  catch (std::exception e) {
-    std::cout << e.what() << std::endl;
+  catch (const char * e) {
+    std::cout << e << std::endl;
   }
+#endif
 
   return 0;
 }

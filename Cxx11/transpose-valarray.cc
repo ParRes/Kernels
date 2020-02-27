@@ -53,6 +53,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include <valarray>
 
 int main(int argc, char * argv[])
 {

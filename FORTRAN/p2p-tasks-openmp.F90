@@ -173,12 +173,17 @@ program main
     enddo
   enddo
 
-  do j=1,n
+  !$omp task private(j) firstprivate(n) shared(grid)
+  do j=2,n
     grid(1,j) = real(j-1,REAL64)
   enddo
-  do i=1,m
+  !$omp end task
+  !$omp task private(i) firstprivate(m) shared(grid)
+  do i=2,m
     grid(i,1) = real(i-1,REAL64)
   enddo
+  !$omp end task
+  !$omp taskwait
 
   do k=0,iterations
 

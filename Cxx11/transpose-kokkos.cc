@@ -111,7 +111,7 @@ int main(int argc, char * argv[])
     std::cout << "Matrix order         = " << order << std::endl;
     std::cout << "Tile size            = " << tile_size << std::endl;
     std::cout << "Permute loops        = " << (permute ? "yes" : "no") << std::endl;
-    std::cout << "Kokkos execution space: " << typeid(Kokkos::DefaultExecutionSpace).name() << std::endl;
+    std::cout << "Kokkos execution space: " << Kokkos::DefaultExecutionSpace::name() << std::endl;
 
     //////////////////////////////////////////////////////////////////////
     // Allocate space and perform the computation

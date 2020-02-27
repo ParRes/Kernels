@@ -77,7 +77,7 @@ const bool false=0;
 # define OMP_BARRIER PRAGMA(omp barrier)
 # define OMP_FOR(x) PRAGMA(omp for x)
 # define OMP_FOR_REDUCE(x) PRAGMA(omp for reduction (x) )
-# if (_OPENMP >= 201300)
+# if (_OPENMP >= 201300) || (__ibmxl_version__ >= 16)
 #  define OMP_SIMD PRAGMA(omp simd)
 #  define OMP_FOR_SIMD(x) PRAGMA(omp for simd x)
 #  define OMP_TASK(x) PRAGMA(omp task x)

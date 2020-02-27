@@ -44,7 +44,7 @@
 # define OMP_FOR(x) PRAGMA(omp for x)
 # define OMP_FOR_REDUCE(x) PRAGMA(omp for reduction (x) )
 // OpenMP SIMD if supported, else not.
-# if (_OPENMP >= 201300)
+# if (_OPENMP >= 201300) || (__ibmxl_version__ >= 16)
 #  define OMP_SIMD PRAGMA(omp simd)
 #  define OMP_FOR_SIMD PRAGMA(omp for simd)
 #  define OMP_TASK(x) PRAGMA(omp task x)
@@ -89,6 +89,17 @@
 # define OMP_TARGET(x)
 # define OMP_DECLARE_TARGET
 # define OMP_END_DECLARE_TARGET
+#endif
+
+// used in OpenMP target code because std::min etc are not declare target
+#ifndef MIN
+#define MIN(x,y) ((x)<(y)?(x):(y))
+#endif
+#ifndef MAX
+#define MAX(x,y) ((x)>(y)?(x):(y))
+#endif
+#ifndef ABS
+#define ABS(a) ((a) >= 0 ? (a) : -(a))
 #endif
 
 #endif /* PRK_OPENMP_H */

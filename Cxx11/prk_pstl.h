@@ -36,18 +36,24 @@
 #define USE_INTEL_PSTL
 #endif
 
-#ifdef USE_PSTL
-# ifdef USE_INTEL_PSTL
+#if defined(USE_PSTL)
+# if defined(__GNUC__) && (__GNUC__ >= 9)
+#  include <execution>
+#  include <algorithm>
+#  include <numeric>
+//#  include <memory>
+namespace exec = __pstl::execution;
+# elif defined(USE_INTEL_PSTL)
 #  include <pstl/execution>
 #  include <pstl/algorithm>
 #  include <pstl/numeric>
-#  include <pstl/memory>
+//#  include <pstl/memory>
+namespace exec = std::execution;
 # elif defined(__GNUC__) && defined(__GNUC_MINOR__) && \
        ( (__GNUC__ >= 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
 #  include <parallel/algorithm>
 #  include <parallel/numeric>
 # endif
-namespace exec = std::execution;
 #endif
 
 #endif /* PRK_PSTL_H */

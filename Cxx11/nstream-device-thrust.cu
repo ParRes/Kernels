@@ -64,6 +64,7 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
+#include "prk_thrust.h"
 
 int main(int argc, char * argv[])
 {
@@ -115,8 +116,6 @@ int main(int argc, char * argv[])
   thrust::device_vector<double> B(length);
   thrust::device_vector<double> C(length);
 
-  auto range = prk::range(static_cast<size_t>(0), length);
-
   double scalar(3);
   {
     thrust::fill(thrust::device, A.begin(), A.end(), 0.0);
@@ -163,6 +162,7 @@ int main(int argc, char * argv[])
   double epsilon(1.e-8);
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;

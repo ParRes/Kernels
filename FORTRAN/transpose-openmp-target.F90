@@ -39,29 +39,22 @@
 ! USAGE:   Program input is the matrix order and the number of times to
 !          repeat the operation:
 !
-!          transpose <matrix_size> <# iterations>
+!          transpose <matrix_size> <# iterations> [tile size]
+!
+!          An optional parameter specifies the tile size used to divide the
+!          individual matrix blocks for improved cache and TLB performance.
 !
 !          The output consists of diagnostics to make sure the
 !          transpose worked and timing statistics.
 !
 ! HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-!          Converted to Fortran by Jeff Hammond, February 2015
-!
+!          Converted to Fortran by Jeff Hammond, January 2015
 ! *******************************************************************
-
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
 
 program main
   use iso_fortran_env
+  use omp_lib
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -73,9 +66,9 @@ program main
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
-  integer(kind=INT32) :: i,j,k
-  integer(kind=INT64) :: j2, o2                      ! for loop over order**2
-  real(kind=REAL64) ::  abserr                      ! squared error
+  integer(kind=INT32) ::  i, j, k
+  !integer(kind=INT32) ::  it, jt, tile_size
+  real(kind=REAL64) ::  abserr, addit, temp         ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
 
@@ -84,7 +77,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a40)') 'Fortran Pretty Matrix transpose: B = A^T'
+  write(*,'(a46)') 'Fortran OpenMP TARGET Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -108,8 +101,17 @@ program main
     stop 1
   endif
 
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix order         = ', order
+  ! same default as the C implementation
+  !tile_size = 32
+  !if (command_argument_count().gt.2) then
+  !    call get_command_argument(3,argtmp,arglen,err)
+  !    if (err.eq.0) read(argtmp,'(i32)') tile_size
+  !endif
+  !if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
+  !  write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
+  !                         ' must be >= 1 and <= ',order
+  !  tile_size = order ! no tiling
+  !endif
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -127,42 +129,65 @@ program main
     stop 1
   endif
 
-  ! Fill the original matrix
-  o2 = int(order,INT64)**2
-  A = reshape((/ (j2, j2 = 0,o2) /),(/order, order/))
-  B = 0
+  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
+  write(*,'(a,i8)') 'Matrix order         = ', order
+  !write(*,'(a,i8)') 'Tile size            = ', tile_size
+
+  !$omp parallel do simd collapse(2)
+  do j=1,order
+    do i=1,order
+      A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+      B(i,j) = 0
+    enddo
+  enddo
+  !$omp end parallel do simd
+
+  !$omp target data map(to: A) map(tofrom: B)
 
   t0 = 0
 
   do k=0,iterations
-    ! start timer after a warmup iteration
-    if (k.eq.1) t0 = prk_get_wtime()
-    B = B + transpose(A)
-    A = A + 1
+
+    if (k.eq.1) t0 = omp_get_wtime()
+
+    !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
+    do j=1,order
+      do i=1,order
+        B(j,i) = B(j,i) + A(i,j)
+        A(i,j) = A(i,j) + 1
+      enddo
+    enddo
+    !$omp end target teams distribute parallel do simd
+
   enddo ! iterations
 
-  t1 = prk_get_wtime()
+  t1 = omp_get_wtime()
   trans_time = t1 - t0
+
+  !$omp end target data
 
   ! ********************************************************************
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  ! we reuse A here as the reference matrix, to compute the error
-  A = ( transpose(reshape((/ (j2, j2 = 0,o2) /),(/order, order/))) &
-        * real(iterations+1,REAL64) ) &
-      + real((iterations*(iterations+1))/2,REAL64)
-#if defined(PGI)
-  abserr = 0.0d0
+  abserr = 0.0
+  ! this will overflow if iterations>>1000
+  addit = (0.5*iterations) * (iterations+1)
+  !$omp parallel do collapse(2)                                       &
+  !$omp& default(none)                                               &
+  !$omp& shared(B)                                                   &
+  !$omp& firstprivate(order,iterations,addit)                        &
+  !$omp& private(i,j,temp)                                           &
+  !$omp& reduction(+:abserr)
   do j=1,order
     do i=1,order
-      abserr = abserr + (B(i,j) - A(i,j))**2
+      temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
+           * real(iterations+1,REAL64)
+      abserr = abserr + abs(B(i,j) - (temp+addit))
     enddo
   enddo
-  abserr = sqrt(abserr)
-#else
-  abserr = norm2(A-B)
-#endif
+  !$omp end parallel do
 
   deallocate( B )
   deallocate( A )

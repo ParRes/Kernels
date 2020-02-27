@@ -83,6 +83,23 @@ namespace prk
                     }
                 }
 
+                // do not use cached value as a hedge against weird stuff happening
+                int num_gpus() {
+                    int g;
+                    prk::CUDA::check( cudaGetDeviceCount(&g) );
+                    return g;
+                }
+
+                int get_gpu() {
+                    int g;
+                    prk::CUDA::check( cudaGetDevice(&g) );
+                    return g;
+                }
+
+                void set_gpu(int g) {
+                    prk::CUDA::check( cudaSetDevice(g) );
+                }
+
                 void print() {
                     for (auto i=0; i<nDevices; ++i) {
                         std::cout << "device name: " << vDevices[i].name << "\n";

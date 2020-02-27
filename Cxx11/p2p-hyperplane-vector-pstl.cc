@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time(0);
 
   std::vector<double> grid(n*n,0.0);
 
@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
     grid[j*n+0] = static_cast<double>(j);
   }
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) pipeline_time = prk::wtime();
 
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
         const auto begin = std::max(2,i-(nb+1)+2);
         const auto end   = std::min(i,nb+1)+1;
         auto range = prk::range(begin,end);
-#if defined(USE_PSTL) && defined(USE_INTEL_PSTL)
+#if defined(USE_PSTL) && ( defined(USE_INTEL_PSTL) || ( defined(__GNUC__) && (__GNUC__ >= 9) ) )
         std::for_each( exec::par, std::begin(range), std::end(range), [&] (auto j) {
 #elif defined(USE_PSTL) && defined(__GNUC__) && defined(__GNUC_MINOR__) \
                         && ( (__GNUC__ == 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )

@@ -40,8 +40,8 @@
 #include <cassert>
 
 // Test standard library _after_ standard headers have been included...
-#if !defined(__NVCC__) && !defined(__PGI) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
-# error You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
+#if !defined(__NVCC__) && !defined(__PGI) && !defined(__ibmxl__) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
+# warning You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
 #endif
 
 #if !(defined(__cplusplus) && (__cplusplus >= 201103L))
@@ -54,7 +54,7 @@
 #include <exception>
 #include <list>
 #include <vector>
-#include <valarray>
+//#include <valarray>
 
 #include <chrono>
 #include <random>
@@ -276,6 +276,31 @@ namespace prk {
     template <class T1, class T2>
     static inline auto divceil(T1 numerator, T2 denominator) -> decltype(numerator / denominator) {
         return ( numerator / denominator + (numerator % denominator > 0) );
+    }
+
+    template<typename T>
+    T * alloc(size_t bytes)
+    {
+        int alignment = ::prk::get_alignment();
+#if defined(__INTEL_COMPILER)
+        return (void*)_mm_malloc(bytes,alignment);
+#else
+        T * ptr = nullptr;
+        int ret = posix_memalign((void**)&ptr,alignment,bytes);
+        if (ret!=0) ptr = NULL;
+        return ptr;
+#endif
+
+    }
+
+    template<typename T>
+    void dealloc(T * p)
+    {
+#if defined(__INTEL_COMPILER)
+        _mm_free((void*)p);
+#else
+        free((void*)p);
+#endif
     }
 
 } // namespace prk

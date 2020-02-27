@@ -39,14 +39,14 @@ OPENCLFLAGS = $(OPENCLFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 TBBFLAGS = $(TBBFLAG) -DUSE_TBB -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
-BOOSTFLAGS = $(BOOSTFLAG) -DUSE_BOOST
+BOOSTFLAGS = $(BOOSTFLAG)
 RANGEFLAGS = $(RANGEFLAG) -DUSE_RANGES
 STLFLAGS = $(STLFLAG) $(RANGEFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS) -DUSE_PSTL
 RAJAFLAGS = $(RAJAFLAG) -DUSE_RAJA
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS) -DUSE_THRUST
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(RANGEFLAGS) -DUSE_KOKKOS
-SYCLFLAGS = $(SYCLFLAG) -DUSE_SYCL -DUSE_2D_INDEXING=0 $(RANGEFLAGS)
+SYCLFLAGS = $(SYCLFLAG) -DUSE_SYCL -DUSE_2D_INDEXING=0
 ORNLACCFLAGS = $(ORNLACCFLAG)
 
 ifdef OCCADIR
@@ -69,7 +69,7 @@ ifneq ($(findstring pgc++,$(CXX)),pgc++)
   EXTRA += tbb pstl
 endif
 
-all: sequential vector valarray openmp taskloop stl rangefor kokkos opencl sycl boost-compute $(EXTRA) # raja
+all: sequential vector valarray openmp taskloop stl rangefor opencl sycl $(EXTRA)
 
 #p2p: p2p-vector p2p-doacross-openmp p2p-hyperplane-openmp p2p-tasks-openmp p2p-openmp-target \
      p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl p2p-hyperplane-vector-tbb \
@@ -105,7 +105,11 @@ taskloop: stencil-vector-taskloop transpose-vector-taskloop nstream-vector-taskl
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
-sycl: p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl
+sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl
+
+sycl-usm: nstream-sycl-usm stencil-sycl-usm transpose-sycl-usm
+
+sycl-explicit: nstream-sycl-explicit transpose-sycl-explicit
 
 tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb \
      p2p-hyperplane-vector-tbb p2p-tasks-tbb
@@ -118,8 +122,8 @@ rangefor: stencil-vector-rangefor transpose-vector-rangefor nstream-vector-range
 
 kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
-raja: p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja \
-      p2p-raja stencil-raja transpose-raja nstream-raja
+raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
+      p2p-raja transpose-raja nstream-raja stencil-raja # transpose-vector-raja
 
 cuda: stencil-cuda transpose-cuda nstream-cuda
 
@@ -129,6 +133,8 @@ thrust: nstream-host-thrust nstream-device-thrust \
         transpose-host-thrust transpose-device-thrust
 
 cuda: transpose-cuda
+
+cublas: transpose-cublas nstream-cublas dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas
 
 cblas: transpose-cblas dgemm-cblas
 
@@ -153,6 +159,12 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-sycl: %-sycl.cc prk_util.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
+%-sycl-usm: %-sycl-usm.cc prk_util.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
+%-sycl-explicit: %-sycl-explicit.cc prk_util.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-target: %-target.cc prk_util.h
@@ -183,9 +195,14 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 %-raja: %-raja.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
 
+ifeq ($(PRK_KOKKOS_BACKEND),Cuda)
+%-kokkos: %-kokkos.cc prk_util.h
+	${KOKKOSDIR}/bin/nvcc_wrapper $(CPPFLAGS) $(CUDAFLAGS) $< $(KOKKOSFLAG) -DUSE_KOKKOS -DPRK_KOKKOS_BACKEND=Cuda -o $@
+else
 %-kokkos: %-kokkos.cc prk_util.h
 	$(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
 	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
+endif
 
 # for host execution
 %-thrust: %-thrust.cc prk_util.h
@@ -197,6 +214,9 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
+
+%-mpi-cublas: %-mpi-cublas.cu prk_util.h prk_cuda.h prk_mpi.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas $(MPIFLAGS) -o $@
 
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas -o $@
@@ -224,6 +244,7 @@ clean:
 	-rm -f *.o
 	-rm -f *.s
 	-rm -f *.ll # Coriander
+	-rm -f pgipar* # PGI?
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
@@ -235,6 +256,8 @@ clean:
 	-rm -f *-taskloop
 	-rm -f *-opencl
 	-rm -f *-sycl
+	-rm -f *-sycl-explicit
+	-rm -f *-sycl-usm
 	-rm -f *-tbb
 	-rm -f *-stl
 	-rm -f *-pstl
