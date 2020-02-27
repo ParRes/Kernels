@@ -74,7 +74,7 @@ int main(int argc, char * argv[])
 
   if (me==0) {
       std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-      std::cout << "C++ HPX STREAM triad: A = B + scalar * C" << std::endl;
+      std::cout << "UPC++ STREAM triad: A = B + scalar * C" << std::endl;
   }
 
   //////////////////////////////////////////////////////////////////////
