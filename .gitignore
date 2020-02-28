@@ -180,6 +180,9 @@ Cxx11/nstream-cublas
 Cxx11/nstream-cuda
 Cxx11/nstream-openmp-target
 Cxx11/nstream-sycl
+Cxx11/nstream-sycl-usm
+Cxx11/nstream-sycl-explicit
+Cxx11/nstream-celerity
 Cxx11/sparse-vector
 Cxx11/stencil-opencl
 Cxx11/stencil-openmp-target
