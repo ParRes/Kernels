@@ -46,7 +46,7 @@ PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS) -DUSE_PSTL
 RAJAFLAGS = $(RAJAFLAG) -DUSE_RAJA
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS) -DUSE_THRUST
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(RANGEFLAGS) -DUSE_KOKKOS
-SYCLFLAGS = $(SYCLFLAG) -DUSE_SYCL -DUSE_2D_INDEXING=0
+SYCLFLAGS = $(SYCLFLAG) -DUSE_2D_INDEXING=0
 ORNLACCFLAGS = $(ORNLACCFLAG)
 
 ifdef OCCADIR
@@ -156,13 +156,16 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
-%-sycl: %-sycl.cc prk_util.h
+%-celerity: %-celerity.cc prk_util.h prk_sycl.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $(BOOSTFLAGS) $(CELERITYINC) $(MPIINC) $< $(CELERITYLIB) $(MPILIB) -o $@
+
+%-sycl: %-sycl.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
-%-sycl-usm: %-sycl-usm.cc prk_util.h
+%-sycl-usm: %-sycl-usm.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
-%-sycl-explicit: %-sycl-explicit.cc prk_util.h
+%-sycl-explicit: %-sycl-explicit.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-target: %-target.cc prk_util.h
@@ -259,6 +262,7 @@ clean:
 	-rm -f *-sycl
 	-rm -f *-sycl-explicit
 	-rm -f *-sycl-usm
+	-rm -f *-celerity
 	-rm -f *-tbb
 	-rm -f *-stl
 	-rm -f *-pstl
