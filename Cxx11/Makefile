@@ -103,6 +103,8 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 
 taskloop: stencil-vector-taskloop transpose-vector-taskloop nstream-vector-taskloop
 
+mpi: nstream-mpi
+
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
 sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl
@@ -152,6 +154,9 @@ transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
 
 nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+
+%-mpi: %-mpi.cc prk_util.h prk_mpi.h
+	$(CXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) -o $@
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
@@ -258,6 +263,7 @@ clean:
 	-rm -f *-openmp
 	-rm -f *-target
 	-rm -f *-taskloop
+	-rm -f *-mpi
 	-rm -f *-opencl
 	-rm -f *-sycl
 	-rm -f *-sycl-explicit

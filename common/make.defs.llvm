@@ -115,8 +115,6 @@ SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib
 CELERITYDIR=${SYCLDIR}
 CELERITYINC=-I$(CELERITYDIR)/include/celerity -I$(CELERITYDIR)/include/celerity/vendor
 CELERITYLIB=-L$(CELERITYDIR)/lib -lcelerity_runtime
-MPIINC=-I/usr/include/mpich-3.2-x86_64
-MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
 #
 # OCCA
 #
@@ -178,6 +176,9 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 #
 # We assume you have installed an implementation of MPI-3 that is in your path.
 MPICC=mpicc
+MPICXX=mpicxx
+MPIINC=-I/usr/include/mpich-3.2-x86_64
+MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
 
 MEMKINDDIR=/home/parallels/PRK/deps
 MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib
