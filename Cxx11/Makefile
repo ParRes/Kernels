@@ -103,7 +103,7 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 
 taskloop: stencil-vector-taskloop transpose-vector-taskloop nstream-vector-taskloop
 
-mpi: nstream-mpi
+mpi: nstream-mpi stencil-mpi
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
