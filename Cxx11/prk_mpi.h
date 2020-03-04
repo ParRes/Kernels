@@ -14,9 +14,9 @@ namespace prk
 {
     namespace MPI
     {
-        void abort(int errorcode = -1)
+        void abort(int errorcode = -1, MPI_Comm comm = MPI_COMM_WORLD)
         {
-            MPI_Abort(MPI_COMM_WORLD, errorcode);
+            MPI_Abort(comm, errorcode);
             std::abort(); // unreachable
         }
 
@@ -147,48 +147,62 @@ namespace prk
         class vector {
 
           private:
+              MPI_Comm comm_;
+              MPI_Comm node_comm_;
+              size_t global_size_;
+              size_t local_size_;
               MPI_Win shm_win_;
               MPI_Win distributed_win_;
-              T * local_pointer;
+              T * local_pointer_;
 
           public:
-            vector(size_t global_size, MPI_Comm comm = MPI_COMM_WORLD)
+            vector(size_t global_size, T fill_value = 0, MPI_Comm comm = MPI_COMM_WORLD)
             {
-                int np = prk::MPI::size(comm);
-                int me = prk::MPI::rank(comm);
+                prk::MPI::check( MPI_Comm_dup(comm, &comm_) );
 
-                bool consistency = prk::MPI::is_same(global_size, comm);
+                int np = prk::MPI::size(comm_);
+                int me = prk::MPI::rank(comm_);
+
+                bool consistency = prk::MPI::is_same(global_size, comm_);
                 if (!consistency) {
                     if (me == 0) std::cerr << "global size inconsistent!\n"
                                            << " rank = " << me << ", global size = " << global_size << std::endl;
                     prk::MPI::abort();
                 }
 
-                size_t local_size = global_size / np;
-                size_t remainder  = global_size % np;
-                if (me < remainder) local_size++;
+                global_size_ = global_size;
+                local_size_ = global_size_ / np;
+                const size_t remainder  = global_size_ % np;
+                if (me < remainder) local_size_++;
 
-                size_t verify_global_size = sum(local_size, comm);
+                const size_t verify_global_size = sum(local_size_, comm_);
                 if (global_size != verify_global_size) {
                     if (me == 0) std::cerr << "global size inconsistent!\n"
                                            << " expected: " << global_size << "\n"
                                            << " actual: " << verify_global_size << "\n";
-                    std::cerr << "rank = " << me << ", local size = " << local_size << std::endl;
+                    std::cerr << "rank = " << me << ", local size = " << local_size_ << std::endl;
                     prk::MPI::abort();
                 }
 
-                MPI_Comm node_comm;
-                prk::MPI::check( MPI_Comm_split_type(comm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &node_comm) );
+                prk::MPI::check( MPI_Comm_split_type(comm_, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &node_comm_) );
 
-                prk::MPI::check( MPI_Win_allocate_shared(local_size, 1, MPI_INFO_NULL, node_comm,
-                                                         &this->local_pointer, &this->shm_win_) );
+                prk::MPI::check( MPI_Win_allocate_shared(local_size_, 1, MPI_INFO_NULL, node_comm_,
+                                                         &local_pointer_, &shm_win_) );
 
-                prk::MPI::check( MPI_Win_allocate_shared(local_size, 1, MPI_INFO_NULL, comm,
-                                                         &this->local_pointer, &this->distributed_win_) );
+                prk::MPI::check( MPI_Win_create(local_pointer_, local_size_, 1, MPI_INFO_NULL, comm_,
+                                                distributed_win_) );
 
-                prk::MPI::check( MPI_Comm_free(&node_comm) );
+                for (size_t i=0; i < local_size_; ++i) {
+                    local_pointer_[i] = fill_value;
+                }
+            }
 
-
+            ~vector(void)
+            {
+                prk::MPI::check( MPI_Win_free(&distributed_win_) );
+                prk::MPI::check( MPI_Win_free(&shm_win_) );
+                prk::MPI::check( MPI_Comm_free(&node_comm_) );
+                prk::MPI::check( MPI_Comm_free(&comm_) );
             }
         };
 
