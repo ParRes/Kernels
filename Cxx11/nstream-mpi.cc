@@ -122,30 +122,28 @@ int main(int argc, char * argv[])
 
     double nstream_time(0);
 
-    double * RESTRICT A = new double[length];
-    double * RESTRICT B = new double[length];
-    double * RESTRICT C = new double[length];
+    prk::MPI::vector A(length,0.0);
+    prk::MPI::vector B(length,2.0);
+    prk::MPI::vector C(length,2.0);
 
-    double scalar = 3.0;
+    size_t local_length = A.get_local_size();
+
+    const double scalar(3);
 
     {
-      for (size_t i=0; i<length; i++) {
-        A[i] = 0.0;
-        B[i] = 2.0;
-        C[i] = 2.0;
-      }
-
-      for (auto iter = 0; iter<=iterations; iter++) {
+      for (int iter = 0; iter<=iterations; iter++) {
 
         if (iter==1) {
-            nstream_time = prk::wtime();
+            prk::MPI::barrier();
+            nstream_time = prk::MPI::wtime();
         }
 
-        for (size_t i=0; i<length; i++) {
+        for (size_t i=0; i<local_length; i++) {
             A[i] += B[i] + scalar * C[i];
         }
       }
-      nstream_time = prk::wtime() - nstream_time;
+      prk::MPI::barrier();
+      nstream_time = prk::MPI::wtime() - nstream_time;
     }
 
     //////////////////////////////////////////////////////////////////////
@@ -162,9 +160,11 @@ int main(int argc, char * argv[])
     ar *= length;
 
     double asum(0);
-    for (size_t i=0; i<length; i++) {
+    for (size_t i=0; i<local_length; i++) {
         asum += std::fabs(A[i]);
     }
+
+    asum = prk::MPI::sum(asum);
 
     double epsilon=1.e-8;
     if (std::fabs(ar-asum)/asum > epsilon) {
@@ -173,13 +173,14 @@ int main(int argc, char * argv[])
                   << "       Expected checksum: " << ar << "\n"
                   << "       Observed checksum: " << asum << std::endl;
         std::cout << "ERROR: solution did not validate" << std::endl;
-        return 1;
     } else {
+      if (me == 0) {
         std::cout << "Solution validates" << std::endl;
         double avgtime = nstream_time/iterations;
         double nbytes = 4.0 * length * sizeof(double);
         std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                   << " Avg time (s): " << avgtime << std::endl;
+      }
     }
 
   } // prk::MPI:state goes out of scope here
