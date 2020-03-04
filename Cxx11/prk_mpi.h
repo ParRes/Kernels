@@ -1,19 +1,27 @@
 #ifndef PRK_MPI_HPP
 #define PRK_MPI_HPP
 
+#include <cstdio>
+#include <cstdlib>
+#include <cinttypes>
+
 #include <iostream>
 #include <vector>
 #include <string>
 
-#include <cinttypes>
 #include <type_traits>
 
 #include <mpi.h>
+
+#define ENABLE_SHM 1
 
 namespace prk
 {
     namespace MPI
     {
+        double wtime(void) { return MPI_Wtime(); }
+        double wtick(void) { return MPI_Wtick(); }
+
         void abort(int errorcode = -1, MPI_Comm comm = MPI_COMM_WORLD)
         {
             MPI_Abort(comm, errorcode);
@@ -107,6 +115,12 @@ namespace prk
             return out;
         }
 
+        double sum(double in, MPI_Comm comm = MPI_COMM_WORLD) {
+            double out;
+            prk::MPI::check( MPI_Allreduce(&in, &out, 1, MPI_DOUBLE, MPI_SUM, comm) );
+            return out;
+        }
+
         double avg(double in, MPI_Comm comm = MPI_COMM_WORLD) {
             double out;
             prk::MPI::check( MPI_Allreduce(&in, &out, 1, MPI_DOUBLE, MPI_SUM, comm) );
@@ -143,20 +157,23 @@ namespace prk
             return out;
         }
 
-        template <typename T>
         class vector {
 
           private:
-              MPI_Comm comm_;
-              MPI_Comm node_comm_;
               size_t global_size_;
               size_t local_size_;
+
+#if ENABLE_SHM
+              MPI_Comm node_comm_;
               MPI_Win shm_win_;
+#endif
+              MPI_Comm comm_;
               MPI_Win distributed_win_;
-              T * local_pointer_;
+
+              double * local_pointer_;
 
           public:
-            vector(size_t global_size, T fill_value = 0, MPI_Comm comm = MPI_COMM_WORLD)
+            vector(size_t global_size, double fill_value = 0.0, MPI_Comm comm = MPI_COMM_WORLD)
             {
                 prk::MPI::check( MPI_Comm_dup(comm, &comm_) );
 
@@ -179,18 +196,23 @@ namespace prk
                 if (global_size != verify_global_size) {
                     if (me == 0) std::cerr << "global size inconsistent!\n"
                                            << " expected: " << global_size << "\n"
-                                           << " actual: " << verify_global_size << "\n";
+                                           << " actual:   " << verify_global_size << "\n";
                     std::cerr << "rank = " << me << ", local size = " << local_size_ << std::endl;
                     prk::MPI::abort();
                 }
 
+                size_t local_bytes = local_size_ * sizeof(double);
+#if ENABLE_SHM
                 prk::MPI::check( MPI_Comm_split_type(comm_, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &node_comm_) );
-
-                prk::MPI::check( MPI_Win_allocate_shared(local_size_, 1, MPI_INFO_NULL, node_comm_,
+                prk::MPI::check( MPI_Win_allocate_shared(local_bytes, 1, MPI_INFO_NULL, node_comm_,
                                                          &local_pointer_, &shm_win_) );
 
-                prk::MPI::check( MPI_Win_create(local_pointer_, local_size_, 1, MPI_INFO_NULL, comm_,
-                                                distributed_win_) );
+                prk::MPI::check( MPI_Win_create(local_pointer_, local_bytes, 1, MPI_INFO_NULL, comm_,
+                                                &distributed_win_) );
+#else
+                prk::MPI::check( MPI_Win_allocate(local_bytes, 1, MPI_INFO_NULL, comm_,
+                                                  &local_pointer_, &distributed_win_) );
+#endif
 
                 for (size_t i=0; i < local_size_; ++i) {
                     local_pointer_[i] = fill_value;
@@ -200,10 +222,28 @@ namespace prk
             ~vector(void)
             {
                 prk::MPI::check( MPI_Win_free(&distributed_win_) );
+#if ENABLE_SHM
                 prk::MPI::check( MPI_Win_free(&shm_win_) );
                 prk::MPI::check( MPI_Comm_free(&node_comm_) );
+#endif
                 prk::MPI::check( MPI_Comm_free(&comm_) );
             }
+
+            double * get_local_pointer(size_t offset = 0)
+            {
+                return &local_pointer_[offset];
+            }
+
+            size_t get_local_size(void)
+            {
+                return local_size_;
+            }
+#if 1
+            double& operator[](size_t offset)
+            {
+                return local_pointer_[offset];
+            }
+#endif
         };
 
     } // MPI namespace
