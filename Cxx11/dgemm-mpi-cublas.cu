@@ -87,7 +87,7 @@ __global__ void init(int order, double * C)
 int main(int argc, char * argv[])
 {
   {
-    prk::MPI::state mpi(argc,argv);
+    prk::MPI::state mpi(&argc,&argv);
 
     int np = prk::MPI::size();
     int me = prk::MPI::rank();
