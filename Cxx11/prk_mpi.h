@@ -14,6 +14,7 @@
 #include <mpi.h>
 
 #define ENABLE_SHM 1
+#define STL_VECTOR_API 1
 
 namespace prk
 {
@@ -157,6 +158,7 @@ namespace prk
             return out;
         }
 
+        template <typename T>
         class vector {
 
           private:
@@ -170,10 +172,10 @@ namespace prk
               MPI_Comm comm_;
               MPI_Win distributed_win_;
 
-              double * local_pointer_;
+              T * local_pointer_;
 
           public:
-            vector(size_t global_size, double fill_value = 0.0, MPI_Comm comm = MPI_COMM_WORLD)
+            vector(size_t global_size, T fill_value = 0, MPI_Comm comm = MPI_COMM_WORLD)
             {
                 prk::MPI::check( MPI_Comm_dup(comm, &comm_) );
 
@@ -201,7 +203,7 @@ namespace prk
                     prk::MPI::abort();
                 }
 
-                size_t local_bytes = local_size_ * sizeof(double);
+                size_t local_bytes = local_size_ * sizeof(T);
 #if ENABLE_SHM
                 prk::MPI::check( MPI_Comm_split_type(comm_, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &node_comm_) );
                 prk::MPI::check( MPI_Win_allocate_shared(local_bytes, 1, MPI_INFO_NULL, node_comm_,
@@ -229,17 +231,23 @@ namespace prk
                 prk::MPI::check( MPI_Comm_free(&comm_) );
             }
 
-            double * get_local_pointer(size_t offset = 0)
+            T * local_pointer(size_t offset = 0)
             {
                 return &local_pointer_[offset];
             }
 
-            size_t get_local_size(void)
+            size_t local_size(void)
             {
                 return local_size_;
             }
-#if 1
-            double& operator[](size_t offset)
+
+#if STL_VECTOR_API
+            size_t size(void)
+            {
+                return local_size_;
+            }
+
+            T& operator[](size_t offset)
             {
                 return local_pointer_[offset];
             }

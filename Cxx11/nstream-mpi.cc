@@ -122,14 +122,13 @@ int main(int argc, char * argv[])
 
     double nstream_time(0);
 
-    prk::MPI::vector A(length,0.0);
-    prk::MPI::vector B(length,2.0);
-    prk::MPI::vector C(length,2.0);
-
-    size_t local_length = A.get_local_size();
+    prk::MPI::vector<double> A(length,0.0);
+    prk::MPI::vector<double> B(length,2.0);
+    prk::MPI::vector<double> C(length,2.0);
 
     const double scalar(3);
 
+    const size_t local_length = A.local_size();
     {
       for (int iter = 0; iter<=iterations; iter++) {
 
