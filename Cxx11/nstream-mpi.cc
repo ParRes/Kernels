@@ -145,6 +145,18 @@ int main(int argc, char * argv[])
       nstream_time = prk::MPI::wtime() - nstream_time;
     }
 
+#if 0
+    prk::MPI::barrier();
+    if (me == 0) {
+        for (size_t i=0; i<length; ++i) {
+            double x = A(i);
+            std::cout << "A(" << i << ")=" << x << "\n";
+        }
+        std::cout << std::endl;
+    }
+    prk::MPI::barrier();
+#endif
+
     //////////////////////////////////////////////////////////////////////
     /// Analyze and output results
     //////////////////////////////////////////////////////////////////////

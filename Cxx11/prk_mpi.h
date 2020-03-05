@@ -6,9 +6,9 @@
 #include <cinttypes>
 
 #include <iostream>
-#include <vector>
 #include <string>
-
+#include <vector>
+#include <numeric> // exclusive_scan
 #include <type_traits>
 
 #include <mpi.h>
@@ -65,7 +65,7 @@ namespace prk
                 if (!is_init && !is_final) {
                     if (argv==NULL && argc!=NULL) {
                         std::cerr << "argv is NULL but argc is not!" << std::endl;
-                        std::abort();
+                        prk::MPI::abort();
                     }
                     MPI_Init(argc,argv);
                     prk::MPI::check( MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &this->node_comm_) );
@@ -172,34 +172,63 @@ namespace prk
               MPI_Comm comm_;
               MPI_Win distributed_win_;
 
+              int np_, me_; // global size and rank
+
               T * local_pointer_;
+
+              MPI_Datatype dt_;
+
+              size_t my_global_offset_begin_;
+              size_t my_global_offset_end_;
+
+              std::vector<size_t> global_offsets_;
 
           public:
             vector(size_t global_size, T fill_value = 0, MPI_Comm comm = MPI_COMM_WORLD)
             {
                 prk::MPI::check( MPI_Comm_dup(comm, &comm_) );
 
-                int np = prk::MPI::size(comm_);
-                int me = prk::MPI::rank(comm_);
+                np_ = prk::MPI::size(comm_);
+                me_ = prk::MPI::rank(comm_);
 
                 bool consistency = prk::MPI::is_same(global_size, comm_);
                 if (!consistency) {
-                    if (me == 0) std::cerr << "global size inconsistent!\n"
-                                           << " rank = " << me << ", global size = " << global_size << std::endl;
+                    if (me_ == 0) std::cerr << "global size inconsistent!\n"
+                                           << " rank = " << me_ << ", global size = " << global_size << std::endl;
                     prk::MPI::abort();
                 }
 
                 global_size_ = global_size;
-                local_size_ = global_size_ / np;
-                const size_t remainder  = global_size_ % np;
-                if (me < remainder) local_size_++;
+                local_size_ = global_size_ / np_;
+                const size_t remainder  = global_size_ % np_;
+                if (me_ < remainder) local_size_++;
+
+                {
+                    MPI_Datatype dt = (std::is_signed<size_t>() ? MPI_INT64_T : MPI_UINT64_T);
+                    std::vector<size_t> global_sizes(np_);   // in
+                    global_offsets_.resize(np_);             // out
+                    prk::MPI::check( MPI_Allgather(&local_size_, 1, dt, global_sizes.data(), 1, dt, comm_) );
+                    std::exclusive_scan( global_sizes.cbegin(), global_sizes.cend(), global_offsets_.begin(), 0);
+                }
+                my_global_offset_begin_ = global_offsets_[me_];
+                my_global_offset_end_   = (me_ != np_-1) ? global_offsets_[me_+1] : global_size_;
+#if 0
+                if (me_ == 0) {
+                    std::cout << "global offsets = ";
+                    for ( size_t i=0; i<global_offsets_.size(); ++i) {
+                        std::cout << global_offsets_[i] << ",";
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout << "global offsets {begin,end} = " << my_global_offset_begin_ << "," << my_global_offset_end_ << std::endl;
+#endif
 
                 const size_t verify_global_size = sum(local_size_, comm_);
                 if (global_size != verify_global_size) {
-                    if (me == 0) std::cerr << "global size inconsistent!\n"
+                    if (me_ == 0) std::cerr << "global size inconsistent!\n"
                                            << " expected: " << global_size << "\n"
                                            << " actual:   " << verify_global_size << "\n";
-                    std::cerr << "rank = " << me << ", local size = " << local_size_ << std::endl;
+                    std::cerr << "rank = " << me_ << ", local size = " << local_size_ << std::endl;
                     prk::MPI::abort();
                 }
 
@@ -215,14 +244,27 @@ namespace prk
                 prk::MPI::check( MPI_Win_allocate(local_bytes, 1, MPI_INFO_NULL, comm_,
                                                   &local_pointer_, &distributed_win_) );
 #endif
+                prk::MPI::check( MPI_Win_lock_all(MPI_MODE_NOCHECK, distributed_win_) );
 
                 for (size_t i=0; i < local_size_; ++i) {
                     local_pointer_[i] = fill_value;
+                }
+
+                // built-in datatypes are not compile-time constants...
+                if ( std::is_same<T,double>::value ) {
+                    dt_ = MPI_DOUBLE;
+                } else if ( std::is_same<T,float>::value ) {
+                    dt_ = MPI_FLOAT;
+                } else {
+                    dt_ = MPI_DATATYPE_NULL;
+                    std::cerr << "unknown type" << std::endl;
+                    prk::MPI::abort();
                 }
             }
 
             ~vector(void)
             {
+                prk::MPI::check( MPI_Win_unlock_all(distributed_win_) );
                 prk::MPI::check( MPI_Win_free(&distributed_win_) );
 #if ENABLE_SHM
                 prk::MPI::check( MPI_Win_free(&shm_win_) );
@@ -247,11 +289,41 @@ namespace prk
                 return local_size_;
             }
 
-            T& operator[](size_t offset)
+            T& operator[](size_t local_offset)
             {
-                return local_pointer_[offset];
+                return local_pointer_[local_offset];
             }
 #endif
+
+            // read-only access to any data in the vector, include remote data
+            T const operator()(size_t global_offset)
+            {
+                // if the data is in local memory, return a reference immediately
+                if (my_global_offset_begin_ <= global_offset && global_offset < my_global_offset_end_) {
+                    return local_pointer_[global_offset];
+                }
+                /* TODO: add intranode, interprocess path here
+                else if { } */
+                // remote memory fetch
+                else {
+                    for (size_t i=0; i < np_; ++i) {
+                        if (i != me_ && global_offsets_[i] <= global_offset &&
+                                ( (i+1)<np_ ? global_offset < global_offsets_[(i+1)] : global_offset < global_size_)
+                            ) {
+                            //std::cout << "global_offset " << global_offset << " found at rank " << i << "\n";
+                            T data;
+                            MPI_Request req;
+                            MPI_Aint win_offset = global_offset - global_offsets_[i];
+                            prk::MPI::check( MPI_Rget(&data, 1, dt_, i /* rank */, win_offset * sizeof(T), 1, dt_, distributed_win_, &req) );
+                            prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
+                            return data;
+                        }
+                    }
+                    std::cerr << "global_offset " << global_offset << " not found!" << std::endl;
+                    prk::MPI::abort();
+                }
+            }
+
         };
 
     } // MPI namespace
