@@ -56,7 +56,7 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
-#define TILED 0
+#define TILED 1
 
 #if TILED
 // The kernel was derived from https://github.com/parallel-forall/code-samples/blob/master/series/cuda-cpp/transpose/transpose.cu,
