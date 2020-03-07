@@ -104,7 +104,7 @@ int main(int argc, char * argv[])
 
   int iterations, offset;
   int length;
-  bool grid_stridem, ordered_fault;
+  bool grid_stride, ordered_fault;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length> [<offset>] [<grid_stride>] [<ordered_fault>]";
@@ -187,8 +187,6 @@ int main(int argc, char * argv[])
     nstream_time = prk::wtime() - nstream_time;
   }
 
-  prk::CUDA::check( cudaFree(d_C) );
-  prk::CUDA::check( cudaFree(d_B) );
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
