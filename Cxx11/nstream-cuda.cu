@@ -85,18 +85,18 @@ int main(int argc, char * argv[])
   std::cout << "C++11/CUDA STREAM triad: A = B + scalar * C" << std::endl;
 
   prk::CUDA::info info;
-  info.print();
+  //info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
+  int iterations;
   int length;
   bool grid_stride;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>] [<grid_stride>]";
+        throw "Usage: <# iterations> <vector length> [<grid_stride>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -109,11 +109,7 @@ int main(int argc, char * argv[])
         throw "ERROR: vector length must be positive";
       }
 
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
-      }
-      grid_stride   = (argc>4) ? prk::parse_boolean(std::string(argv[5])) : false;
+      grid_stride   = (argc>3) ? prk::parse_boolean(std::string(argv[4])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -122,7 +118,6 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
   std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
 
   const int blockSize = 256;
