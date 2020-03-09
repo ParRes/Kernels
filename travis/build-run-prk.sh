@@ -6,12 +6,6 @@ os=`uname`
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 
-if [ -f ~/use-intel-compilers ] ; then
-    export CC=icc
-    export CXX=icpc
-    export FC=ifort
-fi
-
 case "$os" in
     FreeBSD)
         MAKE=gmake

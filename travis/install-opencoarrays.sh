@@ -6,11 +6,7 @@ set -x
 os=`uname`
 TRAVIS_ROOT="$1"
 
-if [ -f ~/use-intel-compilers ] ; then
-
-    echo "OpenCoarrays incompatible with Intel Fortran coarrays"
-
-elif [ ! -d "$TRAVIS_ROOT/opencoarrays" ] ; then
+if [ ! -d "$TRAVIS_ROOT/opencoarrays" ] ; then
 
     case "$os" in
         Darwin)
