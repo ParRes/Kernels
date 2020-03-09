@@ -37,22 +37,22 @@ OPENCLFLAGS = $(OPENCLFLAG)
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
 ORNLACCFLAGS = $(ORNLACCFLAG)
-TBBFLAGS = $(TBBFLAG) -DUSE_TBB -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
+TBBFLAGS = $(TBBFLAG) -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
 BOOSTFLAGS = $(BOOSTFLAG)
 RANGEFLAGS = $(RANGEFLAG) -DUSE_RANGES
 STLFLAGS = $(STLFLAG) $(RANGEFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS) -DUSE_PSTL
-RAJAFLAGS = $(RAJAFLAG) -DUSE_RAJA
-THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS) -DUSE_THRUST
-KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(RANGEFLAGS) -DUSE_KOKKOS
+RAJAFLAGS = $(RAJAFLAG)
+THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
+KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) #$(RANGEFLAGS)
 SYCLFLAGS = $(SYCLFLAG) -DUSE_2D_INDEXING=0
 ORNLACCFLAGS = $(ORNLACCFLAG)
 
 ifdef OCCADIR
   include ${OCCADIR}/scripts/makefile
 endif
-OCCAFLAGS = -DUSE_OCCA -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
+OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl \
 	rangefor kokkos raja cuda cublas sycl boost-compute thrust
@@ -198,7 +198,7 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 
 ifeq ($(PRK_KOKKOS_BACKEND),Cuda)
 %-kokkos: %-kokkos.cc prk_util.h
-	${KOKKOSDIR}/bin/nvcc_wrapper $(CPPFLAGS) $(CUDAFLAGS) $< $(KOKKOSFLAG) -DUSE_KOKKOS -DPRK_KOKKOS_BACKEND=Cuda -o $@
+	${KOKKOSDIR}/bin/nvcc_wrapper $(CPPFLAGS) $(CUDAFLAGS) $< $(KOKKOSFLAG) -DPRK_KOKKOS_BACKEND=Cuda -o $@
 else
 %-kokkos: %-kokkos.cc prk_util.h
 	$(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)

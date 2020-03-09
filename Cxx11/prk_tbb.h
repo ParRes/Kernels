@@ -32,24 +32,19 @@
 #ifndef PRK_TBB_H
 #define PRK_TBB_H
 
-#ifdef USE_TBB
-# include <tbb/tbb.h>
-# include <tbb/parallel_for.h>
-# include <tbb/blocked_range.h>
-# include <tbb/flow_graph.h>
-# if ( PRK_TBB_PARTITIONER == 1)
-//#  warning STATIC
+#include <tbb/tbb.h>
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+#include <tbb/flow_graph.h>
+
+#if ( PRK_TBB_PARTITIONER == 1)
    tbb::static_partitioner tbb_partitioner;
-# elif ( PRK_TBB_PARTITIONER == 2)
-//#  warning AFFINITY
+#elif ( PRK_TBB_PARTITIONER == 2)
    tbb::affinity_partitioner tbb_partitioner;
-# elif ( PRK_TBB_PARTITIONER == 3)
-//#  warning SIMPLE
+#elif ( PRK_TBB_PARTITIONER == 3)
    tbb::simple_partitioner tbb_partitioner;
-# else
-//#  warning AUTO
+#else
    tbb::auto_partitioner tbb_partitioner;
-# endif
 #endif
 
 #endif /* PRK_TBB_H */

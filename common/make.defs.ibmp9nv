@@ -11,11 +11,12 @@ CC=xlc_r -qlanglvl=stdc99
 FC=xlf2008_r
 XLFPP=-WF,
 # C++11 may not be required but does no harm here.
-CXX=xlc++_r -qlanglvl=extended1y
+#CXX=xlc++_r -qlanglvl=extended1y
+CXX=g++-9 -std=gnu++17
 #
 # Compiler flags
 #
-DEFAULT_OPT_FLAGS=-O3 -qsuppress=1500-036
+DEFAULT_OPT_FLAGS=-O3 #-qsuppress=1500-036
 #
 # OpenMP flags
 #

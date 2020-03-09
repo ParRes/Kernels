@@ -6,12 +6,6 @@ os=`uname`
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 
-if [ -f ~/use-intel-compilers ] ; then
-    export CC=icc
-    export CXX=icpc
-    export FC=ifort
-fi
-
 case "$os" in
     FreeBSD)
         MAKE=gmake
@@ -494,12 +488,12 @@ case "$PRK_TARGET" in
                 Linux)
                     ${CC} --version
                     export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb"
-                    echo "TBBFLAG=-DUSE_TBB ${TBBFLAG}" >> common/make.defs
+                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
                     export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
                     ;;
                 Darwin)
                     export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb"
-                    echo "TBBFLAG=-DUSE_TBB ${TBBFLAG}" >> common/make.defs
+                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
                     export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
                     ;;
             esac
@@ -590,14 +584,14 @@ case "$PRK_TARGET" in
         case "$CC" in
             gcc)
                 # Kokkos and Raja are built with OpenMP support with GCC
-                echo "RAJAFLAG=-DUSE_RAJA -I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG} -fopenmp" >> common/make.defs
-                echo "KOKKOSFLAG=-DUSE_KOKKOS -I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos -DPRK_KOKKOS_BACKEND=OpenMP -fopenmp -ldl" >> common/make.defs
+                echo "RAJAFLAG=-I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG} -fopenmp" >> common/make.defs
+                echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos -DPRK_KOKKOS_BACKEND=OpenMP -fopenmp -ldl" >> common/make.defs
                 ;;
             clang)
                 # RAJA can use TBB with Clang
-                echo "RAJAFLAG=-DUSE_RAJA -I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG}" >> common/make.defs
+                echo "RAJAFLAG=-I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG}" >> common/make.defs
                 # Kokkos is built with Pthread support with Clang
-                echo "KOKKOSFLAG=-DUSE_KOKKOS -I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos -DPRK_KOKKOS_BACKEND=Threads -lpthread -ldl" >> common/make.defs
+                echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos -DPRK_KOKKOS_BACKEND=Threads -lpthread -ldl" >> common/make.defs
                 ;;
         esac
         # RAJA
@@ -663,7 +657,7 @@ case "$PRK_TARGET" in
             else
                 echo "SYCLCXX=${PRK_CXX} -fopenmp -std=c++1z" >> common/make.defs
             fi
-            echo "SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/include" >> common/make.defs
+            echo "SYCLFLAG=-I${SYCLDIR}/include" >> common/make.defs
             ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-sycl stencil-sycl transpose-sycl nstream-sycl
             #$PRK_TARGET_PATH/p2p-hyperplane-sycl 10 50 1 # 100 takes too long :-o
             $PRK_TARGET_PATH/stencil-sycl        10 1000
