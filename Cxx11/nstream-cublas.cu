@@ -70,17 +70,17 @@ int main(int argc, char * argv[])
   std::cout << "C++11/CUBLAS STREAM triad: A = B + scalar * C" << std::endl;
 
   prk::CUDA::info info;
-  info.print();
+  //info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
+  int iterations;
   int length;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>]";
+        throw "Usage: <# iterations> <vector length> [<grid_stride>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -93,10 +93,7 @@ int main(int argc, char * argv[])
         throw "ERROR: vector length must be positive";
       }
 
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
-      }
+      grid_stride   = (argc>3) ? prk::parse_boolean(std::string(argv[4])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -105,7 +102,6 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
 
   cublasHandle_t h;
   //prk::CUDA::check( cublasInit() );
@@ -138,7 +134,6 @@ int main(int argc, char * argv[])
   prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
   prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
   prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
-
   prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
@@ -183,14 +178,14 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
   ar *= length;
 
   double asum(0);
-  for (size_t i=0; i<length; i++) {
+  for (int i=0; i<length; i++) {
       asum += std::fabs(h_A[i]);
   }
 

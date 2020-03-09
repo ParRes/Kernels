@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and the length
+///          of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length> ...
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -96,18 +96,18 @@ int main(int argc, char * argv[])
   std::cout << "C++11/CUDA STREAM triad: A = B + scalar * C" << std::endl;
 
   prk::CUDA::info info;
-  info.print();
+  //info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
+  int iterations;
   int length;
-  bool grid_stride, ordered_fault;
+  bool system_memory,  grid_stride, ordered_fault, prefetch;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>] [<grid_stride>] [<ordered_fault>]";
+        throw "Usage: <# iterations> <vector length> [<use_system_memory> <grid_stride> <ordered_fault> <prefetch>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -120,12 +120,10 @@ int main(int argc, char * argv[])
         throw "ERROR: vector length must be positive";
       }
 
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
-      }
+      system_memory = (argc>3) ? prk::parse_boolean(std::string(argv[3])) : false;
       grid_stride   = (argc>4) ? prk::parse_boolean(std::string(argv[4])) : false;
       ordered_fault = (argc>5) ? prk::parse_boolean(std::string(argv[5])) : false;
+      prefetch      = (argc>6) ? prk::parse_boolean(std::string(argv[6])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -134,9 +132,10 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
+  std::cout << "Memory allocator     = " << (system_memory ? "system (malloc)" : "cudaMallocManaged") << std::endl;
   std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
   std::cout << "Ordered fault        = " << (ordered_fault ? "yes" : "no") << std::endl;
+  std::cout << "Prefetch             = " << (prefetch ? "yes" : "no") << std::endl;
 
   const int blockSize = 256;
   dim3 dimBlock(blockSize, 1, 1);
@@ -150,14 +149,20 @@ int main(int argc, char * argv[])
 
   double nstream_time(0);
 
-  const size_t bytes = length * sizeof(prk_float);
-
   prk_float * A;
   prk_float * B;
   prk_float * C;
-  prk::CUDA::check( cudaMallocManaged((void**)&A, bytes) );
-  prk::CUDA::check( cudaMallocManaged((void**)&B, bytes) );
-  prk::CUDA::check( cudaMallocManaged((void**)&C, bytes) );
+
+  const size_t bytes = length * sizeof(prk_float);
+  if (system_memory) {
+      A = new double[length];
+      B = new double[length];
+      C = new double[length];
+  } else {
+      prk::CUDA::check( cudaMallocManaged((void**)&A, bytes) );
+      prk::CUDA::check( cudaMallocManaged((void**)&B, bytes) );
+      prk::CUDA::check( cudaMallocManaged((void**)&C, bytes) );
+  }
 
   // initialize on CPU to ensure pages are faulted there
   for (int i=0; i<length; ++i) {
@@ -169,6 +174,12 @@ int main(int argc, char * argv[])
   if (ordered_fault) {
       fault_pages<<<1,1>>>(static_cast<unsigned>(length), A, B, C);
       prk::CUDA::check( cudaDeviceSynchronize() );
+  }
+
+  if (prefetch) {
+      prk::CUDA::check( cudaMemPrefetchAsync(A, bytes, 0) );
+      prk::CUDA::check( cudaMemPrefetchAsync(B, bytes, 0) );
+      prk::CUDA::check( cudaMemPrefetchAsync(C, bytes, 0) );
   }
 
   prk_float scalar(3);
@@ -187,7 +198,6 @@ int main(int argc, char * argv[])
     nstream_time = prk::wtime() - nstream_time;
   }
 
-
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
@@ -198,7 +208,6 @@ int main(int argc, char * argv[])
   for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
-
   ar *= length;
 
   double asum(0);
@@ -206,7 +215,15 @@ int main(int argc, char * argv[])
       asum += std::fabs(A[i]);
   }
 
-  prk::CUDA::check( cudaFree(A) );
+  if (system_memory) {
+      free(A);
+      free(B);
+      free(C);
+  } else {
+      prk::CUDA::check( cudaFree(A) );
+      prk::CUDA::check( cudaFree(B) );
+      prk::CUDA::check( cudaFree(C) );
+  }
 
   double epsilon=1.e-8;
   if (std::fabs(ar-asum)/asum > epsilon) {
