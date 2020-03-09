@@ -23,7 +23,7 @@ namespace prk
         double wtime(void) { return MPI_Wtime(); }
         double wtick(void) { return MPI_Wtick(); }
 
-        void abort(int errorcode = -1, MPI_Comm comm = MPI_COMM_WORLD)
+        [[noreturn]] void abort(int errorcode = -1, MPI_Comm comm = MPI_COMM_WORLD)
         {
             MPI_Abort(comm, errorcode);
             std::abort(); // unreachable
@@ -262,7 +262,7 @@ namespace prk
                 }
             }
 
-            ~vector(void)
+            ~vector(void) noexcept
             {
                 prk::MPI::check( MPI_Win_unlock_all(distributed_win_) );
                 prk::MPI::check( MPI_Win_free(&distributed_win_) );
@@ -273,30 +273,100 @@ namespace prk
                 prk::MPI::check( MPI_Comm_free(&comm_) );
             }
 
-            T * local_pointer(size_t offset = 0)
+            T * local_pointer(size_t offset = 0) noexcept
             {
                 return &local_pointer_[offset];
             }
 
-            size_t local_size(void)
+            size_t local_size(void) noexcept
             {
                 return local_size_;
             }
 
 #if STL_VECTOR_API
-            size_t size(void)
+            size_t size(void) noexcept
             {
                 return local_size_;
             }
 
-            T& operator[](size_t local_offset)
+            T& operator[](size_t local_offset) noexcept
             {
                 return local_pointer_[local_offset];
             }
+
+            constexpr T * data(void) noexcept
+            {
+                return local_pointer_;
+            }
 #endif
+            // read-only element-wise access to remote data
+            T const get(size_t global_offset)
+            {
+                for (size_t i=0; i < np_; ++i) {
+                    if (global_offsets_[i] <= global_offset &&
+                            ( (i+1)<np_ ? global_offset < global_offsets_[(i+1)] : global_offset < global_size_)
+                        ) {
+                        //std::cout << "global_offset " << global_offset << " found at rank " << i << "\n";
+                        T data;
+                        MPI_Request req;
+                        MPI_Aint win_offset = global_offset - global_offsets_[i];
+                        prk::MPI::check( MPI_Rget(&data, 1, dt_, i /* rank */, win_offset * sizeof(T), 1, dt_, distributed_win_, &req) );
+                        prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
+                        return data;
+                    }
+                }
+                std::cerr << "global_offset " << global_offset << " not found!" << std::endl;
+                prk::MPI::abort();
+            }
+
+            // element-wise write access to remote data
+            // non-temporal i.e. no remote visibility unless fenced
+            void put(size_t global_offset, T data)
+            {
+                for (size_t i=0; i < np_; ++i) {
+                    if (global_offsets_[i] <= global_offset &&
+                            ( (i+1)<np_ ? global_offset < global_offsets_[(i+1)] : global_offset < global_size_)
+                        ) {
+                        //std::cout << "global_offset " << global_offset << " found at rank " << i << "\n";
+                        MPI_Request req;
+                        MPI_Aint win_offset = global_offset - global_offsets_[i];
+                        prk::MPI::check( MPI_Rput(&data, 1, dt_, i /* rank */, win_offset * sizeof(T), 1, dt_, distributed_win_, &req) );
+                        prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
+                        return;
+                    }
+                }
+                std::cerr << "global_offset " << global_offset << " not found!" << std::endl;
+                prk::MPI::abort();
+            }
+
+            // element-wise write access to remote data
+            // non-temporal i.e. no remote visibility unless fenced
+            void add(size_t global_offset, T data)
+            {
+                for (size_t i=0; i < np_; ++i) {
+                    if (global_offsets_[i] <= global_offset &&
+                            ( (i+1)<np_ ? global_offset < global_offsets_[(i+1)] : global_offset < global_size_)
+                        ) {
+                        //std::cout << "global_offset " << global_offset << " found at rank " << i << "\n";
+                        MPI_Request req;
+                        MPI_Aint win_offset = global_offset - global_offsets_[i];
+                        prk::MPI::check( MPI_Raccumulate(&data, 1, dt_, i /* rank */, win_offset * sizeof(T), 1, dt_, MPI_SUM, distributed_win_, &req) );
+                        prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
+                        return;
+                    }
+                }
+                std::cerr << "global_offset " << global_offset << " not found!" << std::endl;
+                prk::MPI::abort();
+            }
+
+            // synchronize all outstanding writes
+            void fence(void)
+            {
+                prk::MPI::check( MPI_Win_flush_all(distributed_win_) );
+            }
 
             // read-only access to any data in the vector, include remote data
-            T const operator()(size_t global_offset)
+            T const operator()(size_t global_offset) noexcept
             {
                 // if the data is in local memory, return a reference immediately
                 if (my_global_offset_begin_ <= global_offset && global_offset < my_global_offset_end_) {
@@ -306,21 +376,7 @@ namespace prk
                 else if { } */
                 // remote memory fetch
                 else {
-                    for (size_t i=0; i < np_; ++i) {
-                        if (i != me_ && global_offsets_[i] <= global_offset &&
-                                ( (i+1)<np_ ? global_offset < global_offsets_[(i+1)] : global_offset < global_size_)
-                            ) {
-                            //std::cout << "global_offset " << global_offset << " found at rank " << i << "\n";
-                            T data;
-                            MPI_Request req;
-                            MPI_Aint win_offset = global_offset - global_offsets_[i];
-                            prk::MPI::check( MPI_Rget(&data, 1, dt_, i /* rank */, win_offset * sizeof(T), 1, dt_, distributed_win_, &req) );
-                            prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
-                            return data;
-                        }
-                    }
-                    std::cerr << "global_offset " << global_offset << " not found!" << std::endl;
-                    prk::MPI::abort();
+                    return get(global_offset);
                 }
             }
 
