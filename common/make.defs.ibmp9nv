@@ -11,8 +11,8 @@ CC=xlc_r -qlanglvl=stdc99
 FC=xlf2008_r
 XLFPP=-WF,
 # C++11 may not be required but does no harm here.
-#CXX=xlc++_r -qlanglvl=extended1y
-CXX=g++-9 -std=gnu++17
+CXX=xlc++_r -qlanglvl=extended1y
+#CXX=g++-9 -std=gnu++17
 #
 # Compiler flags
 #
@@ -33,6 +33,11 @@ OFFLOADFLAG=-qoffload -qtgtarch=sm_70
 # Linux
 OPENCLDIR=/usr
 OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL -Wno-deprecated-declarations -qsuppress=1500-029 -qstrict
+#
+# MPI C++
+#
+MPIINC=-I/usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-rolling-release/include
+MPILIB=-L/usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-rolling-release/lib -lmpiprofilesupport -lmpi_ibm
 #
 # OCCA
 #
