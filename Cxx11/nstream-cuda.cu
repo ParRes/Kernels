@@ -85,7 +85,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11/CUDA STREAM triad: A = B + scalar * C" << std::endl;
 
   prk::CUDA::info info;
-  //info.print();
+  info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
