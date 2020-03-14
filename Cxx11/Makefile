@@ -147,11 +147,11 @@ boost-compute: nstream-vector-boost-compute
 p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
-transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
-	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+#transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
+#	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
-nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
-	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+#nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
+#	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
@@ -168,49 +168,49 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 %-sycl-explicit: %-sycl-explicit.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
-%-target: %-target.cc prk_util.h
+%-target: %-target.cc prk_util.h prk_openmp.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@
 
-%-openmp: %-openmp.cc prk_util.h
+%-openmp: %-openmp.cc prk_util.h prk_openmp.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
 
-%-taskloop: %-taskloop.cc prk_util.h
+%-taskloop: %-taskloop.cc prk_util.h prk_openmp.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
 
-%-tbb: %-tbb.cc prk_util.h
+%-tbb: %-tbb.cc prk_util.h prk_tbb.h
 	$(info PRK help: Consider setting USE_PRK_TBB_PARTITIONER={static,affinity,simple} when invoking make)
 	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
 
-%-stl: %-pstl.cc prk_util.h
+%-stl: %-pstl.cc prk_util.h prk_pstl.h
 	$(CXX) $(CXXFLAGS) $< $(STLFLAGS) -o $@
 
-%-pstl: %-pstl.cc prk_util.h
+%-pstl: %-pstl.cc prk_util.h prk_pstl.h
 	$(CXX) $(CXXFLAGS) $< $(PSTLFLAGS) -o $@
 
-%-rangefor: %-rangefor.cc prk_util.h
+%-rangefor: %-rangefor.cc prk_util.h prk_ranges.h
 	$(CXX) $(CXXFLAGS) $< $(RANGEFLAGS) -o $@
 
-%-boost-compute: %-boost-compute.cc prk_util.h
+%-boost-compute: %-boost-compute.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) $(OPENCLFLAGS) -o $@
 
-%-raja: %-raja.cc prk_util.h
+%-raja: %-raja.cc prk_util.h prk_raja.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
 
 ifeq ($(PRK_KOKKOS_BACKEND),Cuda)
-%-kokkos: %-kokkos.cc prk_util.h
+%-kokkos: %-kokkos.cc prk_util.h prk_kokkos.h
 	${KOKKOSDIR}/bin/nvcc_wrapper $(CPPFLAGS) $(CUDAFLAGS) $< $(KOKKOSFLAG) -DPRK_KOKKOS_BACKEND=Cuda -o $@
 else
-%-kokkos: %-kokkos.cc prk_util.h
+%-kokkos: %-kokkos.cc prk_util.h prk_kokkos.h
 	$(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
 	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
 endif
 
 # for host execution
-%-thrust: %-thrust.cc prk_util.h
+%-thrust: %-thrust.cc prk_util.h prk_thrust.h
 	$(CXX) $(CXXFLAGS) $< $(THRUSTFLAGS) -o $@
 
 # for device execution (must compiler as .cu)
-%-thrust: %-thrust.cu prk_util.h
+%-thrust: %-thrust.cu prk_util.h prk_thrust.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< $(THRUSTFLAGS) -o $@
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
