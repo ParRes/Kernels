@@ -72,7 +72,7 @@ void run(cl::Context context, int iterations, int n)
   auto function = (precision==64) ? "p2p64" : "p2p32";
 
   cl_int err;
-  auto kernel = cl::make_kernel<int, cl::Buffer>(program, function, &err);
+  auto kernel = cl::KernelFunctor<int, cl::Buffer>(program, function, &err);
   if(err != CL_SUCCESS){
     std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
     std::cout << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
