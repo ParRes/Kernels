@@ -74,7 +74,7 @@ void run(cl::Context context, int iterations, size_t length)
   auto function = (precision==64) ? "nstream64" : "nstream32";
 
   cl_int err;
-  auto kernel = cl::make_kernel<int, T, cl::Buffer, cl::Buffer, cl::Buffer>(program, function, &err);
+  auto kernel = cl::KernelFunctor<int, T, cl::Buffer, cl::Buffer, cl::Buffer>(program, function, &err);
   if(err != CL_SUCCESS){
     std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
     std::cout << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
