@@ -70,7 +70,7 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++17/PSTL STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++11/STL STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -117,24 +117,24 @@ int main(int argc, char * argv[])
   std::vector<double> B(length);
   std::vector<double> C(length);
 
-  auto range = prk::range(static_cast<size_t>(0), length);
-
   double scalar(3);
 
   {
-    std::for_each( exec::par_unseq, std::begin(range), std::end(range), [&] (size_t i) {
-        A[i] = 0;
-        B[i] = 2;
-        C[i] = 2;
-    });
+    std::fill( std::begin(A), std::end(A), 0.0 );
+    std::fill( std::begin(B), std::end(B), 2.0 );
+    std::fill( std::begin(C), std::end(C), 2.0 );
+
 
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      std::for_each( exec::par_unseq, std::begin(range), std::end(range), [&] (size_t i) {
-          A[i] += B[i] + scalar * C[i];
-      });
+      std::transform( std::begin(B), std::end(B), std::begin(C), std::begin(A),
+                      [scalar](auto&& x, auto&& y) {
+                           return x + scalar * y;
+                      }
+      );
+
     }
     nstream_time = prk::wtime() - nstream_time;
   }
@@ -146,7 +146,7 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 

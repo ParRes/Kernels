@@ -66,7 +66,7 @@
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++17/PSTL HYPERPLANE pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/STL HYPERPLANE pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
         const auto begin = std::max(2,i-n+2);
         const auto end   = std::min(i,n)+1;
         auto range = prk::range(begin,end);
-        std::for_each( exec::par, std::begin(range), std::end(range), [&] (auto j) {
+        std::for_each( std::begin(range), std::end(range), [&] (auto j) {
           const auto x = i-j+1;
           const auto y = j-1;
           grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
         const auto begin = std::max(2,i-(nb+1)+2);
         const auto end   = std::min(i,nb+1)+1;
         auto range = prk::range(begin,end);
-        std::for_each( exec::par, std::begin(range), std::end(range), [&] (auto j) {
+        std::for_each( std::begin(range), std::end(range), [&] (auto j) {
           const int ib = nc*(i-j)+1;
           const int jb = nc*(j-2)+1;
           sweep_tile(ib, std::min(n,ib+nc), jb, std::min(n,jb+nc), n, grid);

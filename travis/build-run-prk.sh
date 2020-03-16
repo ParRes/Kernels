@@ -532,9 +532,9 @@ case "$PRK_TARGET" in
         if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             if [ "${CC}" = "clang" ] ; then
                 # omp.h not found with clang-3.9 - just work around instead of fixing.
-                echo "PSTLFLAG=-DUSE_PSTL ${TBBFLAG} -DUSE_INTEL_PSTL -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
+                echo "PSTLFLAG=${TBBFLAG} -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
             else
-                echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
+                echo "PSTLFLAG=-fopenmp ${TBBFLAG} -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
             fi
             ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-pstl stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
             $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 1
