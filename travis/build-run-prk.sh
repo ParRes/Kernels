@@ -481,37 +481,34 @@ case "$PRK_TARGET" in
         done
 
         # C++11 with TBB
-        # Skip Clang because older Clang from Linux chokes on max_align_t (https://travis-ci.org/jeffhammond/PRK/jobs/243395307)
-        if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-            TBBROOT=${TRAVIS_ROOT}/tbb
-            case "$os" in
-                Linux)
-                    ${CC} --version
-                    export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb"
-                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
-                    export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
-                    ;;
-                Darwin)
-                    export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb"
-                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
-                    export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
-                    ;;
-            esac
-            ${MAKE} -C $PRK_TARGET_PATH p2p-innerloop-vector-tbb p2p-hyperplane-vector-tbb p2p-tasks-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
-            $PRK_TARGET_PATH/p2p-innerloop-vector-tbb     10 1024
-            $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 1
-            $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 32
-            $PRK_TARGET_PATH/p2p-tasks-tbb                10 1024 1024 32 32
-            $PRK_TARGET_PATH/stencil-vector-tbb           10 1000
-            $PRK_TARGET_PATH/transpose-vector-tbb         10 1024 32
-            $PRK_TARGET_PATH/nstream-vector-tbb           10 16777216 32
-            #echo "Test stencil code generator"
-            for s in star grid ; do
-                for r in 1 2 3 4 5 ; do
-                    $PRK_TARGET_PATH/stencil-vector-tbb 10 200 20 $s $r
-                done
+        TBBROOT=${TRAVIS_ROOT}/tbb
+        case "$os" in
+            Linux)
+                ${CC} --version
+                export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb"
+                echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
+                export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
+                ;;
+            Darwin)
+                export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb"
+                echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
+                export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
+                ;;
+        esac
+        ${MAKE} -C $PRK_TARGET_PATH p2p-innerloop-vector-tbb p2p-hyperplane-vector-tbb p2p-tasks-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
+        $PRK_TARGET_PATH/p2p-innerloop-vector-tbb     10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 1
+        $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 32
+        $PRK_TARGET_PATH/p2p-tasks-tbb                10 1024 1024 32 32
+        $PRK_TARGET_PATH/stencil-vector-tbb           10 1000
+        $PRK_TARGET_PATH/transpose-vector-tbb         10 1024 32
+        $PRK_TARGET_PATH/nstream-vector-tbb           10 16777216 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-vector-tbb 10 200 20 $s $r
             done
-        fi
+        done
 
         # C++11 with STL
         ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-stl stencil-vector-stl transpose-vector-stl nstream-vector-stl
@@ -528,27 +525,23 @@ case "$PRK_TARGET" in
         done
 
         # C++17 Parallel STL
-        # Skip Clang+Linux because we skip TBB there - see above.
-        if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-            if [ "${CC}" = "clang" ] ; then
-                # omp.h not found with clang-3.9 - just work around instead of fixing.
-                echo "PSTLFLAG=${TBBFLAG} -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
-            else
-                echo "PSTLFLAG=-fopenmp ${TBBFLAG} -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
-            fi
-            ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-pstl stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
-            $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 1
-            $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 32
-            $PRK_TARGET_PATH/stencil-vector-pstl           10 1000
-            $PRK_TARGET_PATH/transpose-vector-pstl         10 1024 32
-            $PRK_TARGET_PATH/nstream-vector-pstl           10 16777216 32
-            #echo "Test stencil code generator"
-            for s in star grid ; do
-                for r in 1 2 3 4 5 ; do
-                    $PRK_TARGET_PATH/stencil-vector-pstl 10 200 20 $s $r
-                done
+        echo "PSTLFLAG=${TBBFLAG} -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
+        if [ "${CC}" = "gcc" ] ; then
+            # omp.h not found with clang-3.9 - just work around instead of fixing.
+            echo "PSTLFLAG+=-fopenmp" >> common/make.defs
+        else
+        ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-pstl stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
+        $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 1
+        $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 32
+        $PRK_TARGET_PATH/stencil-vector-pstl           10 1000
+        $PRK_TARGET_PATH/transpose-vector-pstl         10 1024 32
+        $PRK_TARGET_PATH/nstream-vector-pstl           10 16777216 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-vector-pstl 10 200 20 $s $r
             done
-        fi
+        done
 
         # C++11 with OpenCL
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
