@@ -529,7 +529,7 @@ case "$PRK_TARGET" in
         if [ "${CC}" = "gcc" ] ; then
             # omp.h not found with clang-3.9 - just work around instead of fixing.
             echo "PSTLFLAG+=-fopenmp" >> common/make.defs
-        else
+        fi
         ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-pstl stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
         $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 1
         $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 32
@@ -587,6 +587,7 @@ case "$PRK_TARGET" in
                 echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkoscore -DPRK_KOKKOS_BACKEND=Threads -lpthread -ldl" >> common/make.defs
                 ;;
         esac
+
         # RAJA
         if [ 0 = 1 ] ; then
         ${MAKE} -C $PRK_TARGET_PATH p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja \
@@ -619,6 +620,7 @@ case "$PRK_TARGET" in
             done
         done
         fi
+
         # Kokkos
         ${MAKE} -C $PRK_TARGET_PATH stencil-kokkos transpose-kokkos nstream-kokkos
         $PRK_TARGET_PATH/stencil-kokkos     10 1000
