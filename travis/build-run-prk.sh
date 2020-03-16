@@ -585,13 +585,13 @@ case "$PRK_TARGET" in
             gcc)
                 # Kokkos and Raja are built with OpenMP support with GCC
                 echo "RAJAFLAG=-I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG} -fopenmp" >> common/make.defs
-                echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos -DPRK_KOKKOS_BACKEND=OpenMP -fopenmp -ldl" >> common/make.defs
+                echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkoscore -DPRK_KOKKOS_BACKEND=OpenMP -fopenmp -ldl" >> common/make.defs
                 ;;
             clang)
                 # RAJA can use TBB with Clang
                 echo "RAJAFLAG=-I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG}" >> common/make.defs
                 # Kokkos is built with Pthread support with Clang
-                echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos -DPRK_KOKKOS_BACKEND=Threads -lpthread -ldl" >> common/make.defs
+                echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkoscore -DPRK_KOKKOS_BACKEND=Threads -lpthread -ldl" >> common/make.defs
                 ;;
         esac
         # RAJA
