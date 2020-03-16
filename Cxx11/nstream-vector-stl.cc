@@ -116,6 +116,8 @@ int main(int argc, char * argv[])
   std::vector<double> B(length);
   std::vector<double> C(length);
 
+  auto range = prk::range(static_cast<size_t>(0), length);
+
   double scalar(3);
 
   {
@@ -128,12 +130,18 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
+#if 0
+      // correct only for one iteration because it does not accumulate...
       std::transform( std::begin(B), std::end(B), std::begin(C), std::begin(A),
                       [scalar](auto&& x, auto&& y) {
                            return x + scalar * y;
                       }
       );
-
+#else
+      std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
+          A[i] += B[i] + scalar * C[i];
+      });
+#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
