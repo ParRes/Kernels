@@ -60,7 +60,6 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_pstl.h"
 #include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
