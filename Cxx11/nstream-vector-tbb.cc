@@ -128,7 +128,7 @@ int main(int argc, char * argv[])
   {
 #if 0
     tbb::parallel_for( range, [&](decltype(range)& r) {
-                       for (auto i=r.begin(); i!=r.end(); ++i ) {
+                       for (int i=r.begin(); i!=r.end(); ++i ) {
                            A[i] = 0.0;
                            B[i] = 2.0;
                            C[i] = 2.0;
@@ -142,13 +142,13 @@ int main(int argc, char * argv[])
                        }, tbb_partitioner);
 #endif
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
 #if 0
       tbb::parallel_for( range, [&](decltype(range)& r) {
-                         for (auto i=r.begin(); i!=r.end(); ++i ) {
+                         for (int i=r.begin(); i!=r.end(); ++i ) {
                              A[i] += B[i] + scalar * C[i];
                          }
                        }, tbb_partitioner);
@@ -168,7 +168,7 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
@@ -177,7 +177,7 @@ int main(int argc, char * argv[])
   double asum(0);
   asum = tbb::parallel_reduce( range, double(0),
                                [&](decltype(range)& r, double temp) -> double {
-                                   for (auto i=r.begin(); i!=r.end(); ++i ) {
+                                   for (int i=r.begin(); i!=r.end(); ++i ) {
                                        temp += std::fabs(A[i]);
                                    }
                                    return temp;

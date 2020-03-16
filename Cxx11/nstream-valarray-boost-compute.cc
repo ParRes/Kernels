@@ -133,7 +133,7 @@ int main(int argc, char * argv[])
     compute::valarray<float> d_B(2.0f, length);
     compute::valarray<float> d_C(2.0f, length);
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
@@ -154,7 +154,7 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 

@@ -132,7 +132,7 @@ int main(int argc, char * argv[])
       C[i] = 2.0;
     }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
           OMP_BARRIER
@@ -157,7 +157,7 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 

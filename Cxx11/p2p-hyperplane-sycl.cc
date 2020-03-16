@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
   {
     sycl::buffer<double> d_grid { h_grid.data(), h_grid.size() };
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) pipeline_time = prk::wtime();
 

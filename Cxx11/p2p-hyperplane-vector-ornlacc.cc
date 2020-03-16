@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 
   #pragma acc data pcopy(grid[0:n*n])
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) pipeline_time = prk::wtime();
 

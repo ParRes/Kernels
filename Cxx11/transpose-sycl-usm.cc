@@ -69,8 +69,8 @@ void run(sycl::queue & q, int iterations, size_t order)
   T * A = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), dev, ctx));
   T * B = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), dev, ctx));
 
-  for (auto i=0;i<order; i++) {
-    for (auto j=0;j<order;j++) {
+  for (int i=0;i<order; i++) {
+    for (int j=0;j<order;j++) {
       A[i*order+j] = static_cast<double>(i*order+j);
       B[i*order+j] = 0.0;
     }

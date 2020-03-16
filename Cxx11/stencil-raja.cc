@@ -186,7 +186,7 @@ int main(int argc, char* argv[])
       out(i,j) = 0.0;
   });
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) stencil_time = prk::wtime();
     // Apply the stencil operator

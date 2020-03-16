@@ -126,22 +126,22 @@ int main(int argc, char* argv[])
   prk::vector<double> grid(n*n,0.0);
 
   // set boundary values (bottom and left side of grid)
-  for (auto j=0; j<n; j++) {
+  for (int j=0; j<n; j++) {
     grid[0*n+j] = static_cast<double>(j);
     grid[j*n+0] = static_cast<double>(j);
   }
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) pipeline_time = prk::wtime();
 
     if (nc==1) {
-      for (auto i=2; i<=2*n-2; i++) {
+      for (int i=2; i<=2*n-2; i++) {
         //OMP_FOR_SIMD
-        //for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
+        //for (int j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
         tbb::parallel_for( std::max(2,i-n+2), std::min(i,n)+1, [=,&grid](int j) {
-          const auto x = i-j+1;
-          const auto y = j-1;
+          const int x = i-j+1;
+          const int y = j-1;
           grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
         });
       }

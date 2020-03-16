@@ -67,9 +67,9 @@ const int block_rows = 8;
 
 __global__ void transpose(int order, prk_float * A, prk_float * B)
 {
-    int x = blockIdx.x * tile_dim + threadIdx.x;
-    int y = blockIdx.y * tile_dim + threadIdx.y;
-    int width = gridDim.x * tile_dim;
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+    auto width = gridDim.x * tile_dim;
 
     for (int j = 0; j < tile_dim; j+= block_rows) {
         B[x*width + (y+j)] += A[(y+j)*width + x];
@@ -180,8 +180,8 @@ int main(int argc, char * argv[])
   h_b = new prk_float[nelems];
 #endif
   // fill A with the sequence 0 to order^2-1
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       h_a[j*order+i] = static_cast<prk_float>(order*j+i);
       h_b[j*order+i] = static_cast<prk_float>(0);
     }
@@ -197,7 +197,7 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
@@ -226,8 +226,8 @@ int main(int argc, char * argv[])
 
   const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const size_t ij = (size_t)i*(size_t)order+(size_t)j;
       const size_t ji = (size_t)j*(size_t)order+(size_t)i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
@@ -253,8 +253,8 @@ int main(int argc, char * argv[])
               << " Avg time (s): " << avgtime << std::endl;
   } else {
 #ifdef VERBOSE
-    for (auto i=0; i<order; i++) {
-      for (auto j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
+      for (int j=0; j<order; j++) {
         std::cout << "(" << i << "," << j << ") = " << h_a[i*order+j] << ", " << h_b[i*order+j] << "\n";
       }
     }

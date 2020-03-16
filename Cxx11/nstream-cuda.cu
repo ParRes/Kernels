@@ -66,7 +66,7 @@
 
 __global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
 {
-    unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) {
         A[i] += B[i] + scalar * C[i];
     }

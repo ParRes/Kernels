@@ -117,21 +117,21 @@ int main(int argc, char * argv[])
 
   tbb::blocked_range2d<int> range(0, order, tile_size, 0, order, tile_size);
   tbb::parallel_for( range, [&](decltype(range)& r) {
-                     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                     for (int i=r.rows().begin(); i!=r.rows().end(); ++i ) {
                          PRAGMA_SIMD
-                         for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                         for (int j=r.cols().begin(); j!=r.cols().end(); ++j ) {
                              A[i*order+j] = static_cast<double>(i*order+j);
                              B[i*order+j] = 0.0;
                          }
                      }
                    }, tbb_partitioner);
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
     if (iter==1) trans_time = prk::wtime();
     tbb::parallel_for( range, [&](decltype(range)& r) {
-                       for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                       for (int i=r.rows().begin(); i!=r.rows().end(); ++i ) {
                            PRAGMA_SIMD
-                           for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                           for (int j=r.cols().begin(); j!=r.cols().end(); ++j ) {
                                 B[i*order+j] += A[j*order+i];
                                 A[j*order+i] += 1.0;
                            }
@@ -148,8 +148,8 @@ int main(int argc, char * argv[])
   double abserr(0);
 #if 0
   // Use this if, for whatever reason, TBB reductions are not reliable.
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
@@ -159,8 +159,8 @@ int main(int argc, char * argv[])
 #else
   abserr = tbb::parallel_reduce( range, double(0),
                                  [&](decltype(range)& r, double temp) -> double {
-                                     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                                         for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                     for (int i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                                         for (int j=r.cols().begin(); j!=r.cols().end(); ++j ) {
                                              const int ij = i*order+j;
                                              const int ji = j*order+i;
                                              const double reference = static_cast<double>(ij)*(1.+iterations)+addit;

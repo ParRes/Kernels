@@ -136,17 +136,17 @@ int main(int argc, char * argv[])
 
   std::vector<std::future<void>> pool;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
-    for (auto ib=0; ib<order; ib+=block_size) {
-      for (auto jb=0; jb<order; jb+=block_size) {
+    for (int ib=0; ib<order; ib+=block_size) {
+      for (int jb=0; jb<order; jb+=block_size) {
         pool.push_back(std::async(std::launch::async, [=,&A,&B] {
-          for (auto it=ib; it<std::min(order,ib+block_size); it+=tile_size) {
-            for (auto jt=jb; jt<std::min(order,jb+block_size); jt+=tile_size) {
-              for (auto i=it; i<std::min(ib+block_size,it+tile_size); i++) {
-                for (auto j=jt; j<std::min(jb+block_size,jt+tile_size); j++) {
+          for (int it=ib; it<std::min(order,ib+block_size); it+=tile_size) {
+            for (int jt=jb; jt<std::min(order,jb+block_size); jt+=tile_size) {
+              for (int i=it; i<std::min(ib+block_size,it+tile_size); i++) {
+                for (int j=jt; j<std::min(jb+block_size,jt+tile_size); j++) {
                   B[i*order+j] += A[j*order+i];
                   A[j*order+i] += 1.0;
                 }
@@ -168,8 +168,8 @@ int main(int argc, char * argv[])
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;

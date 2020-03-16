@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
       }
     }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) sparse_time = prk::wtime();
 

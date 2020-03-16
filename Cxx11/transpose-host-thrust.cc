@@ -104,7 +104,7 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 

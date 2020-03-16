@@ -119,8 +119,8 @@ int main(int argc, char * argv[])
 
   double * h_A = new double[order*order];
   double * h_B = new double[order*order];
-  for (auto i=0;i<order; i++) {
-    for (auto j=0;j<order;j++) {
+  for (int i=0;i<order; i++) {
+    for (int j=0;j<order;j++) {
       h_A[i*order+j] = static_cast<double>(i*order+j);
       h_B[i*order+j] = 0.0;
     }
@@ -135,7 +135,7 @@ int main(int argc, char * argv[])
   occa::kernel transpose = device.buildKernel("transpose.okl", "transpose");
 
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
       if (iter==1) trans_time = prk::wtime();
       transpose(order, d_A, d_B);
       device.finish();
@@ -156,8 +156,8 @@ int main(int argc, char * argv[])
 
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;

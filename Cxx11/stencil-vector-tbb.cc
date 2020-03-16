@@ -175,25 +175,25 @@ int main(int argc, char* argv[])
 
   tbb::blocked_range2d<int> range(0, n, tile_size, 0, n, tile_size);
   tbb::parallel_for( range, [&](decltype(range)& r) {
-                     for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                     for (int i=r.rows().begin(); i!=r.rows().end(); ++i ) {
                          PRAGMA_SIMD
-                         for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                         for (int j=r.cols().begin(); j!=r.cols().end(); ++j ) {
                              in[i*n+j] = static_cast<double>(i+j);
                              out[i*n+j] = 0.0;
                          }
                      }
                    }, tbb_partitioner );
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) stencil_time = prk::wtime();
     // Apply the stencil operator
     stencil(n, tile_size, in, out);
     // Add constant to solution to force refresh of neighbor data, if any
     tbb::parallel_for( range, [&](decltype(range)& r) {
-                       for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                       for (int i=r.rows().begin(); i!=r.rows().end(); ++i ) {
                            PRAGMA_SIMD
-                           for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                           for (int j=r.cols().begin(); j!=r.cols().end(); ++j ) {
                                in[i*n+j] += 1.0;
                            }
                        }
@@ -212,16 +212,16 @@ int main(int argc, char* argv[])
   double norm = 0.0;
 #if 0
   // Use this if, for whatever reason, TBB reductions are not reliable.
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
       norm += std::fabs(out[i*n+j]);
     }
   }
 #else
   norm = tbb::parallel_reduce( range, double(0),
                                [&](decltype(range)& r, double temp) -> double {
-                                   for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-                                       for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+                                   for (int i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+                                       for (int j=r.cols().begin(); j!=r.cols().end(); ++j ) {
                                            temp += std::fabs(out[i*n+j]);
                                        }
                                    }

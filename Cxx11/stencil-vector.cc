@@ -168,11 +168,11 @@ int main(int argc, char* argv[])
   std::vector<double> out(n*n);
 
   {
-    for (auto it=0; it<n; it+=tile_size) {
-      for (auto jt=0; jt<n; jt+=tile_size) {
-        for (auto i=it; i<std::min(n,it+tile_size); i++) {
+    for (int it=0; it<n; it+=tile_size) {
+      for (int jt=0; jt<n; jt+=tile_size) {
+        for (int i=it; i<std::min(n,it+tile_size); i++) {
           PRAGMA_SIMD
-          for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
+          for (int j=jt; j<std::min(n,jt+tile_size); j++) {
             in[i*n+j] = static_cast<double>(i+j);
             out[i*n+j] = 0.0;
           }
@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
       }
     }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) stencil_time = prk::wtime();
       // Apply the stencil operator
@@ -200,8 +200,8 @@ int main(int argc, char* argv[])
 
   // compute L1 norm in parallel
   double norm = 0.0;
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
       norm += std::fabs(out[i*n+j]);
     }
   }

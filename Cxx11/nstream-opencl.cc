@@ -99,7 +99,7 @@ void run(cl::Context context, int iterations, size_t length)
 
   double scalar = 3.0;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) nstream_time = prk::wtime();
 
@@ -120,7 +120,7 @@ void run(cl::Context context, int iterations, size_t length)
   double ar(0);
   T br(2);
   T cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 

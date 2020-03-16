@@ -64,8 +64,8 @@
 
 void SequentialSweep(int m, int n, prk::vector<double> & grid)
 {
-  for (auto i=1; i<m; i++) {
-    for (auto j=1; j<n; j++) {
+  for (int i=1; i<m; i++) {
+    for (int j=1; j<n; j++) {
       grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
     }
   }
@@ -179,14 +179,14 @@ int main(int argc, char* argv[])
   prk::vector<double> grid(m*n,0.0);
 
   // set boundary values (bottom and left side of grid)
-  for (auto j=0; j<n; j++) {
+  for (int j=0; j<n; j++) {
     grid[0*n+j] = static_cast<double>(j);
   }
-  for (auto i=0; i<m; i++) {
+  for (int i=0; i<m; i++) {
     grid[i*n+0] = static_cast<double>(i);
   }
 
-  for (auto iter = 0; iter<=iterations; iter++){
+  for (int iter = 0; iter<=iterations; iter++){
     if (iter == 1) pipeline_time = prk::wtime();
     SequentialSweep(m, n, grid);
     grid[0*n+0] = -grid[(m-1)*n+(n-1)];

@@ -71,11 +71,11 @@ namespace prk
                 info() {
                     prk::CUDA::check( cudaGetDeviceCount(&nDevices) );
                     vDevices.resize(nDevices);
-                    for (auto i=0; i<nDevices; ++i) {
+                    for (int i=0; i<nDevices; ++i) {
                         cudaGetDeviceProperties(&(vDevices[i]), i);
                         if (i==0) {
                             maxThreadsPerBlock = vDevices[i].maxThreadsPerBlock;
-                            for (auto j=0; j<3; ++j) {
+                            for (int j=0; j<3; ++j) {
                                 maxThreadsDim[j]   = vDevices[i].maxThreadsDim[j];
                                 maxGridSize[j]     = vDevices[i].maxGridSize[j];
                             }
@@ -101,7 +101,7 @@ namespace prk
                 }
 
                 void print() {
-                    for (auto i=0; i<nDevices; ++i) {
+                    for (int i=0; i<nDevices; ++i) {
                         std::cout << "device name: " << vDevices[i].name << "\n";
 #ifndef __CORIANDERCC__
                         std::cout << "total global memory:     " << vDevices[i].totalGlobalMem << "\n";

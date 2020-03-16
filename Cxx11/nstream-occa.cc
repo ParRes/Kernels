@@ -146,7 +146,7 @@ int main(int argc, char * argv[])
   occa::kernel nstream = device.buildKernel("nstream.okl", "nstream");
 
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
       if (iter==1) nstream_time = prk::wtime();
       nstream(length, scalar, d_A, d_B, d_C);
       device.finish();
@@ -170,14 +170,14 @@ int main(int argc, char * argv[])
   double br(2);
   double cr(2);
   double ref(0);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
   ar *= length;
 
   double asum(0);
-  for (auto i=0; i<length; i++) {
+  for (int i=0; i<length; i++) {
       asum += std::fabs(h_A[i]);
   }
 
