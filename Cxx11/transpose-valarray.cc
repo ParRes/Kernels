@@ -109,22 +109,22 @@ int main(int argc, char * argv[])
   std::valarray<double> B(0.0,order*order);
 
   auto trans_time = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       A[j*order+i] = order*j+i;
     }
   }
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
     // transpose the  matrix
     if (tile_size < order) {
-      for (auto it=0; it<order; it+=tile_size) {
-        for (auto jt=0; jt<order; jt+=tile_size) {
-          for (auto i=it; i<std::min(order,it+tile_size); i++) {
-            for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
+      for (int it=0; it<order; it+=tile_size) {
+        for (int jt=0; jt<order; jt+=tile_size) {
+          for (int i=it; i<std::min(order,it+tile_size); i++) {
+            for (int j=jt; j<std::min(order,jt+tile_size); j++) {
               B[i*order+j] += A[j*order+i];
               A[j*order+i] += 1.0;
             }
@@ -132,8 +132,8 @@ int main(int argc, char * argv[])
         }
       }
     } else {
-      for (auto i=0;i<order; i++) {
-        for (auto j=0;j<order;j++) {
+      for (int i=0;i<order; i++) {
+        for (int j=0;j<order;j++) {
           B[i*order+j] += A[j*order+i];
           A[j*order+i] += 1.0;
         }
@@ -149,8 +149,8 @@ int main(int argc, char * argv[])
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;

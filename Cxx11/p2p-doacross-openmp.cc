@@ -138,10 +138,10 @@ int main(int argc, char* argv[])
 
     OMP_MASTER
     {
-      for (auto j=0; j<n; j++) {
+      for (int j=0; j<n; j++) {
         grid[0*n+j] = static_cast<double>(j);
       }
-      for (auto i=0; i<m; i++) {
+      for (int i=0; i<m; i++) {
         grid[i*n+0] = static_cast<double>(i);
       }
     }

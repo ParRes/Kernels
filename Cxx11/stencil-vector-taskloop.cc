@@ -181,11 +181,11 @@ int main(int argc, char* argv[])
   OMP_MASTER
   {
     OMP_TASKLOOP_COLLAPSE(2, firstprivate(n) shared(in,out) grainsize(gs) )
-    for (auto it=0; it<n; it+=tile_size) {
-      for (auto jt=0; jt<n; jt+=tile_size) {
-        for (auto i=it; i<std::min(n,it+tile_size); i++) {
+    for (int it=0; it<n; it+=tile_size) {
+      for (int jt=0; jt<n; jt+=tile_size) {
+        for (int i=it; i<std::min(n,it+tile_size); i++) {
           PRAGMA_SIMD
-          for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
+          for (int j=jt; j<std::min(n,jt+tile_size); j++) {
             in[i*n+j] = static_cast<double>(i+j);
             out[i*n+j] = 0.0;
           }
@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
     }
     OMP_TASKWAIT
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) stencil_time = prk::wtime();
       // Apply the stencil operator
@@ -203,11 +203,11 @@ int main(int argc, char* argv[])
 
       // Add constant to solution to force refresh of neighbor data, if any
       OMP_TASKLOOP_COLLAPSE(2, firstprivate(n) shared(in,out) grainsize(gs) )
-      for (auto it=0; it<n; it+=tile_size) {
-        for (auto jt=0; jt<n; jt+=tile_size) {
-          for (auto i=it; i<std::min(n,it+tile_size); i++) {
+      for (int it=0; it<n; it+=tile_size) {
+        for (int jt=0; jt<n; jt+=tile_size) {
+          for (int i=it; i<std::min(n,it+tile_size); i++) {
             PRAGMA_SIMD
-            for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
+            for (int j=jt; j<std::min(n,jt+tile_size); j++) {
               in[i*n+j] += 1.0;
             }
           }
@@ -228,8 +228,8 @@ int main(int argc, char* argv[])
   // compute L1 norm in parallel
   double norm = 0.0;
   OMP_PARALLEL_FOR_REDUCE( +:norm )
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
       norm += std::fabs(out[i*n+j]);
     }
   }

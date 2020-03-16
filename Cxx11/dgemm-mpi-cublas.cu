@@ -64,8 +64,8 @@
 
 __global__ void init(int order, double * A, double * B, double * C)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
     if ((i<order) && (j<order)) {
       A[i*order+j] = i;
@@ -76,8 +76,8 @@ __global__ void init(int order, double * A, double * B, double * C)
 
 __global__ void init(int order, double * C)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
     if ((i<order) && (j<order)) {
       C[i*order+j] = 0;
@@ -176,7 +176,7 @@ int main(int argc, char * argv[])
     init<<<dimGrid, dimBlock>>>(order, d_a, d_b, d_c);
 
     {
-      for (auto iter = 0; iter<=iterations; iter++) {
+      for (int iter = 0; iter<=iterations; iter++) {
 
         if (iter==1) {
             prk::MPI::barrier();

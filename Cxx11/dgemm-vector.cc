@@ -66,11 +66,11 @@ void prk_dgemm(const int order,
                      std::vector<double> & C)
 {
     PRAGMA_SIMD
-    for (auto i=0; i<order; ++i) {
+    for (int i=0; i<order; ++i) {
       PRAGMA_SIMD
-      for (auto k=0; k<order; ++k) {
+      for (int k=0; k<order; ++k) {
         PRAGMA_SIMD
-        for (auto j=0; j<order; ++j) {
+        for (int j=0; j<order; ++j) {
             C[i*order+j] += A[i*order+k] * B[k*order+j];
         }
       }
@@ -82,19 +82,19 @@ void prk_dgemm(const int order, const int tile_size,
                const std::vector<double> & B,
                      std::vector<double> & C)
 {
-    for (auto it=0; it<order; it+=tile_size) {
-      for (auto kt=0; kt<order; kt+=tile_size) {
-        for (auto jt=0; jt<order; jt+=tile_size) {
+    for (int it=0; it<order; it+=tile_size) {
+      for (int kt=0; kt<order; kt+=tile_size) {
+        for (int jt=0; jt<order; jt+=tile_size) {
           // ICC will not hoist these on its own...
           auto iend = std::min(order,it+tile_size);
           auto jend = std::min(order,jt+tile_size);
           auto kend = std::min(order,kt+tile_size);
           PRAGMA_SIMD
-          for (auto i=it; i<iend; ++i) {
+          for (int i=it; i<iend; ++i) {
             PRAGMA_SIMD
-            for (auto k=kt; k<kend; ++k) {
+            for (int k=kt; k<kend; ++k) {
               PRAGMA_SIMD
-              for (auto j=jt; j<jend; ++j) {
+              for (int j=jt; j<jend; ++j) {
                 C[i*order+j] += A[i*order+k] * B[k*order+j];
               }
             }
@@ -159,15 +159,15 @@ int main(int argc, char * argv[])
   std::vector<double> A(order*order);
   std::vector<double> B(order*order);
   std::vector<double> C(order*order,0.0);
-  for (auto i=0; i<order; ++i) {
-    for (auto j=0; j<order; ++j) {
+  for (int i=0; i<order; ++i) {
+    for (int j=0; j<order; ++j) {
        A[i*order+j] = i;
        B[i*order+j] = i;
     }
   }
 
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) dgemm_time = prk::wtime();
 
@@ -204,14 +204,14 @@ int main(int argc, char * argv[])
     std::cout << "Reference checksum = " << reference << "\n"
               << "Actual checksum = " << checksum << std::endl;
 #if VERBOSE
-    for (auto i=0; i<order; ++i)
-      for (auto j=0; j<order; ++j)
+    for (int i=0; i<order; ++i)
+      for (int j=0; j<order; ++j)
         std::cout << "A(" << i << "," << j << ") = " << A[i*order+j] << "\n";
-    for (auto i=0; i<order; ++i)
-      for (auto j=0; j<order; ++j)
+    for (int i=0; i<order; ++i)
+      for (int j=0; j<order; ++j)
         std::cout << "B(" << i << "," << j << ") = " << B[i*order+j] << "\n";
-    for (auto i=0; i<order; ++i)
-      for (auto j=0; j<order; ++j)
+    for (int i=0; i<order; ++i)
+      for (int j=0; j<order; ++j)
         std::cout << "C(" << i << "," << j << ") = " << C[i*order+j] << "\n";
     std::cout << std::endl;
 #endif

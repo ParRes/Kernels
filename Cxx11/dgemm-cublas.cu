@@ -88,8 +88,8 @@ __global__ void init(unsigned order, double * C)
 
 __global__ void init(int order, const int matrices, double * A, double * B, double * C)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
     for (int b=0; b<matrices; ++b) {
       if ((i<order) && (j<order)) {
@@ -102,8 +102,8 @@ __global__ void init(int order, const int matrices, double * A, double * B, doub
 
 __global__ void init(int order, const int matrices, double * C)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
     for (int b=0; b<matrices; ++b) {
       if ((i<order) && (j<order)) {
@@ -294,7 +294,7 @@ int main(int argc, char * argv[])
   double xfer(0);
   double comp(0);
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) dgemm_time = prk::wtime();
 

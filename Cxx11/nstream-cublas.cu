@@ -138,7 +138,7 @@ int main(int argc, char * argv[])
 
   double scalar(3);
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 

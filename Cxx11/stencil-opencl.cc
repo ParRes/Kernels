@@ -116,8 +116,8 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   auto stencil_time = 0.0;
 
   // initialize the input array
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
       h_in[i*n+j] = static_cast<T>(i+j);
     }
   }
@@ -126,7 +126,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   cl::Buffer d_in = cl::Buffer(context, begin(h_in), end(h_in), true);
   cl::Buffer d_out = cl::Buffer(context, begin(h_out), end(h_out), false);
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) stencil_time = prk::wtime();
 
@@ -155,8 +155,8 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
 
   // compute L1 norm in parallel
   double norm = 0.0;
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
       norm += std::fabs(static_cast<double>(h_out[i*n+j]));
     }
   }

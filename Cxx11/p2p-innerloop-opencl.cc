@@ -85,10 +85,10 @@ void run(cl::Context context, int iterations, int n)
   //////////////////////////////////////////////////////////////////////
 
   std::vector<T> h_grid(n*n, T(0));
-  for (auto j=0; j<n; j++) {
+  for (int j=0; j<n; j++) {
     h_grid[0*n+j] = static_cast<double>(j);
   }
-  for (auto i=0; i<n; i++) {
+  for (int i=0; i<n; i++) {
     h_grid[i*n+0] = static_cast<double>(i);
   }
 
@@ -97,7 +97,7 @@ void run(cl::Context context, int iterations, int n)
 
   auto pipeline_time = 0.0;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) pipeline_time = prk::wtime();
 

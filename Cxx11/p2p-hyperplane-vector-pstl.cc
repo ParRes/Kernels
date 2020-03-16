@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
   std::vector<double> grid(n*n,0.0);
 
   // set boundary values (bottom and left side of grid)
-  for (auto j=0; j<n; j++) {
+  for (int j=0; j<n; j++) {
     grid[0*n+j] = static_cast<double>(j);
     grid[j*n+0] = static_cast<double>(j);
   }
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
     if (iter==1) pipeline_time = prk::wtime();
 
     if (nc==1) {
-      for (auto i=2; i<=2*n-2; i++) {
+      for (int i=2; i<=2*n-2; i++) {
         const auto begin = std::max(2,i-n+2);
         const auto end   = std::min(i,n)+1;
         auto range = prk::range(begin,end);

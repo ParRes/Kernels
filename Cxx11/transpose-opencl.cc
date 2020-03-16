@@ -90,7 +90,7 @@ void run(cl::Context context, int iterations, int order)
 
   auto trans_time = 0.0;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
@@ -107,8 +107,8 @@ void run(cl::Context context, int iterations, int order)
   // TODO: replace with std::generate, std::accumulate, or similar
   const double addit = (iterations+1.0) * (0.5*iterations);
   double abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(iterations+1)+addit;

@@ -75,8 +75,8 @@ __global__ void nothing(const int n, const prk_float * in, prk_float * out)
 
 __global__ void add(const int n, prk_float * in)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
     if ((i<n) && (j<n)) {
         in[i*n+j] += (prk_float)1;
@@ -196,8 +196,8 @@ int main(int argc, char* argv[])
   h_out = new prk_float[nelems];
 #endif
 
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
       h_in[i*n+j]  = static_cast<prk_float>(i+j);
       h_out[i*n+j] = static_cast<prk_float>(0);
     }
@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
   prk::CUDA::check( cudaMemcpy(d_in, &(h_in[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_out, &(h_out[0]), bytes, cudaMemcpyHostToDevice) );
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) stencil_time = prk::wtime();
 
@@ -247,8 +247,8 @@ int main(int argc, char* argv[])
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
   // compute L1 norm
   double norm = 0.0;
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
       norm += std::fabs(h_out[i*n+j]);
     }
   }

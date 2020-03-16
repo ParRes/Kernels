@@ -112,7 +112,7 @@ int main(int argc, char * argv[])
   auto itrange = prk::range(0,order,tile_size);
   auto jtrange = prk::range(0,order,tile_size);
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 

@@ -113,8 +113,8 @@ int main(int argc, char * argv[])
   prk::CUDA::check( cudaMallocHost((void**)&h_b, bytes) );
 
   // fill A with the sequence 0 to order^2-1 as doubles
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       h_a[j*order+i] = order*j+i;
       h_b[j*order+i] = 0;
     }
@@ -133,8 +133,8 @@ int main(int argc, char * argv[])
   // correctly implement incx=0.
   double * h_o;
   prk::CUDA::check( cudaMallocHost((void**)&h_o, bytes) );
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       h_o[j*order+i] = 1;
     }
   }
@@ -159,7 +159,7 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
@@ -218,8 +218,8 @@ int main(int argc, char * argv[])
   // TODO: replace with std::generate, std::accumulate, or similar
   const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const size_t ij = (size_t)i*(size_t)order+(size_t)j;
       const size_t ji = (size_t)j*(size_t)order+(size_t)i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
@@ -240,8 +240,8 @@ int main(int argc, char * argv[])
               << " Avg time (s): " << avgtime << std::endl;
   } else {
 #ifdef VERBOSE
-    for (auto i=0; i<order; i++) {
-      for (auto j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
+      for (int j=0; j<order; j++) {
         std::cout << "(" << i << "," << j << ") = " << h_a[i*order+j] << ", " << h_b[i*order+j] << "\n";
       }
     }
