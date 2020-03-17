@@ -50,10 +50,10 @@ case "$PRK_TARGET" in
         ;;
     allc1z)
         echo "C1z"
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
+        if [ "${CC}" = "gcc" ] ; then
             sh ./travis/install-gcc.sh $TRAVIS_ROOT
         fi
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+        if [ "${CC}" = "clang" ] ; then
             sh ./travis/install-clang.sh $TRAVIS_ROOT
         fi
         #if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
@@ -62,10 +62,10 @@ case "$PRK_TARGET" in
         ;;
     allcxx)
         echo "C++11"
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
+        if [ "${CC}" = "gcc" ] ; then
             sh ./travis/install-gcc.sh $TRAVIS_ROOT
         fi
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+        if [ "${CC}" = "clang" ] ; then
             sh ./travis/install-clang.sh $TRAVIS_ROOT
         fi
         sh ./travis/install-tbb.sh $TRAVIS_ROOT
@@ -81,10 +81,8 @@ case "$PRK_TARGET" in
         ;;
     allfortran)
         echo "Fortran"
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
-            sh ./travis/install-gcc.sh $TRAVIS_ROOT
-        fi
         if [ "${CC}" = "gcc" ] ; then
+            sh ./travis/install-gcc.sh $TRAVIS_ROOT
             sh ./travis/install-cmake.sh $TRAVIS_ROOT
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
         fi
