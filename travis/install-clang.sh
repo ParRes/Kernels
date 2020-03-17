@@ -17,7 +17,7 @@ if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
             echo "Linux Clang/LLVM builds not supported!"
             set +e
             for v in "-11" "-10" "-9" "-8" "-7" ; do
-                sudo apt-get install clang$v && sudo apt-get instal llibomp$v-dev
+                sudo apt-get install clang$v && sudo apt-get install libomp$v-dev
                 if [ -f /usr/lib/llvm$v/bin/clang-$v ] && [ -f /usr/lib/llvm$v/lib/libomp.so ] ; then
                     /usr/lib/llvm$v/bin/clang-$ -v
                     break
