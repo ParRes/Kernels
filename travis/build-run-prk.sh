@@ -525,7 +525,7 @@ case "$PRK_TARGET" in
         done
 
         # C++17 Parallel STL
-        echo "PSTLFLAG=${TBBFLAG} -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
+        echo "PSTLFLAG=${TBBFLAG} -DUSE_LLVM_PSTL -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
         if [ "${CC}" = "gcc" ] ; then
             # omp.h not found with clang-3.9 - just work around instead of fixing.
             echo "PSTLFLAG+=-fopenmp" >> common/make.defs

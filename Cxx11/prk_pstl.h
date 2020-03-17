@@ -33,15 +33,26 @@
 #define PRK_PSTL_H
 
 #if defined(__GNUC__) && (__GNUC__ >= 9)
+
 # include <execution>
 # include <algorithm>
 # include <numeric>
 namespace exec = __pstl::execution;
+
+#elif defined(USE_LLVM_PSTL)
+
+# include <__pstl_execution>
+# include <__pstl_algorithm>
+# include <__pstl_numeric>
+namespace exec = std::execution;
+
 #else
+
 # include <pstl/execution>
 # include <pstl/algorithm>
 # include <pstl/numeric>
 namespace exec = std::execution;
+
 #endif
 
 #endif /* PRK_PSTL_H */
