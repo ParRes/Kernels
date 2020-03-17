@@ -183,6 +183,7 @@ case "$PRK_TARGET" in
                             " -Wl,-rpath -Wl,${LLVMPATH}/lib" >> common/make.defs
             export LD_RUN_PATH=${LLVMPATH}/lib:$LD_RUN_PATH
             export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
+            find ${LLVMPATH} -name libomp.so
         else
             echo "CC=$PRK_CC -std=c99" >> common/make.defs
             echo "OPENMPFLAG=-fopenmp" >> common/make.defs
