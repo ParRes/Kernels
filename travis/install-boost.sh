@@ -8,7 +8,6 @@ TRAVIS_ROOT="$1"
 
 case "$os" in
     Darwin)
-        brew update
         brew install boost || brew upgrade boost || true
         ;;
 

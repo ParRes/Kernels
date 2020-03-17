@@ -11,12 +11,7 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ] ; then
     case "$os" in
         Darwin)
             echo "Mac"
-            brew update
-            #brew install gcc   || brew update gcc
-            #brew install mpich || brew update mpich
-            #brew install cmake || brew update cmake
-            #cmake --version
-            brew install opencoarrays || brew update opencoarrays
+            brew install opencoarrays || brew upgrade opencoarrays
             brew list opencoarrays
             which caf
             which cafrun

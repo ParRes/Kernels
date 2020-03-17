@@ -12,7 +12,6 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     case "$os" in
         Darwin)
             echo "Mac"
-            #brew update
             #brew install ruby boost
             # Homebrew location
             export MPI_ROOT=/usr/local

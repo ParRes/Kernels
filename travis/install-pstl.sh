@@ -16,7 +16,6 @@ make -j2 install
 #case "$os" in
 #    Darwin)
 #        echo "Mac"
-#        brew update
 #        brew upgrade parallelstl || brew install parallelstl
 #        ;;
 #    Linux)

@@ -9,7 +9,6 @@ TRAVIS_ROOT="$1"
 case "$os" in
     Darwin)
         echo "Mac"
-        brew update
         brew cask upgrade julia || brew cask install julia
         ;;
     Linux)

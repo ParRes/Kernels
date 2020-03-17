@@ -15,7 +15,6 @@ MPI_FORTRAN="$3"
 case "$os" in
     Darwin)
         echo "Mac"
-        brew update
         case "$MPI_IMPL" in
             mpich)
                 brew upgrade mpich || brew install mpich || true
@@ -25,13 +24,19 @@ case "$os" in
                 brew link --overwrite gcc || true
                 brew upgrade openmpi || brew install openmpi || true
                 ;;
-            *)
-                echo "Unknown MPI implementation: $MPI_IMPL"
-                exit 10
-                ;;
         esac
         ;;
     Linux)
+        case "$MPI_IMPL" in
+            mpich)
+                sudo apt-get install libmpich-dev
+                ;;
+            openmpi)
+                sudo apt-get install libopenmpi-dev
+                ;;
+        esac
+        ;;
+    LinuxNoSUDO)
         echo "Linux"
         case "$CC" in
             gcc)
@@ -108,10 +113,6 @@ case "$os" in
                 fi
 
 
-                ;;
-            *)
-                echo "Unknown MPI implementation: $MPI_IMPL"
-                exit 20
                 ;;
         esac
         ;;

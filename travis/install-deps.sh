@@ -6,6 +6,17 @@ set -x
 TRAVIS_ROOT="$1"
 PRK_TARGET="$2"
 
+# update package managers once at the beginning
+case ${TRAVIS_OS_NAME} in
+    osx)
+        brew update
+        ;;
+    linux)
+        sudo apt-get update -y
+        sudo apt-get upgrade -y
+        ;;
+esac
+
 case ${TRAVIS_OS_NAME} in
     osx)
         MPI_IMPL=openmpi
@@ -74,7 +85,6 @@ case "$PRK_TARGET" in
     allfortran)
         echo "Fortran"
         if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "gcc" ] ; then
-            brew update || true
             brew upgrade gcc || brew install gcc || true
             #
             # Workaround Homebrew issues in Travis CI...
