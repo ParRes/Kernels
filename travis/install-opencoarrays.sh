@@ -18,7 +18,7 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ] ; then
         LinuxSudo)
             sudo apt-get install open-coarrays-bin libcoarrays-dev
             ;;
-        Linux)
+        LinuxNoSudo)
             echo "Linux"
             sh ./travis/install-cmake.sh $TRAVIS_ROOT
             sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich 1

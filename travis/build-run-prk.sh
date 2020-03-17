@@ -661,14 +661,6 @@ case "$PRK_TARGET" in
                 esac
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
                 ;;
-            icc)
-                # -heap-arrays prevents SEGV in transpose-pretty (?)
-                export PRK_FC="ifort -fpp -std08 -heap-arrays"
-                echo "FC=$PRK_FC" >> common/make.defs
-                echo "OPENMPFLAG=-qopenmp" >> common/make.defs
-                echo "OFFLOADFLAG=-qopenmp-offload=host" >> common/make.defs
-                echo "COARRAYFLAG=-coarray" >> common/make.defs
-                ;;
         esac
 
         # Serial
@@ -705,9 +697,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/dgemm-openmp         10 400 400 # untiled
         $PRK_TARGET_PATH/dgemm-openmp         10 400 32
 
-        # Intel Mac does not support OpenMP target or coarrays
-        if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-            # OpenMP target
+        # OpenMP target
+        if [ "${CC}" = "gcc" ] ; then
             ${MAKE} -C ${PRK_TARGET_PATH} stencil-openmp-target transpose-openmp-target nstream-openmp-target
             export OMP_NUM_THREADS=2
             #$PRK_TARGET_PATH/p2p-openmp-target           10 1024 1024 # most compilers do not support doacross yet
@@ -715,8 +706,11 @@ case "$PRK_TARGET" in
             $PRK_TARGET_PATH/transpose-openmp-target     10 1024 1
             $PRK_TARGET_PATH/transpose-openmp-target     10 1024 32
             $PRK_TARGET_PATH/nstream-openmp-target       10 16777216
+        fi
 
-            # Fortran coarrays
+        # Fortran coarrays
+        # Disable GCC Linux because installing OpenCoarrays is not working
+        if [ "${CC}" = "gcc" ] && [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             ${MAKE} -C ${PRK_TARGET_PATH} coarray
             export PRK_MPI_PROCS=4
             if [ "${CC}" = "gcc" ] ; then
