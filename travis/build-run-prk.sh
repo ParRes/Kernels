@@ -382,11 +382,11 @@ case "$PRK_TARGET" in
                         $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
                     done
                 done
-                # ORNL-ACC
-                echo "ORNLACCFLAG=-fopenacc" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-ornlacc
-                $PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024
-                $PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024 64
+                # ORNL-ACC - do not test in Travis CI because GCC-5 is too old
+                #echo "ORNLACCFLAG=-fopenacc" >> common/make.defs
+                #${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-ornlacc
+                #$PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024
+                #$PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024 64
                 ;;
             clang)
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
