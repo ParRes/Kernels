@@ -40,7 +40,7 @@ case "$os" in
         else
             case "$CC" in
                 gcc)
-                    for gccversion in "-9" "-8" "-7" "" ; do
+                    for gccversion in "-9" "-8" "-7" "-6" "-5" "" ; do
                         if [ -f "`which gcc$gccversion`" ]; then
                             export PRK_CC="gcc$gccversion"
                             export PRK_CXX="g++$gccversion"
