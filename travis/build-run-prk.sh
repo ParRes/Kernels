@@ -125,7 +125,7 @@ case "$PRK_TARGET" in
                 fi
                 ;;
             clang*)
-                for version in "-5" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
+                for version in "-10" "-9" "-8" "-7" "-6" "-5" "" ; do
                   if [ -f "`which ${CC}${version}`" ]; then
                       export PRK_CC="${CC}${version}"
                       echo "Found C: $PRK_CC"

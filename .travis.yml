@@ -156,22 +156,19 @@ addons:
     - ubuntu-toolchain-r-test
     # works on Precise and Trusty
     # see https://docs.travis-ci.com/user/languages/c/ for details
-    - llvm-toolchain-precise-3.8
+    #- llvm-toolchain-precise-3.8
     #  Boost is for Grappa, HPX, C++ rangefor, pstl
     - boost-latest
     packages:
     - python-numpy
     - python-scipy
-    - gcc-7
-    - g++-7
-    - gfortran-7
+    #- gcc-7
+    #- g++-7
+    #- gfortran-7
     # Required by GUPC
-    - libnuma-dev
-    # This should provide OpenMP
-    - clang-3.8
-    - clang-3.9
+    #- libnuma-dev
     # Grappa and HPX use CMake
-    - cmake
+    #- cmake
     # C++ code needs range headers
     - libboost-all-dev
 before_install:
