@@ -35,6 +35,7 @@
 #include <cstdio>
 #include <cstdlib> // atoi, getenv
 #include <cstdint>
+#include <cfloat>  // FLT_MIN
 #include <climits>
 #include <cmath>   // abs, fabs
 #include <cassert>
