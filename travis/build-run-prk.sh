@@ -203,16 +203,19 @@ case "$PRK_TARGET" in
             done
         done
         # Target Offload
-        echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
-        ${MAKE} -C $PRK_TARGET_PATH target
-        $PRK_TARGET_PATH/stencil-target     10 1000
-        $PRK_TARGET_PATH/transpose-target   10 1024 32
-        #echo "Test stencil code generator"
-        for s in star grid ; do
-            for r in 1 2 3 4 5 ; do
-                $PRK_TARGET_PATH/stencil-target 10 200 $s $r
+        if [ "${CC}" = "gcc" ] ; then
+            echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
+            ${MAKE} -C $PRK_TARGET_PATH target
+            $PRK_TARGET_PATH/nstream-target     10 16777216
+            $PRK_TARGET_PATH/stencil-target     10 1000
+            $PRK_TARGET_PATH/transpose-target   10 1024 32
+            #echo "Test stencil code generator"
+            for s in star grid ; do
+                for r in 1 2 3 4 5 ; do
+                    $PRK_TARGET_PATH/stencil-target 10 200 $s $r
+                done
             done
-        done
+        fi
 
         # Use MUSL for GCC+Linux only
         if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "$CC" = "gcc" ] ; then
