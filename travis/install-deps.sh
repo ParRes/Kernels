@@ -13,7 +13,7 @@ case ${TRAVIS_OS_NAME} in
         ;;
     linux)
         sudo apt-get update -y
-        sudo apt-get upgrade -y
+        #sudo apt-get upgrade -y
         ;;
 esac
 
