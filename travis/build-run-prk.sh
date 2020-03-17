@@ -247,7 +247,7 @@ case "$PRK_TARGET" in
         # Use MUSL for GCC+Linux only
         if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "$CC" = "gcc" ] ; then
             ${MAKE} -C $PRK_TARGET_PATH clean
-            ./travis/install-musl.sh ${TRAVIS_ROOT} ${PRK_CC}
+            sh ./travis/install-musl.sh ${TRAVIS_ROOT} ${PRK_CC}
             echo "PRKVERSION=\"'2.16'\"" > common/make.defs
             echo "CC=${TRAVIS_ROOT}/musl/bin/musl-gcc -static -std=c11 -DUSE_C11_THREADS" >> common/make.defs
             echo "EXTRA_CLIBS=-lm -lpthread" >> common/make.defs
