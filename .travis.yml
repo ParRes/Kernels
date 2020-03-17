@@ -1,10 +1,10 @@
 sudo: true
 language: cpp
 python:
-  - "3.5"
+  - "3.7"
 env:
   matrix:
-  #- PRK_TARGET=allserial
+  - PRK_TARGET=allserial
   - PRK_TARGET=allc1z
   - PRK_TARGET=allcxx
   - PRK_TARGET=allpython
@@ -147,34 +147,11 @@ matrix:
     env: PRK_TARGET=allmpi
   - os: linux
     env: PRK_TARGET=allcharm++
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    # works on Precise and Trusty
-    # see https://docs.travis-ci.com/user/languages/c/ for details
-    #- llvm-toolchain-precise-3.8
-    #  Boost is for Grappa, HPX, C++ rangefor, pstl
-    - boost-latest
-    packages:
-    - python-numpy
-    - python-scipy
-    #- gcc-7
-    #- g++-7
-    #- gfortran-7
-    # Required by GUPC
-    #- libnuma-dev
-    # Grappa and HPX use CMake
-    #- cmake
-    # C++ code needs range headers
-    - libboost-all-dev
 before_install:
   - pwd
   - export TRAVIS_HOME=$PWD
   - export TRAVIS_ROOT=$TRAVIS_HOME/PRK-deps
   - mkdir -p $TRAVIS_ROOT
-  #- sh ./travis/install-intel.sh $TRAVIS_ROOT $PRK_TARGET
-  #- source ~/.bashrc
 install:
   - export PATH=$TRAVIS_ROOT/bin:$PATH
   - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
