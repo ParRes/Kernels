@@ -162,87 +162,47 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/transpose-thread   10 1024 512
 
         # C11 with OpenMP
+        # Host OpenMP
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+            LLVMPATH="$(brew --cellar llvm)/$(brew list --versions llvm | tr ' ' '\n' | tail -1)"
+            echo "LLVMPATH=${LLVMPATH}"
+            echo "CC=${LLVMPATH}/bin/clang -std=c99" >> common/make.defs
+            echo "OPENMPFLAG=-fopenmp" \
+                            " -L${LLVMPATH}/lib -lomp" \
+                            " ${LLVMPATH}/lib/libomp.dylib" \
+                            " -Wl,-rpath -Wl,${LLVMPATH}/lib" >> common/make.defs
+            export LD_RUN_PATH=${LLVMPATH}/lib:$LD_RUN_PATH
+            export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
+            export DYLD_LIBRARY_PATH=${LLVMPATH}/lib:$DYLD_LIBRARY_PATH
+        else
+            echo "CC=$PRK_CC -std=c99" >> common/make.defs
+            echo "OPENMPFLAG=-fopenmp" >> common/make.defs
+        fi
         export OMP_NUM_THREADS=2
-        case "$CC" in
-            clang*)
-                echo "Skipping Clang since OpenMP support probably missing"
-                ;;
-            g*)
-                # Host
-                echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH nstream-openmp p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp transpose-openmp
-                $PRK_TARGET_PATH/nstream-openmp           10 16777216 32
-                $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024
-                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024 32
-                $PRK_TARGET_PATH/stencil-openmp           10 1000
-                $PRK_TARGET_PATH/transpose-openmp         10 1024 32
-                #echo "Test stencil code generator"
-                for s in star grid ; do
-                    for r in 1 2 3 4 5 ; do
-                        $PRK_TARGET_PATH/stencil-openmp 10 200 $s $r
-                    done
-                done
-                # Offload
-                echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH target
-                $PRK_TARGET_PATH/stencil-target     10 1000
-                $PRK_TARGET_PATH/transpose-target   10 1024 32
-                #echo "Test stencil code generator"
-                for s in star grid ; do
-                    for r in 1 2 3 4 5 ; do
-                        $PRK_TARGET_PATH/stencil-target 10 200 $s $r
-                    done
-                done
-                ;;
-            ic*)
-                # Host
-                echo "OPENMPFLAG=-qopenmp" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH nstream-openmp p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp transpose-openmp
-                $PRK_TARGET_PATH/nstream-openmp           10 16777216 32
-                $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024
-                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024 32
-                $PRK_TARGET_PATH/stencil-openmp           10 1000
-                $PRK_TARGET_PATH/transpose-openmp         10 1024 32
-                #echo "Test stencil code generator"
-                for s in star grid ; do
-                    for r in 1 2 3 4 5 ; do
-                        $PRK_TARGET_PATH/stencil-openmp 10 200 $s $r
-                    done
-                done
-                # Offload - not supported on MacOS
-                if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-                    echo "OFFLOADFLAG=-qopenmp -qopenmp-offload=host" >> common/make.defs
-                    ${MAKE} -C $PRK_TARGET_PATH target
-                    $PRK_TARGET_PATH/stencil-openmp-target     10 1000
-                    $PRK_TARGET_PATH/transpose-openmp-target   10 1024 32
-                    #echo "Test stencil code generator"
-                    for s in star grid ; do
-                        for r in 1 2 3 4 5 ; do
-                            $PRK_TARGET_PATH/stencil-openmp-target 10 200 $s $r
-                        done
-                    done
-                fi
-                ;;
-            *)
-                echo "Figure out your OpenMP flags..."
-                ;;
-        esac
-
-        # C11 with Cilk
-        #if [ "${CC}" = "gcc" ] ; then
-        #    echo "CILKFLAG=-fcilkplus" >> common/make.defs
-        #    ${MAKE} -C $PRK_TARGET_PATH stencil-cilk transpose-cilk
-        #    $PRK_TARGET_PATH/stencil-cilk     10 1000
-        #    $PRK_TARGET_PATH/transpose-cilk   10 1024 32
-        #    #echo "Test stencil code generator"
-        #    for s in star grid ; do
-        #        for r in 1 2 3 4 5 ; do
-        #            $PRK_TARGET_PATH/stencil-cilk 10 200 $s $r
-        #        done
-        #    done
-        #fi
+        ${MAKE} -C $PRK_TARGET_PATH nstream-openmp p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp transpose-openmp
+        $PRK_TARGET_PATH/nstream-openmp           10 16777216 32
+        $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
+        $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024 32
+        $PRK_TARGET_PATH/stencil-openmp           10 1000
+        $PRK_TARGET_PATH/transpose-openmp         10 1024 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-openmp 10 200 $s $r
+            done
+        done
+        # Target Offload
+        echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
+        ${MAKE} -C $PRK_TARGET_PATH target
+        $PRK_TARGET_PATH/stencil-target     10 1000
+        $PRK_TARGET_PATH/transpose-target   10 1024 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-target 10 200 $s $r
+            done
+        done
 
         # Use MUSL for GCC+Linux only
         if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "$CC" = "gcc" ] ; then
