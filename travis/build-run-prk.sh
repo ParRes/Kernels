@@ -37,7 +37,7 @@ case "$PRK_TARGET" in
         which python3 || which python || true
         python3 --version || python --version || true
         export PRK_TARGET_PATH=PYTHON
-        export PRK_PYTHON=python
+        export PRK_PYTHON=python3
         # Native
         $PRK_PYTHON $PRK_TARGET_PATH/p2p.py             10 100 100
         $PRK_PYTHON $PRK_TARGET_PATH/stencil.py         10 100
