@@ -561,17 +561,16 @@ case "$PRK_TARGET" in
             cd ..
         fi
 
-        # Boost.Compute moved after OpenCL to reuse those flags...
-
         # C++11 with Boost.Compute
+        # Boost.Compute moved after OpenCL to reuse those flags...
         # Only test Mac because:
         # (1) We only test OpenCL on MacOS in Travis.
         # (2) Boost.Compute is not available from APT.
         # If we ever address 1, we need to enable the Boost.Compute install for Linux.
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-            ${MAKE} -C $PRK_TARGET_PATH nstream-vector-boost-compute
-            $PRK_TARGET_PATH/nstream-vector-boost-compute     10 16777216 32
-        fi
+        #if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+        #    ${MAKE} -C $PRK_TARGET_PATH nstream-vector-boost-compute
+        #    $PRK_TARGET_PATH/nstream-vector-boost-compute     10 16777216 32
+        #fi
 
         # C++11 with Kokkos, RAJA
         case "$CC" in
