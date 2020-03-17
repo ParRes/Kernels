@@ -83,7 +83,6 @@ case "$PRK_TARGET" in
         echo "Fortran"
         if [ "${CC}" = "gcc" ] ; then
             sh ./travis/install-gcc.sh $TRAVIS_ROOT
-            sh ./travis/install-cmake.sh $TRAVIS_ROOT
             sh ./travis/install-opencoarrays.sh $TRAVIS_ROOT
         fi
         ;;
