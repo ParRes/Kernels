@@ -311,7 +311,7 @@ case "$PRK_TARGET" in
         ${PRK_CXX} -v
         # Need to increment this for PSTL
         # The pthread flag is supported by GCC and Clang at least
-        echo "CXX=${PRK_CXX} -std=c++14 -pthread" >> common/make.defs
+        echo "CXX=${PRK_CXX} -std=c++17 -pthread" >> common/make.defs
 
         # C++11 without external parallelism
         ${MAKE} -C $PRK_TARGET_PATH transpose-valarray nstream-valarray
