@@ -1,4 +1,4 @@
-sudo: false
+sudo: true
 language: cpp
 python:
   - "3.5"
@@ -52,9 +52,6 @@ matrix:
   - os: osx
     compiler: gcc
     env: PRK_TARGET=allc1z
-  - os: osx
-    compiler: gcc
-    env: PRK_TARGET=allcxx
   - os: osx
     compiler: gcc
     env: PRK_TARGET=allshmem
