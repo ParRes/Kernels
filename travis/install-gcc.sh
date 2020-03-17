@@ -15,7 +15,11 @@ if [ "${CC}" = "gcc" ] || [ "${CXX}" = "g++" ] ; then
             ;;
         Linux)
             echo "Linux"
-            sudo apt-get install gcc g++ gfortran
+            set +e
+            for v in "-10" "-9" "-8" "-7" ; do
+                sudo apt-get install gcc$v g++$v gfortran$v
+            done
+            set -e
         ;;
     esac
 fi
