@@ -405,17 +405,6 @@ case "$PRK_TARGET" in
                         $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
                     done
                 done
-                # Offload
-                #echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
-                #${MAKE} -C $PRK_TARGET_PATH target
-                #$PRK_TARGET_PATH/stencil-openmp-target     10 1000
-                #$PRK_TARGET_PATH/transpose-openmp-target   10 1024 32
-                ##echo "Test stencil code generator"
-                #for s in star grid ; do
-                #    for r in 1 2 3 4 5 ; do
-                #        $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
-                #    done
-                #done
                 ;;
         esac
 
