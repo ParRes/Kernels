@@ -399,18 +399,16 @@ case "$PRK_TARGET" in
         esac
 
         # Boost.Compute runs after OpenCL, and only available in Travis with MacOS.
-        case "$os" in
-            FreeBSD)
-                echo "BOOSTFLAG=-I/usr/local/include" >> common/make.defs
-                echo "RANGEFLAG=-DUSE_BOOST_IRANGE -I/usr/local/include" >> common/make.defs
-                ;;
-            *)
-                echo "BOOSTFLAG=-I/usr/include" >> common/make.defs
-                echo "RANGEFLAG=-DUSE_RANGES_TS -I${TRAVIS_ROOT}/range-v3/include" >> common/make.defs
-                ;;
-        esac
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            echo "BOOSTFLAG=-I/usr/include -I/usr/local/include" >> common/make.defs
+            echo "RANGEFLAG=-DUSE_RANGES_TS -I${TRAVIS_ROOT}/range-v3/include" >> common/make.defs
+        else
+            echo "BOOSTFLAG=-I/usr/include -I/usr/local/include" >> common/make.defs
+            echo "RANGEFLAG=-DUSE_BOOST_IRANGE -I/usr/local/include" >> common/make.defs
+        fi
 
         # C++11 with rangefor and Boost.Ranges
+        #if [ ! "${CC}" = "gcc" ] && [ ! "${TRAVIS_OS_NAME}" = "linux" ] ; then
         ${MAKE} -C $PRK_TARGET_PATH rangefor
         $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
         $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
@@ -421,6 +419,7 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 20 $s $r
             done
         done
+        #fi
 
         # C++11 with TBB
         TBBROOT=${TRAVIS_ROOT}/tbb
