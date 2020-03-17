@@ -233,7 +233,7 @@ case "$PRK_TARGET" in
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "x$PRK_CXX" = "x" ] ; then
                   brew list
                   brew search llvm
-                  for version in "9" "8" "7" "6" "5" "" ; do
+                  for version in "9" "8" "7" "6" "5" ; do
                     if [ -f "`which /usr/local/opt/gcc@${version}/bin/g++-${version}`" ]; then
                         export PRK_CXX="`which /usr/local/opt/gcc@${version}/bin/g++-${version}`"
                         echo "Found C++: $PRK_CXX"
@@ -242,7 +242,6 @@ case "$PRK_TARGET" in
                   done
                 fi
                 if [ "x$PRK_CXX" = "x" ] ; then
-                  find /usr/ /opt/ -name g++\*
                   for major in "-9" "-8" "-7" "-6" "-5" "" ; do
                     if [ -f "`which ${CXX}${major}`" ]; then
                         export PRK_CXX="${CXX}${major}"
