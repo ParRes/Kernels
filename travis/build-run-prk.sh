@@ -37,7 +37,7 @@ case "$PRK_TARGET" in
         which python3 || which python || true
         python3 --version || python --version || true
         export PRK_TARGET_PATH=PYTHON
-        export PRK_PYTHON=python
+        export PRK_PYTHON=python3
         # Native
         $PRK_PYTHON $PRK_TARGET_PATH/p2p.py             10 100 100
         $PRK_PYTHON $PRK_TARGET_PATH/stencil.py         10 100
@@ -125,7 +125,7 @@ case "$PRK_TARGET" in
                 fi
                 ;;
             clang*)
-                for version in "-5" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
+                for version in "-10" "-9" "-8" "-7" "-6" "-5" "" ; do
                   if [ -f "`which ${CC}${version}`" ]; then
                       export PRK_CC="${CC}${version}"
                       echo "Found C: $PRK_CC"
@@ -162,92 +162,65 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/transpose-thread   10 1024 512
 
         # C11 with OpenMP
+        # Host OpenMP
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${CC}" = "clang" ] ; then
+            LLVMPATH="$(brew --cellar llvm)/$(brew list --versions llvm | tr ' ' '\n' | tail -1)"
+            echo "LLVMPATH=${LLVMPATH}"
+            echo "CC=${LLVMPATH}/bin/clang -std=c99" >> common/make.defs
+            echo "OPENMPFLAG=-fopenmp" \
+                            " -L${LLVMPATH}/lib -lomp" \
+                            " ${LLVMPATH}/lib/libomp.dylib" \
+                            " -Wl,-rpath -Wl,${LLVMPATH}/lib" >> common/make.defs
+            export LD_RUN_PATH=${LLVMPATH}/lib:$LD_RUN_PATH
+            export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
+            export DYLD_LIBRARY_PATH=${LLVMPATH}/lib:$DYLD_LIBRARY_PATH
+        elif [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "clang" ] ; then
+            LLVMPATH=/usr/lib/llvm-8 # dirty hack FIXME
+            echo "LLVMPATH=${LLVMPATH}"
+            echo "CC=${LLVMPATH}/bin/clang -std=c99" >> common/make.defs
+            echo "OPENMPFLAG=-fopenmp" \
+                            " -L${LLVMPATH}/lib" \
+                            " -Wl,-rpath -Wl,${LLVMPATH}/lib" >> common/make.defs
+            export LD_RUN_PATH=${LLVMPATH}/lib:$LD_RUN_PATH
+            export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
+            find ${LLVMPATH} -name libomp.so
+        else
+            echo "CC=$PRK_CC -std=c99" >> common/make.defs
+            echo "OPENMPFLAG=-fopenmp" >> common/make.defs
+        fi
         export OMP_NUM_THREADS=2
-        case "$CC" in
-            clang*)
-                echo "Skipping Clang since OpenMP support probably missing"
-                ;;
-            g*)
-                # Host
-                echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH nstream-openmp p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp transpose-openmp
-                $PRK_TARGET_PATH/nstream-openmp           10 16777216 32
-                $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024
-                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024 32
-                $PRK_TARGET_PATH/stencil-openmp           10 1000
-                $PRK_TARGET_PATH/transpose-openmp         10 1024 32
-                #echo "Test stencil code generator"
-                for s in star grid ; do
-                    for r in 1 2 3 4 5 ; do
-                        $PRK_TARGET_PATH/stencil-openmp 10 200 $s $r
-                    done
+        ${MAKE} -C $PRK_TARGET_PATH nstream-openmp p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp transpose-openmp
+        $PRK_TARGET_PATH/nstream-openmp           10 16777216 32
+        $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
+        $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024 32
+        $PRK_TARGET_PATH/stencil-openmp           10 1000
+        $PRK_TARGET_PATH/transpose-openmp         10 1024 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-openmp 10 200 $s $r
+            done
+        done
+        # Target Offload
+        if [ "${CC}" = "gcc" ] ; then
+            echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
+            ${MAKE} -C $PRK_TARGET_PATH target
+            $PRK_TARGET_PATH/nstream-target     10 16777216
+            $PRK_TARGET_PATH/stencil-target     10 1000
+            $PRK_TARGET_PATH/transpose-target   10 1024 32
+            #echo "Test stencil code generator"
+            for s in star grid ; do
+                for r in 1 2 3 4 5 ; do
+                    $PRK_TARGET_PATH/stencil-target 10 200 $s $r
                 done
-                # Offload
-                echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH target
-                $PRK_TARGET_PATH/stencil-target     10 1000
-                $PRK_TARGET_PATH/transpose-target   10 1024 32
-                #echo "Test stencil code generator"
-                for s in star grid ; do
-                    for r in 1 2 3 4 5 ; do
-                        $PRK_TARGET_PATH/stencil-target 10 200 $s $r
-                    done
-                done
-                ;;
-            ic*)
-                # Host
-                echo "OPENMPFLAG=-qopenmp" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH nstream-openmp p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp transpose-openmp
-                $PRK_TARGET_PATH/nstream-openmp           10 16777216 32
-                $PRK_TARGET_PATH/p2p-tasks-openmp         10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024
-                $PRK_TARGET_PATH/p2p-hyperplane-openmp    10 1024 32
-                $PRK_TARGET_PATH/stencil-openmp           10 1000
-                $PRK_TARGET_PATH/transpose-openmp         10 1024 32
-                #echo "Test stencil code generator"
-                for s in star grid ; do
-                    for r in 1 2 3 4 5 ; do
-                        $PRK_TARGET_PATH/stencil-openmp 10 200 $s $r
-                    done
-                done
-                # Offload - not supported on MacOS
-                if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-                    echo "OFFLOADFLAG=-qopenmp -qopenmp-offload=host" >> common/make.defs
-                    ${MAKE} -C $PRK_TARGET_PATH target
-                    $PRK_TARGET_PATH/stencil-openmp-target     10 1000
-                    $PRK_TARGET_PATH/transpose-openmp-target   10 1024 32
-                    #echo "Test stencil code generator"
-                    for s in star grid ; do
-                        for r in 1 2 3 4 5 ; do
-                            $PRK_TARGET_PATH/stencil-openmp-target 10 200 $s $r
-                        done
-                    done
-                fi
-                ;;
-            *)
-                echo "Figure out your OpenMP flags..."
-                ;;
-        esac
-
-        # C11 with Cilk
-        #if [ "${CC}" = "gcc" ] ; then
-        #    echo "CILKFLAG=-fcilkplus" >> common/make.defs
-        #    ${MAKE} -C $PRK_TARGET_PATH stencil-cilk transpose-cilk
-        #    $PRK_TARGET_PATH/stencil-cilk     10 1000
-        #    $PRK_TARGET_PATH/transpose-cilk   10 1024 32
-        #    #echo "Test stencil code generator"
-        #    for s in star grid ; do
-        #        for r in 1 2 3 4 5 ; do
-        #            $PRK_TARGET_PATH/stencil-cilk 10 200 $s $r
-        #        done
-        #    done
-        #fi
+            done
+        fi
 
         # Use MUSL for GCC+Linux only
         if [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "$CC" = "gcc" ] ; then
             ${MAKE} -C $PRK_TARGET_PATH clean
-            ./travis/install-musl.sh ${TRAVIS_ROOT} ${PRK_CC}
+            sh ./travis/install-musl.sh ${TRAVIS_ROOT} ${PRK_CC}
             echo "PRKVERSION=\"'2.16'\"" > common/make.defs
             echo "CC=${TRAVIS_ROOT}/musl/bin/musl-gcc -static -std=c11 -DUSE_C11_THREADS" >> common/make.defs
             echo "EXTRA_CLIBS=-lm -lpthread" >> common/make.defs
@@ -262,7 +235,9 @@ case "$PRK_TARGET" in
         case $CXX in
             g++)
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "x$PRK_CXX" = "x" ] ; then
-                  for version in "9" "8" "7" "6" "5" "" ; do
+                  brew list
+                  brew search llvm
+                  for version in "9" "8" "7" "6" "5" ; do
                     if [ -f "`which /usr/local/opt/gcc@${version}/bin/g++-${version}`" ]; then
                         export PRK_CXX="`which /usr/local/opt/gcc@${version}/bin/g++-${version}`"
                         echo "Found C++: $PRK_CXX"
@@ -286,7 +261,7 @@ case "$PRK_TARGET" in
             clang++)
                 # Homebrew does not always place the best/latest Clang/LLVM in the default path
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "x$PRK_CXX" = "x" ] ; then
-                  for version in "" "@6" "@5" "@4" ; do
+                  for version in "" ; do
                     if [ -f "`which /usr/local/opt/llvm${version}/bin/clang++`" ]; then
                         export PRK_CXX="`which /usr/local/opt/llvm${version}/bin/clang++`"
                         echo "Found C++: $PRK_CXX"
@@ -295,7 +270,7 @@ case "$PRK_TARGET" in
                   done
                 fi
                 if [ "x$PRK_CXX" = "x" ] ; then
-                  for version in "-6" "-5" "-4.1" "-4" "-4.0" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
+                  for version in "-11" "-10" "-9" "-8" "-7" "-6" "-5" "" ; do
                     if [ -f "`which ${CXX}${version}`" ]; then
                         export PRK_CXX="${CXX}${version}"
                         echo "Found C++: $PRK_CXX"
@@ -311,7 +286,7 @@ case "$PRK_TARGET" in
         ${PRK_CXX} -v
         # Need to increment this for PSTL
         # The pthread flag is supported by GCC and Clang at least
-        echo "CXX=${PRK_CXX} -std=c++14 -pthread" >> common/make.defs
+        echo "CXX=${PRK_CXX} -std=c++17 -pthread" >> common/make.defs
 
         # C++11 without external parallelism
         ${MAKE} -C $PRK_TARGET_PATH transpose-valarray nstream-valarray
@@ -340,7 +315,7 @@ case "$PRK_TARGET" in
 
         # C++11 with CBLAS
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-            echo "CBLASFLAG=-DACCELERATE -framework Accelerate" >> common/make.defs
+            echo "CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions" >> common/make.defs
             ${MAKE} -C $PRK_TARGET_PATH transpose-cblas dgemm-cblas
             $PRK_TARGET_PATH/transpose-cblas    10 1024
             $PRK_TARGET_PATH/dgemm-cblas        10 400
@@ -356,9 +331,10 @@ case "$PRK_TARGET" in
         case "$CC" in
             gcc)
                 # Host
+                echo "CC=$PRK_CC -std=c99" >> common/make.defs
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
                 ${MAKE} -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp \
-                                         transpose-openmp nstream-openmp
+                                            transpose-openmp nstream-openmp
                 $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
                 $PRK_TARGET_PATH/p2p-hyperplane-openmp     10 1024
                 $PRK_TARGET_PATH/p2p-hyperplane-openmp     10 1024 64
@@ -382,52 +358,44 @@ case "$PRK_TARGET" in
                         $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
                     done
                 done
-                # ORNL-ACC
-                echo "ORNLACCFLAG=-fopenacc" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-ornlacc
-                $PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024
-                $PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024 64
+                # ORNL-ACC - do not test in Travis CI because GCC-5 is too old
+                #echo "ORNLACCFLAG=-fopenacc" >> common/make.defs
+                #${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-ornlacc
+                #$PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024
+                #$PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024 64
                 ;;
             clang)
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
                     # Host
-                    echo "OPENMPFLAG=-fopenmp" >> common/make.defs
-                    ${MAKE} -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp \
-                                             transpose-openmp nstream-openmp
-                    $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
-                    $PRK_TARGET_PATH/p2p-hyperplane-openmp     10 1024
-                    $PRK_TARGET_PATH/p2p-hyperplane-openmp     10 1024 64
-                    $PRK_TARGET_PATH/stencil-openmp            10 1000
-                    $PRK_TARGET_PATH/transpose-openmp          10 1024 32
-                    $PRK_TARGET_PATH/nstream-openmp            10 16777216 32
-                    #echo "Test stencil code generator"
-                    for s in star grid ; do
-                        for r in 1 2 3 4 5 ; do
-                            $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
-                        done
-                    done
-                    # Offload
-                    #echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
-                    #${MAKE} -C $PRK_TARGET_PATH target
-                    #$PRK_TARGET_PATH/stencil-openmp-target     10 1000
-                    #$PRK_TARGET_PATH/transpose-openmp-target   10 1024 32
-                    ##echo "Test stencil code generator"
-                    #for s in star grid ; do
-                    #    for r in 1 2 3 4 5 ; do
-                    #        $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
-                    #    done
-                    #done
+                    LLVMPATH="$(brew --cellar llvm)/$(brew list --versions llvm | tr ' ' '\n' | tail -1)"
+                    echo "LLVMPATH=${LLVMPATH}"
+                    echo "CC=${LLVMPATH}/bin/clang -std=c99" >> common/make.defs
+                    echo "OPENMPFLAG=-fopenmp" \
+                                    " -L${LLVMPATH}/lib -lomp" \
+                                    " ${LLVMPATH}/lib/libomp.dylib" \
+                                    " -Wl,-rpath -Wl,${LLVMPATH}/lib" >> common/make.defs
+                    export LD_RUN_PATH=${LLVMPATH}/lib:$LD_RUN_PATH
+                    export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
+                    export DYLD_LIBRARY_PATH=${LLVMPATH}/lib:$DYLD_LIBRARY_PATH
+                elif [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "clang" ] ; then
+                    LLVMPATH=/usr/lib/llvm-8 # dirty hack FIXME
+                    echo "LLVMPATH=${LLVMPATH}"
+                    echo "CC=${LLVMPATH}/bin/clang -std=c99" >> common/make.defs
+                    echo "OPENMPFLAG=-fopenmp" \
+                                    " -L${LLVMPATH}/lib" \
+                                    " -Wl,-rpath -Wl,${LLVMPATH}/lib" >> common/make.defs
+                    export LD_RUN_PATH=${LLVMPATH}/lib:$LD_RUN_PATH
+                    export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
                 else
                     echo "Skipping Clang since OpenMP support probably missing"
+                    echo "CC=$PRK_CC -std=c99" >> common/make.defs
+                    echo "OPENMPFLAG=-fopenmp" >> common/make.defs
                 fi
-                ;;
-            icc)
-                # Host
-                echo "OPENMPFLAG=-qopenmp" >> common/make.defs
-                ${MAKE} -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp \
-                                         transpose-openmp nstream-openmp
-                $PRK_TARGET_PATH/p2p-tasks-openmp                 10 1024 1024 100 100
-                $PRK_TARGET_PATH/p2p-innerloop-openmp             10 1024 1024
+                ${MAKE} -C $PRK_TARGET_PATH p2p-tasks-openmp p2p-hyperplane-openmp stencil-openmp \
+                                            transpose-openmp nstream-openmp
+                $PRK_TARGET_PATH/p2p-tasks-openmp          10 1024 1024 100 100
+                $PRK_TARGET_PATH/p2p-hyperplane-openmp     10 1024
+                $PRK_TARGET_PATH/p2p-hyperplane-openmp     10 1024 64
                 $PRK_TARGET_PATH/stencil-openmp            10 1000
                 $PRK_TARGET_PATH/transpose-openmp          10 1024 32
                 $PRK_TARGET_PATH/nstream-openmp            10 16777216 32
@@ -437,38 +405,20 @@ case "$PRK_TARGET" in
                         $PRK_TARGET_PATH/stencil-openmp 10 200 20 $s $r
                     done
                 done
-                # Offload - not supported on MacOS
-                if [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-                    echo "OFFLOADFLAG=-qopenmp -qopenmp-offload=host" >> common/make.defs
-                    ${MAKE} -C $PRK_TARGET_PATH target
-                    $PRK_TARGET_PATH/stencil-openmp-target     10 1000
-                    $PRK_TARGET_PATH/transpose-openmp-target   10 1024 32
-                    #echo "Test stencil code generator"
-                    for s in star grid ; do
-                        for r in 1 2 3 4 5 ; do
-                            $PRK_TARGET_PATH/stencil-openmp-target 10 200 20 $s $r
-                        done
-                    done
-                fi
-                ;;
-            *)
-                echo "Figure out your OpenMP flags..."
                 ;;
         esac
 
         # Boost.Compute runs after OpenCL, and only available in Travis with MacOS.
-        case "$os" in
-            FreeBSD)
-                echo "BOOSTFLAG=-I/usr/local/include" >> common/make.defs
-                echo "RANGEFLAG=-DUSE_BOOST_IRANGE -I/usr/local/include" >> common/make.defs
-                ;;
-            *)
-                echo "BOOSTFLAG=-I/usr/include" >> common/make.defs
-                echo "RANGEFLAG=-DUSE_RANGES_TS -I${TRAVIS_ROOT}/range-v3/include" >> common/make.defs
-                ;;
-        esac
+        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+            echo "BOOSTFLAG=-I/usr/include -I/usr/local/include" >> common/make.defs
+            echo "RANGEFLAG=-DUSE_RANGES_TS -I${TRAVIS_ROOT}/range-v3/include" >> common/make.defs
+        else
+            echo "BOOSTFLAG=-I/usr/include -I/usr/local/include" >> common/make.defs
+            echo "RANGEFLAG=-DUSE_BOOST_IRANGE -I/usr/local/include" >> common/make.defs
+        fi
 
         # C++11 with rangefor and Boost.Ranges
+        #if [ ! "${CC}" = "gcc" ] && [ ! "${TRAVIS_OS_NAME}" = "linux" ] ; then
         ${MAKE} -C $PRK_TARGET_PATH rangefor
         $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
         $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
@@ -479,39 +429,37 @@ case "$PRK_TARGET" in
                 $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 20 $s $r
             done
         done
+        #fi
 
         # C++11 with TBB
-        # Skip Clang because older Clang from Linux chokes on max_align_t (https://travis-ci.org/jeffhammond/PRK/jobs/243395307)
-        if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-            TBBROOT=${TRAVIS_ROOT}/tbb
-            case "$os" in
-                Linux)
-                    ${CC} --version
-                    export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb"
-                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
-                    export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
-                    ;;
-                Darwin)
-                    export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb"
-                    echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
-                    export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
-                    ;;
-            esac
-            ${MAKE} -C $PRK_TARGET_PATH p2p-innerloop-vector-tbb p2p-hyperplane-vector-tbb p2p-tasks-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
-            $PRK_TARGET_PATH/p2p-innerloop-vector-tbb     10 1024
-            $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 1
-            $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 32
-            $PRK_TARGET_PATH/p2p-tasks-tbb                10 1024 1024 32 32
-            $PRK_TARGET_PATH/stencil-vector-tbb           10 1000
-            $PRK_TARGET_PATH/transpose-vector-tbb         10 1024 32
-            $PRK_TARGET_PATH/nstream-vector-tbb           10 16777216 32
-            #echo "Test stencil code generator"
-            for s in star grid ; do
-                for r in 1 2 3 4 5 ; do
-                    $PRK_TARGET_PATH/stencil-vector-tbb 10 200 20 $s $r
-                done
+        TBBROOT=${TRAVIS_ROOT}/tbb
+        case "$os" in
+            Linux)
+                ${CC} --version
+                export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb"
+                echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
+                export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
+                ;;
+            Darwin)
+                export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib -ltbb"
+                echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
+                export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
+                ;;
+        esac
+        ${MAKE} -C $PRK_TARGET_PATH p2p-innerloop-vector-tbb p2p-hyperplane-vector-tbb p2p-tasks-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
+        $PRK_TARGET_PATH/p2p-innerloop-vector-tbb     10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 1
+        $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 32
+        $PRK_TARGET_PATH/p2p-tasks-tbb                10 1024 1024 32 32
+        $PRK_TARGET_PATH/stencil-vector-tbb           10 1000
+        $PRK_TARGET_PATH/transpose-vector-tbb         10 1024 32
+        $PRK_TARGET_PATH/nstream-vector-tbb           10 16777216 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-vector-tbb 10 200 20 $s $r
             done
-        fi
+        done
 
         # C++11 with STL
         ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-stl stencil-vector-stl transpose-vector-stl nstream-vector-stl
@@ -528,13 +476,12 @@ case "$PRK_TARGET" in
         done
 
         # C++17 Parallel STL
-        # Skip Clang+Linux because we skip TBB there - see above.
-        if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-            if [ "${CC}" = "clang" ] ; then
+        # disable Linux w/ GCC because GCC-5 is too old FIXME
+        if [ ! "${CC}" = "gcc" ] && [ ! "${TRAVIS_OS_NAME}" = "linux" ] ; then
+            echo "PSTLFLAG=${TBBFLAG} -DUSE_LLVM_PSTL -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
+            if [ "${CC}" = "gcc" ] ; then
                 # omp.h not found with clang-3.9 - just work around instead of fixing.
-                echo "PSTLFLAG=-DUSE_PSTL ${TBBFLAG} -DUSE_INTEL_PSTL -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
-            else
-                echo "PSTLFLAG=-DUSE_PSTL -fopenmp ${TBBFLAG} -DUSE_INTEL_PSTL -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
+                echo "PSTLFLAG+=-fopenmp" >> common/make.defs
             fi
             ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-pstl stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
             $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 1
@@ -568,32 +515,32 @@ case "$PRK_TARGET" in
             cd ..
         fi
 
-        # Boost.Compute moved after OpenCL to reuse those flags...
-
         # C++11 with Boost.Compute
+        # Boost.Compute moved after OpenCL to reuse those flags...
         # Only test Mac because:
         # (1) We only test OpenCL on MacOS in Travis.
         # (2) Boost.Compute is not available from APT.
         # If we ever address 1, we need to enable the Boost.Compute install for Linux.
-        if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-            ${MAKE} -C $PRK_TARGET_PATH nstream-vector-boost-compute
-            $PRK_TARGET_PATH/nstream-vector-boost-compute     10 16777216 32
-        fi
+        #if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
+        #    ${MAKE} -C $PRK_TARGET_PATH nstream-vector-boost-compute
+        #    $PRK_TARGET_PATH/nstream-vector-boost-compute     10 16777216 32
+        #fi
 
         # C++11 with Kokkos, RAJA
         case "$CC" in
             gcc)
                 # Kokkos and Raja are built with OpenMP support with GCC
                 echo "RAJAFLAG=-I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG} -fopenmp" >> common/make.defs
-                echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos -DPRK_KOKKOS_BACKEND=OpenMP -fopenmp -ldl" >> common/make.defs
+                echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkoscore -DPRK_KOKKOS_BACKEND=OpenMP -fopenmp -ldl" >> common/make.defs
                 ;;
             clang)
                 # RAJA can use TBB with Clang
                 echo "RAJAFLAG=-I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG}" >> common/make.defs
                 # Kokkos is built with Pthread support with Clang
-                echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkos -DPRK_KOKKOS_BACKEND=Threads -lpthread -ldl" >> common/make.defs
+                echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkoscore -DPRK_KOKKOS_BACKEND=Threads -lpthread -ldl" >> common/make.defs
                 ;;
         esac
+
         # RAJA
         if [ 0 = 1 ] ; then
         ${MAKE} -C $PRK_TARGET_PATH p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja \
@@ -626,6 +573,7 @@ case "$PRK_TARGET" in
             done
         done
         fi
+
         # Kokkos
         ${MAKE} -C $PRK_TARGET_PATH stencil-kokkos transpose-kokkos nstream-kokkos
         $PRK_TARGET_PATH/stencil-kokkos     10 1000
@@ -713,14 +661,6 @@ case "$PRK_TARGET" in
                 esac
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
                 ;;
-            icc)
-                # -heap-arrays prevents SEGV in transpose-pretty (?)
-                export PRK_FC="ifort -fpp -std08 -heap-arrays"
-                echo "FC=$PRK_FC" >> common/make.defs
-                echo "OPENMPFLAG=-qopenmp" >> common/make.defs
-                echo "OFFLOADFLAG=-qopenmp-offload=host" >> common/make.defs
-                echo "COARRAYFLAG=-coarray" >> common/make.defs
-                ;;
         esac
 
         # Serial
@@ -757,9 +697,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/dgemm-openmp         10 400 400 # untiled
         $PRK_TARGET_PATH/dgemm-openmp         10 400 32
 
-        # Intel Mac does not support OpenMP target or coarrays
-        if [ "${CC}" = "gcc" ] || [ "${TRAVIS_OS_NAME}" = "linux" ] ; then
-            # OpenMP target
+        # OpenMP target
+        if [ "${CC}" = "gcc" ] ; then
             ${MAKE} -C ${PRK_TARGET_PATH} stencil-openmp-target transpose-openmp-target nstream-openmp-target
             export OMP_NUM_THREADS=2
             #$PRK_TARGET_PATH/p2p-openmp-target           10 1024 1024 # most compilers do not support doacross yet
@@ -767,8 +706,11 @@ case "$PRK_TARGET" in
             $PRK_TARGET_PATH/transpose-openmp-target     10 1024 1
             $PRK_TARGET_PATH/transpose-openmp-target     10 1024 32
             $PRK_TARGET_PATH/nstream-openmp-target       10 16777216
+        fi
 
-            # Fortran coarrays
+        # Fortran coarrays
+        # Disable GCC Linux because installing OpenCoarrays is not working
+        if [ "${CC}" = "gcc" ] && [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             ${MAKE} -C ${PRK_TARGET_PATH} coarray
             export PRK_MPI_PROCS=4
             if [ "${CC}" = "gcc" ] ; then
@@ -811,6 +753,15 @@ case "$PRK_TARGET" in
             export LD_RUN_PATH=${LLVMPATH}/lib:$LD_RUN_PATH
             export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
             export DYLD_LIBRARY_PATH=${LLVMPATH}/lib:$DYLD_LIBRARY_PATH
+        elif [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${CC}" = "clang" ] ; then
+            LLVMPATH=/usr/lib/llvm-8 # dirty hack FIXME
+            echo "LLVMPATH=${LLVMPATH}"
+            echo "CC=${LLVMPATH}/bin/clang -std=c99" >> common/make.defs
+            echo "OPENMPFLAG=-fopenmp" \
+                            " -L${LLVMPATH}/lib" \
+                            " -Wl,-rpath -Wl,${LLVMPATH}/lib" >> common/make.defs
+            export LD_RUN_PATH=${LLVMPATH}/lib:$LD_RUN_PATH
+            export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
         else
             echo "CC=$CC -std=c99" >> common/make.defs
             echo "OPENMPFLAG=-fopenmp" >> common/make.defs

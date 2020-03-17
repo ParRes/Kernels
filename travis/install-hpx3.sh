@@ -10,7 +10,6 @@ case "$TRAVIS_OS_NAME" in
         ;;
     osx)
         set +e
-        brew update
         if [ "$USE_HPX_TARBALL" ] ; then
             export HPX_BOOST="homebrew/versions/boost155"
         else

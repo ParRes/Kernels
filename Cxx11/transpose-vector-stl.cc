@@ -50,12 +50,11 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_pstl.h"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++17/PSTL Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/STL Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -109,8 +108,8 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     // transpose
-    std::for_each( exec::par, std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( exec::unseq, std::begin(range), std::end(range), [&] (int j) {
+    std::for_each( std::begin(range), std::end(range), [&] (int i) {
+      std::for_each( std::begin(range), std::end(range), [&] (int j) {
           B[i*order+j] += A[j*order+i];
           A[j*order+i] += 1.0;
       });

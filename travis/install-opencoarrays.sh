@@ -7,22 +7,18 @@ os=`uname`
 TRAVIS_ROOT="$1"
 
 if [ ! -d "$TRAVIS_ROOT/opencoarrays" ] ; then
-
     case "$os" in
         Darwin)
             echo "Mac"
-            brew update
-            #brew install gcc   || brew update gcc
-            #brew install mpich || brew update mpich
-            #brew install cmake || brew update cmake
-            #cmake --version
-            brew install opencoarrays || brew update opencoarrays
+            brew install opencoarrays || brew upgrade opencoarrays
             brew list opencoarrays
             which caf
             which cafrun
             ;;
-
-        Linux)
+        LinuxSudo)
+            sudo apt-get install open-coarrays-bin libcoarrays-dev
+            ;;
+        LinuxNoSudo)
             echo "Linux"
             sh ./travis/install-cmake.sh $TRAVIS_ROOT
             sh ./travis/install-mpi.sh $TRAVIS_ROOT mpich 1
@@ -59,11 +55,8 @@ if [ ! -d "$TRAVIS_ROOT/opencoarrays" ] ; then
             find $TRAVIS_ROOT -name cafrun
             ;;
     esac
-
 else
-
     echo "OpenCoarrays installed..."
     find $TRAVIS_ROOT -name caf
     find $TRAVIS_ROOT -name cafrun
-
 fi

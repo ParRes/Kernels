@@ -61,8 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_pstl.h"
-#include "stencil_pstl.hpp"
+#include "stencil_stl.hpp"
 
 void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
 {
@@ -77,7 +76,7 @@ void nothing(const int n, const int t, std::vector<double> & in, std::vector<dou
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++17/PSTL Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/STL Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -170,8 +169,8 @@ int main(int argc, char* argv[])
 
   // initialize the input and output arrays
   auto range = prk::range(0,n);
-  std::for_each( exec::par, std::begin(range), std::end(range), [&] (int i) {
-    std::for_each( exec::unseq, std::begin(range), std::end(range), [&] (int j) {
+  std::for_each( std::begin(range), std::end(range), [&] (int i) {
+    std::for_each( std::begin(range), std::end(range), [&] (int j) {
       in[i*n+j] = static_cast<double>(i+j);
       out[i*n+j] = 0.0;
     });
@@ -182,7 +181,7 @@ int main(int argc, char* argv[])
     // Apply the stencil operator
     stencil(n, tile_size, in, out);
     // Add constant to solution to force refresh of neighbor data, if any
-    std::transform( exec::par_unseq, in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
+    std::transform( in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
   }
 
   stencil_time = prk::wtime() - stencil_time;

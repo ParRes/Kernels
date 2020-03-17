@@ -42,7 +42,7 @@ CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
 BOOSTFLAGS = $(BOOSTFLAG)
 RANGEFLAGS = $(RANGEFLAG) -DUSE_RANGES
 STLFLAGS = $(STLFLAG) $(RANGEFLAGS)
-PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS) -DUSE_PSTL
+PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) #$(RANGEFLAGS)
@@ -181,8 +181,11 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 	$(info PRK help: Consider setting USE_PRK_TBB_PARTITIONER={static,affinity,simple} when invoking make)
 	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
 
-%-stl: %-pstl.cc prk_util.h prk_pstl.h
+%-stl: %-stl.cc prk_util.h prk_pstl.h
 	$(CXX) $(CXXFLAGS) $< $(STLFLAGS) -o $@
+
+#%-stl: %-pstl.cc prk_util.h prk_pstl.h
+#	$(CXX) $(CXXFLAGS) $< $(STLFLAGS) -o $@
 
 %-pstl: %-pstl.cc prk_util.h prk_pstl.h
 	$(CXX) $(CXXFLAGS) $< $(PSTLFLAGS) -o $@

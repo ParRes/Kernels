@@ -5,6 +5,16 @@ set -x
 
 TRAVIS_ROOT="$1"
 
+case ${TRAVIS_OS_NAME} in
+    osx)
+        brew install gnu-sed || brew upgrade gnu-sed || true
+        SED="gsed"
+        ;;
+    linux)
+        SED="sed"
+        ;;
+esac
+
 # --with-openmp:                        Enable OpenMP backend.
 # --with-pthread:                       Enable Pthreads backend.
 # --with-serial:                        Enable Serial backend.
@@ -52,6 +62,7 @@ if [ ! -d "$TRAVIS_ROOT/kokkos" ]; then
     cd kokkos
     mkdir build
     cd build
+    ${SED} -i "s/DKokkos_ENABLE_TESTS=ON/DKokkos_ENABLE_TESTS=OFF/g" ../generate_makefile.bash
     ../generate_makefile.bash --prefix=${TRAVIS_ROOT}/kokkos \
                               --compiler=${PRK_CXX} ${KOKKOS_BACKEND}
     make -j2
