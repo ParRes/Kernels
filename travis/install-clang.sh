@@ -15,7 +15,11 @@ if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
             ;;
         Linux)
             echo "Linux Clang/LLVM builds not supported!"
-            exit 18
+            set +e
+            for v in "-11" "-10" "-9" "-8" "-7" "-6.0" "-5.0" "-4.0" ; do
+                sudo apt-get install clang$v
+            done
+            set -e
         ;;
     esac
 fi

@@ -12,6 +12,8 @@ if [ "${CC}" = "gcc" ] || [ "${CXX}" = "g++" ] ; then
             echo "Mac"
             # this is 5.3.0 or later
             brew upgrade gcc || brew install gcc --force-bottle || true
+            brew link --overwrite --dry-run gcc
+            brew link --overwrite gcc || true
             ;;
         Linux)
             echo "Linux"
@@ -20,6 +22,6 @@ if [ "${CC}" = "gcc" ] || [ "${CXX}" = "g++" ] ; then
                 sudo apt-get install gcc$v g++$v gfortran$v
             done
             set -e
-        ;;
+            ;;
     esac
 fi
