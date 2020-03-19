@@ -16,10 +16,12 @@
 #include <cuda_device_runtime_api.h>
 #endif
 
-#ifdef __NVCC__
+#if defined(PRK_USE_CUBLAS)
+#if defined(__NVCC__)
 #include <cublas_v2.h>
 #else
 #error Sorry, no CUBLAS without NVCC.
+#endif
 #endif
 
 #ifdef __CORIANDERCC__
@@ -43,7 +45,7 @@ namespace prk
             }
         }
 
-#ifndef __CORIANDERCC__
+#if defined(PRK_USE_CUBLAS)
         // It seems that Coriander defines cublasStatus_t to cudaError_t
         // because the compiler complains that this is a redefinition.
         void check(cublasStatus_t rc)
