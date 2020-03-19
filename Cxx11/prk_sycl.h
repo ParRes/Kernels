@@ -42,7 +42,7 @@ namespace prk {
 
     // There seems to be an issue with the clang CUDA/HIP toolchains not having
     // std::abort() available
-    void abort(void) {
+    void Abort(void) {
 #if defined(HIPSYCL_PLATFORM_CUDA) || defined(HIPSYCL_PLATFORM_HCC)
         abort();
 #else
