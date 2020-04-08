@@ -117,6 +117,8 @@ int main(int argc, char * argv[])
   std::vector<double> B(length,2);
   std::vector<double> C(length,2);
 
+  auto range = unifex::range_stream{0, (int)length};
+
   double scalar(3);
 
   {
@@ -125,9 +127,8 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
       unifex::sync_wait(
-          unifex::for_each(
-              unifex::range_stream{0, (int)length},
-              [&] (size_t i) { A[i] += B[i] + scalar * C[i]; }
+          unifex::for_each( range, [&] (size_t i) {
+              A[i] += B[i] + scalar * C[i]; }
           )
       );
     }

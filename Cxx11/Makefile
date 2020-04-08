@@ -43,10 +43,10 @@ BOOSTFLAGS = $(BOOSTFLAG)
 RANGEFLAGS = $(RANGEFLAG) -DUSE_RANGES
 STLFLAGS = $(STLFLAG) $(RANGEFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS)
-EXECUTORSFLAGS = $(EXECUTORSFLAG) #$(RANGEFLAGS)
+EXECUTORSFLAGS = $(EXECUTORSFLAG) $(PSTLFLAGS) #$(RANGEFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
-KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) #$(RANGEFLAGS)
+KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
 SYCLFLAGS = $(SYCLFLAG) -DUSE_2D_INDEXING=0
 ORNLACCFLAGS = $(ORNLACCFLAG)
 
@@ -102,7 +102,7 @@ pstl: stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
 
 rangefor: stencil-vector-rangefor transpose-vector-rangefor nstream-vector-rangefor
 
-executors: nstream-executors
+executors: nstream-executors transpose-executors
 
 kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
