@@ -130,18 +130,18 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-#if 0
-      // correct only for one iteration because it does not accumulate...
-      std::transform( std::begin(B), std::end(B), std::begin(C), std::begin(A),
-                      [scalar](auto&& x, auto&& y) {
-                           return x + scalar * y;
+      // two passes but can fuse with greater C++ intelligence
+      // A[i] += B[i] + scalar * C[i] is the goal
+      std::transform( std::begin(A), std::end(A), std::begin(B), std::begin(A),
+                      [](auto&& x, auto&& y) {
+                           return x + y; // A[i] += B[i]
                       }
       );
-#else
-      std::for_each( std::begin(range), std::end(range), [&] (size_t i) {
-          A[i] += B[i] + scalar * C[i];
-      });
-#endif
+      std::transform( std::begin(A), std::end(A), std::begin(C), std::begin(A),
+                      [scalar](auto&& x, auto&& y) {
+                           return x + scalar * y; // A[i] += scalar * C[i]
+                      }
+      );
     }
     nstream_time = prk::wtime() - nstream_time;
   }
