@@ -121,18 +121,28 @@ int main(int argc, char * argv[])
     thrust::fill(thrust::host, B.begin(), B.end(), 2.0);
     thrust::fill(thrust::host, C.begin(), C.end(), 2.0);
 
-    auto nstream = [=] __host__ __device__ (thrust::tuple<double&,double,double> t) {
-        thrust::get<0>(t) +=  thrust::get<1>(t) + scalar * thrust::get<2>(t);
-    };
-
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
+#if 0
+      auto nstream = [=] __host__ __device__ (thrust::tuple<double&,double,double> t) {
+          thrust::get<0>(t) +=  thrust::get<1>(t) + scalar * thrust::get<2>(t);
+      };
       thrust::for_each( thrust::host,
                         thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
                         thrust::make_zip_iterator(thrust::make_tuple(A.end()  , B.end()  , C.end())),
                         nstream);
+#else
+      auto nstream = [=] __host__ __device__ (thrust::tuple<double&,double,double> t) {
+          return thrust::get<0>(t) +  thrust::get<1>(t) + scalar * thrust::get<2>(t);
+      };
+      thrust::transform( thrust::host,
+                         thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
+                         thrust::make_zip_iterator(thrust::make_tuple(A.end()  , B.end()  , C.end())),
+                         A.begin(),
+                         nstream);
+#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
