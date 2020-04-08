@@ -67,7 +67,7 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++2a/Exectuors STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -88,6 +88,9 @@ int main(int argc, char * argv[])
       length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
+      } else if (length > INT_MAX) {
+        // this is a limit of range_stream below, which only supports int
+        throw "ERROR: vector length too large - overflow risk";
       }
 
       offset = (argc>3) ? std::atoi(argv[3]) : 0;
@@ -110,20 +113,23 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A(length,0.0);
-  std::vector<double> B(length,2.0);
-  std::vector<double> C(length,2.0);
+  std::vector<double> A(length,0);
+  std::vector<double> B(length,2);
+  std::vector<double> C(length,2);
 
-  double scalar = 3.0;
+  double scalar(3);
 
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      for (size_t i=0; i<length; i++) {
-          A[i] += B[i] + scalar * C[i];
-      }
+      unifex::sync_wait(
+          unifex::for_each(
+              unifex::range_stream{0, (int)length},
+              [&] (size_t i) { A[i] += B[i] + scalar * C[i]; }
+          )
+      );
     }
     nstream_time = prk::wtime() - nstream_time;
   }
@@ -146,7 +152,7 @@ int main(int argc, char * argv[])
       asum += std::fabs(A[i]);
   }
 
-  double epsilon=1.e-8;
+  double epsilon(1.e-8);
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << "       Expected checksum: " << ar << "\n"

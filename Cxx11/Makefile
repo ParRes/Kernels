@@ -43,7 +43,7 @@ BOOSTFLAGS = $(BOOSTFLAG)
 RANGEFLAGS = $(RANGEFLAG) -DUSE_RANGES
 STLFLAGS = $(STLFLAG) $(RANGEFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS)
-EXECUTORSFLAGS = $(EXECUTORSFLAG)
+EXECUTORSFLAGS = $(EXECUTORSFLAG) #$(RANGEFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) #$(RANGEFLAGS)
@@ -56,7 +56,7 @@ endif
 OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl \
-	rangefor kokkos raja cuda cublas sycl boost-compute thrust
+	rangefor kokkos raja cuda cublas sycl boost-compute thrust executor
 
 EXTRA=
 ifeq ($(shell uname -s),Darwin)
@@ -71,25 +71,6 @@ ifneq ($(findstring pgc++,$(CXX)),pgc++)
 endif
 
 all: sequential vector valarray openmp taskloop stl rangefor opencl sycl $(EXTRA)
-
-#p2p: p2p-vector p2p-doacross-openmp p2p-hyperplane-openmp p2p-tasks-openmp p2p-openmp-target \
-     p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl p2p-hyperplane-vector-tbb \
-     p2p-hyperplane-sycl p2p-hyperplane-vector-ornlacc p2p-tasks-tbb
-
-#stencil: stencil-valarray stencil-vector stencil-vector-async stencil-openmp stencil-openmp-target \
-	 stencil-vector-taskloop stencil-vector-stl stencil-vector-pstl stencil-vector-raja \
-	 stencil-vector-rangefor stencil-vector-tbb stencil-vector-thread stencil-kokkos stencil-opencl \
-	 stencil-cuda
-
-#transpose: transpose-valarray transpose-vector transpose-vector-async transpose-openmp transpose-openmp-target \
-	   transpose-vector-taskloop transpose-vector-stl transpose-vector-pstl transpose-vector-raja \
-	   transpose-vector-rangefor transpose-vector-tbb transpose-vector-thread transpose-kokkos transpose-opencl
-
-#nstream: nstream-valarray nstream-vector nstream-openmp nstream-openmp-target \
-	 nstream-vector-taskloop nstream-vector-stl nstream-vector-pstl nstream-vector-raja \
-	 nstream-vector-rangefor nstream-vector-tbb nstream-kokkos nstream-opencl
-
-#dgemm: dgemm-vector dgemm-cblas dgemm-cublas
 
 sequential: p2p stencil transpose nstream dgemm sparse
 
@@ -120,6 +101,8 @@ stl: stencil-vector-stl transpose-vector-stl nstream-vector-stl
 pstl: stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
 
 rangefor: stencil-vector-rangefor transpose-vector-rangefor nstream-vector-rangefor
+
+executors: nstream-executors
 
 kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
@@ -193,6 +176,9 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 
 %-rangefor: %-rangefor.cc prk_util.h prk_ranges.h
 	$(CXX) $(CXXFLAGS) $< $(RANGEFLAGS) -o $@
+
+%-executors: %-executors.cc prk_util.h prk_executors.h
+	$(CXX) $(CXXFLAGS) $< $(EXECUTORSFLAGS) -o $@
 
 %-boost-compute: %-boost-compute.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) $(OPENCLFLAGS) -o $@

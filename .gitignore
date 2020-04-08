@@ -193,6 +193,7 @@ Cxx11/nstream-sycl-explicit
 Cxx11/nstream-celerity
 Cxx11/nstream-hpx
 Cxx11/nstream-upcxx
+Cxx11/nstream-executors
 Cxx11/sparse-vector
 Cxx11/stencil-opencl
 Cxx11/stencil-openmp-target
