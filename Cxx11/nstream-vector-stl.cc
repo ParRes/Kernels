@@ -64,7 +64,9 @@
 
 #include "prk_util.h"
 
-// See ParallelSTL.md for important information.
+#include "boost/iterator/zip_iterator.hpp"
+#include "boost/tuple/tuple.hpp"
+#include "boost/tuple/tuple_comparison.hpp"
 
 int main(int argc, char * argv[])
 {
@@ -116,7 +118,7 @@ int main(int argc, char * argv[])
   std::vector<double> B(length);
   std::vector<double> C(length);
 
-  auto range = prk::range(static_cast<size_t>(0), length);
+  //auto range = prk::range(static_cast<size_t>(0), length);
 
   double scalar(3);
 
@@ -130,8 +132,8 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-      // two passes but can fuse with greater C++ intelligence
-      // A[i] += B[i] + scalar * C[i] is the goal
+#if 0
+      // stupid version
       std::transform( std::begin(A), std::end(A), std::begin(B), std::begin(A),
                       [](auto&& x, auto&& y) {
                            return x + y; // A[i] += B[i]
@@ -142,6 +144,15 @@ int main(int argc, char * argv[])
                            return x + scalar * y; // A[i] += scalar * C[i]
                       }
       );
+#else
+      auto nstream = [=] (boost::tuple<double&,double,double> t) {
+          return boost::get<0>(t) +  boost::get<1>(t) + scalar * boost::get<2>(t);
+      };
+      std::transform( boost::make_zip_iterator(boost::make_tuple(A.begin(), B.begin(), C.begin())),
+                      boost::make_zip_iterator(boost::make_tuple(A.end()  , B.end()  , C.end())),
+                      A.begin(),
+                      nstream);
+#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
