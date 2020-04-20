@@ -57,8 +57,10 @@ OPENMPFLAG+=-L${LLVM_ROOT}/lib
 # http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
 #OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
+#OPENCLDIR=/etc/alternatives
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
-#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL -Wno-deprecated-declarations -Wno-missing-braces
+#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+#OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
 #
 # SYCL flags
 #
@@ -77,11 +79,12 @@ OPENMPFLAG+=-L${LLVM_ROOT}/lib
 #SYCLFLAG+=-std=c++17 -O3
 #SYCLFLAG+=--gcc-toolchain=/opt/rh/devtoolset-7/root/usr
 #SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=1
-#SYCLFLAG+=-stdlib=c++ 
+#SYCLFLAG+=-stdlib=c++
 #
 # CodePlay ComputeCpp
 #
 #SYCLDIR=/opt/sycl/latest
+#SYCLDIR=/opt/codeplay/latest
 #SYCLCXX=${SYCLDIR}/bin/compute++
 #SYCLFLAG=-sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
 #SYCLFLAG+=-std=c++14 -O3
@@ -95,6 +98,7 @@ OPENMPFLAG+=-L${LLVM_ROOT}/lib
 #SYCLFLAG+=${OPENCLFLAG}
 # NVIDIA target
 #SYCLFLAG+=-sycl-target ptx64
+#SYCLFLAG+=-DPRK_NO_OPENCL_GPU
 #
 # triSYCL
 #
@@ -105,13 +109,13 @@ OPENMPFLAG+=-L${LLVM_ROOT}/lib
 #
 # hipSYCL
 #
-SYCLDIR=/opt/hipSYCL
-SYCLCXX=${SYCLDIR}/bin/syclcc-clang
-SYCLFLAG=-std=c++17 -O3
-SYCLFLAG+=-DHIPSYCL
+#SYCLDIR=/opt/hipSYCL
+#SYCLCXX=${SYCLDIR}/bin/syclcc-clang
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-DHIPSYCL
 # CPU platform
-SYCLFLAG+=--hipsycl-platform=cpu
-SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib
+#SYCLFLAG+=--hipsycl-platform=cpu
+#SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib
 #
 CELERITYDIR=${SYCLDIR}
 CELERITYINC=-I$(CELERITYDIR)/include/celerity -I$(CELERITYDIR)/include/celerity/vendor
