@@ -27,7 +27,9 @@ namespace sycl = cl::sycl;
 #endif
 
 // !defined(HIPSYCL_PLATFORM_CPU) = !( defined(HIPSYCL_PLATFORM_CUDA) || defined(HIPSYCL_PLATFORM_HCC) )
-#if !defined(__HIPSYCL__) || !defined(HIPSYCL_PLATFORM_CPU)
+#if defined(PRK_NO_OPENCL_GPU)
+#define SYCL_TRY_GPU_QUEUE 0
+#elif !defined(__HIPSYCL__) || !defined(HIPSYCL_PLATFORM_CPU)
 #define SYCL_TRY_GPU_QUEUE 1
 #else
 #define SYCL_TRY_GPU_QUEUE 0
