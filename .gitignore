@@ -132,9 +132,16 @@ C1z/transpose-openmp
 C1z/transpose-target
 C1z/transpose-taskloop
 C1z/transpose-ispc
+# directories for dependencies
 Cxx11/boost
+Cxx11/boostall
 Cxx11/compute
 Cxx11/triSYCL
+Cxx11/hpx*
+Cxx11/agency
+Cxx11/upcxx*
+Cxx11/llvm-pstl*
+Cxx11/libunifex
 Cxx11/occa
 Cxx11/pstl
 Cxx11/parallelstl
@@ -194,6 +201,9 @@ Cxx11/nstream-sycl
 Cxx11/nstream-sycl-usm
 Cxx11/nstream-sycl-explicit
 Cxx11/nstream-celerity
+Cxx11/nstream-hpx
+Cxx11/nstream-upcxx
+Cxx11/nstream-executors
 Cxx11/sparse-vector
 Cxx11/stencil-opencl
 Cxx11/stencil-openmp-target

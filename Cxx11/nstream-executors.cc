@@ -52,7 +52,6 @@
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
 ///
-///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
 ///          reported results should not be associated with Stream in
@@ -63,15 +62,12 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
-#include "boost/iterator/zip_iterator.hpp"
-#include "boost/tuple/tuple.hpp"
-#include "boost/tuple/tuple_comparison.hpp"
+#include "prk_executors.h"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/STL STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++2a/Exectuors STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -81,7 +77,7 @@ int main(int argc, char * argv[])
   size_t length;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length>";
+        throw "Usage: <# iterations> <vector length> [<offset>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -92,6 +88,9 @@ int main(int argc, char * argv[])
       length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
+      } else if (length > INT_MAX) {
+        // this is a limit of range_stream below, which only supports int
+        throw "ERROR: vector length too large - overflow risk";
       }
 
       offset = (argc>3) ? std::atoi(argv[3]) : 0;
@@ -114,45 +113,24 @@ int main(int argc, char * argv[])
 
   auto nstream_time = 0.0;
 
-  std::vector<double> A(length);
-  std::vector<double> B(length);
-  std::vector<double> C(length);
+  std::vector<double> A(length,0);
+  std::vector<double> B(length,2);
+  std::vector<double> C(length,2);
 
-  //auto range = prk::range(static_cast<size_t>(0), length);
+  auto range = unifex::range_stream{0, (int)length};
 
   double scalar(3);
 
   {
-    std::fill( std::begin(A), std::end(A), 0.0 );
-    std::fill( std::begin(B), std::end(B), 2.0 );
-    std::fill( std::begin(C), std::end(C), 2.0 );
-
-
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-#if 0
-      // stupid version
-      std::transform( std::begin(A), std::end(A), std::begin(B), std::begin(A),
-                      [](auto&& x, auto&& y) {
-                           return x + y; // A[i] += B[i]
-                      }
+      unifex::sync_wait(
+          unifex::for_each( range, [&] (size_t i) {
+              A[i] += B[i] + scalar * C[i]; }
+          )
       );
-      std::transform( std::begin(A), std::end(A), std::begin(C), std::begin(A),
-                      [scalar](auto&& x, auto&& y) {
-                           return x + scalar * y; // A[i] += scalar * C[i]
-                      }
-      );
-#else
-      auto nstream = [=] (boost::tuple<double&,double,double> t) {
-          return boost::get<0>(t) +  boost::get<1>(t) + scalar * boost::get<2>(t);
-      };
-      std::transform( boost::make_zip_iterator(boost::make_tuple(A.begin(), B.begin(), C.begin())),
-                      boost::make_zip_iterator(boost::make_tuple(A.end()  , B.end()  , C.end())),
-                      A.begin(),
-                      nstream);
-#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
