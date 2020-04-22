@@ -63,6 +63,9 @@
 #include "prk_util.h"
 #include "p2p-kernel.h"
 
+class sweep;
+class corner;
+
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
