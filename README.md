@@ -1,3 +1,5 @@
+![PRK logo.](https://github.com/ParRes/Kernels/blob/master/logo/PRK%20logo.png)
+
 [![license](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/ParRes/Kernels/blob/master/COPYING)
 [![Travis-CI Status](https://travis-ci.org/ParRes/Kernels.svg)](https://travis-ci.org/ParRes/Kernels)
 [![GitHub contributors](https://img.shields.io/github/contributors/ParRes/Kernels.svg)]()
