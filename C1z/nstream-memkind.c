@@ -72,7 +72,7 @@
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+  printf("Parallel Research Kernels version %d\n", PRKVERSION );
 #ifdef _OPENMP
   printf("C11/OpenMP STREAM triad: A = B + scalar * C\n");
 #else

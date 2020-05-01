@@ -160,7 +160,7 @@ static inline void sweep_tile(int startm, int endm,
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("Parallel Research Kernels version %d\n", PRKVERSION);
   printf("C11 pipeline execution on 2D grid\n");
 
   //////////////////////////////////////////////////////////////////////

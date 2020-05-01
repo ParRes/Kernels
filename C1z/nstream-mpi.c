@@ -76,7 +76,7 @@ int main(int argc, char * argv[])
   MPI_Comm_size(MPI_COMM_WORLD, &np);
 
   if (me==0) {
-      printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+      printf("Parallel Research Kernels version %d\n", PRKVERSION );
       printf("C11/MPI STREAM triad: A = B + scalar * C\n");
   }
 

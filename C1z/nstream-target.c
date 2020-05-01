@@ -67,7 +67,7 @@
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+  printf("Parallel Research Kernels version %d\n", PRKVERSION );
   printf("C11/OpenMP TARGET STREAM triad: A = B + scalar * C\n");
 
   //////////////////////////////////////////////////////////////////////

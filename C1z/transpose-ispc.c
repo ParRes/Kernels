@@ -61,7 +61,7 @@ void transpose_tiled(const int order, double A[], double B[], const int tile_siz
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+  printf("Parallel Research Kernels version %d\n", PRKVERSION );
 #ifdef _OPENMP
   printf("ISPC + OpenMP Matrix transpose: B = A^T\n");
 #else

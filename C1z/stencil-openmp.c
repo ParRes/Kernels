@@ -80,7 +80,7 @@ void nothing(const int n, const double * restrict in, double * restrict out)
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("Parallel Research Kernels version %d\n", PRKVERSION);
 #ifdef _OPENMP
   printf("C11/OpenMP Stencil execution on 2D grid\n");
 #else
