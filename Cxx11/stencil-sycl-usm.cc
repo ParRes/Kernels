@@ -105,17 +105,17 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
+  auto ctx = q.get_context();
+
   double stencil_time(0);
 
-  T * in;
   T * out;
-
-  auto ctx = q.get_context();
-  auto dev = q.get_device();
 
   try {
 
-    in  = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), dev, ctx));
+    auto dev = q.get_device();
+
+    T * in  = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), dev, ctx));
     out = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), dev, ctx));
 
     q.submit([&](sycl::handler& h) {

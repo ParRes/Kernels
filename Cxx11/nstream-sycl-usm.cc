@@ -86,17 +86,14 @@ void run(sycl::queue & q, int iterations, size_t length)
 
     auto dev = q.get_device();
 
-    T * B;
-    T * C;
-
 #if PREBUILD_KERNEL
     sycl::program kernel(ctx);
     kernel.build_with_kernel_type<nstream<T>>();
 #endif
 
     A = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
-    B = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
-    C = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
+    T * B = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
+    T * C = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
 
     for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
