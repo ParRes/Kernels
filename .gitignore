@@ -196,6 +196,7 @@ Cxx11/nstream-valarray-boost-compute
 Cxx11/nstream-vector-boost-compute
 Cxx11/nstream-cublas
 Cxx11/nstream-cuda
+Cxx11/nstream-cuda-managed
 Cxx11/nstream-openmp-target
 Cxx11/nstream-sycl
 Cxx11/nstream-sycl-usm
@@ -222,10 +223,14 @@ Cxx11/stencil-vector-taskloop
 Cxx11/stencil-kokkos
 Cxx11/stencil-cuda
 Cxx11/stencil-sycl
+Cxx11/stencil-sycl-usm
+Cxx11/stencil-sycl-explicit
 Cxx11/transpose-openmp
 Cxx11/transpose-mpi
 Cxx11/transpose-opencl
 Cxx11/transpose-sycl
+Cxx11/transpose-sycl-usm
+Cxx11/transpose-sycl-explicit
 Cxx11/transpose-openmp-target
 Cxx11/transpose-valarray
 Cxx11/transpose-vector
