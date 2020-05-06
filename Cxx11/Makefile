@@ -57,7 +57,8 @@ endif
 OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl \
-	rangefor kokkos raja cuda cublas sycl boost-compute thrust executor
+	rangefor kokkos raja cuda cublas sycl sycl-usm sycl-explicit dpcpp \
+	boost-compute thrust executor
 
 EXTRA=
 ifeq ($(shell uname -s),Darwin)
@@ -68,7 +69,7 @@ else
   EXTRA += target
 endif
 ifneq ($(findstring pgc++,$(CXX)),pgc++)
-  EXTRA += tbb pstl
+  EXTRA += pstl
 endif
 
 all: sequential vector valarray openmp taskloop stl rangefor opencl sycl $(EXTRA)
@@ -95,6 +96,8 @@ sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl
 sycl-usm: nstream-sycl-usm stencil-sycl-usm transpose-sycl-usm
 
 sycl-explicit: nstream-sycl-explicit transpose-sycl-explicit
+
+dpcpp: sycl sycl-usm sycl-explicit
 
 tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb \
      p2p-hyperplane-vector-tbb p2p-tasks-tbb
