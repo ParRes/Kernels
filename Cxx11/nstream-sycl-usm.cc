@@ -74,18 +74,20 @@ void run(sycl::queue & q, int iterations, size_t length)
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
+  auto ctx = q.get_context();
+
   double nstream_time(0);
 
   const T scalar(3);
 
   T * A;
-  T * B;
-  T * C;
 
   try {
 
-    auto ctx = q.get_context();
     auto dev = q.get_device();
+
+    T * B;
+    T * C;
 
 #if PREBUILD_KERNEL
     sycl::program kernel(ctx);
