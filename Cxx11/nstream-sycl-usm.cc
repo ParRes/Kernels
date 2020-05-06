@@ -92,9 +92,9 @@ void run(sycl::queue & q, int iterations, size_t length)
     kernel.build_with_kernel_type<nstream<T>>();
 #endif
 
-    A = static_cast<T*>(sycl::malloc_shared(length * sizeof(T), dev, ctx));
-    B = static_cast<T*>(sycl::malloc_shared(length * sizeof(T), dev, ctx));
-    C = static_cast<T*>(sycl::malloc_shared(length * sizeof(T), dev, ctx));
+    A = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
+    B = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
+    C = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
 
     for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
@@ -124,8 +124,8 @@ void run(sycl::queue & q, int iterations, size_t length)
     // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
 
-    sycl::free(B, ctx);
-    sycl::free(C, ctx);
+    syclx::free(B, ctx);
+    syclx::free(C, ctx);
 
   }
   catch (sycl::exception & e) {
@@ -160,7 +160,7 @@ void run(sycl::queue & q, int iterations, size_t length)
       asum += std::fabs(A[i]);
   }
 
-  sycl::free(A, ctx);
+  syclx::free(A, ctx);
   
   const double epsilon(1.e-8);
   if (std::fabs(ar-asum)/asum > epsilon) {

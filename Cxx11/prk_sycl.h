@@ -6,7 +6,17 @@
 
 #include "CL/sycl.hpp"
 
+#ifdef __COMPUTECPP__
+#include "SYCL/experimental/usm.h"
+#endif
+
 namespace sycl = cl::sycl;
+
+#ifdef __COMPUTECPP__
+namespace syclx = cl::sycl::experimental;
+#else
+namespace syclx = cl::sycl;
+#endif
 
 // prebuilt kernels are not required/not fully supported on hipSYCL and triSYCL
 #if defined(TRISYCL) || defined(__HIPSYCL__) || defined(DPCPP)

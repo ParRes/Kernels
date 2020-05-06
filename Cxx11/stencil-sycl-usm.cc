@@ -115,8 +115,8 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
 
   try {
 
-    in  = static_cast<T*>(sycl::malloc_shared(n * n * sizeof(T), dev, ctx));
-    out = static_cast<T*>(sycl::malloc_shared(n * n * sizeof(T), dev, ctx));
+    in  = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), dev, ctx));
+    out = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), dev, ctx));
 
     q.submit([&](sycl::handler& h) {
 
@@ -146,7 +146,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
     }
     stencil_time = prk::wtime() - stencil_time;
 
-    sycl::free(in, ctx);
+    syclx::free(in, ctx);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -178,7 +178,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   }
   norm /= active_points;
 
-  sycl::free(out, ctx);
+  syclx::free(out, ctx);
 
   // verify correctness
   const double epsilon = 1.0e-8;
