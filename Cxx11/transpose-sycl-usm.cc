@@ -66,8 +66,8 @@ void run(sycl::queue & q, int iterations, size_t order)
   auto ctx = q.get_context();
   auto dev = q.get_device();
 
-  T * A = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), dev, ctx));
-  T * B = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), dev, ctx));
+  T * A = static_cast<T*>(syclx::malloc_shared(order*order * sizeof(T), dev, ctx));
+  T * B = static_cast<T*>(syclx::malloc_shared(order*order * sizeof(T), dev, ctx));
 
   for (int i=0;i<order; i++) {
     for (int j=0;j<order;j++) {
@@ -128,8 +128,8 @@ void run(sycl::queue & q, int iterations, size_t order)
     return;
   }
 
-  sycl::free(A, ctx);
-  sycl::free(B, ctx);
+  syclx::free(A, ctx);
+  syclx::free(B, ctx);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
