@@ -124,7 +124,6 @@ void run(sycl::queue & q, int iterations, size_t length)
     // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
 
-    syclx::free(A, ctx);
     syclx::free(B, ctx);
     syclx::free(C, ctx);
 
@@ -161,6 +160,8 @@ void run(sycl::queue & q, int iterations, size_t length)
       asum += std::fabs(A[i]);
   }
 
+  syclx::free(A, ctx);
+  
   const double epsilon(1.e-8);
   if (std::fabs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
