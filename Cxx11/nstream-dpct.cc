@@ -62,9 +62,9 @@
 //////////////////////////////////////////////////////////////////////
 
 #include <CL/sycl.hpp>
-#include <dpct/dpct.hpp>
 #include "prk_util.h"
-#include "prk_dpct.h"
+#include "prk_sycl.h"
+#include <dpct/dpct.hpp>
 
 void nstream(const unsigned n, const double scalar, double * A, const double * B, const double * C,
              sycl::nd_item<3> item_ct1)
@@ -129,6 +129,9 @@ int main(int argc, char * argv[])
   sycl::range<3> dimBlock(blockSize, 1, 1);
   sycl::range<3> dimGrid(prk::divceil(length, blockSize), 1, 1);
 
+  sycl::queue q(sycl::default_selector{});
+  prk::SYCL::print_device_platform(q);
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
@@ -137,9 +140,9 @@ int main(int argc, char * argv[])
 
   const size_t bytes = length * sizeof(double);
 
-  double * h_A = sycl::malloc_host<double>(length, dpct::get_default_context());
-  double * h_B = sycl::malloc_host<double>(length, dpct::get_default_context());
-  double * h_C = sycl::malloc_host<double>(length, dpct::get_default_context());
+  double * h_A = sycl::malloc_host<double>(length, q);
+  double * h_B = sycl::malloc_host<double>(length, q);
+  double * h_C = sycl::malloc_host<double>(length, q);
 
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
@@ -147,12 +150,12 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  double * d_A = sycl::malloc_device<double>(length, dpct::get_default_context());
-  double * d_B = sycl::malloc_device<double>(length, dpct::get_default_context());
-  double * d_C = sycl::malloc_device<double>(length, dpct::get_default_context());
-  dpct::get_default_queue().memcpy(d_A, &(h_A[0]), bytes).wait();
-  dpct::get_default_queue().memcpy(d_B, &(h_B[0]), bytes).wait();
-  dpct::get_default_queue().memcpy(d_C, &(h_C[0]), bytes).wait();
+  double * d_A = sycl::malloc_device<double>(length, q);
+  double * d_B = sycl::malloc_device<double>(length, q);
+  double * d_C = sycl::malloc_device<double>(length, q);
+  q.memcpy(d_A, &(h_A[0]), bytes).wait();
+  q.memcpy(d_B, &(h_B[0]), bytes).wait();
+  q.memcpy(d_C, &(h_C[0]), bytes).wait();
 
   double scalar(3);
   {
@@ -161,7 +164,7 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
       if (grid_stride) {
-          dpct::get_default_queue().submit([&](sycl::handler &cgh) {
+          q.submit([&](sycl::handler &cgh) {
               auto dpct_global_range = dimGrid * dimBlock;
 
               cgh.parallel_for(
@@ -171,7 +174,7 @@ int main(int argc, char * argv[])
                   });
           });
       } else {
-          dpct::get_default_queue().submit([&](sycl::handler &cgh) {
+          q.submit([&](sycl::handler &cgh) {
               auto dpct_global_range = dimGrid * dimBlock;
 
               cgh.parallel_for(
@@ -186,14 +189,14 @@ int main(int argc, char * argv[])
     nstream_time = prk::wtime() - nstream_time;
   }
 
-  dpct::get_default_queue().memcpy(&(h_A[0]), d_A, bytes).wait();
+  q.memcpy(&(h_A[0]), d_A, bytes).wait();
 
-  sycl::free(d_C, dpct::get_default_context());
-  sycl::free(d_B, dpct::get_default_context());
-  sycl::free(d_A, dpct::get_default_context());
+  sycl::free(d_C, q);
+  sycl::free(d_B, q);
+  sycl::free(d_A, q);
 
-  sycl::free(h_B, dpct::get_default_context());
-  sycl::free(h_C, dpct::get_default_context());
+  sycl::free(h_B, q);
+  sycl::free(h_C, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -213,7 +216,7 @@ int main(int argc, char * argv[])
     asum += std::fabs(h_A[i]);
   }
 
-  sycl::free(h_A, dpct::get_default_context();
+  sycl::free(h_A, q);
 
   double epsilon=1.e-8;
   if (std::fabs(ar - asum) / asum > epsilon) {
