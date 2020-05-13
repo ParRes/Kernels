@@ -60,10 +60,13 @@
 //////////////////////////////////////////////////////////////////////
 
 #include <CL/sycl.hpp>
-#include <dpct/dpct.hpp>
+
 #include "prk_util.h"
-#include "prk_dpct.h"
-#include <cmath>
+#include "prk_sycl.h"
+
+#include <mkl_blas_sycl.hpp>
+#include <mkl_lapack_sycl.hpp>
+#include <mkl_sycl_types.hpp>
 
 void init(int order, const int matrices, double * A, double * B, double * C, sycl::nd_item<3> item_ct1)
 {
@@ -91,7 +94,7 @@ void init(int order, const int matrices, double * C, sycl::nd_item<3> item_ct1)
     }
 }
 
-void prk_dgemm(const sycl::queue &h, const int order, const int batches, double *A, double *B, double *C)
+void prk_dgemm(sycl::queue &q, const int order, const int batches, double *A, double *B, double *C)
 {
     const double alpha = 1.0;
     const double beta  = 1.0;
@@ -100,7 +103,7 @@ void prk_dgemm(const sycl::queue &h, const int order, const int batches, double 
         double * pA = &(A[b*order*order]);
         double * pB = &(B[b*order*order]);
         double * pC = &(C[b*order*order]);
-        mkl::blas::gemm(h, mkl::transpose::nontrans, // opA
+        mkl::blas::gemm(q, mkl::transpose::nontrans, // opA
                            mkl::transpose::nontrans, // opB
                            order, order, order,      // m, n, k
                            alpha,                    // alpha
@@ -109,40 +112,13 @@ void prk_dgemm(const sycl::queue &h, const int order, const int batches, double 
                            beta,                     // beta
                            pC, order);               // C, ldc
     }
-    dpct::get_current_device().queues_wait_and_throw();
+    q.wait_and_throw();
 }
-
-#if 0
-void prk_bgemm(const sycl::queue &h, const int order, const int batches,
-               double *A, double *B, double *C)
-{
-    const double alpha = 1.0;
-    const double beta  = 1.0;
-
-    cublasDgemmStridedBatched(
-        h, mkl::transpose::nontrans, mkl::transpose::nontrans, order, order,
-        order, &alpha, (const double *)A, order, order * order,
-        (const double *)B, order, order * order, &beta, C, order, order * order,
-        batches);
-    dpct::get_current_device().queues_wait_and_throw();
-
-    //  cublasStatus_t cublasDgemmBatched(cublasHandle_t handle,
-    //                                    cublasOperation_t transa,
-    //                                    cublasOperation_t transb,
-    //                                    int m, int n, int k,
-    //                                    const double          *alpha,
-    //                                    const double          *Aarray[], int lda,
-    //                                    const double          *Barray[], int ldb,
-    //                                    const double          *beta,
-    //                                    double          *Carray[], int ldc,
-    //                                    int batchCount)
-}
-#endif // 0
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/CUBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
+  std::cout << "C++11/oneMKL Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -197,7 +173,7 @@ int main(int argc, char * argv[])
 #endif // 0
   std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
 
-  int haz_ngpu = dpct::dev_mgr::instance().device_count();
+  int haz_ngpu = 1; // FIXME
   std::cout << "Number of GPUs found  = " << haz_ngpu << std::endl;
 
   if (use_ngpu > haz_ngpu) {
@@ -206,10 +182,20 @@ int main(int argc, char * argv[])
 
   int ngpus = use_ngpu;
 
-  std::vector<cublasHandle_t> contexts(ngpus);
-  for (int i=0; i<ngpus; ++i) {
-        dpct::dev_mgr::instance().select_device(i);
+  std::vector<sycl::queue> qs(ngpus);
+
+  auto platform_list = sycl::platform::get_platforms();
+  auto device_list = platform_list.get_devices();
+  for (const auto &platform : platform_list) {
+      for (const auto &device : device_list) {
+          qs.insert( cl::sycl::queue(device) );
+      }
   }
+
+  for (int i=0; i<ngpus; ++i) {
+      prk::SYCL::print_device_platform(qs[i]);
+  }
+
 
   const int tile_size = 32;
   sycl::range<3> dimGrid(prk::divceil(order, tile_size), prk::divceil(order, tile_size), 1);
@@ -228,7 +214,7 @@ int main(int argc, char * argv[])
   // host buffers
   std::vector<double*> h_c(ngpus,nullptr);
   for (int i=0; i<ngpus; ++i) {
-      h_c[i] = sycl::malloc_host<double>(matrices * bytes, dpct::get_default_context());
+      h_c[i] = sycl::malloc_host<double>(matrices * bytes, qs[i]);
   }
 
   // device buffers
@@ -236,29 +222,29 @@ int main(int argc, char * argv[])
   std::vector<double*> d_b(ngpus,nullptr);
   std::vector<double*> d_c(ngpus,nullptr);
   for (int i=0; i<ngpus; ++i) {
-        dpct::dev_mgr::instance().select_device(i);
-        d_a[i] = sycl::malloc_device<double>(matrices * nelems, dpct::get_current_device(), dpct::get_default_context());
-        d_b[i] = sycl::malloc_device<double>(matrices * nelems, dpct::get_current_device(), dpct::get_default_context());
-        d_c[i] = sycl::malloc_device<double>(matrices * nelems, dpct::get_current_device(), dpct::get_default_context());
-        dpct::get_default_queue().submit([&](sycl::handler &cgh)
-        {
-            auto dpct_global_range = dimGrid * dimBlock;
+      auto q = qs[i];
+      d_a[i] = sycl::malloc_device<double>(matrices * nelems, q);
+      d_b[i] = sycl::malloc_device<double>(matrices * nelems, q);
+      d_c[i] = sycl::malloc_device<double>(matrices * nelems, q);
+      q.submit([&](sycl::handler &cgh)
+      {
+          auto dpct_global_range = dimGrid * dimBlock;
 
-            auto d_a_i_ct2 = d_a[i];
-            auto d_b_i_ct3 = d_b[i];
-            auto d_c_i_ct4 = d_c[i];
+          auto d_a_i_ct2 = d_a[i];
+          auto d_b_i_ct3 = d_b[i];
+          auto d_c_i_ct4 = d_c[i];
 
-            cgh.parallel_for(
-                sycl::nd_range<3>(sycl::range<3>(dpct_global_range.get(2), dpct_global_range.get(1), dpct_global_range.get(0)),
-                                  sycl::range<3>(dimBlock.get(2), dimBlock.get(1), dimBlock.get(0))),
-                [=](sycl::nd_item<3> item_ct1) {
-                    init(order, matrices, d_a_i_ct2, d_b_i_ct3, d_c_i_ct4, item_ct1);
-                });
-        });
+          cgh.parallel_for(
+              sycl::nd_range<3>(sycl::range<3>(dpct_global_range.get(2), dpct_global_range.get(1), dpct_global_range.get(0)),
+                                sycl::range<3>(dimBlock.get(2), dimBlock.get(1), dimBlock.get(0))),
+              [=](sycl::nd_item<3> item_ct1) {
+                  init(order, matrices, d_a_i_ct2, d_b_i_ct3, d_c_i_ct4, item_ct1);
+              });
+      });
   }
   for (int i=0; i<ngpus; ++i) {
-        dpct::dev_mgr::instance().select_device(i);
-        dpct::get_current_device().queues_wait_and_throw();
+      auto q = qs[i];
+      q.wait_and_throw();
   }
 
   for (int iter = 0; iter<=iterations; iter++) {
@@ -266,38 +252,32 @@ int main(int argc, char * argv[])
     if (iter==1) dgemm_time = prk::wtime();
 
     for (int i=0; i<ngpus; ++i) {
-        dpct::dev_mgr::instance().select_device(i);
         if (batches == 0) {
-            prk_dgemm(contexts[i], order, matrices, d_a[i], d_b[i], d_c[i]);
+            prk_dgemm(qs[i], order, matrices, d_a[i], d_b[i], d_c[i]);
         }
         else if (batches < 0) {
-            prk_dgemm(contexts[i], order, matrices, d_a[i], d_b[i], d_c[i]);
+            prk_dgemm(qs[i], order, matrices, d_a[i], d_b[i], d_c[i]);
         }
-#if 0
-        else if (batches > 0) {
-            prk_bgemm(contexts[i], order, matrices, d_a[i], d_b[i], d_c[i]);
-        }
-#endif // 0
     }
     for (int i=0; i<ngpus; ++i) {
-            dpct::dev_mgr::instance().select_device(i);
-            dpct::get_current_device().queues_wait_and_throw();
+      auto q = qs[i];
+      q.wait_and_throw();
     }
   }
   dgemm_time = prk::wtime() - dgemm_time;
 
   // copy output back to host
   for (int i=0; i<ngpus; ++i) {
-        dpct::dev_mgr::instance().select_device(i);
-        dpct::get_default_queue().memcpy(h_c[i], d_c[i], matrices * bytes);
+      auto q = qs[i];
+      q.memcpy(h_c[i], d_c[i], matrices * bytes);
   }
 
   for (int i=0; i<ngpus; ++i) {
-        dpct::dev_mgr::instance().select_device(i);
-        dpct::get_current_device().queues_wait_and_throw();
-        sycl::free(d_c[i], dpct::get_default_context());
-        sycl::free(d_b[i], dpct::get_default_context());
-        sycl::free(d_a[i], dpct::get_default_context());
+      auto q = qs[i];
+      q.wait_and_throw();
+      sycl::free(d_c[i], q);
+      sycl::free(d_b[i], q);
+      sycl::free(d_a[i], q);
   }
 
   //////////////////////////////////////////////////////////////////////
@@ -306,14 +286,12 @@ int main(int argc, char * argv[])
 
   const double epsilon = 1.0e-8;
   const double forder = static_cast<double>(order);
-    const double reference = 0.25 * std::pow(forder, 3) *
-                             std::pow(forder - 1.0, 2) * (iterations + 1);
-
+  const double reference = 0.25 * std::pow(forder, 3) * std::pow(forder - 1.0, 2) * (iterations + 1);
   double residuum(0);
   for (int i=0; i<ngpus; ++i) {
       for (int b=0; b<matrices; ++b) {
           const auto checksum = prk::reduce( &(h_c[i][b*order*order+0]), &(h_c[i][b*order*order+nelems]), 0.0);
-            residuum += std::abs(checksum - reference) / reference;
+          residuum += std::abs(checksum - reference) / reference;
       }
   }
   residuum /= matrices;
@@ -336,7 +314,7 @@ int main(int argc, char * argv[])
   }
 
   for (int i=0; i<ngpus; ++i) {
-        sycl::free(h_c[i], dpct::get_default_context());
+      sycl::free(h_c[i], qs[i]);
   }
 
   return 0;
