@@ -174,7 +174,7 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-onemkl: %-onemkl.cc prk_util.h prk_dpct.h
-	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< $(ONEMKLFLAG) -o $@
 
 %-target: %-target.cc prk_util.h prk_openmp.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@

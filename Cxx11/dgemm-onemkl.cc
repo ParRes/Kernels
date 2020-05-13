@@ -60,10 +60,13 @@
 //////////////////////////////////////////////////////////////////////
 
 #include <CL/sycl.hpp>
-#include <dpct/dpct.hpp>
+
 #include "prk_util.h"
-#include "prk_dpct.h"
-#include <cmath>
+#include "prk_sycl.h"
+
+#include <mkl_blas_sycl.hpp>
+#include <mkl_lapack_sycl.hpp>
+#include <mkl_sycl_types.hpp>
 
 void init(int order, const int matrices, double * A, double * B, double * C, sycl::nd_item<3> item_ct1)
 {
@@ -91,7 +94,7 @@ void init(int order, const int matrices, double * C, sycl::nd_item<3> item_ct1)
     }
 }
 
-void prk_dgemm(const sycl::queue &h, const int order, const int batches, double *A, double *B, double *C)
+void prk_dgemm(sycl::queue &q, const int order, const int batches, double *A, double *B, double *C)
 {
     const double alpha = 1.0;
     const double beta  = 1.0;
@@ -100,7 +103,7 @@ void prk_dgemm(const sycl::queue &h, const int order, const int batches, double 
         double * pA = &(A[b*order*order]);
         double * pB = &(B[b*order*order]);
         double * pC = &(C[b*order*order]);
-        mkl::blas::gemm(h, mkl::transpose::nontrans, // opA
+        mkl::blas::gemm(q, mkl::transpose::nontrans, // opA
                            mkl::transpose::nontrans, // opB
                            order, order, order,      // m, n, k
                            alpha,                    // alpha
@@ -109,7 +112,7 @@ void prk_dgemm(const sycl::queue &h, const int order, const int batches, double 
                            beta,                     // beta
                            pC, order);               // C, ldc
     }
-    dpct::get_current_device().queues_wait_and_throw();
+    q.wait_and_throw();
 }
 
 int main(int argc, char * argv[])
@@ -169,7 +172,8 @@ int main(int argc, char * argv[])
   }
   std::cout << "Input copy           = " << (input_copy ? "yes" : "no") << std::endl;
 
-  sycl::queue h(dpct::get_default_context(), dpct::get_current_device());
+  sycl::queue q(sycl::default_selector{});
+  prk::SYCL::print_device_platform(q);
 
   const int tile_size = 32;
   sycl::range<3> dimGrid(prk::divceil(order, tile_size), prk::divceil(order, tile_size), 1);
@@ -186,14 +190,14 @@ int main(int argc, char * argv[])
   const size_t bytes = nelems * sizeof(double);
 
   // host buffers
-  double * h_a = sycl::malloc_host<double>(nelems, dpct::get_default_context()),
-  double * h_b = sycl::malloc_host<double>(nelems, dpct::get_default_context()),
-  double * h_c = sycl::malloc_host<double>(nelems, dpct::get_default_context()),
+  double * h_a = sycl::malloc_host<double>(nelems, q);
+  double * h_b = sycl::malloc_host<double>(nelems, q);
+  double * h_c = sycl::malloc_host<double>(nelems, q);
 
   // device buffers
-  double * d_a = sycl::malloc_device<double>( matrices * nelems, dpct::get_current_device(), dpct::get_default_context();
-  double * d_b = sycl::malloc_device<double>( matrices * nelems, dpct::get_current_device(), dpct::get_default_context();
-  double * d_c = sycl::malloc_device<double>( matrices * nelems, dpct::get_current_device(), dpct::get_default_context();
+  double * d_a = sycl::malloc_device<double>( matrices * nelems, q);
+  double * d_b = sycl::malloc_device<double>( matrices * nelems, q);
+  double * d_c = sycl::malloc_device<double>( matrices * nelems, q);
 
   if (input_copy) {
 
@@ -205,12 +209,12 @@ int main(int argc, char * argv[])
     }
 
     for (int b=0; b<matrices; ++b) {
-            dpct::get_default_queue().memcpy( &(d_a[b * order * order]), h_a, bytes);
-            dpct::get_default_queue().memcpy( &(d_b[b * order * order]), h_b, bytes);
+        q.memcpy( &(d_a[b * order * order]), h_a, bytes);
+        q.memcpy( &(d_b[b * order * order]), h_b, bytes);
     }
-    dpct::get_current_device().queues_wait_and_throw();
+    q.wait_and_throw();
 
-    dpct::get_default_queue().submit([&](sycl::handler &cgh) {
+    q.submit([&](sycl::handler &cgh) {
         auto dpct_global_range = dimGrid * dimBlock;
 
         cgh.parallel_for(
@@ -223,7 +227,7 @@ int main(int argc, char * argv[])
 
   } else {
 
-      dpct::get_default_queue().submit([&](sycl::handler &cgh) {
+      q.submit([&](sycl::handler &cgh) {
           auto dpct_global_range = dimGrid * dimBlock;
 
           cgh.parallel_for(
@@ -234,7 +238,7 @@ int main(int argc, char * argv[])
               });
       });
   }
-  dpct::get_current_device().queues_wait_and_throw();
+  q.wait_and_throw();
 
   double xfer(0);
   double comp(0);
@@ -246,17 +250,17 @@ int main(int argc, char * argv[])
       if (input_copy) {
         double t0 = prk::wtime();
         for (int b=0; b<matrices; ++b) {
-            dpct::get_default_queue().memcpy( &(d_a[b * order * order]), h_a, bytes);
-            dpct::get_default_queue().memcpy( &(d_b[b * order * order]), h_b, bytes);
+            q.memcpy( &(d_a[b * order * order]), h_a, bytes);
+            q.memcpy( &(d_b[b * order * order]), h_b, bytes);
         }
-        dpct::get_current_device().queues_wait_and_throw();
+        q.wait_and_throw();
         double t1 = prk::wtime();
         if (iter==1) xfer += (t1-t0);
       }
 
       {
         double t0 = prk::wtime();
-        prk_dgemm(h, order, matrices, d_a, d_b, d_c);
+        prk_dgemm(q, order, matrices, d_a, d_b, d_c);
         double t1 = prk::wtime();
         if (iter==1) comp += (t1-t0);
       }
@@ -266,13 +270,13 @@ int main(int argc, char * argv[])
   std::cout << "xfer, comp = " << xfer << "," << comp << std::endl;
 
   // copy output back to host
-  dpct::get_default_queue().memcpy(&(h_c[0]), d_c, matrices * bytes);
-  sycl::free(d_c, dpct::get_default_context());
-  sycl::free(d_b, dpct::get_default_context());
-  sycl::free(d_a, dpct::get_default_context());
-  sycl::free(h_a, dpct::get_default_context());
-  sycl::free(h_b, dpct::get_default_context());
-  dpct::get_current_device().queues_wait_and_throw();
+  q.memcpy(&(h_c[0]), d_c, matrices * bytes);
+  sycl::free(d_c, q);
+  sycl::free(d_b, q);
+  sycl::free(d_a, q);
+  sycl::free(h_a, q);
+  sycl::free(h_b, q);
+  q.wait_and_throw();
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -304,7 +308,7 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  sycl::free(h_c, dpct::get_default_context());
+  sycl::free(h_c, q);
 
   return 0;
 }
