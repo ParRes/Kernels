@@ -57,8 +57,8 @@ endif
 OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl \
-	rangefor kokkos raja cuda cublas sycl sycl-usm sycl-explicit dpcpp \
-	boost-compute thrust executor
+	rangefor kokkos raja cuda cublas sycl sycl-usm sycl-explicit dpcpp dpct \
+	boost-compute thrust executor oneapi onemkl
 
 EXTRA=
 ifeq ($(shell uname -s),Darwin)
@@ -97,7 +97,9 @@ sycl-usm: nstream-sycl-usm stencil-sycl-usm transpose-sycl-usm
 
 sycl-explicit: nstream-sycl-explicit transpose-sycl-explicit
 
-dpcpp: sycl sycl-usm sycl-explicit
+dpct: nstream-dpct nstream-managed-dpct transpose-dpct
+
+dpcpp: sycl sycl-usm sycl-explicit dpct
 
 tbb: p2p-innerloop-tbb p2p-tbb stencil-tbb transpose-tbb nstream-tbb \
      p2p-hyperplane-tbb p2p-tasks-tbb
@@ -125,6 +127,10 @@ cuda: transpose-cuda
 cublas: transpose-cublas nstream-cublas dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas
 
 cblas: transpose-cblas dgemm-cblas
+
+onemkl: nstream-onemkl dgemm-onemkl dgemm-multigpu-onemkl
+
+oneapi: onemkl dpcpp dpct
 
 occa: transpose-occa nstream-occa
 
@@ -162,6 +168,12 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-sycl-explicit: %-sycl-explicit.cc prk_util.h prk_sycl.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
+%-dpct: %-dpct.cc prk_util.h prk_dpct.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
+%-onemkl: %-onemkl.cc prk_util.h prk_dpct.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-target: %-target.cc prk_util.h prk_openmp.h
@@ -218,9 +230,6 @@ endif
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
-%-cuda-managed: %-cuda-managed.cu prk_util.h prk_cuda.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
-
 %-mpi-cublas: %-mpi-cublas.cu prk_util.h prk_cuda.h prk_mpi.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) $< -lcublas $(MPILIB) -o $@
 
@@ -265,6 +274,7 @@ clean:
 	-rm -f *-sycl
 	-rm -f *-sycl-explicit
 	-rm -f *-sycl-usm
+	-rm -f *-dpct
 	-rm -f *-celerity
 	-rm -f *-tbb
 	-rm -f *-stl
@@ -276,6 +286,7 @@ clean:
 	-rm -f *-cuda
 	-rm -f *-cublas
 	-rm -f *-cblas
+	-rm -f *-onemkl
 	-rm -f *-occa
 	-rm -f *-boost-compute
 	-rm -f *-ornlacc

@@ -112,33 +112,6 @@ void prk_dgemm(const sycl::queue &h, const int order, const int batches, double 
     dpct::get_current_device().queues_wait_and_throw();
 }
 
-#if 0
-void prk_bgemm(const sycl::queue &h, const int order, const int batches,
-               double *A, double *B, double *C)
-{
-    const double alpha = 1.0;
-    const double beta  = 1.0;
-
-    cublasDgemmStridedBatched(
-        h, mkl::transpose::nontrans, mkl::transpose::nontrans, order, order,
-        order, &alpha, (const double *)A, order, order * order,
-        (const double *)B, order, order * order, &beta, C, order, order * order,
-        batches);
-    dpct::get_current_device().queues_wait_and_throw();
-
-    //  cublasStatus_t cublasDgemmBatched(cublasHandle_t handle,
-    //                                    cublasOperation_t transa,
-    //                                    cublasOperation_t transb,
-    //                                    int m, int n, int k,
-    //                                    const double          *alpha,
-    //                                    const double          *Aarray[], int lda,
-    //                                    const double          *Barray[], int ldb,
-    //                                    const double          *beta,
-    //                                    double          *Carray[], int ldc,
-    //                                    int batchCount)
-}
-#endif // 0
-
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -283,11 +256,7 @@ int main(int argc, char * argv[])
 
       {
         double t0 = prk::wtime();
-        if (batches > 0) {
-          prk_bgemm(h, order, matrices, d_a, d_b, d_c);
-        } else {
-          prk_dgemm(h, order, matrices, d_a, d_b, d_c);
-        }
+        prk_dgemm(h, order, matrices, d_a, d_b, d_c);
         double t1 = prk::wtime();
         if (iter==1) comp += (t1-t0);
       }

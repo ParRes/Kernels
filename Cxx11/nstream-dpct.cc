@@ -66,7 +66,7 @@
 #include "prk_util.h"
 #include "prk_dpct.h"
 
-void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C,
+void nstream(const unsigned n, const double scalar, double * A, const double * B, const double * C,
              sycl::nd_item<3> item_ct1)
 {
     auto i = item_ct1.get_group(2) * item_ct1.get_local_range().get(2) + item_ct1.get_local_id(2);
@@ -75,7 +75,7 @@ void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_
     }
 }
 
-void nstream2(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C,
+void nstream2(const unsigned n, const double scalar, double * A, const double * B, const double * C,
               sycl::nd_item<3> item_ct1)
 {
     for (unsigned int i =
