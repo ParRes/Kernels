@@ -184,7 +184,7 @@ int main(int argc, char * argv[])
                   });
           });
       }
-      dpct::get_current_device().queues_wait_and_throw();
+      q.wait_and_throw();
     }
     nstream_time = prk::wtime() - nstream_time;
   }
