@@ -164,16 +164,31 @@ int main(int argc, char * argv[])
       std::cout << "No batching" << std::endl;
   }
   else if (batches < 0) {
-      std::cout << "Batch size            = " << -batches << " (loop over legacy BLAS)" << std::endl;
+      std::cout << "Batch size            = " << -batches << " (loop over BLAS)" << std::endl;
   }
-#if 0
   else if (batches > 0) {
-      std::cout << "Batch size            = " <<  batches << " (batched BLAS)" << std::endl;
+      std::cout << "Batched BLAS not supported." << std::endl;
+      std::abort();
+      //std::cout << "Batch size            = " <<  batches << " (batched BLAS)" << std::endl;
   }
-#endif // 0
   std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
 
-  int haz_ngpu = 1; // FIXME
+  std::vector<sycl::queue> qs;
+
+  auto platforms = sycl::platform::get_platforms();
+  for (auto & p : platforms) {
+    std::cout << "Platform: " << p.get_info<sycl::info::platform::name>() << std::endl;
+    auto devices = p.get_devices();
+    for (auto & d : devices ) {
+        std::cout << " Device: " << d.get_info<sycl::info::device::name>() << std::endl;
+        if (d.is_gpu()) {
+            std::cout << "Device is GPU - adding to vector of queues" << std::endl;
+            qs.push_back(sycl::queue(d));
+        }
+    }
+  }
+
+  int haz_ngpu = qs.size();
   std::cout << "Number of GPUs found  = " << haz_ngpu << std::endl;
 
   if (use_ngpu > haz_ngpu) {
@@ -181,21 +196,6 @@ int main(int argc, char * argv[])
   }
 
   int ngpus = use_ngpu;
-
-  std::vector<sycl::queue> qs(ngpus);
-
-  auto platform_list = sycl::platform::get_platforms();
-  auto device_list = platform_list.get_devices();
-  for (const auto &platform : platform_list) {
-      for (const auto &device : device_list) {
-          qs.insert( cl::sycl::queue(device) );
-      }
-  }
-
-  for (int i=0; i<ngpus; ++i) {
-      prk::SYCL::print_device_platform(qs[i]);
-  }
-
 
   const int tile_size = 32;
   sycl::range<3> dimGrid(prk::divceil(order, tile_size), prk::divceil(order, tile_size), 1);

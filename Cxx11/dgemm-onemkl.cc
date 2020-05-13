@@ -288,7 +288,7 @@ int main(int argc, char * argv[])
   double residuum(0);
   for (int b=0; b<matrices; ++b) {
       const auto checksum = prk::reduce( &(h_c[b*order*order+0]), &(h_c[b*order*order+nelems]), 0.0);
-        residuum += std::abs(checksum - reference) / reference;
+      residuum += std::abs(checksum - reference) / reference;
   }
   residuum /= matrices;
 
