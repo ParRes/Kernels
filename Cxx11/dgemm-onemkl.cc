@@ -51,9 +51,6 @@
 ///          Other than OpenMP or standard C functions, the following
 ///          functions are used in this program:
 ///
-///          cblasDgemm()
-///          cublasDgemmStridedBatched()
-///
 /// HISTORY: Written by Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, December, 2017.
 ///
