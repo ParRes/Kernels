@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
 
       for (int i=1; i<m; i+=mc) {
         for (int j=1; j<n; j+=nc) {
-          OMP_TASK( firstprivate(m,n) shared(grid) depend(in:grid[(i-mc)*n+j],grid[i*n+(j-nc)]) depend(out:grid[i*n+j]) )
+          OMP_TASK( firstprivate(m,n) shared(grid) depend(in:grid[(i-mc)*n+j:1],grid[i*n+(j-nc):1]) depend(out:grid[i*n+j:1]) )
           sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, grid);
         }
       }
