@@ -59,29 +59,14 @@
 !          external publications
 !
 !          Converted to C++11 by Jeff Hammond, November May 2017.
+!          Fortran by Jeff Hammond, ???
+!          Global Arrays by Jeff Hammond, May 2020.
 !
 ! *******************************************************************
 
-#ifndef _OPENMP
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-#endif
-
 program main
   use iso_fortran_env
-#ifdef _OPENMP
-  use omp_lib
-#endif
   implicit none
-#ifndef _OPENMP
-  real(kind=REAL64) :: prk_get_wtime
-#endif
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -106,11 +91,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-#ifdef _OPENMP
-  write(*,'(a47)') 'Fortran OpenMP STREAM triad: A = B + scalar * C'
-#else
-  write(*,'(a47)') 'Fortran Serial STREAM triad: A = B + scalar * C'
-#endif
+  write(*,'(a47)') 'Fortran Global Arrays STREAM triad: A = B + scalar * C'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -144,9 +125,10 @@ program main
     endif
   endif
 
-#ifdef _OPENMP
-  write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
-#endif
+  call mpi_init_thread(requested,provided)
+  call ga_initialize_ltd(max_mem)
+
+  write(*,'(a,i12)') 'Number of GA procs   = ', ga_nnodes()
   write(*,'(a,i12)') 'Number of iterations = ', iterations
   write(*,'(a,i12)') 'Vector length        = ', length
   write(*,'(a,i12)') 'Offset               = ', offset
