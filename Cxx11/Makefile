@@ -93,7 +93,8 @@ opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
 sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl
 
-sycl-usm: nstream-sycl-usm stencil-sycl-usm transpose-sycl-usm
+sycl-usm: nstream-sycl-usm stencil-sycl-usm transpose-sycl-usm \
+          nstream-sycl-explicit-usm
 
 sycl-explicit: nstream-sycl-explicit transpose-sycl-explicit
 
@@ -162,6 +163,9 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $(BOOSTFLAGS) $(CELERITYINC) $(MPIINC) $< $(CELERITYLIB) $(MPILIB) -o $@
 
 %-sycl: %-sycl.cc prk_util.h prk_sycl.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
+%-sycl-explicit-usm: %-sycl-explicit-usm.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-sycl-usm: %-sycl-usm.cc prk_util.h prk_sycl.h
