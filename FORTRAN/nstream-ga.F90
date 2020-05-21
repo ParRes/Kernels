@@ -66,19 +66,33 @@
 
 program main
   use iso_fortran_env
+  use mpi_f08
   implicit none
+#include 'global.fh'
+#include 'ga-mpi.fh'
+#include 'mafdecls.fh'
   ! for argument parsing
   integer :: err
   integer :: arglen
   character(len=32) :: argtmp
+  ! MPI - should always use 32-bit INTEGER
+  integer(kind=INT32), parameter :: requested = MPI_THREAD_SERIALIZED
+  integer(kind=INT32) :: provided
+  integer(kind=INT32) :: world_size, world_rank
+  integer(kind=INT32) :: ierr
+  type(MPI_Comm), parameter :: world = MPI_COMM_WORLD
+  ! GA - compiled with 64-bit INTEGER
+  logical :: ok
+  integer :: me, np
+  integer, parameter :: ndim = 1
+  integer :: dims(ndim)
+  integer :: chunk(ndim)
+  integer :: A, B, C
   ! problem definition
   integer(kind=INT32) ::  iterations, offset
-  integer(kind=INT64) ::  length
-  real(kind=REAL64), allocatable ::  A(:)
-  real(kind=REAL64), allocatable ::  B(:)
-  real(kind=REAL64), allocatable ::  C(:)
-  real(kind=REAL64) :: scalar
+  integer(kind=INT64) ::  length, max_mem
   integer(kind=INT64) :: bytes
+  real(kind=REAL64) :: scalar
   ! runtime variables
   integer(kind=INT64) :: i
   integer(kind=INT32) :: k
@@ -86,12 +100,13 @@ program main
   real(kind=REAL64) ::  t0, t1, nstream_time, avgtime
   real(kind=REAL64), parameter ::  epsilon=1.D-8
 
+  if (storage_size(length).ne.storage_size(me)) then
+    write(*,'(a50)') 'You must compile with 64-bit INTEGER!'
+    stop 1
+  endif
   ! ********************************************************************
   ! read and test input parameters
   ! ********************************************************************
-
-  write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a47)') 'Fortran Global Arrays STREAM triad: A = B + scalar * C'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -126,111 +141,84 @@ program main
   endif
 
   call mpi_init_thread(requested,provided)
+
+  ! ask GA to allocate enough memory for 4 vectors, just to be safe
+  max_mem = length * 4 * ( storage_size(scalar) / 8 )
   call ga_initialize_ltd(max_mem)
 
-  write(*,'(a,i12)') 'Number of GA procs   = ', ga_nnodes()
-  write(*,'(a,i12)') 'Number of iterations = ', iterations
-  write(*,'(a,i12)') 'Vector length        = ', length
-  write(*,'(a,i12)') 'Offset               = ', offset
+  me = ga_nodeid()
+  np = ga_nnodes()
+
+  call MPI_Comm_rank(world, world_rank)
+  call MPI_Comm_size(world, world_size)
+
+  if ((me.ne.world_rank).or.(np.ne.world_size)) then
+      write(*,'(a12,i8,i8)') 'rank=',me,world_rank
+      write(*,'(a12,i8,i8)') 'size=',me,world_size
+      call ga_error('MPI_COMM_WORLD is unsafe to use!!!',np)
+  endif
+
+  if (me.eq.0) then
+    write(*,'(a25)') 'Parallel Research Kernels'
+    write(*,'(a54)') 'Fortran Global Arrays STREAM triad: A = B + scalar * C'
+    write(*,'(a22,i12)') 'Number of GA procs   = ', np
+    write(*,'(a22,i12)') 'Number of iterations = ', iterations
+    write(*,'(a22,i12)') 'Vector length        = ', length
+    write(*,'(a22,i12)') 'Offset               = ', offset
+  endif
+
+  call ga_sync()
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(length), stat=err)
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
-    stop 1
-  endif
-
-  allocate( B(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
-
-  allocate( C(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of C returned ',err
-    stop 1
-  endif
+  t0 = 0
 
   scalar = 3
 
-  t0 = 0
+  dims(1)  = length
+  chunk(1) = -1
 
-#ifdef _OPENMP
-  !$omp parallel default(none)                           &
-  !$omp&  shared(A,B,C,t0,t1)                            &
-  !$omp&  firstprivate(length,iterations,offset,scalar)  &
-  !$omp&  private(i,k)
-#endif
+  ok = nga_create(MT_DBL, ndim, dims,'A', chunk, A)
+  if (.not.ok) then
+    call ga_error('allocation of A failed',100)
+  endif
 
-#if defined(_OPENMP)
-  !$omp do
-  do i=1,length
-    A(i) = 0
-    B(i) = 2
-    C(i) = 2
-  enddo
-  !$omp end do
-#elif 0
-  forall (i=1:length)
-    A(i) = 0
-    B(i) = 2
-    C(i) = 2
-  end forall
-#else
-  do concurrent (i=1:length)
-    A(i) = 0
-    B(i) = 2
-    C(i) = 2
-  enddo
-#endif
+  ok = ga_duplicate(A,B,'B')
+  if (.not.ok) then
+    call ga_error('duplication of A as B failed ',101)
+  endif
 
-  ! need this because otherwise no barrier between initialization
-  ! and iteration 0 (warmup), which will lead to incorrectness.
-  !$omp barrier
+  ok = ga_duplicate(B,C,'C')
+  if (.not.ok) then
+    call ga_error('duplication of B as C failed ',101)
+  endif
+
+  call ga_sync()
+
+  call ga_fill(A,0)
+  call ga_fill(B,2)
+  call ga_fill(C,2)
+
+  call ga_sync()
 
   do k=0,iterations
+
     ! start timer after a warmup iteration
     if (k.eq.1) then
-#ifdef _OPENMP
-    !$omp barrier
-    !$omp master
-    t0 = omp_get_wtime()
-    !$omp end master
-#else
-    t0 = prk_get_wtime()
-#endif
+        call ga_sync()
+        t0 = ga_wtime()
     endif
 
-#if defined(_OPENMP)
-    !$omp do
     do i=1,length
-      A(i) = A(i) + B(i) + scalar * C(i)
+   !   A(i) = A(i) + B(i) + scalar * C(i)
     enddo
-    !$omp end do
-#elif 0
-    forall (i=1:length)
-      A(i) = A(i) + B(i) + scalar * C(i)
-    end forall
-#else
-    do concurrent (i=1:length)
-      A(i) = A(i) + B(i) + scalar * C(i)
-    enddo
-#endif
+
   enddo ! iterations
 
-#ifdef _OPENMP
-  t1 = omp_get_wtime()
-#else
-  t1 = prk_get_wtime()
-#endif
-
-#ifdef _OPENMP
-  !$omp end parallel
-#endif
+  call ga_sync()
+  t1 = ga_wtime()
 
   nstream_time = t1 - t0
 
@@ -248,22 +236,23 @@ program main
 
   ar = ar * length
 
-  asum = 0
-#if defined(_OPENMP)
-  !$omp parallel do reduction(+:asum)
-  do i=1,length
-    asum = asum + abs(A(i))
-  enddo
-  !$omp end parallel do
-#else
-  do concurrent (i=1:length)
-    asum = asum + abs(A(i))
-  enddo
-#endif
+  call ga_norm1(A,asum)
+  call ga_sync()
 
-  deallocate( C )
-  deallocate( B )
-  deallocate( A )
+  ok = ga_destroy(A)
+  if (.not.ok) then
+      call ga_error('ga_destroy failed',201)
+  endif
+
+  ok = ga_destroy(B)
+  if (.not.ok) then
+      call ga_error('ga_destroy failed',202)
+  endif
+
+  ok = ga_destroy(C)
+  if (.not.ok) then
+      call ga_error('ga_destroy failed',203)
+  endif
 
   if (abs(asum-ar) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
@@ -279,6 +268,14 @@ program main
         'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
         'Avg time (s): ', avgtime
   endif
+
+  if (me.eq.0) then
+    write(*,'(a)') ! add an empty line
+  endif
+  call ga_sync()
+  call ga_summarize(.false.)
+  call ga_terminate()
+  call mpi_finalize()
 
 end program main
 

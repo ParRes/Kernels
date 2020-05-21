@@ -12,7 +12,7 @@ if [ ! -d "$TRAVIS_ROOT/ga" ]; then
     mkdir build
     cd build
     #../configure CC=mpicc --prefix=$TRAVIS_ROOT/ga
-    ../configure --with-mpi3 MPICC=mpiicc MPICXX=mpiicpc MPIFC=mpiifort MPIF77=mpiifort  --prefix=$TRAVIS_ROOT/ga && make -j8 install
+    ../configure --with-mpi3 MPICC=mpiicc MPICXX=mpiicpc MPIFC=mpiifort MPIF77=mpiifort --prefix=$TRAVIS_ROOT/ga && make -j8 install
     make
     make install
 else

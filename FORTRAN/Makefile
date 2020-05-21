@@ -85,7 +85,7 @@ dgemm-pretty: dgemm-pretty.F90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 %-ga: %-ga.F90
-	$(FC) $(FCFLAGS) $(GAFLAG) $< -o $@
+	$(FC) $(FCFLAGS) $< $(GAFLAG) -o $@
 
 %-coarray: %-coarray.F90
 	$(CAFC) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
