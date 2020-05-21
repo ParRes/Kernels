@@ -88,6 +88,9 @@ program main
   integer :: dims(ndim)
   integer :: chunk(ndim)
   integer :: A, B, C
+  real(kind=REAL64), parameter :: zero = 0.d0
+  real(kind=REAL64), parameter :: one  = 1.d0
+  real(kind=REAL64), parameter :: two  = 2.d0
   ! problem definition
   integer(kind=INT32) ::  iterations, offset
   integer(kind=INT64) ::  length, max_mem
@@ -98,7 +101,7 @@ program main
   integer(kind=INT32) :: k
   real(kind=REAL64) ::  asum, ar, br, cr, ref
   real(kind=REAL64) ::  t0, t1, nstream_time, avgtime
-  real(kind=REAL64), parameter ::  epsilon=1.D-8
+  real(kind=REAL64), parameter ::  epsilon=1.d-8
 
   if (storage_size(length).ne.storage_size(me)) then
     write(*,'(a50)') 'You must compile with 64-bit INTEGER!'
@@ -173,9 +176,9 @@ program main
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  t0 = 0
+  t0 = 0.0d0
 
-  scalar = 3
+  scalar = 3.0d0
 
   dims(1)  = length
   chunk(1) = -1
@@ -197,9 +200,9 @@ program main
 
   call ga_sync()
 
-  call ga_fill(A,0)
-  call ga_fill(B,2)
-  call ga_fill(C,2)
+  call ga_fill(A,zero)
+  call ga_fill(B,two)
+  call ga_fill(C,two)
 
   call ga_sync()
 
@@ -211,9 +214,9 @@ program main
         t0 = ga_wtime()
     endif
 
-    do i=1,length
-   !   A(i) = A(i) + B(i) + scalar * C(i)
-    enddo
+    ! A += B + scalar * C
+    call ga_add(one,A,one,B,A)     ! A = A + B
+    call ga_add(one,A,scalar,C,A)  ! A = A + scalar * C
 
   enddo ! iterations
 
@@ -226,10 +229,10 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  ar  = 0
-  br  = 2
-  cr  = 2
-  ref = 0
+  ar  = zero
+  br  = two
+  cr  = two
+  ref = zero
   do k=0,iterations
       ar = ar + br + scalar * cr;
   enddo
@@ -254,6 +257,8 @@ program main
       call ga_error('ga_destroy failed',203)
   endif
 
+  call ga_sync()
+
   if (abs(asum-ar) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
     write(*,'(a30,f30.15)') '       Expected checksum: ', ar
@@ -269,11 +274,15 @@ program main
         'Avg time (s): ', avgtime
   endif
 
+  call ga_sync()
+
+#ifdef PRK_GA_SUMMARY
   if (me.eq.0) then
     write(*,'(a)') ! add an empty line
   endif
-  call ga_sync()
   call ga_summarize(.false.)
+#endif
+
   call ga_terminate()
   call mpi_finalize()
 
