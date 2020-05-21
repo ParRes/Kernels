@@ -69,7 +69,7 @@ program main
   use mpi_f08
   implicit none
 #include 'global.fh'
-#include 'ga-mpi.fh'
+!#include 'ga-mpi.fh' ! unused
 #include 'mafdecls.fh'
   ! for argument parsing
   integer :: err
@@ -152,6 +152,12 @@ program main
   me = ga_nodeid()
   np = ga_nnodes()
 
+#if PRK_CHECK_GA_MPI
+  ! We do use MPI anywhere, but if we did, we would need to avoid MPI collectives
+  ! on the world communicator, because it is possible for that to be larger than
+  ! the GA world process group.  In this case, we need to get the MPI communicator
+  ! associated with GA world, but those routines assume MPI communicators are integers.
+
   call MPI_Comm_rank(world, world_rank)
   call MPI_Comm_size(world, world_size)
 
@@ -160,6 +166,7 @@ program main
       write(*,'(a12,i8,i8)') 'size=',me,world_size
       call ga_error('MPI_COMM_WORLD is unsafe to use!!!',np)
   endif
+#endif
 
   if (me.eq.0) then
     write(*,'(a25)') 'Parallel Research Kernels'
@@ -259,19 +266,21 @@ program main
 
   call ga_sync()
 
-  if (abs(asum-ar) .gt. epsilon) then
-    write(*,'(a35)') 'Failed Validation on output array'
-    write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-    write(*,'(a30,f30.15)') '       Observed checksum: ', asum
-    write(*,'(a35)')  'ERROR: solution did not validate'
-    stop 1
-  else
-    write(*,'(a17)') 'Solution validates'
-    avgtime = nstream_time/iterations;
-    bytes = 4 * int(length,INT64) * storage_size(A)/8
-    write(*,'(a12,f15.3,1x,a12,e15.6)')    &
-        'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
-        'Avg time (s): ', avgtime
+  if (me.eq.0) then
+    if (abs(asum-ar) .gt. epsilon) then
+      write(*,'(a35)') 'Failed Validation on output array'
+      write(*,'(a30,f30.15)') '       Expected checksum: ', ar
+      write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+      write(*,'(a35)')  'ERROR: solution did not validate'
+      stop 1
+    else
+      write(*,'(a17)') 'Solution validates'
+      avgtime = nstream_time/iterations;
+      bytes = 4 * int(length,INT64) * storage_size(scalar)/8
+      write(*,'(a12,f15.3,1x,a12,e15.6)')    &
+              'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
+              'Avg time (s): ', avgtime
+    endif
   endif
 
   call ga_sync()
