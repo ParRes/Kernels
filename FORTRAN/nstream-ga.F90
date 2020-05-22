@@ -58,8 +58,8 @@
 !          reported results should not be associated with Stream in
 !          external publications
 !
-!          Converted to C++11 by Jeff Hammond, November May 2017.
-!          Fortran by Jeff Hammond, ???
+!          Converted to C++11 by Jeff Hammond, 2017.
+!          Converted to Fortran by Jeff Hammond, 2017.
 !          Global Arrays by Jeff Hammond, May 2020.
 !
 ! *******************************************************************
@@ -93,8 +93,8 @@ program main
   real(kind=REAL64), parameter :: two  = 2.d0
   ! problem definition
   integer(kind=INT32) ::  iterations, offset
-  integer(kind=INT64) ::  length, max_mem
-  integer(kind=INT64) :: bytes
+  integer(kind=INT64) ::  length
+  integer(kind=INT64) :: bytes, max_mem
   real(kind=REAL64) :: scalar
   ! runtime variables
   integer(kind=INT64) :: i
@@ -273,6 +273,7 @@ program main
       write(*,'(a30,f30.15)') '       Observed checksum: ', asum
       write(*,'(a35)')  'ERROR: solution did not validate'
       stop 1
+      call ga_error('Answer wrong',911)
     else
       write(*,'(a17)') 'Solution validates'
       avgtime = nstream_time/iterations;
