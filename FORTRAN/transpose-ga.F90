@@ -49,55 +49,50 @@
 !
 ! HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 !          Converted to Fortran by Jeff Hammond, January 2015
+!          Global Arrays by Jeff Hammond, May 2020.
 ! *******************************************************************
-
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
 
 program main
   use iso_fortran_env
-#ifdef _OPENMP
-  use omp_lib
-#endif
+  use mpi_f08
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
+#include 'global.fh'
+!#include 'ga-mpi.fh' ! unused
+#include 'mafdecls.fh'
   ! for argument parsing
   integer :: err
   integer :: arglen
   character(len=32) :: argtmp
+  ! MPI - should always use 32-bit INTEGER
+  integer(kind=INT32), parameter :: requested = MPI_THREAD_SERIALIZED
+  integer(kind=INT32) :: provided
+  integer(kind=INT32) :: world_size, world_rank
+  integer(kind=INT32) :: ierr
+  type(MPI_Comm), parameter :: world = MPI_COMM_WORLD
+  ! GA - compiled with 64-bit INTEGER
+  logical :: ok
+  integer :: me, np
+  integer :: A, B, C
+  real(kind=REAL64), parameter :: zero = 0.d0
+  real(kind=REAL64), parameter :: one  = 1.d0
+  real(kind=REAL64), parameter :: two  = 2.d0
   ! problem definition
-  integer(kind=INT32) ::  iterations                ! number of times to do the transpose
-  integer(kind=INT32) ::  order                     ! order of a the matrix
-  real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
-  real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
-  integer(kind=INT64) ::  bytes                     ! combined size of matrices
+  integer(kind=INT32) ::  iterations
+  integer(kind=INT32) ::  order
+  integer(kind=INT64) ::  bytes, max_mem
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
-  integer(kind=INT32) ::  it, jt, tile_size
-  real(kind=REAL64) ::  abserr, addit, temp         ! squared error
-  real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
-  real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
+  real(kind=REAL64) ::  abserr, addit, temp
+  real(kind=REAL64) ::  t0, t1, trans_time, avgtime
+  real(kind=REAL64), parameter ::  epsilon=1.d-8
 
   ! ********************************************************************
   ! read and test input parameters
   ! ********************************************************************
 
-  write(*,'(a25)') 'Parallel Research Kernels'
-#ifdef _OPENMP
-  write(*,'(a40)') 'Fortran OpenMP Matrix transpose: B = A^T'
-#else
-  write(*,'(a40)') 'Fortran Serial Matrix transpose: B = A^T'
-#endif
-
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
+    write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order>'
     stop 1
   endif
 
@@ -117,170 +112,90 @@ program main
     stop 1
   endif
 
-  ! same default as the C implementation
-  tile_size = 32
-  if (command_argument_count().gt.2) then
-      call get_command_argument(3,argtmp,arglen,err)
-      if (err.eq.0) read(argtmp,'(i32)') tile_size
+  call mpi_init_thread(requested,provided)
+
+  ! ask GA to allocate enough memory for 3 matrices, just to be safe
+  max_mem = order * order * 3 * ( storage_size(zero) / 8 )
+  call ga_initialize_ltd(max_mem)
+
+  me = ga_nodeid()
+  np = ga_nnodes()
+
+#if PRK_CHECK_GA_MPI
+  ! We do use MPI anywhere, but if we did, we would need to avoid MPI collectives
+  ! on the world communicator, because it is possible for that to be larger than
+  ! the GA world process group.  In this case, we need to get the MPI communicator
+  ! associated with GA world, but those routines assume MPI communicators are integers.
+
+  call MPI_Comm_rank(world, world_rank)
+  call MPI_Comm_size(world, world_size)
+
+  if ((me.ne.world_rank).or.(np.ne.world_size)) then
+      write(*,'(a12,i8,i8)') 'rank=',me,world_rank
+      write(*,'(a12,i8,i8)') 'size=',me,world_size
+      call ga_error('MPI_COMM_WORLD is unsafe to use!!!',np)
   endif
-  if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    write(*,'(a20,i5,a22,i5)') 'WARNING: tile_size ',tile_size,&
-                           ' must be >= 1 and <= ',order
-    tile_size = order ! no tiling
+#endif
+
+  if (me.eq.0) then
+    write(*,'(a25)') 'Parallel Research Kernels'
+    write(*,'(a44)') 'Fortran Global Arrays Matrix transpose: B = A^T'
+    write(*,'(a22,i12)') 'Number of GA procs   = ', np
+    write(*,'(a,i8)') 'Number of iterations    = ', iterations
+    write(*,'(a,i8)') 'Matrix order            = ', order
   endif
+
+  call ga_sync()
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(order,order), stat=err)
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
-    stop 1
+  t0 = 0.0d0
+
+  ok = ga_create(MT_DBL, order, order,'A',-1,-1, A)
+  if (.not.ok) then
+    call ga_error('allocation of A failed',100)
   endif
 
-  allocate( B(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
+  ok = ga_duplicate(A,B,'B')
+  if (.not.ok) then
+    call ga_error('duplication of A as B failed ',101)
   endif
+  call ga_zero(B)
+  call ga_sync()
 
-#ifdef _OPENMP
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
-#endif
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix order         = ', order
-  write(*,'(a,i8)') 'Tile size            = ', tile_size
+  call ga_distribution(g_a, iproc, ilo, ihi, jlo, jhi)
 
-  t0 = 0
 
-#ifdef _OPENMP
-  !$omp parallel default(none)                     &
-  !$omp&  shared(A,B,t0,t1)                        &
-  !$omp&  firstprivate(order,iterations,tile_size) &
-  !$omp&  private(i,j,it,jt,k)
-#endif
 
-  if (tile_size.lt.order) then
-#if defined(_OPENMP)
-#if defined(__INTEL_COMPILER) && defined(__INTEL_COMPILER_BUILD_DATE) \
- && (__INTEL_COMPILER==1600) && (__INTEL_COMPILER_BUILD_DATE<20160101)
-#warning Disabling collapse because of IPS6000153696
-    !$omp do
-#else
-    !$omp do collapse(2)
-#endif
-    do jt=1,order,tile_size
-      do it=1,order,tile_size
-#else
-    do concurrent (jt=1:order:tile_size)
-      do concurrent (it=1:order:tile_size)
-#endif
-        do j=jt,min(order,jt+tile_size-1)
-          do i=it,min(order,it+tile_size-1)
-              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-              B(i,j) = 0.0
-          enddo
-        enddo
-      enddo
-    enddo
-#ifdef _OPENMP
-    !$omp end do
-#endif
-  else
-#if defined(_OPENMP)
-    !$omp do collapse(2)
     do j=1,order
       do i=1,order
-#else
-    do concurrent (j=1:order)
-      do concurrent (i=1:order)
-#endif
-        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-        B(i,j) = 0.0
+!        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
       enddo
     enddo
-#ifdef _OPENMP
-    !$omp end do
-#endif
-  endif
 
-  ! need this because otherwise no barrier between initialization
-  ! and iteration 0 (warmup), which will lead to incorrectness.
-  !$omp barrier
 
   do k=0,iterations
 
     ! start timer after a warmup iteration
     if (k.eq.1) then
-#ifdef _OPENMP
-      !$omp barrier
-      !$omp master
-#endif
-      t0 = prk_get_wtime()
-#ifdef _OPENMP
-      !$omp end master
-#endif
+        call ga_sync()
+        t0 = ga_wtime()
     endif
 
     ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
-    if (tile_size.lt.order) then
-#if defined(_OPENMP)
-#if defined(__INTEL_COMPILER) && defined(__INTEL_COMPILER_BUILD_DATE) \
- && (__INTEL_COMPILER==1600) && (__INTEL_COMPILER_BUILD_DATE<20160101)
-      !$omp do
-#else
-      !$omp do collapse(2)
-#endif
-      do jt=1,order,tile_size
-        do it=1,order,tile_size
-#else
-      do concurrent (jt=1:order:tile_size)
-        do concurrent (it=1:order:tile_size)
-#endif
-          do j=jt,min(order,jt+tile_size-1)
-            do i=it,min(order,it+tile_size-1)
-              B(j,i) = B(j,i) + A(i,j)
-              A(i,j) = A(i,j) + 1.0
-            enddo
-          enddo
-        enddo
+    do j=1,order
+      do i=1,order
+!        B(j,i) = B(j,i) + A(i,j)
+!        A(i,j) = A(i,j) + one
       enddo
-#ifdef _OPENMP
-      !$omp end do
-#endif
-    else
-#if defined(_OPENMP)
-      !$omp do collapse(2)
-      do j=1,order
-        do i=1,order
-#else
-      do concurrent (j=1:order)
-        do concurrent (i=1:order)
-#endif
-          B(j,i) = B(j,i) + A(i,j)
-          A(i,j) = A(i,j) + 1.0
-        enddo
-      enddo
-#ifdef _OPENMP
-      !$omp end do
-#endif
-    endif
+    enddo
 
   enddo ! iterations
 
-#ifdef _OPENMP
-  !$omp barrier
-  !$omp master
-#endif
-  t1 = prk_get_wtime()
-#ifdef _OPENMP
-  !$omp end master
-#endif
-
-#ifdef _OPENMP
-  !$omp end parallel
-#endif
+  call ga_sync()
+  t1 = ga_wtime()
 
   trans_time = t1 - t0
 
@@ -291,42 +206,51 @@ program main
   abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
-#if defined(_OPENMP)
-  !$omp parallel do collapse(2)                                       &
-  !$omp& default(none)                                                &
-  !$omp& shared(B)                                                   &
-  !$omp& firstprivate(order,iterations,addit)                        &
-  !$omp& private(i,j,temp)                                           &
-  !$omp& reduction(+:abserr)
   do j=1,order
     do i=1,order
-#else
-  do concurrent (j=1:order)
-    do concurrent (i=1:order)
-#endif
       temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
            * real(iterations+1,REAL64)
-      abserr = abserr + abs(B(i,j) - (temp+addit))
+!      abserr = abserr + abs(B(i,j) - (temp+addit))
     enddo
   enddo
-#if defined(_OPENMP)
-  !$omp end parallel do
+
+  ok = ga_destroy(A)
+  if (.not.ok) then
+      call ga_error('ga_destroy failed',201)
+  endif
+
+  ok = ga_destroy(B)
+  if (.not.ok) then
+      call ga_error('ga_destroy failed',202)
+  endif
+
+  call ga_sync()
+
+  if (me.eq.0) then
+    if (abserr .lt. epsilon) then
+      write(*,'(a)') 'Solution validates'
+      avgtime = trans_time/iterations
+      bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(one)/8
+      write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',(1.d-6*bytes)/avgtime, &
+             ' Avg time (s): ', avgtime
+    else
+      write(*,'(a,f30.15,a,f30.15)') 'ERROR: Aggregate squared error ',abserr, &
+             'exceeds threshold ',epsilon
+      call ga_error('Answer wrong',911)
+    endif
+  endif
+
+  call ga_sync()
+
+#ifdef PRK_GA_SUMMARY
+  if (me.eq.0) then
+    write(*,'(a)') ! add an empty line
+  endif
+  call ga_summarize(.false.)
 #endif
 
-  deallocate( B )
-  deallocate( A )
-
-  if (abserr .lt. epsilon) then
-    write(*,'(a)') 'Solution validates'
-    avgtime = trans_time/iterations
-    bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
-    write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',(1.d-6*bytes)/avgtime, &
-           ' Avg time (s): ', avgtime
-  else
-    write(*,'(a,f30.15,a,f30.15)') 'ERROR: Aggregate squared error ',abserr, &
-           'exceeds threshold ',epsilon
-    stop 1
-  endif
+  call ga_terminate()
+  call mpi_finalize()
 
 end program main
 
