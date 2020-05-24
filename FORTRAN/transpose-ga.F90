@@ -74,9 +74,7 @@ program main
   integer :: me, np
   integer :: A, B, AT
   integer :: mylo(2),myhi(2)
-  real(kind=REAL64), parameter :: zero = 0.d0
   real(kind=REAL64), parameter :: one  = 1.d0
-  real(kind=REAL64), parameter :: two  = 2.d0
   real(kind=REAL64), allocatable ::  T(:,:)
   ! problem definition
   integer(kind=INT32) ::  iterations
@@ -118,7 +116,7 @@ program main
 
   !call ga_initialize()
   ! ask GA to allocate enough memory for 4 matrices, just to be safe
-  max_mem = order * order * 4 * ( storage_size(zero) / 8 )
+  max_mem = order * order * 4 * ( storage_size(one) / 8 )
   call ga_initialize_ltd(max_mem)
 
   me = ga_nodeid()
