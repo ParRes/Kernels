@@ -283,13 +283,16 @@ FORTRAN/dgemm-pretty
 FORTRAN/dgemm-openmp
 FORTRAN/dgemm-openmp-target
 FORTRAN/dgemm
+FORTRAN/dgemm-ga
 FORTRAN/nstream
+FORTRAN/nstream-ga
 FORTRAN/nstream-openmp
 FORTRAN/nstream-pretty
 FORTRAN/nstream-taskloop-openmp
 FORTRAN/nstream-openmp-target
 FORTRAN/nstream-ornlacc
 FORTRAN/p2p
+FORTRAN/p2p-ga
 FORTRAN/p2p-innerloop
 FORTRAN/p2p-coarray
 FORTRAN/p2p-openmp-target
@@ -300,6 +303,7 @@ FORTRAN/p2p-datapar-openmp
 FORTRAN/p2p-innerloop-ornlacc
 FORTRAN/p2p-ornlacc
 FORTRAN/stencil
+FORTRAN/stencil-ga
 FORTRAN/stencil-coarray
 FORTRAN/stencil-openmp
 FORTRAN/stencil-openmp-target
@@ -308,6 +312,7 @@ FORTRAN/stencil-ornlacc
 FORTRAN/stencil-taskloop-openmp
 FORTRAN/stencil-ornlacc
 FORTRAN/transpose
+FORTRAN/transpose-ga
 FORTRAN/transpose-coarray
 FORTRAN/transpose-openmp
 FORTRAN/transpose-openmp-target
