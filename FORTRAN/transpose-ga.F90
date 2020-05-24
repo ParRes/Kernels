@@ -57,8 +57,8 @@ program main
   use mpi_f08
   implicit none
 #include 'global.fh'
-!#include 'ga-mpi.fh' ! unused
 #include 'mafdecls.fh'
+!#include 'ga-mpi.fh' ! unused
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -72,16 +72,18 @@ program main
   ! GA - compiled with 64-bit INTEGER
   logical :: ok
   integer :: me, np
-  integer :: A, B, C
+  integer :: A, B, AT
+  integer :: mylo(2),myhi(2)
   real(kind=REAL64), parameter :: zero = 0.d0
   real(kind=REAL64), parameter :: one  = 1.d0
   real(kind=REAL64), parameter :: two  = 2.d0
+  real(kind=REAL64), allocatable ::  T(:,:)
   ! problem definition
   integer(kind=INT32) ::  iterations
   integer(kind=INT32) ::  order
   integer(kind=INT64) ::  bytes, max_mem
   ! runtime variables
-  integer(kind=INT32) ::  i, j, k
+  integer(kind=INT32) ::  i, j, k, ii, jj
   real(kind=REAL64) ::  abserr, addit, temp
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime
   real(kind=REAL64), parameter ::  epsilon=1.d-8
@@ -114,12 +116,15 @@ program main
 
   call mpi_init_thread(requested,provided)
 
-  ! ask GA to allocate enough memory for 3 matrices, just to be safe
-  max_mem = order * order * 3 * ( storage_size(zero) / 8 )
+  !call ga_initialize()
+  ! ask GA to allocate enough memory for 4 matrices, just to be safe
+  max_mem = order * order * 4 * ( storage_size(zero) / 8 )
   call ga_initialize_ltd(max_mem)
 
   me = ga_nodeid()
   np = ga_nnodes()
+
+  !if (me.eq.0) print*,'max_mem=',max_mem
 
 #if PRK_CHECK_GA_MPI
   ! We do use MPI anywhere, but if we did, we would need to avoid MPI collectives
@@ -139,7 +144,7 @@ program main
 
   if (me.eq.0) then
     write(*,'(a25)') 'Parallel Research Kernels'
-    write(*,'(a44)') 'Fortran Global Arrays Matrix transpose: B = A^T'
+    write(*,'(a47)') 'Fortran Global Arrays Matrix transpose: B = A^T'
     write(*,'(a22,i12)') 'Number of GA procs   = ', np
     write(*,'(a,i8)') 'Number of iterations    = ', iterations
     write(*,'(a,i8)') 'Matrix order            = ', order
@@ -153,7 +158,9 @@ program main
 
   t0 = 0.0d0
 
-  ok = ga_create(MT_DBL, order, order,'A',-1,-1, A)
+  !print*,'order=',order
+  ! must cast int32 order to integer...
+  ok = ga_create(MT_DBL, int(order), int(order),'A',-1,-1, A)
   if (.not.ok) then
     call ga_error('allocation of A failed',100)
   endif
@@ -163,18 +170,40 @@ program main
     call ga_error('duplication of A as B failed ',101)
   endif
   call ga_zero(B)
+
+  ok = ga_duplicate(A,AT,'A^T')
+  if (.not.ok) then
+    call ga_error('duplication of A as A^T failed ',102)
+  endif
+  call ga_zero(AT)
+
   call ga_sync()
 
-  call ga_distribution(g_a, iproc, ilo, ihi, jlo, jhi)
-
-
-
-    do j=1,order
-      do i=1,order
-!        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-      enddo
+  call ga_distribution( A, me, mylo(1), myhi(1), mylo(2), myhi(2) )
+  !write(*,'(a7,5i6)') 'local:',me,mylo(1), myhi(1), mylo(2), myhi(2)
+  allocate( T(myhi(1)-mylo(1)+1,myhi(2)-mylo(2)+1), stat=err)
+  if (err .ne. 0) then
+    call ga_error('allocation of T failed',err)
+  endif
+  do j=mylo(2),myhi(2)
+    jj = j-mylo(2)+1
+    do i=mylo(1),myhi(1)
+      ii = i-mylo(1)+1
+      T(ii,jj) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
     enddo
+  enddo
+  !write(*,'(a8,5i6)') 'ga_put:',mylo(1), myhi(1), mylo(2), myhi(2), myhi(2)-mylo(2)+1
+  call ga_put( A, mylo(1), myhi(1), mylo(2), myhi(2), T, myhi(1)-mylo(1)+1 )
+  call ga_sync()
 
+  ok = ma_init(MT_DBL, order*order, 0)
+  if (.not.ok) then
+    call ga_error('ma_init failed', order)
+  endif
+
+  if (order.lt.10) then
+    call ga_print(A)
+  endif
 
   do k=0,iterations
 
@@ -184,13 +213,11 @@ program main
         t0 = ga_wtime()
     endif
 
-    ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
-    do j=1,order
-      do i=1,order
-!        B(j,i) = B(j,i) + A(i,j)
-!        A(i,j) = A(i,j) + one
-      enddo
-    enddo
+    ! B += A^T
+    ! A += 1
+    call ga_transpose(A,AT)      ! C  = A^T
+    call ga_add(one,B,one,AT,B)  ! B += A^T
+    call ga_add_constant(A, one) ! A += 1
 
   enddo ! iterations
 
@@ -203,25 +230,44 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
+  if (order.lt.10) then
+    call ga_print(A)
+    call ga_print(AT)
+    call ga_print(B)
+  endif
+
+  !write(*,'(a8,5i6)') 'ga_get:',mylo(1), myhi(1), mylo(2), myhi(2), myhi(2)-mylo(2)+1
+  call ga_get( B, mylo(1), myhi(1), mylo(2), myhi(2), T, myhi(1)-mylo(1)+1 )
+
   abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
-  do j=1,order
-    do i=1,order
+  do j=mylo(2),myhi(2)
+    jj = j-mylo(2)+1
+    do i=mylo(1),myhi(1)
+      ii = i-mylo(1)+1
       temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
            * real(iterations+1,REAL64)
-!      abserr = abserr + abs(B(i,j) - (temp+addit))
+      abserr = abserr + abs(T(ii,jj) - (temp+addit))
     enddo
   enddo
+  call ga_dgop(MT_DBL, abserr, 1, '+')
 
-  ok = ga_destroy(A)
+  deallocate( T )
+
+  ok = ga_destroy(AT)
   if (.not.ok) then
       call ga_error('ga_destroy failed',201)
   endif
 
-  ok = ga_destroy(B)
+  ok = ga_destroy(A)
   if (.not.ok) then
       call ga_error('ga_destroy failed',202)
+  endif
+
+  ok = ga_destroy(B)
+  if (.not.ok) then
+      call ga_error('ga_destroy failed',203)
   endif
 
   call ga_sync()
@@ -243,10 +289,11 @@ program main
   call ga_sync()
 
 #ifdef PRK_GA_SUMMARY
-  if (me.eq.0) then
-    write(*,'(a)') ! add an empty line
-  endif
+  if (me.eq.0) write(*,'(a)') ! add an empty line
   call ga_summarize(.false.)
+  if (me.eq.0) then
+    call ma_print_stats()
+  endif
 #endif
 
   call ga_terminate()
