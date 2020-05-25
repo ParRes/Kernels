@@ -80,7 +80,7 @@ program main
   integer(kind=INT32) :: i,j,k
   real(kind=REAL64) ::  checksum, reference, residuum
   real(kind=REAL64) ::  t0, t1, dgemm_time, avgtime ! timing parameters
-  real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
+  real(kind=REAL64), parameter ::  epsilon=1.0d-8   ! error tolerance
 
   ! ********************************************************************
   ! read and test input parameters
@@ -138,8 +138,9 @@ program main
 
   ! Fill the original matrix
   do i=1, order
-    A(:,i) = i-1
-    B(:,i) = i-1
+    A(:,i) = real(i-1,REAL64)
+    B(:,i) = real(i-1,REAL64)
+    C(:,i) = real(0,REAL64)
   enddo
   C = 0
 
@@ -157,8 +158,8 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  deallocate( B )
   deallocate( A )
+  deallocate( B )
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
@@ -168,6 +169,8 @@ program main
       checksum = checksum + C(i,j)
     enddo
   enddo
+
+  deallocate( C )
 
   residuum = abs(checksum-reference)/reference
   if (residuum .lt. epsilon) then
@@ -179,11 +182,8 @@ program main
   else
     write(*,'(a,e30.15)') 'Reference checksum = ', reference
     write(*,'(a,e30.15)') 'Actual checksum    = ', checksum
-    print*,C
     stop 1
   endif
-
-  deallocate( C )
 
 end program main
 
