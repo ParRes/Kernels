@@ -214,8 +214,10 @@ program main
     ! B += A^T
     ! A += 1
     call ga_transpose(A,AT)      ! C  = A^T
+    call ga_sync()               ! ga_tranpose does not synchronize after remote updates
     call ga_add(one,B,one,AT,B)  ! B += A^T
     call ga_add_constant(A, one) ! A += 1
+    !call ga_sync()               ! ga_add and ga_add_constant synchronize
 
   enddo ! iterations
 
