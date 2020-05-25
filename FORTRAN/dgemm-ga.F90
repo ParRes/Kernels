@@ -143,7 +143,7 @@ program main
 
   if (me.eq.0) then
     write(*,'(a25)') 'Parallel Research Kernels'
-    write(*,'(a47)') 'Fortran Global Arrays Matrix transpose: B = A^T'
+    write(*,'(a68)') 'Fortran Global Arrays Dense matrix-matrix multiplication: C += A x B'
     write(*,'(a22,i12)') 'Number of GA procs   = ', np
     write(*,'(a,i8)') 'Number of iterations    = ', iterations
     write(*,'(a,i8)') 'Matrix order            = ', order
@@ -171,16 +171,16 @@ program main
   endif
   call ga_zero(B)
 
-  ok = ga_duplicate(A,C,'A^T')
+  ok = ga_duplicate(A,C,'C')
   if (.not.ok) then
-    call ga_error('duplication of A as A^T failed ',102)
+    call ga_error('duplication of A as C failed ',102)
   endif
   call ga_zero(C)
 
   call ga_sync()
 
   call ga_distribution( A, me, mylo(1), myhi(1), mylo(2), myhi(2) )
-  write(*,'(a7,5i6)') 'local:',me,mylo(1), myhi(1), mylo(2), myhi(2)
+  !write(*,'(a7,5i6)') 'local:',me,mylo(1), myhi(1), mylo(2), myhi(2)
   allocate( T(myhi(1)-mylo(1)+1,myhi(2)-mylo(2)+1), stat=err)
   if (err .ne. 0) then
     call ga_error('allocation of T failed',err)
@@ -192,7 +192,7 @@ program main
       T(ii,jj) = i-1
     enddo
   enddo
-  write(*,'(a8,5i6)') 'ga_put:',mylo(1), myhi(1), mylo(2), myhi(2), myhi(2)-mylo(2)+1
+  !write(*,'(a8,5i6)') 'ga_put:',mylo(1), myhi(1), mylo(2), myhi(2), myhi(2)-mylo(2)+1
   call ga_put( A, mylo(1), myhi(1), mylo(2), myhi(2), T, myhi(1)-mylo(1)+1 )
   call ga_put( B, mylo(1), myhi(1), mylo(2), myhi(2), T, myhi(1)-mylo(1)+1 )
   call ga_sync()
@@ -228,14 +228,8 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  if (order.lt.10) then
-    call ga_print(A)
-    call ga_print(C)
-    call ga_print(B)
-  endif
-
   !write(*,'(a8,5i6)') 'ga_get:',mylo(1), myhi(1), mylo(2), myhi(2), myhi(2)-mylo(2)+1
-  call ga_get( B, mylo(1), myhi(1), mylo(2), myhi(2), T, myhi(1)-mylo(1)+1 )
+  call ga_get( C, mylo(1), myhi(1), mylo(2), myhi(2), T, myhi(1)-mylo(1)+1 )
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
