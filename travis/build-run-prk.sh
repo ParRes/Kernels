@@ -315,16 +315,16 @@ case "$PRK_TARGET" in
 
         # C++11 with CBLAS
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-            echo "CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions" >> common/make.defs
+            echo "CBLASFLAG=-DACCELERATE -framework Accelerate -flax-conversions" >> common/make.defs
             ${MAKE} -C $PRK_TARGET_PATH transpose-cblas dgemm-cblas
             $PRK_TARGET_PATH/transpose-cblas    10 1024
             $PRK_TARGET_PATH/dgemm-cblas        10 400
         fi
 
         # C++11 native parallelism
-        ${MAKE} -C $PRK_TARGET_PATH transpose-vector-thread transpose-vector-async
-        $PRK_TARGET_PATH/transpose-vector-thread 10 1024 512 32
-        $PRK_TARGET_PATH/transpose-vector-async  10 1024 512 32
+        ${MAKE} -C $PRK_TARGET_PATH transpose-thread transpose-async
+        $PRK_TARGET_PATH/transpose-thread 10 1024 512 32
+        $PRK_TARGET_PATH/transpose-async  10 1024 512 32
 
         # C++11 with OpenMP
         export OMP_NUM_THREADS=2
@@ -360,9 +360,9 @@ case "$PRK_TARGET" in
                 done
                 # ORNL-ACC - do not test in Travis CI because GCC-5 is too old
                 #echo "ORNLACCFLAG=-fopenacc" >> common/make.defs
-                #${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-ornlacc
-                #$PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024
-                #$PRK_TARGET_PATH/p2p-hyperplane-vector-ornlacc     10 1024 64
+                #${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-ornlacc
+                #$PRK_TARGET_PATH/p2p-hyperplane-ornlacc     10 1024
+                #$PRK_TARGET_PATH/p2p-hyperplane-ornlacc     10 1024 64
                 ;;
             clang)
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
@@ -420,13 +420,13 @@ case "$PRK_TARGET" in
         # C++11 with rangefor and Boost.Ranges
         #if [ ! "${CC}" = "gcc" ] && [ ! "${TRAVIS_OS_NAME}" = "linux" ] ; then
         ${MAKE} -C $PRK_TARGET_PATH rangefor
-        $PRK_TARGET_PATH/stencil-vector-rangefor     10 1000
-        $PRK_TARGET_PATH/transpose-vector-rangefor   10 1024 32
-        $PRK_TARGET_PATH/nstream-vector-rangefor     10 16777216 32
+        $PRK_TARGET_PATH/stencil-rangefor     10 1000
+        $PRK_TARGET_PATH/transpose-rangefor   10 1024 32
+        $PRK_TARGET_PATH/nstream-rangefor     10 16777216 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
-                $PRK_TARGET_PATH/stencil-vector-rangefor 10 200 20 $s $r
+                $PRK_TARGET_PATH/stencil-rangefor 10 200 20 $s $r
             done
         done
         #fi
@@ -446,32 +446,32 @@ case "$PRK_TARGET" in
                 export LD_LIBRARY_PATH=${TBBROOT}/lib:${LD_LIBRARY_PATH}
                 ;;
         esac
-        ${MAKE} -C $PRK_TARGET_PATH p2p-innerloop-vector-tbb p2p-hyperplane-vector-tbb p2p-tasks-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb
-        $PRK_TARGET_PATH/p2p-innerloop-vector-tbb     10 1024
-        $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 1
-        $PRK_TARGET_PATH/p2p-hyperplane-vector-tbb    10 1024 32
+        ${MAKE} -C $PRK_TARGET_PATH p2p-innerloop-tbb p2p-hyperplane-tbb p2p-tasks-tbb stencil-tbb transpose-tbb nstream-tbb
+        $PRK_TARGET_PATH/p2p-innerloop-tbb     10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane-tbb    10 1024 1
+        $PRK_TARGET_PATH/p2p-hyperplane-tbb    10 1024 32
         $PRK_TARGET_PATH/p2p-tasks-tbb                10 1024 1024 32 32
-        $PRK_TARGET_PATH/stencil-vector-tbb           10 1000
-        $PRK_TARGET_PATH/transpose-vector-tbb         10 1024 32
-        $PRK_TARGET_PATH/nstream-vector-tbb           10 16777216 32
+        $PRK_TARGET_PATH/stencil-tbb           10 1000
+        $PRK_TARGET_PATH/transpose-tbb         10 1024 32
+        $PRK_TARGET_PATH/nstream-tbb           10 16777216 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
-                $PRK_TARGET_PATH/stencil-vector-tbb 10 200 20 $s $r
+                $PRK_TARGET_PATH/stencil-tbb 10 200 20 $s $r
             done
         done
 
         # C++11 with STL
-        ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-stl stencil-vector-stl transpose-vector-stl nstream-vector-stl
-        $PRK_TARGET_PATH/p2p-hyperplane-vector-stl    10 1024 1
-        $PRK_TARGET_PATH/p2p-hyperplane-vector-stl    10 1024 32
-        $PRK_TARGET_PATH/stencil-vector-stl           10 1000
-        $PRK_TARGET_PATH/transpose-vector-stl         10 1024 32
-        $PRK_TARGET_PATH/nstream-vector-stl           10 16777216 32
+        ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-stl stencil-stl transpose-stl nstream-stl
+        $PRK_TARGET_PATH/p2p-hyperplane-stl    10 1024 1
+        $PRK_TARGET_PATH/p2p-hyperplane-stl    10 1024 32
+        $PRK_TARGET_PATH/stencil-stl           10 1000
+        $PRK_TARGET_PATH/transpose-stl         10 1024 32
+        $PRK_TARGET_PATH/nstream-stl           10 16777216 32
         #echo "Test stencil code generator"
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
-                $PRK_TARGET_PATH/stencil-vector-stl 10 200 20 $s $r
+                $PRK_TARGET_PATH/stencil-stl 10 200 20 $s $r
             done
         done
 
@@ -483,16 +483,16 @@ case "$PRK_TARGET" in
                 # omp.h not found with clang-3.9 - just work around instead of fixing.
                 echo "PSTLFLAG+=-fopenmp" >> common/make.defs
             fi
-            ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-vector-pstl stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
-            $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 1
-            $PRK_TARGET_PATH/p2p-hyperplane-vector-pstl    10 1024 32
-            $PRK_TARGET_PATH/stencil-vector-pstl           10 1000
-            $PRK_TARGET_PATH/transpose-vector-pstl         10 1024 32
-            $PRK_TARGET_PATH/nstream-vector-pstl           10 16777216 32
+            ${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-pstl stencil-pstl transpose-pstl nstream-pstl
+            $PRK_TARGET_PATH/p2p-hyperplane-pstl    10 1024 1
+            $PRK_TARGET_PATH/p2p-hyperplane-pstl    10 1024 32
+            $PRK_TARGET_PATH/stencil-pstl           10 1000
+            $PRK_TARGET_PATH/transpose-pstl         10 1024 32
+            $PRK_TARGET_PATH/nstream-pstl           10 16777216 32
             #echo "Test stencil code generator"
             for s in star grid ; do
                 for r in 1 2 3 4 5 ; do
-                    $PRK_TARGET_PATH/stencil-vector-pstl 10 200 20 $s $r
+                    $PRK_TARGET_PATH/stencil-pstl 10 200 20 $s $r
                 done
             done
         fi
@@ -522,8 +522,8 @@ case "$PRK_TARGET" in
         # (2) Boost.Compute is not available from APT.
         # If we ever address 1, we need to enable the Boost.Compute install for Linux.
         #if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
-        #    ${MAKE} -C $PRK_TARGET_PATH nstream-vector-boost-compute
-        #    $PRK_TARGET_PATH/nstream-vector-boost-compute     10 16777216 32
+        #    ${MAKE} -C $PRK_TARGET_PATH nstream-boost-compute
+        #    $PRK_TARGET_PATH/nstream-boost-compute     10 16777216 32
         #fi
 
         # C++11 with Kokkos, RAJA
@@ -543,8 +543,8 @@ case "$PRK_TARGET" in
 
         # RAJA
         if [ 0 = 1 ] ; then
-        ${MAKE} -C $PRK_TARGET_PATH p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja \
-                                 p2p-raja stencil-raja transpose-raja nstream-raja
+        ${MAKE} -C $PRK_TARGET_PATH p2p-raja stencil-raja transpose-raja nstream-raja \
+                                    p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja
         # New (Views)
         $PRK_TARGET_PATH/p2p-raja                10 1024 1024
         $PRK_TARGET_PATH/stencil-raja            10 1000
@@ -559,7 +559,7 @@ case "$PRK_TARGET" in
           for t in y n ; do
            for n in y n ; do
             for p in no ij ji ; do
-             $PRK_TARGET_PATH/transpose-vector-raja 4 200 nested=$n for=$f simd=$s tiled=$t permute=$p
+             $PRK_TARGET_PATH/transpose-raja 4 200 nested=$n for=$f simd=$s tiled=$t permute=$p
             done
            done
           done
@@ -568,8 +568,8 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/nstream-vector-raja     10 16777216 32
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
-                $PRK_TARGET_PATH/stencil-vector-raja 10 200 20 $s $r
                 $PRK_TARGET_PATH/stencil-raja        10 200 20 $s $r
+                $PRK_TARGET_PATH/stencil-vector-raja 10 200 20 $s $r
             done
         done
         fi
