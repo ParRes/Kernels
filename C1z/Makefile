@@ -57,6 +57,8 @@ openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp stencil-openmp transpose
 
 mpi: nstream-mpi
 
+petsc: nstream-petsc
+
 memkind: nstream-memkind nstream-memkind-openmp
 
 mmap: nstream-mmap nstream-mmap-openmp
@@ -82,7 +84,10 @@ transpose: transpose-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 %-mpi: %-mpi.c prk_util.h
-	$(MPICC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+	$(CC) $(CFLAGS) $(MPIINC) $< $(MPILIB) $(EXTRA_CLIBS) -o $@
+
+%-petsc: %-petsc.c prk_util.h
+	$(CC) $(CFLAGS) $(MPIINC) $< $(PETSCFLAG) $(MPILIB) $(EXTRA_CLIBS) -o $@
 
 %-memkind: %-memkind.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) $(MEMKINDFLAGS) -o $@
@@ -133,6 +138,7 @@ clean:
 	-rm -f nstream p2p p2p-hyperplane stencil transpose
 	-rm -f *-openmp
 	-rm -f *-mpi
+	-rm -f *-petsc
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-cilk
