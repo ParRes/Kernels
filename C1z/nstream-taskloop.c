@@ -90,10 +90,10 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  // length of a the matrix
+  // length of a the vector
   size_t length = atol(argv[2]);
   if (length <= 0) {
-    printf("ERROR: Matrix length must be greater than 0\n");
+    printf("ERROR: Vector length must be greater than 0\n");
     return 1;
   }
 
