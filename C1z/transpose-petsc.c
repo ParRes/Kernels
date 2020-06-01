@@ -124,13 +124,14 @@ int main(int argc, char * argv[])
   PetscReal three = 3;
 
   Mat A;
+  Mat AT;
   Mat B;
 
   ierr = MatCreateDense(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, order, order, NULL, &A); CHKERRQ(ierr);
   //ierr = MatSetFromOptions(A); CHKERRQ(ierr);
   //ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,order,order); CHKERRQ(ierr);
-
   ierr = MatDuplicate(A,MAT_DO_NOT_COPY_VALUES,&B); CHKERRQ(ierr);
+  ierr = MatDuplicate(A,MAT_DO_NOT_COPY_VALUES,&AT); CHKERRQ(ierr);
 
   // A[i,j] = (i*order+j);
   ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
@@ -152,8 +153,6 @@ int main(int argc, char * argv[])
   }
   ierr = MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
 
-  ierr = MatDuplicate(A,MAT_DO_NOT_COPY_VALUES,&B); CHKERRQ(ierr);
-
   PetscLogEvent prk_event;
   PetscLogEventRegister("PRK transpose",0,&prk_event);
 
@@ -165,11 +164,9 @@ int main(int argc, char * argv[])
         ierr = PetscLogEventBegin(prk_event,0,0,0,0); CHKERRQ(ierr);
     }
 
-    Mat AT;
     // create transpose view of A
-    ierr = MatDuplicate(A,MAT_DO_NOT_COPY_VALUES,&AT); CHKERRQ(ierr);
     ierr = MatAssemblyBegin(AT, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatCreateTranspose(A, &AT); CHKERRQ(ierr);
+    ierr = MatTranspose(A, MAT_REUSE_MATRIX, &AT); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(AT, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     // Y+=a*X
     ierr = MatAXPY(B, one, AT, SAME_NONZERO_PATTERN); CHKERRQ(ierr);
@@ -214,6 +211,7 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+  ierr = MatDestroy(&AT); CHKERRQ(ierr);
   ierr = MatDestroy(&A); CHKERRQ(ierr);
   ierr = MatDestroy(&B); CHKERRQ(ierr);
 
