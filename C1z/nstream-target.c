@@ -64,6 +64,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 
 int main(int argc, char * argv[])
 {
@@ -79,7 +80,6 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  // number of times to do the transpose
   int iterations = atoi(argv[1]);
   if (iterations < 1) {
     printf("ERROR: iterations must be >= 1\n");
