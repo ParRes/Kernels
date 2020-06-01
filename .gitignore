@@ -104,7 +104,8 @@ C1z/nstream
 C1z/nstream-openmp
 C1z/nstream-target
 C1z/nstream-taskloop
-C1z/ntream-mpi
+C1z/nstream-mpi
+C1z/nstream-petsc
 C1z/nstream-memkind
 C1z/nstream-memkind-openmp
 C1z/nstream-mmap
