@@ -57,7 +57,7 @@ openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp stencil-openmp transpose
 
 mpi: nstream-mpi
 
-petsc: nstream-petsc
+petsc: nstream-petsc transpose-petsc
 
 memkind: nstream-memkind nstream-memkind-openmp
 
