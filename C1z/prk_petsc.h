@@ -8,5 +8,6 @@
 #include <petsc.h>
 #include <petscsys.h>
 #include <petscvec.h>
+#include <petscmat.h>
 
 #endif // PRK_PETSC_H_
