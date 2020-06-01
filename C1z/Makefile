@@ -92,22 +92,22 @@ transpose: transpose-openmp.c prk_util.h
 %-memkind: %-memkind.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) $(MEMKINDFLAGS) -o $@
 
-%-memkind-openmp: %-memkind.c prk_util.h
+%-memkind-openmp: %-memkind.c prk_util.h prk_openmp.h
 	$(CC) $(CFLAGS) $(OMPFLAGS) $< $(EXTRA_CLIBS) $(MEMKINDFLAGS) -o $@
 
 %-mmap: %-mmap.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
-%-mmap-openmp: %-mmap.c prk_util.h
+%-mmap-openmp: %-mmap.c prk_util.h prk_openmp.h
 	$(CC) $(CFLAGS) $(OMPFLAGS) $< $(EXTRA_CLIBS) -o $@
 
-%-target: %-target.c prk_util.h
+%-target: %-target.c prk_util.h prk_openmp.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) $(EXTRA_CLIBS) -o $@
 
-%-taskloop: %-taskloop.c prk_util.h
+%-taskloop: %-taskloop.c prk_util.h prk_openmp.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
 
-%-openmp: %-openmp.c prk_util.h
+%-openmp: %-openmp.c prk_util.h prk_openmp.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-cilk: %-cilk.c prk_util.h

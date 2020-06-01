@@ -60,6 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 
 typedef void (*stencil_t)(const int, const int, const double * restrict, double * restrict);
 
