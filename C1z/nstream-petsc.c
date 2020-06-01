@@ -99,7 +99,7 @@ int main(int argc, char * argv[])
 
   if (set != PETSC_TRUE || iterations < 1) {
     PetscPrintf(PETSC_COMM_WORLD,"ERROR: iterations must be >= 1\n");
-    PetscPrintf(PETSC_COMM_WORLD,"HELP:  Set wtih -i <iterations>\n");
+    PetscPrintf(PETSC_COMM_WORLD,"HELP:  Set with -i <iterations>\n");
     PetscFinalize();
     return 1;
   }
@@ -108,7 +108,7 @@ int main(int argc, char * argv[])
   ierr = PetscOptionsGetInt(NULL,NULL,"-n",&length,&set); CHKERRQ(ierr);
   if (set != PETSC_TRUE || length <= 0) {
     PetscPrintf(PETSC_COMM_WORLD,"ERROR: Vector length must be greater than 0\n");
-    PetscPrintf(PETSC_COMM_WORLD,"HELP:  Set wtih -n <vector length>\n");
+    PetscPrintf(PETSC_COMM_WORLD,"HELP:  Set with -n <vector length>\n");
     PetscFinalize();
     return 1;
   }
