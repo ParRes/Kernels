@@ -64,71 +64,62 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_petsc.h"
 
-#include <mpi.h>
-#include <petsc.h>
+static char help[] = "FIXME.\n\n";
 
 int main(int argc, char * argv[])
 {
-  int me, np;
+  PetscErrorCode ierr;
+  ierr = PetscInitialize(&argc,&argv,(char*)0,help);
+  if (ierr) {
+      PetscPrintf(PETSC_COMM_WORLD,"PetscInitialize failed\n");
+      abort();
+      return -1;
+  }
 
-  MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &me);
-  MPI_Comm_size(MPI_COMM_WORLD, &np);
+  PetscPrintf(PETSC_COMM_WORLD,"Parallel Research Kernels version %d\n", PRKVERSION );
+  PetscPrintf(PETSC_COMM_WORLD,"C11/PETSc STREAM triad: A = B + scalar * C\n");
 
-  if (me==0) {
-      printf("Parallel Research Kernels version %d\n", PRKVERSION );
-      printf("C11/PETSc STREAM triad: A = B + scalar * C\n");
+  if (argc == 1) {
+    PetscPrintf(PETSC_COMM_WORLD,"Example arguments:\n");
+    PetscPrintf(PETSC_COMM_WORLD,"  ./nstream-petsc -i <iterations> -n <vector length> \\\n");
+    PetscPrintf(PETSC_COMM_WORLD,"                 [-vec_type {standard,seq,mpi,shared,node}] \\\n");
+    PetscPrintf(PETSC_COMM_WORLD,"                 [-log_view]\n");
   }
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 3) {
-    if (me==0) printf("Usage: <# iterations> <vector length>\n");
-    MPI_Finalize();
+  PetscBool set = PETSC_FALSE;
+
+  PetscInt iterations = -1;
+  ierr = PetscOptionsGetInt(NULL,NULL,"-i",&iterations,&set); CHKERRQ(ierr);
+
+  if (set != PETSC_TRUE || iterations < 1) {
+    PetscPrintf(PETSC_COMM_WORLD,"ERROR: iterations must be >= 1\n");
+    PetscPrintf(PETSC_COMM_WORLD,"HELP:  Set wtih -i <iterations>\n");
+    PetscFinalize();
     return 1;
   }
 
-  // number of times to do the transpose
-  int iterations = atoi(argv[1]);
-  if (iterations < 1) {
-    if (me==0) printf("ERROR: iterations must be >= 1\n");
-    MPI_Finalize();
+  PetscInt length = -1;
+  ierr = PetscOptionsGetInt(NULL,NULL,"-n",&length,&set); CHKERRQ(ierr);
+  if (set != PETSC_TRUE || length <= 0) {
+    PetscPrintf(PETSC_COMM_WORLD,"ERROR: Vector length must be greater than 0\n");
+    PetscPrintf(PETSC_COMM_WORLD,"HELP:  Set wtih -n <vector length>\n");
+    PetscFinalize();
     return 1;
   }
 
-  // length of a the matrix
-  size_t length = atol(argv[2]);
-  if (length <= 0) {
-    if (me==0) printf("ERROR: Matrix length must be greater than 0\n");
-    MPI_Finalize();
-    return 1;
-  }
-
-  if (me==0) {
-      printf("Number of processes  = %d\n", np);
-      printf("Number of iterations = %d\n", iterations);
-      printf("Vector length        = %zu\n", length);
-      //printf("Offset               = %d\n", offset);
-  }
-
-  size_t local_length;
-  if (length % np == 0) {
-      local_length = length / np;
-  } else {
-      double x = (double)length / np;
-      size_t y = (size_t)ceil(x);
-      if (me != (np-1)) {
-          local_length = y;
-      } else {
-          local_length = length - y*(np-1);
-      }
-  }
-  //printf("Vector length (%4d) = %zu\n", me, local_length);
-  fflush(stdout);
-  MPI_Barrier(MPI_COMM_WORLD);
+  int np = 1;
+#ifdef PRK_PETSC_USE_MPI
+  MPI_Comm_size(MPI_COMM_WORLD, &np);
+#endif
+  PetscPrintf(PETSC_COMM_WORLD,"Number of processes  = %d\n", np);
+  PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %d\n", iterations);
+  PetscPrintf(PETSC_COMM_WORLD,"Vector length        = %zu\n", length);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -136,80 +127,84 @@ int main(int argc, char * argv[])
 
   double nstream_time = 0.0;
 
-  double * restrict A;
-  double * restrict B;
-  double * restrict C;
+  PetscReal zero  = 0;
+  PetscReal one   = 1;
+  PetscReal two   = 2;
+  PetscReal three = 3;
 
-  MPI_Win wA, wB, wC;
+  Vec A;
+  Vec B;
+  Vec C;
 
-  size_t bytes = local_length*sizeof(double);
+  ierr = VecCreate(PETSC_COMM_WORLD, &A); CHKERRQ(ierr);
+  ierr = VecSetFromOptions(A); CHKERRQ(ierr);
+  ierr = VecSetSizes(A,PETSC_DECIDE,length); CHKERRQ(ierr);
 
-  MPI_Win_allocate_shared(bytes, sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void**)&A, &wA);
-  MPI_Win_allocate_shared(bytes, sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void**)&B, &wB);
-  MPI_Win_allocate_shared(bytes, sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, (void**)&C, &wC);
+  ierr = VecDuplicate(A,&B); CHKERRQ(ierr);
+  ierr = VecDuplicate(A,&C); CHKERRQ(ierr);
 
-  double scalar = 3.0;
+  ierr = VecSet(A,zero); CHKERRQ(ierr);
+  ierr = VecSet(B,two);  CHKERRQ(ierr);
+  ierr = VecSet(C,two);  CHKERRQ(ierr);
 
-  for (size_t i=0; i<local_length; i++) {
-    A[i] = 0.0;
-    B[i] = 2.0;
-    C[i] = 2.0;
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
+  PetscLogEvent prk_event;
+  PetscLogEventRegister("PRK nstream",0,&prk_event);
 
   for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) {
-        MPI_Barrier(MPI_COMM_WORLD);
-        nstream_time = MPI_Wtime();
+        ierr = PetscBarrier(NULL); CHKERRQ(ierr);
+        nstream_time = prk_wtime();
+        ierr = PetscLogEventBegin(prk_event,0,0,0,0); CHKERRQ(ierr);
     }
 
-    for (size_t i=0; i<local_length; i++) {
-        A[i] += B[i] + scalar * C[i];
-    }
+    // A += B + three * C
+    // z = alpha x + beta y + gamma z
+    // z:=A gamma:=1
+    // x:=B alpha:=1
+    // y:=C beta:=three
+    ierr = VecAXPBYPCZ(A, one, three, one, B, C);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
-  nstream_time = MPI_Wtime() - nstream_time;
 
-  MPI_Allreduce(MPI_IN_PLACE, &nstream_time, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  ierr = PetscBarrier(NULL); CHKERRQ(ierr);
+  nstream_time = prk_wtime() - nstream_time;
+  ierr = PetscLogEventEnd(prk_event,0,0,0,0); CHKERRQ(ierr);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  double ar = 0.0;
-  double br = 2.0;
-  double cr = 2.0;
+  PetscReal ar = 0;
+  PetscReal br = 2;
+  PetscReal cr = 2;
   for (int i=0; i<=iterations; i++) {
-      ar += br + scalar * cr;
+      ar += br + three * cr;
   }
 
-  ar *= local_length;
+  ar *= length;
 
-  double asum = 0.0;
-  for (size_t i=0; i<local_length; i++) {
-      asum += fabs(A[i]);
-  }
+  PetscReal asum = 0;
+  ierr = VecNorm(A, NORM_1, &asum);
 
   double epsilon=1.e-8;
   if (fabs(ar-asum)/asum > epsilon) {
-      printf("Failed Validation on output array\n"
+      PetscPrintf(PETSC_COMM_WORLD,"Failed Validation on output array\n"
              "       Expected checksum: %lf\n"
              "       Observed checksum: %lf\n"
              "ERROR: solution did not validate\n", ar, asum);
-      return 1;
+      ierr = VecView(A,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
   } else {
-      if (me==0) printf("Solution validates\n");
+      PetscPrintf(PETSC_COMM_WORLD,"Solution validates\n");
       double avgtime = nstream_time/iterations;
       double nbytes = 4.0 * length * sizeof(double);
-      if (me==0) printf("Rate (MB/s): %lf Avg time (s): %lf\n", 1.e-6*nbytes/avgtime, avgtime);
+      PetscPrintf(PETSC_COMM_WORLD,"Rate (MB/s): %lf Avg time (s): %lf\n", 1.e-6*nbytes/avgtime, avgtime);
   }
 
-  MPI_Win_free(&wA);
-  MPI_Win_free(&wB);
-  MPI_Win_free(&wC);
+  ierr = VecDestroy(&A); CHKERRQ(ierr);
+  ierr = VecDestroy(&B); CHKERRQ(ierr);
+  ierr = VecDestroy(&C); CHKERRQ(ierr);
 
-  MPI_Finalize();
+  PetscFinalize();
 
   return 0;
 }
