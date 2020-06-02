@@ -148,7 +148,7 @@ int main(int argc, char * argv[])
   for (int i=0;i<order; i++) {
     for (int j=0;j<order;j++) {
       PetscReal v = 0;
-      ierr = MatSetValue(A, i, j, v, INSERT_VALUES); CHKERRQ(ierr);
+      ierr = MatSetValue(B, i, j, v, INSERT_VALUES); CHKERRQ(ierr);
     }
   }
   ierr = MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
