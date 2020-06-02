@@ -77,6 +77,7 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 #CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 CBLASFLAG=-DMKL -mkl
+ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
 #
 # CUDA flags
 #
@@ -102,13 +103,31 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
 MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
-MPICC=${MPIDIR}/bin/mpicc
-MPICXX=${MPIDIR}/bin/mpicxx
+MPICC=${MPIDIR}/bin/mpiicc
+MPICXX=${MPIDIR}/bin/mpiicpc
 MPIINC=-I${MPIDIR}/include
 MPILIB=-L${MPIDIR}/lib -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
 #MPIINC=-I/usr/include/mpich-3.2-x86_64
 #MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# Global Arrays
+#
+GADIR=../deps/ga
+GAFLAG=-I${GADIR}/include
+GAFLAG+=-L${GADIR}/lib -lga
+GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
+#GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
+GAFLAG+=${MPIINC} ${MPILIB}
+GAFLAG+=-lmpifort -lmpi
+GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+#
+# PETSc
+#
+PETSCDIR=../deps/petsc
+PETSCFLAG=-I${PETSCDIR}/include
+PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
+PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
 #
 # MEMKIND (used in C1z)
 #
