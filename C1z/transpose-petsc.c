@@ -165,8 +165,8 @@ int main(int argc, char * argv[])
     }
 
     // create transpose view of A
-    ierr = MatAssemblyBegin(AT, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatTranspose(A, MAT_REUSE_MATRIX, &AT); CHKERRQ(ierr);
+    ierr = MatAssemblyBegin(AT, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     ierr = MatAssemblyEnd(AT, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
     // Y+=a*X
     ierr = MatAXPY(B, one, AT, SAME_NONZERO_PATTERN); CHKERRQ(ierr);
