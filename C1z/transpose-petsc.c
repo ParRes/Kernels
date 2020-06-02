@@ -124,16 +124,18 @@ int main(int argc, char * argv[])
   PetscReal three = 3;
 
   Mat A;
-  Mat AT;
   Mat B;
+  Mat AT; // A^T formed explicitly every iteration
+  Mat C;  // C:=constant - full of ones
 
   ierr = MatCreateDense(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, order, order, NULL, &A); CHKERRQ(ierr);
-  //ierr = MatSetFromOptions(A); CHKERRQ(ierr);
+  ierr = MatSetFromOptions(A); CHKERRQ(ierr);
   //ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,order,order); CHKERRQ(ierr);
   ierr = MatDuplicate(A,MAT_DO_NOT_COPY_VALUES,&B); CHKERRQ(ierr);
   ierr = MatDuplicate(A,MAT_DO_NOT_COPY_VALUES,&AT); CHKERRQ(ierr);
+  ierr = MatDuplicate(A,MAT_DO_NOT_COPY_VALUES,&C); CHKERRQ(ierr);
 
-  // A[i,j] = (i*order+j);
+  // A[i,j] = (i*order+j)
   ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   for (int i=0;i<order; i++) {
     for (int j=0;j<order;j++) {
@@ -143,11 +145,25 @@ int main(int argc, char * argv[])
   }
   ierr = MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
 
-  // B[i,j] = 0;
+  // B[i,j] = 0
+#if 0
   ierr = MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
   for (int i=0;i<order; i++) {
     for (int j=0;j<order;j++) {
       PetscReal v = 0;
+      ierr = MatSetValue(B, i, j, v, INSERT_VALUES); CHKERRQ(ierr);
+    }
+  }
+  ierr = MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+#else
+  ierr = MatZeroEntries(B); CHKERRQ(ierr);
+#endif
+
+  // C[i,j] = 1
+  ierr = MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  for (int i=0;i<order; i++) {
+    for (int j=0;j<order;j++) {
+      PetscReal v = 1;
       ierr = MatSetValue(B, i, j, v, INSERT_VALUES); CHKERRQ(ierr);
     }
   }
@@ -164,15 +180,12 @@ int main(int argc, char * argv[])
         ierr = PetscLogEventBegin(prk_event,0,0,0,0); CHKERRQ(ierr);
     }
 
-    // create transpose view of A
+    // AT = A^T
     ierr = MatTranspose(A, MAT_REUSE_MATRIX, &AT); CHKERRQ(ierr);
-    ierr = MatAssemblyBegin(AT, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(AT, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-    // Y+=a*X
-    ierr = MatAXPY(B, one, AT, SAME_NONZERO_PATTERN); CHKERRQ(ierr);
     // B += A^T
+    ierr = MatAXPY(B, one, AT, SAME_NONZERO_PATTERN); CHKERRQ(ierr);
     // A += 1
-
+    ierr = MatAXPY(A, one, C, SAME_NONZERO_PATTERN); CHKERRQ(ierr);
   }
 
   ierr = PetscBarrier(NULL); CHKERRQ(ierr);
@@ -198,6 +211,9 @@ int main(int argc, char * argv[])
 
 #ifdef VERBOSE
   PetscPrintf(PETSC_COMM_WORLD,"Sum of absolute differences: %lf\n", abserr);
+  if (order < 10) {
+      ierr = MatView(B, PETSC_VIEWER_STDOUT_WORLD);
+  }
 #endif
 
   PetscReal epsilon = 1.0e-8;
