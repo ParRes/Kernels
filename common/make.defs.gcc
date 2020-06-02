@@ -70,7 +70,7 @@ METALFLAG=-framework MetalPerformanceShaders
 #SYCLFLAG+=-std=c++17 -O3
 #SYCLFLAG+=--gcc-toolchain=/opt/rh/devtoolset-7/root/usr
 #SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=1
-#SYCLFLAG+=-stdlib=c++ 
+#SYCLFLAG+=-stdlib=c++
 #
 # CodePlay ComputeCpp
 #
@@ -154,7 +154,8 @@ CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 #NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
 NVCC=nvcc
-CUDAFLAGS=-g -O3 -std=c++11 -arch=sm_50
+CUDAFLAGS=-g -O3 -std=c++11
+CUDAFLAGS+=-arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #
@@ -163,10 +164,39 @@ CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 ISPC=ispc
 ISPCFLAG=-O3 --target=host --opt=fast-math
 #
-# MPI
+# MPI-3
 #
-# We assume you have installed an implementation of MPI-3 that is in your path.
-MPICC=mpicc -std=c99
+# We assume you have Intel MPI and have setup your environment with e.g.
+# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
+# in your .bashrc.
+#
+# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
+MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
+MPICC=${MPIDIR}/bin/mpiicc
+MPICXX=${MPIDIR}/bin/mpiicpc
+MPIINC=-I${MPIDIR}/include
+MPILIB=-L${MPIDIR}/lib -lmpi
+#MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
+#MPIINC=-I/usr/include/mpich-3.2-x86_64
+#MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# Global Arrays
+#
+GADIR=../deps/ga
+GAFLAG=-I${GADIR}/include
+GAFLAG+=-L${GADIR}/lib -lga
+GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
+#GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
+GAFLAG+=${MPIINC} ${MPILIB}
+GAFLAG+=-lmpifort -lmpi
+GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+#
+# PETSc
+#
+PETSCDIR=../deps/petsc
+PETSCFLAG=-I${PETSCDIR}/include
+PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
+PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
 #
 # Fortran 2008 coarrays
 #
@@ -175,6 +205,8 @@ MPICC=mpicc -std=c99
 COARRAYFLAG=-fcoarray=single -lcaf_single
 # multi-node
 # COARRAYFLAG=-fcoarray=lib -lcaf_mpi
-
+#
+# MEMKIND (used in C1z)
+#
 MEMKINDDIR=/home/parallels/PRK/deps
 MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib

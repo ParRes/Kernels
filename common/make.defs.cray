@@ -26,15 +26,64 @@ ORNLACCFLAG=-h acc
 #
 # NERSC: "module load boost"
 BOOSTFLAG=-I$${BOOST_DIR}/include
+RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+#RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG} -I./pstl/stdlib -I./pstl/include
+KOKKOSDIR=/opt/kokkos/intel
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
+RAJADIR=/opt/raja/intel
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+THRUSTDIR=/opt/nvidia/thrust
+THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
 CBLASFLAG= # LibSci likely included by default
 #
-# MPI
+# CUDA flags
 #
-# cc wraps gcc, icc or craycc, depending on your PrgEng module.
-MPICC=cc
+# Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
+#NVCC=/opt/llvm/cocl/bin/cocl
+# Linux w/ NVIDIA CUDA
+NVCC=nvcc
+CUDAFLAGS=-g -O3 -std=c++11
+CUDAFLAGS+=-arch=sm_50
+# https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
+CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# MPI-3
+#
+# We assume you have Intel MPI and have setup your environment with e.g.
+# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
+# in your .bashrc.
+#
+# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
+MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
+MPICC=${MPIDIR}/bin/mpiicc
+MPICXX=${MPIDIR}/bin/mpiicpc
+MPIINC=-I${MPIDIR}/include
+MPILIB=-L${MPIDIR}/lib -lmpi
+#MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
+#MPIINC=-I/usr/include/mpich-3.2-x86_64
+#MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# Global Arrays
+#
+GADIR=../deps/ga
+GAFLAG=-I${GADIR}/include
+GAFLAG+=-L${GADIR}/lib -lga
+GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
+#GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
+GAFLAG+=${MPIINC} ${MPILIB}
+GAFLAG+=-lmpifort -lmpi
+GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+#
+# PETSc
+#
+PETSCDIR=../deps/petsc
+PETSCFLAG=-I${PETSCDIR}/include
+PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
+PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
 #
 # Fortran 2008 coarrays
 #
@@ -50,3 +99,8 @@ UPCFLAG=-h upc
 #
 # You may need to load a module such as cray-shmem
 SHMEMCC=cc
+#
+# MEMKIND (used in C1z)
+#
+MEMKINDDIR=/home/parallels/PRK/deps
+MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib
