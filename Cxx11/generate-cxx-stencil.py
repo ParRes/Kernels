@@ -67,7 +67,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('     }\n')
     elif (model=='target'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {\n')
-        src.write('    OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )\n')
+        src.write('    OMP_TARGET( teams distribute parallel for simd collapse(2) )\n')
         src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
         src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
         bodygen(src,pattern,stencil_size,radius,W,model)

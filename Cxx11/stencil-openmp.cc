@@ -62,6 +62,7 @@
 
 #include "prk_util.h"
 #ifdef _OPENMP
+#include "prk_openmp.h"
 #include "stencil_openmp.hpp"
 #else
 #include "stencil_seq.hpp"

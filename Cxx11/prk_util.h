@@ -71,8 +71,9 @@
 # include "prk_ranges.h"
 #endif
 
-#ifdef USE_OPENMP
-# include "prk_openmp.h"
+// omp_get_wtime()
+#if defined(USE_OPENMP) && defined(_OPENMP)
+#include <omp.h>
 #endif
 
 #define RESTRICT __restrict__
