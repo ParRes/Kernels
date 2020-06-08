@@ -61,6 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 #include "stencil_target.hpp"
 
 void nothing(const int n, const int t, const double * RESTRICT in, double * RESTRICT out)
@@ -189,7 +190,7 @@ int main(int argc, char* argv[])
       stencil(n, tile_size, in, out);
 
       // Add constant to solution to force refresh of neighbor data, if any
-      OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
+      OMP_TARGET( teams distribute parallel for simd collapse(2) )
       for (int i=0; i<n; i++) {
         for (int j=0; j<n; j++) {
           in[i*n+j] += 1.0;
