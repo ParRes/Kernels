@@ -192,7 +192,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(2.*n-2.));
-  if ( (std::fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+  if ( (prk::abs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;

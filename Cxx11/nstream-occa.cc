@@ -178,7 +178,7 @@ int main(int argc, char * argv[])
 
   double asum(0);
   for (int i=0; i<length; i++) {
-      asum += std::fabs(h_A[i]);
+      asum += prk::abs(h_A[i]);
   }
 
   delete[] h_A;
@@ -186,7 +186,7 @@ int main(int argc, char * argv[])
   delete[] h_C;
 
   double epsilon=1.e-8;
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"

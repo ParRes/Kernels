@@ -128,11 +128,11 @@ void run(cl::Context context, int iterations, size_t length)
 
   double asum(0);
   for (size_t i=0; i<length; i++) {
-      asum += std::fabs(h_a[i]);
+      asum += prk::abs(h_a[i]);
   }
 
   const double epsilon = (precision==64) ? 1.0e-8 : 1.0e-4;
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
