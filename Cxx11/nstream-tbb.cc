@@ -178,7 +178,7 @@ int main(int argc, char * argv[])
   asum = tbb::parallel_reduce( range, double(0),
                                [&](decltype(range)& r, double temp) -> double {
                                    for (int i=r.begin(); i!=r.end(); ++i ) {
-                                       temp += std::fabs(A[i]);
+                                       temp += prk::abs(A[i]);
                                    }
                                    return temp;
                                },
@@ -186,7 +186,7 @@ int main(int argc, char * argv[])
                                tbb_partitioner );
 
   double epsilon(1.e-8);
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;

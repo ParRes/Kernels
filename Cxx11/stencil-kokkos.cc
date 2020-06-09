@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
         n  = std::atoi(argv[2]);
         if (n < 1) {
           throw "ERROR: grid dimension must be positive";
-        } else if (n > std::floor(std::sqrt(INT_MAX))) {
+        } else if (n > prk::get_max_matrix_size()) {
           throw "ERROR: grid dimension too large - overflow risk";
         }
 
@@ -215,7 +215,7 @@ int main(int argc, char* argv[])
     auto nr2    = {n-radius,n-radius};
     auto inside = Kokkos::MDRangePolicy<Kokkos::Rank<2>>(r2,nr2,tile2);
     Kokkos::parallel_reduce(inside, KOKKOS_LAMBDA(int i, int j, double & norm) {
-        norm += std::fabs(out(i,j));
+        norm += prk::abs(out(i,j));
     }, norm);
     Kokkos::fence();
     norm /= active_points;
@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
     // verify correctness
     double const epsilon(1.0e-8);
     double reference_norm = 2.*(iterations+1.);
-    if (std::fabs(norm-reference_norm) > epsilon) {
+    if (prk::abs(norm-reference_norm) > epsilon) {
       std::cout << "ERROR: L1 norm = " << norm
                 << " Reference L1 norm = " << reference_norm << std::endl;
       return 1;

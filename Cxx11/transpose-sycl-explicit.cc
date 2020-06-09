@@ -180,7 +180,7 @@ void run(sycl::queue & q, int iterations, size_t order)
       size_t const ij = i*order+j;
       size_t const ji = j*order+i;
       const T reference = static_cast<T>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(h_B[ji] - reference);
+      abserr += prk::abs(h_B[ji] - reference);
     }
   }
 
@@ -228,7 +228,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
   }

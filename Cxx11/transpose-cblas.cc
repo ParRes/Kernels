@@ -87,7 +87,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
   }
@@ -151,7 +151,7 @@ int main(int argc, char * argv[])
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      abserr += prk::abs(B[ji] - reference);
     }
   }
 

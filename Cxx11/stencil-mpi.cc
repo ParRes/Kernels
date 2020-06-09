@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
         n  = std::atoi(argv[2]);
         if (n < 1) {
           throw "ERROR: grid dimension must be positive";
-        } else if (n > std::floor(std::sqrt(INT_MAX))) {
+        } else if (n > prk::get_max_matrix_size()) {
           throw "ERROR: grid dimension too large - overflow risk";
         }
 
@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
     double norm(0);
     for (size_t i=radius; i<n-radius; i++) {
       for (size_t j=radius; j<n-radius; j++) {
-        norm += std::fabs(out[i*n+j]);
+        norm += prk::abs(out[i*n+j]);
       }
     }
     norm = prk::MPI::sum(norm);
@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
     // verify correctness
     const double epsilon = 1.0e-8;
     double reference_norm = 2.*(iterations+1.);
-    if (std::fabs(norm-reference_norm) > epsilon) {
+    if (prk::abs(norm-reference_norm) > epsilon) {
       std::cout << "ERROR: L1 norm = " << norm
                 << " Reference L1 norm = " << reference_norm << std::endl;
       return 1;

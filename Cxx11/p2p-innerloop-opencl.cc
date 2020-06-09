@@ -120,7 +120,7 @@ void run(cl::Context context, int iterations, int n)
 
   // verify correctness, using top right value
   T corner_val = ((iterations+1)*(2*n-2));
-  if ( (std::fabs(h_grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+  if ( (prk::abs(h_grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << h_grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
   }

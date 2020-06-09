@@ -168,12 +168,12 @@ int main(int argc, char * argv[])
   RAJA::ReduceSum<RAJA::seq_reduce, double> reduced_asum(0.0);
   //RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
   RAJA::forall<RAJA::seq_exec>(range, [=](RAJA::Index_type i) {
-      reduced_asum += std::fabs(A(i));
+      reduced_asum += prk::abs(A(i));
   });
   double asum(reduced_asum);
 
   double epsilon=1.e-8;
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"

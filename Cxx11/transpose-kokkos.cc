@@ -87,7 +87,7 @@ int main(int argc, char * argv[])
         order = std::atoi(argv[2]);
         if (order <= 0) {
           throw "ERROR: Matrix Order must be greater than 0";
-        } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        } else if (order > prk::get_max_matrix_size()) {
           throw "ERROR: matrix dimension too large - overflow risk";
         }
 
@@ -170,7 +170,7 @@ int main(int argc, char * argv[])
     Kokkos::parallel_reduce(policy, KOKKOS_LAMBDA(int i, int j, double & update) {
         size_t const ij = i*order+j;
         double const reference = static_cast<double>(ij)*(1.+iterations)+addit;
-        update += std::fabs(B(j,i) - reference);
+        update += prk::abs(B(j,i) - reference);
     }, abserr);
 
 #ifdef VERBOSE

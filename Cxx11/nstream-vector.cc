@@ -142,11 +142,11 @@ int main(int argc, char * argv[])
 
   double asum(0);
   for (size_t i=0; i<length; i++) {
-      asum += std::fabs(A[i]);
+      asum += prk::abs(A[i]);
   }
 
   double epsilon=1.e-8;
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;

@@ -112,7 +112,7 @@ void run(cl::Context context, int iterations, int order)
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(iterations+1)+addit;
-      abserr += std::fabs(static_cast<double>(h_b[ji]) - reference);
+      abserr += prk::abs(static_cast<double>(h_b[ji]) - reference);
     }
   }
   //
@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
       order = std::atol(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
   }

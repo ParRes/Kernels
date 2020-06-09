@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
       n  = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimension must be positive";
-      } else if (n > std::floor(std::sqrt(INT_MAX))) {
+      } else if (n > prk::get_max_matrix_size()) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
   RAJA::ReduceSum<RAJA::seq_reduce, double> reduced_norm(0.0);
   RAJA::forall<RAJA::seq_exec>(inside, [&](RAJA::Index_type i) {
     RAJA::forall<RAJA::seq_exec>(inside, [&](RAJA::Index_type j) {
-      reduced_norm += std::fabs(out(i,j));
+      reduced_norm += prk::abs(out(i,j));
     });
   });
   double norm = reduced_norm / active_points;
@@ -219,7 +219,7 @@ int main(int argc, char* argv[])
   // verify correctness
   const double epsilon = 1.0e-8;
   double reference_norm = 2.*(iterations+1.);
-  if (std::fabs(norm-reference_norm) > epsilon) {
+  if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
     return 1;

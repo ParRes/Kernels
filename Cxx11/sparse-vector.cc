@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
 
   const double epsilon(1.e-8);
 
-  if (std::fabs(vector_sum-reference_sum) > epsilon) {
+  if (prk::abs(vector_sum-reference_sum) > epsilon) {
     std::cout << "ERROR: Vector norm = " << vector_sum
               << " Reference vector norm = " << reference_sum << std::endl;
     return 1;

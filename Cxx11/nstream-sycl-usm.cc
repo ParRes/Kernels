@@ -156,13 +156,13 @@ void run(sycl::queue & q, int iterations, size_t length)
 
   double asum(0);
   for (size_t i=0; i<length; ++i) {
-      asum += std::fabs(A[i]);
+      asum += prk::abs(A[i]);
   }
 
   syclx::free(A, ctx);
   
   const double epsilon(1.e-8);
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"

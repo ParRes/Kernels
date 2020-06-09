@@ -173,7 +173,7 @@ int main(int argc, char * argv[])
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      abserr += prk::abs(B[ji] - reference);
     }
   }
 

@@ -149,7 +149,7 @@ double Error(int iterations, int order, std::vector<double> & B)
           const auto dij = static_cast<double>(i*order+j);
           const auto addit = (iterations+1.) * (0.5*iterations);
           const auto reference = dij*(1.+iterations)+addit;
-          abserr += std::fabs(B[j*order+i] - reference);
+          abserr += prk::abs(B[j*order+i] - reference);
       });
       return abserr;
 }
@@ -186,7 +186,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 

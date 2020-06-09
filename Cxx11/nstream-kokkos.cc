@@ -170,12 +170,12 @@ int main(int argc, char * argv[])
 
     double asum(0);
     Kokkos::parallel_reduce(length, KOKKOS_LAMBDA(size_t const i, double & inner) {
-        inner += std::fabs(A(i));
+        inner += prk::abs(A(i));
     }, asum);
     Kokkos::fence();
 
     double epsilon(1.e-8);
-    if (std::fabs(ar-asum)/asum > epsilon) {
+    if (prk::abs(ar-asum)/asum > epsilon) {
         std::cout << "Failed Validation on output array\n"
                   << std::setprecision(16)
                   << "       Expected checksum: " << ar << "\n"
