@@ -63,6 +63,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 
 int main(int argc, char * argv[])
 {

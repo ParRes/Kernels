@@ -61,6 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 #include "stencil_taskloop.hpp"
 
 void nothing(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out, const int gs)
