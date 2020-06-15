@@ -204,6 +204,7 @@ Cxx11/nstream-sycl
 Cxx11/nstream-sycl-usm
 Cxx11/nstream-sycl-explicit
 Cxx11/nstream-sycl-explicit-usm
+Cxx11/nstream-dpcpp
 Cxx11/nstream-celerity
 Cxx11/nstream-hpx
 Cxx11/nstream-upcxx
@@ -229,6 +230,7 @@ Cxx11/stencil-sycl
 Cxx11/stencil-sycl-usm
 Cxx11/stencil-sycl-explicit
 Cxx11/stencil-sycl-explicit-usm
+Cxx11/stencil-dpcpp
 Cxx11/transpose-openmp
 Cxx11/transpose-mpi
 Cxx11/transpose-opencl
@@ -236,6 +238,7 @@ Cxx11/transpose-sycl
 Cxx11/transpose-sycl-usm
 Cxx11/transpose-sycl-explicit
 Cxx11/transpose-sycl-explicit-usm
+Cxx11/transpose-dpcpp
 Cxx11/transpose-openmp-target
 Cxx11/transpose-valarray
 Cxx11/transpose-vector
