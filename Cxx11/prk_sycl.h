@@ -10,12 +10,6 @@
 #include "SYCL/experimental/usm.h"
 #endif
 
-#ifdef PRK_USE_DPCPP
-#include <mkl_blas_sycl.hpp>
-#include <mkl_lapack_sycl.hpp>
-#include <mkl_sycl_types.hpp>
-#endif
-
 namespace sycl = cl::sycl;
 
 #ifdef __COMPUTECPP__

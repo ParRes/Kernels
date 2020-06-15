@@ -128,7 +128,7 @@ cblas: transpose-cblas dgemm-cblas
 
 onemkl: nstream-onemkl dgemm-onemkl dgemm-multigpu-onemkl
 
-oneapi: onemkl dpcpp dpct
+oneapi: onemkl dpcpp sycl sycl-usm sycl-explicit
 
 occa: transpose-occa nstream-occa
 
@@ -174,10 +174,7 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 %-sycl-explicit: %-sycl-explicit.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
-%-dpct: %-dpct.cc prk_util.h prk_dpct.h
-	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
-
-%-onemkl: %-onemkl.cc prk_util.h prk_dpct.h
+%-onemkl: %-onemkl.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< $(ONEMKLFLAG) -o $@
 
 %-target: %-target.cc prk_util.h prk_openmp.h

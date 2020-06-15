@@ -61,10 +61,12 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <CL/sycl.hpp>
-#include <dpct/dpct.hpp>
+#include "prk_sycl.h"
 #include "prk_util.h"
-#include "prk_dpct.h"
+
+#include <mkl_blas_sycl.hpp>
+#include <mkl_lapack_sycl.hpp>
+#include <mkl_sycl_types.hpp>
 
 int main(int argc, char * argv[])
 {
@@ -100,7 +102,7 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
 
-  sycl::queue h(dpct::get_default_context(), dpct::get_current_device());
+  sycl::queue q(sycl::default_selector{});
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -110,9 +112,9 @@ int main(int argc, char * argv[])
 
   const size_t bytes = length * sizeof(double);
 
-  double * h_A = sycl::malloc_host<double>(length, dpct::get_default_context());
-  double * h_B = sycl::malloc_host<double>(length, dpct::get_default_context());
-  double * h_C = sycl::malloc_host<double>(length, dpct::get_default_context());
+  double * h_A = syclx::malloc_host<double>(length, q);
+  double * h_B = syclx::malloc_host<double>(length, q);
+  double * h_C = syclx::malloc_host<double>(length, q);
 
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
@@ -120,12 +122,12 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  double * d_A = sycl::malloc_device<double>(length, dpct::get_default_context());
-  double * d_B = sycl::malloc_device<double>(length, dpct::get_default_context());
-  double * d_C = sycl::malloc_device<double>(length, dpct::get_default_context());
-  dpct::get_default_queue().memcpy(d_A, &(h_A[0]), bytes).wait();
-  dpct::get_default_queue().memcpy(d_B, &(h_B[0]), bytes).wait();
-  dpct::get_default_queue().memcpy(d_C, &(h_C[0]), bytes).wait();
+  double * d_A = syclx::malloc_device<double>(length, q);
+  double * d_B = syclx::malloc_device<double>(length, q);
+  double * d_C = syclx::malloc_device<double>(length, q);
+  q.memcpy(d_A, &(h_A[0]), bytes).wait();
+  q.memcpy(d_B, &(h_B[0]), bytes).wait();
+  q.memcpy(d_C, &(h_C[0]), bytes).wait();
 
   double scalar(3);
   {
@@ -134,27 +136,27 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
       double one(1);
-      mkl::blas::axpy(h, length,
+      mkl::blas::axpy(q, length,
                          one,              // alpha
                          d_B, 1,           // x, incx
                          d_A, 1).wait();   // y, incy
-      mkl::blas::axpy(h, length,
+      mkl::blas::axpy(q, length,
                          scalar,           // alpha
                          d_C, 1,           // x, incx
                          d_A, 1).wait();   // y, incy
-      dpct::get_current_device().queues_wait_and_throw();
+      q.wait();
     }
     nstream_time = prk::wtime() - nstream_time;
   }
 
-  dpct::get_default_queue().memcpy(&(h_A[0]), d_A, bytes).wait();
+  q.memcpy(&(h_A[0]), d_A, bytes).wait();
 
-  sycl::free(d_C, dpct::get_default_context();
-  sycl::free(d_B, dpct::get_default_context();
-  sycl::free(d_A, dpct::get_default_context();
+  syclx::free(d_C, q);
+  syclx::free(d_B, q);
+  syclx::free(d_A, q);
 
-  sycl::free(h_B, dpct::get_default_context();
-  sycl::free(h_C, dpct::get_default_context());
+  syclx::free(h_B, q);
+  syclx::free(h_C, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -174,7 +176,7 @@ int main(int argc, char * argv[])
     asum += std::fabs(h_A[i]);
   }
 
-  sycl::free(h_A, dpct::get_default_context();
+  sycl::free(h_A, q);
 
   double epsilon=1.e-8;
   if (std::fabs(ar - asum) / asum > epsilon) {
