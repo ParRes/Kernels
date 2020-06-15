@@ -213,7 +213,7 @@ int main(int argc, char * argv[])
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
-      if (argc>3) {
+      if (argc > 3) {
         batches = std::atoi(argv[3]);
       }
 
@@ -249,7 +249,7 @@ int main(int argc, char * argv[])
   }
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for matrices
+  // Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
   double dgemm_time(0);
@@ -306,9 +306,9 @@ int main(int argc, char * argv[])
   double residuum(0);
   for (int b=0; b<matrices; ++b) {
       const auto checksum = prk::reduce(C[b].begin(), C[b].end(), 0.0);
-      residuum += std::abs(checksum-reference)/reference;
+      residuum += std::abs(checksum - reference) / reference;
   }
-  residuum/=matrices;
+  residuum /= matrices;
 
   if (residuum < epsilon) {
 #if VERBOSE
