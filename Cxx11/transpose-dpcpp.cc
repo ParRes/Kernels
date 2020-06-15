@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -11,7 +11,7 @@
 ///       copyright notice, this list of conditions and the following
 ///       disclaimer in the documentation and/or other materials provided
 ///       with the distribution.
-/// * Neither the name of <COPYRIGHT HOLDER> nor the names of its
+/// * Neither the name of Intel Corporation nor the names of its
 ///       contributors may be used to endorse or promote products
 ///       derived from this software without specific prior written
 ///       permission.
@@ -39,10 +39,7 @@
 /// USAGE:   Program input is the matrix order and the number of times to
 ///          repeat the operation:
 ///
-///          transpose <matrix_size> <# iterations> [tile size]
-///
-///          An optional parameter specifies the tile size used to divide the
-///          individual matrix blocks for improved cache and TLB performance.
+///          transpose <matrix_size> <# iterations>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          transpose worked and timing statistics.
@@ -52,21 +49,8 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <CL/sycl.hpp>
-#include <dpct/dpct.hpp>
 #include "prk_util.h"
-#include "prk_dpct.h"
-
-void transpose(unsigned order, double * A, double * B, sycl::nd_item<3> item_ct1)
-{
-    auto i = item_ct1.get_group(2) * item_ct1.get_local_range().get(2) + item_ct1.get_local_id(2);
-    auto j = item_ct1.get_group(1) * item_ct1.get_local_range().get(1) + item_ct1.get_local_id(1);
-
-    if ((i<order) && (j<order)) {
-        B[i*order+j] += A[j*order+i];
-        A[j*order+i] += (double)1;
-    }
-}
+#include "prk_sycl.h"
 
 int main(int argc, char * argv[])
 {
@@ -78,7 +62,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int order, tile_size;
+  size_t order;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order>";
@@ -95,14 +79,6 @@ int main(int argc, char * argv[])
         } else if (order > std::floor(std::sqrt(INT_MAX))) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
-
-      // default tile size for tiling of local transpose
-      tile_size = 32;
-      if (argc > 3) {
-          tile_size = std::atoi(argv[3]);
-          if (tile_size <= 0) tile_size = order;
-          if (tile_size > order) tile_size = order;
-      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -111,10 +87,9 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Tile size             = " << tile_size << std::endl;
 
-  sycl::range<3> dimGrid(prk::divceil(order, tile_size), prk::divceil(order, tile_size), 1);
-  sycl::range<3> dimBlock(tile_size, tile_size, 1);
+  sycl::queue q(sycl::default_selector{});
+  prk::SYCL::print_device_platform(q);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
@@ -122,8 +97,8 @@ int main(int argc, char * argv[])
 
   const size_t nelems = (size_t)order * (size_t)order;
   const size_t bytes = nelems * sizeof(double);
-  double * h_a = sycl::malloc_host<double>( nelems, dpct::get_default_context());
-  double * h_b = sycl::malloc_host<double>( nelems, dpct::get_default_context());
+  double * h_a = syclx::malloc_host<double>( nelems, q);
+  double * h_b = syclx::malloc_host<double>( nelems, q);
 
   // fill A with the sequence 0 to order^2-1
   for (int j=0; j<order; j++) {
@@ -134,45 +109,40 @@ int main(int argc, char * argv[])
   }
 
   // copy input from host to device
-  double * d_a = sycl::malloc_device<double>( nelems, dpct::get_current_device(), dpct::get_default_context());
-  double * d_b = sycl::malloc_device<double>( nelems, dpct::get_current_device(), dpct::get_default_context());
-  dpct::get_default_queue().memcpy(d_a, &(h_a[0]), bytes).wait();
-  dpct::get_default_queue().memcpy(d_b, &(h_b[0]), bytes).wait();
+  double * A = syclx::malloc_device<double>( nelems, q);
+  double * B = syclx::malloc_device<double>( nelems, q);
+  q.memcpy(A, &(h_a[0]), bytes).wait();
+  q.memcpy(B, &(h_b[0]), bytes).wait();
 
   auto trans_time = 0.0;
 
   for (int iter = 0; iter<=iterations; iter++) {
 
-    if (iter==1) trans_time = prk::wtime();
+      if (iter==1) trans_time = prk::wtime();
 
-        dpct::get_default_queue().submit([&](sycl::handler &cgh) {
-            auto dpct_global_range = dimGrid * dimBlock;
+      q.submit([&](sycl::handler& h) {
 
-            cgh.parallel_for(
-                sycl::nd_range<3>(sycl::range<3>(dpct_global_range.get(2),
-                                                 dpct_global_range.get(1),
-                                                 dpct_global_range.get(0)),
-                                  sycl::range<3>(dimBlock.get(2),
-                                                 dimBlock.get(1),
-                                                 dimBlock.get(0))),
-                [=](sycl::nd_item<3> item_ct1) {
-                    transpose(order, d_a, d_b, item_ct1);
-                });
+        h.parallel_for( sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
+#if USE_2D_INDEXING
+          sycl::id<2> ij{it[0],it[1]};
+          sycl::id<2> ji{it[1],it[0]};
+          B[ij] += A[ji];
+          A[ji] += (T)1;
+#else
+          B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
+          A[it[1] * order + it[0]] += 1.0;
+#endif
         });
-        dpct::get_current_device().queues_wait_and_throw();
+      });
+      q.wait();
   }
   trans_time = prk::wtime() - trans_time;
 
   // copy output back to host
-  dpct::get_default_queue().memcpy(&(h_b[0]), d_b, bytes).wait();
+  q.memcpy(&(h_b[0]), B, bytes).wait();
 
-#ifdef VERBOSE
-  // copy input back to host - debug only
-  cudaMemcpy(&(h_a[0]), d_a, bytes, cudaMemcpyDeviceToHost);
-#endif
-
-  sycl::free(d_b, dpct::get_default_context());
-  sycl::free(d_a, dpct::get_default_context());
+  syclx::free(B, q);
+  syclx::free(A, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -189,12 +159,8 @@ int main(int argc, char * argv[])
     }
   }
 
-#ifdef VERBOSE
-  std::cout << "Sum of absolute differences: " << abserr << std::endl;
-#endif
-
-  sycl::free(h_b, dpct::get_default_context();
-  sycl::free(h_a, dpct::get_default_context();
+  syclx::free(h_b, q);
+  syclx::free(h_a, q);
 
   const auto epsilon = 1.0e-8;
   if (abserr < epsilon) {
@@ -204,13 +170,6 @@ int main(int argc, char * argv[])
     std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
-#ifdef VERBOSE
-    for (int i=0; i<order; i++) {
-      for (int j=0; j<order; j++) {
-        std::cout << "(" << i << "," << j << ") = " << h_a[i*order+j] << ", " << h_b[i*order+j] << "\n";
-      }
-    }
-#endif
     std::cout << "ERROR: Aggregate squared error " << abserr
               << " exceeds threshold " << epsilon << std::endl;
     return 1;

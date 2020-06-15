@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -61,16 +61,13 @@ void run(sycl::queue & q, int iterations, size_t order)
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  auto ctx = q.get_context();
-  auto dev = q.get_device();
-
   double trans_time(0);
 
-  T * B = static_cast<T*>(syclx::malloc_shared(order*order * sizeof(T), dev, ctx));
+  T * B = static_cast<T*>(syclx::malloc_shared(order*order * sizeof(T), q));
 
   try {
 
-    T * A = static_cast<T*>(syclx::malloc_shared(order*order * sizeof(T), dev, ctx));
+    T * A = static_cast<T*>(syclx::malloc_shared(order*order * sizeof(T), q));
 
     for (int i=0;i<order; i++) {
       for (int j=0;j<order;j++) {
@@ -79,11 +76,6 @@ void run(sycl::queue & q, int iterations, size_t order)
       }
     }
 
-#if PREBUILD_KERNEL
-    sycl::program kernel(ctx);
-    kernel.build_with_kernel_type<transpose<T>>();
-#endif
-
     for (int iter = 0; iter<=iterations; ++iter) {
 
       if (iter==1) trans_time = prk::wtime();
@@ -91,9 +83,6 @@ void run(sycl::queue & q, int iterations, size_t order)
       q.submit([&](sycl::handler& h) {
 
         h.parallel_for<class transpose<T>>(
-#if PREBUILD_KERNEL
-                kernel.get_kernel<transpose<T>>(),
-#endif
                 sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
 #if USE_2D_INDEXING
           sycl::id<2> ij{it[0],it[1]};
@@ -114,7 +103,7 @@ void run(sycl::queue & q, int iterations, size_t order)
     // for other device-oriented programming models.
     trans_time = prk::wtime() - trans_time;
 
-    syclx::free(A, ctx);
+    syclx::free(A, q);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -129,8 +118,6 @@ void run(sycl::queue & q, int iterations, size_t order)
     std::cout << e << std::endl;
     return;
   }
-
-  syclx::free(B, ctx);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -164,6 +151,9 @@ void run(sycl::queue & q, int iterations, size_t order)
     std::cout << "ERROR: Aggregate squared error " << abserr
               << " exceeds threshold " << epsilon << std::endl;
   }
+
+  syclx::free(B, q);
+
 }
 
 int main(int argc, char * argv[])

@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -61,44 +61,20 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <CL/sycl.hpp>
-#include "prk_util.h"
 #include "prk_sycl.h"
-#include <dpct/dpct.hpp>
-
-void nstream(const unsigned n, const double scalar, double * A, const double * B, const double * C,
-             sycl::nd_item<3> item_ct1)
-{
-    auto i = item_ct1.get_group(2) * item_ct1.get_local_range().get(2) + item_ct1.get_local_id(2);
-    if (i < n) {
-        A[i] += B[i] + scalar * C[i];
-    }
-}
-
-void nstream2(const unsigned n, const double scalar, double * A, const double * B, const double * C,
-              sycl::nd_item<3> item_ct1)
-{
-    for (unsigned int i =
-             item_ct1.get_group(2) * item_ct1.get_local_range().get(2) +
-             item_ct1.get_local_id(2);
-         i < n;
-         i += item_ct1.get_local_range().get(2) * item_ct1.get_group_range(2)) {
-        A[i] += B[i] + scalar * C[i];
-    }
-}
+#include "prk_util.h"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/DPCT STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++11/DPC++ STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int length;
-  bool grid_stride;
+  size_t length;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length> [<grid_stride>]";
@@ -113,8 +89,6 @@ int main(int argc, char * argv[])
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
-
-      grid_stride   = (argc>3) ? prk::parse_boolean(std::string(argv[4])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -123,11 +97,6 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
-
-  const int blockSize = 256;
-  sycl::range<3> dimBlock(blockSize, 1, 1);
-  sycl::range<3> dimGrid(prk::divceil(length, blockSize), 1, 1);
 
   sycl::queue q(sycl::default_selector{});
   prk::SYCL::print_device_platform(q);
@@ -140,9 +109,9 @@ int main(int argc, char * argv[])
 
   const size_t bytes = length * sizeof(double);
 
-  double * h_A = sycl::malloc_host<double>(length, q);
-  double * h_B = sycl::malloc_host<double>(length, q);
-  double * h_C = sycl::malloc_host<double>(length, q);
+  double * h_A = syclx::malloc_host<double>(length, q);
+  double * h_B = syclx::malloc_host<double>(length, q);
+  double * h_C = syclx::malloc_host<double>(length, q);
 
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
@@ -150,9 +119,9 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  double * d_A = sycl::malloc_device<double>(length, q);
-  double * d_B = sycl::malloc_device<double>(length, q);
-  double * d_C = sycl::malloc_device<double>(length, q);
+  double * d_A = syclx::malloc_device<double>(length, q);
+  double * d_B = syclx::malloc_device<double>(length, q);
+  double * d_C = syclx::malloc_device<double>(length, q);
   q.memcpy(d_A, &(h_A[0]), bytes).wait();
   q.memcpy(d_B, &(h_B[0]), bytes).wait();
   q.memcpy(d_C, &(h_C[0]), bytes).wait();
@@ -163,40 +132,27 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-      if (grid_stride) {
-          q.submit([&](sycl::handler &cgh) {
-              auto dpct_global_range = dimGrid * dimBlock;
+      q.submit([&](sycl::handler& h) {
 
-              cgh.parallel_for(
-                  sycl::nd_range<3>( sycl::range<3>(dpct_global_range.get(2), dpct_global_range.get(1), dpct_global_range.get(0)), sycl::range<3>(dimBlock.get(2), dimBlock.get(1), dimBlock.get(0))),
-                  [=](sycl::nd_item<3> item_ct1) {
-                      nstream2(static_cast<unsigned>(length), scalar, d_A, d_B, d_C, item_ct1);
-                  });
-          });
-      } else {
-          q.submit([&](sycl::handler &cgh) {
-              auto dpct_global_range = dimGrid * dimBlock;
-
-              cgh.parallel_for(
-                  sycl::nd_range<3>( sycl::range<3>(dpct_global_range.get(2), dpct_global_range.get(1), dpct_global_range.get(0)), sycl::range<3>(dimBlock.get(2), dimBlock.get(1), dimBlock.get(0))),
-                  [=](sycl::nd_item<3> item_ct1) {
-                      nstream(static_cast<unsigned>(length), scalar, d_A, d_B, d_C, item_ct1);
-                  });
-          });
-      }
-      q.wait_and_throw();
+        h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> it) {
+            const size_t i = it[0];
+            d_A[i] += d_B[i] + scalar * d_C[i];
+        });
+      });
+      q.wait();
     }
+
     nstream_time = prk::wtime() - nstream_time;
   }
 
   q.memcpy(&(h_A[0]), d_A, bytes).wait();
 
-  sycl::free(d_C, q);
-  sycl::free(d_B, q);
-  sycl::free(d_A, q);
+  syclx::free(d_C, q);
+  syclx::free(d_B, q);
+  syclx::free(d_A, q);
 
-  sycl::free(h_B, q);
-  sycl::free(h_C, q);
+  syclx::free(h_B, q);
+  syclx::free(h_C, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -216,7 +172,7 @@ int main(int argc, char * argv[])
     asum += std::fabs(h_A[i]);
   }
 
-  sycl::free(h_A, q);
+  syclx::free(h_A, q);
 
   double epsilon=1.e-8;
   if (std::fabs(ar - asum) / asum > epsilon) {

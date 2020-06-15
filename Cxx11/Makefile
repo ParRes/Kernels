@@ -93,14 +93,11 @@ opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
 sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl
 
-sycl-usm: nstream-sycl-usm stencil-sycl-usm transpose-sycl-usm \
-          nstream-sycl-explicit-usm
+sycl-usm: nstream-sycl-usm nstream-sycl-explicit-usm stencil-sycl-usm transpose-sycl-usm
 
 sycl-explicit: nstream-sycl-explicit transpose-sycl-explicit
 
-dpct: nstream-dpct nstream-managed-dpct transpose-dpct
-
-dpcpp: sycl sycl-usm sycl-explicit dpct
+dpcpp: nstream-dpcpp transpose-dpcpp
 
 tbb: p2p-innerloop-tbb p2p-tbb stencil-tbb transpose-tbb nstream-tbb \
      p2p-hyperplane-tbb p2p-tasks-tbb
@@ -161,6 +158,9 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 
 %-celerity: %-celerity.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $(BOOSTFLAGS) $(CELERITYINC) $(MPIINC) $< $(CELERITYLIB) $(MPILIB) -o $@
+
+%-dpcpp: %-dpcpp.cc prk_util.h prk_sycl.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-sycl: %-sycl.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
@@ -276,9 +276,11 @@ clean:
 	-rm -f *-mpi
 	-rm -f *-opencl
 	-rm -f *-sycl
-	-rm -f *-sycl-explicit
 	-rm -f *-sycl-usm
+	-rm -f *-sycl-explicit
+	-rm -f *-sycl-explicit-usm
 	-rm -f *-dpct
+	-rm -f *-dpcpp
 	-rm -f *-celerity
 	-rm -f *-tbb
 	-rm -f *-stl

@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -52,7 +52,6 @@
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
 ///
-///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
 ///          reported results should not be associated with Stream in
@@ -74,8 +73,6 @@ void run(sycl::queue & q, int iterations, size_t length)
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto ctx = q.get_context();
-
   double nstream_time(0);
 
   const T scalar(3);
@@ -91,14 +88,6 @@ void run(sycl::queue & q, int iterations, size_t length)
   }
 
   try {
-
-#if PREBUILD_KERNEL
-    sycl::program kernel(ctx);
-    kernel.build_with_kernel_type<nstream<T>>();
-#endif
-
-    auto dev = q.get_device();
-
     T * d_A = syclx::malloc_device<T>(length, q);
     T * d_B = syclx::malloc_device<T>(length, q);
     T * d_C = syclx::malloc_device<T>(length, q);
@@ -117,9 +106,6 @@ void run(sycl::queue & q, int iterations, size_t length)
 
       q.submit([&](sycl::handler& h) {
         h.parallel_for<class nstream<T>>(
-#if PREBUILD_KERNEL
-                kernel.get_kernel<nstream<T>>(),
-#endif
                 sycl::range<1>{length}, [=] (sycl::id<1> it) {
             const size_t i = it[0];
             d_A[i] += d_B[i] + scalar * d_C[i];
