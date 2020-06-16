@@ -30,8 +30,8 @@ DEFAULT_OPT_FLAGS+=-g3
 #
 #DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
 DEFAULT_OPT_FLAGS+=-Wall #-Werror
-DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
-#DEFAULT_OPT_FLAGS+=-mavx -mfma
+DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations # silence warnings in third-party headers
+#DEFAULT_OPT_FLAGS+=-mavx -mfma # these should be used on Haswell and later
 #
 # OpenMP flags
 #

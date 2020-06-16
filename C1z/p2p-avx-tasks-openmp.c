@@ -59,14 +59,11 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#ifndef __AVX__
-#error Your compiler does not support AVX!  Use -mavx or equivalent.
-#endif
-
 #include "prk_util.h"
 
-#if 1
 #include "immintrin.h"
+
+#if 1
 void print_m256d(const char * label, __m256d r)
 {
   double d[4];
@@ -154,8 +151,12 @@ static inline void sweep_tile(int startm, int endm,
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %d\n", PRKVERSION);
-  printf("C11 pipeline execution on 2D grid\n");
+  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+#ifdef _OPENMP
+  printf("C11/OpenMP TASKS pipeline execution on 2D grid\n");
+#else
+  printf("C11/Serial pipeline execution on 2D grid\n");
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -191,6 +192,9 @@ int main(int argc, char * argv[])
     nc = n;
   }
 
+#ifdef _OPENMP
+  printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
   printf("Number of iterations      = %d\n", iterations);
   printf("Grid sizes                = %d,%d\n", m, n);
   printf("Grid chunk sizes          = %d,%d\n", mc, nc);
@@ -204,12 +208,17 @@ int main(int argc, char * argv[])
   size_t bytes = m*n*sizeof(double);
   double * restrict grid = prk_malloc(bytes);
 
+  OMP_PARALLEL()
+  OMP_MASTER
   {
+    OMP_TASKLOOP( firstprivate(n) shared(grid) )
     for (int i=0; i<m; i++) {
       for (int j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
       }
     }
+    OMP_TASKWAIT
+
     for (int j=0; j<n; j++) {
       grid[0*n+j] = (double)j;
     }
@@ -223,9 +232,11 @@ int main(int argc, char * argv[])
 
       for (int i=1; i<m; i+=mc) {
         for (int j=1; j<n; j+=nc) {
+          OMP_TASK( depend(in:grid[(i-mc)*n+j],grid[i*n+(j-nc)]) depend(out:grid[i*n+j]) )
           sweep_tile(i, MIN(m,i+mc), j, MIN(n,j+nc), n, grid);
         }
       }
+      OMP_TASKWAIT
       grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
     pipeline_time = prk_wtime() - pipeline_time;

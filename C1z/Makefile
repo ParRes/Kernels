@@ -18,7 +18,8 @@ ifeq ($(findstring musl,$(CC)),musl)
   CFLAGS += -DUSE_C11_THREADS
 endif
 
-ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm $(CFLAGS)
+#ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm $(CFLAGS)
+ASMFLAGS = -fverbose-asm $(CFLAGS)
 
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
@@ -50,6 +51,8 @@ endif
 all: serial thread openmp taskloop $(EXTRA)
 
 serial: nstream p2p p2p-hyperplane stencil transpose
+
+vector: p2p-sse p2p-avx p2p-avx-tasks-openmp
 
 thread: transpose-thread
 
@@ -136,6 +139,7 @@ clean:
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
 	-rm -f nstream p2p p2p-hyperplane stencil transpose
+	-rm -f p2p-sse p2p-avx p2p-avx3 p2p-avx-tasks-openmp
 	-rm -f *-openmp
 	-rm -f *-mpi
 	-rm -f *-petsc
