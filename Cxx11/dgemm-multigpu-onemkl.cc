@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2018, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -51,9 +51,6 @@
 ///          Other than OpenMP or standard C functions, the following
 ///          functions are used in this program:
 ///
-///          cblasDgemm()
-///          cublasDgemmStridedBatched()
-///
 /// HISTORY: Written by Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, December, 2017.
 ///
@@ -67,32 +64,6 @@
 #include <mkl_blas_sycl.hpp>
 #include <mkl_lapack_sycl.hpp>
 #include <mkl_sycl_types.hpp>
-
-void init(int order, const int matrices, double * A, double * B, double * C, sycl::nd_item<3> item_ct1)
-{
-    auto i = item_ct1.get_group(2) * item_ct1.get_local_range().get(2) + item_ct1.get_local_id(2);
-    auto j = item_ct1.get_group(1) * item_ct1.get_local_range().get(1) + item_ct1.get_local_id(1);
-
-    for (int b=0; b<matrices; ++b) {
-      if ((i<order) && (j<order)) {
-        A[b*order*order+i*order+j] = i;
-        B[b*order*order+i*order+j] = i;
-        C[b*order*order+i*order+j] = 0;
-      }
-    }
-}
-
-void init(int order, const int matrices, double * C, sycl::nd_item<3> item_ct1)
-{
-    auto i = item_ct1.get_group(2) * item_ct1.get_local_range().get(2) + item_ct1.get_local_id(2);
-    auto j = item_ct1.get_group(1) * item_ct1.get_local_range().get(1) + item_ct1.get_local_id(1);
-
-    for (int b=0; b<matrices; ++b) {
-      if ((i<order) && (j<order)) {
-        C[b*order*order+i*order+j] = 0;
-      }
-    }
-}
 
 void prk_dgemm(sycl::queue &q, const int order, const int batches, double *A, double *B, double *C)
 {
@@ -112,7 +83,7 @@ void prk_dgemm(sycl::queue &q, const int order, const int batches, double *A, do
                            beta,                     // beta
                            pC, order);               // C, ldc
     }
-    q.wait_and_throw();
+    q.wait();
 }
 
 int main(int argc, char * argv[])
@@ -141,7 +112,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-        } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
@@ -167,9 +138,12 @@ int main(int argc, char * argv[])
       std::cout << "Batch size            = " << -batches << " (loop over BLAS)" << std::endl;
   }
   else if (batches > 0) {
+#if 0
+      std::cout << "Batch size            = " <<  batches << " (batched BLAS)" << std::endl;
+#else
       std::cout << "Batched BLAS not supported." << std::endl;
       std::abort();
-      //std::cout << "Batch size            = " <<  batches << " (batched BLAS)" << std::endl;
+#endif
   }
   std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
 
@@ -197,10 +171,6 @@ int main(int argc, char * argv[])
 
   int ngpus = use_ngpu;
 
-  const int tile_size = 32;
-  sycl::range<3> dimGrid(prk::divceil(order, tile_size), prk::divceil(order, tile_size), 1);
-  sycl::range<3> dimBlock(tile_size, tile_size, 1);
-
   //////////////////////////////////////////////////////////////////////
   // Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
@@ -214,7 +184,7 @@ int main(int argc, char * argv[])
   // host buffers
   std::vector<double*> h_c(ngpus,nullptr);
   for (int i=0; i<ngpus; ++i) {
-      h_c[i] = sycl::malloc_host<double>(matrices * bytes, qs[i]);
+      h_c[i] = syclx::malloc_host<double>(matrices * bytes, qs[i]);
   }
 
   // device buffers
@@ -223,28 +193,26 @@ int main(int argc, char * argv[])
   std::vector<double*> d_c(ngpus,nullptr);
   for (int i=0; i<ngpus; ++i) {
       auto q = qs[i];
-      d_a[i] = sycl::malloc_device<double>(matrices * nelems, q);
-      d_b[i] = sycl::malloc_device<double>(matrices * nelems, q);
-      d_c[i] = sycl::malloc_device<double>(matrices * nelems, q);
+      d_a[i] = syclx::malloc_device<double>(matrices * nelems, q);
+      d_b[i] = syclx::malloc_device<double>(matrices * nelems, q);
+      d_c[i] = syclx::malloc_device<double>(matrices * nelems, q);
       q.submit([&](sycl::handler &cgh)
       {
-          auto dpct_global_range = dimGrid * dimBlock;
-
-          auto d_a_i_ct2 = d_a[i];
-          auto d_b_i_ct3 = d_b[i];
-          auto d_c_i_ct4 = d_c[i];
-
-          cgh.parallel_for(
-              sycl::nd_range<3>(sycl::range<3>(dpct_global_range.get(2), dpct_global_range.get(1), dpct_global_range.get(0)),
-                                sycl::range<3>(dimBlock.get(2), dimBlock.get(1), dimBlock.get(0))),
-              [=](sycl::nd_item<3> item_ct1) {
-                  init(order, matrices, d_a_i_ct2, d_b_i_ct3, d_c_i_ct4, item_ct1);
-              });
+          cgh.parallel_for( sycl::range<2>{(size_t)order,(size_t)order},
+                            [=] (sycl::id<2> it) {
+            auto i = it[0];
+            auto j = it[1];
+            for (int b=0; b<matrices; ++b) {
+                d_a[i][b*order*order+i*order+j] = i;
+                d_b[i][b*order*order+i*order+j] = i;
+                d_c[i][b*order*order+i*order+j] = 0;
+            }
+          });
       });
   }
   for (int i=0; i<ngpus; ++i) {
       auto q = qs[i];
-      q.wait_and_throw();
+      q.wait();
   }
 
   for (int iter = 0; iter<=iterations; iter++) {
@@ -261,7 +229,7 @@ int main(int argc, char * argv[])
     }
     for (int i=0; i<ngpus; ++i) {
       auto q = qs[i];
-      q.wait_and_throw();
+      q.wait();
     }
   }
   dgemm_time = prk::wtime() - dgemm_time;
@@ -274,10 +242,10 @@ int main(int argc, char * argv[])
 
   for (int i=0; i<ngpus; ++i) {
       auto q = qs[i];
-      q.wait_and_throw();
-      sycl::free(d_c[i], q);
-      sycl::free(d_b[i], q);
-      sycl::free(d_a[i], q);
+      q.wait();
+      syclx::free(d_c[i], q);
+      syclx::free(d_b[i], q);
+      syclx::free(d_a[i], q);
   }
 
   //////////////////////////////////////////////////////////////////////
@@ -286,7 +254,7 @@ int main(int argc, char * argv[])
 
   const double epsilon = 1.0e-8;
   const double forder = static_cast<double>(order);
-  const double reference = 0.25 * std::pow(forder, 3) * std::pow(forder - 1.0, 2) * (iterations + 1);
+  const double reference = 0.25 * prk::pow(forder,3) * prk::pow(forder-1.0,2) * (iterations+1);
   double residuum(0);
   for (int i=0; i<ngpus; ++i) {
       for (int b=0; b<matrices; ++b) {
@@ -304,7 +272,7 @@ int main(int argc, char * argv[])
 #endif
     std::cout << "Solution validates" << std::endl;
     auto avgtime = dgemm_time/iterations/matrices;
-        auto nflops = 2.0 * std::pow(forder, 3) * ngpus;
+    auto nflops = 2.0 * std::pow(forder, 3) * ngpus;
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
