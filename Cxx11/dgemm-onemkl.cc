@@ -124,8 +124,7 @@ int main(int argc, char * argv[])
   }
   std::cout << "Input copy           = " << (input_copy ? "yes" : "no") << std::endl;
 
-  sycl::queue q(sycl::cpu_selector{});
-  //sycl::queue q(sycl::default_selector{});
+  sycl::queue q(sycl::default_selector{});
   prk::SYCL::print_device_platform(q);
 
   //////////////////////////////////////////////////////////////////////
