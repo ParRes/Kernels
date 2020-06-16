@@ -31,68 +31,84 @@
 
 //////////////////////////////////////////////////////////////////////
 ///
-/// NAME:    transpose
+/// NAME:    nstream
 ///
-/// PURPOSE: This program measures the time for the transpose of a
-///          column-major stored matrix into a row-major stored matrix.
+/// PURPOSE: To compute memory bandwidth when adding a vector of a given
+///          number of double precision values to the scalar multiple of
+///          another vector of the same length, and storing the result in
+///          a third vector.
 ///
-/// USAGE:   Program input is the matrix order and the number of times to
-///          repeat the operation:
+/// USAGE:   The program takes as input the number
+///          of iterations to loop over the triad vectors, the length of the
+///          vectors, and the offset between vectors
 ///
-///          transpose <matrix_size> <# iterations>
+///          <progname> <# iterations> <vector length> <offset>
 ///
 ///          The output consists of diagnostics to make sure the
-///          transpose worked and timing statistics.
+///          algorithm worked, and of timing statistics.
 ///
-/// HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-///          Converted to C++11 by Jeff Hammond, February 2016 and May 2017.
+/// NOTES:   Bandwidth is determined as the number of words read, plus the
+///          number of words written, times the size of the words, divided
+///          by the execution time. For a vector length of N, the total
+///          number of words read and written is 4*N*sizeof(double).
+///
+/// HISTORY: This code is loosely based on the Stream benchmark by John
+///          McCalpin, but does not follow all the Stream rules. Hence,
+///          reported results should not be associated with Stream in
+///          external publications
+///
+///          Converted to C++11 by Jeff Hammond, November 2017.
 ///
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_sycl.h"
 #include "prk_util.h"
 
-template <typename T> class transpose;
+template <typename T> class nstream;
 
 template <typename T>
-void run(sycl::queue & q, int iterations, size_t order)
+void run(sycl::queue & q, int iterations, size_t length)
 {
   //////////////////////////////////////////////////////////////////////
-  // Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double trans_time(0);
+  double nstream_time(0);
 
-  T * B = static_cast<T*>(syclx::malloc_shared(order*order * sizeof(T), q));
+  const T scalar(3);
+
+  T * h_A = syclx::malloc_host<T>(length, q);
+  T * h_B = syclx::malloc_host<T>(length, q);
+  T * h_C = syclx::malloc_host<T>(length, q);
+
+  for (size_t i=0; i<length; i++) {
+    h_A[i] = 0.0;
+    h_B[i] = 2.0;
+    h_C[i] = 2.0;
+  }
 
   try {
+    T * d_A = syclx::malloc_device<T>(length, q);
+    T * d_B = syclx::malloc_device<T>(length, q);
+    T * d_C = syclx::malloc_device<T>(length, q);
+    q.wait();
 
-    T * A = static_cast<T*>(syclx::malloc_shared(order*order * sizeof(T), q));
+    const size_t bytes = length * sizeof(double);
 
-    for (int i=0;i<order; i++) {
-      for (int j=0;j<order;j++) {
-        A[i*order+j] = static_cast<double>(i*order+j);
-        B[i*order+j] = 0.0;
-      }
-    }
+    q.memcpy(d_A, &(h_A[0]), bytes);
+    q.memcpy(d_B, &(h_B[0]), bytes);
+    q.memcpy(d_C, &(h_C[0]), bytes);
+    q.wait();
 
     for (int iter = 0; iter<=iterations; ++iter) {
 
-      if (iter==1) trans_time = prk::wtime();
+      if (iter==1) nstream_time = prk::wtime();
 
       q.submit([&](sycl::handler& h) {
-
-        h.parallel_for<class transpose<T>>(
-                sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
-#if USE_2D_INDEXING
-          sycl::id<2> ij{it[0],it[1]};
-          sycl::id<2> ji{it[1],it[0]};
-          B[ij] += A[ji];
-          A[ji] += (T)1;
-#else
-          B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
-          A[it[1] * order + it[0]] += (T)1;
-#endif
+        h.parallel_for<class nstream<T>>(
+                sycl::range<1>{length}, [=] (sycl::id<1> it) {
+            const size_t i = it[0];
+            d_A[i] += d_B[i] + scalar * d_C[i];
         });
       });
       q.wait();
@@ -101,9 +117,17 @@ void run(sycl::queue & q, int iterations, size_t order)
     // Stop timer before buffer+accessor destructors fire,
     // since that will move data, and we do not time that
     // for other device-oriented programming models.
-    trans_time = prk::wtime() - trans_time;
+    nstream_time = prk::wtime() - nstream_time;
 
-    syclx::free(A, q);
+    q.memcpy(&(h_A[0]), d_A, bytes).wait();
+
+    syclx::free(d_A, q);
+    syclx::free(d_B, q);
+    syclx::free(d_C, q);
+
+    syclx::free(h_B, q);
+    syclx::free(h_C, q);
+
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -123,67 +147,68 @@ void run(sycl::queue & q, int iterations, size_t order)
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
-  const T addit = (iterations+1.) * (iterations/2.);
-  double abserr(0);
-  for (size_t i=0; i<order; ++i) {
-    for (size_t j=0; j<order; ++j) {
-      size_t const ij = i*order+j;
-      size_t const ji = j*order+i;
-      const T reference = static_cast<T>(ij)*(1.+iterations)+addit;
-      abserr += prk::abs(B[ji] - reference);
-    }
+  double ar(0);
+  T br(2);
+  T cr(2);
+  for (int i=0; i<=iterations; ++i) {
+      ar += br + scalar * cr;
   }
 
-#ifdef VERBOSE
-  std::cout << "Sum of absolute differences: " << abserr << std::endl;
-#endif
+  ar *= length;
 
-  const double epsilon(1.0e-8);
-  if (abserr < epsilon) {
-    std::cout << "Solution validates" << std::endl;
-    double avgtime = trans_time/iterations;
-    double bytes = (size_t)order * (size_t)order * sizeof(T);
-    std::cout << 8*sizeof(T) << "B "
-              << "Rate (MB/s): " << 1.0e-6 * (2.*bytes)/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+  double asum(0);
+  for (size_t i=0; i<length; ++i) {
+      asum += prk::abs(h_A[i]);
+  }
+
+  syclx::free(h_A, q);
+
+  const double epsilon(1.e-8);
+  if (prk::abs(ar-asum)/asum > epsilon) {
+      std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
+                << "       Expected checksum: " << ar << "\n"
+                << "       Observed checksum: " << asum << std::endl;
+      std::cout << "ERROR: solution did not validate" << std::endl;
   } else {
-    std::cout << "ERROR: Aggregate squared error " << abserr
-              << " exceeds threshold " << epsilon << std::endl;
+      std::cout << "Solution validates" << std::endl;
+      double avgtime = nstream_time/iterations;
+      double nbytes = 4.0 * length * sizeof(T);
+      std::cout << 8*sizeof(T) << "B "
+                << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
+                << " Avg time (s): " << avgtime << std::endl;
   }
-
-  syclx::free(B, q);
-
 }
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/SYCL Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/SYCL STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  size_t order;
+  int iterations, offset;
+  size_t length;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order>";
+        throw "Usage: <# iterations> <vector length>";
       }
 
-      // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
-      // order of a the matrix
-      order = std::atoi(argv[2]);
-      if (order <= 0) {
-        throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > prk::get_max_matrix_size()) {
-        throw "ERROR: matrix dimension too large - overflow risk";
+      length = std::atol(argv[2]);
+      if (length <= 0) {
+        throw "ERROR: vector length must be positive";
+      }
+
+      offset = (argc>3) ? std::atoi(argv[3]) : 0;
+      if (length <= 0) {
+        throw "ERROR: offset must be nonnegative";
       }
   }
   catch (const char * e) {
@@ -191,8 +216,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Vector length        = " << length << std::endl;
+  std::cout << "Offset               = " << offset << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Setup SYCL environment
@@ -204,11 +230,11 @@ int main(int argc, char * argv[])
 
   try {
 #if SYCL_TRY_CPU_QUEUE
-    if (order<10000) {
+    if (length<100000) {
         sycl::queue q(sycl::host_selector{});
         prk::SYCL::print_device_platform(q);
-        run<float>(q, iterations, order);
-        run<double>(q, iterations, order);
+        run<float>(q, iterations, length);
+        run<double>(q, iterations, length);
     } else {
         std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
     }
@@ -221,8 +247,8 @@ int main(int argc, char * argv[])
         prk::SYCL::print_device_platform(q);
         bool has_spir = prk::SYCL::has_spir(q);
         if (has_spir) {
-          run<float>(q, iterations, order);
-          run<double>(q, iterations, order);
+          run<float>(q, iterations, length);
+          run<double>(q, iterations, length);
         }
     }
 #endif
@@ -239,9 +265,9 @@ int main(int argc, char * argv[])
           std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
         }
         if (has_spir || has_ptx) {
-          run<float>(q, iterations, order);
+          run<float>(q, iterations, length);
           if (has_fp64) {
-            run<double>(q, iterations, order);
+            run<double>(q, iterations, length);
           }
         }
     }

@@ -18,6 +18,12 @@ namespace syclx = cl::sycl::experimental;
 namespace syclx = cl::sycl;
 #endif
 
+#ifdef PRK_SYCL_USE_FLOAT
+typedef float prk_float;
+#else
+typedef double prk_float;
+#endif
+
 // prebuilt kernels are not required/not fully supported on hipSYCL and triSYCL
 #if defined(TRISYCL) || defined(__HIPSYCL__) || defined(DPCPP)
 #define PREBUILD_KERNEL 0

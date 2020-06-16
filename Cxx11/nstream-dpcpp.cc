@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -61,39 +61,20 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#include "prk_sycl.h"
 #include "prk_util.h"
-#include "prk_cuda.h"
-
-__global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
-{
-    auto i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) {
-        A[i] += B[i] + scalar * C[i];
-    }
-}
-
-__global__ void nstream2(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
-{
-    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
-        A[i] += B[i] + scalar * C[i];
-    }
-}
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/CUDA STREAM triad: A = B + scalar * C" << std::endl;
-
-  prk::CUDA::info info;
-  info.print();
+  std::cout << "C++11/DPC++ STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int length;
-  bool grid_stride;
+  size_t length;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length> [<grid_stride>]";
@@ -108,8 +89,6 @@ int main(int argc, char * argv[])
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
-
-      grid_stride   = (argc>3) ? prk::parse_boolean(std::string(argv[4])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -118,13 +97,9 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
 
-  const int blockSize = 256;
-  dim3 dimBlock(blockSize, 1, 1);
-  dim3 dimGrid(prk::divceil(length,blockSize), 1, 1);
-
-  info.checkDims(dimBlock, dimGrid);
+  sycl::queue q(sycl::default_selector{});
+  prk::SYCL::print_device_platform(q);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -132,64 +107,52 @@ int main(int argc, char * argv[])
 
   double nstream_time(0);
 
-  const size_t bytes = length * sizeof(prk_float);
-  prk_float * h_A;
-  prk_float * h_B;
-  prk_float * h_C;
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
-#else
-  h_A = new prk_float[length];
-  h_B = new prk_float[length];
-  h_C = new prk_float[length];
-#endif
-  for (int i=0; i<length; ++i) {
-    h_A[i] = static_cast<prk_float>(0);
-    h_B[i] = static_cast<prk_float>(2);
-    h_C[i] = static_cast<prk_float>(2);
+  const size_t bytes = length * sizeof(double);
+
+  double * h_A = syclx::malloc_host<double>(length, q);
+  double * h_B = syclx::malloc_host<double>(length, q);
+  double * h_C = syclx::malloc_host<double>(length, q);
+
+  for (size_t i=0; i<length; ++i) {
+    h_A[i] = 0;
+    h_B[i] = 2;
+    h_C[i] = 2;
   }
 
-  prk_float * d_A;
-  prk_float * d_B;
-  prk_float * d_C;
-  prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
+  double * d_A = syclx::malloc_device<double>(length, q);
+  double * d_B = syclx::malloc_device<double>(length, q);
+  double * d_C = syclx::malloc_device<double>(length, q);
+  q.memcpy(d_A, &(h_A[0]), bytes).wait();
+  q.memcpy(d_B, &(h_B[0]), bytes).wait();
+  q.memcpy(d_C, &(h_C[0]), bytes).wait();
 
-  prk_float scalar(3);
+  double scalar(3);
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      if (grid_stride) {
-          nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
-      } else {
-          nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
-      }
-#ifndef __CORIANDERCC__
-      // silence "ignoring cudaDeviceSynchronize for now" warning
-      prk::CUDA::check( cudaDeviceSynchronize() );
-#endif
+      q.submit([&](sycl::handler& h) {
+
+        h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> it) {
+            const size_t i = it[0];
+            d_A[i] += d_B[i] + scalar * d_C[i];
+        });
+      });
+      q.wait();
     }
+
     nstream_time = prk::wtime() - nstream_time;
   }
 
-  prk::CUDA::check( cudaMemcpy(&(h_A[0]), d_A, bytes, cudaMemcpyDeviceToHost) );
+  q.memcpy(&(h_A[0]), d_A, bytes).wait();
 
-  prk::CUDA::check( cudaFree(d_C) );
-  prk::CUDA::check( cudaFree(d_B) );
-  prk::CUDA::check( cudaFree(d_A) );
+  syclx::free(d_C, q);
+  syclx::free(d_B, q);
+  syclx::free(d_A, q);
 
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_B) );
-  prk::CUDA::check( cudaFreeHost(h_C) );
-#endif
+  syclx::free(h_B, q);
+  syclx::free(h_C, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -206,15 +169,13 @@ int main(int argc, char * argv[])
 
   double asum(0);
   for (int i=0; i<length; i++) {
-      asum += prk::abs(h_A[i]);
+    asum += prk::abs(h_A[i]);
   }
 
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_A) );
-#endif
+  syclx::free(h_A, q);
 
   double epsilon=1.e-8;
-  if (prk::abs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar - asum) / asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
@@ -224,7 +185,7 @@ int main(int argc, char * argv[])
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
-      double nbytes = 4.0 * length * sizeof(prk_float);
+      double nbytes = 4.0 * length * sizeof(double);
       std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }

@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and the length
+///          of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length> ...
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -66,7 +66,7 @@
 
 __global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
 {
-    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) {
         A[i] += B[i] + scalar * C[i];
     }
@@ -79,13 +79,24 @@ __global__ void nstream2(const unsigned n, const prk_float scalar, prk_float * A
     }
 }
 
+__global__ void fault_pages(const unsigned n, prk_float * A, prk_float * B, prk_float * C)
+{
+    //const unsigned inc = 4096/sizeof(prk_float);
+    //for (unsigned int i = 0; i < n; i += inc) {
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
+        A[i] = (prk_float)0;
+        B[i] = (prk_float)2;
+        C[i] = (prk_float)2;
+    }
+}
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/CUDA STREAM triad: A = B + scalar * C" << std::endl;
 
   prk::CUDA::info info;
-  info.print();
+  //info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -93,10 +104,10 @@ int main(int argc, char * argv[])
 
   int iterations;
   int length;
-  bool grid_stride;
+  bool system_memory,  grid_stride, ordered_fault, prefetch;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<grid_stride>]";
+        throw "Usage: <# iterations> <vector length> [<use_system_memory> <grid_stride> <ordered_fault> <prefetch>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -109,7 +120,10 @@ int main(int argc, char * argv[])
         throw "ERROR: vector length must be positive";
       }
 
-      grid_stride   = (argc>3) ? prk::parse_boolean(std::string(argv[4])) : false;
+      system_memory = (argc>3) ? prk::parse_boolean(std::string(argv[3])) : false;
+      grid_stride   = (argc>4) ? prk::parse_boolean(std::string(argv[4])) : false;
+      ordered_fault = (argc>5) ? prk::parse_boolean(std::string(argv[5])) : false;
+      prefetch      = (argc>6) ? prk::parse_boolean(std::string(argv[6])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -118,7 +132,10 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
+  std::cout << "Memory allocator     = " << (system_memory ? "system (malloc)" : "cudaMallocManaged") << std::endl;
   std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
+  std::cout << "Ordered fault        = " << (ordered_fault ? "yes" : "no") << std::endl;
+  std::cout << "Prefetch             = " << (prefetch ? "yes" : "no") << std::endl;
 
   const int blockSize = 256;
   dim3 dimBlock(blockSize, 1, 1);
@@ -132,34 +149,38 @@ int main(int argc, char * argv[])
 
   double nstream_time(0);
 
+  prk_float * A;
+  prk_float * B;
+  prk_float * C;
+
   const size_t bytes = length * sizeof(prk_float);
-  prk_float * h_A;
-  prk_float * h_B;
-  prk_float * h_C;
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
-#else
-  h_A = new prk_float[length];
-  h_B = new prk_float[length];
-  h_C = new prk_float[length];
-#endif
-  for (int i=0; i<length; ++i) {
-    h_A[i] = static_cast<prk_float>(0);
-    h_B[i] = static_cast<prk_float>(2);
-    h_C[i] = static_cast<prk_float>(2);
+  if (system_memory) {
+      A = new double[length];
+      B = new double[length];
+      C = new double[length];
+  } else {
+      prk::CUDA::check( cudaMallocManaged((void**)&A, bytes) );
+      prk::CUDA::check( cudaMallocManaged((void**)&B, bytes) );
+      prk::CUDA::check( cudaMallocManaged((void**)&C, bytes) );
   }
 
-  prk_float * d_A;
-  prk_float * d_B;
-  prk_float * d_C;
-  prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
+  // initialize on CPU to ensure pages are faulted there
+  for (int i=0; i<length; ++i) {
+    A[i] = static_cast<prk_float>(0);
+    B[i] = static_cast<prk_float>(2);
+    C[i] = static_cast<prk_float>(2);
+  }
+
+  if (ordered_fault) {
+      fault_pages<<<1,1>>>(static_cast<unsigned>(length), A, B, C);
+      prk::CUDA::check( cudaDeviceSynchronize() );
+  }
+
+  if (prefetch) {
+      prk::CUDA::check( cudaMemPrefetchAsync(A, bytes, 0) );
+      prk::CUDA::check( cudaMemPrefetchAsync(B, bytes, 0) );
+      prk::CUDA::check( cudaMemPrefetchAsync(C, bytes, 0) );
+  }
 
   prk_float scalar(3);
   {
@@ -168,28 +189,14 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
       if (grid_stride) {
-          nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+          nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, A, B, C);
       } else {
-          nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+          nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, A, B, C);
       }
-#ifndef __CORIANDERCC__
-      // silence "ignoring cudaDeviceSynchronize for now" warning
       prk::CUDA::check( cudaDeviceSynchronize() );
-#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
-
-  prk::CUDA::check( cudaMemcpy(&(h_A[0]), d_A, bytes, cudaMemcpyDeviceToHost) );
-
-  prk::CUDA::check( cudaFree(d_C) );
-  prk::CUDA::check( cudaFree(d_B) );
-  prk::CUDA::check( cudaFree(d_A) );
-
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_B) );
-  prk::CUDA::check( cudaFreeHost(h_C) );
-#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -201,17 +208,22 @@ int main(int argc, char * argv[])
   for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
-
   ar *= length;
 
   double asum(0);
   for (int i=0; i<length; i++) {
-      asum += prk::abs(h_A[i]);
+      asum += prk::abs(A[i]);
   }
 
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_A) );
-#endif
+  if (system_memory) {
+      free(A);
+      free(B);
+      free(C);
+  } else {
+      prk::CUDA::check( cudaFree(A) );
+      prk::CUDA::check( cudaFree(B) );
+      prk::CUDA::check( cudaFree(C) );
+  }
 
   double epsilon=1.e-8;
   if (prk::abs(ar-asum)/asum > epsilon) {

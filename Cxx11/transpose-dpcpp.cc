@@ -39,10 +39,7 @@
 /// USAGE:   Program input is the matrix order and the number of times to
 ///          repeat the operation:
 ///
-///          transpose <matrix_size> <# iterations> [tile size]
-///
-///          An optional parameter specifies the tile size used to divide the
-///          individual matrix blocks for improved cache and TLB performance.
+///          transpose <matrix_size> <# iterations>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          transpose worked and timing statistics.
@@ -53,22 +50,22 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_sycl.h"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/DPCT Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int order;
-  int tile_size;
+  size_t order;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [tile size]";
+        throw "Usage: <# iterations> <matrix order>";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -82,61 +79,70 @@ int main(int argc, char * argv[])
       } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
-
-      // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
-      // a negative tile size means no tiling of the local transpose
-      if (tile_size <= 0) tile_size = order;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
-  std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Matrix order         = " << order << std::endl;
-  std::cout << "Tile size            = " << tile_size << std::endl;
+  std::cout << "Number of iterations  = " << iterations << std::endl;
+  std::cout << "Matrix order          = " << order << std::endl;
+
+  sycl::queue q(sycl::default_selector{});
+  prk::SYCL::print_device_platform(q);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
+  const size_t nelems = (size_t)order * (size_t)order;
+  const size_t bytes = nelems * sizeof(double);
+  double * h_a = syclx::malloc_host<double>( nelems, q);
+  double * h_b = syclx::malloc_host<double>( nelems, q);
+
+  // fill A with the sequence 0 to order^2-1
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
+      h_a[j*order+i] = static_cast<double>(order*j+i);
+      h_b[j*order+i] = static_cast<double>(0);
+    }
+  }
+
+  // copy input from host to device
+  double * A = syclx::malloc_device<double>( nelems, q);
+  double * B = syclx::malloc_device<double>( nelems, q);
+  q.memcpy(A, &(h_a[0]), bytes).wait();
+  q.memcpy(B, &(h_b[0]), bytes).wait();
+
   auto trans_time = 0.0;
 
-  prk::vector<double> A(order*order);
-  prk::vector<double> B(order*order,0.0);
-
-  // fill A with the sequence 0 to order^2-1 as doubles
-  std::iota(A.begin(), A.end(), 0.0);
-
-  {
-    for (int iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) trans_time = prk::wtime();
 
-      // transpose the  matrix
-      if (tile_size < order) {
-        for (int it=0; it<order; it+=tile_size) {
-          for (int jt=0; jt<order; jt+=tile_size) {
-            for (int i=it; i<std::min(order,it+tile_size); i++) {
-              for (int j=jt; j<std::min(order,jt+tile_size); j++) {
-                B[i*order+j] += A[j*order+i];
-                A[j*order+i] += 1.0;
-              }
-            }
-          }
-        }
-      } else {
-        for (int i=0;i<order; i++) {
-          for (int j=0;j<order;j++) {
-            B[i*order+j] += A[j*order+i];
-            A[j*order+i] += 1.0;
-          }
-        }
-      }
-    }
-    trans_time = prk::wtime() - trans_time;
+      q.submit([&](sycl::handler& h) {
+
+        h.parallel_for( sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
+#if USE_2D_INDEXING
+          sycl::id<2> ij{it[0],it[1]};
+          sycl::id<2> ji{it[1],it[0]};
+          B[ij] += A[ji];
+          A[ji] += (T)1;
+#else
+          B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
+          A[it[1] * order + it[0]] += 1.0;
+#endif
+        });
+      });
+      q.wait();
   }
+  trans_time = prk::wtime() - trans_time;
+
+  // copy output back to host
+  q.memcpy(&(h_b[0]), B, bytes).wait();
+
+  syclx::free(B, q);
+  syclx::free(A, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -144,19 +150,17 @@ int main(int argc, char * argv[])
 
   const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
-  // TODO: replace with std::generate, std::accumulate, or similar
   for (int j=0; j<order; j++) {
     for (int i=0; i<order; i++) {
-      const int ij = i*order+j;
-      const int ji = j*order+i;
+      const size_t ij = (size_t)i*(size_t)order+(size_t)j;
+      const size_t ji = (size_t)j*(size_t)order+(size_t)i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += prk::abs(B[ji] - reference);
+      abserr += prk::abs(h_b[ji] - reference);
     }
   }
 
-#ifdef VERBOSE
-  std::cout << "Sum of absolute differences: " << abserr << std::endl;
-#endif
+  syclx::free(h_b, q);
+  syclx::free(h_a, q);
 
   const auto epsilon = 1.0e-8;
   if (abserr < epsilon) {

@@ -13,7 +13,12 @@ STARFLAG = $(XLFPP)-DSTAR
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
 FCFLAGS += $(XLFPP)-DRADIUS=$(RADIUS) $(STARFLAG)
 
+BLASFLAGS = $(BLASFLAG)
+
 ifeq ($(findstring ifort,$(FC)),ifort)
+  BLASFLAGS += -heap-arrays
+endif
+ifeq ($(findstring ifx,$(FC)),ifx)
   BLASFLAGS += -heap-arrays
 endif
 
@@ -65,6 +70,8 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgem
 
 ornlacc: p2p-ornlacc p2p-innerloop-ornlacc stencil-ornlacc transpose-ornlacc nstream-ornlacc
 
+blas: dgemm-mkl
+
 %: %.F90
 	$(FC) $(FCFLAGS) $< -o $@
 
@@ -73,6 +80,9 @@ stencil: stencil.F90 stencil_serial.F90
 	$(FC) $(FCFLAGS) $< -o $@
 
 dgemm-pretty: dgemm-pretty.F90
+	$(FC) $(FCFLAGS) $(BLASFLAGS) $< -o $@
+
+dgemm-blas: dgemm-blas.F90
 	$(FC) $(FCFLAGS) $(BLASFLAGS) $< -o $@
 
 %-pretty: %-pretty.F90

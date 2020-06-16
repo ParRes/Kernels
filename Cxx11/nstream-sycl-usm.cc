@@ -160,7 +160,7 @@ void run(sycl::queue & q, int iterations, size_t length)
   }
 
   syclx::free(A, ctx);
-  
+
   const double epsilon(1.e-8);
   if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"

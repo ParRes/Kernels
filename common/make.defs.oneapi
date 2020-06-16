@@ -76,8 +76,10 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 # CBLAS for C++ DGEMM
 #
 #CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+BLASFLAG=-mkl
 CBLASFLAG=-DMKL -mkl
-ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
+ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_tbb_thread -tbb -lmkl_core -lOpenCL -ldl
+#ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
 #
 # CUDA flags
 #
@@ -128,6 +130,14 @@ PETSCDIR=../deps/petsc
 PETSCFLAG=-I${PETSCDIR}/include
 PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
 PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
+#
+# Fortran 2008 coarrays
+#
+# see https://github.com/ParRes/Kernels/blob/master/FORTRAN/README.md for details
+# single-node
+COARRAYFLAG=-coarray
+# multi-node
+# COARRAYFLAG=-coarray=distributed
 #
 # MEMKIND (used in C1z)
 #
