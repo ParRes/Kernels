@@ -65,15 +65,15 @@
 #include <mkl_lapack_sycl.hpp>
 #include <mkl_sycl_types.hpp>
 
-void prk_dgemm(sycl::queue &q, const int order, const int batches, double *A, double *B, double *C)
+void prk_dgemm(sycl::queue &q, const int order, const int batches, prk_float *A, prk_float *B, prk_float *C)
 {
-    const double alpha = 1.0;
-    const double beta  = 1.0;
+    const prk_float alpha = 1.0;
+    const prk_float beta  = 1.0;
 
     for (int b=0; b<batches; ++b) {
-        double * pA = &(A[b*order*order]);
-        double * pB = &(B[b*order*order]);
-        double * pC = &(C[b*order*order]);
+        prk_float * pA = &(A[b*order*order]);
+        prk_float * pB = &(B[b*order*order]);
+        prk_float * pC = &(C[b*order*order]);
         mkl::blas::gemm(q, mkl::transpose::nontrans, // opA
                            mkl::transpose::nontrans, // opB
                            order, order, order,      // m, n, k
@@ -151,11 +151,16 @@ int main(int argc, char * argv[])
 
   auto platforms = sycl::platform::get_platforms();
   for (auto & p : platforms) {
-    std::cout << "Platform: " << p.get_info<sycl::info::platform::name>() << std::endl;
+    auto pname = p.get_info<sycl::info::platform::name>();
+    std::cout << "Platform: " << pname << std::endl;
+    if ( pname.find("Level-Zero") != std::string::npos) {
+        std::cout << "Level Zero GPU skipped" << std::endl;
+        break;
+    }
     auto devices = p.get_devices();
     for (auto & d : devices ) {
         std::cout << " Device: " << d.get_info<sycl::info::device::name>() << std::endl;
-        if (d.is_gpu()) {
+        if ( d.is_gpu() ) {
             std::cout << "Device is GPU - adding to vector of queues" << std::endl;
             qs.push_back(sycl::queue(d));
         }
@@ -179,23 +184,23 @@ int main(int argc, char * argv[])
 
   const int matrices = (batches == 0 ? 1 : abs(batches));
   const size_t nelems = (size_t)order * (size_t)order;
-  const size_t bytes = nelems * sizeof(double);
+  const size_t bytes = nelems * sizeof(prk_float);
 
   // host buffers
-  std::vector<double*> h_c(ngpus,nullptr);
+  std::vector<prk_float*> h_c(ngpus,nullptr);
   for (int i=0; i<ngpus; ++i) {
-      h_c[i] = syclx::malloc_host<double>(matrices * bytes, qs[i]);
+      h_c[i] = syclx::malloc_host<prk_float>(matrices * bytes, qs[i]);
   }
 
   // device buffers
-  std::vector<double*> d_a(ngpus,nullptr);
-  std::vector<double*> d_b(ngpus,nullptr);
-  std::vector<double*> d_c(ngpus,nullptr);
+  std::vector<prk_float*> d_a(ngpus, nullptr);
+  std::vector<prk_float*> d_b(ngpus, nullptr);
+  std::vector<prk_float*> d_c(ngpus, nullptr);
   for (int i=0; i<ngpus; ++i) {
       auto q = qs[i];
-      d_a[i] = syclx::malloc_device<double>(matrices * nelems, q);
-      d_b[i] = syclx::malloc_device<double>(matrices * nelems, q);
-      d_c[i] = syclx::malloc_device<double>(matrices * nelems, q);
+      prk_float * p_a = d_a[i] = syclx::malloc_device<prk_float>(matrices * nelems, q);
+      prk_float * p_b = d_b[i] = syclx::malloc_device<prk_float>(matrices * nelems, q);
+      prk_float * p_c = d_c[i] = syclx::malloc_device<prk_float>(matrices * nelems, q);
       q.submit([&](sycl::handler &cgh)
       {
           cgh.parallel_for( sycl::range<2>{(size_t)order,(size_t)order},
@@ -203,9 +208,9 @@ int main(int argc, char * argv[])
             auto i = it[0];
             auto j = it[1];
             for (int b=0; b<matrices; ++b) {
-                d_a[i][b*order*order+i*order+j] = i;
-                d_b[i][b*order*order+i*order+j] = i;
-                d_c[i][b*order*order+i*order+j] = 0;
+                p_a[b*order*order+i*order+j] = i;
+                p_b[b*order*order+i*order+j] = i;
+                p_c[b*order*order+i*order+j] = 0;
             }
           });
       });
@@ -258,8 +263,8 @@ int main(int argc, char * argv[])
   double residuum(0);
   for (int i=0; i<ngpus; ++i) {
       for (int b=0; b<matrices; ++b) {
-          const auto checksum = prk::reduce( &(h_c[i][b*order*order+0]), &(h_c[i][b*order*order+nelems]), 0.0);
-          residuum += std::abs(checksum - reference) / reference;
+          const double checksum = prk::reduce( &(h_c[i][b*order*order+0]), &(h_c[i][b*order*order+nelems]), (prk_float)0);
+          residuum += prk::abs(checksum - reference) / reference;
       }
   }
   residuum /= matrices;
