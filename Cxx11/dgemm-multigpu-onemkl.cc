@@ -272,7 +272,7 @@ int main(int argc, char * argv[])
 #endif
     std::cout << "Solution validates" << std::endl;
     auto avgtime = dgemm_time/iterations/matrices;
-    auto nflops = 2.0 * std::pow(forder, 3) * ngpus;
+    auto nflops = 2.0 * prk::pow(forder, 3) * ngpus;
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {

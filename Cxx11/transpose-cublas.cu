@@ -11,7 +11,7 @@
 ///       copyright notice, this list of conditions and the following
 ///       disclaimer in the documentation and/or other materials provided
 ///       with the distribution.
-/// * Neither the name of <COPYRIGHT HOLDER> nor the names of its
+/// * Neither the name of Intel Corporation nor the names of its
 ///       contributors may be used to endorse or promote products
 ///       derived from this software without specific prior written
 ///       permission.
@@ -66,7 +66,7 @@ int main(int argc, char * argv[])
   info.print();
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
   }
@@ -223,7 +223,7 @@ int main(int argc, char * argv[])
       const size_t ij = (size_t)i*(size_t)order+(size_t)j;
       const size_t ji = (size_t)j*(size_t)order+(size_t)i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(h_b[ji] - reference);
+      abserr += prk::abs(h_b[ji] - reference);
     }
   }
 

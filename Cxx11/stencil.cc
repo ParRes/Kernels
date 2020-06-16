@@ -197,8 +197,6 @@ int main(int argc, char* argv[])
 
   // interior of grid with respect to stencil
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
-
-  // compute L1 norm in parallel
   double norm = 0.0;
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {

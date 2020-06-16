@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -60,7 +60,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // Read and test input parameters
+  /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -98,7 +98,7 @@ int main(int argc, char * argv[])
   std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // Allocate space and perform the computation
+  // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
   auto trans_time = 0.0;
@@ -142,7 +142,7 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  const auto addit = (iterations+1.) * (iterations/2.);
+  const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
   // TODO: replace with std::generate, std::accumulate, or similar
   for (int j=0; j<order; j++) {
