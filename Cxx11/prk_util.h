@@ -100,7 +100,7 @@ namespace prk {
         const char* temp = std::getenv("PRK_ALIGNMENT");
         int a = (temp!=nullptr) ? std::atoi(temp) : 64;
         if (a < 8) a = 8;
-        if ( prk::is_power_of_2(a) ) {
+        if ( !prk::is_power_of_2(a) ) {
             std::cout << "You requested alignment (" << a << ") that is not a power of two!" << std::endl;
             std::abort();
         }
