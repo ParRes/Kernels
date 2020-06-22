@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
   }
 
   int haz_ngpu = qs.size();
-  std::cout << "Number of GPUs found  = " << haz_ngpu << std::endl;
+  std::cout << "\nNumber of GPUs found  = " << haz_ngpu << std::endl;
 
   if (use_ngpu > haz_ngpu) {
       std::cout << "You cannot use more GPUs (" << use_ngpu << ") than you have (" << haz_ngpu << ")" << std::endl;
@@ -137,6 +137,8 @@ int main(int argc, char * argv[])
 
   int ngpus = use_ngpu;
 
+#if 0
+  // NOT NECESSARY - using regular host memory
   for (int g=1; g<ngpus; ++g) {
       auto q0 = qs[g-1];
       auto q1 = qs[g];
@@ -145,6 +147,7 @@ int main(int argc, char * argv[])
           std::cout << "USM may not like this..." << std::endl;
       }
   }
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -164,36 +167,20 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  const size_t K = 1024;
-  const size_t M = 1024*1024;
-  const size_t chunk = (length > ngpus * M) ? M : K;
-
   std::vector<size_t> ls(ngpus,0);
   {
-      const size_t nchunks = prk::divceil(length, chunk);
-      std::cout << "nchunks = " << nchunks << std::endl;
-
-      const size_t chunks_per_gpu = prk::divceil(nchunks, ngpus);
-      std::cout << "chunks_per_gpu = " << chunks_per_gpu << std::endl;
-
-      size_t remainder = length;
-      for (int g=0; g<ngpus-1; ++g) {
-
-          std::cout << "remainder (before) = " << remainder << std::endl;
-
-          const size_t elements_per_gpu = chunks_per_gpu * chunk;
-          std::cout << "elements_per_gpu = " << elements_per_gpu << std::endl;
-
-          ls[g] = elements_per_gpu;
-          remainder -= elements_per_gpu;
-
-          std::cout << "remainder (after) = " << remainder << std::endl;
-      }
-      ls[ngpus-1] = remainder;
+      const size_t elements_per_gpu = prk::divceil(length, ngpus);
+      std::cout << "elements_per_gpu = " << elements_per_gpu << std::endl;
 
       for (int g=0; g<ngpus; ++g) {
+          ls[g] = elements_per_gpu;
+      }
+      if (elements_per_gpu * ngpus > length) {
+          ls[ngpus-1] = length - (ngpus-1) * elements_per_gpu;
+      }
+      for (int g=0; g<ngpus; ++g) {
           const size_t elements_per_gpu = ls[g];
-          std::cout << "ls[" << g << "] " << ls[g] << std::endl;
+          std::cout << "ls[" << g << "]=" << ls[g] << std::endl;
       }
   }
 
@@ -210,17 +197,23 @@ int main(int argc, char * argv[])
       d_A[g] = syclx::malloc_device<double>(local_length, q);
       d_B[g] = syclx::malloc_device<double>(local_length, q);
       d_C[g] = syclx::malloc_device<double>(local_length, q);
+      q.wait();
 
-      const size_t start = g * chunk;
-      const size_t size  = ls[g];
+      const size_t start = (g>1) ? ls[g-1]+1 : 0;
+      const size_t size  = ls[g] * sizeof(double);
       q.memcpy(d_A[g], &(h_A[start]), size);
       q.memcpy(d_B[g], &(h_B[start]), size);
       q.memcpy(d_C[g], &(h_C[start]), size);
-
       q.wait();
   }
 
-  double scalar(3);
+  for (size_t i=0; i<length; ++i) {
+    h_A[i] = -77777777;
+    h_B[i] = -88888888;
+    h_C[i] = -99999999;
+  }
+
+  const double scalar(3);
   {
       for (int iter = 0; iter<=iterations; iter++) {
 
@@ -233,9 +226,10 @@ int main(int argc, char * argv[])
             auto p_B = d_B[g];
             auto p_C = d_C[g];
 
-            q.submit([&](sycl::handler& h) {
+            const size_t size  = ls[g];
 
-              h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> it) {
+            q.submit([&](sycl::handler& h) {
+              h.parallel_for( sycl::range<1>{size}, [=] (sycl::id<1> it) {
                   const size_t i = it[0];
                   p_A[i] += p_B[i] + scalar * p_C[i];
               });
@@ -252,18 +246,20 @@ int main(int argc, char * argv[])
   for (int g=0; g<ngpus; ++g) {
       auto q = qs[g];
 
-      const size_t start = g * chunk;
-      const size_t size  = ls[g];
+      const size_t start = (g>1) ? ls[g-1]+1 : 0;
+      const size_t size  = ls[g] * sizeof(double);
 
       q.memcpy(&(h_A[start]), d_A[g], size);
+      q.memcpy(&(h_B[start]), d_B[g], size);
+      q.memcpy(&(h_C[start]), d_C[g], size);
       q.wait();
 
       syclx::free(d_C[g], q);
       syclx::free(d_B[g], q);
       syclx::free(d_A[g], q);
+      q.wait();
   }
 
-#if 0
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
@@ -289,6 +285,14 @@ int main(int argc, char * argv[])
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
+
+      std::cerr << "h_A = \n";
+      for (int i=0; i<length; i++) {
+          std::cerr << i << "," << h_A[i] << "," << h_B[i] << "," << h_C[i] << "\n";
+      }
+      std::cerr << std::endl;
+
+
       return 1;
   } else {
       std::cout << "Solution validates" << std::endl;
@@ -297,7 +301,7 @@ int main(int argc, char * argv[])
       std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }
-#endif
+
   return 0;
 }
 
