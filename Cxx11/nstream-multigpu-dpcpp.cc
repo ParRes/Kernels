@@ -75,9 +75,10 @@ int main(int argc, char * argv[])
 
   int iterations;
   size_t length;
+  int use_ngpu = 1;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<grid_stride>]";
+        throw "Usage: <# iterations> <vector length> [<use_ngpu>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -89,17 +90,61 @@ int main(int argc, char * argv[])
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
+
+      if (argc > 3) {
+        use_ngpu = std::atoi(argv[3]);
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
-  std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Vector length        = " << length << std::endl;
+  std::cout << "Number of iterations  = " << iterations << std::endl;
+  std::cout << "Vector length         = " << length << std::endl;
+  std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
 
-  sycl::queue q(sycl::default_selector{});
-  prk::SYCL::print_device_platform(q);
+  std::vector<sycl::queue> qs;
+
+  auto platforms = sycl::platform::get_platforms();
+  for (auto & p : platforms) {
+    auto pname = p.get_info<sycl::info::platform::name>();
+    std::cout << "\n*Platform: " << pname << std::endl;
+    if ( pname.find("Level-Zero") != std::string::npos) {
+        std::cout << "*Level Zero GPU skipped" << std::endl;
+        break;
+    }
+    if ( pname.find("Intel") == std::string::npos) {
+        std::cout << "*non-Intel skipped" << std::endl;
+        break;
+    }
+    auto devices = p.get_devices();
+    for (auto & d : devices ) {
+        std::cout << "**Device: " << d.get_info<sycl::info::device::name>() << std::endl;
+        if ( d.is_gpu() || d.is_cpu() ) {
+            std::cout << "**Device is CPU or GPU - adding to vector of queues" << std::endl;
+            qs.push_back(sycl::queue(d));
+        }
+    }
+  }
+
+  int haz_ngpu = qs.size();
+  std::cout << "Number of GPUs found  = " << haz_ngpu << std::endl;
+
+  if (use_ngpu > haz_ngpu) {
+      std::cout << "You cannot use more GPUs (" << use_ngpu << ") than you have (" << haz_ngpu << ")" << std::endl;
+  }
+
+  int ngpus = use_ngpu;
+
+  for (int g=1; g<ngpus; ++g) {
+      auto q0 = qs[g-1];
+      auto q1 = qs[g];
+      if ( q0.get_context() != q1.get_context() ) {
+          std::cout << "SYCL queues associated with different contexts.\n";
+          std::cout << "USM may not like this..." << std::endl;
+      }
+  }
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -109,9 +154,9 @@ int main(int argc, char * argv[])
 
   const size_t bytes = length * sizeof(double);
 
-  double * h_A = syclx::malloc_host<double>(length, q);
-  double * h_B = syclx::malloc_host<double>(length, q);
-  double * h_C = syclx::malloc_host<double>(length, q);
+  auto h_A = prk::vector<double>(length);
+  auto h_B = prk::vector<double>(length);
+  auto h_C = prk::vector<double>(length);
 
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
@@ -119,41 +164,106 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  double * d_A = syclx::malloc_device<double>(length, q);
-  double * d_B = syclx::malloc_device<double>(length, q);
-  double * d_C = syclx::malloc_device<double>(length, q);
-  q.memcpy(d_A, &(h_A[0]), bytes).wait();
-  q.memcpy(d_B, &(h_B[0]), bytes).wait();
-  q.memcpy(d_C, &(h_C[0]), bytes).wait();
+  const size_t K = 1024;
+  const size_t M = 1024*1024;
+  const size_t chunk = (length > ngpus * M) ? M : K;
+
+  std::vector<size_t> ls(ngpus,0);
+  {
+      const size_t nchunks = prk::divceil(length, chunk);
+      std::cout << "nchunks = " << nchunks << std::endl;
+
+      const size_t chunks_per_gpu = prk::divceil(nchunks, ngpus);
+      std::cout << "chunks_per_gpu = " << chunks_per_gpu << std::endl;
+
+      size_t remainder = length;
+      for (int g=0; g<ngpus-1; ++g) {
+
+          std::cout << "remainder (before) = " << remainder << std::endl;
+
+          const size_t elements_per_gpu = chunks_per_gpu * chunk;
+          std::cout << "elements_per_gpu = " << elements_per_gpu << std::endl;
+
+          ls[g] = elements_per_gpu;
+          remainder -= elements_per_gpu;
+
+          std::cout << "remainder (after) = " << remainder << std::endl;
+      }
+      ls[ngpus-1] = remainder;
+
+      for (int g=0; g<ngpus; ++g) {
+          const size_t elements_per_gpu = ls[g];
+          std::cout << "ls[" << g << "] " << ls[g] << std::endl;
+      }
+  }
+
+  auto d_A = std::vector<double*> (ngpus, nullptr);
+  auto d_B = std::vector<double*> (ngpus, nullptr);
+  auto d_C = std::vector<double*> (ngpus, nullptr);
+
+  for (int g=0; g<ngpus; ++g) {
+      auto q = qs[g];
+
+      const auto local_length = ls[g];
+      const auto local_bytes = local_length * sizeof(double);
+
+      d_A[g] = syclx::malloc_device<double>(local_length, q);
+      d_B[g] = syclx::malloc_device<double>(local_length, q);
+      d_C[g] = syclx::malloc_device<double>(local_length, q);
+
+      const size_t start = g * chunk;
+      const size_t size  = ls[g];
+      q.memcpy(d_A[g], &(h_A[start]), size);
+      q.memcpy(d_B[g], &(h_B[start]), size);
+      q.memcpy(d_C[g], &(h_C[start]), size);
+
+      q.wait();
+  }
 
   double scalar(3);
   {
-    for (int iter = 0; iter<=iterations; iter++) {
+      for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) nstream_time = prk::wtime();
+        if (iter==1) nstream_time = prk::wtime();
 
-      q.submit([&](sycl::handler& h) {
+        for (int g=0; g<ngpus; ++g) {
+            auto q = qs[g];
 
-        h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> it) {
-            const size_t i = it[0];
-            d_A[i] += d_B[i] + scalar * d_C[i];
-        });
-      });
-      q.wait();
-    }
+            auto p_A = d_A[g];
+            auto p_B = d_B[g];
+            auto p_C = d_C[g];
 
-    nstream_time = prk::wtime() - nstream_time;
+            q.submit([&](sycl::handler& h) {
+
+              h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> it) {
+                  const size_t i = it[0];
+                  p_A[i] += p_B[i] + scalar * p_C[i];
+              });
+            });
+        }
+        for (int g=0; g<ngpus; ++g) {
+            auto q = qs[g];
+            q.wait();
+        }
+      }
+      nstream_time = prk::wtime() - nstream_time;
   }
 
-  q.memcpy(&(h_A[0]), d_A, bytes).wait();
+  for (int g=0; g<ngpus; ++g) {
+      auto q = qs[g];
 
-  syclx::free(d_C, q);
-  syclx::free(d_B, q);
-  syclx::free(d_A, q);
+      const size_t start = g * chunk;
+      const size_t size  = ls[g];
 
-  syclx::free(h_B, q);
-  syclx::free(h_C, q);
+      q.memcpy(&(h_A[start]), d_A[g], size);
+      q.wait();
 
+      syclx::free(d_C[g], q);
+      syclx::free(d_B[g], q);
+      syclx::free(d_A[g], q);
+  }
+
+#if 0
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
@@ -172,8 +282,6 @@ int main(int argc, char * argv[])
     asum += prk::abs(h_A[i]);
   }
 
-  syclx::free(h_A, q);
-
   double epsilon=1.e-8;
   if (prk::abs(ar - asum) / asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
@@ -189,7 +297,7 @@ int main(int argc, char * argv[])
       std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }
-
+#endif
   return 0;
 }
 
