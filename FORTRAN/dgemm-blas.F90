@@ -183,9 +183,6 @@ program main
     enddo
   enddo
 
-  print*,'checksum=',checksum
-  print*,'reference=',reference
-
   deallocate( C )
 
   residuum = abs(checksum-reference)/reference
