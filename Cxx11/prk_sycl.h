@@ -30,6 +30,10 @@ typedef double prk_float;
 #define OPENCL_CONSTANT
 #endif
 
+// EXAMPLE OF PRINTF DEBUGGING IN SYCL DEVICE CODE
+//static const OPENCL_CONSTANT char format[] = "%d:%lf,%lf,%lf\n";
+//sycl::intel::experimental::printf(format, g, p_A[i], p_B[i], p_C[i]);
+
 // prebuilt kernels are not required/not fully supported on hipSYCL and triSYCL
 #if defined(TRISYCL) || defined(__HIPSYCL__) || defined(DPCPP)
 #define PREBUILD_KERNEL 0
