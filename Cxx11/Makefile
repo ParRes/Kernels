@@ -97,7 +97,7 @@ sycl-usm: nstream-sycl-usm nstream-sycl-explicit-usm stencil-sycl-usm transpose-
 
 sycl-explicit: nstream-sycl-explicit transpose-sycl-explicit
 
-dpcpp: nstream-dpcpp nstream-multigpu-dpcpp transpose-dpcpp
+dpcpp: nstream-dpcpp nstream-multigpu-dpcpp stencil-dpcpp stencil-multigpu-dpcpp transpose-dpcpp
 
 tbb: p2p-innerloop-tbb p2p-tbb stencil-tbb transpose-tbb nstream-tbb \
      p2p-hyperplane-tbb p2p-tasks-tbb
