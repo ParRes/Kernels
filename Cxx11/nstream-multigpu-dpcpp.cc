@@ -248,7 +248,7 @@ int main(int argc, char * argv[])
   for (int g=0; g<ngpus; ++g) {
       auto q = qs[g];
 
-      const size_t start = (g>0) ? ls[g-1]+1 : 0;
+      const size_t start = (g>0) ? ls[g-1] : 0;
       const size_t size  = ls[g] * sizeof(double);
 
       std::cout << g << ": start=" << start << ", size=" << size << std::endl;
