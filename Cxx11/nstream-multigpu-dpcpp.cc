@@ -232,6 +232,8 @@ int main(int argc, char * argv[])
               h.parallel_for( sycl::range<1>{size}, [=] (sycl::id<1> it) {
                   const size_t i = it[0];
                   p_A[i] += p_B[i] + scalar * p_C[i];
+                  static const OPENCL_CONSTANT char format[] = "%d:%lf,%lf,%lf\n";
+                  sycl::intel::experimental::printf(format, g, p_A[i], p_B[i], p_C[i]);
               });
             });
         }
@@ -246,9 +248,10 @@ int main(int argc, char * argv[])
   for (int g=0; g<ngpus; ++g) {
       auto q = qs[g];
 
-      const size_t start = (g>1) ? ls[g-1]+1 : 0;
+      const size_t start = (g>0) ? ls[g-1]+1 : 0;
       const size_t size  = ls[g] * sizeof(double);
 
+      std::cout << g << ": start=" << start << ", size=" << size << std::endl;
       q.memcpy(&(h_A[start]), d_A[g], size);
       q.memcpy(&(h_B[start]), d_B[g], size);
       q.memcpy(&(h_C[start]), d_C[g], size);
