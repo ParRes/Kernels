@@ -181,7 +181,7 @@ int main(int argc, char * argv[])
       d_C[g] = syclx::malloc_device<double>(local_length, q);
       q.wait();
 
-      const size_t start = (g>1) ? ls[g-1]+1 : 0;
+      const size_t start = (g>0) ? ls[g-1] : 0;
       const size_t size  = ls[g] * sizeof(double);
       q.memcpy(d_A[g], &(h_A[start]), size);
       q.memcpy(d_B[g], &(h_B[start]), size);
@@ -191,8 +191,6 @@ int main(int argc, char * argv[])
 
   for (size_t i=0; i<length; ++i) {
     h_A[i] = -77777777;
-    h_B[i] = -88888888;
-    h_C[i] = -99999999;
   }
 
   const double scalar(3);
@@ -213,13 +211,10 @@ int main(int argc, char * argv[])
             q.submit([&](sycl::handler& h) {
               h.parallel_for( sycl::range<1>{size}, [=] (sycl::id<1> i) {
                   p_A[i] += p_B[i] + scalar * p_C[i];
-                  //static const OPENCL_CONSTANT char format[] = "%d:%lf,%lf,%lf\n";
-                  //sycl::intel::experimental::printf(format, g, p_A[i], p_B[i], p_C[i]);
               });
             });
         }
-        for (int g=0; g<ngpus; ++g) {
-            auto q = qs[g];
+        for (auto & q : qs) {
             q.wait();
         }
       }
