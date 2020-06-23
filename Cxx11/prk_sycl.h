@@ -24,6 +24,12 @@ typedef float prk_float;
 typedef double prk_float;
 #endif
 
+#ifdef __SYCL_DEVICE_ONLY__
+#define OPENCL_CONSTANT __attribute__((opencl_constant))
+#else
+#define OPENCL_CONSTANT
+#endif
+
 // prebuilt kernels are not required/not fully supported on hipSYCL and triSYCL
 #if defined(TRISYCL) || defined(__HIPSYCL__) || defined(DPCPP)
 #define PREBUILD_KERNEL 0
