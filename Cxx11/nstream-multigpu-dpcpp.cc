@@ -109,7 +109,7 @@ int main(int argc, char * argv[])
   auto platforms = sycl::platform::get_platforms();
   for (auto & p : platforms) {
     auto pname = p.get_info<sycl::info::platform::name>();
-    std::cout << "\n*Platform: " << pname << std::endl;
+    std::cout << "*Platform: " << pname << std::endl;
     if ( pname.find("Level-Zero") != std::string::npos) {
         std::cout << "*Level Zero GPU skipped" << std::endl;
         break;
@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
   }
 
   int haz_ngpu = qs.size();
-  std::cout << "\nNumber of GPUs found  = " << haz_ngpu << std::endl;
+  std::cout << "Number of CPUs and GPUs found  = " << haz_ngpu << std::endl;
 
   if (use_ngpu > haz_ngpu) {
       std::cout << "You cannot use more GPUs (" << use_ngpu << ") than you have (" << haz_ngpu << ")" << std::endl;
@@ -170,7 +170,7 @@ int main(int argc, char * argv[])
   std::vector<size_t> ls(ngpus,0);
   {
       const size_t elements_per_gpu = prk::divceil(length, ngpus);
-      std::cout << "elements_per_gpu = " << elements_per_gpu << std::endl;
+      //std::cout << "elements_per_gpu = " << elements_per_gpu << std::endl;
 
       for (int g=0; g<ngpus; ++g) {
           ls[g] = elements_per_gpu;
@@ -179,8 +179,7 @@ int main(int argc, char * argv[])
           ls[ngpus-1] = length - (ngpus-1) * elements_per_gpu;
       }
       for (int g=0; g<ngpus; ++g) {
-          const size_t elements_per_gpu = ls[g];
-          std::cout << "ls[" << g << "]=" << ls[g] << std::endl;
+          //std::cout << "ls[" << g << "]=" << ls[g] << std::endl;
       }
   }
 
@@ -229,11 +228,11 @@ int main(int argc, char * argv[])
             const size_t size  = ls[g];
 
             q.submit([&](sycl::handler& h) {
-              h.parallel_for( sycl::range<1>{size}, [=] (sycl::id<1> it) {
-                  const size_t i = it[0];
+              h.parallel_for( sycl::range<1>{size}, [=] (sycl::id<1> i) {
+                  //const size_t i = it[0];
                   p_A[i] += p_B[i] + scalar * p_C[i];
-                  static const OPENCL_CONSTANT char format[] = "%d:%lf,%lf,%lf\n";
-                  sycl::intel::experimental::printf(format, g, p_A[i], p_B[i], p_C[i]);
+                  //static const OPENCL_CONSTANT char format[] = "%d:%lf,%lf,%lf\n";
+                  //sycl::intel::experimental::printf(format, g, p_A[i], p_B[i], p_C[i]);
               });
             });
         }
@@ -251,7 +250,7 @@ int main(int argc, char * argv[])
       const size_t start = (g>0) ? ls[g-1] : 0;
       const size_t size  = ls[g] * sizeof(double);
 
-      std::cout << g << ": start=" << start << ", size=" << size << std::endl;
+      //std::cout << g << ": start=" << start << ", size=" << size << std::endl;
       q.memcpy(&(h_A[start]), d_A[g], size);
       q.memcpy(&(h_B[start]), d_B[g], size);
       q.memcpy(&(h_C[start]), d_C[g], size);
