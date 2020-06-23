@@ -122,9 +122,10 @@ int main(int argc, char * argv[])
   double * d_A = syclx::malloc_device<double>(length, q);
   double * d_B = syclx::malloc_device<double>(length, q);
   double * d_C = syclx::malloc_device<double>(length, q);
-  q.memcpy(d_A, &(h_A[0]), bytes).wait();
-  q.memcpy(d_B, &(h_B[0]), bytes).wait();
-  q.memcpy(d_C, &(h_C[0]), bytes).wait();
+  q.memcpy(d_A, &(h_A[0]), bytes);
+  q.memcpy(d_B, &(h_B[0]), bytes);
+  q.memcpy(d_C, &(h_C[0]), bytes);
+  q.wait();
 
   double scalar(3);
   {
@@ -133,9 +134,7 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
       q.submit([&](sycl::handler& h) {
-
-        h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> it) {
-            const size_t i = it[0];
+        h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> i) {
             d_A[i] += d_B[i] + scalar * d_C[i];
         });
       });
