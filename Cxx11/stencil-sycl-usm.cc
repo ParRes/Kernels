@@ -105,25 +105,21 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto ctx = q.get_context();
-
   double stencil_time(0);
 
   T * out;
 
   try {
 
-    auto dev = q.get_device();
-
-    T * in  = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), dev, ctx));
-    out = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), dev, ctx));
+    T * in  = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), q));
+    out = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), q));
 
     q.submit([&](sycl::handler& h) {
-
       h.parallel_for<class init<T>>(sycl::range<2> {n, n}, [=] (sycl::id<2> it) {
           const auto i = it[0];
           const auto j = it[1];
-          in[i*n+j] = static_cast<T>(i+j);
+          in[i*n+j]  = static_cast<T>(i+j);
+          out[i*n+j] = static_cast<T>(0);
       });
     });
     q.wait();
@@ -133,9 +129,9 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
       if (iter==1) stencil_time = prk::wtime();
 
       stencil(q, n, in, out);
+      q.wait();
 
       q.submit([&](sycl::handler& h) {
-        // Add constant to solution to force refresh of neighbor data, if any
         h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0}, [=] (sycl::id<2> it) {
             const auto i = it[0];
             const auto j = it[1];
@@ -146,7 +142,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
     }
     stencil_time = prk::wtime() - stencil_time;
 
-    syclx::free(in, ctx);
+    syclx::free(in, q);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -178,7 +174,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   }
   norm /= active_points;
 
-  syclx::free(out, ctx);
+  syclx::free(out, q);
 
   // verify correctness
   const double epsilon = 1.0e-8;
@@ -186,6 +182,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
+    std::cout << "===================================" << std::endl;
   } else {
     std::cout << "Solution validates" << std::endl;
 #ifdef VERBOSE
@@ -265,6 +262,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
