@@ -59,8 +59,8 @@ namespace prk {
 #if ! ( defined(TRISYCL) || defined(__HIPSYCL__) )
             auto device      = q.get_device();
             auto platform    = device.get_platform();
-            std::cout << "SYCL Device:   " << device.get_info<sycl::info::device::name>() << std::endl;
             std::cout << "SYCL Platform: " << platform.get_info<sycl::info::platform::name>() << std::endl;
+            std::cout << "SYCL Device:   " << device.get_info<sycl::info::device::name>() << std::endl;
 #endif
         }
 
