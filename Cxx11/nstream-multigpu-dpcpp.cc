@@ -137,18 +137,6 @@ int main(int argc, char * argv[])
 
   int ngpus = use_ngpu;
 
-#if 0
-  // NOT NECESSARY - using regular host memory
-  for (int g=1; g<ngpus; ++g) {
-      auto q0 = qs[g-1];
-      auto q1 = qs[g];
-      if ( q0.get_context() != q1.get_context() ) {
-          std::cout << "SYCL queues associated with different contexts.\n";
-          std::cout << "USM may not like this..." << std::endl;
-      }
-  }
-#endif
-
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
@@ -170,16 +158,11 @@ int main(int argc, char * argv[])
   std::vector<size_t> ls(ngpus,0);
   {
       const size_t elements_per_gpu = prk::divceil(length, ngpus);
-      //std::cout << "elements_per_gpu = " << elements_per_gpu << std::endl;
-
       for (int g=0; g<ngpus; ++g) {
           ls[g] = elements_per_gpu;
       }
       if (elements_per_gpu * ngpus > length) {
           ls[ngpus-1] = length - (ngpus-1) * elements_per_gpu;
-      }
-      for (int g=0; g<ngpus; ++g) {
-          //std::cout << "ls[" << g << "]=" << ls[g] << std::endl;
       }
   }
 
@@ -229,7 +212,6 @@ int main(int argc, char * argv[])
 
             q.submit([&](sycl::handler& h) {
               h.parallel_for( sycl::range<1>{size}, [=] (sycl::id<1> i) {
-                  //const size_t i = it[0];
                   p_A[i] += p_B[i] + scalar * p_C[i];
                   //static const OPENCL_CONSTANT char format[] = "%d:%lf,%lf,%lf\n";
                   //sycl::intel::experimental::printf(format, g, p_A[i], p_B[i], p_C[i]);
@@ -250,10 +232,7 @@ int main(int argc, char * argv[])
       const size_t start = (g>0) ? ls[g-1] : 0;
       const size_t size  = ls[g] * sizeof(double);
 
-      //std::cout << g << ": start=" << start << ", size=" << size << std::endl;
       q.memcpy(&(h_A[start]), d_A[g], size);
-      q.memcpy(&(h_B[start]), d_B[g], size);
-      q.memcpy(&(h_C[start]), d_C[g], size);
       q.wait();
 
       syclx::free(d_C[g], q);
@@ -287,14 +266,6 @@ int main(int argc, char * argv[])
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
-
-      std::cerr << "h_A = \n";
-      for (int i=0; i<length; i++) {
-          std::cerr << i << "," << h_A[i] << "," << h_B[i] << "," << h_C[i] << "\n";
-      }
-      std::cerr << std::endl;
-
-
       return 1;
   } else {
       std::cout << "Solution validates" << std::endl;
