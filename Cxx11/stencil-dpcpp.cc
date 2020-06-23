@@ -1,6 +1,6 @@
 
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -46,12 +46,6 @@
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
 ///
-/// FUNCTIONS CALLED:
-///
-///          Other than standard C functions, the following functions are used in
-///          this program:
-///          wtime()
-///
 /// HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 ///          - RvdW: Removed unrolling pragmas for clarity;
 ///            added constant to array "in" at end of each iteration to force
@@ -60,30 +54,32 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#include "prk_sycl.h"
 #include "prk_util.h"
-#include "stencil_seq.hpp"
+#include "stencil_sycl.hpp"
 
-void nothing(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out)
+template <typename T>
+void nothing(sycl::queue & q, const size_t n, const T * in, T * out)
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
     std::cout << "and add it to the case-switch in the driver." << std::endl;
-    // n will never be zero - this is to silence compiler warnings.
-    if (n==0 || t==0) std::cout << in.size() << out.size() << std::endl;
-    std::abort();
+    prk::Abort();
 }
 
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/DPC++ Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, n, radius, tile_size;
+  int iterations;
+  size_t n, tile_size;
   bool star = true;
+  size_t radius = 2;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
@@ -139,16 +135,18 @@ int main(int argc, char* argv[])
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
-  auto stencil = nothing;
+  auto stencil = nothing<double>;
   if (star) {
       switch (radius) {
-          case 1: stencil = star1; break;
-          case 2: stencil = star2; break;
-          case 3: stencil = star3; break;
-          case 4: stencil = star4; break;
-          case 5: stencil = star5; break;
+          case 1: stencil = star1<double>; break;
+          case 2: stencil = star2<double>; break;
+          case 3: stencil = star3<double>; break;
+          case 4: stencil = star4<double>; break;
+          case 5: stencil = star5<double>; break;
       }
-  } else {
+  }
+#if 0
+  else {
       switch (radius) {
           case 1: stencil = grid1; break;
           case 2: stencil = grid2; break;
@@ -157,39 +155,63 @@ int main(int argc, char* argv[])
           case 5: stencil = grid5; break;
       }
   }
+#endif
+
+  sycl::queue q(sycl::default_selector{});
+  prk::SYCL::print_device_platform(q);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  double stencil_time(0);
 
-  prk::vector<double> in(n*n);
-  prk::vector<double> out(n*n);
+  prk::vector<double> h_in(n*n, 0);
+  prk::vector<double> h_out(n*n, 0);
 
-  {
-    for (int it=0; it<n; it+=tile_size) {
-      for (int jt=0; jt<n; jt+=tile_size) {
-        for (int i=it; i<std::min(n,it+tile_size); i++) {
-          PRAGMA_SIMD
-          for (int j=jt; j<std::min(n,jt+tile_size); j++) {
-            in[i*n+j] = static_cast<double>(i+j);
-            out[i*n+j] = 0.0;
-          }
-        }
-      }
-    }
+  const size_t bytes = n * n * sizeof(double);
 
-    for (int iter = 0; iter<=iterations; iter++) {
+  double * d_in  = syclx::malloc_device<double>(n*n, q);
+  double * d_out = syclx::malloc_device<double>(n*n, q);
+  q.wait();
 
-      if (iter==1) stencil_time = prk::wtime();
-      // Apply the stencil operator
-      stencil(n, tile_size, in, out);
-      // Add constant to solution to force refresh of neighbor data, if any
-      std::transform(in.begin(), in.end(), in.begin(), [](double c) { return c+=1.0; });
-    }
-    stencil_time = prk::wtime() - stencil_time;
+  q.submit([&](sycl::handler& h) {
+    h.parallel_for(sycl::range<2> {n,n}, [=] (sycl::item<2> it) {
+      const auto i = it[0];
+      const auto j = it[1];
+      d_in[i*n+j]  = static_cast<double>(i+j);
+      d_out[i*n+j] = static_cast<double>(0);
+    });
+  });
+  q.wait();
+
+  for (int iter = 0; iter<=iterations; iter++) {
+
+    if (iter==1) stencil_time = prk::wtime();
+
+    // Apply the stencil operator
+    stencil(q, n, d_in, d_out);
+    q.wait();
+
+    // Add constant to solution to force refresh of neighbor data, if any
+    q.submit([&](sycl::handler& h) {
+      h.parallel_for(sycl::range<2> {n,n}, [=] (sycl::item<2> it) {
+        const auto i = it[0];
+        const auto j = it[1];
+        d_in[i*n+j] += static_cast<double>(1);
+      });
+    });
+    q.wait();
   }
+  stencil_time = prk::wtime() - stencil_time;
+
+  q.memcpy(&(h_in[0]),  d_in,  bytes);
+  q.memcpy(&(h_out[0]), d_out, bytes);
+  q.wait();
+
+  syclx::free(d_in, q);
+  syclx::free(d_out,q);
+  q.wait();
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
@@ -200,7 +222,7 @@ int main(int argc, char* argv[])
   double norm = 0.0;
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
-      norm += prk::abs(out[i*n+j]);
+      norm += prk::abs(h_out[i*n+j]);
     }
   }
   norm /= active_points;
@@ -211,6 +233,11 @@ int main(int argc, char* argv[])
   if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+          std::cerr << i << "," << j  << " = " << h_in[i*n+j] <<", " << h_out[i*n+j] << "\n";
+      }
+    }
     return 1;
   } else {
     std::cout << "Solution validates" << std::endl;
