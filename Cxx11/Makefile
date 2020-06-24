@@ -128,7 +128,7 @@ cblas: transpose-cblas dgemm-cblas
 
 onemkl: nstream-onemkl dgemm-onemkl dgemm-multigpu-onemkl
 
-oneapi: onemkl dpcpp sycl sycl-usm sycl-explicit
+oneapi: onemkl dpcpp sycl sycl-usm sycl-explicit sycl-explicit-usm
 
 occa: transpose-occa nstream-occa
 
