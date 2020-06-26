@@ -83,8 +83,8 @@ void prk_dgemm(const int order, const int tile_size,
                      prk::vector<double> & C)
 {
     for (int it=0; it<order; it+=tile_size) {
-      for (int jt=0; jt<order; jt+=tile_size) {
-        for (int kt=0; kt<order; kt+=tile_size) {
+      for (int kt=0; kt<order; kt+=tile_size) {
+        for (int jt=0; jt<order; jt+=tile_size) {
           // ICC will not hoist these on its own...
           auto iend = std::min(order,it+tile_size);
           auto jend = std::min(order,jt+tile_size);
@@ -189,7 +189,7 @@ int main(int argc, char * argv[])
   const auto checksum = prk::reduce(C.begin(), C.end(), 0.0);
 
   const auto epsilon = 1.0e-8;
-  const auto residuum = std::abs(checksum-reference)/reference;
+  const auto residuum = prk::abs(checksum-reference)/reference;
   if (residuum < epsilon) {
 #if VERBOSE
     std::cout << "Reference checksum = " << reference << "\n"

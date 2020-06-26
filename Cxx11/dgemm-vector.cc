@@ -189,7 +189,7 @@ int main(int argc, char * argv[])
   const auto checksum = prk::reduce(C.begin(), C.end(), 0.0);
 
   const auto epsilon = 1.0e-8;
-  const auto residuum = std::abs(checksum-reference)/reference;
+  const auto residuum = prk::abs(checksum-reference)/reference;
   if (residuum < epsilon) {
 #if VERBOSE
     std::cout << "Reference checksum = " << reference << "\n"
