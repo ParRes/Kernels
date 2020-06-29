@@ -63,9 +63,10 @@ int main(int argc, char * argv[])
 
   int iterations;
   size_t order;
+  int use_ngpu = 1;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order>";
+        throw "Usage: <# iterations> <matrix order> [<use_ngpu>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -79,6 +80,15 @@ int main(int argc, char * argv[])
       } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
+
+      if (argc > 3) {
+        use_ngpu = std::atoi(argv[3]);
+      }
+
+      if (order % use_ngpu) {
+        std::cerr << "order = " << order << ", device count = " << use_ngpu << std::endl;
+        throw "ERROR: matrix order should be divisible by device count!";
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -87,34 +97,66 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
 
-  sycl::queue q(sycl::default_selector{});
-  prk::SYCL::print_device_platform(q);
+  std::vector<sycl::queue> qs;
+
+  auto platforms = sycl::platform::get_platforms();
+  for (auto & p : platforms) {
+    auto pname = p.get_info<sycl::info::platform::name>();
+    std::cout << "*Platform: " << pname << std::endl;
+    if ( pname.find("Level-Zero") != std::string::npos) {
+        std::cout << "*Level Zero GPU skipped" << std::endl;
+        break;
+    }
+    if ( pname.find("Intel") == std::string::npos) {
+        std::cout << "*non-Intel skipped" << std::endl;
+        break;
+    }
+    auto devices = p.get_devices();
+    for (auto & d : devices ) {
+        std::cout << "**Device: " << d.get_info<sycl::info::device::name>() << std::endl;
+        if ( d.is_gpu() || d.is_cpu() ) {
+            std::cout << "**Device is CPU or GPU - adding to vector of queues" << std::endl;
+            qs.push_back(sycl::queue(d));
+        }
+    }
+  }
+
+  int haz_ngpu = qs.size();
+  std::cout << "Number of CPUs and GPUs found  = " << haz_ngpu << std::endl;
+
+  if (use_ngpu > haz_ngpu) {
+      std::cout << "You cannot use more GPUs (" << use_ngpu << ") than you have (" << haz_ngpu << ")" << std::endl;
+  }
+
+  int ngpus = use_ngpu;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  const size_t nelems = (size_t)order * (size_t)order;
-  const size_t bytes = nelems * sizeof(double);
-  double * h_a = syclx::malloc_host<double>( nelems, q);
-  double * h_b = syclx::malloc_host<double>( nelems, q);
+  double trans_time(0);
+
+  auto h_a = prk::vector<double>(order * order);
+  auto h_b = prk::vector<double>(order * order);
 
   // fill A with the sequence 0 to order^2-1
-  for (int j=0; j<order; j++) {
-    for (int i=0; i<order; i++) {
+  for (size_t j=0; j<order; j++) {
+    for (size_t i=0; i<order; i++) {
       h_a[j*order+i] = static_cast<double>(order*j+i);
       h_b[j*order+i] = static_cast<double>(0);
     }
   }
 
-  // copy input from host to device
-  double * A = syclx::malloc_device<double>( nelems, q);
-  double * B = syclx::malloc_device<double>( nelems, q);
-  q.memcpy(A, &(h_a[0]), bytes).wait();
-  q.memcpy(B, &(h_b[0]), bytes).wait();
+  const size_t bytes = order * order * sizeof(double);
 
-  auto trans_time = 0.0;
+  // copy input from host to device
+  double * A = syclx::malloc_device<double>(order * order, q);
+  double * B = syclx::malloc_device<double>(order * order, q);
+  q.memcpy(A, &(h_a[0]), bytes);
+  q.memcpy(B, &(h_b[0]), bytes);
+  q.wait();
 
   for (int iter = 0; iter<=iterations; iter++) {
 
