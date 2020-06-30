@@ -157,6 +157,23 @@ case "$PRK_TARGET" in
             done
         done
 
+        # C11 2D VLA
+        ${MAKE} -C $PRK_TARGET_PATH p2p-2d stencil-2d transpose-2d p2p-tasks-2d p2p-hyperplane-2d
+        $PRK_TARGET_PATH/p2p-2d             10 1024 1024
+        $PRK_TARGET_PATH/p2p-2d             10 1024 1024 100 100
+        $PRK_TARGET_PATH/p2p-tasks-2d       10 1024 1024
+        $PRK_TARGET_PATH/p2p-tasks-2d       10 1024 1024 100 100
+        $PRK_TARGET_PATH/p2p-hyperplane-2d  10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane-2d  10 1024 32
+        $PRK_TARGET_PATH/stencil-2d         10 1000
+        $PRK_TARGET_PATH/transpose-2d       10 1024 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-2d 10 200 $s $r
+            done
+        done
+
         # C11 with POSIX or C11 thread parallelism - test POSIX here, C11 at the end.
         ${MAKE} -C $PRK_TARGET_PATH transpose-thread
         $PRK_TARGET_PATH/transpose-thread   10 1024 512
@@ -200,6 +217,22 @@ case "$PRK_TARGET" in
         for s in star grid ; do
             for r in 1 2 3 4 5 ; do
                 $PRK_TARGET_PATH/stencil-openmp 10 200 $s $r
+            done
+        done
+        # OpenMP C11 2D VLA
+        ${MAKE} -C $PRK_TARGET_PATH p2p-2d-openmp stencil-2d-openmp transpose-2d-openmp p2p-tasks-2d-openmp p2p-hyperplane-2d-openmp
+        $PRK_TARGET_PATH/p2p-2d-openmp             10 1024 1024
+        $PRK_TARGET_PATH/p2p-2d-openmp             10 1024 1024 100 100
+        $PRK_TARGET_PATH/p2p-tasks-2d-openmp       10 1024 1024
+        $PRK_TARGET_PATH/p2p-tasks-2d-openmp       10 1024 1024 100 100
+        $PRK_TARGET_PATH/p2p-hyperplane-2d-openmp  10 1024
+        $PRK_TARGET_PATH/p2p-hyperplane-2d-openmp  10 1024 32
+        $PRK_TARGET_PATH/stencil-2d-openmp         10 1000
+        $PRK_TARGET_PATH/transpose-2d-openmp       10 1024 32
+        #echo "Test stencil code generator"
+        for s in star grid ; do
+            for r in 1 2 3 4 5 ; do
+                $PRK_TARGET_PATH/stencil-2d-openmp 10 200 $s $r
             done
         done
         # Target Offload
