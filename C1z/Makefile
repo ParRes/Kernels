@@ -50,13 +50,21 @@ endif
 
 all: serial thread openmp taskloop $(EXTRA)
 
-serial: nstream p2p p2p-hyperplane stencil transpose
+serial: nstream \
+        p2p p2p-2d p2p-tasks-2d \
+	p2p-hyperplane p2p-hyperplane-2d \
+	stencil stencil-2d \
+	transpose transpose-2d
 
 vector: p2p-sse p2p-avx p2p-avx-tasks-openmp
 
 thread: transpose-thread
 
-openmp: nstream-openmp p2p-simd-openmp p2p-tasks-openmp stencil-openmp transpose-openmp p2p-hyperplane-openmp
+openmp: nstream-openmp p2p-simd-openmp \
+	p2p-tasks-openmp p2p-tasks-2d-openmp \
+	p2p-hyperplane-openmp p2p-hyperplane-2d-openmp \
+	stencil-openmp stencil-2d-openmp \
+	transpose-openmp transpose-2d-openmp
 
 mpi: nstream-mpi
 
@@ -84,6 +92,12 @@ stencil: stencil-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 transpose: transpose-openmp.c prk_util.h
+	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
+p2p-2d: p2p-2d.c prk_util.h
+	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
+
+%-2d: %-2d-openmp.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 %-mpi: %-mpi.c prk_util.h
@@ -140,6 +154,7 @@ clean:
 	-rm -rf *.dSYM # Mac
 	-rm -f nstream p2p p2p-hyperplane stencil transpose
 	-rm -f p2p-sse p2p-avx p2p-avx3 p2p-avx-tasks-openmp
+	-rm -f *-2d
 	-rm -f *-openmp
 	-rm -f *-mpi
 	-rm -f *-petsc
