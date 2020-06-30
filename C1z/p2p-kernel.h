@@ -72,3 +72,15 @@ static inline void sweep_tile(int startm, int endm,
 }
 
 #endif
+
+static inline void sweep_tile_2d(int startm, int endm,
+                                 int startn, int endn,
+                                 int n, double (* restrict grid)[n])
+{
+  for (int i=startm; i<endm; i++) {
+    for (int j=startn; j<endn; j++) {
+      grid[i][j] = grid[i-1][j] + grid[i][j-1] - grid[i-1][j-1];
+    }
+  }
+}
+
