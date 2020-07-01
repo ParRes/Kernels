@@ -62,9 +62,9 @@
 #include "prk_util.h"
 #include "prk_openmp.h"
 
-typedef void (*stencil_t)(const int, const double * restrict, double * restrict);
+typedef void (*stencil_t)(const int n, const double (* restrict in)[n], double (* restrict out)[n]);
 
-void nothing(const int n, const double * restrict in, double * restrict out)
+void nothing(const int n, const double (* restrict in)[n], double (* restrict out)[n])
 {
     printf("You are trying to use a stencil that does not exist.\n");
     printf("Please generate the new stencil using the code generator.\n");
@@ -74,9 +74,9 @@ void nothing(const int n, const double * restrict in, double * restrict out)
 }
 
 #ifdef _OPENMP
-#include "stencil_2d_openmp.h"
+#include "stencil_openmp.h"
 #else
-#include "stencil_2d_seq.h"
+#include "stencil_seq.h"
 #endif
 
 int main(int argc, char * argv[])
