@@ -74,9 +74,9 @@ void nothing(const int n, const double * restrict in, double * restrict out)
 }
 
 #ifdef _OPENMP
-#include "stencil_openmp.h"
+#include "stencil_2d_openmp.h"
 #else
-#include "stencil_seq.h"
+#include "stencil_2d_seq.h"
 #endif
 
 int main(int argc, char * argv[])
@@ -143,27 +143,27 @@ int main(int argc, char * argv[])
   stencil_t stencil = nothing;
   if (star) {
       switch (radius) {
-          case 1: stencil = star1; break;
-          case 2: stencil = star2; break;
-          case 3: stencil = star3; break;
-          case 4: stencil = star4; break;
-          case 5: stencil = star5; break;
-          case 6: stencil = star6; break;
-          case 7: stencil = star7; break;
-          case 8: stencil = star8; break;
-          case 9: stencil = star9; break;
+          case 1: stencil = star1_2d; break;
+          case 2: stencil = star2_2d; break;
+          case 3: stencil = star3_2d; break;
+          case 4: stencil = star4_2d; break;
+          case 5: stencil = star5_2d; break;
+          case 6: stencil = star6_2d; break;
+          case 7: stencil = star7_2d; break;
+          case 8: stencil = star8_2d; break;
+          case 9: stencil = star9_2d; break;
       }
   } else {
       switch (radius) {
-          case 1: stencil = grid1; break;
-          case 2: stencil = grid2; break;
-          case 3: stencil = grid3; break;
-          case 4: stencil = grid4; break;
-          case 5: stencil = grid5; break;
-          case 6: stencil = grid6; break;
-          case 7: stencil = grid7; break;
-          case 8: stencil = grid8; break;
-          case 9: stencil = grid9; break;
+          case 1: stencil = grid1_2d; break;
+          case 2: stencil = grid2_2d; break;
+          case 3: stencil = grid3_2d; break;
+          case 4: stencil = grid4_2d; break;
+          case 5: stencil = grid5_2d; break;
+          case 6: stencil = grid6_2d; break;
+          case 7: stencil = grid7_2d; break;
+          case 8: stencil = grid8_2d; break;
+          case 9: stencil = grid9_2d; break;
       }
   }
 
