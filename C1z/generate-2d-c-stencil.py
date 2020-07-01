@@ -5,7 +5,14 @@ import fileinput
 import string
 import os
 
-def codegen(src,pattern,stencil_size,radius,W,model):
+def codegen(src,pattern,stencil_size,radius,W,model,dim):
+    if (dim == 1):
+        suffix = ''
+        array = '*n+'
+    elif (dim == 2):
+        suffix = '_2d'
+        array = ']['
+
     extraarg = ''
     if (model=='taskloop'):
         extraarg = 'const int gs, '
@@ -26,17 +33,22 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     elif (model=='cilk'):
         inner += 'PRAGMA_SIMD\n    '
 
-    src.write('void '+pattern+str(radius)+'_2d(const int n,'+extraarg+' const double (* restrict in)[n], double (* restrict out)[n]) {\n')
+    src.write('void '+pattern+str(radius)+suffix+'(const int n,'+extraarg)
+    if (dim == 1):
+        src.write(' const double * restrict in, double * restrict out) {\n')
+    elif (dim == 2):
+        src.write(' const double (* restrict in)[n], double (* restrict out)[n]) {\n')
+
     src.write(outer+'for (int i='+str(radius)+'; i<n-'+str(radius)+'; i++) {\n')
     src.write(inner+'for (int j='+str(radius)+'; j<n-'+str(radius)+'; j++) {\n')
-    src.write('        out[i][j] += ')
+    src.write('        out[i'+array+'j] += ')
     k = 0
     kmax = stencil_size-1;
     for j in range(0,2*radius+1):
         for i in range(0,2*radius+1):
             if ( W[j][i] != 0.0):
                 k+=1
-                src.write('+in[i+'+str(j-radius)+'][j+'+str(i-radius)+'] * '+str(W[j][i]))
+                src.write('+in[(i+'+str(j-radius)+')'+array+'(j+'+str(i-radius)+')] * '+str(W[j][i]))
                 if (k<kmax): src.write('\n')
                 if (k>0 and k<kmax): src.write('                      ')
     src.write(';\n')
@@ -44,7 +56,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     src.write('  }\n')
     src.write('}\n\n')
 
-def instance(src,model,pattern,r):
+def instance(src,model,pattern,r,dim):
 
     W = [[0.0 for x in range(2*r+1)] for x in range(2*r+1)]
     if pattern == 'star':
@@ -67,16 +79,15 @@ def instance(src,model,pattern,r):
             W[r+j][r+j]    = +1./(4*j*r)
             W[r-j][r-j]    = -1./(4*j*r)
 
-    codegen(src,pattern,stencil_size,r,W,model)
+    codegen(src,pattern,stencil_size,r,W,model,dim)
 
 def main():
     for model in ['seq','openmp','target','cilk','taskloop']:
-      src = open('stencil_2d_'+model+'.h','w')
+      src = open('stencil_'+model+'.h','w')
       for pattern in ['star','grid']:
         for r in range(1,10):
-          instance(src,model,pattern,r)
-      #if (model=='target'):
-      #    src.write('OMP( end declare target )\n')
+          for d in range(1,3):
+            instance(src,model,pattern,r,d)
       src.close()
 
 if __name__ == '__main__':
