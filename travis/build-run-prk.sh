@@ -220,9 +220,7 @@ case "$PRK_TARGET" in
             done
         done
         # OpenMP C11 2D VLA
-        ${MAKE} -C $PRK_TARGET_PATH p2p-2d-openmp stencil-2d-openmp transpose-2d-openmp p2p-tasks-2d-openmp p2p-hyperplane-2d-openmp
-        $PRK_TARGET_PATH/p2p-2d-openmp             10 1024 1024
-        $PRK_TARGET_PATH/p2p-2d-openmp             10 1024 1024 100 100
+        ${MAKE} -C $PRK_TARGET_PATH p2p-tasks-2d-openmp p2p-hyperplane-2d-openmp stencil-2d-openmp transpose-2d-openmp
         $PRK_TARGET_PATH/p2p-tasks-2d-openmp       10 1024 1024
         $PRK_TARGET_PATH/p2p-tasks-2d-openmp       10 1024 1024 100 100
         $PRK_TARGET_PATH/p2p-hyperplane-2d-openmp  10 1024
