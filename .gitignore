@@ -341,3 +341,7 @@ FORTRAN/transpose-ornlacc
 RUST/p2p/Cargo.lock
 RUST/stencil/Cargo.lock
 RUST/transpose/Cargo.lock
+JAVA/nstream.class
+JAVA/p2p.class
+JAVA/stencil.class
+JAVA/transpose.class
