@@ -79,7 +79,7 @@ def main():
     if m < 1:
         sys.exit("ERROR: array dimension must be >= 1")
 
-    n = int(sys.argv[2])
+    n = int(sys.argv[3])
     if n < 1:
         sys.exit("ERROR: array dimension must be >= 1")
 
