@@ -25,7 +25,7 @@ public class transpose {
         }
 
         int tileSize = 0;
-        if (args.length == 4)
+        if (args.length == 3)
             tileSize = Integer.parseInt(args[2]);
         /* a non-positive tile size means no tiling of the local transpose */
         if (tileSize <=0)
@@ -96,7 +96,7 @@ public class transpose {
             }
         }
 
-        System.out.println("Sum of absolute differences: " + abserr);
+        //System.out.println("Sum of absolute differences: " + abserr);
 
         if (abserr < epsilon) {
             System.out.println("Solution validates");
@@ -104,7 +104,7 @@ public class transpose {
             System.out.format("Rate (MB/s): %f Avg time (s): %f%n",
                 1.0e-6 * bytes/avgtime, avgtime);
 
-            System.out.println("Squared errors: " + abserr);
+            //System.out.println("Squared errors: " + abserr);
         } else {
             System.out.format("ERROR: Aggregate squared error %f exceeds threshold %f%n",
                abserr, epsilon);
