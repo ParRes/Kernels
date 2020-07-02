@@ -187,10 +187,10 @@ public class stencil {
             System.out.println("Solution validates");
             double flops = (2*stencilSize + 1) * activePoints;
             double avgtime = stencilTime/(double)iterations/1000;
-            System.out.format("Rate (MFlops/s): %f Avg time (s):%f", 1.e-6*flops/avgtime, avgtime);
+            System.out.format("Rate (MFlops/s): %f Avg time (s):%f%n", 1.e-6*flops/avgtime, avgtime);
         }
         else {
-            System.out.format("ERROR: L1 norm = %.10f Reference L1 norm = %d", normal, referenceNorm);
+            System.out.format("ERROR: L1 norm = %.10f Reference L1 norm = %d%n", normal, referenceNorm);
         }
 
 
