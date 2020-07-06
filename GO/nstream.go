@@ -83,23 +83,25 @@ func main() {
   //////////////////////////////////////////////////////////////////////
 
   if len(os.Args) < 2 {
-    fmt.Println("Usage: <# iterations> <vector length>")
-    os.Exit(1)
+      fmt.Println("Usage: <# iterations> <vector length>")
+      os.Exit(1)
   }
 
-  iterations = flag.Int32("i", 0, "iterations")
-  length     = flag.Int64("n", 0, "length of vector")
-
+  piterations := flag.Int("i", 0, "iterations")
+  plength     := flag.Int64("n", 0, "length of vector")
   flag.Parse()
 
+  iterations := *piterations
+  length     := *plength
+
   if (iterations < 1) {
-    fmt.Println("ERROR: iterations must be >= 1")
-    os.Exit(1)
+      fmt.Println("ERROR: iterations must be >= 1: ", iterations, *piterations)
+      os.Exit(1)
   }
 
   if (length <= 0) {
-    fmt.Println("ERROR: vector length must be positive")
-    os.Exit(1)
+      fmt.Println("ERROR: vector length must be positive: ", length, *plength)
+      os.Exit(1)
   }
 
   fmt.Println("Number of iterations = ", iterations)
@@ -109,19 +111,27 @@ func main() {
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  var A [length] float64
-  var B [length] float64
-  var C [length] float64
+  A := make([]float64, length)
+  B := make([]float64, length)
+  C := make([]float64, length)
+
+  for i := int64(0); i<length; i++ {
+      A[i] = 0
+      B[i] = 2
+      C[i] = 2
+  }
 
   scalar := float64(3)
+
+  var start = time.Now()
 
   for iter := 0; iter<=iterations; iter++ {
 
       if iter==1 {
-          start := time.Now()
+          start = time.Now()
       }
 
-      for i := 0; i<length; i++ {
+      for i := int64(0); i<length; i++ {
           A[i] += B[i] + scalar * C[i]
       }
   }
@@ -140,26 +150,26 @@ func main() {
       ar += br + scalar * cr
   }
 
-  ar *= length
+  ar *= float64(length)
 
   asum := float64(0)
-  for i := 0; i<length; i++ {
-      asum += Abs(A[i])
+  for i := int64(0); i<length; i++ {
+      asum += math.Abs(A[i])
   }
 
   epsilon := float64(1.e-8)
-  if Abs(ar-asum)/asum > epsilon {
-      fmt.Println("Failed Validation on output array\n")
-      fmt.Println("       Expected checksum: %T\n", ar)
-      fmt.Println("       Observed checksum: %T\n", asum)
-      fmt.Println("ERROR: solution did not validate\n")
+  if math.Abs(ar-asum)/asum > epsilon {
+      fmt.Printf("Failed Validation on output array\n")
+      fmt.Printf("       Expected checksum: %f\n", ar)
+      fmt.Printf("       Observed checksum: %f\n", asum)
+      fmt.Printf("ERROR: solution did not validate\n")
       os.Exit(1)
   } else {
-      fmt.Println("Solution validates\n")
-      avgtime := nstream_time/iterations
-      nbytes  := 4.0 * length * sizeof(double)
-      fmt.Println("Rate (MB/s): %T\n", 1.e-6*nbytes/avgtime)
-      fmt.Println(" Avg time (s): %T\n", avgtime)
+      fmt.Println("Solution validates")
+      avgtime := int64(nstream_time/time.Microsecond) / int64(iterations)
+      nbytes  := int64(4) * length * int64(unsafe.Sizeof(A[0]))
+      fmt.Printf("Rate (MB/s): %f", float64(nbytes) / float64(avgtime) )
+      fmt.Printf(" Avg time (s): %f\n", 1.0e-6 * float64(avgtime) )
   }
 }
 
