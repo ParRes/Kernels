@@ -55,14 +55,14 @@ from mpi4py import MPI
 def main():
 
     comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
+    me = comm.Get_rank()
+    np = comm.Get_size()
 
     # ********************************************************************
     # read and test input parameters
     # ********************************************************************
 
-    if (rank==0):
+    if (me==0):
         print('Parallel Research Kernels version ') #, PRKVERSION
         print('Python MPI Matrix transpose: B = A^T')
 
@@ -78,7 +78,10 @@ def main():
     if order < 1:
         sys.exit("ERROR: order must be >= 1")
 
-    if (rank==0):
+    if order % np != 0:
+        sys.exit("ERROR: matrix order ", order," should be divisible by # procs", np)
+
+    if (me==0):
         print('Number of iterations = ', iterations)
         print('Matrix order         = ', order)
 
@@ -125,13 +128,13 @@ def main():
     epsilon=1.e-8
     nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
     if abserr < epsilon:
-        if (rank==0):
+        if (me==0):
 
             print('Solution validates')
             avgtime = trans_time/iterations
             print('Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime)
     else:
-        if (rank==0):
+        if (me==0):
             print('error ',abserr, ' exceeds threshold ',epsilon)
         sys.exit("ERROR: solution did not validate")
 
