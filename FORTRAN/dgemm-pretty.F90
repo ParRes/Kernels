@@ -157,8 +157,8 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  deallocate( A )
   deallocate( B )
+  deallocate( A )
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
