@@ -140,7 +140,6 @@ program main
   do i=1, order
     A(:,i) = real(i-1,REAL64)
     B(:,i) = real(i-1,REAL64)
-    C(:,i) = real(0,REAL64)
   enddo
   C = 0
 
