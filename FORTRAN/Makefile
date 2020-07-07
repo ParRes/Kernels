@@ -118,6 +118,7 @@ clean:
 	-rm -f p2p stencil transpose nstream dgemm
 	-rm -f p2p-innerloop
 	-rm -f *-pretty
+	-rm -f *-blas
 	-rm -f *-coarray
 	-rm -f *-ga
 	-rm -f *-openmp
