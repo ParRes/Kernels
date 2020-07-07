@@ -93,12 +93,14 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+  int device = (argc > 3) ? atol(argv[3]) : omp_get_initial_device();
+
 #ifdef _OPENMP
   printf("Number of threads    = %d\n", omp_get_max_threads());
 #endif
   printf("Number of iterations = %d\n", iterations);
   printf("Vector length        = %zu\n", length);
-  //printf("Offset               = %d\n", offset);
+  printf("OpenMP Device        = %d\n", device);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -114,30 +116,29 @@ int main(int argc, char * argv[])
   double scalar = 3.0;
 
   // HOST
-  OMP_PARALLEL()
-  {
-    OMP_FOR_SIMD()
-    for (size_t i=0; i<length; i++) {
+  #pragma omp parallel for simd schedule(static)
+  for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
       B[i] = 2.0;
       C[i] = 2.0;
-    }
   }
 
-  // DEVICE
-  OMP_TARGET( data map(tofrom: A[0:length]) map(to: B[0:length], C[0:length]) )
+  #pragma omp target data map(tofrom: A[0:length]) map(to: B[0:length], C[0:length])
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk_wtime();
 
-      OMP_TARGET( teams distribute parallel for simd schedule(static,1) )
+      // DEVICE
+      #pragma omp target  teams distribute parallel for simd schedule(static)
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }
     }
     nstream_time = prk_wtime() - nstream_time;
   }
+  prk_free(C);
+  prk_free(B);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -152,11 +153,14 @@ int main(int argc, char * argv[])
 
   ar *= length;
 
+  // HOST
   double asum = 0.0;
-  OMP_PARALLEL_FOR_REDUCE( +:asum )
+  #pragma omp parallel for reduction(+:asum)
   for (size_t i=0; i<length; i++) {
       asum += fabs(A[i]);
   }
+
+  prk_free(A);
 
   double epsilon=1.e-8;
   if (fabs(ar-asum)/asum > epsilon) {
