@@ -148,7 +148,7 @@ program main
   integer(kind=INT32) :: i,j,k
   real(kind=REAL64) ::  checksum, reference, residuum
   real(kind=REAL64) ::  t0, t1, dgemm_time, avgtime ! timing parameters
-  real(kind=REAL64), parameter ::  epsilon=1.0d-8    ! error tolerance
+  real(kind=REAL64), parameter ::  epsilon=1.0d-8   ! error tolerance
 
   ! ********************************************************************
   ! read and test input parameters
