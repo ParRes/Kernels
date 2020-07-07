@@ -93,7 +93,11 @@ def main():
     if total_length < 1:
         sys.exit("ERROR: length must be positive")
 
-    length = total_length / size
+    length = int(total_length / size)
+    remainder = total_length % size
+    if (remainder > 0):
+        if (rank < remainder):
+            length += 1
 
     if (rank==0):
         print('Number of iterations = ', iterations)
