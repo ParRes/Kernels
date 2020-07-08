@@ -93,11 +93,12 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  int device = (argc > 3) ? atol(argv[3]) : omp_get_initial_device();
+  int device = (argc > 3) ? atol(argv[3]) : omp_get_default_device();
+  if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_default_device()) ) {
+    printf("ERROR: device number %d is not valid.\n", device);
+    return 1;
+  }
 
-#ifdef _OPENMP
-  printf("Number of threads    = %d\n", omp_get_max_threads());
-#endif
   printf("Number of iterations = %d\n", iterations);
   printf("Vector length        = %zu\n", length);
   printf("OpenMP Device        = %d\n", device);
@@ -115,7 +116,6 @@ int main(int argc, char * argv[])
 
   double scalar = 3.0;
 
-  // HOST
   #pragma omp parallel for simd schedule(static)
   for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
@@ -129,14 +129,14 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk_wtime();
 
-      // DEVICE
-      #pragma omp target  teams distribute parallel for simd schedule(static)
+      #pragma omp target teams distribute parallel for simd schedule(static) // device(device)
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }
     }
     nstream_time = prk_wtime() - nstream_time;
   }
+
   prk_free(C);
   prk_free(B);
 
@@ -153,7 +153,6 @@ int main(int argc, char * argv[])
 
   ar *= length;
 
-  // HOST
   double asum = 0.0;
   #pragma omp parallel for reduction(+:asum)
   for (size_t i=0; i<length; i++) {
