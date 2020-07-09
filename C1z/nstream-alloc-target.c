@@ -95,8 +95,8 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  int device = (argc > 3) ? atol(argv[3]) : omp_get_default_device();
-  if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_default_device()) ) {
+  int device = (argc > 3) ? atol(argv[3]) : omp_get_initial_device();
+  if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_initial_device()) ) {
     printf("ERROR: device number %d is not valid.\n", device);
     return 1;
   }

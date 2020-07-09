@@ -63,7 +63,7 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#pragma omp requires unified_shared_memory
+#pragma omp requires unified_address
 
 #include "prk_util.h"
 #include "prk_openmp.h"
@@ -95,8 +95,8 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  int device = (argc > 3) ? atol(argv[3]) : omp_get_initial_device();
-  if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_initial_device()) ) {
+  int device = (argc > 3) ? atol(argv[3]) : omp_get_default_device();
+  if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_default_device()) ) {
     printf("ERROR: device number %d is not valid.\n", device);
     return 1;
   }
@@ -130,14 +130,15 @@ int main(int argc, char * argv[])
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) nstream_time = omp_get_wtime();
+      if (iter==1) nstream_time = prk_wtime();
 
-      #pragma omp target teams distribute parallel for simd schedule(static) device(device)
+      #pragma omp target teams distribute parallel for simd \
+                  schedule(static) device(device)
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }
     }
-    nstream_time = omp_get_wtime() - nstream_time;
+    nstream_time = prk_wtime() - nstream_time;
   }
 
   omp_target_free(C, host);
