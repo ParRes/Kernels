@@ -93,7 +93,7 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  int device = (argc > 3) ? atol(argv[3]) : omp_get_initial_device();
+  int device = (argc > 3) ? atol(argv[3]) : omp_get_default_device();
   if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_initial_device()) ) {
     printf("ERROR: device number %d is not valid.\n", device);
     return 1;
@@ -116,7 +116,9 @@ int main(int argc, char * argv[])
 
   double scalar = 3.0;
 
-  #pragma omp target teams distribute parallel for simd schedule(static) // device(device)
+  #pragma omp target teams distribute parallel for simd \
+              schedule(static) device(device) \
+              is_device_ptr(A,B,C)
   for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
       B[i] = 2.0;
@@ -128,7 +130,9 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk_wtime();
 
-      #pragma omp target teams distribute parallel for simd schedule(static) // device(device)
+      #pragma omp target teams distribute parallel for simd \
+                  schedule(static) device(device) \
+                  is_device_ptr(A,B,C)
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }
@@ -153,7 +157,9 @@ int main(int argc, char * argv[])
   ar *= length;
 
   double asum = 0.0;
-  #pragma omp target teams distribute parallel for reduction(+:asum) device(device)
+  #pragma omp target teams distribute parallel for \
+              reduction(+:asum) device(device) \
+              is_device_ptr(A)
   for (size_t i=0; i<length; i++) {
       asum += fabs(A[i]);
   }
@@ -176,5 +182,4 @@ int main(int argc, char * argv[])
 
   return 0;
 }
-
 
