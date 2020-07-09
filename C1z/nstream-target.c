@@ -127,14 +127,14 @@ int main(int argc, char * argv[])
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) nstream_time = prk_wtime();
+      if (iter==1) nstream_time = omp_get_wtime();
 
       #pragma omp target teams distribute parallel for simd schedule(static) // device(device)
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }
     }
-    nstream_time = prk_wtime() - nstream_time;
+    nstream_time = omp_get_wtime() - nstream_time;
   }
 
   prk_free(C);
@@ -177,5 +177,3 @@ int main(int argc, char * argv[])
 
   return 0;
 }
-
-
