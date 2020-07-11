@@ -12,14 +12,14 @@
 CC=icx -std=c11 -pthread
 #EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=ifx -fpp
+FC=ifx -std08 -fpp
 # C++11 may not be required but does no harm here.
 CXX=icpx -std=c++17 -pthread
 #
 # Compiler flags
 #
 # -xHOST is appropriate for most cases.
-DEFAULT_OPT_FLAGS=-g -O3 -xHOST
+DEFAULT_OPT_FLAGS=-g -O3
 #
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -xMIC-AVX512
@@ -29,8 +29,8 @@ DEFAULT_OPT_FLAGS=-g -O3 -xHOST
 # OpenMP flags
 #
 OPENMPFLAG=-fiopenmp
-OPENMPSIMDFLAG=-fiopenmp
-OFFLOADFLAG=-fopenmp-targets=spir64
+OPENMPSIMDFLAG=-qopenmp-simd
+OFFLOADFLAG=-fiopenmp -fopenmp-targets=spir64
 #
 # OpenCL flags
 #
