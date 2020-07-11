@@ -63,6 +63,8 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#pragma omp requires unified_address
+
 #include "prk_util.h"
 #include "prk_openmp.h"
 
@@ -109,36 +111,60 @@ int main(int argc, char * argv[])
 
   double nstream_time = 0.0;
 
+  int host = omp_get_initial_device();
+
   size_t bytes = length*sizeof(double);
-  double * restrict A = prk_malloc(bytes);
-  double * restrict B = prk_malloc(bytes);
-  double * restrict C = prk_malloc(bytes);
+  double * restrict h_A = omp_target_alloc(bytes, host);
+  double * restrict h_B = omp_target_alloc(bytes, host);
+  double * restrict h_C = omp_target_alloc(bytes, host);
 
   double scalar = 3.0;
 
   #pragma omp parallel for simd schedule(static)
   for (size_t i=0; i<length; i++) {
-      A[i] = 0.0;
-      B[i] = 2.0;
-      C[i] = 2.0;
+      h_A[i] = 0.0;
+      h_B[i] = 2.0;
+      h_C[i] = 2.0;
   }
 
-  #pragma omp target data map(tofrom: A[0:length]) map(to: B[0:length], C[0:length])
+  double * restrict d_A = omp_target_alloc(bytes, host);
+  double * restrict d_B = omp_target_alloc(bytes, host);
+  double * restrict d_C = omp_target_alloc(bytes, host);
+
+  int rc = 0;
+  rc = omp_target_memcpy(d_A, h_A, bytes, 0, 0, device, host);
+  if (rc) { printf("ERROR: omp_target_memcpy(A) returned %d\n", rc); abort(); }
+  rc = omp_target_memcpy(d_B, h_B, bytes, 0, 0, device, host);
+  if (rc) { printf("ERROR: omp_target_memcpy(B) returned %d\n", rc); abort(); }
+  rc = omp_target_memcpy(d_C, h_C, bytes, 0, 0, device, host);
+  if (rc) { printf("ERROR: omp_target_memcpy(C) returned %d\n", rc); abort(); }
+
+  omp_target_free(h_C, host);
+  omp_target_free(h_B, host);
+
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = omp_get_wtime();
 
-      #pragma omp target teams distribute parallel for simd schedule(static) // device(device)
+      #pragma omp target teams distribute parallel for simd schedule(static) device(device) is_device_ptr(d_A,d_B,d_C)
       for (size_t i=0; i<length; i++) {
-          A[i] += B[i] + scalar * C[i];
+          d_A[i] += d_B[i] + scalar * d_C[i];
       }
     }
     nstream_time = omp_get_wtime() - nstream_time;
   }
 
-  prk_free(C);
-  prk_free(B);
+  rc = omp_target_memcpy(h_A, d_A, bytes, 0, 0, host, device);
+  if (rc) { printf("ERROR: omp_target_memcpy(A) returned %d\n", rc); abort(); }
+  rc = omp_target_memcpy(h_B, d_B, bytes, 0, 0, host, device);
+  if (rc) { printf("ERROR: omp_target_memcpy(B) returned %d\n", rc); abort(); }
+  rc = omp_target_memcpy(h_C, d_C, bytes, 0, 0, host, device);
+  if (rc) { printf("ERROR: omp_target_memcpy(C) returned %d\n", rc); abort(); }
+
+  omp_target_free(d_C, device);
+  omp_target_free(d_B, device);
+  omp_target_free(d_A, device);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -156,10 +182,10 @@ int main(int argc, char * argv[])
   double asum = 0.0;
   #pragma omp parallel for reduction(+:asum)
   for (size_t i=0; i<length; i++) {
-      asum += fabs(A[i]);
+      asum += fabs(h_A[i]);
   }
 
-  prk_free(A);
+  omp_target_free(h_A, host);
 
   double epsilon=1.e-8;
   if (fabs(ar-asum)/asum > epsilon) {

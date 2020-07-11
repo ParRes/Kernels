@@ -63,6 +63,8 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#pragma omp requires unified_address
+
 #include "prk_util.h"
 #include "prk_openmp.h"
 
@@ -109,10 +111,12 @@ int main(int argc, char * argv[])
 
   double nstream_time = 0.0;
 
+  int host = omp_get_initial_device();
+
   size_t bytes = length*sizeof(double);
-  double * restrict A = prk_malloc(bytes);
-  double * restrict B = prk_malloc(bytes);
-  double * restrict C = prk_malloc(bytes);
+  double * restrict A = omp_target_alloc(bytes, host);
+  double * restrict B = omp_target_alloc(bytes, host);
+  double * restrict C = omp_target_alloc(bytes, host);
 
   double scalar = 3.0;
 
@@ -123,22 +127,22 @@ int main(int argc, char * argv[])
       C[i] = 2.0;
   }
 
-  #pragma omp target data map(tofrom: A[0:length]) map(to: B[0:length], C[0:length])
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) nstream_time = omp_get_wtime();
+      if (iter==1) nstream_time = prk_wtime();
 
-      #pragma omp target teams distribute parallel for simd schedule(static) // device(device)
+      #pragma omp target teams distribute parallel for simd \
+                  schedule(static) device(device)
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }
     }
-    nstream_time = omp_get_wtime() - nstream_time;
+    nstream_time = prk_wtime() - nstream_time;
   }
 
-  prk_free(C);
-  prk_free(B);
+  omp_target_free(C, host);
+  omp_target_free(B, host);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -159,7 +163,7 @@ int main(int argc, char * argv[])
       asum += fabs(A[i]);
   }
 
-  prk_free(A);
+  omp_target_free(A, host);
 
   double epsilon=1.e-8;
   if (fabs(ar-asum)/asum > epsilon) {

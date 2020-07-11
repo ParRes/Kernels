@@ -74,7 +74,7 @@ memkind: nstream-memkind nstream-memkind-openmp
 
 mmap: nstream-mmap nstream-mmap-openmp
 
-target: nstream-target stencil-target transpose-target
+target: nstream-target stencil-target transpose-target nstream-alloc-target nstream-usm-target nstream-memcpy-target nstream-ua-target
 
 taskloop: nstream-taskloop stencil-taskloop transpose-taskloop
 
