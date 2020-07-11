@@ -89,6 +89,11 @@ def main():
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
+    block_order    = order / np;
+    colstart       = block_order * me;
+    Colblock_size  = order * block_order;
+    block_size     = block_order * block_order;
+
     # 0.0 is a float, which is 64b (53b of precision)
     A = [[0.0 for x in range(order)] for x in range(order)]
     B = [[0.0 for x in range(order)] for x in range(order)]
