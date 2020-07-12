@@ -47,7 +47,53 @@
 #
 # HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 #          Converted to Python by Jeff Hammond, February 2016.
+#
 # *******************************************************************
+
+#                     Layout nomenclature
+#                     -------------------
+#
+# - Each rank owns one block of columns (Colblock) of the overall
+#   matrix to be transposed, as well as of the transposed matrix.
+# - Colblock is stored contiguously in the memory of the rank.
+#   The stored format is column major, which means that matrix
+#   elements (i,j) and (i+1,j) are adjacent, and (i,j) and (i,j+1)
+#   are "order" words apart
+# - Colblock is logically composed of #ranks Blocks, but a Block is
+#   not stored contiguously in memory. Conceptually, the Block is
+#   the unit of data that gets communicated between ranks. Block i of
+#   rank j is locally transposed and gathered into a buffer called Work,
+#   which is sent to rank i, where it is scattered into Block j of the
+#   transposed matrix.
+# - When tiling is applied to reduce TLB misses, each block gets
+#   accessed by tiles.
+# - The original and transposed matrices are called A and B
+#
+# +-----------------------------------------------------------------+
+# |           |           |           |                             |
+# | Colblock  |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |        -------------------------------                          |
+# |           |           |           |                             |
+# |           |  Block    |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |        -------------------------------                          |
+# |           |           |           |                             |
+# |           |           |           |   Overall Matrix            |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |        -------------------------------                          |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# +-----------------------------------------------------------------+
 
 import sys
 from mpi4py import MPI
@@ -81,7 +127,10 @@ def main():
     if order % np != 0:
         sys.exit("ERROR: matrix order ", order," should be divisible by # procs", np)
 
+    block_order    = order / np;
+
     if (me==0):
+        print('Number of ranks      = ', np)
         print('Number of iterations = ', iterations)
         print('Matrix order         = ', order)
 
@@ -89,9 +138,7 @@ def main():
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    block_order    = order / np;
     colstart       = block_order * me;
-    Colblock_size  = order * block_order;
     block_size     = block_order * block_order;
 
     # 0.0 is a float, which is 64b (53b of precision)

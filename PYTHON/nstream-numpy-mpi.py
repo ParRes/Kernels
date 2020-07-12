@@ -100,6 +100,7 @@ def main():
             length += 1
 
     if (me==0):
+        print('Number of ranks      = ', np)
         print('Number of iterations = ', iterations)
         print('Vector length        = ', total_length)
 
