@@ -47,7 +47,53 @@
 #
 # HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 #          Converted to Python by Jeff Hammond, February 2016.
+#
 # *******************************************************************
+
+#                     Layout nomenclature
+#                     -------------------
+#
+# - Each rank owns one block of columns (Colblock) of the overall
+#   matrix to be transposed, as well as of the transposed matrix.
+# - Colblock is stored contiguously in the memory of the rank.
+#   The stored format is column major, which means that matrix
+#   elements (i,j) and (i+1,j) are adjacent, and (i,j) and (i,j+1)
+#   are "order" words apart
+# - Colblock is logically composed of #ranks Blocks, but a Block is
+#   not stored contiguously in memory. Conceptually, the Block is
+#   the unit of data that gets communicated between ranks. Block i of
+#   rank j is locally transposed and gathered into a buffer called Work,
+#   which is sent to rank i, where it is scattered into Block j of the
+#   transposed matrix.
+# - When tiling is applied to reduce TLB misses, each block gets
+#   accessed by tiles.
+# - The original and transposed matrices are called A and B
+#
+# +-----------------------------------------------------------------+
+# |           |           |           |                             |
+# | Colblock  |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |        -------------------------------                          |
+# |           |           |           |                             |
+# |           |  Block    |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |        -------------------------------                          |
+# |           |           |           |                             |
+# |           |           |           |   Overall Matrix            |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |        -------------------------------                          |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# |           |           |           |                             |
+# +-----------------------------------------------------------------+
 
 import sys
 from mpi4py import MPI
@@ -82,21 +128,24 @@ def main():
     if order % np != 0:
         sys.exit("ERROR: matrix order ", order," should be divisible by # procs", np)
 
+    block_order = int(order / np)
+
     if (me==0):
+        print('Number of ranks      = ', np)
         print('Number of iterations = ', iterations)
         print('Matrix order         = ', order)
+        # DEBUG
+        print('Block order          = ', block_order)
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    block_order    = order / np;
-    colstart       = block_order * me;
-    Colblock_size  = order * block_order;
-    block_size     = block_order * block_order;
-
-    A = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
-    B = numpy.zeros((order,order))
+    offset = me * block_order
+    A = numpy.fromfunction(lambda i,j: offset+i*order+j, (order,block_order), dtype=float)
+    B = numpy.zeros((order,block_order))
+    T = numpy.zeros((order,block_order))
+    #Z = numpy.array_split(T,3)
 
     for k in range(0,iterations+1):
 
@@ -105,21 +154,41 @@ def main():
             t0 = MPI.Wtime()
 
         # this actually forms the transpose of A
-        # B += numpy.transpose(A)
+        #B += numpy.transpose(A)
         # this only uses the transpose _view_ of A
-        B += A.T
+        #B += A.T
+
+        S = numpy.array_split(A,3)
+        #T = numpy.array_split(A,3)
+        Z = comm.alltoall(S)
+        #print('T=\n',T[me])
+        for r in range(0,np):
+            lo = block_order * r
+            hi = block_order * (r+1)
+            T[lo:hi,:] = numpy.transpose(Z[r])
+
+        B += T
+
         A += 1.0
 
     comm.Barrier()
     t1 = MPI.Wtime()
     trans_time = t1 - t0
 
+    for p in range(0,np):
+        if (p==me):
+            print('process',p)
+            print(me,': A=\n',A)
+            print(me,': T=\n',T)
+            #print(me,': Z=\n',Z)
+        comm.Barrier()
+
     # ********************************************************************
     # ** Analyze and output results.
     # ********************************************************************
 
-    A = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
-    abserr = numpy.linalg.norm(numpy.reshape(B-A,order*order),ord=1)
+    A = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,block_order), dtype=float)
+    abserr = numpy.linalg.norm(numpy.reshape(B-A,order*block_order),ord=1)
 
     epsilon=1.e-8
     nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
