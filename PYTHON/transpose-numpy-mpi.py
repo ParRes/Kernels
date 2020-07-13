@@ -175,29 +175,10 @@ def main():
     # ********************************************************************
 
     # allgather is non-scalable but was easier to debug
-    if (order>0):
-        F = comm.allgather(B)
-        G = numpy.concatenate(F,axis=1)
-        #if (me==0):
-        #    print(me,': G=\n',G)
-        A = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
-        abserr = numpy.linalg.norm(numpy.reshape(G-A,order*order),ord=1)
-
-    if (1>0):
-        for p in range(0,np):
-            if (p==me):
-                print('process',p)
-                print(me,': A=\n',A)
-                print(me,': T=\n',T)
-                #print(me,': Z=\n',Z)
-            comm.Barrier()
-
-        offset = me * block_order
-        addit = int( iterations * (iterations + 1) / 2 )
-        A = numpy.fromfunction(lambda i,j: addit + (order*j+i+offset), (order,block_order), dtype=float)
-        abserr = numpy.linalg.norm(numpy.reshape(B-A,order*block_order),ord=1)
-        abserr = 0.0
-        print(me,": abserr=",abserr)
+    F = comm.allgather(B)
+    G = numpy.concatenate(F,axis=1)
+    H = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
+    abserr = numpy.linalg.norm(numpy.reshape(G-H,order*order),ord=1)
 
     epsilon=1.e-8
     nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
