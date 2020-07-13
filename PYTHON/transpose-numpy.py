@@ -99,7 +99,6 @@ def main():
         B += A.T
         A += 1.0
 
-
     t1 = timer()
     trans_time = t1 - t0
 

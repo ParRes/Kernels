@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2017, Intel Corporation
+# Copyright (c) 2020, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -70,14 +70,14 @@ import numpy
 def main():
 
     comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
+    me = comm.Get_rank()
+    np = comm.Get_size()
 
     # ********************************************************************
     # read and test input parameters
     # ********************************************************************
 
-    if (rank==0):
+    if (me==0):
         print('Parallel Research Kernels version ') #, PRKVERSION
         print('Python MPI/Numpy STREAM triad: A = B + scalar * C')
 
@@ -93,13 +93,14 @@ def main():
     if total_length < 1:
         sys.exit("ERROR: length must be positive")
 
-    length = int(total_length / size)
-    remainder = total_length % size
+    length = int(total_length / np)
+    remainder = total_length % np
     if (remainder > 0):
-        if (rank < remainder):
+        if (me < remainder):
             length += 1
 
-    if (rank==0):
+    if (me==0):
+        print('Number of ranks      = ', np)
         print('Number of iterations = ', iterations)
         print('Vector length        = ', total_length)
 
@@ -148,13 +149,13 @@ def main():
 
     epsilon=1.e-8
     if abs(ar-asum)/asum > epsilon:
-        if (rank==0):
+        if (me==0):
             print('Failed Validation on output array');
             print('        Expected checksum: ',ar);
             print('        Observed checksum: ',asum);
         sys.exit("ERROR: solution did not validate")
     else:
-        if (rank==0):
+        if (me==0):
             print('Solution validates')
             avgtime = nstream_time/iterations
             nbytes = 4.0 * total_length * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
