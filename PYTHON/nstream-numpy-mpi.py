@@ -141,11 +141,11 @@ def main():
     for k in range(0,iterations+1):
         ar += br + scalar * cr
 
-    ar *= length
+    ar *= total_length
 
     asum = numpy.linalg.norm(A, ord=1)
 
-    comm.allreduce(asum, op=MPI.SUM)
+    asum = comm.allreduce(asum, op=MPI.SUM)
 
     epsilon=1.e-8
     if abs(ar-asum)/asum > epsilon:
