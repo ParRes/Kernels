@@ -134,8 +134,6 @@ def main():
         print('Number of ranks      = ', np)
         print('Number of iterations = ', iterations)
         print('Matrix order         = ', order)
-        # DEBUG
-        print('Block order          = ', block_order)
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
@@ -145,7 +143,6 @@ def main():
     A = numpy.fromfunction(lambda i,j: offset+i*order+j, (order,block_order), dtype=float)
     B = numpy.zeros((order,block_order))
     T = numpy.zeros((order,block_order))
-    #Z = numpy.array_split(T,3)
 
     for k in range(0,iterations+1):
 
@@ -158,10 +155,8 @@ def main():
         # this only uses the transpose _view_ of A
         #B += A.T
 
-        S = numpy.array_split(A,3)
-        #T = numpy.array_split(A,3)
+        S = numpy.split(A,np)
         Z = comm.alltoall(S)
-        #print('T=\n',T[me])
         for r in range(0,np):
             lo = block_order * r
             hi = block_order * (r+1)
@@ -175,20 +170,34 @@ def main():
     t1 = MPI.Wtime()
     trans_time = t1 - t0
 
-    for p in range(0,np):
-        if (p==me):
-            print('process',p)
-            print(me,': A=\n',A)
-            print(me,': T=\n',T)
-            #print(me,': Z=\n',Z)
-        comm.Barrier()
-
     # ********************************************************************
     # ** Analyze and output results.
     # ********************************************************************
 
-    A = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,block_order), dtype=float)
-    abserr = numpy.linalg.norm(numpy.reshape(B-A,order*block_order),ord=1)
+    # allgather is non-scalable but was easier to debug
+    if (order>0):
+        F = comm.allgather(B)
+        G = numpy.concatenate(F,axis=1)
+        #if (me==0):
+        #    print(me,': G=\n',G)
+        A = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
+        abserr = numpy.linalg.norm(numpy.reshape(G-A,order*order),ord=1)
+
+    if (1>0):
+        for p in range(0,np):
+            if (p==me):
+                print('process',p)
+                print(me,': A=\n',A)
+                print(me,': T=\n',T)
+                #print(me,': Z=\n',Z)
+            comm.Barrier()
+
+        offset = me * block_order
+        addit = int( iterations * (iterations + 1) / 2 )
+        A = numpy.fromfunction(lambda i,j: addit + (order*j+i+offset), (order,block_order), dtype=float)
+        abserr = numpy.linalg.norm(numpy.reshape(B-A,order*block_order),ord=1)
+        abserr = 0.0
+        print(me,": abserr=",abserr)
 
     epsilon=1.e-8
     nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
