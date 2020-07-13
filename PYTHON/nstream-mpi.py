@@ -96,7 +96,7 @@ def main():
     if (total_length % np > 0):
         if (me < total_length % np):
             length += 1
-
+   
     if (me==0):
         print('Number of ranks      = ', np)
         print('Number of iterations = ', iterations)
