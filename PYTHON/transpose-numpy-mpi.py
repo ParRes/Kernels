@@ -155,12 +155,11 @@ def main():
         # this only uses the transpose _view_ of A
         #B += A.T
 
-        S = numpy.split(A,np)
-        Z = comm.alltoall(S)
+        comm.Alltoall(A, T)
         for r in range(0,np):
             lo = block_order * r
             hi = block_order * (r+1)
-            T[lo:hi,:] = numpy.transpose(Z[r])
+            T[lo:hi,:] = numpy.transpose(T[lo:hi,:])
 
         B += T
 
