@@ -127,7 +127,7 @@ int main(int argc, char * argv[])
   std::cout << "Number of CPUs and GPUs found  = " << haz_ngpu << std::endl;
 
   if (use_ngpu > haz_ngpu) {
-      std::cout << "You cannot use more GPUs (" << use_ngpu << ") than you have (" << haz_ngpu << ")" << std::endl;
+      std::cout << "You cannot use more CPUs and GPUs (" << use_ngpu << ") than you have (" << haz_ngpu << ")" << std::endl;
   }
 
   int ngpus = use_ngpu;
