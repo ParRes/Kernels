@@ -180,7 +180,6 @@ int main(int argc, char * argv[])
       auto i = l.index();
       auto v = l.value();
       auto bytes = local_length * sizeof(double);
-      auto start = local_length * i;
       {
           auto target = d_A[i];
           auto source = &h_A[i * local_length];
@@ -236,7 +235,6 @@ int main(int argc, char * argv[])
       auto i = l.index();
       auto v = l.value();
       auto bytes = local_length * sizeof(double);
-      auto start = local_length * i;
       auto target = &h_A[i * local_length];
       auto source = d_A[i];
       v.memcpy(target, source, bytes);
