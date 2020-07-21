@@ -166,16 +166,7 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  std::vector<size_t> ls(ngpus,0);
-  {
-      const size_t elements_per_gpu = prk::divceil(length, ngpus);
-      for (int g=0; g<ngpus; ++g) {
-          ls[g] = elements_per_gpu;
-      }
-      if (elements_per_gpu * ngpus > length) {
-          ls[ngpus-1] = length - (ngpus-1) * elements_per_gpu;
-      }
-  }
+  std::vector<size_t> ls(ngpus,local_length);
 
   auto d_A = std::vector<double*> (ngpus, nullptr);
   auto d_B = std::vector<double*> (ngpus, nullptr);
