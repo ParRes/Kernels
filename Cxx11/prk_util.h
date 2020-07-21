@@ -203,20 +203,17 @@ namespace prk {
         public:
 
             vector(size_t n) {
-                //this->data_ = new T[n];
                 this->data_ = prk::malloc<T>(n);
                 this->size_ = n;
             }
 
             vector(size_t n, T v) {
-                //this->data_ = new T[n];
                 this->data_ = prk::malloc<T>(n);
                 for (size_t i=0; i<n; ++i) this->data_[i] = v;
                 this->size_ = n;
             }
 
             ~vector() {
-                //delete[] this->data_;
                 prk::free<T>(this->data_);
             }
 
@@ -256,6 +253,10 @@ namespace prk {
 
             T * end() {
                 return &(this->data_[this->size_]);
+            }
+
+            void fill(T v) {
+                for (size_t i=0; i<this->size_; ++i) this->data_[i] = v;
             }
 
 #if 0
