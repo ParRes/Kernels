@@ -164,6 +164,7 @@ namespace prk {
                     }
                 }
 
+#if 0
                 template <typename T>
                 void gather(T * host_pointer,
                             const std::vector<T*> & device_pointers,
@@ -179,6 +180,7 @@ namespace prk {
                         v.memcpy(target, source, bytes);
                     }
                 }
+#endif
 
                 template <typename T>
                 void gather(prk::vector<T> & host_pointer,
@@ -196,6 +198,7 @@ namespace prk {
                     }
                 }
 
+#if 0
                 template <typename T>
                 void scatter(std::vector<T*> & device_pointers,
                              const T * host_pointer,
@@ -211,6 +214,7 @@ namespace prk {
                         v.memcpy(target, source, bytes);
                     }
                 }
+#endif
 
                 template <typename T>
                 void scatter(std::vector<T*> & device_pointers,
