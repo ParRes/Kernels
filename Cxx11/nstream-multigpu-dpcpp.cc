@@ -264,15 +264,6 @@ int main(int argc, char * argv[])
       nstream_time = prk::wtime() - nstream_time;
   }
 
-#if 0
-  std::vector<size_t> ls(np,local_length);
-  for (int g=0; g<np; ++g) {
-      auto q = qs[g];
-      const size_t start = (g>0) ? ls[g-1] : 0;
-      const size_t size  = ls[g] * sizeof(double);
-      q.memcpy(&(h_A[start]), d_A[g], size);
-  }
-#else
   for (const auto & l : list | boost::adaptors::indexed(0) ) {
       auto i = l.index();
       auto v = l.value();
@@ -282,7 +273,6 @@ int main(int argc, char * argv[])
       auto source = d_A[i];
       v.memcpy(target, source, bytes);
   }
-#endif
   for (auto & q : qs) {
       q.wait();
   }
