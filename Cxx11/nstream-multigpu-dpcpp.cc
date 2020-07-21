@@ -164,16 +164,6 @@ int main(int argc, char * argv[])
   auto d_B = std::vector<double*> (np, nullptr);
   auto d_C = std::vector<double*> (np, nullptr);
 
-#if 0
-  for (int g=0; g<np; ++g) {
-      auto q = qs[g];
-      const auto local_bytes = local_length * sizeof(double);
-      d_A[g] = syclx::malloc_device<double>(local_length, q);
-      d_B[g] = syclx::malloc_device<double>(local_length, q);
-      d_C[g] = syclx::malloc_device<double>(local_length, q);
-      q.wait();
-  }
-#else
   auto list(qs);
   for (const auto & l : list | boost::adaptors::indexed(0) ) {
       auto i = l.index();
@@ -185,28 +175,7 @@ int main(int argc, char * argv[])
   for (auto & i : list) {
       i.wait();
   }
-#endif
 
-#if 0
-  for (int g=0; g<np; ++g) {
-      auto q = qs[g];
-      const size_t start = local_length * g;
-      const size_t size  = local_length * sizeof(double);
-      q.memcpy(d_A[g], &(h_A[start]), size);
-      q.memcpy(d_B[g], &(h_B[start]), size);
-      q.memcpy(d_C[g], &(h_C[start]), size);
-  }
-#elif 0
-  for (const auto & l : list | boost::adaptors::indexed(0) ) {
-      auto i = l.index();
-      auto v = l.value();
-      auto start = local_length * i;
-      auto bytes = local_length * sizeof(double);
-      v.memcpy(d_A[i], &(h_A[start]), bytes);
-      v.memcpy(d_B[i], &(h_B[start]), bytes);
-      v.memcpy(d_C[i], &(h_C[start]), bytes);
-  }
-#else
   for (const auto & l : list | boost::adaptors::indexed(0) ) {
       auto i = l.index();
       auto v = l.value();
@@ -228,7 +197,6 @@ int main(int argc, char * argv[])
           v.memcpy(target, source, bytes);
       }
   }
-#endif
   for (auto & i : list) {
       i.wait();
   }
@@ -277,14 +245,6 @@ int main(int argc, char * argv[])
       q.wait();
   }
 
-#if 0
-  for (int g=0; g<np; ++g) {
-      auto q = qs[g];
-      syclx::free(d_C[g], q);
-      syclx::free(d_B[g], q);
-      syclx::free(d_A[g], q);
-  }
-#else
   for (const auto & l : list | boost::adaptors::indexed(0) ) {
       auto i = l.index();
       auto v = l.value();
@@ -292,7 +252,6 @@ int main(int argc, char * argv[])
       syclx::free(d_B[i], v);
       syclx::free(d_C[i], v);
   }
-#endif
   for (auto & q : qs) {
       q.wait();
   }
