@@ -69,32 +69,7 @@ int main(int argc, char * argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/DPC++ STREAM triad: A = B + scalar * C" << std::endl;
 
-  std::vector<sycl::queue> qs;
-
-  auto platforms = sycl::platform::get_platforms();
-  for (auto & p : platforms) {
-    auto pname = p.get_info<sycl::info::platform::name>();
-    std::cout << "*Platform: " << pname << std::endl;
-    if ( pname.find("Level-Zero") != std::string::npos) {
-        std::cout << "*Level Zero GPU skipped" << std::endl;
-        break;
-    }
-    if ( pname.find("Intel") == std::string::npos) {
-        std::cout << "*non-Intel skipped" << std::endl;
-        break;
-    }
-    auto devices = p.get_devices();
-    for (auto & d : devices ) {
-        std::cout << "**Device: " << d.get_info<sycl::info::device::name>() << std::endl;
-        if ( d.is_gpu() || d.is_cpu() ) {
-            std::cout << "**Device is CPU or GPU - adding to vector of queues" << std::endl;
-            qs.push_back(sycl::queue(d));
-        }
-    }
-  }
-
-  int haz_ngpu = qs.size();
-  std::cout << "Number of CPUs and GPUs found  = " << haz_ngpu << std::endl;
+  auto qs = prk::SYCL::queues();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -164,41 +139,15 @@ int main(int argc, char * argv[])
   auto d_B = std::vector<double*> (np, nullptr);
   auto d_C = std::vector<double*> (np, nullptr);
 
-  auto list(qs);
-  for (const auto & l : list | boost::adaptors::indexed(0) ) {
-      auto i = l.index();
-      auto v = l.value();
-      d_A[i] = syclx::malloc_device<double>(local_length, v);
-      d_B[i] = syclx::malloc_device<double>(local_length, v);
-      d_C[i] = syclx::malloc_device<double>(local_length, v);
-  }
-  for (auto & i : list) {
-      i.wait();
-  }
+  qs.allocate<double>(d_A, local_length);
+  qs.allocate<double>(d_B, local_length);
+  qs.allocate<double>(d_C, local_length);
+  qs.waitall();
 
-  for (const auto & l : list | boost::adaptors::indexed(0) ) {
-      auto i = l.index();
-      auto v = l.value();
-      auto bytes = local_length * sizeof(double);
-      {
-          auto target = d_A[i];
-          auto source = &h_A[i * local_length];
-          v.memcpy(target, source, bytes);
-      }
-      {
-          auto target = d_B[i];
-          auto source = &h_B[i * local_length];
-          v.memcpy(target, source, bytes);
-      }
-      {
-          auto target = d_C[i];
-          auto source = &h_C[i * local_length];
-          v.memcpy(target, source, bytes);
-      }
-  }
-  for (auto & i : list) {
-      i.wait();
-  }
+  qs.scatter<double>(d_A, h_A, local_length);
+  qs.scatter<double>(d_B, h_B, local_length);
+  qs.scatter<double>(d_C, h_C, local_length);
+  qs.waitall();
 
   // overwrite host buffer with garbage to detect bugs
   h_A.fill(-77777777);
@@ -209,8 +158,9 @@ int main(int argc, char * argv[])
 
         if (iter==1) nstream_time = prk::wtime();
 
+#if 1
         for (int g=0; g<np; ++g) {
-            auto q = qs[g];
+            auto q = qs.queue(g);
 
             auto p_A = d_A[g];
             auto p_B = d_B[g];
@@ -224,35 +174,19 @@ int main(int argc, char * argv[])
               });
             });
         }
-        for (auto & q : qs) {
-            q.wait();
-        }
+        qs.waitall();
+#endif
       }
       nstream_time = prk::wtime() - nstream_time;
   }
 
-  for (const auto & l : list | boost::adaptors::indexed(0) ) {
-      auto i = l.index();
-      auto v = l.value();
-      auto bytes = local_length * sizeof(double);
-      auto target = &h_A[i * local_length];
-      auto source = d_A[i];
-      v.memcpy(target, source, bytes);
-  }
-  for (auto & q : qs) {
-      q.wait();
-  }
+  qs.gather<double>(h_A, d_A, local_length);
+  qs.waitall();
 
-  for (const auto & l : list | boost::adaptors::indexed(0) ) {
-      auto i = l.index();
-      auto v = l.value();
-      syclx::free(d_A[i], v);
-      syclx::free(d_B[i], v);
-      syclx::free(d_C[i], v);
-  }
-  for (auto & q : qs) {
-      q.wait();
-  }
+  qs.free(d_A);
+  qs.free(d_B);
+  qs.free(d_C);
+  qs.waitall();
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
