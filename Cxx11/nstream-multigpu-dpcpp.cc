@@ -148,7 +148,7 @@ int main(int argc, char * argv[])
   std::cout << "Vector length         = " << length << std::endl;
   std::cout << "Vector length (local) = " << local_length << std::endl;
 
-  int ngpus = use_ngpu;
+  int np = use_ngpu;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -160,34 +160,81 @@ int main(int argc, char * argv[])
   auto h_B = prk::vector<double>(length, 2);
   auto h_C = prk::vector<double>(length, 2);
 
-  std::vector<size_t> ls(ngpus,local_length);
+  auto d_A = std::vector<double*> (np, nullptr);
+  auto d_B = std::vector<double*> (np, nullptr);
+  auto d_C = std::vector<double*> (np, nullptr);
 
-  auto d_A = std::vector<double*> (ngpus, nullptr);
-  auto d_B = std::vector<double*> (ngpus, nullptr);
-  auto d_C = std::vector<double*> (ngpus, nullptr);
-
-  for (int g=0; g<ngpus; ++g) {
+#if 0
+  for (int g=0; g<np; ++g) {
       auto q = qs[g];
-
-      const auto local_length = ls[g];
       const auto local_bytes = local_length * sizeof(double);
-
       d_A[g] = syclx::malloc_device<double>(local_length, q);
       d_B[g] = syclx::malloc_device<double>(local_length, q);
       d_C[g] = syclx::malloc_device<double>(local_length, q);
       q.wait();
+  }
+#else
+  auto list(qs);
+  for (const auto & l : list | boost::adaptors::indexed(0) ) {
+      auto i = l.index();
+      auto v = l.value();
+      d_A[i] = syclx::malloc_device<double>(local_length, v);
+      d_B[i] = syclx::malloc_device<double>(local_length, v);
+      d_C[i] = syclx::malloc_device<double>(local_length, v);
+  }
+  for (auto & i : list) {
+      i.wait();
+  }
+#endif
 
-      const size_t start = (g>0) ? ls[g-1] : 0;
-      const size_t size  = ls[g] * sizeof(double);
+#if 0
+  for (int g=0; g<np; ++g) {
+      auto q = qs[g];
+      const size_t start = local_length * g;
+      const size_t size  = local_length * sizeof(double);
       q.memcpy(d_A[g], &(h_A[start]), size);
       q.memcpy(d_B[g], &(h_B[start]), size);
       q.memcpy(d_C[g], &(h_C[start]), size);
-      q.wait();
+  }
+#elif 0
+  for (const auto & l : list | boost::adaptors::indexed(0) ) {
+      auto i = l.index();
+      auto v = l.value();
+      auto start = local_length * i;
+      auto bytes = local_length * sizeof(double);
+      v.memcpy(d_A[i], &(h_A[start]), bytes);
+      v.memcpy(d_B[i], &(h_B[start]), bytes);
+      v.memcpy(d_C[i], &(h_C[start]), bytes);
+  }
+#else
+  for (const auto & l : list | boost::adaptors::indexed(0) ) {
+      auto i = l.index();
+      auto v = l.value();
+      auto bytes = local_length * sizeof(double);
+      auto start = local_length * i;
+      {
+          auto target = d_A[i];
+          auto source = &h_A[i * local_length];
+          v.memcpy(target, source, bytes);
+      }
+      {
+          auto target = d_B[i];
+          auto source = &h_B[i * local_length];
+          v.memcpy(target, source, bytes);
+      }
+      {
+          auto target = d_C[i];
+          auto source = &h_C[i * local_length];
+          v.memcpy(target, source, bytes);
+      }
+  }
+#endif
+  for (auto & i : list) {
+      i.wait();
   }
 
-  for (size_t i=0; i<length; ++i) {
-    h_A[i] = -77777777;
-  }
+  // overwrite host buffer with garbage to detect bugs
+  h_A.fill(-77777777);
 
   const double scalar(3);
   {
@@ -195,14 +242,14 @@ int main(int argc, char * argv[])
 
         if (iter==1) nstream_time = prk::wtime();
 
-        for (int g=0; g<ngpus; ++g) {
+        for (int g=0; g<np; ++g) {
             auto q = qs[g];
 
             auto p_A = d_A[g];
             auto p_B = d_B[g];
             auto p_C = d_C[g];
 
-            const size_t size  = ls[g];
+            const size_t size  = local_length;
 
             q.submit([&](sycl::handler& h) {
               h.parallel_for( sycl::range<1>{size}, [=] (sycl::id<1> i) {
@@ -217,19 +264,46 @@ int main(int argc, char * argv[])
       nstream_time = prk::wtime() - nstream_time;
   }
 
-  for (int g=0; g<ngpus; ++g) {
+#if 0
+  std::vector<size_t> ls(np,local_length);
+  for (int g=0; g<np; ++g) {
       auto q = qs[g];
       const size_t start = (g>0) ? ls[g-1] : 0;
       const size_t size  = ls[g] * sizeof(double);
       q.memcpy(&(h_A[start]), d_A[g], size);
+  }
+#else
+  for (const auto & l : list | boost::adaptors::indexed(0) ) {
+      auto i = l.index();
+      auto v = l.value();
+      auto bytes = local_length * sizeof(double);
+      auto start = local_length * i;
+      auto target = &h_A[i * local_length];
+      auto source = d_A[i];
+      v.memcpy(target, source, bytes);
+  }
+#endif
+  for (auto & q : qs) {
       q.wait();
   }
 
-  for (int g=0; g<ngpus; ++g) {
+#if 0
+  for (int g=0; g<np; ++g) {
       auto q = qs[g];
       syclx::free(d_C[g], q);
       syclx::free(d_B[g], q);
       syclx::free(d_A[g], q);
+  }
+#else
+  for (const auto & l : list | boost::adaptors::indexed(0) ) {
+      auto i = l.index();
+      auto v = l.value();
+      syclx::free(d_A[i], v);
+      syclx::free(d_B[i], v);
+      syclx::free(d_C[i], v);
+  }
+#endif
+  for (auto & q : qs) {
       q.wait();
   }
 
