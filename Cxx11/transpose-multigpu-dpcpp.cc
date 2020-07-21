@@ -95,10 +95,6 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
-
   std::vector<sycl::queue> qs;
 
   auto platforms = sycl::platform::get_platforms();
@@ -131,6 +127,17 @@ int main(int argc, char * argv[])
   }
 
   int ngpus = use_ngpu;
+
+  if (order % ngpus != 0) {
+      std::cout << "ERROR: matrix order " << order << " should be divisible by # procs" << ngpus << std::endl;
+      return 2;
+  }
+  size_t block_order = order / ngpus;
+
+  std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
+  std::cout << "Number of iterations  = " << iterations << std::endl;
+  std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Block order           = " << block_order << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
