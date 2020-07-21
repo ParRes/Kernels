@@ -156,15 +156,9 @@ int main(int argc, char * argv[])
 
   double nstream_time(0);
 
-  auto h_A = prk::vector<double>(length);
-  auto h_B = prk::vector<double>(length);
-  auto h_C = prk::vector<double>(length);
-
-  for (size_t i=0; i<length; ++i) {
-    h_A[i] = 0;
-    h_B[i] = 2;
-    h_C[i] = 2;
-  }
+  auto h_A = prk::vector<double>(length, 0);
+  auto h_B = prk::vector<double>(length, 2);
+  auto h_C = prk::vector<double>(length, 2);
 
   std::vector<size_t> ls(ngpus,local_length);
 
@@ -225,13 +219,14 @@ int main(int argc, char * argv[])
 
   for (int g=0; g<ngpus; ++g) {
       auto q = qs[g];
-
       const size_t start = (g>0) ? ls[g-1] : 0;
       const size_t size  = ls[g] * sizeof(double);
-
       q.memcpy(&(h_A[start]), d_A[g], size);
       q.wait();
+  }
 
+  for (int g=0; g<ngpus; ++g) {
+      auto q = qs[g];
       syclx::free(d_C[g], q);
       syclx::free(d_B[g], q);
       syclx::free(d_A[g], q);
