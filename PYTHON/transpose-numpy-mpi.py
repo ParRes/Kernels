@@ -159,7 +159,8 @@ def main():
         for r in range(0,np):
             lo = block_order * r
             hi = block_order * (r+1)
-            B[lo:hi,:] += numpy.transpose(T[lo:hi,:])
+            #B[lo:hi,:] += numpy.transpose(T[lo:hi,:])
+            B[lo:hi,:] += T[lo:hi,:].T
 
         A += 1.0
 
