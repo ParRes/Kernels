@@ -165,8 +165,44 @@ namespace prk {
                     }
                 }
 
-                template <typename T>
-                void gather(prk::vector<T> & host_pointer,
+                // UNUSED and UNTESTED
+                template <typename T, typename B>
+                void broadcast(std::vector<T*> & device_pointers,
+                               const B & host_pointer,
+                               size_t num_elements)
+                {
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        auto bytes = num_elements * sizeof(T);
+                        auto target = device_pointers[i];
+                        auto source = &host_pointer[0];
+                        v.memcpy(target, source, bytes);
+                    }
+                }
+
+                // UNUSED and UNTESTED
+                template <typename T, typename B, typename Op>
+                void reduce(B & host_pointer,
+                            const std::vector<T*> & device_pointers,
+                            size_t num_elements)
+                {
+                    auto temp = std::vector<T>(num_elements, 0);
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        auto bytes = num_elements * sizeof(T);
+                        auto target = device_pointers[i];
+                        auto source = &host_pointer[0];
+                        v.memcpy(temp, source, bytes);
+                        for (size_t e=0; e<num_elements; ++e) {
+                            target[e] = Op{}( target[e], temp[e] );
+                        }
+                    }
+                }
+
+                template <typename T, typename B>
+                void gather(B & host_pointer,
                             const std::vector<T*> & device_pointers,
                             size_t num_elements)
                 {
@@ -180,9 +216,9 @@ namespace prk {
                     }
                 }
 
-                template <typename T>
+                template <typename T, typename B>
                 void scatter(std::vector<T*> & device_pointers,
-                             prk::vector<T>  & host_pointer,
+                             const B & host_pointer,
                              size_t num_elements)
                 {
                     for (const auto & l : list | boost::adaptors::indexed(0) ) {
@@ -194,7 +230,6 @@ namespace prk {
                         v.memcpy(target, source, bytes);
                     }
                 }
-
 
 
         };
