@@ -64,7 +64,7 @@ taskloop: stencil-taskloop-openmp transpose-taskloop-openmp nstream-taskloop-ope
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
-ga: nstream-ga transpose-ga
+ga: nstream-ga transpose-ga dgemm-ga
 
 target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target
 
@@ -118,6 +118,7 @@ clean:
 	-rm -f p2p stencil transpose nstream dgemm
 	-rm -f p2p-innerloop
 	-rm -f *-pretty
+	-rm -f *-blas
 	-rm -f *-coarray
 	-rm -f *-ga
 	-rm -f *-openmp

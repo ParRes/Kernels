@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2019, Intel Corporation
+/// Copyright (c) 2017, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -52,128 +52,125 @@
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
 ///
-///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
 ///          reported results should not be associated with Stream in
 ///          external publications
 ///
 ///          Converted to C++11 by Jeff Hammond, November 2017.
-///          Converted to C11 by Jeff Hammond, February 2019.
+///          Converted to Go by Jeff Hammond, July 2020.
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include "prk_util.h"
-#include "prk_openmp.h"
+package main
 
-int main(int argc, char * argv[])
-{
-  printf("Parallel Research Kernels version %d\n", PRKVERSION );
-  printf("C11/OpenMP TARGET STREAM triad: A = B + scalar * C\n");
+import (
+    "fmt"
+    "flag"
+    "os"
+    "time"
+    "math"
+    "unsafe"
+)
+
+func main() {
+
+  fmt.Println("Parallel Research Kernels")
+  fmt.Println("Go STREAM triad: A = B + scalar * C")
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 3) {
-    printf("Usage: <# iterations> <vector length>\n");
-    return 1;
+  if len(os.Args) < 2 {
+      fmt.Println("Usage: <# iterations> <vector length>")
+      os.Exit(1)
   }
 
-  int iterations = atoi(argv[1]);
+  piterations := flag.Int("i", 0, "iterations")
+  plength     := flag.Int64("n", 0, "length of vector")
+  flag.Parse()
+
+  iterations := *piterations
+  length     := *plength
+
   if (iterations < 1) {
-    printf("ERROR: iterations must be >= 1\n");
-    return 1;
+      fmt.Println("ERROR: iterations must be >= 1: ", iterations, *piterations)
+      os.Exit(1)
   }
 
-  // length of a the vector
-  size_t length = atol(argv[2]);
   if (length <= 0) {
-    printf("ERROR: Vector length must be greater than 0\n");
-    return 1;
+      fmt.Println("ERROR: vector length must be positive: ", length, *plength)
+      os.Exit(1)
   }
 
-  int device = (argc > 3) ? atol(argv[3]) : omp_get_default_device();
-  if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_default_device()) ) {
-    printf("ERROR: device number %d is not valid.\n", device);
-    return 1;
-  }
-
-  printf("Number of iterations = %d\n", iterations);
-  printf("Vector length        = %zu\n", length);
-  printf("OpenMP Device        = %d\n", device);
+  fmt.Println("Number of iterations = ", iterations)
+  fmt.Println("Vector length        = ", length)
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double nstream_time = 0.0;
+  A := make([]float64, length)
+  B := make([]float64, length)
+  C := make([]float64, length)
 
-  size_t bytes = length*sizeof(double);
-  double * restrict A = prk_malloc(bytes);
-  double * restrict B = prk_malloc(bytes);
-  double * restrict C = prk_malloc(bytes);
-
-  double scalar = 3.0;
-
-  #pragma omp parallel for simd schedule(static)
-  for (size_t i=0; i<length; i++) {
-      A[i] = 0.0;
-      B[i] = 2.0;
-      C[i] = 2.0;
+  for i := int64(0); i<length; i++ {
+      A[i] = 0
+      B[i] = 2
+      C[i] = 2
   }
 
-  #pragma omp target data map(tofrom: A[0:length]) map(to: B[0:length], C[0:length])
-  {
-    for (int iter = 0; iter<=iterations; iter++) {
+  scalar := float64(3)
 
-      if (iter==1) nstream_time = omp_get_wtime();
+  var start = time.Now()
 
-      #pragma omp target teams distribute parallel for simd schedule(static) // device(device)
-      for (size_t i=0; i<length; i++) {
-          A[i] += B[i] + scalar * C[i];
+  for iter := 0; iter<=iterations; iter++ {
+
+      if iter==1 {
+          start = time.Now()
       }
-    }
-    nstream_time = omp_get_wtime() - nstream_time;
-  }
 
-  prk_free(C);
-  prk_free(B);
+      for i := int64(0); i<length; i++ {
+          A[i] += B[i] + scalar * C[i]
+      }
+  }
+  stop := time.Now()
+
+  nstream_time := stop.Sub(start)
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  double ar = 0.0;
-  double br = 2.0;
-  double cr = 2.0;
-  for (int i=0; i<=iterations; i++) {
-      ar += br + scalar * cr;
+  ar := float64(0)
+  br := float64(2)
+  cr := float64(2)
+  for i := 0; i<=iterations; i++ {
+      ar += br + scalar * cr
   }
 
-  ar *= length;
+  ar *= float64(length)
 
-  double asum = 0.0;
-  #pragma omp parallel for reduction(+:asum)
-  for (size_t i=0; i<length; i++) {
-      asum += fabs(A[i]);
+  asum := float64(0)
+  for i := int64(0); i<length; i++ {
+      asum += math.Abs(A[i])
   }
 
-  prk_free(A);
-
-  double epsilon=1.e-8;
-  if (fabs(ar-asum)/asum > epsilon) {
-      printf("Failed Validation on output array\n"
-             "       Expected checksum: %lf\n"
-             "       Observed checksum: %lf\n"
-             "ERROR: solution did not validate\n", ar, asum);
-      return 1;
+  epsilon := float64(1.e-8)
+  if math.Abs(ar-asum)/asum > epsilon {
+      fmt.Printf("Failed Validation on output array\n")
+      fmt.Printf("       Expected checksum: %f\n", ar)
+      fmt.Printf("       Observed checksum: %f\n", asum)
+      fmt.Printf("ERROR: solution did not validate\n")
+      os.Exit(1)
   } else {
-      printf("Solution validates\n");
-      double avgtime = nstream_time/iterations;
-      double nbytes = 4.0 * length * sizeof(double);
-      printf("Rate (MB/s): %lf Avg time (s): %lf\n", 1.e-6*nbytes/avgtime, avgtime);
+      fmt.Println("Solution validates")
+      avgtime := int64(nstream_time/time.Microsecond) / int64(iterations)
+      nbytes  := int64(4) * length * int64(unsafe.Sizeof(A[0]))
+      fmt.Printf("Rate (MB/s): %f", float64(nbytes) / float64(avgtime) )
+      fmt.Printf(" Avg time (s): %f\n", 1.0e-6 * float64(avgtime) )
   }
-
-  return 0;
 }
+
+
