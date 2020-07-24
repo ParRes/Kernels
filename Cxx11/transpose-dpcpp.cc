@@ -123,15 +123,8 @@ int main(int argc, char * argv[])
       q.submit([&](sycl::handler& h) {
 
         h.parallel_for( sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
-#if USE_2D_INDEXING
-          sycl::id<2> ij{it[0],it[1]};
-          sycl::id<2> ji{it[1],it[0]};
-          B[ij] += A[ji];
-          A[ji] += (T)1;
-#else
           B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
           A[it[1] * order + it[0]] += 1.0;
-#endif
         });
       });
       q.wait();
