@@ -57,12 +57,14 @@ int main(int argc, char * argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/DPCT Matrix transpose: B = A^T" << std::endl;
 
+  auto qs = prk::SYCL::queues();
+
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t order;
+  size_t order, block_order;
   int use_ngpu = 1;
   try {
       if (argc < 3) {
@@ -84,60 +86,34 @@ int main(int argc, char * argv[])
       if (argc > 3) {
         use_ngpu = std::atoi(argv[3]);
       }
-
-      if (order % use_ngpu) {
-        std::cerr << "order = " << order << ", device count = " << use_ngpu << std::endl;
-        throw "ERROR: matrix order should be divisible by device count!";
+      if ( use_ngpu > qs.size() ) {
+          std::string error = "You cannot use more devices ("
+                            + std::to_string(use_ngpu)
+                            + ") than you have ("
+                            + std::to_string(qs.size()) + ")";
+          throw error;
       }
+
+      if (order % use_ngpu != 0) {
+          std::string error = "ERROR: matrix order ("
+                            + std::to_string(order)
+                            + ") should be divisible by # procs ("
+                            + std::to_string(use_ngpu) + ")";
+          throw error;
+      }
+      block_order = order / use_ngpu;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
-  std::vector<sycl::queue> qs;
-
-  auto platforms = sycl::platform::get_platforms();
-  for (auto & p : platforms) {
-    auto pname = p.get_info<sycl::info::platform::name>();
-    std::cout << "*Platform: " << pname << std::endl;
-    if ( pname.find("Level-Zero") != std::string::npos) {
-        std::cout << "*Level Zero GPU skipped" << std::endl;
-        break;
-    }
-    if ( pname.find("Intel") == std::string::npos) {
-        std::cout << "*non-Intel skipped" << std::endl;
-        break;
-    }
-    auto devices = p.get_devices();
-    for (auto & d : devices ) {
-        std::cout << "**Device: " << d.get_info<sycl::info::device::name>() << std::endl;
-        if ( d.is_gpu() || d.is_cpu() ) {
-            std::cout << "**Device is CPU or GPU - adding to vector of queues" << std::endl;
-            qs.push_back(sycl::queue(d));
-        }
-    }
-  }
-
-  int haz_ngpu = qs.size();
-  std::cout << "Number of CPUs and GPUs found  = " << haz_ngpu << std::endl;
-
-  if (use_ngpu > haz_ngpu) {
-      std::cout << "You cannot use more CPUs and GPUs (" << use_ngpu << ") than you have (" << haz_ngpu << ")" << std::endl;
-  }
-
-  int ngpus = use_ngpu;
-
-  if (order % ngpus != 0) {
-      std::cout << "ERROR: matrix order " << order << " should be divisible by # procs" << ngpus << std::endl;
-      return 2;
-  }
-  size_t block_order = order / ngpus;
-
-  std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
+  std::cout << "Number of devices     = " << use_ngpu << std::endl;
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
   std::cout << "Block order           = " << block_order << std::endl;
+
+  int np = use_ngpu;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
@@ -156,42 +132,48 @@ int main(int argc, char * argv[])
     }
   }
 
-  const size_t bytes = order * order * sizeof(double);
+  auto d_a = std::vector<double*> (np, nullptr);
+  auto d_b = std::vector<double*> (np, nullptr);
 
-  // copy input from host to device
-  double * A = syclx::malloc_device<double>(order * order, q);
-  double * B = syclx::malloc_device<double>(order * order, q);
-  q.memcpy(A, &(h_a[0]), bytes);
-  q.memcpy(B, &(h_b[0]), bytes);
-  q.wait();
+  qs.allocate<double>(d_a, order * block_order);
+  qs.allocate<double>(d_b, order * block_order);
+  qs.waitall();
+
+  qs.scatter<double>(d_a, h_a, order * block_order);
+  qs.scatter<double>(d_b, h_b, order * block_order);
+  qs.waitall();
+
+  // overwrite host buffer with garbage to detect bugs
+  h_a.fill(-77777777);
 
   for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) trans_time = prk::wtime();
 
-      q.submit([&](sycl::handler& h) {
+      for (int g=0; g<np; ++g) {
+          auto q = qs.queue(g);
 
-        h.parallel_for( sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
-#if USE_2D_INDEXING
-          sycl::id<2> ij{it[0],it[1]};
-          sycl::id<2> ji{it[1],it[0]};
-          B[ij] += A[ji];
-          A[ji] += (T)1;
-#else
-          B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
-          A[it[1] * order + it[0]] += 1.0;
-#endif
-        });
-      });
-      q.wait();
+          auto A = d_a[g];
+          auto B = d_b[g];
+
+          q.submit([&](sycl::handler& h) {
+            h.parallel_for( sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
+              B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
+              A[it[1] * order + it[0]] += 1.0;
+            });
+          });
+      }
+      qs.waitall();
   }
   trans_time = prk::wtime() - trans_time;
 
   // copy output back to host
-  q.memcpy(&(h_b[0]), B, bytes).wait();
+  qs.gather<double>(h_a, d_a, order * block_order);
+  qs.waitall();
 
-  syclx::free(B, q);
-  syclx::free(A, q);
+  qs.free(d_a);
+  qs.free(d_b);
+  qs.waitall();
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -207,9 +189,6 @@ int main(int argc, char * argv[])
       abserr += prk::abs(h_b[ji] - reference);
     }
   }
-
-  syclx::free(h_b, q);
-  syclx::free(h_a, q);
 
   const auto epsilon = 1.0e-8;
   if (abserr < epsilon) {
