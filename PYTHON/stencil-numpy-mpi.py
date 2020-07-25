@@ -10,8 +10,13 @@ def main():
     comm = comm.Create_cart([x,y])
     me = comm.Get_rank() #My ID
     coords = comm.Get_coords(me)
+    X = coords[0]
+    Y = coords[1]
 
-    if (me==0):
+    x = int(x)
+    y = int(y)
+
+    if me==0:
         print('Parallel Research Kernels ')
         print('Python MPI/Numpy  Stencil execution on 2D grid')
 
@@ -27,9 +32,9 @@ def main():
 
     n = int(sys.argv[2])
     nsquare = n * n;
-    if (nsquare < np){
+    if nsquare < np:
         sys.exit("ERROR: grid size ", nsquare, " must be at least # ranks: ", Num_procs);
-    }
+    
 
 
     if len(sys.argv) > 3:
@@ -93,7 +98,8 @@ def main():
         '''
 
 
-    width = n/x
+    width = n//x
+    print("a", width)
     leftover = n%x
 
     if X<leftover:
@@ -112,7 +118,7 @@ def main():
 
 
 
-    height = n/y
+    height = n//y
     leftover = n%y
     if Y<leftover:
         jstart = (height+1) * Y
@@ -123,14 +129,13 @@ def main():
         jend = jstart + height - 1
 
     height = jend - jstart + 1
-    if height == 0
+    if height == 0:
         sys.exit("ERROR: rank", me,"has no work to do")
 
 
 
     if width < r or height < r:
         sys.exit("ERROR: rank", me,"has work tile smaller then stencil radius")
-
 
 
     A = numpy.fromfunction(lambda i,j: i+j,(height+2*r,width+2*r),dtype=float)
@@ -283,7 +288,7 @@ def main():
     # compute L1 norm in parallel
     local_norm = 0.0;
     for a in range(max(jstart,r), min(n-r-1,jend)+1):
-        for b in range((istart,r), min(n-r-1,iend)+1):
+        for b in range(max(istart,r), min(n-r-1,iend)+1):
             local_norm = local_norm + abs(B[a-jstart][b-istart])
 
 
