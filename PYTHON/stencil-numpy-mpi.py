@@ -175,12 +175,12 @@ def main():
             req0 = comm.Irecv([top_buf_in, r*width, MPI.DOUBLE], source =top_nbr , tag =101 )
             kk=0
             for a in range(jend-r+1, jend+1):
+                a = a - jstart
                 for b in range(istart, iend+1) :
-                    a = a-jstart
                     b = b-istart
                     top_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req1 = comm.Isend([top_buf_out, r*width, MPI.DOUBLE], source =top_nbr, tag =99)
+            req1 = comm.Isend([top_buf_out, r*width, MPI.DOUBLE], dest =top_nbr, tag =99)
 
 
 
@@ -189,12 +189,12 @@ def main():
             req2 = comm.Irecv([bot_buf_in, r*width, MPI.DOUBLE], source =bot_nbr , tag =99 )
             kk=0
             for a in range(jstart, jstart+r):
+                a = a - jstart
                 for b in range(istart, iend+1) :
-                    a = a-jstart
                     b = b-istart
                     top_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req3 = comm.Isend([bot_buf_out, r*width, MPI.DOUBLE], source =bot_nbr, tag =101)
+            req3 = comm.Isend([bot_buf_out, r*width, MPI.DOUBLE], dest =bot_nbr, tag =101)
 
 
 
@@ -203,12 +203,12 @@ def main():
             req4 = comm.Irecv([right_buf_in, r*height, MPI.DOUBLE], source =right_nbr , tag =1010)
             kk=0
             for a in range(jstart, jend+1):
+                a = a - jstart
                 for b in range(iend-r+1, iend+1) :
-                    a = a-jstart
                     b = b-istart
                     right_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req5 = comm.Isend([right_buf_out, r*height, MPI.DOUBLE], source =right_nbr, tag =990)
+            req5 = comm.Isend([right_buf_out, r*height, MPI.DOUBLE], dest =right_nbr, tag =990)
 
 
 
@@ -216,12 +216,12 @@ def main():
             req6 = comm.Irecv([left_buf_in, r*height, MPI.DOUBLE], source =left_nbr , tag =990 )
             kk=0
             for a in range(jstart, jend+1):
+                a = a - jstart
                 for b in range(istart, istart+r) :
-                    a = a-jstart
                     b = b-istart
                     left_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req7 = comm.Isend([left_buf_out, r*height, MPI.DOUBLE], source =left_nbr, tag =1010)
+            req7 = comm.Isend([left_buf_out, r*height, MPI.DOUBLE], dest =left_nbr, tag =1010)
 
 
         if Y < y-1 :
@@ -229,8 +229,8 @@ def main():
             req1.wait()
             kk=0
             for a in range(jend+1, jend+r+1):
+                a = a - jstart
                 for b in range(istart, iend+1):
-                    a = a-jstart
                     b = b-istart
                     A[a+r][b+r] = top_buf_in[kk]
                     kk = kk+1
@@ -251,8 +251,8 @@ def main():
             req7.wait()
             kk=0
             for a in range(jstart, jend+1):
+                a = a - jstart
                 for b in range(istart-r, istart):
-                    a = a-jstart
                     b = b-istart
                     A[a+r][b+r] = left_buf_in[kk]
                     kk = kk+1
@@ -262,8 +262,8 @@ def main():
             req5.wait()
             kk=0
             for a in range(jstart, jend+1):
+                a = a - jstart
                 for b in range(iend+1, iend+r+1):
-                    a = a-jstart
                     b = b-istart
                     A[a+r][b+r] = right_buf_in[kk]
                     kk = kk+1
@@ -271,8 +271,8 @@ def main():
 
         # Apply the stencil operator
         for a in range(max(jstart,r),min(n-r-1,jend)+1):
+            a = a - jstart
             for b in range(max(istart,r),min(n-r-1,iend)+1):
-                a = a - jstart
                 b = b - istart
                 B[a][b] = B[a][b] + numpy.dot(W[r],A[a:a+2*r+1,b+r])
                 B[a][b] = B[a][b] + numpy.dot(W[:,r],A[a+r,b:b+2*r+1])
