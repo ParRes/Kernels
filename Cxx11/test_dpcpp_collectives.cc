@@ -43,13 +43,13 @@ int main(int argc, char * argv[])
         throw "Usage: <vector length> [<use_ngpu>]";
       }
 
-      length = std::atoi(argv[2]);
+      length = std::atoi(argv[1]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
 
       if (argc > 3) {
-        use_ngpu = std::atoi(argv[3]);
+        use_ngpu = std::atoi(argv[2]);
       }
       if ( use_ngpu > qs.size() ) {
           std::string error = "You cannot use more devices ("
@@ -79,54 +79,60 @@ int main(int argc, char * argv[])
 
   int np = use_ngpu;
 
-  auto h_A = prk::vector<double>(length, 0);
-  auto h_B = prk::vector<double>(length, 2);
+  auto host = prk::vector<double>(length, 37);
 
-  auto d_A = std::vector<double*> (np, nullptr);
-  auto d_B = std::vector<double*> (np, nullptr);
+  auto device = std::vector<double*> (np, nullptr);
 
-  qs.allocate<double>(d_A, local_length);
-  qs.allocate<double>(d_B, local_length);
+  qs.allocate<double>(device, local_length);
   qs.waitall();
 
-  qs.scatter<double>(d_A, h_A, local_length);
-  qs.scatter<double>(d_B, h_B, local_length);
+  qs.scatter<double>(device, host, local_length);
   qs.waitall();
 
-  // overwrite host buffer with garbage to detect bugs
-  h_A.fill(-77777777);
+  host.fill(-77777777);
 
-  const double scalar(3);
+  qs.gather<double>(host, device, local_length);
+  qs.waitall();
+
   {
-      for (int iter = 0; iter<=iterations; iter++) {
-
-        if (iter==1) nstream_time = prk::wtime();
-
-        for (int g=0; g<np; ++g) {
-            auto q = qs.queue(g);
-
-            auto p_A = d_A[g];
-            auto p_B = d_B[g];
-
-            const size_t size  = local_length;
-
-            q.submit([&](sycl::handler& h) {
-              h.parallel_for( sycl::range<1>{size}, [=] (sycl::id<1> i) {
-                  p_A[i] += p_B[i] + scalar * p_C[i];
-              });
-            });
+    size_t errors(0);
+    for (size_t i=0; i<length; ++i) {
+        if (host[i] != 37) {
+            std::cerr << "ERROR at location " << i << " : " << host[i] << "\n";
         }
-        qs.waitall();
-      }
-      nstream_time = prk::wtime() - nstream_time;
+    }
+    std::cout << "there were " << errors << " errors" << std::endl;
+    if (errors != 0) std::abort();
   }
 
-  qs.gather<double>(h_A, d_A, local_length);
-  qs.gather<double>(h_B, d_B, local_length);
+  host.fill(0);
+
+  for (int g=0; g<np; ++g) {
+      auto q = qs.queue(g);
+      auto p = device[g];
+      q.submit([&](sycl::handler& h) {
+        h.parallel_for( sycl::range<1>{local_length}, [=] (sycl::id<1> i) {
+            p[i] = i;
+        });
+      });
+  }
   qs.waitall();
 
-  qs.free(d_A);
-  qs.free(d_B);
+  qs.gather<double>(host, device, local_length);
+  qs.waitall();
+
+  {
+    size_t errors(0);
+    for (size_t i=0; i<length; ++i) {
+        if (host[i] != i) {
+            std::cerr << "ERROR at location " << i << " : " << host[i] << "\n";
+        }
+    }
+    std::cout << "there were " << errors << " errors" << std::endl;
+    if (errors != 0) std::abort();
+  }
+
+  qs.free(device);
   qs.waitall();
 
   return 0;
