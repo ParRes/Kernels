@@ -171,10 +171,10 @@ namespace prk {
                                const B & host_pointer,
                                size_t num_elements)
                 {
+                    auto bytes = num_elements * sizeof(T);
                     for (const auto & l : list | boost::adaptors::indexed(0) ) {
                         auto i = l.index();
                         auto v = l.value();
-                        auto bytes = num_elements * sizeof(T);
                         auto target = device_pointers[i];
                         auto source = &host_pointer[0];
                         v.memcpy(target, source, bytes);
@@ -187,11 +187,11 @@ namespace prk {
                             const std::vector<T*> & device_pointers,
                             size_t num_elements)
                 {
+                    auto bytes = num_elements * sizeof(T);
                     auto temp = std::vector<T>(num_elements, 0);
                     for (const auto & l : list | boost::adaptors::indexed(0) ) {
                         auto i = l.index();
                         auto v = l.value();
-                        auto bytes = num_elements * sizeof(T);
                         auto target = device_pointers[i];
                         auto source = &host_pointer[0];
                         v.memcpy(temp, source, bytes);
@@ -206,10 +206,10 @@ namespace prk {
                             const std::vector<T*> & device_pointers,
                             size_t num_elements)
                 {
+                    auto bytes = num_elements * sizeof(T);
                     for (const auto & l : list | boost::adaptors::indexed(0) ) {
                         auto i = l.index();
                         auto v = l.value();
-                        auto bytes = num_elements * sizeof(T);
                         auto target = &host_pointer[i * num_elements];
                         auto source = device_pointers[i];
                         v.memcpy(target, source, bytes);
@@ -221,17 +221,51 @@ namespace prk {
                              const B & host_pointer,
                              size_t num_elements)
                 {
+                    auto bytes = num_elements * sizeof(T);
                     for (const auto & l : list | boost::adaptors::indexed(0) ) {
                         auto i = l.index();
                         auto v = l.value();
-                        auto bytes = num_elements * sizeof(T);
                         auto target = device_pointers[i];
                         auto source = &host_pointer[i * num_elements];
                         v.memcpy(target, source, bytes);
                     }
                 }
 
+                // num_elements is defined the same as MPI
+                // each device contributes np * num_elements
+                // each device receives np * num_elements
+                template <typename T, typename B>
+                void alltoall(std::vector<T*> & device_pointers_out,
+                              std::vector<T*> & device_pointers_in,
+                              size_t num_elements)
+                {
+                    auto bytes = num_elements * sizeof(T);
+                    // allocate np*np temp space on the host, because
+                    // we cannot copy device-to-device if they are in
+                    // different contexts.
+                    // we can specialize for single-context later...
+                    int np = this->list.size();
+                    prk::vector<double> temp(num_elements * np * np);
 
+                    // gather phase - contiguous
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        auto target = &temp[i * np * num_elements];
+                        auto source = device_pointers_in[i];
+                        v.memcpy(target, source, np * bytes);
+                    }
+
+                    // scatter phase - noncontiguous
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        auto target = device_pointers_out[i];
+                        auto source = &temp[i * num_elements];
+                        v.memcpy(target, source, bytes);
+                    }
+
+                }
         };
 
     } // namespace SYCL
