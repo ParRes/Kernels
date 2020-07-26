@@ -93,10 +93,20 @@ int main(int argc, char * argv[])
 
   auto host = prk::vector<double>(length, 37);
 
-  auto device = std::vector<double*>(np, nullptr);
+  auto host2 = prk::vector<double>(local_length, -10);
 
+  auto device = std::vector<double*>(np, nullptr);
   qs.allocate<double>(device, local_length);
   qs.waitall();
+
+  // device out vector
+  auto device2 = std::vector<double*>(np, nullptr);
+  qs.allocate<double>(device2, local_length);
+  qs.waitall();
+
+  ////////////////////////////////////////////////////////////////////////////
+  // scatter and gather
+  ////////////////////////////////////////////////////////////////////////////
 
   std::cout << "Testing scatter-gather" << std::endl;
 
@@ -150,9 +160,11 @@ int main(int argc, char * argv[])
     if (errors != 0) std::abort();
   }
 
-  std::cout << "Testing broadcast-reduce" << std::endl;
+  ////////////////////////////////////////////////////////////////////////////
+  // broadcast and reduce
+  ////////////////////////////////////////////////////////////////////////////
 
-  auto host2 = prk::vector<double>(local_length, -10);
+  std::cout << "Testing broadcast-reduce" << std::endl;
 
   qs.broadcast<double>(device, host2, local_length);
   qs.waitall();
@@ -165,13 +177,46 @@ int main(int argc, char * argv[])
     size_t errors(0);
     for (size_t i=0; i<local_length; ++i) {
         if (host2[i] != correct) {
-            std::cerr << "ERROR at location " << i << " : " << host2[i] << "\n";
+            std::cerr << "ERROR at location " << i << " : " << host2[i] << " (" << correct << ")" << "\n";
             errors++;
         }
     }
     std::cout << "there were " << errors << " errors" << std::endl;
     if (errors != 0) std::abort();
   }
+
+  ////////////////////////////////////////////////////////////////////////////
+  // alltoall
+  ////////////////////////////////////////////////////////////////////////////
+
+#if 0
+  std::cout << "Testing alltoall" << std::endl;
+
+  // fill out vector with junk
+  host.fill(-73);
+  qs.scatter<double>(device2, host, local_length);
+  qs.waitall();
+
+  // reset host and fill with input
+  host.fill(0);
+  for (int d=0; d<np; ++d) {
+      for (size_t i=0; i<local_length; ++i) {
+          size_t offset = d * local_length + i;
+          host[offset] = d+1;
+      }
+  }
+
+  // scatter input
+  qs.scatter<double>(device, host, local_length);
+  qs.waitall();
+
+  qs.alltoall<double>(device2, device, local_length);
+  qs.waitall();
+#endif
+
+  ////////////////////////////////////////////////////////////////////////////
+  // THE END
+  ////////////////////////////////////////////////////////////////////////////
 
   qs.free(device);
   qs.waitall();

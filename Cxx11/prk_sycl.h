@@ -189,6 +189,7 @@ namespace prk {
                         auto v = l.value();
                         auto target = device_pointers[i];
                         auto source = &host_pointer[0];
+                        std::cout << "BCAST: device " << i << std::endl;
                         v.memcpy(target, source, bytes);
                     }
                 }
@@ -198,17 +199,19 @@ namespace prk {
                             const std::vector<T*> & device_pointers,
                             size_t num_elements)
                 {
+                    std::cout << "REDUCE: num_elements " << num_elements << std::endl;
                     auto bytes = num_elements * sizeof(T);
+                    std::cout << "REDUCE: bytes " << bytes << std::endl;
                     auto temp = prk::vector<T>(num_elements, 0);
                     for (const auto & l : list | boost::adaptors::indexed(0) ) {
                         auto i = l.index();
                         auto v = l.value();
+                        std::cout << "REDUCE: device " << i << std::endl;
                         auto target = &temp[0];
                         auto source = device_pointers[i];
                         v.memcpy(target, source, bytes);
-                        target = &host_pointer[0];
                         for (size_t e=0; e<num_elements; ++e) {
-                            target[e] += temp[e];
+                            host_pointer[e] += temp[e];
                         }
                     }
                 }
@@ -246,7 +249,7 @@ namespace prk {
                 // num_elements is defined the same as MPI
                 // each device contributes np * num_elements
                 // each device receives np * num_elements
-                template <typename T, typename B>
+                template <typename T>
                 void alltoall(std::vector<T*> & device_pointers_out,
                               std::vector<T*> & device_pointers_in,
                               size_t num_elements)
