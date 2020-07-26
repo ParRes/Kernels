@@ -121,7 +121,6 @@ int main(int argc, char * argv[])
       if (iter==1) trans_time = prk::wtime();
 
       q.submit([&](sycl::handler& h) {
-
         h.parallel_for( sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
           B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
           A[it[1] * order + it[0]] += 1.0;
