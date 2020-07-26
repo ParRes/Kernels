@@ -178,7 +178,6 @@ namespace prk {
                     }
                 }
 
-                // UNUSED and UNTESTED
                 template <typename T, typename B>
                 void broadcast(std::vector<T*> & device_pointers,
                                const B & host_pointer,
@@ -194,7 +193,6 @@ namespace prk {
                     }
                 }
 
-                // UNUSED and UNTESTED
                 template <typename T, typename B>
                 void reduce(B & host_pointer,
                             const std::vector<T*> & device_pointers,
@@ -206,9 +204,9 @@ namespace prk {
                         auto i = l.index();
                         auto v = l.value();
                         auto target = &temp[0];
-                        auto source = &host_pointer[0];
+                        auto source = device_pointers[i];
                         v.memcpy(target, source, bytes);
-                        target = device_pointers[i];
+                        target = &host_pointer[0];
                         for (size_t e=0; e<num_elements; ++e) {
                             target[e] += temp[e];
                         }

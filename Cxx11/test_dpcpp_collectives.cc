@@ -142,6 +142,7 @@ int main(int argc, char * argv[])
             size_t offset = d * local_length + i;
             if (host[i] != i) {
                 std::cerr << "ERROR for device " << d << " at location " << i << " : " << host[i] << "\n";
+                errors++;
             }
         }
     }
@@ -149,7 +150,6 @@ int main(int argc, char * argv[])
     if (errors != 0) std::abort();
   }
 
-#if 0
   std::cout << "Testing broadcast-reduce" << std::endl;
 
   auto host2 = prk::vector<double>(local_length, -10);
@@ -163,15 +163,15 @@ int main(int argc, char * argv[])
   {
     double correct = -10 * np;
     size_t errors(0);
-    for (size_t i=0; i<length; ++i) {
-        if (host[i] != correct) {
-            std::cerr << "ERROR at location " << i << " : " << host[i] << "\n";
+    for (size_t i=0; i<local_length; ++i) {
+        if (host2[i] != correct) {
+            std::cerr << "ERROR at location " << i << " : " << host2[i] << "\n";
+            errors++;
         }
     }
     std::cout << "there were " << errors << " errors" << std::endl;
     if (errors != 0) std::abort();
   }
-#endif
 
   qs.free(device);
   qs.waitall();
