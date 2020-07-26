@@ -34,23 +34,35 @@
 
 int main(int argc, char * argv[])
 {
-  auto qs = prk::SYCL::queues();
-
-  size_t length, local_length;
+  size_t length = 10000, local_length;
   int use_ngpu = 1;
   try {
-      if (argc < 2) {
-        throw "Usage: <vector length> [<use_ngpu>]";
+      if (argc == 2) {
+          std::string a(argv[1]);
+          if ( a.find("h") != std::string::npos) {
+            throw "HELP: <program> [<vector length> <use_ngpu>]";
+          }
       }
 
-      length = std::atoi(argv[1]);
-      if (length <= 0) {
-        throw "ERROR: vector length must be positive";
+      if (argc > 1) {
+          length = std::atoi(argv[1]);
+          if (length <= 0) {
+            throw "ERROR: vector length must be positive";
+          }
       }
 
-      if (argc > 3) {
+      if (argc > 2) {
         use_ngpu = std::atoi(argv[2]);
       }
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return 1;
+  }
+
+  auto qs = prk::SYCL::queues(use_ngpu>1,true);
+
+  try {
       if ( use_ngpu > qs.size() ) {
           std::string error = "You cannot use more devices ("
                             + std::to_string(use_ngpu)
@@ -68,7 +80,7 @@ int main(int argc, char * argv[])
       }
       local_length = length / use_ngpu;
   }
-  catch (const char * e) {
+  catch (std::string & e) {
     std::cout << e << std::endl;
     return 1;
   }
@@ -81,10 +93,12 @@ int main(int argc, char * argv[])
 
   auto host = prk::vector<double>(length, 37);
 
-  auto device = std::vector<double*> (np, nullptr);
+  auto device = std::vector<double*>(np, nullptr);
 
   qs.allocate<double>(device, local_length);
   qs.waitall();
+
+  std::cout << "Testing scatter-gather" << std::endl;
 
   qs.scatter<double>(device, host, local_length);
   qs.waitall();
@@ -123,14 +137,41 @@ int main(int argc, char * argv[])
 
   {
     size_t errors(0);
+    for (int d=0; d<np; ++d) {
+        for (size_t i=0; i<local_length; ++i) {
+            size_t offset = d * local_length + i;
+            if (host[i] != i) {
+                std::cerr << "ERROR for device " << d << " at location " << i << " : " << host[i] << "\n";
+            }
+        }
+    }
+    std::cout << "there were " << errors << " errors" << std::endl;
+    if (errors != 0) std::abort();
+  }
+
+#if 0
+  std::cout << "Testing broadcast-reduce" << std::endl;
+
+  auto host2 = prk::vector<double>(local_length, -10);
+
+  qs.broadcast<double>(device, host2, local_length);
+  qs.waitall();
+
+  qs.reduce<double>(host2, device, local_length);
+  qs.waitall();
+
+  {
+    double correct = -10 * np;
+    size_t errors(0);
     for (size_t i=0; i<length; ++i) {
-        if (host[i] != i) {
+        if (host[i] != correct) {
             std::cerr << "ERROR at location " << i << " : " << host[i] << "\n";
         }
     }
     std::cout << "there were " << errors << " errors" << std::endl;
     if (errors != 0) std::abort();
   }
+#endif
 
   qs.free(device);
   qs.waitall();

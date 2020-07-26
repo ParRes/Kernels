@@ -100,10 +100,12 @@ namespace prk {
                     for (auto & p : platforms) {
                         auto pname = p.get_info<sycl::info::platform::name>();
                         std::cout << "*Platform: " << pname << std::endl;
+#if 0
                         if ( pname.find("Level-Zero") != std::string::npos) {
                             std::cout << "*Level Zero GPU skipped" << std::endl;
                             break;
                         }
+#endif
                         if ( pname.find("Intel") == std::string::npos) {
                             std::cout << "*non-Intel skipped" << std::endl;
                             break;
@@ -111,15 +113,20 @@ namespace prk {
                         auto devices = p.get_devices();
                         for (auto & d : devices ) {
                             std::cout << "**Device: " << d.get_info<sycl::info::device::name>() << std::endl;
-                            if ( d.is_cpu() && use_cpu ) {
-                                std::cout << "**Device is CPU - adding to vector of queues" << std::endl;
-                                list.push_back(sycl::queue(d));
-                            }
                             if ( d.is_gpu() && use_gpu ) {
                                 std::cout << "**Device is GPU - adding to vector of queues" << std::endl;
                                 list.push_back(sycl::queue(d));
                             }
                         }
+#if 1
+                        for (auto & d : devices ) {
+                            std::cout << "**Device: " << d.get_info<sycl::info::device::name>() << std::endl;
+                            if ( d.is_cpu() && use_cpu ) {
+                                std::cout << "**Device is CPU - adding to vector of queues" << std::endl;
+                                list.push_back(sycl::queue(d));
+                            }
+                        }
+#endif
                     }
                 }
 
@@ -130,7 +137,10 @@ namespace prk {
 
                 void wait(int i)
                 {
-                    list[i].wait();
+                    if ( i > this->size() ) {
+                        std::cerr << "ERROR: invalid device id: " << i << std::endl;
+                    }
+                    list.at(i).wait();
                 }
 
                 void waitall(void)
@@ -141,7 +151,10 @@ namespace prk {
                 }
 
                 sycl::queue queue(int i) {
-                    return this->list[i];
+                    if ( i > this->size() ) {
+                        std::cerr << "ERROR: invalid device id: " << i << std::endl;
+                    }
+                    return this->list.at(i);
                 }
 
                 template <typename T>
@@ -182,21 +195,22 @@ namespace prk {
                 }
 
                 // UNUSED and UNTESTED
-                template <typename T, typename B, typename Op>
+                template <typename T, typename B>
                 void reduce(B & host_pointer,
                             const std::vector<T*> & device_pointers,
                             size_t num_elements)
                 {
                     auto bytes = num_elements * sizeof(T);
-                    auto temp = std::vector<T>(num_elements, 0);
+                    auto temp = prk::vector<T>(num_elements, 0);
                     for (const auto & l : list | boost::adaptors::indexed(0) ) {
                         auto i = l.index();
                         auto v = l.value();
-                        auto target = device_pointers[i];
+                        auto target = &temp[0];
                         auto source = &host_pointer[0];
-                        v.memcpy(temp, source, bytes);
+                        v.memcpy(target, source, bytes);
+                        target = device_pointers[i];
                         for (size_t e=0; e<num_elements; ++e) {
-                            target[e] = Op{}( target[e], temp[e] );
+                            target[e] += temp[e];
                         }
                     }
                 }
