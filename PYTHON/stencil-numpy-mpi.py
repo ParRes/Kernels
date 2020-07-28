@@ -63,7 +63,7 @@ def main():
             print('Type of stencil      = stencil')
         print('Radius of stencil    = ', r)
 
-        print('Data type            = double precision')
+        print('Data type            = float 64 (double precision in C)')
         print('Compact representation of stencil loop body')
 
 
@@ -172,7 +172,9 @@ def main():
 
 
         if Y < y-1 :
-            req0 = comm.Irecv([top_buf_in, r*width, typ], source =top_nbr , tag =101 )
+            #req0 = comm.Irecv([top_buf_in, r*width, typ], source =top_nbr , tag =101 )
+            # ^ I do not know why this does not work
+            req0 = comm.Irecv(top_buf_in, source =top_nbr , tag =101 )
             kk=0
             for a in range(jend-r+1, jend+1):
                 a = a - jstart
@@ -180,13 +182,13 @@ def main():
                     b = b-istart
                     top_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req1 = comm.Isend([top_buf_out, r*width, typ], dest =top_nbr, tag =99)
+            req1 = comm.Isend(top_buf_out, dest =top_nbr, tag =99)
 
 
 
 
         if Y > 0 :
-            req2 = comm.Irecv([bot_buf_in, r*width, typ], source =bot_nbr , tag =99 )
+            req2 = comm.Irecv(bot_buf_in, source =bot_nbr , tag =99 )
             kk=0
             for a in range(jstart, jstart+r):
                 a = a - jstart
@@ -194,13 +196,13 @@ def main():
                     b = b-istart
                     bot_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req3 = comm.Isend([bot_buf_out, r*width, typ], dest =bot_nbr, tag =101)
+            req3 = comm.Isend(bot_buf_out, dest =bot_nbr, tag =101)
 
 
 
 
         if X < x-1 :
-            req4 = comm.Irecv([right_buf_in, r*height, typ], source =right_nbr , tag =1010)
+            req4 = comm.Irecv(right_buf_in, source =right_nbr , tag =1010)
             kk=0
             for a in range(jstart, jend+1):
                 a = a - jstart
@@ -208,12 +210,12 @@ def main():
                     b = b-istart
                     right_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req5 = comm.Isend([right_buf_out, r*height, typ], dest =right_nbr, tag =990)
+            req5 = comm.Isend(right_buf_out, dest =right_nbr, tag =990)
 
 
 
         if X > 0 :
-            req6 = comm.Irecv([left_buf_in, r*height, typ], source =left_nbr , tag =990 )
+            req6 = comm.Irecv(left_buf_in, source =left_nbr , tag =990 )
             kk=0
             for a in range(jstart, jend+1):
                 a = a - jstart
@@ -221,7 +223,7 @@ def main():
                     b = b-istart
                     left_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req7 = comm.Isend([left_buf_out, r*height, typ], dest =left_nbr, tag =1010)
+            req7 = comm.Isend(left_buf_out, dest =left_nbr, tag =1010)
 
 
         if Y < y-1 :
@@ -284,7 +286,7 @@ def main():
     local_time = numpy.array(MPI.Wtime() - t0 , dtype ='f')
     total_time = numpy.array(0 , dtype ='f')
 
-    comm.Reduce([local_time , 1 , MPI.DOUBLE],[total_time , 1 , MPI.DOUBLE], op=MPI.SUM , root =0)
+    comm.Reduce([local_time , 1 , typ],[total_time , 1 , typ], op=MPI.SUM , root =0)
 
     # compute L1 norm in parallel
     local_norm = 0.0;
