@@ -40,6 +40,8 @@ scripts/small/runfgmpi
 scripts/wide/runfgmpi
 scripts/small/runfenix
 
+deps/
+
 *.incl                          # PRK C89 stencil generated code
 */*.incl
 */*/*.incl
