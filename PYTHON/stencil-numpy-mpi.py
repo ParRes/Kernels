@@ -140,6 +140,7 @@ def main():
 
     A = numpy.fromfunction(lambda i,j: i+j,(height+2*r,width+2*r),dtype=float)
     B = numpy.zeros((height,width))
+    typ = MPI.FLOAT
 
 
 
@@ -164,7 +165,6 @@ def main():
         left_buf_in  = numpy.zeros(r*height)
         left_buf_out = numpy.zeros(r*height)
 
-
     for i in range(0,iterations+1):
         if i<1:
             comm.Barrier()
@@ -172,7 +172,7 @@ def main():
 
 
         if Y < y-1 :
-            req0 = comm.Irecv([top_buf_in, r*width, MPI.DOUBLE], source =top_nbr , tag =101 )
+            req0 = comm.Irecv([top_buf_in, r*width, typ], source =top_nbr , tag =101 )
             kk=0
             for a in range(jend-r+1, jend+1):
                 a = a - jstart
@@ -180,27 +180,27 @@ def main():
                     b = b-istart
                     top_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req1 = comm.Isend([top_buf_out, r*width, MPI.DOUBLE], dest =top_nbr, tag =99)
+            req1 = comm.Isend([top_buf_out, r*width, typ], dest =top_nbr, tag =99)
 
 
 
 
         if Y > 0 :
-            req2 = comm.Irecv([bot_buf_in, r*width, MPI.DOUBLE], source =bot_nbr , tag =99 )
+            req2 = comm.Irecv([bot_buf_in, r*width, typ], source =bot_nbr , tag =99 )
             kk=0
             for a in range(jstart, jstart+r):
                 a = a - jstart
                 for b in range(istart, iend+1) :
                     b = b-istart
-                    top_buf_out[kk] = A[a+r][b+r]
+                    bot_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req3 = comm.Isend([bot_buf_out, r*width, MPI.DOUBLE], dest =bot_nbr, tag =101)
+            req3 = comm.Isend([bot_buf_out, r*width, typ], dest =bot_nbr, tag =101)
 
 
 
 
         if X < x-1 :
-            req4 = comm.Irecv([right_buf_in, r*height, MPI.DOUBLE], source =right_nbr , tag =1010)
+            req4 = comm.Irecv([right_buf_in, r*height, typ], source =right_nbr , tag =1010)
             kk=0
             for a in range(jstart, jend+1):
                 a = a - jstart
@@ -208,12 +208,12 @@ def main():
                     b = b-istart
                     right_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req5 = comm.Isend([right_buf_out, r*height, MPI.DOUBLE], dest =right_nbr, tag =990)
+            req5 = comm.Isend([right_buf_out, r*height, typ], dest =right_nbr, tag =990)
 
 
 
         if X > 0 :
-            req6 = comm.Irecv([left_buf_in, r*height, MPI.DOUBLE], source =left_nbr , tag =990 )
+            req6 = comm.Irecv([left_buf_in, r*height, typ], source =left_nbr , tag =990 )
             kk=0
             for a in range(jstart, jend+1):
                 a = a - jstart
@@ -221,7 +221,7 @@ def main():
                     b = b-istart
                     left_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
-            req7 = comm.Isend([left_buf_out, r*height, MPI.DOUBLE], dest =left_nbr, tag =1010)
+            req7 = comm.Isend([left_buf_out, r*height, typ], dest =left_nbr, tag =1010)
 
 
         if Y < y-1 :
@@ -240,8 +240,9 @@ def main():
             req3.wait()
             kk=0
             for a in range(jstart-r, jstart):
+                a = a-jstart
                 for b in range(istart, iend+1):
-                    a = a-jstart
+                    
                     b = b-istart
                     A[a+r][b+r] = bot_buf_in[kk]
                     kk = kk+1
@@ -294,7 +295,7 @@ def main():
 
     local_norm = numpy.array(local_norm, dtype ='f')
     norm = numpy.array(0 , dtype ='f')
-    comm.Reduce([local_norm, 1 , MPI.DOUBLE], [norm, 1, MPI.DOUBLE], op=MPI.SUM , root =0)
+    comm.Reduce([local_norm, 1 , typ], [norm, 1, typ], op=MPI.SUM , root =0)
 
 
     if me == 0:
