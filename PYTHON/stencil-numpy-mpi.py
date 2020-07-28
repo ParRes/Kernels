@@ -99,7 +99,6 @@ def main():
 
 
     width = n//x
-    print("a", width)
     leftover = n%x
 
     if X<leftover:
@@ -138,7 +137,9 @@ def main():
         sys.exit("ERROR: rank", me,"has work tile smaller then stencil radius")
 
 
-    A = numpy.fromfunction(lambda i,j: i+j,(height+2*r,width+2*r),dtype=float)
+    A = numpy.zeros((height+2*r,width+2*r))
+    a = numpy.fromfunction(lambda i,j: i+istart+j+jstart,(height,width),dtype=float)
+    A[r:-r,r:-r] = a
     B = numpy.zeros((height,width))
     typ = MPI.FLOAT
 
