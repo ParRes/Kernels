@@ -68,7 +68,7 @@ def main():
 
     if len(sys.argv) != 3:
         print('argument count = ', len(sys.argv))
-        sys.exit("Usage: ./transpose <# iterations> <matrix order>")
+        sys.exit("Usage: ./dgemm <# iterations> <matrix order>")
 
     iterations = int(sys.argv[1])
     if iterations < 1:

@@ -62,10 +62,34 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
+#if 0
+__global__ void init(unsigned order, double * A, double * B, double * C)
+{
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if ((i<order) && (j<order)) {
+      A[i*order+j] = i;
+      B[i*order+j] = i;
+      C[i*order+j] = 0;
+    }
+}
+
+__global__ void init(unsigned order, double * C)
+{
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if ((i<order) && (j<order)) {
+      C[i*order+j] = 0;
+    }
+}
+#endif
+
 __global__ void init(int order, const int matrices, double * A, double * B, double * C)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
     for (int b=0; b<matrices; ++b) {
       if ((i<order) && (j<order)) {
@@ -78,8 +102,8 @@ __global__ void init(int order, const int matrices, double * A, double * B, doub
 
 __global__ void init(int order, const int matrices, double * C)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
     for (int b=0; b<matrices; ++b) {
       if ((i<order) && (j<order)) {
@@ -153,7 +177,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11/CUBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   prk::CUDA::info info;
-  info.print();
+  //info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -176,16 +200,19 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
-      if (argc>3) {
+      if (argc > 3) {
         batches = std::atoi(argv[3]);
       }
 
       if (argc > 4) {
-        input_copy = std::atoi(argv[3]);
+        input_copy = std::atoi(argv[4]);
+        if (input_copy != 0 && input_copy != 1) {
+          throw "ERROR: input_copy was not 0 or 1";
+        }
       }
   }
   catch (const char * e) {
@@ -195,6 +222,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
+
   if (batches == 0) {
       std::cout << "No batching" << std::endl;
   } else if (batches < 0) {
@@ -261,30 +289,40 @@ int main(int argc, char * argv[])
     init<<<dimGrid, dimBlock>>>(order, matrices, d_a, d_b, d_c);
 
   }
+  prk::CUDA::check( cudaDeviceSynchronize() );
 
+  double xfer(0);
+  double comp(0);
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) dgemm_time = prk::wtime();
 
       if (input_copy) {
+        double t0 = prk::wtime();
         for (int b=0; b<matrices; ++b) {
           prk::CUDA::check( cudaMemcpyAsync(&(d_a[b*order*order]), h_a, bytes, cudaMemcpyHostToDevice) );
           prk::CUDA::check( cudaMemcpyAsync(&(d_b[b*order*order]), h_b, bytes, cudaMemcpyHostToDevice) );
         }
         prk::CUDA::check( cudaDeviceSynchronize() );
+        double t1 = prk::wtime();
+        if (iter==1) xfer += (t1-t0);
       }
 
-      if (batches == 0) {
-        prk_dgemm(h, order, matrices, d_a, d_b, d_c);
-      } else if (batches < 0) {
-        prk_dgemm(h, order, matrices, d_a, d_b, d_c);
-      } else if (batches > 0) {
-        prk_bgemm(h, order, matrices, d_a, d_b, d_c);
+      {
+        double t0 = prk::wtime();
+        if (batches > 0) {
+          prk_bgemm(h, order, matrices, d_a, d_b, d_c);
+        } else {
+          prk_dgemm(h, order, matrices, d_a, d_b, d_c);
+        }
+        double t1 = prk::wtime();
+        if (iter==1) comp += (t1-t0);
       }
     }
     dgemm_time = prk::wtime() - dgemm_time;
   }
+  std::cout << "xfer, comp = " << xfer << "," << comp << std::endl;
 
   // copy output back to host
   prk::CUDA::check( cudaMemcpyAsync(&(h_c[0]), d_c, matrices*bytes, cudaMemcpyDeviceToHost) );
@@ -304,15 +342,15 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  const double epsilon = 1.0e-8;
-  const double forder = static_cast<double>(order);
-  const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
+  const auto epsilon = 1.0e-8;
+  const auto forder = static_cast<double>(order);
+  const auto reference = 0.25 * prk::pow(forder,3) * prk::pow(forder-1.0,2) * (iterations+1);
   double residuum(0);
   for (int b=0; b<matrices; ++b) {
       const auto checksum = prk::reduce( &(h_c[b*order*order+0]), &(h_c[b*order*order+nelems]), 0.0);
       residuum += std::abs(checksum-reference)/reference;
   }
-  residuum/=matrices;
+  residuum /= matrices;
 
   if (residuum < epsilon) {
 #if VERBOSE
@@ -321,7 +359,7 @@ int main(int argc, char * argv[])
 #endif
     std::cout << "Solution validates" << std::endl;
     auto avgtime = dgemm_time/iterations/matrices;
-    auto nflops = 2.0 * std::pow(forder,3);
+    auto nflops = 2.0 * prk::pow(forder,3);
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {

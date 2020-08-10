@@ -60,6 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 #include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
@@ -138,10 +139,10 @@ int main(int argc, char* argv[])
 
     OMP_MASTER
     {
-      for (auto j=0; j<n; j++) {
+      for (int j=0; j<n; j++) {
         grid[0*n+j] = static_cast<double>(j);
       }
-      for (auto i=0; i<m; i++) {
+      for (int i=0; i<m; i++) {
         grid[i*n+0] = static_cast<double>(i);
       }
     }
@@ -191,7 +192,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+  if ( (prk::abs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;

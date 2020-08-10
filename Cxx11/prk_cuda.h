@@ -16,10 +16,12 @@
 #include <cuda_device_runtime_api.h>
 #endif
 
-#ifdef __NVCC__
+#if defined(PRK_USE_CUBLAS)
+#if defined(__NVCC__)
 #include <cublas_v2.h>
 #else
 #error Sorry, no CUBLAS without NVCC.
+#endif
 #endif
 
 #ifdef __CORIANDERCC__
@@ -43,7 +45,7 @@ namespace prk
             }
         }
 
-#ifndef __CORIANDERCC__
+#if defined(PRK_USE_CUBLAS)
         // It seems that Coriander defines cublasStatus_t to cudaError_t
         // because the compiler complains that this is a redefinition.
         void check(cublasStatus_t rc)
@@ -71,11 +73,11 @@ namespace prk
                 info() {
                     prk::CUDA::check( cudaGetDeviceCount(&nDevices) );
                     vDevices.resize(nDevices);
-                    for (auto i=0; i<nDevices; ++i) {
+                    for (int i=0; i<nDevices; ++i) {
                         cudaGetDeviceProperties(&(vDevices[i]), i);
                         if (i==0) {
                             maxThreadsPerBlock = vDevices[i].maxThreadsPerBlock;
-                            for (auto j=0; j<3; ++j) {
+                            for (int j=0; j<3; ++j) {
                                 maxThreadsDim[j]   = vDevices[i].maxThreadsDim[j];
                                 maxGridSize[j]     = vDevices[i].maxGridSize[j];
                             }
@@ -83,8 +85,25 @@ namespace prk
                     }
                 }
 
+                // do not use cached value as a hedge against weird stuff happening
+                int num_gpus() {
+                    int g;
+                    prk::CUDA::check( cudaGetDeviceCount(&g) );
+                    return g;
+                }
+
+                int get_gpu() {
+                    int g;
+                    prk::CUDA::check( cudaGetDevice(&g) );
+                    return g;
+                }
+
+                void set_gpu(int g) {
+                    prk::CUDA::check( cudaSetDevice(g) );
+                }
+
                 void print() {
-                    for (auto i=0; i<nDevices; ++i) {
+                    for (int i=0; i<nDevices; ++i) {
                         std::cout << "device name: " << vDevices[i].name << "\n";
 #ifndef __CORIANDERCC__
                         std::cout << "total global memory:     " << vDevices[i].totalGlobalMem << "\n";

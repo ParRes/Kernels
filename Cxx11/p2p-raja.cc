@@ -121,10 +121,14 @@ int main(int argc, char* argv[])
   double * RESTRICT Amem = new double[m*n];
   matrix grid(Amem, m, n);
 
-  for (int i=0; i<m; i++) {
-    for (int j=0; j<n; j++) {
-      grid(i,j) = 0.0;
-    }
+  {
+    RAJA::RangeSegment range(0,m);
+    RAJA::forall<thread_exec>(range, [=](RAJA::Index_type i) {
+    //for (int i=0; i<m; i++) {
+      for (int j=0; j<n; j++) {
+        grid(i,j) = 0.0;
+      }
+    });
   }
   // set boundary values (bottom and left side of grid)
   for (int j=0; j<n; j++) {
@@ -165,7 +169,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(grid(m-1,n-1) - corner_val)/corner_val) > epsilon) {
+  if ( (prk::abs(grid(m-1,n-1) - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid(m-1,n-1)
               << " does not match verification value " << corner_val << std::endl;
     return 1;

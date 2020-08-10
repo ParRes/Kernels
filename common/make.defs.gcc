@@ -4,7 +4,7 @@
 #
 # Base compilers and language options
 #
-VERSION=-8
+VERSION=-9
 # C99 is required in some implementations.
 CC=gcc${VERSION} -std=c11 -pthread
 #EXTRA_CLIBS=-lrt
@@ -30,8 +30,8 @@ DEFAULT_OPT_FLAGS+=-g3
 #
 #DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
 DEFAULT_OPT_FLAGS+=-Wall #-Werror
-DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
-#DEFAULT_OPT_FLAGS+=-mavx -mfma
+DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations # silence warnings in third-party headers
+#DEFAULT_OPT_FLAGS+=-mavx -mfma # these should be used on Haswell and later
 #
 # OpenMP flags
 #
@@ -44,6 +44,9 @@ ORNLACCFLAG=-fopenacc
 #
 # MacOS
 OPENCLFLAG=-framework OpenCL
+# POCL
+# http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
+#OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
@@ -52,17 +55,62 @@ METALFLAG=-framework MetalPerformanceShaders
 #
 # SYCL flags
 #
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+#SYCLDIR=/opt/isycl
+#SYCLCXX=${SYCLDIR}/bin/clang++
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-fsycl
+#SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#
+# Intel oneAPI
+#
+#SYCLCXX=dpcpp
+#SYCLFLAG=-fsycl
+#SYCLFLAG+=-std=c++17 -O3
+#SYCLFLAG+=--gcc-toolchain=/opt/rh/devtoolset-7/root/usr
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=1
+#SYCLFLAG+=-stdlib=c++
+#
+# CodePlay ComputeCpp
+#
+#SYCLDIR=/opt/sycl/latest
+#SYCLCXX=${SYCLDIR}/bin/compute++
+#SYCLFLAG=-sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+#SYCLFLAG+=-std=c++14 -O3
+# This makes a huge difference in e.g. nstream...
+#SYCLFLAG+=-no-serial-memop
+# CentOS7 and Ubuntu14 built for this
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+# PRK header rejects GCC4
+#SYCLFLAG+=--gcc-toolchain=/swtools/gcc/5.4.0
+# If not found automatically
+#SYCLFLAG+=${OPENCLFLAG}
+# NVIDIA target
+#SYCLFLAG+=-sycl-target ptx64
+#
 # triSYCL
+#
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
-SYCLDIR=./triSYCL
-SYCLCXX=${CXX} -std=c++17 ${OPENMPFLAG}
-SYCLFLAG=-I$(SYCLDIR)/include
-# ProGTX
-# https://github.com/ProGTX/sycl-gtx
-#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
-#SYCLCXX=${CXX} ${OPENMPFLAG}
-#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
-METALFLAG=-framework MetalPerformanceShaders
+#SYCLDIR=./triSYCL
+#SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
+#SYCLFLAG=-std=c++17 -I$(SYCLDIR)/include -DTRISYCL
+#
+# hipSYCL
+#
+SYCLDIR=/opt/hipSYCL
+SYCLCXX=${SYCLDIR}/bin/syclcc-clang
+SYCLFLAG=-std=c++17 -O3
+SYCLFLAG+=-DHIPSYCL
+# CPU platform
+SYCLFLAG+=--hipsycl-platform=cpu
+SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib
+#
+CELERITYDIR=${SYCLDIR}
+CELERITYINC=-I$(CELERITYDIR)/include/celerity -I$(CELERITYDIR)/include/celerity/vendor
+CELERITYLIB=-L$(CELERITYDIR)/lib -lcelerity_runtime
+MPIINC=-I/usr/include/mpich-3.2-x86_64
+MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
 #
 # OCCA
 #
@@ -74,48 +122,26 @@ METALFLAG=-framework MetalPerformanceShaders
 #
 # TBB
 #
-TBBDIR=/usr/local/Cellar/tbb/2019_U3_1
-TBBFLAG=-DUSE_TBB -I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+#TBBDIR=/usr/lib/x86_64-linux-gnu
+TBBDIR=/usr/local/Cellar/tbb/2019_U8
+TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+#TBBDIR=/opt/intel/compilers_and_libraries_2019.2.159/linux/tbb
+#TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -L${TBBDIR}/lib/intel64_lin/gcc4.7 -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=-I/usr/local/Cellar/boost/1.68.0_1/include
-#RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
-RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
-PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -DUSE_INTEL_PSTL -I./pstl/include ${RANGEFLAG}
+#BOOSTFLAG=-I/usr/local/Cellar/boost/1.71.0/include
+BOOSTFLAG=-I/usr/include/boost169
+RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+#RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG}
+#PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -I./pstl/include ${RANGEFLAG} -Wno-\#pragma-messages
 KOKKOSDIR=/opt/kokkos/gcc
 KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
 RAJADIR=/opt/raja/gcc
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 THRUSTDIR=/Users/jrhammon/Work/NVIDIA/thrust
 THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
-#
-# SYCL flags
-#
-# triSYCL
-# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
-SYCLDIR=./triSYCL
-SYCLCXX=${CXX} -std=c++17 ${OPENMPFLAG}
-SYCLFLAG=-I${SYCLDIR}/include ${BOOSTFLAG} -DTRISYCL
-# ProGTX
-# https://github.com/ProGTX/sycl-gtx
-#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
-#SYCLCXX=${CXX} ${OPENMPFLAG}
-#SYCLFLAG=-I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
-SYCLFLAG+=${RANGEFLAG}
-#
-# SYCL flags
-#
-# triSYCL
-# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
-SYCLDIR=./triSYCL
-SYCLCXX=${CXX} -std=c++17 ${OPENMPFLAG}
-SYCLFLAG=-I${SYCLDIR}/include ${BOOSTFLAG}
-# ProGTX
-# https://github.com/ProGTX/sycl-gtx
-#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
-#SYCLCXX=${CXX} ${OPENMPFLAG}
-#SYCLFLAG=-DUSE_SYCL -I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
 #
 # CBLAS for C++ DGEMM
 #
@@ -128,7 +154,8 @@ CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 #NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
 NVCC=nvcc
-CUDAFLAGS=-g -O3 -std=c++11 -arch=sm_50
+CUDAFLAGS=-g -O3 -std=c++11
+CUDAFLAGS+=-arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #
@@ -137,10 +164,39 @@ CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 ISPC=ispc
 ISPCFLAG=-O3 --target=host --opt=fast-math
 #
-# MPI
+# MPI-3
 #
-# We assume you have installed an implementation of MPI-3 that is in your path.
-MPICC=mpicc -std=c99
+# We assume you have Intel MPI and have setup your environment with e.g.
+# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
+# in your .bashrc.
+#
+# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
+MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
+MPICC=${MPIDIR}/bin/mpiicc
+MPICXX=${MPIDIR}/bin/mpiicpc
+MPIINC=-I${MPIDIR}/include
+MPILIB=-L${MPIDIR}/lib -lmpi
+#MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
+#MPIINC=-I/usr/include/mpich-3.2-x86_64
+#MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# Global Arrays
+#
+GADIR=../deps/ga
+GAFLAG=-I${GADIR}/include
+GAFLAG+=-L${GADIR}/lib -lga
+GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
+#GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
+GAFLAG+=${MPIINC} ${MPILIB}
+GAFLAG+=-lmpifort -lmpi
+GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+#
+# PETSc
+#
+PETSCDIR=../deps/petsc
+PETSCFLAG=-I${PETSCDIR}/include
+PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
+PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
 #
 # Fortran 2008 coarrays
 #
@@ -149,6 +205,8 @@ MPICC=mpicc -std=c99
 COARRAYFLAG=-fcoarray=single -lcaf_single
 # multi-node
 # COARRAYFLAG=-fcoarray=lib -lcaf_mpi
-
+#
+# MEMKIND (used in C1z)
+#
 MEMKINDDIR=/home/parallels/PRK/deps
 MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib

@@ -66,8 +66,15 @@
 
 __global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
 {
-    unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) {
+        A[i] += B[i] + scalar * C[i];
+    }
+}
+
+__global__ void nstream2(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
+{
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
         A[i] += B[i] + scalar * C[i];
     }
 }
@@ -84,11 +91,12 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
+  int iterations;
   int length;
+  bool grid_stride;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>]";
+        throw "Usage: <# iterations> <vector length> [<grid_stride>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -101,10 +109,7 @@ int main(int argc, char * argv[])
         throw "ERROR: vector length must be positive";
       }
 
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
-      }
+      grid_stride   = (argc>3) ? prk::parse_boolean(std::string(argv[4])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -113,9 +118,9 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
+  std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
 
-  const int blockSize = 128;
+  const int blockSize = 256;
   dim3 dimBlock(blockSize, 1, 1);
   dim3 dimGrid(prk::divceil(length,blockSize), 1, 1);
 
@@ -125,7 +130,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time(0);
 
   const size_t bytes = length * sizeof(prk_float);
   prk_float * h_A;
@@ -140,7 +145,7 @@ int main(int argc, char * argv[])
   h_B = new prk_float[length];
   h_C = new prk_float[length];
 #endif
-  for (auto i=0; i<length; ++i) {
+  for (int i=0; i<length; ++i) {
     h_A[i] = static_cast<prk_float>(0);
     h_B[i] = static_cast<prk_float>(2);
     h_C[i] = static_cast<prk_float>(2);
@@ -158,11 +163,15 @@ int main(int argc, char * argv[])
 
   prk_float scalar(3);
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+      if (grid_stride) {
+          nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+      } else {
+          nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
+      }
 #ifndef __CORIANDERCC__
       // silence "ignoring cudaDeviceSynchronize for now" warning
       prk::CUDA::check( cudaDeviceSynchronize() );
@@ -189,15 +198,15 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
   ar *= length;
 
   double asum(0);
-  for (auto i=0; i<length; i++) {
-      asum += std::fabs(h_A[i]);
+  for (int i=0; i<length; i++) {
+      asum += prk::abs(h_A[i]);
   }
 
 #ifndef __CORIANDERCC__
@@ -205,8 +214,9 @@ int main(int argc, char * argv[])
 #endif
 
   double epsilon=1.e-8;
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;

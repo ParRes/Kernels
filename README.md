@@ -1,3 +1,5 @@
+![PRK logo.](https://github.com/ParRes/Kernels/blob/default/logo/PRK%20logo.png)
+
 [![license](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/ParRes/Kernels/blob/master/COPYING)
 [![Travis-CI Status](https://travis-ci.org/ParRes/Kernels.svg)](https://travis-ci.org/ParRes/Kernels)
 [![GitHub contributors](https://img.shields.io/github/contributors/ParRes/Kernels.svg)]()
@@ -31,23 +33,28 @@ valid path where that compiler is installed.
 Special instructions for building and running codes using Charm++, Grappa, 
 OpenSHMEM, or Fine-Grain MPI are in `README.special`.
 
-We provide examples of working examples for a number of programming environments
+We provide examples of working examples for a number of programming environments.
+Some of these are tested more than others.
+If you are looking for the simplest option, try `make.defs.gcc`.
 
 | File (in `./common/`) | Environment |  
 |----------------------|-------------------------|  
 | `make.defs.cray`     | Cray compilers on Cray XC systems. |
 | `make.defs.cuda`     | GCC with the CUDA compiler (only used in C++/CUDA implementation). |
 | `make.defs.gcc`      | GCC compiler tool chain, which supports essentially all implementations. |
-| `make.defs.ibmbg`    | IBM Blue Gene/Q compiler toolchain (infrequently tested). |
+| `make.defs.freebsd`  | FreeBSD (rarely tested). |
+| `make.defs.ibmbg`    | IBM Blue Gene/Q compiler toolchain (deprecated). |
+| `make.defs.ibmp9nv`  | IBM compilers for POWER9 and NVIDIA Volta platforms. |
 | `make.defs.intel`    | Intel compiler tool chain, which supports most implementations. |
 | `make.defs.llvm`     | LLVM compiler tool chain, which supports most implementations. |
 | `make.defs.musl`     | GCC compiler toolchain with MUSL as the C standard library, which is required to use C11 threads. |
+| `make.defs.oneapi`   | Intel oneAPI (https://software.intel.com/oneapi/hpc-kit). |
 | `make.defs.pgi`      | PGI compiler toolchain (infrequently tested). |
 
 Some of the C++ implementations require you to install Boost, RAJA, KOKKOS, Parallel STL, respectively,
-and then modify `make.defs` appropriately.  Please see the documentation in the C++ subdirectory.
+and then modify `make.defs` appropriately.  Please see the documentation in the [https://github.com/ParRes/Kernels/tree/default/doc](documentation (`doc`) subdirectory).
 
-Because we test essentially everything in Travis CI, you can refer to the `$PRK/travis` subdirectory
+Because we test essentially everything in Travis CI, you can refer to the `travis` subdirectory
 for install scripts that can be readily modified to install any of the dependencies in your local
 environment.
 
@@ -89,10 +96,10 @@ f = see footnotes
 | OpenMP tasks         |  y  |    y    |     y     |    y    |        |       |
 | OpenMP target        |  y  |    y    |     y     |    y    |        |       |
 | OpenCL 1.x           |  i  |    y    |     y     |    y    |        |       |
-| SYCL                 |     |    y    |     y     |    y    |        |       |
+| SYCL                 |  i  |    y    |     y     |    y    |        |   y   |
 | Boost.Compute        |     |         |           |    y    |        |       |
 | Parallel STL         |  y  |    y    |     y     |    y    |        |       |
-| Thrust               |     |         |           |    y    |        |       |
+| Thrust               |     |         |     i     |    y    |        |       |
 | TBB                  |  y  |    y    |     y     |    y    |        |       |
 | Kokkos               |  y  |    y    |     y     |    y    |        |       |
 | RAJA                 |  y  |    y    |     y     |    y    |        |       |
@@ -111,13 +118,19 @@ f = see footnotes
 
 | Parallelism          | p2p | stencil | transpose | nstream | sparse |
 |----------------------|-----|---------|-----------|---------|--------|
-| None                 |  y  |    y    |     y     |         |        |
+| None                 |  y  |    y    |     y     |    y    |        |
 | C11 threads          |     |         |     y     |         |        |
-| OpenMP               |  y  |    y    |     y     |         |        |
-| OpenMP tasks         |  y  |    y    |     y     |         |        |
-| OpenMP target        |  y  |    y    |     y     |         |        |
+| OpenMP               |  y  |    y    |     y     |    y    |        |
+| OpenMP tasks         |  y  |    y    |     y     |    y    |        |
+| OpenMP target        |  y  |    y    |     y     |    y    |        |
 | Cilk                 |     |    y    |     y     |         |        |
 | ISPC                 |     |         |     y     |         |        |
+| MPI                  |     |         |           |    y    |        |
+
+There are versions of nstream with OpenMP that support memory allocation
+using [mmap](http://man7.org/linux/man-pages/man2/mmap.2.html)
+and [memkind](https://github.com/memkind/memkind), which can be used
+for testing novel memory systems, including persistent memory.
 
 * [ISPC](https://ispc.github.io/)
 
@@ -128,6 +141,7 @@ f = see footnotes
 | None                 |  y  |    y    |     y     |    y    |        |   y   |
 | Intrinsics           |     |         |     y     |    y    |        |   y   |
 | coarrays             |  y  |    y    |     y     |         |        |       |
+| Global Arrays        |     |         |     y     |    y    |        |       |
 | OpenMP               |  y  |    y    |     y     |    y    |        |   y   |
 | OpenMP tasks         |  y  |    y    |     y     |    y    |        |       |
 | OpenMP target        |  y  |    y    |     y     |    y    |        |       |
@@ -146,6 +160,7 @@ x = externally supported (in the Chapel repo)
 | Python 3 w/ Numpy    |  y  |    y    |     y     |    y    |    y   |   y   |
 | Julia                |  y  |    y    |     y     |         |        |       |
 | Octave (Matlab)      |  y  |    y    |     y     |         |        |       |
+| Rust                 |  y  |    y    |     y     |         |        |       |
 | Chapel               |  x  |    x    |     x     |         |        |       |
 
 ## Global make

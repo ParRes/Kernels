@@ -60,34 +60,29 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include "CL/sycl.hpp"
+#include "prk_sycl.h"
 #include "prk_util.h"
 #include "stencil_sycl.hpp"
-
-#if 0
-#include "prk_opencl.h"
-#define USE_OPENCL 1
-#endif
 
 template <typename T> class init;
 template <typename T> class add;
 
 #if USE_2D_INDEXING
 template <typename T>
-void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T, 2> & d_in, cl::sycl::buffer<T, 2> & d_out)
+void nothing(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buffer<T, 2> & d_out)
 #else
 template <typename T>
-void nothing(cl::sycl::queue & q, const size_t n, cl::sycl::buffer<T> & d_in, cl::sycl::buffer<T> & d_out)
+void nothing(sycl::queue & q, const size_t n, sycl::buffer<T> & d_in, sycl::buffer<T> & d_out)
 #endif
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
     std::cout << "and add it to the case-switch in the driver." << std::endl;
-    std::abort();
+    prk::Abort();
 }
 
 template <typename T>
-void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star, size_t radius)
+void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star, size_t radius)
 {
   auto stencil = nothing<T>;
   if (star) {
@@ -124,23 +119,23 @@ void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool s
 
     // initialize device buffers from host buffers
 #if USE_2D_INDEXING
-    cl::sycl::buffer<T, 2> d_in  { cl::sycl::range<2> {n, n} };
-    cl::sycl::buffer<T, 2> d_out { h_out.data(), cl::sycl::range<2> {n, n} };
+    sycl::buffer<T, 2> d_in  { sycl::range<2> {n, n} };
+    sycl::buffer<T, 2> d_out { h_out.data(), sycl::range<2> {n, n} };
 #else
     // FIXME: if I don't initialize this buffer from host, the results are wrong.  Why?
-    //cl::sycl::buffer<T> d_in  { cl::sycl::range<1> {n*n} };
-    cl::sycl::buffer<T> d_in  { h_in.data(),  h_in.size() };
-    cl::sycl::buffer<T> d_out { h_out.data(), h_out.size() };
+    //sycl::buffer<T> d_in  { sycl::range<1> {n*n} };
+    sycl::buffer<T> d_in  { h_in.data(),  h_in.size() };
+    sycl::buffer<T> d_out { h_out.data(), h_out.size() };
 #endif
 
-    q.submit([&](cl::sycl::handler& h) {
+    q.submit([&](sycl::handler& h) {
 
       // accessor methods
-      auto in  = d_in.template get_access<cl::sycl::access::mode::read_write>(h);
+      auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
 
-      h.parallel_for<class init<T>>(cl::sycl::range<2> {n, n}, [=] (cl::sycl::item<2> it) {
+      h.parallel_for<class init<T>>(sycl::range<2> {n, n}, [=] (sycl::item<2> it) {
 #if USE_2D_INDEXING
-          cl::sycl::id<2> xy = it.get_id();
+          sycl::id<2> xy = it.get_id();
           auto i = it[0];
           auto j = it[1];
           in[xy] = static_cast<T>(i+j);
@@ -153,7 +148,7 @@ void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool s
     });
     q.wait();
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) stencil_time = prk::wtime();
 
@@ -162,16 +157,16 @@ void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool s
       q.wait();
 #endif
 
-      q.submit([&](cl::sycl::handler& h) {
+      q.submit([&](sycl::handler& h) {
 
         // accessor methods
-        auto in  = d_in.template get_access<cl::sycl::access::mode::read_write>(h);
+        auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
 
         // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add<T>>(cl::sycl::range<2> {n, n}, cl::sycl::id<2> {0, 0},
-                                  [=] (cl::sycl::item<2> it) {
+        h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0},
+                                  [=] (sycl::item<2> it) {
 #if USE_2D_INDEXING
-            cl::sycl::id<2> xy = it.get_id();
+            sycl::id<2> xy = it.get_id();
             in[xy] += static_cast<T>(1);
 #else
 #if 0 // This is noticeably slower :-(
@@ -188,18 +183,12 @@ void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool s
     }
     stencil_time = prk::wtime() - stencil_time;
   }
-  catch (cl::sycl::exception e) {
+  catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
-#ifdef __COMPUTECPP__
-    std::cout << e.get_file_name() << std::endl;
-    std::cout << e.get_line_number() << std::endl;
-    std::cout << e.get_description() << std::endl;
-    std::cout << e.get_cl_error_message() << std::endl;
-    std::cout << e.get_cl_code() << std::endl;
-#endif
+    prk::SYCL::print_exception_details(e);
     return;
   }
-  catch (std::exception e) {
+  catch (std::exception & e) {
     std::cout << e.what() << std::endl;
     return;
   }
@@ -219,7 +208,7 @@ void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool s
   double norm(0);
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
-      norm += std::fabs(h_out[i*n+j]);
+      norm += prk::abs(h_out[i*n+j]);
     }
   }
   norm /= active_points;
@@ -227,7 +216,7 @@ void run(cl::sycl::queue & q, int iterations, size_t n, size_t tile_size, bool s
   // verify correctness
   const double epsilon = 1.0e-8;
   const double reference_norm = 2*(iterations+1);
-  if (std::fabs(norm-reference_norm) > epsilon) {
+  if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
   } else {
@@ -273,7 +262,7 @@ int main(int argc, char * argv[])
       n  = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimension must be positive";
-      } else if (n > std::floor(std::sqrt(INT_MAX))) {
+      } else if (n > prk::get_max_matrix_size()) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
@@ -316,95 +305,64 @@ int main(int argc, char * argv[])
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
-#ifdef USE_OPENCL
-  prk::opencl::listPlatforms();
-#endif
-
   try {
-
-    if (1) {
-        cl::sycl::queue host(cl::sycl::host_selector{});
-#ifndef TRISYCL
-        auto device      = host.get_device();
-        auto platform    = device.get_platform();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-#endif
-
-        run<float>(host, iterations, n, tile_size, star, radius);
-        run<double>(host, iterations, n, tile_size, star, radius);
-    }
-
-    // CPU requires spir64 target
-    if (1) {
-        cl::sycl::queue cpu(cl::sycl::cpu_selector{});
-#ifndef TRISYCL
-        auto device      = cpu.get_device();
-        auto platform    = device.get_platform();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
-#else
-        bool has_spir = true; // ?
-#endif
-        if (has_spir) {
-          run<float>(cpu, iterations, n, tile_size, star, radius);
-          run<double>(cpu, iterations, n, tile_size, star, radius);
-        }
-    }
-
-    // NVIDIA GPU requires ptx64 target and does not work very well
-    if (0) {
-        cl::sycl::queue gpu(cl::sycl::gpu_selector{});
-#ifndef TRISYCL
-        auto device      = gpu.get_device();
-        auto platform    = device.get_platform();
-        std::cout << "SYCL Device:   " << device.get_info<cl::sycl::info::device::name>() << std::endl;
-        std::cout << "SYCL Platform: " << platform.get_info<cl::sycl::info::platform::name>() << std::endl;
-        bool has_spir = device.has_extension(cl::sycl::string_class("cl_khr_spir"));
-        bool has_fp64 = device.has_extension(cl::sycl::string_class("cl_khr_fp64"));
-#else
-        bool has_spir = true; // ?
-        bool has_fp64 = true;
-#endif
-        if (!has_fp64) {
-          std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
-        }
-        if (has_spir) {
-          run<float>(gpu, iterations, n, tile_size, star, radius);
-          if (has_fp64) {
-            run<double>(gpu, iterations, n, tile_size, star, radius);
-          }
-        } else {
-          std::cout << "SYCL GPU device lacks SPIR-V support." << std::endl;
-#ifdef __COMPUTECPP__
-          std::cout << "You are using ComputeCpp so we will try it anyways..." << std::endl;
-          run<float>(gpu, iterations, n, tile_size, star, radius);
-          if (has_fp64) {
-            run<double>(gpu, iterations, n, tile_size, star, radius);
-          }
-#endif
-        }
+    if (n<10000) {
+      sycl::queue q(sycl::host_selector{});
+      prk::SYCL::print_device_platform(q);
+      run<float>(q, iterations, n, tile_size, star, radius);
+      run<double>(q, iterations, n, tile_size, star, radius);
+    } else {
+        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
     }
   }
-  catch (cl::sycl::exception e) {
+  catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
-#ifdef __COMPUTECPP__
-    std::cout << e.get_file_name() << std::endl;
-    std::cout << e.get_line_number() << std::endl;
-    std::cout << e.get_description() << std::endl;
-    std::cout << e.get_cl_error_message() << std::endl;
-    std::cout << e.get_cl_code() << std::endl;
-#endif
-    return 1;
+    prk::SYCL::print_exception_details(e);
   }
-  catch (std::exception e) {
+  catch (std::exception & e) {
     std::cout << e.what() << std::endl;
-    return 1;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
-    return 1;
+  }
+
+  try {
+    sycl::queue q(sycl::cpu_selector{});
+    prk::SYCL::print_device_platform(q);
+    run<float>(q, iterations, n, tile_size, star, radius);
+    run<double>(q, iterations, n, tile_size, star, radius);
+  }
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+  }
+  catch (std::exception & e) {
+    std::cout << e.what() << std::endl;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+  }
+
+  try {
+    sycl::queue q(sycl::gpu_selector{});
+    prk::SYCL::print_device_platform(q);
+    bool has_fp64 = prk::SYCL::has_fp64(q);
+    run<float>(q, iterations, n, tile_size, star, radius);
+    if (has_fp64) {
+      run<double>(q, iterations, n, tile_size, star, radius);
+    } else {
+      std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
+    }
+  }
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+  }
+  catch (std::exception & e) {
+    std::cout << e.what() << std::endl;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
   }
 
   return 0;

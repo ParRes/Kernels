@@ -42,7 +42,7 @@ ifndef PRK_FLAGS
   PRK_FLAGS=-O3
 endif
 
-default: allserial allopenmp allmpi
+default: allserial allcxx allc1z allfortran allopenmp allmpi
 
 help:
 	@echo "Usage: \"make all\"          (re-)builds all targets"

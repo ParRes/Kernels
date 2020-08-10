@@ -51,7 +51,7 @@ namespace prk {
 #if defined(USE_BOOST_IRANGE)
         return boost::irange(static_cast<decltype(end)>(start), end);
 #elif defined(USE_RANGES_TS)
-        return ranges::view::iota(static_cast<decltype(end)>(start), end);
+        return ranges::views::iota(static_cast<decltype(end)>(start), end);
 #endif
     }
 
@@ -63,9 +63,9 @@ namespace prk {
         // NOTE:
         // iota(s) | slice(s,e) | stride(b)  is faster than
         // iota(s,e) | stride(b) for some reason.
-        return ranges::view::iota(static_cast<decltype(end)>(start)) |
-               ranges::view::slice(static_cast<decltype(end)>(start), end) |
-               ranges::view::stride(static_cast<decltype(end)>(blocking));
+        return ranges::views::iota(static_cast<decltype(end)>(start)) |
+               ranges::views::slice(static_cast<decltype(end)>(start), end) |
+               ranges::views::stride(static_cast<decltype(end)>(blocking));
 #endif
     }
 

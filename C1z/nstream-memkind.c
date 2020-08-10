@@ -64,6 +64,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 
 #include <memkind.h>
 #ifndef MEMKIND_PMEM_MIN_SIZE
@@ -72,7 +73,7 @@
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+  printf("Parallel Research Kernels version %d\n", PRKVERSION );
 #ifdef _OPENMP
   printf("C11/OpenMP STREAM triad: A = B + scalar * C\n");
 #else
@@ -88,17 +89,16 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  // number of times to do the transpose
   int iterations = atoi(argv[1]);
   if (iterations < 1) {
     printf("ERROR: iterations must be >= 1\n");
     return 1;
   }
 
-  // length of a the matrix
+  // length of a the vector
   size_t length = atol(argv[2]);
   if (length <= 0) {
-    printf("ERROR: Matrix length must be greater than 0\n");
+    printf("ERROR: Vector length must be greater than 0\n");
     return 1;
   }
 

@@ -12,7 +12,7 @@
 ///       copyright notice, this list of conditions and the following
 ///       disclaimer in the documentation and/or other materials provided
 ///       with the distribution.
-/// * Neither the name of <COPYRIGHT HOLDER> nor the names of its
+/// * Neither the name of Intel Corporation nor the names of its
 ///       contributors may be used to endorse or promote products
 ///       derived from this software without specific prior written
 ///       permission.
@@ -56,7 +56,7 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
-#define TILED 0
+#define TILED 1
 
 #if TILED
 // The kernel was derived from https://github.com/parallel-forall/code-samples/blob/master/series/cuda-cpp/transpose/transpose.cu,
@@ -67,9 +67,9 @@ const int block_rows = 8;
 
 __global__ void transpose(int order, prk_float * A, prk_float * B)
 {
-    int x = blockIdx.x * tile_dim + threadIdx.x;
-    int y = blockIdx.y * tile_dim + threadIdx.y;
-    int width = gridDim.x * tile_dim;
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+    auto width = gridDim.x * tile_dim;
 
     for (int j = 0; j < tile_dim; j+= block_rows) {
         B[x*width + (y+j)] += A[(y+j)*width + x];
@@ -98,7 +98,7 @@ int main(int argc, char * argv[])
   info.print();
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -116,7 +116,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
@@ -180,8 +180,8 @@ int main(int argc, char * argv[])
   h_b = new prk_float[nelems];
 #endif
   // fill A with the sequence 0 to order^2-1
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       h_a[j*order+i] = static_cast<prk_float>(order*j+i);
       h_b[j*order+i] = static_cast<prk_float>(0);
     }
@@ -197,7 +197,7 @@ int main(int argc, char * argv[])
 
   auto trans_time = 0.0;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
@@ -226,12 +226,12 @@ int main(int argc, char * argv[])
 
   const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const size_t ij = (size_t)i*(size_t)order+(size_t)j;
       const size_t ji = (size_t)j*(size_t)order+(size_t)i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(h_b[ji] - reference);
+      abserr += prk::abs(h_b[ji] - reference);
     }
   }
 
@@ -253,8 +253,8 @@ int main(int argc, char * argv[])
               << " Avg time (s): " << avgtime << std::endl;
   } else {
 #ifdef VERBOSE
-    for (auto i=0; i<order; i++) {
-      for (auto j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
+      for (int j=0; j<order; j++) {
         std::cout << "(" << i << "," << j << ") = " << h_a[i*order+j] << ", " << h_b[i*order+j] << "\n";
       }
     }

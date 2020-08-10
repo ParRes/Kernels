@@ -64,6 +64,7 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
+#include "prk_thrust.h"
 
 int main(int argc, char * argv[])
 {
@@ -115,8 +116,6 @@ int main(int argc, char * argv[])
   thrust::device_vector<double> B(length);
   thrust::device_vector<double> C(length);
 
-  auto range = prk::range(static_cast<size_t>(0), length);
-
   double scalar(3);
   {
     thrust::fill(thrust::device, A.begin(), A.end(), 0.0);
@@ -127,7 +126,7 @@ int main(int argc, char * argv[])
         thrust::get<0>(t) +=  thrust::get<1>(t) + scalar * thrust::get<2>(t);
     };
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
@@ -147,7 +146,7 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
@@ -161,8 +160,9 @@ int main(int argc, char * argv[])
                                          thrust::plus<double>());
 
   double epsilon(1.e-8);
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;

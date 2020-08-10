@@ -93,12 +93,12 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   cl::Program program2(context, prk::opencl::loadProgram(filename2), true);
 
   cl_int err;
-  auto kernel1 = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program1, funcname1, &err);
+  auto kernel1 = cl::KernelFunctor<int, cl::Buffer, cl::Buffer>(program1, funcname1, &err);
   if(err != CL_SUCCESS){
     std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
     std::cout << program1.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
   }
-  auto kernel2 = cl::make_kernel<int, cl::Buffer>(program2, funcname2, &err);
+  auto kernel2 = cl::KernelFunctor<int, cl::Buffer>(program2, funcname2, &err);
   if(err != CL_SUCCESS){
     std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
     std::cout << program2.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
@@ -116,8 +116,8 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   auto stencil_time = 0.0;
 
   // initialize the input array
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
       h_in[i*n+j] = static_cast<T>(i+j);
     }
   }
@@ -126,7 +126,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   cl::Buffer d_in = cl::Buffer(context, begin(h_in), end(h_in), true);
   cl::Buffer d_out = cl::Buffer(context, begin(h_out), end(h_out), false);
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) stencil_time = prk::wtime();
 
@@ -155,9 +155,9 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
 
   // compute L1 norm in parallel
   double norm = 0.0;
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
-      norm += std::fabs(static_cast<double>(h_out[i*n+j]));
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
+      norm += prk::abs(static_cast<double>(h_out[i*n+j]));
     }
   }
   norm /= active_points;
@@ -165,7 +165,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   // verify correctness
   const double epsilon = (sizeof(T)==8) ? 1.0e-8 : 1.0e-4;
   double reference_norm = 2*(iterations+1);
-  if (std::fabs(norm-reference_norm) > epsilon) {
+  if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
   } else {
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
       n  = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimension must be positive";
-      } else if (n > std::floor(std::sqrt(INT_MAX))) {
+      } else if (n > prk::get_max_matrix_size()) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 

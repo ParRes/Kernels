@@ -203,16 +203,16 @@ int main(int argc, char* argv[])
 
     tbb::blocked_range2d<int> range(0, m, mc, 0, n, nc);
     tbb::parallel_for( range, [&](decltype(range)& r) {
-      for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-        for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+      for (int i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+        for (int j=r.cols().begin(); j!=r.cols().end(); ++j ) {
           grid[i*n+j] = 0.0;
         }
       }
     }, tbb_partitioner);
-    for (auto j=0; j<n; j++) {
+    for (int j=0; j<n; j++) {
       grid[0*n+j] = static_cast<double>(j);
     }
-    for (auto i=0; i<m; i++) {
+    for (int i=0; i<m; i++) {
       grid[i*n+0] = static_cast<double>(i);
     }
 
@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+  if ( (prk::abs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;

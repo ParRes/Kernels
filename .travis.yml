@@ -1,27 +1,27 @@
-sudo: false
+sudo: true
 language: cpp
 python:
-  - "3.5"
+  - "3.7"
 env:
   matrix:
   - PRK_TARGET=allserial
   - PRK_TARGET=allc1z
   - PRK_TARGET=allcxx
   - PRK_TARGET=allpython
+  - PRK_TARGET=alljulia
+  #- PRK_TARGET=allrust
+  #- PRK_TARGET=allopenmp
+  - PRK_TARGET=allfortran
+  #- PRK_TARGET=allmpi
+  #- PRK_TARGET=allshmem
+  #- PRK_TARGET=allampi
+  #- PRK_TARGET=allfgmpi
+  #- PRK_TARGET=allcharm++
+  #- PRK_TARGET=allgrappa
+  #- PRK_TARGET=allupc UPC_IMPL=gupc
+  #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
   # Octave is working but it takes forever to brew (~20 minutes).
   #- PRK_TARGET=alloctave
-  - PRK_TARGET=alljulia
-  - PRK_TARGET=allrust
-  - PRK_TARGET=allopenmp
-  - PRK_TARGET=allfortran
-  - PRK_TARGET=allmpi
-  - PRK_TARGET=allshmem
-  - PRK_TARGET=allampi
-  - PRK_TARGET=allfgmpi
-  - PRK_TARGET=allcharm++
-  #- PRK_TARGET=allgrappa
-  - PRK_TARGET=allupc UPC_IMPL=gupc
-  - PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
   # This works but we don't need to test it.
   #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
   # Optional: We do not need to test BUPC this thoroughly every time
@@ -34,9 +34,6 @@ env:
   #- PRK_TARGET=allhpx3
   # HPX-5 kernels are not merged yet.  Activate these when they are.
   #- PRK_TARGET=allhpx5
-  global:
-  - secure: "oLiTOLZlbVt0CbaPao3CaVoEGTtOPCQ6cfU98AOR616i6IuZCW13K8OIstD5GbvO6AHCVTH1jonJZ7bBCTF5C0gTWLTNbwMNMKAbsdedieSlLkTcAQkpJzYBuUfL8IXhm6VivguAewD8axzWMUXUbKJBUYEftOHtN6SFu/M7OnLrWWim5hgFnUakrq+hjVmIsMX9rKaARLCRsrN/M0GQ8/BhFHDl++1oLPc3loaieLsDC4riMZE8wxp/6U5peN5iosxwJhsDtYo/GGPv5oivvcSFErAkM9PrIhoNn7DiHfxrx331V0ukf8zDP93pxDx/9L2yERoTUdw5fk6NG6LX6r2WT2iR+JuR4ZdyCdbUaGyWY0VMwXLIholHQU0d2tI2S5rHue/btFRrHJbhOyujX9rJhPx407aZU7ZOZYfy9OPo3r8ekzlDJRfSceykFeIg97HdJ+sqguSs1ZYHbQAQGoPyxcVhw/+Fz//k+hndyGui1AaOLnihaY4KQwoMijJsa3+7X6RS9supSKzlk5JWzF9lLbNOoPO04VGGnLdfqhHNImQWZNsYoP0E4VnKcMXKulyF0bDsoCDookQzTJwYgi+F/drZjKDw9iyMvT1gWM+T0uAo7fHUnomTgEUIYeJppkETKuZEg3aZ+rUekcygYvrEVf5/2sgrRMBxXzE1U9I="
-  - secure: "j2SveaWkbcxRTK3c27qkdD7o0GvCrIMjx2GcVa4YOKtkKWiE5CdocPugDKdPzBhoehVKqD7u3w6ZFep1lm3+VSHwxuKC2I28fTFmGmxQUUEcXAlAc3HfcdOctqOjPL0w8oLRduGiN4fc1D7KEW7uqwT7kTYIm9qXCr2lDyigUjLrulnt5N/o64Xr8j9yKE1s3JNcuibvkTGYoMISJ8i271XjWEewzY8lJziWYqVSv2MsKr1Epl7TDNCLVhHbFq+DAJfCFilvNDngFXOzNfuYYoKCzxaDOk6dWtjCH70D0YZfOtJJJjFOzAG8Q14IklWQlcm69pFQCoveEUOaUULBDJ1B9O+wdmj56dm592+QdUI7onefqcrTFcQ/O3q18EgtKRjPt5Y52iaOBzW8gF+570G1MSX69KpazmEbeEzefPewIi9adwduBhnzdy27hFzPocA+1xrzjSSTFFfAPl0/boJlhOyUtY25VquqIUqUPLbkMWe2hX2FDr8G9O9mJ4jsvTYBNXhW95cELxepJ9zok7XUTB64e8ElTTOjcUk39cejIT2tF2/fur8Ld9HpXtFgUarq+RgDLG3QOOgeu93DiyYhKIgxfSntnAc4/4ACI2PPBju0wXYBpIEBIykCFNRTuoVMGt4r2FQcSztHQs6rj7SCXHFzAxmBcEbLd4GvTJE="
 # this is for Python, per http://danielnouri.org/notes/2012/11/23/use-apt-get-to-install-python-dependencies-for-travis-ci/
 virtualenv:
   system_site_packages: true
@@ -55,9 +52,6 @@ matrix:
   - os: osx
     compiler: gcc
     env: PRK_TARGET=allc1z
-  - os: osx
-    compiler: gcc
-    env: PRK_TARGET=allcxx
   - os: osx
     compiler: gcc
     env: PRK_TARGET=allshmem
@@ -153,37 +147,11 @@ matrix:
     env: PRK_TARGET=allmpi
   - os: linux
     env: PRK_TARGET=allcharm++
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    # works on Precise and Trusty
-    # see https://docs.travis-ci.com/user/languages/c/ for details
-    - llvm-toolchain-precise-3.8
-    #  Boost is for Grappa, HPX, C++ rangefor, pstl
-    - boost-latest
-    packages:
-    - python-numpy
-    - python-scipy
-    - gcc-7
-    - g++-7
-    - gfortran-7
-    # Required by GUPC
-    - libnuma-dev
-    # This should provide OpenMP
-    - clang-3.8
-    - clang-3.9
-    # Grappa and HPX use CMake
-    - cmake
-    # C++ code needs range headers
-    - libboost-all-dev
 before_install:
   - pwd
   - export TRAVIS_HOME=$PWD
   - export TRAVIS_ROOT=$TRAVIS_HOME/PRK-deps
   - mkdir -p $TRAVIS_ROOT
-  #- sh ./travis/install-intel.sh $TRAVIS_ROOT $PRK_TARGET
-  #- source ~/.bashrc
 install:
   - export PATH=$TRAVIS_ROOT/bin:$PATH
   - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH

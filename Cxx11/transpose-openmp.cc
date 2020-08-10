@@ -53,6 +53,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 
 int main(int argc, char * argv[])
 {
@@ -85,7 +86,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
@@ -118,15 +119,15 @@ int main(int argc, char * argv[])
   OMP_PARALLEL()
   {
     OMP_FOR()
-    for (auto i=0;i<order; i++) {
+    for (int i=0;i<order; i++) {
       PRAGMA_SIMD
-      for (auto j=0;j<order;j++) {
+      for (int j=0;j<order;j++) {
         A[i*order+j] = static_cast<double>(i*order+j);
         B[i*order+j] = 0.0;
       }
     }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
           OMP_BARRIER
@@ -137,12 +138,12 @@ int main(int argc, char * argv[])
       // transpose the  matrix
       if (tile_size < order) {
         OMP_FOR()
-        for (auto it=0; it<order; it+=tile_size) {
-          for (auto jt=0; jt<order; jt+=tile_size) {
+        for (int it=0; it<order; it+=tile_size) {
+          for (int jt=0; jt<order; jt+=tile_size) {
             PRAGMA_SIMD
-            for (auto i=it; i<std::min(order,it+tile_size); i++) {
+            for (int i=it; i<std::min(order,it+tile_size); i++) {
               PRAGMA_SIMD
-              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
+              for (int j=jt; j<std::min(order,jt+tile_size); j++) {
                 B[i*order+j] += A[j*order+i];
                 A[j*order+i] += 1.0;
               }
@@ -151,9 +152,9 @@ int main(int argc, char * argv[])
         }
       } else {
         OMP_FOR()
-        for (auto i=0;i<order; i++) {
+        for (int i=0;i<order; i++) {
         PRAGMA_SIMD
-          for (auto j=0;j<order;j++) {
+          for (int j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
             A[j*order+i] += 1.0;
           }
@@ -172,12 +173,12 @@ int main(int argc, char * argv[])
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
   OMP_PARALLEL_FOR_REDUCE( +:abserr )
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      abserr += prk::abs(B[ji] - reference);
     }
   }
 

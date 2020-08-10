@@ -124,10 +124,13 @@ int main(int argc, char * argv[])
   std::vector<double> B(length);
   std::vector<double> C(length);
 
+  RAJA::RangeSegment range(0, length);
+
   double scalar(3);
 
   {
-    RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+    //RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+    RAJA::forall<thread_exec>(range, [&](RAJA::Index_type i) {
         A[i] = 0.0;
         B[i] = 2.0;
         C[i] = 2.0;
@@ -137,7 +140,8 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-      RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+      //RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+      RAJA::forall<thread_exec>(range, [&](RAJA::Index_type i) {
           A[i] += B[i] + scalar * C[i];
       });
     }
@@ -158,13 +162,14 @@ int main(int argc, char * argv[])
   ar *= length;
 
   RAJA::ReduceSum<RAJA::seq_reduce, double> reduced_asum(0.0);
-  RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
-      reduced_asum += std::fabs(A[i]);
+  //RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+  RAJA::forall<RAJA::seq_exec>(range, [=](RAJA::Index_type i) {
+      reduced_asum += prk::abs(A[i]);
   });
   double asum(reduced_asum);
 
   double epsilon=1.e-8;
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;

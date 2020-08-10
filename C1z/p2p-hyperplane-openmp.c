@@ -60,11 +60,12 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 #include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("Parallel Research Kernels version %d\n", PRKVERSION);
 #ifdef _OPENMP
   printf("C11/OpenMP HYPERPLANE pipeline execution on 2D grid\n");
 #else
@@ -150,20 +151,19 @@ int main(int argc, char* argv[])
       }
 
       if (nc==1) {
+        const int nn = 1-n;
         for (int i=2; i<=2*n-2; i++) {
           OMP_FOR_SIMD()
           for (int j=MAX(2,i-n+2); j<=MIN(i,n); j++) {
-            const int x = i-j+1;
-            const int y = j-1;
-            grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+            grid[(i+1)*n-1+j*nn] = grid[i*n-1+j*nn] + grid[(i+1)*n-2+j*nn] - grid[i*n-2+j*nn];
           }
         }
       } else {
         for (int i=2; i<=2*(nb+1)-2; i++) {
           OMP_FOR()
           for (int j=MAX(2,i-(nb+1)+2); j<=MIN(i,nb+1); j++) {
-            const int ib = nc*(i-j+1-1)+1;
-            const int jb = nc*(j-1-1)+1;
+            const int ib = nc*(i-j)+1;
+            const int jb = nc*(j-2)+1;
             sweep_tile(ib, MIN(n,ib+nc), jb, MIN(n,jb+nc), n, grid);
           }
         }

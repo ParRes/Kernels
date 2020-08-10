@@ -72,7 +72,7 @@ void run(cl::Context context, int iterations, int n)
   auto function = (precision==64) ? "p2p64" : "p2p32";
 
   cl_int err;
-  auto kernel = cl::make_kernel<int, cl::Buffer>(program, function, &err);
+  auto kernel = cl::KernelFunctor<int, cl::Buffer>(program, function, &err);
   if(err != CL_SUCCESS){
     std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
     std::cout << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
@@ -85,10 +85,10 @@ void run(cl::Context context, int iterations, int n)
   //////////////////////////////////////////////////////////////////////
 
   std::vector<T> h_grid(n*n, T(0));
-  for (auto j=0; j<n; j++) {
+  for (int j=0; j<n; j++) {
     h_grid[0*n+j] = static_cast<double>(j);
   }
-  for (auto i=0; i<n; i++) {
+  for (int i=0; i<n; i++) {
     h_grid[i*n+0] = static_cast<double>(i);
   }
 
@@ -97,7 +97,7 @@ void run(cl::Context context, int iterations, int n)
 
   auto pipeline_time = 0.0;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) pipeline_time = prk::wtime();
 
@@ -120,7 +120,7 @@ void run(cl::Context context, int iterations, int n)
 
   // verify correctness, using top right value
   T corner_val = ((iterations+1)*(2*n-2));
-  if ( (std::fabs(h_grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+  if ( (prk::abs(h_grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << h_grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
   }

@@ -35,13 +35,12 @@
 #include <cstdio>
 #include <cstdlib> // atoi, getenv
 #include <cstdint>
+#include <cfloat>  // FLT_MIN
 #include <climits>
-#include <cmath>   // abs, fabs
-#include <cassert>
 
 // Test standard library _after_ standard headers have been included...
-#if !defined(__NVCC__) && !defined(__PGI) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
-# error You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
+#if !defined(__NVCC__) && !defined(__PGI) && !defined(__ibmxl__) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
+# warning You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
 #endif
 
 #if !(defined(__cplusplus) && (__cplusplus >= 201103L))
@@ -54,10 +53,8 @@
 #include <exception>
 #include <list>
 #include <vector>
-#include <valarray>
 
 #include <chrono>
-#include <random>
 #include <typeinfo>
 #include <array>
 #include <atomic>
@@ -70,8 +67,9 @@
 # include "prk_ranges.h"
 #endif
 
-#ifdef USE_OPENMP
-# include "prk_openmp.h"
+// omp_get_wtime()
+#if defined(USE_OPENMP) && defined(_OPENMP)
+#include <omp.h>
 #endif
 
 #define RESTRICT __restrict__
@@ -82,14 +80,16 @@
 #define PRK_UNUSED
 #endif
 
-// for SYCL
-#ifdef TRISYCL
-#define PREBUILD_KERNEL 0
-#else
-#define PREBUILD_KERNEL 1
-#endif
-
 namespace prk {
+
+    template <typename T>
+    bool is_power_of_2(T n) {
+#if defined(__GNUC__) || defined(__clang__)
+        return (1 == __builtin_popcount(n));
+#else
+        return ( (a & (~a+1)) == a );
+#endif
+    }
 
     int get_alignment(void)
     {
@@ -100,7 +100,10 @@ namespace prk {
         const char* temp = std::getenv("PRK_ALIGNMENT");
         int a = (temp!=nullptr) ? std::atoi(temp) : 64;
         if (a < 8) a = 8;
-        assert( (a & (~a+1)) == a ); /* is power of 2? */
+        if ( !prk::is_power_of_2(a) ) {
+            std::cout << "You requested alignment (" << a << ") that is not a power of two!" << std::endl;
+            std::abort();
+        }
 #endif
         return a;
     }
@@ -283,6 +286,96 @@ namespace prk {
     template <class T1, class T2>
     static inline auto divceil(T1 numerator, T2 denominator) -> decltype(numerator / denominator) {
         return ( numerator / denominator + (numerator % denominator > 0) );
+    }
+
+    bool parse_boolean(const std::string & s)
+    {
+        if (s=="t" || s=="T" || s=="y" || s=="Y" || s=="1") {
+            return true;
+        } else {
+            return false;
+        }
+
+    }
+
+    template<typename T>
+    T * alloc(size_t bytes)
+    {
+        int alignment = ::prk::get_alignment();
+#if defined(__INTEL_COMPILER)
+        return (void*)_mm_malloc(bytes,alignment);
+#else
+        T * ptr = nullptr;
+        int ret = posix_memalign((void**)&ptr,alignment,bytes);
+        if (ret!=0) ptr = NULL;
+        return ptr;
+#endif
+
+    }
+
+    template<typename T>
+    void dealloc(T * p)
+    {
+#if defined(__INTEL_COMPILER)
+        _mm_free((void*)p);
+#else
+        free((void*)p);
+#endif
+    }
+
+    int get_max_matrix_size(void)
+    {
+        // std::floor( std::sqrt(INT_MAX) )
+        return 46340;
+    }
+
+    template <typename T>
+    T abs(T x) {
+        return (x >= 0 ? x : -x);
+    }
+
+    template <>
+    float abs(float x) {
+        return __builtin_fabsf(x);
+    }
+
+    template <>
+    double abs(double x) {
+        return __builtin_fabs(x);
+    }
+
+    template <typename T>
+    T sqrt(T x) {
+        double y = static_cast<double>(x);
+        double z = __builtin_sqrt(y);
+        return static_cast<T>(z);
+    }
+
+    template <>
+    float sqrt(float x) {
+        return __builtin_sqrtf(x);
+    }
+
+    template <>
+    double sqrt(double x) {
+        return __builtin_sqrt(x);
+    }
+
+    template <typename T>
+    T pow(T x, int n) {
+        double y = static_cast<double>(x);
+        double z = __builtin_pow(y,n);
+        return static_cast<T>(z);
+    }
+
+    template <>
+    double pow(double x, int n) {
+        return __builtin_pow(x,n);
+    }
+
+    template <>
+    float pow(float x, int n) {
+        return __builtin_pow(x,n);
     }
 
 } // namespace prk

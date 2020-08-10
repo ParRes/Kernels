@@ -133,7 +133,7 @@ int main(int argc, char * argv[])
     compute::valarray<float> d_B(2.0f, length);
     compute::valarray<float> d_C(2.0f, length);
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
@@ -154,7 +154,7 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
@@ -162,11 +162,11 @@ int main(int argc, char * argv[])
 
   double asum(0);
   for (size_t i=0; i<length; i++) {
-      asum += std::fabs(h_A[i]);
+      asum += prk::abs(h_A[i]);
   }
 
   double epsilon(1.e-8);
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;

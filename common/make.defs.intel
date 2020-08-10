@@ -45,16 +45,62 @@ OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
 # SYCL flags
 #
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+#SYCLDIR=/opt/isycl
+#SYCLCXX=${SYCLDIR}/bin/clang++
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-fsycl
+#SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#
+# Intel oneAPI
+#
+#SYCLCXX=dpcpp
+#SYCLFLAG=-fsycl
+#SYCLFLAG+=-std=c++17 -O3
+#SYCLFLAG+=--gcc-toolchain=/opt/rh/devtoolset-7/root/usr
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=1
+#SYCLFLAG+=-stdlib=c++
+#
+# CodePlay ComputeCpp
+#
+#SYCLDIR=/opt/sycl/latest
+#SYCLDIR=/opt/codeplay/latest
+#SYCLCXX=${SYCLDIR}/bin/compute++
+#SYCLFLAG=-sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+#SYCLFLAG+=-std=c++14 -O3
+# This makes a huge difference in e.g. nstream...
+#SYCLFLAG+=-no-serial-memop
+# CentOS7 and Ubuntu14 built for this
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+# PRK header rejects GCC4
+#SYCLFLAG+=--gcc-toolchain=/swtools/gcc/5.4.0
+# If not found automatically
+#SYCLFLAG+=${OPENCLFLAG}
+# NVIDIA target
+#SYCLFLAG+=-sycl-target ptx64
+#SYCLFLAG+=-DPRK_NO_OPENCL_GPU
+#
 # triSYCL
+#
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
 SYCLDIR=./triSYCL
 SYCLCXX=${CXX} ${OPENMPFLAG}
 SYCLFLAG=-std=gnu++14 -I$(SYCLDIR)/include
-# ProGTX
-# https://github.com/ProGTX/sycl-gtx
-#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
-#SYCLCXX=${CXX} ${OPENMPFLAG}
-#SYCLFLAG=-I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
+#
+# hipSYCL
+#
+#SYCLDIR=/opt/hipSYCL
+#SYCLCXX=${SYCLDIR}/bin/syclcc-clang
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-DHIPSYCL
+# CPU platform
+#SYCLFLAG+=--hipsycl-platform=cpu
+#SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib
+#
+#CELERITYDIR=${SYCLDIR}
+#CELERITYINC=-I$(CELERITYDIR)/include/celerity -I$(CELERITYDIR)/include/celerity/vendor
+#CELERITYLIB=-L$(CELERITYDIR)/lib -lcelerity_runtime
 #
 # OCCA
 #
@@ -86,6 +132,7 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 #CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 CBLASFLAG=-DMKL -mkl
+ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
 #
 # CUDA flags
 #
@@ -103,14 +150,39 @@ CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 ISPC=ispc
 ISPCFLAG=-O3 --target=host --opt=fast-math
 #
-# MPI
+# MPI-3
 #
 # We assume you have Intel MPI and have setup your environment with e.g.
 # . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
 # in your .bashrc.
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPICC=mpiicc -std=c99
+MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
+MPICC=${MPIDIR}/bin/mpiicc
+MPICXX=${MPIDIR}/bin/mpiicpc
+MPIINC=-I${MPIDIR}/include
+MPILIB=-L${MPIDIR}/lib -lmpi
+#MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
+#MPIINC=-I/usr/include/mpich-3.2-x86_64
+#MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# Global Arrays
+#
+GADIR=../deps/ga
+GAFLAG=-I${GADIR}/include
+GAFLAG+=-L${GADIR}/lib -lga
+GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
+#GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
+GAFLAG+=${MPIINC} ${MPILIB}
+GAFLAG+=-lmpifort -lmpi
+GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+#
+# PETSc
+#
+PETSCDIR=../deps/petsc
+PETSCFLAG=-I${PETSCDIR}/include
+PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
+PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
 #
 # Fortran 2008 coarrays
 #

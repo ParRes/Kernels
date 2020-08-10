@@ -5,6 +5,16 @@ set -x
 
 TRAVIS_ROOT="$1"
 
+case ${TRAVIS_OS_NAME} in
+    osx)
+        brew install gnu-sed || brew upgrade gnu-sed || true
+        SED="gsed"
+        ;;
+    linux)
+        SED="sed"
+        ;;
+esac
+
 # --with-openmp:                        Enable OpenMP backend.
 # --with-pthread:                       Enable Pthreads backend.
 # --with-serial:                        Enable Serial backend.
@@ -33,7 +43,7 @@ case $CXX in
         fi
         ;;
     clang++)
-        for version in "-5" "-4" "-3.9" "-3.8" "-3.7" "-3.6" "" ; do
+        for version in "-11" "-10" "-9" "-8" "-7" "-6" "-5" "" ; do
           if [ -f "`which ${CXX}${version}`" ]; then
               export PRK_CXX="${CXX}${version}"
               echo "Found C++: $PRK_CXX"
@@ -52,11 +62,11 @@ if [ ! -d "$TRAVIS_ROOT/kokkos" ]; then
     cd kokkos
     mkdir build
     cd build
+    ${SED} -i "s/DKokkos_ENABLE_TESTS=ON/DKokkos_ENABLE_TESTS=OFF/g" ../generate_makefile.bash
     ../generate_makefile.bash --prefix=${TRAVIS_ROOT}/kokkos \
-                              --compiler=${PRK_CXX} ${KOKKOS_BACKEND} \
-                              --make-j=2
-    make
-    make install
+                              --compiler=${PRK_CXX} ${KOKKOS_BACKEND}
+    make -j2
+    make -j2 install
 else
     echo "KOKKOS installed..."
     find $TRAVIS_ROOT/kokkos -name Kokkos_Core.hpp

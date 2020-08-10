@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
       n  = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimension must be positive";
-      } else if (n > std::floor(std::sqrt(INT_MAX))) {
+      } else if (n > prk::get_max_matrix_size()) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
@@ -168,41 +168,26 @@ int main(int argc, char* argv[])
   std::vector<double> in(n*n);
   std::vector<double> out(n*n);
 
-#if 0
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-          ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
-            [&](RAJA::Index_type i, RAJA::Index_type j) {
-      in[i*n+j] = static_cast<double>(i+j);
-      out[i*n+j] = 0.0;
-  });
-#else
-  RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type i) {
-    RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type j) {
+  RAJA::RangeSegment range(0, n);
+
+  RAJA::forall<thread_exec>(range, [&](RAJA::Index_type i) {
+    RAJA::forall<RAJA::simd_exec>(range, [&](RAJA::Index_type j) {
       in[i*n+j] = static_cast<double>(i+j);
       out[i*n+j] = 0.0;
     });
   });
-#endif
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) stencil_time = prk::wtime();
     // Apply the stencil operator
     stencil(n, tile_size, in, out);
     // Add constant to solution to force refresh of neighbor data, if any
-#if 0
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
-        in[i*n+j] += 1.0;
-    });
-#else
-    RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type i) {
-      RAJA::forall<RAJA::simd_exec>(RAJA::Index_type(0), RAJA::Index_type(n), [&](RAJA::Index_type j) {
+    RAJA::forall<thread_exec>(range, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(range, [&](RAJA::Index_type j) {
         in[i*n+j] += 1.0;
       });
     });
-#endif
   }
 
   stencil_time = prk::wtime() - stencil_time;
@@ -215,24 +200,19 @@ int main(int argc, char* argv[])
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
   // compute L1 norm in parallel
-#if 0
-  // This leads to incorrect computation of the norm.
-  RAJA::ReduceSum<RAJA::omp_reduce, double> reduced_norm(0.0);
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-#else
+  RAJA::RangeSegment inside(radius,n-radius);
   RAJA::ReduceSum<RAJA::seq_reduce, double> reduced_norm(0.0);
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>>>
-#endif
-          ( RAJA::RangeSegment(radius,n-radius), RAJA::RangeSegment(radius,n-radius),
-            [&](RAJA::Index_type i, RAJA::Index_type j) {
-      reduced_norm += std::fabs(out[i*n+j]);
+  RAJA::forall<RAJA::seq_exec>(inside, [&](RAJA::Index_type i) {
+    RAJA::forall<RAJA::seq_exec>(inside, [&](RAJA::Index_type j) {
+      reduced_norm += prk::abs(out[i*n+j]);
+    });
   });
   double norm = reduced_norm / active_points;
 
   // verify correctness
   const double epsilon = 1.0e-8;
   double reference_norm = 2.*(iterations+1.);
-  if (std::fabs(norm-reference_norm) > epsilon) {
+  if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
     return 1;

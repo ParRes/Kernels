@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -60,7 +60,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // Read and test input parameters
+  /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -79,7 +79,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
@@ -98,7 +98,7 @@ int main(int argc, char * argv[])
   std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // Allocate space and perform the computation
+  // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
   auto trans_time = 0.0;
@@ -110,16 +110,16 @@ int main(int argc, char * argv[])
   std::iota(A.begin(), A.end(), 0.0);
 
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) trans_time = prk::wtime();
 
       // transpose the  matrix
       if (tile_size < order) {
-        for (auto it=0; it<order; it+=tile_size) {
-          for (auto jt=0; jt<order; jt+=tile_size) {
-            for (auto i=it; i<std::min(order,it+tile_size); i++) {
-              for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
+        for (int it=0; it<order; it+=tile_size) {
+          for (int jt=0; jt<order; jt+=tile_size) {
+            for (int i=it; i<std::min(order,it+tile_size); i++) {
+              for (int j=jt; j<std::min(order,jt+tile_size); j++) {
                 B[i*order+j] += A[j*order+i];
                 A[j*order+i] += 1.0;
               }
@@ -127,8 +127,8 @@ int main(int argc, char * argv[])
           }
         }
       } else {
-        for (auto i=0;i<order; i++) {
-          for (auto j=0;j<order;j++) {
+        for (int i=0;i<order; i++) {
+          for (int j=0;j<order;j++) {
             B[i*order+j] += A[j*order+i];
             A[j*order+i] += 1.0;
           }
@@ -142,15 +142,15 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  const auto addit = (iterations+1.) * (iterations/2.);
+  const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
   // TODO: replace with std::generate, std::accumulate, or similar
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      abserr += prk::abs(B[ji] - reference);
     }
   }
 
