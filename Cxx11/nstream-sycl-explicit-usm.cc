@@ -93,7 +93,7 @@ void run(sycl::queue & q, int iterations, size_t length)
     T * d_C = syclx::malloc_device<T>(length, q);
     q.wait();
 
-    const size_t bytes = length * sizeof(double);
+    const size_t bytes = length * sizeof(T);
 
     q.memcpy(d_A, &(h_A[0]), bytes);
     q.memcpy(d_B, &(h_B[0]), bytes);
