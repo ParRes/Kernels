@@ -97,7 +97,7 @@ sycl-usm: nstream-sycl-usm nstream-sycl-explicit-usm stencil-sycl-usm transpose-
 
 sycl-explicit: nstream-sycl-explicit transpose-sycl-explicit
 
-dpcpp: nstream-dpcpp nstream-multigpu-dpcpp transpose-dpcpp
+dpcpp: nstream-dpcpp nstream-multigpu-dpcpp transpose-dpcpp pic-dpcpp
 
 tbb: p2p-innerloop-tbb p2p-tbb stencil-tbb transpose-tbb nstream-tbb \
      p2p-hyperplane-tbb p2p-tasks-tbb
@@ -158,6 +158,12 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 
 %-celerity: %-celerity.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $(BOOSTFLAGS) $(CELERITYINC) $(MPIINC) $< $(CELERITYLIB) $(MPILIB) -o $@
+
+pic-dpcpp: pic-dpcpp.cc prk_util.h prk_sycl.h random_draw.o
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< random_draw.o -o $@
+
+random_draw.o: random_draw.c random_draw.h
+	$(CC) $(DEFAULT_OPT_FLAGS) $(CPPFLAGS) -c $< -o $@
 
 %-dpcpp: %-dpcpp.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
