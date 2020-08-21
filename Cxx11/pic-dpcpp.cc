@@ -78,11 +78,9 @@
 
 #include "random_draw.h"
 
-#define QG(i,j,L) Qgrid[(j)*(L+1)+i]
-#define MASS_INV 1.0
-#define Q 1.0
-#define epsilon 0.000001
-#define DT 1.0
+static const double Q = 1.0;
+static const double epsilon = 0.000001;
+static const double  DT = 1.0;
 
 #define SUCCESS 1
 #define FAILURE 0
@@ -141,7 +139,7 @@ double * initializeGrid(uint64_t L)
   /* initialization with dipoles */
   for (uint64_t x=0; x<=L; x++) {
     for (uint64_t y=0; y<=L; y++) {
-      QG(y,x,L) = (x%2 == 0) ? Q : -Q;
+      Qgrid[x*(L+1)+y] = (x%2 == 0) ? Q : -Q;
     }
   }
   return Qgrid;
@@ -362,7 +360,8 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
 }
 
 /* Verifies the final position of a particle */
-int verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t L){
+bool verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t L)
+{
   uint64_t x, y;
   double   x_final, y_final, x_periodic, y_periodic, disp;
 
@@ -372,7 +371,7 @@ int verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t L)
 
   /* According to initial location and charge determine the direction of displacements */
   disp = (double)(iterations+1)*(2*p.k+1);
-  x_final = ( (p.q * QG(y,x,L)) > 0) ? p.x0+disp : p.x0-disp;
+  x_final = ( (p.q * Qgrid[x*(L+1)+y]) > 0) ? p.x0+disp : p.x0-disp;
   y_final = p.y0 + p.m * (double)(iterations+1);
 
   /* apply periodicity, making sure we never mod a negative value */
@@ -380,55 +379,57 @@ int verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t L)
   y_periodic = fmod(y_final+(double)(iterations+1) *llabs(p.m)*L, L);
 
   if ( fabs(p.x - x_periodic) > epsilon || fabs(p.y - y_periodic) > epsilon) {
-    return FAILURE;
+    return false;
   }
-  return SUCCESS;
+  return true;
 }
 
 /* Computes the Coulomb force among two charges q1 and q2 */
-void computeCoulomb(double x_dist, double y_dist, double q1, double q2, double *fx, double *fy){
-  double   r2 = x_dist * x_dist + y_dist * y_dist;
-  double   r = cl::sycl::sqrt(r2);
-  double   f_coulomb = q1 * q2 / r2;
+inline void computeCoulomb(double x_dist, double y_dist, double q1, double q2, double & fx, double & fy)
+{
+  const double r2 = x_dist * x_dist + y_dist * y_dist;
+  const double r = cl::sycl::sqrt(r2);
+  const double f_coulomb = q1 * q2 / r2;
 
-  (*fx) = f_coulomb * x_dist/r; // f_coulomb * cos_theta
-  (*fy) = f_coulomb * y_dist/r; // f_coulomb * sin_theta
+  fx = f_coulomb * x_dist / r; // f_coulomb * cos_theta
+  fy = f_coulomb * y_dist / r; // f_coulomb * sin_theta
   return;
 }
 
 /* Computes the total Coulomb force on a particle exerted from the charges of the corresponding cell */
-void computeTotalForce(particle_t p, uint64_t L, double *Qgrid, double *fx, double *fy){
-  uint64_t  y, x;
-  double   tmp_fx, tmp_fy, rel_y, rel_x, tmp_res_x = 0.0, tmp_res_y = 0.0;
+inline void computeTotalForce(const particle_t p, const uint64_t L, const double * const Qgrid, double & fx, double & fy)
+{
+  double tmp_fx, tmp_fy;
+  double tmp_res_x{0}, tmp_res_y{0};
 
   /* Coordinates of the cell containing the particle */
-  y = (uint64_t) cl::sycl::floor(p.y);
-  x = (uint64_t) cl::sycl::floor(p.x);
-  rel_x = p.x -  x;
-  rel_y = p.y -  y;
+  uint64_t y = (uint64_t) sycl::floor(p.y);
+  uint64_t x = (uint64_t) sycl::floor(p.x);
+  double rel_x = p.x -  x;
+  double rel_y = p.y -  y;
 
   /* Coulomb force from top-left charge */
-  computeCoulomb(rel_x, rel_y, p.q, QG(y,x,L), &tmp_fx, &tmp_fy);
+  computeCoulomb(rel_x, rel_y, p.q, Qgrid[x*(L+1)+y], tmp_fx, tmp_fy);
   tmp_res_x += tmp_fx;
   tmp_res_y += tmp_fy;
 
   /* Coulomb force from bottom-left charge */
-  computeCoulomb(rel_x, 1.0-rel_y, p.q, QG(y+1,x,L), &tmp_fx, &tmp_fy);
+  computeCoulomb(rel_x, 1.0-rel_y, p.q, Qgrid[x*(L+1)+y+1], tmp_fx, tmp_fy);
   tmp_res_x += tmp_fx;
   tmp_res_y -= tmp_fy;
 
   /* Coulomb force from top-right charge */
-  computeCoulomb(1.0-rel_x, rel_y, p.q, QG(y,x+1,L), &tmp_fx, &tmp_fy);
+  computeCoulomb(1.0-rel_x, rel_y, p.q, Qgrid[(x+1)*(L+1)+y], tmp_fx, tmp_fy);
   tmp_res_x -= tmp_fx;
   tmp_res_y += tmp_fy;
 
   /* Coulomb force from bottom-right charge */
-  computeCoulomb(1.0-rel_x, 1.0-rel_y, p.q, QG(y+1,x+1,L), &tmp_fx, &tmp_fy);
+  computeCoulomb(1.0-rel_x, 1.0-rel_y, p.q, Qgrid[(x+1)*(L+1)+y+1], tmp_fx, tmp_fy);
   tmp_res_x -= tmp_fx;
   tmp_res_y -= tmp_fy;
 
-  (*fx) = tmp_res_x;
-  (*fy) = tmp_res_y;
+  fx = tmp_res_x;
+  fy = tmp_res_y;
 }
 
 int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
@@ -441,16 +442,6 @@ int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
 }
 
 int main(int argc, char ** argv) {
-
-  double      rho;               // attenuation factor for geometric particle distribution
-  int64_t     k, m;              // determine initial horizontal and vertical velocity of
-                                 // particles-- (2*k)+1 cells per time step
-  double      alpha, beta;       // slope and offset values for linear particle distribution
-  bbox_t      grid_patch,        // whole grid
-              init_patch;        // subset of grid used for localized initialization
-  int         correctness = 1;   // determines whether simulation was correct
-  uint64_t    iter, i;           // dummies
-  double      fx, fy, ax, ay;    // forces and accelerations
 
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/DPC++ Particle-in-Cell execution on 2D grid" << std::endl;
@@ -466,6 +457,14 @@ int main(int argc, char ** argv) {
   uint64_t    n;                 // total number of particles in the simulation
   uint64_t    particle_mode;     // particle initialization mode (int)
   std::string init_mode;
+
+  double      rho;               // attenuation factor for geometric particle distribution
+  double      alpha, beta;       // slope and offset values for linear particle distribution
+  int64_t     k, m;              // determine initial horizontal and vertical velocity of
+                                 // particles-- (2*k)+1 cells per time step
+  bbox_t      grid_patch,        // whole grid
+              init_patch;        // subset of grid used for localized initialization
+
 
   try {
     if (argc<6) {
@@ -566,13 +565,13 @@ int main(int argc, char ** argv) {
     return 1;
   }
 
-
   std::cout << "Grid size                      = " << L << std::endl;
   std::cout << "Number of particles requested  = " << n << std::endl;
   std::cout << "Number of time steps           = " << iterations << std::endl;
   std::cout << "Initialization mode            = " << init_mode << std::endl;
 
-  switch(particle_mode) {
+  switch (particle_mode)
+  {
       case GEOMETRIC:
           std::cout << "  Attenuation factor           = " << rho << std::endl;
           break;
@@ -600,7 +599,8 @@ int main(int argc, char ** argv) {
   LCG_init(&dice);
 
   particle_t * particles; // the particles array
-  switch(particle_mode) {
+  switch (particle_mode)
+  {
       case GEOMETRIC:
           particles = initializeGeometric(n, L, rho, k, m, &n, &dice);
           break;
@@ -627,7 +627,7 @@ int main(int argc, char ** argv) {
       const size_t local_work_size = 256;
       size_t global_work_size = (n + local_work_size - 1) / local_work_size * local_work_size;
 
-      for (iter=0; iter<=iterations; iter++) {
+      for (int iter=0; iter<=iterations; iter++) {
 
           if (iter==1) pic_time = prk::wtime();
 
@@ -635,16 +635,17 @@ int main(int argc, char ** argv) {
           q.submit([&](sycl::handler& cgh) {
 
               auto p = d_particles.get_access<sycl::access::mode::read_write>(cgh);
-              auto q = d_Qgrid.get_access<sycl::access::mode::read_write>(cgh);
+              auto q = d_Qgrid.get_access<sycl::access::mode::read>(cgh);
+
               cgh.parallel_for<class kernelPIC>(sycl::nd_range<1>(sycl::range<1>(global_work_size), sycl::range<1>(local_work_size)), [=] (sycl::nd_item<1> item) {
-                  uint64_t i = item.get_global_id(0);
+                  auto i = item.get_global_id(0);
                   if (i < n) {
                       double fx = 0.0;
                       double fy = 0.0;
-                      //computeTotalForce(p[i], L, Qgrid, &fx, &fy);
-                      computeTotalForce(p[i], L, q.get_pointer(), &fx, &fy);
-                      double ax = fx * MASS_INV;
-                      double ay = fy * MASS_INV;
+                      computeTotalForce(p[i], L, q.get_pointer(), fx, fy);
+                      const double MASS_INV = 1.0;
+                      const double ax = fx * MASS_INV;
+                      const double ay = fy * MASS_INV;
 
                       /* Update particle positions, taking into account periodic boundaries */
                       p[i].x = sycl::fmod(p[i].x + p[i].v_x*DT + 0.5*ax*DT*DT + L, (double)L);
@@ -663,11 +664,12 @@ int main(int argc, char ** argv) {
   pic_time = prk::wtime() - pic_time;
 
   /* Run the verification test */
-  for (i=0; i<n; i++) {
-    correctness *= verifyParticle(particles[i], iterations, Qgrid, L);
+  int correct = true;
+  for (uint64_t i=0; i<n; i++) {
+    correct &= verifyParticle(particles[i], iterations, Qgrid, L);
   }
 
-  if (correctness) {
+  if (correct) {
       std::cout << "Solution validates" << std::endl;
 #ifdef VERBOSE
     std::cout << "Simulation time is" << pic_time << "seconds" << std::endl;
