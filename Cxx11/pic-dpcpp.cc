@@ -144,8 +144,7 @@ double * initializeGrid(uint64_t L)
 {
   double * Qgrid = prk::malloc<double>((L+1)*(L+1));
   if (Qgrid == NULL) {
-    printf("ERROR: Could not allocate space for grid\n");
-    exit(EXIT_FAILURE);
+    throw "ERROR: Could not allocate space for grid.";
   }
 
   /* initialization with dipoles */
@@ -203,8 +202,7 @@ particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
 
   particle_t * particles = prk::malloc<particle_t>(*n_placed);
   if (particles == NULL) {
-    printf("ERROR: Could not allocate space for particles\n");
-    exit(EXIT_FAILURE);
+      throw "ERROR: Could not allocate space for particles";
   }
 
   /* Re-initialize random number generator */
@@ -248,8 +246,7 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
 
   particle_t * particles = prk::malloc<particle_t>(*n_placed);
   if (particles == NULL) {
-    printf("ERROR: Could not allocate space for particles\n");
-    exit(EXIT_FAILURE);
+      throw "ERROR: Could not allocate space for particles.";
   }
 
   /* Re-initialize random number generator */
@@ -298,8 +295,7 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
 
   particle_t * particles = prk::malloc<particle_t>(*n_placed);
   if (particles == NULL) {
-    printf("ERROR: Could not allocate space for particles\n");
-    exit(EXIT_FAILURE);
+      throw "ERROR: Could not allocate space for particles.";
   }
 
   /* Re-initialize random number generator */
@@ -349,8 +345,7 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
 
   particles = prk::malloc<particle_t>(*n_placed);
   if (particles == NULL) {
-    printf("ERROR: Could not allocate space for particles\n");
-    exit(EXIT_FAILURE);
+      throw "ERROR: Could not allocate space for particles";
   }
 
   /* Re-initialize random number generator */
@@ -456,11 +451,6 @@ int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
 
 int main(int argc, char ** argv) {
 
-  int         args_used = 1;     // keeps track of # consumed arguments
-  uint64_t    L;                 // dimension of grid in cells
-  uint64_t    iterations;        // total number of simulation steps
-  uint64_t    n;                 // total number of particles in the simulation
-  char        *init_mode;        // particle initialization mode (char)
   uint64_t    particle_mode;     // particle initialization mode (int)
   double      rho;               // attenuation factor for geometric particle distribution
   int64_t     k, m;              // determine initial horizontal and vertical velocity of
@@ -486,111 +476,124 @@ int main(int argc, char ** argv) {
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  printf("OpenMP Particle-in-Cell execution on 2D grid\n");
-  if (argc<6) {
-    printf("Usage: %s <#simulation steps> <grid size> <#particles> <k (particle charge semi-increment)> ", argv[0]);
-    printf("<m (vertical particle velocity)>\n");
-    printf("          <init mode> <init parameters>]\n");
-    printf("   init mode \"GEOMETRIC\"  parameters: <attenuation factor>\n");
-    printf("             \"SINUSOIDAL\" parameters: none\n");
-    printf("             \"LINEAR\"     parameters: <negative slope> <constant offset>\n");
-    printf("             \"PATCH\"      parameters: <xleft> <xright>  <ybottom> <ytop>\n");
-    exit(SUCCESS);
-  }
+  uint64_t    iterations;        // total number of simulation steps
+  uint64_t    L;                 // dimension of grid in cells
+  uint64_t    n;                 // total number of particles in the simulation
+  std::string init_mode;
 
-  iterations = atol(*++argv);  args_used++;
-  if (iterations<1) {
-    printf("ERROR: Number of time steps must be positive: %" PRIu64 "\n", iterations);
-    exit(FAILURE);
-  }
-  L = atol(*++argv);  args_used++;
-  if (L<1 || L%2) {
-    printf("ERROR: Number of grid cells must be positive and even: %" PRIu64 "\n", L);
-    exit(FAILURE);
-  }
-
-  grid_patch = (bbox_t){0, L+1, 0, L+1};
-  n = atol(*++argv);  args_used++;
-  if (n<1) {
-    printf("ERROR: Number of particles must be positive: %" PRIu64 "\n", n);
-    exit(FAILURE);
-  }
-
-  particle_mode  = UNDEFINED;
-  k = atoi(*++argv);   args_used++;
-  if (k<0) {
-    printf("ERROR: Particle semi-charge must be non-negative: %" PRIu64 "\n", k);
-    exit(FAILURE);
-  }
-  m = atoi(*++argv);   args_used++;
-  init_mode = *++argv; args_used++;
-
-  /* Initialize particles with geometric distribution */
-  if (strcmp(init_mode, "GEOMETRIC") == 0) {
-    if (argc<args_used+1) {
-      printf("ERROR: Not enough arguments for GEOMETRIC\n");
-      exit(FAILURE);
+  try {
+    if (argc<6) {
+      std::cout << "Usage: " << argv[0]
+                << " <#simulation steps> <grid size> <#particles>"
+                << " <k (particle charge semi-increment)> " << std::endl;
+      std::cout << "<m (vertical particle velocity)>" << std::endl;
+      std::cout << "          <init mode> <init parameters>]" << std::endl;
+      std::cout << "   init mode \"GEOMETRIC\"  parameters: <attenuation factor>" << std::endl;
+      std::cout << "             \"SINUSOIDAL\" parameters: none" << std::endl;
+      std::cout << "             \"LINEAR\"     parameters: <negative slope> <constant offset>" << std::endl;
+      std::cout << "             \"PATCH\"      parameters: <xleft> <xright>  <ybottom> <ytop>" << std::endl;
+      throw "";
     }
-    particle_mode = GEOMETRIC;
-    rho = atof(*++argv);   args_used++;
+
+    iterations = std::atol(argv[1]);
+    if (iterations<1) {
+      throw "ERROR: Number of time steps must be positive.";
+    }
+    L = std::atol(argv[2]);
+    if (L<1 || L%2) {
+      throw "ERROR: Number of grid cells must be positive and even.";
+    }
+
+    grid_patch = (bbox_t){0, L+1, 0, L+1};
+    n = std::atol(argv[3]);
+    if (n<1) {
+      throw "ERROR: Number of particles must be positive.";
+    }
+
+    particle_mode  = UNDEFINED;
+    k = std::atoi(argv[4]);
+    if (k<0) {
+      throw "ERROR: Particle semi-charge must be non-negative.";
+    }
+    m = std::atoi(argv[5]);
+
+    init_mode = std::string(argv[6]);
+
+    /* Initialize particles with geometric distribution */
+    if (init_mode.find("GEOMETRIC") != std::string::npos) {
+      if (argc<7) {
+        throw "ERROR: Not enough arguments for GEOMETRIC.";
+      }
+      particle_mode = GEOMETRIC;
+      rho = std::atof(argv[7]);
+    }
+
+    /* Initialize with a sinusoidal particle distribution (single period) */
+    if (init_mode.find("SINUSOIDAL") != std::string::npos) {
+      particle_mode = SINUSOIDAL;
+    }
+
+    /* Initialize particles with linear distribution */
+    /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
+    if (init_mode.find("LINEAR") != std::string::npos) {
+      if (argc<8) {
+        throw "ERROR: Not enough arguments for LINEAR initialization.";
+      }
+      particle_mode = LINEAR;
+      alpha = std::atof(argv[7]);
+      beta  = std::atof(argv[8]);
+      if (beta <0 || beta<alpha) {
+        throw "ERROR: linear profile gives negative particle density.";
+      }
+    }
+
+    /* Initialize particles uniformly within a "patch" */
+    if (init_mode.find("PATCH") != std::string::npos) {
+      if (argc<10) {
+        throw "ERROR: Not enough arguments for PATCH initialization.";
+        exit(FAILURE);
+      }
+      particle_mode = PATCH;
+      init_patch.left   = std::atoi(argv[7]);
+      init_patch.right  = std::atoi(argv[8]);
+      init_patch.bottom = std::atoi(argv[9]);
+      init_patch.top    = std::atoi(argv[10]);
+      if (bad_patch(&init_patch, &grid_patch)) {
+        throw "ERROR: inconsistent initial patch.";
+      }
+    }
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+    return 1;
   }
 
-  /* Initialize with a sinusoidal particle distribution (single period) */
-  if (strcmp(init_mode, "SINUSOIDAL") == 0) {
-    particle_mode = SINUSOIDAL;
-  }
 
-  /* Initialize particles with linear distribution */
-  /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
-  if (strcmp(init_mode, "LINEAR") == 0) {
-    if (argc<args_used+2) {
-      printf("ERROR: Not enough arguments for LINEAR initialization\n");
-      exit(EXIT_FAILURE);
-    }
-    particle_mode = LINEAR;
-    alpha = atof(*++argv); args_used++;
-    beta  = atof(*++argv); args_used++;
-    if (beta <0 || beta<alpha) {
-      printf("ERROR: linear profile gives negative particle density\n");
-      exit(EXIT_FAILURE);
-    }
-  }
-
-  /* Initialize particles uniformly within a "patch" */
-  if (strcmp(init_mode, "PATCH") == 0) {
-    if (argc<args_used+4) {
-      printf("ERROR: Not enough arguments for PATCH initialization\n");
-      exit(FAILURE);
-    }
-    particle_mode = PATCH;
-    init_patch.left   = atoi(*++argv); args_used++;
-    init_patch.right  = atoi(*++argv); args_used++;
-    init_patch.bottom = atoi(*++argv); args_used++;
-    init_patch.top    = atoi(*++argv); args_used++;
-    if (bad_patch(&init_patch, &grid_patch)) {
-      printf("ERROR: inconsistent initial patch\n");
-      exit(FAILURE);
-    }
-  }
-
-  printf("Grid size                      = %lu\n", L);
-  printf("Number of particles requested  = %lu\n", n);
-  printf("Number of time steps           = %lu\n", iterations);
-  printf("Initialization mode            = %s\n", init_mode);
+  std::cout << "Grid size                      = " << L << std::endl;
+  std::cout << "Number of particles requested  = " << n << std::endl;
+  std::cout << "Number of time steps           = " << iterations << std::endl;
+  std::cout << "Initialization mode            = " << init_mode << std::endl;
 
   switch(particle_mode) {
-  case GEOMETRIC: printf("  Attenuation factor           = %lf\n", rho);    break;
-  case SINUSOIDAL:                                                          break;
-  case LINEAR:    printf("  Negative slope               = %lf\n", alpha);
-                  printf("  Offset                       = %lf\n", beta);   break;
-  case PATCH:     printf("  Bounding box                 = %" PRIu64 "%" PRIu64 "%" PRIu64 "%" PRIu64 "\n",
-                         init_patch.left, init_patch.right,
-                         init_patch.bottom, init_patch.top);                break;
-  default:        printf("ERROR: Unsupported particle initializating mode\n");
-                   exit(FAILURE);
+      case GEOMETRIC:
+          std::cout << "  Attenuation factor           = " << rho << std::endl;
+          break;
+      case SINUSOIDAL:
+          break;
+      case LINEAR:
+          std::cout << "  Negative slope               = " << alpha << std::endl;
+          std::cout << "  Offset                       = " << beta << std::endl;
+          break;
+      case PATCH:
+          std::cout << "  Bounding box                 = "
+                    << init_patch.left << ", " << init_patch.right << ", "
+                    << init_patch.bottom << ", " << init_patch.top << std::endl;
+          break;
+      default:
+          throw "ERROR: Unsupported particle initializating mode";
   }
-  printf("Particle charge semi-increment = %ld\n", k);
-  printf("Vertical velocity              = %ld\n", m);
+  std::cout << "Particle charge semi-increment = " << k << std::endl;
+  std::cout << "Vertical velocity              = " << m << std::endl;
 
   /* Initialize grid of charges and particles */
   Qgrid = initializeGrid(L);
@@ -598,14 +601,14 @@ int main(int argc, char ** argv) {
   random_draw_t dice;
   LCG_init(&dice);
   switch(particle_mode) {
-  case GEOMETRIC:  particles = initializeGeometric(n, L, rho, k, m, &n, &dice);      break;
-  case SINUSOIDAL: particles = initializeSinusoidal(n, L, k, m, &n, &dice);          break;
-  case LINEAR:     particles = initializeLinear(n, L, alpha, beta, k, m, &n, &dice); break;
-  case PATCH:      particles = initializePatch(n, L, init_patch, k, m, &n, &dice);   break;
-  default:         printf("ERROR: Unsupported particle distribution\n");  exit(FAILURE);
+      case GEOMETRIC:  particles = initializeGeometric(n, L, rho, k, m, &n, &dice);      break;
+      case SINUSOIDAL: particles = initializeSinusoidal(n, L, k, m, &n, &dice);          break;
+      case LINEAR:     particles = initializeLinear(n, L, alpha, beta, k, m, &n, &dice); break;
+      case PATCH:      particles = initializePatch(n, L, init_patch, k, m, &n, &dice);   break;
+      default:         throw "ERROR: Unsupported particle distribution";
   }
 
-  printf("Number of particles placed     = %lu\n", n);
+  std::cout << "Number of particles placed     = " << n << std::endl;
 
   {
   queue q;
@@ -674,15 +677,15 @@ int main(int argc, char ** argv) {
   }
 
   if (correctness) {
-    printf("Solution validates\n");
+      std::cout << "Solution validates" << std::endl;
 #ifdef VERBOSE
-    printf("Simulation time is %lf seconds\n", pic_time);
+    std::cout << "Simulation time is" << pic_time << "seconds" << std::endl;
 #endif
     avg_time = n*iterations/pic_time;
-    printf("Rate (Mparticles_moved/s): %lf\n", 1.0e-6*avg_time);
+    std::cout << "Rate (Mparticles_moved/s): " << 1.0e-6*avg_time << std::endl;
   } else {
-    printf("Solution does not validate\n");
+    std::cout << "Solution does not validate" << std::endl;
   }
 
-  return(EXIT_SUCCESS);
+  return 0;
 }
