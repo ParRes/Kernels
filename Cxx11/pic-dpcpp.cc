@@ -78,15 +78,6 @@
 
 #include "random_draw.h"
 
-
-using namespace cl::sycl;
-constexpr access::mode sycl_read       = access::mode::read;
-constexpr access::mode sycl_write      = access::mode::write;
-constexpr access::mode sycl_read_write = access::mode::read_write;
-constexpr access::mode sycl_discard_read_write = access::mode::discard_read_write;
-constexpr access::mode sycl_discard_write = access::mode::discard_write;
-constexpr access::mode sycl_atomic     = access::mode::atomic;
-
 #define QG(i,j,L) Qgrid[(j)*(L+1)+i]
 #define MASS_INV 1.0
 #define Q 1.0
@@ -451,7 +442,6 @@ int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
 
 int main(int argc, char ** argv) {
 
-  uint64_t    particle_mode;     // particle initialization mode (int)
   double      rho;               // attenuation factor for geometric particle distribution
   int64_t     k, m;              // determine initial horizontal and vertical velocity of
                                  // particles-- (2*k)+1 cells per time step
@@ -459,18 +449,13 @@ int main(int argc, char ** argv) {
   bbox_t      grid_patch,        // whole grid
               init_patch;        // subset of grid used for localized initialization
   int         correctness = 1;   // determines whether simulation was correct
-  double      *Qgrid;            // field of fixed charges
-  particle_t  *particles, *p;    // the particles array
   uint64_t    iter, i;           // dummies
   double      fx, fy, ax, ay;    // forces and accelerations
-  double      avg_time, pic_time;// timing parameters
-  int         nthread_input,     // thread parameters
-              nthread;
-  int         num_error=0;       // flag that signals that requested and obtained
-                                 // numbers of threads are the same
 
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/DPC++ Particle-in-Cell execution on 2D grid" << std::endl;
+
+  sycl::queue q;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -479,6 +464,7 @@ int main(int argc, char ** argv) {
   uint64_t    iterations;        // total number of simulation steps
   uint64_t    L;                 // dimension of grid in cells
   uint64_t    n;                 // total number of particles in the simulation
+  uint64_t    particle_mode;     // particle initialization mode (int)
   std::string init_mode;
 
   try {
@@ -562,6 +548,18 @@ int main(int argc, char ** argv) {
         throw "ERROR: inconsistent initial patch.";
       }
     }
+
+    char * devchar = std::getenv("PRK_DEVICE");
+    std::string devname = (devchar==NULL ? "None" : devchar);
+    if (devname == "CPU") {
+        q = sycl::cpu_selector{};
+    } else if (devname == "GPU") {
+        q = sycl::gpu_selector{};
+    } else if (devname == "HOST") {
+        q = sycl::host_selector{};
+    } else {
+        throw "PRK_DEVICE must be CPU, GPU or HOST";
+    }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -586,8 +584,8 @@ int main(int argc, char ** argv) {
           break;
       case PATCH:
           std::cout << "  Bounding box                 = "
-                    << init_patch.left << ", " << init_patch.right << ", "
-                    << init_patch.bottom << ", " << init_patch.top << std::endl;
+                    << init_patch.left   << ", " << init_patch.right << ", "
+                    << init_patch.bottom << ", " << init_patch.top   << std::endl;
           break;
       default:
           throw "ERROR: Unsupported particle initializating mode";
@@ -596,77 +594,70 @@ int main(int argc, char ** argv) {
   std::cout << "Vertical velocity              = " << m << std::endl;
 
   /* Initialize grid of charges and particles */
-  Qgrid = initializeGrid(L);
+  double * Qgrid = initializeGrid(L);
 
   random_draw_t dice;
   LCG_init(&dice);
+
+  particle_t * particles; // the particles array
   switch(particle_mode) {
-      case GEOMETRIC:  particles = initializeGeometric(n, L, rho, k, m, &n, &dice);      break;
-      case SINUSOIDAL: particles = initializeSinusoidal(n, L, k, m, &n, &dice);          break;
-      case LINEAR:     particles = initializeLinear(n, L, alpha, beta, k, m, &n, &dice); break;
-      case PATCH:      particles = initializePatch(n, L, init_patch, k, m, &n, &dice);   break;
-      default:         throw "ERROR: Unsupported particle distribution";
+      case GEOMETRIC:
+          particles = initializeGeometric(n, L, rho, k, m, &n, &dice);
+          break;
+      case SINUSOIDAL:
+          particles = initializeSinusoidal(n, L, k, m, &n, &dice);
+          break;
+      case LINEAR:
+          particles = initializeLinear(n, L, alpha, beta, k, m, &n, &dice);
+          break;
+      case PATCH:
+          particles = initializePatch(n, L, init_patch, k, m, &n, &dice);
+          break;
+      default:
+          throw "ERROR: Unsupported particle distribution";
   }
 
   std::cout << "Number of particles placed     = " << n << std::endl;
 
+  double pic_time;
   {
-  queue q;
-  char * devchar = std::getenv("PRK_DEVICE");
-  std::string devname = (devchar==NULL ? "None" : devchar);
-  if (devname == "CPU") {
-      q = cpu_selector{};
-  }
-  else
-  if (devname == "GPU") {
-      q = gpu_selector{};
-  }
-  else
-  if (devname == "HOST") {
-      q = host_selector{};
-  }
-  else
-  {
-      std::cout << "PRK_DEVICE must be CPU, GPU or HOST" << std::endl;
-      std::abort();
-  }
+      sycl::buffer<particle_t, 1> d_particles (particles, n);
+      sycl::buffer<double, 1>     d_Qgrid(Qgrid, (L+1)*(L+1));
 
-  buffer<particle_t, 1> d_particles (particles, n);
+      const size_t local_work_size = 256;
+      size_t global_work_size = (n + local_work_size - 1) / local_work_size * local_work_size;
 
-  const size_t local_work_size = 256;
-  size_t global_work_size = (n + local_work_size - 1) / local_work_size * local_work_size;
+      for (iter=0; iter<=iterations; iter++) {
 
-  for (iter=0; iter<=iterations; iter++) {
+          if (iter==1) pic_time = prk::wtime();
 
-    /* start the timer after one warm-up time step */
-    if (iter==1) {
-      pic_time = prk::wtime();
-    }
+          /* Calculate forces on particles and update positions */
+          q.submit([&](sycl::handler& cgh) {
 
-    /* Calculate forces on particles and update positions */
-    q.submit([&](handler& cgh) {
-      auto p = d_particles.get_access<sycl_read_write>(cgh);
-      cgh.parallel_for<class kernelPIC>(
-         nd_range<1>(range<1>(global_work_size), range<1>(local_work_size)), [=] (nd_item<1> item) {
-        uint64_t i = item.get_global_id(0);
-        if (i >= n) return;
-        double fx = 0.0;
-        double fy = 0.0;
-        computeTotalForce(p[i], L, Qgrid, &fx, &fy);
-        double ax = fx * MASS_INV;
-        double ay = fy * MASS_INV;
+              auto p = d_particles.get_access<sycl::access::mode::read_write>(cgh);
+              auto q = d_Qgrid.get_access<sycl::access::mode::read_write>(cgh);
+              cgh.parallel_for<class kernelPIC>(sycl::nd_range<1>(sycl::range<1>(global_work_size), sycl::range<1>(local_work_size)), [=] (sycl::nd_item<1> item) {
+                  uint64_t i = item.get_global_id(0);
+                  if (i < n) {
+                      double fx = 0.0;
+                      double fy = 0.0;
+                      //computeTotalForce(p[i], L, Qgrid, &fx, &fy);
+                      computeTotalForce(p[i], L, q.get_pointer(), &fx, &fy);
+                      double ax = fx * MASS_INV;
+                      double ay = fy * MASS_INV;
 
-        /* Update particle positions, taking into account periodic boundaries */
-        p[i].x = cl::sycl::fmod(p[i].x + p[i].v_x*DT + 0.5*ax*DT*DT + L, (double)L);
-        p[i].y = cl::sycl::fmod(p[i].y + p[i].v_y*DT + 0.5*ay*DT*DT + L, (double)L);
+                      /* Update particle positions, taking into account periodic boundaries */
+                      p[i].x = sycl::fmod(p[i].x + p[i].v_x*DT + 0.5*ax*DT*DT + L, (double)L);
+                      p[i].y = sycl::fmod(p[i].y + p[i].v_y*DT + 0.5*ay*DT*DT + L, (double)L);
 
-        /* Update velocities */
-        p[i].v_x += ax * DT;
-        p[i].v_y += ay * DT;
-      });
-    });
-  }
-
+                      /* Update velocities */
+                      p[i].v_x += ax * DT;
+                      p[i].v_y += ay * DT;
+                  }
+              });
+          });
+          q.wait();
+      }
   }
 
   pic_time = prk::wtime() - pic_time;
@@ -681,7 +672,7 @@ int main(int argc, char ** argv) {
 #ifdef VERBOSE
     std::cout << "Simulation time is" << pic_time << "seconds" << std::endl;
 #endif
-    avg_time = n*iterations/pic_time;
+    double avg_time = n*iterations/pic_time;
     std::cout << "Rate (Mparticles_moved/s): " << 1.0e-6*avg_time << std::endl;
   } else {
     std::cout << "Solution does not validate" << std::endl;
