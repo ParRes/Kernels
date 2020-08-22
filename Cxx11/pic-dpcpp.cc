@@ -152,8 +152,6 @@ void finish_distribution(const uint64_t n, particle_t p[const n])
 /* Initializes  particles with geometric distribution */
 particle_t * initializeGeometric(uint64_t n_input, uint64_t L, double rho, double k, double m, uint64_t & n_placed, random_draw_t *parm)
 {
-  uint64_t x;
-
   /* initialize random number generator */
   LCG_init(parm);
 
@@ -162,7 +160,7 @@ particle_t * initializeGeometric(uint64_t n_input, uint64_t L, double rho, doubl
   /* Each cell in the i-th column of cells contains p(i) = A * rho^i particles */
   double A = n_input * ((1.0-rho) / (1.0-pow(rho,L))) / (double)L;
   n_placed = 0;
-  for (x=0; x<L; x++) {
+  for (uint64_t x=0; x<L; x++) {
     for (uint64_t y=0; y<L; y++) {
       n_placed += random_draw(A * pow(rho, x), parm);
     }
@@ -196,8 +194,7 @@ particle_t * initializeGeometric(uint64_t n_input, uint64_t L, double rho, doubl
 /* Initialize particles with a sinusoidal distribution */
 particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L, double k, double m, uint64_t & n_placed, random_draw_t *parm)
 {
-  double      step = prk::constants::pi() / L;
-  uint64_t    x, y, p, pi, actual_particles;
+  const double step = prk::constants::pi() / L;
 
   /* initialize random number generator */
   LCG_init(parm);
@@ -206,8 +203,8 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L, double k, double 
 
   /* Loop over columns of cells and assign number of particles proportional to sinusodial weight */
   n_placed = 0;
-  for (x=0; x<L; x++) {
-    for (y=0; y<L; y++) {
+  for (uint64_t x=0; x<L; x++) {
+    for (uint64_t y=0; y<L; y++) {
       n_placed += random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L), parm);
     }
   }
@@ -220,10 +217,10 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L, double k, double 
   /* Re-initialize random number generator */
   LCG_init(parm);
 
-  for (pi=0,x=0; x<L; x++) {
-    for (y=0; y<L; y++) {
-      actual_particles = random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L), parm);
-      for (p=0; p<actual_particles; p++,pi++) {
+  for (uint64_t pi=0,x=0; x<L; x++) {
+    for (uint64_t y=0; y<L; y++) {
+      const uint64_t actual_particles = random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L), parm);
+      for (uint64_t p=0; p<actual_particles; p++,pi++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
         particles[pi].k = k;
@@ -240,8 +237,7 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L, double k, double 
 /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
 particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double beta, double k, double m, uint64_t & n_placed, random_draw_t *parm)
 {
-  uint64_t    x, y, p, pi, actual_particles;
-  double      total_weight, step = 1.0/L, current_weight;
+  double step = 1.0/L;
 
   /* initialize random number generator */
   LCG_init(parm);
@@ -249,13 +245,13 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
   /* first determine total number of particles, then allocate and place them   */
 
   /* Find sum of all weights to normalize the number of particles */
-  total_weight = beta*L-alpha*0.5*step*L*(L-1);
+  double total_weight = beta*L-alpha*0.5*step*L*(L-1);
 
   /* Loop over columns of cells and assign number of particles proportional linear weight */
   n_placed = 0;
-  for (x=0; x<L; x++) {
-    current_weight = (beta - alpha * step * ((double) x));
-    for (y=0; y<L; y++) {
+  for (uint64_t x=0; x<L; x++) {
+    const double current_weight = (beta - alpha * step * ((double) x));
+    for (uint64_t y=0; y<L; y++) {
       n_placed += random_draw(n_input * (current_weight/total_weight)/L, parm);
     }
   }
@@ -269,11 +265,11 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
   LCG_init(parm);
 
   /* Loop over columns of cells and assign number of particles proportional linear weight */
-  for (pi=0,x=0; x<L; x++) {
-    current_weight = (beta - alpha * step * ((double) x));
-    for (y=0; y<L; y++) {
-      actual_particles = random_draw(n_input * (current_weight/total_weight)/L, parm);
-      for (p=0; p<actual_particles; p++,pi++) {
+  for (uint64_t pi=0,x=0; x<L; x++) {
+    const double current_weight = (beta - alpha * step * ((double) x));
+    for (uint64_t y=0; y<L; y++) {
+      uint64_t actual_particles = random_draw(n_input * (current_weight/total_weight)/L, parm);
+      for (uint64_t p=0; p<actual_particles; p++,pi++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
         particles[pi].k = k;
@@ -287,9 +283,9 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
 }
 
 /* Initialize uniformly particles within a "patch" */
-particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch, double k, double m, uint64_t & n_placed, random_draw_t *parm){
-  particle_t  *particles;
-  uint64_t    x, y, p, pi, total_cells, actual_particles;
+particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch, double k, double m, uint64_t & n_placed, random_draw_t *parm)
+{
+  uint64_t total_cells, actual_particles;
 
   /* initialize random number generator */
   LCG_init(parm);
@@ -300,15 +296,15 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch, double k
 
   /* Iterate over the columns of cells and assign uniform number of particles */
   n_placed = 0;
-  for (x=0; x<L; x++) {
-    for (y=0; y<L; y++) {
-      actual_particles = random_draw(particles_per_cell, parm);
+  for (uint64_t x=0; x<L; x++) {
+    for (uint64_t y=0; y<L; y++) {
+      uint64_t actual_particles = random_draw(particles_per_cell, parm);
       if (x<patch.left || x>patch.right || y<patch.bottom || y>patch.top) actual_particles = 0;
       n_placed += actual_particles;
     }
   }
 
-  particles = prk::malloc<particle_t>(n_placed);
+  particle_t * particles = prk::malloc<particle_t>(n_placed);
   if (particles == NULL) {
       throw "ERROR: Could not allocate space for particles";
   }
@@ -317,12 +313,11 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch, double k
   LCG_init(parm);
 
   /* Iterate over the columns of cells and assign uniform number of particles */
-  for (pi=0,x=0; x<L; x++) {
-    for (y=0; y<L; y++) {
+  for (uint64_t pi=0,x=0; x<L; x++) {
+    for (uint64_t y=0; y<L; y++) {
       actual_particles = random_draw(particles_per_cell, parm);
-      if (x<patch.left || x>patch.right || y<patch.bottom || y>patch.top)
-        actual_particles = 0;
-      for (p=0; p<actual_particles; p++,pi++) {
+      if (x<patch.left || x>patch.right || y<patch.bottom || y>patch.top) actual_particles = 0;
+      for (uint64_t p=0; p<actual_particles; p++,pi++) {
         particles[pi].x = x + REL_X;
         particles[pi].y = y + REL_Y;
         particles[pi].k = k;
@@ -431,7 +426,7 @@ int main(int argc, char ** argv) {
   uint64_t    iterations;        // total number of simulation steps
   uint64_t    L;                 // dimension of grid in cells
   uint64_t    n;                 // total number of particles in the simulation
-  uint64_t    particle_mode;     // particle initialization mode (int)
+  geometry particle_mode;        // particle initialization mode (int)
   std::string init_mode;
 
   double      rho;               // attenuation factor for geometric particle distribution
@@ -471,7 +466,6 @@ int main(int argc, char ** argv) {
       throw "ERROR: Number of particles must be positive.";
     }
 
-    geometry particle_mode  = UNDEFINED;
     k = std::atoi(argv[4]);
     if (k<0) {
       throw "ERROR: Particle semi-charge must be non-negative.";
