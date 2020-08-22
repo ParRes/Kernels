@@ -63,36 +63,16 @@
 #include "prk_sycl.h"
 #include "prk_util.h"
 
-#define __STDC_FORMAT_MACROS 1
-#include <inttypes.h>
-
-#include <cstdint>
-
-#include <cmath>
-/* M_PI is not defined in strict C99 */
-#ifdef M_PI
-#define PRK_M_PI M_PI
-#else
-#define PRK_M_PI 3.14159265358979323846264338327950288419716939937510
-#endif
-
 #include "random_draw.h"
 
 static const double Q = 1.0;
 static const double epsilon = 0.000001;
-static const double  DT = 1.0;
+static const double DT = 1.0;
 
-#define SUCCESS 1
-#define FAILURE 0
+static const double REL_X = 0.5;
+static const double REL_Y = 0.5;
 
-#define REL_X 0.5
-#define REL_Y 0.5
-
-#define GEOMETRIC  0
-#define SINUSOIDAL 1
-#define LINEAR     2
-#define PATCH      3
-#define UNDEFINED  4
+enum geometry { GEOMETRIC, SINUSOIDAL, LINEAR, PATCH, UNDEFINED };
 
 typedef struct {
   uint64_t left;
@@ -218,7 +198,7 @@ particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
 particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
                                  double k, double m, uint64_t *n_placed,
                                 random_draw_t *parm){
-  double      step = PRK_M_PI/L;
+  double      step = prk::constants::pi() / L;
   uint64_t    x, y, p, pi, actual_particles;
 
   /* initialize random number generator */
@@ -495,7 +475,7 @@ int main(int argc, char ** argv) {
       throw "ERROR: Number of particles must be positive.";
     }
 
-    particle_mode  = UNDEFINED;
+    geometry particle_mode  = UNDEFINED;
     k = std::atoi(argv[4]);
     if (k<0) {
       throw "ERROR: Particle semi-charge must be non-negative.";
@@ -536,7 +516,6 @@ int main(int argc, char ** argv) {
     if (init_mode.find("PATCH") != std::string::npos) {
       if (argc<10) {
         throw "ERROR: Not enough arguments for PATCH initialization.";
-        exit(FAILURE);
       }
       particle_mode = PATCH;
       init_patch.left   = std::atoi(argv[7]);
