@@ -126,7 +126,7 @@ double * initializeGrid(uint64_t L)
 }
 
 /* Completes particle distribution */
-void finish_distribution(uint64_t n, particle_t *p)
+void finish_distribution(const uint64_t n, particle_t p[const n])
 {
   for (uint64_t pi=0; pi<n; pi++) {
     double x_coord = p[pi].x;
@@ -150,9 +150,7 @@ void finish_distribution(uint64_t n, particle_t *p)
 }
 
 /* Initializes  particles with geometric distribution */
-particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
-                                double k, double m, uint64_t *n_placed,
-                                random_draw_t *parm)
+particle_t * initializeGeometric(uint64_t n_input, uint64_t L, double rho, double k, double m, uint64_t & n_placed, random_draw_t *parm)
 {
   uint64_t x;
 
@@ -163,13 +161,14 @@ particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
 
   /* Each cell in the i-th column of cells contains p(i) = A * rho^i particles */
   double A = n_input * ((1.0-rho) / (1.0-pow(rho,L))) / (double)L;
-  for (*n_placed=0, x=0; x<L; x++) {
+  n_placed = 0;
+  for (x=0; x<L; x++) {
     for (uint64_t y=0; y<L; y++) {
-      (*n_placed) += random_draw(A * pow(rho, x), parm);
+      n_placed += random_draw(A * pow(rho, x), parm);
     }
   }
 
-  particle_t * particles = prk::malloc<particle_t>(*n_placed);
+  particle_t * particles = prk::malloc<particle_t>(n_placed);
   if (particles == NULL) {
       throw "ERROR: Could not allocate space for particles";
   }
@@ -189,15 +188,14 @@ particle_t *initializeGeometric(uint64_t n_input, uint64_t L, double rho,
       }
     }
   }
-  finish_distribution((*n_placed), particles);
+  finish_distribution(n_placed, particles);
 
   return particles;
 }
 
 /* Initialize particles with a sinusoidal distribution */
-particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
-                                 double k, double m, uint64_t *n_placed,
-                                random_draw_t *parm){
+particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L, double k, double m, uint64_t & n_placed, random_draw_t *parm)
+{
   double      step = prk::constants::pi() / L;
   uint64_t    x, y, p, pi, actual_particles;
 
@@ -207,13 +205,14 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
   /* first determine total number of particles, then allocate and place them   */
 
   /* Loop over columns of cells and assign number of particles proportional to sinusodial weight */
-  for (*n_placed=0,x=0; x<L; x++) {
+  n_placed = 0;
+  for (x=0; x<L; x++) {
     for (y=0; y<L; y++) {
-      (*n_placed) += random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L), parm);
+      n_placed += random_draw(2.0*cos(x*step)*cos(x*step)*n_input/(L*L), parm);
     }
   }
 
-  particle_t * particles = prk::malloc<particle_t>(*n_placed);
+  particle_t * particles = prk::malloc<particle_t>(n_placed);
   if (particles == NULL) {
       throw "ERROR: Could not allocate space for particles.";
   }
@@ -232,16 +231,14 @@ particle_t *initializeSinusoidal(uint64_t n_input, uint64_t L,
       }
     }
   }
-  finish_distribution((*n_placed), particles);
+  finish_distribution(n_placed, particles);
 
   return particles;
 }
 
 /* Initialize particles with linearly decreasing distribution */
 /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
-particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double beta,
-                             double k, double m, uint64_t *n_placed,
-                             random_draw_t *parm)
+particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double beta, double k, double m, uint64_t & n_placed, random_draw_t *parm)
 {
   uint64_t    x, y, p, pi, actual_particles;
   double      total_weight, step = 1.0/L, current_weight;
@@ -255,14 +252,15 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
   total_weight = beta*L-alpha*0.5*step*L*(L-1);
 
   /* Loop over columns of cells and assign number of particles proportional linear weight */
-  for ((*n_placed)=0,x=0; x<L; x++) {
+  n_placed = 0;
+  for (x=0; x<L; x++) {
     current_weight = (beta - alpha * step * ((double) x));
     for (y=0; y<L; y++) {
-      (*n_placed) += random_draw(n_input * (current_weight/total_weight)/L, parm);
+      n_placed += random_draw(n_input * (current_weight/total_weight)/L, parm);
     }
   }
 
-  particle_t * particles = prk::malloc<particle_t>(*n_placed);
+  particle_t * particles = prk::malloc<particle_t>(n_placed);
   if (particles == NULL) {
       throw "ERROR: Could not allocate space for particles.";
   }
@@ -283,15 +281,13 @@ particle_t *initializeLinear(uint64_t n_input, uint64_t L, double alpha, double 
       }
     }
   }
-  finish_distribution((*n_placed), particles);
+  finish_distribution(n_placed, particles);
 
   return particles;
 }
 
 /* Initialize uniformly particles within a "patch" */
-particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
-                            double k, double m, uint64_t *n_placed,
-                            random_draw_t *parm){
+particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch, double k, double m, uint64_t & n_placed, random_draw_t *parm){
   particle_t  *particles;
   uint64_t    x, y, p, pi, total_cells, actual_particles;
 
@@ -303,16 +299,16 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
   double particles_per_cell = (double) n_input/total_cells;
 
   /* Iterate over the columns of cells and assign uniform number of particles */
-  for ((*n_placed)=0,x=0; x<L; x++) {
+  n_placed = 0;
+  for (x=0; x<L; x++) {
     for (y=0; y<L; y++) {
       actual_particles = random_draw(particles_per_cell, parm);
-      if (x<patch.left || x>patch.right || y<patch.bottom || y>patch.top)
-        actual_particles = 0;
-      (*n_placed) += actual_particles;
+      if (x<patch.left || x>patch.right || y<patch.bottom || y>patch.top) actual_particles = 0;
+      n_placed += actual_particles;
     }
   }
 
-  particles = prk::malloc<particle_t>(*n_placed);
+  particles = prk::malloc<particle_t>(n_placed);
   if (particles == NULL) {
       throw "ERROR: Could not allocate space for particles";
   }
@@ -334,7 +330,7 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch,
       }
     }
   }
-  finish_distribution((*n_placed), particles);
+  finish_distribution(n_placed, particles);
 
   return particles;
 }
@@ -581,16 +577,16 @@ int main(int argc, char ** argv) {
   switch (particle_mode)
   {
       case GEOMETRIC:
-          particles = initializeGeometric(n, L, rho, k, m, &n, &dice);
+          particles = initializeGeometric(n, L, rho, k, m, n, &dice);
           break;
       case SINUSOIDAL:
-          particles = initializeSinusoidal(n, L, k, m, &n, &dice);
+          particles = initializeSinusoidal(n, L, k, m, n, &dice);
           break;
       case LINEAR:
-          particles = initializeLinear(n, L, alpha, beta, k, m, &n, &dice);
+          particles = initializeLinear(n, L, alpha, beta, k, m, n, &dice);
           break;
       case PATCH:
-          particles = initializePatch(n, L, init_patch, k, m, &n, &dice);
+          particles = initializePatch(n, L, init_patch, k, m, n, &dice);
           break;
       default:
           throw "ERROR: Unsupported particle distribution";
