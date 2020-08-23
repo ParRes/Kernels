@@ -80,6 +80,8 @@ namespace prk {
             std::cout << e.get_description() << std::endl;
             std::cout << e.get_cl_error_message() << std::endl;
             std::cout << e.get_cl_code() << std::endl;
+#else
+            (void)e;
 #endif
         }
 
