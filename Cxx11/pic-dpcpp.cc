@@ -333,21 +333,18 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch, double k
 /* Verifies the final position of a particle */
 bool verifyParticle(particle_t p, int iterations, double *Qgrid, uint64_t L)
 {
-  uint64_t x, y;
-  double   x_final, y_final, x_periodic, y_periodic, disp;
-
   /* Coordinates of the cell containing the particle initially */
-  y = (uint64_t) p.y0;
-  x = (uint64_t) p.x0;
+  uint64_t y = (uint64_t) p.y0;
+  uint64_t x = (uint64_t) p.x0;
 
   /* According to initial location and charge determine the direction of displacements */
-  disp = (double)(iterations+1)*(2*p.k+1);
-  x_final = ( (p.q * Qgrid[x*(L+1)+y]) > 0) ? p.x0+disp : p.x0-disp;
-  y_final = p.y0 + p.m * (double)(iterations+1);
+  double disp = (double)(iterations+1)*(2*p.k+1);
+  double x_final = ( (p.q * Qgrid[x*(L+1)+y]) > 0) ? p.x0+disp : p.x0-disp;
+  double y_final = p.y0 + p.m * (double)(iterations+1);
 
   /* apply periodicity, making sure we never mod a negative value */
-  x_periodic = fmod(x_final+(double)(iterations+1) *(2*p.k+1)*L, L);
-  y_periodic = fmod(y_final+(double)(iterations+1) *llabs(p.m)*L, L);
+  double x_periodic = fmod(x_final+(double)(iterations+1) *(2*p.k+1)*L, L);
+  double y_periodic = fmod(y_final+(double)(iterations+1) *llabs(p.m)*L, L);
 
   if ( fabs(p.x - x_periodic) > epsilon || fabs(p.y - y_periodic) > epsilon) {
     return false;
