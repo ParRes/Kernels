@@ -331,7 +331,7 @@ particle_t *initializePatch(uint64_t n_input, uint64_t L, bbox_t patch, double k
 }
 
 /* Verifies the final position of a particle */
-bool verifyParticle(particle_t p, uint64_t iterations, double *Qgrid, uint64_t L)
+bool verifyParticle(particle_t p, int iterations, double *Qgrid, uint64_t L)
 {
   uint64_t x, y;
   double   x_final, y_final, x_periodic, y_periodic, disp;
@@ -423,7 +423,7 @@ int main(int argc, char ** argv) {
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  uint64_t    iterations;        // total number of simulation steps
+  int iterations;
   uint64_t    L;                 // dimension of grid in cells
   uint64_t    n;                 // total number of particles in the simulation
   geometry particle_mode;        // particle initialization mode (int)
