@@ -91,13 +91,13 @@ mpi: nstream-mpi stencil-mpi
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
-sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl
+sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl pic-sycl
 
 sycl-usm: nstream-sycl-usm nstream-sycl-explicit-usm stencil-sycl-usm transpose-sycl-usm
 
 sycl-explicit: nstream-sycl-explicit transpose-sycl-explicit
 
-dpcpp: nstream-dpcpp nstream-multigpu-dpcpp transpose-dpcpp pic-dpcpp
+dpcpp: nstream-dpcpp nstream-multigpu-dpcpp transpose-dpcpp
 
 tbb: p2p-innerloop-tbb p2p-tbb stencil-tbb transpose-tbb nstream-tbb \
      p2p-hyperplane-tbb p2p-tasks-tbb
@@ -162,7 +162,7 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 pic: pic.cc prk_util.h random_draw.o
 	$(CXX) $(CXXFLAGS) $< random_draw.o -o $@
 
-pic-dpcpp: pic-dpcpp.cc prk_util.h prk_sycl.h random_draw.o
+pic-sycl: pic-sycl.cc prk_util.h prk_sycl.h random_draw.o
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< random_draw.o -o $@
 
 random_draw.o: random_draw.c random_draw.h
