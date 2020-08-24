@@ -409,12 +409,12 @@ int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
   return(0);
 }
 
+class pic;
+
 int main(int argc, char ** argv) {
 
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/DPC++ Particle-in-Cell execution on 2D grid" << std::endl;
-
-  sycl::queue q;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -513,23 +513,25 @@ int main(int argc, char ** argv) {
         throw "ERROR: inconsistent initial patch.";
       }
     }
-
-    char * devchar = std::getenv("PRK_DEVICE");
-    std::string devname = (devchar==NULL ? "None" : devchar);
-    if (devname == "CPU") {
-        q = sycl::cpu_selector{};
-    } else if (devname == "GPU") {
-        q = sycl::gpu_selector{};
-    } else if (devname == "HOST") {
-        q = sycl::host_selector{};
-    } else {
-        throw "PRK_DEVICE must be CPU, GPU or HOST";
-    }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
+
+  char * devchar = std::getenv("PRK_DEVICE");
+  std::string devname = (devchar==NULL ? "None" : devchar);
+  sycl::device d;
+  if (devname == "CPU") {
+      d = sycl::cpu_selector{}.select_device();
+  } else if (devname == "GPU") {
+      d = sycl::gpu_selector{}.select_device();
+  } else if (devname == "HOST") {
+      d = sycl::host_selector{}.select_device();
+  } else {
+      throw "PRK_DEVICE must be CPU, GPU or HOST";
+  }
+  sycl::queue q(d);
 
   std::cout << "Grid size                      = " << L << std::endl;
   std::cout << "Number of particles requested  = " << n << std::endl;
@@ -603,7 +605,7 @@ int main(int argc, char ** argv) {
               auto p = d_particles.get_access<sycl::access::mode::read_write>(cgh);
               auto q = d_Qgrid.get_access<sycl::access::mode::read>(cgh);
 
-              cgh.parallel_for<class kernelPIC>(sycl::nd_range<1>(sycl::range<1>(global_work_size), sycl::range<1>(local_work_size)), [=] (sycl::nd_item<1> item) {
+              cgh.parallel_for<class pic>(sycl::nd_range<1>(sycl::range<1>(global_work_size), sycl::range<1>(local_work_size)), [=] (sycl::nd_item<1> item) {
                   auto i = item.get_global_id(0);
                   if (i < n) {
                       double fx = 0.0;
