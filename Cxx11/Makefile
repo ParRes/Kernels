@@ -159,6 +159,9 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 %-celerity: %-celerity.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $(BOOSTFLAGS) $(CELERITYINC) $(MPIINC) $< $(CELERITYLIB) $(MPILIB) -o $@
 
+pic: pic.cc prk_util.h random_draw.o
+	$(CXX) $(CXXFLAGS) $< random_draw.o -o $@
+
 pic-dpcpp: pic-dpcpp.cc prk_util.h prk_sycl.h random_draw.o
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< random_draw.o -o $@
 
