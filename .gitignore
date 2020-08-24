@@ -224,7 +224,17 @@ Cxx11/nstream-celerity
 Cxx11/nstream-hpx
 Cxx11/nstream-upcxx
 Cxx11/nstream-executors
+Cxx11/pic
 Cxx11/pic-dpcpp
+Cxx11/pic-sycl
+Cxx11/pic-sycl-usm
+Cxx11/pic-openmp
+Cxx11/pic-openmp-target
+Cxx11/pic-taskloop
+Cxx11/pic-kokkos
+Cxx11/pic-raja
+Cxx11/pic-stl
+Cxx11/pic-tbb
 Cxx11/sparse-vector
 Cxx11/stencil
 Cxx11/stencil-opencl
