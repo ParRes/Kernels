@@ -356,7 +356,7 @@ bool verifyParticle(particle_t p, int iterations, double *Qgrid, uint64_t L)
 inline void computeCoulomb(double x_dist, double y_dist, double q1, double q2, double & fx, double & fy)
 {
   const double r2 = x_dist * x_dist + y_dist * y_dist;
-  const double r = cl::sycl::sqrt(r2);
+  const double r = sycl::sqrt(r2);
   const double f_coulomb = q1 * q2 / r2;
 
   fx = f_coulomb * x_dist / r; // f_coulomb * cos_theta
