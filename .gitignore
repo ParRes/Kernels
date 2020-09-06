@@ -40,6 +40,8 @@ scripts/small/runfgmpi
 scripts/wide/runfgmpi
 scripts/small/runfenix
 
+deps/
+
 *.incl                          # PRK C89 stencil generated code
 */*.incl
 */*/*.incl
@@ -178,6 +180,7 @@ Cxx11/p2p-openmp-target
 Cxx11/p2p-tasks-openmp
 Cxx11/p2p-tasks-tbb
 Cxx11/p2p-vector
+Cxx11/p2p
 Cxx11/p2p-doacross-openmp
 Cxx11/p2p-vector-raja
 Cxx11/p2p-tbb
@@ -225,7 +228,19 @@ Cxx11/nstream-celerity
 Cxx11/nstream-hpx
 Cxx11/nstream-upcxx
 Cxx11/nstream-executors
+Cxx11/pic
+Cxx11/pic-dpcpp
+Cxx11/pic-sycl
+Cxx11/pic-sycl-usm
+Cxx11/pic-openmp
+Cxx11/pic-openmp-target
+Cxx11/pic-taskloop
+Cxx11/pic-kokkos
+Cxx11/pic-raja
+Cxx11/pic-stl
+Cxx11/pic-tbb
 Cxx11/sparse-vector
+Cxx11/stencil
 Cxx11/stencil-opencl
 Cxx11/stencil-openmp-target
 Cxx11/stencil-vector
@@ -247,6 +262,7 @@ Cxx11/stencil-sycl-usm
 Cxx11/stencil-sycl-explicit
 Cxx11/stencil-sycl-explicit-usm
 Cxx11/stencil-dpcpp
+Cxx11/transpose
 Cxx11/transpose-openmp
 Cxx11/transpose-mpi
 Cxx11/transpose-opencl

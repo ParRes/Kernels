@@ -91,7 +91,7 @@ mpi: nstream-mpi stencil-mpi
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
-sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl
+sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl pic-sycl
 
 sycl-usm: nstream-sycl-usm nstream-sycl-explicit-usm stencil-sycl-usm transpose-sycl-usm
 
@@ -161,6 +161,15 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 
 %-celerity: %-celerity.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $(BOOSTFLAGS) $(CELERITYINC) $(MPIINC) $< $(CELERITYLIB) $(MPILIB) -o $@
+
+pic: pic.cc prk_util.h random_draw.o
+	$(CXX) $(CXXFLAGS) $< random_draw.o -o $@
+
+pic-sycl: pic-sycl.cc prk_util.h prk_sycl.h random_draw.o
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< random_draw.o -o $@
+
+random_draw.o: random_draw.c random_draw.h
+	$(CC) $(DEFAULT_OPT_FLAGS) $(CPPFLAGS) -c $< -o $@
 
 %-dpcpp: %-dpcpp.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@

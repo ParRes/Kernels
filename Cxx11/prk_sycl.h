@@ -62,10 +62,10 @@ namespace prk {
 
         void print_device_platform(const sycl::queue & q) {
 #if ! ( defined(TRISYCL) || defined(__HIPSYCL__) )
-            auto device      = q.get_device();
-            auto platform    = device.get_platform();
-            std::cout << "SYCL Platform: " << platform.get_info<sycl::info::platform::name>() << std::endl;
-            std::cout << "SYCL Device:   " << device.get_info<sycl::info::device::name>() << std::endl;
+            auto d = q.get_device();
+            auto p = d.get_platform();
+            std::cout << "SYCL Device:   " << d.get_info<sycl::info::device::name>() << std::endl;
+            std::cout << "SYCL Platform: " << p.get_info<sycl::info::platform::name>() << std::endl;
 #endif
         }
 
@@ -73,12 +73,13 @@ namespace prk {
 #if defined(TRISYCL) || defined(__HIPSYCL__)
             return true;
 #else
-            auto device      = q.get_device();
+            auto device = q.get_device();
             return device.has_extension(sycl::string_class("cl_khr_fp64"));
 #endif
         }
 
         void print_exception_details(sycl::exception & e) {
+            std::cout << e.what() << std::endl;
 #ifdef __COMPUTECPP__
             std::cout << e.get_file_name() << std::endl;
             std::cout << e.get_line_number() << std::endl;
