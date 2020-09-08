@@ -72,9 +72,10 @@ OPENCLFLAG=-framework OpenCL
 # Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
 #
 #SYCLDIR=/opt/isycl
+#SYCLDIR=${HOME}/ISYCL/llvm/build
 #SYCLCXX=${SYCLDIR}/bin/clang++
 #SYCLFLAG=-std=c++17 -O3
-#SYCLFLAG+=-fsycl
+#SYCLFLAG+=-fsycl -fsycl-unnamed-lambda
 #SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
 #
 # Intel oneAPI
@@ -114,6 +115,7 @@ OPENCLFLAG=-framework OpenCL
 #
 # hipSYCL
 #
+#SYCLDIR=/opt/hipsycl/usr/local # if installed with DESTDIR
 #SYCLDIR=/opt/hipSYCL
 #SYCLDIR=/opt/spack/spack/opt/spack/linux-ubuntu18.04-haswell/gcc-8.3.0/hipsycl-master-appurj662qod4y4z5zxipr2fwthl66k7
 #SYCLCXX=${SYCLDIR}/bin/syclcc-clang
@@ -123,7 +125,8 @@ OPENCLFLAG=-framework OpenCL
 #SYCLFLAG+=--hipsycl-platform=cpu
 #SYCLFLAG+=--hipsycl-platform=cuda
 #SYCLFLAG+=--hipsycl-gpu-arch=sm_60
-#SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib
+#SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib # wrong?
+#SYCLFLAG+=-Wl,-rpath=${SYCLDIR}/lib
 #
 CELERITYDIR=${SYCLDIR}
 CELERITYINC=-I$(CELERITYDIR)/include/celerity -I$(CELERITYDIR)/include/celerity/vendor
