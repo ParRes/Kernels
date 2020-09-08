@@ -75,6 +75,7 @@ __global__ void p2p(int N, double * M)
 
     int bx = blockIdx.x;
     int tx = threadIdx.x;
+    int dx = blockDim.x;
 
     cooperative_groups::grid_group cuda_grid = this_grid();
 
@@ -109,6 +110,12 @@ __global__ void p2p(int N, double * M)
             cuda_grid.sync();
         }
     }
+
+    // one thread copies the bottom right corner to the top left corner...
+    if ((bx * dx + tx) == 0) {
+        M[0*np+0] = -M[(n-1)*np+(n-1)];
+    }
+    cuda_grid.sync(); // required?
 }
 
 int main(int argc, char* argv[])
@@ -158,43 +165,44 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  const size_t nelems = (size_t)n * (size_t)n;
+  const int np = n+HALO_SIZE; // padded n
+  const size_t nelems = (size_t)np * (size_t)np;
   const size_t bytes = nelems * sizeof(double);
   double * h_grid;
   prk::CUDA::check( cudaMallocHost((void**)&h_grid, bytes) );
 
   // initialize boundary conditions
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
-      h_grid[i*n+j] = static_cast<double>(0);
+  for (int i=0; i<np; i++) {
+    for (int j=0; j<np; j++) {
+      h_grid[i*np+j] = static_cast<double>(0);
     }
   }
-  for (auto j=0; j<n; j++) {
-    h_grid[0*n+j] = static_cast<double>(j);
+  for (int j=0; j<np; j++) {
+    h_grid[0*np+j] = static_cast<double>(j);
   }
-  for (auto i=0; i<n; i++) {
-    h_grid[i*n+0] = static_cast<double>(i);
+  for (int i=0; i<np; i++) {
+    h_grid[i*np+0] = static_cast<double>(i);
   }
 
   double * d_grid;
   prk::CUDA::check( cudaMalloc((void**)&d_grid, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_grid, &(h_grid[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::CUDA::check( cudaMemcpy(d_grid, h_grid, bytes, cudaMemcpyHostToDevice) );
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) pipeline_time = prk::wtime();
 
     dim3 cuda_threads(BLOCK_SIZE);
     dim3 cuda_grid(n / BLOCK_SIZE);
     void * kernel_args[2] = { (void*)n, (void*)&d_grid };
-    cudaLaunchCooperativeKernel((void*)p2p, cuda_grid, cuda_threads, (void**)kernel_args);
+    prk::CUDA::check( cudaLaunchCooperativeKernel((void*)p2p, cuda_grid, cuda_threads, (void**)kernel_args) );
 
     //prk::CUDA::check( cudaDeviceSynchronize() );
   }
   pipeline_time = prk::wtime() - pipeline_time;
 
   // copy output back to host
-  prk::CUDA::check( cudaMemcpy(&(h_grid[0]), d_grid, bytes, cudaMemcpyDeviceToHost) );
+  prk::CUDA::check( cudaMemcpy(h_grid, d_grid, bytes, cudaMemcpyDeviceToHost) );
   prk::CUDA::check( cudaFree(d_grid) );
 
   //////////////////////////////////////////////////////////////////////
@@ -203,7 +211,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(2.*n-2.));
-  if ( (std::fabs(h_grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+  if ( (std::fabs(h_grid[(n-1)*np+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << h_grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;
