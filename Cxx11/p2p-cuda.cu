@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2018, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -62,12 +62,14 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
+#include <cuda_runtime.h>
 #include <cooperative_groups.h>
 
-//using namespace cooperative_groups;
+#define BLOCK_SIZE 32
+
+#if 0
 
 #define HALO_SIZE 1
-#define BLOCK_SIZE 32
 
 __global__ void p2p(int N, double * M)
 {
@@ -77,7 +79,7 @@ __global__ void p2p(int N, double * M)
     int tx = threadIdx.x;
     int dx = blockDim.x;
 
-    cooperative_groups::grid_group cuda_grid = this_grid();
+    cooperative_groups::grid_group cuda_grid = cooperative_groups::this_grid();
 
     for(int i = 0; i < 2*N/BLOCK_SIZE; ++i) {
 
@@ -111,12 +113,48 @@ __global__ void p2p(int N, double * M)
         }
     }
 
+#if 0
     // one thread copies the bottom right corner to the top left corner...
     if ((bx * dx + tx) == 0) {
-        M[0*np+0] = -M[(n-1)*np+(n-1)];
+        M[0] = -M[(N-1)*(N+HALO_SIZE)+(N-1)];
     }
     cuda_grid.sync(); // required?
+#endif
 }
+#else
+__global__ void p2p(double * grid, const int n)
+{
+    const int bx = blockIdx.x;
+    const int tx = threadIdx.x;
+    const int dx = blockDim.x;
+
+    const int j = bx * dx + tx + 1;
+    //printf("bx=%d, tx=%d, dx=%d, tid=%d\n",bx,tx,dx,j);
+
+    cooperative_groups::grid_group cuda_grid = cooperative_groups::this_grid();
+
+    for (int i=2; i<=2*n-2; i++) {
+      //parallel_for (int j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
+      if (MAX(2,i-n+2) <= j && j <= MIN(i,n)) {
+        const int x = i-j+1;
+        const int y = j-1;
+        grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
+        //printf("tid=%d, x=%d y=%d g=%f\n",j,x,y,grid[x*n+y]);
+      }
+      //__threadfence();
+      cuda_grid.sync();
+      //__threadfence();
+    }
+
+    // one thread copies the bottom right corner to the top left corner...
+    if (j == 1) {
+      grid[0*n+0] = -grid[(n-1)*n+(n-1)];
+    }
+    //__threadfence();
+    cuda_grid.sync(); // required?
+    //__threadfence();
+}
+#endif
 
 int main(int argc, char* argv[])
 {
@@ -131,10 +169,10 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int n;
+  int n, nc, nb;
   try {
       if (argc < 3) {
-        throw " <# iterations> <array dimension>";
+        throw " <# iterations> <array dimension> [<chunk dimension>]";
       }
 
       // number of times to run the pipeline algorithm
@@ -149,7 +187,21 @@ int main(int argc, char* argv[])
         throw "ERROR: grid dimensions must be positive";
       } else if ( n > prk::get_max_matrix_size() ) {
         throw "ERROR: grid dimension too large - overflow risk";
+      } else if (n % BLOCK_SIZE) {
+        throw "ERROR: grid dimension is not a multiple of BLOCK_SIZE";
       }
+
+      // grid chunk dimensions
+      nc = (argc > 3) ? std::atoi(argv[3]) : 1;
+      nc = std::max(1,nc);
+      nc = std::min(n,nc);
+
+      // number of grid blocks
+      nb = (n-1)/nc;
+      if ((n-1)%nc) nb++;
+      //std::cerr << "n="  << n << std::endl;
+      //std::cerr << "nb=" << nb << std::endl;
+      //std::cerr << "nc=" << nc << std::endl;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -158,6 +210,9 @@ int main(int argc, char* argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
+  std::cout << "Grid chunk sizes     = " << nc << std::endl;
+
+  std::cout << "THIS IMPLEMENTATION IS NOT GOOD!!!!" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -165,28 +220,45 @@ int main(int argc, char* argv[])
 
   auto pipeline_time = 0.0; // silence compiler warning
 
-  const int np = n+HALO_SIZE; // padded n
-  const size_t nelems = (size_t)np * (size_t)np;
+  const size_t nelems = (size_t)n * (size_t)n;
   const size_t bytes = nelems * sizeof(double);
   double * h_grid;
   prk::CUDA::check( cudaMallocHost((void**)&h_grid, bytes) );
 
   // initialize boundary conditions
-  for (int i=0; i<np; i++) {
-    for (int j=0; j<np; j++) {
-      h_grid[i*np+j] = static_cast<double>(0);
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
+      h_grid[i*n+j] = static_cast<double>(0);
     }
   }
-  for (int j=0; j<np; j++) {
-    h_grid[0*np+j] = static_cast<double>(j);
+  for (int j=0; j<n; j++) {
+    h_grid[0*n+j] = static_cast<double>(j);
   }
-  for (int i=0; i<np; i++) {
-    h_grid[i*np+0] = static_cast<double>(i);
+  for (int i=0; i<n; i++) {
+    h_grid[i*n+0] = static_cast<double>(i);
   }
+
+#ifdef DEBUG
+  std::cout << "B h_grid=\n";
+  for (int i=0; i<n; i++) {
+    std::cout << "B ";
+    for (int j=0; j<n; j++) {
+        std::cout << h_grid[i*n+j] << ",";
+    }
+    std::cout << "\n";
+  }
+#endif
 
   double * d_grid;
   prk::CUDA::check( cudaMalloc((void**)&d_grid, bytes) );
   prk::CUDA::check( cudaMemcpy(d_grid, h_grid, bytes, cudaMemcpyHostToDevice) );
+  prk::CUDA::check( cudaDeviceSynchronize() );
+
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
+      h_grid[i*n+j] = static_cast<double>(-777);
+    }
+  }
 
   for (int iter = 0; iter<=iterations; iter++) {
 
@@ -194,11 +266,27 @@ int main(int argc, char* argv[])
 
     dim3 cuda_threads(BLOCK_SIZE);
     dim3 cuda_grid(n / BLOCK_SIZE);
-    void * kernel_args[2] = { (void*)n, (void*)&d_grid };
+#if 0
+    void * kernel_args[2] = { (void*)&n, (void*)&d_grid };
     prk::CUDA::check( cudaLaunchCooperativeKernel((void*)p2p, cuda_grid, cuda_threads, (void**)kernel_args) );
+#else
+    void * kernel_args[2] = { (void*)&d_grid, (void*)&n };
+    prk::CUDA::check( cudaLaunchCooperativeKernel((void*)p2p, cuda_grid, cuda_threads, (void**)kernel_args) );
+#endif
+    prk::CUDA::check( cudaDeviceSynchronize() );
+    prk::CUDA::check( cudaMemcpy(h_grid, d_grid, bytes, cudaMemcpyDeviceToHost) );
 
-    //prk::CUDA::check( cudaDeviceSynchronize() );
+#ifdef DEBUG
+    std::cout << "h_grid=\n";
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+          std::cout << h_grid[i*n+j] << ",";
+      }
+      std::cout << "\n";
+    }
+#endif
   }
+  prk::CUDA::check( cudaDeviceSynchronize() );
   pipeline_time = prk::wtime() - pipeline_time;
 
   // copy output back to host
@@ -211,7 +299,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(2.*n-2.));
-  if ( (std::fabs(h_grid[(n-1)*np+(n-1)] - corner_val)/corner_val) > epsilon) {
+  if ( (prk::abs(h_grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << h_grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;

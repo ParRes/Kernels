@@ -67,6 +67,17 @@
 # include "prk_ranges.h"
 #endif
 
+// used in OpenMP target and CUDA code because std::min etc are not declare target
+#ifndef MIN
+#define MIN(x,y) ((x)<(y)?(x):(y))
+#endif
+#ifndef MAX
+#define MAX(x,y) ((x)>(y)?(x):(y))
+#endif
+#ifndef ABS
+#define ABS(a) ((a) >= 0 ? (a) : -(a))
+#endif
+
 // omp_get_wtime()
 #if defined(USE_OPENMP) && defined(_OPENMP)
 #include <omp.h>
