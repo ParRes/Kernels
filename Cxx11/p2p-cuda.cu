@@ -151,7 +151,7 @@ __global__ void p2p(double * grid, const int n)
       grid[0*n+0] = -grid[(n-1)*n+(n-1)];
     }
     //__threadfence();
-    cuda_grid.sync(); // required?
+    //cuda_grid.sync(); // required?
     //__threadfence();
 }
 #endif
