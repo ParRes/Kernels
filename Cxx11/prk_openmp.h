@@ -91,15 +91,4 @@
 # define OMP_END_DECLARE_TARGET
 #endif
 
-// used in OpenMP target code because std::min etc are not declare target
-#ifndef MIN
-#define MIN(x,y) ((x)<(y)?(x):(y))
-#endif
-#ifndef MAX
-#define MAX(x,y) ((x)>(y)?(x):(y))
-#endif
-#ifndef ABS
-#define ABS(a) ((a) >= 0 ? (a) : -(a))
-#endif
-
 #endif /* PRK_OPENMP_H */
