@@ -129,7 +129,6 @@ __global__ void p2p(double * grid, const int n)
     const int dx = blockDim.x;
 
     const int j = bx * dx + tx + 1;
-    //printf("bx=%d, tx=%d, dx=%d, tid=%d\n",bx,tx,dx,j);
 
     cooperative_groups::grid_group cuda_grid = cooperative_groups::this_grid();
 
@@ -139,7 +138,6 @@ __global__ void p2p(double * grid, const int n)
         const int x = i-j+1;
         const int y = j-1;
         grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-        //printf("tid=%d, x=%d y=%d g=%f\n",j,x,y,grid[x*n+y]);
       }
       //__threadfence();
       cuda_grid.sync();
