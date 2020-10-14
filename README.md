@@ -52,7 +52,8 @@ If you are looking for the simplest option, try `make.defs.gcc`.
 | `make.defs.pgi`      | PGI compiler toolchain (infrequently tested). |
 
 Some of the C++ implementations require you to install Boost, RAJA, KOKKOS, Parallel STL, respectively,
-and then modify `make.defs` appropriately.  Please see the documentation in the [https://github.com/ParRes/Kernels/tree/default/doc](documentation (`doc`) subdirectory).
+and then modify `make.defs` appropriately.  Please see the documentation in the
+[documentation](https://github.com/ParRes/Kernels/tree/default/doc) (`doc`) subdirectory.
 
 Because we test essentially everything in Travis CI, you can refer to the `travis` subdirectory
 for install scripts that can be readily modified to install any of the dependencies in your local

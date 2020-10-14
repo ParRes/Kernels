@@ -118,7 +118,7 @@ kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 raja: p2p-raja stencil-raja nstream-raja \
       p2p-raja transpose-raja nstream-raja stencil-raja # transpose-raja
 
-cuda: stencil-cuda transpose-cuda nstream-cuda nstream-cuda-managed
+cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
 
 thrust: nstream-host-thrust nstream-device-thrust \
         transpose-host-thrust transpose-device-thrust
