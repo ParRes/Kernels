@@ -65,7 +65,7 @@ namespace prk {
         }
 
         bool has_fp64(const sycl::queue & q) {
-#if defined(TRISYCL) || defined(__HIPSYCL__)
+#if defined(TRISYCL) || defined(__HIPSYCL__) || defined(DPCPP_CUDA)
             return true;
 #else
             auto device = q.get_device();
