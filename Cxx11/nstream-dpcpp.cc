@@ -74,10 +74,17 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t length;
+  size_t length, block_size;
+
+#ifdef DPCPP_CUDA
+  block_size = 256; // matches CUDA version default
+#else
+  block_size = 16384;
+#endif
+
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length>";
+        throw "Usage: <# iterations> <vector length> [<block_size>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -89,6 +96,10 @@ int main(int argc, char * argv[])
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
+
+      if (argc>3) {
+         block_size = std::atoi(argv[3]);
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -97,9 +108,13 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
+  std::cout << "Block size           = " << block_size << std::endl;
 
   sycl::queue q(sycl::default_selector{});
   prk::SYCL::print_device_platform(q);
+
+  sycl::range global{length};
+  sycl::range local{block_size};
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -134,8 +149,13 @@ int main(int argc, char * argv[])
 
       q.submit([&](sycl::handler& h) {
 
+#if 0 // defaults in DPC++ are not optimal for V100
         h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> it) {
-            const size_t i = it[0];
+            const size_t i = it;
+#else
+        h.parallel_for(sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+            const size_t i = it.get_global_id(0);
+#endif
             d_A[i] += d_B[i] + scalar * d_C[i];
         });
       });
