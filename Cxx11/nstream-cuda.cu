@@ -92,11 +92,11 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int length;
-  bool grid_stride;
+  int length, block_size=256;
+  bool grid_stride = false;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<grid_stride>]";
+        throw "Usage: <# iterations> <vector length> [<block_size>] [<grid_stride>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -109,7 +109,13 @@ int main(int argc, char * argv[])
         throw "ERROR: vector length must be positive";
       }
 
-      grid_stride   = (argc>3) ? prk::parse_boolean(std::string(argv[4])) : false;
+      if (argc>3) {
+         block_size = std::atoi(argv[3]);
+      }
+
+      if (argc>4) {
+        grid_stride = prk::parse_boolean(std::string(argv[4]));
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -118,11 +124,11 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
+  std::cout << "Block size           = " << block_size << std::endl;
   std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
 
-  const int blockSize = 256;
-  dim3 dimBlock(blockSize, 1, 1);
-  dim3 dimGrid(prk::divceil(length,blockSize), 1, 1);
+  dim3 dimBlock(block_size, 1, 1);
+  dim3 dimGrid(prk::divceil(length,block_size), 1, 1);
 
   info.checkDims(dimBlock, dimGrid);
 
