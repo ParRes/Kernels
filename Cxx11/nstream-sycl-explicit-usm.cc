@@ -116,7 +116,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
 #endif
-            A[i] += B[i] + scalar * C[i];
+            d_A[i] += d_B[i] + scalar * d_C[i];
         });
       });
       q.wait();
