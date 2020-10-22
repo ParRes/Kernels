@@ -65,6 +65,8 @@
 #include <mkl_lapack_sycl.hpp>
 #include <mkl_sycl_types.hpp>
 
+using namespace oneapi; // oneapi::mkl -> mkl
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;

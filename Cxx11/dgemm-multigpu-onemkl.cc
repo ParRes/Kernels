@@ -65,6 +65,8 @@
 #include <mkl_lapack_sycl.hpp>
 #include <mkl_sycl_types.hpp>
 
+using namespace oneapi; // oneapi::mkl -> mkl
+
 void prk_dgemm(sycl::queue &q, const int order, const int batches, prk_float *A, prk_float *B, prk_float *C)
 {
     const prk_float alpha = 1.0;
