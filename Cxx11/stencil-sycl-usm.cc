@@ -273,14 +273,10 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    if (n<10000) {
-      sycl::queue q(sycl::host_selector{});
-      prk::SYCL::print_device_platform(q);
-      run<float>(q, iterations, n, tile_size, star, radius);
-      run<double>(q, iterations, n, tile_size, star, radius);
-    } else {
-        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
-    }
+    sycl::queue q(sycl::host_selector{});
+    prk::SYCL::print_device_platform(q);
+    run<float>(q, iterations, n, tile_size, star, radius);
+    run<double>(q, iterations, n, tile_size, star, radius);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;

@@ -237,14 +237,10 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    if (1) {
-      sycl::queue q(sycl::host_selector{});
-      prk::SYCL::print_device_platform(q);
-      run<float>(q, iterations, length, block_size);
-      run<double>(q, iterations, length, block_size);
-    } else {
-        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
-    }
+    sycl::queue q(sycl::host_selector{});
+    prk::SYCL::print_device_platform(q);
+    run<float>(q, iterations, length, block_size);
+    run<double>(q, iterations, length, block_size);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;

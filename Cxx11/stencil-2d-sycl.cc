@@ -68,7 +68,7 @@ template <typename T> class init;
 template <typename T> class add;
 
 template <typename T>
-void nothing(sycl::queue & q, const size_t n, sycl::buffer<T> & d_in, sycl::buffer<T> & d_out)
+void nothing(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buffer<T, 2> & d_out)
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
@@ -117,20 +117,19 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
   try {
 
     // initialize device buffers from host buffers
-    sycl::buffer<T> d_in  { h_in.data(),  h_in.size() };
-    sycl::buffer<T> d_out { h_out.data(), h_out.size() };
+    sycl::buffer<T, 2> d_in  { sycl::range<2> {n, n} };
+    sycl::buffer<T, 2> d_out { h_out.data(), sycl::range<2> {n, n} };
 
     q.submit([&](sycl::handler& h) {
 
       // accessor methods
       auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
 
-      h.parallel_for<class init<T>>(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
-          const size_t i = it.get_global_id(0);
-          const size_t j = it.get_global_id(1);
-          if ((i<n) && (j<n)) {
-            in[i*n+j] = static_cast<T>(i+j);
-          }
+      h.parallel_for<class init<T>>(sycl::range<2> {n, n}, [=] (sycl::item<2> it) {
+          sycl::id<2> xy = it.get_id();
+          auto i = it[0];
+          auto j = it[1];
+          in[xy] = static_cast<T>(i+j);
       });
     });
     q.wait();
@@ -145,10 +144,12 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
       q.submit([&](sycl::handler& h) {
         auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
         // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add<T>>(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
-            const size_t i = it.get_global_id(0);
-            const size_t j = it.get_global_id(1);
-            in[i*n+j] += static_cast<T>(1);
+        h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0}, [=] (sycl::item<2> it) {
+#if PREBUILD_KERNEL
+            kernel.get_kernel<transpose<T>>(),
+#endif
+            sycl::id<2> xy = it.get_id();
+            in[xy] += static_cast<T>(1);
         });
       });
       q.wait();

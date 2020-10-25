@@ -76,11 +76,7 @@ int main(int argc, char * argv[])
   int iterations;
   size_t length, block_size;
 
-#ifdef DPCPP_CUDA
   block_size = 256; // matches CUDA version default
-#else
-  block_size = 16384;
-#endif
 
   try {
       if (argc < 3) {
@@ -113,7 +109,8 @@ int main(int argc, char * argv[])
   sycl::queue q(sycl::default_selector{});
   prk::SYCL::print_device_platform(q);
 
-  sycl::range global{length};
+  size_t padded_length = block_size * prk::divceil(length,block_size);
+  sycl::range global{padded_length};
   sycl::range local{block_size};
 
   //////////////////////////////////////////////////////////////////////
@@ -147,18 +144,22 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-      q.submit([&](sycl::handler& h) {
-
-#if 0 // defaults in DPC++ are not optimal for V100
-        h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> it) {
-            const size_t i = it;
-#else
-        h.parallel_for(sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
-            const size_t i = it.get_global_id(0);
-#endif
-            d_A[i] += d_B[i] + scalar * d_C[i];
-        });
-      });
+      // old way - general but uses default local range, which is not optimal for V100
+      //h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> it) {
+      //    const size_t i = it;
+      if (padded_length > length) {
+          q.parallel_for(sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+              const size_t i = it.get_global_id(0);
+              if (i<length) {
+                  d_A[i] += d_B[i] + scalar * d_C[i];
+              }
+          });
+      } else {
+          q.parallel_for(sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+              const size_t i = it.get_global_id(0);
+              d_A[i] += d_B[i] + scalar * d_C[i];
+          });
+      }
       q.wait();
     }
 

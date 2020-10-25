@@ -3,12 +3,12 @@ include ../common/PRKVERSION
 
 CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
 
-CXXFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
-
 # debugging
 ifdef VERBOSE
-    CXXFLAGS += -DVERBOSE
+    CPPFLAGS += -DVERBOSE
 endif
+
+CXXFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 
 ifeq ($(USE_PRK_TBB_PARTITIONER),static)
     PRK_TBB_PARTITIONER=1
@@ -48,7 +48,7 @@ EXECUTORSFLAGS = $(EXECUTORSFLAG) $(PSTLFLAGS) #$(RANGEFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
-SYCLFLAGS = $(SYCLFLAG) -DUSE_2D_INDEXING=0
+SYCLFLAGS = $(SYCLFLAG)
 ORNLACCFLAGS = $(ORNLACCFLAG)
 
 ifdef OCCADIR
@@ -57,7 +57,7 @@ endif
 OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl \
-	rangefor kokkos raja cuda cublas sycl sycl-usm sycl-explicit dpcpp dpct \
+	rangefor kokkos raja cuda cublas sycl sycl-usm dpcpp dpct \
 	boost-compute thrust executor oneapi onemkl
 
 EXTRA=
@@ -91,11 +91,9 @@ mpi: nstream-mpi stencil-mpi
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
-sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl pic-sycl
+sycl: nstream-sycl nstream-sycl-explicit p2p-hyperplane-sycl stencil-sycl stencil-2d-sycl transpose-sycl transpose-2d-sycl pic-sycl
 
 sycl-usm: nstream-sycl-usm nstream-sycl-explicit-usm stencil-sycl-usm transpose-sycl-usm
-
-sycl-explicit: nstream-sycl-explicit transpose-sycl-explicit
 
 dpcpp: nstream-dpcpp nstream-multigpu-dpcpp transpose-dpcpp
 
