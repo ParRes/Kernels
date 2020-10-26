@@ -208,11 +208,7 @@ int main(int argc, char * argv[])
   int iterations, offset;
   size_t length, block_size;
 
-#ifdef DPCPP_CUDA
   block_size = 256; // matches CUDA version default
-#else
-  block_size = 16384;
-#endif
 
   try {
       if (argc < 3) {
