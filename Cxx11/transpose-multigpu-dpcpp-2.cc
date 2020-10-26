@@ -62,13 +62,11 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t order, block_size;
-
-  block_size = 16;
-
+  size_t order;
+  int use_ngpu = 1;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [<block_size>]";
+        throw "Usage: <# iterations> <matrix order> [<use_ngpu>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -83,8 +81,13 @@ int main(int argc, char * argv[])
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
-      if (argc>3) {
-         block_size = std::atoi(argv[3]);
+      if (argc > 3) {
+        use_ngpu = std::atoi(argv[3]);
+      }
+
+      if (order % use_ngpu) {
+        std::cerr << "order = " << order << ", device count = " << use_ngpu << std::endl;
+        throw "ERROR: matrix order should be divisible by device count!";
       }
   }
   catch (const char * e) {
@@ -92,64 +95,94 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+  std::vector<sycl::queue> qs;
+
+  auto platforms = sycl::platform::get_platforms();
+  for (auto & p : platforms) {
+    auto pname = p.get_info<sycl::info::platform::name>();
+    std::cout << "*Platform: " << pname << std::endl;
+    if ( pname.find("Level-Zero") != std::string::npos) {
+        std::cout << "*Level Zero GPU skipped" << std::endl;
+        break;
+    }
+    if ( pname.find("Intel") == std::string::npos) {
+        std::cout << "*non-Intel skipped" << std::endl;
+        break;
+    }
+    auto devices = p.get_devices();
+    for (auto & d : devices ) {
+        std::cout << "**Device: " << d.get_info<sycl::info::device::name>() << std::endl;
+        if ( d.is_gpu() || d.is_cpu() ) {
+            std::cout << "**Device is CPU or GPU - adding to vector of queues" << std::endl;
+            qs.push_back(sycl::queue(d));
+        }
+    }
+  }
+
+  int haz_ngpu = qs.size();
+  std::cout << "Number of CPUs and GPUs found  = " << haz_ngpu << std::endl;
+
+  if (use_ngpu > haz_ngpu) {
+      std::cout << "You cannot use more CPUs and GPUs (" << use_ngpu << ") than you have (" << haz_ngpu << ")" << std::endl;
+  }
+
+  int ngpus = use_ngpu;
+
+  if (order % ngpus != 0) {
+      std::cout << "ERROR: matrix order " << order << " should be divisible by # procs" << ngpus << std::endl;
+      return 2;
+  }
+  size_t block_order = order / ngpus;
+
+  std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Block size            = " << block_size << std::endl;
-
-  sycl::queue q(sycl::default_selector{});
-  prk::SYCL::print_device_platform(q);
-
-  size_t padded_order = block_size * prk::divceil(order,block_size);
-  sycl::range global{padded_order,padded_order};
-  sycl::range local{block_size,block_size};
+  std::cout << "Block order           = " << block_order << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  const size_t nelems = (size_t)order * (size_t)order;
-  const size_t bytes = nelems * sizeof(double);
-  double * h_a = syclx::malloc_host<double>( nelems, q);
-  double * h_b = syclx::malloc_host<double>( nelems, q);
+  double trans_time(0);
+
+  auto h_a = prk::vector<double>(order * order);
+  auto h_b = prk::vector<double>(order * order);
 
   // fill A with the sequence 0 to order^2-1
-  for (int j=0; j<order; j++) {
-    for (int i=0; i<order; i++) {
+  for (size_t j=0; j<order; j++) {
+    for (size_t i=0; i<order; i++) {
       h_a[j*order+i] = static_cast<double>(order*j+i);
       h_b[j*order+i] = static_cast<double>(0);
     }
   }
 
+  const size_t bytes = order * order * sizeof(double);
+
   // copy input from host to device
-  double * A = syclx::malloc_device<double>( nelems, q);
-  double * B = syclx::malloc_device<double>( nelems, q);
+  double * A = syclx::malloc_device<double>(order * order, q);
+  double * B = syclx::malloc_device<double>(order * order, q);
   q.memcpy(A, &(h_a[0]), bytes);
   q.memcpy(B, &(h_b[0]), bytes);
   q.wait();
-
-  auto trans_time = 0.0;
 
   for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) trans_time = prk::wtime();
 
-      if (padded_order > order) {
-          q.parallel_for(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
-              const size_t i = it.get_global_id(0);
-              const size_t j = it.get_global_id(1);
-              if ((i<order) && (j<order)) {
-                  B[i * order + j] += A[j * order + i];
-                  A[j * order + i] += 1.0;
-              }
-          });
-      } else {
-          q.parallel_for(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
-              const size_t i = it.get_global_id(0);
-              const size_t j = it.get_global_id(1);
-              B[i * order + j] += A[j * order + i];
-              A[j * order + i] += 1.0;
-          });
-      }
+      q.submit([&](sycl::handler& h) {
+
+        h.parallel_for( sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
+#if USE_2D_INDEXING
+          sycl::id<2> ij{it[0],it[1]};
+          sycl::id<2> ji{it[1],it[0]};
+          B[ij] += A[ji];
+          A[ji] += (T)1;
+#else
+          B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
+          A[it[1] * order + it[0]] += 1.0;
+#endif
+        });
+      });
       q.wait();
   }
   trans_time = prk::wtime() - trans_time;
@@ -166,8 +199,8 @@ int main(int argc, char * argv[])
 
   const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
-  for (size_t j=0; j<order; j++) {
-    for (size_t i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const size_t ij = (size_t)i*(size_t)order+(size_t)j;
       const size_t ji = (size_t)j*(size_t)order+(size_t)i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
@@ -193,5 +226,3 @@ int main(int argc, char * argv[])
 
   return 0;
 }
-
-

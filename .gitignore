@@ -176,6 +176,7 @@ Cxx11/dgemm-raja
 Cxx11/dgemm-vector-raja
 Cxx11/dgemm-cblas
 Cxx11/dgemm-cublas
+Cxx11/dgemm-multigpu-cublas
 Cxx11/p2p-openmp-target
 Cxx11/p2p-tasks-openmp
 Cxx11/p2p-tasks-tbb
@@ -197,12 +198,13 @@ Cxx11/p2p-hyperplane-stl
 Cxx11/p2p-hyperplane-pstl
 Cxx11/p2p-hyperplane-tbb
 Cxx11/p2p-hyperplane-sycl
+Cxx11/nstream
 Cxx11/nstream-kokkos
 Cxx11/nstream-opencl
 Cxx11/nstream-valarray
 Cxx11/nstream-vector
 Cxx11/nstream-openmp
-Cxx11/nstream-openmp
+Cxx11/nstream-openmp-target
 Cxx11/nstream-mpi
 Cxx11/nstream-pstl
 Cxx11/nstream-raja
@@ -216,7 +218,7 @@ Cxx11/nstream-boost-compute
 Cxx11/nstream-cublas
 Cxx11/nstream-cuda
 Cxx11/nstream-cuda-managed
-Cxx11/nstream-openmp-target
+Cxx11/nstream-managed-cuda
 Cxx11/nstream-sycl
 Cxx11/nstream-sycl-usm
 Cxx11/nstream-sycl-explicit
@@ -228,6 +230,8 @@ Cxx11/nstream-celerity
 Cxx11/nstream-hpx
 Cxx11/nstream-upcxx
 Cxx11/nstream-executors
+Cxx11/nstream-host-thrust
+Cxx11/sparse
 Cxx11/pic
 Cxx11/pic-dpcpp
 Cxx11/pic-sycl
@@ -242,9 +246,9 @@ Cxx11/pic-tbb
 Cxx11/sparse-vector
 Cxx11/stencil
 Cxx11/stencil-opencl
+Cxx11/stencil-openmp
 Cxx11/stencil-openmp-target
 Cxx11/stencil-vector
-Cxx11/stencil-openmp
 Cxx11/stencil-cilk
 Cxx11/stencil-stl
 Cxx11/stencil-pstl

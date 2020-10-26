@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -61,42 +61,26 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#include "prk_sycl.h"
 #include "prk_util.h"
-#include "prk_cuda.h"
-
-__global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
-{
-    auto i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) {
-        A[i] += B[i] + scalar * C[i];
-    }
-}
-
-__global__ void nstream2(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
-{
-    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
-        A[i] += B[i] + scalar * C[i];
-    }
-}
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/CUDA STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++11/DPC++ STREAM triad: A = B + scalar * C" << std::endl;
 
-  prk::CUDA::info info;
-  info.print();
+  auto qs = prk::SYCL::queues();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int length, block_size=256;
-  bool grid_stride = false;
+  size_t length, local_length;
+  int use_ngpu = 1;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<block_size>] [<grid_stride>]";
+        throw "Usage: <# iterations> <vector length> [<use_ngpu>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -109,28 +93,37 @@ int main(int argc, char * argv[])
         throw "ERROR: vector length must be positive";
       }
 
-      if (argc>3) {
-         block_size = std::atoi(argv[3]);
+      if (argc > 3) {
+        use_ngpu = std::atoi(argv[3]);
+      }
+      if ( use_ngpu > qs.size() ) {
+          std::string error = "You cannot use more devices ("
+                            + std::to_string(use_ngpu)
+                            + ") than you have ("
+                            + std::to_string(qs.size()) + ")";
+          throw error;
       }
 
-      if (argc>4) {
-        grid_stride = prk::parse_boolean(std::string(argv[4]));
+      if (length % use_ngpu != 0) {
+          std::string error = "ERROR: vector length ("
+                            + std::to_string(length)
+                            + ") should be divisible by # procs ("
+                            + std::to_string(use_ngpu) + ")";
+          throw error;
       }
+      local_length = length / use_ngpu;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
     return 1;
   }
 
-  std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Block size           = " << block_size << std::endl;
-  std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
+  std::cout << "Number of devices     = " << use_ngpu << std::endl;
+  std::cout << "Number of iterations  = " << iterations << std::endl;
+  std::cout << "Vector length         = " << length << std::endl;
+  std::cout << "Vector length (local) = " << local_length << std::endl;
 
-  dim3 dimBlock(block_size, 1, 1);
-  dim3 dimGrid(prk::divceil(length,block_size), 1, 1);
-
-  info.checkDims(dimBlock, dimGrid);
+  int np = use_ngpu;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -138,64 +131,62 @@ int main(int argc, char * argv[])
 
   double nstream_time(0);
 
-  const size_t bytes = length * sizeof(prk_float);
-  prk_float * h_A;
-  prk_float * h_B;
-  prk_float * h_C;
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
-#else
-  h_A = new prk_float[length];
-  h_B = new prk_float[length];
-  h_C = new prk_float[length];
-#endif
-  for (int i=0; i<length; ++i) {
-    h_A[i] = static_cast<prk_float>(0);
-    h_B[i] = static_cast<prk_float>(2);
-    h_C[i] = static_cast<prk_float>(2);
-  }
+  auto h_A = prk::vector<double>(length, 0);
+  auto h_B = prk::vector<double>(length, 2);
+  auto h_C = prk::vector<double>(length, 2);
 
-  prk_float * d_A;
-  prk_float * d_B;
-  prk_float * d_C;
-  prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
+  auto d_A = std::vector<double*> (np, nullptr);
+  auto d_B = std::vector<double*> (np, nullptr);
+  auto d_C = std::vector<double*> (np, nullptr);
 
-  prk_float scalar(3);
+  qs.allocate<double>(d_A, local_length);
+  qs.allocate<double>(d_B, local_length);
+  qs.allocate<double>(d_C, local_length);
+  qs.waitall();
+
+  qs.scatter<double>(d_A, h_A, local_length);
+  qs.scatter<double>(d_B, h_B, local_length);
+  qs.scatter<double>(d_C, h_C, local_length);
+  qs.waitall();
+
+  // overwrite host buffer with garbage to detect bugs
+  h_A.fill(-77777777);
+
+  const double scalar(3);
   {
-    for (int iter = 0; iter<=iterations; iter++) {
+      for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) nstream_time = prk::wtime();
+        if (iter==1) nstream_time = prk::wtime();
 
-      if (grid_stride) {
-          nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
-      } else {
-          nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
-      }
-#ifndef __CORIANDERCC__
-      // silence "ignoring cudaDeviceSynchronize for now" warning
-      prk::CUDA::check( cudaDeviceSynchronize() );
+#if 1
+        for (int g=0; g<np; ++g) {
+            auto q = qs.queue(g);
+
+            auto p_A = d_A[g];
+            auto p_B = d_B[g];
+            auto p_C = d_C[g];
+
+            const size_t size  = local_length;
+
+            q.submit([&](sycl::handler& h) {
+              h.parallel_for( sycl::range<1>{size}, [=] (sycl::id<1> i) {
+                  p_A[i] += p_B[i] + scalar * p_C[i];
+              });
+            });
+        }
+        qs.waitall();
 #endif
-    }
-    nstream_time = prk::wtime() - nstream_time;
+      }
+      nstream_time = prk::wtime() - nstream_time;
   }
 
-  prk::CUDA::check( cudaMemcpy(&(h_A[0]), d_A, bytes, cudaMemcpyDeviceToHost) );
+  qs.gather<double>(h_A, d_A, local_length);
+  qs.waitall();
 
-  prk::CUDA::check( cudaFree(d_C) );
-  prk::CUDA::check( cudaFree(d_B) );
-  prk::CUDA::check( cudaFree(d_A) );
-
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_B) );
-  prk::CUDA::check( cudaFreeHost(h_C) );
-#endif
+  qs.free(d_A);
+  qs.free(d_B);
+  qs.free(d_C);
+  qs.waitall();
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -212,15 +203,11 @@ int main(int argc, char * argv[])
 
   double asum(0);
   for (int i=0; i<length; i++) {
-      asum += prk::abs(h_A[i]);
+    asum += prk::abs(h_A[i]);
   }
 
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_A) );
-#endif
-
   double epsilon=1.e-8;
-  if (prk::abs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar - asum) / asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
@@ -230,7 +217,7 @@ int main(int argc, char * argv[])
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
-      double nbytes = 4.0 * length * sizeof(prk_float);
+      double nbytes = 4.0 * length * sizeof(double);
       std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }

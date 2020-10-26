@@ -67,8 +67,11 @@
 template <typename T> class nstream;
 
 template <typename T>
-void run(sycl::queue & q, int iterations, size_t length)
+void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 {
+  sycl::range global{length};
+  sycl::range local{block_size};
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
@@ -106,8 +109,13 @@ void run(sycl::queue & q, int iterations, size_t length)
 
       q.submit([&](sycl::handler& h) {
         h.parallel_for<class nstream<T>>(
-                sycl::range<1>{length}, [=] (sycl::id<1> it) {
-            const size_t i = it[0];
+#if 0 // defaults in DPC++ are not optimal for V100
+		sycl::range<1>{length}, [=] (sycl::id<1> it) {
+		const size_t i = it;
+#else
+		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+		const size_t i = it.get_global_id(0);
+#endif
             d_A[i] += d_B[i] + scalar * d_C[i];
         });
       });
@@ -190,10 +198,13 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations, offset;
-  size_t length;
+  size_t length, block_size;
+
+  block_size = 256; // matches CUDA version default
+
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length>";
+        throw "Usage: <# iterations> <vector length> [<block_size>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -206,9 +217,8 @@ int main(int argc, char * argv[])
         throw "ERROR: vector length must be positive";
       }
 
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
+      if (argc>3) {
+         block_size = std::atoi(argv[3]);
       }
   }
   catch (const char * e) {
@@ -218,21 +228,17 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
+  std::cout << "Block size           = " << block_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
   try {
-    if (length<100000) {
-      sycl::queue q(sycl::host_selector{});
-      prk::SYCL::print_device_platform(q);
-      run<float>(q, iterations, length);
-      run<double>(q, iterations, length);
-    } else {
-        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
-    }
+    sycl::queue q(sycl::host_selector{});
+    prk::SYCL::print_device_platform(q);
+    run<float>(q, iterations, length, block_size);
+    run<double>(q, iterations, length, block_size);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -248,8 +254,8 @@ int main(int argc, char * argv[])
   try {
     sycl::queue q(sycl::cpu_selector{});
     prk::SYCL::print_device_platform(q);
-    run<float>(q, iterations, length);
-    run<double>(q, iterations, length);
+    run<float>(q, iterations, length, block_size);
+    run<double>(q, iterations, length, block_size);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -266,9 +272,9 @@ int main(int argc, char * argv[])
     sycl::queue q(sycl::gpu_selector{});
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
-    run<float>(q, iterations, length);
+    run<float>(q, iterations, length, block_size);
     if (has_fp64) {
-      run<double>(q, iterations, length);
+      run<double>(q, iterations, length, block_size);
     } else {
       std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
     }

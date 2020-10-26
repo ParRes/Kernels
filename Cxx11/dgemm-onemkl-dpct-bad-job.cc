@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2020, Intel Corporation
+/// Copyright (c) 2018, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -65,7 +65,52 @@
 #include <mkl_lapack_sycl.hpp>
 #include <mkl_sycl_types.hpp>
 
-using namespace oneapi; // oneapi::mkl -> mkl
+void init(int order, const int matrices, double * A, double * B, double * C, sycl::nd_item<3> item_ct1)
+{
+    auto i = item_ct1.get_group(2) * item_ct1.get_local_range().get(2) + item_ct1.get_local_id(2);
+    auto j = item_ct1.get_group(1) * item_ct1.get_local_range().get(1) + item_ct1.get_local_id(1);
+
+    for (int b=0; b<matrices; ++b) {
+      if ((i<order) && (j<order)) {
+        A[b*order*order+i*order+j] = i;
+        B[b*order*order+i*order+j] = i;
+        C[b*order*order+i*order+j] = 0;
+      }
+    }
+}
+
+void init(int order, const int matrices, double * C, sycl::nd_item<3> item_ct1)
+{
+    auto i = item_ct1.get_group(2) * item_ct1.get_local_range().get(2) + item_ct1.get_local_id(2);
+    auto j = item_ct1.get_group(1) * item_ct1.get_local_range().get(1) + item_ct1.get_local_id(1);
+
+    for (int b=0; b<matrices; ++b) {
+      if ((i<order) && (j<order)) {
+        C[b*order*order+i*order+j] = 0;
+      }
+    }
+}
+
+void prk_dgemm(sycl::queue &q, const int order, const int batches, double *A, double *B, double *C)
+{
+    const double alpha = 1.0;
+    const double beta  = 1.0;
+
+    for (int b=0; b<batches; ++b) {
+        double * pA = &(A[b*order*order]);
+        double * pB = &(B[b*order*order]);
+        double * pC = &(C[b*order*order]);
+        mkl::blas::gemm(q, mkl::transpose::nontrans, // opA
+                           mkl::transpose::nontrans, // opB
+                           order, order, order,      // m, n, k
+                           alpha,                    // alpha
+                           pA, order,                // A, lda
+                           pB, order,                // B, ldb
+                           beta,                     // beta
+                           pC, order);               // C, ldc
+    }
+    q.wait_and_throw();
+}
 
 int main(int argc, char * argv[])
 {
@@ -93,11 +138,10 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > prk::get_max_matrix_size()) {
+        } else if (order > std::floor(std::sqrt(INT_MAX))) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
-#if 0
       if (argc > 3) {
         batches = std::atoi(argv[3]);
       }
@@ -108,7 +152,6 @@ int main(int argc, char * argv[])
           throw "ERROR: input_copy was not 0 or 1";
         }
       }
-#endif
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -129,76 +172,116 @@ int main(int argc, char * argv[])
   sycl::queue q(sycl::default_selector{});
   prk::SYCL::print_device_platform(q);
 
+  const int tile_size = 32;
+  sycl::range<3> dimGrid(prk::divceil(order, tile_size), prk::divceil(order, tile_size), 1);
+  sycl::range<3> dimBlock(tile_size, tile_size, 1);
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  const int matrices = 1;
-
   double dgemm_time(0);
 
+  const int matrices = (batches == 0 ? 1 : abs(batches));
   const size_t nelems = (size_t)order * (size_t)order;
   const size_t bytes = nelems * sizeof(double);
-  double * h_a = syclx::malloc_host<double>( nelems, q);
-  double * h_b = syclx::malloc_host<double>( nelems, q);
-  double * h_c = syclx::malloc_host<double>( nelems, q);
 
-  for (int i=0; i<order; ++i) {
-    for (int j=0; j<order; ++j) {
-       h_a[i*order+j] = i;
-       h_b[i*order+j] = i;
-       h_c[i*order+j] = 0;
+  // host buffers
+  double * h_a = sycl::malloc_host<double>(nelems, q);
+  double * h_b = sycl::malloc_host<double>(nelems, q);
+  double * h_c = sycl::malloc_host<double>(nelems, q);
+
+  // device buffers
+  double * d_a = sycl::malloc_device<double>( matrices * nelems, q);
+  double * d_b = sycl::malloc_device<double>( matrices * nelems, q);
+  double * d_c = sycl::malloc_device<double>( matrices * nelems, q);
+
+  if (input_copy) {
+
+    for (int i=0; i<order; ++i) {
+      for (int j=0; j<order; ++j) {
+         h_a[i*order+j] = i;
+         h_b[i*order+j] = i;
+      }
     }
+
+    for (int b=0; b<matrices; ++b) {
+        q.memcpy( &(d_a[b * order * order]), h_a, bytes);
+        q.memcpy( &(d_b[b * order * order]), h_b, bytes);
+    }
+    q.wait_and_throw();
+
+    q.submit([&](sycl::handler &cgh) {
+        auto dpct_global_range = dimGrid * dimBlock;
+
+        cgh.parallel_for(
+            sycl::nd_range<3>(sycl::range<3>(dpct_global_range.get(2), dpct_global_range.get(1), dpct_global_range.get(0)),
+                              sycl::range<3>(dimBlock.get(2), dimBlock.get(1), dimBlock.get(0))),
+            [=](sycl::nd_item<3> item_ct1) {
+                init(order, matrices, d_c, item_ct1);
+            });
+    });
+
+  } else {
+
+      q.submit([&](sycl::handler &cgh) {
+          auto dpct_global_range = dimGrid * dimBlock;
+
+          cgh.parallel_for(
+              sycl::nd_range<3>(sycl::range<3>(dpct_global_range.get(2), dpct_global_range.get(1), dpct_global_range.get(0)),
+                                sycl::range<3>(dimBlock.get(2), dimBlock.get(1), dimBlock.get(0))),
+              [=](sycl::nd_item<3> item_ct1) {
+                  init(order, matrices, d_a, d_b, d_c, item_ct1);
+              });
+      });
   }
+  q.wait_and_throw();
 
-  // copy input from host to device
-  double * A = syclx::malloc_device<double>( nelems, q);
-  double * B = syclx::malloc_device<double>( nelems, q);
-  double * C = syclx::malloc_device<double>( nelems, q);
-  q.wait();
-
-  q.memcpy(A, &(h_a[0]), bytes).wait();
-  q.memcpy(B, &(h_b[0]), bytes).wait();
-  q.memcpy(C, &(h_c[0]), bytes).wait();
-  q.wait();
-
-  syclx::free(h_a, q);
-  syclx::free(h_b, q);
-
+  double xfer(0);
+  double comp(0);
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) dgemm_time = prk::wtime();
 
-      const double alpha = 1.0;
-      const double beta  = 1.0;
+      if (input_copy) {
+        double t0 = prk::wtime();
+        for (int b=0; b<matrices; ++b) {
+            q.memcpy( &(d_a[b * order * order]), h_a, bytes);
+            q.memcpy( &(d_b[b * order * order]), h_b, bytes);
+        }
+        q.wait_and_throw();
+        double t1 = prk::wtime();
+        if (iter==1) xfer += (t1-t0);
+      }
 
-      mkl::blas::gemm(q, mkl::transpose::nontrans, // opA
-                         mkl::transpose::nontrans, // opB
-                         order, order, order,      // m, n, k
-                         alpha,                    // alpha
-                         A, order,                 // A, lda
-                         B, order,                 // B, ldb
-                         beta,                     // beta
-                         C, order);                // C, ldc
-      q.wait();
+      {
+        double t0 = prk::wtime();
+        prk_dgemm(q, order, matrices, d_a, d_b, d_c);
+        double t1 = prk::wtime();
+        if (iter==1) comp += (t1-t0);
+      }
     }
     dgemm_time = prk::wtime() - dgemm_time;
   }
-  // copy output back to host
-  q.memcpy(&(h_c[0]), C, bytes).wait();
+  std::cout << "xfer, comp = " << xfer << "," << comp << std::endl;
 
-  syclx::free(C, q);
-  syclx::free(B, q);
-  syclx::free(A, q);
+  // copy output back to host
+  q.memcpy(&(h_c[0]), d_c, matrices * bytes);
+  sycl::free(d_c, q);
+  sycl::free(d_b, q);
+  sycl::free(d_a, q);
+  sycl::free(h_a, q);
+  sycl::free(h_b, q);
+  q.wait_and_throw();
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  const double epsilon = 1.0e-8;
-  const double forder = static_cast<double>(order);
-  const double reference = 0.25 * prk::pow(forder,3) * prk::pow(forder-1.0,2) * (iterations+1);
+  const auto epsilon = 1.0e-8;
+  const auto forder = static_cast<double>(order);
+  const auto reference = 0.25 * prk::pow(forder, 3) * prk::pow(forder - 1.0, 2) * (iterations + 1);
   double residuum(0);
   for (int b=0; b<matrices; ++b) {
       const auto checksum = prk::reduce( &(h_c[b*order*order+0]), &(h_c[b*order*order+nelems]), 0.0);
@@ -213,7 +296,7 @@ int main(int argc, char * argv[])
 #endif
     std::cout << "Solution validates" << std::endl;
     auto avgtime = dgemm_time/iterations/matrices;
-    auto nflops = 2.0 * prk::pow(forder,3);
+        auto nflops = 2.0 * prk::pow(forder, 3);
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
@@ -222,7 +305,7 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  syclx::free(h_c, q);
+  sycl::free(h_c, q);
 
   return 0;
 }

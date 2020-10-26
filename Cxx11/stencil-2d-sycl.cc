@@ -68,7 +68,7 @@ template <typename T> class init;
 template <typename T> class add;
 
 template <typename T>
-void nothing(sycl::queue & q, const size_t n, const T * in, T *out)
+void nothing(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buffer<T, 2> & d_out)
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
@@ -77,7 +77,7 @@ void nothing(sycl::queue & q, const size_t n, const T * in, T *out)
 }
 
 template <typename T>
-void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star, size_t radius)
+void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star, size_t radius)
 {
   auto stencil = nothing<T>;
   if (star) {
@@ -101,25 +101,35 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   }
 #endif
 
+  size_t padded_n = block_size * prk::divceil(n,block_size);
+  sycl::range global{padded_n,padded_n};
+  sycl::range local{block_size,block_size};
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
   double stencil_time(0);
 
-  T * out;
+  std::vector<T> h_in(n*n,0);
+  std::vector<T> h_out(n*n,0);
 
   try {
 
-    T * in  = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), q));
-    out = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), q));
+    // initialize device buffers from host buffers
+    sycl::buffer<T, 2> d_in  { sycl::range<2> {n, n} };
+    sycl::buffer<T, 2> d_out { h_out.data(), sycl::range<2> {n, n} };
 
     q.submit([&](sycl::handler& h) {
-      h.parallel_for<class init<T>>(sycl::range<2> {n, n}, [=] (sycl::id<2> it) {
-          const auto i = it[0];
-          const auto j = it[1];
-          in[i*n+j]  = static_cast<T>(i+j);
-          out[i*n+j] = static_cast<T>(0);
+
+      // accessor methods
+      auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
+
+      h.parallel_for<class init<T>>(sycl::range<2> {n, n}, [=] (sycl::item<2> it) {
+          sycl::id<2> xy = it.get_id();
+          auto i = it[0];
+          auto j = it[1];
+          in[xy] = static_cast<T>(i+j);
       });
     });
     q.wait();
@@ -128,21 +138,23 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
 
       if (iter==1) stencil_time = prk::wtime();
 
-      stencil(q, n, in, out);
+      stencil(q, n, d_in, d_out);
       q.wait();
 
       q.submit([&](sycl::handler& h) {
-        h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0}, [=] (sycl::id<2> it) {
-            const auto i = it[0];
-            const auto j = it[1];
-            in[i*n+j] += static_cast<T>(1);
+        auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
+        // Add constant to solution to force refresh of neighbor data, if any
+        h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0}, [=] (sycl::item<2> it) {
+#if PREBUILD_KERNEL
+            kernel.get_kernel<transpose<T>>(),
+#endif
+            sycl::id<2> xy = it.get_id();
+            in[xy] += static_cast<T>(1);
         });
       });
       q.wait();
     }
     stencil_time = prk::wtime() - stencil_time;
-
-    syclx::free(in, q);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -169,12 +181,10 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   double norm(0);
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
-      norm += prk::abs(out[i*n+j]);
+      norm += prk::abs(h_out[i*n+j]);
     }
   }
   norm /= active_points;
-
-  syclx::free(out, q);
 
   // verify correctness
   const double epsilon = 1.0e-8;
@@ -182,7 +192,6 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
-    std::cout << "===================================" << std::endl;
   } else {
     std::cout << "Solution validates" << std::endl;
 #ifdef VERBOSE
@@ -208,12 +217,15 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t n, tile_size;
+  size_t n, block_size;
   bool star = true;
   size_t radius = 2;
+
+  block_size = 16;
+
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <array dimension> [<tile size> <star/grid> <stencil radius>]";
+        throw "Usage: <# iterations> <array dimension> [<block size> <star/grid> <stencil radius>]";
       }
 
       // number of times to run the algorithm
@@ -230,12 +242,10 @@ int main(int argc, char * argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-      // default tile size for tiling of local transpose
-      tile_size = 32;
       if (argc > 3) {
-          tile_size = std::atoi(argv[3]);
-          if (tile_size <= 0) tile_size = n;
-          if (tile_size > n) tile_size = n;
+          block_size = std::atoi(argv[3]);
+          if (block_size <= 0) block_size = n;
+          if (block_size > n) block_size = n;
       }
 
       // stencil pattern
@@ -262,7 +272,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
-  std::cout << "Tile size            = " << tile_size << std::endl;
+  std::cout << "Block size           = " << block_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
@@ -273,8 +283,8 @@ int main(int argc, char * argv[])
   try {
     sycl::queue q(sycl::host_selector{});
     prk::SYCL::print_device_platform(q);
-    run<float>(q, iterations, n, tile_size, star, radius);
-    run<double>(q, iterations, n, tile_size, star, radius);
+    run<float>(q, iterations, n, block_size, star, radius);
+    run<double>(q, iterations, n, block_size, star, radius);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -290,8 +300,8 @@ int main(int argc, char * argv[])
   try {
     sycl::queue q(sycl::cpu_selector{});
     prk::SYCL::print_device_platform(q);
-    run<float>(q, iterations, n, tile_size, star, radius);
-    run<double>(q, iterations, n, tile_size, star, radius);
+    run<float>(q, iterations, n, block_size, star, radius);
+    run<double>(q, iterations, n, block_size, star, radius);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -308,9 +318,9 @@ int main(int argc, char * argv[])
     sycl::queue q(sycl::gpu_selector{});
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
-    run<float>(q, iterations, n, tile_size, star, radius);
+    run<float>(q, iterations, n, block_size, star, radius);
     if (has_fp64) {
-      run<double>(q, iterations, n, tile_size, star, radius);
+      run<double>(q, iterations, n, block_size, star, radius);
     } else {
       std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
     }

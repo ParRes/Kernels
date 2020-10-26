@@ -1,0 +1,44 @@
+//
+// icpx -std=c++17 -pthread -g -O3 -xHOST -fiopenmp -fopenmp-targets=spir64 nstream-openmp-target-bug.cc
+//
+#include <cstdio>
+#include <cstdlib> // atoi, getenv
+#include <cstdint>
+#include <cmath>   // abs, fabs
+
+int main(int argc, char * argv[])
+{
+  size_t length = 100000;
+
+  //////////////////////////////////////////////////////////////////////
+  // Allocate space and perform the computation
+  //////////////////////////////////////////////////////////////////////
+
+  double * A = new double[length];
+  double * B = new double[length];
+  double * C = new double[length];
+
+  double scalar = 3.0;
+
+  // HOST
+  {
+    for (size_t i=0; i<length; i++) {
+      A[i] = 0.0;
+      B[i] = 2.0;
+      C[i] = 2.0;
+    }
+  }
+
+  // DEVICE
+#pragma omp target data map(tofrom: A[0:length]) map(to: B[0:length], C[0:length])
+  {
+#pragma omp target teams distribute parallel for // simd schedule(static,1)
+      for (size_t i=0; i<length; i++) {
+          A[i] += B[i] + scalar * C[i];
+      }
+  }
+
+  return 0;
+}
+
+

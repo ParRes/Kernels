@@ -83,7 +83,7 @@ program main
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./dgemm-pretty <# iterations> <matrix order> [<tile_size>]'
+    write(*,'(a65)')    'Usage: ./dgemm-pretty <# iterations> <matrix order> [<tile_size>]'
     stop 1
   endif
 
