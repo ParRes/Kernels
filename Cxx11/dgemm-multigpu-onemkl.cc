@@ -61,8 +61,6 @@
 
 #if BETA9 // and older
 #include <mkl_blas_sycl.hpp>
-#include <mkl_lapack_sycl.hpp>
-#include <mkl_sycl_types.hpp>
 #else
 #include <oneapi/mkl/blas.hpp>
 #endif
