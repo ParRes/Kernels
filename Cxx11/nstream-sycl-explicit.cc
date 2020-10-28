@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -72,7 +72,7 @@ template <typename T> class nstream3;
 template <typename T>
 void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 {
-  const auto padded_length = block_size * (length / block_size + length % block_size);
+  const auto padded_length = (block_size > 0) ? (block_size * (length / block_size + length % block_size)) : 0;
   sycl::range global{padded_length};
   sycl::range local{block_size};
 
@@ -119,11 +119,13 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
       if (iter==1) nstream_time = prk::wtime();
 
       q.submit([&](sycl::handler& h) {
-        sycl::accessor<T, 1, sycl::access::mode::read_write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(length), sycl::id<1>(0));
-        sycl::accessor<T, 1, sycl::access::mode::read,       sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(length), sycl::id<1>(0));
-        sycl::accessor<T, 1, sycl::access::mode::read,       sycl::access::target::global_buffer> C(d_C, h, sycl::range<1>(length), sycl::id<1>(0));
+
+        auto A = d_A.template get_access<sycl::access::mode::read_write>(h);
+        auto B = d_B.template get_access<sycl::access::mode::read>(h);
+        auto C = d_C.template get_access<sycl::access::mode::read>(h);
 
         if (block_size == 0) {
+            // hipSYCL prefers range to nd_range because no barriers
             h.parallel_for<class nstream1<T>>(
 #if PREBUILD_KERNEL
                 kernel.get_kernel<nstream1<T>>(),

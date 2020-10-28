@@ -71,7 +71,7 @@ template <typename T> class nstream3;
 template <typename T>
 void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 {
-  const auto padded_length = block_size * (length / block_size + length % block_size);
+  const auto padded_length = (block_size > 0) ? (block_size * (length / block_size + length % block_size)) : 0;
   sycl::range global{padded_length};
   sycl::range local{block_size};
 
