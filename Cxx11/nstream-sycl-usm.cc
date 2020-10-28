@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -72,7 +72,7 @@ template <typename T> class nstream3;
 template <typename T>
 void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 {
-  const auto padded_length = block_size * (length / block_size + length % block_size);
+  const auto padded_length = (block_size > 0) ? (block_size * (length / block_size + length % block_size)) : 0;
   sycl::range global{padded_length};
   sycl::range local{block_size};
 
