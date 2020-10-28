@@ -107,17 +107,19 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
 
   double stencil_time(0);
 
-  T * out = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), q));
-  T * in  = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), q));
+  T * out;
 
   try {
 
-    q.submit([&](sycl::handler& h) {
+    T * in  = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), q));
+    out = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), q));
 
+    q.submit([&](sycl::handler& h) {
       h.parallel_for<class init<T>>(sycl::range<2> {n, n}, [=] (sycl::id<2> it) {
           const auto i = it[0];
           const auto j = it[1];
-          in[i*n+j] = static_cast<T>(i+j);
+          in[i*n+j]  = static_cast<T>(i+j);
+          out[i*n+j] = static_cast<T>(0);
       });
     });
     q.wait();
@@ -127,9 +129,9 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
       if (iter==1) stencil_time = prk::wtime();
 
       stencil(q, n, in, out);
+      q.wait();
 
       q.submit([&](sycl::handler& h) {
-        // Add constant to solution to force refresh of neighbor data, if any
         h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0}, [=] (sycl::id<2> it) {
             const auto i = it[0];
             const auto j = it[1];
@@ -180,6 +182,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
+    std::cout << "===================================" << std::endl;
   } else {
     std::cout << "Solution validates" << std::endl;
 #ifdef VERBOSE
@@ -259,6 +262,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
@@ -267,7 +271,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q(sycl::host_selector{}, sycl::property::queue::in_order{});
+    sycl::queue q(sycl::host_selector{});
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, tile_size, star, radius);
     run<double>(q, iterations, n, tile_size, star, radius);
@@ -284,7 +288,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::cpu_selector{}, sycl::property::queue::in_order{});
+    sycl::queue q(sycl::cpu_selector{});
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, tile_size, star, radius);
     run<double>(q, iterations, n, tile_size, star, radius);
@@ -301,7 +305,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::gpu_selector{}, sycl::property::queue::in_order{});
+    sycl::queue q(sycl::gpu_selector{});
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
     run<float>(q, iterations, n, tile_size, star, radius);

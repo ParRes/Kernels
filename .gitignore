@@ -168,6 +168,8 @@ Cxx11/dgemm-mpi
 Cxx11/dgemm-sycl
 Cxx11/dgemm-blas-sycl
 Cxx11/dgemm-mkl-sycl
+Cxx11/dgemm-multigpu-onemkl
+Cxx11/dgemm-onemkl
 Cxx11/dgemm-kokkos
 Cxx11/dgemm-kernels-kokkos
 Cxx11/dgemm-raja
@@ -202,7 +204,7 @@ Cxx11/nstream-opencl
 Cxx11/nstream-valarray
 Cxx11/nstream-vector
 Cxx11/nstream-openmp
-Cxx11/nstream-openmp
+Cxx11/nstream-openmp-target
 Cxx11/nstream-mpi
 Cxx11/nstream-pstl
 Cxx11/nstream-raja
@@ -217,13 +219,13 @@ Cxx11/nstream-cublas
 Cxx11/nstream-cuda
 Cxx11/nstream-cuda-managed
 Cxx11/nstream-managed-cuda
-Cxx11/nstream-openmp-target
 Cxx11/nstream-sycl
 Cxx11/nstream-sycl-usm
 Cxx11/nstream-sycl-explicit
 Cxx11/nstream-sycl-explicit-usm
 Cxx11/nstream-dpcpp
 Cxx11/nstream-multigpu-dpcpp
+Cxx11/nstream-onemkl
 Cxx11/nstream-celerity
 Cxx11/nstream-hpx
 Cxx11/nstream-upcxx
@@ -244,9 +246,9 @@ Cxx11/pic-tbb
 Cxx11/sparse-vector
 Cxx11/stencil
 Cxx11/stencil-opencl
+Cxx11/stencil-openmp
 Cxx11/stencil-openmp-target
 Cxx11/stencil-vector
-Cxx11/stencil-openmp
 Cxx11/stencil-cilk
 Cxx11/stencil-stl
 Cxx11/stencil-pstl

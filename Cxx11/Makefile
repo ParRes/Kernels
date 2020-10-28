@@ -95,7 +95,11 @@ sycl: nstream-sycl nstream-sycl-explicit p2p-hyperplane-sycl stencil-sycl transp
       stencil-2d-sycl transpose-2d-sycl pic-sycl \
       nstream-sycl-usm nstream-sycl-explicit-usm stencil-sycl-usm transpose-sycl-usm
 
-dpcpp: sycl nstream-dpcpp nstream-multigpu-dpcpp transpose-dpcpp
+dpcpp: sycl nstream-dpcpp          stencil-dpcpp          transpose-dpcpp \
+            nstream-multigpu-dpcpp stencil-multigpu-dpcpp transpose-multigpu-dpcpp
+
+test_dpcpp_collectives: test_dpcpp_collectives.cc prk_util.h prk_sycl.h
+	$(SYCLCXX) $(SYCLFLAGS) -g $< -o $@
 
 tbb: p2p-innerloop-tbb p2p-tbb stencil-tbb transpose-tbb nstream-tbb \
      p2p-hyperplane-tbb p2p-tasks-tbb
@@ -285,6 +289,7 @@ clean:
 	-rm -f *-sycl-explicit-usm
 	-rm -f *-dpct
 	-rm -f *-dpcpp
+	-rm -f test_dpcpp_collectives
 	-rm -f *-celerity
 	-rm -f *-tbb
 	-rm -f *-stl

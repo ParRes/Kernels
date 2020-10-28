@@ -4,11 +4,16 @@
 #include <cstdlib>
 #include <iostream>
 
+//#include <iterator> // std::distance
+#include <boost/range/adaptor/indexed.hpp>
+
 #include "CL/sycl.hpp"
 
 #ifdef __COMPUTECPP__
 #include "SYCL/experimental/usm.h"
 #endif
+
+#include "prk_util.h" // prk::vector
 
 namespace sycl = cl::sycl;
 
@@ -83,6 +88,201 @@ namespace prk {
             std::cout << e.get_cl_code() << std::endl;
 #endif
         }
+
+        class queues {
+
+            private:
+                std::vector<sycl::queue> list;
+
+            public:
+                queues(bool use_cpu = true, bool use_gpu = true)
+                {
+                    auto platforms = sycl::platform::get_platforms();
+                    for (auto & p : platforms) {
+                        auto pname = p.get_info<sycl::info::platform::name>();
+                        std::cout << "*Platform: " << pname << std::endl;
+#if 0
+                        if ( pname.find("Level-Zero") != std::string::npos) {
+                            std::cout << "*Level Zero GPU skipped" << std::endl;
+                            break;
+                        }
+#endif
+                        if ( pname.find("Intel") == std::string::npos) {
+                            std::cout << "*non-Intel skipped" << std::endl;
+                            break;
+                        }
+                        auto devices = p.get_devices();
+                        for (auto & d : devices ) {
+                            std::cout << "**Device: " << d.get_info<sycl::info::device::name>() << std::endl;
+                            if ( d.is_gpu() && use_gpu ) {
+                                std::cout << "**Device is GPU - adding to vector of queues" << std::endl;
+                                list.push_back(sycl::queue(d));
+                            }
+                        }
+#if 1
+                        for (auto & d : devices ) {
+                            std::cout << "**Device: " << d.get_info<sycl::info::device::name>() << std::endl;
+                            if ( d.is_cpu() && use_cpu ) {
+                                std::cout << "**Device is CPU - adding to vector of queues" << std::endl;
+                                list.push_back(sycl::queue(d));
+                            }
+                        }
+#endif
+                    }
+                }
+
+                int size(void)
+                {
+                    return list.size();
+                }
+
+                void wait(int i)
+                {
+                    if ( i > this->size() ) {
+                        std::cerr << "ERROR: invalid device id: " << i << std::endl;
+                    }
+                    list.at(i).wait();
+                }
+
+                void waitall(void)
+                {
+                    for (auto & i : list) {
+                        i.wait();
+                    }
+                }
+
+                sycl::queue queue(int i) {
+                    if ( i > this->size() ) {
+                        std::cerr << "ERROR: invalid device id: " << i << std::endl;
+                    }
+                    return this->list.at(i);
+                }
+
+                template <typename T>
+                void allocate(std::vector<T*> & device_pointers,
+                              size_t num_elements)
+                {
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        device_pointers[i] = syclx::malloc_device<T>(num_elements, v);
+                    }
+                }
+
+                template <typename T>
+                void free(std::vector<T*> & device_pointers)
+                {
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        syclx::free(device_pointers[i], v);
+                    }
+                }
+
+                template <typename T, typename B>
+                void broadcast(std::vector<T*> & device_pointers,
+                               const B & host_pointer,
+                               size_t num_elements)
+                {
+                    auto bytes = num_elements * sizeof(T);
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        auto target = device_pointers[i];
+                        auto source = &host_pointer[0];
+                        std::cout << "BCAST: device " << i << std::endl;
+                        v.memcpy(target, source, bytes);
+                    }
+                }
+
+                template <typename T, typename B>
+                void reduce(B & host_pointer,
+                            const std::vector<T*> & device_pointers,
+                            size_t num_elements)
+                {
+                    std::cout << "REDUCE: num_elements " << num_elements << std::endl;
+                    auto bytes = num_elements * sizeof(T);
+                    std::cout << "REDUCE: bytes " << bytes << std::endl;
+                    auto temp = prk::vector<T>(num_elements, 0);
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        std::cout << "REDUCE: device " << i << std::endl;
+                        auto target = &temp[0];
+                        auto source = device_pointers[i];
+                        v.memcpy(target, source, bytes);
+                        for (size_t e=0; e<num_elements; ++e) {
+                            host_pointer[e] += temp[e];
+                        }
+                    }
+                }
+
+                template <typename T, typename B>
+                void gather(B & host_pointer,
+                            const std::vector<T*> & device_pointers,
+                            size_t num_elements)
+                {
+                    auto bytes = num_elements * sizeof(T);
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        auto target = &host_pointer[i * num_elements];
+                        auto source = device_pointers[i];
+                        v.memcpy(target, source, bytes);
+                    }
+                }
+
+                template <typename T, typename B>
+                void scatter(std::vector<T*> & device_pointers,
+                             const B & host_pointer,
+                             size_t num_elements)
+                {
+                    auto bytes = num_elements * sizeof(T);
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        auto target = device_pointers[i];
+                        auto source = &host_pointer[i * num_elements];
+                        v.memcpy(target, source, bytes);
+                    }
+                }
+
+                // num_elements is defined the same as MPI
+                // each device contributes np * num_elements
+                // each device receives np * num_elements
+                template <typename T>
+                void alltoall(std::vector<T*> & device_pointers_out,
+                              std::vector<T*> & device_pointers_in,
+                              size_t num_elements)
+                {
+                    auto bytes = num_elements * sizeof(T);
+                    // allocate np*np temp space on the host, because
+                    // we cannot copy device-to-device if they are in
+                    // different contexts.
+                    // we can specialize for single-context later...
+                    int np = this->list.size();
+                    prk::vector<double> temp(num_elements * np * np);
+
+                    // gather phase - contiguous
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        auto target = &temp[i * np * num_elements];
+                        auto source = device_pointers_in[i];
+                        v.memcpy(target, source, np * bytes);
+                    }
+
+                    // scatter phase - noncontiguous
+                    for (const auto & l : list | boost::adaptors::indexed(0) ) {
+                        auto i = l.index();
+                        auto v = l.value();
+                        auto target = device_pointers_out[i];
+                        auto source = &temp[i * num_elements];
+                        v.memcpy(target, source, bytes);
+                    }
+
+                }
+        };
 
     } // namespace SYCL
 

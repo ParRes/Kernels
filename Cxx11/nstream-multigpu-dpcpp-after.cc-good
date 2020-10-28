@@ -158,6 +158,7 @@ int main(int argc, char * argv[])
 
         if (iter==1) nstream_time = prk::wtime();
 
+#if 1
         for (int g=0; g<np; ++g) {
             auto q = qs.queue(g);
 
@@ -174,6 +175,7 @@ int main(int argc, char * argv[])
             });
         }
         qs.waitall();
+#endif
       }
       nstream_time = prk::wtime() - nstream_time;
   }

@@ -134,9 +134,10 @@ int main(int argc, char * argv[])
   double * d_A = syclx::malloc_device<double>(length, q);
   double * d_B = syclx::malloc_device<double>(length, q);
   double * d_C = syclx::malloc_device<double>(length, q);
-  q.memcpy(d_A, &(h_A[0]), bytes).wait();
-  q.memcpy(d_B, &(h_B[0]), bytes).wait();
-  q.memcpy(d_C, &(h_C[0]), bytes).wait();
+  q.memcpy(d_A, &(h_A[0]), bytes);
+  q.memcpy(d_B, &(h_B[0]), bytes);
+  q.memcpy(d_C, &(h_C[0]), bytes);
+  q.wait();
 
   double scalar(3);
   {

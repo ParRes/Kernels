@@ -46,12 +46,6 @@
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
 ///
-/// FUNCTIONS CALLED:
-///
-///          Other than standard C functions, the following functions are used in
-///          this program:
-///          wtime()
-///
 /// HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 ///          - RvdW: Removed unrolling pragmas for clarity;
 ///            added constant to array "in" at end of each iteration to force
