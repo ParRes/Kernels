@@ -105,18 +105,12 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto ctx = q.get_context();
-
   double stencil_time(0);
 
-  T * out;
+  T * out = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), q));
+  T * in  = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), q));
 
   try {
-
-    auto dev = q.get_device();
-
-    T * in  = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), dev, ctx));
-    out = static_cast<T*>(syclx::malloc_shared(n * n * sizeof(T), dev, ctx));
 
     q.submit([&](sycl::handler& h) {
 
@@ -146,7 +140,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
     }
     stencil_time = prk::wtime() - stencil_time;
 
-    syclx::free(in, ctx);
+    syclx::free(in, q);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -178,7 +172,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   }
   norm /= active_points;
 
-  syclx::free(out, ctx);
+  syclx::free(out, q);
 
   // verify correctness
   const double epsilon = 1.0e-8;
@@ -273,7 +267,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q(sycl::host_selector{});
+    sycl::queue q(sycl::host_selector{}, sycl::property::queue::in_order{});
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, tile_size, star, radius);
     run<double>(q, iterations, n, tile_size, star, radius);
@@ -290,7 +284,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::cpu_selector{});
+    sycl::queue q(sycl::cpu_selector{}, sycl::property::queue::in_order{});
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, tile_size, star, radius);
     run<double>(q, iterations, n, tile_size, star, radius);
@@ -307,7 +301,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::gpu_selector{});
+    sycl::queue q(sycl::gpu_selector{}, sycl::property::queue::in_order{});
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
     run<float>(q, iterations, n, tile_size, star, radius);
