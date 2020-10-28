@@ -64,7 +64,9 @@
 #include "prk_sycl.h"
 #include "prk_util.h"
 
-template <typename T> class nstream;
+template <typename T> class nstream1;
+template <typename T> class nstream2;
+template <typename T> class nstream3;
 
 template <typename T>
 void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
@@ -90,7 +92,9 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 #if PREBUILD_KERNEL
     auto ctx = q.get_context();
     sycl::program kernel(ctx);
-    kernel.build_with_kernel_type<nstream<T>>();
+    kernel.build_with_kernel_type<nstream1<T>>();
+    kernel.build_with_kernel_type<nstream2<T>>();
+    kernel.build_with_kernel_type<nstream3<T>>();
 #endif
 
     sycl::buffer<T,1> d_A { h_A.data(), sycl::range<1>(h_A.size()) };
@@ -109,18 +113,18 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 
         if (block_size == 0) {
             // hipSYCL prefers range to nd_range because no barriers
-            h.parallel_for<class nstream<T>>(
+            h.parallel_for<class nstream1<T>>(
 #if PREBUILD_KERNEL
-                kernel.get_kernel<nstream<T>>(),
+                kernel.get_kernel<nstream1<T>>(),
 #endif
 		sycl::range<1>{length}, [=] (sycl::id<1> it) {
 		const size_t i = it;
                 A[i] += B[i] + scalar * C[i];
             });
         } else if (length % block_size) {
-            h.parallel_for<class nstream<T>>(
+            h.parallel_for<class nstream2<T>>(
 #if PREBUILD_KERNEL
-                kernel.get_kernel<nstream<T>>(),
+                kernel.get_kernel<nstream2<T>>(),
 #endif
 		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
@@ -129,9 +133,9 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
                 }
             });
         } else {
-            h.parallel_for<class nstream<T>>(
+            h.parallel_for<class nstream3<T>>(
 #if PREBUILD_KERNEL
-                kernel.get_kernel<nstream<T>>(),
+                kernel.get_kernel<nstream3<T>>(),
 #endif
 		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
@@ -186,6 +190,9 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
+      for (size_t i=0; i<length; ++i) {
+          std::cerr << i << "," << h_A[i] << "\n";
+      }
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
