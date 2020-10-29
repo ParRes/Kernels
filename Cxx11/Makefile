@@ -115,7 +115,11 @@ raja: p2p-raja stencil-raja nstream-raja \
 
 cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
 
-hip: nstream-hip
+hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
+
+hipstl: nstream-hipstl transpose-hipstl
+
+hipblas: nstream-hipblas dgemm-hipblas
 
 thrust: nstream-host-thrust nstream-device-thrust \
         transpose-host-thrust transpose-device-thrust
@@ -245,6 +249,12 @@ endif
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) -DPRK_USE_CUBLAS $< -lcublas -o $@
 
 %-hip: %-hip.cc prk_util.h prk_hip.h
+	$(HIPCC) $(HIPFLAGS) $(CPPFLAGS) $< -o $@
+
+%-hipstl: %-hipstl.cc prk_util.h prk_hip.h
+	$(HIPCC) $(HIPFLAGS) $(RANGEFLAGS) $(CPPFLAGS) -DHIP_THRUST $< -o $@
+
+%-hipblas: %-hipblas.cc prk_util.h prk_hip.h
 	$(HIPCC) $(HIPFLAGS) $(CPPFLAGS) $< -o $@
 
 %-cblas: %-cblas.cc prk_util.h

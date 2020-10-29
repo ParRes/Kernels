@@ -64,7 +64,7 @@ TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
-BOOSTFLAG=
+BOOSTFLAG=-I/usr/include
 RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
 #RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
 PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG} -I./pstl/stdlib -I./pstl/include
@@ -92,7 +92,15 @@ CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
 # HIP flags
 #
 HIPCC=hipcc
-HIPFLAGS=-g -O3 -std=c++11
+HIPFLAGS=-g -O3 -std=c++14
+# hipBLAS
+HIPFLAGS+=-L/opt/rocm/lib -lrocblas
+HIPFLAGS+=-L/opt/rocm/lib -lhipblas
+# hipThrust
+HIPFLAGS+=-I/opt/rocm/include
+HIPFLAGS+=-I/opt/rocm/rocthrust/include
+HIPFLAGS+=-I/opt/rocm/rocprim/include
+HIPFLAGS+=${RANGEFLAG}
 #
 # MPI-3
 #

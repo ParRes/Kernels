@@ -13,6 +13,11 @@
 #include <hip/hip_runtime_api.h>
 #include <hipblas.h>
 
+#ifdef HIP_THRUST
+#include <thrust/device_vector.h>
+#include "prk_ranges.h"
+#endif
+
 //typedef float prk_float;
 typedef double prk_float;
 
