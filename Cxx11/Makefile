@@ -117,7 +117,7 @@ cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
 
 hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 
-hipstl: nstream-hipstl transpose-hipstl
+hipstl: nstream-hipstl
 
 hipblas: nstream-hipblas dgemm-hipblas
 
