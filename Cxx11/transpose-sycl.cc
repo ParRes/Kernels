@@ -77,7 +77,7 @@ void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
 
 #if PREBUILD_KERNEL
     auto ctx = q.get_context();
-    sycl::program kernel(ctx);
+    sycl::program kernel{ctx};
     kernel.build_with_kernel_type<transpose<T>>();
 #endif
 

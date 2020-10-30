@@ -98,7 +98,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 
 #if PREBUILD_KERNEL
     auto ctx = q.get_context();
-    sycl::program kernel(ctx);
+    sycl::program kernel{ctx};
     kernel.build_with_kernel_type<nstream1<T>>();
     kernel.build_with_kernel_type<nstream2<T>>();
     kernel.build_with_kernel_type<nstream3<T>>();
