@@ -175,6 +175,7 @@ Cxx11/dgemm-vector-raja
 Cxx11/dgemm-cblas
 Cxx11/dgemm-cublas
 Cxx11/dgemm-multigpu-cublas
+Cxx11/dgemm-hipblas
 Cxx11/p2p-openmp-target
 Cxx11/p2p-tasks-openmp
 Cxx11/p2p-tasks-tbb
@@ -229,6 +230,10 @@ Cxx11/nstream-hpx
 Cxx11/nstream-upcxx
 Cxx11/nstream-executors
 Cxx11/nstream-host-thrust
+Cxx11/nstream-hip
+Cxx11/nstream-hipblas
+Cxx11/nstream-hipstl
+Cxx11/nstream-managed-hip
 Cxx11/sparse
 Cxx11/pic
 Cxx11/pic-dpcpp
@@ -264,6 +269,7 @@ Cxx11/stencil-sycl-usm
 Cxx11/stencil-sycl-explicit
 Cxx11/stencil-sycl-explicit-usm
 Cxx11/stencil-dpcpp
+Cxx11/stencil-hip
 Cxx11/transpose
 Cxx11/transpose-openmp
 Cxx11/transpose-mpi
@@ -294,6 +300,7 @@ Cxx11/transpose-device-thrust
 Cxx11/transpose-host-thrust
 Cxx11/transpose-cublas
 Cxx11/transpose-cuda
+Cxx11/transpose-hip
 Cxx11/grid1.cl
 Cxx11/grid2.cl
 Cxx11/grid3.cl
