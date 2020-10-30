@@ -121,10 +121,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
     sycl::buffer<T> d_out { h_out.data(), h_out.size() };
 
     q.submit([&](sycl::handler& h) {
-
-      // accessor methods
       auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
-
       h.parallel_for<class init<T>>(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
           const size_t i = it.get_global_id(0);
           const size_t j = it.get_global_id(1);
@@ -144,7 +141,6 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
 
       q.submit([&](sycl::handler& h) {
         auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
-        // Add constant to solution to force refresh of neighbor data, if any
         h.parallel_for<class add<T>>(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
             const size_t i = it.get_global_id(0);
             const size_t j = it.get_global_id(1);
