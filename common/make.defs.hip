@@ -3,14 +3,14 @@
 #
 # Base compilers and language options
 #
-VERSION=
+VERSION=-10
 # C99 is required in some implementations.
-CC=gcc${VERSION} -std=gnu11
+CC=gcc${VERSION} -std=gnu11 -pthread
 #EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=gfortran${VERSION} -std=f2008 -cpp
 # C++11 may not be required but does no harm here.
-CXX=g++${VERSION} -std=gnu++17
+CXX=g++${VERSION} -std=gnu++17 -pthread
 #
 # Compiler flags
 #
@@ -28,8 +28,8 @@ DEFAULT_OPT_FLAGS=-O3 -mtune=native -ffast-math
 #
 OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
-OFFLOADFLAG=-foffload="-O3 -v"
-ORNLACCFLAG=-fopenacc
+OFFLOADFLAG=-foffload=amdgcn-amdhsa="-march=fiji"
+ORNLACCFLAG=-fopenacc $(OFFLOADFLAG)
 #
 # OpenCL flags
 #
@@ -47,6 +47,7 @@ SYCLFLAG=-std=c++17 -O3
 SYCLFLAG+=-DHIPSYCL
 # CPU platform
 SYCLFLAG+=--hipsycl-platform=rocm
+SYCLFLAG+=--hipsycl-gpu-arch=gfx900
 #SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib
 #
 #CELERITYDIR=${SYCLDIR}
@@ -109,9 +110,9 @@ HIPFLAGS+=${RANGEFLAG}
 # in your .bashrc.
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
-MPICC=${MPIDIR}/bin/mpiicc
-MPICXX=${MPIDIR}/bin/mpiicpc
+MPIDIR=/usr
+MPICC=${MPIDIR}/bin/mpicc
+MPICXX=${MPIDIR}/bin/mpicxx
 MPIINC=-I${MPIDIR}/include
 MPILIB=-L${MPIDIR}/lib -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
