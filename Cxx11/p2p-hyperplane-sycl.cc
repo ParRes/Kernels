@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   std::vector<double> h_grid(n*n,0.0);
   for (int j=0; j<n; j++) {

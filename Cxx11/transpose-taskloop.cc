@@ -117,7 +117,7 @@ int main(int argc, char * argv[])
   prk::vector<double> A(order*order);
   prk::vector<double> B(order*order);
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   OMP_PARALLEL()
   OMP_MASTER
