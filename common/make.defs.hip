@@ -128,7 +128,7 @@ GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
 #GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
 GAFLAG+=${MPIINC} ${MPILIB}
 GAFLAG+=-lmpifort -lmpi
-GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+GAFLAG+=-fdefault-integer-8 # GA is compiled with 64b integers on 64-bit systems
 #
 # PETSc
 #
