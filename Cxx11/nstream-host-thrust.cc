@@ -109,7 +109,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time{0};
 
   thrust::host_vector<double> A(length);
   thrust::host_vector<double> B(length);

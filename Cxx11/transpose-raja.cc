@@ -107,7 +107,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double trans_time(0);
+  double trans_time{0};
 
   double * RESTRICT Amem = new double[order*order];
   double * RESTRICT Bmem = new double[order*order];

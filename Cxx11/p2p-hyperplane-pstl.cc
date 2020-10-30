@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double pipeline_time(0);
+  double pipeline_time{0};
 
   std::vector<double> grid(n*n,0.0);
 

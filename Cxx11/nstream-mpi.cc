@@ -120,7 +120,7 @@ int main(int argc, char * argv[])
     // Allocate space and perform the computation
     //////////////////////////////////////////////////////////////////////
 
-    double nstream_time(0);
+    double nstream_time{0};
 
     prk::MPI::vector<double> A(length,0.0);
     prk::MPI::vector<double> B(length,2.0);

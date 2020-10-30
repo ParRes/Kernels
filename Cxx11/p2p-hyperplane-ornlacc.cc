@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0;
+  double pipeline_time{0};
 
   double * grid = new double[n*n];
 

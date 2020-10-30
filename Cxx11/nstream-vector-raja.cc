@@ -118,7 +118,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double nstream_time(0);
+  double nstream_time{0};
 
   std::vector<double> A(length);
   std::vector<double> B(length);

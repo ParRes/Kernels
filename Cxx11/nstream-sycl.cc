@@ -79,7 +79,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double nstream_time(0);
+  double nstream_time{0};
 
   const T scalar(3);
 
@@ -91,7 +91,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 
 #if PREBUILD_KERNEL
     auto ctx = q.get_context();
-    sycl::program kernel(ctx);
+    sycl::program kernel{ctx};
     kernel.build_with_kernel_type<nstream1<T>>();
     kernel.build_with_kernel_type<nstream2<T>>();
     kernel.build_with_kernel_type<nstream3<T>>();
@@ -250,7 +250,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q(sycl::host_selector{});
+    sycl::queue q{sycl::host_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, length, block_size);
     run<double>(q, iterations, length, block_size);
@@ -267,7 +267,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::cpu_selector{});
+    sycl::queue q{sycl::cpu_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, length, block_size);
     run<double>(q, iterations, length, block_size);
@@ -284,7 +284,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::gpu_selector{});
+    sycl::queue q{sycl::gpu_selector{}};
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
     run<float>(q, iterations, length, block_size);

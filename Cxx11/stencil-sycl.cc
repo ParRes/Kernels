@@ -109,7 +109,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double stencil_time(0);
+  double stencil_time{0};
 
   std::vector<T> h_in(n*n,0);
   std::vector<T> h_out(n*n,0);
@@ -121,10 +121,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
     sycl::buffer<T> d_out { h_out.data(), h_out.size() };
 
     q.submit([&](sycl::handler& h) {
-
-      // accessor methods
       auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
-
       h.parallel_for<class init<T>>(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
           const size_t i = it.get_global_id(0);
           const size_t j = it.get_global_id(1);
@@ -144,7 +141,6 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
 
       q.submit([&](sycl::handler& h) {
         auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
-        // Add constant to solution to force refresh of neighbor data, if any
         h.parallel_for<class add<T>>(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
             const size_t i = it.get_global_id(0);
             const size_t j = it.get_global_id(1);
@@ -280,7 +276,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q(sycl::host_selector{});
+    sycl::queue q{sycl::host_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, block_size, star, radius);
     run<double>(q, iterations, n, block_size, star, radius);
@@ -297,7 +293,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::cpu_selector{});
+    sycl::queue q{sycl::cpu_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, block_size, star, radius);
     run<double>(q, iterations, n, block_size, star, radius);
@@ -314,7 +310,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::gpu_selector{});
+    sycl::queue q{sycl::gpu_selector{}};
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
     run<float>(q, iterations, n, block_size, star, radius);

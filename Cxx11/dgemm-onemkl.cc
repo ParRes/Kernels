@@ -135,7 +135,7 @@ int main(int argc, char * argv[])
 
   const int matrices = 1;
 
-  double dgemm_time(0);
+  double dgemm_time{0};
 
   const size_t nelems = (size_t)order * (size_t)order;
   const size_t bytes = nelems * sizeof(double);
