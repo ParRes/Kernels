@@ -65,7 +65,7 @@ void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  double trans_time(0);
+  double trans_time{0};
 
   T * B = static_cast<T*>(syclx::malloc_shared(order*order * sizeof(T), q));
 

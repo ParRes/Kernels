@@ -182,7 +182,7 @@ int main(int argc, char * argv[])
   // Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  double dgemm_time(0);
+  double dgemm_time{0};
 
   const int matrices = (batches == 0 ? 1 : abs(batches));
   const size_t nelems = (size_t)order * (size_t)order;

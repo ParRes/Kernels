@@ -80,7 +80,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double nstream_time(0);
+  double nstream_time{0};
 
   const T scalar(3);
 

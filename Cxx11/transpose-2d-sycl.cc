@@ -65,7 +65,7 @@ void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  double trans_time(0);
+  double trans_time{0};
 
   std::vector<T> h_A(order*order);
   std::vector<T> h_B(order*order,(T)0);

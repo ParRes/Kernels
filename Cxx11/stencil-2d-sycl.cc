@@ -109,7 +109,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double stencil_time(0);
+  double stencil_time{0};
 
   std::vector<T> h_in(n*n,0);
   std::vector<T> h_out(n*n,0);
