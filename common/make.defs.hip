@@ -78,8 +78,8 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
-BLASFLAG=
-CBLASFLAG=
+BLASFLAG=-L/usr/lib/x86_64-linux-gnu -lblas64 -lpthread
+CBLASFLAG=-L/usr/lib/x86_64-linux-gnu -lblas64 -lpthread
 #
 # CUDA flags
 #
