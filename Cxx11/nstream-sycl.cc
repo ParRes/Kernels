@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -52,7 +52,6 @@
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
 ///
-///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
 ///          reported results should not be associated with Stream in
@@ -65,12 +64,15 @@
 #include "prk_sycl.h"
 #include "prk_util.h"
 
-template <typename T> class nstream;
+template <typename T> class nstream1;
+template <typename T> class nstream2;
+template <typename T> class nstream3;
 
 template <typename T>
 void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 {
-  sycl::range global{length};
+  const auto padded_length = (block_size > 0) ? (block_size * (length / block_size + length % block_size)) : 0;
+  sycl::range global{padded_length};
   sycl::range local{block_size};
 
   //////////////////////////////////////////////////////////////////////
@@ -90,7 +92,9 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 #if PREBUILD_KERNEL
     auto ctx = q.get_context();
     sycl::program kernel(ctx);
-    kernel.build_with_kernel_type<nstream<T>>();
+    kernel.build_with_kernel_type<nstream1<T>>();
+    kernel.build_with_kernel_type<nstream2<T>>();
+    kernel.build_with_kernel_type<nstream3<T>>();
 #endif
 
     sycl::buffer<T,1> d_A { h_A.data(), sycl::range<1>(h_A.size()) };
@@ -107,19 +111,37 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
         auto B = d_B.template get_access<sycl::access::mode::read>(h);
         auto C = d_C.template get_access<sycl::access::mode::read>(h);
 
-        h.parallel_for<class nstream<T>>(
+        if (block_size == 0) {
+            // hipSYCL prefers range to nd_range because no barriers
+            h.parallel_for<class nstream1<T>>(
 #if PREBUILD_KERNEL
-                kernel.get_kernel<nstream<T>>(),
+                kernel.get_kernel<nstream1<T>>(),
 #endif
-#if 0 // defaults in DPC++ are not optimal for V100
 		sycl::range<1>{length}, [=] (sycl::id<1> it) {
 		const size_t i = it;
-#else
+                A[i] += B[i] + scalar * C[i];
+            });
+        } else if (length % block_size) {
+            h.parallel_for<class nstream2<T>>(
+#if PREBUILD_KERNEL
+                kernel.get_kernel<nstream2<T>>(),
+#endif
 		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
+                if (i < length) {
+                    A[i] += B[i] + scalar * C[i];
+                }
+            });
+        } else {
+            h.parallel_for<class nstream3<T>>(
+#if PREBUILD_KERNEL
+                kernel.get_kernel<nstream3<T>>(),
 #endif
-            A[i] += B[i] + scalar * C[i];
-        });
+		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+		const size_t i = it.get_global_id(0);
+                A[i] += B[i] + scalar * C[i];
+            });
+        }
       });
       q.wait();
     }
@@ -168,6 +190,9 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
+      for (size_t i=0; i<length; ++i) {
+          std::cerr << i << "," << h_A[i] << "\n";
+      }
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;

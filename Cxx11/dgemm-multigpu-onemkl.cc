@@ -56,14 +56,14 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <CL/sycl.hpp>
-
-#include "prk_util.h"
 #include "prk_sycl.h"
+#include "prk_util.h"
 
+#if BETA9 // and older
 #include <mkl_blas_sycl.hpp>
-#include <mkl_lapack_sycl.hpp>
-#include <mkl_sycl_types.hpp>
+#else
+#include <oneapi/mkl/blas.hpp>
+#endif
 
 using namespace oneapi; // oneapi::mkl -> mkl
 

@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -65,63 +65,81 @@
 #include "prk_sycl.h"
 #include "prk_util.h"
 
-template <typename T> class nstream;
+template <typename T> class nstream1;
+template <typename T> class nstream2;
+template <typename T> class nstream3;
 
 template <typename T>
 void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 {
-  sycl::range global{length};
+  const auto padded_length = (block_size > 0) ? (block_size * (length / block_size + length % block_size)) : 0;
+  sycl::range global{padded_length};
   sycl::range local{block_size};
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto ctx = q.get_context();
-
   double nstream_time(0);
 
   const T scalar(3);
 
-  T * A;
+  T * A = syclx::malloc_shared<T>(length, q);
+  T * B = syclx::malloc_shared<T>(length, q);
+  T * C = syclx::malloc_shared<T>(length, q);
+
+  for (size_t i=0; i<length; i++) {
+    A[i] = 0.0;
+    B[i] = 2.0;
+    C[i] = 2.0;
+  }
 
   try {
 
-    auto dev = q.get_device();
-
 #if PREBUILD_KERNEL
+    auto ctx = q.get_context();
     sycl::program kernel(ctx);
-    kernel.build_with_kernel_type<nstream<T>>();
+    kernel.build_with_kernel_type<nstream1<T>>();
+    kernel.build_with_kernel_type<nstream2<T>>();
+    kernel.build_with_kernel_type<nstream3<T>>();
 #endif
-
-    A = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
-    T * B = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
-    T * C = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
-
-    for (size_t i=0; i<length; i++) {
-      A[i] = 0.0;
-      B[i] = 2.0;
-      C[i] = 2.0;
-    }
 
     for (int iter = 0; iter<=iterations; ++iter) {
 
       if (iter==1) nstream_time = prk::wtime();
 
       q.submit([&](sycl::handler& h) {
-        h.parallel_for<class nstream<T>>(
+        if (block_size == 0) {
+            // hipSYCL prefers range to nd_range because no barriers
+            h.parallel_for<class nstream1<T>>(
 #if PREBUILD_KERNEL
-                kernel.get_kernel<nstream<T>>(),
+                kernel.get_kernel<nstream1<T>>(),
 #endif
-#if 0 // defaults in DPC++ are not optimal for V100
 		sycl::range<1>{length}, [=] (sycl::id<1> it) {
 		const size_t i = it;
-#else
+                A[i] += B[i] + scalar * C[i];
+            });
+        } else if (length % block_size) {
+            h.parallel_for<class nstream2<T>>(
+#if PREBUILD_KERNEL
+                kernel.get_kernel<nstream2<T>>(),
+#endif
 		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
+                if (i < length) {
+                    A[i] += B[i] + scalar * C[i];
+                }
+            });
+        } else {
+            h.parallel_for<class nstream3<T>>(
+#if PREBUILD_KERNEL
+                kernel.get_kernel<nstream3<T>>(),
 #endif
-            A[i] += B[i] + scalar * C[i];
-        });
+		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+		const size_t i = it.get_global_id(0);
+                A[i] += B[i] + scalar * C[i];
+            });
+        }
       });
       q.wait();
     }
@@ -131,8 +149,8 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
     // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
 
-    syclx::free(B, ctx);
-    syclx::free(C, ctx);
+    syclx::free(B, q);
+    syclx::free(C, q);
 
   }
   catch (sycl::exception & e) {
@@ -167,7 +185,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
       asum += prk::abs(A[i]);
   }
 
-  syclx::free(A, ctx);
+  syclx::free(A, q);
 
   const double epsilon(1.e-8);
   if (prk::abs(ar-asum)/asum > epsilon) {
@@ -176,6 +194,9 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
+      for (size_t i=0; i<length; ++i) {
+          std::cerr << i << "," << A[i] << "\n";
+      }
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
