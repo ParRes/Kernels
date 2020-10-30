@@ -213,7 +213,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q(sycl::host_selector{});
+    sycl::queue q{sycl::host_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, order, block_size);
     run<double>(q, iterations, order, block_size);
@@ -230,7 +230,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::cpu_selector{});
+    sycl::queue q{sycl::cpu_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, order, block_size);
     run<double>(q, iterations, order, block_size);
@@ -247,7 +247,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::gpu_selector{});
+    sycl::queue q{sycl::gpu_selector{}};
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
     run<float>(q, iterations, order, block_size);
