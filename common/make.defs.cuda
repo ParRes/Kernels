@@ -1,6 +1,5 @@
 #
-# This file shows the CUDA+GCC toolchain options for PRKs using
-# OpenMP, MPI and/or Fortran coarrays only.
+# This file shows the CUDA+GCC toolchain options.
 #
 # Base compilers and language options
 #
@@ -22,8 +21,6 @@ DEFAULT_OPT_FLAGS=-O3 -mtune=native -ffast-math
 #DEFAULT_OPT_FLAGS+=-fsanitize=undefined,leak
 #DEFAULT_OPT_FLAGS+=-fsanitize=address
 #DEFAULT_OPT_FLAGS+=-fsanitize=thread
-# If you are compiling for KNL on a Xeon login node, use the following:
-# DEFAULT_OPT_FLAGS=-g -O3 -march=knl
 # See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
 #
 #DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
@@ -129,8 +126,8 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
-#BLASFLAG=-DACCELERATE -framework Accelerate
-#CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+#BLASFLAG=
+#CBLASFLAG=
 #
 # CUDA flags
 #

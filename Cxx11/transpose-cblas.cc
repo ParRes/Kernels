@@ -127,7 +127,7 @@ int main(int argc, char * argv[])
 #warning No CBLAS transpose extension available!
       for (int i=0;i<order; i++) {
         for (int j=0;j<order;j++) {
-          T2[i*order+j] = A[j*order+i];
+          T[i*order+j] = A[j*order+i];
         }
       }
 #endif
