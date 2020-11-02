@@ -280,6 +280,10 @@ FORTRAN/transpose-ornlacc
 FORTRAN/transpose-pretty
 FORTRAN/transpose-taskloop-openmp
 FORTRAN/transpose-tasks-openmp
+GO/nstream
+GO/p2p
+GO/stencil
+GO/transform
 JAVA/nstream.class
 JAVA/p2p.class
 JAVA/stencil.class
