@@ -308,6 +308,8 @@ clean:
 	-rm -f *-thrust
 	-rm -f *-cuda
 	-rm -f *-cublas
+	-rm -f *-hip
+	-rm -f *-hipblas
 	-rm -f *-cblas
 	-rm -f *-onemkl
 	-rm -f *-occa
