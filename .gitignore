@@ -2,6 +2,8 @@
 *.s                             # Assembly output
 *.ll                            # LLVM intermediate
 *.o                             # Object files
+*/*.o
+*/*/*.o
 core.*                          # core files
 octave-workspace                # Octave crashes
 *.swp                           # Vim
@@ -20,7 +22,11 @@ scripts/small/runfenix
 deps/
 
 *.incl                          # PRK C89 stencil generated code
+*/*.incl
+*/*/*.incl
 func.c                          # PRK C89 stencil generated code
+*/func.c
+*/*/func.c
 
 *.cobaltlog                     # ALCF Cobalt scheduler
 *.output                        # ALCF Cobalt scheduler
@@ -197,6 +203,7 @@ Cxx11/stencil-sycl
 Cxx11/stencil-sycl-explicit
 Cxx11/stencil-sycl-explicit-usm
 Cxx11/stencil-sycl-usm
+Cxx11/stencil-2d-sycl
 Cxx11/stencil-taskloop
 Cxx11/stencil-tbb
 Cxx11/stencil-vector
@@ -225,6 +232,7 @@ Cxx11/transpose-sycl
 Cxx11/transpose-sycl-explicit
 Cxx11/transpose-sycl-explicit-usm
 Cxx11/transpose-sycl-usm
+Cxx11/transpose-2d-sycl
 Cxx11/transpose-taskloop
 Cxx11/transpose-tbb
 Cxx11/transpose-thread
