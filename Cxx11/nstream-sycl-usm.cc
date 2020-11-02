@@ -116,7 +116,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
                 kernel.get_kernel<nstream1<T>>(),
 #endif
 		sycl::range<1>{length}, [=] (sycl::id<1> it) {
-		const size_t i = it;
+		const size_t i = it[0];
                 A[i] += B[i] + scalar * C[i];
             });
         } else if (length % block_size) {
