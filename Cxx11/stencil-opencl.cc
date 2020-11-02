@@ -113,7 +113,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   std::vector<T> h_in(n*n,  T(0));
   std::vector<T> h_out(n*n, T(0));
 
-  auto stencil_time = 0.0;
+  double stencil_time{0};
 
   // initialize the input array
   for (int i=0; i<n; i++) {

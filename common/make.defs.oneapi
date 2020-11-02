@@ -30,7 +30,7 @@ DEFAULT_OPT_FLAGS=-g -O3
 #
 OPENMPFLAG=-fiopenmp
 OPENMPSIMDFLAG=-qopenmp-simd
-OFFLOADFLAG=-fiopenmp -fopenmp-targets=spir64
+OFFLOADFLAG=-fopenmp-targets=spir64
 #
 # OpenCL flags
 #
@@ -45,8 +45,19 @@ OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
 #
 # SYCL flags
 #
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+#SYCLDIR=/opt/isycl
+#SYCLCXX=${SYCLDIR}/bin/clang++
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-fsycl -fsycl-unnamed-lambda
+#SYCLFLAG+=-fsycl-targets=spir64_gen-unknown-linux-sycldevice -Xsycl-target-backend=spir64_gen-unknown-linux-sycldevice "-device skl"
+#SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#
+# Intel oneAPI
+#
 SYCLCXX=dpcpp
-SYCLFLAG=-fsycl -fsycl-unnamed-lambda
+SYCLFLAG=-fsycl
 SYCLFLAG+=-std=c++17 -O3
 SYCLFLAG+=-DDPCPP
 #
@@ -78,8 +89,11 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 BLASFLAG=-mkl
 CBLASFLAG=-DMKL -mkl
-ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_tbb_thread -tbb -lmkl_core -lOpenCL -ldl
+#MKLROOT=/opt/intel/inteloneapi/mkl/2021.1-beta09
+#ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_tbb_thread ${TBBFLAG} -lmkl_core -lOpenCL -ldl
+#ONEMKLFLAG+=-I/opt/intel/oneapi/mkl/2021.1-beta09/include/
 #ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
+ONEMKLFLAG=-mkl
 #
 # CUDA flags
 #

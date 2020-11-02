@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  double stencil_time{0};
 
   const size_t nelems = (size_t)n * (size_t)n;
   const size_t bytes = nelems * sizeof(prk_float);

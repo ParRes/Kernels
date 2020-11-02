@@ -195,7 +195,7 @@ int main(int argc, char * argv[])
   prk::CUDA::check( cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice) );
   prk::CUDA::check( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   for (int iter = 0; iter<=iterations; iter++) {
 

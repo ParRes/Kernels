@@ -445,7 +445,7 @@ int main(int argc, char ** argv) {
       std::cout << "             \"SINUSOIDAL\" parameters: none" << std::endl;
       std::cout << "             \"LINEAR\"     parameters: <negative slope> <constant offset>" << std::endl;
       std::cout << "             \"PATCH\"      parameters: <xleft> <xright>  <ybottom> <ytop>" << std::endl;
-      throw "";
+      return argc;
     }
 
     iterations = std::atol(argv[1]);
@@ -529,9 +529,11 @@ int main(int argc, char ** argv) {
   } else if (devname == "HOST") {
       d = sycl::host_selector{}.select_device();
   } else {
-      throw "PRK_DEVICE must be CPU, GPU or HOST";
+      std::cout << "PRK_DEVICE should be CPU, GPU or HOST" << std::endl;
+      d = sycl::default_selector{}.select_device();
   }
   sycl::queue q(d);
+  prk::SYCL::print_device_platform(q);
 
   std::cout << "Grid size                      = " << L << std::endl;
   std::cout << "Number of particles requested  = " << n << std::endl;

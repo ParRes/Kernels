@@ -67,6 +67,10 @@ OPENCLFLAG=-framework OpenCL
 #
 #METALFLAG=-framework MetalPerformanceShaders
 #
+# OCCA
+#
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
 # SYCL flags
 #
 # Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md

@@ -56,14 +56,16 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <CL/sycl.hpp>
-
-#include "prk_util.h"
 #include "prk_sycl.h"
+#include "prk_util.h"
 
+#if BETA9 // and older
 #include <mkl_blas_sycl.hpp>
-#include <mkl_lapack_sycl.hpp>
-#include <mkl_sycl_types.hpp>
+#else
+#include <oneapi/mkl/blas.hpp>
+#endif
+
+using namespace oneapi; // oneapi::mkl -> mkl
 
 int main(int argc, char * argv[])
 {
@@ -133,7 +135,7 @@ int main(int argc, char * argv[])
 
   const int matrices = 1;
 
-  double dgemm_time(0);
+  double dgemm_time{0};
 
   const size_t nelems = (size_t)order * (size_t)order;
   const size_t bytes = nelems * sizeof(double);

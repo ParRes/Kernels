@@ -56,14 +56,16 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <CL/sycl.hpp>
-
-#include "prk_util.h"
 #include "prk_sycl.h"
+#include "prk_util.h"
 
+#if BETA9 // and older
 #include <mkl_blas_sycl.hpp>
-#include <mkl_lapack_sycl.hpp>
-#include <mkl_sycl_types.hpp>
+#else
+#include <oneapi/mkl/blas.hpp>
+#endif
+
+using namespace oneapi; // oneapi::mkl -> mkl
 
 void prk_dgemm(sycl::queue &q, const int order, const int batches, prk_float *A, prk_float *B, prk_float *C)
 {
@@ -180,7 +182,7 @@ int main(int argc, char * argv[])
   // Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  double dgemm_time(0);
+  double dgemm_time{0};
 
   const int matrices = (batches == 0 ? 1 : abs(batches));
   const size_t nelems = (size_t)order * (size_t)order;

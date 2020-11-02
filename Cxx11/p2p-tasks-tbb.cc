@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
   int num_blocks_m = (m / mc);
   if(m%mc != 0) num_blocks_m++;
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   double * grid = new double[m*n];
 
