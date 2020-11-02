@@ -86,7 +86,7 @@ void run(cl::Context context, int iterations, size_t length)
   /// Allocate space for the input and nstream matrix
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time{0};
 
   std::vector<T> h_a(length, T(0));
   std::vector<T> h_b(length, T(2));

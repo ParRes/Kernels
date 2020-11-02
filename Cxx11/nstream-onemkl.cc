@@ -64,9 +64,13 @@
 #include "prk_sycl.h"
 #include "prk_util.h"
 
+#if BETA9 // and older
 #include <mkl_blas_sycl.hpp>
-#include <mkl_lapack_sycl.hpp>
-#include <mkl_sycl_types.hpp>
+#else
+#include <oneapi/mkl/blas.hpp>
+#endif
+
+using namespace oneapi; // oneapi::mkl -> mkl
 
 int main(int argc, char * argv[])
 {
@@ -108,7 +112,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double nstream_time(0);
+  double nstream_time{0};
 
   const size_t bytes = length * sizeof(double);
 

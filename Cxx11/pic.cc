@@ -125,7 +125,7 @@ double * initializeGrid(uint64_t L)
 }
 
 /* Completes particle distribution */
-void finish_distribution(const uint64_t n, particle_t p[const n])
+void finish_distribution(const uint64_t n, particle_t * RESTRICT p)
 {
   for (uint64_t pi=0; pi<n; pi++) {
     double x_coord = p[pi].x;

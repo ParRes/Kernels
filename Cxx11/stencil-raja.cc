@@ -163,7 +163,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  double stencil_time{0};
 
   double * RESTRICT imem = new double[n*n];
   double * RESTRICT omem = new double[n*n];

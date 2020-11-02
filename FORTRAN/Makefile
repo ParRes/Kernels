@@ -70,7 +70,7 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgem
 
 ornlacc: p2p-ornlacc p2p-innerloop-ornlacc stencil-ornlacc transpose-ornlacc nstream-ornlacc
 
-blas: dgemm-mkl
+blas: dgemm-blas
 
 %: %.F90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -80,10 +80,10 @@ stencil: stencil.F90 stencil_serial.F90
 	$(FC) $(FCFLAGS) $< -o $@
 
 dgemm-pretty: dgemm-pretty.F90
-	$(FC) $(FCFLAGS) $(BLASFLAGS) $< -o $@
+	$(FC) $(FCFLAGS) $< $(BLASFLAGS) -o $@
 
 dgemm-blas: dgemm-blas.F90
-	$(FC) $(FCFLAGS) $(BLASFLAGS) $< -o $@
+	$(FC) $(FCFLAGS) $< $(BLASFLAGS) -o $@
 
 %-pretty: %-pretty.F90
 	$(FC) $(FCFLAGS) $< -o $@

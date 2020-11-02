@@ -1,6 +1,5 @@
 #
-# This file shows the GCC toolchain options for PRKs using
-# OpenMP, MPI and/or Fortran coarrays only.
+# This file shows the CUDA+GCC toolchain options.
 #
 # Base compilers and language options
 #
@@ -17,15 +16,11 @@ CXX=g++${VERSION} -std=gnu++17
 #
 # -mtune=native is appropriate for most cases.
 # -march=native is appropriate if you want portable binaries.
-#DEFAULT_OPT_FLAGS=-O3 -mtune=native -ffast-math
-DEFAULT_OPT_FLAGS=-O0
-DEFAULT_OPT_FLAGS+=-g3
+DEFAULT_OPT_FLAGS=-O3 -mtune=native -ffast-math
 #DEFAULT_OPT_FLAGS+=-fsanitize=undefined
 #DEFAULT_OPT_FLAGS+=-fsanitize=undefined,leak
 #DEFAULT_OPT_FLAGS+=-fsanitize=address
 #DEFAULT_OPT_FLAGS+=-fsanitize=thread
-# If you are compiling for KNL on a Xeon login node, use the following:
-# DEFAULT_OPT_FLAGS=-g -O3 -march=knl
 # See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
 #
 #DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
@@ -47,17 +42,69 @@ ORNLACCFLAG=-fopenacc
 # Linux
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
-OPENCLFLAG=-I/usr/include -L/usr/lib/x86_64-linux-gnu -lOpenCL
-OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
-METALFLAG=-framework MetalPerformanceShaders
+#OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
+#OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
+#
+# Metal (MacOS-only, unused)
+#
+#METALFLAG=-framework MetalPerformanceShaders
 #
 # OCCA
 #
 #OCCADIR=${HOME}/prk-repo/Cxx11/occa
 #
-# Cilk
+# SYCL flags
 #
-#CILKFLAG=-fcilkplus
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+#SYCLDIR=/opt/isycl
+#SYCLDIR=${HOME}/ISYCL/llvm/build
+#SYCLCXX=${SYCLDIR}/bin/clang++
+#SYCLFLAG=-g -std=c++17 -O3
+#SYCLFLAG+=-fsycl -fsycl-unnamed-lambda
+#SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#
+# CodePlay ComputeCpp
+#
+#SYCLDIR=/opt/sycl/latest
+#SYCLDIR=/opt/codeplay/latest
+#SYCLCXX=${SYCLDIR}/bin/compute++
+#SYCLFLAG=-sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+#SYCLFLAG+=-std=c++14 -O3
+# This makes a huge difference in e.g. nstream...
+#SYCLFLAG+=-no-serial-memop
+# CentOS7 and Ubuntu14 built for this
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+# PRK header rejects GCC4
+#SYCLFLAG+=--gcc-toolchain=/swtools/gcc/5.4.0
+# If not found automatically
+#SYCLFLAG+=${OPENCLFLAG}
+# NVIDIA target
+#SYCLFLAG+=-sycl-target ptx64
+#SYCLFLAG+=-DPRK_NO_OPENCL_GPU
+#
+# hipSYCL
+#
+#SYCLDIR=/opt/hipsycl/usr/local # if installed with DESTDIR
+#SYCLDIR=/opt/hipSYCL
+#SYCLDIR=/opt/spack/spack/opt/spack/linux-ubuntu18.04-haswell/gcc-8.3.0/hipsycl-master-appurj662qod4y4z5zxipr2fwthl66k7
+#SYCLCXX=${SYCLDIR}/bin/syclcc-clang
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-DHIPSYCL
+# CPU platform
+#SYCLFLAG+=--hipsycl-platform=cpu
+#SYCLFLAG+=--hipsycl-platform=cuda
+#SYCLFLAG+=--hipsycl-gpu-arch=sm_60
+#SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib # wrong?
+#SYCLFLAG+=-Wl,-rpath=${SYCLDIR}/lib
+#
+#CELERITYDIR=${SYCLDIR}
+#CELERITYINC=-I$(CELERITYDIR)/include/celerity -I$(CELERITYDIR)/include/celerity/vendor
+#CELERITYLIB=-L$(CELERITYDIR)/lib -lcelerity_runtime
+#
+# OCCA
+#
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
 #
 # TBB
 #
@@ -77,24 +124,10 @@ RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 THRUSTDIR=/opt/nvidia/thrust
 THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
-# SYCL flags
-#
-# triSYCL
-# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
-SYCLDIR=./triSYCL
-SYCLCXX=${CXX} -std=c++17 ${OPENMPFLAG}
-SYCLFLAG=-I${SYCLDIR}/include ${BOOSTFLAG} -DTRISYCL
-# ProGTX
-# https://github.com/ProGTX/sycl-gtx
-#SYCLDIR=${HOME}/Work/OpenCL/sycl-gtx
-#SYCLCXX=${CXX} ${OPENMPFLAG}
-#SYCLFLAG=-I${SYCLDIR}/sycl-gtx/include -L${SYCLDIR}/build/sycl-gtx -lsycl-gtx ${OPENCLFLAG}
-SYCLFLAG+=${RANGEFLAG}
-#
 # CBLAS for C++ DGEMM
 #
-BLASFLAG=-DACCELERATE -framework Accelerate
-CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+#BLASFLAG=
+#CBLASFLAG=
 #
 # CUDA flags
 #
@@ -132,11 +165,39 @@ CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
 #CUDAFLAGS+=-D_AVX512IFMAVLINTRIN_H_INCLUDED
 #CUDAFLAGS+=-D_AVX512ERINTRIN_H_INCLUDED
 #
-# MPI
+# MPI-3
 #
-# We assume you have installed an implementation of MPI-3 that is in your path.
-MPICC=mpicc
-MPIFLAGS=-lmpi
+# We assume you have Intel MPI and have setup your environment with e.g.
+# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
+# in your .bashrc.
+#
+# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
+MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
+MPICC=${MPIDIR}/bin/mpiicc
+MPICXX=${MPIDIR}/bin/mpiicpc
+MPIINC=-I${MPIDIR}/include
+MPILIB=-L${MPIDIR}/lib -lmpi
+#MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
+#MPIINC=-I/usr/include/mpich-3.2-x86_64
+#MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# Global Arrays
+#
+GADIR=../deps/ga
+GAFLAG=-I${GADIR}/include
+GAFLAG+=-L${GADIR}/lib -lga
+GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
+#GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
+GAFLAG+=${MPIINC} ${MPILIB}
+GAFLAG+=-lmpifort -lmpi
+GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+#
+# PETSc
+#
+PETSCDIR=../deps/petsc
+PETSCFLAG=-I${PETSCDIR}/include
+PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
+PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
 #
 # Fortran 2008 coarrays
 #

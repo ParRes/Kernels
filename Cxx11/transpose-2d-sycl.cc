@@ -52,59 +52,37 @@
 #include "prk_sycl.h"
 #include "prk_util.h"
 
-template <typename T> class iota;
 template <typename T> class transpose;
 
 template <typename T>
-void run(sycl::queue & q, int iterations, size_t order)
+void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
 {
+  size_t padded_order = block_size * prk::divceil(order,block_size);
+  sycl::range<2> global{padded_order,padded_order};
+  sycl::range<2> local{block_size,block_size};
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  double trans_time(0);
+  double trans_time{0};
 
+  std::vector<T> h_A(order*order);
   std::vector<T> h_B(order*order,(T)0);
+
+  // fill A with the sequence 0 to order^2-1 as doubles
+  std::iota(h_A.begin(), h_A.end(), static_cast<T>(0));
 
   try {
 
-    auto ctx = q.get_context();
-
 #if PREBUILD_KERNEL
-    sycl::program kernel(ctx);
+    auto ctx = q.get_context();
+    sycl::program kernel{ctx};
     kernel.build_with_kernel_type<transpose<T>>();
 #endif
 
-#if USE_2D_INDEXING
-    sycl::buffer<T,2> d_A( sycl::range<2>{order,order} );
-    sycl::buffer<T,2> d_B( sycl::range<2>{order,order} );
-#else
-    sycl::buffer<T> d_A { sycl::range<1>{order*order}  };
-    sycl::buffer<T> d_B { sycl::range<1>{order*order}  };
-#endif
-
-    q.submit([&](sycl::handler& h) {
-#if USE_2D_INDEXING
-        sycl::accessor<T, 2, sycl::access::mode::write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<2>(order,order), sycl::id<2>(0,0));
-        h.parallel_for<class iota<T>>(sycl::range<2>{order,order}, [=] (sycl::item<2> i) {
-            A[i] = i[0] * order + i[1];
-        });
-#else
-        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(order*order), sycl::id<1>(0));
-        h.parallel_for<class iota<T>>(sycl::range<1>{order*order}, [=] (sycl::item<1> i) {
-            A[i] = i[0];
-        });
-#endif
-    });
-    q.submit([&](sycl::handler& h) {
-#if USE_2D_INDEXING
-        sycl::accessor<T, 2, sycl::access::mode::write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<2>(order,order), sycl::id<2>(0,0));
-#else
-        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(order*order), sycl::id<1>(0));
-#endif
-        h.fill(B,(T)0);
-    });
-    q.wait();
+    sycl::buffer<T,2> d_A( h_A.data(), sycl::range<2>{order,order} );
+    sycl::buffer<T,2> d_B( h_B.data(), sycl::range<2>{order,order} );
 
     for (int iter = 0; iter<=iterations; ++iter) {
 
@@ -112,47 +90,31 @@ void run(sycl::queue & q, int iterations, size_t order)
 
       q.submit([&](sycl::handler& h) {
 
-#if USE_2D_INDEXING
-        sycl::accessor<T, 2, sycl::access::mode::read_write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<2>(order,order), sycl::id<2>(0,0));
-        sycl::accessor<T, 2, sycl::access::mode::read_write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<2>(order,order), sycl::id<2>(0,0));
-#else
-        sycl::accessor<T, 1, sycl::access::mode::read_write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(order*order), sycl::id<1>(0));
-        sycl::accessor<T, 1, sycl::access::mode::read_write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(order*order), sycl::id<1>(0));
-#endif
+        // accessor methods
+        auto A = d_A.template get_access<sycl::access::mode::read_write>(h);
+        auto B = d_B.template get_access<sycl::access::mode::read_write>(h);
 
         h.parallel_for<class transpose<T>>(
 #if PREBUILD_KERNEL
-                kernel.get_kernel<transpose<T>>(),
+            kernel.get_kernel<transpose<T>>(),
 #endif
-                sycl::range<2>{order,order}, [=] (sycl::item<2> it) {
-#if USE_2D_INDEXING
-          sycl::id<2> ij{it[0],it[1]};
-          sycl::id<2> ji{it[1],it[0]};
-          B[ij] += A[ji];
-          A[ji] += (T)1;
-#else
-          B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
-          A[it[1] * order + it[0]] += (T)1;
-#endif
+            sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
+                const size_t i = it.get_global_id(0);
+                const size_t j = it.get_global_id(1);
+                if ((i<order) && (j<order)) {
+                    sycl::id<2> ij{i,j};
+                    sycl::id<2> ji{j,i};
+                    B[ij] += A[ji];
+                    A[ji] += (T)1;
+                }
         });
       });
       q.wait();
     }
-
     // Stop timer before buffer+accessor destructors fire,
     // since that will move data, and we do not time that
     // for other device-oriented programming models.
     trans_time = prk::wtime() - trans_time;
-
-    q.submit([&](sycl::handler& h) {
-#if USE_2D_INDEXING
-        sycl::accessor<T, 2, sycl::access::mode::read, sycl::access::target::global_buffer> B(d_B, h, sycl::range<2>(order,order), sycl::id<2>(0,0));
-#else
-        sycl::accessor<T, 1, sycl::access::mode::read, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(order*order), sycl::id<1>(0));
-#endif
-        h.copy(B,h_B.data());
-    });
-    q.wait();
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -172,14 +134,13 @@ void run(sycl::queue & q, int iterations, size_t order)
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
-  const T addit = (iterations+1.) * (iterations/2.);
+  const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
   for (size_t i=0; i<order; ++i) {
     for (size_t j=0; j<order; ++j) {
-      size_t const ij = i*order+j;
-      size_t const ji = j*order+i;
-      const T reference = static_cast<T>(ij)*(1.+iterations)+addit;
+      const size_t ij = i*order+j;
+      const size_t ji = j*order+i;
+      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
       abserr += prk::abs(h_B[ji] - reference);
     }
   }
@@ -212,10 +173,13 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t order;
+  size_t order, block_size;
+
+  block_size = 16;
+
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order>";
+        throw "Usage: <# iterations> <matrix order> [<block_size>]";
       }
 
       // number of times to do the transpose
@@ -231,6 +195,10 @@ int main(int argc, char * argv[])
       } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
+
+      if (argc>3) {
+         block_size = std::atoi(argv[3]);
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -239,37 +207,17 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Block size            = " << block_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
   try {
-    if (order<10000) {
-      sycl::queue q(sycl::host_selector{});
-      prk::SYCL::print_device_platform(q);
-      run<float>(q, iterations, order);
-      run<double>(q, iterations, order);
-    } else {
-        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
-    }
-  }
-  catch (sycl::exception & e) {
-    std::cout << e.what() << std::endl;
-    prk::SYCL::print_exception_details(e);
-  }
-  catch (std::exception & e) {
-    std::cout << e.what() << std::endl;
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-  }
-
-  try {
-    sycl::queue q(sycl::cpu_selector{});
+    sycl::queue q{sycl::host_selector{}};
     prk::SYCL::print_device_platform(q);
-    run<float>(q, iterations, order);
-    run<double>(q, iterations, order);
+    run<float>(q, iterations, order, block_size);
+    run<double>(q, iterations, order, block_size);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -283,12 +231,29 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::gpu_selector{});
+    sycl::queue q{sycl::cpu_selector{}};
+    prk::SYCL::print_device_platform(q);
+    run<float>(q, iterations, order, block_size);
+    run<double>(q, iterations, order, block_size);
+  }
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+  }
+  catch (std::exception & e) {
+    std::cout << e.what() << std::endl;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+  }
+
+  try {
+    sycl::queue q{sycl::gpu_selector{}};
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
-    run<float>(q, iterations, order);
+    run<float>(q, iterations, order, block_size);
     if (has_fp64) {
-      run<double>(q, iterations, order);
+      run<double>(q, iterations, order, block_size);
     } else {
       std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
     }
