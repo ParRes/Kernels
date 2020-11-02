@@ -58,8 +58,8 @@ template <typename T>
 void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
 {
   size_t padded_order = block_size * prk::divceil(order,block_size);
-  sycl::range global{padded_order,padded_order};
-  sycl::range local{block_size,block_size};
+  sycl::range<2> global{padded_order,padded_order};
+  sycl::range<2> local{block_size,block_size};
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix

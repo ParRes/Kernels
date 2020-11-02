@@ -102,8 +102,8 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
 #endif
 
   size_t padded_n = block_size * prk::divceil(n,block_size);
-  sycl::range global{padded_n,padded_n};
-  sycl::range local{block_size,block_size};
+  sycl::range<2> global{padded_n,padded_n};
+  sycl::range<2> local{block_size,block_size};
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
