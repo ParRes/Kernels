@@ -62,6 +62,8 @@ ORNLACCFLAG=-fopenacc
 #SYCLCXX=${SYCLDIR}/bin/clang++
 #SYCLFLAG=-g -std=c++17 -O3
 #SYCLFLAG+=-fsycl -fsycl-unnamed-lambda
+###SYCLFLAG+=-Wno-unknown-cuda-version
+#SYCLFLAG+=-fsycl-targets=nvptx64-nvidia-cuda-sycldevice
 #SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
 #
 # CodePlay ComputeCpp
