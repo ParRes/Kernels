@@ -163,7 +163,7 @@ int main(int argc, char * argv[])
     // z:=A gamma:=1
     // x:=B alpha:=1
     // y:=C beta:=three
-    ierr = VecAXPBYPCZ(A, one, three, one, B, C);
+    ierr = VecAXPBYPCZ(A, one, three, one, B, C); CHKERRQ(ierr);
   }
 
   ierr = PetscBarrier(NULL); CHKERRQ(ierr);
