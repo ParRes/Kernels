@@ -149,4 +149,3 @@ COARRAYFLAG=-fcoarray=single -lcaf_single
 #
 MEMKINDDIR=/home/parallels/PRK/deps
 MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib
-
