@@ -56,8 +56,8 @@ program main
   use iso_fortran_env
   use mpi_f08
   implicit none
-#include 'global.fh'
-#include 'mafdecls.fh'
+#include "global.fh"
+#include "mafdecls.fh"
 !#include 'ga-mpi.fh' ! unused
   ! for argument parsing
   integer :: err
@@ -196,7 +196,7 @@ program main
 
   ok = ma_init(MT_DBL, order*order, 0)
   if (.not.ok) then
-    call ga_error('ma_init failed', order)
+    call ga_error('ma_init failed', 1)
   endif
 
   if (order.lt.10) then

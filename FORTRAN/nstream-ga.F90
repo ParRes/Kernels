@@ -68,9 +68,9 @@ program main
   use iso_fortran_env
   use mpi_f08
   implicit none
-#include 'global.fh'
+#include "global.fh"
 !#include 'ga-mpi.fh' ! unused
-#include 'mafdecls.fh'
+#include "mafdecls.fh"
   ! for argument parsing
   integer :: err
   integer :: arglen
