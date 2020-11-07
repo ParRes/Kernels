@@ -83,7 +83,7 @@ function do_verify(B, order, iterations)
 end
 
 function main()
-    println("Parallel Research Kernels version ") #, PRKVERSION)
+    println("Parallel Research Kernels version")
     println("Julia Matrix transpose: B = A^T")
 
     if length(ARGS) != 2
@@ -108,8 +108,8 @@ function main()
         exit(3)
     end
 
-    println("Order                    = ", order)
     println("Number of iterations     = ", iterations)
+    println("Order                    = ", order)
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
