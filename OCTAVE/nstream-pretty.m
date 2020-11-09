@@ -90,9 +90,9 @@ printf("Vector length            = %d\n", length);
 % ** Allocate space for the input and transpose matrix
 % ********************************************************************
 
-A = zeros(length,'double');
-B = zeros(length,'double');
-C = zeros(length,'double');
+A = zeros(length,1,'double');
+B = zeros(length,1,'double');
+C = zeros(length,1,'double');
 
 A(:) = 0;
 B(:) = 2;
