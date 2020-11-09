@@ -66,7 +66,7 @@ fn main()
   println!("Rust Matrix transpose: B = A^T");
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   let args : Vec<String> = env::args().collect();
@@ -157,7 +157,7 @@ fn main()
   let transpose_time : f64 = dtt as f64 * 1.0e-9;
 
   //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
+  // Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
   let addit : usize = ((iterations as usize + 1) * (iterations as usize)) / 2;

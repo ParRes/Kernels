@@ -63,7 +63,7 @@
 
 use std::env;
 use std::mem;
-use std::num;
+//use std::num; // abs?
 use std::time::{Instant,Duration};
 
 fn help() {
@@ -76,7 +76,7 @@ fn main()
   println!("Rust STREAM triad: A = B + scalar * C");
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   let args : Vec<String> = env::args().collect();
@@ -106,24 +106,24 @@ fn main()
   }
 
   println!("Number of iterations  = {}", iterations);
-  println!("vector length         = {}", order);
+  println!("vector length         = {}", length);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  let mut a : Vec<f64> = vec![0.0; nelems];
-  let mut b : Vec<f64> = vec![2.0; nelems];
-  let mut c : Vec<f64> = vec![2.0; nelems];
+  let mut a : Vec<f64> = vec![0.0; length];
+  let b : Vec<f64> = vec![2.0; length];
+  let c : Vec<f64> = vec![2.0; length];
 
   let timer = Instant::now();
   let mut t0 : Duration = timer.elapsed();
 
   let scalar : f64 = 3.0;
 
-  for k in 0..iterations+1 {
+  for _k in 0..iterations+1 {
 
-    if k == 1 { t0 = timer.elapsed(); }
+    if _k == 1 { t0 = timer.elapsed(); }
 
     for i in 0..length {
         a[i] += b[i] + scalar * c[i];
@@ -136,26 +136,22 @@ fn main()
   let nstream_time : f64 = dtt as f64 * 1.0e-9;
 
   //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
+  // Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
   let mut ar : f64 = 0.0;
   let br : f64 = 2.0;
   let cr : f64 = 2.0;
-  for k in 0..iterations+1 {
+  for _k in 0..iterations+1 {
       ar += br + scalar * cr;
   }
 
-  ar *= length;
+  ar *= length as f64;
 
   let mut asum = 0.0;
   for i in 0..length {
       let absa : f64 = a[i].abs();
       asum += absa;
-  }
-
-  if cfg!(VERBOSE) {
-    println!("Sum of absolute differences: {:30.15}", abserr);
   }
 
   let err : f64 = (ar-asum)/asum;
