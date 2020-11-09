@@ -81,7 +81,7 @@ func main() {
   //////////////////////////////////////////////////////////////////////
 
   if len(os.Args) < 2 {
-      fmt.Println("Usage: nstream.go -i <# iterations> -n <vector length>")
+      fmt.Println("Usage: go run nstream.go -i <# iterations> -n <vector length>")
       os.Exit(1)
   }
 
