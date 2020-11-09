@@ -11,11 +11,13 @@
 .PHONY: all clean
 
 all:
+	cd nstream && cargo build
 	cd p2p && cargo build
 	cd stencil && cargo build
 	cd transpose && cargo build
 
 clean:
+	cd nstream && cargo clean
 	cd p2p && cargo clean
 	cd stencil && cargo clean
 	cd transpose && cargo clean
