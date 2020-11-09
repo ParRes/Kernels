@@ -7,6 +7,9 @@
 core.*                          # core files
 octave-workspace                # Octave crashes
 *.swp                           # Vim
+*/*.swp
+*/*/*.swp
+*/*/*/*.swp
 *.swo                           # Vim
 *.dSYM                          # Mac
 *.optrpt                        # Intel compiler
