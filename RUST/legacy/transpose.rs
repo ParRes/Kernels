@@ -180,7 +180,7 @@ fn main()
     println!("Solution validates");
     let avgtime : f64 = (transpose_time as f64) / (iterations as f64);
     let bytes : usize = 2 * nelems * mem::size_of::<f64>();
-    println!("Rate (MB/s): {:10.3} Avg time (s): {:10.3}", (1.0e0-6_f64) * (bytes as f64) / avgtime, avgtime);
+    println!("Rate (MB/s): {:10.3} Avg time (s): {:10.3}", (1.0e-6_f64) * (bytes as f64) / avgtime, avgtime);
   } else {
     println!("ERROR: Aggregate squared error {:30.15} exceeds threshold {:30.15}", abserr, epsilon);
     return;
