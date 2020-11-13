@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -72,8 +72,8 @@ template <typename T>
 void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 {
   const auto padded_length = (block_size > 0) ? (block_size * (length / block_size + length % block_size)) : 0;
-  sycl::range global{padded_length};
-  sycl::range local{block_size};
+  sycl::range<1> global{padded_length};
+  sycl::range<1> local{block_size};
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -212,7 +212,7 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
+  int iterations;
   size_t length, block_size;
 
   block_size = 256; // matches CUDA version default
