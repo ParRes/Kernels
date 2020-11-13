@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -86,7 +86,7 @@ int main(int argc, char * argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atoi(argv[2]);
+      length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
@@ -100,9 +100,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Vector length         = " << length << std::endl;
-  std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Vector length        = " << length << std::endl;
+  std::cout << "Number of GPU to use = " << use_ngpu << std::endl;
 
   std::vector<sycl::queue> qs;
 
