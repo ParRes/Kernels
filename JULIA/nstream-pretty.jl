@@ -124,7 +124,7 @@ function main()
     precompile(do_initialize, (Array{Float64,1}, Int64))
     do_initialize(A, B, C, vlength)
 
-    # precompile hot function to smooth performance measurement
+    # precompile hot functions to smooth performance measurement
     precompile(do_nstream, (Array{Float64,1}, Array{Float64,1}, Array{Float64,1}, Float64, Int64))
 
     scalar = 3.0
@@ -132,6 +132,9 @@ function main()
     t0 = time_ns()
 
     for k in 0:iterations
+        if k==0
+            t0 = time_ns()
+        end
         do_nstream(A, B, C, scalar, vlength)
     end
 
@@ -158,7 +161,7 @@ function main()
     if abs(ar-asum)/asum < epsilon
         println("Solution validates")
         avgtime = nstream_time/iterations
-        nbytes = 4.0 * vlength * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
+        nbytes = 4.0 * vlength * sizeof(Float64)
         println("Rate (MB/s): ",1.e-6*nbytes/avgtime, " Avg time (s): ", avgtime)
     else
         println("Failed Validation on output array");
