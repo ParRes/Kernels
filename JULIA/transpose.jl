@@ -121,12 +121,15 @@ function main()
     precompile(do_initialize, (Array{Float64,2}, Int64))
     do_initialize(A, order)
 
-    # precompile hot function to smooth performance measurement
+    # precompile hot functions to smooth performance measurement
     precompile(do_transpose, (Array{Float64,2}, Array{Float64,2}, Int64))
 
     t0 = time_ns()
 
-    for k in 1:iterations+1
+    for k in 0:iterations
+        if k==0
+            t0 = time_ns()
+        end
         do_transpose(A, B, order)
     end
 
@@ -140,8 +143,8 @@ function main()
     precompile(do_verify, (Array{Float64,2}, Int64, Int64))
     abserr = do_verify(B, order, iterations)
 
-    epsilon=1.e-8
-    nbytes = 2 * order^2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
+    epsilon = 1.e-8
+    nbytes = 2 * order^2 * sizeof(Float64)
     if abserr < epsilon
         println("Solution validates")
         avgtime = trans_time/iterations
