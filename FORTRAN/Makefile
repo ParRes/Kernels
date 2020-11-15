@@ -66,7 +66,7 @@ tasks: p2p-tasks-openmp transpose-tasks-openmp
 
 taskloop: stencil-taskloop-openmp transpose-taskloop-openmp nstream-taskloop-openmp dgemm-taskloop-openmp
 
-coarray: p2p-coarray stencil-coarray transpose-coarray
+coarray: nstream-coarray p2p-coarray stencil-coarray transpose-coarray
 
 mpi: nstream-mpi
 
