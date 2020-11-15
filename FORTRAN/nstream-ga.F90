@@ -99,7 +99,7 @@ program main
   ! runtime variables
   integer(kind=INT64) :: i
   integer(kind=INT32) :: k
-  real(kind=REAL64) ::  asum, ar, br, cr, ref
+  real(kind=REAL64) ::  asum, ar, br, cr
   real(kind=REAL64) ::  t0, t1, nstream_time, avgtime
   real(kind=REAL64), parameter ::  epsilon=1.d-8
 
@@ -239,7 +239,6 @@ program main
   ar  = zero
   br  = two
   cr  = two
-  ref = zero
   do k=0,iterations
       ar = ar + br + scalar * cr;
   enddo
