@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -108,7 +108,6 @@ int main(int argc, char * argv[])
       printf("Number of processes  = %d\n", np);
       printf("Number of iterations = %d\n", iterations);
       printf("Vector length        = %zu\n", length);
-      //printf("Offset               = %d\n", offset);
   }
 
   size_t local_length;
