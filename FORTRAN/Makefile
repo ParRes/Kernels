@@ -29,8 +29,12 @@ ifeq ($(findstring ifort,$(FC)),ifort)
   ifeq ($(shell uname -s),Darwin)
     EXTRA = taskloop
   else
-    EXTRA = taskloop target coarray
+    EXTRA = taskloop coarray
   endif
+endif
+# OpenMP target stuff is only in IFX now
+ifeq ($(findstring ifx,$(FC)),ifx)
+  EXTRA = target
 endif
 # GCC (also matches pgfortran so PGI must come after)
 ifeq ($(findstring gfortran,$(FC)),gfortran)
