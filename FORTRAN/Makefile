@@ -64,6 +64,10 @@ taskloop: stencil-taskloop-openmp transpose-taskloop-openmp nstream-taskloop-ope
 
 coarray: p2p-coarray stencil-coarray transpose-coarray
 
+mpi: nstream-mpi
+
+mpi-openmp: nstream-mpi-openmp
+
 ga: nstream-ga transpose-ga dgemm-ga
 
 target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target
@@ -97,6 +101,12 @@ dgemm-blas: dgemm-blas.F90
 %-ga: %-ga.F90
 	$(FC) $(FCFLAGS) $< $(GAFLAG) -o $@
 
+%-mpi-openmp: %-mpi.F90
+	$(MPIFORT) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+
+%-mpi: %-mpi.F90
+	$(MPIFORT) $(FCFLAGS) $< -o $@
+
 %-coarray: %-coarray.F90
 	$(CAFC) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
 
@@ -120,6 +130,7 @@ clean:
 	-rm -f *-pretty
 	-rm -f *-blas
 	-rm -f *-coarray
+	-rm -f *-mpi
 	-rm -f *-ga
 	-rm -f *-openmp
 	-rm -f *-target

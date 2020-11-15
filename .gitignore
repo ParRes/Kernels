@@ -252,6 +252,8 @@ FORTRAN/dgemm-taskloop-openmp
 FORTRAN/nstream
 FORTRAN/nstream-ga
 FORTRAN/nstream-openmp
+FORTRAN/nstream-mpi
+FORTRAN/nstream-mpi-openmp
 FORTRAN/nstream-openmp-target
 FORTRAN/nstream-ornlacc
 FORTRAN/nstream-pretty
