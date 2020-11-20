@@ -118,9 +118,10 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 # in your .bashrc.
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
+MPIDIR=/opt/intel/oneapi/mpi/2021.1-beta10
 MPICC=${MPIDIR}/bin/mpiicc
 MPICXX=${MPIDIR}/bin/mpiicpc
+MPIFORT=${MPIDIR}/bin/mpiifort
 MPIINC=-I${MPIDIR}/include
 MPILIB=-L${MPIDIR}/lib -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
