@@ -45,3 +45,10 @@ for a new user to install it, etc.
 
 We strongly recommend that you add the appropriate features
 to `make.defs.${toolchain}` if appropriate.
+
+### Do you certify that your contribution is made in good faith and does not attempt to introduce any negative behavior into this project?
+
+- [ ] Yes
+- [ ] No
+
+This clause was introduced because of the behavior of Qiushi Wu and Kangjie Lu described in [this tweet](https://twitter.com/kengiter/status/1330209966255435776?s=20) and [this tweet](https://twitter.com/kengiter/status/1330209966255435776?s=20).
