@@ -19,7 +19,7 @@ CXX=icpx -std=c++17 -pthread
 # Compiler flags
 #
 # -xHOST is appropriate for most cases.
-DEFAULT_OPT_FLAGS=-g -O3
+DEFAULT_OPT_FLAGS=-g -O3 -xHOST
 #
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -xMIC-AVX512
@@ -40,8 +40,8 @@ OFFLOADFLAG=-fopenmp-targets=spir64
 # http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
 #OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
-OPENCLDIR=/etc/alternatives/opencl-intel-tools
-OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLDIR=/opt/intel/oneapi/compiler/latest/linux
+OPENCLFLAG=-I${OPENCLDIR}/include/sycl -L${OPENCLDIR}/lib -lOpenCL
 #
 # SYCL flags
 #
@@ -89,9 +89,9 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 BLASFLAG=-mkl
 CBLASFLAG=-DMKL -mkl
-#MKLROOT=/opt/intel/inteloneapi/mkl/2021.1-beta09
+#MKLROOT=/opt/intel/inteloneapi/mkl/latest
 #ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_tbb_thread ${TBBFLAG} -lmkl_core -lOpenCL -ldl
-#ONEMKLFLAG+=-I/opt/intel/oneapi/mkl/2021.1-beta09/include/
+#ONEMKLFLAG+=-I/opt/intel/oneapi/mkl/latest/include/
 #ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
 ONEMKLFLAG=-mkl
 #
@@ -118,7 +118,7 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 # in your .bashrc.
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPIDIR=/opt/intel/oneapi/mpi/2021.1-beta10
+MPIDIR=/opt/intel/oneapi/mpi/latest
 MPICC=${MPIDIR}/bin/mpiicc
 MPICXX=${MPIDIR}/bin/mpiicpc
 MPIFORT=${MPIDIR}/bin/mpiifort
