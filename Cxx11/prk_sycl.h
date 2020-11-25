@@ -84,6 +84,30 @@ namespace prk {
 #endif
         }
 
+        // returns true if FP64 will not work
+        bool print_gen12lp_helper(const sycl::queue & q) {
+            auto d = q.get_device();
+            auto s = d.get_info<sycl::info::device::name>();
+            if ( s.find("Gen12LP") != std::string::npos) {
+                bool e1=false;
+                bool e2=false;
+                auto c1 = std::getenv("IGC_EnableDPEmulation");
+                auto c2 = std::getenv("OverrideDefaultFP64Settings");
+                std::string s1{c1};
+                std::string s2{c2};
+                if (s1 != "1" || s2 != "1") {
+                    std::cout << std::endl
+                              << "You are using Gen12LP, which emulates FP64.\n"
+                              << "Please try again with the following environment variables set:\n"
+                              << "    export IGC_EnableDPEmulation=1\n"
+                              << "    export OverrideDefaultFP64Settings=1\n"
+                              << std::endl;
+                    return true;
+                }
+            }
+            return false;
+        }
+
     } // namespace SYCL
 
 } // namespace prk
