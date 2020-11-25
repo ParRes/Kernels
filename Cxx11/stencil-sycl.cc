@@ -313,6 +313,9 @@ int main(int argc, char * argv[])
     sycl::queue q{sycl::gpu_selector{}};
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
+    if (has_fp64) {
+      if (prk::SYCL::print_gen12lp_helper(q)) return 1;
+    }
     run<float>(q, iterations, n, block_size, star, radius);
     if (has_fp64) {
       run<double>(q, iterations, n, block_size, star, radius);
