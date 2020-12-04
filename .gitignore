@@ -96,6 +96,7 @@ Cxx11/dgemm-mpi-cublas
 Cxx11/dgemm-multigpu-cublas
 Cxx11/dgemm-multigpu-onemkl
 Cxx11/dgemm-onemkl
+Cxx11/xgemm-onemkl
 Cxx11/dgemm-openmp
 Cxx11/dgemm-raja
 Cxx11/dgemm-sycl
