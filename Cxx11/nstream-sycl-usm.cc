@@ -123,7 +123,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 #if PREBUILD_KERNEL
                 kernel.get_kernel<nstream2<T>>(),
 #endif
-		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+		sycl::nd_range<1>{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
                 if (i < length) {
                     A[i] += B[i] + scalar * C[i];
@@ -134,7 +134,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 #if PREBUILD_KERNEL
                 kernel.get_kernel<nstream3<T>>(),
 #endif
-		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+		sycl::nd_range<1>{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
                 A[i] += B[i] + scalar * C[i];
             });
