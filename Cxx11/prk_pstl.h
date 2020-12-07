@@ -46,7 +46,14 @@ namespace exec = __pstl::execution;
 # include <__pstl_numeric>
 namespace exec = std::execution;
 
-#else
+#elif defined(USE_ONEAPI_DPL)
+
+# include <oneapi/dpl/execution>
+# include <oneapi/dpl/algorithm>
+# include <oneapi/dpl/numeric>
+namespace exec = std::execution;
+
+#elif defined(USE_GITHUB_PSTL)
 
 # include <pstl/execution>
 # include <pstl/algorithm>
