@@ -109,8 +109,8 @@ int main(int argc, char * argv[])
 
   const size_t nelems = (size_t)order * (size_t)order;
   const size_t bytes = nelems * sizeof(double);
-  double * h_a = syclx::malloc_host<double>( nelems, q);
-  double * h_b = syclx::malloc_host<double>( nelems, q);
+  double * h_a = sycl::malloc_host<double>( nelems, q);
+  double * h_b = sycl::malloc_host<double>( nelems, q);
 
   // fill A with the sequence 0 to order^2-1
   for (int j=0; j<order; j++) {
@@ -121,8 +121,8 @@ int main(int argc, char * argv[])
   }
 
   // copy input from host to device
-  double * A = syclx::malloc_device<double>( nelems, q);
-  double * B = syclx::malloc_device<double>( nelems, q);
+  double * A = sycl::malloc_device<double>( nelems, q);
+  double * B = sycl::malloc_device<double>( nelems, q);
   q.memcpy(A, &(h_a[0]), bytes);
   q.memcpy(B, &(h_b[0]), bytes);
   q.wait();
@@ -157,8 +157,8 @@ int main(int argc, char * argv[])
   // copy output back to host
   q.memcpy(&(h_b[0]), B, bytes).wait();
 
-  syclx::free(B, q);
-  syclx::free(A, q);
+  sycl::free(B, q);
+  sycl::free(A, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -175,8 +175,8 @@ int main(int argc, char * argv[])
     }
   }
 
-  syclx::free(h_b, q);
-  syclx::free(h_a, q);
+  sycl::free(h_b, q);
+  sycl::free(h_a, q);
 
   const auto epsilon = 1.0e-8;
   if (abserr < epsilon) {

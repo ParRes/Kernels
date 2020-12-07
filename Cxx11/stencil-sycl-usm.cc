@@ -111,8 +111,8 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
 
   double stencil_time{0};
 
-  T * in  = syclx::malloc_shared<T>(n*n, q);
-  T * out = syclx::malloc_shared<T>(n*n, q);
+  T * in  = sycl::malloc_shared<T>(n*n, q);
+  T * out = sycl::malloc_shared<T>(n*n, q);
 
   try {
 
@@ -138,7 +138,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
     }
     stencil_time = prk::wtime() - stencil_time;
 
-    syclx::free(in, q);
+    sycl::free(in, q);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -170,7 +170,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
   }
   norm /= active_points;
 
-  syclx::free(out, q);
+  sycl::free(out, q);
 
   // verify correctness
   const double epsilon = 1.0e-8;

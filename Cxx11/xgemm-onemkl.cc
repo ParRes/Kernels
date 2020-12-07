@@ -74,9 +74,9 @@ void run(sycl::queue & q, int iterations, int order)
 
   const size_t nelems = (size_t)order * (size_t)order;
   const size_t bytes = nelems * sizeof(T);
-  auto h_a = syclx::malloc_host<T>( nelems, q);
-  auto h_b = syclx::malloc_host<T>( nelems, q);
-  auto h_c = syclx::malloc_host<T>( nelems, q);
+  auto h_a = sycl::malloc_host<T>( nelems, q);
+  auto h_b = sycl::malloc_host<T>( nelems, q);
+  auto h_c = sycl::malloc_host<T>( nelems, q);
 
   for (int i=0; i<order; ++i) {
     for (int j=0; j<order; ++j) {
@@ -87,9 +87,9 @@ void run(sycl::queue & q, int iterations, int order)
   }
 
   // copy input from host to device
-  auto  A = syclx::malloc_device<T>( nelems, q);
-  auto  B = syclx::malloc_device<T>( nelems, q);
-  auto  C = syclx::malloc_device<T>( nelems, q);
+  auto  A = sycl::malloc_device<T>( nelems, q);
+  auto  B = sycl::malloc_device<T>( nelems, q);
+  auto  C = sycl::malloc_device<T>( nelems, q);
   q.wait();
 
   q.memcpy(A, &(h_a[0]), bytes).wait();
@@ -97,8 +97,8 @@ void run(sycl::queue & q, int iterations, int order)
   q.memcpy(C, &(h_c[0]), bytes).wait();
   q.wait();
 
-  syclx::free(h_a, q);
-  syclx::free(h_b, q);
+  sycl::free(h_a, q);
+  sycl::free(h_b, q);
 
   {
     for (int iter = 0; iter<=iterations; iter++) {
@@ -123,9 +123,9 @@ void run(sycl::queue & q, int iterations, int order)
   // copy output back to host
   q.memcpy(&(h_c[0]), C, bytes).wait();
 
-  syclx::free(C, q);
-  syclx::free(B, q);
-  syclx::free(A, q);
+  sycl::free(C, q);
+  sycl::free(B, q);
+  sycl::free(A, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -155,7 +155,7 @@ void run(sycl::queue & q, int iterations, int order)
               << "Residuum           = " << residuum << std::endl;
   }
 
-  syclx::free(h_c, q);
+  sycl::free(h_c, q);
 }
 
 int main(int argc, char * argv[])

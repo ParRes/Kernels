@@ -6,17 +6,12 @@
 
 #include "CL/sycl.hpp"
 
-#ifdef __COMPUTECPP__
-#include "SYCL/experimental/usm.h"
-#endif
-
 namespace sycl = cl::sycl;
 
-#ifdef __COMPUTECPP__
-namespace syclx = cl::sycl::experimental;
-#else
-namespace syclx = cl::sycl;
-#endif
+//#ifdef __COMPUTECPP
+//#include <SYCL/experimental.hpp>
+//namespace syclx = cl::sycl::experimental;
+//#endif
 
 #ifdef PRK_SYCL_USE_FLOAT
 typedef float prk_float;

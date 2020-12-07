@@ -116,9 +116,9 @@ int main(int argc, char * argv[])
 
   const size_t bytes = length * sizeof(double);
 
-  double * h_A = syclx::malloc_host<double>(length, q);
-  double * h_B = syclx::malloc_host<double>(length, q);
-  double * h_C = syclx::malloc_host<double>(length, q);
+  double * h_A = sycl::malloc_host<double>(length, q);
+  double * h_B = sycl::malloc_host<double>(length, q);
+  double * h_C = sycl::malloc_host<double>(length, q);
 
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
@@ -126,9 +126,9 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  double * d_A = syclx::malloc_device<double>(length, q);
-  double * d_B = syclx::malloc_device<double>(length, q);
-  double * d_C = syclx::malloc_device<double>(length, q);
+  double * d_A = sycl::malloc_device<double>(length, q);
+  double * d_B = sycl::malloc_device<double>(length, q);
+  double * d_C = sycl::malloc_device<double>(length, q);
   q.memcpy(d_A, &(h_A[0]), bytes).wait();
   q.memcpy(d_B, &(h_B[0]), bytes).wait();
   q.memcpy(d_C, &(h_C[0]), bytes).wait();
@@ -155,12 +155,12 @@ int main(int argc, char * argv[])
 
   q.memcpy(&(h_A[0]), d_A, bytes).wait();
 
-  syclx::free(d_C, q);
-  syclx::free(d_B, q);
-  syclx::free(d_A, q);
+  sycl::free(d_C, q);
+  sycl::free(d_B, q);
+  sycl::free(d_A, q);
 
-  syclx::free(h_B, q);
-  syclx::free(h_C, q);
+  sycl::free(h_B, q);
+  sycl::free(h_C, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results

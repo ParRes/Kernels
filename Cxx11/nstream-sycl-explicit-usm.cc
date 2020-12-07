@@ -83,9 +83,9 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 
   const T scalar(3);
 
-  T * h_A = syclx::malloc_host<T>(length, q);
-  T * h_B = syclx::malloc_host<T>(length, q);
-  T * h_C = syclx::malloc_host<T>(length, q);
+  T * h_A = sycl::malloc_host<T>(length, q);
+  T * h_B = sycl::malloc_host<T>(length, q);
+  T * h_C = sycl::malloc_host<T>(length, q);
 
   for (size_t i=0; i<length; i++) {
     h_A[i] = 0.0;
@@ -103,9 +103,9 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
     kernel.build_with_kernel_type<nstream3<T>>();
 #endif
 
-    T * d_A = syclx::malloc_device<T>(length, q);
-    T * d_B = syclx::malloc_device<T>(length, q);
-    T * d_C = syclx::malloc_device<T>(length, q);
+    T * d_A = sycl::malloc_device<T>(length, q);
+    T * d_B = sycl::malloc_device<T>(length, q);
+    T * d_C = sycl::malloc_device<T>(length, q);
     q.wait();
 
     const size_t bytes = length * sizeof(T);
@@ -166,12 +166,12 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 
     q.memcpy(&(h_A[0]), d_A, bytes).wait();
 
-    syclx::free(d_A, q);
-    syclx::free(d_B, q);
-    syclx::free(d_C, q);
+    sycl::free(d_A, q);
+    sycl::free(d_B, q);
+    sycl::free(d_C, q);
 
-    syclx::free(h_B, q);
-    syclx::free(h_C, q);
+    sycl::free(h_B, q);
+    sycl::free(h_C, q);
 
   }
   catch (sycl::exception & e) {
@@ -206,7 +206,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
       asum += prk::abs(h_A[i]);
   }
 
-  syclx::free(h_A, q);
+  sycl::free(h_A, q);
 
   const double epsilon(1.e-8);
   if (prk::abs(ar-asum)/asum > epsilon) {

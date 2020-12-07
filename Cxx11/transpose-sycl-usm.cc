@@ -67,11 +67,11 @@ void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
 
   double trans_time{0};
 
-  T * B = static_cast<T*>(syclx::malloc_shared(order*order * sizeof(T), q));
+  T * B = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), q));
 
   try {
 
-    T * A = static_cast<T*>(syclx::malloc_shared(order*order * sizeof(T), q));
+    T * A = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), q));
 
     for (size_t i=0;i<order; i++) {
       for (size_t j=0;j<order;j++) {
@@ -104,7 +104,7 @@ void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
     // for other device-oriented programming models.
     trans_time = prk::wtime() - trans_time;
 
-    syclx::free(A, q);
+    sycl::free(A, q);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -152,7 +152,7 @@ void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
               << " exceeds threshold " << epsilon << std::endl;
   }
 
-  syclx::free(B, q);
+  sycl::free(B, q);
 
 }
 

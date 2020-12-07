@@ -176,9 +176,9 @@ int main(int argc, char * argv[])
       const auto local_length = ls[g];
       const auto local_bytes = local_length * sizeof(double);
 
-      d_A[g] = syclx::malloc_device<double>(local_length, q);
-      d_B[g] = syclx::malloc_device<double>(local_length, q);
-      d_C[g] = syclx::malloc_device<double>(local_length, q);
+      d_A[g] = sycl::malloc_device<double>(local_length, q);
+      d_B[g] = sycl::malloc_device<double>(local_length, q);
+      d_C[g] = sycl::malloc_device<double>(local_length, q);
       q.wait();
 
       const size_t start = (g>0) ? ls[g-1] : 0;
@@ -230,9 +230,9 @@ int main(int argc, char * argv[])
       q.memcpy(&(h_A[start]), d_A[g], size);
       q.wait();
 
-      syclx::free(d_C[g], q);
-      syclx::free(d_B[g], q);
-      syclx::free(d_A[g], q);
+      sycl::free(d_C[g], q);
+      sycl::free(d_B[g], q);
+      sycl::free(d_A[g], q);
       q.wait();
   }
 

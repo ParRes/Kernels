@@ -83,9 +83,9 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 
   const T scalar(3);
 
-  T * A = syclx::malloc_shared<T>(length, q);
-  T * B = syclx::malloc_shared<T>(length, q);
-  T * C = syclx::malloc_shared<T>(length, q);
+  T * A = sycl::malloc_shared<T>(length, q);
+  T * B = sycl::malloc_shared<T>(length, q);
+  T * C = sycl::malloc_shared<T>(length, q);
 
   for (size_t i=0; i<length; i++) {
     A[i] = 0.0;
@@ -148,8 +148,8 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
     // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
 
-    syclx::free(B, q);
-    syclx::free(C, q);
+    sycl::free(B, q);
+    sycl::free(C, q);
 
   }
   catch (sycl::exception & e) {
@@ -184,7 +184,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
       asum += prk::abs(A[i]);
   }
 
-  syclx::free(A, q);
+  sycl::free(A, q);
 
   const double epsilon(1.e-8);
   if (prk::abs(ar-asum)/asum > epsilon) {
