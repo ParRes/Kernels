@@ -67,25 +67,20 @@ void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
 
   double trans_time{0};
 
-  T * B = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), q));
+  T * A = sycl::malloc_shared<T>(order*order, q);
+  T * B = sycl::malloc_shared<T>(order*order, q);
+
+  for (size_t i=0;i<order; i++) {
+    for (size_t j=0;j<order;j++) {
+      A[i*order+j] = static_cast<double>(i*order+j);
+      B[i*order+j] = 0.0;
+    }
+  }
 
   try {
-
-    T * A = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), q));
-
-    for (size_t i=0;i<order; i++) {
-      for (size_t j=0;j<order;j++) {
-        A[i*order+j] = static_cast<double>(i*order+j);
-        B[i*order+j] = 0.0;
-      }
-    }
-
     for (int iter = 0; iter<=iterations; ++iter) {
-
       if (iter==1) trans_time = prk::wtime();
-
       q.submit([&](sycl::handler& h) {
-
         h.parallel_for<class transpose<T>>(
             sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
                 const size_t i = it.get_global_id(0);
@@ -98,12 +93,7 @@ void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
       });
       q.wait();
     }
-
-    // Stop timer before buffer+accessor destructors fire,
-    // since that will move data, and we do not time that
-    // for other device-oriented programming models.
     trans_time = prk::wtime() - trans_time;
-
     sycl::free(A, q);
   }
   catch (sycl::exception & e) {
