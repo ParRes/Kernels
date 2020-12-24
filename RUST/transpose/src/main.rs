@@ -114,13 +114,13 @@ fn main()
     println!("ERROR: tilesize cannot be > order");
   }
 
+  println!("Number of iterations  = {}", iterations);
   println!("Matrix order          = {}", order);
   if tilesize < order {
       println!("Tile size             = {}", tilesize);
   } else {
       println!("Untiled");
   }
-  println!("Number of iterations  = {}", iterations);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
