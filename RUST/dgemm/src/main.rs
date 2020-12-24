@@ -52,8 +52,15 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+extern crate blas;
+extern crate cblas;
+extern crate blas_src;
+
 use std::env;
 use std::time::{Instant,Duration};
+
+//use blas::*;
+use cblas::*;
 
 fn prk_dgemm(order : usize, a : &mut Vec<f64>, b : &mut Vec<f64>, c : &mut Vec<f64>)
 {
@@ -131,7 +138,14 @@ fn main()
 
     if k == 1 { t0 = timer.elapsed(); }
 
-    prk_dgemm(order, &mut a, &mut b, &mut c);
+    //prk_dgemm(order, &mut a, &mut b, &mut c);
+    let m : i32 = order as i32;
+    let n : i32 = order as i32;
+    let k : i32 = order as i32;
+    unsafe {
+        dgemm(Layout::RowMajor, Transpose::None, Transpose::None,
+              m, n, k, 1.0, &a, m, &b, k, 1.0, &mut c, m);
+    }
 
   }
   let t1 = timer.elapsed();
