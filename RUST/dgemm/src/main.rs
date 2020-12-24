@@ -58,8 +58,8 @@ use std::time::{Instant,Duration};
 fn prk_dgemm(order : usize, a : &mut Vec<f64>, b : &mut Vec<f64>, c : &mut Vec<f64>)
 {
   for i in 0..order {
-    for j in 0..order {
-      for k in 0..order {
+    for k in 0..order {
+      for j in 0..order {
         c[i*order+j] += a[i*order+k] * b[k*order+j];
       }
     }
