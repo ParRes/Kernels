@@ -60,7 +60,6 @@ import (
     "os"
     "time"
     "math"
-    "unsafe"
     "gonum.org/v1/gonum/mat"
 )
 
@@ -109,6 +108,7 @@ func main() {
   A := mat.NewDense(order, order, nil)
   B := mat.NewDense(order, order, nil)
   C := mat.NewDense(order, order, nil)
+  T := mat.NewDense(order, order, nil)
 
   for j := int(0); j<order; j++ {
     for i := int(0); i<order; i++ {
@@ -126,7 +126,8 @@ func main() {
           start = time.Now()
       }
 
-      C += Mul(A,B)
+      T.Mul(A,B)
+      C.Add(C,T)
   }
   stop := time.Now()
 
@@ -136,29 +137,31 @@ func main() {
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  addit := float64(((iterations+1)*iterations)/2)
-  var abserr = float64(0)
+  forder := float64(order)
+  forder3 := forder * forder * forder
+  forder2 := (forder-1) * (forder-1)
+  reference := 0.25 * forder3 * forder2 * float64(iterations+1)
+  var checksum = float64(0)
   for j := int(0); j<order; j++ {
     for i := int(0); i<order; i++ {
-      ji := j*order+i
-      reference := float64(ji)*float64(1+iterations)+addit
-      abserr += math.Abs(B.At(j,i) - reference)
+      checksum += C.At(i,j)
     }
   }
 
   epsilon := float64(1.e-8)
-  if abserr < epsilon {
+  residuum := math.Abs(checksum-reference)/reference
+  if residuum < epsilon {
       fmt.Println("Solution validates")
       avgtime := int64(dgemm_time/time.Microsecond) / int64(iterations)
-      nbytes  := 2 * order * order * int(unsafe.Sizeof(scalar))
-      fmt.Printf("Rate (MB/s): %f", float64(nbytes) / float64(avgtime) )
+      nbytes  := 2.0 * forder * forder * forder
+      fmt.Printf("Rate (MF/s): %f", float64(nbytes) / float64(avgtime) )
       fmt.Printf(" Avg time (s): %f\n", 1.0e-6 * float64(avgtime) )
   } else {
       fmt.Printf("Failed Validation on output array\n")
       fmt.Printf("ERROR: solution did not validate\n")
       for i := int(0); i<order; i++ {
         for j := int(0); j<order; j++ {
-          fmt.Printf("%d %d %f %f\n", i, j, A.At(j,i), B.At(j,i))
+          fmt.Printf("%d %d %f %f %f\n", i, j, A.At(i,j), B.At(i,j), C.At(i,j))
         }
       }
       os.Exit(1)
