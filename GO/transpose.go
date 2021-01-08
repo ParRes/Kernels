@@ -79,7 +79,7 @@ func AddOne(i, j int, v float64) float64 {
 func main() {
 
   fmt.Println("Parallel Research Kernels")
-  fmt.Println("Go STREAM triad: A = B + scalar * C")
+  fmt.Println("Go Matrix transpose: B = A^T")
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
