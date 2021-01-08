@@ -31,32 +31,24 @@
 
 //////////////////////////////////////////////////////////////////////
 ///
-/// NAME:    nstream
+/// NAME:    transpose
 ///
-/// PURPOSE: To compute memory bandwidth when adding a vector of a given
-///          number of double precision values to the scalar multiple of
-///          another vector of the same length, and storing the result in
-///          a third vector.
+/// PURPOSE: This program measures the time for the transpose of a
+///          column-major stored matrix into a row-major stored matrix.
 ///
-/// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors.
+/// USAGE:   Program input is the matrix order and the number of times to
+///          repeat the operation:
+///
+///          transpose <matrix_size> <# iterations> [tile size]
+///
+///          An optional parameter specifies the tile size used to divide the
+///          individual matrix blocks for improved cache and TLB performance.
 ///
 ///          The output consists of diagnostics to make sure the
-///          algorithm worked, and of timing statistics.
-///
-/// NOTES:   Bandwidth is determined as the number of words read, plus the
-///          number of words written, times the size of the words, divided
-///          by the execution time. For a vector length of N, the total
-///          number of words read and written is 4*N*sizeof(double).
-///
-/// HISTORY: This code is loosely based on the Stream benchmark by John
-///          McCalpin, but does not follow all the Stream rules. Hence,
-///          reported results should not be associated with Stream in
-///          external publications
+///          transpose worked and timing statistics.
 ///
 ///          Converted to C++11 by Jeff Hammond, November 2017.
-///          Converted to Go by Jeff Hammond, July 2020.
+///          Converted to Go by Jeff Hammond, January 2021.
 ///
 //////////////////////////////////////////////////////////////////////
 
@@ -69,7 +61,12 @@ import (
     "time"
     "math"
     "unsafe"
+    "gonum.org/v1/gonum/mat"
 )
+
+func AddOne(i, j int, v float64) float64 {
+ return v+1.0
+}
 
 func main() {
 
@@ -81,42 +78,49 @@ func main() {
   //////////////////////////////////////////////////////////////////////
 
   if len(os.Args) < 2 {
-      fmt.Println("Usage: go run nstream.go -i <# iterations> -n <vector length>")
+      fmt.Println("Usage: go run transpose.go -i <# iterations> -n <matrix order> [-t <tile size>]")
       os.Exit(1)
   }
 
   piterations := flag.Int("i", 0, "iterations")
-  plength     := flag.Int64("n", 0, "length of vector")
+  porder      := flag.Int("n", 0, "matrix order")
+  ptilesize   := flag.Int("t", 0, "tile size")
   flag.Parse()
 
   iterations := *piterations
-  length     := *plength
+  order      := *porder
+  tilesize   := *ptilesize
 
   if (iterations < 1) {
       fmt.Println("ERROR: iterations must be >= 1: ", iterations, *piterations)
       os.Exit(1)
   }
 
-  if (length <= 0) {
-      fmt.Println("ERROR: vector length must be positive: ", length, *plength)
+  if (order <= 0) {
+      fmt.Println("ERROR: vector order must be positive: ", order, *porder)
       os.Exit(1)
   }
 
   fmt.Println("Number of iterations = ", iterations)
-  fmt.Println("Vector length        = ", length)
+  fmt.Println("Matrix order         = ", order)
+  if (tilesize > 0) {
+      fmt.Println("Tile size            = ", tilesize)
+  } else {
+      fmt.Println("Untiled")
+  }
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  A := make([]float64, length)
-  B := make([]float64, length)
-  C := make([]float64, length)
+  A := mat.NewDense(order, order, nil)
+  B := mat.NewDense(order, order, nil)
 
-  for i := int64(0); i<length; i++ {
-      A[i] = 0
-      B[i] = 2
-      C[i] = 2
+  for j := int(0); j<order; j++ {
+    for i := int(0); i<order; i++ {
+      A.Set(j,i,float64(i*order+j))
+      B.Set(j,i,0.0)
+    }
   }
 
   scalar := float64(3)
@@ -129,45 +133,53 @@ func main() {
           start = time.Now()
       }
 
-      for i := int64(0); i<length; i++ {
-          A[i] += B[i] + scalar * C[i]
+      // The T() method is inadequate...
+      //B += A.T()
+      // Implements A += 1.0
+      //A.Apply(AddOne,A)
+
+      // This is such an embarrassing implementation...
+      for i := int(0); i<order; i++ {
+        for j := int(0); j<order; j++ {
+          B.Set(i,j,B.At(i,j)+A.At(j,i))
+          A.Set(j,i,A.At(j,i)+1.0)
+        }
       }
   }
   stop := time.Now()
 
-  nstream_time := stop.Sub(start)
+  transpose_time := stop.Sub(start)
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  ar := float64(0)
-  br := float64(2)
-  cr := float64(2)
-  for i := 0; i<=iterations; i++ {
-      ar += br + scalar * cr
-  }
-
-  ar *= float64(length)
-
-  asum := float64(0)
-  for i := int64(0); i<length; i++ {
-      asum += math.Abs(A[i])
+  addit := float64(((iterations+1)*iterations)/2)
+  var abserr = float64(0)
+  for j := int(0); j<order; j++ {
+    for i := int(0); i<order; i++ {
+      ji := j*order+i
+      reference := float64(ji)*float64(1+iterations)+addit
+      abserr += math.Abs(B.At(j,i) - reference)
+    }
   }
 
   epsilon := float64(1.e-8)
-  if math.Abs(ar-asum)/asum > epsilon {
-      fmt.Printf("Failed Validation on output array\n")
-      fmt.Printf("       Expected checksum: %f\n", ar)
-      fmt.Printf("       Observed checksum: %f\n", asum)
-      fmt.Printf("ERROR: solution did not validate\n")
-      os.Exit(1)
-  } else {
+  if abserr < epsilon {
       fmt.Println("Solution validates")
-      avgtime := int64(nstream_time/time.Microsecond) / int64(iterations)
-      nbytes  := int64(4) * length * int64(unsafe.Sizeof(A[0]))
+      avgtime := int64(transpose_time/time.Microsecond) / int64(iterations)
+      nbytes  := 2 * order * order * int(unsafe.Sizeof(scalar))
       fmt.Printf("Rate (MB/s): %f", float64(nbytes) / float64(avgtime) )
       fmt.Printf(" Avg time (s): %f\n", 1.0e-6 * float64(avgtime) )
+  } else {
+      fmt.Printf("Failed Validation on output array\n")
+      fmt.Printf("ERROR: solution did not validate\n")
+      for i := int(0); i<order; i++ {
+        for j := int(0); j<order; j++ {
+          fmt.Printf("%d %d %f %f\n", i, j, A.At(j,i), B.At(j,i))
+        }
+      }
+      os.Exit(1)
   }
 }
 
