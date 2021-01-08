@@ -168,6 +168,7 @@ x = externally supported (in the Chapel repo)
 | Julia                |  y  |    y    |     y     |         |        |       |
 | Octave (Matlab)      |  y  |    y    |     y     |         |        |       |
 | Rust                 |  y  |    y    |     y     |         |        |       |
+| Go                   |     |         |     y     |    y    |        |   y   |
 | Chapel               |  x  |    x    |     x     |         |        |       |
 | Java                 |  y  |    y    |     y     |    y    |        |       |
 | Lua                  |     |         |           |    y    |        |       |
