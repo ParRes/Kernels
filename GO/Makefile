@@ -1,4 +1,4 @@
-all: nstream transpose
+all: nstream transpose dgemm
 
 %: %.go
 	go build $<
@@ -11,4 +11,5 @@ deps:
 clean:
 	-rm -f nstream
 	-rm -f transpose
+	-rm -f dgemm
 
