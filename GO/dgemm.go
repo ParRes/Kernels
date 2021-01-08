@@ -31,21 +31,21 @@
 
 //////////////////////////////////////////////////////////////////////
 ///
-/// NAME:    transpose
+/// NAME:    dgemm
 ///
-/// PURPOSE: This program measures the time for the transpose of a
+/// PURPOSE: This program measures the time for the dgemm of a
 ///          column-major stored matrix into a row-major stored matrix.
 ///
 /// USAGE:   Program input is the matrix order and the number of times to
 ///          repeat the operation:
 ///
-///          transpose <matrix_size> <# iterations> [tile size]
+///          dgemm <matrix_size> <# iterations> [tile size]
 ///
 ///          An optional parameter specifies the tile size used to divide the
 ///          individual matrix blocks for improved cache and TLB performance.
 ///
 ///          The output consists of diagnostics to make sure the
-///          transpose worked and timing statistics.
+///          dgemm worked and timing statistics.
 ///
 ///          Converted to C++11 by Jeff Hammond, November 2017.
 ///          Converted to Go by Jeff Hammond, January 2021.
@@ -71,14 +71,14 @@ func AddOne(i, j int, v float64) float64 {
 func main() {
 
   fmt.Println("Parallel Research Kernels")
-  fmt.Println("Go STREAM triad: A = B + scalar * C")
+  fmt.Println("Go Dense matrix-matrix multiplication: C = A x B")
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   if len(os.Args) < 2 {
-      fmt.Println("Usage: go run transpose.go -i <# iterations> -n <matrix order>")
+      fmt.Println("Usage: go run dgemm.go -i <# iterations> -n <matrix order>")
       os.Exit(1)
   }
 
@@ -108,15 +108,15 @@ func main() {
 
   A := mat.NewDense(order, order, nil)
   B := mat.NewDense(order, order, nil)
+  C := mat.NewDense(order, order, nil)
 
   for j := int(0); j<order; j++ {
     for i := int(0); i<order; i++ {
-      A.Set(j,i,float64(i*order+j))
-      B.Set(j,i,0.0)
+      A.Set(j,i,float64(j))
+      B.Set(j,i,float64(j))
+      C.Set(j,i,0.0)
     }
   }
-
-  scalar := float64(3)
 
   var start = time.Now()
 
@@ -126,22 +126,11 @@ func main() {
           start = time.Now()
       }
 
-      // The T() method is inadequate...
-      //B += A.T()
-      // Implements A += 1.0
-      //A.Apply(AddOne,A)
-
-      // This is such an embarrassing implementation...
-      for i := int(0); i<order; i++ {
-        for j := int(0); j<order; j++ {
-          B.Set(i,j,B.At(i,j)+A.At(j,i))
-          A.Set(j,i,A.At(j,i)+1.0)
-        }
-      }
+      C += Mul(A,B)
   }
   stop := time.Now()
 
-  transpose_time := stop.Sub(start)
+  dgemm_time := stop.Sub(start)
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -160,7 +149,7 @@ func main() {
   epsilon := float64(1.e-8)
   if abserr < epsilon {
       fmt.Println("Solution validates")
-      avgtime := int64(transpose_time/time.Microsecond) / int64(iterations)
+      avgtime := int64(dgemm_time/time.Microsecond) / int64(iterations)
       nbytes  := 2 * order * order * int(unsafe.Sizeof(scalar))
       fmt.Printf("Rate (MB/s): %f", float64(nbytes) / float64(avgtime) )
       fmt.Printf(" Avg time (s): %f\n", 1.0e-6 * float64(avgtime) )
