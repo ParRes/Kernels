@@ -189,7 +189,7 @@ func main() {
       fmt.Printf("ERROR: solution did not validate\n")
       for i := int(0); i<order; i++ {
         for j := int(0); j<order; j++ {
-          fmt.Printf("%d %d %f %f\n", i, j, A.At(j,i), B.At(j,i))
+          fmt.Printf("%d %d %f %f\n", i, j, A.At(i,j), B.At(i,j))
         }
       }
       os.Exit(1)
