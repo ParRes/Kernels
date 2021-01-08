@@ -1,8 +1,9 @@
-all: nstream
+all: nstream transpose
 
-nstream: nstream.go
-	go build nstream.go
+%: %.go
+	go build $<
 
 clean:
 	-rm -f nstream
+	-rm -f transpose
 
