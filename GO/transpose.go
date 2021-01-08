@@ -64,6 +64,14 @@ import (
     "gonum.org/v1/gonum/mat"
 )
 
+func tselect(t, o int) int {
+    if (t == 0) {
+        return o
+    } else {
+        return t
+    }
+}
+
 func AddOne(i, j int, v float64) float64 {
  return v+1.0
 }
@@ -89,7 +97,7 @@ func main() {
 
   iterations := *piterations
   order      := *porder
-  tilesize   := *ptilesize
+  tilesize   := tselect(*ptilesize,*porder)
 
   if (iterations < 1) {
       fmt.Println("ERROR: iterations must be >= 1: ", iterations, *piterations)
@@ -98,6 +106,11 @@ func main() {
 
   if (order <= 0) {
       fmt.Println("ERROR: vector order must be positive: ", order, *porder)
+      os.Exit(1)
+  }
+
+  if (tilesize > order || tilesize < 1) {
+      fmt.Println("ERROR: tilesize must be between 1 and order: ", tilesize, *ptilesize)
       os.Exit(1)
   }
 
