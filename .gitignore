@@ -83,6 +83,12 @@ C1z/transpose-petsc
 C1z/transpose-target
 C1z/transpose-taskloop
 C1z/transpose-thread
+Csharp/hello.exe
+Csharp/dgemm.exe
+Csharp/nstream.exe
+Csharp/p2p.exe
+Csharp/stencil.exe
+Csharp/transpose.exe
 Cxx11/dgemm
 Cxx11/dgemm-blas-sycl
 Cxx11/dgemm-cblas
