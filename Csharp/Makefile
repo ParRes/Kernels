@@ -1,4 +1,4 @@
-all: hello.exe
+all: hello.exe nstream.exe transpose.exe
 
 %.exe: %.cs
 	mcs $< -out:$@
