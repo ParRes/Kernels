@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 namespace PRK {
 
@@ -29,7 +30,36 @@ namespace PRK {
           Help();
       }
 
+      double[] A = new double[length];
+      double[] B = new double[length];
+      double[] C = new double[length];
 
+      for (int i = 0 ; i < length ; i++) {
+          A[i] = 0.0;
+          B[i] = 2.0;
+          C[i] = 2.0;
+      }
+
+      double scalar = 3.0;
+
+      //System.Diagnostics.Stopwatch nstream_timer;
+      Stopwatch timer = new Stopwatch();
+
+      for (int k = 0 ; k <= iterations ; k++) {
+
+          if (k == 0) {
+              timer.Start();
+          }
+
+          for (int i = 0 ; i < length ; i++) {
+              A[i] += B[i] + scalar * C[i];
+          }
+      }
+      timer.Stop();
+      long tics = timer.ElapsedTicks;
+      long freq = Stopwatch.Frequency;
+      double dt = (double)tics/(double)freq;
+      Console.WriteLine("tics={0} freq={1} dt={2}", tics, freq, dt);
 
     }
 
