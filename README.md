@@ -169,6 +169,7 @@ x = externally supported (in the Chapel repo)
 | Octave (Matlab)      |  y  |    y    |     y     |         |        |       |
 | Rust                 |  y  |    y    |     y     |         |        |       |
 | Go                   |     |         |     y     |    y    |        |   y   |
+| C#                   |     |         |     y     |    y    |        |       |
 | Chapel               |  x  |    x    |     x     |         |        |       |
 | Java                 |  y  |    y    |     y     |    y    |        |       |
 | Lua                  |     |         |           |    y    |        |       |
