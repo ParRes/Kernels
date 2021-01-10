@@ -294,6 +294,8 @@ FORTRAN/transpose-ornlacc
 FORTRAN/transpose-pretty
 FORTRAN/transpose-taskloop-openmp
 FORTRAN/transpose-tasks-openmp
+GO/dgemm
+GO/hello
 GO/nstream
 GO/p2p
 GO/stencil
