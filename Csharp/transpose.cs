@@ -31,32 +31,24 @@
 
 //////////////////////////////////////////////////////////////////////
 ///
-/// NAME:    nstream
+/// NAME:    transpose
 ///
-/// PURPOSE: To compute memory bandwidth when adding a vector of a given
-///          number of double precision values to the scalar multiple of
-///          another vector of the same length, and storing the result in
-///          a third vector.
+/// PURPOSE: This program measures the time for the transpose of a
+///          column-major stored matrix into a row-major stored matrix.
 ///
-/// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors and
-///          the length of the vectors.
+/// USAGE:   Program input is the matrix order and the number of times to
+///          repeat the operation:
 ///
-///          <progname> <# iterations> <vector length>
+///          transpose <matrix_size> <# iterations> [tile size]
+///
+///          An optional parameter specifies the tile size used to divide the
+///          individual matrix blocks for improved cache and TLB performance.
 ///
 ///          The output consists of diagnostics to make sure the
-///          algorithm worked, and of timing statistics.
+///          transpose worked and timing statistics.
 ///
-/// NOTES:   Bandwidth is determined as the number of words read, plus the
-///          number of words written, times the size of the words, divided
-///          by the execution time. For a vector length of N, the total
-///          number of words read and written is 4*N*sizeof(double).
-///
-/// HISTORY: This code is loosely based on the Stream benchmark by John
-///          McCalpin, but does not follow all the Stream rules. Hence,
-///          reported results should not be associated with Stream in
-///          external publications
-///
+/// HISTORY: Written by  Rob Van der Wijngaart, February 2009.
+///          Converted to C++11 by Jeff Hammond, February 2016 and May 2017.
 ///          Converted to C# by Jeff Hammond, January 2021.
 ///
 //////////////////////////////////////////////////////////////////////
@@ -66,7 +58,7 @@ using System.Diagnostics;
 
 namespace PRK {
 
-  class nstream {
+  class transpose {
 
     static void Help() {
       Console.WriteLine("Usage: <# iterations> <vector length>");
@@ -74,8 +66,8 @@ namespace PRK {
 
     static void Main(string[] args)
     {
-      Console.WriteLine("Parallel Research Kernels");
-      Console.WriteLine("C# STREAM triad: A = B + scalar * C");
+      Console.WriteLine("Parallel Research Kernels version ");
+      Console.WriteLine("C# Matrix transpose: B = A^T");
 
       //////////////////////////////////////////////////////////////////////
       // Read and test input parameters
@@ -87,32 +79,23 @@ namespace PRK {
       }
 
       if ( int.TryParse(args[0], out int iterations) ) {
-          Console.WriteLine("Number of iterations  = {0}", iterations);
+          Console.WriteLine("Number of iterations = {0}", iterations);
       } else {
           Help();
       }
 
-      if ( int.TryParse(args[1], out int length) ) {
-          Console.WriteLine("vector length         = {0}", length);
+      if ( int.TryParse(args[1], out int order) ) {
+          Console.WriteLine("Matrix order         = {0}", order);
       } else {
           Help();
       }
 
       //////////////////////////////////////////////////////////////////////
-      // Allocate space and perform the computation
+      // Allocate space for the input and transpose matrix
       //////////////////////////////////////////////////////////////////////
 
-      double[] A = new double[length];
-      double[] B = new double[length];
-      double[] C = new double[length];
-
-      for (int i = 0 ; i < length ; i++) {
-          A[i] = 0.0;
-          B[i] = 2.0;
-          C[i] = 2.0;
-      }
-
-      double scalar = 3.0;
+      double[] A = new double[order*order];
+      double[] B = new double[order*order];
 
       Stopwatch timer = new Stopwatch();
 
@@ -122,48 +105,45 @@ namespace PRK {
               timer.Start();
           }
 
-          for (int i = 0 ; i < length ; i++) {
-              A[i] += B[i] + scalar * C[i];
+          for (int i = 0 ; i < order ; i++) {
+              for (int j = 0 ; j < order ; j++) {
+                  B[i*order+j] += A[j*order+i];
+                  A[j*order+i] += 1.0;
+              }
           }
       }
       timer.Stop();
       long tics = timer.ElapsedTicks;
       long freq = Stopwatch.Frequency;
-      double nstream_time = (double)tics/(double)freq;
+      double trans_time = (double)tics/(double)freq;
 
       //////////////////////////////////////////////////////////////////////
       // Analyze and output results
       //////////////////////////////////////////////////////////////////////
 
-      double ar = 0.0;
-      double br = 2.0;
-      double cr = 2.0;
-      for (int k = 0 ; k <= iterations ; k++) {
-          ar += br + scalar * cr;
+      double addit = (iterations+1) * iterations / 2;
+      double abserr = 0.0;
+      for (int j=0; j<order; j++) {
+        for (int i=0; i<order; i++) {
+          long ij = i*order+j;
+          long ji = j*order+i;
+          double reference = (double)(ij)*(1+iterations)+addit;
+          abserr += Math.Abs(B[ji] - reference);
+        }
       }
 
-      ar *= length;
-
-      double asum = 0.0;
-      for (int i = 0 ; i < length ; i++) {
-          asum += Math.Abs(A[i]);
-      }
-
-      const double epsilon=1e-8;
-      if (Math.Abs(ar-asum)/asum > epsilon) {
-          Console.WriteLine("Failed Validation on output array");
-          Console.WriteLine("       Expected checksum: {0}",ar);
-          Console.WriteLine("       Observed checksum: {0}",asum);
-          Console.WriteLine("ERROR: solution did not validate");
+      const double epsilon = 1.0e-8;
+      if (abserr < epsilon) {
+        Console.WriteLine("Solution validates");
+        double avgtime = trans_time/iterations;
+        double bytes = order * order * sizeof(double);
+        Console.WriteLine("Rate (MB/s): {0} Avg time (s): {1}", 2.0e-6 * bytes/avgtime, avgtime );
       } else {
-          Console.WriteLine("Solution validates");
-          double avgtime = nstream_time/iterations;
-          double nbytes = 4.0 * length * sizeof(double);
-          Console.WriteLine("Rate (MB/s): {0} Avg time (s): {1}", 1e-6*nbytes/avgtime, avgtime);
+        Console.WriteLine("ERROR: Aggregate squared error {0} exceeds threshold {1}", abserr, epsilon );
       }
 
     }
 
-  } // nstream
+  } // transpose
 
 } // PRK
