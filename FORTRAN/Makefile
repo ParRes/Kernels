@@ -22,7 +22,7 @@ ifeq ($(findstring ifx,$(FC)),ifx)
   BLASFLAGS += -heap-arrays
 endif
 
-.PHONY: all clean serial pretty openmp coarray target ornlacc ga
+.PHONY: all clean serial pretty openmp coarray target openacc ga
 
 # Intel
 ifeq ($(findstring ifort,$(FC)),ifort)
@@ -38,15 +38,15 @@ ifeq ($(findstring ifx,$(FC)),ifx)
 endif
 # GCC (also matches pgfortran so PGI must come after)
 ifeq ($(findstring gfortran,$(FC)),gfortran)
-  EXTRA = target coarray taskloop ornlacc
+  EXTRA = target coarray taskloop openacc
 endif
 # PGI and LLVM Flang
 ifeq ($(findstring pgf,$(FC)),pgf)
-  EXTRA = target ornlacc
+  EXTRA = target openacc
   FCFLAGS += -DPGI
 endif
 ifeq ($(findstring flang,$(FC)),flang)
-  EXTRA = target ornlacc
+  EXTRA = target openacc
   FCFLAGS += -DPGI
 endif
 ifeq ($(findstring xlf,$(FC)),xlf)
@@ -76,7 +76,7 @@ ga: nstream-ga transpose-ga dgemm-ga
 
 target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target
 
-ornlacc: p2p-ornlacc p2p-innerloop-ornlacc stencil-ornlacc transpose-ornlacc nstream-ornlacc
+openacc: p2p-openacc p2p-innerloop-openacc stencil-openacc transpose-openacc nstream-openacc
 
 blas: dgemm-blas
 
@@ -117,8 +117,8 @@ dgemm-blas: dgemm-blas.F90
 %-target: %-target.F90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< -o $@
 
-%-ornlacc: %-ornlacc.F90
-	$(FC) $(FCFLAGS) $(ORNLACCFLAG) $< -o $@
+%-openacc: %-openacc.F90
+	$(FC) $(FCFLAGS) $(OPENACCFLAG) $< -o $@
 
 clean:
 	-rm -f *.o
@@ -138,4 +138,4 @@ clean:
 	-rm -f *-ga
 	-rm -f *-openmp
 	-rm -f *-target
-	-rm -f *-ornlacc
+	-rm -f *-openacc

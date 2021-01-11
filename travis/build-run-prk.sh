@@ -390,10 +390,10 @@ case "$PRK_TARGET" in
                     done
                 done
                 # ORNL-ACC - do not test in Travis CI because GCC-5 is too old
-                #echo "ORNLACCFLAG=-fopenacc" >> common/make.defs
-                #${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-ornlacc
-                #$PRK_TARGET_PATH/p2p-hyperplane-ornlacc     10 1024
-                #$PRK_TARGET_PATH/p2p-hyperplane-ornlacc     10 1024 64
+                #echo "OPENACCFLAG=-fopenacc" >> common/make.defs
+                #${MAKE} -C $PRK_TARGET_PATH p2p-hyperplane-openacc
+                #$PRK_TARGET_PATH/p2p-hyperplane-openacc     10 1024
+                #$PRK_TARGET_PATH/p2p-hyperplane-openacc     10 1024 64
                 ;;
             clang)
                 if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then

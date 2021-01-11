@@ -38,7 +38,7 @@ DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations # silenc
 OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
 OFFLOADFLAG=-foffload="-O3 -v"
-ORNLACCFLAG=-fopenacc
+OPENACCFLAG=-fopenacc
 #
 # OpenCL flags
 #

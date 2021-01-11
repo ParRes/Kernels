@@ -36,7 +36,7 @@ TARGETFLAGS = $(OFFLOADFLAG)
 OPENCLFLAGS = $(OPENCLFLAG) -DCL_HPP_MINIMUM_OPENCL_VERSION=120 -DCL_HPP_TARGET_OPENCL_VERSION=120
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
-ORNLACCFLAGS = $(ORNLACCFLAG)
+OPENACCFLAGS = $(OPENACCFLAG)
 TBBFLAGS = $(TBBFLAG) -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
 BOOSTFLAGS = $(BOOSTFLAG)
@@ -49,7 +49,7 @@ RAJAFLAGS = $(RAJAFLAG)
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
 SYCLFLAGS = $(SYCLFLAG)
-ORNLACCFLAGS = $(ORNLACCFLAG)
+OPENACCFLAGS = $(OPENACCFLAG)
 
 ifdef OCCADIR
   include ${OCCADIR}/scripts/makefile
@@ -134,7 +134,7 @@ oneapi: onemkl dpcpp sycl
 
 occa: transpose-occa nstream-occa
 
-ornlacc: p2p-hyperplane-ornlacc
+openacc: p2p-hyperplane-openacc
 
 boost-compute: nstream-boost-compute
 # busted
@@ -264,8 +264,8 @@ endif
 	$(info PRK help: Set OCCA_CXX=$(firstword $(CXX)) to use that compiler for OKL files.)
 	$(CXX) $(CXXFLAGS) $< $(OCCAFLAGS) -o $@
 
-%-ornlacc: %-ornlacc.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $< $(ORNLACCFLAGS) -o $@
+%-openacc: %-openacc.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(OPENACCFLAGS) -o $@
 
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -314,7 +314,7 @@ clean:
 	-rm -f *-onemkl
 	-rm -f *-occa
 	-rm -f *-boost-compute
-	-rm -f *-ornlacc
+	-rm -f *-openacc
 	-rm -f transpose-async transpose-thread
 
 cleancl:

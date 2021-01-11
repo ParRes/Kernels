@@ -29,7 +29,7 @@ DEFAULT_OPT_FLAGS=-O3 -mtune=native -ffast-math
 OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
 OFFLOADFLAG=-foffload=amdgcn-amdhsa="-march=fiji"
-ORNLACCFLAG=-fopenacc $(OFFLOADFLAG)
+OPENACCFLAG=-fopenacc $(OFFLOADFLAG)
 #
 # OpenCL flags
 #
