@@ -86,17 +86,8 @@ namespace PRK {
           System.Environment.Exit(args.Length+1);
       }
 
-      if ( int.TryParse(args[0], out int iterations) ) {
-          Console.WriteLine("Number of iterations  = {0}", iterations);
-      } else {
-          Help();
-      }
-
-      if ( int.TryParse(args[1], out int length) ) {
-          Console.WriteLine("vector length         = {0}", length);
-      } else {
-          Help();
-      }
+      int iterations = int.Parse(args[0]);
+      int length     = int.Parse(args[1]);
 
       //////////////////////////////////////////////////////////////////////
       // Allocate space and perform the computation

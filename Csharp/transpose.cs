@@ -78,17 +78,15 @@ namespace PRK {
           System.Environment.Exit(args.Length+1);
       }
 
-      if ( int.TryParse(args[0], out int iterations) ) {
-          Console.WriteLine("Number of iterations = {0}", iterations);
-      } else {
-          Help();
-      }
+      // This requires a newer C# compiler than 4.6 (e.g. 6.8)
+      //if ( int.TryParse(args[0], out int iterations) ) {
+      //    Console.WriteLine("Number of iterations = {0}", iterations);
+      //} else {
+      //    Help();
+      //}
 
-      if ( int.TryParse(args[1], out int order) ) {
-          Console.WriteLine("Matrix order         = {0}", order);
-      } else {
-          Help();
-      }
+      int iterations = int.Parse(args[0]);
+      int order      = int.Parse(args[1]);
 
       //////////////////////////////////////////////////////////////////////
       // Allocate space for the input and transpose matrix
