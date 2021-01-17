@@ -37,7 +37,9 @@
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_reduce.h>
 #include <tbb/blocked_range.h>
+#include <tbb/blocked_range2d.h>
 #include <tbb/flow_graph.h>
+#include <tbb/parallel_do.h>
 
 #if ( PRK_TBB_PARTITIONER == 1)
    tbb::static_partitioner tbb_partitioner;

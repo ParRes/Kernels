@@ -64,7 +64,7 @@
 #include "prk_util.h"
 #include "prk_tbb.h"
 
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/TBB STREAM triad: A = B + scalar * C" << std::endl;
@@ -118,23 +118,21 @@ int main(int argc, char * argv[])
 
   tbb::blocked_range<size_t> range(0, length);
 
-  {
+  tbb::parallel_for( std::begin(range), std::end(range), [&](size_t i) {
+                         A[i] = 0.0;
+                         B[i] = 2.0;
+                         C[i] = 2.0;
+                     }, tbb_partitioner);
+
+  for (int iter = 0; iter<=iterations; iter++) {
+
+    if (iter==1) nstream_time = prk::wtime();
+
     tbb::parallel_for( std::begin(range), std::end(range), [&](size_t i) {
-                           A[i] = 0.0;
-                           B[i] = 2.0;
-                           C[i] = 2.0;
+                           A[i] += B[i] + scalar * C[i];
                        }, tbb_partitioner);
-
-    for (int iter = 0; iter<=iterations; iter++) {
-
-      if (iter==1) nstream_time = prk::wtime();
-
-      tbb::parallel_for( std::begin(range), std::end(range), [&](size_t i) {
-                             A[i] += B[i] + scalar * C[i];
-                         }, tbb_partitioner);
-    }
-    nstream_time = prk::wtime() - nstream_time;
   }
+  nstream_time = prk::wtime() - nstream_time;
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -177,5 +175,3 @@ int main(int argc, char * argv[])
 
   return 0;
 }
-
-
