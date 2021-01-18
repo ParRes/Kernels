@@ -1,3 +1,5 @@
+#!/usr/bin/env -S scala -nc -J-Xmx4g
+
 object nstream
 {
     def main (args: Array[String])
@@ -10,7 +12,7 @@ object nstream
         /////////////////////////////////////////////////////////
 
         if (args.length != 2){
-            println("Usage: java nstream <# iterations> <vector length>")
+            println("Usage: nstream.scala <# iterations> <vector length>")
             return
         }
 
@@ -33,7 +35,7 @@ object nstream
         var b = Array.ofDim[Double](length)
         var c = Array.ofDim[Double](length)
 
-        for (j <- 1 to length) {
+        for (j <- 0 until length) {
             a(j) = 0.0
             b(j) = 2.0
             c(j) = 2.0
@@ -43,14 +45,13 @@ object nstream
 
         var t0 = System.nanoTime()
 
-        for (iter <- 0 to iterations) {
+        for (iter <- 0 until iterations) {
 
-            /* start timer after a warmup iteration */
             if (iter == 1) {
                 t0 = System.nanoTime()
             }
 
-            for (j <- 1 to length) {
+            for (j <- 0 until length) {
                 a(j) += b(j) + scalar*c(j)
             }
         }
@@ -66,14 +67,14 @@ object nstream
         val br : Double = 2
         val cr : Double = 2
 
-        for (k <- 0 to iterations) {
-            ar = ar + br + scalar * cr
+        for (k <- 0 until iterations) {
+            ar += br + scalar * cr
         }
 
-        ar *= length;
+        ar *= length
 
         var asum : Double = 0
-        for (i <- 1 to length) {
+        for (i <- 0 until length) {
             asum += Math.abs(a(i))
         }
 
@@ -85,8 +86,8 @@ object nstream
             println("ERROR: solution did not validate")
         } else {
             println("Solution validates")
-            val avgtime = nstream_time/iterations/1000
-            val nbytes  = 4 * length * 8
+            val avgtime = 1.0E-9*nstream_time/iterations.toDouble
+            val nbytes  = 4L * length * 8L // like Java, Scala has no sizeof(double), hence the 8
             println("Rate (MB/s): " + 1.0E-6*nbytes/avgtime + " Avg time (s): " + avgtime)
         }
     }
