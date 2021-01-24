@@ -67,18 +67,23 @@
 template <typename T>
 void run(cl::Context context, int iterations, size_t length)
 {
-  auto precision = (sizeof(T)==8) ? 64 : 32;
+  cl_int err = CL_SUCCESS;
 
   cl::Program program(context, prk::opencl::loadProgram("nstream.cl"), true);
 
-  auto function = (precision==64) ? "nstream64" : "nstream32";
+  auto precision = (sizeof(T)==8) ? 64 : 32;
+  auto function  = (precision==64) ? "nstream64" : "nstream32";
 
-  cl_int err;
-  auto kernel = cl::KernelFunctor<int, T, cl::Buffer, cl::Buffer, cl::Buffer>(program, function, &err);
-  if(err != CL_SUCCESS){
-    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
-    std::cout << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
+  try {
+    program.build();
   }
+  catch (...) {
+    auto info = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(&err);
+    for (auto &pair : info) {
+      std::cout << pair.second << std::endl;
+    }
+  }
+  auto kernel = cl::KernelFunctor<int, T, cl::Buffer, cl::Buffer, cl::Buffer>(program, function, &err);
 
   cl::CommandQueue queue(context);
 
@@ -103,7 +108,6 @@ void run(cl::Context context, int iterations, size_t length)
 
     if (iter==1) nstream_time = prk::wtime();
 
-    // nstream the  matrix
     kernel(cl::EnqueueArgs(queue, cl::NDRange(length)), length, scalar, d_a, d_b, d_c);
     queue.finish();
 
@@ -150,6 +154,8 @@ void run(cl::Context context, int iterations, size_t length)
 
 int main(int argc, char* argv[])
 {
+  prk::opencl::listPlatforms();
+
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OpenCL STREAM triad: A = B + scalar * C" << std::endl;
 
@@ -191,55 +197,34 @@ int main(int argc, char* argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
-  prk::opencl::listPlatforms();
-
-  cl_int err = CL_SUCCESS;
-
-  cl::Context cpu(CL_DEVICE_TYPE_CPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(cpu) )
-  {
-    const int precision = prk::opencl::precision(cpu);
-
-    std::cout << "CPU Precision        = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(cpu, iterations, length);
-    }
-    run<float>(cpu, iterations, length);
-  } else {
-    std::cerr << "No CPU" << std::endl;
+  std::vector<cl::Platform> platforms;
+  cl::Platform::get(&platforms);
+  if ( platforms.size() == 0 ) {
+    std::cout <<" No platforms found. Check OpenCL installation!\n";
+    return 1;
   }
+  for (auto plat : platforms) {
+    std::cout << "====================================================\n"
+              << "CL_PLATFORM_NAME=" << plat.getInfo<CL_PLATFORM_NAME>() << ", "
+              << "CL_PLATFORM_VENDOR=" << plat.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
 
-  cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(gpu) )
-  {
-    const int precision = prk::opencl::precision(gpu);
+    std::vector<cl::Device> devices;
+    plat.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+    for (auto dev : devices) {
+      std::cout << "CL_DEVICE_NAME="   << dev.getInfo<CL_DEVICE_NAME>()   << ", "
+                << "CL_DEVICE_VENDOR=" << dev.getInfo<CL_DEVICE_VENDOR>() << std::endl;
 
-    std::cout << "GPU Precision        = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(gpu, iterations, length);
+      cl_int err = CL_SUCCESS;
+      cl::Context ctx(dev, NULL, NULL, NULL, &err);
+      const int precision = prk::opencl::precision(ctx);
+      //std::cout << "Device Precision        = " << precision << "-bit" << std::endl;
+      if (precision==64) {
+          run<double>(dev, iterations, length);
+      }
+      run<float>(dev, iterations, length);
     }
-    run<float>(gpu, iterations, length);
-  } else {
-    std::cerr << "No GPU" << std::endl;
   }
-
-  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(acc) )
-  {
-
-    const int precision = prk::opencl::precision(acc);
-
-    std::cout << "ACC Precision        = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(acc, iterations, length);
-    }
-    run<float>(acc, iterations, length);
-  } else {
-    std::cerr << "No ACC" << std::endl;
-  }
+  std::cout << "====================================================" << std::endl;
 
   return 0;
 }
