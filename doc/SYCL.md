@@ -46,6 +46,11 @@ The optional arguments are associated with platforms such as the Xavier AGX, as 
 python3 ./buildbot/configure.py --arm --cuda --cmake-opt="-DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0"
 ```
 
+It may also be necessary to apply the following (evil) `CPATH` hack on ARM systems.
+```
+export CPATH=/usr/include/aarch64-linux-gnu:$CPATH
+```
+
 ## hipSYCL
 
 See https://github.com/illuhad/hipSYCL/tree/master/doc for other options.
