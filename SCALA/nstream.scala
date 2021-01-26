@@ -1,9 +1,6 @@
-#!/usr/bin/env -S scala -nc -J-Xmx4g
-
 object nstream
 {
-    def main (args: Array[String])
-    {
+    def main(args: Array[String]) {
         println("Parallel Research Kernels")
         println("Scala Stream triad: A = B + scalar * C.")
 
@@ -11,42 +8,36 @@ object nstream
         // read and test input parameters
         /////////////////////////////////////////////////////////
 
-        if (args.length != 2){
+        if (args.length != 2) {
             println("Usage: nstream.scala <# iterations> <vector length>")
-            return
+            System.exit(0)
         }
 
         val iterations = args(0).toInt
         if (iterations < 1) {
             println("ERROR: iterations must be >= 1")
-            return
+            System.exit(0)
         }
 
         val length = args(1).toInt
         if (length < 1) {
             println("ERROR: vector length must be positive")
-            return
+            System.exit(0)
         }
 
         println("Vector length        = " + length)
         println("Number of iterations = " + iterations)
 
-        var a = Array.ofDim[Double](length)
-        var b = Array.ofDim[Double](length)
-        var c = Array.ofDim[Double](length)
-
-        for (j <- 0 until length) {
-            a(j) = 0.0
-            b(j) = 2.0
-            c(j) = 2.0
-        }
-
+        // Note: Array is mutable data struct. a, b and c hold a reference
+        // of an array object and we don't update references.
+        val a = Array.fill(length) {0.0.toDouble}
+        val b = Array.fill(length) {2.0.toDouble}
+        val c = Array.fill(length) {2.0.toDouble}
         val scalar: Double = 3
 
         var t0 = System.nanoTime()
 
         for (iter <- 0 until iterations) {
-
             if (iter == 1) {
                 t0 = System.nanoTime()
             }
