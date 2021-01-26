@@ -95,9 +95,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of threads    = " << omp_get_max_threads() << std::endl;
-  std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Vector length        = " << length << std::endl;
+  std::cout << "OpenMP default device = " << omp_get_default_device() << std::endl;
+  std::cout << "Number of iterations  = " << iterations << std::endl;
+  std::cout << "Vector length         = " << length << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-      OMP_TARGET( teams distribute parallel for simd schedule(static,1) )
+      OMP_TARGET( teams distribute parallel for simd )
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }
