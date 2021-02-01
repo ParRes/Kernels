@@ -127,9 +127,9 @@ int main(int argc, char * argv[])
       h_C[i] = 2.0;
   }
 
-  double * restrict d_A = omp_target_alloc(bytes, host);
-  double * restrict d_B = omp_target_alloc(bytes, host);
-  double * restrict d_C = omp_target_alloc(bytes, host);
+  double * restrict d_A = omp_target_alloc(bytes, device);
+  double * restrict d_B = omp_target_alloc(bytes, device);
+  double * restrict d_C = omp_target_alloc(bytes, device);
 
   int rc = 0;
   rc = omp_target_memcpy(d_A, h_A, bytes, 0, 0, device, host);
