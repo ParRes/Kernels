@@ -139,9 +139,6 @@ int main(int argc, char * argv[])
   rc = omp_target_memcpy(d_C, h_C, bytes, 0, 0, device, host);
   if (rc) { printf("ERROR: omp_target_memcpy(C) returned %d\n", rc); abort(); }
 
-  omp_target_free(h_C, host);
-  omp_target_free(h_B, host);
-
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
@@ -165,6 +162,8 @@ int main(int argc, char * argv[])
   omp_target_free(d_C, device);
   omp_target_free(d_B, device);
   omp_target_free(d_A, device);
+  omp_target_free(h_C, host);
+  omp_target_free(h_B, host);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
