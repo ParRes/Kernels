@@ -190,7 +190,7 @@ program main
     write(*,'(a)') 'Solution validates'
     avgtime = dgemm_time/iterations
     nflops = 2 * int(order,INT64)**3
-    write(*,'(a,f13.6,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
+    write(*,'(a,f13.3,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
            ' Avg time (s): ', avgtime
   else
     write(*,'(a,e30.15)') 'Reference checksum = ', reference
