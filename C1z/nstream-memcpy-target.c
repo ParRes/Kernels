@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -127,9 +127,9 @@ int main(int argc, char * argv[])
       h_C[i] = 2.0;
   }
 
-  double * restrict d_A = omp_target_alloc(bytes, host);
-  double * restrict d_B = omp_target_alloc(bytes, host);
-  double * restrict d_C = omp_target_alloc(bytes, host);
+  double * restrict d_A = omp_target_alloc(bytes, device);
+  double * restrict d_B = omp_target_alloc(bytes, device);
+  double * restrict d_C = omp_target_alloc(bytes, device);
 
   int rc = 0;
   rc = omp_target_memcpy(d_A, h_A, bytes, 0, 0, device, host);

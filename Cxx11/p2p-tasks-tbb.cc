@@ -114,8 +114,8 @@ int main(int argc, char* argv[])
   }
 
   const char* envvar = std::getenv("TBB_NUM_THREADS");
-  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
-  tbb::task_scheduler_init init(num_threads);
+  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : prk::get_num_cores();
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, num_threads);
 
   std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
   int num_blocks_m = (m / mc);
   if(m%mc != 0) num_blocks_m++;
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   double * grid = new double[m*n];
 

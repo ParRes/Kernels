@@ -102,14 +102,14 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
 #endif
 
   size_t padded_n = block_size * prk::divceil(n,block_size);
-  sycl::range global{padded_n,padded_n};
-  sycl::range local{block_size,block_size};
+  sycl::range<2> global{padded_n,padded_n};
+  sycl::range<2> local{block_size,block_size};
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double stencil_time(0);
+  double stencil_time{0};
 
   std::vector<T> h_in(n*n,0);
   std::vector<T> h_out(n*n,0);
@@ -145,9 +145,6 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
         auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
         // Add constant to solution to force refresh of neighbor data, if any
         h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0}, [=] (sycl::item<2> it) {
-#if PREBUILD_KERNEL
-            kernel.get_kernel<transpose<T>>(),
-#endif
             sycl::id<2> xy = it.get_id();
             in[xy] += static_cast<T>(1);
         });
@@ -281,7 +278,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q(sycl::host_selector{});
+    sycl::queue q{sycl::host_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, block_size, star, radius);
     run<double>(q, iterations, n, block_size, star, radius);
@@ -298,7 +295,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::cpu_selector{});
+    sycl::queue q{sycl::cpu_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, block_size, star, radius);
     run<double>(q, iterations, n, block_size, star, radius);
@@ -315,7 +312,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::gpu_selector{});
+    sycl::queue q{sycl::gpu_selector{}};
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
     run<float>(q, iterations, n, block_size, star, radius);

@@ -22,27 +22,31 @@ ifeq ($(findstring ifx,$(FC)),ifx)
   BLASFLAGS += -heap-arrays
 endif
 
-.PHONY: all clean serial pretty openmp coarray target ornlacc ga
+.PHONY: all clean serial pretty openmp coarray target openacc ga
 
 # Intel
 ifeq ($(findstring ifort,$(FC)),ifort)
   ifeq ($(shell uname -s),Darwin)
     EXTRA = taskloop
   else
-    EXTRA = taskloop target coarray
+    EXTRA = taskloop coarray
   endif
+endif
+# OpenMP target stuff is only in IFX now
+ifeq ($(findstring ifx,$(FC)),ifx)
+  EXTRA = target
 endif
 # GCC (also matches pgfortran so PGI must come after)
 ifeq ($(findstring gfortran,$(FC)),gfortran)
-  EXTRA = target coarray taskloop ornlacc
+  EXTRA = target coarray taskloop openacc
 endif
 # PGI and LLVM Flang
 ifeq ($(findstring pgf,$(FC)),pgf)
-  EXTRA = target ornlacc
+  EXTRA = target openacc
   FCFLAGS += -DPGI
 endif
 ifeq ($(findstring flang,$(FC)),flang)
-  EXTRA = target ornlacc
+  EXTRA = target openacc
   FCFLAGS += -DPGI
 endif
 ifeq ($(findstring xlf,$(FC)),xlf)
@@ -62,15 +66,19 @@ tasks: p2p-tasks-openmp transpose-tasks-openmp
 
 taskloop: stencil-taskloop-openmp transpose-taskloop-openmp nstream-taskloop-openmp dgemm-taskloop-openmp
 
-coarray: p2p-coarray stencil-coarray transpose-coarray
+coarray: nstream-coarray p2p-coarray stencil-coarray transpose-coarray
+
+mpi: nstream-mpi
+
+mpi-openmp: nstream-mpi-openmp
 
 ga: nstream-ga transpose-ga dgemm-ga
 
 target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target
 
-ornlacc: p2p-ornlacc p2p-innerloop-ornlacc stencil-ornlacc transpose-ornlacc nstream-ornlacc
+openacc: p2p-openacc p2p-innerloop-openacc stencil-openacc transpose-openacc nstream-openacc
 
-blas: dgemm-mkl
+blas: dgemm-blas
 
 %: %.F90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -80,10 +88,10 @@ stencil: stencil.F90 stencil_serial.F90
 	$(FC) $(FCFLAGS) $< -o $@
 
 dgemm-pretty: dgemm-pretty.F90
-	$(FC) $(FCFLAGS) $(BLASFLAGS) $< -o $@
+	$(FC) $(FCFLAGS) $< $(BLASFLAGS) -o $@
 
 dgemm-blas: dgemm-blas.F90
-	$(FC) $(FCFLAGS) $(BLASFLAGS) $< -o $@
+	$(FC) $(FCFLAGS) $< $(BLASFLAGS) -o $@
 
 %-pretty: %-pretty.F90
 	$(FC) $(FCFLAGS) $< -o $@
@@ -97,14 +105,20 @@ dgemm-blas: dgemm-blas.F90
 %-ga: %-ga.F90
 	$(FC) $(FCFLAGS) $< $(GAFLAG) -o $@
 
+%-mpi-openmp: %-mpi.F90
+	$(MPIFORT) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+
+%-mpi: %-mpi.F90
+	$(MPIFORT) $(FCFLAGS) $< -o $@
+
 %-coarray: %-coarray.F90
 	$(CAFC) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
 
 %-target: %-target.F90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< -o $@
 
-%-ornlacc: %-ornlacc.F90
-	$(FC) $(FCFLAGS) $(ORNLACCFLAG) $< -o $@
+%-openacc: %-openacc.F90
+	$(FC) $(FCFLAGS) $(OPENACCFLAG) $< -o $@
 
 clean:
 	-rm -f *.o
@@ -120,7 +134,8 @@ clean:
 	-rm -f *-pretty
 	-rm -f *-blas
 	-rm -f *-coarray
+	-rm -f *-mpi
 	-rm -f *-ga
 	-rm -f *-openmp
 	-rm -f *-target
-	-rm -f *-ornlacc
+	-rm -f *-openacc

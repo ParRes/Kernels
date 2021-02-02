@@ -36,7 +36,7 @@ TARGETFLAGS = $(OFFLOADFLAG)
 OPENCLFLAGS = $(OPENCLFLAG) -DCL_HPP_MINIMUM_OPENCL_VERSION=120 -DCL_HPP_TARGET_OPENCL_VERSION=120
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
-ORNLACCFLAGS = $(ORNLACCFLAG)
+OPENACCFLAGS = $(OPENACCFLAG)
 TBBFLAGS = $(TBBFLAG) -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
 BOOSTFLAGS = $(BOOSTFLAG)
@@ -49,7 +49,7 @@ RAJAFLAGS = $(RAJAFLAG)
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
 SYCLFLAGS = $(SYCLFLAG)
-ORNLACCFLAGS = $(ORNLACCFLAG)
+OPENACCFLAGS = $(OPENACCFLAG)
 
 ifdef OCCADIR
   include ${OCCADIR}/scripts/makefile
@@ -115,10 +115,14 @@ raja: p2p-raja stencil-raja nstream-raja \
 
 cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
 
+hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
+
+hipstl: nstream-hipstl
+
+hipblas: nstream-hipblas dgemm-hipblas
+
 thrust: nstream-host-thrust nstream-device-thrust \
         transpose-host-thrust transpose-device-thrust
-
-cuda: transpose-cuda
 
 cublas: transpose-cublas nstream-cublas dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas
 
@@ -130,7 +134,7 @@ oneapi: onemkl dpcpp sycl
 
 occa: transpose-occa nstream-occa
 
-ornlacc: p2p-hyperplane-ornlacc
+openacc: p2p-hyperplane-openacc
 
 boost-compute: nstream-boost-compute
 # busted
@@ -244,6 +248,15 @@ endif
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) -DPRK_USE_CUBLAS $< -lcublas -o $@
 
+%-hip: %-hip.cc prk_util.h prk_hip.h
+	$(HIPCC) $(HIPFLAGS) $(CPPFLAGS) $< -o $@
+
+%-hipstl: %-hipstl.cc prk_util.h prk_hip.h
+	$(HIPCC) $(HIPFLAGS) $(RANGEFLAGS) $(CPPFLAGS) -DHIP_THRUST $< -o $@
+
+%-hipblas: %-hipblas.cc prk_util.h prk_hip.h
+	$(HIPCC) $(HIPFLAGS) $(CPPFLAGS) $< -o $@
+
 %-cblas: %-cblas.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(CBLASFLAGS) -o $@
 
@@ -251,8 +264,8 @@ endif
 	$(info PRK help: Set OCCA_CXX=$(firstword $(CXX)) to use that compiler for OKL files.)
 	$(CXX) $(CXXFLAGS) $< $(OCCAFLAGS) -o $@
 
-%-ornlacc: %-ornlacc.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $< $(ORNLACCFLAGS) -o $@
+%-openacc: %-openacc.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(OPENACCFLAGS) -o $@
 
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -295,11 +308,13 @@ clean:
 	-rm -f *-thrust
 	-rm -f *-cuda
 	-rm -f *-cublas
+	-rm -f *-hip
+	-rm -f *-hipblas
 	-rm -f *-cblas
 	-rm -f *-onemkl
 	-rm -f *-occa
 	-rm -f *-boost-compute
-	-rm -f *-ornlacc
+	-rm -f *-openacc
 	-rm -f transpose-async transpose-thread
 
 cleancl:

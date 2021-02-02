@@ -19,7 +19,7 @@ CXX=icpx -std=c++17 -pthread
 # Compiler flags
 #
 # -xHOST is appropriate for most cases.
-DEFAULT_OPT_FLAGS=-g -O3
+DEFAULT_OPT_FLAGS=-g -O3 -xHOST
 #
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -xMIC-AVX512
@@ -30,7 +30,7 @@ DEFAULT_OPT_FLAGS=-g -O3
 #
 OPENMPFLAG=-fiopenmp
 OPENMPSIMDFLAG=-qopenmp-simd
-OFFLOADFLAG=-fiopenmp -fopenmp-targets=spir64
+OFFLOADFLAG=-fopenmp-targets=spir64
 #
 # OpenCL flags
 #
@@ -40,13 +40,24 @@ OFFLOADFLAG=-fiopenmp -fopenmp-targets=spir64
 # http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
 #OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
-OPENCLDIR=/etc/alternatives/opencl-intel-tools
-OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLDIR=/opt/intel/oneapi/compiler/latest/linux
+OPENCLFLAG=-I${OPENCLDIR}/include/sycl -L${OPENCLDIR}/lib -lOpenCL
 #
 # SYCL flags
 #
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+#SYCLDIR=/opt/isycl
+#SYCLCXX=${SYCLDIR}/bin/clang++
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-fsycl -fsycl-unnamed-lambda
+#SYCLFLAG+=-fsycl-targets=spir64_gen-unknown-linux-sycldevice -Xsycl-target-backend=spir64_gen-unknown-linux-sycldevice "-device skl"
+#SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#
+# Intel oneAPI
+#
 SYCLCXX=dpcpp
-SYCLFLAG=-fsycl -fsycl-unnamed-lambda
+SYCLFLAG=-fsycl
 SYCLFLAG+=-std=c++17 -O3
 SYCLFLAG+=-DDPCPP
 #
@@ -78,8 +89,11 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 BLASFLAG=-mkl
 CBLASFLAG=-DMKL -mkl
-ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_tbb_thread -tbb -lmkl_core -lOpenCL -ldl
+#MKLROOT=/opt/intel/inteloneapi/mkl/latest
+#ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_tbb_thread ${TBBFLAG} -lmkl_core -lOpenCL -ldl
+#ONEMKLFLAG+=-I/opt/intel/oneapi/mkl/latest/include/
 #ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
+ONEMKLFLAG=-mkl
 #
 # CUDA flags
 #
@@ -104,9 +118,10 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 # in your .bashrc.
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
+MPIDIR=/opt/intel/oneapi/mpi/latest
 MPICC=${MPIDIR}/bin/mpiicc
 MPICXX=${MPIDIR}/bin/mpiicpc
+MPIFORT=${MPIDIR}/bin/mpiifort
 MPIINC=-I${MPIDIR}/include
 MPILIB=-L${MPIDIR}/lib -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi

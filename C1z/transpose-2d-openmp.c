@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -122,8 +122,8 @@ int main(int argc, char * argv[])
   OMP_PARALLEL()
   {
     OMP_FOR()
-    for (int i=0;i<order; i++) {
-      for (int j=0;j<order;j++) {
+    for (int j=0;j<order;j++) {
+      for (int i=0;i<order; i++) {
         A[j][i] = (double)(i*order+j);
         B[j][i] = 0.0;
       }
@@ -175,7 +175,6 @@ int main(int argc, char * argv[])
   OMP_PARALLEL_FOR_REDUCE( +:abserr )
   for (int j=0; j<order; j++) {
     for (int i=0; i<order; i++) {
-      const size_t ij = i*order+j;
       const size_t ji = j*order+i;
       const double reference = (double)(ji)*(1.+iterations)+addit;
       abserr += fabs(B[j][i] - reference);

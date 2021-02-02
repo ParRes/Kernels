@@ -88,7 +88,7 @@ void run(cl::Context context, int iterations, int order)
   cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), false);
   cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), false);
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   for (int iter = 0; iter<=iterations; iter++) {
 

@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -86,7 +86,7 @@ int main(int argc, char * argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atoi(argv[2]);
+      length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
@@ -100,9 +100,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Vector length         = " << length << std::endl;
-  std::cout << "Number of GPUs to use = " << use_ngpu << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Vector length        = " << length << std::endl;
+  std::cout << "Number of GPU to use = " << use_ngpu << std::endl;
 
   std::vector<sycl::queue> qs;
 
@@ -141,7 +141,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double nstream_time(0);
+  double nstream_time{0};
 
   const size_t bytes = length * sizeof(double);
 
@@ -176,9 +176,9 @@ int main(int argc, char * argv[])
       const auto local_length = ls[g];
       const auto local_bytes = local_length * sizeof(double);
 
-      d_A[g] = syclx::malloc_device<double>(local_length, q);
-      d_B[g] = syclx::malloc_device<double>(local_length, q);
-      d_C[g] = syclx::malloc_device<double>(local_length, q);
+      d_A[g] = sycl::malloc_device<double>(local_length, q);
+      d_B[g] = sycl::malloc_device<double>(local_length, q);
+      d_C[g] = sycl::malloc_device<double>(local_length, q);
       q.wait();
 
       const size_t start = (g>0) ? ls[g-1] : 0;
@@ -230,9 +230,9 @@ int main(int argc, char * argv[])
       q.memcpy(&(h_A[start]), d_A[g], size);
       q.wait();
 
-      syclx::free(d_C[g], q);
-      syclx::free(d_B[g], q);
-      syclx::free(d_A[g], q);
+      sycl::free(d_C[g], q);
+      sycl::free(d_B[g], q);
+      sycl::free(d_A[g], q);
       q.wait();
   }
 

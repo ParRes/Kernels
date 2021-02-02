@@ -115,7 +115,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   double * h_A = new double[order*order];
   double * h_B = new double[order*order];

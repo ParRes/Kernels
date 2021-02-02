@@ -117,7 +117,7 @@ int main(int argc, char * argv[])
     // Allocate space and perform the computation
     //////////////////////////////////////////////////////////////////////
 
-    double trans_time(0);
+    double trans_time{0};
 
     matrix A("A", order, order);
     matrix B("B", order, order);

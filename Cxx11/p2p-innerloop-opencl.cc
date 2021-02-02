@@ -95,7 +95,7 @@ void run(cl::Context context, int iterations, int n)
   // copy input from host to device
   cl::Buffer d_grid = cl::Buffer(context, begin(h_grid), end(h_grid), false);
 
-  auto pipeline_time = 0.0;
+  double pipeline_time{0};
 
   for (int iter = 0; iter<=iterations; iter++) {
 

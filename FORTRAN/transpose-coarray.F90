@@ -175,7 +175,7 @@ program main
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
   if (printer) then
-    write(6,'(a23,i8)') 'Number of images     = ', num_images()
+    write(6,'(a23,i8)') 'Number of images     = ', npes
     write(6,'(a23,i8)') 'Number of iterations = ', iterations
     write(6,'(a23,i8)') 'Matrix order         = ', order
     write(6,'(a23,i8)') 'Tile size            = ', tile_size
@@ -277,7 +277,6 @@ program main
 
   enddo ! iterations
 
-  sync all ! barrier
   t1 = prk_get_wtime()
   trans_time = t1 - t0
 

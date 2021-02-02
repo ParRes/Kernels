@@ -103,7 +103,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   double * RESTRICT A = new double[order*order];
   double * RESTRICT B = new double[order*order];

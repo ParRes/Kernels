@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -95,8 +95,8 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  int device = (argc > 3) ? atol(argv[3]) : omp_get_initial_device();
-  if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_initial_device()) ) {
+  int device = (argc > 3) ? atol(argv[3]) : omp_get_default_device();
+  if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_default_device()) ) {
     printf("ERROR: device number %d is not valid.\n", device);
     return 1;
   }

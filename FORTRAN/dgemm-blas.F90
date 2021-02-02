@@ -91,7 +91,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a61)') 'Fortran BLAS Dense matrix-matrix multiplication: C += A x B'
+  write(*,'(a59)') 'Fortran BLAS Dense matrix-matrix multiplication: C += A x B'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()

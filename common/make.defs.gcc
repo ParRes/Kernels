@@ -38,7 +38,7 @@ DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations # silenc
 OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
 OFFLOADFLAG=-foffload="-O3 -v"
-ORNLACCFLAG=-fopenacc
+OPENACCFLAG=-fopenacc
 #
 # OpenCL flags
 #
@@ -145,8 +145,10 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
-BLASFLAG=-DACCELERATE -framework Accelerate
-CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+#BLASFLAG=-DACCELERATE -framework Accelerate
+#CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+BLASFLAG=-lblas
+CBLASFLAG=-lblas
 #
 # CUDA flags
 #
@@ -158,6 +160,16 @@ CUDAFLAGS=-g -O3 -std=c++11
 CUDAFLAGS+=-arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# Halide
+#
+HALIDECXX=${CXX}
+HALIDEDIR=/opt/halide/Halide-10.0.0-x86-64-linux
+HALIDEFLAG=-I${HALIDEDIR}/include
+HALIDEFLAG+=-Wl,-rpath=${HALIDEDIR}/lib -L${HALIDEDIR}/lib -lHalide
+#HALIDEFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
+HALIDEFLAG+=-std=c++17
 #
 # ISPC
 #
@@ -171,9 +183,9 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 # in your .bashrc.
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
-MPICC=${MPIDIR}/bin/mpiicc
-MPICXX=${MPIDIR}/bin/mpiicpc
+MPIDIR=/usr
+MPICC=${MPIDIR}/bin/mpicc
+MPICXX=${MPIDIR}/bin/mpicxx
 MPIINC=-I${MPIDIR}/include
 MPILIB=-L${MPIDIR}/lib -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
@@ -189,7 +201,7 @@ GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
 #GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
 GAFLAG+=${MPIINC} ${MPILIB}
 GAFLAG+=-lmpifort -lmpi
-GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+GAFLAG+=-fdefault-integer-8 # GA is compiled with 64b integers on 64-bit systems
 #
 # PETSc
 #

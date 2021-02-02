@@ -61,6 +61,7 @@
 #include <atomic>
 #include <numeric>
 #include <algorithm>
+#include <thread> // std::thread::hardware_concurrency
 
 #include "prk_simd.h"
 
@@ -93,6 +94,12 @@
 #endif
 
 namespace prk {
+
+
+    int get_num_cores(void)
+    {
+        return std::thread::hardware_concurrency();
+    }
 
     // only used in PIC
     namespace constants {

@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -51,7 +51,6 @@
 ///          number of words written, times the size of the words, divided
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
-///
 ///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
@@ -65,63 +64,81 @@
 #include "prk_sycl.h"
 #include "prk_util.h"
 
-template <typename T> class nstream;
+template <typename T> class nstream1;
+template <typename T> class nstream2;
+template <typename T> class nstream3;
 
 template <typename T>
 void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 {
-  sycl::range global{length};
-  sycl::range local{block_size};
+  const auto padded_length = (block_size > 0) ? (block_size * (length / block_size + length % block_size)) : 0;
+  sycl::range<1> global{padded_length};
+  sycl::range<1> local{block_size};
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto ctx = q.get_context();
-
-  double nstream_time(0);
+  double nstream_time{0};
 
   const T scalar(3);
 
-  T * A;
+  T * A = sycl::malloc_shared<T>(length, q);
+  T * B = sycl::malloc_shared<T>(length, q);
+  T * C = sycl::malloc_shared<T>(length, q);
+
+  for (size_t i=0; i<length; i++) {
+    A[i] = 0.0;
+    B[i] = 2.0;
+    C[i] = 2.0;
+  }
 
   try {
 
-    auto dev = q.get_device();
-
 #if PREBUILD_KERNEL
-    sycl::program kernel(ctx);
-    kernel.build_with_kernel_type<nstream<T>>();
+    auto ctx = q.get_context();
+    sycl::program kernel{ctx};
+    kernel.build_with_kernel_type<nstream1<T>>();
+    kernel.build_with_kernel_type<nstream2<T>>();
+    kernel.build_with_kernel_type<nstream3<T>>();
 #endif
-
-    A = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
-    T * B = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
-    T * C = static_cast<T*>(syclx::malloc_shared(length * sizeof(T), dev, ctx));
-
-    for (size_t i=0; i<length; i++) {
-      A[i] = 0.0;
-      B[i] = 2.0;
-      C[i] = 2.0;
-    }
 
     for (int iter = 0; iter<=iterations; ++iter) {
 
       if (iter==1) nstream_time = prk::wtime();
 
       q.submit([&](sycl::handler& h) {
-        h.parallel_for<class nstream<T>>(
+        if (block_size == 0) {
+            // hipSYCL prefers range to nd_range because no barriers
+            h.parallel_for<class nstream1<T>>(
 #if PREBUILD_KERNEL
-                kernel.get_kernel<nstream<T>>(),
+                kernel.get_kernel<nstream1<T>>(),
 #endif
-#if 0 // defaults in DPC++ are not optimal for V100
 		sycl::range<1>{length}, [=] (sycl::id<1> it) {
-		const size_t i = it;
-#else
-		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
-		const size_t i = it.get_global_id(0);
+		const size_t i = it[0];
+                A[i] += B[i] + scalar * C[i];
+            });
+        } else if (length % block_size) {
+            h.parallel_for<class nstream2<T>>(
+#if PREBUILD_KERNEL
+                kernel.get_kernel<nstream2<T>>(),
 #endif
-            A[i] += B[i] + scalar * C[i];
-        });
+		sycl::nd_range<1>{global, local}, [=](sycl::nd_item<1> it) {
+		const size_t i = it.get_global_id(0);
+                if (i < length) {
+                    A[i] += B[i] + scalar * C[i];
+                }
+            });
+        } else {
+            h.parallel_for<class nstream3<T>>(
+#if PREBUILD_KERNEL
+                kernel.get_kernel<nstream3<T>>(),
+#endif
+		sycl::nd_range<1>{global, local}, [=](sycl::nd_item<1> it) {
+		const size_t i = it.get_global_id(0);
+                A[i] += B[i] + scalar * C[i];
+            });
+        }
       });
       q.wait();
     }
@@ -131,8 +148,8 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
     // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
 
-    syclx::free(B, ctx);
-    syclx::free(C, ctx);
+    sycl::free(B, q);
+    sycl::free(C, q);
 
   }
   catch (sycl::exception & e) {
@@ -167,7 +184,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
       asum += prk::abs(A[i]);
   }
 
-  syclx::free(A, ctx);
+  sycl::free(A, q);
 
   const double epsilon(1.e-8);
   if (prk::abs(ar-asum)/asum > epsilon) {
@@ -176,6 +193,9 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
+      for (size_t i=0; i<length; ++i) {
+          std::cerr << i << "," << A[i] << "\n";
+      }
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
@@ -195,7 +215,7 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
+  int iterations;
   size_t length, block_size;
 
   block_size = 256; // matches CUDA version default
@@ -233,7 +253,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q(sycl::host_selector{});
+    sycl::queue q{sycl::host_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, length, block_size);
     run<double>(q, iterations, length, block_size);
@@ -250,7 +270,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::cpu_selector{});
+    sycl::queue q{sycl::cpu_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, length, block_size);
     run<double>(q, iterations, length, block_size);
@@ -267,9 +287,12 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::gpu_selector{});
+    sycl::queue q{sycl::gpu_selector{}};
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
+    if (has_fp64) {
+      if (prk::SYCL::print_gen12lp_helper(q)) return 1;
+    }
     run<float>(q, iterations, length, block_size);
     if (has_fp64) {
       run<double>(q, iterations, length, block_size);

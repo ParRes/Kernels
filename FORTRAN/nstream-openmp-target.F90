@@ -42,7 +42,7 @@
 !          of iterations to loop over the triad vectors, the length of the
 !          vectors, and the offset between vectors
 !
-!          <progname> <# iterations> <vector length> <offset>
+!          <progname> <# iterations> <vector length>
 !
 !          The output consists of diagnostics to make sure the
 !          algorithm worked, and of timing statistics.
@@ -71,7 +71,7 @@ program main
   integer :: arglen
   character(len=32) :: argtmp
   ! problem definition
-  integer(kind=INT32) ::  iterations, offset
+  integer(kind=INT32) ::  iterations
   integer(kind=INT64) ::  length
   real(kind=REAL64), allocatable ::  A(:)
   real(kind=REAL64), allocatable ::  B(:)
@@ -81,7 +81,7 @@ program main
   ! runtime variables
   integer(kind=INT64) :: i
   integer(kind=INT32) :: k
-  real(kind=REAL64) ::  asum, ar, br, cr, ref
+  real(kind=REAL64) ::  asum, ar, br, cr
   real(kind=REAL64) ::  t0, t1, nstream_time, avgtime
   real(kind=REAL64), parameter ::  epsilon=1.D-8
 
@@ -90,11 +90,11 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a47)') 'Fortran OpenMP TARGET STREAM triad: A = B + scalar * C'
+  write(*,'(a54)') 'Fortran OpenMP TARGET STREAM triad: A = B + scalar * C'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <vector length> [<offset>]'
+    write(*,'(a62)')    'Usage: ./transpose <# iterations> <vector length>'
     stop 1
   endif
 
@@ -114,20 +114,9 @@ program main
     stop 1
   endif
 
-  offset = 0
-  if (command_argument_count().gt.2) then
-    call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') offset
-    if (offset .lt. 0) then
-      write(*,'(a,i5)') 'ERROR: offset must be positive : ', offset
-      stop 1
-    endif
-  endif
-
-  write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
-  write(*,'(a,i12)') 'Number of iterations = ', iterations
-  write(*,'(a,i12)') 'Matrix length        = ', length
-  write(*,'(a,i12)') 'Offset               = ', offset
+  write(*,'(a,i12)') 'OpenMP default device = ', omp_get_default_device()
+  write(*,'(a,i12)') 'Number of iterations  = ', iterations
+  write(*,'(a,i12)') 'Matrix length         = ', length
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -169,7 +158,7 @@ program main
 
     if (k.eq.1) t0 = omp_get_wtime()
 
-    !$omp target teams distribute parallel do simd schedule(static,1)
+    !$omp target teams distribute parallel do simd
     do i=1,length
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
@@ -190,7 +179,6 @@ program main
   ar  = 0
   br  = 2
   cr  = 2
-  ref = 0
   do k=0,iterations
       ar = ar + br + scalar * cr;
   enddo

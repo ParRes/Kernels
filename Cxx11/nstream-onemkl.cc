@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -64,9 +64,11 @@
 #include "prk_sycl.h"
 #include "prk_util.h"
 
+#if BETA9 // and older
 #include <mkl_blas_sycl.hpp>
-#include <mkl_lapack_sycl.hpp>
-#include <mkl_sycl_types.hpp>
+#else
+#include <oneapi/mkl/blas.hpp>
+#endif
 
 using namespace oneapi; // oneapi::mkl -> mkl
 
@@ -80,7 +82,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int length;
+  size_t length;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length>";
@@ -91,7 +93,7 @@ int main(int argc, char * argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atoi(argv[2]);
+      length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
@@ -110,13 +112,13 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double nstream_time(0);
+  double nstream_time{0};
 
   const size_t bytes = length * sizeof(double);
 
-  double * h_A = syclx::malloc_host<double>(length, q);
-  double * h_B = syclx::malloc_host<double>(length, q);
-  double * h_C = syclx::malloc_host<double>(length, q);
+  double * h_A = sycl::malloc_host<double>(length, q);
+  double * h_B = sycl::malloc_host<double>(length, q);
+  double * h_C = sycl::malloc_host<double>(length, q);
 
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
@@ -124,9 +126,9 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  double * d_A = syclx::malloc_device<double>(length, q);
-  double * d_B = syclx::malloc_device<double>(length, q);
-  double * d_C = syclx::malloc_device<double>(length, q);
+  double * d_A = sycl::malloc_device<double>(length, q);
+  double * d_B = sycl::malloc_device<double>(length, q);
+  double * d_C = sycl::malloc_device<double>(length, q);
   q.memcpy(d_A, &(h_A[0]), bytes).wait();
   q.memcpy(d_B, &(h_B[0]), bytes).wait();
   q.memcpy(d_C, &(h_C[0]), bytes).wait();
@@ -153,12 +155,12 @@ int main(int argc, char * argv[])
 
   q.memcpy(&(h_A[0]), d_A, bytes).wait();
 
-  syclx::free(d_C, q);
-  syclx::free(d_B, q);
-  syclx::free(d_A, q);
+  sycl::free(d_C, q);
+  sycl::free(d_B, q);
+  sycl::free(d_A, q);
 
-  syclx::free(h_B, q);
-  syclx::free(h_C, q);
+  sycl::free(h_B, q);
+  sycl::free(h_C, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results

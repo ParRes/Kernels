@@ -132,7 +132,7 @@ int main(int argc, char * argv[])
 
   auto range = prk::range(0,order);
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   for (int iter = 0; iter<=iterations; iter++) {
 

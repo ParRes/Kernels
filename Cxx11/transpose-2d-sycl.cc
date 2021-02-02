@@ -58,14 +58,14 @@ template <typename T>
 void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
 {
   size_t padded_order = block_size * prk::divceil(order,block_size);
-  sycl::range global{padded_order,padded_order};
-  sycl::range local{block_size,block_size};
+  sycl::range<2> global{padded_order,padded_order};
+  sycl::range<2> local{block_size,block_size};
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  double trans_time(0);
+  double trans_time{0};
 
   std::vector<T> h_A(order*order);
   std::vector<T> h_B(order*order,(T)0);
@@ -77,7 +77,7 @@ void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
 
 #if PREBUILD_KERNEL
     auto ctx = q.get_context();
-    sycl::program kernel(ctx);
+    sycl::program kernel{ctx};
     kernel.build_with_kernel_type<transpose<T>>();
 #endif
 
@@ -214,7 +214,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q(sycl::host_selector{});
+    sycl::queue q{sycl::host_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, order, block_size);
     run<double>(q, iterations, order, block_size);
@@ -231,7 +231,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::cpu_selector{});
+    sycl::queue q{sycl::cpu_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, order, block_size);
     run<double>(q, iterations, order, block_size);
@@ -248,7 +248,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q(sycl::gpu_selector{});
+    sycl::queue q{sycl::gpu_selector{}};
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
     run<float>(q, iterations, order, block_size);

@@ -154,7 +154,7 @@ int main(int argc, char * argv[])
   /// Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  double dgemm_time(0);
+  double dgemm_time{0};
 
   std::vector<double> A(order*order);
   std::vector<double> B(order*order);
