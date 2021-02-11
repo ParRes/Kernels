@@ -163,7 +163,8 @@ TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 # Parallel STL, Boost, etc.
 #
 #BOOSTFLAG=-I/usr/local/Cellar/boost/1.72.0/include
-BOOSTFLAG=-I/usr/include/boost169
+#BOOSTFLAG=-I/usr/include/boost169
+BOOSTFLAG=-I/opt/homebrew/Cellar/boost/1.75.0_1/include # M1 Big Sur
 BOOSTFLAG+=-DBOOST_COMPUTE_USE_CPP11
 
 # triSYCL requires Boost
