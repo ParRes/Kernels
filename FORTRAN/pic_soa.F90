@@ -231,7 +231,7 @@ program pic
     integer(kind=INT64) :: x, y
     do x=1,L
       do y=1,L
-        if(mod(x,2)==0) then
+        if(mod(x,2_INT64)==0) then
           Qgrid(x,y) = Q
         else
           Qgrid(x,y) = -Q
@@ -314,7 +314,7 @@ program pic
       base_charge = 1.0_REAL64 / (DT**2 * Q * (cos_theta/r1_sq + cos_phi/r2_sq))
       particles%v_x(ip) = 0.0_REAL64
       particles%v_y(ip) = real(particles%m(ip), kind=REAL64) / DT
-      q_sign = 2 * mod(x,2) - 1
+      q_sign = 2 * mod(x,2_INT64) - 1
       particles%q(ip) = real(q_sign * (2 * particles%k(ip) + 1), kind=REAL64) * base_charge
       particles%x0(ip) = xval
       particles%y0(ip) = yval
