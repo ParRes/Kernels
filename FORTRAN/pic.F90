@@ -235,7 +235,7 @@ program pic
     integer(kind=INT64), intent(in)    :: L, k, m, init_mode
     real(kind=REAL64), intent(in)      :: rho
     real(kind=REAL64)      :: A
-    integer(kind=INT64)    :: x, y, n_placed, ip
+    integer(kind=INT64)    :: x, y, ip
     integer                :: ip_cell, actual_particles
 
     select case(init_mode)
@@ -371,8 +371,8 @@ program pic
     endif
     y_final = part%y0 + part%m*(iterations+1)
 
-    x_periodic = mod(x_final + real(iterations+1, kind=REAL64) * (2*part%k + 1)*L, real(L))
-    y_periodic = mod(y_final + real(iterations+1, kind=REAL64) * abs(part%m)*L, real(L))
+    x_periodic = mod(x_final + real(iterations+1, kind=REAL64) * (2*part%k + 1)*L, real(L, kind=REAL64))
+    y_periodic = mod(y_final + real(iterations+1, kind=REAL64) * abs(part%m)*L, real(L, kind=REAL64))
 
     if (abs(part%x - x_periodic) > epsilon .or. abs(part%y - y_periodic) > epsilon) then
       verifyParticle = FAILURE
