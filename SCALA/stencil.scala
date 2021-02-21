@@ -2,7 +2,7 @@
 object stencil {
     def main (args: Array[String]) {
         System.out.println("Parallel Research Kernels.")
-        System.out.println("Java pipeline execution on 2D grid.")
+        System.out.println("Scala pipeline execution on 2D grid.")
 
         /*******************************************************************
         **read and test input parameters
