@@ -101,7 +101,6 @@ public class transpose {
         if (abserr < epsilon) {
             System.out.println("Solution validates");
             double avgtime = transposeTime/(double)iterations/1000;
-	    System.out.format("%f\n", avgtime);
             System.out.format("Rate (MB/s): %f Avg time (s): %f%n",
                 1.0e-6 * bytes/avgtime, avgtime);
 
