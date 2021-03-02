@@ -61,15 +61,13 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 #include "stencil_target.hpp"
 
 void nothing(const int n, const int t, const double * RESTRICT in, double * RESTRICT out)
 {
-    std::cout << "You are trying to use a stencil that does not exist." << std::endl;
-    std::cout << "Please generate the new stencil using the code generator." << std::endl;
-    // n will never be zero - this is to silence compiler warnings.
-    if (n==0) std::cout << in << out << std::endl;
-    std::abort();
+    // use arguments to silence compiler warnings
+    out[0] = in[0] + n + t;
 }
 
 int main(int argc, char* argv[])
@@ -98,7 +96,7 @@ int main(int argc, char* argv[])
       n  = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimension must be positive";
-      } else if (n > std::floor(std::sqrt(INT_MAX))) {
+      } else if (n > prk::get_max_matrix_size()) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
@@ -162,7 +160,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  double stencil_time{0};
 
   double * RESTRICT in  = new double[n*n];
   double * RESTRICT out = new double[n*n];
@@ -172,9 +170,9 @@ int main(int argc, char* argv[])
   OMP_PARALLEL()
   {
     OMP_FOR()
-    for (auto i=0; i<n; i++) {
+    for (int i=0; i<n; i++) {
       OMP_SIMD
-      for (auto j=0; j<n; j++) {
+      for (int j=0; j<n; j++) {
         in[i*n+j] = static_cast<double>(i+j);
         out[i*n+j] = 0.0;
       }
@@ -184,7 +182,7 @@ int main(int argc, char* argv[])
   // DEVICE
   OMP_TARGET( data map(tofrom: in[0:n*n], out[0:n*n]) )
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) stencil_time = omp_get_wtime();
 
@@ -192,9 +190,9 @@ int main(int argc, char* argv[])
       stencil(n, tile_size, in, out);
 
       // Add constant to solution to force refresh of neighbor data, if any
-      OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
-      for (auto i=0; i<n; i++) {
-        for (auto j=0; j<n; j++) {
+      OMP_TARGET( teams distribute parallel for simd collapse(2) )
+      for (int i=0; i<n; i++) {
+        for (int j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
@@ -211,9 +209,9 @@ int main(int argc, char* argv[])
   // compute L1 norm in parallel
   double norm = 0.0;
   OMP_PARALLEL_FOR_REDUCE( +:norm )
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
-      norm += std::fabs(out[i*n+j]);
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
+      norm += prk::abs(out[i*n+j]);
     }
   }
   norm /= active_points;
@@ -221,7 +219,7 @@ int main(int argc, char* argv[])
   // verify correctness
   const double epsilon = 1.0e-8;
   double reference_norm = 2.*(iterations+1.);
-  if (std::fabs(norm-reference_norm) > epsilon) {
+  if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
     return 1;

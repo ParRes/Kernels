@@ -6,27 +6,27 @@
 # are met:
 #
 # * Redistributions of source code must retain the above copyright
-#       notice, this list of conditions and the following disclaimer.
+#      notice, this list of conditions and the following disclaimer.
 # * Redistributions in binary form must reproduce the above
-#       copyright notice, this list of conditions and the following
-#       disclaimer in the documentation and/or other materials provided
-#       with the distribution.
+#      copyright notice, this list of conditions and the following
+#      disclaimer in the documentation and/or other materials provided
+#      with the distribution.
 # * Neither the name of Intel Corporation nor the names of its
-#       contributors may be used to endorse or promote products
-#       derived from this software without specific prior written
-#       permission.
+#      contributors may be used to endorse or promote products
+#      derived from this software without specific prior written
+#      permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, ACLUDAG, BUT NOT
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 # LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. A NO EVENT SHALL THE
-# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, ADIRECT,
-# ACIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (ACLUDAG,
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
 # BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSAESS ATERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER A CONTRACT, STRICT
-# LIABILITY, OR TORT (ACLUDAG NEGLIGENCE OR OTHERWISE) ARISAG A
-# ANY WAY B OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
 #
@@ -61,6 +61,21 @@
 #
 # *******************************************************************
 
+function do_add(A, n)
+    for i=1:n
+        for j=1:n
+            A[i,j] += 1.0
+        end
+    end
+end
+
+function do_init(A, n)
+    for i=1:n
+        for j=1:n
+            A[i,j] = i+j-2
+        end
+    end
+end
 
 function do_star(A, W, B, r, n)
     for j=r:n-r-1
@@ -151,48 +166,50 @@ function main()
     if pattern == "star"
         stencil_size = 4*r+1
         for i=1:r
-            W[r+1,r+i+1] = +1./(2*i*r)
-            W[r+i+1,r+1] = +1./(2*i*r)
-            W[r+1,r-i+1] = -1./(2*i*r)
-            W[r-i+1,r+1] = -1./(2*i*r)
+            W[r+1,r+i+1] =  1.0/(2*i*r)
+            W[r+i+1,r+1] =  1.0/(2*i*r)
+            W[r+1,r-i+1] = -1.0/(2*i*r)
+            W[r-i+1,r+1] = -1.0/(2*i*r)
         end
     else
         stencil_size = (2*r+1)^2
         for j=1:r
             for i=-j+1:j-1
-                W[r+i+1,r+j+1] = +1./(4*j*(2*j-1)*r)
-                W[r+i+1,r-j+1] = -1./(4*j*(2*j-1)*r)
-                W[r+j+1,r+i+1] = +1./(4*j*(2*j-1)*r)
-                W[r-j+1,r+i+1] = -1./(4*j*(2*j-1)*r)
+                W[r+i+1,r+j+1] =  1.0/(4*j*(2*j-1)*r)
+                W[r+i+1,r-j+1] = -1.0/(4*j*(2*j-1)*r)
+                W[r+j+1,r+i+1] =  1.0/(4*j*(2*j-1)*r)
+                W[r-j+1,r+i+1] = -1.0/(4*j*(2*j-1)*r)
             end
-            W[r+j+1,r+j+1]    = +1./(4*j*r)
-            W[r-j+1,r-j+1]    = -1./(4*j*r)
+            W[r+j+1,r+j+1]    =  1.0/(4*j*r)
+            W[r-j+1,r-j+1]    = -1.0/(4*j*r)
         end
     end
 
-    A = zeros(Float64,n,n)
-    for i=1:n
-        for j=1:n
-            A[i,j] = i+j-2
-        end
-    end
-    B = zeros(Float64,n,n)
-
+    precompile(do_init, (Array{Float64,2}, Int64))
     if pattern == "star"
         precompile(do_star, (Array{Float64,2}, Array{Float64,2}, Array{Float64,2}, Int64, Int64))
     else
         precompile(do_stencil, (Array{Float64,2}, Array{Float64,2}, Array{Float64,2}, Int64, Int64))
     end
+    precompile(do_add, (Array{Float64,2}, Int64))
+
+    A = zeros(Float64,n,n)
+    B = zeros(Float64,n,n)
+
+    do_init(A, n)
 
     t0 = time_ns()
 
-    for k=1:iterations+1
+    for k in 0:iterations
+        if k==0
+            t0 = time_ns()
+        end
         if pattern == "star"
             do_star(A, W, B, r, n)
         else
             do_stencil(A, W, B, r, n)
         end
-        A += 1.0
+        do_add(A, n)
     end
 
     t1 = time_ns()
@@ -211,7 +228,7 @@ function main()
     end
     actual_norm /= active_points
 
-    epsilon=1.e-8
+    epsilon = 1.e-8
 
     # verify correctness
     reference_norm = 2*(iterations+1)

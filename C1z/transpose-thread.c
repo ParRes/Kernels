@@ -114,7 +114,7 @@ void * transpose_tile(void * pa)
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+  printf("Parallel Research Kernels version %d\n", PRKVERSION );
 #ifdef HAVE_C11_THREADS
   printf("C11 Threads Matrix transpose: B = A^T\n");
 #else

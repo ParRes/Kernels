@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -51,7 +51,6 @@
 ///          number of words written, times the size of the words, divided
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
-///
 ///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
@@ -63,6 +62,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_kokkos.h"
 
 // We build with OpenMP unless it is not available...
 #ifndef PRK_KOKKOS_BACKEND
@@ -87,7 +87,7 @@ int main(int argc, char * argv[])
     /// Read and test input parameters
     //////////////////////////////////////////////////////////////////////
 
-    int iterations, offset;
+    int iterations;
     size_t length;
     try {
         if (argc < 3) {
@@ -103,11 +103,6 @@ int main(int argc, char * argv[])
         if (length <= 0) {
           throw "ERROR: vector length must be positive";
         }
-
-        offset = (argc>3) ? std::atoi(argv[3]) : 0;
-        if (length <= 0) {
-          throw "ERROR: offset must be nonnegative";
-        }
     }
     catch (const char * e) {
       std::cout << e << std::endl;
@@ -116,14 +111,13 @@ int main(int argc, char * argv[])
 
     std::cout << "Number of iterations = " << iterations << std::endl;
     std::cout << "Vector length        = " << length << std::endl;
-    std::cout << "Offset               = " << offset << std::endl;
-    std::cout << "Kokkos execution space: " << typeid(Kokkos::DefaultExecutionSpace).name() << std::endl;
+    std::cout << "Kokkos execution space: " << Kokkos::DefaultExecutionSpace::name() << std::endl;
 
     //////////////////////////////////////////////////////////////////////
     // Allocate space and perform the computation
     //////////////////////////////////////////////////////////////////////
 
-    double nstream_time(0);
+    double nstream_time{0};
 
     vector A("A", length);
     vector B("B", length);
@@ -137,15 +131,20 @@ int main(int argc, char * argv[])
           B[i] = 2.0;
           C[i] = 2.0;
       });
+      Kokkos::fence();
 
       for (int iter = 0; iter<=iterations; ++iter) {
 
-        if (iter==1) nstream_time = prk::wtime();
+        if (iter==1) {
+          Kokkos::fence();
+          nstream_time = prk::wtime();
+        }
 
         Kokkos::parallel_for(length, KOKKOS_LAMBDA(size_t const i) {
             A[i] += B[i] + scalar * C[i];
         });
       }
+      Kokkos::fence();
       nstream_time = prk::wtime() - nstream_time;
     }
 
@@ -164,12 +163,14 @@ int main(int argc, char * argv[])
 
     double asum(0);
     Kokkos::parallel_reduce(length, KOKKOS_LAMBDA(size_t const i, double & inner) {
-      inner += std::fabs(A(i));
+        inner += prk::abs(A(i));
     }, asum);
+    Kokkos::fence();
 
     double epsilon(1.e-8);
-    if (std::fabs(ar-asum)/asum > epsilon) {
+    if (prk::abs(ar-asum)/asum > epsilon) {
         std::cout << "Failed Validation on output array\n"
+                  << std::setprecision(16)
                   << "       Expected checksum: " << ar << "\n"
                   << "       Observed checksum: " << asum << std::endl;
         std::cout << "ERROR: solution did not validate" << std::endl;

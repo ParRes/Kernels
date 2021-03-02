@@ -35,13 +35,13 @@
 #include <cstdio>
 #include <cstdlib> // atoi, getenv
 #include <cstdint>
+#include <cfloat>  // FLT_MIN
 #include <climits>
-#include <cmath>   // abs, fabs
-#include <cassert>
+#include <cmath>
 
 // Test standard library _after_ standard headers have been included...
-#if !defined(__NVCC__) && !defined(__PGI) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
-# error You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
+#if !defined(__NVCC__) && !defined(__PGI) && !defined(__ibmxl__) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
+# warning You are using an ancient version GNU libstdc++.  Either upgrade your GCC or tell ICC to use a newer version via the -gxx-name= option.
 #endif
 
 #if !(defined(__cplusplus) && (__cplusplus >= 201103L))
@@ -54,192 +54,254 @@
 #include <exception>
 #include <list>
 #include <vector>
-#include <valarray>
 
 #include <chrono>
-#include <random>
 #include <typeinfo>
 #include <array>
 #include <atomic>
 #include <numeric>
 #include <algorithm>
+#include <thread> // std::thread::hardware_concurrency
 
-template<class I, class T>
-const T prk_reduce(I first, I last, T init) {
-#if (defined(__cplusplus) && (__cplusplus >= 201703L)) && !defined(__GNUC__)
-    return std::reduce(first, last, init);
-#elif (defined(__cplusplus) && (__cplusplus >= 201103L))
-    return std::accumulate(first, last, init);
-#else
-    // unreachable, but preserved as reference implementation
-    T r(0);
-    for (I i=first; i!=last; ++i) {
-        r += *i;
-    }
-    return r;
-#endif
-}
+#include "prk_simd.h"
 
-// These headers are busted with NVCC and GCC 5.4.0
-// The <future> header is busted with Cray C++ 8.6.1.
-#if !defined(__NVCC__) && !defined(_CRAYC)
-#include <thread>
-#include <future>
+#ifdef USE_RANGES
+# include "prk_ranges.h"
 #endif
 
-#define PRAGMA(x) _Pragma(#x)
-
-#ifdef _OPENMP
-# include <omp.h>
-# define OMP(x) PRAGMA(omp x)
-# define OMP_PARALLEL(x) PRAGMA(omp parallel x)
-# define OMP_PARALLEL_FOR_REDUCE(x) PRAGMA(omp parallel for reduction (x) )
-# define OMP_MASTER PRAGMA(omp master)
-# define OMP_BARRIER PRAGMA(omp barrier)
-# define OMP_FOR(x) PRAGMA(omp for x)
-# define OMP_FOR_REDUCE(x) PRAGMA(omp for reduction (x) )
-// OpenMP SIMD if supported, else not.
-# if (_OPENMP >= 201300)
-#  define OMP_SIMD PRAGMA(omp simd)
-#  define OMP_FOR_SIMD PRAGMA(omp for simd)
-#  define OMP_TASK(x) PRAGMA(omp task x)
-#  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
-#  if defined(__INTEL_COMPILER)
-#   define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop x )
-#  else
-#   define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop collapse(n) x )
-#  endif
-#  define OMP_TASKWAIT PRAGMA(omp taskwait)
-#  define OMP_ORDERED(x) PRAGMA(omp ordered x)
-#  define OMP_TARGET(x) PRAGMA(omp target x)
-#  define OMP_DECLARE_TARGET PRAGMA(omp declare target)
-#  define OMP_END_DECLARE_TARGET PRAGMA(omp end declare target)
-# else
-#  define OMP_SIMD
-#  define OMP_FOR_SIMD PRAGMA(omp for)
-#  define OMP_TASK(x)
-#  define OMP_TASKLOOP(x)
-#  define OMP_TASKLOOP_COLLAPSE(n,x)
-#  define OMP_TASKWAIT
-#  define OMP_ORDERED(x)
-#  define OMP_TARGET(x)
-#  define OMP_DECLARE_TARGET
-#  define OMP_END_DECLARE_TARGET
-# endif
-#else
-# define OMP(x)
-# define OMP_PARALLEL(x)
-# define OMP_PARALLEL_FOR_REDUCE(x)
-# define OMP_MASTER
-# define OMP_BARRIER
-# define OMP_FOR(x)
-# define OMP_FOR_REDUCE(x)
-# define OMP_SIMD
-# define OMP_FOR_SIMD
-# define OMP_TASK(x)
-# define OMP_TASKLOOP(x)
-# define OMP_TASKLOOP_COLLAPSE(n,x)
-# define OMP_TASKWAIT
-# define OMP_ORDERED(x)
-# define OMP_TARGET(x)
-# define OMP_DECLARE_TARGET
-# define OMP_END_DECLARE_TARGET
+// used in OpenMP target and CUDA code because std::min etc are not declare target
+#ifndef MIN
+#define MIN(x,y) ((x)<(y)?(x):(y))
+#endif
+#ifndef MAX
+#define MAX(x,y) ((x)>(y)?(x):(y))
+#endif
+#ifndef ABS
+#define ABS(a) ((a) >= 0 ? (a) : -(a))
 #endif
 
-#if defined(__INTEL_COMPILER)
-# define PRAGMA_SIMD PRAGMA(vector) PRAGMA(ivdep)
-// According to https://github.com/LLNL/RAJA/pull/310, this improves lambda performance
-# define PRAGMA_INLINE PRAGMA(forceinline recursive)
-#elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
-# define PRAGMA_SIMD PRAGMA(GCC ivdep)
-# define PRAGMA_INLINE PRAGMA(inline)
-#elif defined(__clang__)
-# define PRAGMA_SIMD PRAGMA(clang loop vectorize(assume_safety))
-# define PRAGMA_INLINE
-#else
-# define PRAGMA_SIMD
-# define PRAGMA_INLINE
-#endif
-
-#ifdef USE_TBB
-# include <tbb/tbb.h>
-# include <tbb/parallel_for.h>
-# include <tbb/blocked_range.h>
-# if ( PRK_TBB_PARTITIONER == 1)
-//#  warning STATIC
-   tbb::static_partitioner tbb_partitioner;
-# elif ( PRK_TBB_PARTITIONER == 2)
-//#  warning AFFINITY
-   tbb::affinity_partitioner tbb_partitioner;
-# elif ( PRK_TBB_PARTITIONER == 3)
-//#  warning SIMPLE
-   tbb::simple_partitioner tbb_partitioner;
-# else
-//#  warning AUTO
-   tbb::auto_partitioner tbb_partitioner;
-# endif
-#endif
-
-#if defined(USE_RANGES)
-# if defined(USE_BOOST_IRANGE)
-#  include "boost/range/irange.hpp"
-# elif defined(USE_RANGES_TS)
-#  include "range/v3/view/iota.hpp"
-#  include "range/v3/view/slice.hpp"
-#  include "range/v3/view/stride.hpp"
-# else
-#  error You have not provided a version of ranges to use.
-# endif
-#endif
-
-#if defined(USE_BOOST_COMPUTE)
-# include "boost/compute.hpp"
-# include "boost/compute/container/valarray.hpp"
-#endif
-
-#if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
-#define USE_INTEL_PSTL
-#endif
-
-#ifdef USE_PSTL
-# ifdef USE_INTEL_PSTL
-#  include <pstl/execution>
-#  include <pstl/algorithm>
-#  include <pstl/numeric>
-#  include <pstl/memory>
-# elif defined(__GNUC__) && defined(__GNUC_MINOR__) && \
-       ( (__GNUC__ >= 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
-#  include <parallel/algorithm>
-#  include <parallel/numeric>
-# endif
-#endif
-
-#ifdef USE_KOKKOS
-# include <Kokkos_Core.hpp>
-# include <Kokkos_Concepts.hpp>
-# include <Kokkos_MemoryTraits.hpp>
-#endif
-
-#ifdef USE_RAJA
-# define RAJA_ENABLE_NESTED 1
-# include "RAJA/RAJA.hpp"
-#endif
-
-#ifdef USE_SYCL
-# include "CL/sycl.hpp"
-#endif
-
-#ifdef USE_OCCA
-# include "occa.hpp"
+// omp_get_wtime()
+#if defined(USE_OPENMP) && defined(_OPENMP)
+#include <omp.h>
 #endif
 
 #define RESTRICT __restrict__
 
+#if (defined(__cplusplus) && (__cplusplus >= 201703L))
+#define PRK_UNUSED [[maybe_unused]]
+#else
+#define PRK_UNUSED
+#endif
+
 namespace prk {
+
+
+    int get_num_cores(void)
+    {
+        return std::thread::hardware_concurrency();
+    }
+
+    // only used in PIC
+    namespace constants {
+        double pi(void) {
+#ifdef M_PI
+            return M_PI;
+#else
+            return 3.14159265358979323846264338327950288419716939937510;
+#endif
+        }
+    }
+
+    template <typename T>
+    bool is_power_of_2(T n) {
+#if defined(__GNUC__) || defined(__clang__)
+        return (1 == __builtin_popcount(n));
+#else
+        return ( (a & (~a+1)) == a );
+#endif
+    }
+
+    int get_alignment(void)
+    {
+        /* a := alignment */
+#ifdef PRK_ALIGNMENT
+        int a = PRK_ALIGNMENT;
+#else
+        const char* temp = std::getenv("PRK_ALIGNMENT");
+        int a = (temp!=nullptr) ? std::atoi(temp) : 64;
+        if (a < 8) a = 8;
+        if ( !prk::is_power_of_2(a) ) {
+            std::cout << "You requested alignment (" << a << ") that is not a power of two!" << std::endl;
+            std::abort();
+        }
+#endif
+        return a;
+    }
+
+#if defined(__INTEL_COMPILER)
+
+    template <typename T>
+    T * malloc(size_t n)
+    {
+        const int alignment = prk::get_alignment();
+        const size_t bytes = n * sizeof(T);
+        return (T*)_mm_malloc( bytes, alignment);
+    }
+
+    template <typename T>
+    void free(T * p)
+    {
+        _mm_free(p);
+        p = nullptr;
+    }
+
+#else // !__INTEL_COMPILER
+
+    template <typename T>
+    T * malloc(size_t n)
+    {
+        const int alignment = prk::get_alignment();
+        const size_t bytes = n * sizeof(T);
+
+        // We cannot use C11 aligned_alloc on Mac.
+        // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69680 */
+        // GCC claims to be C11 without knowing if glibc is compliant...
+#if !defined(__GNUC__) && \
+    !defined(__APPLE__) && \
+     defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && 0 \
+
+        // From ISO C11:
+        //
+        // "The aligned_alloc function allocates space for an object
+        //  whose alignment is specified by alignment, whose size is
+        //  specified by size, and whose value is indeterminate.
+        //  The value of alignment shall be a valid alignment supported
+        //  by the implementation and the value of size shall be an
+        //  integral multiple of alignment."
+        //
+        //  Thus, if we do not round up the bytes to be a multiple
+        //  of the alignment, we violate ISO C.
+
+        const size_t padded = bytes;
+        const size_t excess = bytes % alignment;
+        if (excess>0) padded += (alignment - excess);
+        return aligned_alloc(alignment,padded);
+
+#else
+
+        T * ptr = nullptr;
+        const int ret = posix_memalign((void**)&ptr,alignment,bytes);
+        if (ret!=0) ptr = nullptr;
+        return ptr;
+
+#endif
+
+    }
+
+    template <typename T>
+    void free(T * p)
+    {
+        std::free(p);
+        p = nullptr;
+    }
+
+#endif // __INTEL_COMPILER
+
+    template<class I, class T>
+    const T reduce(I first, I last, T init) {
+#if (defined(__cplusplus) && (__cplusplus >= 201703L)) && !defined(__GNUC__)
+        return std::reduce(first, last, init);
+#elif (defined(__cplusplus) && (__cplusplus >= 201103L))
+        return std::accumulate(first, last, init);
+#else
+        // unreachable, but preserved as reference implementation
+        T r(0);
+        for (I i=first; i!=last; ++i) {
+            r += *i;
+        }
+        return r;
+#endif
+    }
+
+    template <typename T>
+    class vector {
+
+        private:
+            T * data_;
+            size_t size_;
+
+        public:
+
+            vector(size_t n) {
+                //this->data_ = new T[n];
+                this->data_ = prk::malloc<T>(n);
+                this->size_ = n;
+            }
+
+            vector(size_t n, T v) {
+                //this->data_ = new T[n];
+                this->data_ = prk::malloc<T>(n);
+                for (size_t i=0; i<n; ++i) this->data_[i] = v;
+                this->size_ = n;
+            }
+
+            ~vector() {
+                //delete[] this->data_;
+                prk::free<T>(this->data_);
+            }
+
+            void operator~() {
+                this->~vector();
+            }
+
+            T * data() {
+                return this->data_;
+            }
+
+            size_t size() {
+                return this->size_;
+            }
+
+#if 0
+            T const & operator[] (int n) const {
+                return this->data_[n];
+            }
+
+            T & operator[] (int n) {
+                return this->data_[n];
+            }
+#endif
+
+            T const & operator[] (size_t n) const {
+                return this->data_[n];
+            }
+
+            T & operator[] (size_t n) {
+                return this->data_[n];
+            }
+
+            T * begin() {
+                return &(this->data_[0]);
+            }
+
+            T * end() {
+                return &(this->data_[this->size_]);
+            }
+
+#if 0
+            T & begin() {
+                return this->data_[0];
+            }
+
+            T & end() {
+                return this->data_[this->size_];
+            }
+#endif
+    };
 
     static inline double wtime(void)
     {
-#ifdef _OPENMP
+#if defined(USE_OPENMP) && defined(_OPENMP)
         return omp_get_wtime();
 #else
         using t = std::chrono::high_resolution_clock;
@@ -256,27 +318,94 @@ namespace prk {
         return ( numerator / denominator + (numerator % denominator > 0) );
     }
 
-    template <class S, class E>
-    auto range(S start, E end) {
-#if defined(USE_BOOST_IRANGE)
-        return boost::irange(static_cast<decltype(end)>(start), end);
-#elif defined(USE_RANGES_TS)
-        return ranges::view::iota(static_cast<decltype(end)>(start), end);
+    bool parse_boolean(const std::string & s)
+    {
+        if (s=="t" || s=="T" || s=="y" || s=="Y" || s=="1") {
+            return true;
+        } else {
+            return false;
+        }
+
+    }
+
+    template<typename T>
+    T * alloc(size_t bytes)
+    {
+        int alignment = ::prk::get_alignment();
+#if defined(__INTEL_COMPILER)
+        return (void*)_mm_malloc(bytes,alignment);
+#else
+        T * ptr = nullptr;
+        int ret = posix_memalign((void**)&ptr,alignment,bytes);
+        if (ret!=0) ptr = NULL;
+        return ptr;
+#endif
+
+    }
+
+    template<typename T>
+    void dealloc(T * p)
+    {
+#if defined(__INTEL_COMPILER)
+        _mm_free((void*)p);
+#else
+        free((void*)p);
 #endif
     }
 
-    template <class S, class E, class B>
-    auto range(S start, E end, B blocking) {
-#if defined(USE_BOOST_IRANGE)
-        return boost::irange(static_cast<decltype(end)>(start), end, decltype(end)>(blocking) );
-#elif defined(USE_RANGES_TS)
-        // NOTE:
-        // iota(s) | slice(s,e) | stride(b)  is faster than
-        // iota(s,e) | stride(b) for some reason.
-        return ranges::view::iota(static_cast<decltype(end)>(start)) |
-               ranges::view::slice(static_cast<decltype(end)>(start), end) |
-               ranges::view::stride(static_cast<decltype(end)>(blocking));
-#endif
+    int get_max_matrix_size(void)
+    {
+        // std::floor( std::sqrt(INT_MAX) )
+        return 46340;
+    }
+
+    template <typename T>
+    T abs(T x) {
+        return (x >= 0 ? x : -x);
+    }
+
+    template <>
+    float abs(float x) {
+        return __builtin_fabsf(x);
+    }
+
+    template <>
+    double abs(double x) {
+        return __builtin_fabs(x);
+    }
+
+    template <typename T>
+    T sqrt(T x) {
+        double y = static_cast<double>(x);
+        double z = __builtin_sqrt(y);
+        return static_cast<T>(z);
+    }
+
+    template <>
+    float sqrt(float x) {
+        return __builtin_sqrtf(x);
+    }
+
+    template <>
+    double sqrt(double x) {
+        return __builtin_sqrt(x);
+    }
+
+    template <typename T>
+    T pow(T x, int n) {
+        double y = static_cast<double>(x);
+        double z = __builtin_pow(y,n);
+        return static_cast<T>(z);
+    }
+
+    template <>
+    double pow(double x, int n) {
+        return __builtin_pow(x,n);
+    }
+
+    template <>
+    float pow(float x, int n) {
+        return __builtin_pow(x,n);
     }
 
 } // namespace prk

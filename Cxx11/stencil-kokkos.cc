@@ -61,6 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_kokkos.h"
 
 typedef Kokkos::View<double**, Kokkos::LayoutRight> matrix;
 //typedef Kokkos::View<double**, Kokkos::LayoutLeft> matrix;
@@ -103,7 +104,7 @@ int main(int argc, char* argv[])
         n  = std::atoi(argv[2]);
         if (n < 1) {
           throw "ERROR: grid dimension must be positive";
-        } else if (n > std::floor(std::sqrt(INT_MAX))) {
+        } else if (n > prk::get_max_matrix_size()) {
           throw "ERROR: grid dimension too large - overflow risk";
         }
 
@@ -143,7 +144,7 @@ int main(int argc, char* argv[])
     std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
     std::cout << "Radius of stencil    = " << radius << std::endl;
     std::cout << "Compact representation of stencil loop body" << std::endl;
-    std::cout << "Kokkos execution space: " << typeid(Kokkos::DefaultExecutionSpace).name() << std::endl;
+    std::cout << "Kokkos execution space: " << Kokkos::DefaultExecutionSpace::name() << std::endl;
 
     auto stencil = nothing;
     if (star) {
@@ -168,7 +169,7 @@ int main(int argc, char* argv[])
     // Allocate space and perform the computation
     //////////////////////////////////////////////////////////////////////
 
-    double stencil_time(0);
+    double stencil_time{0};
 
     // row-major 2D array
     matrix in("in", n, n);
@@ -179,23 +180,29 @@ int main(int argc, char* argv[])
     auto tile2  = {tile_size,tile_size};
     auto full   = Kokkos::MDRangePolicy<Kokkos::Rank<2>>(z2,n2,tile2);
 
-    Kokkos::parallel_for(full, KOKKOS_LAMBDA(int i, int j) {
-        in(i,j)  = static_cast<double>(i+j);
-        out(i,j) = 0.0;
-    });
-
-    for (int iter = 0; iter<=iterations; ++iter) {
-
-      if (iter==1) stencil_time = prk::wtime();
-
-      stencil(n, tile_size, in, out);
-
+    {
       Kokkos::parallel_for(full, KOKKOS_LAMBDA(int i, int j) {
-          in(i,j) += 1.0;
+          in(i,j)  = static_cast<double>(i+j);
+          out(i,j) = 0.0;
       });
-    }
+      Kokkos::fence();
 
-    stencil_time = prk::wtime() - stencil_time;
+      for (int iter = 0; iter<=iterations; ++iter) {
+
+        if (iter==1) {
+          Kokkos::fence();
+          stencil_time = prk::wtime();
+        }
+
+        stencil(n, tile_size, in, out);
+
+        Kokkos::parallel_for(full, KOKKOS_LAMBDA(int i, int j) {
+            in(i,j) += 1.0;
+        });
+      }
+      Kokkos::fence();
+      stencil_time = prk::wtime() - stencil_time;
+    }
 
     //////////////////////////////////////////////////////////////////////
     // Analyze and output results.
@@ -208,14 +215,15 @@ int main(int argc, char* argv[])
     auto nr2    = {n-radius,n-radius};
     auto inside = Kokkos::MDRangePolicy<Kokkos::Rank<2>>(r2,nr2,tile2);
     Kokkos::parallel_reduce(inside, KOKKOS_LAMBDA(int i, int j, double & norm) {
-        norm += std::fabs(out(i,j));
+        norm += prk::abs(out(i,j));
     }, norm);
+    Kokkos::fence();
     norm /= active_points;
 
     // verify correctness
     double const epsilon(1.0e-8);
     double reference_norm = 2.*(iterations+1.);
-    if (std::fabs(norm-reference_norm) > epsilon) {
+    if (prk::abs(norm-reference_norm) > epsilon) {
       std::cout << "ERROR: L1 norm = " << norm
                 << " Reference L1 norm = " << reference_norm << std::endl;
       return 1;

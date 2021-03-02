@@ -8,7 +8,6 @@ TRAVIS_ROOT="$1"
 
 case "$os" in
     Darwin)
-        brew update
         brew info autoconf automake libtool || true
         brew install autoconf || brew upgrade autoconf || true
         brew install automake || brew upgrade automake || true

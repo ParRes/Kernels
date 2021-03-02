@@ -18,7 +18,7 @@
 
 #include <cstdlib>
 
-#include "cl.hpp"
+#include "cl2.hpp"
 
 namespace prk {
 

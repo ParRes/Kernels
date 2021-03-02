@@ -11,7 +11,7 @@
 ///       copyright notice, this list of conditions and the following
 ///       disclaimer in the documentation and/or other materials provided
 ///       with the distribution.
-/// * Neither the name of <COPYRIGHT HOLDER> nor the names of its
+/// * Neither the name of Intel Corporation nor the names of its
 ///       contributors may be used to endorse or promote products
 ///       derived from this software without specific prior written
 ///       permission.
@@ -66,7 +66,7 @@ int main(int argc, char * argv[])
   info.print();
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
   }
@@ -113,8 +113,8 @@ int main(int argc, char * argv[])
   prk::CUDA::check( cudaMallocHost((void**)&h_b, bytes) );
 
   // fill A with the sequence 0 to order^2-1 as doubles
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       h_a[j*order+i] = order*j+i;
       h_b[j*order+i] = 0;
     }
@@ -133,8 +133,8 @@ int main(int argc, char * argv[])
   // correctly implement incx=0.
   double * h_o;
   prk::CUDA::check( cudaMallocHost((void**)&h_o, bytes) );
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       h_o[j*order+i] = 1;
     }
   }
@@ -157,9 +157,9 @@ int main(int argc, char * argv[])
 #endif
 #endif
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
@@ -218,12 +218,12 @@ int main(int argc, char * argv[])
   // TODO: replace with std::generate, std::accumulate, or similar
   const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const size_t ij = (size_t)i*(size_t)order+(size_t)j;
       const size_t ji = (size_t)j*(size_t)order+(size_t)i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(h_b[ji] - reference);
+      abserr += prk::abs(h_b[ji] - reference);
     }
   }
 
@@ -240,8 +240,8 @@ int main(int argc, char * argv[])
               << " Avg time (s): " << avgtime << std::endl;
   } else {
 #ifdef VERBOSE
-    for (auto i=0; i<order; i++) {
-      for (auto j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
+      for (int j=0; j<order; j++) {
         std::cout << "(" << i << "," << j << ") = " << h_a[i*order+j] << ", " << h_b[i*order+j] << "\n";
       }
     }

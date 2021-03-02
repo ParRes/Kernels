@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -74,7 +74,7 @@ void run(cl::Context context, int iterations, size_t length)
   auto function = (precision==64) ? "nstream64" : "nstream32";
 
   cl_int err;
-  auto kernel = cl::make_kernel<int, T, cl::Buffer, cl::Buffer, cl::Buffer>(program, function, &err);
+  auto kernel = cl::KernelFunctor<int, T, cl::Buffer, cl::Buffer, cl::Buffer>(program, function, &err);
   if(err != CL_SUCCESS){
     std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
     std::cout << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
@@ -86,20 +86,20 @@ void run(cl::Context context, int iterations, size_t length)
   /// Allocate space for the input and nstream matrix
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time{0};
 
   std::vector<T> h_a(length, T(0));
   std::vector<T> h_b(length, T(2));
   std::vector<T> h_c(length, T(2));
 
   // copy input from host to device
-  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), true);
+  cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), false);
   cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), true);
   cl::Buffer d_c = cl::Buffer(context, begin(h_c), end(h_c), true);
 
   double scalar = 3.0;
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) nstream_time = prk::wtime();
 
@@ -117,10 +117,10 @@ void run(cl::Context context, int iterations, size_t length)
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  T ar(0);
+  double ar(0);
   T br(2);
   T cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
@@ -128,12 +128,13 @@ void run(cl::Context context, int iterations, size_t length)
 
   double asum(0);
   for (size_t i=0; i<length; i++) {
-      asum += std::fabs(h_a[i]);
+      asum += prk::abs(h_a[i]);
   }
 
   const double epsilon = (precision==64) ? 1.0e-8 : 1.0e-4;
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
@@ -141,7 +142,8 @@ void run(cl::Context context, int iterations, size_t length)
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
       double nbytes = 4.0 * length * sizeof(T);
-      std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
+      std::cout << precision << "B "
+                << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }
 }
@@ -155,10 +157,11 @@ int main(int argc, char* argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset, length;
+  int iterations;
+  size_t length;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>]";
+        throw "Usage: <# iterations> <vector length>";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -166,14 +169,9 @@ int main(int argc, char* argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atoi(argv[2]);
+      length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
-      }
-
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
       }
   }
   catch (const char * e) {
@@ -183,11 +181,12 @@ int main(int argc, char* argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
+
+  prk::opencl::listPlatforms();
 
   cl_int err = CL_SUCCESS;
 
@@ -200,9 +199,10 @@ int main(int argc, char* argv[])
 
     if (precision==64) {
         run<double>(cpu, iterations, length);
-    } else {
-        run<float>(cpu, iterations, length);
     }
+    run<float>(cpu, iterations, length);
+  } else {
+    std::cerr << "No CPU" << std::endl;
   }
 
   cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
@@ -214,9 +214,10 @@ int main(int argc, char* argv[])
 
     if (precision==64) {
         run<double>(gpu, iterations, length);
-    } else {
-        run<float>(gpu, iterations, length);
     }
+    run<float>(gpu, iterations, length);
+  } else {
+    std::cerr << "No GPU" << std::endl;
   }
 
   cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
@@ -229,9 +230,10 @@ int main(int argc, char* argv[])
 
     if (precision==64) {
         run<double>(acc, iterations, length);
-    } else {
-        run<float>(acc, iterations, length);
     }
+    run<float>(acc, iterations, length);
+  } else {
+    std::cerr << "No ACC" << std::endl;
   }
 
   return 0;

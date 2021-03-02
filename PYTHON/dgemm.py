@@ -51,8 +51,11 @@
 # *******************************************************************
 
 import sys
-#from timeit import default_timer as timer
-from time import process_time as timer
+print('Python version = ', str(sys.version_info.major)+'.'+str(sys.version_info.minor))
+if sys.version_info >= (3, 3):
+    from time import process_time as timer
+else:
+    from timeit import default_timer as timer
 
 def main():
 
@@ -65,7 +68,7 @@ def main():
 
     if len(sys.argv) != 3:
         print('argument count = ', len(sys.argv))
-        sys.exit("Usage: ./transpose <# iterations> <matrix order>")
+        sys.exit("Usage: ./dgemm <# iterations> <matrix order>")
 
     iterations = int(sys.argv[1])
     if iterations < 1:

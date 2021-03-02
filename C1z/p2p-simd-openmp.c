@@ -60,23 +60,12 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
-static inline void sweep_tile(int startm, int endm,
-                              int startn, int endn,
-                              int n, double grid[])
-{
-  for (int i=startm; i<endm; i++) {
-    OMP_SIMD
-    for (int j=startn; j<endn; j++) {
-      OMP(ordered simd)
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
+#include "prk_openmp.h"
+#include "p2p-kernel.h"
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("Parallel Research Kernels version %d\n", PRKVERSION);
   printf("C11 pipeline execution on 2D grid\n");
 
   //////////////////////////////////////////////////////////////////////

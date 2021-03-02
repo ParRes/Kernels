@@ -63,14 +63,18 @@
 
 #if defined(MKL)
 #include <mkl.h>
-typedef MKL_INT cblas_int;
+#ifdef MKL_ILP64
+#error Use the MKL library for 32-bit integers!
+#endif
 #elif defined(ACCELERATE)
 // The location of cblas.h is not in the system include path when -framework Accelerate is provided.
 #include <Accelerate/Accelerate.h>
-typedef int cblas_int;
 #else
 #include <cblas.h>
-typedef int cblas_int;
+#endif
+
+#ifdef _OPENMP
+#include <omp.h>
 #endif
 
 #ifdef PRK_DEBUG
@@ -95,12 +99,12 @@ void prk_dgemm(const int order,
                const std::vector<double> & B,
                      std::vector<double> & C)
 {
-    const cblas_int n = order;
+    const int n = order;
     const double alpha = 1.0;
     const double beta  = 1.0;
 
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                n, n, n, alpha, &(A[0]), n, &(B[0]), n, beta, &(C[0]), n);
+                n, n, n, alpha, A.data(), n, B.data(), n, beta, C.data(), n);
 }
 
 void prk_dgemm(const int order, const int batches,
@@ -108,7 +112,7 @@ void prk_dgemm(const int order, const int batches,
                const std::vector<std::vector<double>> & B,
                      std::vector<std::vector<double>> & C)
 {
-    const cblas_int n = order;
+    const int n = order;
     const double alpha = 1.0;
     const double beta  = 1.0;
 
@@ -123,16 +127,16 @@ void prk_dgemm(const int order, const int batches, const int nt,
                const std::vector<std::vector<double>> & B,
                      std::vector<std::vector<double>> & C)
 {
-    const cblas_int n = order;
+    const int n = order;
     const double alpha = 1.0;
     const double beta  = 1.0;
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) num_threads(nt)
+#pragma omp parallel for schedule(dynamic) num_threads(nt)
 #endif
     for (int b=0; b<batches; ++b) {
         cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                    n, n, n, alpha, &(A[b][0]), n, &(B[b][0]), n, beta, &(C[b][0]), n);
+                    n, n, n, alpha, A[b].data(), n, B[b].data(), n, beta, C[b].data(), n);
     }
 }
 
@@ -141,17 +145,17 @@ void prk_dgemm(const int order, const int batches,
                double** & B,
                double** & C)
 {
-    const cblas_int n = order;
+    const int n = order;
     const double alpha = 1.0;
     const double beta  = 1.0;
 
-    const cblas_int group_count = 1;
-    const cblas_int group_size[group_count] = { batches };
+    const int group_count = 1;
+    PRK_UNUSED const int group_size[group_count] = { batches };
 
     const CBLAS_TRANSPOSE transa_array[group_count] = { CblasNoTrans };
     const CBLAS_TRANSPOSE transb_array[group_count] = { CblasNoTrans };
 
-    const cblas_int n_array[group_count] = { n };
+    const int n_array[group_count] = { n };
 
     const double alpha_array[group_count] = { alpha };
     const double beta_array[group_count]  = { beta };
@@ -182,7 +186,7 @@ void prk_dgemm(const int order, const int batches,
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 CBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
+  std::cout << "C++11/CBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -193,7 +197,7 @@ int main(int argc, char * argv[])
   int batches = 0;
   int batch_threads = 1;
   try {
-      if (argc < 2) {
+      if (argc < 3) {
         throw "Usage: <# iterations> <matrix order> [<batches> <batch threads>]";
       }
 
@@ -205,11 +209,11 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
-      if (argc>3) {
+      if (argc > 3) {
         batches = std::atoi(argv[3]);
       }
 
@@ -238,18 +242,17 @@ int main(int argc, char * argv[])
 #endif
   } else if (batches < 0) {
       if (batch_threads > 1) {
-          std::cout << "Batch size           = " << std::abs(batches) << " (loop over legacy BLAS with "
-                    << batch_threads << " threads)" << std::endl;
+          std::cout << "Batch size           = " << std::abs(batches) << " (loop over legacy BLAS with " << batch_threads << " threads)" << std::endl;
       } else {
           std::cout << "Batch size           = " << std::abs(batches) << " (loop over legacy BLAS sequentially)" << std::endl;
       }
   }
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for matrices
+  // Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  double dgemm_time(0);
+  double dgemm_time{0};
 
   const int matrices = (batches==0 ? 1 : abs(batches));
 
@@ -299,13 +302,13 @@ int main(int argc, char * argv[])
 
   const double epsilon = 1.0e-8;
   const double forder = static_cast<double>(order);
-  const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
+  const double reference = 0.25 * prk::pow(forder,3) * prk::pow(forder-1.0,2) * (iterations+1);
   double residuum(0);
   for (int b=0; b<matrices; ++b) {
-      const auto checksum = prk_reduce(C[b].begin(), C[b].end(), 0.0);
-      residuum += std::abs(checksum-reference)/reference;
+      const auto checksum = prk::reduce(C[b].begin(), C[b].end(), 0.0);
+      residuum += std::abs(checksum - reference) / reference;
   }
-  residuum/=matrices;
+  residuum /= matrices;
 
   if (residuum < epsilon) {
 #if VERBOSE
@@ -314,7 +317,7 @@ int main(int argc, char * argv[])
 #endif
     std::cout << "Solution validates" << std::endl;
     auto avgtime = dgemm_time/iterations/matrices;
-    auto nflops = 2.0 * std::pow(forder,3);
+    auto nflops = 2.0 * prk::pow(forder,3);
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {

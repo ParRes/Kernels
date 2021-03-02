@@ -59,33 +59,12 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#include "prk_sycl.h"
 #include "prk_util.h"
+#include "p2p-kernel.h"
 
-inline void sweep_tile_sequential(int startm, int endm,
-                                  int startn, int endn,
-                                  int n, std::vector<double> & grid)
-{
-  for (auto i=startm; i<endm; i++) {
-    for (auto j=startn; j<endn; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
-
-#if 0
-inline void sweep_tile_hyperplane(int startm, int endm,
-                                  int startn, int endn,
-                                  int n, std::vector<double> & grid)
-{
-  for (auto i=2; i<=2*n-2; i++) {
-    for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
-      const auto x = i-j+1;
-      const auto y = j-1;
-      grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
-    }
-  }
-}
-#endif
+class sweep;
+class corner;
 
 int main(int argc, char* argv[])
 {
@@ -116,7 +95,7 @@ int main(int argc, char* argv[])
       n = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimensions must be positive";
-      } else if ( static_cast<size_t>(n)*static_cast<size_t>(n) > static_cast<size_t>(INT_MAX)) {
+      } else if ( n > prk::get_max_matrix_size() ) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
@@ -146,7 +125,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   std::vector<double> h_grid(n*n,0.0);
   for (int j=0; j<n; j++) {
@@ -154,46 +133,46 @@ int main(int argc, char* argv[])
     h_grid[j*n+0] = static_cast<double>(j);
   }
 
-  cl::sycl::queue q;
+  sycl::queue q;
   {
-    cl::sycl::buffer<double> d_grid { h_grid.data(), h_grid.size() };
+    sycl::buffer<double> d_grid { h_grid.data(), h_grid.size() };
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) pipeline_time = prk::wtime();
 
       for (int i=2; i<=2*n-2; i++) {
 
-        cl::sycl::id<1> I{unsigned(i)};
-        cl::sycl::id<1> One{1};
+        sycl::id<1> I{unsigned(i)};
+        sycl::id<1> One{1};
 
-        q.submit([&](cl::sycl::handler& h) {
+        q.submit([&](sycl::handler& h) {
 
-          auto grid = d_grid.get_access<cl::sycl::access::mode::read_write>(h);
+          auto grid = d_grid.get_access<sycl::access::mode::read_write>(h);
 
           unsigned begin = std::max(2,i-n+2);
           unsigned end   = std::min(i,n)+1;
           unsigned range = end-begin;
 
-          h.parallel_for<class sweep>(cl::sycl::range<1>{range}, cl::sycl::id<1>{begin}, [=] (cl::sycl::item<1> j) {
+          h.parallel_for<class sweep>(sycl::range<1>{range}, sycl::id<1>{begin}, [=] (sycl::item<1> j) {
             auto J = j.get_id();
-            cl::sycl::id<1> N{unsigned(n)};
-            cl::sycl::id<1> X{I-J+One};
-            cl::sycl::id<1> Y{J-One};
-            cl::sycl::id<1> Xold{X-One}; // x-1
-            cl::sycl::id<1> Yold{Y-One}; // y-1
-            cl::sycl::id<1> index0{X*N+Y};
-            cl::sycl::id<1> index1{Xold*N+Y};
-            cl::sycl::id<1> index2{X*N+Yold};
-            cl::sycl::id<1> index3{Xold*N+Yold};
+            sycl::id<1> N{unsigned(n)};
+            sycl::id<1> X{I-J+One};
+            sycl::id<1> Y{J-One};
+            sycl::id<1> Xold{X-One}; // x-1
+            sycl::id<1> Yold{Y-One}; // y-1
+            sycl::id<1> index0{X*N+Y};
+            sycl::id<1> index1{Xold*N+Y};
+            sycl::id<1> index2{X*N+Yold};
+            sycl::id<1> index3{Xold*N+Yold};
             grid[index0] = grid[index1] + grid[index2] - grid[index3];
           });
         });
         q.wait();
       }
-      q.submit([&](cl::sycl::handler& h) {
+      q.submit([&](sycl::handler& h) {
 
-        auto grid = d_grid.get_access<cl::sycl::access::mode::read_write>(h);
+        auto grid = d_grid.get_access<sycl::access::mode::read_write>(h);
 
         h.single_task<class corner>([=] {
             grid[0*n+0] = -grid[(n-1)*n+(n-1)];
@@ -219,7 +198,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(2.*n-2.));
-  if ( (std::fabs(h_grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+  if ( (prk::abs(h_grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << h_grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;

@@ -3,12 +3,6 @@
 set -e
 set -x
 
-if [ -f ~/use-intel-compilers ] ; then
-    export CC=icc
-    export CXX=icpc
-    export FC=ifort
-fi
-
 os=`uname`
 TRAVIS_ROOT="$1"
 
@@ -18,7 +12,6 @@ if [ ! -d "$TRAVIS_ROOT/grappa" ]; then
     case "$os" in
         Darwin)
             echo "Mac"
-            #brew update
             #brew install ruby boost
             # Homebrew location
             export MPI_ROOT=/usr/local

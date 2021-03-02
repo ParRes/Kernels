@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -51,7 +51,6 @@
 ///          number of words written, times the size of the words, divided
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
-///
 ///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
@@ -63,6 +62,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_raja.h"
 
 #if defined(RAJA_ENABLE_OPENMP)
   typedef RAJA::omp_parallel_for_exec thread_exec;
@@ -82,7 +82,7 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
+  int iterations;
   size_t length;
   try {
       if (argc < 3) {
@@ -98,11 +98,6 @@ int main(int argc, char * argv[])
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
-
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
-      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -111,32 +106,35 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time{0};
 
   std::vector<double> A(length);
   std::vector<double> B(length);
   std::vector<double> C(length);
 
-  double scalar = 3.0;
+  RAJA::RangeSegment range(0, length);
+
+  double scalar(3);
 
   {
-    RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+    //RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+    RAJA::forall<thread_exec>(range, [&](RAJA::Index_type i) {
         A[i] = 0.0;
         B[i] = 2.0;
         C[i] = 2.0;
     });
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+      //RAJA::forall<thread_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+      RAJA::forall<thread_exec>(range, [&](RAJA::Index_type i) {
           A[i] += B[i] + scalar * C[i];
       });
     }
@@ -150,21 +148,23 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
   ar *= length;
 
   RAJA::ReduceSum<RAJA::seq_reduce, double> reduced_asum(0.0);
-  RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
-      reduced_asum += std::fabs(A[i]);
+  //RAJA::forall<RAJA::seq_exec>(RAJA::Index_type(0), RAJA::Index_type(length), [&](RAJA::Index_type i) {
+  RAJA::forall<RAJA::seq_exec>(range, [=](RAJA::Index_type i) {
+      reduced_asum += prk::abs(A[i]);
   });
   double asum(reduced_asum);
 
   double epsilon=1.e-8;
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;

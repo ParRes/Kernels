@@ -52,9 +52,13 @@
 # *******************************************************************
 
 import sys
-#from timeit import default_timer as timer
-from time import process_time as timer
+print('Python version = ', str(sys.version_info.major)+'.'+str(sys.version_info.minor))
+if sys.version_info >= (3, 3):
+    from time import process_time as timer
+else:
+    from timeit import default_timer as timer
 import numpy
+print('Numpy version  = ', numpy.version.version)
 
 def main():
 
@@ -77,7 +81,7 @@ def main():
     if m < 1:
         sys.exit("ERROR: array dimension must be >= 1")
 
-    n = int(sys.argv[2])
+    n = int(sys.argv[3])
     if n < 1:
         sys.exit("ERROR: array dimension must be >= 1")
 

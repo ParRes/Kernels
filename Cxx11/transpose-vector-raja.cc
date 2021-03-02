@@ -50,6 +50,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_raja.h"
 
 const int tile_size = 32;
 
@@ -148,7 +149,7 @@ double Error(int iterations, int order, std::vector<double> & B)
           const auto dij = static_cast<double>(i*order+j);
           const auto addit = (iterations+1.) * (0.5*iterations);
           const auto reference = dij*(1.+iterations)+addit;
-          abserr += std::fabs(B[j*order+i] - reference);
+          abserr += prk::abs(B[j*order+i] - reference);
       });
       return abserr;
 }
@@ -185,7 +186,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
@@ -259,17 +260,17 @@ int main(int argc, char * argv[])
   if (use_for=="tbb")    for_name = "TBB (static)";
   if (use_for=="tbbdyn") for_name = "TBB (dynamic)";
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Tile size             = " << tile_size << "(compile-time constant, unlike other impls)" << std::endl;
-  std::cout << "RAJA threading        = " << for_name << std::endl;
-  std::cout << "RAJA forallN          = " << (use_nested ? "yes" : "no") << std::endl;
-  std::cout << "RAJA use tiling       = " << (use_tiled ? "yes" : "no") << std::endl;
-  std::cout << "RAJA use permute      = " << use_permute << std::endl;
-  std::cout << "RAJA use simd         = " << (use_simd ? "yes" : "no") << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Tile size            = " << tile_size << "(compile-time constant, unlike other impls)" << std::endl;
+  std::cout << "RAJA threading       = " << for_name << std::endl;
+  std::cout << "RAJA forallN         = " << (use_nested ? "yes" : "no") << std::endl;
+  std::cout << "RAJA use tiling      = " << (use_tiled ? "yes" : "no") << std::endl;
+  std::cout << "RAJA use permute     = " << use_permute << std::endl;
+  std::cout << "RAJA use simd        = " << (use_simd ? "yes" : "no") << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
   std::vector<double> A(order*order);
@@ -420,9 +421,9 @@ int main(int argc, char * argv[])
   }
 #endif
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
@@ -597,17 +598,16 @@ int main(int argc, char * argv[])
   }
 #endif
 
-
 #ifdef VERBOSE
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  const auto epsilon = 1.0e-8;
+  double epsilon(1.0e-8);
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
     auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
+    std::cout << "Rate (MB/s): " << 1.0e-6 * (2.*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "ERROR: Aggregate squared error " << abserr

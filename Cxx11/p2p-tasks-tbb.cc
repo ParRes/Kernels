@@ -61,20 +61,8 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
-#include "tbb/flow_graph.h"
-#include "tbb/parallel_for.h"
-
-inline void sweep_tile(int startm, int endm,
-                       int startn, int endn,
-                       int n, double grid[])
-{
-  for (auto i=startm; i<endm; i++) {
-    for (auto j=startn; j<endn; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
+#include "prk_tbb.h"
+#include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
 {
@@ -126,8 +114,8 @@ int main(int argc, char* argv[])
   }
 
   const char* envvar = std::getenv("TBB_NUM_THREADS");
-  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
-  tbb::task_scheduler_init init(num_threads);
+  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : prk::get_num_cores();
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, num_threads);
 
   std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
@@ -143,7 +131,7 @@ int main(int argc, char* argv[])
   int num_blocks_m = (m / mc);
   if(m%mc != 0) num_blocks_m++;
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   double * grid = new double[m*n];
 
@@ -225,7 +213,7 @@ int main(int argc, char* argv[])
       grid[0*n+j] = static_cast<double>(j);
     }
     for (auto i=0; i<m; i++) {
-      grid[i*n+0] = static_cast<double>(i);
+     grid[i*n+0] = static_cast<double>(i);
     }
 
     s.activate();
@@ -251,7 +239,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+ if ( (prk::abs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;

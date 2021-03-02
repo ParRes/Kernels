@@ -50,9 +50,13 @@
 # *******************************************************************
 
 import sys
-#from timeit import default_timer as timer
-from time import process_time as timer
+print('Python version = ', str(sys.version_info.major)+'.'+str(sys.version_info.minor))
+if sys.version_info >= (3, 3):
+    from time import process_time as timer
+else:
+    from timeit import default_timer as timer
 import numpy
+print('Numpy version  = ', numpy.version.version)
 
 def main():
 
@@ -94,7 +98,6 @@ def main():
         # this only uses the transpose _view_ of A
         B += A.T
         A += 1.0
-
 
     t1 = timer()
     trans_time = t1 - t0
