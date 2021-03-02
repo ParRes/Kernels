@@ -74,7 +74,6 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   using namespace tbb::flow;
-  //graph g;
 
   int iterations;
   int m, n;
@@ -172,25 +171,13 @@ int main(int argc, char* argv[])
         //  make_edge(*nodes[(i-1)*num_blocks_n + j-1], *tmp );
     }
   }
-  auto start = true;
-  source_node<continue_msg> s(g, [&](continue_msg &v) -> bool {
-    if(start) { 
-      v = continue_msg();
-      start = false;
-      return true;
-    }
-    return false;
-  }, false);
-  
-  limiter_node<continue_msg> l(g, iterations+1, 1);
+  limiter_node<continue_msg> l(g, iterations+1);
 
-  make_edge( s, l );
   make_edge( l, *nodes[0] );
   make_edge( *nodes[(num_blocks_n * num_blocks_m) - 1], b);
   make_edge( b, l );
 
 #if TBB_PREVIEW_FLOW_GRAPH_TRACE
-  s.set_name("Source");
   b.set_name("Iteration Barrier");
   l.set_name("Limiter");
 #endif
@@ -216,7 +203,7 @@ int main(int argc, char* argv[])
      grid[i*n+0] = static_cast<double>(i);
     }
 
-    s.activate();
+    l.try_put(continue_msg{});
     g.wait_for_all();
     
     pipeline_time = prk::wtime() - pipeline_time;
