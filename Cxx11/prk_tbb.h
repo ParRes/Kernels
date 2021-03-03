@@ -33,13 +33,13 @@
 #define PRK_TBB_H
 
 //#include <tbb/tbb.h>
-#include <tbb/version.h>
 #include <tbb/global_control.h>
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_reduce.h>
 #include <tbb/blocked_range.h>
 #include <tbb/blocked_range2d.h>
 #include <tbb/flow_graph.h>
+#include <tbb/parallel_for_each.h>
 #if TBB_INTERFACE_VERSION <= 12000
 #   include <tbb/parallel_do.h>
 #endif
