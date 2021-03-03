@@ -73,7 +73,7 @@ void SequentialSweep(int m, int n, prk::vector<double> & grid)
 
 const int N = 64;
 const int MAX_LEN = 1024;
-tbb::atomic<char> Count[MAX_LEN/N+1][MAX_LEN/N+1];
+std::atomic<char> Count[MAX_LEN/N+1][MAX_LEN/N+1];
 double F[MAX_LEN][MAX_LEN];
 
 void ParallelSweep( const char* x, int xlen, const char* y, int ylen ) {
@@ -88,8 +88,13 @@ void ParallelSweep( const char* x, int xlen, const char* y, int ylen ) {
    // Roll the wavefront from the origin.
    typedef std::pair<int,int> block;
    block origin(0,0);
+#if TBB_INTERFACE_VERSION > 12000
+   tbb::parallel_for_each( &origin, &origin+1,
+       [=]( const block& b, tbb::feeder<block>&feeder ) {
+#else
    tbb::parallel_do( &origin, &origin+1,
        [=]( const block& b, tbb::parallel_do_feeder<block>&feeder ) {
+#endif
            // Extract bounds on block
            int bi = b.first;
            int bj = b.second;
