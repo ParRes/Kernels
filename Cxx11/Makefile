@@ -130,7 +130,9 @@ cblas: transpose-cblas dgemm-cblas
 
 onemkl: nstream-onemkl dgemm-onemkl dgemm-multigpu-onemkl
 
-oneapi: onemkl dpcpp sycl
+onedpl: nstream-onedpl
+
+oneapi: onemkl dpcpp sycl onedpl
 
 occa: transpose-occa nstream-occa
 
@@ -183,6 +185,9 @@ random_draw.o: random_draw.c random_draw.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-sycl-explicit: %-sycl-explicit.cc prk_util.h prk_sycl.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
+%-onedpl: %-onedpl.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
 %-onemkl: %-onemkl.cc prk_util.h prk_sycl.h

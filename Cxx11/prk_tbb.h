@@ -39,7 +39,10 @@
 #include <tbb/blocked_range.h>
 #include <tbb/blocked_range2d.h>
 #include <tbb/flow_graph.h>
-#include <tbb/parallel_do.h>
+#include <tbb/parallel_for_each.h>
+#if TBB_INTERFACE_VERSION <= 12000
+#   include <tbb/parallel_do.h>
+#endif
 
 #if ( PRK_TBB_PARTITIONER == 1)
    tbb::static_partitioner tbb_partitioner;
