@@ -1,14 +1,14 @@
 // based on Java version
 object transpose
 {
-    def main(args: Array[String]) {
+    def main(args: Array[String]) : Unit = {
         println("Parallel Research Kernels.")
         println("Java Matrix transpose: B = A^T.")
 
         /*******************************************************************
         **read and test input parameters
         *******************************************************************/
-        def error_and_exit(s: String) {
+        def error_and_exit(s: String) : Unit = {
             println(s)
             System.exit(1)
         }

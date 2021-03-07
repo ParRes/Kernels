@@ -1,13 +1,13 @@
 // based on Java version
 object stencil {
-    def main (args: Array[String]) {
+    def main (args: Array[String]) : Unit = {
         System.out.println("Parallel Research Kernels.")
         System.out.println("Scala pipeline execution on 2D grid.")
 
         /*******************************************************************
         **read and test input parameters
          *******************************************************************/
-        def error_and_exit(s: String) {
+        def error_and_exit(s: String) : Unit = {
             println(s)
             System.exit(1)
         }
