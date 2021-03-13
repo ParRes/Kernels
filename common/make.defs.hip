@@ -1,41 +1,37 @@
 #
 # This file shows the HIP toolchain options for PRKs.
 #
+ROCM_PATH=/opt/rocm
+#
 # Base compilers and language options
 #
-VERSION=-10
+VERSION=
 # C99 is required in some implementations.
-CC=gcc${VERSION} -std=gnu11 -pthread
+CC=${ROCM_PATH}/llvm/bin/clang -std=gnu11 -pthread
 #EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=gfortran${VERSION} -std=f2008 -cpp
+FC=${ROCM_PATH}/llvm/bin/flang #-std=f2008 -cpp
 # C++11 may not be required but does no harm here.
-CXX=g++${VERSION} -std=gnu++17 -pthread
+CXX=${ROCM_PATH}/llvm/bin/clang++ -std=gnu++17 -pthread
 #
 # Compiler flags
 #
-# -mtune=native is appropriate for most cases.
-# -march=native is appropriate if you want portable binaries.
-DEFAULT_OPT_FLAGS=-O3 -mtune=native -ffast-math
-#DEFAULT_OPT_FLAGS+=-fsanitize=undefined
-#DEFAULT_OPT_FLAGS+=-fsanitize=undefined,leak
-#DEFAULT_OPT_FLAGS+=-fsanitize=address
-#DEFAULT_OPT_FLAGS+=-fsanitize=thread
-# See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
+DEFAULT_OPT_FLAGS=-g -O3 -ffast-math -mtune=native
 #
 #
 # OpenMP flags
 #
 OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
-OFFLOADFLAG=-foffload=amdgcn-amdhsa="-march=fiji"
+#GCC#OFFLOADFLAG=-foffload=amdgcn-amdhsa="-march=fiji"
+OFFLOADFLAG=-fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908
 OPENACCFLAG=-fopenacc $(OFFLOADFLAG)
 #
 # OpenCL flags
 #
 # Linux
-OPENCLDIR=/opt/rocm/opencl/
-OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib -lOpenCL
+OPENCLDIR=${ROCM_PATH}/opencl/
+OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib -lOpenCL
 #
 # SYCL flags
 #
@@ -78,8 +74,8 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
-BLASFLAG=-L/usr/lib/x86_64-linux-gnu -lblas64 -lpthread
-CBLASFLAG=-L/usr/lib/x86_64-linux-gnu -lblas64 -lpthread
+BLASFLAG=
+CBLASFLAG=
 #
 # CUDA flags
 #
@@ -92,15 +88,15 @@ CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
 #
 # HIP flags
 #
-HIPCC=hipcc
+HIPCC=${ROCM_PATH}/hip/bin/hipcc
 HIPFLAGS=-g -O3 -std=c++14
 # hipBLAS
-HIPFLAGS+=-L/opt/rocm/lib -lrocblas
-HIPFLAGS+=-L/opt/rocm/lib -lhipblas
+HIPFLAGS+=-L${ROCM_PATH}/lib -lrocblas
+HIPFLAGS+=-L${ROCM_PATH}/lib -lhipblas
 # hipThrust
-HIPFLAGS+=-I/opt/rocm/include
-HIPFLAGS+=-I/opt/rocm/rocthrust/include
-HIPFLAGS+=-I/opt/rocm/rocprim/include
+HIPFLAGS+=-I${ROCM_PATH}/include
+HIPFLAGS+=-I${ROCM_PATH}/rocthrust/include
+HIPFLAGS+=-I${ROCM_PATH}/rocprim/include
 HIPFLAGS+=${RANGEFLAG}
 #
 # MPI-3
@@ -147,5 +143,5 @@ COARRAYFLAG=-fcoarray=single -lcaf_single
 #
 # MEMKIND (used in C1z)
 #
-MEMKINDDIR=/home/parallels/PRK/deps
+MEMKINDDIR=
 MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib
