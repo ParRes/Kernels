@@ -64,7 +64,7 @@ vector: p2p-sse p2p-avx p2p-avx-tasks-openmp
 
 thread: transpose-thread
 
-openmp: nstream-openmp p2p-simd-openmp \
+openmp: nstream-openmp \
 	p2p-hyperplane-openmp p2p-hyperplane-2d-openmp \
 	stencil-openmp stencil-2d-openmp \
 	transpose-openmp transpose-2d-openmp
