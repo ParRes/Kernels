@@ -183,12 +183,10 @@ program main
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-
   asum = 0
   !$omp parallel do reduction(+:asum)
   do i=1,length
-    asum = asum + abs(A(i))
+    asum = asum + abs(A(i)-ar)
   enddo
   !$omp end parallel do
 
@@ -196,7 +194,7 @@ program main
   deallocate( B )
   deallocate( A )
 
-  if (abs(asum-ar) .gt. epsilon) then
+  if (abs(asum) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
     write(*,'(a30,f30.15)') '       Expected checksum: ', ar
     write(*,'(a30,f30.15)') '       Observed checksum: ', asum
