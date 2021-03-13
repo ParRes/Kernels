@@ -38,11 +38,8 @@ OPENACCFLAG=-fopenacc
 #
 # OpenCL flags
 #
-# MacOS
-#OPENCLFLAG=-framework OpenCL
-# Linux
-#OPENCLDIR=/etc/alternatives/opencl-intel-tools
-#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLDIR=/usr/local/cuda-11.2/targets/x86_64-linux
+OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib64 -lOpenCL
 #OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
 #
@@ -139,7 +136,7 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 # Linux w/ NVIDIA CUDA
 # NVCC never supports the latest GCC.
 # Use appropriate arch or code is compiled to ancient features.
-NVCC=nvcc
+NVCC=/usr/local/cuda-11.2/bin/nvcc
 CUDAFLAGS=-g -O3 -std=c++11
 CUDAFLAGS+=--gpu-architecture=sm_70
 #CUDAFLAGS+=--compiler-bindir=/swtools/gcc/7.5.0/bin
