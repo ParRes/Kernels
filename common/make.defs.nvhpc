@@ -7,32 +7,30 @@ NVHPC_PATH=${HOME}/NVIDIA/hpc_sdk/Linux_x86_64/2021
 # C99 is required in some implementations.
 CC=${NVHPC_PATH}/compilers/bin/nvc -c11
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=${NVHPC_PATH}/compilers/bin/nvfortran -acc -gpu=managed -cuda -cudalib
+FC=${NVHPC_PATH}/compilers/bin/nvfortran -acc -gpu=managed -cuda -cudalib -target=gpu
 # C++11 may not be required but does no harm here.
 CXX=${NVHPC_PATH}/compilers/bin/nvc++ --c++17
 #
 # Compiler flags
 #
-DEFAULT_OPT_FLAGS=-O2 -tp=host
+DEFAULT_OPT_FLAGS=-O2
 DEFAULT_OPT_FLAGS+=-Wall #-Werror
 #
 # OpenMP flags
 #
-OPENMPFLAG=-mp #-Minfo=mp,vect
-OPENMPSIMDFLAG=-mp #-Minfo=mp,vect
-OFFLOADFLAG=-mp #-ta=multicore #-Minfo=mp,vect
+OPENMPFLAG=-mp
+#OPENMPFLAG+=-Minfo=mp,vect
+OPENMPSIMDFLAG=
+OFFLOADFLAG=-mp -target=gpu
+#OFFLOADFLAG+=-Minfo=accel
 OFFLOADFLAG+=-DGPU_SCHEDULE="schedule(static,1)"
-OPENACCFLAG=-acc #-ta=multicore #-Minfo=accel
-#OPENACCFLAG=-acc -ta=tesla:cc70 -Minfo=accel
+OPENACCFLAG=-acc -target=gpu
 OPENACCFLAG+=-Mlarge_arrays
 #
 # OpenCL flags
 #
-# MacOS
-#OPENCLFLAG=-framework OpenCL
-# Linux
-#OPENCLDIR=/etc/alternatives/opencl-intel-tools
-#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLDIR=/usr/local/cuda-11.2/targets/x86_64-linux
+OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib -lOpenCL
 #OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
 #
@@ -157,12 +155,8 @@ CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
 #
 # MPI-3
 #
-# We assume you have Intel MPI and have setup your environment with e.g.
-# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
-# in your .bashrc.
-#
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPIDIR=
+MPIDIR=${NVHPC_PATH}/comm_libs/openmpi/openmpi-3.1.5
 MPICC=${MPIDIR}/bin/mpicc
 MPICXX=${MPIDIR}/bin/mpicxx
 MPIINC=-I${MPIDIR}/include
