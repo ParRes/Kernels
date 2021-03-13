@@ -62,6 +62,7 @@ end function prk_get_wtime
 
 program main
   use iso_fortran_env
+  use cutensorex
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -75,6 +76,7 @@ program main
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold input matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold input matrix
   real(kind=REAL64), allocatable ::  C(:,:)         ! buffer to hold output matrix
+  !@cuf attributes(device) :: A, B, C
   integer(kind=INT64) :: nflops
   ! runtime variables
   integer(kind=INT32) :: i,j,k
@@ -176,7 +178,7 @@ program main
     write(*,'(a)') 'Solution validates'
     avgtime = dgemm_time/iterations
     nflops = 2 * int(order,INT64)**3
-    write(*,'(a,f13.6,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
+    write(*,'(a,f13.3,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
            ' Avg time (s): ', avgtime
   else
     write(*,'(a,e30.15)') 'Reference checksum = ', reference
