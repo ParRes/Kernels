@@ -139,3 +139,4 @@ clean:
 	-rm -f *-openmp
 	-rm -f *-target
 	-rm -f *-openacc
+	-rm -f pic pic_soa
