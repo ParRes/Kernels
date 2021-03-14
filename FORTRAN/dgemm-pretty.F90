@@ -62,7 +62,9 @@ end function prk_get_wtime
 
 program main
   use iso_fortran_env
+#ifdef NVHPC
   use cutensorex
+#endif
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
