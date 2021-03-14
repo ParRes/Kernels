@@ -186,18 +186,16 @@ program main
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-
-  asum = sum(abs(A))
+  asum = sum(abs(A-ar))
 
   deallocate( C )
   deallocate( B )
   deallocate( A )
 
-  if (abs(asum-ar) .gt. epsilon) then
+  if (abs(asum) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
-    write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-    write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+    write(*,'(a30,f30.15)') '       Expected value: ', ar
+    write(*,'(a30,f30.15)') '       Observed value: ', A(1)
     write(*,'(a35)')  'ERROR: solution did not validate'
     stop 1
   else

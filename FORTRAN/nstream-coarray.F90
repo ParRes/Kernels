@@ -211,12 +211,9 @@ program main
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-  ar = ar * np
-
   asum = 0
   do concurrent (i=1:length)
-    asum = asum + abs(A(i))
+    asum = asum + abs(A(i)-ar)
   enddo
 
   ! reduction via gather
@@ -233,11 +230,11 @@ program main
   deallocate( B )
   deallocate( A )
 
-  if (abs(asum-ar) .gt. epsilon) then
+  if (abs(asum) .gt. epsilon) then
     if (me.eq.1) then
       write(*,'(a35)') 'Failed Validation on output array'
-      write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-      write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+      write(*,'(a30,f30.15)') '       Expected value: ', ar
+      write(*,'(a30,f30.15)') '       Observed value: ', A(1)
       write(*,'(a35)')  'ERROR: solution did not validate'
       error stop 1
     endif
