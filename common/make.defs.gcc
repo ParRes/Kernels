@@ -4,7 +4,9 @@
 #
 # Base compilers and language options
 #
-VERSION=
+LLVM_ROOT=/opt/homebrew/Cellar/llvm/11.1.0
+LLVM_PATH=${LLVM_ROOT}/bin/
+#CLANG_VERSION=-9
 # C99 is required in some implementations.
 CC=gcc${VERSION} -std=c11 -pthread
 #EXTRA_CLIBS=-lrt
@@ -195,24 +197,26 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 #
 # MPI-3
 #
-MPIDIR=/usr
+MPIDIR=/opt/homebrew/Cellar/open-mpi/4.1.0
 MPICC=${MPIDIR}/bin/mpicc
 MPICXX=${MPIDIR}/bin/mpicxx
+MPIFORT=${MPIDIR}/bin/mpifort
 MPIINC=-I${MPIDIR}/include
-MPILIB=-L${MPIDIR}/lib -lmpi
+MPILIB=-L${MPIDIR}/lib -lmpifort -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
 #MPIINC=-I/usr/include/mpich-3.2-x86_64
 #MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
 #
 # Global Arrays
 #
-GADIR=../deps/ga
+GADIR=../deps
 GAFLAG=-I${GADIR}/include
 GAFLAG+=-L${GADIR}/lib -lga
-GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
+GAFLAG+=-L${GADIR}/lib -larmci # ARMCI-MPI
 #GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
-GAFLAG+=${MPIINC} ${MPILIB}
-GAFLAG+=-lmpifort -lmpi
+#GAFLAG+=${MPIINC} ${MPILIB}
+#GAFLAG+=-lmpifort -lmpi
+GAFLAG+=${BLASFLAG}
 GAFLAG+=-fdefault-integer-8 # GA is compiled with 64b integers on 64-bit systems
 #
 # PETSc
