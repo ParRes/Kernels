@@ -103,7 +103,7 @@ dgemm-blas: dgemm-blas.F90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 %-ga: %-ga.F90
-	$(FC) $(FCFLAGS) $< $(GAFLAG) -o $@
+	$(MPIFORT) $(FCFLAGS) $< $(GAFLAG) -o $@
 
 %-mpi-openmp: %-mpi.F90
 	$(MPIFORT) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
