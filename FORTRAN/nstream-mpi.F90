@@ -276,19 +276,16 @@ program main
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-  ar = ar * np
-
   asum = 0
 #if defined(_OPENMP)
   !$omp parallel do reduction(+:asum)
   do i=1,length
-    asum = asum + abs(A(i))
+    asum = asum + abs(A(i)-ar)
   enddo
   !$omp end parallel do
 #else
   do concurrent (i=1:length)
-    asum = asum + abs(A(i))
+    asum = asum + abs(A(i)-ar)
   enddo
 #endif
   call MPI_Allreduce(MPI_IN_PLACE, asum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD)
@@ -297,11 +294,11 @@ program main
   deallocate( B )
   deallocate( A )
 
-  if (abs(asum-ar) .gt. epsilon) then
+  if (abs(asum) .gt. epsilon) then
     if (me.eq.0) then
       write(*,'(a35)') 'Failed Validation on output array'
-      write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-      write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+      write(*,'(a30,f30.15)') '       Expected value: ', ar
+      write(*,'(a30,f30.15)') '       Observed value: ', A(1)
       write(*,'(a35)')  'ERROR: solution did not validate'
     endif
     call MPI_Abort(MPI_COMM_WORLD, 20)
