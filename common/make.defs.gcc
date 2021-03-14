@@ -124,7 +124,7 @@ MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
 # TBB
 #
 #TBBDIR=/usr/lib/x86_64-linux-gnu
-TBBDIR=/usr/local/Cellar/tbb/2019_U8
+TBBDIR=/opt/homebrew/Cellar/tbb/2020_U3_1
 TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #TBBDIR=/opt/intel/compilers_and_libraries_2019.2.159/linux/tbb
 #TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -L${TBBDIR}/lib/intel64_lin/gcc4.7 -ltbb
@@ -144,6 +144,19 @@ RAJADIR=/opt/raja/gcc
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 THRUSTDIR=/Users/jrhammon/Work/NVIDIA/thrust
 THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
+EXECUTORSDIR=./libunifex
+EXECUTORSFLAG=-I${EXECUTORSDIR}/include -I${EXECUTORSDIR}/build/include
+# HPX is more complicated...
+HWLOCFLAG=-I/usr/local/include
+HPXDIR=./hpx
+HPXCXX=${HPXDIR}/bin/hpxcxx
+HPXFLAG=-Wno-unused-local-typedef ${HWLOCFLAG}
+# UPC++
+UPCXXDIR=./upcxx
+UPCXX=${UPCXXDIR}/bin/upcxx
+UPCXXFLAG=-codemode={O3,debug}
+UPCXXFLAG+=-std=c++17
+UPCXXFLAG+=-mtune=native -ffast-math
 #
 # CBLAS for C++ DGEMM
 #
