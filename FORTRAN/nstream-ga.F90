@@ -265,7 +265,7 @@ program main
   call ga_sync()
 
   if (me.eq.0) then
-    if (abs(asumr) .gt. epsilon) then
+    if (abs(asum) .gt. epsilon) then
       write(*,'(a35)') 'Failed Validation on output array'
       write(*,'(a30,f30.15)') '       Expected value: ', ar
       !write(*,'(a30,f30.15)') '       Observed value: ', A(1)
