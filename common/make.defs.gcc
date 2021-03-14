@@ -182,11 +182,6 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 #
 # MPI-3
 #
-# We assume you have Intel MPI and have setup your environment with e.g.
-# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
-# in your .bashrc.
-#
-# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
 MPIDIR=/usr
 MPICC=${MPIDIR}/bin/mpicc
 MPICXX=${MPIDIR}/bin/mpicxx
