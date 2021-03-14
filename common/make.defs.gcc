@@ -230,9 +230,9 @@ PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
 #
 # see https://github.com/ParRes/Kernels/blob/master/FORTRAN/README.md for details
 # single-node
-COARRAYFLAG=-fcoarray=single -lcaf_single
+#COARRAYFLAG=-fcoarray=single -lcaf_single
 # multi-node
-# COARRAYFLAG=-fcoarray=lib -lcaf_mpi
+COARRAYFLAG=-fcoarray=lib -L/opt/homebrew/lib -lcaf_mpi
 #
 # MEMKIND (used in C1z)
 #
