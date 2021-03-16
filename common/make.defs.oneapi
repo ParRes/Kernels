@@ -31,6 +31,7 @@ DEFAULT_OPT_FLAGS=-g -O3 -xHOST
 OPENMPFLAG=-fiopenmp
 OPENMPSIMDFLAG=-qopenmp-simd
 OFFLOADFLAG=-fopenmp-targets=spir64
+OFFLOADFLAG+=-DGPU_SCHEDULE=""
 #
 # OpenCL flags
 #

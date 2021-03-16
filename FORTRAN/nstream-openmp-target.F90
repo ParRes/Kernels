@@ -144,13 +144,13 @@ program main
 
   t0 = 0
 
-  !$omp parallel do simd
+  !$omp parallel do
   do i=1,length
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
-  !$omp end parallel do simd
+  !$omp end parallel do
 
   !$omp target data map(tofrom: A) map(to: B,C) map(to:length)
 
@@ -158,7 +158,7 @@ program main
 
     if (k.eq.1) t0 = omp_get_wtime()
 
-    !$omp target teams distribute parallel do simd
+    !$omp target teams distribute parallel do simd GPU_SCHEDULE
     do i=1,length
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
