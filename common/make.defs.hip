@@ -25,6 +25,7 @@ OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
 #GCC#OFFLOADFLAG=-foffload=amdgcn-amdhsa="-march=fiji"
 OFFLOADFLAG=-fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908
+OFFLOADFLAG+=-DGPU_SCHEDULE="schedule(static,1)" # makes ~10x diff with AMD Flang 12 on MI-100
 OPENACCFLAG=-fopenacc $(OFFLOADFLAG)
 #
 # OpenCL flags
@@ -74,8 +75,8 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
-BLASFLAG=
-CBLASFLAG=
+BLASFLAG=-L${HOME}/BLIS/zen2-gcc/lib -lblis
+CBLASFLAG=-I${HOME}/BLIS/zen2-gcc/include
 #
 # CUDA flags
 #

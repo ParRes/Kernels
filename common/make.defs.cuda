@@ -33,6 +33,7 @@ DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
 OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
 OFFLOADFLAG=-foffload="-O3 -v"
+OFFLOADFLAG+=-DGPU_SCHEDULE="schedule(static,1)"
 OPENACCFLAG=-fopenacc
 #
 # OpenCL flags

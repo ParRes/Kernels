@@ -41,6 +41,7 @@ DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
 OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
 OFFLOADFLAG=-fopenmp
+OFFLOADFLAG+=-DGPU_SCHEDULE=""
 #OPENACCFLAG= # Flang does not support OpenACC
 # Klondike weirdness
 # OPENMPFLAG+=-L/opt/intel/compilers_and_libraries_2018.0.082/linux/compiler/lib/intel64_lin -liomp5

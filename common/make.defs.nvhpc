@@ -21,6 +21,7 @@ DEFAULT_OPT_FLAGS+=-Wall #-Werror
 OPENMPFLAG=-mp #-Minfo=mp,vect
 OPENMPSIMDFLAG=-mp #-Minfo=mp,vect
 OFFLOADFLAG=-mp #-ta=multicore #-Minfo=mp,vect
+OFFLOADFLAG+=-DGPU_SCHEDULE="schedule(static,1)"
 OPENACCFLAG=-acc #-ta=multicore #-Minfo=accel
 #OPENACCFLAG=-acc -ta=tesla:cc70 -Minfo=accel
 OPENACCFLAG+=-Mlarge_arrays
