@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2017, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -62,7 +63,6 @@
 !
 ! *******************************************************************
 
-#ifndef _OPENMP
 function prk_get_wtime() result(t)
   use iso_fortran_env
   implicit none
@@ -71,17 +71,11 @@ function prk_get_wtime() result(t)
   call system_clock(count = c, count_rate = r)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
-#endif
 
 program main
   use iso_fortran_env
-#ifdef _OPENMP
-  use omp_lib
-#endif
   implicit none
-#ifndef _OPENMP
   real(kind=REAL64) :: prk_get_wtime
-#endif
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -106,11 +100,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-#ifdef _OPENMP
-  write(*,'(a47)') 'Fortran OpenMP STREAM triad: A = B + scalar * C'
-#else
   write(*,'(a47)') 'Fortran Serial STREAM triad: A = B + scalar * C'
-#endif
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -144,9 +134,6 @@ program main
     endif
   endif
 
-#ifdef _OPENMP
-  write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
-#endif
   write(*,'(a,i12)') 'Number of iterations = ', iterations
   write(*,'(a,i12)') 'Vector length        = ', length
   write(*,'(a,i12)') 'Offset               = ', offset
@@ -177,22 +164,7 @@ program main
 
   t0 = 0
 
-#ifdef _OPENMP
-  !$omp parallel default(none)                           &
-  !$omp&  shared(A,B,C,t0,t1)                            &
-  !$omp&  firstprivate(length,iterations,offset,scalar)  &
-  !$omp&  private(i,k)
-#endif
-
-#if defined(_OPENMP)
-  !$omp do
-  do i=1,length
-    A(i) = 0
-    B(i) = 2
-    C(i) = 2
-  enddo
-  !$omp end do
-#elif 0
+#if 0
   forall (i=1:length)
     A(i) = 0
     B(i) = 2
@@ -206,30 +178,12 @@ program main
   enddo
 #endif
 
-  ! need this because otherwise no barrier between initialization
-  ! and iteration 0 (warmup), which will lead to incorrectness.
-  !$omp barrier
-
   do k=0,iterations
-    ! start timer after a warmup iteration
     if (k.eq.1) then
-#ifdef _OPENMP
-    !$omp barrier
-    !$omp master
-    t0 = omp_get_wtime()
-    !$omp end master
-#else
-    t0 = prk_get_wtime()
-#endif
+      t0 = prk_get_wtime()
     endif
 
-#if defined(_OPENMP)
-    !$omp do
-    do i=1,length
-      A(i) = A(i) + B(i) + scalar * C(i)
-    enddo
-    !$omp end do
-#elif 0
+#if 0
     forall (i=1:length)
       A(i) = A(i) + B(i) + scalar * C(i)
     end forall
@@ -240,15 +194,7 @@ program main
 #endif
   enddo ! iterations
 
-#ifdef _OPENMP
-  t1 = omp_get_wtime()
-#else
   t1 = prk_get_wtime()
-#endif
-
-#ifdef _OPENMP
-  !$omp end parallel
-#endif
 
   nstream_time = t1 - t0
 
@@ -264,17 +210,9 @@ program main
   enddo
 
   asum = 0
-#if defined(_OPENMP)
-  !$omp parallel do reduction(+:asum)
-  do i=1,length
-    asum = asum + abs(A(i)-ar)
-  enddo
-  !$omp end parallel do
-#else
   do concurrent (i=1:length)
     asum = asum + abs(A(i)-ar)
   enddo
-#endif
 
   deallocate( C )
   deallocate( B )
