@@ -78,6 +78,8 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgem
 
 openacc: p2p-openacc p2p-innerloop-openacc stencil-openacc transpose-openacc nstream-openacc
 
+stdpar: nstream-stdpar stencil-stdpar transpose-stdpar
+
 blas: dgemm-blas
 
 %: %.F90
@@ -120,6 +122,9 @@ dgemm-blas: dgemm-blas.F90
 %-openacc: %-openacc.F90
 	$(FC) $(FCFLAGS) $(OPENACCFLAG) $< -o $@
 
+%-stdpar: %-stdpar.F90
+	$(FC) $(FCFLAGS) $(STDPARFLAG) $< -o $@
+
 clean:
 	-rm -f *.o
 	-rm -f *.i90
@@ -139,4 +144,5 @@ clean:
 	-rm -f *-openmp
 	-rm -f *-target
 	-rm -f *-openacc
+	-rm -f *-stdpar
 	-rm -f pic pic_soa
