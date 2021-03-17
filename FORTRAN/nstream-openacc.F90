@@ -163,22 +163,32 @@ program main
 
   t0 = 0
 
-  !$acc parallel loop gang
+  !$acc data copy(A) copyin(B,C)
+
+  !$acc parallel loop
   do i=1,length
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
 
-  !$acc data pcopy(A) pcopyin(B,C)
   do k=0,iterations
 
     if (k.eq.1) t0 = prk_get_wtime()
 
-    !$acc parallel loop gang
+#if 1
+    !$acc parallel loop
     do i=1,length
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
+#else
+    !$acc kernels
+    do i=1,length
+      A(i) = A(i) + B(i) + scalar * C(i)
+    enddo
+    !$acc end kernels
+#endif
+
   enddo ! iterations
 
   t1 = prk_get_wtime()
@@ -199,7 +209,7 @@ program main
   enddo
 
   asum = 0
-  !$acc parallel loop reduction(+:asum)
+  !!!$acc parallel loop reduction(+:asum)
   do i=1,length
     asum = asum + abs(A(i)-ar)
   enddo
