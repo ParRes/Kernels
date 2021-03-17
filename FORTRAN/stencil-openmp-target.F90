@@ -118,9 +118,10 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
       enddo
       !$omp end target teams distribute parallel do simd
     else ! tiling
-      !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
+      !$omp target teams distribute collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
+          !$omp parallel do simd collapse(2) schedule(static,1)
           do j=jt,min(n-r-1,jt+tile_size-1)
             do i=it,min(n-r-1,it+tile_size-1)
               do jj=-r,r
@@ -134,9 +135,10 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
               enddo
             enddo
           enddo
+          !$omp end parallel do simd
         enddo
       enddo
-      !$omp end target teams distribute parallel do simd
+      !$omp end target teams distribute
     endif ! tiling
   else ! grid
     if (.not.tiling) then
@@ -152,9 +154,10 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
       enddo
       !$omp end target teams distribute parallel do simd
     else ! tiling
-      !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
+      !$omp target teams distribute collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
+          !$omp parallel do simd collapse(2) schedule(static,1)
           do j=jt,min(n-r-1,jt+tile_size-1)
             do i=it,min(n-r-1,it+tile_size-1)
               do jj=-r,r
@@ -164,9 +167,10 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
               enddo
             enddo
           enddo
+          !$omp end parallel do simd
         enddo
       enddo
-      !$omp end target teams distribute parallel do simd
+      !$omp end target teams distribute
     endif ! tiling
   endif ! star
 end subroutine apply_stencil
@@ -296,28 +300,15 @@ program main
   call initialize_w(is_star,r,W)
 
   ! HOST
-  !$omp parallel default(none) shared(n,A,B) private(i,j)
   ! intialize the input and output arrays
-  !$omp do
+  !$omp parallel do collapse(2) default(none) shared(n,A,B) private(i,j)
   do j=1,n
     do i=1,n
       A(i,j) = cx*i+cy*j
-#if 1
-      B(i,j) = 0.d0
-#endif
-    enddo
-  enddo
-  !$omp end do
-#if 0
-  !$omp do
-  do j=r+1,n-r
-    do i=r+1,n-r
       B(i,j) = 0.d0
     enddo
   enddo
-  !$omp end do
-#endif
-  !$omp end parallel
+  !$omp end parallel do
 
   !$omp target data map(to:W, A) map(tofrom: B) map(to:n)
 
@@ -350,7 +341,7 @@ program main
 
   ! HOST
   ! compute L1 norm in parallel
-  !$omp parallel do                                 &
+  !$omp parallel do collapse(2)                     &
   !$omp& default(none) shared(n,B) private(i,j)     &
   !$omp& reduction(+:norm)
   do j=r,n-r
