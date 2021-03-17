@@ -278,6 +278,10 @@ FORTRAN/p2p-innerloop-openacc
 FORTRAN/p2p-openmp-target
 FORTRAN/p2p-openacc
 FORTRAN/p2p-tasks-openmp
+FORTRAN/pic
+FORTRAN/pic-openmp
+FORTRAN/pic_soa
+FORTRAN/pic_soa-openmp
 FORTRAN/stencil
 FORTRAN/stencil-coarray
 FORTRAN/stencil-ga
