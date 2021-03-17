@@ -265,6 +265,7 @@ FORTRAN/nstream-mpi-openmp
 FORTRAN/nstream-openmp-target
 FORTRAN/nstream-openacc
 FORTRAN/nstream-pretty
+FORTRAN/nstream-stdpar
 FORTRAN/nstream-taskloop-openmp
 FORTRAN/p2p
 FORTRAN/p2p-coarray
@@ -284,6 +285,7 @@ FORTRAN/stencil-openmp
 FORTRAN/stencil-openmp-target
 FORTRAN/stencil-openacc
 FORTRAN/stencil-pretty
+FORTRAN/stencil-stdpar
 FORTRAN/stencil-taskloop-openmp
 FORTRAN/transpose
 FORTRAN/transpose-coarray
@@ -292,6 +294,7 @@ FORTRAN/transpose-openmp
 FORTRAN/transpose-openmp-target
 FORTRAN/transpose-openacc
 FORTRAN/transpose-pretty
+FORTRAN/transpose-stdpar
 FORTRAN/transpose-taskloop-openmp
 FORTRAN/transpose-tasks-openmp
 GO/dgemm
