@@ -98,8 +98,8 @@ dgemm-blas: dgemm-blas.F90
 %-pretty: %-pretty.F90
 	$(FC) $(FCFLAGS) $< -o $@
 
-%-openmp: %.F90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+#%-openmp: %.F90
+#	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
 %-openmp: %-openmp.F90
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
