@@ -7,7 +7,7 @@ NVHPC_PATH=${HOME}/NVIDIA/hpc_sdk/Linux_x86_64/2021
 # C99 is required in some implementations.
 CC=${NVHPC_PATH}/compilers/bin/nvc -c11
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=${NVHPC_PATH}/compilers/bin/nvfortran -acc -gpu=managed -cuda -cudalib -target=gpu
+FC=${NVHPC_PATH}/compilers/bin/nvfortran -acc -gpu=managed -cuda -cudalib -target=gpu -DNVHPC
 # C++11 may not be required but does no harm here.
 CXX=${NVHPC_PATH}/compilers/bin/nvc++ --c++17
 #
@@ -26,6 +26,7 @@ OFFLOADFLAG=-mp -target=gpu
 OFFLOADFLAG+=-DGPU_SCHEDULE="schedule(static,1)"
 OPENACCFLAG=-acc -target=gpu
 OPENACCFLAG+=-Mlarge_arrays
+STDPARFLAG=-stdpar -Minfo=accel
 #
 # OpenCL flags
 #
