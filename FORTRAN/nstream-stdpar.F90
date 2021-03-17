@@ -171,10 +171,8 @@ program main
   enddo
 
   do k=0,iterations
-    ! start timer after a warmup iteration
-    if (k.eq.1) then
-      t0 = prk_get_wtime()
-    endif
+
+    if (k.eq.1) t0 = prk_get_wtime()
 
     do concurrent (i=1:length)
       A(i) = A(i) + B(i) + scalar * C(i)
