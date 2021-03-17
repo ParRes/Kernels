@@ -100,7 +100,7 @@ program main
   call get_command_argument(1,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') iterations
   if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
+    write(*,'(a33,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
   endif
 
@@ -108,7 +108,7 @@ program main
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') order
   if (order .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
+    write(*,'(a28,i5)') 'ERROR: order must be >= 1 : ', order
     stop 1
   endif
 
@@ -120,13 +120,22 @@ program main
   endif
   if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
     write(*,'(a20,i5,a22,i5)') 'WARNING: tile_size ',tile_size,&
-                           ' must be >= 1 and <= ',order
+                               ' must be >= 1 and <= ',order
     tile_size = order ! no tiling
+  endif
+
+  if (mod(order,tile_size).ne.0) then
+    write(*,'(a50)') 'ERROR: order must be evenly divisible by tile_size'
+    stop 1
   endif
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
+
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
+  write(*,'(a,i8)') 'Matrix order         = ', order
+  write(*,'(a,i8)') 'Tile size            = ', tile_size
 
   allocate( A(order,order), stat=err)
   if (err .ne. 0) then
@@ -140,47 +149,39 @@ program main
     stop 1
   endif
 
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix order         = ', order
-  write(*,'(a,i8)') 'Tile size            = ', tile_size
+  allocate( T(tile_size,tile_size), stat=err )
+  if (err .ne. 0) then
+    write(*,'(a,i3)') 'allocation of T returned ',err
+    stop 1
+  endif
 
   t0 = 0
 
-  if (tile_size.lt.order) then
-    do concurrent (jt=1:order:tile_size)
-      do concurrent (it=1:order:tile_size)
-        do j=jt,min(order,jt+tile_size-1)
-          do i=it,min(order,it+tile_size-1)
-              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-              B(i,j) = 0.0
-          enddo
-        enddo
-      enddo
+  do concurrent (j=1:order)
+    do concurrent (i=1:order)
+      A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+      B(i,j) = 0.0
     enddo
-  else
-    do concurrent (j=1:order)
-      do concurrent (i=1:order)
-        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-        B(i,j) = 0.0
-      enddo
-    enddo
-  endif
+  enddo
 
   do k=0,iterations
 
-    ! start timer after a warmup iteration
     if (k.eq.1) then
       t0 = prk_get_wtime()
     endif
 
-    ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
       do concurrent (jt=1:order:tile_size)
         do concurrent (it=1:order:tile_size)
-          do j=jt,min(order,jt+tile_size-1)
-            do i=it,min(order,it+tile_size-1)
-              B(j,i) = B(j,i) + A(i,j)
-              A(i,j) = A(i,j) + 1.0
+          !do j=1,tile_size
+          !  do i=1,tile_size
+          !    T(i,j) = A(it+i-1,jt+j-1)
+          !  enddo
+          !enddo
+          do j=1,tile_size
+            do i=1,tile_size
+              B(jt+j-1,it+i-1) = B(jt+j-1,it+i-1) + A(it+i-1,jt+j-1)
+              A(it+i-1,jt+j-1) = A(it+i-1,jt+j-1) + 1.0
             enddo
           enddo
         enddo
