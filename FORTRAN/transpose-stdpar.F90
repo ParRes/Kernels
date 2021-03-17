@@ -153,18 +153,16 @@ program main
     stop 1
   endif
 
-  t0 = 0
-
   do concurrent (j=1:order, i=1:order)
     A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
     B(i,j) = 0.0
   enddo
 
+  t0 = 0
+
   do k=0,iterations
 
-    if (k.eq.1) then
-      t0 = prk_get_wtime()
-    endif
+    if (k.eq.1) t0 = prk_get_wtime()
 
     if (tile_size.lt.order) then
       do concurrent (jt=1:order:tile_size, it=1:order:tile_size) local(T)
