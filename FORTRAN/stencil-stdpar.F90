@@ -111,10 +111,9 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
   integer(kind=INT32) :: i, j, ii, jj, it, jt
   if (is_star) then
     if (.not.tiling) then
-      !$omp do
-      do j=r,n-r-1
-        do i=r,n-r-1
-            ! do not use Intel Fortran unroll directive here (slows down)
+      do concurrent (j=r:n-r-1, i=r:n-r-1)
+      !do j=r,n-r-1
+      !  do i=r,n-r-1
             do jj=-r,r
               B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
             enddo
@@ -124,11 +123,9 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
             do ii=1,r
               B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
             enddo
-        enddo
+      !  enddo
       enddo
-      !$omp end do
     else ! tiling
-      !$omp do
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -146,11 +143,9 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do
     endif ! tiling
   else ! grid
     if (.not.tiling) then
-      !$omp do
       do j=r,n-r-1
         do i=r,n-r-1
           do jj=-r,r
@@ -160,9 +155,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do
     else ! tiling
-      !$omp do
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
           do j=jt,min(n-r-1,jt+tile_size-1)
@@ -176,16 +169,12 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
           enddo
         enddo
       enddo
-      !$omp end do
     endif ! tiling
   endif ! star
 end subroutine apply_stencil
 
 program main
   use iso_fortran_env
-#ifdef _OPENMP
-  use omp_lib
-#endif
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -202,6 +191,7 @@ program main
   integer(kind=INT32), parameter :: r=RADIUS            ! radius of stencil
   real(kind=REAL64) :: W(-r:r,-r:r)                     ! weights of points in the stencil
   real(kind=REAL64), allocatable :: A(:,:), B(:,:)      ! grid values
+  real(kind=REAL64) ::  T(32,32)                        ! Tile
   real(kind=REAL64), parameter :: cx=1.d0, cy=1.d0
   ! runtime variables
   integer(kind=INT32) :: i, j, k
@@ -216,11 +206,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-#ifdef _OPENMP
-  write(*,'(a43)') 'Fortran OpenMP Stencil execution on 2D grid'
-#else
-  write(*,'(a43)') 'Fortran Serial Stencil execution on 2D grid'
-#endif
+  write(*,'(a43)') 'Fortran stdpar Stencil execution on 2D grid'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -291,9 +277,6 @@ program main
   norm = 0.d0
   active_points = int(n-2*r,INT64)**2
 
-#ifdef _OPENMP
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
-#endif
   write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Grid size            = ', n
   write(*,'(a,i8)') 'Radius of stencil    = ', r
@@ -314,73 +297,42 @@ program main
 
   call initialize_w(is_star,r,W)
 
-  !$omp parallel default(none)                                        &
-  !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size,is_star)   &
-  !$omp&  private(i,j,k)                                  &
-  !$omp&  reduction(+:norm)
-
-  ! intialize the input and output arrays
-  !$omp do
-  do j=1,n
-    do i=1,n
-      A(i,j) = cx*i+cy*j
-#if 1
-      B(i,j) = 0.d0
-#endif
-    enddo
+  do concurrent (j=1:n, i=1:n)
+    A(i,j) = cx*i+cy*j
+    B(i,j) = 0.d0
   enddo
-  !$omp end do
-#if 0
-  !$omp do
-  do j=r+1,n-r
-    do i=r+1,n-r
-      B(i,j) = 0.d0
-    enddo
-  enddo
-  !$omp end do
-#endif
 
   t0 = 0
 
   do k=0,iterations
 
-    ! start timer after a warmup iteration
-    !$omp barrier
-    !$omp master
-    if (k.eq.1) then
-       t0 = prk_get_wtime()
-    endif
-    !$omp end master
+    if (k.eq.1) t0 = prk_get_wtime()
 
     ! Apply the stencil operator
     call apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
 
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp do
+    !do concurrent (j=1:n, i=1:n)
+    !  A(i,j) = A(i,j) + 1.d0
+    !enddo
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.d0
       enddo
     enddo
-    !$omp end do
 
   enddo ! iterations
 
-  !$omp barrier
-  !$omp master
   t1 = prk_get_wtime()
-  !$omp end master
 
-  ! compute L1 norm in parallel
-  !$omp do
+  !do concurrent (j=r:n-r, i=r:n-r)
+  !  norm = norm + abs(B(i,j))
+  !enddo
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
-  !$omp end do
-
-  !$omp end parallel
 
   stencil_time = t1 - t0
   norm = norm / real(active_points,REAL64)
