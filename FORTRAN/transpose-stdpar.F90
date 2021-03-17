@@ -74,7 +74,7 @@ program main
   integer(kind=INT32) ::  order                     ! order of a the matrix
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
-  real(kind=REAL64), allocatable ::  T(:,:)         ! Tile
+  real(kind=REAL64) ::  T(32,32)                    ! Tile
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
@@ -128,6 +128,10 @@ program main
     write(*,'(a50)') 'ERROR: order must be evenly divisible by tile_size'
     stop 1
   endif
+  if (tile_size.gt.32) then
+    write(*,'(a50)') 'ERROR: tile_size must be less than 32 to use temp space'
+    stop 1
+  endif
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -149,19 +153,11 @@ program main
     stop 1
   endif
 
-  allocate( T(tile_size,tile_size), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of T returned ',err
-    stop 1
-  endif
-
   t0 = 0
 
-  do concurrent (j=1:order)
-    do concurrent (i=1:order)
-      A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-      B(i,j) = 0.0
-    enddo
+  do concurrent (j=1:order, i=1:order)
+    A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+    B(i,j) = 0.0
   enddo
 
   do k=0,iterations
@@ -171,27 +167,24 @@ program main
     endif
 
     if (tile_size.lt.order) then
-      do concurrent (jt=1:order:tile_size)
-        do concurrent (it=1:order:tile_size)
-          !do j=1,tile_size
-          !  do i=1,tile_size
-          !    T(i,j) = A(it+i-1,jt+j-1)
-          !  enddo
-          !enddo
-          do j=1,tile_size
-            do i=1,tile_size
-              B(jt+j-1,it+i-1) = B(jt+j-1,it+i-1) + A(it+i-1,jt+j-1)
-              A(it+i-1,jt+j-1) = A(it+i-1,jt+j-1) + 1.0
-            enddo
+      do concurrent (jt=1:order:tile_size, it=1:order:tile_size) local(T)
+        do j=1,tile_size
+          do i=1,tile_size
+            T(i,j) = A(it+i-1,jt+j-1)
+          enddo
+        enddo
+        do j=1,tile_size
+          do i=1,tile_size
+            !B(jt+j-1,it+i-1) = B(jt+j-1,it+i-1) + A(it+i-1,jt+j-1)
+            B(jt+j-1,it+i-1) = B(jt+j-1,it+i-1) + T(i,j)
+            A(it+i-1,jt+j-1) = A(it+i-1,jt+j-1) + 1.0
           enddo
         enddo
       enddo
     else
-      do concurrent (j=1:order)
-        do concurrent (i=1:order)
-          B(j,i) = B(j,i) + A(i,j)
-          A(i,j) = A(i,j) + 1.0
-        enddo
+      do concurrent (j=1:order, i=1:order)
+        B(j,i) = B(j,i) + A(i,j)
+        A(i,j) = A(i,j) + 1.0
       enddo
     endif
 
@@ -208,12 +201,10 @@ program main
   abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
-  do concurrent (j=1:order)
-    do concurrent (i=1:order)
-      temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
-           * real(iterations+1,REAL64)
-      abserr = abserr + abs(B(i,j) - (temp+addit))
-    enddo
+  do concurrent (j=1:order, i=1:order)
+    temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
+         * real(iterations+1,REAL64)
+    abserr = abserr + abs(B(i,j) - (temp+addit))
   enddo
 
   deallocate( B )
