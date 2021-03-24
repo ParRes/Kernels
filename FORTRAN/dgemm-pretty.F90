@@ -78,7 +78,6 @@ program main
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold input matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold input matrix
   real(kind=REAL64), allocatable ::  C(:,:)         ! buffer to hold output matrix
-  !@cuf attributes(device) :: A, B, C
   integer(kind=INT64) :: nflops
   ! runtime variables
   integer(kind=INT32) :: i,j,k
