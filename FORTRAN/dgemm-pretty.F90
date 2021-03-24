@@ -64,6 +64,7 @@ program main
   use iso_fortran_env
 #ifdef NVHPC
   use cutensorex
+  use cudafor
 #endif
   implicit none
   real(kind=REAL64) :: prk_get_wtime
@@ -165,12 +166,7 @@ program main
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
-  checksum = 0.0d0
-  do j=1,order
-    do i=1,order
-      checksum = checksum + C(i,j)
-    enddo
-  enddo
+  checksum = sum(C)
 
   deallocate( C )
 
