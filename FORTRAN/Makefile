@@ -90,13 +90,13 @@ stencil: stencil.F90 stencil_serial.F90
 	$(FC) $(FCFLAGS) $< -o $@
 
 dgemm-pretty: dgemm-pretty.F90
-	$(FC) $(FCFLAGS) $< $(BLASFLAGS) -o $@
+	$(FC) $(FCFLAGS) $< $(BLASFLAGS) $(STDPARFLAG) -o $@
 
 dgemm-blas: dgemm-blas.F90
 	$(FC) $(FCFLAGS) $< $(BLASFLAGS) -o $@
 
 %-pretty: %-pretty.F90
-	$(FC) $(FCFLAGS) $< -o $@
+	$(FC) $(FCFLAGS) $(STDPARFLAG) $< -o $@
 
 #%-openmp: %.F90
 #	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
