@@ -61,10 +61,10 @@
 #
 # *******************************************************************
 
-function do_add(A, n)
-    for i=1:n
-        for j=1:n
-            A[i,j] += 1.0
+function do_add!(A, n)
+	for j = Base.OneTo(n)
+		for i = Base.OneTo(n)
+			@inbounds A[i,j] += one(eltype(A))
         end
     end
 end
