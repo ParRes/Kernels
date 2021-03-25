@@ -64,7 +64,7 @@
 function do_add!(A, n)
 	for j = axes(A, 2)
 		for i = axes(A, 1)
-			@inbounds A[i,j] += oneunit(A)
+			@inbounds A[i,j] += one(eltype(A))
         end
     end
 end
