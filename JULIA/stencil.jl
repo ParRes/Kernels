@@ -62,9 +62,9 @@
 # *******************************************************************
 
 function do_add!(A, n)
-	for j = Base.OneTo(n)
-		for i = Base.OneTo(n)
-			@inbounds A[i,j] += one(eltype(A))
+	for j = axes(A, 2)
+		for i = axes(A, 1)
+			@inbounds A[i,j] += oneunit(A)
         end
     end
 end
