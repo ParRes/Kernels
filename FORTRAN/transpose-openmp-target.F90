@@ -163,8 +163,8 @@ program main
 
     if (tile_size.lt.order) then
       !$omp target teams distribute collapse(2)
-      do j=1,order
-        do i=1,order
+      do jt=1,order,tile_size
+        do it=1,order,tile_size
           !$omp parallel do simd collapse(2) schedule(static,1)
           do j=1,tile_size
             do i=1,tile_size
