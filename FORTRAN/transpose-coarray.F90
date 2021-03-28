@@ -193,7 +193,6 @@ program main
             B(i,j) = 0.0
           enddo
         enddo
-      enddo
     enddo
   else
     do concurrent (j=1:col_per_pe)
@@ -245,7 +244,6 @@ program main
                 B(col_start+i,j) = B(col_start+i,j) + T(j,i)
               enddo
             enddo
-          enddo
         enddo
       else ! untiled
         ! * fully explicit version
