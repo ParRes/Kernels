@@ -145,9 +145,8 @@ program main
   t0 = 0
 
   if (tile_size.lt.order) then
-    !$acc parallel loop gang ! collapse(2) leads to incorrect results
+    !$acc parallel loop gang collapse(2) !leads to incorrect results
     do jt=1,order,tile_size
-      !$acc loop
       do it=1,order,tile_size
         !$acc loop vector collapse(2)
         do j=jt,min(order,jt+tile_size-1)
@@ -159,9 +158,8 @@ program main
       enddo
     enddo
   else
-    !$acc parallel loop gang
+    !$acc parallel loop collapse(2)
     do j=1,order
-      !$acc loop vector
       do i=1,order
         A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
         B(i,j) = 0.0
@@ -176,9 +174,8 @@ program main
 
     ! Transpose the matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
-      !$acc parallel loop gang ! collapse(2) leads to incorrect results
+      !$acc parallel loop gang collapse(2) !leads to incorrect results
       do jt=1,order,tile_size
-        !$acc loop
         do it=1,order,tile_size
           !$acc loop vector collapse(2)
           do j=jt,min(order,jt+tile_size-1)
@@ -190,9 +187,8 @@ program main
         enddo
       enddo
     else
-      !$acc parallel loop gang
+      !$acc parallel loop collapse(2)
       do j=1,order
-        !$acc loop vector
         do i=1,order
           B(j,i) = B(j,i) + A(i,j)
           A(i,j) = A(i,j) + 1.0
@@ -215,9 +211,8 @@ program main
   abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
-  !$acc parallel loop reduction(+:abserr)
+  !$acc parallel loop collapse(2) reduction(+:abserr)
   do j=1,order
-    !$acc loop reduction(+:abserr)
     do i=1,order
       temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
            * real(iterations+1,REAL64)
