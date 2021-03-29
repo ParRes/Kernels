@@ -57,7 +57,7 @@ endif
 OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl \
-	rangefor kokkos raja cuda cublas sycl dpcpp \
+	ranges kokkos raja cuda cublas sycl dpcpp \
 	boost-compute thrust executor oneapi onemkl
 
 EXTRA=
@@ -72,7 +72,7 @@ ifneq ($(findstring pgc++,$(CXX)),pgc++)
   EXTRA += pstl
 endif
 
-all: sequential vector valarray openmp taskloop stl rangefor opencl sycl $(EXTRA)
+all: sequential vector valarray openmp taskloop stl ranges opencl sycl $(EXTRA)
 
 sequential: p2p stencil transpose nstream dgemm sparse
 
@@ -104,7 +104,7 @@ stl: stencil-stl transpose-stl nstream-stl
 
 pstl: stencil-pstl transpose-pstl nstream-pstl
 
-rangefor: stencil-rangefor transpose-rangefor nstream-rangefor
+ranges: stencil-ranges transpose-ranges nstream-ranges
 
 executors: nstream-executors transpose-executors
 
@@ -215,7 +215,7 @@ pic-sycl: pic-sycl.cc prk_util.h prk_sycl.h random_draw.c
 %-pstl: %-pstl.cc prk_util.h prk_pstl.h
 	$(CXX) $(CXXFLAGS) $< $(PSTLFLAGS) -o $@
 
-%-rangefor: %-rangefor.cc prk_util.h prk_ranges.h
+%-ranges: %-ranges.cc prk_util.h prk_ranges.h
 	$(CXX) $(CXXFLAGS) $< $(RANGEFLAGS) -o $@
 
 %-executors: %-executors.cc prk_util.h prk_executors.h
@@ -307,7 +307,7 @@ clean:
 	-rm -f *-tbb
 	-rm -f *-stl
 	-rm -f *-pstl
-	-rm -f *-rangefor
+	-rm -f *-ranges
 	-rm -f *-raja
 	-rm -f *-kokkos
 	-rm -f *-thrust

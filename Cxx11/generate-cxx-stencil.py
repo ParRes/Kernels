@@ -73,7 +73,7 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         bodygen(src,pattern,stencil_size,radius,W,model)
         src.write('       }\n')
         src.write('     }\n')
-    elif (model=='rangefor'):
+    elif (model=='ranges'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {\n')
         src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
         src.write('    for (auto i : inside) {\n')
@@ -200,7 +200,7 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','vector','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','raja','rajaview','kokkos','cuda']:
+    for model in ['seq','vector','ranges','stl','pgnu','pstl','openmp','taskloop','target','tbb','raja','rajaview','kokkos','cuda']:
       src = open('stencil_'+model+'.hpp','w')
       if (model=='target'):
           src.write('#define RESTRICT __restrict__\n\n')
