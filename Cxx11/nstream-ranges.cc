@@ -68,7 +68,7 @@
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/range-for STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++11/ranges STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters

@@ -1,6 +1,6 @@
-
 ///
 /// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -76,7 +76,7 @@ void nothing(const int n, const int t, prk::vector<double> & in, prk::vector<dou
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/range-for Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/ranges Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters

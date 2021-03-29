@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -54,10 +55,13 @@
 
 #include "prk_util.h"
 
+#include "range/v3/view/cartesian_product.hpp"
+#include "range/v3/view/stride.hpp"
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/range-for Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/ranges Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Read and test input parameters
@@ -84,9 +88,13 @@ int main(int argc, char * argv[])
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
+      tile_size = (argc>3) ? std::atoi(argv[3]) : order;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
+      //
+      if ((tile_size < order) && (order % tile_size)) {
+        throw "ERROR: tile size must evenly divide order";
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -109,24 +117,60 @@ int main(int argc, char * argv[])
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 
-  auto itrange = prk::range(0,order,tile_size);
-  auto jtrange = prk::range(0,order,tile_size);
+  // untiled
+  auto v = ranges::views::cartesian_product(
+               ranges::views::iota(0, order),
+               ranges::views::iota(0, order)
+           );
+
+  // tiled: s is the strided (outer) view and t is the tile (inner) view
+  auto s = ranges::views::cartesian_product(
+               ranges::stride_view(ranges::views::iota(0, order), tile_size),
+               ranges::stride_view(ranges::views::iota(0, order), tile_size)
+           );
+  auto t = ranges::views::cartesian_product(
+               ranges::views::iota(0, tile_size),
+               ranges::views::iota(0, tile_size)
+           );
 
   for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
-    for (auto it : itrange) {
-      auto irange = prk::range(it,std::min(order,it+tile_size));
-      for (auto jt : jtrange) {
-        auto jrange = prk::range(jt,std::min(order,jt+tile_size));
-        for (auto i : irange) {
-          for (auto j : jrange) {
-            B[i*order+j] += A[j*order+i];
-            A[j*order+i] += 1.0;
+    if (tile_size < order) {
+#if USE_FOR_EACH_RANGES
+      std::for_each(std::begin(s), std::end(s), [=,&A,&B] (auto itjt) {
+          std::for_each(std::begin(t), std::end(t), [=,&A,&B] (auto ij) {
+              auto [it, jt] = itjt;
+              auto [i, j] = ij;
+              B[(it+i)*order+(jt+j)] += A[(jt+j)*order+(it+i)];
+              A[(jt+j)*order+(it+i)] += 1.0;
+          });
+      });
+#else
+      for (auto itjt : s) {
+          auto [it, jt] = itjt;
+          for (auto ij : t) {
+              auto [i, j] = ij;
+              B[(it+i)*order+(jt+j)] += A[(jt+j)*order+(it+i)];
+              A[(jt+j)*order+(it+i)] += 1.0;
           }
-        }
       }
+#endif
+    } else {
+#if USE_FOR_EACH_RANGES
+      std::for_each(std::begin(v), std::end(v), [=,&A,&B] (auto ij) {
+          auto [i, j] = ij;
+          B[i*order+j] += A[j*order+i];
+          A[j*order+i] += 1.0;
+      });
+#else
+      for (auto ij : v) {
+          auto [i, j] = ij;
+          B[i*order+j] += A[j*order+i];
+          A[j*order+i] += 1.0;
+      }
+#endif
     }
   }
   trans_time = prk::wtime() - trans_time;
