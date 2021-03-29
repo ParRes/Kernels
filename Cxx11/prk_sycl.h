@@ -51,7 +51,7 @@ namespace prk {
     namespace SYCL {
 
         void print_device_platform(const sycl::queue & q) {
-#if ! ( defined(TRISYCL) || defined(__HIPSYCL__) )
+#if ! defined(TRISYCL)
             auto d = q.get_device();
             auto p = d.get_platform();
             std::cout << "SYCL Device:   " << d.get_info<sycl::info::device::name>() << std::endl;
