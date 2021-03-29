@@ -2,7 +2,6 @@ void star1(const int n, const int t, prk::vector<double> & in, prk::vector<doubl
     for (int it=1; it<n-1; it+=t) {
       for (int jt=1; jt<n-1; jt+=t) {
         for (int i=it; i<std::min(n-1,it+t); ++i) {
-          PRAGMA_SIMD
           for (int j=jt; j<std::min(n-1,jt+t); ++j) {
             out[i*n+j] += +in[(i)*n+(j-1)] * -0.5
                           +in[(i-1)*n+(j)] * -0.5
@@ -18,7 +17,6 @@ void star2(const int n, const int t, prk::vector<double> & in, prk::vector<doubl
     for (int it=2; it<n-2; it+=t) {
       for (int jt=2; jt<n-2; jt+=t) {
         for (int i=it; i<std::min(n-2,it+t); ++i) {
-          PRAGMA_SIMD
           for (int j=jt; j<std::min(n-2,jt+t); ++j) {
             out[i*n+j] += +in[(i)*n+(j-2)] * -0.125
                           +in[(i)*n+(j-1)] * -0.25
@@ -38,7 +36,6 @@ void star3(const int n, const int t, prk::vector<double> & in, prk::vector<doubl
     for (int it=3; it<n-3; it+=t) {
       for (int jt=3; jt<n-3; jt+=t) {
         for (int i=it; i<std::min(n-3,it+t); ++i) {
-          PRAGMA_SIMD
           for (int j=jt; j<std::min(n-3,jt+t); ++j) {
             out[i*n+j] += +in[(i)*n+(j-3)] * -0.05555555555555555
                           +in[(i)*n+(j-2)] * -0.08333333333333333
@@ -62,7 +59,6 @@ void star4(const int n, const int t, prk::vector<double> & in, prk::vector<doubl
     for (int it=4; it<n-4; it+=t) {
       for (int jt=4; jt<n-4; jt+=t) {
         for (int i=it; i<std::min(n-4,it+t); ++i) {
-          PRAGMA_SIMD
           for (int j=jt; j<std::min(n-4,jt+t); ++j) {
             out[i*n+j] += +in[(i)*n+(j-4)] * -0.03125
                           +in[(i)*n+(j-3)] * -0.041666666666666664
@@ -90,7 +86,6 @@ void star5(const int n, const int t, prk::vector<double> & in, prk::vector<doubl
     for (int it=5; it<n-5; it+=t) {
       for (int jt=5; jt<n-5; jt+=t) {
         for (int i=it; i<std::min(n-5,it+t); ++i) {
-          PRAGMA_SIMD
           for (int j=jt; j<std::min(n-5,jt+t); ++j) {
             out[i*n+j] += +in[(i)*n+(j-5)] * -0.02
                           +in[(i)*n+(j-4)] * -0.025
@@ -122,7 +117,6 @@ void grid1(const int n, const int t, prk::vector<double> & in, prk::vector<doubl
     for (int it=1; it<n-1; it+=t) {
       for (int jt=1; jt<n-1; jt+=t) {
         for (int i=it; i<std::min(n-1,it+t); ++i) {
-          PRAGMA_SIMD
           for (int j=jt; j<std::min(n-1,jt+t); ++j) {
             out[i*n+j] += +in[(i-1)*n+(j-1)] * -0.25
                           +in[(i)*n+(j-1)] * -0.25
@@ -141,7 +135,6 @@ void grid2(const int n, const int t, prk::vector<double> & in, prk::vector<doubl
     for (int it=2; it<n-2; it+=t) {
       for (int jt=2; jt<n-2; jt+=t) {
         for (int i=it; i<std::min(n-2,it+t); ++i) {
-          PRAGMA_SIMD
           for (int j=jt; j<std::min(n-2,jt+t); ++j) {
             out[i*n+j] += +in[(i-2)*n+(j-2)] * -0.0625
                           +in[(i-1)*n+(j-2)] * -0.020833333333333332
@@ -174,7 +167,6 @@ void grid3(const int n, const int t, prk::vector<double> & in, prk::vector<doubl
     for (int it=3; it<n-3; it+=t) {
       for (int jt=3; jt<n-3; jt+=t) {
         for (int i=it; i<std::min(n-3,it+t); ++i) {
-          PRAGMA_SIMD
           for (int j=jt; j<std::min(n-3,jt+t); ++j) {
             out[i*n+j] += +in[(i-3)*n+(j-3)] * -0.027777777777777776
                           +in[(i-2)*n+(j-3)] * -0.005555555555555556
@@ -229,7 +221,6 @@ void grid4(const int n, const int t, prk::vector<double> & in, prk::vector<doubl
     for (int it=4; it<n-4; it+=t) {
       for (int jt=4; jt<n-4; jt+=t) {
         for (int i=it; i<std::min(n-4,it+t); ++i) {
-          PRAGMA_SIMD
           for (int j=jt; j<std::min(n-4,jt+t); ++j) {
             out[i*n+j] += +in[(i-4)*n+(j-4)] * -0.015625
                           +in[(i-3)*n+(j-4)] * -0.002232142857142857
@@ -314,7 +305,6 @@ void grid5(const int n, const int t, prk::vector<double> & in, prk::vector<doubl
     for (int it=5; it<n-5; it+=t) {
       for (int jt=5; jt<n-5; jt+=t) {
         for (int i=it; i<std::min(n-5,it+t); ++i) {
-          PRAGMA_SIMD
           for (int j=jt; j<std::min(n-5,jt+t); ++j) {
             out[i*n+j] += +in[(i-5)*n+(j-5)] * -0.01
                           +in[(i-4)*n+(j-5)] * -0.0011111111111111111
