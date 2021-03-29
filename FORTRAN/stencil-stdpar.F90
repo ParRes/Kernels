@@ -112,35 +112,34 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
   integer(kind=INT32) :: i, j, ii, jj, it, jt
   if (is_star) then
     if (.not.tiling) then
+      ! this is here to work around a bug
+      !$acc enter data copyin(a,w)
       do concurrent (j=r:n-r-1, i=r:n-r-1)
-      !do j=r,n-r-1
-      !  do i=r,n-r-1
-            do jj=-r,r
-              B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
-            enddo
-            do ii=-r,-1
-              B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-            enddo
-            do ii=1,r
-              B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-            enddo
-      !  enddo
+        do jj=-r,r
+          B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
+        enddo
+        do ii=-r,-1
+          B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
+        enddo
+        do ii=1,r
+          B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
+        enddo
       enddo
     else ! tiling
-      do jt=r,n-r-1,tile_size
-        do it=r,n-r-1,tile_size
-          do j=jt,min(n-r-1,jt+tile_size-1)
-            do i=it,min(n-r-1,it+tile_size-1)
-              do jj=-r,r
-                B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
-              enddo
-              do ii=-r,-1
-                B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-              enddo
-              do ii=1,r
-                B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-              enddo
-            enddo
+      ! this is here to work around a bug
+      !$acc enter data copyin(a,w)
+      do concurrent (jt=r:n-r-1:tile_size, &
+                     it=r:n-r-1:tile_size)
+        do concurrent (j=jt:min(n-r-1,jt+tile_size-1), &
+                       i=it:min(n-r-1,it+tile_size-1))
+          do jj=-r,r
+            B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
+          enddo
+          do ii=-r,-1
+            B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
+          enddo
+          do ii=1,r
+            B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
           enddo
         enddo
       enddo
@@ -278,22 +277,22 @@ program main
   norm = 0.d0
   active_points = int(n-2*r,INT64)**2
 
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Grid size            = ', n
-  write(*,'(a,i8)') 'Radius of stencil    = ', r
+  write(*,'(a22,i8)') 'Number of iterations = ', iterations
+  write(*,'(a22,i8)') 'Grid size            = ', n
+  write(*,'(a22,i8)') 'Radius of stencil    = ', r
   if (is_star) then
-    write(*,'(a,a)')  'Type of stencil      = star'
+    write(*,'(a22,a8)')  'Type of stencil      = ', 'star'
     stencil_size = 4*r+1
   else
-    write(*,'(a,a)')  'Type of stencil      = grid'
+    write(*,'(a22,a8)')  'Type of stencil      = ','grid'
     stencil_size = (2*r+1)**2
   endif
-  write(*,'(a)') 'Data type            = double precision'
-  write(*,'(a)') 'Compact representation of stencil loop body'
+  !write(*,'(a)') 'Data type            = double precision'
+  !write(*,'(a)') 'Compact representation of stencil loop body'
   if (tiling) then
-      write(*,'(a,i5)') 'Tile size            = ', tile_size
+      write(*,'(a22,i8)') 'Tile size            = ', tile_size
   else
-      write(*,'(a)') 'Untiled'
+      write(*,'(a22)') 'Untiled'
   endif
 
   call initialize_w(is_star,r,W)
