@@ -12,6 +12,8 @@ octave-workspace                # Octave crashes
 */*/*/*.swp
 *.swo                           # Vim
 *.dSYM                          # Mac
+*/*.dSYM                        # Mac
+*/*/*.dSYM                      # Mac
 *.optrpt                        # Intel compiler
 *__genmod.*                     # Intel Fortran compiler
 *.patch                         # patch files
@@ -368,3 +370,41 @@ SERIAL/Sparse/sparse
 SERIAL/Stencil/stencil
 SERIAL/Synch_p2p/p2p
 SERIAL/Transpose/transpose
+dgemm-vector.dSYM
+dgemm.dSYM
+nstream-opencl.dSYM
+nstream-openmp-target.dSYM
+nstream-openmp.dSYM
+nstream-ranges.dSYM
+nstream-stl.dSYM
+nstream-taskloop.dSYM
+nstream-valarray.dSYM
+nstream-vector.dSYM
+nstream.dSYM
+p2p-hyperplane-openmp.dSYM
+p2p-hyperplane-vector.dSYM
+p2p-innerloop-opencl.dSYM
+p2p-tasks-openmp.dSYM
+p2p-vector.dSYM
+p2p.dSYM
+sparse-vector.dSYM
+sparse.dSYM
+stencil-opencl.dSYM
+stencil-openmp-target.dSYM
+stencil-openmp.dSYM
+stencil-ranges.dSYM
+stencil-stl.dSYM
+stencil-taskloop.dSYM
+stencil-vector.dSYM
+stencil.dSYM
+transpose-async.dSYM
+transpose-opencl.dSYM
+transpose-openmp-target.dSYM
+transpose-openmp.dSYM
+transpose-ranges.dSYM
+transpose-stl.dSYM
+transpose-taskloop.dSYM
+transpose-thread.dSYM
+transpose-valarray.dSYM
+transpose-vector.dSYM
+transpose.dSYM
