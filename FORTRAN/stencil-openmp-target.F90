@@ -101,9 +101,10 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
   real(kind=REAL64), intent(in) :: A(n,n)
   real(kind=REAL64), intent(inout) :: B(n,n)
   integer(kind=INT32) :: i, j, ii, jj, it, jt
+  !$omp target data use_device_addr(A,B,W)
   if (is_star) then
     if (.not.tiling) then
-      !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
+      !$omp target teams distribute parallel do simd collapse(2) GPU_SCHEDULE 
       do j=r,n-r-1
         do i=r,n-r-1
             do jj=-r,r
@@ -122,7 +123,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
       !$omp target teams distribute collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
-          !$omp parallel do simd collapse(2) schedule(static,1)
+          !$omp parallel do simd collapse(2) GPU_SCHEDULE
           do j=jt,min(n-r-1,jt+tile_size-1)
             do i=it,min(n-r-1,it+tile_size-1)
               do jj=-r,r
@@ -143,7 +144,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
     endif ! tiling
   else ! grid
     if (.not.tiling) then
-      !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
+      !$omp target teams distribute parallel do simd collapse(2) GPU_SCHEDULE
       do j=r,n-r-1
         do i=r,n-r-1
           do jj=-r,r
@@ -158,7 +159,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
       !$omp target teams distribute collapse(2)
       do jt=r,n-r-1,tile_size
         do it=r,n-r-1,tile_size
-          !$omp parallel do simd collapse(2) schedule(static,1)
+          !$omp parallel do simd collapse(2) GPU_SCHEDULE
           do j=jt,min(n-r-1,jt+tile_size-1)
             do i=it,min(n-r-1,it+tile_size-1)
               do jj=-r,r
@@ -174,6 +175,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
       !$omp end target teams distribute
     endif ! tiling
   endif ! star
+  !$omp end target data
 end subroutine apply_stencil
 
 program main
@@ -197,6 +199,7 @@ program main
   real(kind=REAL64), parameter :: cx=1.d0, cy=1.d0
   ! runtime variables
   integer(kind=INT32) :: i, j, k
+  integer(kind=INT32) :: ii, jj, it, jt
   integer(kind=INT64) :: flops                          ! floating point ops per iteration
   real(kind=REAL64) :: norm, reference_norm             ! L1 norm of solution
   integer(kind=INT64) :: active_points                  ! interior of grid with respect to stencil
@@ -279,7 +282,6 @@ program main
   norm = 0.d0
   active_points = int(n-2*r,INT64)**2
 
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
   write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Grid size            = ', n
   write(*,'(a,i8)') 'Radius of stencil    = ', r
@@ -325,7 +327,7 @@ program main
 
     ! DEVICE
     ! add constant to solution to force refresh of neighbor data, if any
-    !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
+    !$omp target teams distribute parallel do simd collapse(2) GPU_SCHEDULE
     do j=1,n
       do i=1,n
         A(i,j) = A(i,j) + 1.d0
@@ -336,9 +338,10 @@ program main
   enddo ! iterations
 
   t1 = omp_get_wtime()
-  stencil_time = t1 - t0
 
   !$omp end target data
+
+  stencil_time = t1 - t0
 
   ! HOST
   ! compute L1 norm in parallel
