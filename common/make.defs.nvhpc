@@ -22,10 +22,11 @@ OPENMPFLAG=-mp
 #OPENMPFLAG+=-Minfo=mp,vect
 OPENMPSIMDFLAG=
 OFFLOADFLAG=-mp -target=gpu
-#OFFLOADFLAG+=-Minfo=accel
+OFFLOADFLAG+=-Minfo=accel
 OFFLOADFLAG+=-DGPU_SCHEDULE="schedule(static,1)"
 OPENACCFLAG=-acc -target=gpu
 OPENACCFLAG+=-Mlarge_arrays
+OPENACCFLAG+=-Minfo=accel
 STDPARFLAG=-stdpar -Minfo=accel
 #
 # OpenCL flags
@@ -35,73 +36,6 @@ OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib -lOpenCL
 #OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
 #
-# Metal (MacOS-only, unused)
-#
-#METALFLAG=-framework MetalPerformanceShaders
-#
-# OCCA
-#
-#OCCADIR=${HOME}/prk-repo/Cxx11/occa
-#
-# SYCL flags
-#
-# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
-#
-#SYCLDIR=/opt/isycl
-#SYCLDIR=${HOME}/ISYCL/llvm/build
-#SYCLCXX=${SYCLDIR}/bin/clang++
-#SYCLFLAG=-g -std=c++17 -O3
-#SYCLFLAG+=-fsycl -fsycl-unnamed-lambda -DDPCPP
-#SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
-#SYCLFLAG+=-fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DDPCPP_CUDA
-###SYCLFLAG+=-Wno-unknown-cuda-version
-#
-# CodePlay ComputeCpp
-#
-#SYCLDIR=/opt/sycl/latest
-#SYCLDIR=/opt/codeplay/latest
-#SYCLCXX=${SYCLDIR}/bin/compute++
-#SYCLFLAG=-sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
-#SYCLFLAG+=-std=c++14 -O3
-# This makes a huge difference in e.g. nstream...
-#SYCLFLAG+=-no-serial-memop
-# CentOS7 and Ubuntu14 built for this
-#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
-# PRK header rejects GCC4
-#SYCLFLAG+=--gcc-toolchain=/swtools/gcc/5.4.0
-# If not found automatically
-#SYCLFLAG+=${OPENCLFLAG}
-# NVIDIA target
-#SYCLFLAG+=-sycl-target ptx64
-#SYCLFLAG+=-DPRK_NO_OPENCL_GPU
-#
-# hipSYCL
-#
-#SYCLDIR=/opt/hipsycl/usr/local # if installed with DESTDIR
-#SYCLDIR=/opt/hipSYCL
-#SYCLDIR=/opt/spack/spack/opt/spack/linux-ubuntu18.04-haswell/gcc-8.3.0/hipsycl-master-appurj662qod4y4z5zxipr2fwthl66k7
-#SYCLCXX=${SYCLDIR}/bin/syclcc-clang
-#SYCLFLAG=-std=c++17 -O3
-#SYCLFLAG+=-DHIPSYCL
-# CPU platform
-#SYCLFLAG+=--hipsycl-platform=cpu
-#SYCLFLAG+=--hipsycl-platform=cuda
-#SYCLFLAG+=--hipsycl-gpu-arch=sm_60
-#SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib # wrong?
-#SYCLFLAG+=-Wl,-rpath=${SYCLDIR}/lib
-#
-#CELERITYDIR=${SYCLDIR}
-#CELERITYINC=-I$(CELERITYDIR)/include/celerity -I$(CELERITYDIR)/include/celerity/vendor
-#CELERITYLIB=-L$(CELERITYDIR)/lib -lcelerity_runtime
-#
-# OCCA
-#
-#OCCADIR=${HOME}/prk-repo/Cxx11/occa
-#
-# TBB
-#
-TBBDIR=
-TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #
 # Parallel STL, Boost, etc.
 #
