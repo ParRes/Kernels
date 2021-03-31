@@ -50,6 +50,7 @@ THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
 SYCLFLAGS = $(SYCLFLAG)
 OPENACCFLAGS = $(OPENACCFLAG)
+STDPARFLAGS = $(STDPARFLAG)
 
 ifdef OCCADIR
   include ${OCCADIR}/scripts/makefile
@@ -137,6 +138,8 @@ oneapi: onemkl dpcpp sycl onedpl
 occa: transpose-occa nstream-occa
 
 openacc: p2p-hyperplane-openacc
+
+stdpar: nstream-stdpar transpose-stdpar #stencil-stdpar p2p-stdpar
 
 boost-compute: nstream-boost-compute
 # busted
@@ -272,6 +275,9 @@ endif
 %-openacc: %-openacc.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(OPENACCFLAGS) -o $@
 
+%-stdpar: %-stdpar.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(STDPARFLAGS) -o $@
+
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
@@ -308,6 +314,7 @@ clean:
 	-rm -f *-stl
 	-rm -f *-pstl
 	-rm -f *-ranges
+	-rm -f *-stdpar
 	-rm -f *-raja
 	-rm -f *-kokkos
 	-rm -f *-thrust
