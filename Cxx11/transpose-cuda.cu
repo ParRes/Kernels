@@ -137,12 +137,6 @@ int main(int argc, char * argv[])
 	  }
       }
 #endif
-#ifdef __CORIANDERCC__
-      // This has not been analyzed, but it is an empirical fact.
-      if (order > 1234) {
-          std::cout << "The results are probably going to be wrong, because order>1234.\n";
-      }
-#endif
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -175,13 +169,10 @@ int main(int argc, char * argv[])
   const size_t bytes = nelems * sizeof(prk_float);
   prk_float * h_a;
   prk_float * h_b;
-#ifndef __CORIANDERCC__
+
   prk::CUDA::check( cudaMallocHost((void**)&h_a, bytes) );
   prk::CUDA::check( cudaMallocHost((void**)&h_b, bytes) );
-#else
-  h_a = new prk_float[nelems];
-  h_b = new prk_float[nelems];
-#endif
+
   // fill A with the sequence 0 to order^2-1
   for (int j=0; j<order; j++) {
     for (int i=0; i<order; i++) {
@@ -205,10 +196,8 @@ int main(int argc, char * argv[])
     if (iter==1) trans_time = prk::wtime();
 
     transpose<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-#ifndef __CORIANDERCC__
-    // silence "ignoring cudaDeviceSynchronize for now" warning
+
     prk::CUDA::check( cudaDeviceSynchronize() );
-#endif
   }
   trans_time = prk::wtime() - trans_time;
 
@@ -242,10 +231,8 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-#ifndef __CORIANDERCC__
   prk::CUDA::check( cudaFreeHost(h_b) );
   prk::CUDA::check( cudaFreeHost(h_a) );
-#endif
 
   const auto epsilon = 1.0e-8;
   if (abserr < epsilon) {

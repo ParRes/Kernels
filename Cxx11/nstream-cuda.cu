@@ -142,15 +142,11 @@ int main(int argc, char * argv[])
   prk_float * h_A;
   prk_float * h_B;
   prk_float * h_C;
-#ifndef __CORIANDERCC__
+
   prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
   prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
   prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
-#else
-  h_A = new prk_float[length];
-  h_B = new prk_float[length];
-  h_C = new prk_float[length];
-#endif
+
   for (int i=0; i<length; ++i) {
     h_A[i] = static_cast<prk_float>(0);
     h_B[i] = static_cast<prk_float>(2);
@@ -178,10 +174,7 @@ int main(int argc, char * argv[])
       } else {
           nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
       }
-#ifndef __CORIANDERCC__
-      // silence "ignoring cudaDeviceSynchronize for now" warning
       prk::CUDA::check( cudaDeviceSynchronize() );
-#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
@@ -192,10 +185,8 @@ int main(int argc, char * argv[])
   prk::CUDA::check( cudaFree(d_B) );
   prk::CUDA::check( cudaFree(d_A) );
 
-#ifndef __CORIANDERCC__
   prk::CUDA::check( cudaFreeHost(h_B) );
   prk::CUDA::check( cudaFreeHost(h_C) );
-#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -215,9 +206,7 @@ int main(int argc, char * argv[])
       asum += prk::abs(h_A[i]);
   }
 
-#ifndef __CORIANDERCC__
   prk::CUDA::check( cudaFreeHost(h_A) );
-#endif
 
   double epsilon=1.e-8;
   if (prk::abs(ar-asum)/asum > epsilon) {
