@@ -24,12 +24,7 @@
 #endif
 #endif
 
-#ifdef __CORIANDERCC__
-// Coriander does not support double
-typedef float prk_float;
-#else
 typedef double prk_float;
-#endif
 
 namespace prk
 {
@@ -105,7 +100,6 @@ namespace prk
                 void print() {
                     for (int i=0; i<nDevices; ++i) {
                         std::cout << "device name: " << vDevices[i].name << "\n";
-#ifndef __CORIANDERCC__
                         std::cout << "total global memory:     " << vDevices[i].totalGlobalMem << "\n";
                         std::cout << "max threads per block:   " << vDevices[i].maxThreadsPerBlock << "\n";
                         std::cout << "max threads dim:         " << vDevices[i].maxThreadsDim[0] << ","
@@ -116,7 +110,6 @@ namespace prk
                                                                  << vDevices[i].maxGridSize[2] << "\n";
                         std::cout << "memory clock rate (KHz): " << vDevices[i].memoryClockRate << "\n";
                         std::cout << "memory bus width (bits): " << vDevices[i].memoryBusWidth << "\n";
-#endif
                     }
                 }
 
