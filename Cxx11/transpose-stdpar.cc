@@ -52,10 +52,11 @@
 
 #include "prk_util.h"
 
-#include <execution>
 #include <algorithm>
 #include <numeric>
+#include <execution>
 #include <ranges>
+#include <iterator>
 
 int main(int argc, char * argv[])
 {
@@ -105,7 +106,9 @@ int main(int argc, char * argv[])
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 
-  auto range = std::views::iota(0,order);
+  //auto range = std::views::iota(0,order);
+  std::vector<int> range(order);
+  std::iota(range.begin(), range.end(), 0);
 
   double trans_time{0};
 
@@ -115,7 +118,8 @@ int main(int argc, char * argv[])
 
     std::for_each( std::execution::par_unseq,
 		   std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( std::execution::par_unseq,
+      std::for_each( //std::execution::par_unseq,
+                     //std::execution::unseq,
 		     std::begin(range), std::end(range), [&] (int j) {
           B[i*order+j] += A[j*order+i];
           A[j*order+i] += 1.0;
@@ -128,11 +132,11 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
+  const double addit = (iterations+1.) * (iterations/2.);
+  double abserr(0);
   // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
-  for (auto i : range) {
-    for (auto j : range) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
