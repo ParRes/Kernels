@@ -142,6 +142,63 @@ namespace prk
                 }
         };
 
+        template <typename T>
+        T * malloc_device(size_t n) {
+            T * ptr;
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMalloc((void**)&ptr, bytes) );
+            return ptr;
+        }
+
+        template <typename T>
+        T * malloc_host(size_t n) {
+            T * ptr;
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMallocHost((void**)&ptr, bytes) );
+            return ptr;
+        }
+
+        template <typename T>
+        T * malloc_managed(size_t n) {
+            T * ptr;
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMallocManaged((void**)&ptr, bytes) );
+            return ptr;
+        }
+
+        template <typename T>
+        void free(T * ptr) {
+            prk::CUDA::check( cudaFree((void*)ptr) );
+        }
+
+        template <typename T>
+        void free_host(T * ptr) {
+            prk::CUDA::check( cudaFreeHost((void*)ptr) );
+        }
+
+        template <typename T>
+        void copyD2H(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMemcpy(output, input, bytes, cudaMemcpyDeviceToHost) );
+        }
+
+        template <typename T>
+        void copyH2D(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMemcpy(output, input, bytes, cudaMemcpyHostToDevice) );
+        }
+
+        template <typename T>
+        void prefetch(T * ptr, size_t n, int device = 0) {
+            size_t bytes = n * sizeof(T);
+            //std::cout << "device=" << device << "\n";
+            prk::CUDA::check( cudaMemPrefetchAsync(ptr, bytes, device) );
+        }
+
+        void sync(void) {
+            prk::CUDA::check( cudaDeviceSynchronize() );
+        }
+
     } // CUDA namespace
 
 } // prk namespace
