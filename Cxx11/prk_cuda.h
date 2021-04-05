@@ -211,6 +211,10 @@ namespace prk
             prk::CUDA::check( cudaDeviceSynchronize() );
         }
 
+        void set_device(int i) {
+            prk::CUDA::check( cudaSetDevice(i) );
+        }
+
     } // CUDA namespace
 
 } // prk namespace
