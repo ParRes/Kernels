@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2018, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -169,8 +170,8 @@ int main(int argc, char * argv[])
     double * d_a;
     double * d_b;
     double * d_c;
-    prk::CUDA::check( cudaMalloc((void**)&d_a, bytes) );
-    prk::CUDA::check( cudaMalloc((void**)&d_b, bytes) );
+    d_a = prk::CUDA::malloc_device<double>(order*order);
+    d_b = prk::CUDA::malloc_device<double>(order*order);
     prk::CUDA::check( cudaMalloc((void**)&d_c, bytes) );
 
     init<<<dimGrid, dimBlock>>>(order, d_a, d_b, d_c);

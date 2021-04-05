@@ -65,7 +65,7 @@
 const int tile_dim = 32;
 const int block_rows = 8;
 
-__global__ void transpose(int order, prk_float * A, prk_float * B)
+__global__ void transpose(int order, double * A, double * B)
 {
     auto x = blockIdx.x * tile_dim + threadIdx.x;
     auto y = blockIdx.y * tile_dim + threadIdx.y;
@@ -73,18 +73,18 @@ __global__ void transpose(int order, prk_float * A, prk_float * B)
 
     for (int j = 0; j < tile_dim; j+= block_rows) {
         B[x*width + (y+j)] += A[(y+j)*width + x];
-        A[(y+j)*width + x] += (prk_float)1;
+        A[(y+j)*width + x] += (double)1;
     }
 }
 #else
-__global__ void transpose(unsigned order, prk_float * A, prk_float * B)
+__global__ void transpose(unsigned order, double * A, double * B)
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
     if ((i<order) && (j<order)) {
         B[i*order+j] += A[j*order+i];
-        A[j*order+i] += (prk_float)1;
+        A[j*order+i] += (double)1;
     }
 }
 #endif
@@ -137,12 +137,6 @@ int main(int argc, char * argv[])
 	  }
       }
 #endif
-#ifdef __CORIANDERCC__
-      // This has not been analyzed, but it is an empirical fact.
-      if (order > 1234) {
-          std::cout << "The results are probably going to be wrong, because order>1234.\n";
-      }
-#endif
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -172,56 +166,48 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   const size_t nelems = (size_t)order * (size_t)order;
-  const size_t bytes = nelems * sizeof(prk_float);
-  prk_float * h_a;
-  prk_float * h_b;
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaMallocHost((void**)&h_a, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_b, bytes) );
-#else
-  h_a = new prk_float[nelems];
-  h_b = new prk_float[nelems];
-#endif
+
+  double * h_a = prk::CUDA::malloc_host<double>(nelems);
+  double * h_b = prk::CUDA::malloc_host<double>(nelems);
+
   // fill A with the sequence 0 to order^2-1
   for (int j=0; j<order; j++) {
     for (int i=0; i<order; i++) {
-      h_a[j*order+i] = static_cast<prk_float>(order*j+i);
-      h_b[j*order+i] = static_cast<prk_float>(0);
+      h_a[j*order+i] = static_cast<double>(order*j+i);
+      h_b[j*order+i] = static_cast<double>(0);
     }
   }
 
   // copy input from host to device
-  prk_float * d_a;
-  prk_float * d_b;
-  prk::CUDA::check( cudaMalloc((void**)&d_a, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_b, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
+  double * d_a = prk::CUDA::malloc_device<double>(nelems);
+  double * d_b = prk::CUDA::malloc_device<double>(nelems);
+
+  prk::CUDA::copyH2D(d_a, h_a, nelems);
+  prk::CUDA::copyH2D(d_b, h_b, nelems);
 
   double trans_time{0};
 
   for (int iter = 0; iter<=iterations; iter++) {
 
-    if (iter==1) trans_time = prk::wtime();
+    if (iter==1) {
+        prk::CUDA::sync();
+        trans_time = prk::wtime();
+    }
 
     transpose<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-#ifndef __CORIANDERCC__
-    // silence "ignoring cudaDeviceSynchronize for now" warning
-    prk::CUDA::check( cudaDeviceSynchronize() );
-#endif
+
+    prk::CUDA::sync();
   }
   trans_time = prk::wtime() - trans_time;
 
-  // copy output back to host
-  prk::CUDA::check( cudaMemcpy(&(h_b[0]), d_b, bytes, cudaMemcpyDeviceToHost) );
+  prk::CUDA::copyD2H(h_b, d_b, nelems);
 
 #ifdef VERBOSE
-  // copy input back to host - debug only
-  prk::CUDA::check( cudaMemcpy(&(h_a[0]), d_a, bytes, cudaMemcpyDeviceToHost) );
+  prk::CUDA::copyD2H(h_a, d_a, nelems);
 #endif
 
-  prk::CUDA::check( cudaFree(d_b) );
-  prk::CUDA::check( cudaFree(d_a) );
+  prk::CUDA::free(d_a);
+  prk::CUDA::free(d_b);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -242,16 +228,14 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_b) );
-  prk::CUDA::check( cudaFreeHost(h_a) );
-#endif
+  prk::CUDA::free_host(h_a);
+  prk::CUDA::free_host(h_b);
 
-  const auto epsilon = 1.0e-8;
+  const double epsilon = 1.0e-8;
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(prk_float);
+    auto bytes = (size_t)order * (size_t)order * sizeof(double);
     std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
