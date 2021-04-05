@@ -189,6 +189,18 @@ namespace prk
         }
 
         template <typename T>
+        void copyD2Hasync(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMemcpyAsync(output, input, bytes, cudaMemcpyDeviceToHost) );
+        }
+
+        template <typename T>
+        void copyH2Dasync(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMemcpyAsync(output, input, bytes, cudaMemcpyHostToDevice) );
+        }
+
+        template <typename T>
         void prefetch(T * ptr, size_t n, int device = 0) {
             size_t bytes = n * sizeof(T);
             //std::cout << "device=" << device << "\n";
