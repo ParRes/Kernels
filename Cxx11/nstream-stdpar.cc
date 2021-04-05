@@ -68,6 +68,8 @@
 #include <algorithm>
 #include <numeric>
 
+#include <thrust/iterator/zip_iterator.h>
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -125,26 +127,26 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-#if 1
+#if 0
       // stupid version
       std::transform( std::execution::par_unseq,
-		      std::begin(A), std::end(A), std::begin(B), std::begin(A),
+                      std::begin(A), std::end(A), std::begin(B), std::begin(A),
                       [](auto&& x, auto&& y) {
                            return x + y; // A[i] += B[i]
                       }
       );
       std::transform( std::execution::par_unseq,
-		      std::begin(A), std::end(A), std::begin(C), std::begin(A),
+                      std::begin(A), std::end(A), std::begin(C), std::begin(A),
                       [scalar](auto&& x, auto&& y) {
                            return x + scalar * y; // A[i] += scalar * C[i]
                       }
       );
 #else
-      auto nstream = [=] (boost::tuple<double&,double,double> t) {
-          return boost::get<0>(t) +  boost::get<1>(t) + scalar * boost::get<2>(t);
+      auto nstream = [=] (thrust::tuple<double&,double,double> t) {
+          return thrust::get<0>(t) +  thrust::get<1>(t) + scalar * thrust::get<2>(t);
       };
-      std::transform( boost::make_zip_iterator(boost::make_tuple(A.begin(), B.begin(), C.begin())),
-                      boost::make_zip_iterator(boost::make_tuple(A.end()  , B.end()  , C.end())),
+      std::transform( thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
+                      thrust::make_zip_iterator(thrust::make_tuple(A.end()  , B.end()  , C.end())),
                       A.begin(),
                       nstream);
 #endif
@@ -162,7 +164,6 @@ int main(int argc, char * argv[])
   for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
-
   ar *= length;
 
   double asum(0);
