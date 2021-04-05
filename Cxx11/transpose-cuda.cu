@@ -1,5 +1,3 @@
-#define VERBOSE 1
-
 ///
 /// Copyright (c) 2013, Intel Corporation
 /// Copyright (c) 2021, NVIDIA
@@ -121,6 +119,8 @@ __global__ void transposeNaive(int order, double * A, double * B)
     }
 }
 
+const std::array<std::string,3> vnames = {"naive", "coalesced", "no bank conflicts"};
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -134,10 +134,10 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int order;
+  int order, variant;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order>";
+        throw "Usage: <# iterations> <matrix order> [variant (0/1/2)]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -152,9 +152,12 @@ int main(int argc, char * argv[])
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
-      if (order % tile_dim != 0) {
-          std::cout << "Sorry, but order (" << order << ") must be evenly divible by " << tile_dim
-                    << " or the results are going to be wrong.\n";
+      variant = 2; // transposeNoBankConflicts
+      if (argc > 3) {
+          variant = std::atoi(argv[3]);
+      }
+      if (variant < 0 || variant > 2) {
+          throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts)";
       }
   }
   catch (const char * e) {
@@ -164,7 +167,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Tile size             = " << tile_dim << std::endl;
+  std::cout << "Variant               = " << vnames[variant] << std::endl;
 
   dim3 dimGrid(order/tile_dim, order/tile_dim, 1);
   dim3 dimBlock(tile_dim, block_rows, 1);
@@ -204,10 +207,13 @@ int main(int argc, char * argv[])
         trans_time = prk::wtime();
     }
 
-    //transposeNaive<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-    //transposeCoalesced<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-    transposeNoBankConflict<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-
+    if (variant==0) {
+        transposeNaive<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    } else if (variant==1) {
+        transposeCoalesced<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    } else if (variant==2) {
+        transposeNoBankConflict<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    }
     prk::CUDA::sync();
   }
   trans_time = prk::wtime() - trans_time;
@@ -242,13 +248,6 @@ int main(int argc, char * argv[])
 
   const double epsilon = 1.0e-8;
   if (abserr < epsilon) {
-#if 0
-    for (int i=0; i<order; i++) {
-      for (int j=0; j<order; j++) {
-        std::cout << "(" << i << "," << j << ") = " << h_a[i*order+j] << ", " << h_b[i*order+j] << "\n";
-      }
-    }
-#endif
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
     auto bytes = (size_t)order * (size_t)order * sizeof(double);
