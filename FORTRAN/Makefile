@@ -78,7 +78,7 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgem
 
 openacc: p2p-openacc p2p-innerloop-openacc stencil-openacc transpose-openacc nstream-openacc
 
-stdpar: nstream-stdpar stencil-stdpar transpose-stdpar
+stdpar: nstream-stdpar stencil-stdpar transpose-stdpar dgemm-stdpar
 
 blas: dgemm-blas
 
