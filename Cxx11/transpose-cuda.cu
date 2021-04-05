@@ -1,6 +1,8 @@
+#define VERBOSE 1
+
 ///
 /// Copyright (c) 2013, Intel Corporation
-/// Copyright (c) 2015, NVIDIA CORPORATION.
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -56,16 +58,58 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
-#define TILED 0
-
-#if TILED
-// The kernel was derived from https://github.com/parallel-forall/code-samples/blob/master/series/cuda-cpp/transpose/transpose.cu,
-// which is the reason for the additional copyright noted above.
+// The kernel was derived from https://github.com/parallel-forall/code-samples/blob/master/series/cuda-cpp/transpose/transpose.cu
 
 const int tile_dim = 32;
 const int block_rows = 8;
 
-__global__ void transpose(int order, double * A, double * B)
+__global__ void transposeNoBankConflict(int order, double * A, double * B)
+{
+    __shared__ double tile[tile_dim][tile_dim+1];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+    auto width = gridDim.x * tile_dim;
+
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*width + x];
+       A[(y+j)*width + x] += (double)1;
+    }
+
+    __syncthreads();
+
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[(y+j)*width + x] += tile[threadIdx.x][threadIdx.y + j];
+    }
+}
+
+__global__ void transposeCoalesced(int order, double * A, double * B)
+{
+    __shared__ double tile[tile_dim][tile_dim];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+    auto width = gridDim.x * tile_dim;
+
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*width + x];
+       A[(y+j)*width + x] += (double)1;
+    }
+
+    __syncthreads();
+
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[(y+j)*width + x] += tile[threadIdx.x][threadIdx.y + j];
+    }
+}
+
+__global__ void transposeNaive(int order, double * A, double * B)
 {
     auto x = blockIdx.x * tile_dim + threadIdx.x;
     auto y = blockIdx.y * tile_dim + threadIdx.y;
@@ -76,18 +120,6 @@ __global__ void transpose(int order, double * A, double * B)
         A[(y+j)*width + x] += (double)1;
     }
 }
-#else
-__global__ void transpose(unsigned order, double * A, double * B)
-{
-    auto i = blockIdx.x * blockDim.x + threadIdx.x;
-    auto j = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if ((i<order) && (j<order)) {
-        B[i*order+j] += A[j*order+i];
-        A[j*order+i] += (double)1;
-    }
-}
-#endif
 
 int main(int argc, char * argv[])
 {
@@ -102,7 +134,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int order, tile_size;
+  int order;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order>";
@@ -120,23 +152,10 @@ int main(int argc, char * argv[])
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
-#if TILED
       if (order % tile_dim != 0) {
           std::cout << "Sorry, but order (" << order << ") must be evenly divible by " << tile_dim
                     << " or the results are going to be wrong.\n";
       }
-#else
-      // default tile size for tiling of local transpose
-      tile_size = 32;
-      if (argc > 3) {
-          tile_size = std::atoi(argv[3]);
-          if (tile_size <= 0) tile_size = order;
-          if (tile_size > order) tile_size = order;
-          if (tile_size > 32) {
-		  std::cout << "The results are probably going to be wrong; use tile_size<=32.\n";
-	  }
-      }
-#endif
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -145,19 +164,10 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
-#if TILED
   std::cout << "Tile size             = " << tile_dim << std::endl;
-#else
-  std::cout << "Tile size             = " << tile_size << std::endl;
-#endif
 
-#if TILED
   dim3 dimGrid(order/tile_dim, order/tile_dim, 1);
   dim3 dimBlock(tile_dim, block_rows, 1);
-#else
-  dim3 dimGrid(prk::divceil(order,tile_size),prk::divceil(order,tile_size),1);
-  dim3 dimBlock(tile_size, tile_size, 1);
-#endif
 
   info.checkDims(dimBlock, dimGrid);
 
@@ -194,7 +204,9 @@ int main(int argc, char * argv[])
         trans_time = prk::wtime();
     }
 
-    transpose<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    //transposeNaive<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    //transposeCoalesced<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    transposeNoBankConflict<<<dimGrid, dimBlock>>>(order, d_a, d_b);
 
     prk::CUDA::sync();
   }
@@ -228,11 +240,15 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-  prk::CUDA::free_host(h_a);
-  prk::CUDA::free_host(h_b);
-
   const double epsilon = 1.0e-8;
   if (abserr < epsilon) {
+#if 0
+    for (int i=0; i<order; i++) {
+      for (int j=0; j<order; j++) {
+        std::cout << "(" << i << "," << j << ") = " << h_a[i*order+j] << ", " << h_b[i*order+j] << "\n";
+      }
+    }
+#endif
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
     auto bytes = (size_t)order * (size_t)order * sizeof(double);
@@ -250,6 +266,9 @@ int main(int argc, char * argv[])
               << " exceeds threshold " << epsilon << std::endl;
     return 1;
   }
+
+  prk::CUDA::free_host(h_a);
+  prk::CUDA::free_host(h_b);
 
   return 0;
 }
