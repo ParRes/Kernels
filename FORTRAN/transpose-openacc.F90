@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2015, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -145,7 +146,7 @@ program main
   t0 = 0
 
   if (tile_size.lt.order) then
-    !$acc parallel loop gang collapse(2) !leads to incorrect results
+    !$acc parallel loop gang collapse(2)
     do jt=1,order,tile_size
       do it=1,order,tile_size
         !$acc loop vector collapse(2)
@@ -174,7 +175,7 @@ program main
 
     ! Transpose the matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
-      !$acc parallel loop gang collapse(2) !leads to incorrect results
+      !$acc parallel loop gang collapse(2)
       do jt=1,order,tile_size
         do it=1,order,tile_size
           !$acc loop vector collapse(2)
