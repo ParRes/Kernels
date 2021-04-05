@@ -68,19 +68,34 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
   real(kind=REAL64), intent(in) ::  A(order,order)
   real(kind=REAL64), intent(in) ::  B(order,order)
   real(kind=REAL64), intent(inout) ::  C(order,order)
+  !real(kind=REAL64) :: TA(tile_size,tile_size)
+  real(kind=REAL64) :: TB(tile_size,tile_size)
+  !real(kind=REAL64) :: TTB(tile_size,tile_size)
+  !real(kind=REAL64) :: TC(tile_size,tile_size)
   integer(kind=INT32) :: i,j,k,it,jt,kt
 
   if (tile_size.lt.order) then
     do jt=1,order,tile_size
       do kt=1,order,tile_size
+        TB(1:tile_size,1:tile_size) = B(kt:kt+tile_size,jt:jt+tile_size)
+        !TTB = transpose(TB)
+        !TTB = transpose(B(kt:kt+tile_size,jt:jt+tile_size))
         do it=1,order,tile_size
+          !TA(1:tile_size,1:tile_size) = A(it:it+tile_size,kt:kt+tile_size)
+          !!TC = C(it:it+tile_size,jt:jt+tile_size)
           do j=jt,min(order,jt+tile_size-1)
             do k=kt,min(order,kt+tile_size-1)
               do i=it,min(order,it+tile_size-1)
-                C(i,j) = C(i,j) + A(i,k) * B(k,j)
+                !C(i,j) = C(i,j) + A(i,k) * B(k,j) ! original
+                C(i,j) = C(i,j) + A(i,k) * TB(1+k-kt,1+j-jt) ! before TTB
+                !C(i,j) = C(i,j) + A(i,k) * TTB(1+j-jt,1+k-kt) ! after TTB
+                !C(i,j) = C(i,j) + TA(1+i-it,1+k-kt) * TB(1+k-kt,1+j-jt) ! with TA
+                !!TC(1+i-it,1+j-jt) = TC(1+i-it,1+j-jt) + TA(1+i-it,1+k-kt) * TB(1+k-kt,1+j-jt) ! with TA and TB
               enddo
             enddo
           enddo
+          !!C(it:it+tile_size,jt:jt+tile_size) = C(it:it+tile_size,jt:jt+tile_size) + TC
+          !!C(it:it+tile_size,jt:jt+tile_size) = TC
         enddo
       enddo
     enddo
