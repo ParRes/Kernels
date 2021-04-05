@@ -223,7 +223,6 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
-
   if (batches == 0) {
       std::cout << "No batching" << std::endl;
   } else if (batches < 0) {
@@ -250,7 +249,6 @@ int main(int argc, char * argv[])
 
   const int matrices = (batches==0 ? 1 : abs(batches));
   const size_t nelems = (size_t)order * (size_t)order;
-  const size_t bytes = nelems * sizeof(double);
 
   // host buffers
   double * h_a = prk::CUDA::malloc_host<double>(nelems);
