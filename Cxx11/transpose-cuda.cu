@@ -231,7 +231,7 @@ int main(int argc, char * argv[])
   prk::CUDA::free_host(h_a);
   prk::CUDA::free_host(h_b);
 
-  const auto epsilon = 1.0e-8;
+  const double epsilon = 1.0e-8;
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
