@@ -55,8 +55,10 @@
 #include <algorithm>
 #include <numeric>
 #include <execution>
-#include <ranges>
-#include <iterator>
+//#include <ranges>
+//#include <iterator>
+
+#include <thrust/iterator/counting_iterator.h>
 
 int main(int argc, char * argv[])
 {
@@ -107,8 +109,12 @@ int main(int argc, char * argv[])
   std::iota(A.begin(), A.end(), 0.0);
 
   //auto range = std::views::iota(0,order);
-  std::vector<int> range(order);
-  std::iota(range.begin(), range.end(), 0);
+
+  //std::vector<int> range(order);
+  //std::iota(range.begin(), range.end(), 0);
+
+  thrust::counting_iterator<int> begin(0);
+  thrust::counting_iterator<int> end(order*order);
 
   double trans_time{0};
 
@@ -116,14 +122,15 @@ int main(int argc, char * argv[])
 
     if (iter==1) trans_time = prk::wtime();
 
+    double * const pA = A.data();
+    double * const pB = B.data();
     std::for_each( std::execution::par_unseq,
-		   std::begin(range), std::end(range), [&] (int i) {
-      std::for_each( //std::execution::par_unseq,
-                     //std::execution::unseq,
-		     std::begin(range), std::end(range), [&] (int j) {
-          B[i*order+j] += A[j*order+i];
-          A[j*order+i] += 1.0;
-      });
+		   begin, end,
+                   [order,pA,pB] __device__ (int idx) {
+        auto i = idx / order;
+        auto j = idx % order;
+        pB[i*order+j] += pA[j*order+i];
+        pA[j*order+i] += 1.0;
     });
   }
   trans_time = prk::wtime() - trans_time;
