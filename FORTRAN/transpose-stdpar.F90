@@ -113,7 +113,7 @@ program main
   endif
 
   ! same default as the C implementation
-  tile_size = 32
+  tile_size = 16
   if (command_argument_count().gt.2) then
       call get_command_argument(3,argtmp,arglen,err)
       if (err.eq.0) read(argtmp,'(i32)') tile_size
@@ -128,7 +128,7 @@ program main
     write(*,'(a50)') 'ERROR: order must be evenly divisible by tile_size'
     stop 1
   endif
-  if ((tile_size.ne.order).and.(tile_size.gt.32)) then
+  if ((tile_size.ne.order) .and. (tile_size.gt.32)) then
     write(*,'(a50)') 'ERROR: tile_size must be less than 32 to use temp space'
     stop 1
   endif
