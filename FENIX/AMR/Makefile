@@ -1,12 +1,11 @@
 include ../../common/FENIX.defs
-COMOBJS += random_draw.o get_BG_data.o
+COMOBJS += random_draw.o 
 COMOBJS += timestep.o
 
 ##### User configurable options #####
 #uncomment any of the following flags (and change values) to change defaults
 
-#OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
-OPTFLAGS    = -std=c99 -O3
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
 #description: change above into something that is a decent optimization on you system
 
 USERFLAGS    = 

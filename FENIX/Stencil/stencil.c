@@ -345,13 +345,13 @@ int main(int argc, char ** argv) {
              0, MPI_INFO_NULL, &error);
 
   if (error==FENIX_WARNING_SPARE_RANKS_DEPLETED) 
-    printf("ERROR: Rank %d: Cannot reconstitute original communicator\n", my_ID);
-  bail_out(error);
+    printf("ERROR %d: Rank %d: Cannot reconstitute original communicator\n", error, my_ID);
+  //  bail_out(error);error=0;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
-  /* if rank is recovered, set iter to a negative number, to be increased
+  /* if rank is recovered, set iter to a large number, to be reduced
      to the actual value corresponding to the current iter value among
      survivor ranks; handle number of Fenix_Init calls similarly               */
   switch (fenix_status){

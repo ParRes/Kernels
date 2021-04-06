@@ -4,9 +4,9 @@ NUMITERS=10
 NUMKILLS=1
 FREQ=4
 SEPLINE="==============================================================="
-MPIRUN=mpirun
+MPIRUN=`which mpirun`
 
-$MPIRUN -am ft-enable-mpi -bind-to-core -np $NUMPROCS FENIX/Stencil/stencil     $NUMITERS 1000              $NUMSPARES $NUMKILLS $FREQ 0;  echo $SEPLINE
-$MPIRUN -am ft-enable-mpi -bind-to-core -np $NUMPROCS FENIX/AMR/amr             $NUMITERS 1000 100 1 20 5 1 $NUMSPARES $NUMKILLS $FREQ 0;  echo $SEPLINE
-$MPIRUN -am ft-enable-mpi -bind-to-core -np $NUMPROCS FENIX/Transpose/transpose $NUMITERS 1000              $NUMSPARES $NUMKILLS $FREQ 0;  echo $SEPLINE
-$MPIRUN -am ft-enable-mpi -bind-to-core -np $NUMPROCS FENIX/Synch_p2p/p2p       $NUMITERS 1000 1000         $NUMSPARES $NUMKILLS $FREQ 0; echo $SEPLINE
+$MPIRUN $ULFMRUNFLAG -np $NUMPROCS FENIX/Stencil/stencil     $NUMITERS 1000              $NUMSPARES $NUMKILLS $FREQ 0;             echo $SEPLINE
+$MPIRUN $ULFMRUNFLAG -np $NUMPROCS FENIX/AMR/amr             $NUMITERS 1000 100 1 20 5 1 $NUMSPARES $NUMKILLS $FREQ 0 HIGH_WATER;  echo $SEPLINE
+$MPIRUN $ULFMRUNFLAG -np $NUMPROCS FENIX/Transpose/transpose $NUMITERS 1000              $NUMSPARES $NUMKILLS $FREQ 0;             echo $SEPLINE
+$MPIRUN $ULFMRUNFLAG -np $NUMPROCS FENIX/Synch_p2p/p2p       $NUMITERS 1000 1000         $NUMSPARES $NUMKILLS $FREQ 0;             echo $SEPLINE
