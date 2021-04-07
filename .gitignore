@@ -24,6 +24,16 @@ octave-workspace                # Octave crashes
 *.cub
 *.ptx
 
+# AMD GPU compiler
+*.cmdx
+*.cmod
+*.ilm
+*.stb
+*.cmdx
+*.cmod
+*.ilm
+*.stb
+
 common/make.defs
 scripts/small/runfgmpi
 scripts/wide/runfgmpi
