@@ -19,6 +19,11 @@ octave-workspace                # Octave crashes
 *.patch                         # patch files
 *.dbg                           # Flang
 
+# Cray GPU compiler
+*.lst
+*.cub
+*.ptx
+
 common/make.defs
 scripts/small/runfgmpi
 scripts/wide/runfgmpi
