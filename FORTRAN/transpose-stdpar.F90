@@ -124,11 +124,11 @@ program main
     tile_size = order ! no tiling
   endif
 
-  if (mod(order,tile_size).ne.0) then
+  if ((tile_size.gt.0).and.(mod(order,tile_size).ne.0)) then
     write(*,'(a50)') 'ERROR: order must be evenly divisible by tile_size'
     stop 1
   endif
-  if (tile_size.gt.32) then
+  if ((tile_size.ne.order).and.(tile_size.gt.32)) then
     write(*,'(a50)') 'ERROR: tile_size must be less than 32 to use temp space'
     stop 1
   endif
