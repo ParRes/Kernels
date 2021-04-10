@@ -256,6 +256,7 @@ Cxx11/transpose-thread
 Cxx11/transpose-valarray
 Cxx11/transpose-vector
 Cxx11/transpose-vector-raja
+FORTRAN/*.mod
 FORTRAN/dgemm
 FORTRAN/dgemm-ga
 FORTRAN/dgemm-openmp
@@ -264,6 +265,7 @@ FORTRAN/dgemm-pretty
 FORTRAN/dgemm-taskloop-openmp
 FORTRAN/nstream
 FORTRAN/nstream-coarray
+FORTRAN/nstream-cufortran
 FORTRAN/nstream-ga
 FORTRAN/nstream-openmp
 FORTRAN/nstream-mpi
