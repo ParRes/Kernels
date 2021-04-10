@@ -78,6 +78,9 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgem
 
 openacc: p2p-openacc p2p-innerloop-openacc stencil-openacc transpose-openacc nstream-openacc
 
+cuf: cufortran
+cufortran: nstream-cufortran
+
 stdpar: nstream-stdpar stencil-stdpar transpose-stdpar
 
 blas: dgemm-blas
@@ -121,6 +124,9 @@ dgemm-blas: dgemm-blas.F90
 
 %-openacc: %-openacc.F90
 	$(FC) $(FCFLAGS) $(OPENACCFLAG) $< -o $@
+
+%-cufortran: %-cufortran.cuf
+	$(FC) $(FCFLAGS) $(CUFORTFLAG) $< -o $@
 
 %-stdpar: %-stdpar.F90
 	$(FC) $(FCFLAGS) $(STDPARFLAG) $< -o $@
