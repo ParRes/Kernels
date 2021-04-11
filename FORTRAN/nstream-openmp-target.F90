@@ -120,7 +120,7 @@ program main
   write(*,'(a,i12)') 'Matrix length         = ', length
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   allocate( A(length), stat=err)

@@ -152,7 +152,7 @@ program main
   endif
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   allocate( A(length)[*], stat=err)
