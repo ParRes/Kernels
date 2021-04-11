@@ -181,7 +181,7 @@ program main
   call ga_sync()
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   t0 = 0.0d0

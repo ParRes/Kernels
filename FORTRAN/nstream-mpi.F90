@@ -158,7 +158,7 @@ program main
   call MPI_Bcast(length, 1, MPI_INT64_T, 0, MPI_COMM_WORLD)
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   allocate( A(length), stat=err)
