@@ -162,7 +162,7 @@ program main
     if (k.eq.1) t0 = omp_get_wtime()
 
     if (tile_size.lt.order) then
-      !$omp target teams distribute collapse(2) private(T)
+      !$omp target teams distribute collapse(2) !!! private(T)
       do jt=1,order,tile_size
         do it=1,order,tile_size
           !!$omp parallel do simd collapse(2) schedule(static,1)
