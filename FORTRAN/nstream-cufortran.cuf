@@ -125,7 +125,7 @@ program main
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a64)')    'Usage: ./transpose <# iterations> <vector length> [<block_size>]'
+    write(*,'(a64)')    'Usage: ./nstream <# iterations> <vector length> [<block_size>]'
     stop 1
   endif
 
