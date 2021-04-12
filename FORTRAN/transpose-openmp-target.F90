@@ -65,7 +65,7 @@ program main
   integer(kind=INT32) ::  order                     ! order of a the matrix
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
-  real(kind=REAL64) ::  T(32,32)                    ! Tile
+  !real(kind=REAL64) ::  T(32,32)                    ! Tile
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
@@ -162,21 +162,21 @@ program main
     if (k.eq.1) t0 = omp_get_wtime()
 
     if (tile_size.lt.order) then
-      !$omp target teams distribute collapse(2)
+      !$omp target teams distribute collapse(2) private(T)
       do jt=1,order,tile_size
         do it=1,order,tile_size
+          !!$omp parallel do simd collapse(2) schedule(static,1)
+          !do j=1,tile_size
+          !  do i=1,tile_size
+          !    T(i,j) = A(it+i-1,jt+j-1)
+          !  enddo
+          !enddo
+          !!$omp end parallel do simd
           !$omp parallel do simd collapse(2) schedule(static,1)
           do j=1,tile_size
             do i=1,tile_size
-              T(i,j) = A(it+i-1,jt+j-1)
-            enddo
-          enddo
-          !$omp end parallel do simd
-          !$omp parallel do simd collapse(2) schedule(static,1)
-          do j=1,tile_size
-            do i=1,tile_size
-              !B(jt+j-1,it+i-1) = B(jt+j-1,it+i-1) + A(it+i-1,jt+j-1)
-              B(jt+j-1,it+i-1) = B(jt+j-1,it+i-1) + T(i,j)
+              B(jt+j-1,it+i-1) = B(jt+j-1,it+i-1) + A(it+i-1,jt+j-1)
+              !B(jt+j-1,it+i-1) = B(jt+j-1,it+i-1) + T(i,j)
               A(it+i-1,jt+j-1) = A(it+i-1,jt+j-1) + 1.0
             enddo
           enddo
