@@ -84,12 +84,19 @@ module transpose
         real(kind=REAL64), intent(inout) :: A(order,order)
         real(kind=REAL64), intent(inout) :: B(order,order)
         integer(kind=INT32), intent(in), value ::  order
+        real(kind=REAL64), shared :: tile(32,32)
         integer :: x, y, j
         x = (blockIdx%x-1) * tile_dim + (threadIdx%x);
         y = (blockIdx%y-1) * tile_dim + (threadIdx%y);
         do j = 0,tile_dim-1,block_rows
-            B(y+j,x) = B(y+j,x) + A(x,y+j);
+            tile(threadIdx%y+j,threadIdx%x) = A(x,y+j);
             A(x,y+j) = A(x,y+j) + 1.0d0;
+        end do
+        call syncThreads()
+        x = (blockIdx%y-1) * tile_dim + (threadIdx%x);
+        y = (blockIdx%x-1) * tile_dim + (threadIdx%y);
+        do j = 0,tile_dim-1,block_rows
+            B(x,y+j) = B(x,y+j) + tile(threadIdx%x,threadIdx%y+j)
         end do
       end subroutine coalesced
       attributes(global) subroutine nobankconflicts(order, A, B)
@@ -253,7 +260,9 @@ program main
     call flush(0)
     do j=1,order
       do i=1,order
-        print*,i,j,A(i,j),B(i,j)
+        temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
+             * real(iterations+1,REAL64)
+        write(*,'(i4,1x,i4,1x,e10.5,1x,e10.5,1x,e10.5)') i,j,A(i,j),B(i,j),temp+addit
       enddo
     enddo
     call flush(0)
