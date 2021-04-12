@@ -22,7 +22,7 @@ ifeq ($(findstring ifx,$(FC)),ifx)
   BLASFLAGS += -heap-arrays
 endif
 
-.PHONY: all clean serial pretty openmp coarray target openacc ga
+.PHONY: all clean serial pretty openmp coarray target stdpar blas ga
 
 # Intel
 ifeq ($(findstring ifort,$(FC)),ifort)
@@ -41,13 +41,17 @@ ifeq ($(findstring gfortran,$(FC)),gfortran)
   EXTRA = target coarray taskloop openacc
 endif
 # PGI and LLVM Flang
-ifeq ($(findstring pgf,$(FC)),pgf)
-  EXTRA = target openacc
-  FCFLAGS += -DPGI
-endif
 ifeq ($(findstring flang,$(FC)),flang)
   EXTRA = target openacc
   FCFLAGS += -DPGI
+endif
+ifeq ($(findstring pgf,$(FC)),pgf)
+  EXTRA = target openacc cufortran
+  FCFLAGS += -DPGI
+endif
+ifeq ($(findstring nvf,$(FC)),nvf)
+  EXTRA = target openacc cufortran
+  FCFLAGS += -DNVHPC
 endif
 ifeq ($(findstring xlf,$(FC)),xlf)
   EXTRA = target
