@@ -79,7 +79,7 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgem
 openacc: p2p-openacc p2p-innerloop-openacc stencil-openacc transpose-openacc nstream-openacc
 
 cuf: cufortran
-cufortran: nstream-cufortran
+cufortran: nstream-cufortran transpose-cufortran
 
 stdpar: nstream-stdpar stencil-stdpar transpose-stdpar
 
@@ -151,4 +151,5 @@ clean:
 	-rm -f *-target
 	-rm -f *-openacc
 	-rm -f *-stdpar
+	-rm -f *-cufortran
 	-rm -f pic pic_soa
