@@ -89,14 +89,14 @@ module transpose
         x = (blockIdx%x-1) * tile_dim + (threadIdx%x);
         y = (blockIdx%y-1) * tile_dim + (threadIdx%y);
         do j = 0,tile_dim-1,block_rows
-            tile(threadIdx%y+j,threadIdx%x) = A(x,y+j);
+            tile(threadIdx%x,threadIdx%y+j) = A(x,y+j);
             A(x,y+j) = A(x,y+j) + 1.0d0;
         end do
         call syncThreads()
         x = (blockIdx%y-1) * tile_dim + (threadIdx%x);
         y = (blockIdx%x-1) * tile_dim + (threadIdx%y);
         do j = 0,tile_dim-1,block_rows
-            B(x,y+j) = B(x,y+j) + tile(threadIdx%x,threadIdx%y+j)
+            B(x,y+j) = B(x,y+j) + tile(threadIdx%y+j,threadIdx%x)
         end do
       end subroutine coalesced
       attributes(global) subroutine nobankconflicts(order, A, B)
@@ -104,12 +104,19 @@ module transpose
         real(kind=REAL64), intent(inout) :: A(order,order)
         real(kind=REAL64), intent(inout) :: B(order,order)
         integer(kind=INT32), intent(in), value ::  order
+        real(kind=REAL64), shared :: tile(33,32)
         integer :: x, y, j
         x = (blockIdx%x-1) * tile_dim + (threadIdx%x);
         y = (blockIdx%y-1) * tile_dim + (threadIdx%y);
         do j = 0,tile_dim-1,block_rows
-            B(y+j,x) = B(y+j,x) + A(x,y+j);
+            tile(threadIdx%x,threadIdx%y+j) = A(x,y+j);
             A(x,y+j) = A(x,y+j) + 1.0d0;
+        end do
+        call syncThreads()
+        x = (blockIdx%y-1) * tile_dim + (threadIdx%x);
+        y = (blockIdx%x-1) * tile_dim + (threadIdx%y);
+        do j = 0,tile_dim-1,block_rows
+            B(x,y+j) = B(x,y+j) + tile(threadIdx%y+j,threadIdx%x)
         end do
       end subroutine nobankconflicts
 end module transpose
