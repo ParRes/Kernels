@@ -67,11 +67,10 @@ __global__ void transposeNoBankConflict(int order, double * A, double * B)
 
     auto x = blockIdx.x * tile_dim + threadIdx.x;
     auto y = blockIdx.y * tile_dim + threadIdx.y;
-    auto width = gridDim.x * tile_dim;
 
     for (int j = 0; j < tile_dim; j += block_rows) {
-       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*width + x];
-       A[(y+j)*width + x] += (double)1;
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
+       A[(y+j)*order + x] += (double)1;
     }
 
     __syncthreads();
@@ -80,7 +79,7 @@ __global__ void transposeNoBankConflict(int order, double * A, double * B)
     y = blockIdx.x * tile_dim + threadIdx.y;
 
     for (int j = 0; j < tile_dim; j+= block_rows) {
-        B[(y+j)*width + x] += tile[threadIdx.x][threadIdx.y + j];
+        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
     }
 }
 
@@ -90,11 +89,10 @@ __global__ void transposeCoalesced(int order, double * A, double * B)
 
     auto x = blockIdx.x * tile_dim + threadIdx.x;
     auto y = blockIdx.y * tile_dim + threadIdx.y;
-    auto width = gridDim.x * tile_dim;
 
     for (int j = 0; j < tile_dim; j += block_rows) {
-       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*width + x];
-       A[(y+j)*width + x] += (double)1;
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
+       A[(y+j)*order + x] += (double)1;
     }
 
     __syncthreads();
@@ -103,7 +101,7 @@ __global__ void transposeCoalesced(int order, double * A, double * B)
     y = blockIdx.x * tile_dim + threadIdx.y;
 
     for (int j = 0; j < tile_dim; j+= block_rows) {
-        B[(y+j)*width + x] += tile[threadIdx.x][threadIdx.y + j];
+        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
     }
 }
 
@@ -111,11 +109,10 @@ __global__ void transposeNaive(int order, double * A, double * B)
 {
     auto x = blockIdx.x * tile_dim + threadIdx.x;
     auto y = blockIdx.y * tile_dim + threadIdx.y;
-    auto width = gridDim.x * tile_dim;
 
     for (int j = 0; j < tile_dim; j+= block_rows) {
-        B[x*width + (y+j)] += A[(y+j)*width + x];
-        A[(y+j)*width + x] += (double)1;
+        B[x*order + (y+j)] += A[(y+j)*order + x];
+        A[(y+j)*order + x] += (double)1;
     }
 }
 
