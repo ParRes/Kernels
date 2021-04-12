@@ -154,8 +154,8 @@ program main
     write(*,'(a,i12)') 'Number of iterations = ', iterations
     write(*,'(a,i12)') 'Vector length        = ', length
   endif
-  call MPI_Bcast(iterations, 1, MPI_INT32_T, 0, MPI_COMM_WORLD)
-  call MPI_Bcast(length, 1, MPI_INT64_T, 0, MPI_COMM_WORLD)
+  call MPI_Bcast(iterations, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
+  call MPI_Bcast(length, 1, MPI_INTEGER8, 0, MPI_COMM_WORLD)
 
   ! ********************************************************************
   ! ** Allocate space and perform the computation
@@ -289,7 +289,7 @@ program main
     asum = asum + abs(A(i)-ar)
   enddo
 #endif
-  call MPI_Allreduce(MPI_IN_PLACE, asum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD)
+  call MPI_Allreduce(MPI_IN_PLACE, asum, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD)
 
   deallocate( C )
   deallocate( B )
