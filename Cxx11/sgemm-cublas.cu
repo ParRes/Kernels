@@ -52,8 +52,8 @@
 ///          Other than OpenMP or standard C functions, the following
 ///          functions are used in this program:
 ///
-///          cblassgemm()
-///          cublassgemmStridedBatched()
+///          cblasSgemm()
+///          cublasSgemmStridedBatched()
 ///
 /// HISTORY: Written by Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, December, 2017.
@@ -136,7 +136,6 @@ void prk_sgemm(const cublasHandle_t & h,
                                       &beta,                    // beta
                                       pC, order) );             // C, ldc
     }
-    //prk::CUDA::sync();
 }
 
 void prk_bgemm(const cublasHandle_t & h,
@@ -158,7 +157,6 @@ void prk_bgemm(const cublasHandle_t & h,
                                                 &beta,
                                                 C, order, order*order,
                                                 batches) );
-    prk::CUDA::sync();
 
     //  cublasStatus_t cublasSgemmBatched(cublasHandle_t handle,
     //                                    cublasOperation_t transa,
@@ -245,20 +243,20 @@ int main(int argc, char * argv[])
   // Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  double sgemm_time(0);
+  double gemm_time(0);
 
   const int matrices = (batches==0 ? 1 : abs(batches));
   const size_t nelems = (size_t)order * (size_t)order;
 
   // host buffers
-  float * h_a = prk::CUDA::malloc_host<float>(nelems);
-  float * h_b = prk::CUDA::malloc_host<float>(nelems);
-  float * h_c = prk::CUDA::malloc_host<float>(matrices*nelems);
+  auto h_a = prk::CUDA::malloc_host<float>(nelems);
+  auto h_b = prk::CUDA::malloc_host<float>(nelems);
+  auto h_c = prk::CUDA::malloc_host<float>(matrices*nelems);
 
   // device buffers
-  float * d_a = prk::CUDA::malloc_device<float>(matrices*nelems);
-  float * d_b = prk::CUDA::malloc_device<float>(matrices*nelems);
-  float * d_c = prk::CUDA::malloc_device<float>(matrices*nelems);
+  auto d_a = prk::CUDA::malloc_device<float>(matrices*nelems);
+  auto d_b = prk::CUDA::malloc_device<float>(matrices*nelems);
+  auto d_c = prk::CUDA::malloc_device<float>(matrices*nelems);
 
   if (input_copy) {
     for (int i=0; i<order; ++i) {
@@ -283,40 +281,40 @@ int main(int argc, char * argv[])
   }
   prk::CUDA::sync();
 
-  float xfer(0);
-  float comp(0);
+  double xfer(0);
+  double comp(0);
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
           prk::CUDA::sync();
-          sgemm_time = prk::wtime();
+          gemm_time = prk::wtime();
       }
 
       if (input_copy) {
-        float t0 = prk::wtime();
+        double t0 = prk::wtime();
         for (int b=0; b<matrices; ++b) {
           prk::CUDA::copyH2Dasync(&(d_a[b*nelems]), h_a, nelems);
           prk::CUDA::copyH2Dasync(&(d_b[b*nelems]), h_b, nelems);
         }
         prk::CUDA::sync();
-        float t1 = prk::wtime();
+        double t1 = prk::wtime();
         if (iter==1) xfer += (t1-t0);
       }
 
       {
-        float t0 = prk::wtime();
+        double t0 = prk::wtime();
         if (batches > 0) {
           prk_bgemm(h, order, matrices, d_a, d_b, d_c);
         } else {
           prk_sgemm(h, order, matrices, d_a, d_b, d_c);
         }
-        float t1 = prk::wtime();
+        double t1 = prk::wtime();
         if (iter==1) comp += (t1-t0);
       }
     }
     prk::CUDA::sync();
-    sgemm_time = prk::wtime() - sgemm_time;
+    gemm_time = prk::wtime() - gemm_time;
   }
   std::cout << "xfer, comp = " << xfer << "," << comp << std::endl;
 
@@ -339,7 +337,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   const auto epsilon = 1.0e-8;
-  const auto forder = static_cast<float>(order);
+  const auto forder = static_cast<double>(order);
   const auto reference = 0.25 * prk::pow(forder,3) * prk::pow(forder-1.0,2) * (iterations+1);
   double residuum(0);
   for (int b=0; b<matrices; ++b) {
@@ -354,7 +352,7 @@ int main(int argc, char * argv[])
               << "Actual checksum = " << checksum << std::endl;
 #endif
     std::cout << "Solution validates" << std::endl;
-    auto avgtime = sgemm_time/iterations/matrices;
+    auto avgtime = gemm_time/iterations/matrices;
     auto nflops = 2.0 * prk::pow(forder,3);
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
