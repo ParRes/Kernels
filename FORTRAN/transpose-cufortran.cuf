@@ -72,8 +72,8 @@ module transpose
         real(kind=REAL64), intent(inout) :: B(order,order)
         integer(kind=INT32), intent(in), value ::  order
         integer :: x, y, j
-        x = (blockIdx%x-1) * tile_dim + (threadIdx%x-1);
-        y = (blockIdx%y-1) * tile_dim + (threadIdx%y-1);
+        x = (blockIdx%x-1) * tile_dim + (threadIdx%x);
+        y = (blockIdx%y-1) * tile_dim + (threadIdx%y);
         do j = 0,tile_dim-1,block_rows
             B(y+j,x) = B(y+j,x) + A(x,y+j);
             A(x,y+j) = A(x,y+j) + 1.0d0;
@@ -104,17 +104,22 @@ program main
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
   ! CUDA stuff
   type(dim3) :: grid, tblock
+  integer :: variant
+  character(len=16), dimension(3) :: variant_name
+  variant_name(1) = 'naive'
+  variant_name(2) = 'coalesced'
+  variant_name(3) = 'no bank conflicts'
 
   ! ********************************************************************
   ! read and test input parameters
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a41)') 'CUDA Fortran Matrix transpose: B = A^T'
+  write(*,'(a38)') 'CUDA Fortran Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order>'
+    write(*,'(a66)')    'Usage: ./transpose <# iterations> <matrix order> [variant (0/1/2)]'
     stop 1
   endif
 
@@ -134,11 +139,22 @@ program main
     stop 1
   endif
 
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix order         = ', order
+  variant = 2
+  if (command_argument_count().gt.2) then
+      call get_command_argument(3,argtmp,arglen,err)
+      if (err.eq.0) read(argtmp,'(i32)') variant
+  endif
+  if ((variant .lt. 0).or.(variant.gt.2)) then
+    write(*,'(a,i5)') 'ERROR: variant must be 0, 1 or 2 : ', variant
+    stop 1
+  endif
 
-  tblock = dim3(order/tile_dim, order/tile_dim, 1)
-  grid   = dim3(tile_dim, block_rows, 1)
+  write(*,'(a,i8)')  'Number of iterations = ', iterations
+  write(*,'(a,i8)')  'Matrix order         = ', order
+  write(*,'(a,a16)') 'Variant              = ', variant_name(variant+1)
+
+  grid   = dim3(order/tile_dim, order/tile_dim, 1)
+  tblock = dim3(tile_dim, block_rows, 1)
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -170,6 +186,7 @@ program main
     if (k.eq.1) t0 = prk_get_wtime()
 
     call naive<<<grid, tblock>>>(order, A, B)
+    err = cudaDeviceSynchronize()
 
   enddo ! iterations
 
@@ -201,11 +218,13 @@ program main
   else
     write(*,'(a,e30.15,a,e30.15)') 'ERROR: Aggregate squared error ',abserr, &
            'exceeds threshold ',epsilon
+    call flush(0)
     do j=1,order
       do i=1,order
         print*,i,j,A(i,j),B(i,j)
       enddo
     enddo
+    call flush(0)
     stop 1
   endif
 
