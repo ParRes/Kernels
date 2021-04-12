@@ -88,7 +88,7 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
               do i=it,min(order,it+tile_size-1)
                 !C(i,j) = C(i,j) + A(i,k) * B(k,j) ! original
                 C(i,j) = C(i,j) + A(i,k) * TB(1+k-kt,1+j-jt) ! before TTB
-                !C(i,j) = C(i,j) + A(i,k) * TTB(1+j-jt,1+k-kt) ! after TTB
+                !C(i,j) = C(i,j) + A(i,k) * TTB(1+j-jt,1+k-kt) ! after TT
                 !C(i,j) = C(i,j) + TA(1+i-it,1+k-kt) * TB(1+k-kt,1+j-jt) ! with TA
                 !!TC(1+i-it,1+j-jt) = TC(1+i-it,1+j-jt) + TA(1+i-it,1+k-kt) * TB(1+k-kt,1+j-jt) ! with TA and TB
               enddo
