@@ -72,10 +72,10 @@ function prk_get_wtime() result(t)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
 
-module kernels
+module nstream
+use iso_fortran_env
 contains
-  attributes(global) subroutine nstream(scalar, A, B, C)
-    use iso_fortran_env
+  attributes(global) subroutine kernel(scalar, A, B, C)
     implicit none
     real(kind=REAL64), intent(inout) :: A(:)
     real(kind=REAL64), intent(in) :: B(:), C(:)
@@ -86,13 +86,13 @@ contains
     if (i <= n) then
         A(i) = A(i) + B(i) + scalar * C(i)
     endif
-  end subroutine nstream
-end module kernels
+  end subroutine kernel
+end module nstream
 
 program main
   use iso_fortran_env
   use cudafor
-  use kernels
+  use nstream
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -198,7 +198,7 @@ program main
 
     if (k.eq.1) t0 = prk_get_wtime()
 
-    call nstream<<<grid, tblock>>>(scalar, A, B, C)
+    call kernel<<<grid, tblock>>>(scalar, A, B, C)
 
   enddo ! iterations
 
