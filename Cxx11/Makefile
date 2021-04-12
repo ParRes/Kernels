@@ -251,10 +251,10 @@ endif
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
 %-mpi-cublas: %-mpi-cublas.cu prk_util.h prk_cuda.h prk_mpi.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt $(MPILIB) -o $@
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) -DPRK_USE_CUBLAS $< -lcublas $(MPILIB) -o $@
 
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt -o $@
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) -DPRK_USE_CUBLAS $< -lcublas -o $@
 
 %-hip: %-hip.cc prk_util.h prk_hip.h
 	$(HIPCC) $(HIPFLAGS) $(CPPFLAGS) $< -o $@
