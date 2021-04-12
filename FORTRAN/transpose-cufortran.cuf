@@ -61,30 +61,30 @@ function prk_get_wtime() result(t)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
 
-module kernels
+module transpose
     use iso_fortran_env
     integer(kind=INT32), parameter :: tile_dim = 32
     integer(kind=INT32), parameter :: block_rows = 8
     contains
-      attributes(global) subroutine transposeNaive(order, A, B)
-        use iso_fortran_env
+      attributes(global) subroutine naive(order, A, B)
         implicit none
-        real(kind=REAL64), intent(inout) :: A(:,:), B(:,:)
+        real(kind=REAL64), intent(inout) :: A(order,order)
+        real(kind=REAL64), intent(inout) :: B(order,order)
         integer(kind=INT32), intent(in), value ::  order
         integer :: x, y, j
-        x = blockIdx%x * tile_dim + threadIdx%x;
-        y = blockIdx%y * tile_dim + threadIdx%y;
-        do j = 1,tile_dim,block_rows
-            B(x,y+j) = B(x,y+j) + A(y+j,x);
-            A(y+j,x) = A(y+j,x) + 1;
+        x = (blockIdx%x-1) * tile_dim + (threadIdx%x-1);
+        y = (blockIdx%y-1) * tile_dim + (threadIdx%y-1);
+        do j = 0,tile_dim-1,block_rows
+            B(y+j,x) = B(y+j,x) + A(x,y+j);
+            A(x,y+j) = A(x,y+j) + 1.0d0;
         end do
-      end subroutine transposeNaive
-end module kernels
+      end subroutine naive
+end module transpose
 
 program main
   use iso_fortran_env
   use cudafor
-  use kernels
+  use transpose
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -169,7 +169,7 @@ program main
 
     if (k.eq.1) t0 = prk_get_wtime()
 
-    call transposeNaive<<<grid, tblock>>>(order, A, B)
+    call naive<<<grid, tblock>>>(order, A, B)
 
   enddo ! iterations
 
@@ -192,9 +192,6 @@ program main
     enddo
   enddo
 
-  deallocate( B )
-  deallocate( A )
-
   if (abserr .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
     avgtime = trans_time/iterations
@@ -202,10 +199,18 @@ program main
     write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',(1.d-6*bytes)/avgtime, &
            ' Avg time (s): ', avgtime
   else
-    write(*,'(a,f30.15,a,f30.15)') 'ERROR: Aggregate squared error ',abserr, &
+    write(*,'(a,e30.15,a,e30.15)') 'ERROR: Aggregate squared error ',abserr, &
            'exceeds threshold ',epsilon
+    do j=1,order
+      do i=1,order
+        print*,i,j,A(i,j),B(i,j)
+      enddo
+    enddo
     stop 1
   endif
+
+  deallocate( A )
+  deallocate( B )
 
 end program main
 
