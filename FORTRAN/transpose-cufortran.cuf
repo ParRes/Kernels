@@ -79,6 +79,32 @@ module transpose
             A(x,y+j) = A(x,y+j) + 1.0d0;
         end do
       end subroutine naive
+      attributes(global) subroutine coalesced(order, A, B)
+        implicit none
+        real(kind=REAL64), intent(inout) :: A(order,order)
+        real(kind=REAL64), intent(inout) :: B(order,order)
+        integer(kind=INT32), intent(in), value ::  order
+        integer :: x, y, j
+        x = (blockIdx%x-1) * tile_dim + (threadIdx%x);
+        y = (blockIdx%y-1) * tile_dim + (threadIdx%y);
+        do j = 0,tile_dim-1,block_rows
+            B(y+j,x) = B(y+j,x) + A(x,y+j);
+            A(x,y+j) = A(x,y+j) + 1.0d0;
+        end do
+      end subroutine coalesced
+      attributes(global) subroutine nobankconflicts(order, A, B)
+        implicit none
+        real(kind=REAL64), intent(inout) :: A(order,order)
+        real(kind=REAL64), intent(inout) :: B(order,order)
+        integer(kind=INT32), intent(in), value ::  order
+        integer :: x, y, j
+        x = (blockIdx%x-1) * tile_dim + (threadIdx%x);
+        y = (blockIdx%y-1) * tile_dim + (threadIdx%y);
+        do j = 0,tile_dim-1,block_rows
+            B(y+j,x) = B(y+j,x) + A(x,y+j);
+            A(x,y+j) = A(x,y+j) + 1.0d0;
+        end do
+      end subroutine nobankconflicts
 end module transpose
 
 program main
@@ -185,7 +211,13 @@ program main
 
     if (k.eq.1) t0 = prk_get_wtime()
 
-    call naive<<<grid, tblock>>>(order, A, B)
+    if (variant.eq.0) then
+        call naive<<<grid, tblock>>>(order, A, B)
+    else if (variant.eq.1) then
+        call coalesced<<<grid, tblock>>>(order, A, B)
+    else if (variant.eq.2) then
+        call nobankconflicts<<<grid, tblock>>>(order, A, B)
+    endif
     err = cudaDeviceSynchronize()
 
   enddo ! iterations
