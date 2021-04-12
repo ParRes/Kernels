@@ -136,7 +136,6 @@ void prk_dgemm(const cublasHandle_t & h,
                                       &beta,                    // beta
                                       pC, order) );             // C, ldc
     }
-    prk::CUDA::sync();
 }
 
 void prk_bgemm(const cublasHandle_t & h,
@@ -158,7 +157,6 @@ void prk_bgemm(const cublasHandle_t & h,
                                                 &beta,
                                                 C, order, order*order,
                                                 batches) );
-    prk::CUDA::sync();
 
     //  cublasStatus_t cublasDgemmBatched(cublasHandle_t handle,
     //                                    cublasOperation_t transa,
@@ -245,20 +243,20 @@ int main(int argc, char * argv[])
   // Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  double dgemm_time(0);
+  double gemm_time(0);
 
   const int matrices = (batches==0 ? 1 : abs(batches));
   const size_t nelems = (size_t)order * (size_t)order;
 
   // host buffers
-  double * h_a = prk::CUDA::malloc_host<double>(nelems);
-  double * h_b = prk::CUDA::malloc_host<double>(nelems);
-  double * h_c = prk::CUDA::malloc_host<double>(matrices*nelems);
+  auto h_a = prk::CUDA::malloc_host<double>(nelems);
+  auto h_b = prk::CUDA::malloc_host<double>(nelems);
+  auto h_c = prk::CUDA::malloc_host<double>(matrices*nelems);
 
   // device buffers
-  double * d_a = prk::CUDA::malloc_device<double>(matrices*nelems);
-  double * d_b = prk::CUDA::malloc_device<double>(matrices*nelems);
-  double * d_c = prk::CUDA::malloc_device<double>(matrices*nelems);
+  auto d_a = prk::CUDA::malloc_device<double>(matrices*nelems);
+  auto d_b = prk::CUDA::malloc_device<double>(matrices*nelems);
+  auto d_c = prk::CUDA::malloc_device<double>(matrices*nelems);
 
   if (input_copy) {
     for (int i=0; i<order; ++i) {
@@ -290,7 +288,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) {
           prk::CUDA::sync();
-          dgemm_time = prk::wtime();
+          gemm_time = prk::wtime();
       }
 
       if (input_copy) {
@@ -316,7 +314,7 @@ int main(int argc, char * argv[])
       }
     }
     prk::CUDA::sync();
-    dgemm_time = prk::wtime() - dgemm_time;
+    gemm_time = prk::wtime() - gemm_time;
   }
   std::cout << "xfer, comp = " << xfer << "," << comp << std::endl;
 
@@ -354,7 +352,7 @@ int main(int argc, char * argv[])
               << "Actual checksum = " << checksum << std::endl;
 #endif
     std::cout << "Solution validates" << std::endl;
-    auto avgtime = dgemm_time/iterations/matrices;
+    auto avgtime = gemm_time/iterations/matrices;
     auto nflops = 2.0 * prk::pow(forder,3);
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
