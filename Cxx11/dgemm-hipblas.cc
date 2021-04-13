@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2018, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -135,7 +136,6 @@ void prk_dgemm(const hipblasHandle_t & h,
                                       &beta,                    // beta
                                       pC, order) );             // C, ldc
     }
-    prk::HIP::check( hipDeviceSynchronize() );
 }
 
 void prk_bgemm(const hipblasHandle_t & h,
@@ -157,7 +157,6 @@ void prk_bgemm(const hipblasHandle_t & h,
                                                 &beta,
                                                 C, order, order*order,
                                                 batches) );
-    prk::HIP::check( hipDeviceSynchronize() );
 
     //  hipblasStatus_t hipblasDgemmBatched(hipblasHandle_t handle,
     //                                    hipblasOperation_t transa,
@@ -222,7 +221,6 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
-
   if (batches == 0) {
       std::cout << "No batching" << std::endl;
   } else if (batches < 0) {
@@ -245,30 +243,22 @@ int main(int argc, char * argv[])
   // Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  double dgemm_time(0);
+  double gemm_time(0);
 
   const int matrices = (batches==0 ? 1 : abs(batches));
   const size_t nelems = (size_t)order * (size_t)order;
-  const size_t bytes = nelems * sizeof(double);
 
   // host buffers
-  double * h_a;
-  double * h_b;
-  double * h_c;
-  prk::HIP::check( hipHostMalloc((void**)&h_a, bytes) );
-  prk::HIP::check( hipHostMalloc((void**)&h_b, bytes) );
-  prk::HIP::check( hipHostMalloc((void**)&h_c, matrices*bytes) );
+  auto h_a = prk::HIP::malloc_host<double>(nelems);
+  auto h_b = prk::HIP::malloc_host<double>(nelems);
+  auto h_c = prk::HIP::malloc_host<double>(matrices*nelems);
 
   // device buffers
-  double * d_a;
-  double * d_b;
-  double * d_c;
-  prk::HIP::check( hipMalloc((void**)&d_a, matrices*bytes) );
-  prk::HIP::check( hipMalloc((void**)&d_b, matrices*bytes) );
-  prk::HIP::check( hipMalloc((void**)&d_c, matrices*bytes) );
+  auto d_a = prk::HIP::malloc_device<double>(matrices*nelems);
+  auto d_b = prk::HIP::malloc_device<double>(matrices*nelems);
+  auto d_c = prk::HIP::malloc_device<double>(matrices*nelems);
 
   if (input_copy) {
-
     for (int i=0; i<order; ++i) {
       for (int j=0; j<order; ++j) {
          h_a[i*order+j] = i;
@@ -277,10 +267,10 @@ int main(int argc, char * argv[])
     }
 
     for (int b=0; b<matrices; ++b) {
-      prk::HIP::check( hipMemcpyAsync(&(d_a[b*order*order]), h_a, bytes, hipMemcpyHostToDevice) );
-      prk::HIP::check( hipMemcpyAsync(&(d_b[b*order*order]), h_b, bytes, hipMemcpyHostToDevice) );
+      prk::HIP::copyH2Dasync(&(d_a[b*nelems]), h_a, nelems);
+      prk::HIP::copyH2Dasync(&(d_b[b*nelems]), h_b, nelems);
     }
-    prk::HIP::check( hipDeviceSynchronize() );
+    prk::HIP::sync();
 
     hipLaunchKernelGGL(init, dim3(dimGrid), dim3(dimBlock), 0, 0, order, matrices, d_c);
 
@@ -289,22 +279,25 @@ int main(int argc, char * argv[])
     hipLaunchKernelGGL(init, dim3(dimGrid), dim3(dimBlock), 0, 0, order, matrices, d_a, d_b, d_c);
 
   }
-  prk::HIP::check( hipDeviceSynchronize() );
+  prk::HIP::sync();
 
   double xfer(0);
   double comp(0);
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) dgemm_time = prk::wtime();
+      if (iter==1) {
+          prk::HIP::sync();
+          gemm_time = prk::wtime();
+      }
 
       if (input_copy) {
         double t0 = prk::wtime();
         for (int b=0; b<matrices; ++b) {
-          prk::HIP::check( hipMemcpyAsync(&(d_a[b*order*order]), h_a, bytes, hipMemcpyHostToDevice) );
-          prk::HIP::check( hipMemcpyAsync(&(d_b[b*order*order]), h_b, bytes, hipMemcpyHostToDevice) );
+          prk::HIP::copyH2Dasync(&(d_a[b*nelems]), h_a, nelems);
+          prk::HIP::copyH2Dasync(&(d_b[b*nelems]), h_b, nelems);
         }
-        prk::HIP::check( hipDeviceSynchronize() );
+        prk::HIP::sync();
         double t1 = prk::wtime();
         if (iter==1) xfer += (t1-t0);
       }
@@ -320,23 +313,24 @@ int main(int argc, char * argv[])
         if (iter==1) comp += (t1-t0);
       }
     }
-    dgemm_time = prk::wtime() - dgemm_time;
+    prk::HIP::sync();
+    gemm_time = prk::wtime() - gemm_time;
   }
   std::cout << "xfer, comp = " << xfer << "," << comp << std::endl;
 
   // copy output back to host
-  prk::HIP::check( hipMemcpyAsync(&(h_c[0]), d_c, matrices*bytes, hipMemcpyDeviceToHost) );
+  prk::HIP::copyD2H(h_c, d_c, matrices*nelems);
 
-  prk::HIP::check( hipFree(d_c) );
-  prk::HIP::check( hipFree(d_b) );
-  prk::HIP::check( hipFree(d_a) );
+  prk::HIP::free(d_a);
+  prk::HIP::free(d_b);
+  prk::HIP::free(d_c);
 
-  prk::HIP::check( hipHostFree(h_a) );
-  prk::HIP::check( hipHostFree(h_b) );
+  prk::HIP::free_host(h_a);
+  prk::HIP::free_host(h_b);
 
   prk::HIP::check( hipblasDestroy(h) );
 
-  prk::HIP::check( hipDeviceSynchronize() );
+  prk::HIP::sync();
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -358,7 +352,7 @@ int main(int argc, char * argv[])
               << "Actual checksum = " << checksum << std::endl;
 #endif
     std::cout << "Solution validates" << std::endl;
-    auto avgtime = dgemm_time/iterations/matrices;
+    auto avgtime = gemm_time/iterations/matrices;
     auto nflops = 2.0 * prk::pow(forder,3);
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
@@ -368,7 +362,7 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  prk::HIP::check( hipHostFree(h_c) );
+  prk::HIP::free_host(h_c);
 
   return 0;
 }
