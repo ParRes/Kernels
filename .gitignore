@@ -126,6 +126,8 @@ Cxx11/dgemm-stdpar
 Cxx11/dgemm-sycl
 Cxx11/dgemm-vector
 Cxx11/dgemm-vector-raja
+Cxx11/sgemm-cublas
+Cxx11/sgemm-hipblas
 Cxx11/grid1.cl
 Cxx11/grid2.cl
 Cxx11/grid3.cl
@@ -249,6 +251,7 @@ Cxx11/transpose-cuda
 Cxx11/transpose-device-thrust
 Cxx11/transpose-dpcpp
 Cxx11/transpose-hip
+Cxx11/transpose-hipblas
 Cxx11/transpose-host-thrust
 Cxx11/transpose-kokkos
 Cxx11/transpose-mpi
