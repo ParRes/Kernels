@@ -147,6 +147,8 @@ int main(int argc, char * argv[])
         throw "ERROR: Matrix Order must be greater than 0";
       } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
+      } else if (order % TILE_DIM) {
+        throw "ERROR: matrix dimension not divisible by tile size";
       }
 
       variant = 2; // transposeNoBankConflicts
