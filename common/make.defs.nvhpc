@@ -1,5 +1,6 @@
 #
 # This file shows the NVHPC toolchain options.
+#NVHPC_PATH=/proj/nv/Linux_x86_64/21.3
 #NVHPC_PATH=${HOME}/NVIDIA/hpc_sdk/Linux_x86_64/2021
 #NVHPC_CBIN=${NVHPC_PATH}/compilers/bin
 #
@@ -104,6 +105,7 @@ MPIDIR=${NVHPC_PATH}/comm_libs/openmpi/openmpi-3.1.5
 #MPIDIR=${NVHPC_PATH}/comm_libs/openmpi4/openmpi-4.0.5
 MPICC=${MPIDIR}/bin/mpicc
 MPICXX=${MPIDIR}/bin/mpicxx
+MPIFORT=${MPIDIR}/bin/mpifort
 MPIINC=-I${MPIDIR}/include
 MPILIB=-L${MPIDIR}/lib -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
