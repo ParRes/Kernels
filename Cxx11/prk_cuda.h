@@ -8,21 +8,11 @@
 #include <vector>
 #include <array>
 
-#ifndef __NVCC__
-#warning Please compile CUDA code with CC=nvcc.
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 #include <cuda_device_runtime_api.h>
-#endif
-
-#if defined(PRK_USE_CUBLAS)
-#if defined(__NVCC__)
 #include <cublas_v2.h>
-#else
-#error Sorry, no CUBLAS without NVCC.
-#endif
-#endif
 
 typedef double prk_float;
 
@@ -40,9 +30,6 @@ namespace prk
             }
         }
 
-#if defined(PRK_USE_CUBLAS)
-        // It seems that Coriander defines cublasStatus_t to cudaError_t
-        // because the compiler complains that this is a redefinition.
         void check(cublasStatus_t rc)
         {
             if (rc==CUBLAS_STATUS_SUCCESS) {
@@ -52,7 +39,6 @@ namespace prk
                 std::abort();
             }
         }
-#endif
 
         class info {
 
