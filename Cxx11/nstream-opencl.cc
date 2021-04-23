@@ -68,8 +68,9 @@ template <typename T>
 void run(cl::Context context, int iterations, size_t length)
 {
   auto precision = (sizeof(T)==8) ? 64 : 32;
+  auto kfile = "nstream"+std::to_string(precision)+".cl";
 
-  cl::Program program(context, prk::opencl::loadProgram("nstream.cl"), true);
+  cl::Program program(context, prk::opencl::loadProgram(kfile), true);
 
   auto function = (precision==64) ? "nstream64" : "nstream32";
 
@@ -186,54 +187,45 @@ int main(int argc, char* argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
-  prk::opencl::listPlatforms();
+  std::vector<cl::Platform> platforms;
+  cl::Platform::get(&platforms);
+  for (auto i : platforms) {
+      std::cout << "CL_PLATFORM_NAME=" << i.getInfo<CL_PLATFORM_NAME>() << "\n";
+      std::cout << "CL_PLATFORM_VENDOR=" << i.getInfo<CL_PLATFORM_VENDOR>() << "\n";
 
-  cl_int err = CL_SUCCESS;
+      std::vector<cl::Device> devices;
+      i.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+      for (auto j : devices) {
+          std::cout << "   CL_DEVICE_NAME="                << j.getInfo<CL_DEVICE_NAME>()      << "\n";
+          std::cout << "   CL_DEVICE_VENDOR="              << j.getInfo<CL_DEVICE_VENDOR>()    << "\n";
+          std::cout << "   CL_DEVICE_AVAILABLE="           << j.getInfo<CL_DEVICE_AVAILABLE>() << "\n";
+          auto t = j.getInfo<CL_DEVICE_TYPE>();
+          std::string s;
+          switch (t) {
+              case CL_DEVICE_TYPE_CPU:         s="CPU"; break;
+              case CL_DEVICE_TYPE_GPU:         s="GPU"; break;
+              case CL_DEVICE_TYPE_ACCELERATOR: s="ACCELERATOR"; break;
+              //case CL_DEVICE_TYPE_CUSTOM:      s="CUSTOM"; break;
+              default: s="UNKNOWN"; break;
+          }
+          std::cout << "   CL_DEVICE_TYPE="                << s << "\n";
+          //std::cout << "   CL_DEVICE_MAX_COMPUTE_UNITS="   << j.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()   << "\n";
+          //std::cout << "   CL_DEVICE_GLOBAL_MEM_SIZE="     << j.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>()     << "\n";
+          //std::cout << "   CL_DEVICE_MAX_CLOCK_FREQUENCY=" << j.getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>() << "\n";
+          //std::cout << "   CL_DEVICE_MAX_MEM_ALLOC_SIZE="  << j.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>()  << "\n";
+          //std::cout << "   CL_DEVICE_LOCAL_MEM_SIZE="      << j.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>()      << "\n";
+          auto e = j.getInfo<CL_DEVICE_EXTENSIONS>();
+          auto has64 = prk::stringContains(e,"cl_khr_fp64");
+          std::cout << "   CL_DEVICE_EXTENSIONS " << (has64 ? "contains" : "does not contain") << " cl_khr_fp64\n";
+          std::cout << std::endl;
 
-  cl::Context cpu(CL_DEVICE_TYPE_CPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(cpu) )
-  {
-    const int precision = prk::opencl::precision(cpu);
+          cl::Context ctx(j);
+          if (has64) {
+              run<double>(ctx, iterations, length);
+          }
+          run<float>(ctx, iterations, length);
 
-    std::cout << "CPU Precision        = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(cpu, iterations, length);
-    }
-    run<float>(cpu, iterations, length);
-  } else {
-    std::cerr << "No CPU" << std::endl;
-  }
-
-  cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(gpu) )
-  {
-    const int precision = prk::opencl::precision(gpu);
-
-    std::cout << "GPU Precision        = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(gpu, iterations, length);
-    }
-    run<float>(gpu, iterations, length);
-  } else {
-    std::cerr << "No GPU" << std::endl;
-  }
-
-  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(acc) )
-  {
-
-    const int precision = prk::opencl::precision(acc);
-
-    std::cout << "ACC Precision        = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(acc, iterations, length);
-    }
-    run<float>(acc, iterations, length);
-  } else {
-    std::cerr << "No ACC" << std::endl;
+      }
   }
 
   return 0;
