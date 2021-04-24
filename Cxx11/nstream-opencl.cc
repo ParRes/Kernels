@@ -70,7 +70,7 @@ void run(cl::Context context, int iterations, size_t length)
   auto precision = (sizeof(T)==8) ? 64 : 32;
   auto kfile = "nstream"+std::to_string(precision)+".cl";
 
-  cl::Program program(context, prk::opencl::loadProgram(kfile), true);
+  cl::Program program(context, prk::opencl::loadProgram("transpose.cl"), true);
 
   auto function = (precision==64) ? "nstream64" : "nstream32";
 
