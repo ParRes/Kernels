@@ -127,7 +127,7 @@ program main
     if (command_argument_count().lt.2) then
       if (me.eq.0) then
         write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-        write(*,'(a49)')    'Usage: ./transpose <# iterations> <vector length>'
+        write(*,'(a49)')    'Usage: ./nstream <# iterations> <vector length>'
       endif
       call MPI_Abort(MPI_COMM_WORLD, command_argument_count())
     endif
@@ -154,11 +154,11 @@ program main
     write(*,'(a,i12)') 'Number of iterations = ', iterations
     write(*,'(a,i12)') 'Vector length        = ', length
   endif
-  call MPI_Bcast(iterations, 1, MPI_INT32_T, 0, MPI_COMM_WORLD)
-  call MPI_Bcast(length, 1, MPI_INT64_T, 0, MPI_COMM_WORLD)
+  call MPI_Bcast(iterations, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
+  call MPI_Bcast(length, 1, MPI_INTEGER8, 0, MPI_COMM_WORLD)
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   allocate( A(length), stat=err)
@@ -289,7 +289,7 @@ program main
     asum = asum + abs(A(i)-ar)
   enddo
 #endif
-  call MPI_Allreduce(MPI_IN_PLACE, asum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD)
+  call MPI_Allreduce(MPI_IN_PLACE, asum, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD)
 
   deallocate( C )
   deallocate( B )

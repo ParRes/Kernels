@@ -65,7 +65,7 @@ program main
   integer(kind=INT32) ::  order                     ! order of a the matrix
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
-  real(kind=REAL64) ::  T(32,32)                    ! Tile
+  real(kind=REAL64) ::  T(0:32,0:32)                ! Tile
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
@@ -144,40 +144,39 @@ program main
     stop 1
   endif
 
-  !$omp parallel do simd collapse(2)
+  t0 = 0
+
+  !$omp target data map(to: A) map(tofrom: B)
+
+  !$omp target teams distribute parallel do simd collapse(2)
   do j=1,order
     do i=1,order
       A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
       B(i,j) = 0
     enddo
   enddo
-  !$omp end parallel do simd
-
-  !$omp target data map(to: A) map(tofrom: B)
-
-  t0 = 0
+  !$omp end target teams distribute parallel do simd
 
   do k=0,iterations
 
     if (k.eq.1) t0 = omp_get_wtime()
 
     if (tile_size.lt.order) then
-      !$omp target teams distribute collapse(2)
+      !$omp target teams distribute collapse(2) private(T)
       do jt=1,order,tile_size
         do it=1,order,tile_size
-          !$omp parallel do simd collapse(2) schedule(static,1)
-          do j=1,tile_size
-            do i=1,tile_size
-              T(i,j) = A(it+i-1,jt+j-1)
+          !$omp parallel do simd collapse(2) schedule(static,4)
+          do j=0,tile_size-1
+            do i=0,tile_size-1
+              T(i,j) = A(it+i,jt+j)
+              A(it+i,jt+j) = A(it+i,jt+j) + 1
             enddo
           enddo
           !$omp end parallel do simd
-          !$omp parallel do simd collapse(2) schedule(static,1)
-          do j=1,tile_size
-            do i=1,tile_size
-              !B(jt+j-1,it+i-1) = B(jt+j-1,it+i-1) + A(it+i-1,jt+j-1)
-              B(jt+j-1,it+i-1) = B(jt+j-1,it+i-1) + T(i,j)
-              A(it+i-1,jt+j-1) = A(it+i-1,jt+j-1) + 1.0
+          !$omp parallel do simd collapse(2) schedule(static,4)
+          do i=0,tile_size-1
+            do j=0,tile_size-1
+              B(jt+j,it+i) = B(jt+j,it+i) + T(i,j)
             enddo
           enddo
           !$omp end parallel do simd
@@ -185,7 +184,7 @@ program main
       enddo
       !$omp end target teams distribute
     else
-      !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
+      !$omp target teams distribute parallel do simd collapse(2) GPU_SCHEDULE
       do j=1,order
         do i=1,order
           B(j,i) = B(j,i) + A(i,j)

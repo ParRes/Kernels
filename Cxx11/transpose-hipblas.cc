@@ -54,76 +54,14 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_cuda.h"
-
-// The kernel was derived from https://github.com/parallel-forall/code-samples/blob/master/series/cuda-cpp/transpose/transpose.cu
-
-const int tile_dim = 32;
-const int block_rows = 8;
-
-__global__ void transposeNoBankConflict(int order, double * A, double * B)
-{
-    __shared__ double tile[tile_dim][tile_dim+1];
-
-    auto x = blockIdx.x * tile_dim + threadIdx.x;
-    auto y = blockIdx.y * tile_dim + threadIdx.y;
-
-    for (int j = 0; j < tile_dim; j += block_rows) {
-       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
-       A[(y+j)*order + x] += (double)1;
-    }
-
-    __syncthreads();
-
-    x = blockIdx.y * tile_dim + threadIdx.x;
-    y = blockIdx.x * tile_dim + threadIdx.y;
-
-    for (int j = 0; j < tile_dim; j+= block_rows) {
-        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
-    }
-}
-
-__global__ void transposeCoalesced(int order, double * A, double * B)
-{
-    __shared__ double tile[tile_dim][tile_dim];
-
-    auto x = blockIdx.x * tile_dim + threadIdx.x;
-    auto y = blockIdx.y * tile_dim + threadIdx.y;
-
-    for (int j = 0; j < tile_dim; j += block_rows) {
-       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
-       A[(y+j)*order + x] += (double)1;
-    }
-
-    __syncthreads();
-
-    x = blockIdx.y * tile_dim + threadIdx.x;
-    y = blockIdx.x * tile_dim + threadIdx.y;
-
-    for (int j = 0; j < tile_dim; j+= block_rows) {
-        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
-    }
-}
-
-__global__ void transposeNaive(int order, double * A, double * B)
-{
-    auto x = blockIdx.x * tile_dim + threadIdx.x;
-    auto y = blockIdx.y * tile_dim + threadIdx.y;
-
-    for (int j = 0; j < tile_dim; j+= block_rows) {
-        B[x*order + (y+j)] += A[(y+j)*order + x];
-        A[(y+j)*order + x] += (double)1;
-    }
-}
-
-const std::array<std::string,3> vnames = {"naive", "coalesced", "no bank conflicts"};
+#include "prk_hip.h"
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/CUDA Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/HIPBLAS Matrix transpose: B = A^T" << std::endl;
 
-  prk::CUDA::info info;
+  prk::HIP::info info;
   info.print();
 
   //////////////////////////////////////////////////////////////////////
@@ -131,10 +69,10 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int order, variant;
+  int order;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [variant (0/1/2)]";
+        throw "Usage: <# iterations> <matrix order>";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -147,16 +85,6 @@ int main(int argc, char * argv[])
         throw "ERROR: Matrix Order must be greater than 0";
       } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
-      } else if (order % tile_dim) {
-        throw "ERROR: matrix dimension not divisible by tile size";
-      }
-
-      variant = 2; // transposeNoBankConflicts
-      if (argc > 3) {
-          variant = std::atoi(argv[3]);
-      }
-      if (variant < 0 || variant > 2) {
-          throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts)";
       }
   }
   catch (const char * e) {
@@ -164,14 +92,12 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Variant               = " << vnames[variant] << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
 
-  dim3 dimGrid(order/tile_dim, order/tile_dim, 1);
-  dim3 dimBlock(tile_dim, block_rows, 1);
-
-  info.checkDims(dimBlock, dimGrid);
+  hipblasHandle_t h;
+  //prk::HIP::check( cublasInit() );
+  prk::HIP::check( hipblasCreate(&h) );
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
@@ -179,8 +105,9 @@ int main(int argc, char * argv[])
 
   const size_t nelems = (size_t)order * (size_t)order;
 
-  double * h_a = prk::CUDA::malloc_host<double>(nelems);
-  double * h_b = prk::CUDA::malloc_host<double>(nelems);
+  double * h_a = prk::HIP::malloc_host<double>(nelems);
+  double * h_b = prk::HIP::malloc_host<double>(nelems);
+  double * h_o = prk::HIP::malloc_host<double>(1);
 
   // fill A with the sequence 0 to order^2-1
   for (int j=0; j<order; j++) {
@@ -189,42 +116,54 @@ int main(int argc, char * argv[])
       h_b[j*order+i] = static_cast<double>(0);
     }
   }
+  h_o[0] = 1;
 
   // copy input from host to device
-  double * d_a = prk::CUDA::malloc_device<double>(nelems);
-  double * d_b = prk::CUDA::malloc_device<double>(nelems);
+  double * d_a = prk::HIP::malloc_device<double>(nelems);
+  double * d_b = prk::HIP::malloc_device<double>(nelems);
+  double * d_o = prk::HIP::malloc_device<double>(1);
 
-  prk::CUDA::copyH2D(d_a, h_a, nelems);
-  prk::CUDA::copyH2D(d_b, h_b, nelems);
+  prk::HIP::copyH2D(d_a, h_a, nelems);
+  prk::HIP::copyH2D(d_b, h_b, nelems);
+  prk::HIP::copyH2D(d_o, h_o, 1);
 
   double trans_time{0};
 
   for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) {
-        prk::CUDA::sync();
+        prk::HIP::sync();
         trans_time = prk::wtime();
     }
 
-    if (variant==0) {
-        transposeNaive<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-    } else if (variant==1) {
-        transposeCoalesced<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-    } else if (variant==2) {
-        transposeNoBankConflict<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-    }
-    prk::CUDA::sync();
+    double one(1);
+    // B += trans(A) i.e. B = trans(A) + B
+    prk::HIP::check( hipblasDgeam(h,
+                                  HIPBLAS_OP_T, HIPBLAS_OP_N,   // opA, opB
+                                  order, order,               // m, n
+                                  &one, d_a, order,           // alpha, A, lda
+                                  &one, d_b, order,           // beta, B, ldb
+                                  d_b, order) );              // C, ldc (in-place for B)
+
+    // A += 1.0 i.e. A = 1.0 * 1.0 + A
+    prk::HIP::check( hipblasDaxpy(h,
+                      order*order,                // n
+                      &one,                       // alpha
+                      d_o, 0,                     // x, incx
+                      d_a, 1) );                  // y, incy
+    prk::HIP::sync();
   }
   trans_time = prk::wtime() - trans_time;
 
-  prk::CUDA::copyD2H(h_b, d_b, nelems);
+  prk::HIP::copyD2H(h_b, d_b, nelems);
 
-#ifdef VERBOSE
-  prk::CUDA::copyD2H(h_a, d_a, nelems);
-#endif
+  prk::HIP::free(d_a);
+  prk::HIP::free(d_b);
+  prk::HIP::free(d_o);
+  prk::HIP::free_host(h_o);
 
-  prk::CUDA::free(d_a);
-  prk::CUDA::free(d_b);
+  prk::HIP::check( hipblasDestroy(h) );
+  //prk::HIP::check( cublasShutdown() );
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -245,6 +184,9 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
+  prk::HIP::free_host(h_a);
+  prk::HIP::free_host(h_b);
+
   const double epsilon = 1.0e-8;
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
@@ -264,9 +206,6 @@ int main(int argc, char * argv[])
               << " exceeds threshold " << epsilon << std::endl;
     return 1;
   }
-
-  prk::CUDA::free_host(h_a);
-  prk::CUDA::free_host(h_b);
 
   return 0;
 }

@@ -93,8 +93,8 @@ CBLASFLAG=-DMKL -mkl
 #MKLROOT=/opt/intel/inteloneapi/mkl/latest
 #ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_tbb_thread ${TBBFLAG} -lmkl_core -lOpenCL -ldl
 #ONEMKLFLAG+=-I/opt/intel/oneapi/mkl/latest/include/
-#ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
-ONEMKLFLAG=-mkl
+ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
+#ONEMKLFLAG=-mkl
 #
 # CUDA flags
 #
