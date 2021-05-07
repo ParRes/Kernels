@@ -71,41 +71,32 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
   integer(kind=INT32) :: i,j,k,it,jt,kt
 
   if (tile_size.lt.order) then
-    !$omp do collapse(3) private(i,j,k,it,jt,kt)
-    do jt=1,order,tile_size
-      do kt=1,order,tile_size
-        do it=1,order,tile_size
+    do concurrent (jt=1:order:tile_size)
+      do concurrent (kt=1:order:tile_size)
+        do concurrent (it=1:order:tile_size)
           do j=jt,min(order,jt+tile_size-1)
             do k=kt,min(order,kt+tile_size-1)
-              !$omp simd
               do i=it,min(order,it+tile_size-1)
                 C(i,j) = C(i,j) + A(i,k) * B(k,j)
               enddo
-              !$omp end simd
             enddo
           enddo
         enddo
       enddo
     enddo
-    !$omp end do
   else
-    !$omp do private(i,j,k,it,jt,kt)
-    do j=1,order
-      do k=1,order
-        !$omp simd
-        do i=1,order
+    do concurrent (j=1:order)
+      do concurrent (k=1:order)
+        do concurrent (i=1:order)
           C(i,j) = C(i,j) + A(i,k) * B(k,j)
         enddo
-        !$omp end simd
       enddo
     enddo
-    !$omp end do
   endif
 end subroutine prk_dgemm
 
 program main
   use iso_fortran_env
-  use omp_lib
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -132,7 +123,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a61)') 'Fortran OpenMP Dense matrix-matrix multiplication: C += A x B'
+  write(*,'(a61)') 'Fortran STDPAR Dense matrix-matrix multiplication: C += A x B'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -167,7 +158,6 @@ program main
     tile_size = order ! no tiling
   endif
 
-  write(*,'(a,i8)') 'Number of threads    = ', omp_get_max_threads()
   write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Matrix order         = ', order
   write(*,'(a,i8)') 'Tile size            = ', tile_size
@@ -194,37 +184,22 @@ program main
     stop 1
   endif
 
-  !$omp parallel default(none)                     &
-  !$omp&  shared(A,B,C,t0,t1)                      &
-  !$omp&  firstprivate(order,iterations,tile_size) &
-  !$omp&  private(k)
-
-  !$omp do private(i)
-  do i=1, order
+  do concurrent (i=1:order)
     A(:,i) = real(i-1,REAL64)
     B(:,i) = real(i-1,REAL64)
     C(:,i) = real(0,REAL64)
   enddo
-  !$omp end do
 
   t0 = 0
 
   do k=0,iterations
     if (k.eq.1) then
-      !$omp barrier
-      !$omp master
       t0 = prk_get_wtime()
-      !$omp end master
     endif
     call prk_dgemm(order, tile_size, A, B, C)
   enddo
 
-  !$omp barrier
-  !$omp master
   t1 = prk_get_wtime()
-  !$omp end master
-
-  !$omp end parallel
 
   dgemm_time = t1 - t0
 
@@ -238,13 +213,11 @@ program main
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
   checksum = 0.0d0
-  !$omp parallel do reduction(+:checksum)
   do j=1,order
     do i=1,order
       checksum = checksum + C(i,j)
     enddo
   enddo
-  !$omp end parallel do
 
   deallocate( C )
 
