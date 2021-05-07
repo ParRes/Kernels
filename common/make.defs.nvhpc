@@ -49,17 +49,19 @@ BOOSTFLAG=
 #RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
 RANGEFLAG=-DUSE_RANGES_TS -I../deps/range-v3/include
 PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -I./pstl/include ${RANGEFLAG}
-KOKKOSDIR=
-KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
+KOKKOSDIR=../deps/kokkos-cuda
+PRK_KOKKOS_BACKEND=Cuda
+KOKKOSCXX=${KOKKOSDIR}/bin/nvcc_wrapper
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkoscore
 RAJADIR=
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
-THRUSTDIR=../deps/thrust
+THRUSTDIR=/opt/nvidia/hpc_sdk/Linux_x86_64/21.3/compilers/include-stdpar
 THRUSTFLAG=-I${THRUSTDIR}
 #
 # CBLAS for C++ DGEMM
 #
-BLASFLAG=
-CBLASFLAG=
+BLASFLAG=-L${NVHPC_PATH}/REDIST/compilers/lib -lblas
+CBLASFLAG=${BLASFLAG}
 #
 # CUDA flags
 #
@@ -67,9 +69,9 @@ CBLASFLAG=
 # Use appropriate arch or code is compiled to ancient features.
 #NVCC=${NVHPC_CBIN}nvc++
 NVCC=${NVHPC_CBIN}nvcc
-CUDAFLAGS=-g -O3 -std=c++14
+CUDAFLAGS=-g -O3 -std=c++17
 CUDAFLAGS+=--extended-lambda
-CUDAFLAGS+=--gpu-architecture=sm_70
+CUDAFLAGS+=--gpu-architecture=sm_75
 #CUDAFLAGS+=--compiler-bindir=/swtools/gcc/7.5.0/bin
 #CUDAFLAGS+=-forward-unknown-to-host-compiler -fopenmp
 CUDAFLAGS+=-rdc=true # FIXES ptxas fatal   : Unresolved extern function 'cudaCGGetIntrinsicHandle'
