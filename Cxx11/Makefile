@@ -120,12 +120,12 @@ hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 
 hipstl: nstream-hipstl
 
-hipblas: nstream-hipblas dgemm-hipblas
+hipblas: nstream-hipblas sgemm-hipblas dgemm-hipblas transpose-hipblas
 
 thrust: nstream-host-thrust nstream-device-thrust \
         transpose-host-thrust transpose-device-thrust
 
-cublas: transpose-cublas nstream-cublas dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas
+cublas: transpose-cublas nstream-cublas dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas sgemm-cublas
 
 cblas: transpose-cblas dgemm-cblas
 

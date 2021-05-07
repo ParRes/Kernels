@@ -103,7 +103,7 @@ program main
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <vector length> [<offset>]'
+    write(*,'(a62)')    'Usage: ./nstream <# iterations> <vector length> [<offset>]'
     stop 1
   endif
 
@@ -138,7 +138,7 @@ program main
   write(*,'(a,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   allocate( A(length), stat=err)

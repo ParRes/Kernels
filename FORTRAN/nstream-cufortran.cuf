@@ -41,9 +41,9 @@
 !
 ! USAGE:   The program takes as input the number
 !          of iterations to loop over the triad vectors, the length of the
-!          vectors, and the offset between vectors
+!          vectors, and the block_size for the GPU.
 !
-!          <progname> <# iterations> <vector length> <offset>
+!          <progname> <# iterations> <vector length> <block_size>
 !
 !          The output consists of diagnostics to make sure the
 !          algorithm worked, and of timing statistics.
@@ -63,20 +63,48 @@
 !
 ! *******************************************************************
 
+function prk_get_wtime() result(t)
+  use iso_fortran_env
+  implicit none
+  real(kind=REAL64) ::  t
+  integer(kind=INT64) :: c, r
+  call system_clock(count = c, count_rate = r)
+  t = real(c,REAL64) / real(r,REAL64)
+end function prk_get_wtime
+
+module nstream
+use iso_fortran_env
+contains
+  attributes(global) subroutine kernel(scalar, A, B, C)
+    implicit none
+    real(kind=REAL64), intent(inout) :: A(:)
+    real(kind=REAL64), intent(in) :: B(:), C(:)
+    real(kind=REAL64), intent(in), value :: scalar
+    integer :: i, n
+    n = size(A)
+    i = blockDim%x * (blockIdx%x - 1) + threadIdx%x
+    if (i <= n) then
+        A(i) = A(i) + B(i) + scalar * C(i)
+    endif
+  end subroutine kernel
+end module nstream
+
 program main
   use iso_fortran_env
-  use omp_lib
+  use cudafor
+  use nstream
   implicit none
+  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
   character(len=32) :: argtmp
   ! problem definition
-  integer(kind=INT32) ::  iterations, offset
+  integer(kind=INT32) ::  iterations, block_size
   integer(kind=INT64) ::  length
-  real(kind=REAL64), allocatable ::  A(:)
-  real(kind=REAL64), allocatable ::  B(:)
-  real(kind=REAL64), allocatable ::  C(:)
+  real(kind=REAL64), allocatable, managed ::  A(:)
+  real(kind=REAL64), allocatable, managed ::  B(:)
+  real(kind=REAL64), allocatable, managed ::  C(:)
   real(kind=REAL64) :: scalar
   integer(kind=INT64) :: bytes
   ! runtime variables
@@ -85,17 +113,19 @@ program main
   real(kind=REAL64) ::  asum, ar, br, cr
   real(kind=REAL64) ::  t0, t1, nstream_time, avgtime
   real(kind=REAL64), parameter ::  epsilon=1.D-8
+  ! CUDA stuff
+  type(dim3) :: grid, tblock
 
   ! ********************************************************************
   ! read and test input parameters
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a47)') 'Fortran OpenMP STREAM triad: A = B + scalar * C'
+  write(*,'(a45)') 'CUDA Fortran STREAM triad: A = B + scalar * C'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./nstream <# iterations> <vector length> [<offset>]'
+    write(*,'(a64)')    'Usage: ./nstream <# iterations> <vector length> [<block_size>]'
     stop 1
   endif
 
@@ -115,20 +145,22 @@ program main
     stop 1
   endif
 
-  offset = 0
+  block_size = 256
   if (command_argument_count().gt.2) then
     call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') offset
-    if (offset .lt. 0) then
-      write(*,'(a,i5)') 'ERROR: offset must be positive : ', offset
+    if (err.eq.0) read(argtmp,'(i32)') block_size
+    if (block_size .lt. 0) then
+      write(*,'(a,i5)') 'ERROR: block_size must be positive : ', block_size
       stop 1
     endif
   endif
 
-  write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
   write(*,'(a,i12)') 'Number of iterations = ', iterations
   write(*,'(a,i12)') 'Vector length        = ', length
-  write(*,'(a,i12)') 'Offset               = ', offset
+  write(*,'(a,i12)') 'GPU block size       = ', block_size
+
+  tblock = dim3(block_size,1,1)
+  grid = dim3(ceiling(real(length)/tblock%x),1,1)
 
   ! ********************************************************************
   ! ** Allocate space and perform the computation
@@ -156,41 +188,21 @@ program main
 
   t0 = 0
 
-  !$omp parallel default(none)                           &
-  !$omp&  shared(A,B,C,t0,t1)                            &
-  !$omp&  firstprivate(length,iterations,offset,scalar)  &
-  !$omp&  private(i,k)
-
-  !$omp do
   do i=1,length
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
-  !$omp end do
-
-  ! need this because otherwise no barrier between initialization
-  ! and iteration 0 (warmup), which will lead to incorrectness.
-  !$omp barrier
 
   do k=0,iterations
-    if (k.eq.1) then
-      !$omp barrier
-      !$omp master
-      t0 = omp_get_wtime()
-      !$omp end master
-    endif
 
-    !$omp do
-    do i=1,length
-      A(i) = A(i) + B(i) + scalar * C(i)
-    enddo
-    !$omp end do
+    if (k.eq.1) t0 = prk_get_wtime()
+
+    call kernel<<<grid, tblock>>>(scalar, A, B, C)
+
   enddo ! iterations
 
-  t1 = omp_get_wtime()
-
-  !$omp end parallel
+  t1 = prk_get_wtime()
 
   nstream_time = t1 - t0
 
@@ -206,11 +218,9 @@ program main
   enddo
 
   asum = 0
-  !$omp parallel do reduction(+:asum)
   do i=1,length
     asum = asum + abs(A(i)-ar)
   enddo
-  !$omp end parallel do
 
   deallocate( C )
   deallocate( B )

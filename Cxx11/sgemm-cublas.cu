@@ -32,7 +32,7 @@
 
 //////////////////////////////////////////////////////////////////////
 ///
-/// NAME:    dgemm
+/// NAME:    sgemm
 ///
 /// PURPOSE: This program tests the efficiency with which a dense matrix
 ///          dense multiplication is carried out
@@ -52,8 +52,8 @@
 ///          Other than OpenMP or standard C functions, the following
 ///          functions are used in this program:
 ///
-///          cblasDgemm()
-///          cublasDgemmStridedBatched()
+///          cblasSgemm()
+///          cublasSgemmStridedBatched()
 ///
 /// HISTORY: Written by Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, December, 2017.
@@ -64,7 +64,7 @@
 #include "prk_cuda.h"
 
 #if 0
-__global__ void init(unsigned order, double * A, double * B, double * C)
+__global__ void init(unsigned order, float * A, float * B, float * C)
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     auto j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -76,7 +76,7 @@ __global__ void init(unsigned order, double * A, double * B, double * C)
     }
 }
 
-__global__ void init(unsigned order, double * C)
+__global__ void init(unsigned order, float * C)
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     auto j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -87,7 +87,7 @@ __global__ void init(unsigned order, double * C)
 }
 #endif
 
-__global__ void init(int order, const int matrices, double * A, double * B, double * C)
+__global__ void init(int order, const int matrices, float * A, float * B, float * C)
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     auto j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -101,7 +101,7 @@ __global__ void init(int order, const int matrices, double * A, double * B, doub
     }
 }
 
-__global__ void init(int order, const int matrices, double * C)
+__global__ void init(int order, const int matrices, float * C)
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     auto j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -113,21 +113,21 @@ __global__ void init(int order, const int matrices, double * C)
     }
 }
 
-void prk_dgemm(const cublasHandle_t & h,
+void prk_sgemm(const cublasHandle_t & h,
                const int order,
                const int batches,
-               double * A,
-               double * B,
-               double * C)
+               float * A,
+               float * B,
+               float * C)
 {
-    const double alpha = 1.0;
-    const double beta  = 1.0;
+    const float alpha = 1.0;
+    const float beta  = 1.0;
 
     for (int b=0; b<batches; ++b) {
-        double * pA = &(A[b*order*order]);
-        double * pB = &(B[b*order*order]);
-        double * pC = &(C[b*order*order]);
-        prk::CUDA::check( cublasDgemm(h,
+        float * pA = &(A[b*order*order]);
+        float * pB = &(B[b*order*order]);
+        float * pC = &(C[b*order*order]);
+        prk::CUDA::check( cublasSgemm(h,
                                       CUBLAS_OP_N, CUBLAS_OP_N, // opA, opB
                                       order, order, order,      // m, n, k
                                       &alpha,                   // alpha
@@ -141,32 +141,32 @@ void prk_dgemm(const cublasHandle_t & h,
 void prk_bgemm(const cublasHandle_t & h,
                const int order,
                const int batches,
-               double * A,
-               double * B,
-               double * C)
+               float * A,
+               float * B,
+               float * C)
 {
-    const double alpha = 1.0;
-    const double beta  = 1.0;
+    const float alpha = 1.0;
+    const float beta  = 1.0;
 
-    prk::CUDA::check( cublasDgemmStridedBatched(h,
+    prk::CUDA::check( cublasSgemmStridedBatched(h,
                                                 CUBLAS_OP_N, CUBLAS_OP_N,
                                                 order, order, order,
                                                 &alpha,
-                                                (const double *)A, order, order*order,
-                                                (const double *)B, order, order*order,
+                                                (const float *)A, order, order*order,
+                                                (const float *)B, order, order*order,
                                                 &beta,
                                                 C, order, order*order,
                                                 batches) );
 
-    //  cublasStatus_t cublasDgemmBatched(cublasHandle_t handle,
+    //  cublasStatus_t cublasSgemmBatched(cublasHandle_t handle,
     //                                    cublasOperation_t transa,
     //                                    cublasOperation_t transb,
     //                                    int m, int n, int k,
-    //                                    const double          *alpha,
-    //                                    const double          *Aarray[], int lda,
-    //                                    const double          *Barray[], int ldb,
-    //                                    const double          *beta,
-    //                                    double          *Carray[], int ldc,
+    //                                    const float          *alpha,
+    //                                    const float          *Aarray[], int lda,
+    //                                    const float          *Barray[], int ldb,
+    //                                    const float          *beta,
+    //                                    float          *Carray[], int ldc,
     //                                    int batchCount)
 }
 
@@ -249,14 +249,14 @@ int main(int argc, char * argv[])
   const size_t nelems = (size_t)order * (size_t)order;
 
   // host buffers
-  auto h_a = prk::CUDA::malloc_host<double>(nelems);
-  auto h_b = prk::CUDA::malloc_host<double>(nelems);
-  auto h_c = prk::CUDA::malloc_host<double>(matrices*nelems);
+  auto h_a = prk::CUDA::malloc_host<float>(nelems);
+  auto h_b = prk::CUDA::malloc_host<float>(nelems);
+  auto h_c = prk::CUDA::malloc_host<float>(matrices*nelems);
 
   // device buffers
-  auto d_a = prk::CUDA::malloc_device<double>(matrices*nelems);
-  auto d_b = prk::CUDA::malloc_device<double>(matrices*nelems);
-  auto d_c = prk::CUDA::malloc_device<double>(matrices*nelems);
+  auto d_a = prk::CUDA::malloc_device<float>(matrices*nelems);
+  auto d_b = prk::CUDA::malloc_device<float>(matrices*nelems);
+  auto d_c = prk::CUDA::malloc_device<float>(matrices*nelems);
 
   if (input_copy) {
     for (int i=0; i<order; ++i) {
@@ -307,7 +307,7 @@ int main(int argc, char * argv[])
         if (batches > 0) {
           prk_bgemm(h, order, matrices, d_a, d_b, d_c);
         } else {
-          prk_dgemm(h, order, matrices, d_a, d_b, d_c);
+          prk_sgemm(h, order, matrices, d_a, d_b, d_c);
         }
         double t1 = prk::wtime();
         if (iter==1) comp += (t1-t0);

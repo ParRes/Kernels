@@ -19,6 +19,21 @@ octave-workspace                # Octave crashes
 *.patch                         # patch files
 *.dbg                           # Flang
 
+# Cray GPU compiler
+*.lst
+*.cub
+*.ptx
+
+# AMD GPU compiler
+*.cmdx
+*.cmod
+*.ilm
+*.stb
+*.cmdx
+*.cmod
+*.ilm
+*.stb
+
 common/make.defs
 scripts/small/runfgmpi
 scripts/wide/runfgmpi
@@ -111,15 +126,9 @@ Cxx11/dgemm-stdpar
 Cxx11/dgemm-sycl
 Cxx11/dgemm-vector
 Cxx11/dgemm-vector-raja
-Cxx11/grid1.cl
-Cxx11/grid2.cl
-Cxx11/grid3.cl
-Cxx11/grid4.cl
-Cxx11/grid5.cl
-Cxx11/grid6.cl
-Cxx11/grid7.cl
-Cxx11/grid8.cl
-Cxx11/grid9.cl
+Cxx11/sgemm-cublas
+Cxx11/sgemm-hipblas
+Cxx11/grid*.cl
 Cxx11/nstream
 Cxx11/nstream-boost-compute
 Cxx11/nstream-celerity
@@ -190,16 +199,7 @@ Cxx11/pic-taskloop
 Cxx11/pic-tbb
 Cxx11/sparse
 Cxx11/sparse-vector
-Cxx11/star1.cl
-Cxx11/star10.cl
-Cxx11/star2.cl
-Cxx11/star3.cl
-Cxx11/star4.cl
-Cxx11/star5.cl
-Cxx11/star6.cl
-Cxx11/star7.cl
-Cxx11/star8.cl
-Cxx11/star9.cl
+Cxx11/star*.cl
 Cxx11/stencil
 Cxx11/stencil-cilk
 Cxx11/stencil-cuda
@@ -234,6 +234,7 @@ Cxx11/transpose-cuda
 Cxx11/transpose-device-thrust
 Cxx11/transpose-dpcpp
 Cxx11/transpose-hip
+Cxx11/transpose-hipblas
 Cxx11/transpose-host-thrust
 Cxx11/transpose-kokkos
 Cxx11/transpose-mpi
@@ -256,6 +257,7 @@ Cxx11/transpose-thread
 Cxx11/transpose-valarray
 Cxx11/transpose-vector
 Cxx11/transpose-vector-raja
+FORTRAN/*.mod
 FORTRAN/dgemm
 FORTRAN/dgemm-ga
 FORTRAN/dgemm-openmp
@@ -264,6 +266,7 @@ FORTRAN/dgemm-pretty
 FORTRAN/dgemm-taskloop-openmp
 FORTRAN/nstream
 FORTRAN/nstream-coarray
+FORTRAN/nstream-cufortran
 FORTRAN/nstream-ga
 FORTRAN/nstream-openmp
 FORTRAN/nstream-mpi

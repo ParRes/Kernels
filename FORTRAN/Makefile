@@ -22,7 +22,7 @@ ifeq ($(findstring ifx,$(FC)),ifx)
   BLASFLAGS += -heap-arrays
 endif
 
-.PHONY: all clean serial pretty openmp coarray target openacc ga
+.PHONY: all clean serial pretty openmp coarray target stdpar blas ga
 
 # Intel
 ifeq ($(findstring ifort,$(FC)),ifort)
@@ -41,13 +41,17 @@ ifeq ($(findstring gfortran,$(FC)),gfortran)
   EXTRA = target coarray taskloop openacc
 endif
 # PGI and LLVM Flang
-ifeq ($(findstring pgf,$(FC)),pgf)
-  EXTRA = target openacc
-  FCFLAGS += -DPGI
-endif
 ifeq ($(findstring flang,$(FC)),flang)
   EXTRA = target openacc
   FCFLAGS += -DPGI
+endif
+ifeq ($(findstring pgf,$(FC)),pgf)
+  EXTRA = target openacc cufortran
+  FCFLAGS += -DPGI
+endif
+ifeq ($(findstring nvf,$(FC)),nvf)
+  EXTRA = target openacc cufortran
+  FCFLAGS += -DNVHPC
 endif
 ifeq ($(findstring xlf,$(FC)),xlf)
   EXTRA = target
@@ -78,7 +82,11 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgem
 
 openacc: p2p-openacc p2p-innerloop-openacc stencil-openacc transpose-openacc nstream-openacc
 
-stdpar: nstream-stdpar stencil-stdpar transpose-stdpar
+
+stdpar: nstream-stdpar stencil-stdpar transpose-stdpar dgemm-stdpar
+
+cuf: cufortran
+cufortran: nstream-cufortran transpose-cufortran
 
 blas: dgemm-blas
 
@@ -122,6 +130,9 @@ dgemm-blas: dgemm-blas.F90
 %-openacc: %-openacc.F90
 	$(FC) $(FCFLAGS) $(OPENACCFLAG) $< -o $@
 
+%-cufortran: %-cufortran.cuf
+	$(FC) $(FCFLAGS) $(CUFORTFLAG) $< -o $@
+
 %-stdpar: %-stdpar.F90
 	$(FC) $(FCFLAGS) $(STDPARFLAG) $< -o $@
 
@@ -145,4 +156,5 @@ clean:
 	-rm -f *-target
 	-rm -f *-openacc
 	-rm -f *-stdpar
+	-rm -f *-cufortran
 	-rm -f pic pic_soa
