@@ -48,10 +48,9 @@
 #
 # HISTORY: Written by Rob Van der Wijngaart, February 2009.
 #          Converted to Python by Jeff Hammond, February 2016.
-#          Fixed timing err, Ave+std_dev, more pythonic, Tim Mattson May 2021
+#          Fixed timing error, Added Ave+std_dev by Tim Mattson, May 2021.
 # *******************************************************************
 
-import numpy as np
 import sys
 print('Python version = ', str(sys.version_info.major)+'.'+str(sys.version_info.minor))
 if sys.version_info >= (3, 3):
@@ -87,13 +86,15 @@ def main():
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    A = np.zeros((order,order))
-    B = np.zeros((order,order))
-    C = np.zeros((order,order))
-    for i in range(order):
-        A[:,i] = float(i)
-        B[:,i] = float(i)
+    # 0.0 is a float, which is 64b (53b of precision)
+    A = [[0.0 for x in range(order)] for x in range(order)]
+    B = [[0.0 for x in range(order)] for x in range(order)]
+    C = [[0.0 for x in range(order)] for x in range(order)]
 
+    for i in range(order):
+        for j in range(order):
+            A[i][j] = float(j)
+            B[i][j] = float(j)
 
     for kiter in range(0,iters+1):
         if kiter==1: 
@@ -141,3 +142,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
