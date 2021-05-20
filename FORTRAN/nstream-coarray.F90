@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2017, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -111,7 +112,7 @@ program main
 
     if (command_argument_count().lt.2) then
       write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-      write(*,'(a49)')    'Usage: ./transpose <# iterations> <vector length>'
+      write(*,'(a49)')    'Usage: ./nstream <# iterations> <vector length>'
       error stop 1
     endif
 
@@ -151,7 +152,7 @@ program main
   endif
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   allocate( A(length)[*], stat=err)
@@ -211,12 +212,9 @@ program main
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-  ar = ar * np
-
   asum = 0
   do concurrent (i=1:length)
-    asum = asum + abs(A(i))
+    asum = asum + abs(A(i)-ar)
   enddo
 
   ! reduction via gather
@@ -233,11 +231,11 @@ program main
   deallocate( B )
   deallocate( A )
 
-  if (abs(asum-ar) .gt. epsilon) then
+  if (abs(asum) .gt. epsilon) then
     if (me.eq.1) then
       write(*,'(a35)') 'Failed Validation on output array'
-      write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-      write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+      write(*,'(a30,f30.15)') '       Expected value: ', ar
+      write(*,'(a30,f30.15)') '       Observed value: ', A(1)
       write(*,'(a35)')  'ERROR: solution did not validate'
       error stop 1
     endif

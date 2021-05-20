@@ -32,13 +32,23 @@ Install Ninja from package manager or https://ninja-build.org/.
 Install GCC 9 (something newer than GCC 4 is required, but why not install something reasonable?).
 
 If you are on a system with limited memory or multiple users, replace `nproc` with something nicer.
-```
+```sh
 git clean -dfx
 export CC=gcc-9
 export CXX=g++-9
 python3 ./buildbot/configure.py [--arm] [--cuda] [--cmake-opt="-DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0"]
 python3 ./buildbot/compile.py -j`nproc`
 python3 ./buildbot/check.py
+```
+
+The optional arguments are associated with platforms such as the Xavier AGX, as shown below.
+```sh
+python3 ./buildbot/configure.py --arm --cuda --cmake-opt="-DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0"
+```
+
+It may also be necessary to apply the following (evil) `CPATH` hack on ARM systems.
+```
+export CPATH=/usr/include/aarch64-linux-gnu:$CPATH
 ```
 
 ## hipSYCL

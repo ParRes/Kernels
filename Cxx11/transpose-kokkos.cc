@@ -125,11 +125,11 @@ int main(int argc, char * argv[])
     auto order2 = {order,order};
     auto tile2  = {tile_size,tile_size};
 
-    auto policy    = Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0},order2,tile2);
+    const auto policy    = Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0}, {order,order}, {tile_size,tile_size});
     typedef Kokkos::Rank<2,Kokkos::Iterate::Right,Kokkos::Iterate::Left > rl;
     typedef Kokkos::Rank<2,Kokkos::Iterate::Left, Kokkos::Iterate::Right> lr;
-    auto policy_lr = Kokkos::MDRangePolicy<rl>({0,0},order2,tile2);
-    auto policy_rl = Kokkos::MDRangePolicy<lr>({0,0},order2,tile2);
+    const auto policy_lr = Kokkos::MDRangePolicy<rl>({0,0}, {order,order}, {tile_size,tile_size});
+    const auto policy_rl = Kokkos::MDRangePolicy<lr>({0,0}, {order,order}, {tile_size,tile_size});
 
     {
       Kokkos::parallel_for(policy, KOKKOS_LAMBDA(int i, int j) {
@@ -170,12 +170,14 @@ int main(int argc, char * argv[])
     Kokkos::parallel_reduce(policy, KOKKOS_LAMBDA(int i, int j, double & update) {
         size_t const ij = i*order+j;
         double const reference = static_cast<double>(ij)*(1.+iterations)+addit;
-        update += prk::abs(B(j,i) - reference);
+        using Kokkos::Experimental::fabs;
+        update += fabs(B(j,i) - reference);
     }, abserr);
 
 #ifdef VERBOSE
     std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
+
 
     double epsilon(1.0e-8);
     if (abserr < epsilon) {
@@ -192,7 +194,6 @@ int main(int argc, char * argv[])
 
   }
   Kokkos::finalize();
-
   return 0;
 }
 

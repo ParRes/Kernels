@@ -73,7 +73,7 @@ void SequentialSweep(int m, int n, prk::vector<double> & grid)
 
 const int N = 64;
 const int MAX_LEN = 1024;
-tbb::atomic<char> Count[MAX_LEN/N+1][MAX_LEN/N+1];
+std::atomic<char> Count[MAX_LEN/N+1][MAX_LEN/N+1];
 double F[MAX_LEN][MAX_LEN];
 
 void ParallelSweep( const char* x, int xlen, const char* y, int ylen ) {
@@ -88,8 +88,13 @@ void ParallelSweep( const char* x, int xlen, const char* y, int ylen ) {
    // Roll the wavefront from the origin.
    typedef std::pair<int,int> block;
    block origin(0,0);
+#if TBB_INTERFACE_VERSION > 12000
+   tbb::parallel_for_each( &origin, &origin+1,
+       [=]( const block& b, tbb::feeder<block>&feeder ) {
+#else
    tbb::parallel_do( &origin, &origin+1,
        [=]( const block& b, tbb::parallel_do_feeder<block>&feeder ) {
+#endif
            // Extract bounds on block
            int bi = b.first;
            int bj = b.second;
@@ -161,14 +166,14 @@ int main(int argc, char* argv[])
   }
 
   const char* envvar = std::getenv("TBB_NUM_THREADS");
-  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
-  tbb::task_scheduler_init init(num_threads);
+  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : prk::get_num_cores();
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, num_threads);
 
   std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
   std::cout << "Grid chunk sizes     = " << mc << ", " << nc << std::endl;
-  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
+  std::cout << "TBB partitioner      = " << tbb_partitioner_name << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation

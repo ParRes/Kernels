@@ -1,6 +1,6 @@
-
 ///
 /// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -61,7 +61,11 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "stencil_seq.hpp"
+
+#include "range/v3/view/cartesian_product.hpp"
+#include "range/v3/view/stride.hpp"
+
+#include "stencil_ranges.hpp"
 
 void nothing(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out)
 {
@@ -76,7 +80,7 @@ void nothing(const int n, const int t, prk::vector<double> & in, prk::vector<dou
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/range-for Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/ranges Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -89,7 +93,6 @@ int main(int argc, char* argv[])
         throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
       }
 
-      // number of times to run the algorithm
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
@@ -109,6 +112,9 @@ int main(int argc, char* argv[])
           tile_size = std::atoi(argv[3]);
           if (tile_size <= 0) tile_size = n;
           if (tile_size > n) tile_size = n;
+          //if ((tile_size < n) && (n % tile_size)) {
+          //  throw "ERROR: tile size must evenly divide grid dimension";
+          //}
       }
 
       // stencil pattern
@@ -167,25 +173,25 @@ int main(int argc, char* argv[])
   prk::vector<double> in(n*n);
   prk::vector<double> out(n*n);
 
-  // initialize the input and output arrays
-  auto range = prk::range(0,n);
-  for (auto i : range) {
-    for (auto j : range) {
+  auto v = ranges::views::cartesian_product(ranges::views::iota(0, n),ranges::views::iota(0, n));
+
+  for (auto ij : v) {
+      auto [i, j] = ij;
       in[i*n+j] = static_cast<double>(i+j);
       out[i*n+j] = 0.0;
-    }
   }
 
   for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) stencil_time = prk::wtime();
+
     // Apply the stencil operator
     stencil(n, tile_size, in, out);
+
     // Add constant to solution to force refresh of neighbor data, if any
-    for (auto i : range) {
-      for (auto j : range) {
+    for (auto ij : v) {
+        auto [i, j] = ij;
         in[i*n+j] += 1.0;
-      }
     }
   }
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import fileinput
@@ -52,10 +52,10 @@ def main(precision):
 
     if (precision==32):
         t = 'float'
-        src = open(pattern+str(r)+'.cl','w')
+        src = open(pattern+str(r)+'_32.cl','w')
     else:
         t = 'double'
-        src = open(pattern+str(r)+'.cl','a')
+        src = open(pattern+str(r)+'_64.cl','a')
         src.write('#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n\n')
     src.write('__kernel void '+pattern+str(r)+'_'+str(precision)+'(const int n, __global const '+t+' * in, __global '+t+' * out)\n')
     src.write('{\n')

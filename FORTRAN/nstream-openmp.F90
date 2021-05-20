@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2017, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -62,19 +63,10 @@
 !
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 program main
   use iso_fortran_env
+  use omp_lib
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -99,11 +91,11 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a47)') 'Fortran OpenACC STREAM triad: A = B + scalar * C'
+  write(*,'(a47)') 'Fortran OpenMP STREAM triad: A = B + scalar * C'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <vector length> [<offset>]'
+    write(*,'(a62)')    'Usage: ./nstream <# iterations> <vector length> [<offset>]'
     stop 1
   endif
 
@@ -133,12 +125,13 @@ program main
     endif
   endif
 
+  write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
   write(*,'(a,i12)') 'Number of iterations = ', iterations
   write(*,'(a,i12)') 'Vector length        = ', length
   write(*,'(a,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   allocate( A(length), stat=err)
@@ -163,27 +156,41 @@ program main
 
   t0 = 0
 
-  !$acc parallel loop gang
+  !$omp parallel default(none)                           &
+  !$omp&  shared(A,B,C,t0,t1)                            &
+  !$omp&  firstprivate(length,iterations,offset,scalar)  &
+  !$omp&  private(i,k)
+
+  !$omp do
   do i=1,length
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
+  !$omp end do
 
-  !$acc data pcopy(A) pcopyin(B,C)
+  ! need this because otherwise no barrier between initialization
+  ! and iteration 0 (warmup), which will lead to incorrectness.
+  !$omp barrier
+
   do k=0,iterations
+    if (k.eq.1) then
+      !$omp barrier
+      !$omp master
+      t0 = omp_get_wtime()
+      !$omp end master
+    endif
 
-    if (k.eq.1) t0 = prk_get_wtime()
-
-    !$acc parallel loop gang
+    !$omp do
     do i=1,length
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
+    !$omp end do
   enddo ! iterations
 
-  t1 = prk_get_wtime()
+  t1 = omp_get_wtime()
 
-  !$acc end data
+  !$omp end parallel
 
   nstream_time = t1 - t0
 
@@ -198,22 +205,21 @@ program main
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-
   asum = 0
-  !$acc parallel loop reduction(+:asum)
+  !$omp parallel do reduction(+:asum)
   do i=1,length
-    asum = asum + abs(A(i))
+    asum = asum + abs(A(i)-ar)
   enddo
+  !$omp end parallel do
 
   deallocate( C )
   deallocate( B )
   deallocate( A )
 
-  if (abs(asum-ar) .gt. epsilon) then
+  if (abs(asum) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
-    write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-    write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+    write(*,'(a30,f30.15)') '       Expected value: ', ar
+    write(*,'(a30,f30.15)') '       Observed value: ', A(1)
     write(*,'(a35)')  'ERROR: solution did not validate'
     stop 1
   else

@@ -57,108 +57,104 @@
 ///          reported results should not be associated with Stream in
 ///          external publications
 ///
-///          Converted to C++11 by Jeff Hammond, November 2017.
+///          Converted to C# by Jeff Hammond, January 2021.
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include "prk_util.h"
+using System;
+using System.Diagnostics;
 
-// See ParallelSTL.md for important information.
+namespace PRK {
 
-int main(int argc, char * argv[])
-{
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/range-for STREAM triad: A = B + scalar * C" << std::endl;
+  class nstream {
 
-  //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
-  //////////////////////////////////////////////////////////////////////
-
-  int iterations;
-  size_t length;
-  try {
-      if (argc < 3) {
-        throw "Usage: <# iterations> <vector length>";
-      }
-
-      iterations  = std::atoi(argv[1]);
-      if (iterations < 1) {
-        throw "ERROR: iterations must be >= 1";
-      }
-
-      length = std::atol(argv[2]);
-      if (length <= 0) {
-        throw "ERROR: vector length must be positive";
-      }
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-    return 1;
-  }
-
-  std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Vector length        = " << length << std::endl;
-
-  //////////////////////////////////////////////////////////////////////
-  // Allocate space and perform the computation
-  //////////////////////////////////////////////////////////////////////
-
-  double nstream_time{0};
-
-  prk::vector<double> A(length,0.0);
-  prk::vector<double> B(length,2.0);
-  prk::vector<double> C(length,2.0);
-
-  auto range = prk::range(0,length);
-
-  double scalar(3);
-
-  {
-    for (int iter = 0; iter<=iterations; iter++) {
-
-      if (iter==1) nstream_time = prk::wtime();
-
-      for (auto i : range) {
-          A[i] += B[i] + scalar * C[i];
-      }
+    static void Help() {
+      Console.WriteLine("Usage: <# iterations> <vector length>");
     }
-    nstream_time = prk::wtime() - nstream_time;
-  }
 
-  //////////////////////////////////////////////////////////////////////
-  /// Analyze and output results
-  //////////////////////////////////////////////////////////////////////
+    static void Main(string[] args)
+    {
+      Console.WriteLine("Parallel Research Kernels");
+      Console.WriteLine("C# STREAM triad: A = B + scalar * C");
 
-  double ar(0);
-  double br(2);
-  double cr(2);
-  for (int i=0; i<=iterations; i++) {
-      ar += br + scalar * cr;
-  }
+      //////////////////////////////////////////////////////////////////////
+      // Read and test input parameters
+      //////////////////////////////////////////////////////////////////////
 
-  ar *= length;
+      if (args.Length != 2) {
+          Help();
+          System.Environment.Exit(args.Length+1);
+      }
 
-  double asum(0);
-  for (auto i : range) {
-      asum += prk::abs(A[i]);
-  }
+      int iterations = int.Parse(args[0]);
+      int length     = int.Parse(args[1]);
 
-  double epsilon(1.e-8);
-  if (prk::abs(ar-asum)/asum > epsilon) {
-      std::cout << "Failed Validation on output array\n"
-                << "       Expected checksum: " << ar << "\n"
-                << "       Observed checksum: " << asum << std::endl;
-      std::cout << "ERROR: solution did not validate" << std::endl;
-      return 1;
-  } else {
-      std::cout << "Solution validates" << std::endl;
-      double avgtime = nstream_time/iterations;
-      double nbytes = 4.0 * length * sizeof(double);
-      std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
-                << " Avg time (s): " << avgtime << std::endl;
-  }
+      //////////////////////////////////////////////////////////////////////
+      // Allocate space and perform the computation
+      //////////////////////////////////////////////////////////////////////
 
-  return 0;
-}
+      double[] A = new double[length];
+      double[] B = new double[length];
+      double[] C = new double[length];
 
+      for (int i = 0 ; i < length ; i++) {
+          A[i] = 0.0;
+          B[i] = 2.0;
+          C[i] = 2.0;
+      }
 
+      double scalar = 3.0;
+
+      Stopwatch timer = new Stopwatch();
+
+      for (int k = 0 ; k <= iterations ; k++) {
+
+          if (k == 0) {
+              timer.Start();
+          }
+
+          for (int i = 0 ; i < length ; i++) {
+              A[i] += B[i] + scalar * C[i];
+          }
+      }
+      timer.Stop();
+      long tics = timer.ElapsedTicks;
+      long freq = Stopwatch.Frequency;
+      double nstream_time = (double)tics/(double)freq;
+
+      //////////////////////////////////////////////////////////////////////
+      // Analyze and output results
+      //////////////////////////////////////////////////////////////////////
+
+      double ar = 0.0;
+      double br = 2.0;
+      double cr = 2.0;
+      for (int k = 0 ; k <= iterations ; k++) {
+          ar += br + scalar * cr;
+      }
+
+      ar *= length;
+
+      double asum = 0.0;
+      for (int i = 0 ; i < length ; i++) {
+          asum += Math.Abs(A[i]);
+      }
+
+      const double epsilon=1e-8;
+      if (Math.Abs(ar-asum)/asum > epsilon) {
+          Console.WriteLine("Failed Validation on output array");
+          Console.WriteLine("       Expected checksum: {0}",ar);
+          Console.WriteLine("       Observed checksum: {0}",asum);
+          Console.WriteLine("ERROR: solution did not validate");
+      } else {
+          Console.WriteLine("Solution validates");
+          double avgtime = nstream_time/iterations;
+          double nbytes = 4.0 * length * sizeof(double);
+          Console.WriteLine("Rate (MB/s): {0} Avg time (s): {1}", 1e-6*nbytes/avgtime, avgtime);
+      }
+
+    }
+
+  } // nstream
+
+} // PRK

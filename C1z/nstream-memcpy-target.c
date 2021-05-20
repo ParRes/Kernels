@@ -127,9 +127,9 @@ int main(int argc, char * argv[])
       h_C[i] = 2.0;
   }
 
-  double * restrict d_A = omp_target_alloc(bytes, host);
-  double * restrict d_B = omp_target_alloc(bytes, host);
-  double * restrict d_C = omp_target_alloc(bytes, host);
+  double * restrict d_A = omp_target_alloc(bytes, device);
+  double * restrict d_B = omp_target_alloc(bytes, device);
+  double * restrict d_C = omp_target_alloc(bytes, device);
 
   int rc = 0;
   rc = omp_target_memcpy(d_A, h_A, bytes, 0, 0, device, host);
@@ -157,10 +157,6 @@ int main(int argc, char * argv[])
 
   rc = omp_target_memcpy(h_A, d_A, bytes, 0, 0, host, device);
   if (rc) { printf("ERROR: omp_target_memcpy(A) returned %d\n", rc); abort(); }
-  rc = omp_target_memcpy(h_B, d_B, bytes, 0, 0, host, device);
-  if (rc) { printf("ERROR: omp_target_memcpy(B) returned %d\n", rc); abort(); }
-  rc = omp_target_memcpy(h_C, d_C, bytes, 0, 0, host, device);
-  if (rc) { printf("ERROR: omp_target_memcpy(C) returned %d\n", rc); abort(); }
 
   omp_target_free(d_C, device);
   omp_target_free(d_B, device);

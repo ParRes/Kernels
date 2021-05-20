@@ -20,9 +20,10 @@ DEFAULT_OPT_FLAGS=-O2 -tp=haswell
 OPENMPFLAG=-mp #-Minfo=mp,vect
 OPENMPSIMDFLAG=-mp #-Minfo=mp,vect
 OFFLOADFLAG=-mp -ta=multicore #-Minfo=mp,vect
-ORNLACCFLAG=-acc -ta=multicore #-Minfo=accel
-#ORNLACCFLAG=-acc -ta=tesla:cc70 -Minfo=accel
-ORNLACCFLAG+=-Mlarge_arrays
+OFFLOADFLAG+=-DGPU_SCHEDULE=""
+OPENACCFLAG=-acc -ta=multicore #-Minfo=accel
+#OPENACCFLAG=-acc -ta=tesla:cc70 -Minfo=accel
+OPENACCFLAG+=-Mlarge_arrays
 #
 # OpenCL flags
 #

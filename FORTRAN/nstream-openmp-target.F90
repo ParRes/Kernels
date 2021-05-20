@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2017, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -42,7 +43,7 @@
 !          of iterations to loop over the triad vectors, the length of the
 !          vectors, and the offset between vectors
 !
-!          <progname> <# iterations> <vector length> <offset>
+!          <progname> <# iterations> <vector length>
 !
 !          The output consists of diagnostics to make sure the
 !          algorithm worked, and of timing statistics.
@@ -71,7 +72,7 @@ program main
   integer :: arglen
   character(len=32) :: argtmp
   ! problem definition
-  integer(kind=INT32) ::  iterations, offset
+  integer(kind=INT32) ::  iterations
   integer(kind=INT64) ::  length
   real(kind=REAL64), allocatable ::  A(:)
   real(kind=REAL64), allocatable ::  B(:)
@@ -90,11 +91,11 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a47)') 'Fortran OpenMP TARGET STREAM triad: A = B + scalar * C'
+  write(*,'(a54)') 'Fortran OpenMP TARGET STREAM triad: A = B + scalar * C'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <vector length> [<offset>]'
+    write(*,'(a62)')    'Usage: ./nstream <# iterations> <vector length>'
     stop 1
   endif
 
@@ -114,23 +115,12 @@ program main
     stop 1
   endif
 
-  offset = 0
-  if (command_argument_count().gt.2) then
-    call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') offset
-    if (offset .lt. 0) then
-      write(*,'(a,i5)') 'ERROR: offset must be positive : ', offset
-      stop 1
-    endif
-  endif
-
-  write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
-  write(*,'(a,i12)') 'Number of iterations = ', iterations
-  write(*,'(a,i12)') 'Matrix length        = ', length
-  write(*,'(a,i12)') 'Offset               = ', offset
+  write(*,'(a,i12)') 'OpenMP default device = ', omp_get_default_device()
+  write(*,'(a,i12)') 'Number of iterations  = ', iterations
+  write(*,'(a,i12)') 'Matrix length         = ', length
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   allocate( A(length), stat=err)
@@ -155,13 +145,13 @@ program main
 
   t0 = 0
 
-  !$omp parallel do simd
+  !$omp parallel do
   do i=1,length
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
-  !$omp end parallel do simd
+  !$omp end parallel do
 
   !$omp target data map(tofrom: A) map(to: B,C) map(to:length)
 
@@ -169,7 +159,7 @@ program main
 
     if (k.eq.1) t0 = omp_get_wtime()
 
-    !$omp target teams distribute parallel do simd schedule(static,1)
+    !$omp target teams distribute parallel do simd GPU_SCHEDULE
     do i=1,length
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
@@ -194,12 +184,10 @@ program main
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-
   asum = 0
   !$omp parallel do reduction(+:asum)
   do i=1,length
-    asum = asum + abs(A(i))
+    asum = asum + abs(A(i)-ar)
   enddo
   !$omp end parallel do
 
@@ -207,10 +195,10 @@ program main
   deallocate( B )
   deallocate( A )
 
-  if (abs(asum-ar) .gt. epsilon) then
+  if (abs(asum) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
-    write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-    write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+    write(*,'(a30,f30.15)') '       Expected value: ', ar
+    write(*,'(a30,f30.15)') '       Observed value: ', A(1)
     write(*,'(a35)')  'ERROR: solution did not validate'
     stop 1
   else

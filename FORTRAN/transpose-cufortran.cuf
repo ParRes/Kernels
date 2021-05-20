@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2015, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -60,8 +61,70 @@ function prk_get_wtime() result(t)
   t = real(c,REAL64) / real(r,REAL64)
 end function prk_get_wtime
 
+module transpose
+    use iso_fortran_env
+    integer(kind=INT32), parameter :: tile_dim = 32
+    integer(kind=INT32), parameter :: block_rows = 8
+    contains
+      attributes(global) subroutine naive(order, A, B)
+        implicit none
+        real(kind=REAL64), intent(inout) :: A(order,order)
+        real(kind=REAL64), intent(inout) :: B(order,order)
+        integer(kind=INT32), intent(in), value ::  order
+        integer :: x, y, j
+        x = (blockIdx%x-1) * tile_dim + (threadIdx%x);
+        y = (blockIdx%y-1) * tile_dim + (threadIdx%y);
+        do j = 0,tile_dim-1,block_rows
+            B(y+j,x) = B(y+j,x) + A(x,y+j);
+            A(x,y+j) = A(x,y+j) + 1.0d0;
+        end do
+      end subroutine naive
+      attributes(global) subroutine coalesced(order, A, B)
+        implicit none
+        real(kind=REAL64), intent(inout) :: A(order,order)
+        real(kind=REAL64), intent(inout) :: B(order,order)
+        integer(kind=INT32), intent(in), value ::  order
+        real(kind=REAL64), shared :: tile(32,32)
+        integer :: x, y, j
+        x = (blockIdx%x-1) * tile_dim + (threadIdx%x);
+        y = (blockIdx%y-1) * tile_dim + (threadIdx%y);
+        do j = 0,tile_dim-1,block_rows
+            tile(threadIdx%x,threadIdx%y+j) = A(x,y+j);
+            A(x,y+j) = A(x,y+j) + 1.0d0;
+        end do
+        call syncThreads()
+        x = (blockIdx%y-1) * tile_dim + (threadIdx%x);
+        y = (blockIdx%x-1) * tile_dim + (threadIdx%y);
+        do j = 0,tile_dim-1,block_rows
+            B(x,y+j) = B(x,y+j) + tile(threadIdx%y+j,threadIdx%x)
+        end do
+      end subroutine coalesced
+      attributes(global) subroutine nobankconflicts(order, A, B)
+        implicit none
+        real(kind=REAL64), intent(inout) :: A(order,order)
+        real(kind=REAL64), intent(inout) :: B(order,order)
+        integer(kind=INT32), intent(in), value ::  order
+        real(kind=REAL64), shared :: tile(33,32)
+        integer :: x, y, j
+        x = (blockIdx%x-1) * tile_dim + (threadIdx%x);
+        y = (blockIdx%y-1) * tile_dim + (threadIdx%y);
+        do j = 0,tile_dim-1,block_rows
+            tile(threadIdx%x,threadIdx%y+j) = A(x,y+j);
+            A(x,y+j) = A(x,y+j) + 1.0d0;
+        end do
+        call syncThreads()
+        x = (blockIdx%y-1) * tile_dim + (threadIdx%x);
+        y = (blockIdx%x-1) * tile_dim + (threadIdx%y);
+        do j = 0,tile_dim-1,block_rows
+            B(x,y+j) = B(x,y+j) + tile(threadIdx%y+j,threadIdx%x)
+        end do
+      end subroutine nobankconflicts
+end module transpose
+
 program main
   use iso_fortran_env
+  use cudafor
+  use transpose
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -71,26 +134,32 @@ program main
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
   integer(kind=INT32) ::  order                     ! order of a the matrix
-  real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
-  real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
+  real(kind=REAL64), allocatable, managed ::  A(:,:)! buffer to hold original matrix
+  real(kind=REAL64), allocatable, managed ::  B(:,:)! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
-  integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp         ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
+  ! CUDA stuff
+  type(dim3) :: grid, tblock
+  integer :: variant
+  character(len=16), dimension(3) :: variant_name
+  variant_name(1) = 'naive'
+  variant_name(2) = 'coalesced'
+  variant_name(3) = 'no bank conflicts'
 
   ! ********************************************************************
   ! read and test input parameters
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a41)') 'Fortran OpenACC Matrix transpose: B = A^T'
+  write(*,'(a38)') 'CUDA Fortran Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
+    write(*,'(a66)')    'Usage: ./transpose <# iterations> <matrix order> [variant (0/1/2)]'
     stop 1
   endif
 
@@ -110,17 +179,22 @@ program main
     stop 1
   endif
 
-  ! same default as the C implementation
-  tile_size = 32
+  variant = 2
   if (command_argument_count().gt.2) then
       call get_command_argument(3,argtmp,arglen,err)
-      if (err.eq.0) read(argtmp,'(i32)') tile_size
+      if (err.eq.0) read(argtmp,'(i32)') variant
   endif
-  if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
-                           ' must be >= 1 and <= ',order
-    tile_size = order ! no tiling
+  if ((variant .lt. 0).or.(variant.gt.2)) then
+    write(*,'(a,i5)') 'ERROR: variant must be 0, 1 or 2 : ', variant
+    stop 1
   endif
+
+  write(*,'(a,i8)')  'Number of iterations = ', iterations
+  write(*,'(a,i8)')  'Matrix order         = ', order
+  write(*,'(a,a16)') 'Variant              = ', variant_name(variant+1)
+
+  grid   = dim3(order/tile_dim, order/tile_dim, 1)
+  tblock = dim3(tile_dim, block_rows, 1)
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -138,73 +212,31 @@ program main
     stop 1
   endif
 
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix order         = ', order
-  write(*,'(a,i8)') 'Tile size            = ', tile_size
-
   t0 = 0
 
-  if (tile_size.lt.order) then
-    !$acc parallel loop gang ! collapse(2) leads to incorrect results
-    do jt=1,order,tile_size
-      !$acc loop
-      do it=1,order,tile_size
-        !$acc loop vector collapse(2)
-        do j=jt,min(order,jt+tile_size-1)
-          do i=it,min(order,it+tile_size-1)
-              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-              B(i,j) = 0.0
-          enddo
-        enddo
-      enddo
+  do j=1,order
+    do i=1,order
+      A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+      B(i,j) = 0.0
     enddo
-  else
-    !$acc parallel loop gang
-    do j=1,order
-      !$acc loop vector
-      do i=1,order
-        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-        B(i,j) = 0.0
-      enddo
-    enddo
-  endif
+  enddo
 
-  !$acc data pcopyin(A) pcopy(B)
   do k=0,iterations
 
     if (k.eq.1) t0 = prk_get_wtime()
 
-    ! Transpose the matrix; only use tiling if the tile size is smaller than the matrix
-    if (tile_size.lt.order) then
-      !$acc parallel loop gang ! collapse(2) leads to incorrect results
-      do jt=1,order,tile_size
-        !$acc loop
-        do it=1,order,tile_size
-          !$acc loop vector collapse(2)
-          do j=jt,min(order,jt+tile_size-1)
-            do i=it,min(order,it+tile_size-1)
-              B(j,i) = B(j,i) + A(i,j)
-              A(i,j) = A(i,j) + 1.0
-            enddo
-          enddo
-        enddo
-      enddo
-    else
-      !$acc parallel loop gang
-      do j=1,order
-        !$acc loop vector
-        do i=1,order
-          B(j,i) = B(j,i) + A(i,j)
-          A(i,j) = A(i,j) + 1.0
-        enddo
-      enddo
+    if (variant.eq.0) then
+        call naive<<<grid, tblock>>>(order, A, B)
+    else if (variant.eq.1) then
+        call coalesced<<<grid, tblock>>>(order, A, B)
+    else if (variant.eq.2) then
+        call nobankconflicts<<<grid, tblock>>>(order, A, B)
     endif
+    err = cudaDeviceSynchronize()
 
   enddo ! iterations
 
   t1 = prk_get_wtime()
-
-  !$acc end data
 
   trans_time = t1 - t0
 
@@ -215,18 +247,13 @@ program main
   abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
-  !$acc parallel loop reduction(+:abserr)
   do j=1,order
-    !$acc loop reduction(+:abserr)
     do i=1,order
       temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
            * real(iterations+1,REAL64)
       abserr = abserr + abs(B(i,j) - (temp+addit))
     enddo
   enddo
-
-  deallocate( B )
-  deallocate( A )
 
   if (abserr .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
@@ -235,10 +262,22 @@ program main
     write(*,'(a,f13.6,a,f10.6)') 'Rate (MB/s): ',(1.d-6*bytes)/avgtime, &
            ' Avg time (s): ', avgtime
   else
-    write(*,'(a,f30.15,a,f30.15)') 'ERROR: Aggregate squared error ',abserr, &
+    write(*,'(a,e30.15,a,e30.15)') 'ERROR: Aggregate squared error ',abserr, &
            'exceeds threshold ',epsilon
+    call flush(0)
+    do j=1,order
+      do i=1,order
+        temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
+             * real(iterations+1,REAL64)
+        write(*,'(i4,1x,i4,1x,e10.5,1x,e10.5,1x,e10.5)') i,j,A(i,j),B(i,j),temp+addit
+      enddo
+    enddo
+    call flush(0)
     stop 1
   endif
+
+  deallocate( A )
+  deallocate( B )
 
 end program main
 

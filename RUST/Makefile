@@ -19,6 +19,7 @@ all:
 	cd p2p 		&& cargo build $(RCFLAGS)
 	cd stencil 	&& cargo build $(RCFLAGS)
 	cd transpose 	&& cargo build $(RCFLAGS)
+	cd dgemm 	&& cargo build $(RCFLAGS)
 
 clean:
 	cd nstream 	&& cargo clean
@@ -27,4 +28,5 @@ clean:
 	cd p2p 		&& cargo clean
 	cd stencil 	&& cargo clean
 	cd transpose 	&& cargo clean
+	cd dgemm 	&& cargo clean
 
