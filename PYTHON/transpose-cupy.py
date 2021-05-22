@@ -103,6 +103,8 @@ def main():
         B += A.T
         A += 1.0
 
+    cupy.cuda.runtime.deviceSynchronize()
+
     t1 = timer()
     trans_time = t1 - t0
 

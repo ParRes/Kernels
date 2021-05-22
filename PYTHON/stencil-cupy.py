@@ -170,6 +170,8 @@ def main():
 
         A += 1.0
 
+    cupy.cuda.runtime.deviceSynchronize()
+
     t1 = timer()
     stencil_time = t1 - t0
 
