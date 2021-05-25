@@ -56,8 +56,6 @@ if sys.version_info >= (3, 3):
     from time import process_time as timer
 else:
     from timeit import default_timer as timer
-import numpy
-print('Numpy version  = ', numpy.version.version)
 
 import cupy
 
@@ -96,9 +94,6 @@ def main():
 
         if k<1: t0 = timer()
 
-        # this actually forms the transpose of A
-        # B += numpy.transpose(A)
-        # this only uses the transpose _view_ of A
         B += A.T
         A += 1.0
 
