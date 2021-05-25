@@ -89,8 +89,7 @@ def main():
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    T = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
-    A = cupy.array(T)
+    A = cupy.arange(order*order,dtype=float).reshape(order,order)
     B = cupy.zeros((order,order))
 
     for k in range(0,iterations+1):
@@ -112,8 +111,7 @@ def main():
     # ** Analyze and output results.
     # ********************************************************************
 
-    T = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
-    A = cupy.array(T)
+    A = (iterations+1.)*(cupy.arange(order*order).reshape(order,order).T+iterations/2.0)
     abserr = cupy.linalg.norm(cupy.reshape(B-A,order*order),ord=1)
 
     epsilon=1.e-8
