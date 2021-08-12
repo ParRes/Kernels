@@ -155,10 +155,7 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 #	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
 %-mpi: %-mpi.cc prk_util.h prk_mpi.h
-	$(CXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) -o $@
-
-%-mpi: %-mpi.cc prk_util.h prk_mpi.h
-	$(CXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) -o $@
+	$(MPICXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) -o $@
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
