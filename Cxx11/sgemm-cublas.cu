@@ -186,9 +186,10 @@ int main(int argc, char * argv[])
   int order;
   int batches = 0;
   int input_copy = 0;
+  int tf32 = 0;
   try {
       if (argc < 2) {
-        throw "Usage: <# iterations> <matrix order> [<batches>] [<copy input every iteration [0/1]>]";
+        throw "Usage: <# iterations> <matrix order> [<batches>] [<copy input every iteration [0/1]>] [<use TF32 [0/1]>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -213,6 +214,13 @@ int main(int argc, char * argv[])
           throw "ERROR: input_copy was not 0 or 1";
         }
       }
+
+      if (argc > 5) {
+        tf32 = std::atoi(argv[5]);
+        if (tf32 != 0 && tf32 != 1) {
+          throw "ERROR: tf32 was not 0 or 1";
+        }
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -229,9 +237,14 @@ int main(int argc, char * argv[])
       std::cout << "Batch size           = " <<  batches << " (batched BLAS)" << std::endl;
   }
   std::cout << "Input copy           = " << (input_copy ? "yes" : "no") << std::endl;
+  std::cout << "TF32                 = " << (tf32 ? "yes" : "no") << std::endl;
 
   cublasHandle_t h;
   prk::CUDA::check( cublasCreate(&h) );
+
+  if (tf32) {
+    cublasSetMathMode(h, CUBLAS_TF32_TENSOR_OP_MATH);
+  }
 
   const int tile_size = 32;
   dim3 dimGrid(prk::divceil(order,tile_size),prk::divceil(order,tile_size),1);
@@ -336,7 +349,12 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  const auto epsilon = 1.0e-8;
+  double epsilon;
+  if(tf32) {
+    epsilon = 1.0e-4;
+  } else {
+    epsilon = 1.0e-8;
+  }
   const auto forder = static_cast<double>(order);
   const auto reference = 0.25 * prk::pow(forder,3) * prk::pow(forder-1.0,2) * (iterations+1);
   double residuum(0);
