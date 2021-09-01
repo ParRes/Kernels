@@ -88,7 +88,7 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 
 taskloop: stencil-taskloop transpose-taskloop nstream-taskloop
 
-mpi: nstream-mpi stencil-mpi
+mpi: nstream-mpi stencil-mpi dgemm-mpi-cblas
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
@@ -156,6 +156,9 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 
 %-mpi: %-mpi.cc prk_util.h prk_mpi.h
 	$(MPICXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) -o $@
+
+%-mpi-cblas: %-mpi-cblas.cc prk_util.h prk_mpi.h
+	$(CXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) $(CBLASFLAGS) -o $@
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@

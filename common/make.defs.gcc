@@ -4,7 +4,7 @@
 #
 # Base compilers and language options
 #
-VERSION=-10
+VERSION=-11
 # C99 is required in some implementations.
 CC=gcc${VERSION} -std=c11 -pthread
 #EXTRA_CLIBS=-lrt
@@ -30,7 +30,6 @@ DEFAULT_OPT_FLAGS+=-g3
 #
 #DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
 DEFAULT_OPT_FLAGS+=-Wall #-Werror
-DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations # silence warnings in third-party headers
 #DEFAULT_OPT_FLAGS+=-mavx -mfma # these should be used on Haswell and later
 #
 # OpenMP flags
@@ -162,10 +161,10 @@ UPCXXFLAG+=-mtune=native -ffast-math
 #
 #BLASFLAG=-L${HOME}/BLIS/lib -lblis #-fopenmp -lpthread
 #CBLASFLAG=-I${HOME}/BLIS/include
-#BLASFLAG=-DACCELERATE -framework Accelerate
-#CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
-BLASFLAG=-lblas
-CBLASFLAG=-lblas
+BLASFLAG=-DACCELERATE -framework Accelerate
+CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+#BLASFLAG=-lblas
+#`CBLASFLAG=-lblas
 #
 # CUDA flags
 #
@@ -195,12 +194,13 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 #
 # MPI-3
 #
-MPIDIR=/opt/homebrew/Cellar/open-mpi/4.1.0
+MPIDIR=/opt/homebrew/Cellar/open-mpi/4.1.1_2
 MPICC=${MPIDIR}/bin/mpicc
 MPICXX=${MPIDIR}/bin/mpicxx
 MPIFORT=${MPIDIR}/bin/mpifort
 MPIINC=-I${MPIDIR}/include
-MPILIB=-L${MPIDIR}/lib -lmpifort -lmpi
+MPILIB=-L${MPIDIR}/lib -lmpi_usempif08 -lmpi
+#MPILIB=-L${MPIDIR}/lib -lmpifort -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
 #MPIINC=-I/usr/include/mpich-3.2-x86_64
 #MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
