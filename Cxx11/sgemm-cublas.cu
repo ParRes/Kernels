@@ -185,8 +185,8 @@ int main(int argc, char * argv[])
   int iterations;
   int order;
   int batches = 0;
-  int input_copy = 0;
-  int tf32 = 0;
+  bool input_copy{false};
+  bool tf32{false};
   try {
       if (argc < 2) {
         throw "Usage: <# iterations> <matrix order> [<batches>] [<copy input every iteration [0/1]>] [<use TF32 [0/1]>]";
@@ -209,17 +209,11 @@ int main(int argc, char * argv[])
       }
 
       if (argc > 4) {
-        input_copy = std::atoi(argv[4]);
-        if (input_copy != 0 && input_copy != 1) {
-          throw "ERROR: input_copy was not 0 or 1";
-        }
+        input_copy = prk::parse_boolean(std::string(argv[4]));
       }
 
       if (argc > 5) {
-        tf32 = std::atoi(argv[5]);
-        if (tf32 != 0 && tf32 != 1) {
-          throw "ERROR: tf32 was not 0 or 1";
-        }
+        tf32 = prk::parse_boolean(std::string(argv[5]));
       }
   }
   catch (const char * e) {
