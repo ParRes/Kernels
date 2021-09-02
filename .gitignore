@@ -302,6 +302,7 @@ FORTRAN/stencil-stdpar
 FORTRAN/stencil-taskloop-openmp
 FORTRAN/transpose
 FORTRAN/transpose-coarray
+FORTRAN/transpose-cufortran
 FORTRAN/transpose-ga
 FORTRAN/transpose-openmp
 FORTRAN/transpose-openmp-target
