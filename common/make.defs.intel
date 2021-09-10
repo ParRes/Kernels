@@ -12,7 +12,7 @@
 CC=icc -std=c11 -pthread
 #EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=ifort -std08 -fpp
+FC=ifort -std08 -fpp -qopt-matmul
 # C++11 may not be required but does no harm here.
 CXX=icpc -std=c++17 -pthread
 #
@@ -31,6 +31,7 @@ DEFAULT_OPT_FLAGS=-g -O3 -xHOST
 OPENMPFLAG=-qopenmp
 OPENMPSIMDFLAG=-qopenmp-simd
 OFFLOADFLAG=-qopenmp-offload=host
+OFFLOADFLAG+=-DGPU_SCHEDULE=""
 #
 # OpenCL flags
 #
@@ -131,6 +132,7 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 # CBLAS for C++ DGEMM
 #
 #CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+BLASFLAG=-mkl
 CBLASFLAG=-DMKL -mkl
 ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
 #

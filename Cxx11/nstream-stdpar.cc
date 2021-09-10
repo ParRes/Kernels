@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2020, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -63,12 +64,16 @@
 
 #include "prk_util.h"
 
-// See ParallelSTL.md for important information.
+#include <execution>
+#include <algorithm>
+#include <numeric>
+
+#include <thrust/iterator/zip_iterator.h>
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/range-for STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "C++11/STDPAR STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -105,22 +110,46 @@ int main(int argc, char * argv[])
 
   double nstream_time{0};
 
-  prk::vector<double> A(length,0.0);
-  prk::vector<double> B(length,2.0);
-  prk::vector<double> C(length,2.0);
+  std::vector<double> A(length);
+  std::vector<double> B(length);
+  std::vector<double> C(length);
 
-  auto range = prk::range(0,length);
+  //auto range = prk::range(static_cast<size_t>(0), length);
 
   double scalar(3);
 
   {
+    std::fill( std::begin(A), std::end(A), 0.0 );
+    std::fill( std::begin(B), std::end(B), 2.0 );
+    std::fill( std::begin(C), std::end(C), 2.0 );
+
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      for (auto i : range) {
-          A[i] += B[i] + scalar * C[i];
-      }
+#if 0
+      // stupid version
+      std::transform( std::execution::par_unseq,
+                      std::begin(A), std::end(A), std::begin(B), std::begin(A),
+                      [](auto&& x, auto&& y) {
+                           return x + y; // A[i] += B[i]
+                      }
+      );
+      std::transform( std::execution::par_unseq,
+                      std::begin(A), std::end(A), std::begin(C), std::begin(A),
+                      [scalar](auto&& x, auto&& y) {
+                           return x + scalar * y; // A[i] += scalar * C[i]
+                      }
+      );
+#else
+      auto nstream = [=] (thrust::tuple<double&,double,double> t) {
+          return thrust::get<0>(t) +  thrust::get<1>(t) + scalar * thrust::get<2>(t);
+      };
+      std::transform( thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
+                      thrust::make_zip_iterator(thrust::make_tuple(A.end()  , B.end()  , C.end())),
+                      A.begin(),
+                      nstream);
+#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
@@ -135,11 +164,10 @@ int main(int argc, char * argv[])
   for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
-
   ar *= length;
 
   double asum(0);
-  for (auto i : range) {
+  for (size_t i=0; i<length; i++) {
       asum += prk::abs(A[i]);
   }
 

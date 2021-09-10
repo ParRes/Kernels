@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2017, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -99,11 +100,11 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a47)') 'Fortran OpenACC STREAM triad: A = B + scalar * C'
+  write(*,'(a48)') 'Fortran OpenACC STREAM triad: A = B + scalar * C'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <vector length> [<offset>]'
+    write(*,'(a62)')    'Usage: ./nstream <# iterations> <vector length> [<offset>]'
     stop 1
   endif
 
@@ -138,7 +139,7 @@ program main
   write(*,'(a,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   allocate( A(length), stat=err)
@@ -163,22 +164,32 @@ program main
 
   t0 = 0
 
-  !$acc parallel loop gang
+  !$acc data copy(A) copyin(B,C)
+
+  !$acc parallel loop
   do i=1,length
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
 
-  !$acc data pcopy(A) pcopyin(B,C)
   do k=0,iterations
 
     if (k.eq.1) t0 = prk_get_wtime()
 
-    !$acc parallel loop gang
+#if 1
+    !$acc parallel loop
     do i=1,length
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
+#else
+    !$acc kernels
+    do i=1,length
+      A(i) = A(i) + B(i) + scalar * C(i)
+    enddo
+    !$acc end kernels
+#endif
+
   enddo ! iterations
 
   t1 = prk_get_wtime()
@@ -198,22 +209,20 @@ program main
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-
   asum = 0
-  !$acc parallel loop reduction(+:asum)
+  !!!$acc parallel loop reduction(+:asum)
   do i=1,length
-    asum = asum + abs(A(i))
+    asum = asum + abs(A(i)-ar)
   enddo
 
   deallocate( C )
   deallocate( B )
   deallocate( A )
 
-  if (abs(asum-ar) .gt. epsilon) then
+  if (abs(asum) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
-    write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-    write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+    write(*,'(a30,f30.15)') '       Expected value: ', ar
+    write(*,'(a30,f30.15)') '       Observed value: ', A(1)
     write(*,'(a35)')  'ERROR: solution did not validate'
     stop 1
   else

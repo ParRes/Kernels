@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2018, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -32,32 +33,37 @@
 #ifndef PRK_RANGES_H
 #define PRK_RANGES_H
 
-#if defined(USE_RANGES)
-# if defined(USE_BOOST_IRANGE)
-#  include "boost/range/irange.hpp"
-# elif defined(USE_RANGES_TS)
-#  include "range/v3/view/iota.hpp"
-#  include "range/v3/view/slice.hpp"
-#  include "range/v3/view/stride.hpp"
-# else
-#  error You have not provided a version of ranges to use.
-# endif
+#if defined(USE_GCC_RANGES)
+# include <ranges>
+#elif defined(USE_BOOST_IRANGE)
+# include "boost/range/irange.hpp"
+#elif defined(USE_RANGES_TS)
+# include "range/v3/view/iota.hpp"
+# include "range/v3/view/slice.hpp"
+# include "range/v3/view/stride.hpp"
+#else
+# error You have not provided a version of ranges to use.
 #endif
 
 namespace prk {
 
     template <class S, class E>
     auto range(S start, E end) {
-#if defined(USE_BOOST_IRANGE)
+#if defined(USE_GCC_RANGES)
+        return std::ranges::views::iota(static_cast<decltype(end)>(start), end);
+#elif defined(USE_BOOST_IRANGE)
         return boost::irange(static_cast<decltype(end)>(start), end);
 #elif defined(USE_RANGES_TS)
         return ranges::views::iota(static_cast<decltype(end)>(start), end);
 #endif
     }
 
+#if UNUSED
     template <class S, class E, class B>
     auto range(S start, E end, B blocking) {
-#if defined(USE_BOOST_IRANGE)
+#if defined(USE_GCC_RANGES)
+#error FIXME
+#elif defined(USE_BOOST_IRANGE)
         return boost::irange(static_cast<decltype(end)>(start), end, static_cast<decltype(end)>(blocking) );
 #elif defined(USE_RANGES_TS)
         // NOTE:
@@ -68,6 +74,7 @@ namespace prk {
                ranges::views::stride(static_cast<decltype(end)>(blocking));
 #endif
     }
+#endif
 
 } // namespace prk
 

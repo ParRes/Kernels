@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2015, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -49,6 +50,7 @@
 !
 ! HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 !          Converted to Fortran by Jeff Hammond, January 2015
+!
 ! *******************************************************************
 
 function prk_get_wtime() result(t)
@@ -62,9 +64,6 @@ end function prk_get_wtime
 
 program main
   use iso_fortran_env
-#ifdef _OPENMP
-  use omp_lib
-#endif
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -89,11 +88,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-#ifdef _OPENMP
-  write(*,'(a40)') 'Fortran OpenMP Matrix transpose: B = A^T'
-#else
   write(*,'(a40)') 'Fortran Serial Matrix transpose: B = A^T'
-#endif
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -145,37 +140,15 @@ program main
     stop 1
   endif
 
-#ifdef _OPENMP
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
-#endif
   write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Matrix order         = ', order
   write(*,'(a,i8)') 'Tile size            = ', tile_size
 
   t0 = 0
 
-#ifdef _OPENMP
-  !$omp parallel default(none)                     &
-  !$omp&  shared(A,B,t0,t1)                        &
-  !$omp&  firstprivate(order,iterations,tile_size) &
-  !$omp&  private(i,j,it,jt,k)
-#endif
-
   if (tile_size.lt.order) then
-#if defined(_OPENMP)
-#if defined(__INTEL_COMPILER) && defined(__INTEL_COMPILER_BUILD_DATE) \
- && (__INTEL_COMPILER==1600) && (__INTEL_COMPILER_BUILD_DATE<20160101)
-#warning Disabling collapse because of IPS6000153696
-    !$omp do
-#else
-    !$omp do collapse(2)
-#endif
     do jt=1,order,tile_size
       do it=1,order,tile_size
-#else
-    do concurrent (jt=1:order:tile_size)
-      do concurrent (it=1:order:tile_size)
-#endif
         do j=jt,min(order,jt+tile_size-1)
           do i=it,min(order,it+tile_size-1)
               A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
@@ -184,60 +157,25 @@ program main
         enddo
       enddo
     enddo
-#ifdef _OPENMP
-    !$omp end do
-#endif
   else
-#if defined(_OPENMP)
-    !$omp do collapse(2)
     do j=1,order
       do i=1,order
-#else
-    do concurrent (j=1:order)
-      do concurrent (i=1:order)
-#endif
         A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
         B(i,j) = 0.0
       enddo
     enddo
-#ifdef _OPENMP
-    !$omp end do
-#endif
   endif
-
-  ! need this because otherwise no barrier between initialization
-  ! and iteration 0 (warmup), which will lead to incorrectness.
-  !$omp barrier
 
   do k=0,iterations
 
-    ! start timer after a warmup iteration
     if (k.eq.1) then
-#ifdef _OPENMP
-      !$omp barrier
-      !$omp master
-#endif
       t0 = prk_get_wtime()
-#ifdef _OPENMP
-      !$omp end master
-#endif
     endif
 
     ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
-#if defined(_OPENMP)
-#if defined(__INTEL_COMPILER) && defined(__INTEL_COMPILER_BUILD_DATE) \
- && (__INTEL_COMPILER==1600) && (__INTEL_COMPILER_BUILD_DATE<20160101)
-      !$omp do
-#else
-      !$omp do collapse(2)
-#endif
       do jt=1,order,tile_size
         do it=1,order,tile_size
-#else
-      do concurrent (jt=1:order:tile_size)
-        do concurrent (it=1:order:tile_size)
-#endif
           do j=jt,min(order,jt+tile_size-1)
             do i=it,min(order,it+tile_size-1)
               B(j,i) = B(j,i) + A(i,j)
@@ -246,41 +184,18 @@ program main
           enddo
         enddo
       enddo
-#ifdef _OPENMP
-      !$omp end do
-#endif
     else
-#if defined(_OPENMP)
-      !$omp do collapse(2)
       do j=1,order
         do i=1,order
-#else
-      do concurrent (j=1:order)
-        do concurrent (i=1:order)
-#endif
           B(j,i) = B(j,i) + A(i,j)
           A(i,j) = A(i,j) + 1.0
         enddo
       enddo
-#ifdef _OPENMP
-      !$omp end do
-#endif
     endif
 
   enddo ! iterations
 
-#ifdef _OPENMP
-  !$omp barrier
-  !$omp master
-#endif
   t1 = prk_get_wtime()
-#ifdef _OPENMP
-  !$omp end master
-#endif
-
-#ifdef _OPENMP
-  !$omp end parallel
-#endif
 
   trans_time = t1 - t0
 
@@ -291,27 +206,13 @@ program main
   abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
-#if defined(_OPENMP)
-  !$omp parallel do collapse(2)                                       &
-  !$omp& default(none)                                                &
-  !$omp& shared(B)                                                   &
-  !$omp& firstprivate(order,iterations,addit)                        &
-  !$omp& private(i,j,temp)                                           &
-  !$omp& reduction(+:abserr)
   do j=1,order
     do i=1,order
-#else
-  do concurrent (j=1:order)
-    do concurrent (i=1:order)
-#endif
       temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
            * real(iterations+1,REAL64)
       abserr = abserr + abs(B(i,j) - (temp+addit))
     enddo
   enddo
-#if defined(_OPENMP)
-  !$omp end parallel do
-#endif
 
   deallocate( B )
   deallocate( A )
