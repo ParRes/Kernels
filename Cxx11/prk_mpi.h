@@ -207,8 +207,17 @@ namespace prk
                     MPI_Datatype dt = (std::is_signed<size_t>() ? MPI_INT64_T : MPI_UINT64_T);
                     std::vector<size_t> global_sizes(np_);   // in
                     global_offsets_.resize(np_);             // out
+                    // there is probably a better way to do this.  i should be able to MPI_Exscan then MPI_Allgather instead.
                     prk::MPI::check( MPI_Allgather(&local_size_, 1, dt, global_sizes.data(), 1, dt, comm_) );
+#if 0
                     std::exclusive_scan( global_sizes.cbegin(), global_sizes.cend(), global_offsets_.begin(), 0);
+#else
+                    global_offsets_[0] = 0;
+                    for ( size_t i = 1 ; i < global_sizes.size() ; ++i ) {
+                        global_offsets_[i] = global_sizes[i-1];
+
+                    }
+#endif
                 }
                 my_global_offset_begin_ = global_offsets_[me_];
                 my_global_offset_end_   = (me_ != np_-1) ? global_offsets_[me_+1] : global_size_;
@@ -294,7 +303,7 @@ namespace prk
                 return local_pointer_[local_offset];
             }
 
-            constexpr T * data(void) noexcept
+            T * data(void) noexcept
             {
                 return local_pointer_;
             }

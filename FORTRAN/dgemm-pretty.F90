@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2017, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -62,6 +63,10 @@ end function prk_get_wtime
 
 program main
   use iso_fortran_env
+#ifdef NVHPC
+  use cutensorex
+  use cudafor
+#endif
   implicit none
   real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
@@ -162,12 +167,7 @@ program main
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
-  checksum = 0.0d0
-  do j=1,order
-    do i=1,order
-      checksum = checksum + C(i,j)
-    enddo
-  enddo
+  checksum = sum(C)
 
   deallocate( C )
 
@@ -176,7 +176,7 @@ program main
     write(*,'(a)') 'Solution validates'
     avgtime = dgemm_time/iterations
     nflops = 2 * int(order,INT64)**3
-    write(*,'(a,f13.6,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
+    write(*,'(a,f13.3,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
            ' Avg time (s): ', avgtime
   else
     write(*,'(a,e30.15)') 'Reference checksum = ', reference

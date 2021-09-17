@@ -1,6 +1,6 @@
 object nstream
 {
-    def main(args: Array[String]) {
+    def main(args: Array[String]) : Unit = {
         println("Parallel Research Kernels")
         println("Scala Stream triad: A = B + scalar * C.")
 

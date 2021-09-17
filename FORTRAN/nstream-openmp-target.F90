@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2017, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -94,7 +95,7 @@ program main
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <vector length>'
+    write(*,'(a62)')    'Usage: ./nstream <# iterations> <vector length>'
     stop 1
   endif
 
@@ -119,7 +120,7 @@ program main
   write(*,'(a,i12)') 'Matrix length         = ', length
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   allocate( A(length), stat=err)
@@ -144,13 +145,13 @@ program main
 
   t0 = 0
 
-  !$omp parallel do simd
+  !$omp parallel do
   do i=1,length
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
-  !$omp end parallel do simd
+  !$omp end parallel do
 
   !$omp target data map(tofrom: A) map(to: B,C) map(to:length)
 
@@ -158,7 +159,7 @@ program main
 
     if (k.eq.1) t0 = omp_get_wtime()
 
-    !$omp target teams distribute parallel do simd
+    !$omp target teams distribute parallel do simd GPU_SCHEDULE
     do i=1,length
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
@@ -183,12 +184,10 @@ program main
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-
   asum = 0
   !$omp parallel do reduction(+:asum)
   do i=1,length
-    asum = asum + abs(A(i))
+    asum = asum + abs(A(i)-ar)
   enddo
   !$omp end parallel do
 
@@ -196,10 +195,10 @@ program main
   deallocate( B )
   deallocate( A )
 
-  if (abs(asum-ar) .gt. epsilon) then
+  if (abs(asum) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
-    write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-    write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+    write(*,'(a30,f30.15)') '       Expected value: ', ar
+    write(*,'(a30,f30.15)') '       Observed value: ', A(1)
     write(*,'(a35)')  'ERROR: solution did not validate'
     stop 1
   else

@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +40,7 @@
 /// USAGE:   Program input is the matrix order and the number of times to
 ///          repeat the operation:
 ///
-///          transpose <matrix_size> <# iterations> [tile size]
-///
-///          An optional parameter specifies the tile size used to divide the
-///          individual matrix blocks for improved cache and TLB performance.
+///          transpose <matrix_size> <# iterations>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          transpose worked and timing statistics.
@@ -54,39 +52,43 @@
 
 #include "prk_util.h"
 
+#include <algorithm>
+#include <numeric>
+#include <execution>
+//#include <ranges>
+//#include <iterator>
+
+#include <thrust/iterator/counting_iterator.h>
+
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/range-for Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/STDPAR Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // Read and test input parameters
+  /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
   int order;
-  int tile_size;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [tile size]";
+        throw "Usage: <# iterations> <matrix order>";
       }
 
+      // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
+      // order of a the matrix
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
       } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
-
-      // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
-      // a negative tile size means no tiling of the local transpose
-      if (tile_size <= 0) tile_size = order;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -95,39 +97,41 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
-  std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  // Allocate space and perform the computation
+  /// Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  double trans_time{0};
-
-  prk::vector<double> A(order*order);
-  prk::vector<double> B(order*order,0.0);
+  std::vector<double> A(order*order);
+  std::vector<double> B(order*order,0.0);
 
   // fill A with the sequence 0 to order^2-1 as doubles
   std::iota(A.begin(), A.end(), 0.0);
 
-  auto itrange = prk::range(0,order,tile_size);
-  auto jtrange = prk::range(0,order,tile_size);
+  //auto range = std::views::iota(0,order);
+
+  //std::vector<int> range(order);
+  //std::iota(range.begin(), range.end(), 0);
+
+  thrust::counting_iterator<int> begin(0);
+  thrust::counting_iterator<int> end(order*order);
+
+  double trans_time{0};
 
   for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
-    for (auto it : itrange) {
-      auto irange = prk::range(it,std::min(order,it+tile_size));
-      for (auto jt : jtrange) {
-        auto jrange = prk::range(jt,std::min(order,jt+tile_size));
-        for (auto i : irange) {
-          for (auto j : jrange) {
-            B[i*order+j] += A[j*order+i];
-            A[j*order+i] += 1.0;
-          }
-        }
-      }
-    }
+    double * const pA = A.data();
+    double * const pB = B.data();
+    std::for_each( std::execution::par_unseq,
+		   begin, end,
+                   [order,pA,pB] __device__ (int idx) {
+        auto i = idx / order;
+        auto j = idx % order;
+        pB[i*order+j] += pA[j*order+i];
+        pA[j*order+i] += 1.0;
+    });
   }
   trans_time = prk::wtime() - trans_time;
 
@@ -135,13 +139,11 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
-  auto const addit = (iterations+1.) * (iterations/2.);
+  const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
-  auto irange = prk::range(0,order);
-  auto jrange = prk::range(0,order);
-  for (auto i : irange) {
-    for (auto j : jrange) {
+  // TODO: replace with std::generate, std::accumulate, or similar
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
