@@ -64,10 +64,6 @@
 #include "prk_sycl.h"
 #include "prk_util.h"
 
-template <typename T> class nstream1;
-template <typename T> class nstream2;
-template <typename T> class nstream3;
-
 template <typename T>
 void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 {
@@ -95,52 +91,32 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 
   try {
 
-#if PREBUILD_KERNEL
-    auto ctx = q.get_context();
-    sycl::program kernel{ctx};
-    kernel.build_with_kernel_type<nstream1<T>>();
-    kernel.build_with_kernel_type<nstream2<T>>();
-    kernel.build_with_kernel_type<nstream3<T>>();
-#endif
-
     for (int iter = 0; iter<=iterations; ++iter) {
 
       if (iter==1) nstream_time = prk::wtime();
 
-      q.submit([&](sycl::handler& h) {
         if (block_size == 0) {
             // hipSYCL prefers range to nd_range because no barriers
-            h.parallel_for<class nstream1<T>>(
-#if PREBUILD_KERNEL
-                kernel.get_kernel<nstream1<T>>(),
-#endif
+            q.parallel_for(
 		sycl::range<1>{length}, [=] (sycl::id<1> it) {
 		const size_t i = it[0];
                 A[i] += B[i] + scalar * C[i];
-            });
+            }).wait();
         } else if (length % block_size) {
-            h.parallel_for<class nstream2<T>>(
-#if PREBUILD_KERNEL
-                kernel.get_kernel<nstream2<T>>(),
-#endif
+            q.parallel_for(
 		sycl::nd_range<1>{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
                 if (i < length) {
                     A[i] += B[i] + scalar * C[i];
                 }
-            });
+            }).wait();
         } else {
-            h.parallel_for<class nstream3<T>>(
-#if PREBUILD_KERNEL
-                kernel.get_kernel<nstream3<T>>(),
-#endif
+            q.parallel_for(
 		sycl::nd_range<1>{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
                 A[i] += B[i] + scalar * C[i];
-            });
+            }).wait();
         }
-      });
-      q.wait();
     }
 
     // Stop timer before buffer+accessor destructors fire,

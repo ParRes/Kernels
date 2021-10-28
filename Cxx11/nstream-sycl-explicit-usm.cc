@@ -64,10 +64,6 @@
 #include "prk_sycl.h"
 #include "prk_util.h"
 
-template <typename T> class nstream1;
-template <typename T> class nstream2;
-template <typename T> class nstream3;
-
 template <typename T>
 void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 {
@@ -95,24 +91,14 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 
   try {
 
-#if PREBUILD_KERNEL
-    auto ctx = q.get_context();
-    sycl::program kernel{ctx};
-    kernel.build_with_kernel_type<nstream1<T>>();
-    kernel.build_with_kernel_type<nstream2<T>>();
-    kernel.build_with_kernel_type<nstream3<T>>();
-#endif
-
     T * d_A = sycl::malloc_device<T>(length, q);
     T * d_B = sycl::malloc_device<T>(length, q);
     T * d_C = sycl::malloc_device<T>(length, q);
     q.wait();
 
-    const size_t bytes = length * sizeof(T);
-
-    q.memcpy(d_A, &(h_A[0]), bytes);
-    q.memcpy(d_B, &(h_B[0]), bytes);
-    q.memcpy(d_C, &(h_C[0]), bytes);
+    q.copy(&(h_A[0]), d_A, length);
+    q.copy(&(h_B[0]), d_B, length);
+    q.copy(&(h_C[0]), d_C, length);
     q.wait();
 
     for (int iter = 0; iter<=iterations; ++iter) {
@@ -123,39 +109,28 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
       auto B = d_B;
       auto C = d_C;
 
-      q.submit([&](sycl::handler& h) {
-        if (block_size == 0) {
-            // hipSYCL prefers range to nd_range because no barriers
-            h.parallel_for<class nstream1<T>>(
-#if PREBUILD_KERNEL
-                kernel.get_kernel<nstream1<T>>(),
-#endif
+      if (block_size == 0) {
+          // hipSYCL prefers range to nd_range because no barriers
+          q.parallel_for(
 		sycl::range<1>{length}, [=] (sycl::id<1> it) {
 		const size_t i = it[0];
                 A[i] += B[i] + scalar * C[i];
-            });
-        } else if (length % block_size) {
-            h.parallel_for<class nstream2<T>>(
-#if PREBUILD_KERNEL
-                kernel.get_kernel<nstream2<T>>(),
-#endif
+          });
+      } else if (length % block_size) {
+          q.parallel_for(
 		sycl::nd_range<1>{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
                 if (i < length) {
                     A[i] += B[i] + scalar * C[i];
                 }
-            });
-        } else {
-            h.parallel_for<class nstream3<T>>(
-#if PREBUILD_KERNEL
-                kernel.get_kernel<nstream3<T>>(),
-#endif
+          });
+      } else {
+          q.parallel_for(
 		sycl::nd_range<1>{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
                 A[i] += B[i] + scalar * C[i];
-            });
-        }
-      });
+          });
+      }
       q.wait();
     }
 
@@ -164,7 +139,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
     // for other device-oriented programming models.
     nstream_time = prk::wtime() - nstream_time;
 
-    q.memcpy(&(h_A[0]), d_A, bytes).wait();
+    q.copy(d_A, &(h_A[0]), length).wait();
 
     sycl::free(d_A, q);
     sycl::free(d_B, q);
