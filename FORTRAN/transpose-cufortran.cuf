@@ -118,7 +118,6 @@ program main
   use transpose
   use prk
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen

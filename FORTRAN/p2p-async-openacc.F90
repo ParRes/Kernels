@@ -54,17 +54,9 @@
 !            Converted to Fortran by Jeff Hammond, January 2016.
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 subroutine sweep_tile(startm,endm,startn,endn,m,n,grid)
   use iso_fortran_env
+  use prk
   implicit none
   integer(kind=INT32), intent(in) :: m,n
   integer(kind=INT32), intent(in) :: startm,endm
@@ -83,7 +75,6 @@ end subroutine
 program main
   use iso_fortran_env
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
