@@ -49,8 +49,6 @@ program pic
 #endif
   use prk
   implicit none
-#ifndef _OPENMP
-#endif
 
   type particle_t
     real(kind=REAL64) :: x, y, v_x, v_y, q, x0, y0
