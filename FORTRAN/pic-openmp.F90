@@ -42,26 +42,13 @@
 #define FAILURE 0
 #define epsilon 1.e-5
 
-#ifndef _OPENMP
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-#endif
-
 program pic
   use, intrinsic :: ISO_FORTRAN_ENV, only : REAL64, REAL32, INT64, INT32
 #ifdef _OPENMP
   use omp_lib
 #endif
+  use prk
   implicit none
-#ifndef _OPENMP
-  real(kind=REAL64) :: prk_get_wtime
-#endif
 
   type particle_t
     real(kind=REAL64) :: x, y, v_x, v_y, q, x0, y0

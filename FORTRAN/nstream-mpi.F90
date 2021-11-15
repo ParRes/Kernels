@@ -63,17 +63,6 @@
 !
 ! *******************************************************************
 
-#ifndef _OPENMP
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-#endif
-
 program main
   use iso_fortran_env
 #ifdef _OPENMP
@@ -81,9 +70,6 @@ program main
 #endif
   use mpi_f08
   implicit none
-#ifndef _OPENMP
-  real(kind=REAL64) :: prk_get_wtime
-#endif
   ! for argument parsing
   integer :: err
   integer :: arglen
