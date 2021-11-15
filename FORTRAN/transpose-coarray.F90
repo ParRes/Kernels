@@ -58,12 +58,12 @@ program main
   use iso_fortran_env
   use prk
   implicit none
-  integer :: me, npes
-  logical :: printer
   ! for argument parsing
   integer :: err
   integer :: arglen
   character(len=32) :: argtmp
+  integer :: me, np
+  logical :: printer
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
   integer(kind=INT32) ::  order                     ! order of a the matrix
@@ -72,7 +72,7 @@ program main
   real(kind=REAL64), allocatable ::  T(:,:)         ! temporary to hold tile
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! distributed data helpers
-  integer(kind=INT32) :: col_per_pe                 ! columns per PE = order/npes
+  integer(kind=INT32) :: col_per_pe                 ! columns per PE = order/np
   integer(kind=INT32) :: col_start, row_start
   ! runtime variables
   integer(kind=INT32) ::  i, j, k, p, q
@@ -82,7 +82,7 @@ program main
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
 
   me   = this_image()-1 ! use 0-based indexing of PEs
-  npes = num_images()
+  np = num_images()
   printer = (me.eq.0)
 
   ! ********************************************************************
@@ -121,14 +121,14 @@ program main
     endif
     stop 1
   endif
-  if (modulo(order,npes).gt.0) then
+  if (modulo(order,np).gt.0) then
     if (printer) then
       write(6,'(a20,i5,a35,i5)') 'ERROR: matrix order ',order,&
-                        ' should be divisible by # images ',npes
+                        ' should be divisible by # images ',np
     endif
     stop 1
   endif
-  col_per_pe = order/npes
+  col_per_pe = order/np
 
   ! same default as the C implementation
   tile_size = 32
@@ -167,7 +167,7 @@ program main
   bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
   if (printer) then
-    write(6,'(a23,i8)') 'Number of images     = ', npes
+    write(6,'(a23,i8)') 'Number of images     = ', np
     write(6,'(a23,i8)') 'Number of iterations = ', iterations
     write(6,'(a23,i8)') 'Matrix order         = ', order
     write(6,'(a23,i8)') 'Tile size            = ', tile_size
@@ -204,12 +204,12 @@ program main
       t0 = prk_get_wtime()
     endif
 
-    ! we shift the loop range from [0,npes-1] to [me,me+npes-1]
+    ! we shift the loop range from [0,np-1] to [me,me+np-1]
     ! to balance communication.  if everyone starts at 0, they will
     ! take turns blasting each image in the system with get operations.
     ! side note: this trick is used extensively in NWChem.
-    do q=me,me+npes-1
-      p = modulo(q,npes)
+    do q=me,me+np-1
+      p = modulo(q,np)
       ! Step 1: Gather A tile from remote image
       row_start = me*col_per_pe
       ! * fully explicit version
@@ -289,7 +289,7 @@ program main
 
   deallocate( B )
 
-  if (abserr .lt. (epsilon/npes)) then
+  if (abserr .lt. (epsilon/np)) then
     if (printer) then
       write(6,'(a)') 'Solution validates'
       avgtime = trans_time/iterations
@@ -299,7 +299,7 @@ program main
   else
     if (printer) then
       write(6,'(a30,f13.6,a18,f13.6)') 'ERROR: Aggregate squared error ', &
-              abserr,' exceeds threshold ',(epsilon/npes)
+              abserr,' exceeds threshold ',(epsilon/np)
     endif
     stop 1
   endif
