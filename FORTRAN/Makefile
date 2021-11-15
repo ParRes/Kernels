@@ -90,53 +90,57 @@ cufortran: nstream-cufortran transpose-cufortran
 
 blas: dgemm-blas
 
-%: %.F90
-	$(FC) $(FCFLAGS) $< -o $@
+%: %.F90 prk.mod
+	$(FC) $(FCFLAGS) $< prk_mod.o -o $@
 
-stencil: stencil.F90 stencil_serial.F90
-	#$(FC) $(FCFLAGS) -c stencil_serial.F90 -o stencil_serial.o
-	$(FC) $(FCFLAGS) $< -o $@
+prk.mod: prk_mod.F90
+	$(FC) $(FCFLAGS) -c $< -o prk_mod.o
 
-dgemm-pretty: dgemm-pretty.F90
-	$(FC) $(FCFLAGS) $< $(BLASFLAGS) $(STDPARFLAG) -o $@
+stencil: stencil.F90 stencil_serial.F90 prk.mod
+	#$(FC) $(FCFLAGS) -c stencil_serial.F90 prk_mod.o -o stencil_serial.o
+	$(FC) $(FCFLAGS) $<  prk_mod.o -o $@
 
-dgemm-blas: dgemm-blas.F90
-	$(FC) $(FCFLAGS) $< $(BLASFLAGS) -o $@
+dgemm-pretty: dgemm-pretty.F90 prk.mod
+	$(FC) $(FCFLAGS) $< prk_mod.o $(BLASFLAGS) $(STDPARFLAG) -o $@
 
-%-pretty: %-pretty.F90
-	$(FC) $(FCFLAGS) $(STDPARFLAG) $< -o $@
+dgemm-blas: dgemm-blas.F90 prk.mod
+	$(FC) $(FCFLAGS) $< prk_mod.o $(BLASFLAGS) -o $@
 
-#%-openmp: %.F90
-#	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+%-pretty: %-pretty.F90 prk.mod
+	$(FC) $(FCFLAGS) $(STDPARFLAG) $< prk_mod.o -o $@
 
-%-openmp: %-openmp.F90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+#%-openmp: %.F90 prk.mod
+#	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< prk_mod.o -o $@
 
-%-ga: %-ga.F90
-	$(MPIFORT) $(FCFLAGS) $< $(GAFLAG) -o $@
+%-openmp: %-openmp.F90 prk.mod
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< prk_mod.o -o $@
 
-%-mpi-openmp: %-mpi.F90
-	$(MPIFORT) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+%-ga: %-ga.F90 prk.mod
+	$(MPIFORT) $(FCFLAGS) $< prk_mod.o $(GAFLAG) -o $@
 
-%-mpi: %-mpi.F90
-	$(MPIFORT) $(FCFLAGS) $< -o $@
+%-mpi-openmp: %-mpi.F90 prk.mod
+	$(MPIFORT) $(FCFLAGS) $(OPENMPFLAG) $< prk_mod.o -o $@
 
-%-coarray: %-coarray.F90
-	$(CAFC) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
+%-mpi: %-mpi.F90 prk.mod
+	$(MPIFORT) $(FCFLAGS) $< prk_mod.o -o $@
 
-%-target: %-target.F90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< -o $@
+%-coarray: %-coarray.F90 prk.mod
+	$(CAFC) $(FCFLAGS) $< prk_mod.o $(COARRAYFLAG) -o $@
 
-%-openacc: %-openacc.F90
-	$(FC) $(FCFLAGS) $(OPENACCFLAG) $< -o $@
+%-target: %-target.F90 prk.mod
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< prk_mod.o -o $@
 
-%-cufortran: %-cufortran.cuf
-	$(FC) $(FCFLAGS) $(CUFORTFLAG) $< -o $@
+%-openacc: %-openacc.F90 prk.mod
+	$(FC) $(FCFLAGS) $(OPENACCFLAG) $< prk_mod.o -o $@
 
-%-stdpar: %-stdpar.F90
-	$(FC) $(FCFLAGS) $(STDPARFLAG) $< -o $@
+%-cufortran: %-cufortran.cuf prk.mod
+	$(FC) $(FCFLAGS) $(CUFORTFLAG) $< prk_mod.o -o $@
+
+%-stdpar: %-stdpar.F90 prk.mod
+	$(FC) $(FCFLAGS) $(STDPARFLAG) $< prk_mod.o -o $@
 
 clean:
+	-rm -f prk.mod
 	-rm -f *.o
 	-rm -f *.i90
 	-rm -f *.dbg
