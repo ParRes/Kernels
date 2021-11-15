@@ -92,9 +92,11 @@ program main
   integer(kind=INT32) :: me, np, provided
 
   call MPI_Init_thread(MPI_THREAD_FUNNELED,provided)
+#ifdef _OPENMP
   if (provided.eq.MPI_THREAD_SINGLE) then
      call MPI_Abort(MPI_COMM_WORLD,1)
   endif
+#endif
   call MPI_Comm_rank(MPI_COMM_WORLD, me)
   call MPI_Comm_size(MPI_COMM_WORLD, np)
 
@@ -111,10 +113,8 @@ program main
 #endif
 
     if (command_argument_count().lt.2) then
-      if (me.eq.0) then
-        write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-        write(*,'(a49)')    'Usage: ./nstream <# iterations> <vector length>'
-      endif
+      write(*,'(a17,i1)') 'argument count = ', command_argument_count()
+      write(*,'(a49)')    'Usage: ./nstream <# iterations> <vector length>'
       call MPI_Abort(MPI_COMM_WORLD, command_argument_count())
     endif
 
@@ -135,10 +135,11 @@ program main
     endif
 
 #ifdef _OPENMP
-    write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
+    write(*,'(a23,i8)')  'Number of threads    = ', omp_get_max_threads()
 #endif
-    write(*,'(a,i12)') 'Number of iterations = ', iterations
-    write(*,'(a,i12)') 'Vector length        = ', length
+    write(*,'(a23,i8)')  'Number of MPI procs  = ', np
+    write(*,'(a23,i8)')  'Number of iterations = ', iterations
+    write(*,'(a23,i12)') 'Vector length        = ', length
   endif
   call MPI_Bcast(iterations, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
   call MPI_Bcast(length, 1, MPI_INTEGER8, 0, MPI_COMM_WORLD)
@@ -147,22 +148,10 @@ program main
   ! ** Allocate space and perform the computation
   ! ********************************************************************
 
-  allocate( A(length), stat=err)
+  allocate( A(length), B(length), C(length), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a,i3)') 'allocation returned ',err
     call MPI_Abort(MPI_COMM_WORLD, 10)
-  endif
-
-  allocate( B(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    call MPI_Abort(MPI_COMM_WORLD, 11)
-  endif
-
-  allocate( C(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of C returned ',err
-    call MPI_Abort(MPI_COMM_WORLD, 12)
   endif
 
   scalar = 3
@@ -277,9 +266,7 @@ program main
 #endif
   call MPI_Allreduce(MPI_IN_PLACE, asum, 1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD)
 
-  deallocate( C )
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B,C )
 
   if (abs(asum) .gt. epsilon) then
     if (me.eq.0) then
@@ -297,7 +284,7 @@ program main
       write(*,'(a12,f15.3,1x,a12,e15.6)')           &
               'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
               'Avg time (s): ', avgtime
-        endif
+    endif
   endif
 
   call MPI_Finalize()
