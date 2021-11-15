@@ -201,7 +201,7 @@ namespace prk
                 global_size_ = global_size;
                 local_size_ = global_size_ / np_;
                 const size_t remainder  = global_size_ % np_;
-                if (me_ < remainder) local_size_++;
+                if ((size_t)me_ < remainder) local_size_++;
 
                 {
                     MPI_Datatype dt = (std::is_signed<size_t>() ? MPI_INT64_T : MPI_UINT64_T);
