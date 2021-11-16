@@ -146,25 +146,11 @@ program main
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(order,col_per_pe)[*], stat=err)
+  allocate( A(order,col_per_pe)[*], B(order,col_per_pe)[*], T(col_per_pe,col_per_pe), stat=err)
   if (err .ne. 0) then
-    write(6,'(a20,i3,a10,i5)') 'allocation of A returned ',err,' at image ',me
+    write(6,'(a20,i3,a10,i5)') 'allocation returned ',err,' at image ',me
     stop 1
   endif
-
-  allocate( B(order,col_per_pe)[*], stat=err )
-  if (err .ne. 0) then
-    write(6,'(a20,i3,a10,i5)') 'allocation of B returned ',err,' at image ',me
-    stop 1
-  endif
-
-  allocate( T(col_per_pe,col_per_pe), stat=err )
-  if (err .ne. 0) then
-    write(6,'(a20,i3,a10,i5)') 'allocation of T returned ',err,' at image ',me
-    stop 1
-  endif
-
-  bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A)/8
 
   if (printer) then
     write(6,'(a23,i8)') 'Number of images     = ', np
@@ -270,8 +256,7 @@ program main
   t1 = prk_get_wtime()
   trans_time = t1 - t0
 
-  deallocate( T )
-  deallocate( A )
+  deallocate( A,T )
 
   ! ********************************************************************
   ! ** Analyze and output results.
@@ -293,6 +278,7 @@ program main
     if (printer) then
       write(6,'(a)') 'Solution validates'
       avgtime = trans_time/iterations
+      bytes = 2 * int(order,INT64) * int(order,INT64) * storage_size(A(1,1))/8
       write(6,'(a12,f13.6,a17,f10.6)') 'Rate (MB/s): ',&
               (1.d-6*bytes/avgtime),' Avg time (s): ', avgtime
     endif

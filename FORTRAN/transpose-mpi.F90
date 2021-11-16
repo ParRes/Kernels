@@ -56,6 +56,7 @@
 program main
   use iso_fortran_env
   use mpi_f08
+  use prk
   implicit none
   ! for argument parsing
   integer :: err
@@ -63,18 +64,15 @@ program main
   character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations
-  integer(kind=INT32) ::  order
+  integer(kind=INT32) ::  order, block_order
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   real(kind=REAL64), allocatable ::  T(:,:)         ! temporary to hold tile
   real(kind=REAL64), parameter :: one=1.0d0
-  integer(kind=INT64) ::  bytes
-  ! distributed data helpers
-  integer(kind=INT32) :: col_per_pe                 ! columns per PE = order/np
-  integer(kind=INT32) :: col_start, row_start
   ! runtime variables
-  integer(kind=INT32) ::  i, j, k, p, q
-  integer(kind=INT32) ::  it, jt, tile_size
+  integer(kind=INT64) ::  bytes
+  integer(kind=INT32) ::  i, j, k, r, lo, hi
+  !integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime
   real(kind=REAL64), parameter ::  epsilon=1.d-8
@@ -134,11 +132,26 @@ program main
   call MPI_Bcast(iterations, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
   call MPI_Bcast(order, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
 
+  block_order = int(order / np)
+
   call MPI_Barrier(MPI_COMM_WORLD)
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
+
+  allocate( A(order,block_order), B(order,block_order), T(order,block_order), stat=err)
+  if (err .ne. 0) then
+    write(*,'(a,i3)') 'allocation  returned ',err
+    stop 1
+  endif
+  
+  ! Fill the original matrix
+  do concurrent (i=1:order, j=1:block_order)
+    A(i,j) = me * block_order + (i-1)*order + (j-1)
+  end do
+  !call print_matrix(order, block_order, A)
+  B = 0
 
   t0 = 0.0d0
 
@@ -150,7 +163,20 @@ program main
     endif
 
     ! B += A^T
+    call MPI_Alltoall(A, order*block_order, MPI_DOUBLE_PRECISION, &
+                      T, order*block_order, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD)
+
+    !for r in range(0,np):
+    do r=1,np
+        lo = block_order * (r-1) + 1
+        hi = block_order * r
+        B(lo:hi,:) = B(lo:hi,:) + transpose(T(lo:hi,:))
+    end do
+    !print*,'===================================='
+    !print*,'B=',B
+    !call print_matrix(order, block_order, B)
     ! A += 1
+    A = A + one
 
   enddo ! iterations
 
@@ -159,9 +185,35 @@ program main
 
   trans_time = t1 - t0
 
+  deallocate( A,T )
+
   ! ********************************************************************
   ! ** Analyze and output results.
   ! ********************************************************************
+
+  abserr = 0.0;
+  addit = (0.5*iterations) * (iterations+1.0)
+  do r=0,np-1
+    if (me.eq.r) then
+      print*,'===================================='
+      do j=1,block_order
+        do i=1,order
+          !temp = ((real(order,REAL64)*real(j-1,REAL64))+real(block_order*me+i-1,REAL64)) &
+          !     * real(iterations+1,REAL64) + addit
+          temp = ((iterations/2.0)+(order*j+i))*(iterations+1.0)
+          abserr = abserr + abs(B(i,j) - temp)
+          if (abs(B(i,j) - temp).gt.epsilon) then
+            print*,me,':',i,j+me*block_order,B(i,j),temp,'<<<<'
+          else
+            print*,me,':',i,j+me*block_order,B(i,j),temp
+          endif
+        enddo
+      enddo
+    endif
+    call MPI_Barrier(MPI_COMM_WORLD)
+  enddo
+
+  deallocate( B )
 
   if (me.eq.0) then
     if (abserr .lt. epsilon) then
@@ -173,12 +225,11 @@ program main
     else
       write(*,'(a,f30.15,a,f30.15)') 'ERROR: Aggregate squared error ',abserr, &
              'exceeds threshold ',epsilon
-      call MPI_Abort(MPI_COMM_WORLD,1)
+      !call MPI_Abort(MPI_COMM_WORLD,1)
     endif
   endif
 
-  call MPI_Barrier(MPI_COMM_WORLD)
-  call mpi_finalize()
+  call MPI_Finalize()
 
 end program main
 

@@ -39,4 +39,15 @@ module prk
         endif
       end subroutine initialize_w
 
+      subroutine print_matrix(row, col, mat)
+        use iso_fortran_env
+        implicit none
+        integer(kind=INT32), intent(in) :: row, col
+        real(kind=REAL64), intent(in) :: mat(row, col)
+        integer(kind=INT32) :: i
+        do i=1,row
+          write(*,*) mat(i,:)
+        end do
+      end subroutine print_matrix
+
 end module prk
