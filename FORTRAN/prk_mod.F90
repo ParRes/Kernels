@@ -39,15 +39,25 @@ module prk
         endif
       end subroutine initialize_w
 
-      subroutine print_matrix(row, col, mat)
+      subroutine print_matrix(mat, label)
         use iso_fortran_env
         implicit none
-        integer(kind=INT32), intent(in) :: row, col
-        real(kind=REAL64), intent(in) :: mat(row, col)
-        integer(kind=INT32) :: i
-        do i=1,row
-          write(*,*) mat(i,:)
+        real(kind=REAL64), intent(in) :: mat(:,:)
+        integer(kind=INT32), intent(in), optional :: label
+        integer(kind=INT32) :: dims(2)
+        integer(kind=INT32) :: i,j
+        dims(1) = size(mat,1)
+        dims(2) = size(mat,2)
+        do i=1,dims(1)
+          write(6,'(i5,a1)', advance='no') label,':'
+          do j=1,dims(2)
+            if (present(label)) then
+              write(6,'(f10.1)', advance='no') mat(i,j)
+            end if
+          end do
+          write(6,'(a1)',advance='yes') ''
         end do
+        flush(6)
       end subroutine print_matrix
 
 end module prk
