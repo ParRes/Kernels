@@ -53,10 +53,40 @@
 !          MPI by Jeff Hammond, November 2021
 ! *******************************************************************
 
+module prk_mpi
+  contains
+    subroutine mpi_print_matrix(mat,clabel)
+      use iso_fortran_env
+      use mpi_f08
+      use prk
+      implicit none
+      real(kind=REAL64), intent(in) :: mat(:,:)
+      character(*), intent(in), optional :: clabel
+      integer(kind=INT32) :: r, me, np
+      flush(6)
+      call MPI_Comm_rank(MPI_COMM_WORLD, me)
+      call MPI_Comm_size(MPI_COMM_WORLD, np)
+      call MPI_Barrier(MPI_COMM_WORLD)
+      flush(6)
+      if (me.eq.0) print*,clabel
+      flush(6)
+      call MPI_Barrier(MPI_COMM_WORLD)
+      flush(6)
+      do r=0,np-1
+        if (me.eq.r) then
+          call print_matrix(mat,me)
+        endif
+        call MPI_Barrier(MPI_COMM_WORLD)
+      enddo
+      flush(6)
+    end subroutine
+end module prk_mpi
+
 program main
   use iso_fortran_env
   use mpi_f08
   use prk
+  use prk_mpi
   implicit none
   ! for argument parsing
   integer :: err
@@ -140,7 +170,7 @@ program main
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(order,block_order), B(order,block_order), T(order,block_order), stat=err)
+  allocate( A(block_order,order), B(block_order,order), T(block_order,order), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation  returned ',err
     stop 1
@@ -148,9 +178,9 @@ program main
   
   ! Fill the original matrix
   do concurrent (i=1:order, j=1:block_order)
-    A(i,j) = me * block_order + (i-1)*order + (j-1)
+    A(j,i) = me * block_order + (i-1)*order + (j-1)
   end do
-  !call print_matrix(order, block_order, A)
+  !call mpi_print_matrix(A,'A=')
   B = 0
 
   t0 = 0.0d0
@@ -163,18 +193,17 @@ program main
     endif
 
     ! B += A^T
-    call MPI_Alltoall(A, order*block_order, MPI_DOUBLE_PRECISION, &
-                      T, order*block_order, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD)
+    call MPI_Alltoall(A, block_order*block_order, MPI_DOUBLE_PRECISION, &
+                      T, block_order*block_order, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD)
+    !call mpi_print_matrix(T,'T=')
 
     !for r in range(0,np):
-    do r=1,np
-        lo = block_order * (r-1) + 1
-        hi = block_order * r
-        B(lo:hi,:) = B(lo:hi,:) + transpose(T(lo:hi,:))
+    do r=0,np-1
+        lo = block_order * r + 1
+        hi = block_order * (r+1)
+        B(:,lo:hi) = B(:,lo:hi) + transpose(T(:,lo:hi))
     end do
-    !print*,'===================================='
-    !print*,'B=',B
-    !call print_matrix(order, block_order, B)
+    !call mpi_print_matrix(B,'B=')
     ! A += 1
     A = A + one
 
@@ -191,27 +220,21 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
+  !T = 0
   abserr = 0.0;
   addit = (0.5*iterations) * (iterations+1.0)
-  do r=0,np-1
-    if (me.eq.r) then
-      print*,'===================================='
-      do j=1,block_order
-        do i=1,order
-          !temp = ((real(order,REAL64)*real(j-1,REAL64))+real(block_order*me+i-1,REAL64)) &
-          !     * real(iterations+1,REAL64) + addit
-          temp = ((iterations/2.0)+(order*j+i))*(iterations+1.0)
-          abserr = abserr + abs(B(i,j) - temp)
-          if (abs(B(i,j) - temp).gt.epsilon) then
-            print*,me,':',i,j+me*block_order,B(i,j),temp,'<<<<'
-          else
-            print*,me,':',i,j+me*block_order,B(i,j),temp
-          endif
-        enddo
-      enddo
-    endif
-    call MPI_Barrier(MPI_COMM_WORLD)
+  do j=1,block_order
+    do i=1,order
+      temp =  (order*(me*block_order+j-1)+(i-1)) * (iterations+1)+addit
+      !T(j,i) = temp
+      abserr = abserr + abs(B(j,i) - temp)
+    enddo
   enddo
+  call MPI_Allreduce(MPI_IN_PLACE,abserr,1,MPI_DOUBLE_PRECISION, &
+                     MPI_SUM,MPI_COMM_WORLD)
+
+  !call mpi_print_matrix(T,'R=')
+  !call mpi_print_matrix(B,'B=')
 
   deallocate( B )
 
