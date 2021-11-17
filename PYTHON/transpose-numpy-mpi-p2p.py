@@ -142,7 +142,7 @@ def main():
 
     A = numpy.fromfunction(lambda i,j:  me * block_order + i*order + j, (order,block_order), dtype=float)
     B = numpy.zeros((order,block_order))
-    T = numpy.zeros((order,block_order))
+    T = numpy.zeros((block_order,block_order))
 
     for k in range(0,iterations+1):
 
@@ -150,17 +150,18 @@ def main():
             comm.Barrier()
             t0 = MPI.Wtime()
 
-        # this actually forms the transpose of A
-        #B += numpy.transpose(A)
-        # this only uses the transpose _view_ of A
-        #B += A.T
+        for phase in range(0,np):
+            recv_from = (me + phase     ) % np;
+            send_to   = (me - phase + np) % np;
+            #if k==0:
+            #    print('i am ',me,' receiving from ',recv_from,' sending to ',send_to)
 
-        comm.Alltoall(A, T)
-        for r in range(0,np):
-            lo = block_order * r
-            hi = block_order * (r+1)
-            #B[lo:hi,:] += numpy.transpose(T[lo:hi,:])
-            B[lo:hi,:] += T[lo:hi,:].T
+            lo = block_order * send_to
+            hi = block_order * (send_to+1)
+            comm.Sendrecv(sendbuf=A[lo:hi,:],dest=send_to,sendtag=phase,recvbuf=T,source=recv_from,recvtag=phase)
+            lo = block_order * recv_from 
+            hi = block_order * (recv_from+1)
+            B[lo:hi,:] += T.T
 
         A += 1.0
 
