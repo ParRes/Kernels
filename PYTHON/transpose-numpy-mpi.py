@@ -139,8 +139,7 @@ def main():
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    offset = me * block_order
-    A = numpy.fromfunction(lambda i,j: offset+i*order+j, (order,block_order), dtype=float)
+    A = numpy.fromfunction(lambda i,j:  me * block_order + i*order + j, (order,block_order), dtype=float)
     B = numpy.zeros((order,block_order))
     T = numpy.zeros((order,block_order))
 
