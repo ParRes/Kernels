@@ -151,8 +151,8 @@ def main():
             t0 = MPI.Wtime()
 
         for phase in range(0,np):
-            recv_from = (me + phase     ) % np;
-            send_to   = (me - phase + np) % np;
+            recv_from = (me + phase     ) % np
+            send_to   = (me - phase + np) % np
             #if k==0:
             #    print('i am ',me,' receiving from ',recv_from,' sending to ',send_to)
 
