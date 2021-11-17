@@ -109,12 +109,7 @@ program main
   ! MPI stuff
   integer(kind=INT32) :: me, np, provided
 
-  call MPI_Init_thread(MPI_THREAD_FUNNELED,provided)
-#ifdef _OPENMP
-  if (provided.eq.MPI_THREAD_SINGLE) then
-     call MPI_Abort(MPI_COMM_WORLD,1)
-  endif
-#endif
+  call MPI_Init_thread(MPI_THREAD_SINGLE,provided)
   call MPI_Comm_rank(MPI_COMM_WORLD, me)
   call MPI_Comm_size(MPI_COMM_WORLD, np)
 
@@ -124,11 +119,7 @@ program main
 
   if (me.eq.0) then
     write(*,'(a25)') 'Parallel Research Kernels'
-#ifdef _OPENMP
-    write(*,'(a43)') 'Fortran MPI/OpenMP Matrix transpose: B = A^T'
-#else
     write(*,'(a36)') 'Fortran MPI Matrix transpose: B = A^T'
-#endif
 
     if (command_argument_count().lt.2) then
       write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -152,9 +143,6 @@ program main
       call MPI_Abort(MPI_COMM_WORLD, 3)
     endif
 
-#ifdef _OPENMP
-    write(*,'(a23,i8)') 'Number of threads    = ', omp_get_max_threads()
-#endif
     write(*,'(a23,i8)') 'Number of MPI procs  = ', np
     write(*,'(a23,i8)') 'Number of iterations = ', iterations
     write(*,'(a23,i8)') 'Matrix order         = ', order
@@ -180,7 +168,6 @@ program main
   do concurrent (i=1:order, j=1:block_order)
     A(j,i) = me * block_order + (i-1)*order + (j-1)
   end do
-  !call mpi_print_matrix(A,'A=')
   B = 0
 
   t0 = 0.0d0
@@ -195,15 +182,11 @@ program main
     ! B += A^T
     call MPI_Alltoall(A, block_order*block_order, MPI_DOUBLE_PRECISION, &
                       T, block_order*block_order, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD)
-    !call mpi_print_matrix(T,'T=')
-
-    !for r in range(0,np):
     do r=0,np-1
         lo = block_order * r + 1
         hi = block_order * (r+1)
         B(:,lo:hi) = B(:,lo:hi) + transpose(T(:,lo:hi))
     end do
-    !call mpi_print_matrix(B,'B=')
     ! A += 1
     A = A + one
 
@@ -220,21 +203,16 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  !T = 0
   abserr = 0.0;
   addit = (0.5*iterations) * (iterations+1.0)
   do j=1,block_order
     do i=1,order
       temp =  (order*(me*block_order+j-1)+(i-1)) * (iterations+1)+addit
-      !T(j,i) = temp
       abserr = abserr + abs(B(j,i) - temp)
     enddo
   enddo
   call MPI_Allreduce(MPI_IN_PLACE,abserr,1,MPI_DOUBLE_PRECISION, &
                      MPI_SUM,MPI_COMM_WORLD)
-
-  !call mpi_print_matrix(T,'R=')
-  !call mpi_print_matrix(B,'B=')
 
   deallocate( B )
 
