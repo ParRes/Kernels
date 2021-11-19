@@ -140,18 +140,16 @@ def main():
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    A = numpy.fromfunction(lambda i,j:  me * block_order + i*order + j, (order,block_order), dtype=numpy.double)
-    #B = numpy.zeros((order,block_order))
+    dtsize = MPI.DOUBLE.Get_size()
+    WA = MPI.Win.Allocate(order * block_order * dtsize, dtsize, MPI.INFO_NULL, comm)
+    A = numpy.ndarray([order,block_order],dtype=numpy.double,buffer=WA.tomemory())
+    B = numpy.zeros((order,block_order))
     T = numpy.zeros((block_order,block_order))
 
-    n = order*block_order
-    #print('double size=',MPI.DOUBLE.Get_size())
-    W = MPI.Win.Allocate(n * MPI.DOUBLE.Get_size(), 1, MPI.INFO_NULL, comm)
-    #print('win size=',W.Get_attr(MPI.WIN_SIZE))
-    memory = W.tomemory()
-    #print('len memory=',len(memory))
-    B = numpy.ndarray([order,block_order],dtype=numpy.double,buffer=memory)
+    TA = numpy.fromfunction(lambda i,j:  me * block_order + i*order + j, (order,block_order), dtype=numpy.double)
+    A[:,:] = TA[:,:]
 
+    WA.Lock_all()
     for k in range(0,iterations+1):
 
         if k<1:
@@ -159,23 +157,26 @@ def main():
             t0 = MPI.Wtime()
 
         for phase in range(0,np):
-            recv_from = (me + phase     ) % np
-            send_to   = (me - phase + np) % np
-            #if k==0:
-            #    print('i am ',me,' receiving from ',recv_from,' sending to ',send_to)
-
-            lo = block_order * send_to
-            hi = block_order * (send_to+1)
-            comm.Sendrecv(sendbuf=A[lo:hi,:],dest=send_to,sendtag=phase,recvbuf=T,source=recv_from,recvtag=phase)
+            recv_from = (me + phase) % np
+            bsize = block_order * block_order
+            WA.Get(T, recv_from, [bsize * recv_from, bsize, MPI.DOUBLE])
+            WA.Flush_all()
+                  
             lo = block_order * recv_from 
             hi = block_order * (recv_from+1)
             B[lo:hi,:] += T.T
 
+        comm.Barrier()
         A += 1.0
+        WA.Sync()
+        comm.Barrier()
 
     comm.Barrier()
     t1 = MPI.Wtime()
     trans_time = t1 - t0
+
+    WA.Unlock_all()
+    WA.Free()
 
     # ********************************************************************
     # ** Analyze and output results.
