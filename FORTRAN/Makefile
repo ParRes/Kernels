@@ -72,7 +72,7 @@ taskloop: stencil-taskloop-openmp transpose-taskloop-openmp nstream-taskloop-ope
 
 coarray: nstream-coarray p2p-coarray stencil-coarray transpose-coarray
 
-mpi: nstream-mpi transpose-mpi transpose-p2p-mpi
+mpi: nstream-mpi transpose-mpi transpose-p2p-mpi transpose-get-mpi transpose-acc-mpi
 
 mpi-openmp: nstream-mpi-openmp
 
