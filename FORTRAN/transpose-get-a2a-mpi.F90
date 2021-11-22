@@ -103,7 +103,7 @@ program main
   real(kind=REAL64), parameter :: one=1.0d0
   ! runtime variables
   integer(kind=INT64) ::  bytes
-  integer(kind=INT32) ::  i, j, k, r, lo, hi
+  integer(kind=INT32) ::  i, j, k, q, r, lo, hi
   !integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime
@@ -171,7 +171,7 @@ program main
 
   call c_f_pointer(XA,A,[block_order,order])
                         
-  allocate( B(block_order,order), T(block_order,order), stat=err)
+  allocate( B(block_order,order), T(block_order,block_order), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation  returned ',err
     stop 1
@@ -182,6 +182,7 @@ program main
     A(j,i) = me * block_order + (i-1)*order + (j-1)
   end do
   call MPI_Win_sync(WA)
+  call MPI_Barrier(MPI_COMM_WORLD)
   B = 0
 
   t0 = 0.0d0
@@ -195,21 +196,20 @@ program main
 
     ! B += A^T
     call MPI_Barrier(MPI_COMM_WORLD)
-    do r=0,np-1
+    do q=0,np-1
+        r = mod(me+q,np)
         woff = block_order * block_order * me
-        lo = block_order * r + 1
-        hi = block_order * (r+1)
-        call MPI_Get(origin_addr=T(:,lo:hi), origin_count=block_order*block_order, &
+        call MPI_Get(origin_addr=T(:,:), origin_count=block_order*block_order, &
                      origin_datatype=MPI_DOUBLE_PRECISION, &
                      target_rank=r, target_disp=woff, target_count=block_order*block_order, &
                      target_datatype=MPI_DOUBLE_PRECISION, win=WA)
-    end do
-    call MPI_Win_flush_local_all(WA)
-    do r=0,np-1
+        call MPI_Win_flush_local(r,WA)
         lo = block_order * r + 1
         hi = block_order * (r+1)
-        B(:,lo:hi) = B(:,lo:hi) + transpose(T(:,lo:hi))
+        B(:,lo:hi) = B(:,lo:hi) + transpose(T(:,:))
     end do
+    ! nobody should update A before everyone has fetched it
+    call MPI_Barrier(MPI_COMM_WORLD)
     ! A += 1
     A = A + one
     call MPI_Win_sync(WA)
