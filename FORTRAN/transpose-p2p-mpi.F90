@@ -101,7 +101,7 @@ program main
   real(kind=REAL64), parameter :: one=1.0d0
   ! runtime variables
   integer(kind=INT64) :: bytes
-  integer(kind=INT32) :: i, j, k, lo, hi, phase
+  integer(kind=INT32) :: i, j, k, lo, hi, q
   real(kind=REAL64) ::  abserr, addit, temp
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime
   real(kind=REAL64), parameter ::  epsilon=1.d-8
@@ -142,6 +142,10 @@ program main
       write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
       call MPI_Abort(MPI_COMM_WORLD, 3)
     endif
+    if (mod(order,np).ne.0) then
+      write(*,'(a,2i5)') 'ERROR: order must an integer multiple of np : ', order,np
+      call MPI_Abort(MPI_COMM_WORLD, 4)
+    endif
 
     write(*,'(a23,i8)') 'Number of MPI procs  = ', np
     write(*,'(a23,i8)') 'Number of iterations = ', iterations
@@ -180,18 +184,16 @@ program main
     endif
 
     ! B += A^T
-    !call MPI_Alltoall(A, block_order*block_order, MPI_DOUBLE_PRECISION, &
-    !                  T, block_order*block_order, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD)
-    do phase=0,np-1
-        recv_from = mod( (me + phase     ), np)
-        send_to   = mod( (me - phase + np), np)
+    do q=0,np-1
+        recv_from = mod( (me + q     ), np)
+        send_to   = mod( (me - q + np), np)
 
         lo = block_order * send_to + 1
         hi = block_order * (send_to+1)
         call MPI_Sendrecv(A(:,lo:hi), block_order*block_order, MPI_DOUBLE_PRECISION,    &
-                          send_to,phase,                                                &
+                          send_to,q,                                                &
                           T,block_order*block_order, MPI_DOUBLE_PRECISION,              &
-                          recv_from, phase, MPI_COMM_WORLD, MPI_STATUS_IGNORE)
+                          recv_from, q, MPI_COMM_WORLD, MPI_STATUS_IGNORE)
         lo = block_order * recv_from + 1
         hi = block_order * (recv_from+1)
         B(:,lo:hi) = B(:,lo:hi) + transpose(T)

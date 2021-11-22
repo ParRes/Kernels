@@ -95,19 +95,23 @@ program main
   ! problem definition
   integer(kind=INT32) ::  iterations
   integer(kind=INT32) ::  order, block_order
-  real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
+  type(MPI_Win) :: WA                               ! MPI window for A (original matrix)
+  type(c_ptr) :: XA                                 ! MPI baseptr / C pointer for A
+  real(kind=REAL64), pointer     ::  A(:,:)         ! Fortran pointer to A
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   real(kind=REAL64), allocatable ::  T(:,:)         ! temporary to hold tile
   real(kind=REAL64), parameter :: one=1.0d0
   ! runtime variables
-  integer(kind=INT64) ::  bytes
-  integer(kind=INT32) ::  i, j, k, r, lo, hi
+  integer(kind=INT64) :: bytes
+  integer(kind=INT32) :: i, j, k, q, r, lo, hi
   !integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime
   real(kind=REAL64), parameter ::  epsilon=1.d-8
   ! MPI stuff
   integer(kind=INT32) :: me, np, provided
+  integer(kind=MPI_ADDRESS_KIND) :: wsize, woff
+  integer(kind=INT32) :: dsize
 
   call MPI_Init_thread(MPI_THREAD_SINGLE,provided)
   call MPI_Comm_rank(MPI_COMM_WORLD, me)
@@ -142,6 +146,10 @@ program main
       write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
       call MPI_Abort(MPI_COMM_WORLD, 3)
     endif
+    if (mod(order,np).ne.0) then
+      write(*,'(a,2i5)') 'ERROR: order must an integer multiple of np : ', order,np
+      call MPI_Abort(MPI_COMM_WORLD, 4)
+    endif
 
     write(*,'(a23,i8)') 'Number of MPI procs  = ', np
     write(*,'(a23,i8)') 'Number of iterations = ', iterations
@@ -158,7 +166,16 @@ program main
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(block_order,order), B(block_order,order), T(block_order,order), stat=err)
+  dsize = storage_size(one)/8
+  ! MPI_Win_allocate(size, disp_unit, info, comm, baseptr, win, ierror)
+  wsize = block_order * order * dsize
+  call MPI_Win_allocate(size=wsize, disp_unit=dsize, &
+                        info=MPI_INFO_NULL, comm=MPI_COMM_WORLD, baseptr=XA, win=WA)
+  call MPI_Win_lock_all(0,WA)
+
+  call c_f_pointer(XA,A,[block_order,order])
+                        
+  allocate( B(block_order,order), T(block_order,block_order), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation  returned ',err
     stop 1
@@ -168,6 +185,8 @@ program main
   do concurrent (i=1:order, j=1:block_order)
     A(j,i) = me * block_order + (i-1)*order + (j-1)
   end do
+  call MPI_Win_sync(WA)
+  call MPI_Barrier(MPI_COMM_WORLD)
   B = 0
 
   t0 = 0.0d0
@@ -179,16 +198,25 @@ program main
         t0 = MPI_Wtime()
     endif
 
+    woff = block_order * block_order * me
+    call MPI_Barrier(MPI_COMM_WORLD)
     ! B += A^T
-    call MPI_Alltoall(A, block_order*block_order, MPI_DOUBLE_PRECISION, &
-                      T, block_order*block_order, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD)
-    do r=0,np-1
+    do q=0,np-1
+        r = mod(me+q,np)
+        call MPI_Get(origin_addr=T(:,:), origin_count=block_order*block_order, &
+                     origin_datatype=MPI_DOUBLE_PRECISION, &
+                     target_rank=r, target_disp=woff, target_count=block_order*block_order, &
+                     target_datatype=MPI_DOUBLE_PRECISION, win=WA)
+        call MPI_Win_flush_local(r,WA)
         lo = block_order * r + 1
         hi = block_order * (r+1)
-        B(:,lo:hi) = B(:,lo:hi) + transpose(T(:,lo:hi))
+        B(:,lo:hi) = B(:,lo:hi) + transpose(T(:,:))
     end do
+    ! nobody should update A before everyone has fetched it
+    call MPI_Barrier(MPI_COMM_WORLD)
     ! A += 1
     A = A + one
+    call MPI_Win_sync(WA)
 
   enddo ! iterations
 
@@ -197,7 +225,9 @@ program main
 
   trans_time = t1 - t0
 
-  deallocate( A,T )
+  deallocate( T )
+  call MPI_Win_unlock_all(WA)
+  call MPI_Win_free( WA)
 
   ! ********************************************************************
   ! ** Analyze and output results.

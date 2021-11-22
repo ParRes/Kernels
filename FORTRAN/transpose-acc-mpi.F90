@@ -102,8 +102,8 @@ program main
   real(kind=REAL64), allocatable ::  T(:,:)         ! temporary to hold tile
   real(kind=REAL64), parameter :: one=1.0d0
   ! runtime variables
-  integer(kind=INT64) ::  bytes
-  integer(kind=INT32) ::  i, j, k, q, r, lo, hi
+  integer(kind=INT64) :: bytes
+  integer(kind=INT32) :: i, j, k, q, r, lo, hi
   !integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime
@@ -185,9 +185,9 @@ program main
   do concurrent (i=1:order, j=1:block_order)
     A(j,i) = me * block_order + (i-1)*order + (j-1)
   end do
+  B = 0
   call MPI_Win_sync(WB)
   call MPI_Barrier(MPI_COMM_WORLD)
-  B = 0
 
   t0 = 0.0d0
 
@@ -198,24 +198,25 @@ program main
         t0 = MPI_Wtime()
     endif
 
-    ! B += A^T
+    woff = block_order * block_order * me
     do q=0,np-1
         r = mod(me+q,np)
         lo = block_order * r + 1
         hi = block_order * (r+1)
+        ! B += A^T
         T = transpose( A(:,lo:hi) )
-        woff = block_order * block_order * me
         call MPI_Accumulate(origin_addr=T(:,:), origin_count=block_order*block_order, &
                      origin_datatype=MPI_DOUBLE_PRECISION, &
                      target_rank=r, target_disp=woff, target_count=block_order*block_order, &
                      target_datatype=MPI_DOUBLE_PRECISION, op=MPI_SUM, win=WB)
         call MPI_Win_flush_local(r,WB)
+        ! A += 1
+        A(:,lo:hi) = A(:,lo:hi) + 1
     end do
-    ! A += 1
-    A = A + one
 
   enddo ! iterations
 
+  call MPI_Win_flush_all(WB)
   call MPI_Barrier(MPI_COMM_WORLD)
   t1 = MPI_Wtime()
 
