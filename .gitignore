@@ -311,6 +311,11 @@ FORTRAN/transpose-pretty
 FORTRAN/transpose-stdpar
 FORTRAN/transpose-taskloop-openmp
 FORTRAN/transpose-tasks-openmp
+FORTRAN/transpose-a2a-mpi
+FORTRAN/transpose-acc-mpi
+FORTRAN/transpose-get-mpi
+FORTRAN/transpose-p2p-mpi
+FORTRAN/transpose-pointer
 GO/dgemm
 GO/hello
 GO/nstream
