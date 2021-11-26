@@ -64,10 +64,10 @@ program main
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
   integer(kind=INT32) ::  order                     ! order of a the matrix
-  real(kind=REAL64), allocatable, target ::  A(:)   ! buffer to hold original matrix
-  real(kind=REAL64), allocatable, target ::  B(:)   ! buffer to hold transposed matrix
-  real(kind=REAL64), pointer ::  PA(:,:)            ! pointer to original matrix buffer
-  real(kind=REAL64), pointer ::  PB(:,:)            ! pointer to transposed matrix buffer
+  real(kind=REAL64), allocatable, target ::  TA(:)  ! buffer to hold original matrix
+  real(kind=REAL64), allocatable, target ::  TB(:)  ! buffer to hold transposed matrix
+  real(kind=REAL64), pointer ::  A(:,:)             ! pointer to original matrix buffer
+  real(kind=REAL64), pointer ::  B(:,:)             ! pointer to transposed matrix buffer
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
@@ -121,14 +121,14 @@ program main
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(order*order), B(order*order), stat=err)
+  allocate( TA(order*order), TB(order*order), stat=err)
   if (err .ne. 0) then
     write(*,'(a,i3)') 'allocation  returned ',err
     stop 1
   endif
 
-  PA(1:order,1:order) => A
-  PB(1:order,1:order) => B
+  A(1:order,1:order) => TA
+  B(1:order,1:order) => TB
 
   write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Matrix order         = ', order
@@ -141,8 +141,8 @@ program main
       do it=1,order,tile_size
         do j=jt,min(order,jt+tile_size-1)
           do i=it,min(order,it+tile_size-1)
-              PA(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-              PB(i,j) = 0.0
+              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+              B(i,j) = 0.0
           enddo
         enddo
       enddo
@@ -150,8 +150,8 @@ program main
   else
     do j=1,order
       do i=1,order
-        PA(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-        PB(i,j) = 0.0
+        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+        B(i,j) = 0.0
       enddo
     enddo
   endif
@@ -168,8 +168,8 @@ program main
         do it=1,order,tile_size
           do j=jt,min(order,jt+tile_size-1)
             do i=it,min(order,it+tile_size-1)
-              PB(j,i) = PB(j,i) + PA(i,j)
-              PA(i,j) = PA(i,j) + 1.0
+              B(j,i) = B(j,i) + A(i,j)
+              A(i,j) = A(i,j) + 1.0
             enddo
           enddo
         enddo
@@ -177,8 +177,8 @@ program main
     else
       do j=1,order
         do i=1,order
-          PB(j,i) = PB(j,i) + PA(i,j)
-          PA(i,j) = PA(i,j) + 1.0
+          B(j,i) = B(j,i) + A(i,j)
+          A(i,j) = A(i,j) + 1.0
         enddo
       enddo
     endif
@@ -200,7 +200,7 @@ program main
     do i=1,order
       temp = ((real(order,REAL64)*real(i-1,REAL64))+real(j-1,REAL64)) &
            * real(iterations+1,REAL64)
-      abserr = abserr + abs(PB(i,j) - (temp+addit))
+      abserr = abserr + abs(B(i,j) - (temp+addit))
     enddo
   enddo
 
