@@ -43,7 +43,7 @@ endif
 # PGI and LLVM Flang
 ifeq ($(findstring flang,$(FC)),flang)
   EXTRA = target openacc
-  FCFLAGS += -DPGI
+  #FCFLAGS += -DPGI
 endif
 ifeq ($(findstring pgf,$(FC)),pgf)
   EXTRA = target openacc cufortran
