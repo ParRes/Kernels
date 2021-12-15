@@ -140,10 +140,12 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
       double one(1);
+      // A += B
       mkl::blas::axpy(q, length,
                          one,     // alpha
                          d_B, 1,  // x, incx
                          d_A, 1); // y, incy
+      // A += scalar * C
       mkl::blas::axpy(q, length,
                          scalar,  // alpha
                          d_C, 1,  // x, incx
