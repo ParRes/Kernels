@@ -142,6 +142,7 @@ clean:
 	-rm -f *.dbg
 	-rm -f *__genmod.f90 # Intel Fortran
 	-rm -f *__genmod.mod # Intel Fortran
+	-rm -f flang_unparsed_file*.f90 # F18 Flang
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
