@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2017, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -58,10 +59,7 @@ program main
 #endif
   use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the kernel
   integer(kind=INT32) ::  order                     ! order of the matrix
@@ -75,7 +73,7 @@ program main
   integer(kind=INT32) :: i,j,k
   real(kind=REAL64) ::  checksum, reference, residuum
   real(kind=REAL64) ::  t0, t1, dgemm_time, avgtime ! timing parameters
-  real(kind=REAL64), parameter ::  epsilon=1.0d-8    ! error tolerance
+  real(kind=REAL64), parameter ::  epsilon=1.0d-8   ! error tolerance
 
   ! ********************************************************************
   ! read and test input parameters
@@ -84,27 +82,7 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a59)') 'Fortran BLAS Dense matrix-matrix multiplication: C += A x B'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a66)')    'Usage: ./dgemm-pretty <# iterations> <matrix order>'
-    stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  order = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') order
-  if (order .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
-    stop 1
-  endif
+  call prk_get_arguments('dgemm',iterations=iterations,order=order)
 
 #ifdef _OPENMP
   write(*,'(a,i8)') 'Number of threads    = ', omp_get_max_threads()
@@ -116,21 +94,9 @@ program main
   ! ** Allocate space for the input and output matrices
   ! ********************************************************************
 
-  allocate( A(order,order), stat=err)
+  allocate( A(order,order), B(order,order), C(order,order), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
-    stop 1
-  endif
-
-  allocate( B(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
-
-  allocate( C(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of C returned ',err
+    write(*,'(a,i3)') 'allocation  returned ',err
     stop 1
   endif
 
@@ -155,15 +121,11 @@ program main
 
   t1 = prk_get_wtime()
 
-
   dgemm_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.
   ! ********************************************************************
-
-  deallocate( A )
-  deallocate( B )
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
@@ -174,7 +136,7 @@ program main
     enddo
   enddo
 
-  deallocate( C )
+  deallocate( A,B,C )
 
   residuum = abs(checksum-reference)/reference
   if (residuum .lt. epsilon) then
