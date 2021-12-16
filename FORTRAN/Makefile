@@ -42,7 +42,7 @@ ifeq ($(findstring gfortran,$(FC)),gfortran)
 endif
 # PGI and LLVM Flang
 ifeq ($(findstring flang,$(FC)),flang)
-  EXTRA = target openacc
+  EXTRA = openacc
   #FCFLAGS += -DPGI
 endif
 ifeq ($(findstring pgf,$(FC)),pgf)
@@ -90,15 +90,15 @@ cufortran: nstream-cufortran transpose-cufortran
 
 blas: dgemm-blas
 
-%: %.F90 prk.mod
+%: %.F90 prk.mod prk_mod.o
 	$(FC) $(FCFLAGS) $< prk_mod.o -o $@
 
-prk.mod: prk_mod.F90
+prk.mod prk_mod.o: prk_mod.F90
 	$(FC) $(FCFLAGS) -c $< -o prk_mod.o
 
-stencil: stencil.F90 stencil_serial.F90 prk.mod
-	#$(FC) $(FCFLAGS) -c stencil_serial.F90 prk_mod.o -o stencil_serial.o
-	$(FC) $(FCFLAGS) $<  prk_mod.o -o $@
+stencil: stencil.F90 prk.mod
+	$(FC) $(FCFLAGS) -c stencil_serial.F90
+	$(FC) $(FCFLAGS) stencil.F90 stencil_serial.o prk_mod.o -o $@
 
 dgemm-pretty: dgemm-pretty.F90 prk.mod
 	$(FC) $(FCFLAGS) $< prk_mod.o $(BLASFLAGS) $(STDPARFLAG) -o $@
@@ -141,6 +141,7 @@ dgemm-blas: dgemm-blas.F90 prk.mod
 
 clean:
 	-rm -f prk.mod
+	-rm -f prk.f18.mod
 	-rm -f *.o
 	-rm -f *.i90
 	-rm -f *.dbg
@@ -151,6 +152,7 @@ clean:
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
 	-rm -f p2p stencil transpose nstream dgemm
+	-rm -f transpose-pointer
 	-rm -f p2p-innerloop
 	-rm -f *-pretty
 	-rm -f *-blas
@@ -163,3 +165,4 @@ clean:
 	-rm -f *-stdpar
 	-rm -f *-cufortran
 	-rm -f pic pic_soa
+	-rm -f a.out
