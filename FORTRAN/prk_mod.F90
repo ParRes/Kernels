@@ -188,7 +188,7 @@ module prk
           ! stencil
           if (present(radius)) then
             if (radius .lt. 1) then
-              write(*,'(a,i3)') 'ERROR: radius must be positive : ', radius
+              write(*,'(a27)') 'ERROR: radius must be between 1 and 9'
               stop 1
             endif
           endif
