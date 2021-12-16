@@ -66,14 +66,12 @@
 program main
   use iso_fortran_env
   use omp_lib
+  use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
-  integer(kind=INT32) ::  iterations, offset
-  integer(kind=INT64) ::  length
+  integer(kind=INT32) :: iterations
+  integer(kind=INT64) :: length, offset
   real(kind=REAL64), allocatable ::  A(:)
   real(kind=REAL64), allocatable ::  B(:)
   real(kind=REAL64), allocatable ::  C(:)
@@ -93,73 +91,27 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a47)') 'Fortran OpenMP STREAM triad: A = B + scalar * C'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./nstream <# iterations> <vector length> [<offset>]'
-    stop 1
-  endif
+  call prk_get_arguments('nstream',iterations=iterations,length=length,offset=offset)
 
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  length = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') length
-  if (length .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: length must be nonnegative : ', length
-    stop 1
-  endif
-
-  offset = 0
-  if (command_argument_count().gt.2) then
-    call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') offset
-    if (offset .lt. 0) then
-      write(*,'(a,i5)') 'ERROR: offset must be positive : ', offset
-      stop 1
-    endif
-  endif
-
-  write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
-  write(*,'(a,i12)') 'Number of iterations = ', iterations
-  write(*,'(a,i12)') 'Vector length        = ', length
-  write(*,'(a,i12)') 'Offset               = ', offset
+  write(*,'(a23,i12)') 'Number of threads    = ', omp_get_max_threads()
+  write(*,'(a23,i12)') 'Number of iterations = ', iterations
+  write(*,'(a23,i12)') 'Vector length        = ', length
+  write(*,'(a23,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
   ! ** Allocate space and perform the computation
   ! ********************************************************************
 
-  allocate( A(length), stat=err)
+  allocate( A(length), B(length), C(length), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a20,i3)') 'allocation returned ',err
     stop 1
   endif
 
-  allocate( B(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
-
-  allocate( C(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of C returned ',err
-    stop 1
-  endif
-
-  scalar = 3
-
-  t0 = 0
-
-  !$omp parallel default(none)                           &
-  !$omp&  shared(A,B,C,t0,t1)                            &
-  !$omp&  firstprivate(length,iterations,offset,scalar)  &
-  !$omp&  private(i,k)
+  !$omp parallel default(none)                    &
+  !$omp&  shared(A,B,C,nstream_time)              &
+  !$omp&  firstprivate(length,iterations,offset)  &
+  !$omp&  private(i,k,t0,t1,scalar)
 
   !$omp do
   do i=1,length
@@ -168,6 +120,10 @@ program main
     C(i) = 2
   enddo
   !$omp end do
+
+  scalar = 3
+
+  t0 = 0
 
   ! need this because otherwise no barrier between initialization
   ! and iteration 0 (warmup), which will lead to incorrectness.
@@ -188,11 +144,14 @@ program main
     !$omp end do
   enddo ! iterations
 
+  !$omp barrier
   t1 = omp_get_wtime()
 
-  !$omp end parallel
-
+  !$omp master
   nstream_time = t1 - t0
+  !$omp end master
+
+  !$omp end parallel
 
   ! ********************************************************************
   ! ** Analyze and output results.
@@ -212,9 +171,7 @@ program main
   enddo
   !$omp end parallel do
 
-  deallocate( C )
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B,C )
 
   if (abs(asum) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
@@ -227,8 +184,8 @@ program main
     avgtime = nstream_time/iterations;
     bytes = 4 * int(length,INT64) * storage_size(A)/8
     write(*,'(a12,f15.3,1x,a12,e15.6)')    &
-        'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
-        'Avg time (s): ', avgtime
+            'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
+            'Avg time (s): ', avgtime
   endif
 
 end program main

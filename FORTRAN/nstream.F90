@@ -92,9 +92,9 @@ program main
 
   call prk_get_arguments('nstream',iterations=iterations,length=length,offset=offset)
 
-  write(*,'(a,i12)') 'Number of iterations = ', iterations
-  write(*,'(a,i12)') 'Vector length        = ', length
-  write(*,'(a,i12)') 'Offset               = ', offset
+  write(*,'(a23,i12)') 'Number of iterations = ', iterations
+  write(*,'(a23,i12)') 'Vector length        = ', length
+  write(*,'(a23,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
   ! ** Allocate space and perform the computation
@@ -102,13 +102,9 @@ program main
 
   allocate( A(length), B(length), C(length), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation returned ',err
+    write(*,'(a20,i3)') 'allocation returned ',err
     stop 1
   endif
-
-  scalar = 3
-
-  t0 = 0
 
 #if 0
   forall (i=1:length)
@@ -123,6 +119,10 @@ program main
     C(i) = 2
   enddo
 #endif
+
+  scalar = 3
+
+  t0 = 0
 
   do k=0,iterations
     if (k.eq.1) then
@@ -160,9 +160,7 @@ program main
     asum = asum + abs(A(i)-ar)
   enddo
 
-  deallocate( C )
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B,C )
 
   if (abs(asum) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
@@ -175,8 +173,8 @@ program main
     avgtime = nstream_time/iterations;
     bytes = 4 * int(length,INT64) * storage_size(A)/8
     write(*,'(a12,f15.3,1x,a12,e15.6)')    &
-        'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
-        'Avg time (s): ', avgtime
+            'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
+            'Avg time (s): ', avgtime
   endif
 
 end program main

@@ -68,15 +68,12 @@ program main
   use prk
   implicit none
   integer :: me, np, p
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
-  integer(kind=INT32) ::  iterations
-  integer(kind=INT64) ::  length
-  integer(kind=INT32) ::  co_iterations[*]
-  integer(kind=INT64) ::  co_length[*]
+  integer(kind=INT32) :: iterations
+  integer(kind=INT64) :: length, offset
+  integer(kind=INT32) :: co_iterations[*]
+  integer(kind=INT64) :: co_length[*]
   real(kind=REAL64), allocatable ::  A(:)[:]
   real(kind=REAL64), allocatable ::  B(:)[:]
   real(kind=REAL64), allocatable ::  C(:)[:]
@@ -101,34 +98,13 @@ program main
     write(*,'(a25)') 'Parallel Research Kernels'
     write(*,'(a48)') 'Fortran coarray STREAM triad: A = B + scalar * C'
 
-    if (command_argument_count().lt.2) then
-      write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-      write(*,'(a49)')    'Usage: ./nstream <# iterations> <vector length>'
-      error stop 1
-    endif
+    call prk_get_arguments('nstream',iterations=iterations,length=length,offset=offset)
 
-    iterations = 1
-    call get_command_argument(1,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') iterations
-    if (iterations .lt. 1) then
-      write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-      error stop 1
-    endif
+    write(*,'(a23,i12)') 'Number of images     = ', np
+    write(*,'(a23,i12)') 'Number of iterations = ', iterations
+    write(*,'(a23,i12)') 'Vector length        = ', length
+    write(*,'(a23,i12)') 'Offset               = ', offset
 
-    length = 1
-    call get_command_argument(2,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') length
-    if (length .lt. 1) then
-      write(*,'(a,i5)') 'ERROR: length must be nonnegative : ', length
-      error stop 1
-    endif
-
-    write(*,'(a,i12)')  'Number of images     = ', np
-    write(*,'(a,i12)')  'Number of iterations = ', iterations
-    write(*,'(a,i12)')  'Vector length        = ', length
-  endif
-
-  if (me.eq.1) then
     ! co_broadcast is 2018 and not available in all coarray implementations
     do p=1,np
       co_iterations[p] = iterations
@@ -146,37 +122,24 @@ program main
   ! ** Allocate space and perform the computation
   ! ********************************************************************
 
-  allocate( A(length)[*], stat=err)
+  allocate( A(length)[*], B(length)[*], C(length)[*], stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a,i3)') 'allocation returned ',err
     error stop 1
   endif
-
-  allocate( B(length)[*], stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    error stop 1
-  endif
-
-  allocate( C(length)[*], stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of C returned ',err
-    error stop 1
-  endif
-
-  scalar = 3
-
-  t0 = 0
 
   do concurrent (i=1:length)
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
-  sync all ! barrier to ensure initialization is finished at all PEs
+  sync all
+
+  scalar = 3
+
+  t0 = 0
 
   do k=0,iterations
-
     if (k.eq.1) then
       sync all ! barrier
       t0 = prk_get_wtime()
@@ -218,9 +181,7 @@ program main
     enddo
   endif
 
-  deallocate( C )
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B,C )
 
   if (abs(asum) .gt. epsilon) then
     if (me.eq.1) then
