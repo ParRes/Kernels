@@ -121,7 +121,6 @@ program main
   t0 = 0
 
   do k=0,iterations
-
     if (k.eq.1) then
       t0 = prk_get_wtime()
     endif
@@ -168,8 +167,7 @@ program main
     enddo
   enddo
 
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B )
 
   if (abserr .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
