@@ -40,10 +40,10 @@
 !          a third vector.
 !
 ! USAGE:   The program takes as input the number
-!          of iterations to loop over the triad vectors and
-!          the length of the vectors.
+!          of iterations to loop over the triad vectors, the length of the
+!          vectors, and the offset between vectors
 !
-!          <progname> <# iterations> <vector length>
+!          <progname> <# iterations> <vector length> <offset>
 !
 !          The output consists of diagnostics to make sure the
 !          algorithm worked, and of timing statistics.
@@ -69,14 +69,12 @@ program main
   use omp_lib
 #endif
   use mpi_f08
+  use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
-  integer(kind=INT32) ::  iterations
-  integer(kind=INT64) ::  length
+  integer(kind=INT32) :: iterations
+  integer(kind=INT64) :: length, offset
   real(kind=REAL64), allocatable ::  A(:)
   real(kind=REAL64), allocatable ::  B(:)
   real(kind=REAL64), allocatable ::  C(:)
@@ -112,34 +110,15 @@ program main
     write(*,'(a44)') 'Fortran MPI STREAM triad: A = B + scalar * C'
 #endif
 
-    if (command_argument_count().lt.2) then
-      write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-      write(*,'(a49)')    'Usage: ./nstream <# iterations> <vector length>'
-      call MPI_Abort(MPI_COMM_WORLD, command_argument_count())
-    endif
+    call prk_get_arguments('nstream',iterations=iterations,length=length,offset=offset)
 
-    iterations = 1
-    call get_command_argument(1,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') iterations
-    if (iterations .lt. 1) then
-      write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-      call MPI_Abort(MPI_COMM_WORLD, 2)
-    endif
-
-    length = 1
-    call get_command_argument(2,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') length
-    if (length .lt. 1) then
-      write(*,'(a,i5)') 'ERROR: length must be nonnegative : ', length
-      call MPI_Abort(MPI_COMM_WORLD, 3)
-    endif
-
+    write(*,'(a23,i12)') 'Number of MPI procs  = ', np
 #ifdef _OPENMP
-    write(*,'(a23,i8)')  'Number of threads    = ', omp_get_max_threads()
+    write(*,'(a23,i12)') 'Number of threads    = ', omp_get_max_threads()
 #endif
-    write(*,'(a23,i8)')  'Number of MPI procs  = ', np
-    write(*,'(a23,i8)')  'Number of iterations = ', iterations
+    write(*,'(a23,i12)') 'Number of iterations = ', iterations
     write(*,'(a23,i12)') 'Vector length        = ', length
+    write(*,'(a23,i12)') 'Offset               = ', offset
   endif
   call MPI_Bcast(iterations, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
   call MPI_Bcast(length, 1, MPI_INTEGER8, 0, MPI_COMM_WORLD)
@@ -154,15 +133,11 @@ program main
     call MPI_Abort(MPI_COMM_WORLD, 10)
   endif
 
-  scalar = 3
-
-  t0 = 0
-
 #ifdef _OPENMP
-  !$omp parallel default(none)                           &
-  !$omp&  shared(A,B,C,t0,t1)                            &
-  !$omp&  firstprivate(length,iterations,scalar)  &
-  !$omp&  private(i,k)
+  !$omp parallel default(none)            &
+  !$omp&  shared(A,B,C,nstream_time)      &
+  !$omp&  firstprivate(length,iterations) &
+  !$omp&  private(i,k,scalar,t0,t1)
 #endif
 
 #if defined(_OPENMP)
@@ -194,8 +169,11 @@ program main
   call MPI_Barrier(MPI_COMM_WORLD)
   !$omp end master
 
+  scalar = 3
+
+  t0 = 0
+
   do k=0,iterations
-    ! start timer after a warmup iteration
     if (k.eq.1) then
       call MPI_Barrier(MPI_COMM_WORLD)
 #ifdef _OPENMP
