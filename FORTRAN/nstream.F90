@@ -90,7 +90,6 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a47)') 'Fortran Serial STREAM triad: A = B + scalar * C'
 
-
   call prk_get_arguments('nstream',iterations=iterations,length=length,offset=offset)
 
   write(*,'(a,i12)') 'Number of iterations = ', iterations
@@ -101,21 +100,9 @@ program main
   ! ** Allocate space and perform the computation
   ! ********************************************************************
 
-  allocate( A(length), stat=err)
+  allocate( A(length), B(length), C(length), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
-    stop 1
-  endif
-
-  allocate( B(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
-
-  allocate( C(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of C returned ',err
+    write(*,'(a,i3)') 'allocation returned ',err
     stop 1
   endif
 
