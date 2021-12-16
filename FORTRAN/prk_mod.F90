@@ -78,8 +78,8 @@ module prk
           else if (    (kernel(1:9).eq.'transpose')     &
                    .or.(kernel(1:7).eq.'stencil')       &
                    .or.(kernel(1:5).eq.'dgemm') ) then
-            write(*,'(a53)') 'Old Usage: <program> <# iterations> <order> [<tile_size>]'
-            write(*,'(a73)') 'New Usage: <program> iterations=<# iterations> order=<order> [tile_size=<tile_size>]'
+            write(*,'(a57)') 'Old Usage: <program> <# iterations> <order> [<tile_size>]'
+            write(*,'(a84)') 'New Usage: <program> iterations=<# iterations> order=<order> [tile_size=<tile_size>]'
           endif
           STOP
         endif
@@ -158,38 +158,39 @@ module prk
           stop 1
         endif
 
+        ! nstream
         if (present(length)) then
           if (length .lt. 1) then
             write(*,'(a,i15)') 'ERROR: length must be positive : ', length
             stop 1
           endif
+          if (present(offset)) then
+            if (offset .lt. 0) then
+              write(*,'(a,i15)') 'ERROR: offset must be nonnegative : ', offset
+              stop 1
+            endif
+          endif
         endif
 
+        ! transpose, stencil, dgemm
         if (present(order)) then
           if (order .lt. 1) then
             write(*,'(a,i7)') 'ERROR: order must be positive : ', order
             stop 1
           endif
-        endif
-
-        if (present(radius)) then
-          if (radius .lt. 1) then
-            write(*,'(a,i3)') 'ERROR: radius must be positive : ', radius
-            stop 1
+          if (present(tile_size)) then
+            if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
+              write(*,'(a18,i3,a22,i5)') 'WARNING: tile_size ',tile_size,&
+                                         ' must be between 1 and ',order  
+              tile_size = order ! no tiling
+            endif
           endif
-        endif
-
-        if (present(offset)) then
-          if (offset .lt. 0) then
-            write(*,'(a,i15)') 'ERROR: offset must be nonnegative : ', offset
-            stop 1
-          endif
-        endif
-
-        if (present(tile_size)) then
-          if (tile_size .lt. 0) then
-            write(*,'(a,i3)') 'ERROR: tile_size must be nonnegative : ', tile_size
-            stop 1
+          ! stencil
+          if (present(radius)) then
+            if (radius .lt. 1) then
+              write(*,'(a,i3)') 'ERROR: radius must be positive : ', radius
+              stop 1
+            endif
           endif
         endif
 #endif
