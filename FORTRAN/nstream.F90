@@ -67,13 +67,10 @@ program main
   use iso_fortran_env
   use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
-  integer(kind=INT32) ::  iterations, offset
-  integer(kind=INT64) ::  length
+  integer(kind=INT32) :: iterations
+  integer(kind=INT64) :: length, offset
   real(kind=REAL64), allocatable ::  A(:)
   real(kind=REAL64), allocatable ::  B(:)
   real(kind=REAL64), allocatable ::  C(:)
@@ -93,37 +90,8 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a47)') 'Fortran Serial STREAM triad: A = B + scalar * C'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./nstream <# iterations> <vector length> [<offset>]'
-    stop 1
-  endif
 
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  length = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') length
-  if (length .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: length must be nonnegative : ', length
-    stop 1
-  endif
-
-  offset = 0
-  if (command_argument_count().gt.2) then
-    call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') offset
-    if (offset .lt. 0) then
-      write(*,'(a,i5)') 'ERROR: offset must be positive : ', offset
-      stop 1
-    endif
-  endif
+  call prk_get_arguments('nstream',iterations=iterations,length=length,offset=offset)
 
   write(*,'(a,i12)') 'Number of iterations = ', iterations
   write(*,'(a,i12)') 'Vector length        = ', length
