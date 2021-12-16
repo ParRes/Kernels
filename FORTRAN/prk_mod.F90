@@ -12,6 +12,7 @@ module prk
       subroutine prk_get_arguments(kernel,           & ! which kernel am i parsing?
                                    iterations,       & ! everything
                                    length, offset,   & ! nstream
+                                   gpu_block_size,   & ! nstream GPU only
                                    order, tile_size, & ! transpose, stencil, dgemm
                                    stencil, radius)    ! not supported in implementations yet
         use iso_fortran_env
@@ -19,6 +20,7 @@ module prk
         character(len=*),    intent(in)  :: kernel
         integer(kind=INT32), intent(out) :: iterations
         integer(kind=INT64), intent(out), optional :: length, offset    ! nstream
+        integer(kind=INT32), intent(out), optional :: gpu_block_size    ! nstream GPU only
         integer(kind=INT32), intent(out), optional :: order, tile_size  ! transpose, stencil, dgemm
         integer(kind=INT32), intent(out), optional :: radius            ! stencil
         character(len=4),    intent(out), optional :: stencil           ! stencil
@@ -32,6 +34,9 @@ module prk
         endif
         if (present(offset)) then
           offset = 0
+        endif
+        if (present(gpu_block_size)) then
+          gpu_block_size = 256
         endif
         if (present(order)) then
           order = 1024
@@ -73,8 +78,13 @@ module prk
         if (argc.lt.2 ) then
           write(*,'(a17,i2)') 'argument count = ', command_argument_count()
           if (kernel(1:7).eq.'nstream') then
-            write(*,'(a62)') 'Old Usage: <program> <# iterations> <vector length> [<offset>]'
-            write(*,'(a87)') 'New Usage: <program> iterations=<# iterations> length=<vector length> [offset=<offset>]'
+            if (present(gpu_block_size)) then
+              write(*,'(a62)') 'Old Usage: <program> <# iterations> <vector length> [<gpu_block_size>]'
+              write(*,'(a87)') 'New Usage: <program> iterations=<# iterations> length=<vector length> [block_size=<gpu_block_size>]'
+            else
+              write(*,'(a62)') 'Old Usage: <program> <# iterations> <vector length> [<offset>]'
+              write(*,'(a87)') 'New Usage: <program> iterations=<# iterations> length=<vector length> [offset=<offset>]'
+            endif
           else if (    (kernel(1:9).eq.'transpose')     &
                    .or.(kernel(1:7).eq.'stencil')       &
                    .or.(kernel(1:5).eq.'dgemm') ) then
@@ -148,6 +158,14 @@ module prk
                   read(argtmp(p+1:arglen),'(i1)') radius
                 endif
               endif
+              ! look for gpu_block_size
+              if (present(gpu_block_size)) then
+                q = index(argtmp(1:p-1),"block")
+                if (q.ne.0) then
+                  read(argtmp(p+1:arglen),'(i5)') gpu_block_size
+                endif
+              endif
+              ! end looking
             endif
           endif
         enddo
