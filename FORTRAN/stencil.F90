@@ -138,10 +138,7 @@ program main
   use iso_fortran_env
   use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
   integer(kind=INT32) ::  n                             ! linear grid dimension
@@ -183,7 +180,7 @@ program main
   write(*,'(a22,i8)') 'Grid size            = ', n
   write(*,'(a22,i8)') 'Radius of stencil    = ', r
   if (is_star) then
-    write(*,'(a22,a8)')  'Type of stencil      = ','star'
+    write(*,'(a22,a8)')  'Type of stencil      = ', 'star'
     stencil_size = 4*r+1
   else
     write(*,'(a22,a8)')  'Type of stencil      = ','grid'
@@ -249,8 +246,7 @@ program main
   !* Analyze and output results.
   !******************************************************************************
 
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B )
 
   ! verify correctness
   reference_norm = real(iterations+1,REAL64) * (cx + cy);
