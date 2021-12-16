@@ -99,10 +99,7 @@ program main
   use omp_lib
   use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the kernel
   integer(kind=INT32) ::  order                     ! order of the matrix
@@ -125,63 +122,24 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a61)') 'Fortran OpenMP Dense matrix-matrix multiplication: C += A x B'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a66)')    'Usage: ./dgemm-pretty <# iterations> <matrix order> [<tile_size>]'
-    stop 1
-  endif
+  call prk_get_arguments('dgemm',iterations=iterations,order=order,tile_size=tile_size)
 
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
+  write(*,'(a22,i8)') 'Number of threads    = ', omp_get_max_threads()
+  write(*,'(a22,i8)') 'Number of iterations = ', iterations
+  write(*,'(a22,i8)') 'Matrix order         = ', order
+  if (tile_size.ne.order) then
+    write(*,'(a22,i8)') 'Tile size            = ', tile_size
+  else
+    write(*,'(a10)') 'Tiling off'
   endif
-
-  order = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') order
-  if (order .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
-    stop 1
-  endif
-
-  tile_size = 32
-  if (command_argument_count().gt.2) then
-      call get_command_argument(3,argtmp,arglen,err)
-      if (err.eq.0) read(argtmp,'(i32)') tile_size
-  endif
-  if ((tile_size.lt.1).or.(tile_size.gt.order)) then
-    write(*,'(a20,i5,a22,i5)') 'WARNING: tile_size ',tile_size, &
-                               ' must be >= 1 and <= ',order
-    tile_size = order ! no tiling
-  endif
-
-  write(*,'(a,i8)') 'Number of threads    = ', omp_get_max_threads()
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix order         = ', order
-  write(*,'(a,i8)') 'Tile size            = ', tile_size
 
   ! ********************************************************************
   ! ** Allocate space for the input and output matrices
   ! ********************************************************************
 
-  allocate( A(order,order), stat=err)
+  allocate( A(order,order), B(order,order), C(order,order), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
-    stop 1
-  endif
-
-  allocate( B(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
-
-  allocate( C(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of C returned ',err
+    write(*,'(a,i3)') 'allocation  returned ',err
     stop 1
   endif
 
@@ -223,9 +181,6 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  deallocate( A )
-  deallocate( B )
-
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
   checksum = 0.0d0
@@ -237,7 +192,7 @@ program main
   enddo
   !$omp end parallel do
 
-  deallocate( C )
+  deallocate( A,B,C )
 
   residuum = abs(checksum-reference)/reference
   if (residuum .lt. epsilon) then
