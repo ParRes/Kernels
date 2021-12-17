@@ -70,7 +70,7 @@ program main
   real(kind=REAL64), allocatable ::  C(:,:)         ! buffer to hold output matrix
   integer(kind=INT64) :: nflops
   ! runtime variables
-  integer(kind=INT32) :: i,j,k
+  integer(kind=INT32) :: i,k
   real(kind=REAL64) ::  checksum, reference, residuum
   real(kind=REAL64) ::  t0, t1, dgemm_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.0d-8   ! error tolerance
