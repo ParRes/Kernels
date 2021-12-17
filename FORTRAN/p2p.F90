@@ -98,15 +98,15 @@ program main
   call prk_get_arguments('p2p',iterations=iterations,dimx=m,dimy=n,tilex=mc,tiley=nc)
   chunk = ((mc/=m).or.(nc/=n))
 
-  write(*,'(a,i8)')    'Number of iterations     = ', iterations
-  write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
+  write(*,'(a27,i8)')    'Number of iterations     = ', iterations
+  write(*,'(a27,i8,i8)') 'Grid sizes               = ', m, n
   if (chunk) then
-    write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
+    write(*,'(a27,i8,i8)') 'Size of chunking         = ', mc, nc
   endif
 
   allocate( grid(m,n), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of grid returned ',err
+    write(*,'(a22,i3)') 'allocation of grid returned ',err
     stop 1
   endif
 

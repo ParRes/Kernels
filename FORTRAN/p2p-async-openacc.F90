@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2015, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -56,7 +57,6 @@
 
 subroutine sweep_tile(startm,endm,startn,endn,m,n,grid)
   use iso_fortran_env
-  use prk
   implicit none
   integer(kind=INT32), intent(in) :: m,n
   integer(kind=INT32), intent(in) :: startm,endm
@@ -74,11 +74,9 @@ end subroutine
 
 program main
   use iso_fortran_env
+  use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
   integer(kind=INT32) :: m, n
@@ -99,45 +97,7 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a52)') 'Fortran ORNL-ACC TASKS pipeline execution on 2D grid'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a34,2a39)')  'Usage: ./synch_p2p <# iterations> ',      &
-                           '<array x-dimension> <array y-dimension>', &
-                           '<chunk x-dimension> <chunk y-dimension>'
-    stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-
-  m = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') m
-
-  n = m
-  if (command_argument_count().gt.2) then
-    call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') n
-
-    mc = m
-    call get_command_argument(4,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') mc
-
-    nc = n
-    call get_command_argument(5,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') nc
-  endif
-
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  if ((m .lt. 1).or.(n .lt. 1)) then
-    write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
-    stop 1
-  endif
+  call prk_get_arguments('p2p',iterations=iterations,dimx=m,dimy=n,tilex=mc,tiley=nc)
 
   ! mc=m or nc=n disables chunking in that dimension, which means
   ! there is no task parallelism to exploit
@@ -148,9 +108,9 @@ program main
   mc = max(1,mc)
   nc = max(1,nc)
 
-  write(*,'(a,i8)')    'Number of iterations     = ', iterations
-  write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
-  write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
+  write(*,'(a27,i8)')    'Number of iterations     = ', iterations
+  write(*,'(a27,i8,i8)') 'Grid sizes               = ', m, n
+  write(*,'(a27,i8,i8)') 'Size of chunking         = ', mc, nc
 
   allocate( grid(m,n), stat=err)
   if (err .ne. 0) then
@@ -191,7 +151,6 @@ program main
     enddo
     !$acc async(grid(1,1)) wait(grid(lic,ljc))
     grid(1,1) = -grid(m,n)
-
   enddo
 
   t1 = prk_get_wtime()

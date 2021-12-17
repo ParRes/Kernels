@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2015, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -58,10 +59,7 @@ program main
   use iso_fortran_env
   use omp_lib
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
   integer(kind=INT32) :: m, n
@@ -80,36 +78,8 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a44)') 'Fortran OpenMP TARGET pipeline execution on 2D grid'
 
-  if (command_argument_count().lt.3) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a34,a38)')  'Usage: ./synch_p2p <# iterations> ',  &
-                          '<array x-dimension> <array y-dimension>'
-    stop 1
-  endif
+  call prk_get_arguments('p2p',iterations=iterations,dimx=m,dimy=n)
 
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-
-  m = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') m
-
-  n = 1
-  call get_command_argument(3,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') n
-
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  if ((m .lt. 1).or.(n .lt. 1)) then
-    write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
-    stop 1
-  endif
-
-  write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
   write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
 
