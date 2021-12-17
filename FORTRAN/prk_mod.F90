@@ -14,6 +14,8 @@ module prk
                                    length, offset,   & ! nstream
                                    gpu_block_size,   & ! nstream GPU only
                                    order, tile_size, & ! transpose, stencil, dgemm
+                                   dimx, dimy,       & ! p2p
+                                   tilex, tiley,     & ! p2p
                                    stencil, radius)    ! not supported in implementations yet
         use iso_fortran_env
         implicit none
@@ -22,9 +24,12 @@ module prk
         integer(kind=INT64), intent(out), optional :: length, offset    ! nstream
         integer(kind=INT32), intent(out), optional :: gpu_block_size    ! nstream GPU only
         integer(kind=INT32), intent(out), optional :: order, tile_size  ! transpose, stencil, dgemm
+        integer(kind=INT32), intent(out), optional :: dimx, dimy        ! p2p
+        integer(kind=INT32), intent(out), optional :: tilex, tiley      ! p2p
         integer(kind=INT32), intent(out), optional :: radius            ! stencil
         character(len=4),    intent(out), optional :: stencil           ! stencil
 
+        integer(kind=INT32), parameter :: deadbeef = -559038737 ! 3735928559 as int32
         integer :: argc,arglen,err,a,p,q
         character(len=64) :: argtmp
 
@@ -50,22 +55,35 @@ module prk
         if (present(radius)) then
           radius = 2
         endif
+        if (present(dimx)) then
+          dimx = 1024
+        endif
+        if (present(dimy)) then
+          dimy = deadbeef
+        endif
+        if (present(tilex)) then
+          tilex = 0
+        endif
+        if (present(tiley)) then
+          tiley = deadbeef
+        endif
 
 #ifndef PRK_NO_ARGUMENTS
         if (kernel(1:7).eq.'nstream') then
-          if (present(length)) then
-            length = 0
-          else
+          if (.not.present(length)) then
             print*,'You cannot parse nstream arguments without length'
             stop
           endif
         else if (    (kernel(1:9).eq.'transpose')     &
                  .or.(kernel(1:7).eq.'stencil')       &
                  .or.(kernel(1:5).eq.'dgemm') ) then
-          if (present(order)) then
-            order = 0
-          else
+          if (.not.present(order)) then
             print*,'You cannot parse ',kernel,' arguments without order'
+            stop
+          endif
+        else if (kernel(1:3).eq.'p2p') then
+          if (.not.present(dimx)) then
+            print*,'You cannot parse ',kernel,' arguments without dimx'
             stop
           endif
         else
@@ -80,7 +98,8 @@ module prk
           if (kernel(1:7).eq.'nstream') then
             if (present(gpu_block_size)) then
               write(*,'(a62)') 'Old Usage: <program> <# iterations> <vector length> [<gpu_block_size>]'
-              write(*,'(a87)') 'New Usage: <program> iterations=<# iterations> length=<vector length> [block_size=<gpu_block_size>]'
+              write(*,'(a87)') 'New Usage: <program> iterations=<# iterations> length=<vector length>', &
+                                                                               '[block_size=<gpu_block_size>]'
             else
               write(*,'(a62)') 'Old Usage: <program> <# iterations> <vector length> [<offset>]'
               write(*,'(a87)') 'New Usage: <program> iterations=<# iterations> length=<vector length> [offset=<offset>]'
@@ -90,6 +109,18 @@ module prk
                    .or.(kernel(1:5).eq.'dgemm') ) then
             write(*,'(a57)') 'Old Usage: <program> <# iterations> <order> [<tile_size>]'
             write(*,'(a84)') 'New Usage: <program> iterations=<# iterations> order=<order> [tile_size=<tile_size>]'
+          else if (kernel(1:3).eq.'p2p') then
+            if (present(dimy)) then
+              write(*,'(a75)') 'Old Usage: <program> <# iterations> <array x-dimension> <array y-dimension>'
+              write(*,'(a57)') '          [<tilesize x-dimension> <tilesize y-dimension>]'
+              write(*,'(a46)') 'New Usage: <program> iterations=<# iterations>'
+              write(*,'(a61)') '           dimx=<array x-dimension> dimy=<array y-dimension>'
+              write(*,'(a69)') '           [tilex=<tilesize x-dimension> tiley=<tilesize y-dimension>]'
+           else
+              write(*,'(a57)') 'Old Usage: <program> <# iterations> <array x-dimension> [<tilesize x-dimension>]'
+              write(*,'(a84)') 'New Usage: <program> iterations=<# iterations> dimx=<array x-dimension>', &
+                               '[tilex=<tilesize x-dimension>]'
+           endif
           endif
           STOP
         endif
@@ -106,13 +137,27 @@ module prk
                   read(argtmp,'(i15)') length
                 else if (present(order)) then
                   read(argtmp,'(i7)') order
+                else if (present(dimx)) then
+                  read(argtmp,'(i7)') dimx
                 endif
               else if (a.eq.3) then
                 if (present(offset)) then
                   read(argtmp,'(i15)') offset
-                endif
-                if (present(tile_size)) then
+                else if (present(tile_size)) then
                   read(argtmp,'(i3)') tile_size
+                else if (present(dimy)) then
+                  read(argtmp,'(i7)') dimy
+                else if (.not.present(dimy).and.present(tilex)) then
+                  read(argtmp,'(i7)') tilex
+                endif
+              elseif (a.eq.4) then
+                if (present(dimx).and.present(dimy).and.present(tilex)) then
+                  read(argtmp,'(i7)') tilex
+                endif
+              elseif (a.eq.5) then
+                if (present(dimx).and.present(dimy).and. &
+                    present(tilex).and.present(tiley)) then
+                  read(argtmp,'(i7)') tiley
                 endif
               else
                 print*,'too many positional arguments:',argc
@@ -165,6 +210,34 @@ module prk
                   read(argtmp(p+1:arglen),'(i5)') gpu_block_size
                 endif
               endif
+              ! look for dimx
+              if (present(dimx)) then
+                q = index(argtmp(1:p-1),"dimx")
+                if (q.eq.1) then
+                  read(argtmp(p+1:arglen),'(i7)') dimx
+                endif
+                ! look for tilex
+                if (present(tilex)) then
+                  q = index(argtmp(1:p-1),"tilex")
+                  if (q.eq.1) then
+                    read(argtmp(p+1:arglen),'(i3)') tilex
+                  endif
+                endif
+                ! look for dimy
+                if (present(dimy)) then
+                  q = index(argtmp(1:p-1),"dimy")
+                  if (q.eq.1) then
+                    read(argtmp(p+1:arglen),'(i7)') dimy
+                  endif
+                  ! look for tiley
+                  if (present(tiley)) then
+                    q = index(argtmp(1:p-1),"tiley")
+                    if (q.eq.1) then
+                      read(argtmp(p+1:arglen),'(i3)') tiley
+                    endif
+                  endif
+                endif
+              endif
               ! end looking
             endif
           endif
@@ -208,6 +281,40 @@ module prk
             if (radius .lt. 1) then
               write(*,'(a27)') 'ERROR: radius must be between 1 and 9'
               stop 1
+            endif
+          endif
+        endif
+
+        ! p2p
+        if (present(dimx)) then
+          if (dimx.lt.1) then
+            write(*,'(a,i7)') 'ERROR: dimx must be positive : ', dimx
+            stop 1
+          endif
+          if (present(tilex)) then
+            if ((tilex.lt.1).or.(tilex.gt.dimx)) then
+              write(*,'(a,i7)') 'WARNING: tilex invalid - ignoring'
+              tilex = dimx
+            endif
+          endif
+          if (present(dimy)) then
+            ! user did not provide it, so we assume square array
+            if (dimy.eq.deadbeef) then
+              dimy = dimx
+            endif
+            if (dimy.lt.1) then
+              write(*,'(a,i7)') 'ERROR: dimy must be positive : ', dimy
+              stop 1
+            endif
+            if (present(tiley)) then
+              ! user did not provide it, so we assume square array
+              if (tiley.eq.deadbeef) then
+                tiley = tilex
+              endif
+              if ((tiley.lt.1).or.(tiley.gt.dimy)) then
+                write(*,'(a,i7)') 'WARNING: tiley invalid - ignoring'
+                tiley = dimy
+              endif
             endif
           endif
         endif

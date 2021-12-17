@@ -74,10 +74,7 @@ program main
   use iso_fortran_env
   use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
   integer(kind=INT32) :: m, n
@@ -98,55 +95,14 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a44)') 'Fortran Serial pipeline execution on 2D grid'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a34,a39)')  'Usage: ./synch_p2p <# iterations> ',  &
-                          '<array x-dimension> <array y-dimension>'
-    stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-
-  m = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') m
-
-  n = m
-  if (command_argument_count().gt.2) then
-    call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') n
-
-    mc = m
-    call get_command_argument(4,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') mc
-
-    nc = n
-    call get_command_argument(5,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') nc
-  endif
-
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  if ((m .lt. 1).or.(n .lt. 1)) then
-    write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
-    stop 1
-  endif
-
-  if (((mc.lt.1).or.(mc.gt.m)).or.((mc.lt.1).or.(mc.gt.m))) then
-    write(*,'(a,i5)') 'WARNING: chunking invalid - ignoring'
-    mc = m
-    nc = n
-  endif
+  call prk_get_arguments('p2p',iterations=iterations,dimx=m,dimy=n,tilex=mc,tiley=nc)
   chunk = ((mc/=m).or.(nc/=n))
 
   write(*,'(a,i8)')    'Number of iterations     = ', iterations
   write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
-  write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
+  if (chunk) then
+    write(*,'(a,i8,i8)') 'Size of chunking         = ', mc, nc
+  endif
 
   allocate( grid(m,n), stat=err)
   if (err .ne. 0) then
@@ -170,7 +126,6 @@ program main
 
   do k=0,iterations
 
-    ! start timer after a warmup iteration
     if (k.eq.1) t0 = prk_get_wtime()
 
     if (chunk) then
