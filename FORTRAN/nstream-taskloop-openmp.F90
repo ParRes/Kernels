@@ -108,10 +108,12 @@ program main
     stop 1
   endif
 
+  scalar = 3
+
   !$omp parallel default(none)                    &
-  !$omp&  shared(A,B,C,nstream_time)              &
+  !$omp&  shared(A,B,C,scalar,nstream_time)       &
   !$omp&  firstprivate(length,iterations,offset)  &
-  !$omp&  private(i,k,t0,t1,scalar)
+  !$omp&  private(i,k,t0,t1)
   !$omp master
 
   !$omp taskloop firstprivate(length,offset) shared(A,B,C) private(i)
@@ -121,8 +123,6 @@ program main
     C(i) = 2
   enddo
   !$omp end taskloop
-
-  scalar = 3
 
   t0 = 0
 
@@ -144,11 +144,11 @@ program main
   enddo ! iterations
 
   t1 = omp_get_wtime()
+  nstream_time = t1 - t0
+
 
   !$omp end master
   !$omp end parallel
-
-  nstream_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.
