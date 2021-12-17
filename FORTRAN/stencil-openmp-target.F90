@@ -166,7 +166,6 @@ program main
   real(kind=REAL64), parameter :: cx=1.d0, cy=1.d0
   ! runtime variables
   integer(kind=INT32) :: i, j, k
-  integer(kind=INT32) :: ii, jj, it, jt
   integer(kind=INT64) :: flops                          ! floating point ops per iteration
   real(kind=REAL64) :: norm, reference_norm             ! L1 norm of solution
   integer(kind=INT64) :: active_points                  ! interior of grid with respect to stencil
@@ -258,6 +257,7 @@ program main
 
   stencil_time = t1 - t0
 
+  norm = 0
   ! compute L1 norm in parallel
   !$omp parallel do collapse(2)                     &
   !$omp& default(none) shared(n,B) private(i,j)     &
