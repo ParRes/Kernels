@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2015, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -58,10 +59,7 @@ program main
   use iso_fortran_env
   use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
   integer(kind=INT32) :: n
@@ -80,20 +78,7 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a55)') 'Fortran OpenACC INNERLOOP pipeline execution on 2D grid'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a34,a16)') 'Usage: ./synch_p2p <# iterations> ',  &
-                         '<grid dimension>'
-    stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-
-  n = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') n
+  call prk_get_arguments('p2p',iterations=iterations,dimx=n)
 
   if (n .gt. 16384) then
     write(*,'(a,i5)') 'WARNING: grid size exceeds 16384: ', n
@@ -101,21 +86,8 @@ program main
     write(*,'(a)')    'unless you compiled with -Mlarge_arrays.'
   endif
 
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  if (n .lt. 1) then
-    write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', n
-    stop 1
-  endif
-
-#ifdef _OPENMP
-  write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
-#endif
-  write(*,'(a,i8)')    'Number of iterations     = ', iterations
-  write(*,'(a,i8,i8)') 'Grid sizes               = ', n, n
+  write(*,'(a27,i8)')    'Number of iterations     = ', iterations
+  write(*,'(a27,i8,i8)') 'Grid sizes               = ', n, n
 
   allocate( grid(n,n), stat=err)
   if (err .ne. 0) then
