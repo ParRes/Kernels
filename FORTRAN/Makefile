@@ -58,7 +58,7 @@ ifeq ($(findstring xlf,$(FC)),xlf)
   FCFLAGS += $(XLFPP)-DXLF
 endif
 
-all: serial pretty openmp tasks $(EXTRA)
+all: serial pretty openmp tasks blas mpi mpi-openmp $(EXTRA)
 
 serial: p2p stencil transpose nstream dgemm p2p-innerloop pic pic_soa
 
