@@ -133,11 +133,13 @@ program main
     call MPI_Abort(MPI_COMM_WORLD, 10)
   endif
 
+  scalar = 3
+
 #ifdef _OPENMP
-  !$omp parallel default(none)            &
-  !$omp&  shared(A,B,C,nstream_time)      &
-  !$omp&  firstprivate(length,iterations) &
-  !$omp&  private(i,k,scalar,t0,t1)
+  !$omp parallel default(none)                   &
+  !$omp&  shared(A,B,C,nstream_time)             &
+  !$omp&  firstprivate(length,iterations,scalar) &
+  !$omp&  private(i,k,t0,t1)
 #endif
 
 #if defined(_OPENMP)
@@ -168,8 +170,6 @@ program main
   !$omp master
   call MPI_Barrier(MPI_COMM_WORLD)
   !$omp end master
-
-  scalar = 3
 
   t0 = 0
 
@@ -209,6 +209,7 @@ program main
 #endif
   call MPI_Barrier(MPI_COMM_WORLD)
   t1 = MPI_Wtime()
+  nstream_time = t1 - t0
 #ifdef _OPENMP
   !$omp end master
 #endif
@@ -216,8 +217,6 @@ program main
 #ifdef _OPENMP
   !$omp end parallel
 #endif
-
-  nstream_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.
