@@ -257,6 +257,7 @@ program main
   !$omp barrier
   !$omp master
   t1 = omp_get_wtime()
+  stencil_time = t1 - t0
   !$omp end master
 
   ! compute L1 norm in parallel
