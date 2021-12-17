@@ -108,10 +108,12 @@ program main
     stop 1
   endif
 
+  scalar = 3
+
   !$omp parallel default(none)                    &
-  !$omp&  shared(A,B,C,nstream_time)              &
+  !$omp&  shared(A,B,C,scalar,nstream_time)       &
   !$omp&  firstprivate(length,iterations,offset)  &
-  !$omp&  private(i,k,t0,t1,scalar)
+  !$omp&  private(i,k,t0,t1)
 
   !$omp do
   do i=1,length
@@ -120,8 +122,6 @@ program main
     C(i) = 2
   enddo
   !$omp end do
-
-  scalar = 3
 
   t0 = 0
 
