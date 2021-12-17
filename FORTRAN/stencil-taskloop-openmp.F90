@@ -215,9 +215,9 @@ program main
 
   call initialize_w(is_star,r,W)
 
-  !$omp parallel default(none)                                        &
-  !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size,is_star)   &
-  !$omp&  private(i,j,k)
+  !$omp parallel default(none)                                                   &
+  !$omp&  shared(n,A,B,W,stencil_time,norm,iterations,tiling,tile_size,is_star)  &
+  !$omp&  private(i,j,k,t0,t1)
 
   !$omp master
   !$omp taskloop firstprivate(n) shared(A,B)
@@ -257,20 +257,20 @@ program main
   enddo ! iterations
 
   t1 = omp_get_wtime()
-
-  !$omp end master
-  !$omp end parallel
-
   stencil_time = t1 - t0
 
+  !$omp end master
+
   ! compute L1 norm in parallel
-  !$omp parallel do reduction(+:norm)
+  norm = 0.0d0
+  !$omp do reduction(+:norm)
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
-  !$omp end parallel do
+  !$omp end do
+  !$omp end parallel
   active_points = int(n-2*r,INT64)**2
   norm = norm / real(active_points,REAL64)
 
