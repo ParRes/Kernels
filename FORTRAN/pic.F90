@@ -62,7 +62,8 @@ program pic
   type(particle_t), allocatable, dimension(:) :: particles
   type(particle_t) :: part
   integer(kind=INT64) :: L, n, k, m, init_mode
-  integer(kind=INT64) :: ip, iterations, iter
+  integer(kind=INT32) :: iterations, iter
+  integer(kind=INT64) :: ip
   real(kind=REAL64) :: rho
   real(kind=REAL64) :: t0, pic_time
   character(len=32) :: argtmp
@@ -145,16 +146,18 @@ program pic
 
   print *, 'Number of particles placed     = ', n
 
+  t0 = 0
+
   block
     real(kind=REAL64)   :: fx, fy, ax, ay
-    do iter = 0_INT64, iterations
-    if(iter == 1) then
+    do iter = 0, iterations
+      if(iter == 1) then
 #ifdef _OPENMP
-      t0 = omp_get_wtime()
+        t0 = omp_get_wtime()
 #else
-      t0 = prk_get_wtime()
+        t0 = prk_get_wtime()
 #endif
-    endif
+      endif
       !$omp parallel do private(part, fx, fy, ax, ay)
       do ip=1,n
         part = particles(ip)
@@ -334,7 +337,8 @@ program pic
 
   integer function verifyParticle(part, iterations, Qgrid, L)
     type(particle_t), intent(in) :: part
-    integer(kind=REAL64), intent(in) :: iterations, L
+    integer(kind=INT32), intent(in) :: iterations
+    integer(kind=REAL64), intent(in) :: L
     real(kind=REAL64), allocatable, dimension(:,:), intent(in) :: Qgrid
     integer(kind=INT64) :: x, y
     real(kind=REAL64) :: x_final, y_final, x_periodic, y_periodic, disp
