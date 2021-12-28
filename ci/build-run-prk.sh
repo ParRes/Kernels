@@ -658,7 +658,7 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=FORTRAN
         case "$FC" in
             gfortran)
-                for major in "-14" "-13" "-12" "-11" "-10" "-9" "-8" "-7" "-6" "-5" "-4" "-3" "-2" "-1" "" ; do
+                for major in "-14" "-13" "-12" "-11" "-10" "-9" "-8" "-7" "" ; do
                     if [ -f "`which gfortran$major`" ]; then
                         export PRK_FC="gfortran$major"
                         echo "Found GCC Fortran: $PRK_FC"
@@ -695,6 +695,9 @@ case "$PRK_TARGET" in
                 echo "OPENMPFLAG=-fopenmp" >> common/make.defs
                 ;;
         esac
+
+        # ignore this in CI
+        echo "OFFLOADFLAG+=-DGPU_SCHEDULE=\"\"" >> common/make.defs
 
         # Serial
         ${MAKE} -C ${PRK_TARGET_PATH} p2p p2p-innerloop stencil transpose nstream dgemm
