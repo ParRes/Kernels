@@ -62,7 +62,7 @@
 ! *******************************************************************
 
 subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   implicit none
   logical, intent(in) :: is_star, tiling
   integer(kind=INT32), intent(in) :: tile_size, r, n
@@ -142,7 +142,7 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
 end subroutine apply_stencil
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   use prk
   implicit none
   integer :: err

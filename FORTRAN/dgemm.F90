@@ -53,7 +53,7 @@
 ! *******************************************************************
 
 subroutine prk_dgemm(order, tile_size, A, B, C)
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   implicit none
   integer(kind=INT32), intent(in) :: order, tile_size
   real(kind=REAL64), intent(in) ::  A(order,order)
@@ -102,7 +102,7 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
 end subroutine prk_dgemm
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   use prk
   implicit none
   integer :: err

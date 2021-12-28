@@ -55,7 +55,7 @@
 ! *******************************************************************
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   use prk
   implicit none
   ! for argument parsing

@@ -56,7 +56,7 @@
 ! *******************************************************************
 
 subroutine sweep_tile(startm,endm,startn,endn,m,n,grid)
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   implicit none
   integer(kind=INT32), intent(in) :: m,n
   integer(kind=INT32), intent(in) :: startm,endm
@@ -73,7 +73,7 @@ subroutine sweep_tile(startm,endm,startn,endn,m,n,grid)
 end subroutine
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   use prk
   implicit none
   integer :: err

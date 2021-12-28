@@ -1,7 +1,7 @@
 module prk
   contains
       function prk_get_wtime() result(t)
-        use iso_fortran_env
+        use, intrinsic :: iso_fortran_env
         implicit none
         real(kind=REAL64) ::  t
         integer(kind=INT64) :: c, r
@@ -17,7 +17,7 @@ module prk
                                    dimx, dimy,       & ! p2p
                                    tilex, tiley,     & ! p2p
                                    stencil, radius)    ! not supported in implementations yet
-        use iso_fortran_env
+        use, intrinsic :: iso_fortran_env
         implicit none
         character(len=*),    intent(in)  :: kernel
         integer(kind=INT32), intent(out) :: iterations
@@ -322,7 +322,7 @@ module prk
       end subroutine
 
       subroutine initialize_w(is_star,r,W)
-        use iso_fortran_env
+        use, intrinsic :: iso_fortran_env
         implicit none
         logical, intent(in) :: is_star
         integer(kind=INT32), intent(in) :: r
@@ -352,7 +352,7 @@ module prk
       end subroutine initialize_w
 
       subroutine print_matrix(mat, label)
-        use iso_fortran_env
+        use, intrinsic :: iso_fortran_env
         implicit none
         real(kind=REAL64), intent(in) :: mat(:,:)
         integer(kind=INT32), intent(in), optional :: label
