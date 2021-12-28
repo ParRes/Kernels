@@ -113,7 +113,7 @@ case "$PRK_TARGET" in
         export PRK_TARGET_PATH=C1z
         case $CC in
             g*)
-                for major in "-9" "-8" "-7" "-6" "-5" "" ; do
+                for major in "-14" "-13" "-12" "-11" "-10" "-9" "-8" "-7" "-6" "-5" "" ; do
                   if [ -f "`which ${CC}${major}`" ]; then
                       export PRK_CC="${CC}${major}"
                       echo "Found C: $PRK_CC"
@@ -125,7 +125,7 @@ case "$PRK_TARGET" in
                 fi
                 ;;
             clang*)
-                for version in "-10" "-9" "-8" "-7" "-6" "-5" "" ; do
+                for version in "-14" "-13" "-12" "-11" "-10" "-9" "-8" "-7" "-6" "-5" "" ; do
                   if [ -f "`which ${CC}${version}`" ]; then
                       export PRK_CC="${CC}${version}"
                       echo "Found C: $PRK_CC"
@@ -268,7 +268,7 @@ case "$PRK_TARGET" in
                 if [ "$os" = "Darwin" ] && [ "x$PRK_CXX" = "x" ] ; then
                   brew list
                   brew search llvm
-                  for version in "9" "8" "7" "6" "5" ; do
+                  for version in "14" "13" "12" "11" "10" "9" "8" "7" "6" "5" ; do
                     if [ -f "`which /usr/local/opt/gcc@${version}/bin/g++-${version}`" ]; then
                         export PRK_CXX="`which /usr/local/opt/gcc@${version}/bin/g++-${version}`"
                         echo "Found C++: $PRK_CXX"
@@ -277,7 +277,7 @@ case "$PRK_TARGET" in
                   done
                 fi
                 if [ "x$PRK_CXX" = "x" ] ; then
-                  for major in "-9" "-8" "-7" "-6" "-5" "" ; do
+                  for major in "-14" "-13" "-12" "-11" "-10" "-9" "-8" "-7" "-6" "-5" "" ; do
                     if [ -f "`which ${CXX}${major}`" ]; then
                         export PRK_CXX="${CXX}${major}"
                         echo "Found C++: $PRK_CXX"
@@ -301,7 +301,7 @@ case "$PRK_TARGET" in
                   done
                 fi
                 if [ "x$PRK_CXX" = "x" ] ; then
-                  for version in "-11" "-10" "-9" "-8" "-7" "-6" "-5" "" ; do
+                  for version in "-14" "-13" "-12" "-11" "-10" "-9" "-8" "-7" "-6" "-5" ; do
                     if [ -f "`which ${CXX}${version}`" ]; then
                         export PRK_CXX="${CXX}${version}"
                         echo "Found C++: $PRK_CXX"
