@@ -54,9 +54,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
-#include "range/v3/view/cartesian_product.hpp"
-#include "range/v3/view/stride.hpp"
+#include "prk_ranges.h"
 
 int main(int argc, char * argv[])
 {

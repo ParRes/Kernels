@@ -41,6 +41,7 @@
 # include "range/v3/view/iota.hpp"
 # include "range/v3/view/slice.hpp"
 # include "range/v3/view/stride.hpp"
+# include "range/v3/view/cartesian_product.hpp"
 #else
 # error You have not provided a version of ranges to use.
 #endif
