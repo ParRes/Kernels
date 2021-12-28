@@ -64,7 +64,7 @@
 ! *******************************************************************
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
 #ifdef _OPENMP
   use omp_lib
 #endif

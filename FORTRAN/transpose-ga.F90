@@ -53,7 +53,7 @@
 ! *******************************************************************
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   use mpi_f08
   implicit none
 #include "global.fh"

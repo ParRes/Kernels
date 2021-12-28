@@ -1,5 +1,5 @@
 subroutine star1(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -18,7 +18,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star2(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -41,7 +41,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star3(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -68,7 +68,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star4(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -99,7 +99,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star5(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -134,7 +134,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star6(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -173,7 +173,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star7(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -216,7 +216,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star8(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -263,7 +263,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star9(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -314,7 +314,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid1(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -333,7 +333,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid2(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -362,7 +362,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid3(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -407,7 +407,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid4(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -474,7 +474,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid5(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -569,7 +569,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid6(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -698,7 +698,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid7(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -867,7 +867,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid8(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)
@@ -1082,7 +1082,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid9(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 integer(kind=INT32), intent(in) :: n
 real(kind=REAL64), intent(in) :: in(n,n)

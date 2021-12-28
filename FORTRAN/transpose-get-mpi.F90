@@ -56,7 +56,7 @@
 module prk_mpi
   contains
     subroutine mpi_print_matrix(mat,clabel)
-      use iso_fortran_env
+      use, intrinsic :: iso_fortran_env
       use mpi_f08
       use prk
       implicit none
@@ -83,7 +83,8 @@ module prk_mpi
 end module prk_mpi
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
+  use, intrinsic :: iso_c_binding
   use mpi_f08
   use prk
   use prk_mpi

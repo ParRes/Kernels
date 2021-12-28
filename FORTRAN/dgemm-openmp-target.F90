@@ -53,7 +53,7 @@
 ! *******************************************************************
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   use omp_lib
   use prk
   implicit none
