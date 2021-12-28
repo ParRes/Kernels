@@ -34,7 +34,7 @@ ifeq ($(findstring ifort,$(FC)),ifort)
 endif
 # OpenMP target stuff is only in IFX now
 ifeq ($(findstring ifx,$(FC)),ifx)
-  EXTRA = target
+  EXTRA = target tasks taskloop
 endif
 # GCC (also matches pgfortran so PGI must come after)
 ifeq ($(findstring gfortran,$(FC)),gfortran)
