@@ -30,5 +30,5 @@ RUST/*                      @jeffhammond
 SERIAL/*                    @rfvander
 SHMEM/*                     @jdinan @rfvander
 UPC/*                       @apokayi
-travis/*                    @jeffhammond
+ci/*                        @jeffhammond
 
