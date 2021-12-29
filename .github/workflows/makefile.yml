@@ -14,11 +14,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     
-    - name: Setup
-      run: cp common/make.defs.gcc common/make.defs
-      
-    - name: Build
-      run: make allcxx
-      
-    - name: Run C++
+    - name: Test C++
       run: ./travis/build-run-prk.sh /tmp allcxx
+      
+    - name: Test Fortran
+      run: ./travis/build-run-prk.sh /tmp allfortran
+      
+    - name: Test C11
+      run: ./travis/build-run-prk.sh /tmp allc1z
+      
+    - name: Test Python
+      run: ./travis/build-run-prk.sh /tmp allpython
