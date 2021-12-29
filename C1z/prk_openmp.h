@@ -69,6 +69,7 @@
 # if (_OPENMP >= 201811)
 #  define OMP_REQUIRES(x) PRAGMA(omp requires x)
 # else
+#  warning No OpenMP 5+ features!
 #  define OMP_REQUIRES(x)
 # endif
 #else
