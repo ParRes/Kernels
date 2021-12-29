@@ -65,8 +65,8 @@ online for whatever platform you are using.
 
 All of the libraries and frameworks supported by the PRK project
 can be installed using the Travis CI infrastructure.
-See `travis/install-${dependency}.sh` for details and look
-at how the script is invoked by `travis/install-deps.sh` to
+See `ci/install-${dependency}.sh` for details and look
+at how the script is invoked by `ci/install-deps.sh` to
 undestand the options.
 In many cases, the only required argument is the path to the
 target directory.  We often use `${PRK}/deps/` for this.

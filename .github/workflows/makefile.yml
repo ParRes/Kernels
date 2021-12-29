@@ -1,0 +1,31 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ default ]
+  pull_request:
+    branches: [ default ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Test Python
+      run: |
+        python -m pip install --upgrade pip
+        pip install numpy
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        bash ./ci/build-run-prk.sh /tmp allpython
+      
+    - name: Test C++
+      run: CXX=g++ bash ./ci/build-run-prk.sh /tmp allcxx
+      
+    - name: Test Fortran
+      run: FC=gfortran bash ./ci/build-run-prk.sh /tmp allfortran
+      
+    - name: Test C11
+      run: CC=gcc bash ./ci/build-run-prk.sh /tmp allc1z
