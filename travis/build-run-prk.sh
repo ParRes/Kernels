@@ -234,7 +234,7 @@ case "$PRK_TARGET" in
             done
         done
         # Target Offload
-        if [ "${CC}" = "gcc" ] ; then
+        if [ "${CC}" = "gcc" ] && [ ! true ] ; then
             echo "OFFLOADFLAG=-foffload=\"-O3 -v\"" >> common/make.defs
             ${MAKE} -C $PRK_TARGET_PATH target
             $PRK_TARGET_PATH/nstream-target     10 16777216
