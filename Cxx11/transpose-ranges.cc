@@ -116,20 +116,10 @@ int main(int argc, char * argv[])
   std::iota(A.begin(), A.end(), 0.0);
 
   // untiled
-  auto v = ranges::views::cartesian_product(
-               ranges::views::iota(0, order),
-               ranges::views::iota(0, order)
-           );
-
+  auto v = prk::range2(0,order);
   // tiled: s is the strided (outer) view and t is the tile (inner) view
-  auto s = ranges::views::cartesian_product(
-               ranges::stride_view(ranges::views::iota(0, order), tile_size),
-               ranges::stride_view(ranges::views::iota(0, order), tile_size)
-           );
-  auto t = ranges::views::cartesian_product(
-               ranges::views::iota(0, tile_size),
-               ranges::views::iota(0, tile_size)
-           );
+  auto s = prk::range2(0, order, tile_size);
+  auto t = prk::range2(0, tile_size);
 
   for (int iter = 0; iter<=iterations; iter++) {
 
