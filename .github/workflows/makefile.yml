@@ -18,7 +18,7 @@ jobs:
       run: cp common/make.defs.gcc common/make.defs
       
     - name: Build
-      run: make -C allcxx
+      run: make allcxx
       
     - name: Run C++
       run: ./travis/build-run-prk.sh /tmp allcxx
