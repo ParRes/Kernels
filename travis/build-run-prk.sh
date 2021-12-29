@@ -439,6 +439,8 @@ case "$PRK_TARGET" in
                 ;;
         esac
 
+        exit 0
+
         # Boost.Compute runs after OpenCL, and only available in Travis with MacOS.
         if [ "${TRAVIS_OS_NAME}" = "osx" ] ; then
             echo "BOOSTFLAG=-I/usr/include -I/usr/local/include" >> common/make.defs
