@@ -656,9 +656,9 @@ case "$PRK_TARGET" in
     allfortran)
         echo "Fortran"
         export PRK_TARGET_PATH=FORTRAN
-        case "$CC" in
-            gcc)
-                for major in "-9" "-8" "-7" "-6" "-5" "-4" "-3" "-2" "-1" "" ; do
+        case "$FC" in
+            gfortran)
+                for major in "-14" "-13" "-12" "-11" "-10" "-9" "-8" "-7" "-6" "-5" "-4" "-3" "-2" "-1" "" ; do
                     if [ -f "`which gfortran$major`" ]; then
                         export PRK_FC="gfortran$major"
                         echo "Found GCC Fortran: $PRK_FC"
@@ -682,7 +682,7 @@ case "$PRK_TARGET" in
                 echo "CAFC=$PRK_CAFC -std=f2008 -cpp" >> common/make.defs
                 echo "COARRAYFLAG=-fcoarray=single" >> common/make.defs
                 ;;
-            clang)
+            flang)
                 case "$os" in
                     FreeBSD)
                         echo "FC=flang -Mpreprocess -Mfreeform -I/usr/local/flang/include -lexecinfo" >> common/make.defs
