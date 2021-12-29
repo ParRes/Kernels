@@ -467,7 +467,6 @@ case "$PRK_TARGET" in
         TBBROOT=${TRAVIS_ROOT}/tbb
         case "$os" in
             Linux)
-                ${CC} --version
                 export TBBFLAG="-I${TBBROOT}/include -L${TBBROOT}/lib/intel64/gcc4.7 -ltbb"
                 echo "TBBFLAG=${TBBFLAG}" >> common/make.defs
                 export LD_LIBRARY_PATH=${TBBROOT}/lib/intel64/gcc4.7:${LD_LIBRARY_PATH}
@@ -482,7 +481,7 @@ case "$PRK_TARGET" in
         $PRK_TARGET_PATH/p2p-innerloop-tbb     10 1024
         $PRK_TARGET_PATH/p2p-hyperplane-tbb    10 1024 1
         $PRK_TARGET_PATH/p2p-hyperplane-tbb    10 1024 32
-        $PRK_TARGET_PATH/p2p-tasks-tbb                10 1024 1024 32 32
+        $PRK_TARGET_PATH/p2p-tasks-tbb         10 1024 1024 32 32
         $PRK_TARGET_PATH/stencil-tbb           10 1000
         $PRK_TARGET_PATH/transpose-tbb         10 1024 32
         $PRK_TARGET_PATH/nstream-tbb           10 16777216 32
@@ -509,9 +508,9 @@ case "$PRK_TARGET" in
 
         # C++17 Parallel STL
         # disable Linux w/ GCC because GCC-5 is too old FIXME
-        if [ ! "${CC}" = "gcc" ] && [ ! "${TRAVIS_OS_NAME}" = "linux" ] ; then
+        if [ ! "${CXX}" = "g++" ] && [ ! "${TRAVIS_OS_NAME}" = "linux" ] ; then
             echo "PSTLFLAG=${TBBFLAG} -DUSE_LLVM_PSTL -I${TRAVIS_ROOT}/pstl/include ${RANGEFLAG}" >> common/make.defs
-            if [ "${CC}" = "gcc" ] ; then
+            if [ "${CXX}" = "g++" ] ; then
                 # omp.h not found with clang-3.9 - just work around instead of fixing.
                 echo "PSTLFLAG+=-fopenmp" >> common/make.defs
             fi
@@ -559,13 +558,13 @@ case "$PRK_TARGET" in
         #fi
 
         # C++11 with Kokkos, RAJA
-        case "$CC" in
-            gcc)
+        case "$CXX" in
+            g++)
                 # Kokkos and Raja are built with OpenMP support with GCC
                 echo "RAJAFLAG=-I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG} -fopenmp" >> common/make.defs
                 echo "KOKKOSFLAG=-I${TRAVIS_ROOT}/kokkos/include -L${TRAVIS_ROOT}/kokkos/lib -lkokkoscore -DPRK_KOKKOS_BACKEND=OpenMP -fopenmp -ldl" >> common/make.defs
                 ;;
-            clang)
+            clang++)
                 # RAJA can use TBB with Clang
                 echo "RAJAFLAG=-I${TRAVIS_ROOT}/raja/include -L${TRAVIS_ROOT}/raja/lib -lRAJA ${TBBFLAG}" >> common/make.defs
                 # Kokkos is built with Pthread support with Clang
@@ -575,35 +574,35 @@ case "$PRK_TARGET" in
 
         # RAJA
         if [ 0 = 1 ] ; then
-        ${MAKE} -C $PRK_TARGET_PATH p2p-raja stencil-raja transpose-raja nstream-raja \
-                                    p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja
-        # New (Views)
-        $PRK_TARGET_PATH/p2p-raja                10 1024 1024
-        $PRK_TARGET_PATH/stencil-raja            10 1000
-        $PRK_TARGET_PATH/transpose-raja          10 1024
-        $PRK_TARGET_PATH/nstream-raja            10 16777216 32
-        # Old (STL)
-        $PRK_TARGET_PATH/p2p-vector-raja         10 1024 1024
-        $PRK_TARGET_PATH/stencil-vector-raja     10 1000
-        $PRK_TARGET_PATH/transpose-vector-raja   10 1024
-        for f in seq omp tbb ; do
-         for s in y n ; do
-          for t in y n ; do
-           for n in y n ; do
-            for p in no ij ji ; do
-             $PRK_TARGET_PATH/transpose-raja 4 200 nested=$n for=$f simd=$s tiled=$t permute=$p
-            done
-           done
-          done
-         done
-        done
-        $PRK_TARGET_PATH/nstream-vector-raja     10 16777216 32
-        for s in star grid ; do
-            for r in 1 2 3 4 5 ; do
-                $PRK_TARGET_PATH/stencil-raja        10 200 20 $s $r
-                $PRK_TARGET_PATH/stencil-vector-raja 10 200 20 $s $r
-            done
-        done
+             ${MAKE} -C $PRK_TARGET_PATH p2p-raja stencil-raja transpose-raja nstream-raja \
+                                         p2p-vector-raja stencil-vector-raja transpose-vector-raja nstream-vector-raja
+             # New (Views)
+             $PRK_TARGET_PATH/p2p-raja                10 1024 1024
+             $PRK_TARGET_PATH/stencil-raja            10 1000
+             $PRK_TARGET_PATH/transpose-raja          10 1024
+             $PRK_TARGET_PATH/nstream-raja            10 16777216 32
+             # Old (STL)
+             $PRK_TARGET_PATH/p2p-vector-raja         10 1024 1024
+             $PRK_TARGET_PATH/stencil-vector-raja     10 1000
+             $PRK_TARGET_PATH/transpose-vector-raja   10 1024
+             for f in seq omp tbb ; do
+              for s in y n ; do
+               for t in y n ; do
+                for n in y n ; do
+                 for p in no ij ji ; do
+                  $PRK_TARGET_PATH/transpose-raja 4 200 nested=$n for=$f simd=$s tiled=$t permute=$p
+                 done
+                done
+               done
+              done
+             done
+             $PRK_TARGET_PATH/nstream-vector-raja     10 16777216 32
+             for s in star grid ; do
+                 for r in 1 2 3 4 5 ; do
+                     $PRK_TARGET_PATH/stencil-raja        10 200 20 $s $r
+                     $PRK_TARGET_PATH/stencil-vector-raja 10 200 20 $s $r
+                 done
+             done
         fi
 
         # Kokkos
