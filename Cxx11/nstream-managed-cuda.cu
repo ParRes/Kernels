@@ -1,6 +1,9 @@
 ///
 /// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
+
+// Copyright (c) 2021, NVIDIA
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
 /// are met:
@@ -64,7 +67,7 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
-__global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
+__global__ void nstream(const unsigned n, const double scalar, double * A, const double * B, const double * C)
 {
     unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) {
@@ -72,21 +75,21 @@ __global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A,
     }
 }
 
-__global__ void nstream2(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
+__global__ void nstream2(const unsigned n, const double scalar, double * A, const double * B, const double * C)
 {
     for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
         A[i] += B[i] + scalar * C[i];
     }
 }
 
-__global__ void fault_pages(const unsigned n, prk_float * A, prk_float * B, prk_float * C)
+__global__ void fault_pages(const unsigned n, double * A, double * B, double * C)
 {
-    //const unsigned inc = 4096/sizeof(prk_float);
+    //const unsigned inc = 4096/sizeof(double);
     //for (unsigned int i = 0; i < n; i += inc) {
     for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
-        A[i] = (prk_float)0;
-        B[i] = (prk_float)2;
-        C[i] = (prk_float)2;
+        A[i] = (double)0;
+        B[i] = (double)2;
+        C[i] = (double)2;
     }
 }
 
@@ -149,51 +152,53 @@ int main(int argc, char * argv[])
 
   double nstream_time(0);
 
-  prk_float * A;
-  prk_float * B;
-  prk_float * C;
+  double * A;
+  double * B;
+  double * C;
 
-  const size_t bytes = length * sizeof(prk_float);
   if (system_memory) {
       A = new double[length];
       B = new double[length];
       C = new double[length];
   } else {
-      prk::CUDA::check( cudaMallocManaged((void**)&A, bytes) );
-      prk::CUDA::check( cudaMallocManaged((void**)&B, bytes) );
-      prk::CUDA::check( cudaMallocManaged((void**)&C, bytes) );
+      A = prk::CUDA::malloc_managed<double>(length);
+      B = prk::CUDA::malloc_managed<double>(length);
+      C = prk::CUDA::malloc_managed<double>(length);
   }
 
   // initialize on CPU to ensure pages are faulted there
   for (int i=0; i<length; ++i) {
-    A[i] = static_cast<prk_float>(0);
-    B[i] = static_cast<prk_float>(2);
-    C[i] = static_cast<prk_float>(2);
+    A[i] = static_cast<double>(0);
+    B[i] = static_cast<double>(2);
+    C[i] = static_cast<double>(2);
   }
 
   if (ordered_fault) {
       fault_pages<<<1,1>>>(static_cast<unsigned>(length), A, B, C);
-      prk::CUDA::check( cudaDeviceSynchronize() );
+      prk::CUDA::sync();
   }
 
   if (prefetch) {
-      prk::CUDA::check( cudaMemPrefetchAsync(A, bytes, 0) );
-      prk::CUDA::check( cudaMemPrefetchAsync(B, bytes, 0) );
-      prk::CUDA::check( cudaMemPrefetchAsync(C, bytes, 0) );
+      prk::CUDA::prefetch(A, length);
+      prk::CUDA::prefetch(B, length);
+      prk::CUDA::prefetch(C, length);
   }
 
-  prk_float scalar(3);
+  double scalar(3);
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) nstream_time = prk::wtime();
+      if (iter==1) {
+          prk::CUDA::sync();
+          nstream_time = prk::wtime();
+      }
 
       if (grid_stride) {
           nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, A, B, C);
       } else {
           nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, A, B, C);
       }
-      prk::CUDA::check( cudaDeviceSynchronize() );
+      prk::CUDA::sync();
     }
     nstream_time = prk::wtime() - nstream_time;
   }
@@ -220,9 +225,9 @@ int main(int argc, char * argv[])
       free(B);
       free(C);
   } else {
-      prk::CUDA::check( cudaFree(A) );
-      prk::CUDA::check( cudaFree(B) );
-      prk::CUDA::check( cudaFree(C) );
+      prk::CUDA::free(A);
+      prk::CUDA::free(B);
+      prk::CUDA::free(C);
   }
 
   double epsilon=1.e-8;
@@ -236,7 +241,7 @@ int main(int argc, char * argv[])
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
-      double nbytes = 4.0 * length * sizeof(prk_float);
+      double nbytes = 4.0 * length * sizeof(double);
       std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }

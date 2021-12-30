@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2019, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +40,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -63,10 +64,10 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#pragma omp requires unified_address
-
 #include "prk_util.h"
 #include "prk_openmp.h"
+
+OMP_REQUIRES(unified_address)
 
 int main(int argc, char * argv[])
 {
@@ -127,9 +128,9 @@ int main(int argc, char * argv[])
       h_C[i] = 2.0;
   }
 
-  double * restrict d_A = omp_target_alloc(bytes, host);
-  double * restrict d_B = omp_target_alloc(bytes, host);
-  double * restrict d_C = omp_target_alloc(bytes, host);
+  double * restrict d_A = omp_target_alloc(bytes, device);
+  double * restrict d_B = omp_target_alloc(bytes, device);
+  double * restrict d_C = omp_target_alloc(bytes, device);
 
   int rc = 0;
   rc = omp_target_memcpy(d_A, h_A, bytes, 0, 0, device, host);
@@ -147,7 +148,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = omp_get_wtime();
 
-      #pragma omp target teams distribute parallel for simd schedule(static) device(device) is_device_ptr(d_A,d_B,d_C)
+      OMP_TARGET( teams distribute parallel for simd schedule(static) device(device) is_device_ptr(d_A,d_B,d_C) )
       for (size_t i=0; i<length; i++) {
           d_A[i] += d_B[i] + scalar * d_C[i];
       }
@@ -157,10 +158,6 @@ int main(int argc, char * argv[])
 
   rc = omp_target_memcpy(h_A, d_A, bytes, 0, 0, host, device);
   if (rc) { printf("ERROR: omp_target_memcpy(A) returned %d\n", rc); abort(); }
-  rc = omp_target_memcpy(h_B, d_B, bytes, 0, 0, host, device);
-  if (rc) { printf("ERROR: omp_target_memcpy(B) returned %d\n", rc); abort(); }
-  rc = omp_target_memcpy(h_C, d_C, bytes, 0, 0, host, device);
-  if (rc) { printf("ERROR: omp_target_memcpy(C) returned %d\n", rc); abort(); }
 
   omp_target_free(d_C, device);
   omp_target_free(d_B, device);

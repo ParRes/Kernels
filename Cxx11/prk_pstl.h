@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2018, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -32,12 +33,15 @@
 #ifndef PRK_PSTL_H
 #define PRK_PSTL_H
 
+#include <ranges>
+
 #if defined(__GNUC__) && (__GNUC__ >= 9)
 
 # include <execution>
 # include <algorithm>
 # include <numeric>
-namespace exec = __pstl::execution;
+//namespace exec = __pstl::execution;
+namespace exec = std::execution;
 
 #elif defined(USE_LLVM_PSTL)
 
@@ -46,7 +50,14 @@ namespace exec = __pstl::execution;
 # include <__pstl_numeric>
 namespace exec = std::execution;
 
-#else
+#elif defined(USE_ONEAPI_DPL)
+
+# include <oneapi/dpl/execution>
+# include <oneapi/dpl/algorithm>
+# include <oneapi/dpl/numeric>
+namespace exec = std::execution;
+
+#elif defined(USE_GITHUB_PSTL)
 
 # include <pstl/execution>
 # include <pstl/algorithm>

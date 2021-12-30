@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -82,7 +82,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int length;
+  size_t length;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length>";
@@ -93,7 +93,7 @@ int main(int argc, char * argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atoi(argv[2]);
+      length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
@@ -106,7 +106,7 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
 
-  sycl::queue q(sycl::default_selector{});
+  sycl::queue q(sycl::default_selector{}, sycl::property::queue::in_order{});
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -116,9 +116,9 @@ int main(int argc, char * argv[])
 
   const size_t bytes = length * sizeof(double);
 
-  double * h_A = syclx::malloc_host<double>(length, q);
-  double * h_B = syclx::malloc_host<double>(length, q);
-  double * h_C = syclx::malloc_host<double>(length, q);
+  double * h_A = sycl::malloc_host<double>(length, q);
+  double * h_B = sycl::malloc_host<double>(length, q);
+  double * h_C = sycl::malloc_host<double>(length, q);
 
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
@@ -126,9 +126,9 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  double * d_A = syclx::malloc_device<double>(length, q);
-  double * d_B = syclx::malloc_device<double>(length, q);
-  double * d_C = syclx::malloc_device<double>(length, q);
+  double * d_A = sycl::malloc_device<double>(length, q);
+  double * d_B = sycl::malloc_device<double>(length, q);
+  double * d_C = sycl::malloc_device<double>(length, q);
   q.memcpy(d_A, &(h_A[0]), bytes).wait();
   q.memcpy(d_B, &(h_B[0]), bytes).wait();
   q.memcpy(d_C, &(h_C[0]), bytes).wait();
@@ -140,27 +140,29 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
       double one(1);
+      // A += B
       mkl::blas::axpy(q, length,
-                         one,              // alpha
-                         d_B, 1,           // x, incx
-                         d_A, 1).wait();   // y, incy
+                         one,     // alpha
+                         d_B, 1,  // x, incx
+                         d_A, 1); // y, incy
+      // A += scalar * C
       mkl::blas::axpy(q, length,
-                         scalar,           // alpha
-                         d_C, 1,           // x, incx
-                         d_A, 1).wait();   // y, incy
-      q.wait();
+                         scalar,  // alpha
+                         d_C, 1,  // x, incx
+                         d_A, 1); // y, incy
     }
+    q.wait();
     nstream_time = prk::wtime() - nstream_time;
   }
 
   q.memcpy(&(h_A[0]), d_A, bytes).wait();
 
-  syclx::free(d_C, q);
-  syclx::free(d_B, q);
-  syclx::free(d_A, q);
+  sycl::free(d_C, q);
+  sycl::free(d_B, q);
+  sycl::free(d_A, q);
 
-  syclx::free(h_B, q);
-  syclx::free(h_C, q);
+  sycl::free(h_B, q);
+  sycl::free(h_C, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results

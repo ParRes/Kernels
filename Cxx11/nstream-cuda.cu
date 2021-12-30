@@ -1,5 +1,6 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +40,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -64,7 +65,7 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
-__global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
+__global__ void nstream(const unsigned n, const double scalar, double * A, const double * B, const double * C)
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) {
@@ -72,7 +73,7 @@ __global__ void nstream(const unsigned n, const prk_float scalar, prk_float * A,
     }
 }
 
-__global__ void nstream2(const unsigned n, const prk_float scalar, prk_float * A, const prk_float * B, const prk_float * C)
+__global__ void nstream2(const unsigned n, const double scalar, double * A, const double * B, const double * C)
 {
     for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
         A[i] += B[i] + scalar * C[i];
@@ -92,7 +93,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int length, block_size=256;
+  size_t length, block_size=256;
   bool grid_stride = false;
   try {
       if (argc < 3) {
@@ -104,7 +105,7 @@ int main(int argc, char * argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atoi(argv[2]);
+      length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
@@ -138,64 +139,48 @@ int main(int argc, char * argv[])
 
   double nstream_time(0);
 
-  const size_t bytes = length * sizeof(prk_float);
-  prk_float * h_A;
-  prk_float * h_B;
-  prk_float * h_C;
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
-#else
-  h_A = new prk_float[length];
-  h_B = new prk_float[length];
-  h_C = new prk_float[length];
-#endif
-  for (int i=0; i<length; ++i) {
-    h_A[i] = static_cast<prk_float>(0);
-    h_B[i] = static_cast<prk_float>(2);
-    h_C[i] = static_cast<prk_float>(2);
+  double * h_A = prk::CUDA::malloc_host<double>(length);
+  double * h_B = prk::CUDA::malloc_host<double>(length);
+  double * h_C = prk::CUDA::malloc_host<double>(length);
+
+  for (size_t i=0; i<length; ++i) {
+    h_A[i] = 0;
+    h_B[i] = 2;
+    h_C[i] = 2;
   }
 
-  prk_float * d_A;
-  prk_float * d_B;
-  prk_float * d_C;
-  prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
+  double * d_A = prk::CUDA::malloc_device<double>(length);
+  double * d_B = prk::CUDA::malloc_device<double>(length);
+  double * d_C = prk::CUDA::malloc_device<double>(length);
 
-  prk_float scalar(3);
+  prk::CUDA::copyH2D(d_A, h_A, length);
+  prk::CUDA::copyH2D(d_B, h_B, length);
+  prk::CUDA::copyH2D(d_C, h_C, length);
+
+  double scalar(3);
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) nstream_time = prk::wtime();
+      if (iter==1) {
+          prk::CUDA::sync();
+          nstream_time = prk::wtime();
+      }
 
       if (grid_stride) {
           nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
       } else {
           nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A, d_B, d_C);
       }
-#ifndef __CORIANDERCC__
-      // silence "ignoring cudaDeviceSynchronize for now" warning
-      prk::CUDA::check( cudaDeviceSynchronize() );
-#endif
+      prk::CUDA::sync();
     }
     nstream_time = prk::wtime() - nstream_time;
   }
 
-  prk::CUDA::check( cudaMemcpy(&(h_A[0]), d_A, bytes, cudaMemcpyDeviceToHost) );
+  prk::CUDA::copyD2H(h_A, d_A, length);
 
-  prk::CUDA::check( cudaFree(d_C) );
-  prk::CUDA::check( cudaFree(d_B) );
-  prk::CUDA::check( cudaFree(d_A) );
-
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_B) );
-  prk::CUDA::check( cudaFreeHost(h_C) );
-#endif
+  prk::CUDA::free(d_A);
+  prk::CUDA::free(d_B);
+  prk::CUDA::free(d_C);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -207,7 +192,6 @@ int main(int argc, char * argv[])
   for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
-
   ar *= length;
 
   double asum(0);
@@ -215,9 +199,9 @@ int main(int argc, char * argv[])
       asum += prk::abs(h_A[i]);
   }
 
-#ifndef __CORIANDERCC__
-  prk::CUDA::check( cudaFreeHost(h_A) );
-#endif
+  prk::CUDA::free_host(h_A);
+  prk::CUDA::free_host(h_B);
+  prk::CUDA::free_host(h_C);
 
   double epsilon=1.e-8;
   if (prk::abs(ar-asum)/asum > epsilon) {
@@ -230,7 +214,7 @@ int main(int argc, char * argv[])
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
-      double nbytes = 4.0 * length * sizeof(prk_float);
+      double nbytes = 4.0 * length * sizeof(double);
       std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }

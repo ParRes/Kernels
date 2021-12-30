@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2018, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -51,7 +52,7 @@
 ///          Other than OpenMP or standard C functions, the following
 ///          functions are used in this program:
 ///
-///          cblasDgemm()
+///          cublasDgemm()
 ///
 /// HISTORY: Written by Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, December, 2017.
@@ -156,7 +157,7 @@ int main(int argc, char * argv[])
     // Allocate space for matrices
     //////////////////////////////////////////////////////////////////////
 
-    double dgemm_time(0);
+    double dgemm_time{0};
 
     const size_t nelems = (size_t)order * (size_t)order;
     const size_t bytes = nelems * sizeof(double);
@@ -169,8 +170,8 @@ int main(int argc, char * argv[])
     double * d_a;
     double * d_b;
     double * d_c;
-    prk::CUDA::check( cudaMalloc((void**)&d_a, bytes) );
-    prk::CUDA::check( cudaMalloc((void**)&d_b, bytes) );
+    d_a = prk::CUDA::malloc_device<double>(order*order);
+    d_b = prk::CUDA::malloc_device<double>(order*order);
     prk::CUDA::check( cudaMalloc((void**)&d_c, bytes) );
 
     init<<<dimGrid, dimBlock>>>(order, d_a, d_b, d_c);
@@ -218,7 +219,7 @@ int main(int argc, char * argv[])
     const double epsilon = 1.0e-8;
     const double forder = static_cast<double>(order);
     const double reference = 0.25 * prk::pow(forder,3) * prk::pow(forder-1.0,2) * (iterations+1);
-    double residuum(0);
+    double residuum{0};
     const auto checksum = prk::reduce( &(h_c[0]), &(h_c[nelems]), 0.0);
     residuum += std::abs(checksum-reference)/reference;
 

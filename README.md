@@ -1,7 +1,6 @@
 ![PRK logo.](https://github.com/ParRes/Kernels/blob/default/logo/PRK%20logo.png)
 
 [![license](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/ParRes/Kernels/blob/master/COPYING)
-[![Travis-CI Status](https://travis-ci.org/ParRes/Kernels.svg)](https://travis-ci.org/ParRes/Kernels)
 [![GitHub contributors](https://img.shields.io/github/contributors/ParRes/Kernels.svg)]()
 [![GitHub language count](https://img.shields.io/github/languages/count/ParRes/Kernels.svg)]()
 [![GitHub top language](https://img.shields.io/github/languages/top/ParRes/Kernels.svg)]()
@@ -56,9 +55,8 @@ Some of the C++ implementations require you to install Boost, RAJA, KOKKOS, Para
 and then modify `make.defs` appropriately.  Please see the documentation in the
 [documentation](https://github.com/ParRes/Kernels/tree/default/doc) (`doc`) subdirectory.
 
-Because we test essentially everything in Travis CI, you can refer to the `travis` subdirectory
-for install scripts that can be readily modified to install any of the dependencies in your local
-environment.
+You can refer to the `travis` subdirectory for install scripts that can be readily modified
+to install any of the dependencies in your local environment.
 
 # Supported Programming Models
 
@@ -168,6 +166,8 @@ x = externally supported (in the Chapel repo)
 | Julia                |  y  |    y    |     y     |         |        |       |
 | Octave (Matlab)      |  y  |    y    |     y     |         |        |       |
 | Rust                 |  y  |    y    |     y     |         |        |       |
+| Go                   |     |         |     y     |    y    |        |   y   |
+| C#                   |     |         |     y     |    y    |        |       |
 | Chapel               |  x  |    x    |     x     |         |        |       |
 | Java                 |  y  |    y    |     y     |    y    |        |       |
 | Lua                  |     |         |           |    y    |        |       |

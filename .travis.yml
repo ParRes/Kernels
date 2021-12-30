@@ -149,18 +149,18 @@ matrix:
     env: PRK_TARGET=allcharm++
 before_install:
   - pwd
-  - export TRAVIS_HOME=$PWD
-  - export TRAVIS_ROOT=$TRAVIS_HOME/PRK-deps
-  - mkdir -p $TRAVIS_ROOT
+  - export CI_HOME=$PWD
+  - export CI_ROOT=$CI_HOME/PRK-deps
+  - mkdir -p $CI_ROOT
 install:
-  - export PATH=$TRAVIS_ROOT/bin:$PATH
-  - export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
-  - export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
-  - sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
+  - export PATH=$CI_ROOT/bin:$PATH
+  - export PATH=$CI_ROOT/gcc/bin:$PATH
+  - export PATH=$CI_ROOT/cmake/bin:$PATH
+  - sh ./ci/install-deps.sh $CI_ROOT $PRK_TARGET
 before_script:
   - pwd
 script:
-  - sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
+  - sh ./ci/build-run-prk.sh $CI_ROOT $PRK_TARGET
 after_failure:
   - echo "Sad panda"
   - find . -name config.log -exec grep -L "configure: exit 0" {} ";" | xargs cat

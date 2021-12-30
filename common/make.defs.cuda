@@ -33,15 +33,13 @@ DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
 OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
 OFFLOADFLAG=-foffload="-O3 -v"
-ORNLACCFLAG=-fopenacc
+OFFLOADFLAG+=-DGPU_SCHEDULE="schedule(static,1)"
+OPENACCFLAG=-fopenacc
 #
 # OpenCL flags
 #
-# MacOS
-#OPENCLFLAG=-framework OpenCL
-# Linux
-#OPENCLDIR=/etc/alternatives/opencl-intel-tools
-#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLDIR=/usr/local/cuda-11.2/targets/x86_64-linux
+OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib64 -lOpenCL
 #OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
 #
@@ -61,8 +59,10 @@ ORNLACCFLAG=-fopenacc
 #SYCLDIR=${HOME}/ISYCL/llvm/build
 #SYCLCXX=${SYCLDIR}/bin/clang++
 #SYCLFLAG=-g -std=c++17 -O3
-#SYCLFLAG+=-fsycl -fsycl-unnamed-lambda
+#SYCLFLAG+=-fsycl -fsycl-unnamed-lambda -DDPCPP
 #SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#SYCLFLAG+=-fsycl-targets=nvptx64-nvidia-cuda-sycldevice -DDPCPP_CUDA
+###SYCLFLAG+=-Wno-unknown-cuda-version
 #
 # CodePlay ComputeCpp
 #
@@ -136,7 +136,7 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 # Linux w/ NVIDIA CUDA
 # NVCC never supports the latest GCC.
 # Use appropriate arch or code is compiled to ancient features.
-NVCC=nvcc
+NVCC=/usr/local/cuda-11.2/bin/nvcc
 CUDAFLAGS=-g -O3 -std=c++11
 CUDAFLAGS+=--gpu-architecture=sm_70
 #CUDAFLAGS+=--compiler-bindir=/swtools/gcc/7.5.0/bin
@@ -167,14 +167,10 @@ CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
 #
 # MPI-3
 #
-# We assume you have Intel MPI and have setup your environment with e.g.
-# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
-# in your .bashrc.
-#
-# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
-MPICC=${MPIDIR}/bin/mpiicc
-MPICXX=${MPIDIR}/bin/mpiicpc
+MPIDIR=/usr/lib/aarch64-linux-gnu/openmpi
+MPICC=mpicc
+MPICXX=mpicxx
+MPIFC=mpifort
 MPIINC=-I${MPIDIR}/include
 MPILIB=-L${MPIDIR}/lib -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi

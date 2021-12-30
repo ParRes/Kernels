@@ -6,15 +6,15 @@
 # are met:
 #
 # * Redistributions of source code must retain the above copyright
-#       notice, this list of conditions and the following disclaimer.
+#      notice, this list of conditions and the following disclaimer.
 # * Redistributions in binary form must reproduce the above
-#       copyright notice, this list of conditions and the following
-#       disclaimer in the documentation and/or other materials provided
-#       with the distribution.
+#      copyright notice, this list of conditions and the following
+#      disclaimer in the documentation and/or other materials provided
+#      with the distribution.
 # * Neither the name of Intel Corporation nor the names of its
-#       contributors may be used to endorse or promote products
-#       derived from this software without specific prior written
-#       permission.
+#      contributors may be used to endorse or promote products
+#      derived from this software without specific prior written
+#      permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -105,11 +105,15 @@ function main()
     grid[1,1:n] = collect(Float64,0:n-1)
     grid[1:m,1] = collect(Float64,0:m-1)
 
-    # precompile the hot function to smooth performance measurement
+    # precompile hot functions to smooth performance measurement
     precompile(iterate_over_grid!, (Array{Float64, 2}, Int64, Int64))
 
     t0 = time_ns()
-    for k = 1:iterations+1
+
+    for k in 0:iterations
+        if k==0
+            t0 = time_ns()
+        end
         iterate_over_grid!(grid, m, n)
 
         # copy top right corner value to bottom left corner to create dependency

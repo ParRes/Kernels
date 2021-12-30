@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2015, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -55,15 +56,13 @@
 ! *******************************************************************
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
 #ifdef _OPENMP
   use omp_lib
 #endif
+  use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
   integer(kind=INT32) :: n
@@ -88,36 +87,13 @@ program main
                        ' execution on 2D grid'
 #endif
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a16,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a34,a16)') 'Usage: ./synch_p2p <# iterations> ',  &
-                         '<grid dimension>'
-    stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-
-  n = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') n
-
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  if (n .lt. 1) then
-    write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', n
-    stop 1
-  endif
+  call prk_get_arguments('p2p',iterations=iterations,dimx=n)
 
 #ifdef _OPENMP
-  write(*,'(a,i8)')    'Number of threads        = ', omp_get_max_threads()
+  write(*,'(a27,i8)')    'Number of threads        = ', omp_get_max_threads()
 #endif
-  write(*,'(a,i8)')    'Number of iterations     = ', iterations
-  write(*,'(a,i8,i8)') 'Grid sizes               = ', n, n
+  write(*,'(a27,i8)')    'Number of iterations     = ', iterations
+  write(*,'(a27,i8,i8)') 'Grid sizes               = ', n, n
 
   allocate( grid(n,n), stat=err)
   if (err .ne. 0) then
@@ -149,9 +125,11 @@ program main
   enddo
   !$omp end do
 
+  t0 = 0
+
   do k=0,iterations
 
-    !  start timer after a warmup iteration
+    ! start timer after a warmup iteration
     if (k.eq.1) then
       !$omp barrier
       !$omp master

@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2017, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -65,16 +66,15 @@
 ! *******************************************************************
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   use mpi_f08
+  use prk
   implicit none
-#include 'global.fh'
-!#include 'ga-mpi.fh' ! unused
-#include 'mafdecls.fh'
+#include "global.fh"
+#include 'ga-mpi.fh' ! unused
+#include "mafdecls.fh"
   ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! MPI - should always use 32-bit INTEGER
   integer(kind=INT32), parameter :: requested = MPI_THREAD_SERIALIZED
   integer(kind=INT32) :: provided
@@ -92,16 +92,16 @@ program main
   real(kind=REAL64), parameter :: one  = 1.d0
   real(kind=REAL64), parameter :: two  = 2.d0
   ! problem definition
-  integer(kind=INT32) ::  iterations, offset
-  integer(kind=INT64) ::  length
+  integer(kind=INT32) :: iterations
+  integer(kind=INT64) :: length, offset
   integer(kind=INT64) :: bytes, max_mem
   real(kind=REAL64) :: scalar
   ! runtime variables
   integer(kind=INT64) :: i
   integer(kind=INT32) :: k
-  real(kind=REAL64) ::  asum, ar, br, cr, ref
+  real(kind=REAL64) ::  asum, ar, br, cr, atmp
   real(kind=REAL64) ::  t0, t1, nstream_time, avgtime
-  real(kind=REAL64), parameter ::  epsilon=1.d-8
+  real(kind=REAL64), parameter ::  epsilon=1.D-8
 
   if (storage_size(length).ne.storage_size(me)) then
     write(*,'(a50)') 'You must compile with 64-bit INTEGER!'
@@ -111,39 +111,7 @@ program main
   ! read and test input parameters
   ! ********************************************************************
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <vector length> [<offset>]'
-    stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  length = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') length
-  if (length .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: length must be nonnegative : ', length
-    stop 1
-  endif
-
-  offset = 0
-  if (command_argument_count().gt.2) then
-    call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') offset
-    if (offset .lt. 0) then
-      write(*,'(a,i5)') 'ERROR: offset must be positive : ', offset
-      stop 1
-    endif
-  endif
-
-  call mpi_init_thread(requested,provided)
+  call MPI_Init_thread(requested,provided)
 
   ! ask GA to allocate enough memory for 4 vectors, just to be safe
   max_mem = length * 4 * ( storage_size(scalar) / 8 )
@@ -171,16 +139,33 @@ program main
   if (me.eq.0) then
     write(*,'(a25)') 'Parallel Research Kernels'
     write(*,'(a54)') 'Fortran Global Arrays STREAM triad: A = B + scalar * C'
+
+    call prk_get_arguments('nstream',iterations=iterations,length=length,offset=offset)
+
     write(*,'(a22,i12)') 'Number of GA procs   = ', np
     write(*,'(a22,i12)') 'Number of iterations = ', iterations
     write(*,'(a22,i12)') 'Vector length        = ', length
     write(*,'(a22,i12)') 'Offset               = ', offset
   endif
 
+#if 1
+  call ga_brdcst(0,iterations,4,0)
+  call ga_brdcst(0,length,8,0)
+  call ga_brdcst(0,offset,8,0)
+#else
+  block
+    integer :: comm
+    call ga_mpi_comm_pgroup_default(comm)
+    call MPI_Bcast(iterations, 1, MPI_INTEGER4, 0, comm)
+    call MPI_Bcast(length,     1, MPI_INTEGER8, 0, comm)
+    call MPI_Bcast(offset,     1, MPI_INTEGER8, 0, comm)
+  end block
+#endif
+
   call ga_sync()
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
   t0 = 0.0d0
@@ -239,13 +224,11 @@ program main
   ar  = zero
   br  = two
   cr  = two
-  ref = zero
   do k=0,iterations
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-
+  call ga_add_constant(A,-ar)
   call ga_norm1(A,asum)
   call ga_sync()
 
@@ -267,10 +250,10 @@ program main
   call ga_sync()
 
   if (me.eq.0) then
-    if (abs(asum-ar) .gt. epsilon) then
+    if (abs(asum) .gt. epsilon) then
       write(*,'(a35)') 'Failed Validation on output array'
-      write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-      write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+      write(*,'(a30,f30.15)') '       Expected value: ', ar
+      !write(*,'(a30,f30.15)') '       Observed value: ', A(1)
       write(*,'(a35)')  'ERROR: solution did not validate'
       stop 1
       call ga_error('Answer wrong',911)

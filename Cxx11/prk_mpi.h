@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <numeric> // exclusive_scan
+#include <limits>
 #include <type_traits>
 
 #include <mpi.h>
@@ -50,6 +51,19 @@ namespace prk
 
                 prk::MPI::abort(errorcode);
             }
+        }
+
+        template <typename T>
+        MPI_Datatype get_MPI_Datatype(T t) { return MPI_DATATYPE_NULL; }
+
+        template <>
+        MPI_Datatype get_MPI_Datatype(double d) { return MPI_DOUBLE; }
+        template <>
+        MPI_Datatype get_MPI_Datatype(int i) { return MPI_INT; }
+        template <>
+        MPI_Datatype get_MPI_Datatype(size_t s) {
+            static_assert( sizeof(size_t) == sizeof(int64_t) && sizeof(size_t) == sizeof(uint64_t) );
+            return ( std::is_signed<size_t>() ? MPI_INT64_T : MPI_UINT64_T );
         }
 
         class state {
@@ -104,47 +118,61 @@ namespace prk
             prk::MPI::check( MPI_Barrier(comm) );
         }
 
-        double min(double in, MPI_Comm comm = MPI_COMM_WORLD) {
-            double out;
-            prk::MPI::check( MPI_Allreduce(&in, &out, 1, MPI_DOUBLE, MPI_MIN, comm) );
+        template <typename T>
+        T min(T in, MPI_Comm comm = MPI_COMM_WORLD) {
+            T out;
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(in);
+            prk::MPI::check( MPI_Allreduce(&in, &out, 1, dt, MPI_MIN, comm) );
             return out;
         }
 
-        double max(double in, MPI_Comm comm = MPI_COMM_WORLD) {
-            double out;
-            prk::MPI::check( MPI_Allreduce(&in, &out, 1, MPI_DOUBLE, MPI_MAX, comm) );
+        template <typename T>
+        T max(T in, MPI_Comm comm = MPI_COMM_WORLD) {
+            T out;
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(in);
+            prk::MPI::check( MPI_Allreduce(&in, &out, 1, dt, MPI_MAX, comm) );
             return out;
         }
 
-        double sum(double in, MPI_Comm comm = MPI_COMM_WORLD) {
-            double out;
-            prk::MPI::check( MPI_Allreduce(&in, &out, 1, MPI_DOUBLE, MPI_SUM, comm) );
+        template <typename T>
+        T sum(T in, MPI_Comm comm = MPI_COMM_WORLD) {
+            T out;
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(in);
+            prk::MPI::check( MPI_Allreduce(&in, &out, 1, dt, MPI_SUM, comm) );
             return out;
         }
 
-        double avg(double in, MPI_Comm comm = MPI_COMM_WORLD) {
-            double out;
-            prk::MPI::check( MPI_Allreduce(&in, &out, 1, MPI_DOUBLE, MPI_SUM, comm) );
+        template <typename T>
+        T avg(T in, MPI_Comm comm = MPI_COMM_WORLD) {
+            T out;
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(in);
+            prk::MPI::check( MPI_Allreduce(&in, &out, 1, dt, MPI_SUM, comm) );
             out /= prk::MPI::size(comm);
             return out;
         }
 
-        void stats(double in, double * min, double * max, double * avg, MPI_Comm comm = MPI_COMM_WORLD) {
-            prk::MPI::check( MPI_Allreduce(&in, min, 1, MPI_DOUBLE, MPI_MIN, comm) );
-            prk::MPI::check( MPI_Allreduce(&in, max, 1, MPI_DOUBLE, MPI_MAX, comm) );
-            prk::MPI::check( MPI_Allreduce(&in, avg, 1, MPI_DOUBLE, MPI_SUM, comm) );
+        template <typename T>
+        void stats(T in, T * min, T * max, T * avg, MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(in);
+            prk::MPI::check( MPI_Allreduce(&in, min, 1, dt, MPI_MIN, comm) );
+            prk::MPI::check( MPI_Allreduce(&in, max, 1, dt, MPI_MAX, comm) );
+            prk::MPI::check( MPI_Allreduce(&in, avg, 1, dt, MPI_SUM, comm) );
             *avg /= prk::MPI::size(comm);
         }
 
-        bool is_same(int in, MPI_Comm comm = MPI_COMM_WORLD) {
-            int min=INT_MAX, max=0;
-            prk::MPI::check( MPI_Allreduce(&in, &min, 1, MPI_INT, MPI_MIN, comm) );
-            prk::MPI::check( MPI_Allreduce(&in, &max, 1, MPI_INT, MPI_MAX, comm) );
+        template <typename T>
+        bool is_same(T in, MPI_Comm comm = MPI_COMM_WORLD) {
+            T min=std::numeric_limits<T>::max();
+            T max=std::numeric_limits<T>::min();
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(in);
+            prk::MPI::check( MPI_Allreduce(&in, &min, 1, dt, MPI_MIN, comm) );
+            prk::MPI::check( MPI_Allreduce(&in, &max, 1, dt, MPI_MAX, comm) );
             return (min==max);
         }
 
         bool is_same(size_t in, MPI_Comm comm = MPI_COMM_WORLD) {
             size_t min=SIZE_MAX, max=0;
+            static_assert( sizeof(size_t) == sizeof(int64_t) && sizeof(size_t) == sizeof(uint64_t) );
             MPI_Datatype dt = (std::is_signed<size_t>() ? MPI_INT64_T : MPI_UINT64_T);
             prk::MPI::check( MPI_Allreduce(&in, &min, 1, dt, MPI_MIN, comm) );
             prk::MPI::check( MPI_Allreduce(&in, &max, 1, dt, MPI_MAX, comm) );
@@ -153,6 +181,7 @@ namespace prk
 
         size_t sum(size_t in, MPI_Comm comm = MPI_COMM_WORLD) {
             size_t out;
+            static_assert( sizeof(size_t) == sizeof(int64_t) && sizeof(size_t) == sizeof(uint64_t) );
             MPI_Datatype dt = (std::is_signed<size_t>() ? MPI_INT64_T : MPI_UINT64_T);
             prk::MPI::check( MPI_Allreduce(&in, &out, 1, dt, MPI_SUM, comm) );
             return out;
@@ -201,14 +230,23 @@ namespace prk
                 global_size_ = global_size;
                 local_size_ = global_size_ / np_;
                 const size_t remainder  = global_size_ % np_;
-                if (me_ < remainder) local_size_++;
+                if ((size_t)me_ < remainder) local_size_++;
 
                 {
                     MPI_Datatype dt = (std::is_signed<size_t>() ? MPI_INT64_T : MPI_UINT64_T);
                     std::vector<size_t> global_sizes(np_);   // in
                     global_offsets_.resize(np_);             // out
+                    // there is probably a better way to do this.  i should be able to MPI_Exscan then MPI_Allgather instead.
                     prk::MPI::check( MPI_Allgather(&local_size_, 1, dt, global_sizes.data(), 1, dt, comm_) );
+#if 0
                     std::exclusive_scan( global_sizes.cbegin(), global_sizes.cend(), global_offsets_.begin(), 0);
+#else
+                    global_offsets_[0] = 0;
+                    for ( size_t i = 1 ; i < global_sizes.size() ; ++i ) {
+                        global_offsets_[i] = global_sizes[i-1];
+
+                    }
+#endif
                 }
                 my_global_offset_begin_ = global_offsets_[me_];
                 my_global_offset_end_   = (me_ != np_-1) ? global_offsets_[me_+1] : global_size_;
@@ -294,7 +332,7 @@ namespace prk
                 return local_pointer_[local_offset];
             }
 
-            constexpr T * data(void) noexcept
+            T * data(void) noexcept
             {
                 return local_pointer_;
             }

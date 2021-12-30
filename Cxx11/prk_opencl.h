@@ -15,6 +15,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <tuple>
 
 #include <cstdlib>
 
@@ -34,6 +35,7 @@ namespace prk {
     {
       std::ifstream stream(input.c_str());
       if (!stream.is_open()) {
+        std::cerr << "loadProgram failed on " << input << std::endl;
         return std::string("FAIL");
       }
 

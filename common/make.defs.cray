@@ -20,7 +20,8 @@ DEFAULT_OPT_FLAGS=-O2
 OPENMPFLAG=-h omp
 # Cray requires 'module load craype-accel-host' or similar
 OFFLOADFLAG=-h omp
-ORNLACCFLAG=-h acc
+OFFLOADFLAG+=-DGPU_SCHEDULE=""
+OPENACCFLAG=-h acc
 #
 # Parallel STL, Boost, etc.
 #

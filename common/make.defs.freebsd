@@ -35,7 +35,7 @@ DEFAULT_OPT_FLAGS=-g -O3
 OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
 OFFLOADFLAG=-fopenmp
-#ORNLACCFLAG= # Flang does not support OpenACC
+#OPENACCFLAG= # Flang does not support OpenACC
 # Mac weirdness
 OPENMPFLAG+=-L${LLVM_ROOT}/lib
 # BSD weirdness

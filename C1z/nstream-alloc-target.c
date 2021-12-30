@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2019, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +40,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -63,10 +64,10 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#pragma omp requires unified_address
-
 #include "prk_util.h"
 #include "prk_openmp.h"
+
+OMP_REQUIRES(unified_address)
 
 int main(int argc, char * argv[])
 {
@@ -95,8 +96,8 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  int device = (argc > 3) ? atol(argv[3]) : omp_get_initial_device();
-  if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_initial_device()) ) {
+  int device = (argc > 3) ? atol(argv[3]) : omp_get_default_device();
+  if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_default_device()) ) {
     printf("ERROR: device number %d is not valid.\n", device);
     return 1;
   }
@@ -118,7 +119,7 @@ int main(int argc, char * argv[])
 
   double scalar = 3.0;
 
-  #pragma omp target teams distribute parallel for simd schedule(static) device(device) is_device_ptr(A,B,C)
+  OMP_TARGET( teams distribute parallel for simd schedule(static) device(device) is_device_ptr(A,B,C) )
   for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
       B[i] = 2.0;
@@ -130,7 +131,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = omp_get_wtime();
 
-      #pragma omp target teams distribute parallel for simd schedule(static) device(device) is_device_ptr(A,B,C)
+      OMP_TARGET( teams distribute parallel for simd schedule(static) device(device) is_device_ptr(A,B,C) )
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }
@@ -155,7 +156,7 @@ int main(int argc, char * argv[])
   ar *= length;
 
   double asum = 0.0;
-  #pragma omp target teams distribute parallel for reduction(+:asum) device(device) is_device_ptr(A)
+  OMP_TARGET( teams distribute parallel for reduction(+:asum) device(device) is_device_ptr(A) )
   for (size_t i=0; i<length; i++) {
       asum += fabs(A[i]);
   }

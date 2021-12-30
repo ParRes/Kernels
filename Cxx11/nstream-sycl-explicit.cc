@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -51,7 +51,6 @@
 ///          number of words written, times the size of the words, divided
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
-///
 ///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
@@ -73,8 +72,8 @@ template <typename T>
 void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 {
   const auto padded_length = (block_size > 0) ? (block_size * (length / block_size + length % block_size)) : 0;
-  sycl::range global{padded_length};
-  sycl::range local{block_size};
+  sycl::range<1> global{padded_length};
+  sycl::range<1> local{block_size};
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -101,15 +100,15 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
     sycl::buffer<T> d_C { sycl::range<1>{length} };
 
     q.submit([&](sycl::handler& h) {
-        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::discard_write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(length), sycl::id<1>(0));
         h.fill(A,(T)0);
     });
     q.submit([&](sycl::handler& h) {
-        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::discard_write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(length), sycl::id<1>(0));
         h.fill(B,(T)2);
     });
     q.submit([&](sycl::handler& h) {
-        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> C(d_C, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::discard_write, sycl::access::target::global_buffer> C(d_C, h, sycl::range<1>(length), sycl::id<1>(0));
         h.fill(C,(T)2);
     });
     q.wait();
@@ -139,7 +138,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 #if PREBUILD_KERNEL
                 kernel.get_kernel<nstream2<T>>(),
 #endif
-		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+		sycl::nd_range<1>{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
                 if (i < length) {
                     A[i] += B[i] + scalar * C[i];
@@ -150,7 +149,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
 #if PREBUILD_KERNEL
                 kernel.get_kernel<nstream3<T>>(),
 #endif
-		sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+		sycl::nd_range<1>{global, local}, [=](sycl::nd_item<1> it) {
 		const size_t i = it.get_global_id(0);
                 A[i] += B[i] + scalar * C[i];
             });
@@ -231,7 +230,7 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
+  int iterations;
   size_t length, block_size;
 
   block_size = 256; // matches CUDA version default
@@ -306,6 +305,9 @@ int main(int argc, char * argv[])
     sycl::queue q{sycl::gpu_selector{}};
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
+    if (has_fp64) {
+      if (prk::SYCL::print_gen12lp_helper(q)) return 1;
+    }
     run<float>(q, iterations, length, block_size);
     if (has_fp64) {
       run<double>(q, iterations, length, block_size);

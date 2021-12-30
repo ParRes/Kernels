@@ -20,9 +20,10 @@ DEFAULT_OPT_FLAGS=-O2 -tp=haswell
 OPENMPFLAG=-mp #-Minfo=mp,vect
 OPENMPSIMDFLAG=-mp #-Minfo=mp,vect
 OFFLOADFLAG=-mp -ta=multicore #-Minfo=mp,vect
-ORNLACCFLAG=-acc -ta=multicore #-Minfo=accel
-#ORNLACCFLAG=-acc -ta=tesla:cc70 -Minfo=accel
-ORNLACCFLAG+=-Mlarge_arrays
+OFFLOADFLAG+=-DGPU_SCHEDULE=""
+OPENACCFLAG=-acc -ta=multicore #-Minfo=accel
+#OPENACCFLAG=-acc -ta=tesla:cc70 -Minfo=accel
+OPENACCFLAG+=-Mlarge_arrays
 #
 # OpenCL flags
 #
@@ -73,8 +74,9 @@ CBLASFLAG=
 # NVCC never supports the latest GCC.
 # Use appropriate arch or code is compiled to ancient features.
 #NVCC=nvcc --compiler-bindir=<path to older GCC> --gpu-architecture=sm_61
-NVCC=nvcc --gpu-architecture=sm_61
+NVCC=nvcc
 CUDAFLAGS=-g -O3 -std=c++11
+CUDAFLAGS+=--gpu-architecture=sm_70
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 # heavy hammer:
 #CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
@@ -83,22 +85,60 @@ CUDAFLAGS=-g -O3 -std=c++11
 #CUDAFLAGS+=-D_FMA4INTRIN_H_INCLUDED
 #CUDAFLAGS+=-D_XOPMMINTRIN_H_INCLUDED
 # many tiny hammers:
-CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512FINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512VLINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512BWINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512DQINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512VLBWINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512VBMIVLINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512VBMIINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512VLDQINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512CDINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512PFINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512IFMAINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512IFMAVLINTRIN_H_INCLUDED
-CUDAFLAGS+=-D_AVX512ERINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512FINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512VLINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512BWINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512DQINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512VLBWINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512VBMIVLINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512VBMIINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512VLDQINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512CDINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512PFINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512IFMAINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512IFMAVLINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512ERINTRIN_H_INCLUDED
 #
-# MPI
+# MPI-3
 #
-# Needs PATH and LD_LIBRARY_PATH set appropriately...
-MPICC=/opt/pgi/linux86-64/2019/mpi/openmpi/bin/mpicc
+# We assume you have Intel MPI and have setup your environment with e.g.
+# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
+# in your .bashrc.
+#
+# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
+MPIDIR=
+MPICC=${MPIDIR}/bin/mpicc
+MPICXX=${MPIDIR}/bin/mpicxx
+MPIINC=-I${MPIDIR}/include
+MPILIB=-L${MPIDIR}/lib -lmpi
+#MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
+#MPIINC=-I/usr/include/mpich-3.2-x86_64
+#MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# Global Arrays
+#
+GADIR=../deps/ga
+GAFLAG=-I${GADIR}/include
+GAFLAG+=-L${GADIR}/lib -lga
+GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
+#GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
+GAFLAG+=${MPIINC} ${MPILIB}
+GAFLAG+=-lmpifort -lmpi
+GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+#
+# PETSc
+#
+PETSCDIR=../deps/petsc
+PETSCFLAG=-I${PETSCDIR}/include
+PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
+PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
+#
+# Fortran 2008 coarrays
+#
+# see https://github.com/ParRes/Kernels/blob/master/FORTRAN/README.md for details
+# single-node
+#COARRAYFLAG=-fcoarray=single -lcaf_single
+# multi-node
+# COARRAYFLAG=-fcoarray=lib -lcaf_mpi
+

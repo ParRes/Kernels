@@ -23,7 +23,6 @@ ASMFLAGS = -fverbose-asm $(CFLAGS)
 
 OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
-ORNLACCFLAGS = $(ORNLACCFLAG)
 CILKFLAGS = $(CILKFLAG)
 ISPCFLAGS = $(ISPCFLAG)
 
@@ -35,7 +34,9 @@ ifeq ($(shell uname -s),Darwin)
     EXTRA += target
   endif
 else
-  EXTRA += target
+  ifneq ($(findstring icx,$(CC)),icx)
+    EXTRA += target
+  endif
 endif
 ifdef ($(ISPC))
   EXTRA += ispc
@@ -47,8 +48,11 @@ ifeq ($(findstring xlc,$(CC)),xlc)
   EXTRA = target
   CFLAGS += -DXLC
 endif
+ifneq ($(findstring icx,$(CC)),icx)
+  EXTRA += tasks
+endif
 
-all: serial thread openmp taskloop $(EXTRA)
+all: serial thread openmp $(EXTRA)
 
 serial: nstream \
         p2p p2p-2d p2p-tasks-2d \
@@ -60,11 +64,12 @@ vector: p2p-sse p2p-avx p2p-avx-tasks-openmp
 
 thread: transpose-thread
 
-openmp: nstream-openmp p2p-simd-openmp \
-	p2p-tasks-openmp p2p-tasks-2d-openmp \
+openmp: nstream-openmp \
 	p2p-hyperplane-openmp p2p-hyperplane-2d-openmp \
 	stencil-openmp stencil-2d-openmp \
 	transpose-openmp transpose-2d-openmp
+
+tasks: p2p-tasks-openmp p2p-tasks-2d-openmp
 
 mpi: nstream-mpi
 
@@ -101,7 +106,7 @@ p2p-2d: p2p-2d.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 %-mpi: %-mpi.c prk_util.h
-	$(CC) $(CFLAGS) $(MPIINC) $< $(MPILIB) $(EXTRA_CLIBS) -o $@
+	$(MPICC) $(CFLAGS) $(MPIINC) $< $(MPILIB) $(EXTRA_CLIBS) -o $@
 
 %-petsc: %-petsc.c prk_util.h
 	$(CC) $(CFLAGS) $(MPIINC) $< $(PETSCFLAG) $(MPILIB) $(EXTRA_CLIBS) -o $@

@@ -48,6 +48,7 @@
 #
 # HISTORY: Written by Rob Van der Wijngaart, February 2009.
 #          Converted to Python by Jeff Hammond, February 2016.
+#          Fixed timing err, ave+std_dev, numpy.dot by Tim Mattson, May 2021
 # *******************************************************************
 
 import sys
@@ -72,15 +73,15 @@ def main():
         print('argument count = ', len(sys.argv))
         sys.exit("Usage: ./dgemm <# iterations> <matrix order>")
 
-    iterations = int(sys.argv[1])
-    if iterations < 1:
+    iters = int(sys.argv[1])
+    if iters < 1:
         sys.exit("ERROR: iterations must be >= 1")
 
     order = int(sys.argv[2])
     if order < 1:
         sys.exit("ERROR: order must be >= 1")
 
-    print('Number of iterations = ', iterations)
+    print('Number of iterations = ', iters)
     print('Matrix order         = ', order)
 
     # ********************************************************************
@@ -91,15 +92,24 @@ def main():
     B = numpy.fromfunction(lambda i,j: j, (order,order), dtype=float)
     C = numpy.zeros((order,order))
 
-    for k in range(0,iterations+1):
+    for kiter in range(0,iters+1):
+         if kiter==1: 
+             t0 = timer()
+             tSum=0.0
+             tsqSum=0.0
 
-        if k<1: t0 = timer()
+         C += numpy.matmul(A,B) # requires Numpy 1.10 or later
+         #C += numpy.dot(A,B)
 
-        #C += numpy.matmul(A,B) # requires Numpy 1.10 or later
-        C += numpy.dot(A,B)
+         if kiter>0:
+             tkiter = timer()
+             t = tkiter - t0
+             tSum = tSum + t
+             tsqSum = tsqSum+t*t
+             t0 = tkiter
 
-    t1 = timer()
-    dgemm_time = t1 - t0
+    dgemmAve    = tSum/iters
+    dgemmStdDev = ((tsqSum-iters*dgemmAve*dgemmAve)/(iters-1))**0.5 
 
     # ********************************************************************
     # ** Analyze and output results.
@@ -108,14 +118,16 @@ def main():
     checksum = numpy.linalg.norm(numpy.reshape(C,order*order),ord=1)
 
     ref_checksum = 0.25*order*order*order*(order-1.0)*(order-1.0)
-    ref_checksum *= (iterations+1)
+    ref_checksum *= (iters+1)
 
     epsilon=1.e-8
     if abs((checksum - ref_checksum)/ref_checksum) < epsilon:
         print('Solution validates')
-        avgtime = dgemm_time/iterations
         nflops = 2.0*order*order*order
-        print('Rate (MF/s): ',1.e-6*nflops/avgtime, ' Avg time (s): ', avgtime)
+        recipDiff = (1.0/(dgemmAve-dgemmStdDev) - 1.0/(dgemmAve+dgemmStdDev))
+        GfStdDev = 1.e-6*nflops*recipDiff/2.0
+        print('nflops: ',nflops)
+        print('Rate: ',1.e-6*nflops/dgemmAve,' +/- (MF/s): ',GfStdDev)
     else:
         print('ERROR: Checksum = ', checksum,', Reference checksum = ', ref_checksum,'\n')
         sys.exit("ERROR: solution did not validate")
@@ -123,4 +135,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

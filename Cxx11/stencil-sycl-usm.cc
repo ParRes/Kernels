@@ -111,8 +111,8 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
 
   double stencil_time{0};
 
-  T * in  = syclx::malloc_shared<T>(n*n, q);
-  T * out = syclx::malloc_shared<T>(n*n, q);
+  T * in  = sycl::malloc_shared<T>(n*n, q);
+  T * out = sycl::malloc_shared<T>(n*n, q);
 
   try {
 
@@ -138,7 +138,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
     }
     stencil_time = prk::wtime() - stencil_time;
 
-    syclx::free(in, q);
+    sycl::free(in, q);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -170,7 +170,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
   }
   norm /= active_points;
 
-  syclx::free(out, q);
+  sycl::free(out, q);
 
   // verify correctness
   const double epsilon = 1.0e-8;
@@ -304,6 +304,9 @@ int main(int argc, char * argv[])
     sycl::queue q(sycl::gpu_selector{}, sycl::property::queue::in_order{});
     prk::SYCL::print_device_platform(q);
     bool has_fp64 = prk::SYCL::has_fp64(q);
+    if (has_fp64) {
+      if (prk::SYCL::print_gen12lp_helper(q)) return 1;
+    }
     run<float>(q, iterations, n, block_size, star, radius);
     if (has_fp64) {
       run<double>(q, iterations, n, block_size, star, radius);
