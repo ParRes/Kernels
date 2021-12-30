@@ -100,15 +100,15 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
     sycl::buffer<T> d_C { sycl::range<1>{length} };
 
     q.submit([&](sycl::handler& h) {
-        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::discard_write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(length), sycl::id<1>(0));
         h.fill(A,(T)0);
     });
     q.submit([&](sycl::handler& h) {
-        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::discard_write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(length), sycl::id<1>(0));
         h.fill(B,(T)2);
     });
     q.submit([&](sycl::handler& h) {
-        sycl::accessor<T, 1, sycl::access::mode::write, sycl::access::target::global_buffer> C(d_C, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor<T, 1, sycl::access::mode::discard_write, sycl::access::target::global_buffer> C(d_C, h, sycl::range<1>(length), sycl::id<1>(0));
         h.fill(C,(T)2);
     });
     q.wait();

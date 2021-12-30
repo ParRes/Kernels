@@ -12,10 +12,27 @@ octave-workspace                # Octave crashes
 */*/*/*.swp
 *.swo                           # Vim
 *.dSYM                          # Mac
+*/*.dSYM                        # Mac
+*/*/*.dSYM                      # Mac
 *.optrpt                        # Intel compiler
 *__genmod.*                     # Intel Fortran compiler
 *.patch                         # patch files
 *.dbg                           # Flang
+
+# Cray GPU compiler
+*.lst
+*.cub
+*.ptx
+
+# AMD GPU compiler
+*.cmdx
+*.cmod
+*.ilm
+*.stb
+*.cmdx
+*.cmod
+*.ilm
+*.stb
 
 common/make.defs
 scripts/small/runfgmpi
@@ -105,18 +122,13 @@ Cxx11/dgemm-onemkl
 Cxx11/xgemm-onemkl
 Cxx11/dgemm-openmp
 Cxx11/dgemm-raja
+Cxx11/dgemm-stdpar
 Cxx11/dgemm-sycl
 Cxx11/dgemm-vector
 Cxx11/dgemm-vector-raja
-Cxx11/grid1.cl
-Cxx11/grid2.cl
-Cxx11/grid3.cl
-Cxx11/grid4.cl
-Cxx11/grid5.cl
-Cxx11/grid6.cl
-Cxx11/grid7.cl
-Cxx11/grid8.cl
-Cxx11/grid9.cl
+Cxx11/sgemm-cublas
+Cxx11/sgemm-hipblas
+Cxx11/grid*.cl
 Cxx11/nstream
 Cxx11/nstream-boost-compute
 Cxx11/nstream-celerity
@@ -142,7 +154,8 @@ Cxx11/nstream-openmp
 Cxx11/nstream-openmp-target
 Cxx11/nstream-pstl
 Cxx11/nstream-raja
-Cxx11/nstream-rangefor
+Cxx11/nstream-ranges
+Cxx11/nstream-stdpar
 Cxx11/nstream-stl
 Cxx11/nstream-sycl
 Cxx11/nstream-sycl-explicit
@@ -186,16 +199,7 @@ Cxx11/pic-taskloop
 Cxx11/pic-tbb
 Cxx11/sparse
 Cxx11/sparse-vector
-Cxx11/star1.cl
-Cxx11/star10.cl
-Cxx11/star2.cl
-Cxx11/star3.cl
-Cxx11/star4.cl
-Cxx11/star5.cl
-Cxx11/star6.cl
-Cxx11/star7.cl
-Cxx11/star8.cl
-Cxx11/star9.cl
+Cxx11/star*.cl
 Cxx11/stencil
 Cxx11/stencil-cilk
 Cxx11/stencil-cuda
@@ -208,7 +212,8 @@ Cxx11/stencil-openmp
 Cxx11/stencil-openmp-target
 Cxx11/stencil-pstl
 Cxx11/stencil-raja
-Cxx11/stencil-rangefor
+Cxx11/stencil-ranges
+Cxx11/stencil-stdpar
 Cxx11/stencil-stl
 Cxx11/stencil-sycl
 Cxx11/stencil-sycl-explicit
@@ -229,6 +234,7 @@ Cxx11/transpose-cuda
 Cxx11/transpose-device-thrust
 Cxx11/transpose-dpcpp
 Cxx11/transpose-hip
+Cxx11/transpose-hipblas
 Cxx11/transpose-host-thrust
 Cxx11/transpose-kokkos
 Cxx11/transpose-mpi
@@ -237,7 +243,8 @@ Cxx11/transpose-openmp
 Cxx11/transpose-openmp-target
 Cxx11/transpose-pstl
 Cxx11/transpose-raja
-Cxx11/transpose-rangefor
+Cxx11/transpose-ranges
+Cxx11/transpose-stdpar
 Cxx11/transpose-stl
 Cxx11/transpose-sycl
 Cxx11/transpose-sycl-explicit
@@ -250,6 +257,7 @@ Cxx11/transpose-thread
 Cxx11/transpose-valarray
 Cxx11/transpose-vector
 Cxx11/transpose-vector-raja
+FORTRAN/*.mod
 FORTRAN/dgemm
 FORTRAN/dgemm-ga
 FORTRAN/dgemm-openmp
@@ -258,6 +266,7 @@ FORTRAN/dgemm-pretty
 FORTRAN/dgemm-taskloop-openmp
 FORTRAN/nstream
 FORTRAN/nstream-coarray
+FORTRAN/nstream-cufortran
 FORTRAN/nstream-ga
 FORTRAN/nstream-openmp
 FORTRAN/nstream-mpi
@@ -265,6 +274,7 @@ FORTRAN/nstream-mpi-openmp
 FORTRAN/nstream-openmp-target
 FORTRAN/nstream-openacc
 FORTRAN/nstream-pretty
+FORTRAN/nstream-stdpar
 FORTRAN/nstream-taskloop-openmp
 FORTRAN/p2p
 FORTRAN/p2p-coarray
@@ -277,6 +287,10 @@ FORTRAN/p2p-innerloop-openacc
 FORTRAN/p2p-openmp-target
 FORTRAN/p2p-openacc
 FORTRAN/p2p-tasks-openmp
+FORTRAN/pic
+FORTRAN/pic-openmp
+FORTRAN/pic_soa
+FORTRAN/pic_soa-openmp
 FORTRAN/stencil
 FORTRAN/stencil-coarray
 FORTRAN/stencil-ga
@@ -284,16 +298,24 @@ FORTRAN/stencil-openmp
 FORTRAN/stencil-openmp-target
 FORTRAN/stencil-openacc
 FORTRAN/stencil-pretty
+FORTRAN/stencil-stdpar
 FORTRAN/stencil-taskloop-openmp
 FORTRAN/transpose
 FORTRAN/transpose-coarray
+FORTRAN/transpose-cufortran
 FORTRAN/transpose-ga
 FORTRAN/transpose-openmp
 FORTRAN/transpose-openmp-target
 FORTRAN/transpose-openacc
 FORTRAN/transpose-pretty
+FORTRAN/transpose-stdpar
 FORTRAN/transpose-taskloop-openmp
 FORTRAN/transpose-tasks-openmp
+FORTRAN/transpose-a2a-mpi
+FORTRAN/transpose-acc-mpi
+FORTRAN/transpose-get-mpi
+FORTRAN/transpose-p2p-mpi
+FORTRAN/transpose-pointer
 GO/dgemm
 GO/hello
 GO/nstream
@@ -361,3 +383,41 @@ SERIAL/Sparse/sparse
 SERIAL/Stencil/stencil
 SERIAL/Synch_p2p/p2p
 SERIAL/Transpose/transpose
+dgemm-vector.dSYM
+dgemm.dSYM
+nstream-opencl.dSYM
+nstream-openmp-target.dSYM
+nstream-openmp.dSYM
+nstream-ranges.dSYM
+nstream-stl.dSYM
+nstream-taskloop.dSYM
+nstream-valarray.dSYM
+nstream-vector.dSYM
+nstream.dSYM
+p2p-hyperplane-openmp.dSYM
+p2p-hyperplane-vector.dSYM
+p2p-innerloop-opencl.dSYM
+p2p-tasks-openmp.dSYM
+p2p-vector.dSYM
+p2p.dSYM
+sparse-vector.dSYM
+sparse.dSYM
+stencil-opencl.dSYM
+stencil-openmp-target.dSYM
+stencil-openmp.dSYM
+stencil-ranges.dSYM
+stencil-stl.dSYM
+stencil-taskloop.dSYM
+stencil-vector.dSYM
+stencil.dSYM
+transpose-async.dSYM
+transpose-opencl.dSYM
+transpose-openmp-target.dSYM
+transpose-openmp.dSYM
+transpose-ranges.dSYM
+transpose-stl.dSYM
+transpose-taskloop.dSYM
+transpose-thread.dSYM
+transpose-valarray.dSYM
+transpose-vector.dSYM
+transpose.dSYM

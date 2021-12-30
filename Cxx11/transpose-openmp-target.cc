@@ -85,7 +85,7 @@ int main(int argc, char * argv[])
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
+      tile_size = (argc>3) ? std::atoi(argv[3]) : order;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
   }

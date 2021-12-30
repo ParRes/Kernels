@@ -136,10 +136,10 @@ int main(int argc, char *argv[]) {
         nstream_time = prk::wtime();
 
       auto begin = dpl::make_zip_iterator(d_A, d_B, d_C);
-      std::transform(dpl::execution::make_device_policy<class TriAdd>(q), begin,
+      dpl::transform(dpl::execution::make_device_policy<class TriAdd>(q), begin,
                      begin + length, d_A, [=](const auto &t) {
-                       using std::get;
-                       return get<0>(t) + get<1>(t) + scalar * get<2>(t);
+                       auto [a, b, c] = t;
+                       return a + b + scalar * c;
                      });
     }
     nstream_time = prk::wtime() - nstream_time;

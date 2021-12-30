@@ -48,6 +48,11 @@
 # error You need a C++11 compiler or a newer C++ standard library.
 #endif
 
+// weird issue with NVC++ 21.2 and GCC 10.2.1 (not officially supported)
+#ifndef __GCC_ATOMIC_CHAR8_T_LOCK_FREE
+#define __GCC_ATOMIC_CHAR8_T_LOCK_FREE __GCC_ATOMIC_CHAR_LOCK_FREE
+#endif
+
 #include <string>
 #include <iostream>
 #include <iomanip> // std::setprecision
@@ -58,16 +63,11 @@
 #include <chrono>
 #include <typeinfo>
 #include <array>
-#include <atomic>
 #include <numeric>
 #include <algorithm>
 #include <thread> // std::thread::hardware_concurrency
 
 #include "prk_simd.h"
-
-#ifdef USE_RANGES
-# include "prk_ranges.h"
-#endif
 
 // used in OpenMP target and CUDA code because std::min etc are not declare target
 #ifndef MIN

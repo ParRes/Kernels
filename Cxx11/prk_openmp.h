@@ -47,26 +47,35 @@
 # if (_OPENMP >= 201300) || (__ibmxl_version__ >= 16)
 #  define OMP_SIMD PRAGMA(omp simd)
 #  define OMP_FOR_SIMD PRAGMA(omp for simd)
-#  define OMP_TASK(x) PRAGMA(omp task x)
-#  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
-#  if defined(__INTEL_COMPILER)
-#   define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop x )
+// PGI/NVHPC compilers do not support OpenMP tasking/ordered
+#  if !( defined(__PGIC__) || defined(__PGI) || defined(__NVCOMPILER) )
+#   define OMP_ORDERED(x) PRAGMA(omp ordered x)
+#   define OMP_TASK(x) PRAGMA(omp task x)
+#   define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
+#   if defined(__INTEL_COMPILER)
+#    define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop x )
+#   else
+#    define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop collapse(n) x )
+#   endif
+#   define OMP_TASKWAIT PRAGMA(omp taskwait)
 #  else
-#   define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop collapse(n) x )
+#   define OMP_ORDERED(x)
+#   define OMP_TASK(x)
+#   define OMP_TASKLOOP(x)
+#   define OMP_TASKLOOP_COLLAPSE(n,x)
+#   define OMP_TASKWAIT
 #  endif
-#  define OMP_TASKWAIT PRAGMA(omp taskwait)
-#  define OMP_ORDERED(x) PRAGMA(omp ordered x)
 #  define OMP_TARGET(x) PRAGMA(omp target x)
 #  define OMP_DECLARE_TARGET PRAGMA(omp declare target)
 #  define OMP_END_DECLARE_TARGET PRAGMA(omp end declare target)
 # else
 #  define OMP_SIMD
 #  define OMP_FOR_SIMD PRAGMA(omp for)
+#  define OMP_ORDERED(x)
 #  define OMP_TASK(x)
 #  define OMP_TASKLOOP(x)
 #  define OMP_TASKLOOP_COLLAPSE(n,x)
 #  define OMP_TASKWAIT
-#  define OMP_ORDERED(x)
 #  define OMP_TARGET(x)
 #  define OMP_DECLARE_TARGET
 #  define OMP_END_DECLARE_TARGET

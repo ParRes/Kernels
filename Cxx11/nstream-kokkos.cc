@@ -163,7 +163,8 @@ int main(int argc, char * argv[])
 
     double asum(0);
     Kokkos::parallel_reduce(length, KOKKOS_LAMBDA(size_t const i, double & inner) {
-        inner += prk::abs(A(i));
+        using Kokkos::Experimental::fabs;
+        inner += fabs(A(i));
     }, asum);
     Kokkos::fence();
 

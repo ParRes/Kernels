@@ -106,7 +106,7 @@ p2p-2d: p2p-2d.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 %-mpi: %-mpi.c prk_util.h
-	$(CC) $(CFLAGS) $(MPIINC) $< $(MPILIB) $(EXTRA_CLIBS) -o $@
+	$(MPICC) $(CFLAGS) $(MPIINC) $< $(MPILIB) $(EXTRA_CLIBS) -o $@
 
 %-petsc: %-petsc.c prk_util.h
 	$(CC) $(CFLAGS) $(MPIINC) $< $(PETSCFLAG) $(MPILIB) $(EXTRA_CLIBS) -o $@

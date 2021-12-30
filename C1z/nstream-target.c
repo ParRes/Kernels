@@ -116,7 +116,7 @@ int main(int argc, char * argv[])
 
   double scalar = 3.0;
 
-  #pragma omp parallel for simd schedule(static)
+  #pragma omp parallel for simd
   for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
       B[i] = 2.0;
@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = omp_get_wtime();
 
-      #pragma omp target teams distribute parallel for simd schedule(static) // device(device)
+      #pragma omp target teams distribute parallel for simd
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }

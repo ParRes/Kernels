@@ -9,7 +9,6 @@
 #include <array>
 
 #include <hip/hip_runtime.h>
-#include <hip/hip_runtime.h>
 #include <hip/hip_runtime_api.h>
 #include <hipblas.h>
 
@@ -18,7 +17,6 @@
 #include "prk_ranges.h"
 #endif
 
-//typedef float prk_float;
 typedef double prk_float;
 
 namespace prk
@@ -132,6 +130,78 @@ namespace prk
                     return true;
                 }
         };
+
+        template <typename T>
+        T * malloc_device(size_t n) {
+            T * ptr;
+            size_t bytes = n * sizeof(T);
+            prk::HIP::check( hipMalloc((void**)&ptr, bytes) );
+            return ptr;
+        }
+
+        template <typename T>
+        T * malloc_host(size_t n) {
+            T * ptr;
+            size_t bytes = n * sizeof(T);
+            prk::HIP::check( hipHostMalloc((void**)&ptr, bytes) );
+            return ptr;
+        }
+
+        template <typename T>
+        T * malloc_managed(size_t n) {
+            T * ptr;
+            size_t bytes = n * sizeof(T);
+            prk::HIP::check( hipMallocManaged((void**)&ptr, bytes) );
+            return ptr;
+        }
+
+        template <typename T>
+        void free(T * ptr) {
+            prk::HIP::check( hipFree((void*)ptr) );
+        }
+
+        template <typename T>
+        void free_host(T * ptr) {
+            prk::HIP::check( hipHostFree((void*)ptr) );
+        }
+
+        template <typename T>
+        void copyD2H(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::HIP::check( hipMemcpy(output, input, bytes, hipMemcpyDeviceToHost) );
+        }
+
+        template <typename T>
+        void copyH2D(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::HIP::check( hipMemcpy(output, input, bytes, hipMemcpyHostToDevice) );
+        }
+
+        template <typename T>
+        void copyD2Hasync(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::HIP::check( hipMemcpyAsync(output, input, bytes, hipMemcpyDeviceToHost) );
+        }
+
+        template <typename T>
+        void copyH2Dasync(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::HIP::check( hipMemcpyAsync(output, input, bytes, hipMemcpyHostToDevice) );
+        }
+
+        template <typename T>
+        void prefetch(T * ptr, size_t n, int device = 0) {
+            //size_t bytes = n * sizeof(T);
+            //std::cout << "device=" << device << "\n";
+        }
+
+        void sync(void) {
+            prk::HIP::check( hipDeviceSynchronize() );
+        }
+
+        void set_device(int i) {
+            prk::HIP::check( hipSetDevice(i) );
+        }
 
     } // HIP namespace
 

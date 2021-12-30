@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/Kokkos Stencil execution on 2D grid" << std::endl;
 
-  Kokkos::initialize (argc, argv);
+  Kokkos::initialize(argc, argv);
   {
     //////////////////////////////////////////////////////////////////////
     // Process and test input parameters
@@ -94,7 +94,6 @@ int main(int argc, char* argv[])
           throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
         }
 
-        // number of times to run the algorithm
         iterations  = std::atoi(argv[1]);
         if (iterations < 1) {
           throw "ERROR: iterations must be >= 1";
@@ -175,10 +174,7 @@ int main(int argc, char* argv[])
     matrix in("in", n, n);
     matrix out("out", n, n);
 
-    auto z2     = {0,0};
-    auto n2     = {n,n};
-    auto tile2  = {tile_size,tile_size};
-    auto full   = Kokkos::MDRangePolicy<Kokkos::Rank<2>>(z2,n2,tile2);
+    auto full   = Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0},{n,n},{tile_size,tile_size});
 
     {
       Kokkos::parallel_for(full, KOKKOS_LAMBDA(int i, int j) {
@@ -210,12 +206,11 @@ int main(int argc, char* argv[])
 
     size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
-    double norm(0);
-    auto r2     = {radius,radius};
-    auto nr2    = {n-radius,n-radius};
-    auto inside = Kokkos::MDRangePolicy<Kokkos::Rank<2>>(r2,nr2,tile2);
+    double norm{0};
+    auto inside = Kokkos::MDRangePolicy<Kokkos::Rank<2>>({radius,radius},{n-radius,n-radius},{tile_size,tile_size});
     Kokkos::parallel_reduce(inside, KOKKOS_LAMBDA(int i, int j, double & norm) {
-        norm += prk::abs(out(i,j));
+        using Kokkos::Experimental::fabs;
+        norm += fabs(out(i,j));
     }, norm);
     Kokkos::fence();
     norm /= active_points;

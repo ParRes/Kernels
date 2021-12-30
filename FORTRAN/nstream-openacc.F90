@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2017, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -62,26 +63,14 @@
 !
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
+  use prk
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
-  integer(kind=INT32) ::  iterations, offset
-  integer(kind=INT64) ::  length
+  integer(kind=INT32) :: iterations
+  integer(kind=INT64) :: length, offset
   real(kind=REAL64), allocatable ::  A(:)
   real(kind=REAL64), allocatable ::  B(:)
   real(kind=REAL64), allocatable ::  C(:)
@@ -99,86 +88,55 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a47)') 'Fortran OpenACC STREAM triad: A = B + scalar * C'
+  write(*,'(a48)') 'Fortran OpenACC STREAM triad: A = B + scalar * C'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <vector length> [<offset>]'
-    stop 1
-  endif
+  call prk_get_arguments('nstream',iterations=iterations,length=length,offset=offset)
 
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  length = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') length
-  if (length .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: length must be nonnegative : ', length
-    stop 1
-  endif
-
-  offset = 0
-  if (command_argument_count().gt.2) then
-    call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') offset
-    if (offset .lt. 0) then
-      write(*,'(a,i5)') 'ERROR: offset must be positive : ', offset
-      stop 1
-    endif
-  endif
-
-  write(*,'(a,i12)') 'Number of iterations = ', iterations
-  write(*,'(a,i12)') 'Vector length        = ', length
-  write(*,'(a,i12)') 'Offset               = ', offset
+  write(*,'(a23,i12)') 'Number of iterations = ', iterations
+  write(*,'(a23,i12)') 'Vector length        = ', length
+  write(*,'(a23,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
-  allocate( A(length), stat=err)
+  allocate( A(length), B(length), C(length), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a20,i3)') 'allocation returned ',err
     stop 1
   endif
 
-  allocate( B(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
+  !$acc data copy(A) copyin(B,C)
 
-  allocate( C(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of C returned ',err
-    stop 1
-  endif
-
-  scalar = 3
-
-  t0 = 0
-
-  !$acc parallel loop gang
+  !$acc parallel loop
   do i=1,length
     A(i) = 0
     B(i) = 2
     C(i) = 2
   enddo
 
-  !$acc data pcopy(A) pcopyin(B,C)
+  scalar = 3
+
+  t0 = 0
+
   do k=0,iterations
+    if (k.eq.1) then
+      t0 = prk_get_wtime()
+    endif
 
-    if (k.eq.1) t0 = prk_get_wtime()
-
-    !$acc parallel loop gang
+#if 1
+    !$acc parallel loop
     do i=1,length
       A(i) = A(i) + B(i) + scalar * C(i)
     enddo
+#else
+    !$acc kernels
+    do i=1,length
+      A(i) = A(i) + B(i) + scalar * C(i)
+    enddo
+    !$acc end kernels
+#endif
+
   enddo ! iterations
 
   t1 = prk_get_wtime()
@@ -198,22 +156,18 @@ program main
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-
   asum = 0
-  !$acc parallel loop reduction(+:asum)
+  !!!$acc parallel loop reduction(+:asum)
   do i=1,length
-    asum = asum + abs(A(i))
+    asum = asum + abs(A(i)-ar)
   enddo
 
-  deallocate( C )
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B,C )
 
-  if (abs(asum-ar) .gt. epsilon) then
+  if (abs(asum) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
-    write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-    write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+    write(*,'(a30,f30.15)') '       Expected value: ', ar
+    write(*,'(a30,f30.15)') '       Observed value: ', A(1)
     write(*,'(a35)')  'ERROR: solution did not validate'
     stop 1
   else
@@ -221,8 +175,8 @@ program main
     avgtime = nstream_time/iterations;
     bytes = 4 * int(length,INT64) * storage_size(A)/8
     write(*,'(a12,f15.3,1x,a12,e15.6)')    &
-        'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
-        'Avg time (s): ', avgtime
+            'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
+            'Avg time (s): ', avgtime
   endif
 
 end program main

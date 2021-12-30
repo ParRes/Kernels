@@ -106,7 +106,7 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
 
-  sycl::queue q(sycl::default_selector{});
+  sycl::queue q(sycl::default_selector{}, sycl::property::queue::in_order{});
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -140,16 +140,18 @@ int main(int argc, char * argv[])
       if (iter==1) nstream_time = prk::wtime();
 
       double one(1);
+      // A += B
       mkl::blas::axpy(q, length,
-                         one,              // alpha
-                         d_B, 1,           // x, incx
-                         d_A, 1).wait();   // y, incy
+                         one,     // alpha
+                         d_B, 1,  // x, incx
+                         d_A, 1); // y, incy
+      // A += scalar * C
       mkl::blas::axpy(q, length,
-                         scalar,           // alpha
-                         d_C, 1,           // x, incx
-                         d_A, 1).wait();   // y, incy
-      q.wait();
+                         scalar,  // alpha
+                         d_C, 1,  // x, incx
+                         d_A, 1); // y, incy
     }
+    q.wait();
     nstream_time = prk::wtime() - nstream_time;
   }
 

@@ -61,10 +61,10 @@
 #
 # *******************************************************************
 
-function do_add(A, n)
-    for i=1:n
-        for j=1:n
-            A[i,j] += 1.0
+function do_add!(A, n)
+	for j = axes(A, 2)
+		for i = axes(A, 1)
+			@inbounds A[i,j] += one(eltype(A))
         end
     end
 end
@@ -191,7 +191,7 @@ function main()
     else
         precompile(do_stencil, (Array{Float64,2}, Array{Float64,2}, Array{Float64,2}, Int64, Int64))
     end
-    precompile(do_add, (Array{Float64,2}, Int64))
+    precompile(do_add!, (Array{Float64,2}, Int64))
 
     A = zeros(Float64,n,n)
     B = zeros(Float64,n,n)
@@ -209,7 +209,7 @@ function main()
         else
             do_stencil(A, W, B, r, n)
         end
-        do_add(A, n)
+        do_add!(A, n)
     end
 
     t1 = time_ns()
