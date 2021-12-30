@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2018, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -32,12 +33,15 @@
 #ifndef PRK_PSTL_H
 #define PRK_PSTL_H
 
+#include <ranges>
+
 #if defined(__GNUC__) && (__GNUC__ >= 9)
 
 # include <execution>
 # include <algorithm>
 # include <numeric>
-namespace exec = __pstl::execution;
+//namespace exec = __pstl::execution;
+namespace exec = std::execution;
 
 #elif defined(USE_LLVM_PSTL)
 

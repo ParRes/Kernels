@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #
 # Copyright (c) 2020, Intel Corporation
+# Copyright (c) 2021, NVIDIA
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -139,8 +140,7 @@ def main():
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    offset = me * block_order
-    A = numpy.fromfunction(lambda i,j: offset+i*order+j, (order,block_order), dtype=float)
+    A = numpy.fromfunction(lambda i,j:  me * block_order + i*order + j, (order,block_order), dtype=float)
     B = numpy.zeros((order,block_order))
     T = numpy.zeros((order,block_order))
 
@@ -175,6 +175,8 @@ def main():
     # allgather is non-scalable but was easier to debug
     F = comm.allgather(B)
     G = numpy.concatenate(F,axis=1)
+    #if (me==0):
+    #    print(G)
     H = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
     abserr = numpy.linalg.norm(numpy.reshape(G-H,order*order),ord=1)
 
@@ -188,7 +190,9 @@ def main():
     else:
         if (me==0):
             print('error ',abserr, ' exceeds threshold ',epsilon)
-        sys.exit("ERROR: solution did not validate")
+            print("ERROR: solution did not validate")
+            comm.Abort()
+        #sys.exit("ERROR: solution did not validate")
 
 
 if __name__ == '__main__':

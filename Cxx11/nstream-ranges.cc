@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2020, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -62,6 +63,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include <ranges>
 
 // See ParallelSTL.md for important information.
 
@@ -105,11 +107,11 @@ int main(int argc, char * argv[])
 
   double nstream_time{0};
 
-  prk::vector<double> A(length,0.0);
-  prk::vector<double> B(length,2.0);
-  prk::vector<double> C(length,2.0);
+  std::vector<double> A(length,0.0);
+  std::vector<double> B(length,2.0);
+  std::vector<double> C(length,2.0);
 
-  auto range = prk::range(0,length);
+  auto range = std::ranges::views::iota(static_cast<decltype(length)>(0), length);
 
   double scalar(3);
 
