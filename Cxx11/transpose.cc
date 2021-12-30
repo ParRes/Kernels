@@ -101,7 +101,7 @@ int main(int argc, char * argv[])
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   prk::vector<double> A(order*order);
   prk::vector<double> B(order*order,0.0);

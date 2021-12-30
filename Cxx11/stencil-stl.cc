@@ -61,6 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_ranges.h"
 #include "stencil_stl.hpp"
 
 void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
@@ -162,7 +163,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double stencil_time(0);
+  double stencil_time{0};
 
   std::vector<double> in(n*n);
   std::vector<double> out(n*n);

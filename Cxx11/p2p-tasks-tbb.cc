@@ -74,7 +74,6 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   using namespace tbb::flow;
-  //graph g;
 
   int iterations;
   int m, n;
@@ -114,8 +113,8 @@ int main(int argc, char* argv[])
   }
 
   const char* envvar = std::getenv("TBB_NUM_THREADS");
-  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
-  tbb::task_scheduler_init init(num_threads);
+  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : prk::get_num_cores();
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, num_threads);
 
   std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
@@ -131,7 +130,7 @@ int main(int argc, char* argv[])
   int num_blocks_m = (m / mc);
   if(m%mc != 0) num_blocks_m++;
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   double * grid = new double[m*n];
 
@@ -172,25 +171,13 @@ int main(int argc, char* argv[])
         //  make_edge(*nodes[(i-1)*num_blocks_n + j-1], *tmp );
     }
   }
-  auto start = true;
-  source_node<continue_msg> s(g, [&](continue_msg &v) -> bool {
-    if(start) { 
-      v = continue_msg();
-      start = false;
-      return true;
-    }
-    return false;
-  }, false);
-  
-  limiter_node<continue_msg> l(g, iterations+1, 1);
+  limiter_node<continue_msg> l(g, iterations+1);
 
-  make_edge( s, l );
   make_edge( l, *nodes[0] );
   make_edge( *nodes[(num_blocks_n * num_blocks_m) - 1], b);
   make_edge( b, l );
 
 #if TBB_PREVIEW_FLOW_GRAPH_TRACE
-  s.set_name("Source");
   b.set_name("Iteration Barrier");
   l.set_name("Limiter");
 #endif
@@ -203,20 +190,20 @@ int main(int argc, char* argv[])
 
     tbb::blocked_range2d<int> range(0, m, mc, 0, n, nc);
     tbb::parallel_for( range, [&](decltype(range)& r) {
-      for (int i=r.rows().begin(); i!=r.rows().end(); ++i ) {
-        for (int j=r.cols().begin(); j!=r.cols().end(); ++j ) {
+      for (auto i=r.rows().begin(); i!=r.rows().end(); ++i ) {
+        for (auto j=r.cols().begin(); j!=r.cols().end(); ++j ) {
           grid[i*n+j] = 0.0;
         }
       }
     }, tbb_partitioner);
-    for (int j=0; j<n; j++) {
+    for (auto j=0; j<n; j++) {
       grid[0*n+j] = static_cast<double>(j);
     }
-    for (int i=0; i<m; i++) {
-      grid[i*n+0] = static_cast<double>(i);
+    for (auto i=0; i<m; i++) {
+     grid[i*n+0] = static_cast<double>(i);
     }
 
-    s.activate();
+    l.try_put(continue_msg{});
     g.wait_for_all();
     
     pipeline_time = prk::wtime() - pipeline_time;
@@ -239,7 +226,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (prk::abs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+ if ( (prk::abs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;

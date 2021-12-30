@@ -108,7 +108,7 @@ int main(int argc, char * argv[])
   std::valarray<double> A(0.0,order*order);
   std::valarray<double> B(0.0,order*order);
 
-  auto trans_time = 0.0;
+  double trans_time{0};
   for (int j=0; j<order; j++) {
     for (int i=0; i<order; i++) {
       A[j*order+i] = order*j+i;

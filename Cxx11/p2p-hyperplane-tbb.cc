@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
       n = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimensions must be positive";
-      } else if ( static_cast<size_t>(n)*static_cast<size_t>(n) > static_cast<size_t>(INT_MAX)) {
+      } else if ( n > prk::get_max_matrix_size() ) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
@@ -108,20 +108,20 @@ int main(int argc, char* argv[])
   }
 
   const char* envvar = std::getenv("TBB_NUM_THREADS");
-  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : tbb::task_scheduler_init::default_num_threads();
-  tbb::task_scheduler_init init(num_threads);
+  int num_threads = (envvar!=NULL) ? std::atoi(envvar) : prk::get_num_cores();
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, num_threads);
 
   std::cout << "Number of threads    = " << num_threads << std::endl;
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
   std::cout << "Grid chunk sizes     = " << nc << std::endl;
-  std::cout << "TBB partitioner: " << typeid(tbb_partitioner).name() << std::endl;
+  std::cout << "TBB partitioner      = " << tbb_partitioner_name << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   prk::vector<double> grid(n*n,0.0);
 

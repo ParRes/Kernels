@@ -37,6 +37,7 @@
 #include <cstdint>
 #include <cfloat>  // FLT_MIN
 #include <climits>
+#include <cmath>
 
 // Test standard library _after_ standard headers have been included...
 #if !defined(__NVCC__) && !defined(__PGI) && !defined(__ibmxl__) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
@@ -45,6 +46,11 @@
 
 #if !(defined(__cplusplus) && (__cplusplus >= 201103L))
 # error You need a C++11 compiler or a newer C++ standard library.
+#endif
+
+// weird issue with NVC++ 21.2 and GCC 10.2.1 (not officially supported)
+#ifndef __GCC_ATOMIC_CHAR8_T_LOCK_FREE
+#define __GCC_ATOMIC_CHAR8_T_LOCK_FREE __GCC_ATOMIC_CHAR_LOCK_FREE
 #endif
 
 #include <string>
@@ -57,14 +63,21 @@
 #include <chrono>
 #include <typeinfo>
 #include <array>
-#include <atomic>
 #include <numeric>
 #include <algorithm>
+#include <thread> // std::thread::hardware_concurrency
 
 #include "prk_simd.h"
 
-#ifdef USE_RANGES
-# include "prk_ranges.h"
+// used in OpenMP target and CUDA code because std::min etc are not declare target
+#ifndef MIN
+#define MIN(x,y) ((x)<(y)?(x):(y))
+#endif
+#ifndef MAX
+#define MAX(x,y) ((x)>(y)?(x):(y))
+#endif
+#ifndef ABS
+#define ABS(a) ((a) >= 0 ? (a) : -(a))
 #endif
 
 // omp_get_wtime()
@@ -81,6 +94,23 @@
 #endif
 
 namespace prk {
+
+
+    int get_num_cores(void)
+    {
+        return std::thread::hardware_concurrency();
+    }
+
+    // only used in PIC
+    namespace constants {
+        double pi(void) {
+#ifdef M_PI
+            return M_PI;
+#else
+            return 3.14159265358979323846264338327950288419716939937510;
+#endif
+        }
+    }
 
     template <typename T>
     bool is_power_of_2(T n) {

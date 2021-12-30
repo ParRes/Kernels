@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -73,11 +73,11 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
+  int iterations;
   size_t length;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>]";
+        throw "Usage: <# iterations> <vector length>";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -92,11 +92,6 @@ int main(int argc, char * argv[])
         // this is a limit of range_stream below, which only supports int
         throw "ERROR: vector length too large - overflow risk";
       }
-
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
-      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -105,13 +100,12 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time{0};
 
   std::vector<double> A(length,0);
   std::vector<double> B(length,2);

@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -116,7 +116,7 @@ int main(int argc, char * argv[])
 
   double scalar = 3.0;
 
-  #pragma omp parallel for simd schedule(static)
+  #pragma omp parallel for simd
   for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
       B[i] = 2.0;
@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = omp_get_wtime();
 
-      #pragma omp target teams distribute parallel for simd schedule(static) // device(device)
+      #pragma omp target teams distribute parallel for simd
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }

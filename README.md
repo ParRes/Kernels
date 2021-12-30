@@ -1,7 +1,6 @@
 ![PRK logo.](https://github.com/ParRes/Kernels/blob/default/logo/PRK%20logo.png)
 
 [![license](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/ParRes/Kernels/blob/master/COPYING)
-[![Travis-CI Status](https://travis-ci.org/ParRes/Kernels.svg)](https://travis-ci.org/ParRes/Kernels)
 [![GitHub contributors](https://img.shields.io/github/contributors/ParRes/Kernels.svg)]()
 [![GitHub language count](https://img.shields.io/github/languages/count/ParRes/Kernels.svg)]()
 [![GitHub top language](https://img.shields.io/github/languages/top/ParRes/Kernels.svg)]()
@@ -50,13 +49,14 @@ If you are looking for the simplest option, try `make.defs.gcc`.
 | `make.defs.musl`     | GCC compiler toolchain with MUSL as the C standard library, which is required to use C11 threads. |
 | `make.defs.oneapi`   | Intel oneAPI (https://software.intel.com/oneapi/hpc-kit). |
 | `make.defs.pgi`      | PGI compiler toolchain (infrequently tested). |
+| `make.defs.hip`      | HIP compiler toolchain (infrequently tested). |
 
 Some of the C++ implementations require you to install Boost, RAJA, KOKKOS, Parallel STL, respectively,
-and then modify `make.defs` appropriately.  Please see the documentation in the [https://github.com/ParRes/Kernels/tree/default/doc](documentation (`doc`) subdirectory).
+and then modify `make.defs` appropriately.  Please see the documentation in the
+[documentation](https://github.com/ParRes/Kernels/tree/default/doc) (`doc`) subdirectory.
 
-Because we test essentially everything in Travis CI, you can refer to the `travis` subdirectory
-for install scripts that can be readily modified to install any of the dependencies in your local
-environment.
+You can refer to the `travis` subdirectory for install scripts that can be readily modified
+to install any of the dependencies in your local environment.
 
 # Supported Programming Models
 
@@ -84,29 +84,32 @@ More recently, we have implemented many single-node programming models in modern
 
 y = yes
 
-i = in-progress, incomplete, or incorrect
+i = in-progress, incomplete, incorrect, or incredibly slow
 
 f = see footnotes
 
-| Parallelism          | p2p | stencil | transpose | nstream | sparse | dgemm |
-|----------------------|-----|---------|-----------|---------|--------|-------|
-| None                 |  y  |    y    |     y     |    y    |    y   |   y   |
-| C++11 threads, async |     |         |     y     |         |        |       |
-| OpenMP               |  y  |    y    |     y     |    y    |        |       |
-| OpenMP tasks         |  y  |    y    |     y     |    y    |        |       |
-| OpenMP target        |  y  |    y    |     y     |    y    |        |       |
-| OpenCL 1.x           |  i  |    y    |     y     |    y    |        |       |
-| SYCL                 |  i  |    y    |     y     |    y    |        |   y   |
-| Boost.Compute        |     |         |           |    y    |        |       |
-| Parallel STL         |  y  |    y    |     y     |    y    |        |       |
-| Thrust               |     |         |     i     |    y    |        |       |
-| TBB                  |  y  |    y    |     y     |    y    |        |       |
-| Kokkos               |  y  |    y    |     y     |    y    |        |       |
-| RAJA                 |  y  |    y    |     y     |    y    |        |       |
-| CUDA                 |  i  |    y    |     y     |    y    |        |       |
-| CUBLAS               |     |         |     y     |    y    |        |   y   |
-| CBLAS                |     |         |     y     |         |        |   y   |
-| OpenACC              |  y  |         |           |         |        |       |
+| Parallelism          | p2p | stencil | transpose | nstream | sparse | dgemm | PIC |
+|----------------------|-----|---------|-----------|---------|--------|-------|-----|
+| None                 |  y  |    y    |     y     |    y    |    y   |   y   |  y  |
+| C++11 threads, async |     |         |     y     |         |        |       |     |
+| OpenMP               |  y  |    y    |     y     |    y    |        |       |     |
+| OpenMP tasks         |  y  |    y    |     y     |    y    |        |       |     |
+| OpenMP target        |  y  |    y    |     y     |    y    |        |       |     |
+| OpenCL 1.x           |  i  |    y    |     y     |    y    |        |       |     |
+| SYCL                 |  i  |    y    |     y     |    y    |        |   y   |  y  |
+| Boost.Compute        |     |         |           |    y    |        |       |     |
+| Parallel STL         |  y  |    y    |     y     |    y    |        |       |     |
+| Thrust               |     |         |     i     |    y    |        |       |     |
+| TBB                  |  y  |    y    |     y     |    y    |        |       |     |
+| Kokkos               |  y  |    y    |     y     |    y    |        |       |     |
+| RAJA                 |  y  |    y    |     y     |    y    |        |       |     |
+| CUDA                 |  i  |    y    |     y     |    y    |        |       |     |
+| CUBLAS               |     |         |     y     |    y    |        |   y   |     |
+| HIP                  |  i  |    y    |     y     |    y    |        |       |     |
+| HIPBLAS              |     |         |     y     |    y    |        |   y   |     |
+| CBLAS                |     |         |     y     |         |        |   y   |     |
+| OpenACC              |  y  |         |           |         |        |       |     |
+| MPI (RMA)            |     |         |           |    y    |        |       |     |
 
 * [SYCL](http://sycl.tech/)
 * [Boost.Compute](http://boostorg.github.io/compute/)
@@ -126,6 +129,7 @@ f = see footnotes
 | Cilk                 |     |    y    |     y     |         |        |
 | ISPC                 |     |         |     y     |         |        |
 | MPI                  |     |         |           |    y    |        |
+| PETSc                |     |         |     i     |    y    |        |
 
 There are versions of nstream with OpenMP that support memory allocation
 using [mmap](http://man7.org/linux/man-pages/man2/mmap.2.html)
@@ -158,10 +162,15 @@ x = externally supported (in the Chapel repo)
 |----------------------|-----|---------|-----------|---------|--------|-------|
 | Python 3             |  y  |    y    |     y     |    y    |    y   |   y   |
 | Python 3 w/ Numpy    |  y  |    y    |     y     |    y    |    y   |   y   |
+| Python 3 w/ mpi4py   |     |    y    |     y     |    y    |        |       |
 | Julia                |  y  |    y    |     y     |         |        |       |
 | Octave (Matlab)      |  y  |    y    |     y     |         |        |       |
 | Rust                 |  y  |    y    |     y     |         |        |       |
+| Go                   |     |         |     y     |    y    |        |   y   |
+| C#                   |     |         |     y     |    y    |        |       |
 | Chapel               |  x  |    x    |     x     |         |        |       |
+| Java                 |  y  |    y    |     y     |    y    |        |       |
+| Lua                  |     |         |           |    y    |        |       |
 
 ## Global make
 

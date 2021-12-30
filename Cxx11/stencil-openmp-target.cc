@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  double stencil_time{0};
 
   double * RESTRICT in  = new double[n*n];
   double * RESTRICT out = new double[n*n];

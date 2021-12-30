@@ -103,7 +103,7 @@ int main(int argc, char * argv[])
 
   auto range = prk::range(0,order);
 
-  double trans_time(0);
+  double trans_time{0};
   auto urange = unifex::range_stream{0, order};
 
   for (int iter = 0; iter<=iterations; iter++) {

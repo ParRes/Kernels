@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   prk::vector<double> grid(m*n,0.0);;
 
@@ -155,6 +155,15 @@ int main(int argc, char* argv[])
         }
       }
       pgrid[0*n+0] = -pgrid[(m-1)*n+(n-1)];
+#if 1
+      for (int i=0; i<n; i++) {
+        std::cout << i << ",*=";
+        for (int j=0; j<n; j++) {
+          std::cout << grid[i*n+j] << ",";
+        }
+        std::cout << "\n";
+      }
+#endif
     }
     pipeline_time = prk::wtime() - pipeline_time;
   }

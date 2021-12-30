@@ -154,7 +154,7 @@ int main(int argc, char * argv[])
   /// Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  double dgemm_time(0);
+  double dgemm_time{0};
 
   prk::vector<double> A(order*order);
   prk::vector<double> B(order*order);

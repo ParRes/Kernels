@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -51,7 +51,6 @@
 ///          number of words written, times the size of the words, divided
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
-///
 ///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
@@ -75,7 +74,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t length, gs, offset;
+  size_t length, gs;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <vector length>";
@@ -96,11 +95,6 @@ int main(int argc, char * argv[])
       if (gs < 1 || gs > length) {
         throw "ERROR: grainsize";
       }
-
-      offset = (argc>4) ? std::atoi(argv[4]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
-      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -113,13 +107,12 @@ int main(int argc, char * argv[])
 #endif
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time{0};
 
   prk::vector<double> A(length);
   prk::vector<double> B(length);

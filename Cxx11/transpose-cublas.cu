@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -105,108 +106,63 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   const size_t nelems = (size_t)order * (size_t)order;
-  const size_t bytes = nelems * sizeof(double);
 
-  double * h_a;
-  double * h_b;
-  prk::CUDA::check( cudaMallocHost((void**)&h_a, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_b, bytes) );
+  double * h_a = prk::CUDA::malloc_host<double>(nelems);
+  double * h_b = prk::CUDA::malloc_host<double>(nelems);
+  double * h_o = prk::CUDA::malloc_host<double>(1);
 
-  // fill A with the sequence 0 to order^2-1 as doubles
+  // fill A with the sequence 0 to order^2-1
   for (int j=0; j<order; j++) {
     for (int i=0; i<order; i++) {
-      h_a[j*order+i] = order*j+i;
-      h_b[j*order+i] = 0;
+      h_a[j*order+i] = static_cast<double>(order*j+i);
+      h_b[j*order+i] = static_cast<double>(0);
     }
   }
+  h_o[0] = 1;
 
   // copy input from host to device
-  double * d_a;
-  double * d_b;
-  prk::CUDA::check( cudaMalloc((void**)&d_a, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_b, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
+  double * d_a = prk::CUDA::malloc_device<double>(nelems);
+  double * d_b = prk::CUDA::malloc_device<double>(nelems);
+  double * d_o = prk::CUDA::malloc_device<double>(1);
 
-#if CUBLAS_AXPY_BUG
-  // We need a vector of ones because CUBLAS daxpy does not
-  // correctly implement incx=0.
-  double * h_o;
-  prk::CUDA::check( cudaMallocHost((void**)&h_o, bytes) );
-  for (int j=0; j<order; j++) {
-    for (int i=0; i<order; i++) {
-      h_o[j*order+i] = 1;
-    }
-  }
-  double * d_o;
-  prk::CUDA::check( cudaMalloc((void**)&d_o, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_o, &(h_o[0]), bytes, cudaMemcpyHostToDevice) );
-#endif
+  prk::CUDA::copyH2D(d_a, h_a, nelems);
+  prk::CUDA::copyH2D(d_b, h_b, nelems);
+  prk::CUDA::copyH2D(d_o, h_o, 1);
 
-#ifdef USE_HOST_BUFFERS
-  double p_a = h_a;
-  double p_b = h_b;
-#if CUBLAS_AXPY_BUG
-  double p_o = h_o;
-#endif
-#else
-  double * p_a = d_a;
-  double * p_b = d_b;
-#if CUBLAS_AXPY_BUG
-  double * p_o = d_o;
-#endif
-#endif
-
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   for (int iter = 0; iter<=iterations; iter++) {
 
-    if (iter==1) trans_time = prk::wtime();
+    if (iter==1) {
+        prk::CUDA::sync();
+        trans_time = prk::wtime();
+    }
 
     double one(1);
     // B += trans(A) i.e. B = trans(A) + B
     prk::CUDA::check( cublasDgeam(h,
                                   CUBLAS_OP_T, CUBLAS_OP_N,   // opA, opB
                                   order, order,               // m, n
-                                  &one, p_a, order,           // alpha, A, lda
-                                  &one, p_b, order,           // beta, B, ldb
-                                  p_b, order) );              // C, ldc (in-place for B)
+                                  &one, d_a, order,           // alpha, A, lda
+                                  &one, d_b, order,           // beta, B, ldb
+                                  d_b, order) );              // C, ldc (in-place for B)
 
     // A += 1.0 i.e. A = 1.0 * 1.0 + A
-#if CUBLAS_AXPY_BUG
-    // THIS IS CORRECT
     prk::CUDA::check( cublasDaxpy(h,
                       order*order,                // n
                       &one,                       // alpha
-                      p_o, 1,                     // x, incx
-                      p_a, 1) );                  // y, incy
-#else
-    // THIS IS BUGGY
-    prk::CUDA::check( cublasDaxpy(h,
-                      order*order,                // n
-                      &one,                       // alpha
-                      &one, 0,                    // x, incx
-                      p_a, 1) );                  // y, incy
-#endif
-    // (Host buffer version)
-    // The performance is ~10% better if this is done every iteration,
-    // instead of only once before the timer is stopped.
-    prk::CUDA::check( cudaDeviceSynchronize() );
+                      d_o, 0,                     // x, incx
+                      d_a, 1) );                  // y, incy
+    prk::CUDA::sync();
   }
   trans_time = prk::wtime() - trans_time;
 
-  // copy output back to host
-  prk::CUDA::check( cudaMemcpy(&(h_b[0]), d_b, bytes, cudaMemcpyDeviceToHost) );
+  prk::CUDA::copyD2H(h_b, d_b, nelems);
 
-#if CUBLAS_AXPY_BUG
-  prk::CUDA::check( cudaFree(d_o) );
-  prk::CUDA::check( cudaFreeHost(h_o) );
-#endif
-
-  prk::CUDA::check( cudaFree(d_b) );
-  prk::CUDA::check( cudaFree(d_a) );
-
-  prk::CUDA::check( cudaFreeHost(h_a) );
+  prk::CUDA::free(d_a);
+  prk::CUDA::free(d_b);
+  prk::CUDA::free(d_o);
+  prk::CUDA::free_host(h_o);
 
   prk::CUDA::check( cublasDestroy(h) );
   //prk::CUDA::check( cublasShutdown() );
@@ -215,7 +171,6 @@ int main(int argc, char * argv[])
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
   const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
   for (int j=0; j<order; j++) {
@@ -230,6 +185,9 @@ int main(int argc, char * argv[])
 #ifdef VERBOSE
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
+
+  prk::CUDA::free_host(h_a);
+  prk::CUDA::free_host(h_b);
 
   const double epsilon = 1.0e-8;
   if (abserr < epsilon) {
@@ -250,8 +208,6 @@ int main(int argc, char * argv[])
               << " exceeds threshold " << epsilon << std::endl;
     return 1;
   }
-
-  prk::CUDA::check( cudaFreeHost(h_b) );
 
   return 0;
 }

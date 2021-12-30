@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 
       // number of times to run the pipeline algorithm
       iterations  = std::atoi(argv[1]);
-      if (iterations < 0) {
+      if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
       n = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimensions must be positive";
-      } else if ( static_cast<size_t>(n)*static_cast<size_t>(n) > INT_MAX) {
+      } else if ( n > prk::get_max_matrix_size() ) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   double * RESTRICT grid = new double[n*n];
 

@@ -103,7 +103,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   prk::vector<double> A(order*order);
   prk::vector<double> B(order*order,0.0);
@@ -127,7 +127,7 @@ int main(int argc, char * argv[])
 #warning No CBLAS transpose extension available!
       for (int i=0;i<order; i++) {
         for (int j=0;j<order;j++) {
-          T2[i*order+j] = A[j*order+i];
+          T[i*order+j] = A[j*order+i];
         }
       }
 #endif

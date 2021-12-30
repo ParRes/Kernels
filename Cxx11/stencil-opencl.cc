@@ -71,10 +71,10 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   funcname1.reserve(255);
   funcname1 += ( star ? "star" : "grid" );
   funcname1 += std::to_string(radius);
-  filename1 = funcname1 + ( ".cl" );
   funcname1 += "_" + std::to_string(precision);
+  filename1 = funcname1 + ( ".cl" );
   auto funcname2 = (precision==64) ? "add64" : "add32";
-  auto filename2 = "add.cl";
+  auto filename2 = "add"+std::to_string(precision)+".cl";
 
   std::string source = prk::opencl::loadProgram(filename1);
   if ( source==std::string("FAIL") ) {
@@ -113,7 +113,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   std::vector<T> h_in(n*n,  T(0));
   std::vector<T> h_out(n*n, T(0));
 
-  auto stencil_time = 0.0;
+  double stencil_time{0};
 
   // initialize the input array
   for (int i=0; i<n; i++) {
@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OpenCL stencil execution on 2D grid" << std::endl;
 
-  prk::opencl::listPlatforms();
+  //prk::opencl::listPlatforms();
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -254,49 +254,24 @@ int main(int argc, char* argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
-  cl_int err = CL_SUCCESS;
-
-  cl::Context cpu(CL_DEVICE_TYPE_CPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(cpu) )
-  {
-    const int precision = prk::opencl::precision(cpu);
-
-    std::cout << "CPU Precision         = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(cpu, iterations, n, radius, star);
-    } else {
-        run<float>(cpu, iterations, n, radius, star);
-    }
-  }
-
-  cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(gpu) )
-  {
-    const int precision = prk::opencl::precision(gpu);
-
-    std::cout << "GPU Precision         = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(gpu, iterations, n, radius, star);
-    } else {
-        run<float>(gpu, iterations, n, radius, star);
-    }
-  }
-
-  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(acc) )
-  {
-
-    const int precision = prk::opencl::precision(acc);
-
-    std::cout << "ACC Precision         = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(acc, iterations, n, radius, star);
-    } else {
-        run<float>(acc, iterations, n, radius, star);
-    }
+  std::vector<cl::Platform> platforms;
+  cl::Platform::get(&platforms);
+  for (auto i : platforms) {
+      std::vector<cl::Device> devices;
+      i.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+      for (auto j : devices) {
+          auto t = j.getInfo<CL_DEVICE_TYPE>();
+          if (t == CL_DEVICE_TYPE_CPU || t == CL_DEVICE_TYPE_GPU) {
+              std::cout << "\n" << "CL_DEVICE_NAME=" << j.getInfo<CL_DEVICE_NAME>() << "\n";
+              auto e = j.getInfo<CL_DEVICE_EXTENSIONS>();
+              auto has64 = prk::stringContains(e,"cl_khr_fp64");
+              cl::Context ctx(j);
+              run<float>(ctx, iterations, n, radius, star);
+              if (has64) {
+                  run<double>(ctx, iterations, n, radius, star);
+              }
+          }
+      }
   }
 
   return 0;

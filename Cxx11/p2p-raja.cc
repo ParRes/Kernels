@@ -35,13 +35,13 @@
 ///
 /// PURPOSE: This program tests the efficiency with which point-to-point
 ///          synchronization can be carried out. It does so by executing
-///          a pipelined algorithm on an m*n grid. The first array dimension
+///          a pipelined algorithm on an n*n grid. The first array dimension
 ///          is distributed among the threads (stripwise decomposition).
 ///
 /// USAGE:   The program takes as input the
 ///          dimensions of the grid, and the number of iterations on the grid
 ///
-///                <progname> <iterations> <m> <n>
+///                <progname> <iterations> <n> <nchunk>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -72,11 +72,11 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int m, n;
-  int mc, nc;
+  int n;
+  int nc;
   try {
-      if (argc < 4){
-        throw " <# iterations> <first array dimension> <second array dimension> [<first chunk dimension> <second chunk dimension>]";
+      if (argc < 3) {
+        throw " <# iterations> <array dimension> [<chunk dimension>]";
       }
 
       // number of times to run the pipeline algorithm
@@ -86,22 +86,21 @@ int main(int argc, char* argv[])
       }
 
       // grid dimensions
-      m = std::atoi(argv[2]);
-      n = std::atoi(argv[3]);
-      if (m < 1 || n < 1) {
+      n = std::atoi(argv[2]);
+      if (n < 1) {
         throw "ERROR: grid dimensions must be positive";
-      } else if ( static_cast<size_t>(m)*static_cast<size_t>(n) > INT_MAX) {
+      } else if ( n > prk::get_max_matrix_size() ) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
       // grid chunk dimensions
-      mc = (argc > 4) ? std::atoi(argv[4]) : m;
-      nc = (argc > 5) ? std::atoi(argv[5]) : n;
-      if (mc < 1 || mc > m || nc < 1 || nc > n) {
-        std::cout << "WARNING: grid chunk dimensions invalid: " << mc <<  nc << " (ignoring)" << std::endl;
-        mc = m;
-        nc = n;
-      }
+      nc = (argc > 3) ? std::atoi(argv[3]) : 1;
+      nc = std::max(1,nc);
+      nc = std::min(n,nc);
+
+      // number of grid blocks
+      nb = (n-1)/nc;
+      if ((n-1)%nc) nb++;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -109,22 +108,21 @@ int main(int argc, char* argv[])
   }
 
   std::cout << "Number of iterations = " << iterations << std::endl;
-  std::cout << "Grid sizes           = " << m << ", " << n << std::endl;
-  std::cout << "Grid chunk sizes     = " << mc << ", " << nc << std::endl;
+  std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
+  std::cout << "Grid chunk sizes     = " << nc << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
-  double * RESTRICT Amem = new double[m*n];
-  matrix grid(Amem, m, n);
+  double * RESTRICT Amem = new double[n*n];
+  matrix grid(Amem, n, n);
 
   {
-    RAJA::RangeSegment range(0,m);
+    RAJA::RangeSegment range(0,n);
     RAJA::forall<thread_exec>(range, [=](RAJA::Index_type i) {
-    //for (int i=0; i<m; i++) {
       for (int j=0; j<n; j++) {
         grid(i,j) = 0.0;
       }
@@ -134,7 +132,7 @@ int main(int argc, char* argv[])
   for (int j=0; j<n; j++) {
     grid(0,j) = static_cast<double>(j);
   }
-  for (int i=0; i<m; i++) {
+  for (int i=0; i<n; i++) {
     grid(i,0) = static_cast<double>(i);
   }
 
@@ -158,7 +156,7 @@ int main(int argc, char* argv[])
         grid(x,y) = grid(x-1,y) + grid(x,y-1) - grid(x-1,y-1);
       });
     }
-    grid(0,0) = -grid(m-1,n-1);
+    grid(0,0) = -grid(n-1,n-1);
   }
 
   pipeline_time = prk::wtime() - pipeline_time;
@@ -168,9 +166,9 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   const double epsilon = 1.e-8;
-  auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (prk::abs(grid(m-1,n-1) - corner_val)/corner_val) > epsilon) {
-    std::cout << "ERROR: checksum " << grid(m-1,n-1)
+  auto corner_val = ((iterations+1.)*(n+n-2.));
+  if ( (prk::abs(grid(n-1,n-1) - corner_val)/corner_val) > epsilon) {
+    std::cout << "ERROR: checksum " << grid(n-1,n-1)
               << " does not match verification value " << corner_val << std::endl;
     return 1;
   }
@@ -182,7 +180,7 @@ int main(int argc, char* argv[])
 #endif
   auto avgtime = pipeline_time/iterations;
   std::cout << "Rate (MFlops/s): "
-            << 2.0e-6 * ( (m-1.)*(n-1.) )/avgtime
+            << 2.0e-6 * ( (n-1.)*(n-1.) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
 
   return 0;

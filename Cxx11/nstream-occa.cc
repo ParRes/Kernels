@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -86,11 +86,11 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
-  int length;
+  int iterations;
+  size_t length;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>]";
+        throw "Usage: <# iterations> <vector length>";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -98,14 +98,9 @@ int main(int argc, char * argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atoi(argv[2]);
+      length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
-      }
-
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
       }
   }
   catch (const char * e) {
@@ -115,14 +110,13 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
   std::cout << "OCCA mode            = " << "\"" << ds << "\"" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time{0};
 
   double * h_A = new double[length];
   double * h_B = new double[length];

@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2017, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -62,33 +63,14 @@
 !
 ! *******************************************************************
 
-#ifndef _OPENMP
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-#endif
-
 program main
-  use iso_fortran_env
-#ifdef _OPENMP
-  use omp_lib
-#endif
+  use, intrinsic :: iso_fortran_env
+  use prk
   implicit none
-#ifndef _OPENMP
-  real(kind=REAL64) :: prk_get_wtime
-#endif
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
-  integer(kind=INT32) ::  iterations, offset
-  integer(kind=INT64) ::  length
+  integer(kind=INT32) :: iterations
+  integer(kind=INT64) :: length, offset
   real(kind=REAL64), allocatable ::  A(:)
   real(kind=REAL64), allocatable ::  B(:)
   real(kind=REAL64), allocatable ::  C(:)
@@ -97,7 +79,7 @@ program main
   ! runtime variables
   integer(kind=INT64) :: i
   integer(kind=INT32) :: k
-  real(kind=REAL64) ::  asum, ar, br, cr, ref
+  real(kind=REAL64) ::  asum, ar, br, cr
   real(kind=REAL64) ::  t0, t1, nstream_time, avgtime
   real(kind=REAL64), parameter ::  epsilon=1.D-8
 
@@ -106,93 +88,25 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-#ifdef _OPENMP
-  write(*,'(a47)') 'Fortran OpenMP STREAM triad: A = B + scalar * C'
-#else
   write(*,'(a47)') 'Fortran Serial STREAM triad: A = B + scalar * C'
-#endif
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <vector length> [<offset>]'
-    stop 1
-  endif
+  call prk_get_arguments('nstream',iterations=iterations,length=length,offset=offset)
 
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  length = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') length
-  if (length .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: length must be nonnegative : ', length
-    stop 1
-  endif
-
-  offset = 0
-  if (command_argument_count().gt.2) then
-    call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') offset
-    if (offset .lt. 0) then
-      write(*,'(a,i5)') 'ERROR: offset must be positive : ', offset
-      stop 1
-    endif
-  endif
-
-#ifdef _OPENMP
-  write(*,'(a,i12)') 'Number of threads    = ', omp_get_max_threads()
-#endif
-  write(*,'(a,i12)') 'Number of iterations = ', iterations
-  write(*,'(a,i12)') 'Vector length        = ', length
-  write(*,'(a,i12)') 'Offset               = ', offset
+  write(*,'(a23,i12)') 'Number of iterations = ', iterations
+  write(*,'(a23,i12)') 'Vector length        = ', length
+  write(*,'(a23,i12)') 'Offset               = ', offset
 
   ! ********************************************************************
-  ! ** Allocate space for the input and transpose matrix
+  ! ** Allocate space and perform the computation
   ! ********************************************************************
 
-  allocate( A(length), stat=err)
+  allocate( A(length), B(length), C(length), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a20,i3)') 'allocation returned ',err
     stop 1
   endif
 
-  allocate( B(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
-
-  allocate( C(length), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of C returned ',err
-    stop 1
-  endif
-
-  scalar = 3
-
-  t0 = 0
-
-#ifdef _OPENMP
-  !$omp parallel default(none)                           &
-  !$omp&  shared(A,B,C,t0,t1)                            &
-  !$omp&  firstprivate(length,iterations,offset,scalar)  &
-  !$omp&  private(i,k)
-#endif
-
-#if defined(_OPENMP)
-  !$omp do
-  do i=1,length
-    A(i) = 0
-    B(i) = 2
-    C(i) = 2
-  enddo
-  !$omp end do
-#elif 0
+#if 0
   forall (i=1:length)
     A(i) = 0
     B(i) = 2
@@ -206,30 +120,16 @@ program main
   enddo
 #endif
 
-  ! need this because otherwise no barrier between initialization
-  ! and iteration 0 (warmup), which will lead to incorrectness.
-  !$omp barrier
+  scalar = 3
+
+  t0 = 0
 
   do k=0,iterations
-    ! start timer after a warmup iteration
     if (k.eq.1) then
-#ifdef _OPENMP
-    !$omp barrier
-    !$omp master
-    t0 = omp_get_wtime()
-    !$omp end master
-#else
-    t0 = prk_get_wtime()
-#endif
+      t0 = prk_get_wtime()
     endif
 
-#if defined(_OPENMP)
-    !$omp do
-    do i=1,length
-      A(i) = A(i) + B(i) + scalar * C(i)
-    enddo
-    !$omp end do
-#elif 0
+#if 0
     forall (i=1:length)
       A(i) = A(i) + B(i) + scalar * C(i)
     end forall
@@ -240,15 +140,7 @@ program main
 #endif
   enddo ! iterations
 
-#ifdef _OPENMP
-  t1 = omp_get_wtime()
-#else
   t1 = prk_get_wtime()
-#endif
-
-#ifdef _OPENMP
-  !$omp end parallel
-#endif
 
   nstream_time = t1 - t0
 
@@ -259,34 +151,21 @@ program main
   ar  = 0
   br  = 2
   cr  = 2
-  ref = 0
   do k=0,iterations
       ar = ar + br + scalar * cr;
   enddo
 
-  ar = ar * length
-
   asum = 0
-#if defined(_OPENMP)
-  !$omp parallel do reduction(+:asum)
-  do i=1,length
-    asum = asum + abs(A(i))
-  enddo
-  !$omp end parallel do
-#else
   do concurrent (i=1:length)
-    asum = asum + abs(A(i))
+    asum = asum + abs(A(i)-ar)
   enddo
-#endif
 
-  deallocate( C )
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B,C )
 
-  if (abs(asum-ar) .gt. epsilon) then
+  if (abs(asum) .gt. epsilon) then
     write(*,'(a35)') 'Failed Validation on output array'
-    write(*,'(a30,f30.15)') '       Expected checksum: ', ar
-    write(*,'(a30,f30.15)') '       Observed checksum: ', asum
+    write(*,'(a30,f30.15)') '       Expected value: ', ar
+    write(*,'(a30,f30.15)') '       Observed value: ', A(1)
     write(*,'(a35)')  'ERROR: solution did not validate'
     stop 1
   else
@@ -294,8 +173,8 @@ program main
     avgtime = nstream_time/iterations;
     bytes = 4 * int(length,INT64) * storage_size(A)/8
     write(*,'(a12,f15.3,1x,a12,e15.6)')    &
-        'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
-        'Avg time (s): ', avgtime
+            'Rate (MB/s): ', 1.d-6*bytes/avgtime, &
+            'Avg time (s): ', avgtime
   endif
 
 end program main

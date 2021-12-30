@@ -85,7 +85,7 @@ int main(int argc, char * argv[])
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
+      tile_size = (argc>3) ? std::atoi(argv[3]) : order;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
   }
@@ -103,7 +103,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   double * RESTRICT A = new double[order*order];
   double * RESTRICT B = new double[order*order];

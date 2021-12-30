@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -74,10 +74,13 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t length;
+  size_t length, block_size;
+
+  block_size = 256; // matches CUDA version default
+
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<grid_stride>]";
+        throw "Usage: <# iterations> <vector length> [<block_size>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -85,9 +88,13 @@ int main(int argc, char * argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atoi(argv[2]);
+      length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
+      }
+
+      if (argc>3) {
+         block_size = std::atoi(argv[3]);
       }
   }
   catch (const char * e) {
@@ -97,21 +104,26 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
+  std::cout << "Block size           = " << block_size << std::endl;
 
   sycl::queue q(sycl::default_selector{});
   prk::SYCL::print_device_platform(q);
+
+  size_t padded_length = block_size * prk::divceil(length,block_size);
+  sycl::range global{padded_length};
+  sycl::range local{block_size};
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double nstream_time(0);
+  double nstream_time{0};
 
   const size_t bytes = length * sizeof(double);
 
-  double * h_A = syclx::malloc_host<double>(length, q);
-  double * h_B = syclx::malloc_host<double>(length, q);
-  double * h_C = syclx::malloc_host<double>(length, q);
+  double * h_A = sycl::malloc_host<double>(length, q);
+  double * h_B = sycl::malloc_host<double>(length, q);
+  double * h_C = sycl::malloc_host<double>(length, q);
 
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
@@ -119,9 +131,9 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  double * d_A = syclx::malloc_device<double>(length, q);
-  double * d_B = syclx::malloc_device<double>(length, q);
-  double * d_C = syclx::malloc_device<double>(length, q);
+  double * d_A = sycl::malloc_device<double>(length, q);
+  double * d_B = sycl::malloc_device<double>(length, q);
+  double * d_C = sycl::malloc_device<double>(length, q);
   q.memcpy(d_A, &(h_A[0]), bytes).wait();
   q.memcpy(d_B, &(h_B[0]), bytes).wait();
   q.memcpy(d_C, &(h_C[0]), bytes).wait();
@@ -132,13 +144,22 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = prk::wtime();
 
-      q.submit([&](sycl::handler& h) {
-
-        h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> it) {
-            const size_t i = it[0];
-            d_A[i] += d_B[i] + scalar * d_C[i];
-        });
-      });
+      // old way - general but uses default local range, which is not optimal for V100
+      //h.parallel_for( sycl::range<1>{length}, [=] (sycl::id<1> it) {
+      //    const size_t i = it;
+      if (padded_length > length) {
+          q.parallel_for(sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+              const size_t i = it.get_global_id(0);
+              if (i<length) {
+                  d_A[i] += d_B[i] + scalar * d_C[i];
+              }
+          });
+      } else {
+          q.parallel_for(sycl::nd_range{global, local}, [=](sycl::nd_item<1> it) {
+              const size_t i = it.get_global_id(0);
+              d_A[i] += d_B[i] + scalar * d_C[i];
+          });
+      }
       q.wait();
     }
 
@@ -147,12 +168,12 @@ int main(int argc, char * argv[])
 
   q.memcpy(&(h_A[0]), d_A, bytes).wait();
 
-  syclx::free(d_C, q);
-  syclx::free(d_B, q);
-  syclx::free(d_A, q);
+  sycl::free(d_C, q);
+  sycl::free(d_B, q);
+  sycl::free(d_A, q);
 
-  syclx::free(h_B, q);
-  syclx::free(h_C, q);
+  sycl::free(h_B, q);
+  sycl::free(h_C, q);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -172,7 +193,7 @@ int main(int argc, char * argv[])
     asum += prk::abs(h_A[i]);
   }
 
-  syclx::free(h_A, q);
+  sycl::free(h_A, q);
 
   double epsilon=1.e-8;
   if (prk::abs(ar - asum) / asum > epsilon) {

@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
   prk::vector<double> vector(size2,0.0);
   prk::vector<double> result(size2,0.0);
 
-  double sparse_time(0);
+  double sparse_time{0};
 
   {
     for (size_t row=0; row<size2; row++) {

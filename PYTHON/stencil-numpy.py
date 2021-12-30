@@ -70,7 +70,7 @@ def main():
     # read and test input parameters
     # ********************************************************************
 
-    print('Parallel Research Kernels version ') #, PRKVERSION
+    print('Parallel Research Kernels')
     print('Python stencil execution on 2D grid')
 
     if len(sys.argv) < 3:
@@ -97,18 +97,17 @@ def main():
         if (2*r+1) > n:
             sys.exit("ERROR: Stencil radius exceeds grid size")
     else:
-        r = 2 # radius=2 is what other impls use right now
+        r = 2
 
+    print('Number of iterations = ', iterations)
     print('Grid size            = ', n)
     print('Radius of stencil    = ', r)
     if pattern == 'star':
         print('Type of stencil      = ','star')
     else:
         print('Type of stencil      = ','stencil')
-
     print('Data type            = double precision')
     print('Compact representation of stencil loop body')
-    print('Number of iterations = ', iterations)
 
     # there is certainly a more Pythonic way to initialize W,
     # but it will have no impact on performance.
@@ -195,4 +194,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

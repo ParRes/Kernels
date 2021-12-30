@@ -421,7 +421,7 @@ int main(int argc, char * argv[])
   }
 #endif
 
-  double trans_time(0);
+  double trans_time{0};
 
   for (int iter = 0; iter<=iterations; iter++) {
 

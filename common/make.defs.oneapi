@@ -12,14 +12,14 @@
 CC=icx -std=c11 -pthread
 #EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=ifx -std08 -fpp
+FC=ifx -std18 -fpp
 # C++11 may not be required but does no harm here.
-CXX=icpx -std=c++17 -pthread
+CXX=icpx -std=c++20 -pthread #--gcc-toolchain=/opt/gcc/11.2.0
 #
 # Compiler flags
 #
 # -xHOST is appropriate for most cases.
-DEFAULT_OPT_FLAGS=-g -O3
+DEFAULT_OPT_FLAGS=-g -O3 -xHOST
 #
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -xMIC-AVX512
@@ -28,9 +28,10 @@ DEFAULT_OPT_FLAGS=-g -O3
 #
 # OpenMP flags
 #
-OPENMPFLAG=-fiopenmp
+OPENMPFLAG=-qopenmp
 OPENMPSIMDFLAG=-qopenmp-simd
-OFFLOADFLAG=-fiopenmp -fopenmp-targets=spir64
+OFFLOADFLAG=-fopenmp-targets=spir64
+OFFLOADFLAG+=-DGPU_SCHEDULE=""
 #
 # OpenCL flags
 #
@@ -40,13 +41,24 @@ OFFLOADFLAG=-fiopenmp -fopenmp-targets=spir64
 # http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
 #OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
 # Linux
-OPENCLDIR=/etc/alternatives/opencl-intel-tools
-OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLDIR=/opt/intel/oneapi/compiler/latest/linux
+OPENCLFLAG=-I${OPENCLDIR}/include/sycl -L${OPENCLDIR}/lib -lOpenCL
 #
 # SYCL flags
 #
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+#SYCLDIR=/opt/isycl
+#SYCLCXX=${SYCLDIR}/bin/clang++
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-fsycl -fsycl-unnamed-lambda
+#SYCLFLAG+=-fsycl-targets=spir64_gen-unknown-linux-sycldevice -Xsycl-target-backend=spir64_gen-unknown-linux-sycldevice "-device skl"
+#SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#
+# Intel oneAPI
+#
 SYCLCXX=dpcpp
-SYCLFLAG=-fsycl -fsycl-unnamed-lambda
+SYCLFLAG=-fsycl
 SYCLFLAG+=-std=c++17 -O3
 SYCLFLAG+=-DDPCPP
 #
@@ -63,8 +75,9 @@ TBBFLAG=-tbb
 # Parallel STL, Boost, etc.
 #
 BOOSTFLAG=
-RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
-#RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+#RANGEFLAG=-DUSE_GCC_RANGES
+#RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+RANGEFLAG=-DUSE_RANGES_TS -I../deps/range-v3/include
 PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG} -I./pstl/stdlib -I./pstl/include
 KOKKOSDIR=/opt/kokkos/intel
 KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
@@ -76,10 +89,13 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 # CBLAS for C++ DGEMM
 #
 #CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
-BLASFLAG=-mkl
-CBLASFLAG=-DMKL -mkl
-ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_tbb_thread -tbb -lmkl_core -lOpenCL -ldl
+BLASFLAG=-qmkl
+CBLASFLAG=-DMKL -qmkl
+#MKLROOT=/opt/intel/inteloneapi/mkl/latest
+#ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_tbb_thread ${TBBFLAG} -lmkl_core -lOpenCL -ldl
+#ONEMKLFLAG+=-I/opt/intel/oneapi/mkl/latest/include/
 #ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
+ONEMKLFLAG=-qmkl
 #
 # CUDA flags
 #
@@ -104,11 +120,12 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 # in your .bashrc.
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
+MPIDIR=/opt/intel/oneapi/mpi/latest
 MPICC=${MPIDIR}/bin/mpiicc
 MPICXX=${MPIDIR}/bin/mpiicpc
+MPIFORT=${MPIDIR}/bin/mpiifort
 MPIINC=-I${MPIDIR}/include
-MPILIB=-L${MPIDIR}/lib -lmpi
+MPILIB=-L${MPIDIR}/lib -L${MPIDIR}/lib/release -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
 #MPIINC=-I/usr/include/mpich-3.2-x86_64
 #MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi

@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2015, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -52,16 +53,15 @@
 ! *******************************************************************
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   use mpi_f08
+  use prk
   implicit none
-#include 'global.fh'
-#include 'mafdecls.fh'
-!#include 'ga-mpi.fh' ! unused
+#include "global.fh"
+#include 'ga-mpi.fh' ! unused
+#include "mafdecls.fh"
   ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! MPI - should always use 32-bit INTEGER
   integer(kind=INT32), parameter :: requested = MPI_THREAD_SERIALIZED
   integer(kind=INT32) :: provided
@@ -90,28 +90,6 @@ program main
   ! ********************************************************************
   ! read and test input parameters
   ! ********************************************************************
-
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./dgemm-ga <# iterations> <matrix order>'
-    stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  order = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') order
-  if (order .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
-    stop 1
-  endif
 
   call mpi_init_thread(requested,provided)
 
@@ -144,18 +122,31 @@ program main
   if (me.eq.0) then
     write(*,'(a25)') 'Parallel Research Kernels'
     write(*,'(a68)') 'Fortran Global Arrays Dense matrix-matrix multiplication: C += A x B'
-    write(*,'(a22,i12)') 'Number of GA procs   = ', np
-    write(*,'(a,i8)') 'Number of iterations    = ', iterations
-    write(*,'(a,i8)') 'Matrix order            = ', order
+
+    call prk_get_arguments('dgemm',iterations=iterations,order=order,tile_size=tile_size)
+
+    write(*,'(a22,i12)') 'Number of GA procs      = ', np
+    write(*,'(a22,i12)') 'Number of iterations    = ', iterations
+    write(*,'(a22,i12)') 'Matrix order            = ', order
   endif
+
+#if 1
+  call ga_brdcst(0,iterations,4,0)
+  call ga_brdcst(0,order,     4,0)
+#else
+  block
+    integer :: comm
+    call ga_mpi_comm_pgroup_default(comm)
+    call MPI_Bcast(iterations, 1, MPI_INTEGER4, 0, comm)
+    call MPI_Bcast(order,      1, MPI_INTEGER4, 0, comm)
+  end block
+#endif
 
   call ga_sync()
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
-
-  t0 = 0.0d0
 
   !print*,'order=',order
   ! must cast int32 order to integer...
@@ -199,12 +190,14 @@ program main
 
   ok = ma_init(MT_DBL, order*order, 0)
   if (.not.ok) then
-    call ga_error('ma_init failed', order)
+    call ga_error('ma_init failed', 1)
   endif
 
   if (order.lt.10) then
     call ga_print(A)
   endif
+
+  t0 = 0.0d0
 
   do k=0,iterations
 
@@ -263,7 +256,7 @@ program main
       write(*,'(a)') 'Solution validates'
       avgtime = dgemm_time/iterations
       nflops = 2 * int(order,INT64)**3
-      write(*,'(a,f13.6,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
+      write(*,'(a,f13.3,a,f10.6)') 'Rate (MF/s): ',(1.d-6*nflops)/avgtime, &
              ' Avg time (s): ', avgtime
     else
       write(*,'(a,e30.15)') 'Reference checksum = ', reference

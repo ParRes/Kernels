@@ -75,17 +75,9 @@ print('Numpy version  = ', numpy.version.version)
 
 
 @jit
-def nstream(length,A, B, C, scalar):
-    # range vs ndindex makes no difference on performance
-    #for i in range(0,length):
-    for i in numpy.ndindex(length):
+def nstream(length, A, B, C, scalar):
+    for i in range(length):
         A[i] += B[i] + scalar * C[i]
-
-    # this is slower
-    #A += B + scalar * C
-
-    # this is slowest
-    #A[:] += B[:] + scalar * C[:]
 
 
 def main():
@@ -128,13 +120,12 @@ def main():
 
     scalar = 3.0
 
-    for k in range(0,iterations+1):
+    nstream(length, A, B, C, scalar)
+    t0 = timer()
+    #A += B + scalar * C
 
-        if k<1: t0 = timer()
-
-        #A += B + scalar * C
-        nstream(length,A,B,C,scalar)
-
+    for k in range(iterations):
+        nstream(length, A, B, C, scalar)
 
     t1 = timer()
     nstream_time = t1 - t0

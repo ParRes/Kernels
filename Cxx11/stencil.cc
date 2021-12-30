@@ -162,7 +162,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  double stencil_time{0};
 
   prk::vector<double> in(n*n);
   prk::vector<double> out(n*n);

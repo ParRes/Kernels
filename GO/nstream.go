@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -40,9 +40,7 @@
 ///
 /// USAGE:   The program takes as input the number
 ///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
-///
-///          <progname> <# iterations> <vector length> <offset>
+///          vectors, and the offset between vectors.
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -83,7 +81,7 @@ func main() {
   //////////////////////////////////////////////////////////////////////
 
   if len(os.Args) < 2 {
-      fmt.Println("Usage: <# iterations> <vector length>")
+      fmt.Println("Usage: go run nstream.go -i <# iterations> -n <vector length>")
       os.Exit(1)
   }
 

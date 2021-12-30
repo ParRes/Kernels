@@ -6,17 +6,12 @@
 
 #include "CL/sycl.hpp"
 
-#ifdef __COMPUTECPP__
-#include "SYCL/experimental/usm.h"
-#endif
-
 namespace sycl = cl::sycl;
 
-#ifdef __COMPUTECPP__
-namespace syclx = cl::sycl::experimental;
-#else
-namespace syclx = cl::sycl;
-#endif
+//#ifdef __COMPUTECPP
+//#include <SYCL/experimental.hpp>
+//namespace syclx = cl::sycl::experimental;
+//#endif
 
 #ifdef PRK_SYCL_USE_FLOAT
 typedef float prk_float;
@@ -56,24 +51,25 @@ namespace prk {
     namespace SYCL {
 
         void print_device_platform(const sycl::queue & q) {
-#if ! ( defined(TRISYCL) || defined(__HIPSYCL__) )
-            auto device      = q.get_device();
-            auto platform    = device.get_platform();
-            std::cout << "SYCL Device:   " << device.get_info<sycl::info::device::name>() << std::endl;
-            std::cout << "SYCL Platform: " << platform.get_info<sycl::info::platform::name>() << std::endl;
+#if ! defined(TRISYCL)
+            auto d = q.get_device();
+            auto p = d.get_platform();
+            std::cout << "SYCL Device:   " << d.get_info<sycl::info::device::name>() << std::endl;
+            std::cout << "SYCL Platform: " << p.get_info<sycl::info::platform::name>() << std::endl;
 #endif
         }
 
         bool has_fp64(const sycl::queue & q) {
-#if defined(TRISYCL) || defined(__HIPSYCL__)
+#if defined(TRISYCL) || defined(__HIPSYCL__) || defined(DPCPP_CUDA)
             return true;
 #else
-            auto device      = q.get_device();
+            auto device = q.get_device();
             return device.has_extension(sycl::string_class("cl_khr_fp64"));
 #endif
         }
 
         void print_exception_details(sycl::exception & e) {
+            std::cout << e.what() << std::endl;
 #ifdef __COMPUTECPP__
             std::cout << e.get_file_name() << std::endl;
             std::cout << e.get_line_number() << std::endl;
@@ -81,6 +77,30 @@ namespace prk {
             std::cout << e.get_cl_error_message() << std::endl;
             std::cout << e.get_cl_code() << std::endl;
 #endif
+        }
+
+        // returns true if FP64 will not work
+        bool print_gen12lp_helper(const sycl::queue & q) {
+            auto d = q.get_device();
+            auto s = d.get_info<sycl::info::device::name>();
+            if ( s.find("Gen12LP") != std::string::npos) {
+                bool e1=false;
+                bool e2=false;
+                auto c1 = std::getenv("IGC_EnableDPEmulation");
+                auto c2 = std::getenv("OverrideDefaultFP64Settings");
+                std::string s1{c1};
+                std::string s2{c2};
+                if (s1 != "1" || s2 != "1") {
+                    std::cout << std::endl
+                              << "You are using Gen12LP, which emulates FP64.\n"
+                              << "Please try again with the following environment variables set:\n"
+                              << "    export IGC_EnableDPEmulation=1\n"
+                              << "    export OverrideDefaultFP64Settings=1\n"
+                              << std::endl;
+                    return true;
+                }
+            }
+            return false;
         }
 
     } // namespace SYCL

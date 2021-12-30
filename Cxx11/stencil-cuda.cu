@@ -182,19 +182,16 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  double stencil_time{0};
 
   const size_t nelems = (size_t)n * (size_t)n;
   const size_t bytes = nelems * sizeof(prk_float);
+
   prk_float * h_in;
   prk_float * h_out;
-#ifndef __CORIANDERCC__
+
   prk::CUDA::check( cudaMallocHost((void**)&h_in, bytes) );
   prk::CUDA::check( cudaMallocHost((void**)&h_out, bytes) );
-#else
-  h_in = new prk_float[nelems];
-  h_out = new prk_float[nelems];
-#endif
 
   for (int i=0; i<n; i++) {
     for (int j=0; j<n; j++) {
@@ -221,10 +218,7 @@ int main(int argc, char* argv[])
     // Add constant to solution to force refresh of neighbor data, if any
     add<<<dimGrid, dimBlock>>>(n, d_in);
 
-#ifndef __CORIANDERCC__
-    // silence "ignoring cudaDeviceSynchronize for now" warning
     prk::CUDA::check( cudaDeviceSynchronize() );
-#endif
   }
   stencil_time = prk::wtime() - stencil_time;
 

@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -163,7 +163,7 @@ int main(int argc, char * argv[])
     // z:=A gamma:=1
     // x:=B alpha:=1
     // y:=C beta:=three
-    ierr = VecAXPBYPCZ(A, one, three, one, B, C);
+    ierr = VecAXPBYPCZ(A, one, three, one, B, C); CHKERRQ(ierr);
   }
 
   ierr = PetscBarrier(NULL); CHKERRQ(ierr);

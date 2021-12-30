@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -51,7 +51,6 @@
 ///          number of words written, times the size of the words, divided
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
-///
 ///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
@@ -83,7 +82,7 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
+  int iterations;
   size_t length;
   try {
       if (argc < 3) {
@@ -99,11 +98,6 @@ int main(int argc, char * argv[])
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
-
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
-      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -112,13 +106,12 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double nstream_time(0);
+  double nstream_time{0};
 
   std::vector<double> A(length);
   std::vector<double> B(length);
@@ -171,6 +164,7 @@ int main(int argc, char * argv[])
   double epsilon=1.e-8;
   if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
+                << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;

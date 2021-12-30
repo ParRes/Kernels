@@ -56,14 +56,16 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#include <CL/sycl.hpp>
-
-#include "prk_util.h"
 #include "prk_sycl.h"
+#include "prk_util.h"
 
+#if BETA9 // and older
 #include <mkl_blas_sycl.hpp>
-#include <mkl_lapack_sycl.hpp>
-#include <mkl_sycl_types.hpp>
+#else
+#include <oneapi/mkl/blas.hpp>
+#endif
+
+using namespace oneapi; // oneapi::mkl -> mkl
 
 void prk_dgemm(sycl::queue &q, const int order, const int batches, prk_float *A, prk_float *B, prk_float *C)
 {
@@ -180,7 +182,7 @@ int main(int argc, char * argv[])
   // Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  double dgemm_time(0);
+  double dgemm_time{0};
 
   const int matrices = (batches == 0 ? 1 : abs(batches));
   const size_t nelems = (size_t)order * (size_t)order;
@@ -189,7 +191,7 @@ int main(int argc, char * argv[])
   // host buffers
   std::vector<prk_float*> h_c(ngpus,nullptr);
   for (int i=0; i<ngpus; ++i) {
-      h_c[i] = syclx::malloc_host<prk_float>(matrices * bytes, qs[i]);
+      h_c[i] = sycl::malloc_host<prk_float>(matrices * bytes, qs[i]);
   }
 
   // device buffers
@@ -198,9 +200,9 @@ int main(int argc, char * argv[])
   std::vector<prk_float*> d_c(ngpus, nullptr);
   for (int i=0; i<ngpus; ++i) {
       auto q = qs[i];
-      prk_float * p_a = d_a[i] = syclx::malloc_device<prk_float>(matrices * nelems, q);
-      prk_float * p_b = d_b[i] = syclx::malloc_device<prk_float>(matrices * nelems, q);
-      prk_float * p_c = d_c[i] = syclx::malloc_device<prk_float>(matrices * nelems, q);
+      prk_float * p_a = d_a[i] = sycl::malloc_device<prk_float>(matrices * nelems, q);
+      prk_float * p_b = d_b[i] = sycl::malloc_device<prk_float>(matrices * nelems, q);
+      prk_float * p_c = d_c[i] = sycl::malloc_device<prk_float>(matrices * nelems, q);
       q.submit([&](sycl::handler &cgh)
       {
           cgh.parallel_for( sycl::range<2>{(size_t)order,(size_t)order},
@@ -248,9 +250,9 @@ int main(int argc, char * argv[])
   for (int i=0; i<ngpus; ++i) {
       auto q = qs[i];
       q.wait();
-      syclx::free(d_c[i], q);
-      syclx::free(d_b[i], q);
-      syclx::free(d_a[i], q);
+      sycl::free(d_c[i], q);
+      sycl::free(d_b[i], q);
+      sycl::free(d_a[i], q);
   }
 
   //////////////////////////////////////////////////////////////////////
