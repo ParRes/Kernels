@@ -3,12 +3,12 @@ include ../common/PRKVERSION
 
 CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
 
-CXXFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
-
 # debugging
 ifdef VERBOSE
-    CXXFLAGS += -DVERBOSE
+    CPPFLAGS += -DVERBOSE
 endif
+
+CXXFLAGS  = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
 
 ifeq ($(USE_PRK_TBB_PARTITIONER),static)
     PRK_TBB_PARTITIONER=1
@@ -33,31 +33,35 @@ ASMFLAGS = -fverbose-asm
 
 OMPFLAGS = $(OPENMPFLAG) -DUSE_OPENMP
 TARGETFLAGS = $(OFFLOADFLAG)
-OPENCLFLAGS = $(OPENCLFLAG)
+OPENCLFLAGS = $(OPENCLFLAG) -DCL_HPP_MINIMUM_OPENCL_VERSION=120 -DCL_HPP_TARGET_OPENCL_VERSION=120 -DCL_HPP_ENABLE_EXCEPTIONS
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
-ORNLACCFLAGS = $(ORNLACCFLAG)
-TBBFLAGS = $(TBBFLAG) -DUSE_TBB -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
+OPENACCFLAGS = $(OPENACCFLAG)
+TBBFLAGS = $(TBBFLAG) -DPRK_TBB_PARTITIONER=$(PRK_TBB_PARTITIONER)
 CBLASFLAGS = $(CBLASFLAG) $(OPENMPFLAG)
 BOOSTFLAGS = $(BOOSTFLAG)
 RANGEFLAGS = $(RANGEFLAG) -DUSE_RANGES
-STLFLAGS = $(STLFLAG) $(RANGEFLAGS)
-PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS) -DUSE_PSTL
-RAJAFLAGS = $(RAJAFLAG) -DUSE_RAJA
+# add Boost for transform + zip_iterator
+STLFLAGS = $(STLFLAG) $(RANGEFLAGS) $(BOOSTFLAGS)
+PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS)
+EXECUTORSFLAGS = $(EXECUTORSFLAG) $(PSTLFLAGS) #$(RANGEFLAGS)
+RAJAFLAGS = $(RAJAFLAG)
 HPXFLAGS = -DUSE_HPX $(HPXFLAG) $(BOOSTFLAG) $(RANGEFLAGS)
 UPCXXFLAGS = $(CPPFLAGS) -DUSE_UPCXX $(UPCXXFLAG) $(BOOSTFLAG) $(RANGEFLAGS)
-THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS) -DUSE_THRUST
-KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG) $(RANGEFLAGS) -DUSE_KOKKOS
-SYCLFLAGS = $(SYCLFLAG) -DUSE_SYCL -DUSE_2D_INDEXING=0
-ORNLACCFLAGS = $(ORNLACCFLAG)
+THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
+KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
+SYCLFLAGS = $(SYCLFLAG)
+OPENACCFLAGS = $(OPENACCFLAG)
+STDPARFLAGS = $(STDPARFLAG) $(RANGEFLAGS)
 
 ifdef OCCADIR
   include ${OCCADIR}/scripts/makefile
 endif
-OCCAFLAGS = -DUSE_OCCA -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
+OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl \
-	rangefor kokkos raja cuda cublas sycl boost-compute thrust
+	ranges kokkos raja cuda cublas sycl dpcpp \
+	boost-compute thrust executor oneapi onemkl
 
 EXTRA=
 ifeq ($(shell uname -s),Darwin)
@@ -68,59 +72,44 @@ else
   EXTRA += target
 endif
 ifneq ($(findstring pgc++,$(CXX)),pgc++)
-  EXTRA += tbb pstl
+  EXTRA += pstl
 endif
 
-all: sequential vector valarray openmp taskloop stl rangefor opencl sycl $(EXTRA)
-
-#p2p: p2p-vector p2p-doacross-openmp p2p-hyperplane-openmp p2p-tasks-openmp p2p-openmp-target \
-     p2p-innerloop-vector-tbb p2p-vector-raja p2p-vector-tbb p2p-innerloop-opencl p2p-hyperplane-vector-tbb \
-     p2p-hyperplane-sycl p2p-hyperplane-vector-ornlacc p2p-tasks-tbb
-
-#stencil: stencil-valarray stencil-vector stencil-vector-async stencil-openmp stencil-openmp-target \
-	 stencil-vector-taskloop stencil-vector-stl stencil-vector-pstl stencil-vector-raja \
-	 stencil-vector-rangefor stencil-vector-tbb stencil-vector-thread stencil-kokkos stencil-opencl \
-	 stencil-cuda
-
-#transpose: transpose-valarray transpose-vector transpose-vector-async transpose-openmp transpose-openmp-target \
-	   transpose-vector-taskloop transpose-vector-stl transpose-vector-pstl transpose-vector-raja \
-	   transpose-vector-rangefor transpose-vector-tbb transpose-vector-thread transpose-kokkos transpose-opencl
-
-#nstream: nstream-valarray nstream-vector nstream-openmp nstream-openmp-target \
-	 nstream-vector-taskloop nstream-vector-stl nstream-vector-pstl nstream-vector-raja \
-	 nstream-vector-rangefor nstream-vector-tbb nstream-kokkos nstream-opencl
-
-#dgemm: dgemm-vector dgemm-cblas dgemm-cublas
+all: sequential vector valarray openmp taskloop stl ranges opencl sycl $(EXTRA)
 
 sequential: p2p stencil transpose nstream dgemm sparse
 
 vector: p2p-vector p2p-hyperplane-vector stencil-vector transpose-vector nstream-vector sparse-vector dgemm-vector \
-	transpose-vector-async transpose-vector-thread
+	transpose-async transpose-thread
 
 valarray: transpose-valarray nstream-valarray
 
-openmp: p2p-hyperplane-openmp p2p-tasks-openmp stencil-openmp transpose-openmp nstream-openmp
+openmp: p2p-hyperplane-openmp stencil-openmp transpose-openmp nstream-openmp p2p-tasks-openmp
 
 target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 
-taskloop: stencil-vector-taskloop transpose-vector-taskloop nstream-vector-taskloop
+taskloop: stencil-taskloop transpose-taskloop nstream-taskloop
+
+mpi: nstream-mpi stencil-mpi dgemm-mpi-cblas
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
-sycl: nstream-sycl p2p-hyperplane-sycl stencil-sycl transpose-sycl
+sycl: nstream-sycl nstream-sycl-explicit p2p-hyperplane-sycl stencil-sycl transpose-sycl pic-sycl \
+      stencil-2d-sycl transpose-2d-sycl pic-sycl \
+      nstream-sycl-usm nstream-sycl-explicit-usm stencil-sycl-usm transpose-sycl-usm
 
-sycl-usm: nstream-sycl-usm stencil-sycl-usm transpose-sycl-usm
+dpcpp: sycl nstream-dpcpp nstream-multigpu-dpcpp transpose-dpcpp
 
-sycl-explicit: nstream-sycl-explicit transpose-sycl-explicit
+tbb: p2p-innerloop-tbb p2p-tbb stencil-tbb transpose-tbb nstream-tbb \
+     p2p-hyperplane-tbb p2p-tasks-tbb
 
-tbb: p2p-innerloop-vector-tbb p2p-vector-tbb stencil-vector-tbb transpose-vector-tbb nstream-vector-tbb \
-     p2p-hyperplane-vector-tbb p2p-tasks-tbb
+stl: stencil-stl transpose-stl nstream-stl
 
-stl: stencil-vector-stl transpose-vector-stl nstream-vector-stl
+pstl: stencil-pstl transpose-pstl nstream-pstl
 
-pstl: stencil-vector-pstl transpose-vector-pstl nstream-vector-pstl
+ranges: stencil-ranges transpose-ranges nstream-ranges
 
-rangefor: stencil-vector-rangefor transpose-vector-rangefor nstream-vector-rangefor
+executors: nstream-executors transpose-executors
 
 kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
@@ -131,72 +120,120 @@ upcxx: nstream-upcxx
 raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
       p2p-raja transpose-raja nstream-raja stencil-raja # transpose-vector-raja
 
-cuda: stencil-cuda transpose-cuda nstream-cuda
+cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
+
+hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
+
+hipstl: nstream-hipstl
+
+hipblas: nstream-hipblas sgemm-hipblas dgemm-hipblas transpose-hipblas
 
 thrust: nstream-host-thrust nstream-device-thrust \
         transpose-host-thrust transpose-device-thrust
 
-cuda: transpose-cuda
-
-cublas: transpose-cublas nstream-cublas dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas
+cublas: transpose-cublas nstream-cublas dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas sgemm-cublas
 
 cblas: transpose-cblas dgemm-cblas
 
+onemkl: nstream-onemkl dgemm-onemkl dgemm-multigpu-onemkl
+
+onedpl: nstream-onedpl
+
+oneapi: onemkl dpcpp sycl onedpl
+
 occa: transpose-occa nstream-occa
 
-ornlacc: p2p-hyperplane-vector-ornlacc
+openacc: p2p-hyperplane-openacc
 
-boost-compute: nstream-vector-boost-compute
+stdpar: nstream-stdpar transpose-stdpar #stencil-stdpar p2p-stdpar
+
+boost-compute: nstream-boost-compute
 # busted
 #nstream-valarray-boost-compute
 
 p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
 
-transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
-	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+#transpose-opencl: transpose-opencl.cc transpose.cl prk_util.h prk_opencl.h
+#	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
-nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
-	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+#nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
+#	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
+
+%-mpi: %-mpi.cc prk_util.h prk_mpi.h
+	$(MPICXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) -o $@
+
+%-mpi-cblas: %-mpi-cblas.cc prk_util.h prk_mpi.h
+	$(CXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) $(CBLASFLAGS) -o $@
 
 %-opencl: %-opencl.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
-%-sycl: %-sycl.cc prk_util.h
+%-celerity: %-celerity.cc prk_util.h prk_sycl.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $(BOOSTFLAGS) $(CELERITYINC) $(MPIINC) $< $(CELERITYLIB) $(MPILIB) -o $@
+
+pic: pic.cc prk_util.h random_draw.c
+	$(CXX) $(CXXFLAGS) $< random_draw.c -o $@
+
+pic-sycl: pic-sycl.cc prk_util.h prk_sycl.h random_draw.c
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< random_draw.c -o $@
+
+#random_draw.o: random_draw.c random_draw.h
+#	$(CC) $(DEFAULT_OPT_FLAGS) $(CPPFLAGS) -c $< -o $@
+
+%-dpcpp: %-dpcpp.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
-%-sycl-usm: %-sycl-usm.cc prk_util.h
+%-sycl: %-sycl.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
-%-sycl-explicit: %-sycl-explicit.cc prk_util.h
+%-sycl-explicit-usm: %-sycl-explicit-usm.cc prk_util.h prk_sycl.h
 	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
 
-%-target: %-target.cc prk_util.h
+%-sycl-usm: %-sycl-usm.cc prk_util.h prk_sycl.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
+%-sycl-explicit: %-sycl-explicit.cc prk_util.h prk_sycl.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
+%-onedpl: %-onedpl.cc prk_util.h prk_sycl.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< -o $@
+
+%-onemkl: %-onemkl.cc prk_util.h prk_sycl.h
+	$(SYCLCXX) $(CPPFLAGS) $(SYCLFLAGS) $< $(ONEMKLFLAG) -o $@
+
+%-target: %-target.cc prk_util.h prk_openmp.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) $(TARGETFLAGS) -o $@
 
-%-openmp: %-openmp.cc prk_util.h
+%-openmp: %-openmp.cc prk_util.h prk_openmp.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
 
-%-taskloop: %-taskloop.cc prk_util.h
+%-taskloop: %-taskloop.cc prk_util.h prk_openmp.h
 	$(CXX) $(CXXFLAGS) $< $(OMPFLAGS) -o $@
 
-%-tbb: %-tbb.cc prk_util.h
+%-tbb: %-tbb.cc prk_util.h prk_tbb.h
 	$(info PRK help: Consider setting USE_PRK_TBB_PARTITIONER={static,affinity,simple} when invoking make)
 	$(CXX) $(CXXFLAGS) $< $(TBBFLAGS) -o $@
 
-%-stl: %-pstl.cc prk_util.h
+%-stl: %-stl.cc prk_util.h prk_pstl.h
 	$(CXX) $(CXXFLAGS) $< $(STLFLAGS) -o $@
 
-%-pstl: %-pstl.cc prk_util.h
+#%-stl: %-pstl.cc prk_util.h prk_pstl.h
+#	$(CXX) $(CXXFLAGS) $< $(STLFLAGS) -o $@
+
+%-pstl: %-pstl.cc prk_util.h prk_pstl.h
 	$(CXX) $(CXXFLAGS) $< $(PSTLFLAGS) -o $@
 
-%-rangefor: %-rangefor.cc prk_util.h
+%-ranges: %-ranges.cc prk_util.h prk_ranges.h
 	$(CXX) $(CXXFLAGS) $< $(RANGEFLAGS) -o $@
 
-%-boost-compute: %-boost-compute.cc prk_util.h
+%-executors: %-executors.cc prk_util.h prk_executors.h
+	$(CXX) $(CXXFLAGS) $< $(EXECUTORSFLAGS) -o $@
+
+%-boost-compute: %-boost-compute.cc prk_util.h prk_opencl.h
 	$(CXX) $(CXXFLAGS) $< $(BOOSTFLAGS) $(OPENCLFLAGS) -o $@
 
-%-raja: %-raja.cc prk_util.h
+%-raja: %-raja.cc prk_util.h prk_raja.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
 
 %-upcxx: %-upcxx.cc prk_util.h prk_upcxx.h
@@ -206,30 +243,39 @@ nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 	$(HPXCXX) --exe=$@ $(CXXFLAGS) $(HPXFLAGS) $<
 
 ifeq ($(PRK_KOKKOS_BACKEND),Cuda)
-%-kokkos: %-kokkos.cc prk_util.h
-	${KOKKOSDIR}/bin/nvcc_wrapper $(CPPFLAGS) $(CUDAFLAGS) $< $(KOKKOSFLAG) -DUSE_KOKKOS -DPRK_KOKKOS_BACKEND=Cuda -o $@
+%-kokkos: %-kokkos.cc prk_util.h prk_kokkos.h
+	$(NVCC) -x cu $(CPPFLAGS) $(CUDAFLAGS) $< $(KOKKOSFLAG) -DPRK_KOKKOS_BACKEND=Cuda -o $@
 else
-%-kokkos: %-kokkos.cc prk_util.h
+%-kokkos: %-kokkos.cc prk_util.h prk_kokkos.h
 	$(info PRK help: Set USE_PRK_KOKKOS_BACKEND={Threads,Serial,Cuda} when invoking make to not use OpenMP)
 	$(CXX) $(CXXFLAGS) $< $(KOKKOSFLAGS) -o $@
 endif
 
 # for host execution
-%-thrust: %-thrust.cc prk_util.h
+%-thrust: %-thrust.cc prk_util.h prk_thrust.h
 	$(CXX) $(CXXFLAGS) $< $(THRUSTFLAGS) -o $@
 
 # for device execution (must compiler as .cu)
-%-thrust: %-thrust.cu prk_util.h
+%-thrust: %-thrust.cu prk_util.h prk_thrust.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< $(THRUSTFLAGS) -o $@
 
 %-cuda: %-cuda.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -o $@
 
 %-mpi-cublas: %-mpi-cublas.cu prk_util.h prk_cuda.h prk_mpi.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas $(MPIFLAGS) -o $@
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt $(MPILIB) -o $@
 
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lcublas -o $@
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt -o $@
+
+%-hip: %-hip.cc prk_util.h prk_hip.h
+	$(HIPCC) $(HIPFLAGS) $(CPPFLAGS) $< -o $@
+
+%-hipstl: %-hipstl.cc prk_util.h prk_hip.h
+	$(HIPCC) $(HIPFLAGS) $(RANGEFLAGS) $(CPPFLAGS) -DHIP_THRUST $< -o $@
+
+%-hipblas: %-hipblas.cc prk_util.h prk_hip.h
+	$(HIPCC) $(HIPFLAGS) $(CPPFLAGS) $< -o $@
 
 %-cblas: %-cblas.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(CBLASFLAGS) -o $@
@@ -238,8 +284,11 @@ endif
 	$(info PRK help: Set OCCA_CXX=$(firstword $(CXX)) to use that compiler for OKL files.)
 	$(CXX) $(CXXFLAGS) $< $(OCCAFLAGS) -o $@
 
-%-ornlacc: %-ornlacc.cc prk_util.h
-	$(CXX) $(CXXFLAGS) $< $(ORNLACCFLAGS) -o $@
+%-openacc: %-openacc.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(OPENACCFLAGS) -o $@
+
+%-stdpar: %-stdpar.cc prk_util.h
+	$(CXX) $(CXXFLAGS) $< $(STDPARFLAGS) -o $@
 
 %: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -264,25 +313,34 @@ clean:
 	-rm -f *-openmp
 	-rm -f *-target
 	-rm -f *-taskloop
+	-rm -f *-mpi
 	-rm -f *-opencl
 	-rm -f *-sycl
-	-rm -f *-sycl-explicit
 	-rm -f *-sycl-usm
+	-rm -f *-sycl-explicit
+	-rm -f *-sycl-explicit-usm
+	-rm -f *-dpct
+	-rm -f *-dpcpp
+	-rm -f *-celerity
 	-rm -f *-tbb
 	-rm -f *-stl
 	-rm -f *-pstl
-	-rm -f *-rangefor
+	-rm -f *-ranges
+	-rm -f *-stdpar
 	-rm -f *-raja
 	-rm -f *-kokkos
 	-rm -f *-hpx
 	-rm -f *-thrust
 	-rm -f *-cuda
 	-rm -f *-cublas
+	-rm -f *-hip
+	-rm -f *-hipblas
 	-rm -f *-cblas
+	-rm -f *-onemkl
 	-rm -f *-occa
 	-rm -f *-boost-compute
-	-rm -f *-ornlacc
-	-rm -f transpose-vector-async transpose-vector-thread
+	-rm -f *-openacc
+	-rm -f transpose-async transpose-thread
 
 cleancl:
 	-rm -f star[123456789].cl

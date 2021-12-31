@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2018, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -32,28 +33,37 @@
 #ifndef PRK_PSTL_H
 #define PRK_PSTL_H
 
-#if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1800)
-#define USE_INTEL_PSTL
-#endif
+#include <ranges>
 
-#if defined(USE_PSTL)
-# if defined(__GNUC__) && (__GNUC__ >= 9)
-#  include <execution>
-#  include <algorithm>
-#  include <numeric>
-//#  include <memory>
-namespace exec = __pstl::execution;
-# elif defined(USE_INTEL_PSTL)
-#  include <pstl/execution>
-#  include <pstl/algorithm>
-#  include <pstl/numeric>
-//#  include <pstl/memory>
+#if defined(__GNUC__) && (__GNUC__ >= 9)
+
+# include <execution>
+# include <algorithm>
+# include <numeric>
+//namespace exec = __pstl::execution;
 namespace exec = std::execution;
-# elif defined(__GNUC__) && defined(__GNUC_MINOR__) && \
-       ( (__GNUC__ >= 8) || (__GNUC__ == 7) && (__GNUC_MINOR__ >= 2) )
-#  include <parallel/algorithm>
-#  include <parallel/numeric>
-# endif
+
+#elif defined(USE_LLVM_PSTL)
+
+# include <__pstl_execution>
+# include <__pstl_algorithm>
+# include <__pstl_numeric>
+namespace exec = std::execution;
+
+#elif defined(USE_ONEAPI_DPL)
+
+# include <oneapi/dpl/execution>
+# include <oneapi/dpl/algorithm>
+# include <oneapi/dpl/numeric>
+namespace exec = std::execution;
+
+#elif defined(USE_GITHUB_PSTL)
+
+# include <pstl/execution>
+# include <pstl/algorithm>
+# include <pstl/numeric>
+namespace exec = std::execution;
+
 #endif
 
 #endif /* PRK_PSTL_H */

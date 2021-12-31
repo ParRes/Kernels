@@ -1,5 +1,6 @@
 !
 ! Copyright (c) 2015, Intel Corporation
+! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
 ! modification, are permitted provided that the following conditions
@@ -52,7 +53,7 @@
 ! *******************************************************************
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   use omp_lib
   implicit none
   ! for argument parsing
@@ -64,10 +65,11 @@ program main
   integer(kind=INT32) ::  order                     ! order of a the matrix
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
+  real(kind=REAL64) ::  T(0:32,0:32)                ! Tile
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
-  !integer(kind=INT32) ::  it, jt, tile_size
+  integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp         ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
@@ -77,7 +79,7 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-  write(*,'(a46)') 'Fortran OpenMP TARGET Matrix transpose: B = A^T'
+  write(*,'(a47)') 'Fortran OpenMP TARGET Matrix transpose: B = A^T'
 
   if (command_argument_count().lt.2) then
     write(*,'(a17,i1)') 'argument count = ', command_argument_count()
@@ -89,7 +91,7 @@ program main
   call get_command_argument(1,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') iterations
   if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
+    write(*,'(a33,i5)') 'ERROR: iterations must be >= 1 : ', iterations
     stop 1
   endif
 
@@ -97,21 +99,34 @@ program main
   call get_command_argument(2,argtmp,arglen,err)
   if (err.eq.0) read(argtmp,'(i32)') order
   if (order .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
+    write(*,'(a28,i5)') 'ERROR: order must be >= 1 : ', order
     stop 1
   endif
 
   ! same default as the C implementation
-  !tile_size = 32
-  !if (command_argument_count().gt.2) then
-  !    call get_command_argument(3,argtmp,arglen,err)
-  !    if (err.eq.0) read(argtmp,'(i32)') tile_size
-  !endif
-  !if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-  !  write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
-  !                         ' must be >= 1 and <= ',order
-  !  tile_size = order ! no tiling
-  !endif
+  tile_size = 32
+  if (command_argument_count().gt.2) then
+      call get_command_argument(3,argtmp,arglen,err)
+      if (err.eq.0) read(argtmp,'(i32)') tile_size
+  endif
+  if ((tile_size.gt.order).or.(tile_size.lt.1)) then
+    tile_size = order
+  endif
+
+  if (tile_size.lt.order) then
+    if (mod(order,tile_size).ne.0) then
+      write(*,'(a50)') 'ERROR: order must be evenly divisible by tile_size'
+      stop 1
+    endif
+    if (tile_size.gt.32) then
+      write(*,'(a50)') 'ERROR: tile_size must be less than 32 to use temp space'
+      stop 1
+    endif
+  endif
+
+  write(*,'(a,i8)') 'Number of iterations = ', iterations
+  write(*,'(a,i8)') 'Matrix order         = ', order
+  write(*,'(a,i8)') 'Tile size            = ', tile_size
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -129,36 +144,55 @@ program main
     stop 1
   endif
 
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix order         = ', order
-  !write(*,'(a,i8)') 'Tile size            = ', tile_size
+  t0 = 0
 
-  !$omp parallel do simd collapse(2)
+  !$omp target data map(to: A) map(tofrom: B)
+
+  !$omp target teams distribute parallel do simd collapse(2)
   do j=1,order
     do i=1,order
       A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
       B(i,j) = 0
     enddo
   enddo
-  !$omp end parallel do simd
-
-  !$omp target data map(to: A) map(tofrom: B)
-
-  t0 = 0
+  !$omp end target teams distribute parallel do simd
 
   do k=0,iterations
 
     if (k.eq.1) t0 = omp_get_wtime()
 
-    !$omp target teams distribute parallel do simd collapse(2) schedule(static,1)
-    do j=1,order
-      do i=1,order
-        B(j,i) = B(j,i) + A(i,j)
-        A(i,j) = A(i,j) + 1
+    if (tile_size.lt.order) then
+      !$omp target teams distribute collapse(2) private(T)
+      do jt=1,order,tile_size
+        do it=1,order,tile_size
+          !$omp parallel do simd collapse(2) schedule(static,4)
+          do j=0,tile_size-1
+            do i=0,tile_size-1
+              T(i,j) = A(it+i,jt+j)
+              A(it+i,jt+j) = A(it+i,jt+j) + 1
+            enddo
+          enddo
+          !$omp end parallel do simd
+          !$omp parallel do simd collapse(2) schedule(static,4)
+          do i=0,tile_size-1
+            do j=0,tile_size-1
+              B(jt+j,it+i) = B(jt+j,it+i) + T(i,j)
+            enddo
+          enddo
+          !$omp end parallel do simd
+        enddo
       enddo
-    enddo
-    !$omp end target teams distribute parallel do simd
+      !$omp end target teams distribute
+    else
+      !$omp target teams distribute parallel do simd collapse(2) GPU_SCHEDULE
+      do j=1,order
+        do i=1,order
+          B(j,i) = B(j,i) + A(i,j)
+          A(i,j) = A(i,j) + 1
+        enddo
+      enddo
+      !$omp end target teams distribute parallel do simd
+    endif
 
   enddo ! iterations
 

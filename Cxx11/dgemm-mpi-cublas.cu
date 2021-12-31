@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2018, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -51,7 +52,7 @@
 ///          Other than OpenMP or standard C functions, the following
 ///          functions are used in this program:
 ///
-///          cblasDgemm()
+///          cublasDgemm()
 ///
 /// HISTORY: Written by Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, December, 2017.
@@ -64,8 +65,8 @@
 
 __global__ void init(int order, double * A, double * B, double * C)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
     if ((i<order) && (j<order)) {
       A[i*order+j] = i;
@@ -76,8 +77,8 @@ __global__ void init(int order, double * A, double * B, double * C)
 
 __global__ void init(int order, double * C)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
     if ((i<order) && (j<order)) {
       C[i*order+j] = 0;
@@ -87,7 +88,7 @@ __global__ void init(int order, double * C)
 int main(int argc, char * argv[])
 {
   {
-    prk::MPI::state mpi(argc,argv);
+    prk::MPI::state mpi(&argc,&argv);
 
     int np = prk::MPI::size();
     int me = prk::MPI::rank();
@@ -129,7 +130,7 @@ int main(int argc, char * argv[])
         order = std::atoi(argv[2]);
         if (order <= 0) {
           throw "ERROR: Matrix Order must be greater than 0";
-        } else if (order > std::floor(std::sqrt(INT_MAX))) {
+        } else if (order > prk::get_max_matrix_size()) {
           throw "ERROR: matrix dimension too large - overflow risk";
         }
     }
@@ -156,7 +157,7 @@ int main(int argc, char * argv[])
     // Allocate space for matrices
     //////////////////////////////////////////////////////////////////////
 
-    double dgemm_time(0);
+    double dgemm_time{0};
 
     const size_t nelems = (size_t)order * (size_t)order;
     const size_t bytes = nelems * sizeof(double);
@@ -169,14 +170,14 @@ int main(int argc, char * argv[])
     double * d_a;
     double * d_b;
     double * d_c;
-    prk::CUDA::check( cudaMalloc((void**)&d_a, bytes) );
-    prk::CUDA::check( cudaMalloc((void**)&d_b, bytes) );
+    d_a = prk::CUDA::malloc_device<double>(order*order);
+    d_b = prk::CUDA::malloc_device<double>(order*order);
     prk::CUDA::check( cudaMalloc((void**)&d_c, bytes) );
 
     init<<<dimGrid, dimBlock>>>(order, d_a, d_b, d_c);
 
     {
-      for (auto iter = 0; iter<=iterations; iter++) {
+      for (int iter = 0; iter<=iterations; iter++) {
 
         if (iter==1) {
             prk::MPI::barrier();
@@ -217,8 +218,8 @@ int main(int argc, char * argv[])
 
     const double epsilon = 1.0e-8;
     const double forder = static_cast<double>(order);
-    const double reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
-    double residuum(0);
+    const double reference = 0.25 * prk::pow(forder,3) * prk::pow(forder-1.0,2) * (iterations+1);
+    double residuum{0};
     const auto checksum = prk::reduce( &(h_c[0]), &(h_c[nelems]), 0.0);
     residuum += std::abs(checksum-reference)/reference;
 
@@ -244,7 +245,7 @@ int main(int argc, char * argv[])
         std::cout << "Solution validates" << std::endl;
       }
       auto time = dgemm_time/iterations;
-      auto nflops = 2.0 * std::pow(forder,3);
+      auto nflops = 2.0 * prk::pow(forder,3);
       auto rate = 1.0e-6 * nflops/time;
 
       double minrate = prk::MPI::min(rate);

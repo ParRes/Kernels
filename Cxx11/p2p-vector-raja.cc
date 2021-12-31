@@ -116,19 +116,19 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   std::vector<double> grid(m*n,0.0);
 
   // set boundary values (bottom and left side of grid)
-  for (auto j=0; j<n; j++) {
+  for (int j=0; j<n; j++) {
     grid[0*n+j] = static_cast<double>(j);
   }
-  for (auto i=0; i<m; i++) {
+  for (int i=0; i<m; i++) {
     grid[i*n+0] = static_cast<double>(i);
   }
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) pipeline_time = prk::wtime();
 
@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
         //grid[in] = grid[in - n] + grid[in - 1] - grid[in - n - 1];
     });
 #else
-    for (auto j=1; j<n; j++) {
+    for (int j=1; j<n; j++) {
       //RAJA::forall<thread_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
       RAJA::RangeSegment range(1, j+1);
       RAJA::forall<thread_exec>(range, [&](RAJA::Index_type i) {
@@ -158,7 +158,7 @@ int main(int argc, char* argv[])
         grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
       });
     }
-    for (auto j=n-2; j>=1; j--) {
+    for (int j=n-2; j>=1; j--) {
       //RAJA::forall<thread_exec>(RAJA::Index_type(1), RAJA::Index_type(j+1), [&](RAJA::Index_type i) {
       RAJA::RangeSegment range(1, j+1);
       RAJA::forall<thread_exec>(range, [&](RAJA::Index_type i) {
@@ -183,7 +183,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+  if ( (prk::abs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;

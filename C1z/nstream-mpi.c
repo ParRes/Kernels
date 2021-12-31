@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -76,7 +76,7 @@ int main(int argc, char * argv[])
   MPI_Comm_size(MPI_COMM_WORLD, &np);
 
   if (me==0) {
-      printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+      printf("Parallel Research Kernels version %d\n", PRKVERSION );
       printf("C11/MPI STREAM triad: A = B + scalar * C\n");
   }
 
@@ -90,7 +90,6 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  // number of times to do the transpose
   int iterations = atoi(argv[1]);
   if (iterations < 1) {
     if (me==0) printf("ERROR: iterations must be >= 1\n");
@@ -98,11 +97,10 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  // length of a the matrix
+  // length of a the vector
   size_t length = atol(argv[2]);
   if (length <= 0) {
-    if (me==0) printf("ERROR: Matrix length must be greater than 0\n");
-    MPI_Finalize();
+    printf("ERROR: Vector length must be greater than 0\n");
     return 1;
   }
 
@@ -110,7 +108,6 @@ int main(int argc, char * argv[])
       printf("Number of processes  = %d\n", np);
       printf("Number of iterations = %d\n", iterations);
       printf("Vector length        = %zu\n", length);
-      //printf("Offset               = %d\n", offset);
   }
 
   size_t local_length;

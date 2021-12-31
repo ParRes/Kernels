@@ -60,6 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 #include "p2p-kernel.h"
 
 int main(int argc, char* argv[])
@@ -123,7 +124,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   double * RESTRICT grid = new double[m*n];
 
@@ -151,7 +152,7 @@ int main(int argc, char* argv[])
 
       for (int i=1; i<m; i+=mc) {
         for (int j=1; j<n; j+=nc) {
-          OMP_TASK( firstprivate(m,n) shared(grid) depend(in:grid[(i-mc)*n+j],grid[i*n+(j-nc)]) depend(out:grid[i*n+j]) )
+          OMP_TASK( firstprivate(m,n) shared(grid) depend(in:grid[(i-mc)*n+j:1],grid[i*n+(j-nc):1]) depend(out:grid[i*n+j:1]) )
           sweep_tile(i, std::min(m,i+mc), j, std::min(n,j+nc), n, grid);
         }
       }
@@ -167,7 +168,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(n+m-2.));
-  if ( (std::fabs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+  if ( (prk::abs(grid[(m-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(m-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;

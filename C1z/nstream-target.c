@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -64,10 +64,11 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION );
+  printf("Parallel Research Kernels version %d\n", PRKVERSION );
   printf("C11/OpenMP TARGET STREAM triad: A = B + scalar * C\n");
 
   //////////////////////////////////////////////////////////////////////
@@ -79,26 +80,28 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  // number of times to do the transpose
   int iterations = atoi(argv[1]);
   if (iterations < 1) {
     printf("ERROR: iterations must be >= 1\n");
     return 1;
   }
 
-  // length of a the matrix
+  // length of a the vector
   size_t length = atol(argv[2]);
   if (length <= 0) {
-    printf("ERROR: Matrix length must be greater than 0\n");
+    printf("ERROR: Vector length must be greater than 0\n");
     return 1;
   }
 
-#ifdef _OPENMP
-  printf("Number of threads    = %d\n", omp_get_max_threads());
-#endif
+  int device = (argc > 3) ? atol(argv[3]) : omp_get_default_device();
+  if ( (device < 0 || omp_get_num_devices() <= device ) && (device != omp_get_default_device()) ) {
+    printf("ERROR: device number %d is not valid.\n", device);
+    return 1;
+  }
+
   printf("Number of iterations = %d\n", iterations);
   printf("Vector length        = %zu\n", length);
-  //printf("Offset               = %d\n", offset);
+  printf("OpenMP Device        = %d\n", device);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -113,31 +116,29 @@ int main(int argc, char * argv[])
 
   double scalar = 3.0;
 
-  // HOST
-  OMP_PARALLEL()
-  {
-    OMP_FOR_SIMD()
-    for (size_t i=0; i<length; i++) {
+  #pragma omp parallel for simd
+  for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
       B[i] = 2.0;
       C[i] = 2.0;
-    }
   }
 
-  // DEVICE
-  OMP_TARGET( data map(tofrom: A[0:length]) map(to: B[0:length], C[0:length]) )
+  #pragma omp target data map(tofrom: A[0:length]) map(to: B[0:length], C[0:length])
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) nstream_time = prk_wtime();
+      if (iter==1) nstream_time = omp_get_wtime();
 
-      OMP_TARGET( teams distribute parallel for simd schedule(static,1) )
+      #pragma omp target teams distribute parallel for simd
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }
     }
-    nstream_time = prk_wtime() - nstream_time;
+    nstream_time = omp_get_wtime() - nstream_time;
   }
+
+  prk_free(C);
+  prk_free(B);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -153,10 +154,12 @@ int main(int argc, char * argv[])
   ar *= length;
 
   double asum = 0.0;
-  OMP_PARALLEL_FOR_REDUCE( +:asum )
+  #pragma omp parallel for reduction(+:asum)
   for (size_t i=0; i<length; i++) {
       asum += fabs(A[i]);
   }
+
+  prk_free(A);
 
   double epsilon=1.e-8;
   if (fabs(ar-asum)/asum > epsilon) {
@@ -174,5 +177,3 @@ int main(int argc, char * argv[])
 
   return 0;
 }
-
-

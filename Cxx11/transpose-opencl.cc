@@ -59,13 +59,14 @@ template <typename T>
 void run(cl::Context context, int iterations, int order)
 {
   auto precision = (sizeof(T)==8) ? 64 : 32;
+  auto kfile = "transpose"+std::to_string(precision)+".cl";
 
-  cl::Program program(context, prk::opencl::loadProgram("transpose.cl"), true);
+  cl::Program program(context, prk::opencl::loadProgram(kfile), true);
 
   auto function = (precision==64) ? "transpose64" : "transpose32";
 
   cl_int err;
-  auto kernel = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program, function, &err);
+  auto kernel = cl::KernelFunctor<int, cl::Buffer, cl::Buffer>(program, function, &err);
   if(err != CL_SUCCESS){
     std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
     std::cout << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
@@ -88,9 +89,9 @@ void run(cl::Context context, int iterations, int order)
   cl::Buffer d_a = cl::Buffer(context, begin(h_a), end(h_a), false);
   cl::Buffer d_b = cl::Buffer(context, begin(h_b), end(h_b), false);
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
@@ -107,12 +108,12 @@ void run(cl::Context context, int iterations, int order)
   // TODO: replace with std::generate, std::accumulate, or similar
   const double addit = (iterations+1.0) * (0.5*iterations);
   double abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(iterations+1)+addit;
-      abserr += std::fabs(static_cast<double>(h_b[ji]) - reference);
+      abserr += prk::abs(static_cast<double>(h_b[ji]) - reference);
     }
   }
   //
@@ -142,7 +143,7 @@ int main(int argc, char* argv[])
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OpenCL Matrix transpose: B = A^T" << std::endl;
 
-  prk::opencl::listPlatforms();
+  //prk::opencl::listPlatforms();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -165,8 +166,10 @@ int main(int argc, char* argv[])
       order = std::atol(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
+      } else if (order > 1234) {
+        std::cerr << "WARNING: answer might be wrong, because order>1234 breaks for unknown reasons\n";
       }
   }
   catch (const char * e) {
@@ -181,49 +184,24 @@ int main(int argc, char* argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
-  cl_int err = CL_SUCCESS;
-
-  cl::Context cpu(CL_DEVICE_TYPE_CPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(cpu) )
-  {
-    const int precision = prk::opencl::precision(cpu);
-
-    std::cout << "CPU Precision         = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(cpu, iterations, order);
-    } else {
-        run<float>(cpu, iterations, order);
-    }
-  }
-
-  cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(gpu) )
-  {
-    const int precision = prk::opencl::precision(gpu);
-
-    std::cout << "GPU Precision         = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(gpu, iterations, order);
-    } else {
-        run<float>(gpu, iterations, order);
-    }
-  }
-
-  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(acc) )
-  {
-
-    const int precision = prk::opencl::precision(acc);
-
-    std::cout << "ACC Precision         = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(acc, iterations, order);
-    } else {
-        run<float>(acc, iterations, order);
-    }
+  std::vector<cl::Platform> platforms;
+  cl::Platform::get(&platforms);
+  for (auto i : platforms) {
+      std::vector<cl::Device> devices;
+      i.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+      for (auto j : devices) {
+          auto t = j.getInfo<CL_DEVICE_TYPE>();
+          if (t == CL_DEVICE_TYPE_CPU || t == CL_DEVICE_TYPE_GPU) {
+              std::cout << "\n" << "CL_DEVICE_NAME=" << j.getInfo<CL_DEVICE_NAME>() << "\n";
+              auto e = j.getInfo<CL_DEVICE_EXTENSIONS>();
+              auto has64 = prk::stringContains(e,"cl_khr_fp64");
+              cl::Context ctx(j);
+              run<float>(ctx, iterations, order);
+              if (has64) {
+                  run<double>(ctx, iterations, order);
+              }
+          }
+      }
   }
 
   return 0;

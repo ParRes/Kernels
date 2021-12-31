@@ -67,22 +67,17 @@
 template <typename T> class init;
 template <typename T> class add;
 
-#if USE_2D_INDEXING
-template <typename T>
-void nothing(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buffer<T, 2> & d_out)
-#else
 template <typename T>
 void nothing(sycl::queue & q, const size_t n, sycl::buffer<T> & d_in, sycl::buffer<T> & d_out)
-#endif
 {
     std::cout << "You are trying to use a stencil that does not exist.\n";
     std::cout << "Please generate the new stencil using the code generator\n";
     std::cout << "and add it to the case-switch in the driver." << std::endl;
-    prk::abort();
+    prk::Abort();
 }
 
 template <typename T>
-void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star, size_t radius)
+void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star, size_t radius)
 {
   auto stencil = nothing<T>;
   if (star) {
@@ -106,11 +101,15 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   }
 #endif
 
+  size_t padded_n = block_size * prk::divceil(n,block_size);
+  sycl::range<2> global{padded_n,padded_n};
+  sycl::range<2> local{block_size,block_size};
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double stencil_time(0);
+  double stencil_time{0};
 
   std::vector<T> h_in(n*n,0);
   std::vector<T> h_out(n*n,0);
@@ -118,32 +117,17 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   try {
 
     // initialize device buffers from host buffers
-#if USE_2D_INDEXING
-    sycl::buffer<T, 2> d_in  { sycl::range<2> {n, n} };
-    sycl::buffer<T, 2> d_out { h_out.data(), sycl::range<2> {n, n} };
-#else
-    // FIXME: if I don't initialize this buffer from host, the results are wrong.  Why?
-    //sycl::buffer<T> d_in  { sycl::range<1> {n*n} };
     sycl::buffer<T> d_in  { h_in.data(),  h_in.size() };
     sycl::buffer<T> d_out { h_out.data(), h_out.size() };
-#endif
 
     q.submit([&](sycl::handler& h) {
-
-      // accessor methods
       auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
-
-      h.parallel_for<class init<T>>(sycl::range<2> {n, n}, [=] (sycl::item<2> it) {
-#if USE_2D_INDEXING
-          sycl::id<2> xy = it.get_id();
-          auto i = it[0];
-          auto j = it[1];
-          in[xy] = static_cast<T>(i+j);
-#else
-          auto i = it[0];
-          auto j = it[1];
-          in[i*n+j] = static_cast<T>(i+j);
-#endif
+      h.parallel_for<class init<T>>(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
+          const size_t i = it.get_global_id(0);
+          const size_t j = it.get_global_id(1);
+          if ((i<n) && (j<n)) {
+            in[i*n+j] = static_cast<T>(i+j);
+          }
       });
     });
     q.wait();
@@ -153,30 +137,14 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
       if (iter==1) stencil_time = prk::wtime();
 
       stencil(q, n, d_in, d_out);
-#ifdef TRISYCL
       q.wait();
-#endif
 
       q.submit([&](sycl::handler& h) {
-
-        // accessor methods
         auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
-
-        // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0},
-                                  [=] (sycl::item<2> it) {
-#if USE_2D_INDEXING
-            sycl::id<2> xy = it.get_id();
-            in[xy] += static_cast<T>(1);
-#else
-#if 0 // This is noticeably slower :-(
-            auto i = it[0];
-            auto j = it[1];
-            in[i*n+j] += 1.0;
-#else
-            in[it[0]*n+it[1]] += static_cast<T>(1);
-#endif
-#endif
+        h.parallel_for<class add<T>>(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
+            const size_t i = it.get_global_id(0);
+            const size_t j = it.get_global_id(1);
+            in[i*n+j] += static_cast<T>(1);
         });
       });
       q.wait();
@@ -208,7 +176,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   double norm(0);
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
-      norm += std::fabs(h_out[i*n+j]);
+      norm += prk::abs(h_out[i*n+j]);
     }
   }
   norm /= active_points;
@@ -216,7 +184,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t tile_size, bool star,
   // verify correctness
   const double epsilon = 1.0e-8;
   const double reference_norm = 2*(iterations+1);
-  if (std::fabs(norm-reference_norm) > epsilon) {
+  if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
   } else {
@@ -244,12 +212,15 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t n, tile_size;
+  size_t n, block_size;
   bool star = true;
   size_t radius = 2;
+
+  block_size = 16;
+
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <array dimension> [<tile size> <star/grid> <stencil radius>]";
+        throw "Usage: <# iterations> <array dimension> [<block size> <star/grid> <stencil radius>]";
       }
 
       // number of times to run the algorithm
@@ -262,16 +233,14 @@ int main(int argc, char * argv[])
       n  = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimension must be positive";
-      } else if (n > std::floor(std::sqrt(INT_MAX))) {
+      } else if (n > prk::get_max_matrix_size()) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-      // default tile size for tiling of local transpose
-      tile_size = 32;
       if (argc > 3) {
-          tile_size = std::atoi(argv[3]);
-          if (tile_size <= 0) tile_size = n;
-          if (tile_size > n) tile_size = n;
+          block_size = std::atoi(argv[3]);
+          if (block_size <= 0) block_size = n;
+          if (block_size > n) block_size = n;
       }
 
       // stencil pattern
@@ -298,6 +267,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Block size           = " << block_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
@@ -305,67 +275,63 @@ int main(int argc, char * argv[])
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
-#ifdef USE_OPENCL
-  prk::opencl::listPlatforms();
-#endif
-
   try {
-#if SYCL_TRY_CPU_QUEUE
-    if (n<10000) {
-        sycl::queue q(sycl::host_selector{});
-        prk::SYCL::print_device_platform(q);
-        run<float>(q, iterations, n, tile_size, star, radius);
-        run<double>(q, iterations, n, tile_size, star, radius);
-    } else {
-        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
-    }
-#endif
-
-    // CPU requires spir64 target
-#if SYCL_TRY_CPU_QUEUE
-    if (1) {
-        sycl::queue q(sycl::cpu_selector{});
-        prk::SYCL::print_device_platform(q);
-        bool has_spir = prk::SYCL::has_spir(q);
-        if (has_spir) {
-          run<float>(q, iterations, n, tile_size, star, radius);
-          run<double>(q, iterations, n, tile_size, star, radius);
-        }
-    }
-#endif
-
-    // NVIDIA GPU requires ptx64 target
-#if SYCL_TRY_GPU_QUEUE
-    if (1) {
-        sycl::queue q(sycl::gpu_selector{});
-        prk::SYCL::print_device_platform(q);
-        bool has_spir = prk::SYCL::has_spir(q);
-        bool has_fp64 = prk::SYCL::has_fp64(q);
-        bool has_ptx  = prk::SYCL::has_ptx(q);
-        if (!has_fp64) {
-          std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
-        }
-        if (has_spir || has_ptx) {
-          run<float>(q, iterations, n, tile_size, star, radius);
-          if (has_fp64) {
-            run<double>(q, iterations, n, tile_size, star, radius);
-          }
-        }
-    }
-#endif
+    sycl::queue q{sycl::host_selector{}};
+    prk::SYCL::print_device_platform(q);
+    run<float>(q, iterations, n, block_size, star, radius);
+    run<double>(q, iterations, n, block_size, star, radius);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
     prk::SYCL::print_exception_details(e);
-    return 1;
   }
   catch (std::exception & e) {
     std::cout << e.what() << std::endl;
-    return 1;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
-    return 1;
+  }
+
+  try {
+    sycl::queue q{sycl::cpu_selector{}};
+    prk::SYCL::print_device_platform(q);
+    run<float>(q, iterations, n, block_size, star, radius);
+    run<double>(q, iterations, n, block_size, star, radius);
+  }
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+  }
+  catch (std::exception & e) {
+    std::cout << e.what() << std::endl;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+  }
+
+  try {
+    sycl::queue q{sycl::gpu_selector{}};
+    prk::SYCL::print_device_platform(q);
+    bool has_fp64 = prk::SYCL::has_fp64(q);
+    if (has_fp64) {
+      if (prk::SYCL::print_gen12lp_helper(q)) return 1;
+    }
+    run<float>(q, iterations, n, block_size, star, radius);
+    if (has_fp64) {
+      run<double>(q, iterations, n, block_size, star, radius);
+    } else {
+      std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
+    }
+  }
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+  }
+  catch (std::exception & e) {
+    std::cout << e.what() << std::endl;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
   }
 
   return 0;

@@ -1,5 +1,5 @@
 subroutine star1(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -7,8 +7,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=1,n-1-1
-      do j=1,n-1-1
+    do i=2,n-1
+      do j=2,n-1
         out(i,j) = out(i,j) &
                  + in(i+0,j-1) * (-0.5d0) &
                  + in(i-1,j+0) * (-0.5d0) &
@@ -22,7 +22,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star2(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -30,8 +30,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=2,n-2-1
-      do j=2,n-2-1
+    do i=3,n-2
+      do j=3,n-2
         out(i,j) = out(i,j) &
                  + in(i+0,j-2) * (-0.125d0) &
                  + in(i+0,j-1) * (-0.25d0) &
@@ -49,7 +49,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star3(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -57,8 +57,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=3,n-3-1
-      do j=3,n-3-1
+    do i=4,n-3
+      do j=4,n-3
         out(i,j) = out(i,j) &
                  + in(i+0,j-3) * (-0.05555555555555555d0) &
                  + in(i+0,j-2) * (-0.08333333333333333d0) &
@@ -80,7 +80,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star4(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -88,8 +88,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=4,n-4-1
-      do j=4,n-4-1
+    do i=5,n-4
+      do j=5,n-4
         out(i,j) = out(i,j) &
                  + in(i+0,j-4) * (-0.03125d0) &
                  + in(i+0,j-3) * (-0.041666666666666664d0) &
@@ -115,7 +115,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star5(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -123,8 +123,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=5,n-5-1
-      do j=5,n-5-1
+    do i=6,n-5
+      do j=6,n-5
         out(i,j) = out(i,j) &
                  + in(i+0,j-5) * (-0.02d0) &
                  + in(i+0,j-4) * (-0.025d0) &
@@ -154,7 +154,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star6(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -162,8 +162,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=6,n-6-1
-      do j=6,n-6-1
+    do i=7,n-6
+      do j=7,n-6
         out(i,j) = out(i,j) &
                  + in(i+0,j-6) * (-0.013888888888888888d0) &
                  + in(i+0,j-5) * (-0.016666666666666666d0) &
@@ -197,7 +197,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star7(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -205,8 +205,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=7,n-7-1
-      do j=7,n-7-1
+    do i=8,n-7
+      do j=8,n-7
         out(i,j) = out(i,j) &
                  + in(i+0,j-7) * (-0.01020408163265306d0) &
                  + in(i+0,j-6) * (-0.011904761904761904d0) &
@@ -244,7 +244,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star8(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -252,8 +252,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=8,n-8-1
-      do j=8,n-8-1
+    do i=9,n-8
+      do j=9,n-8
         out(i,j) = out(i,j) &
                  + in(i+0,j-8) * (-0.0078125d0) &
                  + in(i+0,j-7) * (-0.008928571428571428d0) &
@@ -295,7 +295,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine star9(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -303,8 +303,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=9,n-9-1
-      do j=9,n-9-1
+    do i=10,n-9
+      do j=10,n-9
         out(i,j) = out(i,j) &
                  + in(i+0,j-9) * (-0.006172839506172839d0) &
                  + in(i+0,j-8) * (-0.006944444444444444d0) &
@@ -350,7 +350,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid1(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -358,8 +358,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=1,n-1-1
-      do j=1,n-1-1
+    do i=2,n-1
+      do j=2,n-1
         out(i,j) = out(i,j) &
                  + in(i-1,j-1) * (-0.25d0) &
                  + in(i+1,j-1) * (-0.25d0) &
@@ -373,7 +373,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid2(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -381,8 +381,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=2,n-2-1
-      do j=2,n-2-1
+    do i=3,n-2
+      do j=3,n-2
         out(i,j) = out(i,j) &
                  + in(i-2,j-2) * (-0.0625d0) &
                  + in(i+1,j-2) * (-0.020833333333333332d0) &
@@ -406,7 +406,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid3(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -414,8 +414,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=3,n-3-1
-      do j=3,n-3-1
+    do i=4,n-3
+      do j=4,n-3
         out(i,j) = out(i,j) &
                  + in(i-3,j-3) * (-0.027777777777777776d0) &
                  + in(i+1,j-3) * (-0.005555555555555556d0) &
@@ -455,7 +455,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid4(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -463,8 +463,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=4,n-4-1
-      do j=4,n-4-1
+    do i=5,n-4
+      do j=5,n-4
         out(i,j) = out(i,j) &
                  + in(i-4,j-4) * (-0.015625d0) &
                  + in(i+1,j-4) * (-0.002232142857142857d0) &
@@ -526,7 +526,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid5(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -534,8 +534,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=5,n-5-1
-      do j=5,n-5-1
+    do i=6,n-5
+      do j=6,n-5
         out(i,j) = out(i,j) &
                  + in(i-5,j-5) * (-0.01d0) &
                  + in(i+1,j-5) * (-0.0011111111111111111d0) &
@@ -625,7 +625,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid6(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -633,8 +633,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=6,n-6-1
-      do j=6,n-6-1
+    do i=7,n-6
+      do j=7,n-6
         out(i,j) = out(i,j) &
                  + in(i-6,j-6) * (-0.006944444444444444d0) &
                  + in(i+1,j-6) * (-0.0006313131313131314d0) &
@@ -758,7 +758,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid7(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -766,8 +766,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=7,n-7-1
-      do j=7,n-7-1
+    do i=8,n-7
+      do j=8,n-7
         out(i,j) = out(i,j) &
                  + in(i-7,j-7) * (-0.00510204081632653d0) &
                  + in(i+1,j-7) * (-0.0003924646781789639d0) &
@@ -931,7 +931,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid8(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -939,8 +939,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=8,n-8-1
-      do j=8,n-8-1
+    do i=9,n-8
+      do j=9,n-8
         out(i,j) = out(i,j) &
                  + in(i-8,j-8) * (-0.00390625d0) &
                  + in(i+1,j-8) * (-0.00026041666666666666d0) &
@@ -1150,7 +1150,7 @@ integer(kind=INT32) :: i,j
 end subroutine
 
 subroutine grid9(n, in, out)
-use iso_fortran_env
+use, intrinsic :: iso_fortran_env
 implicit none
 !$omp declare target
 integer(kind=INT32), intent(in) :: n
@@ -1158,8 +1158,8 @@ real(kind=REAL64), intent(in) :: in(n,n)
 real(kind=REAL64), intent(inout) :: out(n,n)
 integer(kind=INT32) :: i,j
     !$omp teams distribute parallel for simd collapse(2) schedule(static,1)
-    do i=9,n-9-1
-      do j=9,n-9-1
+    do i=10,n-9
+      do j=10,n-9
         out(i,j) = out(i,j) &
                  + in(i-9,j-9) * (-0.0030864197530864196d0) &
                  + in(i+1,j-9) * (-0.00018155410312273057d0) &

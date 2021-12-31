@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 
       // number of times to run the pipeline algorithm
       iterations  = std::atoi(argv[1]);
-      if (iterations < 0) {
+      if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
       n = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimensions must be positive";
-      } else if ( static_cast<size_t>(n)*static_cast<size_t>(n) > INT_MAX) {
+      } else if ( n > prk::get_max_matrix_size() ) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto pipeline_time = 0.0; // silence compiler warning
+  double pipeline_time{0}; // silence compiler warning
 
   double * RESTRICT grid = new double[n*n];
 
@@ -133,8 +133,8 @@ int main(int argc, char* argv[])
   {
     // TODO block this
     OMP_FOR_SIMD
-    for (auto i=0; i<n; i++) {
-      for (auto j=0; j<n; j++) {
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
       }
     }
@@ -142,16 +142,16 @@ int main(int argc, char* argv[])
     // set boundary values (bottom and left side of grid)
     OMP_MASTER
     {
-      for (auto j=0; j<n; j++) {
+      for (int j=0; j<n; j++) {
         grid[0*n+j] = static_cast<double>(j);
       }
-      for (auto i=0; i<n; i++) {
+      for (int i=0; i<n; i++) {
         grid[i*n+0] = static_cast<double>(i);
       }
     }
     OMP_BARRIER
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
           OMP_BARRIER
@@ -160,11 +160,11 @@ int main(int argc, char* argv[])
       }
 
       if (nc==1) {
-        for (auto i=2; i<=2*n-2; i++) {
+        for (int i=2; i<=2*n-2; i++) {
           OMP_FOR_SIMD
-          for (auto j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
-            const auto x = i-j+1;
-            const auto y = j-1;
+          for (int j=std::max(2,i-n+2); j<=std::min(i,n); j++) {
+            const int x = i-j+1;
+            const int y = j-1;
             grid[x*n+y] = grid[(x-1)*n+y] + grid[x*n+(y-1)] - grid[(x-1)*n+(y-1)];
           }
         }
@@ -192,7 +192,7 @@ int main(int argc, char* argv[])
 
   const double epsilon = 1.e-8;
   auto corner_val = ((iterations+1.)*(2.*n-2.));
-  if ( (std::fabs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
+  if ( (prk::abs(grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
     return 1;

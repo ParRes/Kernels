@@ -25,36 +25,30 @@ See https://software.intel.com/en-us/articles/oneapi-repo-instructions.
 
 ### Build from source
 
-See https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md for details.
+Install CMake 3.14 from source.  None of the package managers seem to have a new enough version.
 
-The following is my automation once the repo is cloned.
+Install Ninja from package manager or https://ninja-build.org/.
 
+Install GCC 9 (something newer than GCC 4 is required, but why not install something reasonable?).
+
+If you are on a system with limited memory or multiple users, replace `nproc` with something nicer.
 ```sh
-#!/bin/bash
+git clean -dfx
+export CC=gcc-9
+export CXX=g++-9
+python3 ./buildbot/configure.py [--arm] [--cuda] [--cmake-opt="-DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0"]
+python3 ./buildbot/compile.py -j`nproc`
+python3 ./buildbot/check.py
+```
 
-export SYCL_HOME=$HOME/ISYCL
+The optional arguments are associated with platforms such as the Xavier AGX, as shown below.
+```sh
+python3 ./buildbot/configure.py --arm --cuda --cmake-opt="-DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0"
+```
 
-#cd $SYCL_HOME/llvm && time git checkout usmapi && time git pull
-cd $SYCL_HOME/llvm && time git checkout sycl && time git pull
-
-rm -rf $SYCL_HOME/build
-
-mkdir -p $SYCL_HOME/build && \
-    cd $SYCL_HOME/build && \
-    time cmake \
-        -DCMAKE_INSTALL_PREFIX=/opt/isycl \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DLLVM_ENABLE_PROJECTS="clang;llvm-spirv;sycl" \
-        -DLLVM_EXTERNAL_PROJECTS="llvm-spirv;sycl" \
-        -DLLVM_EXTERNAL_SYCL_SOURCE_DIR=$SYCL_HOME/llvm/sycl \
-        -DLLVM_EXTERNAL_LLVM_SPIRV_SOURCE_DIR=$SYCL_HOME/llvm/llvm-spirv \
-        -DLLVM_TOOL_SYCL_BUILD=ON \
-        -DLLVM_TOOL_LLVM_SPIRV_BUILD=ON \
-        $SYCL_HOME/llvm/llvm && \
-
-time make -j4 sycl-toolchain
-
-time make -j4 sycl-toolchain install #DESTDIR=/opt/isycl
+It may also be necessary to apply the following (evil) `CPATH` hack on ARM systems.
+```
+export CPATH=/usr/include/aarch64-linux-gnu:$CPATH
 ```
 
 ## hipSYCL

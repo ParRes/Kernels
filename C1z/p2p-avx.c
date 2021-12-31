@@ -59,11 +59,14 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
+#ifndef __AVX__
+#error Your compiler does not support AVX!  Use -mavx or equivalent.
+#endif
+
 #include "prk_util.h"
 
-#include "immintrin.h"
-
 #if 1
+#include "immintrin.h"
 void print_m256d(const char * label, __m256d r)
 {
   double d[4];
@@ -74,8 +77,9 @@ void print_m256d(const char * label, __m256d r)
 
 static inline void sweep_tile(int startm, int endm,
                               int startn, int endn,
-                              int n, double g[])
+                              int n, double g[restrict])
 {
+#if 0
   const __m256d zero  = _mm256_setzero_pd();
   const __m256d ones  = _mm256_cmp_pd( _mm256_setzero_pd() , _mm256_setzero_pd() , _CMP_EQ_OQ);
   const __m256d el1   = _mm256_castsi256_pd( _mm256_set_epi8(0,0,0,0,0,0,0,0,
@@ -87,6 +91,7 @@ static inline void sweep_tile(int startm, int endm,
                                                              255,255,255,255,255,255,255,255,
                                                              255,255,255,255,255,255,255,255) );
   const __m256i mask  = _mm256_set_epi64x(0,0,0,-1);
+#endif
   for (int i=startm; i<endm; i++) {
     int j;
     for (j=startn; j<endn-3; j+=4) {
@@ -109,25 +114,16 @@ static inline void sweep_tile(int startm, int endm,
       __m256d i1 = _mm256_and_pd( i0 , el12 );              // { g[ i ][j-1] - g[i-1][j-1] , g[ i ][ j ] + g[i-1][ j ] , 0 , 0 }
       __m256d i2 = _mm256_hadd_pd( i1 , zero );             // { g[ i ][j-1] - g[i-1][j-1] + g[ i ][ j ] + g[i-1][ j ] , .. }
       _mm256_maskstore_pd( &( g[i*n+j] ) , mask, i2 );      // g[i][j] = { g[i][j-1] - g[i-1][j-1] + g[i][j] + g[i-1][j] }
-#elif 0
-      // NO UNROLLING
-      double c0[4] = { g[(i-1)*n+(j-1)] , g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] };
-      double c1[4] = { g[  i  *n+(j-1)] , g[  i  *n+(j+0)] , g[  i  *n+(j+1)] , g[  i  *n+(j+2)] };
-      double j1[4] = { c1[0] , 0 , 0 , 0 };
-      double i0[4] = { j1[0] - c0[0] , j1[1] + c0[1] , j1[2] - c0[2] , j1[3] + c0[3] };
-      double i1[4] = { i0[0] , i0[1] , 0 , 0 };
-      double i2[4] = { i1[0] + i1[1] , 0 , i1[2] + i1[3] , 0 };
-      g[i*n+j] = i2[0];
 #elif 1
       // WORKS
-      double c0s[4] = { g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] }; // shifted
-      double c0r[4] = { g[(i-1)*n+(j-1)] , g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] }; // regular
-      double i0[4]  = { c0s[0] - c0r[0] , c0s[1] - c0r[1] ,c0s[2] - c0r[2] ,c0s[3] - c0r[3] }; // subtract
+      double c0r[4] = { g[(i-1)*n+(j-1)] , g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] }; // regular
+      double c0s[4] = { g[(i-1)*n+(j+0)] , g[(i-1)*n+(j+1)] , g[(i-1)*n+(j+2)] , g[(i-1)*n+(j+3)] }; // shifted
       double c1[4]  = { g[  i  *n+(j-1)] , g[  i  *n+(j+0)] , g[  i  *n+(j+1)] , g[  i  *n+(j+2)] }; // regular
+      double i0[4]  = { c0s[0] - c0r[0] , c0s[1] - c0r[1] , c0s[2] - c0r[2] , c0s[3] - c0r[3] }; // subtract
       double i1[4]  = { c1[0] + i0[0] , 0 , 0 };        // add first element
       double i2[4]  = { 0 , i1[0] , 0 , 0 };            // shift right
       double i3[4]  = { 0 , i2[1] + i0[1] , 0 , 0 };    // add second element
-      double i4[4]  = { 0 , 0 , i3[2] , 0 };            // shift right
+      double i4[4]  = { 0 , 0 , i3[1] , 0 };            // shift right
       double i5[4]  = { 0 , 0 , i4[2] + i0[2] , 0 };    // add third element
       double i6[4]  = { 0 , 0 , 0 , i5[2] };            // shift right
       double i7[4]  = { 0 , 0 , 0 , i6[3] + i0[3] };    // add fourth element
@@ -135,20 +131,18 @@ static inline void sweep_tile(int startm, int endm,
       g[i*n+j+1] = i3[1];
       g[i*n+j+2] = i5[2];
       g[i*n+j+3] = i7[3];
-      //printf("g[%d][%d]=%f\n",i,j+0,g[i*n+j+0]);
-      //printf("g[%d][%d]=%f\n",i,j+1,g[i*n+j+1]);
-      //printf("g[%d][%d]=%f\n",i,j+2,g[i*n+j+2]);
-      //printf("g[%d][%d]=%f\n",i,j+3,g[i*n+j+3]);
 #else
-      // WORKS
-      g[i*n+j] = g[i*n+j-1] + g[(i-1)*n+j] - g[(i-1)*n+j-1];
-      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
-      g[i*n+j+1] = g[i*n+j] + g[(i-1)*n+j+1] - g[(i-1)*n+j];
-      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
+      // REFERENCE
+      g[i*n+j+0] = g[i*n+j-1] + g[(i-1)*n+j+0] - g[(i-1)*n+j-1];
+      g[i*n+j+1] = g[i*n+j+0] + g[(i-1)*n+j+1] - g[(i-1)*n+j+0];
       g[i*n+j+2] = g[i*n+j+1] + g[(i-1)*n+j+2] - g[(i-1)*n+j+1];
-      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
       g[i*n+j+3] = g[i*n+j+2] + g[(i-1)*n+j+3] - g[(i-1)*n+j+2];
-      //printf("g[%d][%d]=%f\n",i,j,g[i*n+j]);
+#endif
+#ifdef VERBOSE
+      printf("g[%d][%d]=%f\n",i,j+0,g[i*n+j+0]);
+      printf("g[%d][%d]=%f\n",i,j+1,g[i*n+j+1]);
+      printf("g[%d][%d]=%f\n",i,j+2,g[i*n+j+2]);
+      printf("g[%d][%d]=%f\n",i,j+3,g[i*n+j+3]);
 #endif
     }
     for (int jj=j; j<endn; j++) {
@@ -160,7 +154,7 @@ static inline void sweep_tile(int startm, int endm,
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("Parallel Research Kernels version %d\n", PRKVERSION);
   printf("C11 pipeline execution on 2D grid\n");
 
   //////////////////////////////////////////////////////////////////////
@@ -181,16 +175,16 @@ int main(int argc, char * argv[])
   }
 
   // grid dimensions
-  int m = atol(argv[2]);
-  int n = atol(argv[3]);
+  int m = atoi(argv[2]);
+  int n = atoi(argv[3]);
   if (m < 1 || n < 1) {
     printf("ERROR: grid dimensions must be positive: %d,%d\n", m, n);
     return 1;
   }
 
   // grid chunk dimensions
-  int mc = (argc > 4) ? atol(argv[4]) : m;
-  int nc = (argc > 5) ? atol(argv[5]) : n;
+  int mc = (argc > 4) ? atoi(argv[4]) : m;
+  int nc = (argc > 5) ? atoi(argv[5]) : n;
   if (mc < 1 || mc > m || nc < 1 || nc > n) {
     printf("WARNING: grid chunk dimensions invalid: %d,%d (ignoring)\n", mc, nc);
     mc = m;
@@ -240,6 +234,11 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
+
+  if ( isnan(grid[(m-1)*n+(n-1)]) || isinf(grid[(m-1)*n+(n-1)]) ) {
+    printf("ERROR: solution is NaN or Inf!!!! (%lf)\n", grid[(m-1)*n+(n-1)]);
+    return 1;
+  }
 
   const double epsilon = 1.e-8;
   const double corner_val = ((iterations+1.)*(n+m-2.));

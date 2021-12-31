@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
       n  = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimension must be positive";
-      } else if (n > std::floor(std::sqrt(INT_MAX))) {
+      } else if (n > prk::get_max_matrix_size()) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
@@ -162,17 +162,17 @@ int main(int argc, char* argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  double stencil_time{0};
 
   std::vector<double> in(n*n);
   std::vector<double> out(n*n);
 
   {
-    for (auto it=0; it<n; it+=tile_size) {
-      for (auto jt=0; jt<n; jt+=tile_size) {
-        for (auto i=it; i<std::min(n,it+tile_size); i++) {
+    for (int it=0; it<n; it+=tile_size) {
+      for (int jt=0; jt<n; jt+=tile_size) {
+        for (int i=it; i<std::min(n,it+tile_size); i++) {
           PRAGMA_SIMD
-          for (auto j=jt; j<std::min(n,jt+tile_size); j++) {
+          for (int j=jt; j<std::min(n,jt+tile_size); j++) {
             in[i*n+j] = static_cast<double>(i+j);
             out[i*n+j] = 0.0;
           }
@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
       }
     }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) stencil_time = prk::wtime();
       // Apply the stencil operator
@@ -200,9 +200,9 @@ int main(int argc, char* argv[])
 
   // compute L1 norm in parallel
   double norm = 0.0;
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
-      norm += std::fabs(out[i*n+j]);
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
+      norm += prk::abs(out[i*n+j]);
     }
   }
   norm /= active_points;
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
   // verify correctness
   const double epsilon = 1.0e-8;
   double reference_norm = 2.*(iterations+1.);
-  if (std::fabs(norm-reference_norm) > epsilon) {
+  if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
     return 1;

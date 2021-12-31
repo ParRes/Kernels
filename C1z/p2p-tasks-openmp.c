@@ -60,11 +60,12 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 #include "p2p-kernel.h"
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("Parallel Research Kernels version %d\n", PRKVERSION);
 #ifdef _OPENMP
   printf("C11/OpenMP TASKS pipeline execution on 2D grid\n");
 #else
@@ -145,7 +146,7 @@ int main(int argc, char * argv[])
 
       for (int i=1; i<m; i+=mc) {
         for (int j=1; j<n; j+=nc) {
-          OMP_TASK( depend(in:grid[(i-mc)*n+j],grid[i*n+(j-nc)]) depend(out:grid[i*n+j]) )
+          OMP_TASK( firstprivate(m,n) shared(grid) depend(in:grid[(i-mc)*n+j:1],grid[i*n+(j-nc):1]) depend(out:grid[i*n+j:1]) )
           sweep_tile(i, MIN(m,i+mc), j, MIN(n,j+nc), n, grid);
         }
       }

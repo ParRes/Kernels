@@ -92,7 +92,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
@@ -115,12 +115,12 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   double * h_A = new double[order*order];
   double * h_B = new double[order*order];
-  for (auto i=0;i<order; i++) {
-    for (auto j=0;j<order;j++) {
+  for (int i=0;i<order; i++) {
+    for (int j=0;j<order;j++) {
       h_A[i*order+j] = static_cast<double>(i*order+j);
       h_B[i*order+j] = 0.0;
     }
@@ -135,7 +135,7 @@ int main(int argc, char * argv[])
   occa::kernel transpose = device.buildKernel("transpose.okl", "transpose");
 
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
       if (iter==1) trans_time = prk::wtime();
       transpose(order, d_A, d_B);
       device.finish();
@@ -156,12 +156,12 @@ int main(int argc, char * argv[])
 
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(h_B[ji] - reference);
+      abserr += prk::abs(h_B[ji] - reference);
     }
   }
 
