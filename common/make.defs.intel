@@ -43,22 +43,10 @@ OFFLOADFLAG+=-DGPU_SCHEDULE=""
 # Linux
 OPENCLDIR=/etc/alternatives/opencl-intel-tools
 OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
-#OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
-METALFLAG=-framework MetalPerformanceShaders
 #
 # SYCL flags
 #
 # Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
-<<<<<<< HEAD
-#SYCLDIR=/opt/isycl
-#SYCLCXX=${SYCLDIR}/bin/clang++
-#SYCLFLAG=-fsycl -lsycl -lOpenCL -Wl,-rpath=${SYCLDIR}/lib
-#SYCLFLAG+=-std=c++17 -O3
-# CodePlay ComputeCpp
-#SYCLDIR=/opt/sycl/latest
-#SYCLCXX=${SYCLDIR}/bin/compute++
-#SYCLFLAG=-DUSE_SYCL -sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
-=======
 #
 #SYCLDIR=/opt/isycl
 #SYCLCXX=${SYCLDIR}/bin/clang++
@@ -81,7 +69,6 @@ METALFLAG=-framework MetalPerformanceShaders
 #SYCLDIR=/opt/codeplay/latest
 #SYCLCXX=${SYCLDIR}/bin/compute++
 #SYCLFLAG=-sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
->>>>>>> default
 #SYCLFLAG+=-std=c++14 -O3
 # This makes a huge difference in e.g. nstream...
 #SYCLFLAG+=-no-serial-memop
@@ -93,19 +80,11 @@ METALFLAG=-framework MetalPerformanceShaders
 #SYCLFLAG+=${OPENCLFLAG}
 # NVIDIA target
 #SYCLFLAG+=-sycl-target ptx64
-<<<<<<< HEAD
-=======
 #SYCLFLAG+=-DPRK_NO_OPENCL_GPU
->>>>>>> default
 #
 # triSYCL
 #
 # https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
-<<<<<<< HEAD
-#SYCLDIR=./triSYCL
-#SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
-#SYCLFLAG=-std=c++17 -I$(SYCLDIR)/include -DTRISYCL
-=======
 SYCLDIR=./triSYCL
 SYCLCXX=${CXX} ${OPENMPFLAG}
 SYCLFLAG=-std=gnu++14 -I$(SYCLDIR)/include
@@ -123,7 +102,6 @@ SYCLFLAG=-std=gnu++14 -I$(SYCLDIR)/include
 #CELERITYDIR=${SYCLDIR}
 #CELERITYINC=-I$(CELERITYDIR)/include/celerity -I$(CELERITYDIR)/include/celerity/vendor
 #CELERITYLIB=-L$(CELERITYDIR)/lib -lcelerity_runtime
->>>>>>> default
 #
 # OCCA
 #
@@ -131,7 +109,7 @@ SYCLFLAG=-std=gnu++14 -I$(SYCLDIR)/include
 #
 # Cilk
 #
-#CILKFLAG=-intel-extensions # default
+CILKFLAG=-intel-extensions # default
 #
 # TBB
 #
@@ -150,11 +128,6 @@ RAJADIR=/opt/raja/intel
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 THRUSTDIR=/opt/nvidia/thrust
 THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
-# HPX is more complicated...
-HWLOCFLAG=-I/usr/local/include
-HPXDIR=./hpx
-HPXCXX=${HPXDIR}/bin/hpxcxx
-HPXFLAG=-Wno-unused-local-typedef ${HWLOCFLAG}
 #
 # CBLAS for C++ DGEMM
 #
