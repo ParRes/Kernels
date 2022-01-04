@@ -1,5 +1,5 @@
 !
-! Copyright (c) 2013, Intel Corporation
+! Copyright (c) 2022, Intel Corporation
 ! Copyright (c) 2021, NVIDIA
 !
 ! Redistribution and use in source and binary forms, with or without
@@ -216,7 +216,7 @@ program main
   call initialize_w(is_star,r,W)
 
   !$omp parallel default(none)                                                   &
-  !$omp&  shared(n,A,B,W,stencil_time,norm,iterations,tiling,tile_size,is_star)  &
+  !$omp&  shared(n,A,B,W,stencil_time,iterations,tiling,tile_size,is_star)  &
   !$omp&  private(i,j,k,t0,t1)
 
   !$omp master
@@ -260,17 +260,17 @@ program main
   stencil_time = t1 - t0
 
   !$omp end master
+  !$omp end parallel
 
   ! compute L1 norm in parallel
   norm = 0.0d0
-  !$omp do reduction(+:norm)
+  !$omp parallel do reduction(+:norm)
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
-  !$omp end do
-  !$omp end parallel
+  !$omp end parallel do
   active_points = int(n-2*r,INT64)**2
   norm = norm / real(active_points,REAL64)
 
