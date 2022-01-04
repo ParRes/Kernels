@@ -53,35 +53,6 @@
 !          MPI by Jeff Hammond, November 2021
 ! *******************************************************************
 
-module prk_mpi
-  contains
-    subroutine mpi_print_matrix(mat,clabel)
-      use, intrinsic :: iso_fortran_env
-      use mpi_f08
-      use prk
-      implicit none
-      real(kind=REAL64), intent(in) :: mat(:,:)
-      character(*), intent(in), optional :: clabel
-      integer(kind=INT32) :: r, me, np
-      flush(6)
-      call MPI_Comm_rank(MPI_COMM_WORLD, me)
-      call MPI_Comm_size(MPI_COMM_WORLD, np)
-      call MPI_Barrier(MPI_COMM_WORLD)
-      flush(6)
-      if (me.eq.0) print*,clabel
-      flush(6)
-      call MPI_Barrier(MPI_COMM_WORLD)
-      flush(6)
-      do r=0,np-1
-        if (me.eq.r) then
-          call print_matrix(mat,me)
-        endif
-        call MPI_Barrier(MPI_COMM_WORLD)
-      enddo
-      flush(6)
-    end subroutine
-end module prk_mpi
-
 program main
   use, intrinsic :: iso_fortran_env
   use, intrinsic :: iso_c_binding
