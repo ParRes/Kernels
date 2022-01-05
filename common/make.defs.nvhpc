@@ -1,7 +1,8 @@
 #
 # This file shows the NVHPC toolchain options.
-#NVHPC_PATH=/proj/nv/Linux_x86_64/21.3
-#NVHPC_PATH=${HOME}/NVIDIA/hpc_sdk/Linux_x86_64/2021
+#NVHPC_PATH=/proj/nv/Linux_$$(uname -m)/21.11
+#NVHPC_PATH=${HOME}/NVIDIA/hpc_sdk/Linux_$$(uname -m)/2021
+NVHPC_PATH=/opt/nvidia/hpc_sdk/Linux_$$(uname -m)/21.11
 #NVHPC_CBIN=${NVHPC_PATH}/compilers/bin
 #
 # Base compilers and language options
@@ -37,7 +38,7 @@ CUFORTFLAG+=-Minfo=accel
 #
 # OpenCL flags
 #
-OPENCLDIR=/usr/local/cuda-11.2/targets/x86_64-linux
+OPENCLDIR=/usr/local/cuda-11.4/targets/$$(uname -m)-linux
 OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib -lOpenCL
 #OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
@@ -45,9 +46,11 @@ OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib -lOpenCL
 #
 # Parallel STL, Boost, etc.
 #
+TBBFLAG=-L/usr/lib/$$(uname -m)-linux-gnu -ltbb
 BOOSTFLAG=
 #RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
 RANGEFLAG=-DUSE_RANGES_TS -I../deps/range-v3/include
+#RANGEFLAG=-DUSE_GCC_RANGES
 PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -I./pstl/include ${RANGEFLAG}
 KOKKOSDIR=../deps/kokkos-cuda
 PRK_KOKKOS_BACKEND=Cuda
@@ -55,7 +58,7 @@ KOKKOSCXX=${KOKKOSDIR}/bin/nvcc_wrapper
 KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkoscore
 RAJADIR=
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
-THRUSTDIR=/opt/nvidia/hpc_sdk/Linux_x86_64/21.3/compilers/include-stdpar
+THRUSTDIR=/opt/nvidia/hpc_sdk/Linux_$$(uname -m)/21.11/compilers/include-stdpar
 THRUSTFLAG=-I${THRUSTDIR}
 #
 # CBLAS for C++ DGEMM
@@ -75,8 +78,8 @@ CUDAFLAGS+=--gpu-architecture=sm_75
 #CUDAFLAGS+=--compiler-bindir=/swtools/gcc/7.5.0/bin
 #CUDAFLAGS+=-forward-unknown-to-host-compiler -fopenmp
 CUDAFLAGS+=-rdc=true # FIXES ptxas fatal   : Unresolved extern function 'cudaCGGetIntrinsicHandle'
-CUDAFLAGS+=-I${NVHPC_PATH}/math_libs/11.2/targets/x86_64-linux/include
-CUDAFLAGS+=-L${NVHPC_PATH}/math_libs/11.2/targets/x86_64-linux/lib
+CUDAFLAGS+=-I${NVHPC_PATH}/math_libs/11.4/targets/$$(uname -m)-linux/include
+CUDAFLAGS+=-L${NVHPC_PATH}/math_libs/11.4/targets/$$(uname -m)-linux/lib
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 # heavy hammer:
 CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
@@ -111,7 +114,7 @@ MPIFORT=${MPIDIR}/bin/mpifort
 MPIINC=-I${MPIDIR}/include
 MPILIB=-L${MPIDIR}/lib -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
-#MPIINC=-I/usr/include/mpich-3.2-x86_64
+#MPIINC=-I/usr/include/mpich-3.2-$$(uname -m)
 #MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
 #
 # Global Arrays

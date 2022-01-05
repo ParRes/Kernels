@@ -1,6 +1,6 @@
-
 ///
 /// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -61,6 +61,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_ranges.h"
 #include "prk_pstl.h"
 #include "stencil_pstl.hpp"
 

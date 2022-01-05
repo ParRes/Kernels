@@ -86,7 +86,8 @@ def main():
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    A = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
+    #A = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
+    A = numpy.arange(order*order,dtype=float).reshape(order,order)
     B = numpy.zeros((order,order))
 
     for k in range(0,iterations+1):

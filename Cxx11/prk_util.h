@@ -69,10 +69,6 @@
 
 #include "prk_simd.h"
 
-#ifdef USE_RANGES
-# include "prk_ranges.h"
-#endif
-
 // used in OpenMP target and CUDA code because std::min etc are not declare target
 #ifndef MIN
 #define MIN(x,y) ((x)<(y)?(x):(y))
