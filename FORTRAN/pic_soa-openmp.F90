@@ -42,26 +42,13 @@
 #define FAILURE 0
 #define epsilon 1.e-5
 
-#ifndef _OPENMP
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-#endif
-
 program pic
   use, intrinsic :: ISO_FORTRAN_ENV, only : REAL64, REAL32, INT64, INT32
 #ifdef _OPENMP
   use omp_lib
 #endif
+  use prk
   implicit none
-#ifndef _OPENMP
-  real(kind=REAL64) :: prk_get_wtime
-#endif
 
   type particle_t
     real(kind=REAL64) :: x, y, v_x, v_y, q, x0, y0
@@ -79,7 +66,8 @@ program pic
   real(kind=REAL64), allocatable, dimension(:,:) :: Qgrid
   type(particles_t):: particles
   integer(kind=INT64) :: L, n, k, m, init_mode
-  integer(kind=INT64) :: ip, iterations, iter
+  integer(kind=INT32) :: iterations, iter
+  integer(kind=INT64) :: ip
   real(kind=REAL64) :: rho
   real(kind=REAL64) :: t0, pic_time
   character(len=32) :: argtmp
@@ -162,16 +150,18 @@ program pic
 
   print *, 'Number of particles placed     = ', n
 
+  t0 = 0
+
   block
     real(kind=REAL64)   :: fx, fy, ax, ay, xval, yval, vx, vy, qval
-    do iter = 0_INT64, iterations
-    if(iter == 1) then
+    do iter = 0, iterations
+      if(iter == 1) then
 #ifdef _OPENMP
-      t0 = omp_get_wtime()
+        t0 = omp_get_wtime()
 #else
-      t0 = prk_get_wtime()
+        t0 = prk_get_wtime()
 #endif
-    endif
+      endif
       !$omp parallel do private(xval, yval, vx, vy, qval, fx, fy, ax, ay)
       do ip=1,n
         xval = particles%x(ip)
@@ -366,7 +356,8 @@ program pic
 
   integer function verifyParticle(part, iterations, Qgrid, L)
     type(particle_t), intent(in) :: part
-    integer(kind=REAL64), intent(in) :: iterations, L
+    integer(kind=INT32), intent(in) :: iterations
+    integer(kind=REAL64), intent(in) :: L
     real(kind=REAL64), allocatable, dimension(:,:), intent(in) :: Qgrid
     integer(kind=INT64) :: x, y
     real(kind=REAL64) :: x_final, y_final, x_periodic, y_periodic, disp

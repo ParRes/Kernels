@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2019, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -63,10 +64,10 @@
 ///
 //////////////////////////////////////////////////////////////////////
 
-#pragma omp requires unified_address
-
 #include "prk_util.h"
 #include "prk_openmp.h"
+
+OMP_REQUIRES(unified_address)
 
 int main(int argc, char * argv[])
 {
@@ -147,7 +148,7 @@ int main(int argc, char * argv[])
 
       if (iter==1) nstream_time = omp_get_wtime();
 
-      #pragma omp target teams distribute parallel for simd schedule(static) device(device) is_device_ptr(d_A,d_B,d_C)
+      OMP_TARGET( teams distribute parallel for simd schedule(static) device(device) is_device_ptr(d_A,d_B,d_C) )
       for (size_t i=0; i<length; i++) {
           d_A[i] += d_B[i] + scalar * d_C[i];
       }

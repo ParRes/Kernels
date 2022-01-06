@@ -52,27 +52,15 @@
 !
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
 #ifdef NVHPC
   use cutensorex
   use cudafor
 #endif
+  use prk
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the kernel
   integer(kind=INT32) ::  order                     ! order of the matrix
@@ -82,7 +70,7 @@ program main
   real(kind=REAL64), allocatable ::  C(:,:)         ! buffer to hold output matrix
   integer(kind=INT64) :: nflops
   ! runtime variables
-  integer(kind=INT32) :: i,j,k
+  integer(kind=INT32) :: i,k
   real(kind=REAL64) ::  checksum, reference, residuum
   real(kind=REAL64) ::  t0, t1, dgemm_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.0d-8   ! error tolerance
@@ -94,27 +82,7 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a61)') 'Fortran Pretty Dense matrix-matrix multiplication: C += A x B'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./dgemm-pretty <# iterations> <matrix order>'
-    stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  order = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') order
-  if (order .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
-    stop 1
-  endif
+  call prk_get_arguments('dgemm',iterations=iterations,order=order)
 
   write(*,'(a,i8)') 'Number of iterations = ', iterations
   write(*,'(a,i8)') 'Matrix order         = ', order
@@ -123,30 +91,17 @@ program main
   ! ** Allocate space for the input and output matrices
   ! ********************************************************************
 
-  allocate( A(order,order), stat=err)
+  allocate( A(order,order), B(order,order), C(order,order), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a,i3)') 'allocation  returned ',err
     stop 1
   endif
 
-  allocate( B(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
-
-  allocate( C(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of C returned ',err
-    stop 1
-  endif
-
-  ! Fill the original matrix
   do i=1, order
     A(:,i) = real(i-1,REAL64)
     B(:,i) = real(i-1,REAL64)
+    C(:,i) = real(0,REAL64)
   enddo
-  C = 0
 
   t0 = 0
 
@@ -162,14 +117,11 @@ program main
   ! ** Analyze and output results.
   ! ********************************************************************
 
-  deallocate( B )
-  deallocate( A )
-
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
   checksum = sum(C)
 
-  deallocate( C )
+  deallocate( A,B,C )
 
   residuum = abs(checksum-reference)/reference
   if (residuum .lt. epsilon) then
