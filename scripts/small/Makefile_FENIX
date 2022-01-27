@@ -1,6 +1,7 @@
 include ../../common/make.defs
 runfenix: runfenix.in
 	@echo PATH=$(ULFMTOP)/bin:$(PATH) > runfenix
+	@echo export ULFMRUNFLAG=\"$(ULFMRUNFLAG)\" >> runfenix
 	@cat runfenix.in >> runfenix
 	@chmod u+x runfenix
 

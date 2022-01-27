@@ -4,12 +4,12 @@ COMOBJS += timestep.o
 
 ##### User configurable options #####
 
-OPTFLAGS    = $(DEFAULT_OPT_FLAGS)
+OPTFLAGS    = $(DEFAULT_OPT_FLAGS) 
 #description: change above into something that is a decent optimization on you system
 
 #uncomment any of the following flags (and change values) to change defaults
 
-USERFLAGS    = 
+USERFLAGS     = 
 #description: parameter to specify optional flags
 
 #set the following variables for custom libraries and/or other objects
@@ -20,16 +20,21 @@ INCLUDEPATHS = -I$(FENIXTOP)/include
 
 ### End User configurable options ###
 
+ifndef SCRAMBLE
+ SCRAMBLE=1
+endif
+#description: if flag is true, grid indices are scrambled to produce irregular stride
+
 ifndef RESTRICT_KEYWORD
   RESTRICT_KEYWORD=0
 endif
 #description: the "restrict" keyword can be used on IA platforms to disambiguate  
 #             data accessed through pointers (requires -restrict compiler flag)
 
-ifndef SYNCHRONOUS
-  SYNCHRONOUS=0
+ifndef TESTDENSE
+  TESTDENSE=0
 endif
-#description: turn on synchronous (blocking) communications
+#description: if flag is set, sparse matrix will be embedded in dense matrix
 
 ifndef VERBOSE
   VERBOSE=0
@@ -38,16 +43,19 @@ endif
 
 VERBOSEFLAG = -DVERBOSE=$(VERBOSE)
 RESTRICTFLAG= -DRESTRICT_KEYWORD=$(RESTRICT_KEYWORD)
-BLOCKFLAG   = -DSYNCHRONOUS=$(SYNCHRONOUS)
+SCRAMBLEFLAG= -DSCRAMBLE=$(SCRAMBLE)
+DENSEFLAG   = -DTESTDENSE=$(TESTDENSE)
 
 OPTIONSSTRING="Make options:\n\
-OPTION                 MEANING                                      DEFAULT\n\
-RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing)     [0]  \n\
-VERBOSE=0/1            omit/include verbose run information           [0]  \n\
-SYNCHRONOUS=0/1        Use a/synchronous communications               [0]"
+OPTION                 MEANING                                  DEFAULT\n\
+SCRAMBLE=0/1           regular/irregular sparsity pattern         [1]  \n\
+RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing) [0]  \n\
+TESTDENSE=0/1          store sparse matrix in sparse/dense formet [0]  \n\
+VERBOSE=0/1            omit/include verbose run information       [0]"
 
-TUNEFLAGS    = $(VERBOSEFLAG) $(USERFLAGS) $(RESTRICTFLAG) $(BLOCKFLAG)
-PROGRAM      = transpose
-OBJS         = $(PROGRAM).o $(COMOBJS)
+TUNEFLAGS   = $(VERBOSEFLAG) $(USERFLAGS) $(SCRAMBLEFLAG) $(DENSEFLAG) \
+              $(RESTRICTFLAG)
+PROGRAM     = sparse
+OBJS        = $(PROGRAM).o $(COMOBJS)
 
 include ../../common/make.common

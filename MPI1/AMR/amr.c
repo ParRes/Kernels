@@ -985,241 +985,29 @@ int main(int argc, char ** argv) {
       MPI_Barrier(MPI_COMM_WORLD);
       local_stencil_time = wtime();
     }
-    /* first complete communication on background grid to help no_talk balancer     */
-    if (comm_bg != MPI_COMM_NULL) {
-      /* need to fetch ghost point data from neighbors in y-direction                 */
-      if (my_ID_bgy < Num_procs_bgy-1) {
-        MPI_Irecv(top_buf_in_bg, RADIUS*L_width_bg, MPI_DTYPE, top_nbr_bg, 101,
-                  comm_bg, &(request_bg[1]));
-        for (int kk=0,j=L_jend_bg-RADIUS+1; j<=L_jend_bg; j++) 
-        for (int i=L_istart_bg; i<=L_iend_bg; i++) {
-            top_buf_out_bg[kk++]= IN(i,j);
-        }
-        MPI_Isend(top_buf_out_bg, RADIUS*L_width_bg,MPI_DTYPE, top_nbr_bg, 99,
-                  comm_bg, &(request_bg[0]));
-      }
-      if (my_ID_bgy > 0) {
-        MPI_Irecv(bottom_buf_in_bg,RADIUS*L_width_bg, MPI_DTYPE, bottom_nbr_bg, 99,
-                  comm_bg, &(request_bg[3]));
-        for (int kk=0,j=L_jstart_bg; j<=L_jstart_bg+RADIUS-1; j++) 
-        for (int i=L_istart_bg; i<=L_iend_bg; i++) {
-            bottom_buf_out_bg[kk++]= IN(i,j);
-        }
-        MPI_Isend(bottom_buf_out_bg, RADIUS*L_width_bg,MPI_DTYPE, bottom_nbr_bg, 101,
-                  comm_bg, &(request_bg[2]));
-      }
-      if (my_ID_bgy < Num_procs_bgy-1) {
-        MPI_Wait(&(request_bg[0]), MPI_STATUS_IGNORE);
-        MPI_Wait(&(request_bg[1]), MPI_STATUS_IGNORE);
-        for (int kk=0,j=L_jend_bg+1; j<=L_jend_bg+RADIUS; j++) 
-        for (int i=L_istart_bg; i<=L_iend_bg; i++) {
-            IN(i,j) = top_buf_in_bg[kk++];
-        }
-      }
-      if (my_ID_bgy > 0) {
-        MPI_Wait(&(request_bg[2]), MPI_STATUS_IGNORE);
-        MPI_Wait(&(request_bg[3]), MPI_STATUS_IGNORE);
-        for (int kk=0,j=L_jstart_bg-RADIUS; j<=L_jstart_bg-1; j++) 
-        for (int i=L_istart_bg; i<=L_iend_bg; i++) {
-            IN(i,j) = bottom_buf_in_bg[kk++];
-        }
-      }
 
-      /* need to fetch ghost point data from neighbors in x-direction; take into account
-         the load balancer; NO_TALK needs wider copy                                    */
-      if (my_ID_bgx < Num_procs_bgx-1) {
-        MPI_Irecv(right_buf_in_bg, RADIUS*(L_height_bg+2), MPI_DTYPE, right_nbr_bg, 1010,
-                  comm_bg, &(request_bg[1+4]));
-        for (int kk=0,j=L_jstart_bg-1; j<=L_jend_bg+1; j++) 
-        for (int i=L_iend_bg-RADIUS+1; i<=L_iend_bg; i++) {
-            right_buf_out_bg[kk++]= IN(i,j);
-        }
-        MPI_Isend(right_buf_out_bg, RADIUS*(L_height_bg+2), MPI_DTYPE, right_nbr_bg, 990,
-                comm_bg, &(request_bg[0+4]));
-      }
-      if (my_ID_bgx > 0) {
-        MPI_Irecv(left_buf_in_bg, RADIUS*(L_height_bg+2), MPI_DTYPE, left_nbr_bg, 990,
-                  comm_bg, &(request_bg[3+4]));
-        for (int kk=0,j=L_jstart_bg-1; j<=L_jend_bg+1; j++) 
-        for (int i=L_istart_bg; i<=L_istart_bg+RADIUS-1; i++) {
-            left_buf_out_bg[kk++]= IN(i,j);
-        }
-        MPI_Isend(left_buf_out_bg, RADIUS*(L_height_bg+2), MPI_DTYPE, left_nbr_bg, 1010,
-                  comm_bg, &(request_bg[2+4]));
-      }
-      if (my_ID_bgx < Num_procs_bgx-1) {
-        MPI_Wait(&(request_bg[0+4]), MPI_STATUS_IGNORE);
-        MPI_Wait(&(request_bg[1+4]), MPI_STATUS_IGNORE);
-        for (int kk=0,j=L_jstart_bg-1; j<=L_jend_bg+1; j++) 
-        for (int i=L_iend_bg+1; i<=L_iend_bg+RADIUS; i++) {
-            IN(i,j) = right_buf_in_bg[kk++];
-        }
-      }
-      if (my_ID_bgx > 0) {
-        MPI_Wait(&(request_bg[2+4]), MPI_STATUS_IGNORE);
-        MPI_Wait(&(request_bg[3+4]), MPI_STATUS_IGNORE);
-        for (int kk=0,j=L_jstart_bg-1; j<=L_jend_bg+1; j++) 
-        for (int i=L_istart_bg-RADIUS; i<=L_istart_bg-1; i++) {
-            IN(i,j) = left_buf_in_bg[kk++];
-        }
-      }
-    }
-    
-    if (!(iter%period)) {
-      /* a specific refinement has come to life                                */
-      g=(iter/period)%4;
+     time_step(Num_procs, Num_procs_bg, Num_procs_bgx, Num_procs_bgy,
+	       Num_procs_r, Num_procs_rx, Num_procs_ry,
+	       my_ID, my_ID_bg, my_ID_bgx, my_ID_bgy, my_ID_r, my_ID_rx, my_ID_ry,
+	       right_nbr_bg, left_nbr_bg, top_nbr_bg, bottom_nbr_bg,
+	       right_nbr_r, left_nbr_r, top_nbr_r, bottom_nbr_r,
+	       top_buf_out_bg, top_buf_in_bg, bottom_buf_out_bg, bottom_buf_in_bg,
+	       right_buf_out_bg, right_buf_in_bg, left_buf_out_bg, left_buf_in_bg,
+	       top_buf_out_r, top_buf_in_r, bottom_buf_out_r, bottom_buf_in_r,
+	       right_buf_out_r, right_buf_in_r, left_buf_out_r, left_buf_in_r,
+	       n, refine_level, G_istart_r, G_iend_r, G_jstart_r, G_jend_r,
+	       L_istart_bg, L_iend_bg, L_jstart_bg, L_jend_bg, L_width_bg, L_height_bg,
+	       L_istart_r, L_iend_r, L_jstart_r, L_jend_r,
+	       L_istart_r_gross, L_iend_r_gross, L_jstart_r_gross, L_jend_r_gross,
+	       L_istart_r_true_gross, L_iend_r_true_gross,
+	       L_jstart_r_true_gross, L_jend_r_true_gross,
+	       L_istart_r_true, L_iend_r_true, L_jstart_r_true, L_jend_r_true,
+	       L_width_r, L_height_r, L_width_r_true_gross, L_height_r_true_gross, 
+	       L_width_r_true, L_height_r_true,
+	       n_r, n_r_true, expand, period, duration, sub_iterations, iter, h_r,
+	       num_interpolations, in_bg, out_bg, in_r, out_r, weight, weight_r,
+	       load_balance, request_bg, request_r, comm_r, comm_bg);
 
-      get_BG_data(load_balance, in_bg, in_r[g], my_ID, expand, Num_procs,
-                  L_width_bg, L_istart_bg, L_iend_bg, L_jstart_bg, L_jend_bg,
-                  L_istart_r[g], L_iend_r[g], L_jstart_r[g], L_jend_r[g],
-                  G_istart_r[g], G_jstart_r[g], comm_bg, comm_r[g],
-                  L_istart_r_gross[g], L_iend_r_gross[g], 
-                  L_jstart_r_gross[g], L_jend_r_gross[g], 
-                  L_width_r_true_gross[g], L_istart_r_true_gross[g], L_iend_r_true_gross[g],
-                  L_jstart_r_true_gross[g], L_jend_r_true_gross[g], g);
-
-      
-      if (comm_r[g] != MPI_COMM_NULL) {
-        interpolate(in_r[g], L_width_r_true_gross[g], 
-                    L_istart_r_true_gross[g], L_iend_r_true_gross[g],
-                    L_jstart_r_true_gross[g], L_jend_r_true_gross[g], 
-                    L_istart_r_true[g], L_iend_r_true[g],
-                    L_jstart_r_true[g], L_jend_r_true[g], 
-                    expand, h_r, g, Num_procs, my_ID);
-      }
-      /* even though this rank may not interpolate, some just did, so we keep track   */
-      num_interpolations++;
-
-    } // end of initialization of refinement g
-
-    if (comm_r[g] != MPI_COMM_NULL) if ((iter%period) < duration) {
-
-      /* if within an active refinement epoch, first communicate within refinement    */
-
-      for (sub_iter=0; sub_iter<sub_iterations; sub_iter++) {
-
-        /* need to communicate within each sub-iteration                              */
-
-        /* need to fetch ghost point data from neighbors in y-direction               */
-        if (top_nbr_r[g] != -1) {
-          MPI_Irecv(top_buf_in_r[g], RADIUS*L_width_r_true[g], MPI_DTYPE, top_nbr_r[g], 
-                    101, comm_r[g], &(request_r[g][1]));
-          for (int kk=0,j=L_jend_r_true[g]-RADIUS+1; j<=L_jend_r_true[g]; j++) 
-          for (int i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
-	    top_buf_out_r[g][kk++]= IN_R(g,i,j);
-          }
-          MPI_Isend(top_buf_out_r[g], RADIUS*L_width_r_true[g],MPI_DTYPE, top_nbr_r[g], 
-                    99, comm_r[g], &(request_r[g][0]));
-        }
-
-        if (bottom_nbr_r[g] != -1) {
-          MPI_Irecv(bottom_buf_in_r[g],RADIUS*L_width_r_true[g], MPI_DTYPE, bottom_nbr_r[g], 
-                    99, comm_r[g], &(request_r[g][3]));
-          for (int kk=0,j=L_jstart_r_true[g]; j<=L_jstart_r_true[g]+RADIUS-1; j++) 
-          for (int i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
-	    bottom_buf_out_r[g][kk++]= IN_R(g,i,j);
-          }
-          MPI_Isend(bottom_buf_out_r[g], RADIUS*L_width_r_true[g],MPI_DTYPE, bottom_nbr_r[g], 
-                    101, comm_r[g], &(request_r[g][2]));
-        }
-        if (top_nbr_r[g] != -1) {
-          MPI_Wait(&(request_r[g][0]), MPI_STATUS_IGNORE);
-          MPI_Wait(&(request_r[g][1]), MPI_STATUS_IGNORE);
-          for (int kk=0,j=L_jend_r_true[g]+1; j<=L_jend_r_true[g]+RADIUS; j++) 
-          for (int i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
-	    IN_R(g,i,j) = top_buf_in_r[g][kk++];
-          }
-        }
-        if (bottom_nbr_r[g] != -1) {
-          MPI_Wait(&(request_r[g][2]), MPI_STATUS_IGNORE);
-          MPI_Wait(&(request_r[g][3]), MPI_STATUS_IGNORE);
-          for (int kk=0,j=L_jstart_r_true[g]-RADIUS; j<=L_jstart_r_true[g]-1; j++) 
-          for (int i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) {
-	    IN_R(g,i,j) = bottom_buf_in_r[g][kk++];
-          }
-        }
-
-        /* need to fetch ghost point data from neighbors in x-direction                 */
-        if (right_nbr_r[g] != -1) {
-          MPI_Irecv(right_buf_in_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, right_nbr_r[g], 
-                    1010, comm_r[g], &(request_r[g][1+4]));
-          for (int kk=0,j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) {
-          for (int i=L_iend_r_true[g]-RADIUS+1; i<=L_iend_r_true[g]; i++) {
-	    right_buf_out_r[g][kk++]= IN_R(g,i,j);
-          }
-	  }
-          MPI_Isend(right_buf_out_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, right_nbr_r[g], 
-                  990, comm_r[g], &(request_r[g][0+4]));
-	}
-
-        if (left_nbr_r[g] != -1) {
-          MPI_Irecv(left_buf_in_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, left_nbr_r[g], 
-                    990, comm_r[g], &(request_r[g][3+4]));
-          for (int kk=0,j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) {
-            for (int i=L_istart_r_true[g]; i<=L_istart_r_true[g]+RADIUS-1; i++) {
-              left_buf_out_r[g][kk++]= IN_R(g,i,j);
-            }
-	  }
-          MPI_Isend(left_buf_out_r[g], RADIUS*L_height_r_true[g], MPI_DTYPE, left_nbr_r[g], 
-                    1010, comm_r[g], &(request_r[g][2+4]));
-	}
-
-        if (right_nbr_r[g] != -1) {
-          MPI_Wait(&(request_r[g][0+4]), MPI_STATUS_IGNORE);
-          MPI_Wait(&(request_r[g][1+4]), MPI_STATUS_IGNORE);
-          for (int kk=0,j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) {
-            for (int i=L_iend_r_true[g]+1; i<=L_iend_r_true[g]+RADIUS; i++) {
-              IN_R(g,i,j) = right_buf_in_r[g][kk++];
-            }
-	  }
-	}
-
-        if (left_nbr_r[g] != -1) {
-          MPI_Wait(&(request_r[g][2+4]), MPI_STATUS_IGNORE);
-          MPI_Wait(&(request_r[g][3+4]), MPI_STATUS_IGNORE);
-          for (int kk=0,j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) {
-            for (int i=L_istart_r_true[g]-RADIUS; i<=L_istart_r_true[g]-1; i++) {
-	      IN_R(g,i,j) = left_buf_in_r[g][kk++];
-            }
-          }
-        }
-
-        for (j=MAX(RADIUS,L_jstart_r_true[g]); j<=MIN(n_r_true-RADIUS-1,L_jend_r_true[g]); j++) {
-          for (i=MAX(RADIUS,L_istart_r_true[g]); i<=MIN(n_r_true-RADIUS-1,L_iend_r_true[g]); i++) {
-            #if LOOPGEN
-              #include "loop_body_star_amr.incl"
-            #else
-              for (jj=-RADIUS; jj<=RADIUS; jj++)  OUT_R(g,i,j) += WEIGHT_R(0,jj)*IN_R(g,i,j+jj);
-              for (ii=-RADIUS; ii<0; ii++)        OUT_R(g,i,j) += WEIGHT_R(ii,0)*IN_R(g,i+ii,j);
-              for (ii=1; ii<=RADIUS; ii++)        OUT_R(g,i,j) += WEIGHT_R(ii,0)*IN_R(g,i+ii,j);
-            #endif
-          }
-        }
-
-        /* add constant to solution to force refresh of neighbor data, if any        */
-	for (j=L_jstart_r_true[g]; j<=L_jend_r_true[g]; j++) 
-	  for (i=L_istart_r_true[g]; i<=L_iend_r_true[g]; i++) IN_R(g,i,j)+= (DTYPE)1.0;
-      }
-    }
-
-    /* Apply the stencil operator to background grid                                 */
-    if (comm_bg != MPI_COMM_NULL) {
-      for (int j=MAX(L_jstart_bg,RADIUS); j<=MIN(n-RADIUS-1,L_jend_bg); j++) {
-        for (int i=MAX(L_istart_bg,RADIUS); i<=MIN(n-RADIUS-1,L_iend_bg); i++) {
-          #if LOOPGEN
-            #include "loop_body_star.incl"
-          #else
-            for (int jj=-RADIUS; jj<=RADIUS; jj++) OUT(i,j) += WEIGHT(0,jj)*IN(i,j+jj);
-            for (int ii=-RADIUS; ii<0; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-            for (int ii=1; ii<=RADIUS; ii++)       OUT(i,j) += WEIGHT(ii,0)*IN(i+ii,j);
-          #endif
-        }
-      }
-
-      /* add constant to solution to force refresh of neighbor data, if any */
-      for (int j=L_jstart_bg; j<=L_jend_bg; j++)
-      for (int i=L_istart_bg; i<=L_iend_bg; i++) IN(i,j)+= 1.0;
-    }
 
   } /* end of iterations                                                         */
 

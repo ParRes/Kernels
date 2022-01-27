@@ -31,7 +31,7 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <par-res-kern_general.h>
-#include <par-res-kern_fenix.h>
+#include <par-res-kern_mpi.h>
 
 #if DOUBLE
   #define DTYPE     double
