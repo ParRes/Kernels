@@ -33,7 +33,7 @@ ASMFLAGS = -fverbose-asm
 
 OMPFLAGS = $(OPENMPFLAG) -DUSE_OPENMP
 TARGETFLAGS = $(OFFLOADFLAG)
-OPENCLFLAGS = $(OPENCLFLAG) -DCL_HPP_MINIMUM_OPENCL_VERSION=120 -DCL_HPP_TARGET_OPENCL_VERSION=120
+OPENCLFLAGS = $(OPENCLFLAG) -DCL_HPP_MINIMUM_OPENCL_VERSION=120 -DCL_HPP_TARGET_OPENCL_VERSION=120 -DCL_HPP_ENABLE_EXCEPTIONS
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
 OPENACCFLAGS = $(OPENACCFLAG)
@@ -82,7 +82,7 @@ vector: p2p-vector p2p-hyperplane-vector stencil-vector transpose-vector nstream
 
 valarray: transpose-valarray nstream-valarray
 
-openmp: p2p-hyperplane-openmp p2p-tasks-openmp stencil-openmp transpose-openmp nstream-openmp
+openmp: p2p-hyperplane-openmp stencil-openmp transpose-openmp nstream-openmp p2p-tasks-openmp
 
 target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 

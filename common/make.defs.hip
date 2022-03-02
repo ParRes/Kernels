@@ -10,7 +10,7 @@ VERSION=
 CC=${ROCM_PATH}/llvm/bin/clang -std=gnu11 -pthread
 #EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=${ROCM_PATH}/llvm/bin/flang #-std=f2008 -cpp
+FC=${ROCM_PATH}/llvm/bin/flang -DAOMP #-std=f2008 -cpp
 # C++11 may not be required but does no harm here.
 CXX=${ROCM_PATH}/llvm/bin/clang++ -std=gnu++17 -pthread
 #
@@ -38,14 +38,14 @@ OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib -lOpenCL
 #
 # hipSYCL
 #
-SYCLDIR=/opt/hipSYCL
+SYCLDIR=${HOME}/AMD/hipSYCL
 SYCLCXX=${SYCLDIR}/bin/syclcc-clang
 SYCLFLAG=-std=c++17 -O3
 SYCLFLAG+=-DHIPSYCL
 # CPU platform
 SYCLFLAG+=--hipsycl-platform=rocm
-SYCLFLAG+=--hipsycl-gpu-arch=gfx900
-#SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib
+SYCLFLAG+=--hipsycl-gpu-arch=gfx908
+SYCLFLAG+=-Wl,-rpath=/opt/rocm/llvm/lib
 #
 #CELERITYDIR=${SYCLDIR}
 #CELERITYINC=-I$(CELERITYDIR)/include/celerity -I$(CELERITYDIR)/include/celerity/vendor
