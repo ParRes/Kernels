@@ -204,7 +204,7 @@ UPCXXFLAG+=-mtune=native -ffast-math
 #BLASFLAG=-DACCELERATE -framework Accelerate
 #CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
 BLASPATH=/opt/arm/22.0.1/armpl-22.0.1_AArch64_Ubuntu-20.04_arm-linux-compiler_aarch64-linux/lib
-BLASFLAG=-L${BLASPATH} -Wl,-rpath=${BLASPATH} -larmpl_ilp64_mp
+BLASFLAG=-L${BLASPATH} -Wl,-rpath=${BLASPATH} -larmpl_lp64_mp
 CBLASFLAG=-L${BLASPATH} -Wl,-rpath=${BLASPATH} -larmpl_lp64_mp
 CBLASFLAG+=-I/opt/arm/22.0.1/armpl-22.0.1_AArch64_Ubuntu-20.04_arm-linux-compiler_aarch64-linux/include_lp64
 CBLASFLAG+=-L/opt/arm/22.0.1/arm-linux-compiler-22.0.1_Generic-AArch64_Ubuntu-20.04_aarch64-linux/lib -larmflang
