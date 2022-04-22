@@ -1,0 +1,246 @@
+#
+# This file shows the GCC toolchain options for PRKs using
+# OpenMP, MPI and/or Fortran coarrays only.
+#
+# Base compilers and language options
+#
+GCC_ROOT=/opt/arm/22.0.1/gcc-11.2.0_Generic-AArch64_Ubuntu-20.04_aarch64-linux
+GCC_PATH=${GCC_ROOT}/bin/
+#GCC_VERSION=-11
+# C99 is required in some implementations.
+CC=${GCC_PATH}gcc${GCC_VERSION} -std=c11 -pthread
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+FC=${GCC_PATH}gfortran${GCC_VERSION} -std=f2018 -cpp -fexternal-blas -fblas-matmul-limit=0
+# C++11 may not be required but does no harm here.
+CXX=${GCC_PATH}g++${GCC_VERSION} -std=gnu++20 -pthread -fmax-errors=1
+#
+# Compiler flags
+#
+# -mtune=native is appropriate for most cases.
+# -march=native is appropriate if you want portable binaries.
+DEFAULT_OPT_FLAGS=-O3 -mtune=native -ffast-math
+#DEFAULT_OPT_FLAGS=-O0
+DEFAULT_OPT_FLAGS+=-g3
+#DEFAULT_OPT_FLAGS+=-fsanitize=undefined
+#DEFAULT_OPT_FLAGS+=-fsanitize=undefined,leak
+#DEFAULT_OPT_FLAGS+=-fsanitize=address
+#DEFAULT_OPT_FLAGS+=-fsanitize=thread
+# If you are compiling for KNL on a Xeon login node, use the following:
+# DEFAULT_OPT_FLAGS=-g -O3 -march=knl
+# See https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html for details.
+#
+#DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
+DEFAULT_OPT_FLAGS+=-Wall #-Werror
+#DEFAULT_OPT_FLAGS+=-mavx -mfma # these should be used on Haswell and later
+#
+# OpenMP flags
+#
+OPENMPFLAG=-fopenmp
+OPENMPSIMDFLAG=-fopenmp-simd
+OFFLOADFLAG=-foffload="-O3 -v"
+OFFLOADFLAG+=-DGPU_SCHEDULE=""
+OPENACCFLAG=-fopenacc
+
+OPENMPFLAG+=-L${GCC_ROOT}/lib64 -lgomp -Wl,-rpath=${GCC_ROOT}/lib64
+#
+# OpenCL flags
+#
+# MacOS
+#OPENCLFLAG=-framework OpenCL
+# POCL
+# http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
+#OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
+# Linux
+#OPENCLDIR=/etc/alternatives/opencl-intel-tools
+#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
+METALFLAG=-framework MetalPerformanceShaders
+#
+# SYCL flags
+#
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+#SYCLDIR=/opt/isycl
+#SYCLCXX=${SYCLDIR}/bin/clang++
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-fsycl
+#SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#
+# Intel oneAPI
+#
+#SYCLCXX=dpcpp
+#SYCLFLAG=-fsycl
+#SYCLFLAG+=-std=c++17 -O3
+#SYCLFLAG+=--gcc-toolchain=/opt/rh/devtoolset-7/root/usr
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=1
+#SYCLFLAG+=-stdlib=c++
+#
+# CodePlay ComputeCpp
+#
+#SYCLDIR=/opt/sycl/latest
+#SYCLCXX=${SYCLDIR}/bin/compute++
+#SYCLFLAG=-sycl-driver -I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+#SYCLFLAG+=-std=c++14 -O3
+# This makes a huge difference in e.g. nstream...
+#SYCLFLAG+=-no-serial-memop
+# CentOS7 and Ubuntu14 built for this
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+# PRK header rejects GCC4
+#SYCLFLAG+=--gcc-toolchain=/swtools/gcc/5.4.0
+# If not found automatically
+#SYCLFLAG+=${OPENCLFLAG}
+# NVIDIA target
+#SYCLFLAG+=-sycl-target ptx64
+#
+# triSYCL
+#
+# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+#SYCLDIR=./triSYCL
+#SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
+#SYCLFLAG=-std=c++17 -I$(SYCLDIR)/include -DTRISYCL
+#
+# hipSYCL
+#
+SYCLDIR=/opt/hipSYCL
+SYCLCXX=${SYCLDIR}/bin/syclcc-clang
+SYCLFLAG=-std=c++17 -O3
+SYCLFLAG+=-DHIPSYCL
+# CPU platform
+SYCLFLAG+=--hipsycl-platform=cpu
+SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib
+#
+CELERITYDIR=${SYCLDIR}
+CELERITYINC=-I$(CELERITYDIR)/include/celerity -I$(CELERITYDIR)/include/celerity/vendor
+CELERITYLIB=-L$(CELERITYDIR)/lib -lcelerity_runtime
+MPIINC=-I/usr/include/mpich-3.2-x86_64
+MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# OCCA
+#
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
+# Cilk
+#
+#CILKFLAG=-fcilkplus
+#
+# TBB
+#
+#TBBDIR=/usr/lib/x86_64-linux-gnu
+TBBDIR=/opt/homebrew/Cellar/tbb/2020_U3_1
+TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+#TBBDIR=/opt/intel/compilers_and_libraries_2019.2.159/linux/tbb
+#TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -L${TBBDIR}/lib/intel64_lin/gcc4.7 -ltbb
+#
+# Parallel STL, Boost, etc.
+#
+#BOOSTFLAG=-I/usr/local/Cellar/boost/1.71.0/include
+#BOOSTFLAG=-I/usr/include/boost169
+BOOSTFLAG=-I/opt/homebrew/Cellar/boost/1.75.0_1/include # M1 Big Sur
+#RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+RANGEFLAG=-DUSE_RANGES_TS -I../deps/range-v3/include
+#RANGEFLAG=-DUSE_GCC_RANGES
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG}
+#PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -I./pstl/include ${RANGEFLAG} -Wno-\#pragma-messages
+KOKKOSDIR=/opt/kokkos/gcc
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
+RAJADIR=/opt/raja/gcc
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+THRUSTDIR=/Users/jrhammon/Work/NVIDIA/thrust
+THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
+EXECUTORSDIR=./libunifex
+EXECUTORSFLAG=-I${EXECUTORSDIR}/include -I${EXECUTORSDIR}/build/include
+# HPX is more complicated...
+HWLOCFLAG=-I/usr/local/include
+HPXDIR=./hpx
+HPXCXX=${HPXDIR}/bin/hpxcxx
+HPXFLAG=-Wno-unused-local-typedef ${HWLOCFLAG}
+# UPC++
+UPCXXDIR=./upcxx
+UPCXX=${UPCXXDIR}/bin/upcxx
+UPCXXFLAG=-codemode={O3,debug}
+UPCXXFLAG+=-std=c++17
+UPCXXFLAG+=-mtune=native -ffast-math
+#
+# CBLAS for C++ DGEMM
+#
+#BLASFLAG=-DACCELERATE -framework Accelerate
+#CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+BLASPATH=/opt/arm/22.0.1/armpl-22.0.1_AArch64_Ubuntu-20.04_gcc_aarch64-linux/lib
+BLASFLAG=-L${BLASPATH} -Wl,-rpath=${BLASPATH} -larmpl_lp64_mp
+BLASFLAG+=${OPENMPFLAG}
+CBLASFLAG=${BLASFLAG}
+CBLASFLAG+=-I/opt/arm/22.0.1/armpl-22.0.1_AArch64_Ubuntu-20.04_gcc_aarch64-linux/include_lp64
+CBLASFLAG+=-L/opt/arm/22.0.1/gcc-22.0.1_Generic-AArch64_Ubuntu-20.04_aarch64-linux/lib -lgfortran
+CBLASFLAG+=-Wl,-rpath=/opt/arm/22.0.1/gcc-22.0.1_Generic-AArch64_Ubuntu-20.04_aarch64-linux/lib
+#/opt/arm/22.0.1/gcc-22.0.1_Generic-AArch64_Ubuntu-20.04_aarch64-linux/lib/libarmflang.so
+#
+# CUDA flags
+#
+# Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
+#NVCC=/opt/llvm/cocl/bin/cocl
+# Linux w/ NVIDIA CUDA
+NVCC=nvcc
+CUDAFLAGS=-g -O3 -std=c++11
+CUDAFLAGS+=-arch=sm_50
+# https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
+CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# Halide
+#
+HALIDECXX=${CXX}
+HALIDEDIR=/opt/halide/Halide-10.0.0-x86-64-linux
+HALIDEFLAG=-I${HALIDEDIR}/include
+HALIDEFLAG+=-Wl,-rpath=${HALIDEDIR}/lib -L${HALIDEDIR}/lib -lHalide
+#HALIDEFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
+HALIDEFLAG+=-std=c++17
+#
+# ISPC
+#
+ISPC=ispc
+ISPCFLAG=-O3 --target=host --opt=fast-math
+#
+# MPI-3
+#
+MPIDIR=/opt/homebrew/Cellar/open-mpi/4.1.1_2
+MPICC=${MPIDIR}/bin/mpicc
+MPICXX=${MPIDIR}/bin/mpicxx
+MPIFORT=${MPIDIR}/bin/mpifort
+MPIINC=-I${MPIDIR}/include
+MPILIB=-L${MPIDIR}/lib -lmpi_usempif08 -lmpi
+#MPILIB=-L${MPIDIR}/lib -lmpifort -lmpi
+#MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
+#MPIINC=-I/usr/include/mpich-3.2-x86_64
+#MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# Global Arrays
+#
+GADIR=../deps
+GAFLAG=-I${GADIR}/include
+GAFLAG+=-L${GADIR}/lib -lga
+GAFLAG+=-L${GADIR}/lib -larmci # ARMCI-MPI
+#GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
+#GAFLAG+=${MPIINC} ${MPILIB}
+#GAFLAG+=-lmpifort -lmpi
+GAFLAG+=${BLASFLAG}
+GAFLAG+=-fdefault-integer-8 # GA is compiled with 64b integers on 64-bit systems
+#
+# PETSc
+#
+PETSCDIR=../deps/petsc
+PETSCFLAG=-I${PETSCDIR}/include
+PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
+PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
+#
+# Fortran 2008 coarrays
+#
+# see https://github.com/ParRes/Kernels/blob/master/FORTRAN/README.md for details
+# single-node
+#COARRAYFLAG=-fcoarray=single -lcaf_single
+# multi-node
+COARRAYFLAG=-fcoarray=lib -L/opt/homebrew/lib -lcaf_mpi
+#
+# MEMKIND (used in C1z)
+#
+MEMKINDDIR=/home/parallels/PRK/deps
+MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib
