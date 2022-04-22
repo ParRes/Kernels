@@ -1,0 +1,283 @@
+#
+# This file shows the LLVM toolchain options for PRKs using
+# OpenMP, MPI and/or Fortran coarrays only.
+#
+# Base compilers and language options
+#
+#LLVM_ROOT=/usr/local/Cellar/llvm/9.0.0
+#LLVM_PATH=${LLVM_ROOT}/bin/
+LLVM_PATH=/opt/arm/22.0.1/arm-linux-compiler-22.0.1_Generic-AArch64_Ubuntu-20.04_aarch64-linux/llvm-bin/
+#CLANG_VERSION=-9
+# C99 is required in some implementations.
+CC=${LLVM_PATH}clang${CLANG_VERSION} -std=c11 -pthread
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+#FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Mfreeform -L/opt/llvm/pgi-flang/lib -Wl,-rpath=/opt/llvm/pgi-flang/lib
+FC=${LLVM_PATH}flang -Mpreprocess -Mfreeform -DPGI
+# C++11 may not be required but does no harm here.
+CXX=${LLVM_PATH}clang++${CLANG_VERSION} -std=c++2a -pthread
+#
+# Compiler flags
+#
+# -mtune=native is appropriate for most cases.
+# -march=native is appropriate if you want portable binaries.
+#
+DEFAULT_OPT_FLAGS=-g -O3 -ffast-math
+#DEFAULT_OPT_FLAGS+=-mllvm -polly -mllvm -polly-vectorizer=stripmine
+#
+# If you want to be specific, get the architecture options from:
+#   ${LLVM_PATH}llc --version
+# and then get the CPU/ISA options from (e.g. for x86-64):
+#   ${LLVM_PATH}llc -march=x86-64 -mcpu=help
+#
+# These are useful to understand why the compiler does not vectorize loops:
+#   DEFAULT_OPT_FLAGS+=-Rpass-analysis=loop-vectorize
+#   DEFAULT_OPT_FLAGS+=-Rpass=loop-vectorize
+#DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
+DEFAULT_OPT_FLAGS+=-Wall #-Werror
+#DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
+#DEFAULT_OPT_FLAGS+=-mavx -mfma
+#
+# OpenMP flags
+#
+OPENMPFLAG=-fopenmp
+OPENMPSIMDFLAG=-fopenmp-simd
+OFFLOADFLAG=-fopenmp
+OFFLOADFLAG+=-DGPU_SCHEDULE=""
+OPENACCFLAG=-fopenacc
+# Klondike weirdness
+# OPENMPFLAG+=-L/opt/intel/compilers_and_libraries_2018.0.082/linux/compiler/lib/intel64_lin -liomp5
+# Mac weirdness
+#OPENMPFLAG+=-L${LLVM_ROOT}/lib
+# LLVM
+# OPENMPFLAG+=-L/opt/llvm/4.0.0/lib -lomp
+#
+# OpenCL flags
+#
+# MacOS
+#OPENCLFLAG=-framework OpenCL
+# POCL
+# http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
+#OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
+# Linux
+#OPENCLDIR=/etc/alternatives
+#OPENCLDIR=/etc/alternatives/opencl-intel-tools
+#OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
+#OPENCLFLAG+=-Wno-ignored-attributes
+#OPENCLFLAG+=-Wno-deprecated-declarations
+#OPENCLFLAG+=-Wno-missing-braces
+# oneAPI
+#OPENCLDIR=/opt/intel/oneapi/compiler/latest/linux
+#OPENCLFLAG=-I${OPENCLDIR}/include/sycl -L${OPENCLDIR}/lib -lOpenCL
+OPENCLFLAG+=-DCL_TARGET_OPENCL_VERSION=220
+#
+# Metal (MacOS-only, unused)
+#
+#METALFLAG=-framework MetalPerformanceShaders
+#
+# OCCA
+#
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
+# SYCL flags
+#
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+#SYCLDIR=/opt/isycl
+#SYCLDIR=${HOME}/ISYCL/llvm/build
+#SYCLCXX=${SYCLDIR}/bin/clang++
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-fsycl -fsycl-unnamed-lambda
+#SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#
+# Intel oneAPI
+#
+#SYCLCXX=dpcpp
+#SYCLFLAG=-fsycl
+#SYCLFLAG+=-std=c++17 -O3
+#SYCLFLAG+=--gcc-toolchain=/opt/rh/devtoolset-7/root/usr
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=1
+#SYCLFLAG+=-stdlib=c++
+#
+# CodePlay ComputeCpp
+#
+#SYCLDIR=/opt/sycl/latest
+SYCLDIR=/opt/codeplay/latest
+SYCLCXX=${SYCLDIR}/bin/compute++
+SYCLFLAG=-std=c++17 -O3
+SYCLFLAG+=-sycl-driver
+SYCLFLAG+=-Wsycl-pedantic
+# USM-related
+SYCLFLAG+=-DSYCL_LANGUAGE_VERSION=2020
+SYCLFLAG+=-fno-sycl-address-space
+# This makes a huge difference in e.g. nstream...
+SYCLFLAG+=-no-serial-memop
+# SPIR target
+SYCLFLAG+=-sycl-target spir64
+# NVIDIA target
+#SYCLFLAG+=-sycl-target ptx64
+#SYCLFLAG+=-DPRK_NO_OPENCL_GPU
+SYCLFLAG+=-I$(SYCLDIR)/include -L$(SYCLDIR)/lib -Wl,-rpath=$(SYCLDIR)/lib -lComputeCpp
+# If not found automatically
+SYCLFLAG+=${OPENCLFLAG}
+# These are only necessary on systems with very old GCC as the default
+# CentOS7 and Ubuntu14 built for this
+#SYCLFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+# PRK header rejects GCC4
+#SYCLFLAG+=--gcc-toolchain=/swtools/gcc/5.4.0
+#
+# triSYCL
+#
+# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+#SYCLDIR=./triSYCL
+#SYCLCXX=${CXX} $(DEFAULT_OPT_FLAGS)
+#SYCLFLAG=-std=c++17 -I$(SYCLDIR)/include -DTRISYCL
+#
+# hipSYCL
+#
+#SYCLDIR=/opt/hipsycl/usr/local # if installed with DESTDIR
+#SYCLDIR=/opt/hipSYCL
+#SYCLDIR=/opt/spack/spack/opt/spack/linux-ubuntu18.04-haswell/gcc-8.3.0/hipsycl-master-appurj662qod4y4z5zxipr2fwthl66k7
+#SYCLCXX=${SYCLDIR}/bin/syclcc-clang
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-DHIPSYCL
+# CPU platform
+#SYCLFLAG+=--hipsycl-platform=cpu
+#SYCLFLAG+=--hipsycl-platform=cuda
+#SYCLFLAG+=--hipsycl-gpu-arch=sm_60
+#SYCLFLAG+=-Wl,-rpath=/opt/hipSYCL/llvm/lib # wrong?
+#SYCLFLAG+=-Wl,-rpath=${SYCLDIR}/lib
+#
+CELERITYDIR=${SYCLDIR}
+CELERITYINC=-I$(CELERITYDIR)/include/celerity -I$(CELERITYDIR)/include/celerity/vendor
+CELERITYLIB=-L$(CELERITYDIR)/lib -lcelerity_runtime
+#
+# OCCA
+#
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
+# TBB
+#
+#TBBDIR=/usr/lib/x86_64-linux-gnu
+TBBDIR=/opt/homebrew/Cellar/tbb/2020_U3_1
+TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+#TBBDIR=/opt/intel/compilers_and_libraries_2019.2.159/linux/tbb
+#TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -L${TBBDIR}/lib/intel64_lin/gcc4.7 -ltbb
+#
+# Parallel STL, Boost, etc.
+#
+#BOOSTFLAG=-I/usr/local/Cellar/boost/1.72.0/include      # old Homebrew
+#BOOSTFLAG=-I/usr/include/boost169                       # Linux
+BOOSTFLAG=-I/opt/homebrew/Cellar/boost/1.75.0_2/include  # new Homebrew
+BOOSTFLAG+=-DBOOST_COMPUTE_USE_CPP11
+
+# triSYCL requires Boost
+SYCLFLAG+=${BOOSTFLAG}
+
+#RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG}
+PSTLFLAG+=-I./llvm-pstl/include -DLLVM_PSTL
+KOKKOSDIR=/opt/kokkos/clang
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos -ldl
+KOKKOSFLAG+=${OPENMPFLAG}
+#KOKKOSFLAG+=-DPRK_KOKKOS_BACKEND=Threads # Mac Clang does not support OpenMP
+RAJADIR=/opt/raja/clang
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+THRUSTDIR=/opt/nvidia/thrust
+THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
+EXECUTORSDIR=./libunifex
+EXECUTORSFLAG=-I${EXECUTORSDIR}/include -I${EXECUTORSDIR}/build/include
+# HPX is more complicated...
+HWLOCFLAG=-I/usr/local/include
+HPXDIR=./hpx
+HPXCXX=${HPXDIR}/bin/hpxcxx
+HPXFLAG=-Wno-unused-local-typedef ${HWLOCFLAG}
+# UPC++
+UPCXXDIR=./upcxx
+UPCXX=${UPCXXDIR}/bin/upcxx
+UPCXXFLAG=-codemode={O3,debug}
+UPCXXFLAG+=-std=c++17
+UPCXXFLAG+=-mtune=native -ffast-math
+#
+# CBLAS for C++ DGEMM
+#
+#BLASFLAG=-DACCELERATE -framework Accelerate
+#CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+BLASPATH=/opt/arm/22.0.1/armpl-22.0.1_AArch64_Ubuntu-20.04_arm-linux-compiler_aarch64-linux/lib
+BLASFLAG=-L${BLASPATH} -Wl,-rpath=${BLASPATH} -larmpl_lp64_mp
+CBLASFLAG=-L${BLASPATH} -Wl,-rpath=${BLASPATH} -larmpl_lp64_mp
+CBLASFLAG+=-I/opt/arm/22.0.1/armpl-22.0.1_AArch64_Ubuntu-20.04_arm-linux-compiler_aarch64-linux/include_lp64
+CBLASFLAG+=-L/opt/arm/22.0.1/arm-linux-compiler-22.0.1_Generic-AArch64_Ubuntu-20.04_aarch64-linux/lib -larmflang
+CBLASFLAG+=-Wl,-rpath=/opt/arm/22.0.1/arm-linux-compiler-22.0.1_Generic-AArch64_Ubuntu-20.04_aarch64-linux/lib
+#/opt/arm/22.0.1/arm-linux-compiler-22.0.1_Generic-AArch64_Ubuntu-20.04_aarch64-linux/lib/libarmflang.so
+#
+# CUDA flags
+#
+# Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
+NVCC=/opt/llvm/cocl/bin/cocl
+# Linux w/ NVIDIA CUDA
+#NVCC=nvcc -arch=sm_50
+CUDAFLAGS=-g -O3 -std=c++11
+CUDAFLAGS+=-arch=sm_50
+# https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
+CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# Halide
+#
+HALIDECXX=c++
+HALIDEDIR=/opt/halide
+HALIDEFLAG=-I${HALIDEDIR}/include
+HALIDEFLAG+=-L${HALIDEDIR}/lib -lhalide
+#HALIDEFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
+HALIDEFLAG+=-std=c++17 -g3
+#
+# ISPC
+#
+ISPC=ispc
+ISPCFLAG=-O3 --target=host --opt=fast-math
+#
+# MPI-3
+#
+MPIDIR=/usr
+MPICC=${MPIDIR}/bin/mpicc
+MPICXX=${MPIDIR}/bin/mpicxx
+MPIFORT=${MPIDIR}/bin/mpifort
+MPIINC=-I${MPIDIR}/include
+MPILIB=-L${MPIDIR}/lib -lmpifort -lmpi
+#MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
+#MPIINC=-I/usr/include/mpich-3.2-x86_64
+#MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# Global Arrays
+#
+GADIR=../deps/ga
+GAFLAG=-I${GADIR}/include
+GAFLAG+=-L${GADIR}/lib -lga
+GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
+#GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
+GAFLAG+=${MPIINC} ${MPILIB}
+GAFLAG+=-lmpifort -lmpi
+GAFLAG+=${BLASFLAG}
+GAFLAG+=-fdefault-integer-8 # GA is compiled with 64b integers on 64-bit systems
+#
+# PETSc
+#
+PETSCDIR=../deps/petsc
+PETSCFLAG=-I${PETSCDIR}/include
+PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
+PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
+#
+# Fortran 2008 coarrays
+#
+# see https://github.com/ParRes/Kernels/blob/master/FORTRAN/README.md for details
+# single-node
+COARRAYFLAG=-fcoarray=single -lcaf_single
+# multi-node
+#COARRAYFLAG=-fcoarray=lib -L/opt/homebrew/lib -lcaf_mpi
+#COARRAYFLAG=-fcoarray=lib -L/usr/lib/x86_64-linux-gnu/open-coarrays/mpich/lib -lcaf_mpi
+#
+# MEMKIND (used in C1z)
+#
+MEMKINDDIR=/home/parallels/PRK/deps
+MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib
