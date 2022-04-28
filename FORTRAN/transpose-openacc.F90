@@ -137,16 +137,11 @@ program main
   t0 = 0
 
   if (tile_size.lt.order) then
-    !$acc parallel loop gang collapse(2)
-    do jt=1,order,tile_size
-      do it=1,order,tile_size
-        !$acc loop vector collapse(2)
-        do j=jt,min(order,jt+tile_size-1)
-          do i=it,min(order,it+tile_size-1)
-              A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
-              B(i,j) = 0.0
-          enddo
-        enddo
+    !$acc parallel loop tile(tile_size,tile_size)
+    do j=1,order
+      do i=1,order
+        A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
+        B(i,j) = 0.0
       enddo
     enddo
   else
@@ -166,16 +161,11 @@ program main
 
     ! Transpose the matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
-      !$acc parallel loop gang collapse(2)
-      do jt=1,order,tile_size
-        do it=1,order,tile_size
-          !$acc loop vector collapse(2)
-          do j=jt,min(order,jt+tile_size-1)
-            do i=it,min(order,it+tile_size-1)
-              B(j,i) = B(j,i) + A(i,j)
-              A(i,j) = A(i,j) + 1.0
-            enddo
-          enddo
+      !$acc parallel loop tile(tile_size,tile_size)
+      do j=1,order
+        do i=1,order
+          B(j,i) = B(j,i) + A(i,j)
+          A(i,j) = A(i,j) + 1.0
         enddo
       enddo
     else
