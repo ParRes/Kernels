@@ -78,7 +78,8 @@ mpi-openmp: nstream-mpi-openmp
 
 ga: nstream-ga transpose-ga dgemm-ga
 
-target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target
+target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target \
+	transpose-openmp-target-loop
 
 openacc: p2p-openacc p2p-innerloop-openacc stencil-openacc transpose-openacc nstream-openacc
 
@@ -130,6 +131,9 @@ dgemm-blas: dgemm-blas.F90 prk.mod
 %-target: %-target.F90 prk.mod
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< prk_mod.o -o $@
 
+%-target-loop: %-target-loop.F90 prk.mod
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< prk_mod.o -o $@
+
 %-openacc: %-openacc.F90 prk.mod
 	$(FC) $(FCFLAGS) $(OPENACCFLAG) $< prk_mod.o -o $@
 
@@ -161,6 +165,7 @@ clean:
 	-rm -f *-ga
 	-rm -f *-openmp
 	-rm -f *-target
+	-rm -f *-target-loop
 	-rm -f *-openacc
 	-rm -f *-stdpar
 	-rm -f *-cufortran
