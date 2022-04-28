@@ -162,10 +162,10 @@ program main
     if (k.eq.1) t0 = omp_get_wtime()
 
     if (tile_size.lt.order) then
-      !$omp target teams distribute collapse(2) private(T)
+      !$omp target teams distribute collapse(2) private(T,it,jt,i,j)
       do jt=1,order,tile_size
         do it=1,order,tile_size
-          !$omp parallel do simd collapse(2) schedule(static,4)
+          !$omp parallel do simd collapse(2) schedule(static)
           do j=0,tile_size-1
             do i=0,tile_size-1
               T(i,j) = A(it+i,jt+j)
@@ -173,7 +173,7 @@ program main
             enddo
           enddo
           !$omp end parallel do simd
-          !$omp parallel do simd collapse(2) schedule(static,4)
+          !$omp parallel do simd collapse(2) schedule(static)
           do i=0,tile_size-1
             do j=0,tile_size-1
               B(jt+j,it+i) = B(jt+j,it+i) + T(i,j)
@@ -184,7 +184,7 @@ program main
       enddo
       !$omp end target teams distribute
     else
-      !$omp target teams distribute parallel do simd collapse(2) GPU_SCHEDULE
+      !$omp target teams distribute parallel do simd collapse(2) private(it,jt,i,j) GPU_SCHEDULE
       do j=1,order
         do i=1,order
           B(j,i) = B(j,i) + A(i,j)
@@ -208,7 +208,7 @@ program main
   abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
-  !$omp parallel do collapse(2)                                       &
+  !$omp parallel do collapse(2)                                      &
   !$omp& default(none)                                               &
   !$omp& shared(B)                                                   &
   !$omp& firstprivate(order,iterations,addit)                        &
