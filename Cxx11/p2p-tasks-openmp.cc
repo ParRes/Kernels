@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
   OMP_PARALLEL()
   OMP_MASTER
   {
-    OMP_TASKLOOP( firstprivate(m,n) shared(grid) )
+   // OMP_TASKLOOP( firstprivate(m,n) shared(grid) )
     for (int i=0; i<m; i++) {
       for (int j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
