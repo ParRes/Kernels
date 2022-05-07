@@ -144,7 +144,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
       q.submit([&](sycl::handler& h) {
         auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
         // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0}, [=] (sycl::item<2> it) {
+        h.parallel_for<class add<T>>(sycl::range<2> {n, n}, [=] (sycl::item<2> it) {
             sycl::id<2> xy = it.get_id();
             in[xy] += static_cast<T>(1);
         });
