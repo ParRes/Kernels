@@ -33,11 +33,10 @@ def codegen(src,pattern,stencil_size,radius,model,dim,usm):
             src.write('    sycl::id<2> dx'+str(r)+'(sycl::range<2> {'+str(r)+',0});\n')
             src.write('    sycl::id<2> dy'+str(r)+'(sycl::range<2> {0,'+str(r)+'});\n')
     src.write('    h.parallel_for<class '+kernel_name+'<T>>(')
-    src.write('sycl::range<2> {n-'+str(2*radius)+',n-'+str(2*radius)+'}, ')
-    src.write('sycl::id<2> {'+str(radius)+','+str(radius)+'}, ')
+    src.write('sycl::range<2> {n-'+str(radius)+',n-'+str(radius)+'}, ')
     src.write('[=] (sycl::item<2> it) {\n')
     if (dim==2):
-        src.write('        sycl::id<2> xy = it.get_id();\n')
+        src.write('        sycl::id<2> xy = it.get_id() + sycl::id<2> {'+str(radius)+','+str(radius)+'};\n')
         src.write('        out[xy] += ')
     else:
         # 1D indexing the slow way
@@ -45,8 +44,8 @@ def codegen(src,pattern,stencil_size,radius,model,dim,usm):
         #src.write('        auto j = it[1];\n')
         #src.write('        out[i*n+j] += ')
         # 1D indexing the fast way
-        src.write('        const auto i = it[0];\n')
-        src.write('        const auto j = it[1];\n')
+        src.write('        const auto i = it[0] + '+str(radius)+';\n')
+        src.write('        const auto j = it[1] + '+str(radius)+';\n')
         src.write('        out[i*n+j] += ')
     if pattern == 'star':
         for i in range(1,radius+1):

@@ -1,4 +1,3 @@
-
 // declare the kernel name used in SYCL parallel_for
 template <typename T> class star1_1d;
 
