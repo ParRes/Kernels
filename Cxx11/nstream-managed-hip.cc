@@ -153,6 +153,11 @@ int main(int argc, char * argv[])
       B = new double[length];
       C = new double[length];
   } else {
+
+      int managed_memory = 0;
+      prk::HIP::check( hipDeviceGetAttribute(&managed_memory, hipDeviceAttributeManagedMemory, 0) );
+      std::cout << "hipDeviceGetAttribute(..hipDeviceAttributeManagedMemory..) => " << managed_memory << std::endl;
+
       prk::HIP::check( hipMallocManaged((void**)&A, bytes) );
       prk::HIP::check( hipMallocManaged((void**)&B, bytes) );
       prk::HIP::check( hipMallocManaged((void**)&C, bytes) );

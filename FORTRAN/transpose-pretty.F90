@@ -49,19 +49,10 @@
 !
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
+  use prk
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
   ! for argument parsing
   integer :: err
   integer :: arglen
@@ -73,7 +64,7 @@ program main
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
-  integer(kind=INT32) :: i,j,k
+  integer(kind=INT32) :: k
   integer(kind=INT64) :: j2, o2                      ! for loop over order**2
   real(kind=REAL64) ::  abserr                      ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters

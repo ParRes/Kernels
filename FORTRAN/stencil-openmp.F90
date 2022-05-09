@@ -61,39 +61,8 @@
 !
 ! *******************************************************************
 
-subroutine initialize_w(is_star,r,W)
-  use iso_fortran_env
-  implicit none
-  logical, intent(in) :: is_star
-  integer(kind=INT32), intent(in) :: r
-  real(kind=REAL64), intent(inout) :: W(-r:r,-r:r)
-  integer(kind=INT32) :: ii, jj
-  ! fill the stencil weights to reflect a discrete divergence operator
-  W = 0.0d0
-  if (is_star) then
-    do ii=1,r
-      W(0, ii) =  1.0d0/real(2*ii*r,REAL64)
-      W(0,-ii) = -1.0d0/real(2*ii*r,REAL64)
-      W( ii,0) =  1.0d0/real(2*ii*r,REAL64)
-      W(-ii,0) = -1.0d0/real(2*ii*r,REAL64)
-    enddo
-  else
-    ! Jeff: check that this is correct with the new W indexing
-    do jj=1,r
-      do ii=-jj+1,jj-1
-        W( ii, jj) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-        W( ii,-jj) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-        W( jj, ii) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-        W(-jj, ii) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-      enddo
-      W( jj, jj)  =  1.0d0/real(4*jj*r,REAL64)
-      W(-jj,-jj)  = -1.0d0/real(4*jj*r,REAL64)
-    enddo
-  endif
-end subroutine initialize_w
-
 subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   implicit none
   logical, intent(in) :: is_star, tiling
   integer(kind=INT32), intent(in) :: tile_size, r, n
@@ -174,13 +143,11 @@ subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
 end subroutine apply_stencil
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   use omp_lib
+  use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
   integer(kind=INT32) ::  n                             ! linear grid dimension
@@ -207,41 +174,7 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a43)') 'Fortran OpenMP Stencil execution on 2D grid'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a32,a29)') 'Usage: ./stencil <# iterations> ', &
-                      '<array dimension> [tile_size]'
-    stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  n = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') n
-  if (n .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: array dimension must be >= 1 : ', n
-    stop 1
-  endif
-
-  tiling    = .false.
-  tile_size = n
-  if (command_argument_count().gt.2) then
-    call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') tile_size
-    if ((tile_size .lt. 1).or.(tile_size.gt.n)) then
-      write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
-                             ' must be >= 1 and <= ',n
-    else
-      tiling = .true.
-    endif
-  endif
+  call prk_get_arguments('stencil',iterations=iterations,order=n,tile_size=tile_size)
 
   ! TODO: parse runtime input for star/grid
 #ifdef STAR
@@ -250,57 +183,40 @@ program main
   is_star = .false.
 #endif
 
-  ! TODO: parse runtime input for radius
+  tiling = (tile_size.ne.n)
 
-  if (r .lt. 1) then
-    write(*,'(a,i5,a)') 'ERROR: Stencil radius ',r,' should be positive'
-    stop 1
-  else if ((2*r+1) .gt. n) then
-    write(*,'(a,i5,a,i5)') 'ERROR: Stencil radius ',r,&
-                           ' exceeds grid size ',n
-    stop 1
-  endif
-
-  allocate( A(n,n), stat=err)
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
-    stop 1
-  endif
-
-  allocate( B(n,n), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
-
-  norm = 0.d0
-  active_points = int(n-2*r,INT64)**2
-
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Grid size            = ', n
-  write(*,'(a,i8)') 'Radius of stencil    = ', r
+  write(*,'(a22,i8)') 'Number of threads    = ',omp_get_max_threads()
+  write(*,'(a22,i8)') 'Number of iterations = ', iterations
+  write(*,'(a22,i8)') 'Grid size            = ', n
+  write(*,'(a22,i8)') 'Radius of stencil    = ', r
   if (is_star) then
-    write(*,'(a,a)')  'Type of stencil      = star'
+    write(*,'(a22,a8)')  'Type of stencil      = ', 'star'
     stencil_size = 4*r+1
   else
-    write(*,'(a,a)')  'Type of stencil      = grid'
+    write(*,'(a22,a8)')  'Type of stencil      = ','grid'
     stencil_size = (2*r+1)**2
   endif
-  write(*,'(a)') 'Data type            = double precision'
-  write(*,'(a)') 'Compact representation of stencil loop body'
   if (tiling) then
-      write(*,'(a,i5)') 'Tile size            = ', tile_size
+    write(*,'(a22,i8)') 'Tile size            = ', tile_size
   else
-      write(*,'(a)') 'Untiled'
+    write(*,'(a10)') 'Tiling off'
+  endif
+
+  ! ********************************************************************
+  ! ** Allocate space for the input and perform the computation
+  ! ********************************************************************
+
+  allocate( A(n,n), B(n,n), stat=err)
+  if (err .ne. 0) then
+    write(*,'(a,i3)') 'allocation returned ',err
+    stop 1
   endif
 
   call initialize_w(is_star,r,W)
 
-  !$omp parallel default(none)                                        &
-  !$omp&  shared(n,A,B,W,t0,t1,iterations,tiling,tile_size,is_star)   &
-  !$omp&  private(i,j,k)                                  &
-  !$omp&  reduction(+:norm)
+  !$omp parallel default(none)                                              &
+  !$omp&  shared(n,A,B,W,stencil_time,iterations,tiling,tile_size,is_star)  &
+  !$omp&  private(i,j,k,t0,t1)
 
   ! intialize the input and output arrays
   !$omp do
@@ -316,7 +232,6 @@ program main
 
   do k=0,iterations
 
-    ! start timer after a warmup iteration
     !$omp barrier
     !$omp master
     if (k.eq.1) then
@@ -341,28 +256,29 @@ program main
   !$omp barrier
   !$omp master
   t1 = omp_get_wtime()
+  stencil_time = t1 - t0
   !$omp end master
+  !$omp end parallel
 
   ! compute L1 norm in parallel
-  !$omp do
+  norm = 0
+  !$omp parallel do reduction(+:norm)
   do j=r,n-r
     do i=r,n-r
       norm = norm + abs(B(i,j))
     enddo
   enddo
-  !$omp end do
+  !$omp end parallel do
 
-  !$omp end parallel
 
-  stencil_time = t1 - t0
+  active_points = int(n-2*r,INT64)**2
   norm = norm / real(active_points,REAL64)
 
   !******************************************************************************
   !* Analyze and output results.
   !******************************************************************************
 
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B )
 
   ! verify correctness
   reference_norm = real(iterations+1,REAL64) * (cx + cy);

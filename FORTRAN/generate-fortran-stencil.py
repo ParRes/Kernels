@@ -17,21 +17,21 @@ def codegen(src,pattern,stencil_size,radius,W,model):
     src.write('integer(kind=INT32) :: i,j\n')
     if (model=='openmp'):
         src.write('    !$omp do\n')
-        src.write('    do i='+str(radius)+',n-'+str(radius)+'-1\n')
+        src.write('    do i='+str(1+radius)+',n-'+str(radius)+'\n')
         src.write('      !$omp simd\n')
-        src.write('      do j='+str(radius)+',n-'+str(radius)+'-1\n')
+        src.write('      do j='+str(1+radius)+',n-'+str(radius)+'\n')
     if (model=='target'):
         src.write('    !$omp teams distribute parallel for simd collapse(2) schedule(static,1)\n')
-        src.write('    do i='+str(radius)+',n-'+str(radius)+'-1\n')
-        src.write('      do j='+str(radius)+',n-'+str(radius)+'-1\n')
+        src.write('    do i='+str(1+radius)+',n-'+str(radius)+'\n')
+        src.write('      do j='+str(1+radius)+',n-'+str(radius)+'\n')
     elif (model=='taskloop'):
         src.write('    !$omp taskloop\n')
-        src.write('    do i='+str(radius)+',n-'+str(radius)+'-1\n')
+        src.write('    do i='+str(1+radius)+',n-'+str(radius)+'\n')
         src.write('      !$omp simd\n')
-        src.write('      do j='+str(radius)+',n-'+str(radius)+'-1\n')
+        src.write('      do j='+str(1+radius)+',n-'+str(radius)+'\n')
     else:
-        src.write('    do i='+str(radius)+',n-'+str(radius)+'-1\n')
-        src.write('      do j='+str(radius)+',n-'+str(radius)+'-1\n')
+        src.write('    do i='+str(1+radius)+',n-'+str(radius)+'\n')
+        src.write('      do j='+str(1+radius)+',n-'+str(radius)+'\n')
     src.write('        out(i,j) = out(i,j) &\n')
     for j in range(0,2*radius+1):
         if j-radius>=0: opj='+'
