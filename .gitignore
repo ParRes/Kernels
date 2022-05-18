@@ -65,6 +65,7 @@ C1z/nstream-mmap
 C1z/nstream-mmap-openmp
 C1z/nstream-mpi
 C1z/nstream-openmp
+C1z/nstream-openacc
 C1z/nstream-petsc
 C1z/nstream-target
 C1z/nstream-taskloop
@@ -96,6 +97,7 @@ C1z/transpose-2d-openmp
 C1z/transpose-cilk
 C1z/transpose-ispc
 C1z/transpose-openmp
+C1z/transpose-openacc
 C1z/transpose-petsc
 C1z/transpose-target
 C1z/transpose-taskloop
