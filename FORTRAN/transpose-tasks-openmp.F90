@@ -49,16 +49,15 @@
 !
 ! HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 !          Converted to Fortran by Jeff Hammond, January 2015
+!
 ! *******************************************************************
 
 program main
   use, intrinsic :: iso_fortran_env
   use omp_lib
+  use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
   integer(kind=INT32) ::  order                     ! order of a the matrix
@@ -79,60 +78,26 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a46)') 'Fortran OpenMP TASKS Matrix transpose: B = A^T'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
-    stop 1
-  endif
+  call prk_get_arguments('transpose',iterations=iterations,order=order,tile_size=tile_size)
 
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  order = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') order
-  if (order .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
-    stop 1
-  endif
-
-  ! same default as the C implementation
-  tile_size = 32
-  if (command_argument_count().gt.2) then
-      call get_command_argument(3,argtmp,arglen,err)
-      if (err.eq.0) read(argtmp,'(i32)') tile_size
-  endif
-  if ((tile_size .lt. 1).or.(tile_size.gt.order)) then
-    write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
-                           ' must be >= 1 and <= ',order
-    tile_size = order ! no tiling
+  write(*,'(a22,i8)') 'Number of threads    = ',omp_get_max_threads()
+  write(*,'(a22,i8)') 'Number of iterations = ', iterations
+  write(*,'(a22,i8)') 'Matrix order         = ', order
+  if (tile_size.ne.order) then
+    write(*,'(a22,i8)') 'Tile size            = ', tile_size
+  else
+    write(*,'(a10)') 'Tiling off'
   endif
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(order,order), stat=err)
+  allocate( A(order,order), B(order,order), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a,i3)') 'allocation  returned ',err
     stop 1
   endif
-
-  allocate( B(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
-
-  write(*,'(a,i8)') 'Number of threads    = ',omp_get_max_threads()
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix order         = ', order
-  write(*,'(a,i8)') 'Tile size            = ', tile_size
 
   t0 = 0
 
@@ -160,9 +125,7 @@ program main
 
   do k=0,iterations
 
-    if (k.eq.1) then
-      t0 = omp_get_wtime()
-    endif
+    if (k.eq.1) t0 = omp_get_wtime()
 
     do jt=1,order,tile_size
       !$omp task  firstprivate(order,tile_size,jt) shared(A,B) private(i,j,it)
@@ -211,8 +174,7 @@ program main
   enddo
   !$omp end parallel do
 
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B )
 
   if (abserr .lt. epsilon) then
     write(*,'(a)') 'Solution validates'
