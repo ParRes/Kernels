@@ -148,50 +148,50 @@ program main
 
   !$omp target data map(to: A) map(tofrom: B)
 
-  !$omp target teams distribute parallel do simd collapse(2)
+  !$omp target teams loop collapse(2)
   do j=1,order
     do i=1,order
       A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
       B(i,j) = 0
     enddo
   enddo
-  !$omp end target teams distribute parallel do simd
+  !$omp end target teams loop
 
   do k=0,iterations
 
     if (k.eq.1) t0 = omp_get_wtime()
 
     if (tile_size.lt.order) then
-      !$omp target teams distribute collapse(2) private(T,it,jt,i,j)
+      !$omp target teams loop collapse(2) private(T,it,jt,i,j)
       do jt=1,order,tile_size
         do it=1,order,tile_size
-          !$omp parallel do simd collapse(2) schedule(static)
+          !$omp loop collapse(2)
           do j=0,tile_size-1
             do i=0,tile_size-1
               T(i,j) = A(it+i,jt+j)
               A(it+i,jt+j) = A(it+i,jt+j) + 1
             enddo
           enddo
-          !$omp end parallel do simd
-          !$omp parallel do simd collapse(2) schedule(static)
+          !$omp end loop
+          !$omp loop collapse(2)
           do i=0,tile_size-1
             do j=0,tile_size-1
               B(jt+j,it+i) = B(jt+j,it+i) + T(i,j)
             enddo
           enddo
-          !$omp end parallel do simd
+          !$omp end loop
         enddo
       enddo
-      !$omp end target teams distribute
+      !$omp end target teams loop
     else
-      !$omp target teams distribute parallel do simd collapse(2) private(it,jt,i,j) GPU_SCHEDULE
+      !$omp target teams loop collapse(2) private(it,jt,i,j)
       do j=1,order
         do i=1,order
           B(j,i) = B(j,i) + A(i,j)
           A(i,j) = A(i,j) + 1
         enddo
       enddo
-      !$omp end target teams distribute parallel do simd
+      !$omp end target teams loop
     endif
 
   enddo ! iterations
