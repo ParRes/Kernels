@@ -1,6 +1,6 @@
 #
 # This file shows the NVHPC toolchain options.
-NVHPC_PATH=/opt/nvidia/hpc_sdk/Linux_$$(uname -m)/21.11
+NVHPC_PATH=/opt/nvidia/hpc_sdk/Linux_$$(uname -m)/22.2
 #NVHPC_PATH=/proj/nv/Linux_$$(uname -m)/21.11
 #NVHPC_PATH=${HOME}/NVIDIA/hpc_sdk/Linux_$$(uname -m)/2021
 NVHPC_CBIN=${NVHPC_PATH}/compilers/bin/
@@ -74,7 +74,7 @@ CBLASFLAG=${BLASFLAG}
 NVCC=${NVHPC_CBIN}nvcc
 CUDAFLAGS=-g -O3 -std=c++17
 CUDAFLAGS+=--extended-lambda
-CUDAFLAGS+=--gpu-architecture=sm_75
+CUDAFLAGS+=--gpu-architecture=sm_80
 #CUDAFLAGS+=--compiler-bindir=/swtools/gcc/7.5.0/bin
 #CUDAFLAGS+=-forward-unknown-to-host-compiler -fopenmp
 CUDAFLAGS+=-rdc=true # FIXES ptxas fatal   : Unresolved extern function 'cudaCGGetIntrinsicHandle'
@@ -106,8 +106,7 @@ CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
 # MPI-3
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPIDIR=${NVHPC_PATH}/comm_libs/openmpi/openmpi-3.1.5
-#MPIDIR=${NVHPC_PATH}/comm_libs/openmpi4/openmpi-4.0.5
+MPIDIR=${NVHPC_PATH}/comm_libs/hpcx/latest/ompi
 MPICC=${MPIDIR}/bin/mpicc
 MPICXX=${MPIDIR}/bin/mpicxx
 MPIFORT=${MPIDIR}/bin/mpifort
