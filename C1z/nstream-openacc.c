@@ -143,7 +143,7 @@ int main(int argc, char * argv[])
   ar *= length;
 
   double asum = 0.0;
-  #pragma acc parallel loop reduction( +:asum ) deviceptr(A,B,C)
+  #pragma acc parallel loop reduction( +:asum ) deviceptr(A)
   for (size_t i=0; i<length; i++) {
       asum += fabs(A[i]);
   }
