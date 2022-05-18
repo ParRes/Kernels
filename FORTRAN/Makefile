@@ -86,6 +86,7 @@ openacc: p2p-openacc p2p-innerloop-openacc stencil-openacc transpose-openacc nst
 
 stdpar: nstream-stdpar stencil-stdpar transpose-stdpar dgemm-stdpar
 
+cuda: cufortran
 cuf: cufortran
 cufortran: nstream-cufortran transpose-cufortran
 
