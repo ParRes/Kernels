@@ -139,6 +139,7 @@ Cxx11/nstream-cublas
 Cxx11/nstream-cuda
 Cxx11/nstream-cuda-managed
 Cxx11/nstream-dpcpp
+Cxx11/nstream-onedpl
 Cxx11/nstream-executors
 Cxx11/nstream-hip
 Cxx11/nstream-hipblas
@@ -154,6 +155,7 @@ Cxx11/nstream-multigpu-dpcpp
 Cxx11/nstream-onemkl
 Cxx11/nstream-opencl
 Cxx11/nstream-openmp
+Cxx11/nstream-openacc
 Cxx11/nstream-openmp-target
 Cxx11/nstream-pstl
 Cxx11/nstream-raja
@@ -174,6 +176,7 @@ Cxx11/nstream-vector-raja
 Cxx11/p2p
 Cxx11/p2p-doacross-openmp
 Cxx11/p2p-hyperplane-openmp
+Cxx11/p2p-hyperplane-openacc
 Cxx11/p2p-hyperplane-pstl
 Cxx11/p2p-hyperplane-stl
 Cxx11/p2p-hyperplane-sycl
@@ -212,6 +215,7 @@ Cxx11/stencil-kokkos
 Cxx11/stencil-mpi
 Cxx11/stencil-opencl
 Cxx11/stencil-openmp
+Cxx11/stencil-openacc
 Cxx11/stencil-openmp-target
 Cxx11/stencil-pstl
 Cxx11/stencil-raja
@@ -243,6 +247,7 @@ Cxx11/transpose-kokkos
 Cxx11/transpose-mpi
 Cxx11/transpose-opencl
 Cxx11/transpose-openmp
+Cxx11/transpose-openacc
 Cxx11/transpose-openmp-target
 Cxx11/transpose-pstl
 Cxx11/transpose-raja

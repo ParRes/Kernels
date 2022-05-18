@@ -48,86 +48,95 @@
 ///
 /// FUNCTIONS CALLED:
 ///
-///          Other than standard C functions, the following
-///          functions are used in this program:
-///
+///          Other than standard C functions, the following functions are used in
+///          this program:
 ///          wtime()
 ///
 /// HISTORY: - Written by Rob Van der Wijngaart, February 2009.
-///          - C99-ification by Jeff Hammond, February 2016.
-///          - C11-ification by Jeff Hammond, June 2017.
+///          - RvdW: Removed unrolling pragmas for clarity;
+///            added constant to array "in" at end of each iteration to force
+///            refreshing of neighbor data in parallel versions; August 2013
+///            C++11-ification by Jeff Hammond, May 2017.
 ///
 //////////////////////////////////////////////////////////////////////
 
 #include <openacc.h>
 #include "prk_util.h"
+#include "stencil_openacc.hpp"
 
-typedef void (*stencil_t)(const int, const double * restrict, double * restrict);
-
-void nothing(const int n, const double * restrict in, double * restrict out)
+void nothing(const int n, const int t, const double * RESTRICT in, double * RESTRICT out)
 {
-    printf("You are trying to use a stencil that does not exist.\n");
-    printf("Please generate the new stencil using the code generator.\n");
-    // n will never be zero - this is to silence compiler warnings.
-    if (n==0) printf("%p %p\n", in, out);
-    abort();
+    // use arguments to silence compiler warnings
+    out[0] = in[0] + n + t;
 }
 
-#include "stencil_openacc.h"
-
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
-  printf("Parallel Research Kernels version %d\n", PRKVERSION);
-  printf("C11/OpenACC Stencil execution on 2D grid\n");
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "C++11/OpenMP TARGET Stencil execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  if (argc < 3){
-    printf("Usage: <# iterations> <array dimension> [<star/grid> <radius>]\n");
-    return 1;
-  }
-
-  int iterations = atoi(argv[1]);
-  if (iterations < 1) {
-    printf("ERROR: iterations must be >= 1\n");
-    return 1;
-  }
-
-  int n  = atoi(argv[2]);
-  if (n < 1) {
-    printf("ERROR: grid dimension must be positive\n");
-    return 1;
-  } else if (n > floor(sqrt(INT_MAX))) {
-    printf("ERROR: grid dimension too large - overflow risk\n");
-    return 1;
-  }
-
-  // stencil pattern
+  int iterations, n, radius, tile_size;
   bool star = true;
-  if (argc > 3) {
-      char* pattern = argv[3];
-      star = (0==strncmp(pattern,"star",4)) ? true : false;
-  }
+  try {
+      if (argc < 3) {
+        throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
+      }
 
-  // stencil radius
-  int radius = 2;
-  if (argc > 4) {
-      radius = atoi(argv[4]);
-  }
+      // number of times to run the algorithm
+      iterations  = std::atoi(argv[1]);
+      if (iterations < 1) {
+        throw "ERROR: iterations must be >= 1";
+      }
 
-  if ( (radius < 1) || (2*radius+1 > n) ) {
-    printf("ERROR: Stencil radius negative or too large\n");
+      // linear grid dimension
+      n  = std::atoi(argv[2]);
+      if (n < 1) {
+        throw "ERROR: grid dimension must be positive";
+      } else if (n > prk::get_max_matrix_size()) {
+        throw "ERROR: grid dimension too large - overflow risk";
+      }
+
+      // default tile size for tiling of local transpose
+      tile_size = 32;
+      if (argc > 3) {
+          tile_size = std::atoi(argv[3]);
+          if (tile_size <= 0) tile_size = n;
+          if (tile_size > n) tile_size = n;
+      }
+
+      // stencil pattern
+      if (argc > 4) {
+          auto stencil = std::string(argv[4]);
+          auto grid = std::string("grid");
+          star = (stencil == grid) ? false : true;
+      }
+
+      // stencil radius
+      radius = 2;
+      if (argc > 5) {
+          radius = std::atoi(argv[5]);
+      }
+
+      if ( (radius < 1) || (2*radius+1 > n) ) {
+        throw "ERROR: Stencil radius negative or too large";
+      }
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
     return 1;
   }
 
-  printf("Number of iterations      = %d\n", iterations);
-  printf("Grid sizes                = %d\n", n);
-  printf("Type of stencil           = %s\n", (star ? "star" : "grid") );
-  printf("Radius of stencil         = %d\n", radius );
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
+  std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
+  std::cout << "Radius of stencil    = " << radius << std::endl;
 
-  stencil_t stencil = nothing;
+  auto stencil = nothing;
   if (star) {
       switch (radius) {
           case 1: stencil = star1; break;
@@ -135,10 +144,6 @@ int main(int argc, char * argv[])
           case 3: stencil = star3; break;
           case 4: stencil = star4; break;
           case 5: stencil = star5; break;
-          case 6: stencil = star6; break;
-          case 7: stencil = star7; break;
-          case 8: stencil = star8; break;
-          case 9: stencil = star9; break;
       }
   } else {
       switch (radius) {
@@ -147,10 +152,6 @@ int main(int argc, char * argv[])
           case 3: stencil = grid3; break;
           case 4: stencil = grid4; break;
           case 5: stencil = grid5; break;
-          case 6: stencil = grid6; break;
-          case 7: stencil = grid7; break;
-          case 8: stencil = grid8; break;
-          case 9: stencil = grid9; break;
       }
   }
 
@@ -158,35 +159,35 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double stencil_time = 0.0;
+  double stencil_time{0};
 
   size_t bytes = n*n*sizeof(double);
-  double * restrict in  = acc_malloc(bytes);
-  double * restrict out = acc_malloc(bytes);
+  double * RESTRICT in  = (double *)acc_malloc(bytes);
+  double * RESTRICT out = (double *)acc_malloc(bytes);
 
   {
     #pragma acc parallel loop collapse(2) deviceptr(in,out)
     for (int i=0; i<n; i++) {
       for (int j=0; j<n; j++) {
-        in[i*n+j]  = (double)(i+j);
+        in[i*n+j] = static_cast<double>(i+j);
         out[i*n+j] = 0.0;
       }
     }
 
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) stencil_time = prk_wtime();
+      if (iter==1) stencil_time = prk::wtime();
 
-      stencil(n, in, out);
+      stencil(n, tile_size, in, out);
 
-      #pragma acc parallel loop collapse(2) deviceptr(in,out)
+      #pragma acc parallel loop collapse(2) deviceptr(in)
       for (int i=0; i<n; i++) {
         for (int j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
     }
-    stencil_time = prk_wtime() - stencil_time;
+    stencil_time = prk::wtime() - stencil_time;
   }
 
   //////////////////////////////////////////////////////////////////////
@@ -194,13 +195,13 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   // interior of grid with respect to stencil
-  size_t active_points = (n-2*radius)*(n-2*radius);
+  size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
   // compute L1 norm in parallel
   double norm = 0.0;
   #pragma acc parallel loop reduction( +:norm ) deviceptr(out)
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
-      norm += fabs(out[i*n+j]);
+      norm += prk::abs(out[i*n+j]);
     }
   }
   norm /= active_points;
@@ -211,18 +212,21 @@ int main(int argc, char * argv[])
   // verify correctness
   const double epsilon = 1.0e-8;
   double reference_norm = 2.*(iterations+1.);
-  if (fabs(norm-reference_norm) > epsilon) {
-    printf("ERROR: L1 norm = %lf Reference L1 norm = %lf\n", norm, reference_norm);
+  if (prk::abs(norm-reference_norm) > epsilon) {
+    std::cout << "ERROR: L1 norm = " << norm
+              << " Reference L1 norm = " << reference_norm << std::endl;
     return 1;
   } else {
-    printf("Solution validates\n");
+    std::cout << "Solution validates" << std::endl;
 #ifdef VERBOSE
-    printf("L1 norm = %lf Reference L1 norm = %lf\n", norm, reference_norm);
+    std::cout << "L1 norm = " << norm
+              << " Reference L1 norm = " << reference_norm << std::endl;
 #endif
     const int stencil_size = star ? 4*radius+1 : (2*radius+1)*(2*radius+1);
-    size_t flops = (2*stencil_size+1) * active_points;
-    double avgtime = stencil_time/iterations;
-    printf("Rate (MFlops/s): %lf Avg time (s): %lf\n", 1.0e-6 * (double)flops/avgtime, avgtime );
+    size_t flops = (2L*(size_t)stencil_size+1L) * active_points;
+    auto avgtime = stencil_time/iterations;
+    std::cout << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
+              << " Avg time (s): " << avgtime << std::endl;
   }
 
   return 0;
