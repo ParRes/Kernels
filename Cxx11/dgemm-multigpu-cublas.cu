@@ -153,7 +153,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11/CUBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   prk::CUDA::info info;
-  //info.print();
+  info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
