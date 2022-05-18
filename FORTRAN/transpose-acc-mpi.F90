@@ -123,7 +123,7 @@ program main
   if (me.eq.0) then
     call prk_get_arguments('transpose',iterations=iterations,order=order,tile_size=tile_size)
     write(*,'(a25)') 'Parallel Research Kernels'
-    write(*,'(a36)') 'Fortran MPI Matrix transpose: B = A^T'
+    write(*,'(a37)') 'Fortran MPI Matrix transpose: B = A^T'
     write(*,'(a22,i8)') 'Number of MPI procs    = ', np
     write(*,'(a22,i8)') 'Number of iterations    = ', iterations
     write(*,'(a22,i8)') 'Matrix order            = ', order
