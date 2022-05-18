@@ -71,7 +71,7 @@ target: nstream-target stencil-target transpose-target nstream-alloc-target nstr
 
 taskloop: nstream-taskloop stencil-taskloop transpose-taskloop
 
-openacc: nstream-openacc transpose-openacc
+openacc: nstream-openacc stencil-openacc transpose-openacc
 
 cilk: stencil-cilk transpose-cilk
 

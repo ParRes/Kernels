@@ -89,6 +89,7 @@ C1z/stencil-2d
 C1z/stencil-2d-openmp
 C1z/stencil-cilk
 C1z/stencil-openmp
+C1z/stencil-openacc
 C1z/stencil-target
 C1z/stencil-taskloop
 C1z/transpose
