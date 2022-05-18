@@ -140,6 +140,7 @@ program main
     !$acc parallel loop tile(tile_size,tile_size)
     do j=1,order
       do i=1,order
+        !$acc cache(A,B)
         A(i,j) = real(order,REAL64) * real(j-1,REAL64) + real(i-1,REAL64)
         B(i,j) = 0.0
       enddo
