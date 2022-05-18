@@ -66,13 +66,13 @@
 module nstream
 use iso_fortran_env
 contains
-  attributes(global) subroutine kernel(scalar, A, B, C)
+  attributes(global) subroutine kernel(n, scalar, A, B, C)
     implicit none
-    real(kind=REAL64), intent(inout) :: A(:)
-    real(kind=REAL64), intent(in) :: B(:), C(:)
+    integer(kind=INT64), intent(in), value :: n
     real(kind=REAL64), intent(in), value :: scalar
-    integer :: i, n
-    n = size(A)
+    real(kind=REAL64), intent(inout) :: A(n)
+    real(kind=REAL64), intent(in) :: B(n), C(n)
+    integer :: i
     i = blockDim%x * (blockIdx%x - 1) + threadIdx%x
     if (i <= n) then
         A(i) = A(i) + B(i) + scalar * C(i)
@@ -146,7 +146,7 @@ program main
       t0 = prk_get_wtime()
     endif
 
-    call kernel<<<grid, tblock>>>(scalar, A, B, C)
+    call kernel<<<grid, tblock>>>(length, scalar, A, B, C)
 
   enddo ! iterations
 
