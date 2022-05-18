@@ -3,12 +3,13 @@ include ../common/PRKVERSION
 
 CPPFLAGS = -DPRKVERSION=$(PRKVERSION)
 
-CFLAGS = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
-
 # debugging
 ifdef VERBOSE
-  CFLAGS += -DVERBOSE
+    CPPFLAGS += -DVERBOSE
 endif
+
+CFLAGS = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
+
 
 ifdef PRK_USE_MMAP
   CFLAGS += -DPRK_USE_MMAP
@@ -22,10 +23,10 @@ endif
 ASMFLAGS = -fverbose-asm $(CFLAGS)
 
 OMPFLAGS = $(OPENMPFLAG)
-ACCFLAGS = $(OPENACCFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
 CILKFLAGS = $(CILKFLAG)
 ISPCFLAGS = $(ISPCFLAG)
+OPENACCFLAGS = $(OPENACCFLAG)
 
 .PHONY: all clean serial thread openmp tasks target taskloop ispc
 
@@ -123,7 +124,7 @@ p2p-2d: p2p-2d.c prk_util.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-openacc: %-openacc.c prk_util.h
-	$(CC) $(CFLAGS) $< $(ACCFLAGS) $(EXTRA_CLIBS) -o $@
+	$(CC) $(CFLAGS) $< $(OPENACCFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-cilk: %-cilk.c prk_util.h
 	$(CC) $(CFLAGS) $< $(CILKFLAGS) $(EXTRA_CLIBS) -o $@
