@@ -141,6 +141,7 @@ Cxx11/nstream-cuda-managed
 Cxx11/nstream-dpcpp
 Cxx11/nstream-onedpl
 Cxx11/nstream-executors
+Cxx11/nstream-halide
 Cxx11/nstream-hip
 Cxx11/nstream-hipblas
 Cxx11/nstream-hipstl
@@ -210,6 +211,7 @@ Cxx11/stencil
 Cxx11/stencil-cilk
 Cxx11/stencil-cuda
 Cxx11/stencil-dpcpp
+Cxx11/stencil-halide
 Cxx11/stencil-hip
 Cxx11/stencil-kokkos
 Cxx11/stencil-mpi
@@ -240,6 +242,7 @@ Cxx11/transpose-cublas
 Cxx11/transpose-cuda
 Cxx11/transpose-device-thrust
 Cxx11/transpose-dpcpp
+Cxx11/transpose-halide
 Cxx11/transpose-hip
 Cxx11/transpose-hipblas
 Cxx11/transpose-host-thrust

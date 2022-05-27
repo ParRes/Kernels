@@ -113,6 +113,16 @@ CUDAFLAGS+=-arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #
+# Halide
+#
+HALIDECXX=icpx
+HALIDEDIR=/opt/halide
+HALIDEFLAG=-I${HALIDEDIR}/include
+HALIDEFLAG+=-Wl,-rpath=${HALIDEDIR}/lib -L${HALIDEDIR}/lib -lHalide
+#HALIDEFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
+HALIDEFLAG+=-std=c++17
+#
 # ISPC
 #
 ISPC=ispc

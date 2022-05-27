@@ -52,6 +52,7 @@ THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
 SYCLFLAGS = $(SYCLFLAG)
 OPENACCFLAGS = $(OPENACCFLAG)
+HALIDEFLAGS = $(HALIDEFLAG)
 STDPARFLAGS = $(STDPARFLAG) $(RANGEFLAGS)
 
 ifdef OCCADIR
@@ -145,6 +146,8 @@ occa: transpose-occa nstream-occa
 openacc: nstream-openacc stencil-openacc transpose-openacc p2p-hyperplane-openacc
 
 stdpar: nstream-stdpar transpose-stdpar #stencil-stdpar p2p-stdpar
+
+halide: nstream-halide stencil-halide
 
 boost-compute: nstream-boost-compute
 # busted
@@ -283,6 +286,9 @@ endif
 	$(info PRK help: Set OCCA_CXX=$(firstword $(CXX)) to use that compiler for OKL files.)
 	$(CXX) $(CXXFLAGS) $< $(OCCAFLAGS) -o $@
 
+%-halide: %-halide.cc prk_util.h
+	$(HALIDECXX) $(CXXFLAGS) $< $(HALIDEFLAGS) -o $@
+
 %-openacc: %-openacc.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(OPENACCFLAGS) -o $@
 
@@ -337,6 +343,7 @@ clean:
 	-rm -f *-cblas
 	-rm -f *-onemkl
 	-rm -f *-occa
+	-rm -f *-halide
 	-rm -f *-boost-compute
 	-rm -f *-openacc
 	-rm -f transpose-async transpose-thread
