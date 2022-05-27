@@ -1,7 +1,7 @@
-include ../common/Cxx11.defs
+include ../common/make.defs
 include ../common/PRKVERSION
 
-CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
+CPPFLAGS = -DPRKVERSION=$(PRKVERSION)
 
 # debugging
 ifdef VERBOSE
@@ -31,7 +31,7 @@ endif
 #ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm
 ASMFLAGS = -fverbose-asm
 
-OMPFLAGS = $(OPENMPFLAG) -DUSE_OPENMP
+OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
 OPENCLFLAGS = $(OPENCLFLAG) -DCL_HPP_MINIMUM_OPENCL_VERSION=120 -DCL_HPP_TARGET_OPENCL_VERSION=120 -DCL_HPP_ENABLE_EXCEPTIONS
 # We do not yet handle all possible exceptions...
@@ -62,18 +62,17 @@ OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib 
 	boost-compute thrust executor oneapi onemkl
 
 EXTRA=
-ifeq ($(shell uname -s),Darwin)
-  ifneq ($(findstring icpc,$(CXX)),icpc)
-    EXTRA += target
-  endif
-else
-  EXTRA += target
+ifneq ($(findstring nvc++,$(CXX)),nvc++)
+  EXTRA += ranges stl pstl
 endif
-ifneq ($(findstring pgc++,$(CXX)),pgc++)
-  EXTRA += pstl
+ifneq ($(OPENACCFLAG),)
+  EXTRA += openacc
+endif
+ifneq ($(SYCLCC),)
+  EXTRA += sycl
 endif
 
-all: sequential vector valarray openmp taskloop stl ranges opencl sycl $(EXTRA)
+all: sequential vector valarray openmp taskloop opencl $(EXTRA)
 
 sequential: p2p stencil transpose nstream dgemm sparse
 
@@ -137,7 +136,7 @@ oneapi: onemkl dpcpp sycl onedpl
 
 occa: transpose-occa nstream-occa
 
-openacc: p2p-hyperplane-openacc
+openacc: nstream-openacc stencil-openacc transpose-openacc p2p-hyperplane-openacc
 
 stdpar: nstream-stdpar transpose-stdpar #stencil-stdpar p2p-stdpar
 

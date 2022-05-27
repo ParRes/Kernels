@@ -81,7 +81,7 @@
 #endif
 
 // omp_get_wtime()
-#if defined(USE_OPENMP) && defined(_OPENMP)
+#if defined(_OPENMP)
 #include <omp.h>
 #endif
 
@@ -301,7 +301,7 @@ namespace prk {
 
     static inline double wtime(void)
     {
-#if defined(USE_OPENMP) && defined(_OPENMP)
+#if defined(_OPENMP)
         return omp_get_wtime();
 #else
         using t = std::chrono::high_resolution_clock;

@@ -21,9 +21,11 @@ def codegen(src,pattern,stencil_size,radius,W,model,dim):
     if (model=='openmp'):
         outer += 'OMP_FOR()\n  '
     elif (model=='target'):
-        outer += 'OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )\n  '
+        outer += 'OMP_TARGET( teams distribute parallel for simd collapse(2) )\n  '
     elif (model=='taskloop'):
         outer += 'OMP_TASKLOOP( firstprivate(n) shared(in,out) grainsize(gs) )\n  '
+    elif (model=='openacc'):
+        outer += 'PRAGMA( acc parallel loop tile(32,32) deviceptr(in,out) )\n  '
     elif (model=='cilk'):
         outer += '_Cilk_'
 
@@ -82,7 +84,7 @@ def instance(src,model,pattern,r,dim):
     codegen(src,pattern,stencil_size,r,W,model,dim)
 
 def main():
-    for model in ['seq','openmp','target','cilk','taskloop']:
+    for model in ['seq','openmp','target','cilk','taskloop','openacc']:
       src = open('stencil_'+model+'.h','w')
       for pattern in ['star','grid']:
         for r in range(1,10):
