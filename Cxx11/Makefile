@@ -46,6 +46,8 @@ STLFLAGS = $(STLFLAG) $(RANGEFLAGS) $(BOOSTFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS)
 EXECUTORSFLAGS = $(EXECUTORSFLAG) $(PSTLFLAGS) #$(RANGEFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
+HPXFLAGS = -DUSE_HPX $(HPXFLAG) $(BOOSTFLAG) $(RANGEFLAGS)
+UPCXXFLAGS = $(CPPFLAGS) -DUSE_UPCXX $(UPCXXFLAG) $(BOOSTFLAG) $(RANGEFLAGS)
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
 SYCLFLAGS = $(SYCLFLAG)
@@ -110,8 +112,12 @@ executors: nstream-executors transpose-executors
 
 kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
-raja: p2p-raja stencil-raja nstream-raja \
-      p2p-raja transpose-raja nstream-raja stencil-raja # transpose-raja
+hpx: nstream-hpx
+
+upcxx: nstream-upcxx
+
+raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
+      p2p-raja transpose-raja nstream-raja stencil-raja # transpose-vector-raja
 
 cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
 
@@ -229,6 +235,12 @@ pic-sycl: pic-sycl.cc prk_util.h prk_sycl.h random_draw.c
 %-raja: %-raja.cc prk_util.h prk_raja.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
 
+%-upcxx: %-upcxx.cc prk_util.h prk_upcxx.h
+	$(UPCXX) $(UPCXXFLAGS) $< -o $@
+
+%-hpx: %-hpx.cc prk_util.h prk_hpx.h
+	$(HPXCXX) --exe=$@ $(CXXFLAGS) $(HPXFLAGS) $<
+
 ifeq ($(PRK_KOKKOS_BACKEND),Cuda)
 %-kokkos: %-kokkos.cc prk_util.h prk_kokkos.h
 	$(NVCC) -x cu $(CPPFLAGS) $(CUDAFLAGS) $< $(KOKKOSFLAG) -DPRK_KOKKOS_BACKEND=Cuda -o $@
@@ -316,6 +328,7 @@ clean:
 	-rm -f *-stdpar
 	-rm -f *-raja
 	-rm -f *-kokkos
+	-rm -f *-hpx
 	-rm -f *-thrust
 	-rm -f *-cuda
 	-rm -f *-cublas
