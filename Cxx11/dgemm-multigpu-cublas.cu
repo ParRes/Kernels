@@ -306,18 +306,18 @@ int main(int argc, char * argv[])
   double residuum(0);
   for (int i=0; i<ngpus; ++i) {
       for (int b=0; b<matrices; ++b) {
-          const auto checksum = prk::reduce( &(h_c[i][b*order*order+0]), &(h_c[i][b*order*order+nelems]), 0.0);
+          const double checksum = prk::reduce( &(h_c[i][b*order*order+0]), &(h_c[i][b*order*order+nelems]), 0.0);
           residuum += std::abs(checksum-reference)/reference;
+#if VERBOSE
+    std::cout << "Reference checksum = " << reference << "\n"
+              << "Actual checksum = " << checksum << std::endl;
+#endif
       }
   }
   residuum/=matrices;
   residuum/=ngpus;
 
   if (residuum < epsilon) {
-#if VERBOSE
-    std::cout << "Reference checksum = " << reference << "\n"
-              << "Actual checksum = " << checksum << std::endl;
-#endif
     std::cout << "Solution validates" << std::endl;
     auto avgtime = dgemm_time/iterations/matrices;
     auto nflops = 2.0 * prk::pow(forder,3) * ngpus;
