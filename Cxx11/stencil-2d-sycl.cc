@@ -144,7 +144,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
       q.submit([&](sycl::handler& h) {
         auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
         // Add constant to solution to force refresh of neighbor data, if any
-        h.parallel_for<class add<T>>(sycl::range<2> {n, n}, sycl::id<2> {0, 0}, [=] (sycl::item<2> it) {
+        h.parallel_for<class add<T>>(sycl::range<2> {n, n}, [=] (sycl::item<2> it) {
             sycl::id<2> xy = it.get_id();
             in[xy] += static_cast<T>(1);
         });
@@ -281,7 +281,9 @@ int main(int argc, char * argv[])
     sycl::queue q{sycl::host_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, block_size, star, radius);
+#ifndef DPCPP_NO_DOUBLE
     run<double>(q, iterations, n, block_size, star, radius);
+#endif
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -298,7 +300,9 @@ int main(int argc, char * argv[])
     sycl::queue q{sycl::cpu_selector{}};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, block_size, star, radius);
+#ifndef DPCPP_NO_DOUBLE
     run<double>(q, iterations, n, block_size, star, radius);
+#endif
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -314,13 +318,18 @@ int main(int argc, char * argv[])
   try {
     sycl::queue q{sycl::gpu_selector{}};
     prk::SYCL::print_device_platform(q);
-    bool has_fp64 = prk::SYCL::has_fp64(q);
     run<float>(q, iterations, n, block_size, star, radius);
+#ifndef DPCPP_NO_DOUBLE
+    bool has_fp64 = prk::SYCL::has_fp64(q);
+    if (has_fp64) {
+      if (prk::SYCL::print_gen12lp_helper(q)) return 1;
+    }
     if (has_fp64) {
       run<double>(q, iterations, n, block_size, star, radius);
     } else {
       std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
     }
+#endif
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
