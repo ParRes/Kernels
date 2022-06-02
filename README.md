@@ -15,7 +15,7 @@ executed on many computing systems.
 These programs should not be used as benchmarks.  They are operations to 
 explore features of a hardware platform, but they do not define 
 fixed problems that can be used to rank systems.  Furthermore 
-they have not been optimimzed for the features of any particular system.
+they have not been optimized for the features of any particular system.
 
 # Build Instructions
 
@@ -51,7 +51,7 @@ If you are looking for the simplest option, try `make.defs.gcc`.
 | `make.defs.pgi`      | PGI compiler toolchain (infrequently tested). |
 | `make.defs.hip`      | HIP compiler toolchain (infrequently tested). |
 
-Some of the C++ implementations require you to install Boost, RAJA, KOKKOS, Parallel STL, respectively,
+Some of the C++ implementations require you to install Boost, RAJA, Kokkos, Parallel STL, respectively,
 and then modify `make.defs` appropriately.  Please see the documentation in the
 [documentation](https://github.com/ParRes/Kernels/tree/default/doc) (`doc`) subdirectory.
 
@@ -215,7 +215,7 @@ be used unless a `make veryclean` has been issued.
 
 ## Individual make
 
-Descend into the desired sub-tree and cd to the kernel(s) of interest. 
+Descend into the desired sub-tree and `cd` to the kernel(s) of interest. 
 Each kernel has its own Makefile. There are a number of parameters 
 that determine the behavior of the kernel that need to be known at 
 compile time. These are explained succinctly in the Makefile itself. Edit 
