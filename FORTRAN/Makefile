@@ -99,7 +99,7 @@ prk.mod prk_mod.o: prk_mod.F90
 	$(FC) $(FCFLAGS) -c $< -o prk_mod.o
 
 prk_mpi.mod prk_mpi_mod.o: prk_mpi.F90
-	$(FC) $(FCFLAGS) -c $< -o prk_mpi_mod.o
+	$(MPIFORT) $(FCFLAGS) -c $< -o prk_mpi_mod.o
 
 stencil: stencil.F90 prk.mod
 	$(FC) $(FCFLAGS) -c stencil_serial.F90

@@ -205,7 +205,7 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 #
 # MPI-3
 #
-MPIDIR=/opt/homebrew/Cellar/open-mpi/4.1.1_2
+MPIDIR=/opt/homebrew/Cellar/open-mpi/4.1.4
 MPICC=${MPIDIR}/bin/mpicc
 MPICXX=${MPIDIR}/bin/mpicxx
 MPIFORT=${MPIDIR}/bin/mpifort
