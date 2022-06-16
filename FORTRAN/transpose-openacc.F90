@@ -66,7 +66,6 @@ program main
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
   ! runtime variables
   integer(kind=INT32) ::  i, j, k
-  integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp         ! squared error
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8    ! error tolerance
@@ -78,11 +77,11 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a41)') 'Fortran OpenACC Matrix transpose: B = A^T'
 
-  call prk_get_arguments('transpose',iterations=iterations,order=order,tile_size=tile_size)
+  call prk_get_arguments('transpose',iterations=iterations,order=order)
 
   write(*,'(a22,i8)') 'Number of iterations = ', iterations
   write(*,'(a22,i8)') 'Matrix order         = ', order
-  write(*,'(a22,i8)') 'Tile size            = ', tile_size
+  write(*,'(a32)')    'Tile size            = automatic'
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
@@ -110,7 +109,7 @@ program main
 
     if (k.eq.1) t0 = prk_get_wtime()
 
-    !$acc parallel loop tile(tile_size,tile_size)
+    !$acc parallel loop tile(*,*)
     do j=1,order
       do i=1,order
         B(j,i) = B(j,i) + A(i,j)
