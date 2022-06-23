@@ -47,8 +47,8 @@ If you are looking for the simplest option, try `make.defs.gcc`.
 | `make.defs.intel`    | Intel Parallel Studio toolchain, which supports most implementations (tested often). |
 | `make.defs.llvm`     | LLVM compiler toolchain, which supports most implementations (tested often). |
 | `make.defs.musl`     | GCC compiler toolchain with MUSL as the C standard library, which was required to use C11 threads. |
-| `make.defs.nvhpc`    | NVIDIA HPC compiler tool chain, which supports most implementations (tested often). |
-| `make.defs.oneapi`   | Intel oneAPI (https://software.intel.com/oneapi/hpc-kit). |
+| `make.defs.nvhpc`    | [NVIDIA HPC SDK](https://developer.nvidia.com/nvidia-hpc-sdk-downloads), which supports most implementations (tested often). |
+| `make.defs.oneapi`   | Intel [oneAPI](https://software.intel.com/oneapi/hpc-kit). |
 | `make.defs.pgi`      | PGI compiler toolchain (infrequently tested). |
 | `make.defs.hip`      | HIP compiler toolchain (infrequently tested). |
 
