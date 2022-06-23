@@ -38,15 +38,16 @@ If you are looking for the simplest option, try `make.defs.gcc`.
 
 | File (in `./common/`) | Environment |  
 |----------------------|-------------------------|  
-| `make.defs.cray`     | Cray compilers on Cray XC systems. |
+| `make.defs.cray`     | Cray toolchain (rarely tested). |
 | `make.defs.cuda`     | GCC with the CUDA compiler (only used in C++/CUDA implementation). |
-| `make.defs.gcc`      | GCC compiler tool chain, which supports essentially all implementations. |
+| `make.defs.gcc`      | GCC compiler toolchain, which supports essentially all implementations (tested often). |
 | `make.defs.freebsd`  | FreeBSD (rarely tested). |
 | `make.defs.ibmbg`    | IBM Blue Gene/Q compiler toolchain (deprecated). |
-| `make.defs.ibmp9nv`  | IBM compilers for POWER9 and NVIDIA Volta platforms. |
-| `make.defs.intel`    | Intel compiler tool chain, which supports most implementations. |
-| `make.defs.llvm`     | LLVM compiler tool chain, which supports most implementations. |
-| `make.defs.musl`     | GCC compiler toolchain with MUSL as the C standard library, which is required to use C11 threads. |
+| `make.defs.ibmp9nv`  | IBM compilers for POWER9 and NVIDIA Volta platforms (rarely tested). |
+| `make.defs.intel`    | Intel Parallel Studio toolchain, which supports most implementations (tested often). |
+| `make.defs.llvm`     | LLVM compiler toolchain, which supports most implementations (tested often). |
+| `make.defs.musl`     | GCC compiler toolchain with MUSL as the C standard library, which was required to use C11 threads. |
+| `make.defs.nvhpc`    | NVIDIA HPC compiler tool chain, which supports most implementations (tested often). |
 | `make.defs.oneapi`   | Intel oneAPI (https://software.intel.com/oneapi/hpc-kit). |
 | `make.defs.pgi`      | PGI compiler toolchain (infrequently tested). |
 | `make.defs.hip`      | HIP compiler toolchain (infrequently tested). |
