@@ -19,7 +19,7 @@
 
 #include <cstdlib>
 
-#include "cl2.hpp"
+#include "opencl.hpp"
 
 namespace prk {
 
