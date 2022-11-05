@@ -377,6 +377,8 @@ RUST/nstream-unsafe/Cargo.lock
 RUST/nstream-unsafe/target/
 RUST/nstream-iter/Cargo.lock
 RUST/nstream-iter/target/
+RUST/nstream-rayon/Cargo.lock
+RUST/nstream-rayon/target/
 RUST/p2p/Cargo.lock
 RUST/p2p/target/
 RUST/stencil/Cargo.lock

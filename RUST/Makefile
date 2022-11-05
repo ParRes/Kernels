@@ -16,6 +16,7 @@ all:
 	cd nstream 	&& cargo build $(RCFLAGS)
 	cd nstream-unsafe 	&& cargo build $(RCFLAGS)
 	cd nstream-iter 	&& cargo build $(RCFLAGS)
+	cd nstream-rayon 	&& cargo build $(RCFLAGS)
 	cd p2p 		&& cargo build $(RCFLAGS)
 	cd stencil 	&& cargo build $(RCFLAGS)
 	cd transpose 	&& cargo build $(RCFLAGS)
