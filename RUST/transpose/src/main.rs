@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2013, Intel Corporation
+// Copyright (c) 2022, Sajid Ali
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -54,137 +55,191 @@
 
 use std::env;
 use std::mem;
-use std::time::{Instant,Duration};
+use std::time::{Duration, Instant};
 
 fn help() {
-  println!("Usage: <# iterations> <matrix order> [tile size]");
+    println!("Usage: <# iterations> <matrix order> [tile size]");
 }
 
-fn main()
-{
-  println!("Parallel Research Kernels");
-  println!("Rust Matrix transpose: B = A^T");
+fn main() {
+    println!("Parallel Research Kernels");
+    println!("Rust Matrix transpose: B = A^T");
 
-  ///////////////////////////////////////////////
-  // Read and test input parameters
-  ///////////////////////////////////////////////
+    ///////////////////////////////////////////////
+    // Read and test input parameters
+    ///////////////////////////////////////////////
 
-  let args : Vec<String> = env::args().collect();
+    let args: Vec<String> = env::args().collect();
 
-  let iterations : u32;
-  let order      : usize;
-  let tilesize   : usize;
+    let iterations: u32;
+    let order: usize;
+    let tilesize: usize;
 
-  match args.len() {
-    3 => {
-      iterations = match args[1].parse() {
-        Ok(n) => { n },
-        Err(_) => { help(); return; },
-      };
-      order = match args[2].parse() {
-        Ok(n) => { n },
-        Err(_) => { help(); return; },
-      };
-      tilesize = 32;
-    },
-    4 => {
-      iterations = match args[1].parse() {
-        Ok(n) => { n },
-        Err(_) => { help(); return; },
-      };
-      order = match args[2].parse() {
-        Ok(n) => { n },
-        Err(_) => { help(); return; },
-      };
-      tilesize = match args[3].parse() {
-        Ok(n) => { n },
-        Err(_) => { help(); return; },
-      };
-    },
-    _ => {
-      help();
-      return;
+    match args.len() {
+        3 => {
+            iterations = match args[1].parse() {
+                Ok(n) => n,
+                Err(_) => {
+                    help();
+                    return;
+                }
+            };
+            order = match args[2].parse() {
+                Ok(n) => n,
+                Err(_) => {
+                    help();
+                    return;
+                }
+            };
+            tilesize = 32;
+        }
+        4 => {
+            iterations = match args[1].parse() {
+                Ok(n) => n,
+                Err(_) => {
+                    help();
+                    return;
+                }
+            };
+            order = match args[2].parse() {
+                Ok(n) => n,
+                Err(_) => {
+                    help();
+                    return;
+                }
+            };
+            tilesize = match args[3].parse() {
+                Ok(n) => n,
+                Err(_) => {
+                    help();
+                    return;
+                }
+            };
+        }
+        _ => {
+            help();
+            return;
+        }
     }
-  }
 
-  if iterations < 1 {
-    println!("ERROR: iterations must be >= 1");
-  }
-  if tilesize > order {
-    println!("ERROR: tilesize cannot be > order");
-  }
-
-  println!("Number of iterations  = {}", iterations);
-  println!("Matrix order          = {}", order);
-  if tilesize < order {
-      println!("Tile size             = {}", tilesize);
-  } else {
-      println!("Untiled");
-  }
-
-  ///////////////////////////////////////////////
-  // Allocate space for the input and transpose matrix
-  ///////////////////////////////////////////////
-
-  let nelems : usize = order*order;
-  let mut a : Vec<f64> = vec![0.0; nelems];
-  let mut b : Vec<f64> = vec![0.0; nelems];
-
-  for i in 0..order {
-    for j in 0..order {
-      a[i*order+j] = (i*order+j) as f64;
+    if tilesize > order {
+        println!("Warning: tilesize cannot be > order, will not use tiling!");
     }
-  }
 
-  let timer = Instant::now();
-  let mut t0 : Duration = timer.elapsed();
+    println!("Number of iterations  = {}", iterations);
+    println!("Matrix order          = {}", order);
+    if tilesize < order {
+        println!("Tile size             = {}", tilesize);
+    } else {
+        println!("Untiled");
+    }
 
-  for k in 0..iterations+1 {
+    /////////////////////////////////////////////////////
+    // Allocate space for the input and transpose matrix
+    /////////////////////////////////////////////////////
 
-    if k == 1 { t0 = timer.elapsed(); }
+    let nelems: usize = order * order;
+    let mut a: Vec<f64> = vec![0.0; nelems];
+    let mut b: Vec<f64> = vec![0.0; nelems];
 
+    // Initialize matrices
     for i in 0..order {
-      for j in 0..order {
-        b[j*order+i] += a[i*order+j];
-        a[i*order+j] += 1.0;
-      }
+        for j in 0..order {
+            a[i * order + j] = (i * order + j) as f64;
+        }
     }
 
-  }
-  let t1 = timer.elapsed();
-  let dt = (t1.checked_sub(t0)).unwrap();
-  let dtt : u64 = dt.as_secs() * 1_000_000_000 + dt.subsec_nanos() as u64;
-  let transpose_time : f64 = dtt as f64 * 1.0e-9;
+    let (num_tiles, boundscheck): (usize, bool) = if order % tilesize == 0 {
+        (order / tilesize, false) // all tiles have same size
+    } else {
+        (order / tilesize + 1, true) // last tile has size < tilesize
+    };
 
-  ///////////////////////////////////////////////
-  // Analyze and output results
-  ///////////////////////////////////////////////
-
-  let addit : usize = ((iterations as usize + 1) * (iterations as usize)) / 2;
-  let mut abserr : f64 = 0.0;
-  for i in 0..order {
-    for j in 0..order {
-      let ij = i*order+j;
-      let ji = j*order+i;
-      let reference : f64 = (ij*(iterations as usize + 1)+addit) as f64;
-      abserr += (b[ji] - reference).abs();
+    println!("Initialization done, running algorithm");
+    if boundscheck {
+        println!("Warning: Matrix order not divisible by tilesize, will employ bounds checking!")
     }
-  }
 
-  if cfg!(VERBOSE) {
-    println!("Sum of absolute differences: {:30.15}", abserr);
-  }
+    let timer = Instant::now();
+    let mut t0: Duration = timer.elapsed();
 
-  let epsilon : f64 = 1.0e-8;
-  if abserr < epsilon {
-    println!("Solution validates");
-    let avgtime : f64 = (transpose_time as f64) / (iterations as f64);
-    let bytes : usize = 2_usize * nelems * mem::size_of::<f64>();
-    println!("Rate (MB/s): {:10.3} Avg time (s): {:10.3}", (1.0e-6_f64) * (bytes as f64) / avgtime, avgtime);
-  } else {
-    println!("ERROR: Aggregate squared error {:30.15} exceeds threshold {:30.15}", abserr, epsilon);
-    return;
-  }
+    for k in 0..iterations + 1 {
+        if k == 1 {
+            t0 = timer.elapsed();
+        }
+
+        // Version with no bounds check
+        if !boundscheck {
+            for row_tile in 0..num_tiles {
+                for col_tile in 0..num_tiles {
+                    for i in 0..tilesize {
+                        for j in 0..tilesize {
+                            let rowidx = row_tile * tilesize + i;
+                            let colidx = col_tile * tilesize + j;
+                            b[colidx * order + rowidx] += a[rowidx * order + colidx];
+                            a[rowidx * order + colidx] += 1.0;
+                        }
+                    }
+                }
+            }
+        } else {
+            // Version with bounds check
+            for row_tile in 0..num_tiles {
+                for col_tile in 0..num_tiles {
+                    for i in 0..tilesize {
+                        for j in 0..tilesize {
+                            let rowidx = row_tile * tilesize + i;
+                            let colidx = col_tile * tilesize + j;
+                            if rowidx < order && colidx < order {
+                                b[colidx * order + rowidx] += a[rowidx * order + colidx];
+                                a[rowidx * order + colidx] += 1.0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let t1 = timer.elapsed();
+    let dt = (t1.checked_sub(t0)).unwrap();
+    let dtt: u64 = dt.as_secs() * 1_000_000_000 + dt.subsec_nanos() as u64;
+    let transpose_time: f64 = dtt as f64 * 1.0e-9;
+
+    ///////////////////////////////////////////////
+    // Analyze and output results
+    ///////////////////////////////////////////////
+
+    let addit: usize = ((iterations as usize + 1) * (iterations as usize)) / 2;
+    let mut abserr: f64 = 0.0;
+    for i in 0..order {
+        for j in 0..order {
+            let ij = i * order + j;
+            let ji = j * order + i;
+            let reference: f64 = (ij * (iterations as usize + 1) + addit) as f64;
+            abserr += (b[ji] - reference).abs();
+        }
+    }
+
+    if cfg!(VERBOSE) {
+        println!("Sum of absolute differences: {:30.15}", abserr);
+    }
+
+    let epsilon: f64 = 1.0e-8;
+    if abserr < epsilon {
+        println!("Solution validates");
+        let avgtime: f64 = (transpose_time as f64) / (iterations as f64);
+        let bytes: usize = 2_usize * nelems * mem::size_of::<f64>();
+        println!(
+            "Rate (MB/s): {:10.3} Avg time (s): {:10.3}",
+            (1.0e-6_f64) * (bytes as f64) / avgtime,
+            avgtime
+        );
+    } else {
+        println!(
+            "ERROR: Aggregate squared error {:30.15} exceeds threshold {:30.15}",
+            abserr, epsilon
+        );
+        return;
+    }
 }
-
-
