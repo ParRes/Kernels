@@ -391,6 +391,8 @@ RUST/stencil/Cargo.lock
 RUST/stencil/target/
 RUST/transpose/Cargo.lock
 RUST/transpose/target/
+RUST/transpose-iter/Cargo.lock
+RUST/transpose-iter/target/
 SERIAL/AMR/amr
 SERIAL/Branch/branch
 SERIAL/DGEMM/dgemm
