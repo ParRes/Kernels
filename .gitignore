@@ -393,6 +393,8 @@ RUST/transpose/Cargo.lock
 RUST/transpose/target/
 RUST/transpose-iter/Cargo.lock
 RUST/transpose-iter/target/
+RUST/transpose-rayon/Cargo.lock
+RUST/transpose-rayon/target/
 SERIAL/AMR/amr
 SERIAL/Branch/branch
 SERIAL/DGEMM/dgemm

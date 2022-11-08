@@ -53,6 +53,7 @@
 //
 ///////////////////////////////////////////////
 
+use rayon::prelude::*;
 use std::env;
 use std::mem;
 use std::time::{Duration, Instant};
@@ -166,7 +167,8 @@ fn main() {
             t0 = timer.elapsed();
         }
 
-        b.chunks_exact_mut(tilesize * order)
+        // parallelisze outermost loop with rayon
+        b.par_chunks_exact_mut(tilesize * order)
             .enumerate()
             // for the current set of row tiles
             // and the rows corresponding to this row tile
@@ -196,7 +198,7 @@ fn main() {
             });
 
         // straightforward addition of 1.0 to all elements of A
-        a.iter_mut().for_each(|a_element| {
+        a.par_iter_mut().for_each(|a_element| {
             *a_element += 1.0;
         });
     }

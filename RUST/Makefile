@@ -20,6 +20,8 @@ all:
 	cd p2p 		   && cargo build $(RCFLAGS)
 	cd stencil 	   && cargo build $(RCFLAGS)
 	cd transpose 	   && cargo build $(RCFLAGS)
+	cd transpose-iter  && cargo build $(RCFLAGS)
+	cd transpose-rayon && cargo build $(RCFLAGS)
 	cd dgemm           && cargo build $(RCFLAGS)
 	cd dgemm-iter      && cargo build $(RCFLAGS)
 	cd dgemm-rayon     && cargo build $(RCFLAGS)
@@ -31,6 +33,8 @@ clean:
 	cd p2p 	 	   && cargo clean
 	cd stencil 	   && cargo clean
 	cd transpose 	   && cargo clean
+	cd transpose-iter  && cargo clean
+	cd transpose-rayon && cargo clean
 	cd dgemm           && cargo clean
 	cd dgemm-iter      && cargo clean
 	cd dgemm-rayon     && cargo clean
