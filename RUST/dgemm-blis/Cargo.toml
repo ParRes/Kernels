@@ -1,9 +1,10 @@
 [package]
-name = "transpose-rayon"
+name = "dgemm-blis"
 version = "0.1.0"
 authors = ["Jeff Hammond <jeff.r.hammond@intel.com>", "Sajid Ali <sasyed@fnal.gov>"]
 
-edition = "2021"
+edition="2021"
 
 [dependencies]
-rayon = "1.5"
+cblas = "0.4"
+blas-src = { version = "0.8", features = ["blis"] }

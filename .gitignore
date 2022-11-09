@@ -381,6 +381,8 @@ RUST/nstream-rayon/Cargo.lock
 RUST/nstream-rayon/target/
 RUST/dgemm/Cargo.lock
 RUST/dgemm/target/
+RUST/dgemm-blis/Cargo.lock
+RUST/dgemm-blis/target/
 RUST/dgemm-iter/Cargo.lock
 RUST/dgemm-iter/target/
 RUST/dgemm-rayon/Cargo.lock
