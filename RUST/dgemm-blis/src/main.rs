@@ -53,6 +53,10 @@
 //
 ///////////////////////////////////////////////
 
+// Need the following to prevent linker errors per
+// https://github.com/blas-lapack-rs/blas-lapack-rs.github.io/wiki
+extern crate blas_src;
+
 use std::env;
 use std::time::{Duration, Instant};
 
@@ -126,12 +130,28 @@ fn main() {
         if k == 1 {
             t0 = timer.elapsed();
         }
-        for i in 0..order {
-            for k in 0..order {
-                for j in 0..order {
-                    c[i * order + j] += a[i * order + k] * b[k * order + j];
-                }
-            }
+
+        //prk_dgemm(order, &mut a, &mut b, &mut c);
+        let m: i32 = order as i32;
+        let n: i32 = order as i32;
+        let k: i32 = order as i32;
+        unsafe {
+            cblas::dgemm(
+                cblas::Layout::RowMajor,
+                cblas::Transpose::None,
+                cblas::Transpose::None,
+                m,
+                n,
+                k,
+                1.0,
+                &a,
+                m,
+                &b,
+                k,
+                1.0,
+                &mut c,
+                m,
+            );
         }
     }
     let t1 = timer.elapsed();

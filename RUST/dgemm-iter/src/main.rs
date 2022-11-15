@@ -126,14 +126,34 @@ fn main() {
         if k == 1 {
             t0 = timer.elapsed();
         }
-        for i in 0..order {
-            for k in 0..order {
-                for j in 0..order {
-                    c[i * order + j] += a[i * order + k] * b[k * order + j];
-                }
-            }
-        }
+
+        // https://www.reidatcheson.com/matrix%20multiplication/rust/iterators/2021/02/26/gemm-iterators.html
+        c.chunks_exact_mut(order)
+            .zip(a.chunks_exact(order))
+            // ci_mut : mutable ith row of C
+            // ai     : immutable ith row of A
+            .for_each(|(ci_mut, ai)| {
+                // iterate over columns of ith row of a,
+                // zipped with rows of b
+                ai.iter()
+                    .zip(b.chunks_exact(order))
+                    // aik : element at row i, column k in matrix A
+                    // bk  : immutable kth row of matrix B
+                    .for_each(|(aik, bk)| {
+                        // iterate over columns of ith row of c,
+                        // zipped with columns of kth row of b
+                        ci_mut
+                            .iter_mut()
+                            .zip(bk.iter())
+                            // cij : element at row i, column j of matrix C
+                            // bkj : element at row k, column j of marrix B
+                            .for_each(|(cij, bkj)| {
+                                *cij += aik * bkj;
+                            })
+                    });
+            });
     }
+
     let t1 = timer.elapsed();
     let dt = (t1.checked_sub(t0)).unwrap();
     let dtt: u64 = dt.as_secs() * 1_000_000_000 + dt.subsec_nanos() as u64;

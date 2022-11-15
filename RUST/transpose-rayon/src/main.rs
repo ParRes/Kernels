@@ -30,7 +30,7 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-//////////////////////////////////////////////
+///////////////////////////////////////////////
 //
 // NAME:    transpose
 //
@@ -53,16 +53,18 @@
 //
 ///////////////////////////////////////////////
 
+use rayon::prelude::*;
 use std::env;
+use std::mem;
 use std::time::{Duration, Instant};
 
 fn help() {
-    println!("Usage: <# iterations> <matrix order>");
+    println!("Usage: <# iterations> <matrix order> [tile size]");
 }
 
 fn main() {
     println!("Parallel Research Kernels");
-    println!("Rust Dense matrix-matrix multiplication: C += A x B");
+    println!("Rust Matrix transpose: B = A^T");
 
     ///////////////////////////////////////////////
     // Read and test input parameters
@@ -72,6 +74,7 @@ fn main() {
 
     let iterations: u32;
     let order: usize;
+    let mut tilesize: usize;
 
     match args.len() {
         3 => {
@@ -89,6 +92,30 @@ fn main() {
                     return;
                 }
             };
+            tilesize = 32;
+        }
+        4 => {
+            iterations = match args[1].parse() {
+                Ok(n) => n,
+                Err(_) => {
+                    help();
+                    return;
+                }
+            };
+            order = match args[2].parse() {
+                Ok(n) => n,
+                Err(_) => {
+                    help();
+                    return;
+                }
+            };
+            tilesize = match args[3].parse() {
+                Ok(n) => n,
+                Err(_) => {
+                    help();
+                    return;
+                }
+            };
         }
         _ => {
             help();
@@ -96,28 +123,41 @@ fn main() {
         }
     }
 
-    if iterations < 1 {
-        println!("ERROR: iterations must be >= 1");
+    if tilesize > order {
+        println!("Warning: tilesize cannot be > order, will not use tiling!");
     }
 
     println!("Number of iterations  = {}", iterations);
     println!("Matrix order          = {}", order);
+    if tilesize < order {
+        println!("Tile size             = {}", tilesize);
+    } else {
+        tilesize = order;
+        println!("Untiled");
+    }
 
-    ///////////////////////////////////////////////
+    if order % tilesize != 0 && tilesize < order {
+        panic!("Cannot use the given tilesize!")
+    };
+
+    let num_tiles: usize = order / tilesize; // all tiles have same size
+
+    /////////////////////////////////////////////////////
     // Allocate space for the input and transpose matrix
-    ///////////////////////////////////////////////
+    /////////////////////////////////////////////////////
 
     let nelems: usize = order * order;
     let mut a: Vec<f64> = vec![0.0; nelems];
     let mut b: Vec<f64> = vec![0.0; nelems];
-    let mut c: Vec<f64> = vec![0.0; nelems];
 
+    // Initialize matrices
     for i in 0..order {
         for j in 0..order {
-            a[i * order + j] = i as f64;
-            b[i * order + j] = i as f64;
+            a[i * order + j] = (i * order + j) as f64;
         }
     }
+
+    println!("Initialization done, running algorithm");
 
     let timer = Instant::now();
     let mut t0: Duration = timer.elapsed();
@@ -126,56 +166,81 @@ fn main() {
         if k == 1 {
             t0 = timer.elapsed();
         }
-        for i in 0..order {
-            for k in 0..order {
-                for j in 0..order {
-                    c[i * order + j] += a[i * order + k] * b[k * order + j];
-                }
-            }
-        }
+
+        // parallelisze outermost loop with rayon
+        b.par_chunks_exact_mut(tilesize * order)
+            .enumerate()
+            // for the current set of row tiles
+            // and the rows corresponding to this row tile
+            .for_each(|(row_tile_idx, b_rows)| {
+                // iterate over all column tiles
+                (0..num_tiles).for_each(|col_tile_idx| {
+                    // within the tile, iterate over *tilesize* rows of b
+                    // zipped together with rows of b available in the tile
+                    (0..tilesize).zip(b_rows.chunks_exact_mut(order)).for_each(
+                        // bi is the ith row of b
+                        |(row_within_tile, bi)| {
+                            let bi_subset_cols = bi
+                                .get_mut((col_tile_idx * tilesize)..((col_tile_idx + 1) * tilesize))
+                                .unwrap();
+                            // within the tile, iterate over *tilesize* columns of b
+                            // zipped together with subset of columns of b
+                            (0..tilesize).zip(bi_subset_cols.iter_mut()).for_each(
+                                |(col_within_tile, b_element)| {
+                                    let rowidx: usize = row_tile_idx * tilesize + row_within_tile;
+                                    let colidx: usize = col_tile_idx * tilesize + col_within_tile;
+                                    *b_element += a[colidx * order + rowidx];
+                                },
+                            )
+                        },
+                    )
+                })
+            });
+
+        // straightforward addition of 1.0 to all elements of A
+        a.par_iter_mut().for_each(|a_element| {
+            *a_element += 1.0;
+        });
     }
+
     let t1 = timer.elapsed();
     let dt = (t1.checked_sub(t0)).unwrap();
     let dtt: u64 = dt.as_secs() * 1_000_000_000 + dt.subsec_nanos() as u64;
-    let dgemm_time: f64 = dtt as f64 * 1.0e-9;
+    let transpose_time: f64 = dtt as f64 * 1.0e-9;
 
     ///////////////////////////////////////////////
     // Analyze and output results
     ///////////////////////////////////////////////
 
-    let forder: f64 = order as f64;
-    let reference: f64 = 0.25
-        * (forder * forder * forder)
-        * (forder - 1.0)
-        * (forder - 1.0)
-        * (iterations as f64 + 1.0);
-    let mut checksum: f64 = 0.0;
+    let addit: usize = ((iterations as usize + 1) * (iterations as usize)) / 2;
+    let mut abserr: f64 = 0.0;
     for i in 0..order {
         for j in 0..order {
-            checksum += c[i * order + j];
+            let ij = i * order + j;
+            let ji = j * order + i;
+            let reference: f64 = (ij * (iterations as usize + 1) + addit) as f64;
+            abserr += (b[ji] - reference).abs();
         }
     }
 
     if cfg!(VERBOSE) {
-        println!("Sum of absolute differences: {:30.15}", checksum);
+        println!("Sum of absolute differences: {:30.15}", abserr);
     }
 
     let epsilon: f64 = 1.0e-8;
-    let residuum: f64 = (checksum - reference) / reference;
-    if residuum < epsilon {
+    if abserr < epsilon {
         println!("Solution validates");
-        let avgtime: f64 = (dgemm_time as f64) / (iterations as f64);
-        let uorder: usize = order as usize;
-        let nflops: usize = 2_usize * uorder * uorder * uorder;
+        let avgtime: f64 = (transpose_time as f64) / (iterations as f64);
+        let bytes: usize = 2_usize * nelems * mem::size_of::<f64>();
         println!(
             "Rate (MB/s): {:10.3} Avg time (s): {:10.3}",
-            (1.0e-6_f64) * (nflops as f64) / avgtime,
+            (1.0e-6_f64) * (bytes as f64) / avgtime,
             avgtime
         );
     } else {
         println!(
             "ERROR: Aggregate squared error {:30.15} exceeds threshold {:30.15}",
-            residuum, epsilon
+            abserr, epsilon
         );
         return;
     }
