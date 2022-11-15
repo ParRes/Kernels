@@ -23,6 +23,7 @@ all:
 	cd transpose-iter  && cargo build $(RCFLAGS)
 	cd transpose-rayon && cargo build $(RCFLAGS)
 	cd dgemm           && cargo build $(RCFLAGS)
+	cd dgemm-blis      && cargo build $(RCFLAGS)
 	cd dgemm-iter      && cargo build $(RCFLAGS)
 	cd dgemm-rayon     && cargo build $(RCFLAGS)
 clean:
@@ -36,5 +37,6 @@ clean:
 	cd transpose-iter  && cargo clean
 	cd transpose-rayon && cargo clean
 	cd dgemm           && cargo clean
+	cd dgemm-blis      && cargo clean
 	cd dgemm-iter      && cargo clean
 	cd dgemm-rayon     && cargo clean
