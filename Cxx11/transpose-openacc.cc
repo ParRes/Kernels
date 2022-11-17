@@ -96,7 +96,11 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
+#ifdef __GNUC__
+  std::cout << "Tile size             = " << "automatic (GCC)" << std::endl;
+#else
   std::cout << "Tile size             = " << tile_size << std::endl;
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -121,7 +125,11 @@ int main(int argc, char * argv[])
 
       if (iter==1) trans_time = prk::wtime();
 
+#ifdef __GNUC__
+      #pragma acc parallel loop tile(*,*) deviceptr(A,B)
+#else
       #pragma acc parallel loop tile(tile_size,tile_size) deviceptr(A,B)
+#endif
       for (int i=0;i<order; i++) {
         for (int j=0;j<order;j++) {
           B[i*order+j] += A[j*order+i];
