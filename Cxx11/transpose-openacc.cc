@@ -109,8 +109,8 @@ int main(int argc, char * argv[])
   double trans_time{0};
 
   size_t bytes = order*order*sizeof(double);
-  double * restrict A = (double *)acc_malloc(bytes);
-  double * restrict B = (double *)acc_malloc(bytes);
+  double * RESTRICT A = (double *)acc_malloc(bytes);
+  double * RESTRICT B = (double *)acc_malloc(bytes);
 
   {
     #pragma acc parallel loop deviceptr(A,B)
