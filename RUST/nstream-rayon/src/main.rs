@@ -1,5 +1,6 @@
 //
-// Copyright (c) 2013, Intel Corporation
+// Copyright (c) 2020, Intel Corporation
+// Copyright (c) 2020, Thomas Hayward-Schneider
 // Copyright (c) 2022, Sajid Ali
 //
 // Redistribution and use in source and binary forms, with or without
@@ -30,39 +31,51 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-//////////////////////////////////////////////
+///////////////////////////////////////////////
 //
-// NAME:    transpose
+// NAME:    nstream
 //
-// PURPOSE: This program measures the time for the transpose of a
-//          column-major stored matrix into a row-major stored matrix.
+// PURPOSE: To compute memory bandwidth when adding a vector of a given
+//          number of double precision values to the scalar multiple of
+//          another vector of the same length, and storing the result in
+//          a third vector.
 //
-// USAGE:   Program input is the matrix order and the number of times to
-//          repeat the operation:
+// USAGE:   The program takes as input the number
+//          of iterations to loop over the triad vectors, the length of the
+//          vectors, and the offset between vectors
 //
-//          transpose <matrix_size> <# iterations> [tile size]
-//
-//          An optional parameter specifies the tile size used to divide the
-//          individual matrix blocks for improved cache and TLB performance.
+//          <progname> <# iterations> <vector length> <offset>
 //
 //          The output consists of diagnostics to make sure the
-//          transpose worked and timing statistics.
+//          algorithm worked, and of timing statistics.
 //
-// HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-//          Converted to C++11 by Jeff Hammond, February 2016 and May 2017.
+// NOTES:   Bandwidth is determined as the number of words read, plus the
+//          number of words written, times the size of the words, divided
+//          by the execution time. For a vector length of N, the total
+//          number of words read and written is 4*N*sizeof(double).
+//
+// HISTORY: This code is loosely based on the Stream benchmark by John
+//          McCalpin, but does not follow all the Stream rules. Hence,
+//          reported results should not be associated with Stream in
+//          external publications
+//
+//          Converted to C++11 by Jeff Hammond, November 2017.
 //
 ///////////////////////////////////////////////
 
 use std::env;
+use std::mem;
+//use std::num; // abs?
+use rayon::prelude::*;
 use std::time::{Duration, Instant};
 
 fn help() {
-    println!("Usage: <# iterations> <matrix order>");
+    println!("Usage: <# iterations> <vector length>");
 }
 
 fn main() {
     println!("Parallel Research Kernels");
-    println!("Rust Dense matrix-matrix multiplication: C += A x B");
+    println!("Rust STREAM triad: A = B + scalar * C");
 
     ///////////////////////////////////////////////
     // Read and test input parameters
@@ -71,7 +84,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let iterations: u32;
-    let order: usize;
+    let length: usize;
 
     match args.len() {
         3 => {
@@ -82,7 +95,7 @@ fn main() {
                     return;
                 }
             };
-            order = match args[2].parse() {
+            length = match args[2].parse() {
                 Ok(n) => n,
                 Err(_) => {
                     help();
@@ -101,82 +114,71 @@ fn main() {
     }
 
     println!("Number of iterations  = {}", iterations);
-    println!("Matrix order          = {}", order);
+    println!("vector length         = {}", length);
 
     ///////////////////////////////////////////////
-    // Allocate space for the input and transpose matrix
+    // Allocate space and perform the computation
     ///////////////////////////////////////////////
 
-    let nelems: usize = order * order;
-    let mut a: Vec<f64> = vec![0.0; nelems];
-    let mut b: Vec<f64> = vec![0.0; nelems];
-    let mut c: Vec<f64> = vec![0.0; nelems];
-
-    for i in 0..order {
-        for j in 0..order {
-            a[i * order + j] = i as f64;
-            b[i * order + j] = i as f64;
-        }
-    }
+    let mut a: Vec<f64> = vec![0.0; length];
+    let b: Vec<f64> = vec![2.0; length];
+    let c: Vec<f64> = vec![2.0; length];
 
     let timer = Instant::now();
     let mut t0: Duration = timer.elapsed();
 
-    for k in 0..iterations + 1 {
-        if k == 1 {
+    let scalar: f64 = 3.0;
+
+    for _k in 0..iterations + 1 {
+        if _k == 1 {
             t0 = timer.elapsed();
         }
-        for i in 0..order {
-            for k in 0..order {
-                for j in 0..order {
-                    c[i * order + j] += a[i * order + k] * b[k * order + j];
-                }
-            }
-        }
+
+        (&mut a, &b, &c).into_par_iter().for_each(|(x, y, z)| {
+            *x += *y + scalar * (*z);
+        });
     }
     let t1 = timer.elapsed();
     let dt = (t1.checked_sub(t0)).unwrap();
     let dtt: u64 = dt.as_secs() * 1_000_000_000 + dt.subsec_nanos() as u64;
-    let dgemm_time: f64 = dtt as f64 * 1.0e-9;
+    let nstream_time: f64 = dtt as f64 * 1.0e-9;
 
     ///////////////////////////////////////////////
     // Analyze and output results
     ///////////////////////////////////////////////
 
-    let forder: f64 = order as f64;
-    let reference: f64 = 0.25
-        * (forder * forder * forder)
-        * (forder - 1.0)
-        * (forder - 1.0)
-        * (iterations as f64 + 1.0);
-    let mut checksum: f64 = 0.0;
-    for i in 0..order {
-        for j in 0..order {
-            checksum += c[i * order + j];
-        }
+    let mut ar: f64 = 0.0;
+    let br: f64 = 2.0;
+    let cr: f64 = 2.0;
+    for _k in 0..iterations + 1 {
+        ar += br + scalar * cr;
     }
 
-    if cfg!(VERBOSE) {
-        println!("Sum of absolute differences: {:30.15}", checksum);
+    ar *= length as f64;
+
+    let mut asum = 0.0;
+    for i in 0..length {
+        let absa: f64 = a[i].abs();
+        asum += absa;
     }
 
+    let err: f64 = (ar - asum) / asum;
+    let abserr: f64 = err.abs();
     let epsilon: f64 = 1.0e-8;
-    let residuum: f64 = (checksum - reference) / reference;
-    if residuum < epsilon {
+    if abserr < epsilon {
         println!("Solution validates");
-        let avgtime: f64 = (dgemm_time as f64) / (iterations as f64);
-        let uorder: usize = order as usize;
-        let nflops: usize = 2_usize * uorder * uorder * uorder;
+        let avgtime: f64 = (nstream_time as f64) / (iterations as f64);
+        let nbytes: usize = 4 * length * mem::size_of::<f64>();
         println!(
             "Rate (MB/s): {:10.3} Avg time (s): {:10.3}",
-            (1.0e-6_f64) * (nflops as f64) / avgtime,
+            (1.0e-6_f64) * (nbytes as f64) / avgtime,
             avgtime
         );
     } else {
-        println!(
-            "ERROR: Aggregate squared error {:30.15} exceeds threshold {:30.15}",
-            residuum, epsilon
-        );
-        return;
+        println!("Failed Validation on output array");
+        println!("       Expected checksum: {}", ar);
+        println!("       Observed checksum: {}", asum);
+        println!("ERROR: solution did not validate");
     }
+    return;
 }
