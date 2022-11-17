@@ -90,7 +90,11 @@ int main(int argc, char * argv[])
 
   printf("Number of iterations  = %d\n", iterations);
   printf("Matrix order          = %d\n", order);
+#ifdef __GNUC__
+  printf("Tile size             = %s\n", "automatic (GCC)");
+#else
   printf("Tile size             = %d\n", tile_size);
+#endif
 
   //////////////////////////////////////////////////////////////////////
   /// Allocate space for the input and transpose matrix
@@ -115,7 +119,11 @@ int main(int argc, char * argv[])
 
       if (iter==1) trans_time = prk_wtime();
 
+#ifdef __GNUC__
+      #pragma acc parallel loop tile(*,*) deviceptr(A,B)
+#else
       #pragma acc parallel loop tile(tile_size,tile_size) deviceptr(A,B)
+#endif
       for (int i=0;i<order; i++) {
         for (int j=0;j<order;j++) {
           B[i*order+j] += A[j*order+i];
