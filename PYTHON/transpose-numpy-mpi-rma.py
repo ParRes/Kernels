@@ -159,9 +159,10 @@ def main():
         for phase in range(0,np):
             recv_from = (me + phase) % np
             bsize = block_order * block_order
-            WA.Get(T, recv_from, [bsize * me, bsize, MPI.DOUBLE])
-            WA.Flush_all()
+            #WA.Get(T, recv_from, [bsize * me, bsize, MPI.DOUBLE])
             #WA.Flush(recv_from)
+            r = WA.Rget(T, recv_from, [bsize * me, bsize, MPI.DOUBLE])
+            r.Wait()
                   
             lo = block_order * recv_from 
             hi = block_order * (recv_from+1)
