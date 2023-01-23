@@ -161,6 +161,8 @@ def main():
         # this only uses the transpose _view_ of A
         #B += A.T
 
+        # barrier required before alltoall for correctness
+        shmem.barrier_all()
         shmem.alltoall(T, A)
         for r in range(0,np):
             lo = block_order * r
@@ -174,6 +176,9 @@ def main():
     t1 = timer()
     trans_time = t1 - t0
 
+    shmem.free(A)
+    shmem.free(T)
+
     # ********************************************************************
     # ** Analyze and output results.
     # ********************************************************************
@@ -182,10 +187,13 @@ def main():
     F = shmem.zeros((np,order,block_order))
     shmem.fcollect(F,B)
     G = numpy.concatenate(F,axis=1)
-    if (me==0):
-        print(G)
+    #if (me==0):
+    #    print(G)
     H = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
     abserr = numpy.linalg.norm(numpy.reshape(G-H,order*order),ord=1)
+
+    shmem.free(B)
+    shmem.free(F)
 
     epsilon=1.e-8
     nbytes = 2 * order**2 * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.

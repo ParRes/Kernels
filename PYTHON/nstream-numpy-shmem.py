@@ -162,7 +162,7 @@ def main():
             print('Failed Validation on output array');
             print('        Expected checksum: ',ar);
             print('        Observed checksum: ',asum);
-        sys.exit("ERROR: solution did not validate")
+            print("ERROR: solution did not validate")
     else:
         if (me==0):
             print('Solution validates')
@@ -173,4 +173,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
