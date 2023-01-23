@@ -1,5 +1,7 @@
 # How to run
 
+## mpi4py
+
 ```
  mpiexec -n 4 python3 -m mpi4py nstream-numpy-mpi.py 10 10000000
  mpiexec -n 4 python3 -m mpi4py transpose-numpy-mpi.py 10 1000
@@ -12,15 +14,12 @@ On Mac with Homebrew, this might work better:
  mpiexec -n 4 ./transpose-numpy-mpi.py 10 1000
 ```
 
-# shmem4py
-
-## Install
+## shmem4py
 
 Checkout shmem4py and build against e.g. SOS like this:
 ```
 $ export OSHCC=oshcc
-$ make
-$ make install
+$ python3 -m pip install .
 ```
 
 Run like this:
