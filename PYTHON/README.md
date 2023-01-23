@@ -26,7 +26,7 @@ Run like this:
 ```
 $ oshrun -n 4 python3 nstream-numpy-shmem.py 10 10000000
 Parallel Research Kernels version
-Python SHMEM/Numpy STREAM triad: A = B + scalar * C
+Python SHMEM/NumPy STREAM triad: A = B + scalar * C
 Number of ranks      =  4
 Number of iterations =  10
 Vector length        =  10000000
