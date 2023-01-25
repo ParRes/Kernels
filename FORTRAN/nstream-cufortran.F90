@@ -150,6 +150,8 @@ program main
 
   enddo ! iterations
 
+  err = cudaDeviceSynchronize()
+
   t1 = prk_get_wtime()
 
   nstream_time = t1 - t0
