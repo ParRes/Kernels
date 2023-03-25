@@ -35,6 +35,10 @@ begin
         Length := Integer'Value(Argument(2));
     end if;
 
+    if Iterations < 2 then
+        Put_Line("Iteration count must be greater than " & Integer'Image(Iterations) );
+    end if;
+
     Put_Line("Number of iterations =" & Integer'Image(Iterations) );
     Put_Line("Vector length        =" & Integer'Image(Length) );
 
@@ -51,7 +55,11 @@ begin
         AR : Float := 0.0;
         BR : Float := 2.0;
         CR : Float := 2.0;
-        ASUM : Float := 0.0;
+        Asum : Float := 0.0;
+
+        AvgTime : Duration;
+        Bytes : Integer := Float'Size / 8;
+        --Temp : Integer := 1;
 
     begin
 
@@ -86,13 +94,21 @@ begin
         end Loop;
 
         for I in 1..Length Loop
-            ASUM := ASUM + ABS ( A(I) - AR );
+            Asum := Asum + ABS ( A(I) - AR );
         end Loop;
 
-        if ASUM /= 0.0 then
-            Put_Line("ASUM=" & Float'Image(ASUM) );
+        if Asum /= 0.0 then
+            Put_Line("Asum=" & Float'Image(Asum) );
         else
-            Put_Line("Time=" & Duration'Image(To_Duration(Nstream_Time)) & " seconds");
+            Put_Line("Solution validates");
+            Bytes := Bytes * Length * 4;
+            Put_Line(Integer'Image(Nstream_Time / Time_Span_Unit) & " Time_Span_Units");
+            --Temp := 1 / Time_Span_Unit;
+            --Put_Line(Time_Span'Image(Time_Span_Unit) & " Time_Span_Unit");
+            AvgTime := To_Duration(Nstream_Time);
+            Put_Line("Bytes=" & Integer'Image(Bytes) );
+            Put_Line("Time=" & Duration'Image(AvgTime) & " seconds");
+            --Put(Bytes 
         end if;
 
     end;
