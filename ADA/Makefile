@@ -1,12 +1,12 @@
 AC = gnat
 ACFLAGS = make
 
-all: hello
+all: hello args
 
 %: %.adb
 	$(AC) $(ACFLAGS) $< -o $@
 
 clean:
 	-rm -f *.i *.o *.ali
-	-rm hello
+	-rm -f hello args
 
