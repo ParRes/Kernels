@@ -141,7 +141,7 @@ dgemm-blas: dgemm-blas.F90 prk.mod
 %-openacc: %-openacc.F90 prk.mod
 	$(FC) $(FCFLAGS) $(OPENACCFLAG) $< prk_mod.o -o $@
 
-%-cufortran: %-cufortran.cuf prk.mod
+%-cufortran: %-cufortran.F90 prk.mod
 	$(FC) $(FCFLAGS) $(CUFORTFLAG) $< prk_mod.o -o $@
 
 %-stdpar: %-stdpar.F90 prk.mod
