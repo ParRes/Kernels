@@ -4,7 +4,7 @@
 #
 # Base compilers and language options
 #
-VERSION=-10
+VERSION=-12
 # C99 is required in some implementations.
 CC=gcc${VERSION} -std=c11 -pthread
 #EXTRA_CLIBS=-lrt
@@ -186,16 +186,6 @@ HALIDEFLAG+=-Wl,-rpath=${HALIDEDIR}/lib -L${HALIDEDIR}/lib -lHalide
 HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
 HALIDEFLAG+=-std=c++17
 #
-# Halide
-#
-HALIDECXX=${CXX}
-HALIDEDIR=/opt/halide/Halide-10.0.0-x86-64-linux
-HALIDEFLAG=-I${HALIDEDIR}/include
-HALIDEFLAG+=-Wl,-rpath=${HALIDEDIR}/lib -L${HALIDEDIR}/lib -lHalide
-#HALIDEFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
-HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
-HALIDEFLAG+=-std=c++17
-#
 # ISPC
 #
 ISPC=ispc
@@ -203,10 +193,10 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 #
 # MPI-3
 #
-MPIDIR=/usr
-MPICC=${MPIDIR}/bin/mpicc.mpich
-MPICXX=${MPIDIR}/bin/mpicxx.mpich
-MPIFORT=${MPIDIR}/bin/mpifort.mpich
+MPIDIR=/opt/homebrew/Cellar/open-mpi/4.1.5
+MPICC=${MPIDIR}/bin/mpicc
+MPICXX=${MPIDIR}/bin/mpicxx
+MPIFORT=${MPIDIR}/bin/mpifort
 MPIINC=-I${MPIDIR}/include
 MPILIB=-L${MPIDIR}/lib -lmpi_usempif08 -lmpi
 #MPILIB=-L${MPIDIR}/lib -lmpifort -lmpi
