@@ -3,18 +3,20 @@ with
     Ada.Integer_Text_IO,
     --Ada.Strings,
     --Ada.Strings.Bounded,
-    Ada.Real_Time,
-    Ada.Command_line;
-
-use
-    Ada.Text_IO,
-    Ada.Integer_Text_IO,
-    --Ada.Strings,
-    --Ada.Strings.Bounded,
+    --Ada.Calendar,
     Ada.Real_Time,
     Ada.Command_line;
 
 procedure Nstream is
+
+    use
+        Ada.Text_IO,
+        Ada.Integer_Text_IO,
+        --Ada.Strings,
+        --Ada.Strings.Bounded,
+        --Ada.Calendar,
+        Ada.Real_Time,
+        Ada.Command_line;
 
     Iterations : Integer := 10;
     Length : Integer := 1_000_000;
@@ -49,7 +51,9 @@ begin
         C : Vector(1..Length);
 
         T0, T1 : Time;
-        Nstream_Time : Time_Span;
+        DT : Time_Span;
+
+        US : constant Time_Span := Microseconds(US => Iterations);
 
         K : Integer := 0;
         AR : Float := 0.0;
@@ -59,7 +63,9 @@ begin
 
         AvgTime : Duration;
         Bytes : Integer := Float'Size / 8;
-        --Temp : Integer := 1;
+        Nstream_us : Integer;
+        Nstream_time : Float;
+        Bandwidth : Float;
 
     begin
 
@@ -85,7 +91,7 @@ begin
      
         end Loop;
         T1 := Clock;
-        Nstream_Time := T1 - T0;
+        DT := T1 - T0;
 
 -- validation
 
@@ -102,13 +108,17 @@ begin
         else
             Put_Line("Solution validates");
             Bytes := Bytes * Length * 4;
-            Put_Line(Integer'Image(Nstream_Time / Time_Span_Unit) & " Time_Span_Units");
-            --Temp := 1 / Time_Span_Unit;
-            --Put_Line(Time_Span'Image(Time_Span_Unit) & " Time_Span_Unit");
-            AvgTime := To_Duration(Nstream_Time);
-            Put_Line("Bytes=" & Integer'Image(Bytes) );
-            Put_Line("Time=" & Duration'Image(AvgTime) & " seconds");
-            --Put(Bytes 
+            Nstream_us := DT / US; -- this is per iteration now, thanks to US
+            Nstream_time := Float(Nstream_us) / Float(1000000);
+            Put_Line("Avg time (s): " & Float'Image(Nstream_time));
+            Bandwidth := Float(Bytes) / Float(Nstream_us);
+            Put_Line("Rate (MB/s): " & Float'Image(Bandwidth));
+            -- archived for posterity
+            --Put_Line("Bytes=" & Integer'Image(Bytes) );
+            --AvgTime := To_Duration(DT);
+            --Put_Line("Total Time=" & Duration'Image(AvgTime) & " seconds");
+            --Put_Line(Integer'Image(DT / Time_Span_Unit) & " Time_Span_Units");
+            --Put_Line(Integer'Image(DT / US) & " nanoseconds per iteration");
         end if;
 
     end;
