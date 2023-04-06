@@ -23,8 +23,6 @@ procedure Nstream is
 
     Scalar : constant := 3.0;
 
-    type Vector is array(Integer range <>) of Float;
-
 begin
 
     Put_Line("Parallel Research Kernels");
@@ -45,10 +43,12 @@ begin
     Put_Line("Vector length        =" & Integer'Image(Length) );
 
     declare
+        type Vector is array(1..Length) of Float;
+
         I : Integer := 0;
-        A : Vector(1..Length);
-        B : Vector(1..Length);
-        C : Vector(1..Length);
+        A : Vector;
+        B : Vector;
+        C : Vector;
 
         T0, T1 : Time;
         DT : Time_Span;
@@ -115,10 +115,10 @@ begin
             Put_Line("Rate (MB/s): " & Float'Image(Bandwidth));
             -- archived for posterity
             --Put_Line("Bytes=" & Integer'Image(Bytes) );
-            --AvgTime := To_Duration(DT);
-            --Put_Line("Total Time=" & Duration'Image(AvgTime) & " seconds");
+            AvgTime := To_Duration(DT);
+            Put_Line("Total Time: " & Duration'Image(AvgTime) & " seconds");
             --Put_Line(Integer'Image(DT / Time_Span_Unit) & " Time_Span_Units");
-            --Put_Line(Integer'Image(DT / US) & " nanoseconds per iteration");
+            --Put_Line(Integer'Image(DT / US) & " microseconds per iteration");
         end if;
 
     end;
