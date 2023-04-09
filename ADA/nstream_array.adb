@@ -12,8 +12,9 @@ procedure nstream_array is
         Ada.Real_Time,
         Ada.Command_line;
 
+    -- GNAT Integer = int32_t, Long_Integer = int64_t
     Iterations : Integer := 10;
-    Length : Integer := 1_000_000;
+    Length : Long_Integer := 1_000_000;
 
     Scalar : constant := 3.0;
 
@@ -26,7 +27,7 @@ begin
         Iterations := Integer'Value(Argument(1));
     end if;
     if Argument_Count > 1 then
-        Length := Integer'Value(Argument(2));
+        Length := Long_Integer'Value(Argument(2));
     end if;
 
     if Iterations < 2 then
@@ -34,15 +35,15 @@ begin
     end if;
 
     Put_Line("Number of iterations =" & Integer'Image(Iterations) );
-    Put_Line("Vector length        =" & Integer'Image(Length) );
+    Put_Line("Vector length        =" & Long_Integer'Image(Length) );
 
     declare
-        type Float_Array is array(Natural range <>) of Float with Default_Component_Value => 0.0;
+        type Long_Float_Array is array(Long_Integer Range <>) of Long_Float with Default_Component_Value => 0.0;
 
         I : Integer := 0;
-        A : access Float_Array := new Float_Array(1..Length);
-        B : access Float_Array := new Float_Array(1..Length);
-        C : access Float_Array := new Float_Array(1..Length);
+        A : access Long_Float_Array := new Long_Float_Array(1..Length);
+        B : access Long_Float_Array := new Long_Float_Array(1..Length);
+        C : access Long_Float_Array := new Long_Float_Array(1..Length);
 
         T0, T1 : Time;
         DT : Time_Span;
@@ -50,25 +51,25 @@ begin
         US : constant Time_Span := Microseconds(US => Iterations);
 
         K : Integer := 0;
-        AR : Float := 0.0;
-        BR : Float := 2.0;
-        CR : Float := 2.0;
-        Asum : Float := 0.0;
+        AR : Long_Float := 0.0;
+        BR : Long_Float := 2.0;
+        CR : Long_Float := 2.0;
+        Asum : Long_Float := 0.0;
 
         AvgTime : Duration;
-        Bytes : Integer := Float'Size / 8;
+        Bytes : Long_Integer;
         Nstream_us : Integer;
-        Nstream_time : Float;
-        Bandwidth : Float;
+        Nstream_time : Long_Float;
+        Bandwidth : Long_Float;
 
     begin
 
 -- initialization
 
         for I in 1..Length Loop
-            A(I) := Float(0);
-            B(I) := Float(2);
-            C(I) := Float(2);
+            A(I) := Long_Float(0);
+            B(I) := Long_Float(2);
+            C(I) := Long_Float(2);
         end Loop;
      
 -- run the experiment
@@ -98,19 +99,21 @@ begin
         end Loop;
 
         if Asum /= 0.0 then
-            Put_Line("Asum=" & Float'Image(Asum) );
+            Put_Line("Asum=" & Long_Float'Image(Asum) );
         else
             Put_Line("Solution validates");
-            Bytes := Bytes * Length * 4;
+            Bytes := Length * Long_Float'Size / 2;
             Nstream_us := DT / US; -- this is per iteration now, thanks to US
-            Nstream_time := Float(Nstream_us) / Float(1000000);
-            Put_Line("Avg time (s): " & Float'Image(Nstream_time));
-            Bandwidth := Float(Bytes) / Float(Nstream_us);
-            Put_Line("Rate (MB/s): " & Float'Image(Bandwidth));
+            Nstream_time := Long_Float(Nstream_us) / Long_Float(1000000);
+            Put_Line("Avg time (s): " & Long_Float'Image(Nstream_time));
+            Bandwidth := Long_Float(Bytes) / Long_Float(Nstream_us);
+            Put_Line("Rate (MB/s): " & Long_Float'Image(Bandwidth));
             -- archived for posterity
-            --Put_Line("Bytes=" & Integer'Image(Bytes) );
-            AvgTime := To_Duration(DT);
-            Put_Line("Total Time: " & Duration'Image(AvgTime) & " seconds");
+            --Put_Line("Bytes=" & Long_Integer'Image(Bytes) );
+            --AvgTime := To_Duration(DT);
+            --Put_Line("Total Time: " & Duration'Image(AvgTime) & " seconds");
+            --Put_Line("Integer'Last=" & Integer'Image(Integer'Last) );
+            --Put_Line("Long_Integer'Last=" & Long_Integer'Image(Long_Integer'Last) );
         end if;
 
     end;
