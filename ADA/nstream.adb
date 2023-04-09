@@ -1,9 +1,6 @@
 with
     Ada.Text_IO,
     Ada.Integer_Text_IO,
-    --Ada.Strings,
-    --Ada.Strings.Bounded,
-    --Ada.Calendar,
     Ada.Real_Time,
     Ada.Command_line;
 
@@ -12,9 +9,6 @@ procedure Nstream is
     use
         Ada.Text_IO,
         Ada.Integer_Text_IO,
-        --Ada.Strings,
-        --Ada.Strings.Bounded,
-        --Ada.Calendar,
         Ada.Real_Time,
         Ada.Command_line;
 
@@ -117,8 +111,6 @@ begin
             --Put_Line("Bytes=" & Integer'Image(Bytes) );
             AvgTime := To_Duration(DT);
             Put_Line("Total Time: " & Duration'Image(AvgTime) & " seconds");
-            --Put_Line(Integer'Image(DT / Time_Span_Unit) & " Time_Span_Units");
-            --Put_Line(Integer'Image(DT / US) & " microseconds per iteration");
         end if;
 
     end;
