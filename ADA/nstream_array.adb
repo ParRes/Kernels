@@ -37,12 +37,12 @@ begin
     Put_Line("Vector length        =" & Integer'Image(Length) );
 
     declare
-        type Vector is array(1..Length) of Float;
+        type Float_Array is array(Natural range <>) of Float with Default_Component_Value => 0.0;
 
         I : Integer := 0;
-        A : Vector;
-        B : Vector;
-        C : Vector;
+        A : access Float_Array := new Float_Array(1..Length);
+        B : access Float_Array := new Float_Array(1..Length);
+        C : access Float_Array := new Float_Array(1..Length);
 
         T0, T1 : Time;
         DT : Time_Span;
