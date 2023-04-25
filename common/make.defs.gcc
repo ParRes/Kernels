@@ -121,7 +121,7 @@ OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 # TBB
 #
 #TBBDIR=/usr/lib/x86_64-linux-gnu
-TBBDIR=/opt/homebrew/Cellar/tbb/2020_U3_1
+TBBDIR=/opt/homebrew/Cellar/tbb/2021.8.0
 TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
 #TBBDIR=/opt/intel/compilers_and_libraries_2019.2.159/linux/tbb
 #TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -L${TBBDIR}/lib/intel64_lin/gcc4.7 -ltbb
