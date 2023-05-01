@@ -99,9 +99,9 @@ def main():
         sys.exit("ERROR: iterations must be >= 1")
 
     n = int(sys.argv[2])
-    nsquare = n * n;
+    nsquare = n * n
     if nsquare < np:
-        sys.exit("ERROR: grid size ", nsquare, " must be at least # ranks: ", Num_procs);
+        sys.exit("ERROR: grid size ", nsquare, " must be at least # ranks: ", np)
 
 
     if len(sys.argv) > 3:
@@ -234,7 +234,7 @@ def main():
             kk=0
             for a in range(jend-r+1, jend+1):
                 a = a - jstart
-                for b in range(istart, iend+1) :
+                for b in range(istart, iend+1):
                     b = b-istart
                     top_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
@@ -245,7 +245,7 @@ def main():
             kk=0
             for a in range(jstart, jstart+r):
                 a = a - jstart
-                for b in range(istart, iend+1) :
+                for b in range(istart, iend+1):
                     b = b-istart
                     bot_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
@@ -256,7 +256,7 @@ def main():
             kk=0
             for a in range(jstart, jend+1):
                 a = a - jstart
-                for b in range(iend-r+1, iend+1) :
+                for b in range(iend-r+1, iend+1):
                     b = b-istart
                     right_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
@@ -267,7 +267,7 @@ def main():
             kk=0
             for a in range(jstart, jend+1):
                 a = a - jstart
-                for b in range(istart, istart+r) :
+                for b in range(istart, istart+r):
                     b = b-istart
                     left_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
@@ -331,7 +331,7 @@ def main():
     local_time = numpy.array(MPI.Wtime() - t0 , dtype ='f')
     total_time = numpy.array(0 , dtype ='f')
 
-    comm.Reduce([local_time , 1 , typ],[total_time , 1 , typ], op=MPI.SUM , root =0)
+    comm.Reduce([local_time , 1 , typ],[total_time , 1 , typ], op=MPI.MAX , root =0)
 
     # ********************************************************************
     # ** Analyze and output results.
