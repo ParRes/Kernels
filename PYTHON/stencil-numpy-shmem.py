@@ -82,7 +82,7 @@ def main():
 
     if len(sys.argv) < 3 or len(sys.argv) > 5:
         print(f"argument count = {len(sys.argv)}")
-        sys.exit("Usage: ./stencil <# iterations> <array dimension> [<radius>]")
+        sys.exit("Usage: ... <# iterations> <array dimension> [<radius>]")
 
     iterations = int(sys.argv[1])
     if iterations < 1:
