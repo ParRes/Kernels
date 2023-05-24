@@ -130,7 +130,7 @@ def main():
         sys.exit("ERROR: order must be >= 1")
 
     if order % np != 0:
-        sys.exit("ERROR: matrix order ", order," should be divisible by # procs", np)
+        sys.exit(f"ERROR: matrix order ({order}) should be divisible by # procs ({np})")
 
     block_order = int(order / np)
 
