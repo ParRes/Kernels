@@ -90,7 +90,7 @@ def main():
 
     if me==0:
         print("Parallel Research Kernels")
-        print("Python SHMEM/Numpy Stencil execution on 2D grid")
+        print("Python SHMEM/Numba Stencil execution on 2D grid")
 
     if len(sys.argv) < 3 or len(sys.argv) > 5:
         print(f"argument count = {len(sys.argv)}")
@@ -106,7 +106,15 @@ def main():
         sys.exit(f"ERROR: grid size {nsquare} must be at least # ranks: {np}")
 
     if len(sys.argv) > 3:
-        radius = int(sys.argv[3])
+        pattern = sys.argv[3]
+    else:
+        pattern = 'star'
+
+    if pattern != 'star':
+        sys.exit("ERROR: Only star pattern is supported")
+
+    if len(sys.argv) > 4:
+        radius = int(sys.argv[4])
         if radius < 1:
             sys.exit("ERROR: Stencil radius should be positive")
         if 2*radius+1 > n:
@@ -118,16 +126,16 @@ def main():
         print("Number of ranks      = ", np)
         print("Number of iterations = ", iterations)
         print("Grid size            = ", n)
-        print("Type of stencil      = star")
+        print("Type of stencil      = ", pattern)
         print("Radius of stencil    = ", radius)
         print("Data type            = float 64 (double precision in C)")
 
-    weight = numpy.zeros((2*radius+1, 2*radius+1), dtype='f')
+    weight = numpy.zeros((2*radius+1, 2*radius+1), dtype='d')
 
-    local_stencil_time = shmem.zeros(1, dtype='f')
-    stencil_time       = shmem.zeros(1, dtype='f')
-    local_norm = shmem.zeros(1, dtype='f')
-    norm       = shmem.zeros(1, dtype='f')
+    local_stencil_time = shmem.zeros(1, dtype='d')
+    stencil_time       = shmem.zeros(1, dtype='d')
+    local_norm = shmem.zeros(1, dtype='d')
+    norm       = shmem.zeros(1, dtype='d')
     iterflag   = shmem.zeros(2, dtype='i')
     width      = shmem.zeros(1, dtype='i')
     maxwidth   = shmem.zeros(1, dtype='i')
@@ -173,15 +181,13 @@ def main():
     leftover = n%npy
     if mey < leftover:
         jstart = (height[0]+1) * mey
-        jstart = int(jstart)
         jend = jstart + height[0] + 1
     else:
         jstart = (height[0]+1) * leftover + height[0] * (mey-leftover)
-        jstart = int(jstart)
         jend = jstart + height[0]
 
     height[0] = jend - jstart + 1
-    if height == 0:
+    if height[0] == 0:
         print(f"ERROR: rank {me} has no work to do")
         shmem.global_exit(1)
 
@@ -189,10 +195,10 @@ def main():
         print(f"ERROR: rank {me} has work tile smaller then stencil radius")
         shmem.global_exit(1)
 
-    a = numpy.fromfunction(lambda i, j: i+istart+j+jstart, (height[0], width[0]), dtype=float)
-    A = numpy.zeros((height[0]+2*radius, width[0]+2*radius), dtype='f')
+    a = numpy.fromfunction(lambda i, j: i+istart+j+jstart, (height[0], width[0]), dtype='d')
+    A = numpy.zeros((height[0]+2*radius, width[0]+2*radius), dtype='d')
     A[radius:-radius, radius:-radius] = a
-    B = numpy.zeros((height[0], width[0]), dtype='f')
+    B = numpy.zeros((height[0], width[0]), dtype='d')
 
     shmem.barrier_all()
     shmem.max_reduce(maxwidth, width)
@@ -206,25 +212,25 @@ def main():
         weight[-ii+radius][0+radius] = -1.0/(2.0*ii*radius)
 
     # allocate communication buffers for halo values
-    top_buf_out    = shmem.zeros(radius*maxwidth[0], dtype='f')
-    bottom_buf_out = shmem.zeros(radius*maxwidth[0], dtype='f')
+    top_buf_out    = shmem.zeros(radius*maxwidth[0], dtype='d')
+    bottom_buf_out = shmem.zeros(radius*maxwidth[0], dtype='d')
 
     top_buf_in    = {}
     bottom_buf_in = {}
-    top_buf_in[0]    = shmem.zeros(radius*maxwidth[0], dtype='f')
-    top_buf_in[1]    = shmem.zeros(radius*maxwidth[0], dtype='f')
-    bottom_buf_in[0] = shmem.zeros(radius*maxwidth[0], dtype='f')
-    bottom_buf_in[1] = shmem.zeros(radius*maxwidth[0], dtype='f')
+    top_buf_in[0]    = shmem.zeros(radius*maxwidth[0], dtype='d')
+    top_buf_in[1]    = shmem.zeros(radius*maxwidth[0], dtype='d')
+    bottom_buf_in[0] = shmem.zeros(radius*maxwidth[0], dtype='d')
+    bottom_buf_in[1] = shmem.zeros(radius*maxwidth[0], dtype='d')
 
-    right_buf_out = shmem.zeros(radius*maxheight[0], dtype='f')
-    left_buf_out  = shmem.zeros(radius*maxheight[0], dtype='f')
+    right_buf_out = shmem.zeros(radius*maxheight[0], dtype='d')
+    left_buf_out  = shmem.zeros(radius*maxheight[0], dtype='d')
 
     right_buf_in = {}
     left_buf_in  = {}
-    right_buf_in[0] = shmem.zeros(radius*maxheight[0], dtype='f')
-    right_buf_in[1] = shmem.zeros(radius*maxheight[0], dtype='f')
-    left_buf_in[0]  = shmem.zeros(radius*maxheight[0], dtype='f')
-    left_buf_in[1]  = shmem.zeros(radius*maxheight[0], dtype='f')
+    right_buf_in[0] = shmem.zeros(radius*maxheight[0], dtype='d')
+    right_buf_in[1] = shmem.zeros(radius*maxheight[0], dtype='d')
+    left_buf_in[0]  = shmem.zeros(radius*maxheight[0], dtype='d')
+    left_buf_in[1]  = shmem.zeros(radius*maxheight[0], dtype='d')
 
     shmem.barrier_all()
 
@@ -293,13 +299,13 @@ def main():
         if not splitfence:
             shmem.fence()
 
-            if mey < npy-1 and top_nbr is not None:
+            if mey < npy-1:
                 shmem.atomic_inc(iterflag[sw:sw+1], top_nbr)
-            if mey > 0 and bottom_nbr is not None:
+            if mey > 0:
                 shmem.atomic_inc(iterflag[sw:sw+1], bottom_nbr)
-            if mex < npx-1 and right_nbr is not None:
+            if mex < npx-1:
                 shmem.atomic_inc(iterflag[sw:sw+1], right_nbr)
-            if mex > 0 and left_nbr is not None:
+            if mex > 0:
                 shmem.atomic_inc(iterflag[sw:sw+1], left_nbr)
 
         shmem.wait_until(iterflag[sw:sw+1], shmem.CMP.EQ, count_case * (iter // 2 + 1))
@@ -344,7 +350,8 @@ def main():
         star(n,radius,A,B,weight,jstart,jend,istart,iend)
 
         # add constant to solution to force refresh of neighbor data, if any
-        numpy.add(A[0:jend-radius+1, 0:iend-radius+1], 1)
+        A[radius:jend-jstart+radius,radius:iend-istart+radius] += 1.0
+        # numpy.add(A[radius:jend-jstart+radius,radius:iend-istart+radius], 1.0, A[radius:jend-jstart+radius,radius:iend-istart+radius])
 
     local_stencil_time[0] = time.monotonic() - local_stencil_time[0]
     shmem.barrier_all()
