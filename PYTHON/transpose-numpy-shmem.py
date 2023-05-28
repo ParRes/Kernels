@@ -145,7 +145,7 @@ def main():
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    LA = numpy.fromfunction(lambda i,j:  me * block_order + i*order + j, (order,block_order), dtype=float)
+    LA = numpy.fromfunction(lambda i,j:  me * block_order + i*order + j, (order,block_order), dtype='d')
     A = shmem.full((order,block_order),LA)
     B = shmem.zeros((order,block_order))
     T = shmem.zeros((order,block_order))
@@ -189,7 +189,7 @@ def main():
     G = numpy.concatenate(F,axis=1)
     #if (me==0):
     #    print(G)
-    H = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
+    H = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype='d')
     abserr = numpy.linalg.norm(numpy.reshape(G-H,order*order),ord=1)
 
     shmem.free(B)
