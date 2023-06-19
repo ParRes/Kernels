@@ -86,16 +86,22 @@ def main():
         print('Python SHMEM/Numpy STREAM triad: A = B + scalar * C')
 
     if len(sys.argv) != 3:
-        print('argument count = ', len(sys.argv))
-        sys.exit("Usage: python nstream.py <# iterations> <vector length>")
+        if (me==0):
+            print('argument count = ', len(sys.argv))
+            print("Usage: python nstream.py <# iterations> <vector length>")
+        sys.exit()
 
     iterations = int(sys.argv[1])
     if iterations < 1:
-        sys.exit("ERROR: iterations must be >= 1")
+        if (me==0):
+            print("ERROR: iterations must be >= 1")
+        sys.exit()
 
     total_length = int(sys.argv[2])
     if total_length < 1:
-        sys.exit("ERROR: length must be positive")
+        if (me==0):
+            print("ERROR: length must be positive")
+        sys.exit()
 
     length = int(total_length / np)
     remainder = total_length % np
