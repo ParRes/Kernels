@@ -118,19 +118,27 @@ def main():
         print('Python SHMEM/Numpy  Matrix transpose: B = A^T')
 
     if len(sys.argv) != 3:
-        print('argument count = ', len(sys.argv))
-        sys.exit("Usage: ./transpose <# iterations> <matrix order>")
+        if (me==0):
+            print('argument count = ', len(sys.argv))
+            print("Usage: ./transpose <# iterations> <matrix order>")
+        sys.exit()
 
     iterations = int(sys.argv[1])
     if iterations < 1:
-        sys.exit("ERROR: iterations must be >= 1")
+        if (me==0):
+            print("ERROR: iterations must be >= 1")
+        sys.exit()
 
     order = int(sys.argv[2])
     if order < 1:
-        sys.exit("ERROR: order must be >= 1")
+        if (me==0):
+            print("ERROR: order must be >= 1")
+        sys.exit()
 
     if order % np != 0:
-        sys.exit(f"ERROR: matrix order ({order}) should be divisible by # procs ({np})")
+        if (me==0):
+            print(f"ERROR: matrix order ({order}) should be divisible by # procs ({np})")
+        sys.exit()
 
     block_order = int(order / np)
 
