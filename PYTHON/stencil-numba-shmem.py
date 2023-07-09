@@ -93,17 +93,23 @@ def main():
         print("Python SHMEM/Numba Stencil execution on 2D grid")
 
     if len(sys.argv) < 3 or len(sys.argv) > 5:
-        print(f"argument count = {len(sys.argv)}")
-        sys.exit("Usage: ... <# iterations> <array dimension> [<radius>]")
+        if (me==0):
+            print(f"argument count = {len(sys.argv)}")
+            print("Usage: ... <# iterations> <array dimension> [<radius>]")
+        sys.exit()
 
     iterations = int(sys.argv[1])
     if iterations < 1:
-        sys.exit("ERROR: iterations must be >= 1")
+        if (me==0):
+            print("ERROR: iterations must be >= 1")
+        sys.exit()
 
     n = int(sys.argv[2])
     nsquare = n * n
     if nsquare < np:
-        sys.exit(f"ERROR: grid size {nsquare} must be at least # ranks: {np}")
+        if (me==0):
+            print(f"ERROR: grid size {nsquare} must be at least # ranks: {np}")
+        sys.exit()
 
     if len(sys.argv) > 3:
         pattern = sys.argv[3]
@@ -111,14 +117,20 @@ def main():
         pattern = 'star'
 
     if pattern != 'star':
-        sys.exit("ERROR: Only star pattern is supported")
+        if (me==0):
+            print("ERROR: Only star pattern is supported")
+        sys.exit()
 
     if len(sys.argv) > 4:
         radius = int(sys.argv[4])
         if radius < 1:
-            sys.exit("ERROR: Stencil radius should be positive")
+            if (me==0):
+                print("ERROR: Stencil radius should be positive")
+            sys.exit()
         if 2*radius+1 > n:
-            sys.exit("ERROR: Stencil radius exceeds grid size")
+            if (me==0):
+                print("ERROR: Stencil radius exceeds grid size")
+            sys.exit()
     else:
         radius = 2
 
