@@ -134,7 +134,6 @@ int main(int argc, char * argv[])
   double (* const restrict A)[block_order] = (double (*)[block_order]) prk_malloc(bytes);
   double (* const restrict B)[block_order] = (double (*)[block_order]) prk_malloc(bytes);
   double (* const restrict T)[block_order] = (double (*)[block_order]) prk_malloc(bytes);
-  double (* const restrict X)[block_order] = (double (*)[block_order]) prk_malloc(bytes/np);
   if (A == NULL || B == NULL || T == NULL) {
     printf("Error allocating space; A=%p B=%p T=%p\n",A,B,T);
     MPI_Abort(MPI_COMM_WORLD,99);
@@ -163,24 +162,11 @@ int main(int argc, char * argv[])
                  MPI_COMM_WORLD);
     for (int r=0; r<np; r++) {
         const int lo = block_order * r;
-        const int hi = block_order * (r+1);
+        //const int hi = block_order * (r+1);
         // B(:,lo:hi) = B(:,lo:hi) + transpose(T(:,lo:hi))
-        // Obviously, this is dumb, but I have not debugged
-        // the indexing to implement the above in C.
         for (int i=0; i<block_order; i++) {
           for (int j=0; j<block_order; j++) {
-            X[i][j] = T[lo+i][j];
-          }
-        }
-        for (int i=0; i<block_order; i++) {
-          for (int j=0; j<block_order; j++) {
-            T[lo+i][j] = X[j][i];
-          }
-        }
-        for (int i=lo; i<hi; i++) {
-          for (int j=0; j<block_order; j++) {
-            B[i][j] += T[i][j];
-            //printf("%d: (%d,%d)=%8.0lf\n", me, i, j, B[i][j]);
+            B[lo+i][j] += T[lo+j][i];
           }
         }
     }
@@ -213,7 +199,6 @@ int main(int argc, char * argv[])
   prk_free(A);
   prk_free(B);
   prk_free(T);
-  prk_free(X);
 
 #ifdef VERBOSE
   if (me==0) printf("Sum of absolute differences: %lf\n", abserr);
