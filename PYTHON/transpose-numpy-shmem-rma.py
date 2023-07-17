@@ -168,33 +168,19 @@ def main():
             shmem.barrier_all()
             t0 = timer()
 
-        # barrier required before alltoall for correctness
-        #shmem.barrier_all()
-        #shmem.alltoall(T, A)
-        #for r in range(0,np):
-        #    lo = block_order * r
-        #    hi = block_order * (r+1)
-        #    #B[lo:hi,:] += numpy.transpose(T[lo:hi,:])
-        #    B[lo:hi,:] += T[lo:hi,:].T
-
         for phase in range(0,np):
             recv_from = (me + phase) % np
-            bsize = block_order * block_order
-            #WA.Get(T, recv_from, [bsize * me, bsize, MPI.DOUBLE])
-            shmem.get(T, A[bsize * me : bsize * (me+1),:], recv_from)
+            shmem.get(target=T, source=A[block_order * me : block_order * (me+1),:], pe=recv_from)
                   
             lo = block_order * recv_from 
             hi = block_order * (recv_from+1)
             B[lo:hi,:] += T.T
-
-
 
         shmem.barrier_all()
 
         A += 1.0
         shmem.barrier_all()
 
-    shmem.barrier_all()
     t1 = timer()
     trans_time = t1 - t0
 
