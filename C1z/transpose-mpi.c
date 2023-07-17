@@ -135,7 +135,6 @@ int main(int argc, char * argv[])
   double (* const restrict B)[block_order] = (double (*)[block_order]) prk_malloc(bytes);
   double (* const restrict T)[block_order] = (double (*)[block_order]) prk_malloc(bytes);
   double (* const restrict X)[block_order] = (double (*)[block_order]) prk_malloc(bytes/np);
-  double (* const restrict Y)[block_order] = (double (*)[block_order]) prk_malloc(bytes/np);
   if (A == NULL || B == NULL || T == NULL) {
     printf("Error allocating space; A=%p B=%p T=%p\n",A,B,T);
     MPI_Abort(MPI_COMM_WORLD,99);
@@ -175,12 +174,7 @@ int main(int argc, char * argv[])
         }
         for (int i=0; i<block_order; i++) {
           for (int j=0; j<block_order; j++) {
-            Y[j][i] = X[i][j];
-          }
-        }
-        for (int i=0; i<block_order; i++) {
-          for (int j=0; j<block_order; j++) {
-            T[lo+i][j] = Y[i][j];
+            T[lo+i][j] = X[j][i];
           }
         }
         for (int i=lo; i<hi; i++) {
@@ -220,7 +214,6 @@ int main(int argc, char * argv[])
   prk_free(B);
   prk_free(T);
   prk_free(X);
-  prk_free(Y);
 
 #ifdef VERBOSE
   if (me==0) printf("Sum of absolute differences: %lf\n", abserr);
