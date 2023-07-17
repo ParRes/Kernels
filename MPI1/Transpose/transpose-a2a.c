@@ -120,10 +120,6 @@ o The original and transposed matrices are called A and B
 #include <par-res-kern_general.h>
 #include <par-res-kern_mpi.h>
 
-#define A(i,j)        A_p[(i+istart)+order*(j)]
-#define B(i,j)        B_p[(i+istart)+order*(j)]
-#define T(i,j)        T_p[(i+istart)+order*(j)]
-
 int main(int argc, char ** argv)
 {
   long Block_order;        /* number of columns owned by rank       */
@@ -134,10 +130,9 @@ int main(int argc, char ** argv)
   int my_ID;               /* rank                                  */
   int root=0;              /* rank of root                          */
   int iterations;          /* number of times to do the transpose   */
-  int i, j, istart;        /* dummies                               */
+  int i, j;                /* dummies                               */
   int iter;                /* index of iteration                    */
   int phase;               /* phase inside staged communication     */
-  int colstart;            /* starting column for owning rank       */
   int error;               /* error flag                            */
   double * RESTRICT A_p;   /* original matrix column block          */
   double * RESTRICT B_p;   /* transposed matrix column block        */
@@ -202,7 +197,7 @@ int main(int argc, char ** argv)
     printf("Number of ranks      = %d\n", Num_procs);
     printf("Matrix order         = %ld\n", order);
     printf("Number of iterations = %d\n", iterations);
-    printf("Blocking messages\n");
+    printf("Alltoall\n");
   }
 
   /*  Broadcast input data to all ranks */
@@ -219,7 +214,6 @@ int main(int argc, char ** argv)
 *********************************************************************/
 
   Block_order    = order/Num_procs;
-  colstart       = Block_order * my_ID;
   Colblock_size  = order * Block_order;
 
 /*********************************************************************
@@ -244,16 +238,13 @@ int main(int argc, char ** argv)
   bail_out(error);
 
   /* Fill the original column matrix                                                */
-  istart = 0;
-  for (j=0;j<Block_order;j++)
-    for (i=0;i<order; i++)
+  for (i=0;i<order; i++)
+    for (j=0;j<Block_order;j++)
     {
-      A(i,j) = (double) (order*(j+colstart) + i);
-      B(i,j) = 0.0;
+      A_p[i*Block_order+j] = (double) (my_ID*Block_order + i*order +j);
+      B_p[i*Block_order+j] = 0.0;
+      T_p[i*Block_order+j] = 0.0;
     }
-
-    for (i = 0; i < Colblock_size; i++)
-      T_p[i]=0;
 
   for (iter = 0; iter<=iterations; iter++)
   {
@@ -269,43 +260,12 @@ int main(int argc, char ** argv)
 
     for (phase=0; phase<Num_procs; phase++)
     {
-      int lo = Block_order*phase;
-      int hi = Block_order*(phase+1);
+      int lo = Block_order*Block_order*phase;
 
-      if (my_ID == 0)
-      {
-        printf("phase %d T[%d]",phase, my_ID);
-        for (int w=0;w<Block_order*order;w++)
-        {
-          printf("%lf ",T_p[w]);
-        }
-        printf("\n");
-      }
-
-      for (i = lo; i < hi; i++)
-      {
+      for (i = 0; i < Block_order; i++)
           for (j = 0; j < Block_order; j++)
-          {
-            int from = j + Block_order * (i);
-            int to = i + Block_order * (j);
-              if (my_ID == 0)
-              {
-                printf("B[%d] from T[%d]\n",to,from);
-              }
+              B_p[lo + i + Block_order * j] += T_p[lo + j + Block_order * i];
 
-              B_p[to] += T_p[from];
-          }
-      }
-
-      if (my_ID == 0)
-      {
-        printf("phase %d B[%d]",phase, my_ID);
-        for (int w=0;w<Block_order*order;w++)
-        {
-          printf("%lf ",B_p[w]);
-        }
-        printf("\n");
-      }
     }  /* end of phase loop  */
 
     for (j=0; j<Colblock_size; j++)
@@ -319,10 +279,14 @@ int main(int argc, char ** argv)
              MPI_COMM_WORLD);
 
   abserr = 0.0;
-  istart = 0;
   double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
-  for (j=0;j<Block_order;j++) for (i=0;i<order; i++) {
-      abserr += ABS(B(i,j) - (double)((order*i + j+colstart)*(iterations+1)+addit));
+  for (i=0;i<order; i++)
+  {
+    for (j=0;j<Block_order;j++)
+    {
+      const double temp = (order*(my_ID*Block_order+j)+i) * (iterations+1) + addit;
+      abserr += ABS(B_p[i*Block_order+j] - temp);
+    }
   }
 
   MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
