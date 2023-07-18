@@ -63,7 +63,7 @@ program main
   integer :: err
   ! problem definition
   integer(kind=INT32) ::  iterations
-  integer(kind=INT32) ::  order, block_order
+  integer(kind=INT32) ::  order, block_order, bo2
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   real(kind=REAL64), allocatable ::  T(:,:)         ! temporary to hold tile
@@ -102,6 +102,7 @@ program main
   call MPI_Bcast(order, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
 
   block_order = int(order / np)
+  bo2 = block_order * block_order
 
   call MPI_Barrier(MPI_COMM_WORLD)
 
@@ -137,15 +138,13 @@ program main
 
         lo = block_order * send_to + 1
         hi = block_order * (send_to+1)
-        call MPI_Sendrecv(A(:,lo:hi), block_order*block_order, MPI_DOUBLE_PRECISION,    &
-                          send_to,q,                                                &
-                          T,block_order*block_order, MPI_DOUBLE_PRECISION,              &
-                          recv_from, q, MPI_COMM_WORLD, MPI_STATUS_IGNORE)
+        call MPI_Sendrecv(A(:,lo:hi), bo2, MPI_DOUBLE_PRECISION, send_to, q, &
+                          T, bo2, MPI_DOUBLE_PRECISION, recv_from, q,        &
+                          MPI_COMM_WORLD, MPI_STATUS_IGNORE)
+
         lo = block_order * recv_from + 1
         hi = block_order * (recv_from+1)
         B(:,lo:hi) = B(:,lo:hi) + transpose(T)
-
-
     end do
     ! A += 1
     A = A + one
