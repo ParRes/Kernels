@@ -147,6 +147,15 @@ int main(int argc, char * argv[])
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
+#if 0
+  //int MPI_Type_vector(int count, int blocklength, int stride, MPI_Datatype oldtype, MPI_Datatype * newtype)
+  MPI_Datatype stride_dt;
+  MPI_Datatype trans_dt;
+  MPI_Type_vector(block_order, 1, block_order, MPI_DOUBLE, &stride_dt);
+  MPI_Type_vector(stride_dt, 1, 1, stride_dt, &trans_dt);
+  MPI_Type_commit(&trans_dt);
+#endif
+
   double t0=0.0, t1;
 
   for (int iter = 0; iter<=iterations; iter++) {
@@ -181,6 +190,10 @@ int main(int argc, char * argv[])
   t1 = MPI_Wtime();
   const double trans_time = t1 - t0;
   //if (me==0) printf("trans_time=%lf\n", trans_time);
+
+#if 0
+  MPI_Type_free(&trans_dt);
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results
