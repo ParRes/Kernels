@@ -164,9 +164,7 @@ int main(int argc, char * argv[])
         MPI_Sendrecv(&A[to*block_order][0],bo2,MPI_DOUBLE,to,r,
                      &T[from*block_order][0],bo2,MPI_DOUBLE,from,r,
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    }
 
-    for (int r=0; r<np; r++) {
         const int lo = block_order * r;
         //const int hi = block_order * (r+1);
         // B(:,lo:hi) = B(:,lo:hi) + transpose(T(:,lo:hi))
