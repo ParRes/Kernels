@@ -60,7 +60,7 @@ openmp: nstream-openmp \
 
 tasks: p2p-tasks-openmp p2p-tasks-2d-openmp
 
-mpi: nstream-mpi transpose-a2a-mpi
+mpi: nstream-mpi transpose-a2a-mpi transpose-p2p-mpi
 
 petsc: nstream-petsc transpose-petsc
 
