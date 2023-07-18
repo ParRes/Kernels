@@ -147,12 +147,17 @@ int main(int argc, char * argv[])
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
-#if 0
-  //int MPI_Type_vector(int count, int blocklength, int stride, MPI_Datatype oldtype, MPI_Datatype * newtype)
+// Datatypes are slower
+//#define USE_DATATYPES
+#ifdef USE_DATATYPES
   MPI_Datatype stride_dt;
-  MPI_Datatype trans_dt;
+  //int MPI_Type_vector(int count, int blocklength, int stride, MPI_Datatype oldtype, MPI_Datatype * newtype)
   MPI_Type_vector(block_order, 1, block_order, MPI_DOUBLE, &stride_dt);
-  MPI_Type_vector(stride_dt, 1, 1, stride_dt, &trans_dt);
+  int dsize;
+  MPI_Type_size(MPI_DOUBLE,&dsize);
+  MPI_Datatype trans_dt;
+  //int MPI_Type_hvector(int count, int blocklength, MPI_Aint stride, MPI_Datatype oldtype, MPI_Datatype * newtype)
+  MPI_Type_hvector(block_order, 1, dsize, stride_dt, &trans_dt);
   MPI_Type_commit(&trans_dt);
 #endif
 
@@ -167,7 +172,11 @@ int main(int argc, char * argv[])
 
     // B += A^T
     MPI_Alltoall(A, bo2, MPI_DOUBLE, 
+#ifdef USE_DATATYPES
+                 T, 1, trans_dt,
+#else
                  T, bo2, MPI_DOUBLE,
+#endif
                  MPI_COMM_WORLD);
     for (int r=0; r<np; r++) {
         const int lo = block_order * r;
@@ -175,7 +184,11 @@ int main(int argc, char * argv[])
         // B(:,lo:hi) = B(:,lo:hi) + transpose(T(:,lo:hi))
         for (int i=0; i<block_order; i++) {
           for (int j=0; j<block_order; j++) {
+#ifdef USE_DATATYPES
+            B[lo+i][j] += T[lo+i][j];
+#else
             B[lo+i][j] += T[lo+j][i];
+#endif
           }
         }
     }
@@ -191,7 +204,8 @@ int main(int argc, char * argv[])
   const double trans_time = t1 - t0;
   //if (me==0) printf("trans_time=%lf\n", trans_time);
 
-#if 0
+#ifdef USE_DATATYPES
+  MPI_Type_free(&stride_dt);
   MPI_Type_free(&trans_dt);
 #endif
 
