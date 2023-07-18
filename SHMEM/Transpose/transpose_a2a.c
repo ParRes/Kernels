@@ -52,25 +52,15 @@ USAGE:   Program inputs are the matrix order, the number of times to
 
 FUNCTIONS CALLED:
 
-         Other than MPI or standard C functions, the following
+         Other than SHMEM or standard C functions, the following
          functions are used in this program:
 
           wtime()           Portable wall-timer interface.
           bail_out()        Determine global error and exit if nonzero.
 
-HISTORY: Written by Tim Mattson, April 1999.
-         Updated by Rob Van der Wijngaart, December 2005.
-         Updated by Rob Van der Wijngaart, October 2006.
-         Updated by Rob Van der Wijngaart, November 2014::
-         - made variable names more consistent
-         - put timing around entire iterative loop of transposes
-         - fixed incorrect matrix block access; no separate function
-           for local transpose of matrix block
-         - reordered initialization and verification loops to
-           produce unit stride
-         - changed initialization values, such that the input matrix
-           elements are: A(i,j) = i+order*j
-
+HISTORY: Written by Tom St. John, July 2015.
+         Rob vdW: Fixed race condition on synchronization flags, August 2015
+         Marcin Rogowski: shmem_alltoall, July 2023
 
 *******************************************************************/
 
@@ -119,72 +109,106 @@ o The original and transposed matrices are called A and B
  -----------------------------------------------------------------*/
 
 #include <par-res-kern_general.h>
-#include <par-res-kern_mpi.h>
+#include <par-res-kern_shmem.h>
+
+#include <math.h>
 
 int main(int argc, char ** argv)
 {
   long Block_order;        /* number of columns owned by rank       */
-  long Colblock_size;      /* size of column block                  */
+  int Block_size;          /* size of a single block                */
+  int Colblock_size;       /* size of column block                  */
   int Num_procs;           /* number of ranks                       */
-  long order;              /* order of overall matrix               */
+  int order;               /* order of overall matrix               */
+  int send_to, recv_from;  /* ranks with which to communicate       */
   long bytes;              /* combined size of matrices             */
   int my_ID;               /* rank                                  */
   int root=0;              /* rank of root                          */
   int iterations;          /* number of times to do the transpose   */
-  int i, j;                /* dummies                               */
+  long i, j, it, jt, istart;/* dummies                              */
   int iter;                /* index of iteration                    */
   int phase;               /* phase inside staged communication     */
+  int colstart;            /* starting column for owning rank       */
   int error;               /* error flag                            */
   double * RESTRICT A_p;   /* original matrix column block          */
   double * RESTRICT B_p;   /* transposed matrix column block        */
   double * RESTRICT T_p;
-  double abserr,           /* absolute error                        */
-         abserr_tot;       /* aggregate absolute error              */
   double epsilon = 1.e-8;  /* error tolerance                       */
-  double local_trans_time, /* timing parameters                     */
-         trans_time,
-         avgtime;
+  double avgtime;          /* timing parameters                     */
+  long   *pSync_bcast;     /* work space for collectives            */
+  long   *pSync_reduce;    /* work space for collectives            */
+  double *pWrk;            /* work space for SHMEM collectives      */
+  double *local_trans_time,
+         *trans_time;      /* timing parameters                     */
+  double *abserr,
+         *abserr_tot;      /* local and aggregate error             */
+#if !BARRIER_SYNCH
+  int    *recv_flag;       /* synchronization flags: data received  */
+  int    *send_flag;       /* synchronization flags: receiver ready */
+#endif
+  int    *arguments;       /* command line arguments                */
 
 /*********************************************************************
-** Initialize the MPI environment
+** Initialize the SHMEM environment
 *********************************************************************/
-  MPI_Init(&argc,&argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
-  MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
+
+  prk_shmem_init();
+  my_ID=prk_shmem_my_pe();
+  Num_procs=prk_shmem_n_pes();
+
+  if (my_ID == root) {
+    printf("Parallel Research Kernels version %s\n", PRKVERSION);
+    printf("SHMEM matrix transpose: B = A^T\n");
+  }
+
+// initialize sync variables for error checks
+  pSync_bcast      = (long *)   prk_shmem_align(prk_get_alignment(),PRK_SHMEM_BCAST_SYNC_SIZE*sizeof(long));
+  pSync_reduce     = (long *)   prk_shmem_align(prk_get_alignment(),PRK_SHMEM_REDUCE_SYNC_SIZE*sizeof(long));
+  pWrk             = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double) * PRK_SHMEM_REDUCE_MIN_WRKDATA_SIZE);
+  local_trans_time = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double));
+  trans_time       = (double *) prk_shmem_align(prk_get_alignment(),sizeof(double));
+  arguments        = (int *)    prk_shmem_align(prk_get_alignment(),3*sizeof(int));
+  abserr           = (double *) prk_shmem_align(prk_get_alignment(),2*sizeof(double));
+  if (!pSync_bcast || !pSync_reduce || !pWrk || !local_trans_time ||
+      !trans_time || !arguments || !abserr) {
+    printf("Rank %d could not allocate scalar work space on symm heap\n", my_ID);
+    error = 1;
+    goto ENDOFTESTS;
+  }
+
+  for(i=0;i<PRK_SHMEM_BCAST_SYNC_SIZE;i++)
+    pSync_bcast[i]=PRK_SHMEM_SYNC_VALUE;
+
+  for(i=0;i<PRK_SHMEM_REDUCE_SYNC_SIZE;i++)
+    pSync_reduce[i]=PRK_SHMEM_SYNC_VALUE;
 
 /*********************************************************************
 ** process, test and broadcast input parameters
 *********************************************************************/
   error = 0;
-  if (my_ID == root)
-  {
-    printf("Parallel Research Kernels version %s\n", PRKVERSION);
-    printf("MPI matrix transpose: B = A^T\n");
-
-    if (argc != 3)
-    {
-      printf("Usage: %s <# iterations> <matrix order>\n", *argv);
+  if (my_ID == root) {
+    if (argc != 3){
+      printf("Usage: %s <# iterations> <matrix order>\n",
+                                                               *argv);
       error = 1; goto ENDOFTESTS;
     }
 
     iterations  = atoi(*++argv);
-    if(iterations < 1)
-    {
+    arguments[0]=iterations;
+    if(iterations < 1){
       printf("ERROR: iterations must be >= 1 : %d \n",iterations);
       error = 1; goto ENDOFTESTS;
     }
 
-    order = atol(*++argv);
-    if (order < Num_procs)
-    {
-      printf("ERROR: matrix order %ld should at least # procs %d\n",
+    order = atoi(*++argv);
+    arguments[1]=order;
+    if (order < Num_procs) {
+      printf("ERROR: matrix order %d should at least # procs %d\n",
              order, Num_procs);
       error = 1; goto ENDOFTESTS;
     }
-
-    if (order%Num_procs)
-    {
-      printf("ERROR: matrix order %ld should be divisible by # procs %d\n",
+    if (order%Num_procs) {
+      printf("ERROR: matrix order %d should be divisible by # procs %d\n",
              order, Num_procs);
       error = 1; goto ENDOFTESTS;
     }
@@ -193,19 +217,22 @@ int main(int argc, char ** argv)
   }
   bail_out(error);
 
-  if (my_ID == root)
-  {
+  if (my_ID == root) {
     printf("Number of ranks      = %d\n", Num_procs);
-    printf("Matrix order         = %ld\n", order);
+    printf("Matrix order         = %d\n", order);
     printf("Number of iterations = %d\n", iterations);
-    printf("Alltoall\n");
   }
 
   /*  Broadcast input data to all ranks */
-  MPI_Bcast(&order,      1, MPI_LONG, root, MPI_COMM_WORLD);
-  MPI_Bcast(&iterations, 1, MPI_INT,  root, MPI_COMM_WORLD);
+  shmem_broadcast32(&arguments[0], &arguments[0], 2, root, 0, 0, Num_procs, pSync_bcast);
+  shmem_barrier_all();
 
-  /* a non-positive tile size means no tiling of the local transpose */
+  iterations=arguments[0];
+  order=arguments[1];
+
+  shmem_barrier_all();
+  prk_shmem_free(arguments);
+
   bytes = 2 * sizeof(double) * order * order;
 
 /*********************************************************************
@@ -215,7 +242,9 @@ int main(int argc, char ** argv)
 *********************************************************************/
 
   Block_order    = order/Num_procs;
+  colstart       = Block_order * my_ID;
   Colblock_size  = order * Block_order;
+  Block_size     = Block_order * Block_order;
 
 /*********************************************************************
 ** Create the column block of the test matrix, the row block of the
@@ -223,22 +252,20 @@ int main(int argc, char ** argv)
 *********************************************************************/
   A_p = (double *)prk_malloc(Colblock_size*sizeof(double));
   T_p = (double *)prk_malloc(Colblock_size*sizeof(double));
-  if (A_p == NULL)
-  {
+  if (A_p == NULL){
     printf(" Error allocating space for original matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
 
   B_p = (double *)prk_malloc(Colblock_size*sizeof(double));
-  if (B_p == NULL)
-  {
+  if (B_p == NULL){
     printf(" Error allocating space for transpose matrix on node %d\n",my_ID);
     error = 1;
   }
   bail_out(error);
 
-  /* Fill the original column matrix                                                */
+  /* Fill the original column matrices                                              */
   for (i=0;i<order; i++)
     for (j=0;j<Block_order;j++)
     {
@@ -247,72 +274,79 @@ int main(int argc, char ** argv)
       T_p[i*Block_order+j] = 0.0;
     }
 
-  for (iter = 0; iter<=iterations; iter++)
-  {
+  shmem_barrier_all();
+
+  for (iter = 0; iter<=iterations; iter++){
+
     /* start timer after a warmup iteration                                        */
-    if (iter == 1)
-    {
-      MPI_Barrier(MPI_COMM_WORLD);
-      local_trans_time = wtime();
+    if (iter == 1) {
+      shmem_barrier_all();
+      local_trans_time[0] = wtime();
     }
 
-    MPI_Alltoall(A_p, Block_order*Block_order, MPI_DOUBLE,
-                 T_p, Block_order*Block_order, MPI_DOUBLE, MPI_COMM_WORLD);
+    shmem_barrier_all();
+    shmem_double_alltoall(SHMEM_TEAM_WORLD, T_p, A_p, Block_order*Block_order);
 
-    for (phase=0; phase<Num_procs; phase++)
-    {
+    for (phase=0; phase<Num_procs; phase++){
       int lo = Block_order*Block_order*phase;
 
       for (i = 0; i < Block_order; i++)
           for (j = 0; j < Block_order; j++)
               B_p[lo + i + Block_order * j] += T_p[lo + j + Block_order * i];
-
     }  /* end of phase loop  */
 
     for (j=0; j<Colblock_size; j++)
     {
       A_p[j] += 1.0;
     }
+
   } /* end of iterations */
 
-  local_trans_time = wtime() - local_trans_time;
-  MPI_Reduce(&local_trans_time, &trans_time, 1, MPI_DOUBLE, MPI_MAX, root,
-             MPI_COMM_WORLD);
+  shmem_barrier_all();
+  local_trans_time[0] = wtime() - local_trans_time[0];
 
-  abserr = 0.0;
-  double addit = ((double)(iterations+1) * (double) (iterations))/2.0;
+  shmem_barrier_all();
+  shmem_double_max_to_all(trans_time, local_trans_time, 1, 0, 0, Num_procs, pWrk, pSync_reduce);
+
+  abserr[0] = 0.0;
+  double addit = 0.5 * ( (iterations+1.) * (double)iterations );
   for (i=0;i<order; i++)
   {
     for (j=0;j<Block_order;j++)
     {
       const double temp = (order*(my_ID*Block_order+j)+i) * (iterations+1) + addit;
-      abserr += ABS(B_p[i*Block_order+j] - temp);
+      abserr[0] += ABS(B_p[i*Block_order+j] - temp);
     }
   }
 
-  MPI_Reduce(&abserr, &abserr_tot, 1, MPI_DOUBLE, MPI_SUM, root, MPI_COMM_WORLD);
+  shmem_barrier_all();
+  shmem_double_sum_to_all(&(abserr[1]), &(abserr[0]), 1, 0, 0, Num_procs, pWrk, pSync_reduce);
 
-  if (my_ID == root)
-  {
-    if (abserr_tot < epsilon)
-    {
+  if (abserr[1] <= epsilon) {
+    avgtime = trans_time[0]/(double)iterations;
+    if (my_ID == root) {
       printf("Solution validates\n");
-      avgtime = trans_time/(double)iterations;
       printf("Rate (MB/s): %lf Avg time (s): %lf\n",1.0E-06*bytes/avgtime, avgtime);
-#if VERBOSE
-      printf("Summed errors: %f \n", abserr);
+#ifdef VERBOSE
+      printf("Summed errors: %30.15lf \n", abserr[1]);
 #endif
     }
-    else
-    {
-      printf("ERROR: Aggregate squared error %lf exceeds threshold %e\n", abserr, epsilon);
-      error = 1;
+  } else {
+    error = 1;
+    if (my_ID == root) {
+      printf("ERROR: Aggregate squared error %30.15lf exceeds threshold %30.15lf\n", abserr[1], epsilon);
     }
+    fflush(stdout);
+    printf("ERROR: PE=%d, error = %30.15lf\n", my_ID, abserr[0]);
   }
 
   bail_out(error);
 
-  MPI_Finalize();
+  prk_shmem_free(pSync_bcast);
+  prk_shmem_free(pSync_reduce);
+  prk_shmem_free(pWrk);
+
+  prk_shmem_finalize();
   exit(EXIT_SUCCESS);
 
 }  /* end of main */
