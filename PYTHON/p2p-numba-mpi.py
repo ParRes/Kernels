@@ -64,10 +64,9 @@ import numpy
 from numba import jit
 
 @jit(nopython=True)
-def iterate_over_grid(grid, i1, i2, j1, j2):
+def iterate_over_grid(grid, i1, i2, j):
     for i in range(i1,i2):
-        for j in range(j1,j2):
-            grid[i,j] = grid[i-1,j] + grid[i,j-1] - grid[i-1,j-1]
+        grid[i,j] = grid[i-1,j] + grid[i,j-1] - grid[i-1,j-1]
 
 @jit(nopython=True)
 def iterate_over_grid_grp(grid, g, i1, i2, j1, j2):
@@ -160,9 +159,8 @@ def main():
                 if me > 0:
                     comm.Recv(grid[start-1,j:j+1], source=me-1, tag=j)
 
-            iterate_over_grid(grid, start, end+1, 1, n)
+                iterate_over_grid(grid, start, end+1, j)
 
-            for j in range(1,n):
                 # if I am not on the right boundary, send data to my right neighbor
                 if me < np-1:
                     comm.Send(grid[end,j:j+1], dest=me+1, tag=j)

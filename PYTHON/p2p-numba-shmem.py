@@ -65,10 +65,9 @@ from shmem4py import shmem
 from numba import jit
 
 @jit(nopython=True)
-def iterate_over_grid(grid, i1, i2, j1, j2):
+def iterate_over_grid(grid, i1, i2, j):
     for i in range(i1,i2):
-        for j in range(j1,j2):
-            grid[i,j] = grid[i-1,j] + grid[i,j-1] - grid[i-1,j-1]
+        grid[i,j] = grid[i-1,j] + grid[i,j-1] - grid[i-1,j-1]
 
 def main():
     me = shmem.my_pe()
@@ -167,9 +166,8 @@ def main():
                 shmem.wait_until(flag_left[j:j+1], shmem.CMP.EQ, true)
                 grid[start[me]-1,j] = dst[j]
 
-        iterate_over_grid(grid, start[me], end[me]+1, 1, n)
+            iterate_over_grid(grid, start[me], end[me]+1, j)
 
-        for j in range(1,n):
             if me != np-1:
                 src[j] = grid[end[me],j]
 
