@@ -157,9 +157,15 @@ int main(int argc, char * argv[])
     }
 
     // B += A^T
-    MPI_Alltoall(A, bo2, MPI_DOUBLE, 
-                 T, bo2, MPI_DOUBLE,
-                 MPI_COMM_WORLD);
+    //MPI_Alltoall(A, bo2, MPI_DOUBLE, T, bo2, MPI_DOUBLE, MPI_COMM_WORLD);
+    for (int r=0; r<np; r++) {
+        const int to   = (me + r) % np;
+        const int from = (me - r + np) % np;
+        MPI_Sendrecv(&A[to*block_order][0],bo2,MPI_DOUBLE,to,r,
+                     &T[from*block_order][0],bo2,MPI_DOUBLE,from,r,
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+
     for (int r=0; r<np; r++) {
         const int lo = block_order * r;
         //const int hi = block_order * (r+1);
