@@ -133,7 +133,7 @@ int main(int argc, char * argv[])
   const size_t bytes = (size_t)order * (size_t)block_order * sizeof(double);
   double (* const restrict A)[block_order] = (double (*)[block_order]) prk_malloc(bytes);
   double (* const restrict B)[block_order] = (double (*)[block_order]) prk_malloc(bytes);
-  double (* const restrict T)[block_order] = (double (*)[block_order]) prk_malloc(bytes);
+  double (* const restrict T)[block_order] = (double (*)[block_order]) prk_malloc(bytes/np);
   if (A == NULL || B == NULL || T == NULL) {
     printf("Error allocating space; A=%p B=%p T=%p\n",A,B,T);
     MPI_Abort(MPI_COMM_WORLD,99);
@@ -173,16 +173,12 @@ int main(int argc, char * argv[])
         printf("%d: r=%d to=%d, from=%d\n", me, r, to, from);
         MPI_Sendrecv(&A[to*block_order][0],bo2,MPI_DOUBLE,to,r,
                      T,bo2,MPI_DOUBLE,from,r,
-                     //&T[from*block_order][0],bo2,MPI_DOUBLE,from,r,
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    //}
-    //for (int r=0; r<np; r++) {
+
         const int lo = block_order * from;
-        //const int hi = block_order * (r+1);
         // B(:,lo:hi) = B(:,lo:hi) + transpose(T(:,lo:hi))
         for (int i=0; i<block_order; i++) {
           for (int j=0; j<block_order; j++) {
-            //B[lo+i][j] += T[lo+j][i];
             B[lo+i][j] += T[j][i];
           }
         }
