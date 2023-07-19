@@ -100,15 +100,15 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
     sycl::buffer<T> d_C { sycl::range<1>{length} };
 
     q.submit([&](sycl::handler& h) {
-        sycl::accessor<T, 1, sycl::access::mode::discard_write, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor A(d_A, h, sycl::no_init);
         h.fill(A,(T)0);
     });
     q.submit([&](sycl::handler& h) {
-        sycl::accessor<T, 1, sycl::access::mode::discard_write, sycl::access::target::global_buffer> B(d_B, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor B(d_B, h, sycl::no_init);
         h.fill(B,(T)2);
     });
     q.submit([&](sycl::handler& h) {
-        sycl::accessor<T, 1, sycl::access::mode::discard_write, sycl::access::target::global_buffer> C(d_C, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor C(d_C, h, sycl::no_init);
         h.fill(C,(T)2);
     });
     q.wait();
@@ -118,10 +118,9 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
       if (iter==1) nstream_time = prk::wtime();
 
       q.submit([&](sycl::handler& h) {
-
-        auto A = d_A.template get_access<sycl::access::mode::read_write>(h);
-        auto B = d_B.template get_access<sycl::access::mode::read>(h);
-        auto C = d_C.template get_access<sycl::access::mode::read>(h);
+        sycl::accessor A(d_A, h);
+        sycl::accessor B(d_B, h, sycl::read_only);
+        sycl::accessor C(d_C, h, sycl::read_only);
 
         if (block_size == 0) {
             // hipSYCL prefers range to nd_range because no barriers
@@ -164,7 +163,7 @@ void run(sycl::queue & q, int iterations, size_t length, size_t block_size)
     nstream_time = prk::wtime() - nstream_time;
 
     q.submit([&](sycl::handler& h) {
-        sycl::accessor<T, 1, sycl::access::mode::read, sycl::access::target::global_buffer> A(d_A, h, sycl::range<1>(length), sycl::id<1>(0));
+        sycl::accessor A(d_A, h, sycl::read_only);
         h.copy(A,h_A.data());
     });
     q.wait();
@@ -268,7 +267,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q{sycl::host_selector{}};
+    sycl::queue q{sycl::cpu_selector_v};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, length, block_size);
 #ifndef DPCPP_NO_DOUBLE
@@ -287,26 +286,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q{sycl::cpu_selector{}};
-    prk::SYCL::print_device_platform(q);
-    run<float>(q, iterations, length, block_size);
-#ifndef DPCPP_NO_DOUBLE
-    run<double>(q, iterations, length, block_size);
-#endif
-  }
-  catch (sycl::exception & e) {
-    std::cout << e.what() << std::endl;
-    prk::SYCL::print_exception_details(e);
-  }
-  catch (std::exception & e) {
-    std::cout << e.what() << std::endl;
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-  }
-
-  try {
-    sycl::queue q{sycl::gpu_selector{}};
+    sycl::queue q{sycl::gpu_selector_v};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, length, block_size);
 #ifndef DPCPP_NO_DOUBLE

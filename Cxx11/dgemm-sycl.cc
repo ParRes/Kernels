@@ -73,9 +73,9 @@ void prk_dgemm(sycl::queue & q,
 {
     q.submit([&](sycl::handler& h) {
 
-      auto A = d_A.get_access<sycl::access::mode::read>(h);
-      auto B = d_B.get_access<sycl::access::mode::read>(h);
-      auto C = d_C.get_access<sycl::access::mode::read_write>(h);
+      sycl::accessor A(d_A, h, sycl::read_only);
+      sycl::accessor B(d_B, h, sycl::read_only);
+      sycl::accessor C(d_C, h);
 
       h.parallel_for<class dgemm>( sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
 
@@ -130,7 +130,7 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  sycl::queue q(sycl::default_selector{});
+  sycl::queue q(sycl::default_selector_v);
   prk::SYCL::print_device_platform(q);
 
   if (tile_size < order) {
