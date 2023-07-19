@@ -294,12 +294,15 @@ int main(int argc, char ** argv)
     }
 
     if ((Num_procs==1) && (TID==0)) { /* first thread waits for corner value       */
-      while (flag(0,0) == true) {
-        #pragma omp flush
+      while (1) {
+        int flg_tmp;
+        #pragma omp atomic read seq_cst
+        flg_tmp = flag(0,0);
+        if (flg_tmp == false) break;
       }
 #if SYNCHRONOUS
+      #pragma omp atomic write seq_cst
       flag(0,0)= true;
-      #pragma omp flush
 #endif
     }
 
@@ -315,12 +318,15 @@ int main(int argc, char ** argv)
         }
       }
       else {
-	while (flag(TID-1,j) == false) {
-           #pragma omp flush
+        while (1) {
+          int flg_tmp;
+          #pragma omp atomic read seq_cst
+          flg_tmp = flag(TID-1,j);
+          if (flg_tmp == true) break;
         }
 #if SYNCHRONOUS
-        flag(TID-1,j)= false;
-        #pragma omp flush
+        #pragma omp atomic write seq_cst
+        flag(TID-1,j) = false;
 #endif
       }
 
@@ -331,12 +337,15 @@ int main(int argc, char ** argv)
       /* if not on right boundary, signal right neighbor it has new data */
       if (TID < nthread-1) {
 #if SYNCHRONOUS
-        while (flag(TID,j) == true) {
-          #pragma omp flush
+        while (1) {
+          int flg_tmp;
+          #pragma omp atomic read seq_cst
+          flg_tmp = flag(TID,j);
+          if (flg_tmp == false) break;
         }
 #endif
+        #pragma omp atomic write seq_cst
         flag(TID,j) = true;
-        #pragma omp flush
       }
       else { /* if not on the right boundary, send data to my right neighbor      */
         if (my_ID < Num_procs-1) {
@@ -360,15 +369,18 @@ int main(int argc, char ** argv)
                 to bottom left corner to create dependency and signal completion  */
         ARRAY(0,0) = -ARRAY(m-1,n-1);
 #if SYNCHRONOUS
-        while (flag(0,0) == false) {
-          #pragma omp flush
+        while (1) {
+            int flg_tmp;
+            #pragma omp atomic read seq_cst
+            flg_tmp = flag(0,0);
+            if (flg_tmp == true) break;
         }
+        #pragma omp atomic write seq_cst
         flag(0,0) = false;
 #else
-        #pragma omp flush
+        #pragma omp atomic write seq_cst
         flag(0,0) = true;
 #endif
-        #pragma omp flush
       }
     }
 
