@@ -243,7 +243,7 @@ int main(int argc, char ** argv) {
 #if SYNCHRONOUS
       #pragma omp atomic write seq_cst
       flag(0,0)= true;
-#endif      
+#endif
     }
 
     for (j=1; j<n; j+=grp) { /* apply grouping                                   */
@@ -261,7 +261,7 @@ int main(int argc, char ** argv) {
 #if SYNCHRONOUS
         #pragma omp atomic write seq_cst
         flag(TID-1,j) = false;
-#endif      
+#endif
       }
 
       for (jj=j; jj<j+jjsize; jj++)
@@ -271,14 +271,14 @@ int main(int argc, char ** argv) {
 
       /* if not on right boundary, signal right neighbor it has new data         */
       if (TID < nthread-1) {
-#if SYNCHRONOUS 
+#if SYNCHRONOUS
         while (1) {
           int flg_tmp;
           #pragma omp atomic read seq_cst
           flg_tmp = flag(TID,j);
           if (flg_tmp == false) break;
         }
-#endif 
+#endif
         #pragma omp atomic write seq_cst
         flag(TID,j) = true;
       }
