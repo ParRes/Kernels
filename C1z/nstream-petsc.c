@@ -119,7 +119,7 @@ int main(int argc, char * argv[])
 #endif
   PetscPrintf(PETSC_COMM_WORLD,"Number of processes  = %d\n", np);
   PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %d\n", iterations);
-  PetscPrintf(PETSC_COMM_WORLD,"Vector length        = %zu\n", length);
+  PetscPrintf(PETSC_COMM_WORLD,"Vector length        = %zu\n", (size_t)length);
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation

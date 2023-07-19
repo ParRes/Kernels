@@ -118,10 +118,7 @@ int main(int argc, char * argv[])
 
   double trans_time = 0.0;
 
-  PetscReal zero  = 0;
   PetscReal one   = 1;
-  PetscReal two   = 2;
-  PetscReal three = 3;
 
   Mat A;
   Mat B;
@@ -144,6 +141,8 @@ int main(int argc, char * argv[])
     }
   }
   ierr = MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  // https://petsc.org/main/manualpages/Mat/MatTransposeSetPrecursor/
+  ierr = MatTransposeSetPrecursor(A, AT); CHKERRQ(ierr);
 
   // B[i,j] = 0
 #if 0
@@ -196,9 +195,9 @@ int main(int argc, char * argv[])
   // Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  PetscReal addit = (iterations+1)*(iterations)/2;
   PetscReal abserr = 0;
 #if 0
+  PetscReal addit = (iterations+1)*(iterations)/2;
   for (int j=0; j<order; j++) {
     for (int i=0; i<order; i++) {
       const size_t ij = i*order+j;
