@@ -121,7 +121,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
     sycl::buffer<T> d_out { h_out.data(), h_out.size() };
 
     q.submit([&](sycl::handler& h) {
-      auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
+      sycl::accessor in(d_in, h);
       h.parallel_for<class init<T>>(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
           const size_t i = it.get_global_id(0);
           const size_t j = it.get_global_id(1);
@@ -140,7 +140,7 @@ void run(sycl::queue & q, int iterations, size_t n, size_t block_size, bool star
       q.wait();
 
       q.submit([&](sycl::handler& h) {
-        auto in  = d_in.template get_access<sycl::access::mode::read_write>(h);
+        sycl::accessor in(d_in, h);
         h.parallel_for<class add<T>>(sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
             const size_t i = it.get_global_id(0);
             const size_t j = it.get_global_id(1);
@@ -276,7 +276,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q{sycl::host_selector{}};
+    sycl::queue q{sycl::cpu_selector_v};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, block_size, star, radius);
 #ifndef DPCPP_NO_DOUBLE
@@ -295,26 +295,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q{sycl::cpu_selector{}};
-    prk::SYCL::print_device_platform(q);
-    run<float>(q, iterations, n, block_size, star, radius);
-#ifndef DPCPP_NO_DOUBLE
-    run<double>(q, iterations, n, block_size, star, radius);
-#endif
-  }
-  catch (sycl::exception & e) {
-    std::cout << e.what() << std::endl;
-    prk::SYCL::print_exception_details(e);
-  }
-  catch (std::exception & e) {
-    std::cout << e.what() << std::endl;
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-  }
-
-  try {
-    sycl::queue q{sycl::gpu_selector{}};
+    sycl::queue q{sycl::gpu_selector_v};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, n, block_size, star, radius);
 #ifndef DPCPP_NO_DOUBLE

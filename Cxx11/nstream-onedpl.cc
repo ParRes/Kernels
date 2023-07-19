@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
 
-  sycl::queue q(sycl::default_selector{});
+  sycl::queue q(sycl::default_selector_v);
   prk::SYCL::print_device_platform(q);
 
   //////////////////////////////////////////////////////////////////////

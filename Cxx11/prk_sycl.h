@@ -6,8 +6,6 @@
 
 #include "CL/sycl.hpp"
 
-namespace sycl = cl::sycl;
-
 #if defined(__LIBSYCL_MAJOR_VERSION) && defined(__LIBSYCL_MINOR_VERSION) && defined(__LIBSYCL_PATCH_VERSION)
 #    define __LIBSYCL_VERSION                                                                                          \
         (__LIBSYCL_MAJOR_VERSION * 10000 + __LIBSYCL_MINOR_VERSION * 100 + __LIBSYCL_PATCH_VERSION)

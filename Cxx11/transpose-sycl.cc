@@ -91,8 +91,8 @@ void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
       q.submit([&](sycl::handler& h) {
 
         // accessor methods
-        auto A = d_A.template get_access<sycl::access::mode::read_write>(h);
-        auto B = d_B.template get_access<sycl::access::mode::read_write>(h);
+        sycl::accessor A(d_A, h);
+        sycl::accessor B(d_B, h);
 
         h.parallel_for<class transpose<T>>(
 #if PREBUILD_KERNEL
@@ -213,7 +213,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q{sycl::host_selector{}};
+    sycl::queue q{sycl::cpu_selector_v};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, order, block_size);
 #ifndef DPCPP_NO_DOUBLE
@@ -232,26 +232,7 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q{sycl::cpu_selector{}};
-    prk::SYCL::print_device_platform(q);
-    run<float>(q, iterations, order, block_size);
-#ifndef DPCPP_NO_DOUBLE
-    run<double>(q, iterations, order, block_size);
-#endif
-  }
-  catch (sycl::exception & e) {
-    std::cout << e.what() << std::endl;
-    prk::SYCL::print_exception_details(e);
-  }
-  catch (std::exception & e) {
-    std::cout << e.what() << std::endl;
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-  }
-
-  try {
-    sycl::queue q{sycl::gpu_selector{}};
+    sycl::queue q{sycl::gpu_selector_v};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, order, block_size);
 #ifndef DPCPP_NO_DOUBLE

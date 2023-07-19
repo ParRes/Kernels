@@ -5,8 +5,8 @@ template <typename T>
 void star1(sycl::queue & q, const size_t n, sycl::buffer<T> & d_in, sycl::buffer<T> & d_out)
 {
   q.submit([&](sycl::handler& h) {
-    auto in  = d_in.template get_access<sycl::access::mode::read>(h);
-    auto out = d_out.template get_access<sycl::access::mode::read_write>(h);
+    sycl::accessor in(d_in, h, sycl::read_only);
+    sycl::accessor out(d_out, h);
     h.parallel_for<class star1_1d<T>>(sycl::range<2> {n-1,n-1}, [=] (sycl::item<2> it) {
         const auto i = it[0] + 1;
         const auto j = it[1] + 1;
@@ -25,8 +25,8 @@ template <typename T>
 void star1(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buffer<T, 2> & d_out)
 {
   q.submit([&](sycl::handler& h) {
-    auto in  = d_in.template get_access<sycl::access::mode::read>(h);
-    auto out = d_out.template get_access<sycl::access::mode::read_write>(h);
+    sycl::accessor in(d_in, h, sycl::read_only);
+    sycl::accessor out(d_out, h);
     sycl::id<2> dx1(sycl::range<2> {1,0});
     sycl::id<2> dy1(sycl::range<2> {0,1});
     h.parallel_for<class star1_2d<T>>(sycl::range<2> {n-1,n-1}, [=] (sycl::item<2> it) {
@@ -64,8 +64,8 @@ template <typename T>
 void star2(sycl::queue & q, const size_t n, sycl::buffer<T> & d_in, sycl::buffer<T> & d_out)
 {
   q.submit([&](sycl::handler& h) {
-    auto in  = d_in.template get_access<sycl::access::mode::read>(h);
-    auto out = d_out.template get_access<sycl::access::mode::read_write>(h);
+    sycl::accessor in(d_in, h, sycl::read_only);
+    sycl::accessor out(d_out, h);
     h.parallel_for<class star2_1d<T>>(sycl::range<2> {n-2,n-2}, [=] (sycl::item<2> it) {
         const auto i = it[0] + 2;
         const auto j = it[1] + 2;
@@ -88,8 +88,8 @@ template <typename T>
 void star2(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buffer<T, 2> & d_out)
 {
   q.submit([&](sycl::handler& h) {
-    auto in  = d_in.template get_access<sycl::access::mode::read>(h);
-    auto out = d_out.template get_access<sycl::access::mode::read_write>(h);
+    sycl::accessor in(d_in, h, sycl::read_only);
+    sycl::accessor out(d_out, h);
     sycl::id<2> dx1(sycl::range<2> {1,0});
     sycl::id<2> dy1(sycl::range<2> {0,1});
     sycl::id<2> dx2(sycl::range<2> {2,0});
@@ -137,8 +137,8 @@ template <typename T>
 void star3(sycl::queue & q, const size_t n, sycl::buffer<T> & d_in, sycl::buffer<T> & d_out)
 {
   q.submit([&](sycl::handler& h) {
-    auto in  = d_in.template get_access<sycl::access::mode::read>(h);
-    auto out = d_out.template get_access<sycl::access::mode::read_write>(h);
+    sycl::accessor in(d_in, h, sycl::read_only);
+    sycl::accessor out(d_out, h);
     h.parallel_for<class star3_1d<T>>(sycl::range<2> {n-3,n-3}, [=] (sycl::item<2> it) {
         const auto i = it[0] + 3;
         const auto j = it[1] + 3;
@@ -165,8 +165,8 @@ template <typename T>
 void star3(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buffer<T, 2> & d_out)
 {
   q.submit([&](sycl::handler& h) {
-    auto in  = d_in.template get_access<sycl::access::mode::read>(h);
-    auto out = d_out.template get_access<sycl::access::mode::read_write>(h);
+    sycl::accessor in(d_in, h, sycl::read_only);
+    sycl::accessor out(d_out, h);
     sycl::id<2> dx1(sycl::range<2> {1,0});
     sycl::id<2> dy1(sycl::range<2> {0,1});
     sycl::id<2> dx2(sycl::range<2> {2,0});
@@ -224,8 +224,8 @@ template <typename T>
 void star4(sycl::queue & q, const size_t n, sycl::buffer<T> & d_in, sycl::buffer<T> & d_out)
 {
   q.submit([&](sycl::handler& h) {
-    auto in  = d_in.template get_access<sycl::access::mode::read>(h);
-    auto out = d_out.template get_access<sycl::access::mode::read_write>(h);
+    sycl::accessor in(d_in, h, sycl::read_only);
+    sycl::accessor out(d_out, h);
     h.parallel_for<class star4_1d<T>>(sycl::range<2> {n-4,n-4}, [=] (sycl::item<2> it) {
         const auto i = it[0] + 4;
         const auto j = it[1] + 4;
@@ -256,8 +256,8 @@ template <typename T>
 void star4(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buffer<T, 2> & d_out)
 {
   q.submit([&](sycl::handler& h) {
-    auto in  = d_in.template get_access<sycl::access::mode::read>(h);
-    auto out = d_out.template get_access<sycl::access::mode::read_write>(h);
+    sycl::accessor in(d_in, h, sycl::read_only);
+    sycl::accessor out(d_out, h);
     sycl::id<2> dx1(sycl::range<2> {1,0});
     sycl::id<2> dy1(sycl::range<2> {0,1});
     sycl::id<2> dx2(sycl::range<2> {2,0});
@@ -325,8 +325,8 @@ template <typename T>
 void star5(sycl::queue & q, const size_t n, sycl::buffer<T> & d_in, sycl::buffer<T> & d_out)
 {
   q.submit([&](sycl::handler& h) {
-    auto in  = d_in.template get_access<sycl::access::mode::read>(h);
-    auto out = d_out.template get_access<sycl::access::mode::read_write>(h);
+    sycl::accessor in(d_in, h, sycl::read_only);
+    sycl::accessor out(d_out, h);
     h.parallel_for<class star5_1d<T>>(sycl::range<2> {n-5,n-5}, [=] (sycl::item<2> it) {
         const auto i = it[0] + 5;
         const auto j = it[1] + 5;
@@ -361,8 +361,8 @@ template <typename T>
 void star5(sycl::queue & q, const size_t n, sycl::buffer<T, 2> & d_in, sycl::buffer<T, 2> & d_out)
 {
   q.submit([&](sycl::handler& h) {
-    auto in  = d_in.template get_access<sycl::access::mode::read>(h);
-    auto out = d_out.template get_access<sycl::access::mode::read_write>(h);
+    sycl::accessor in(d_in, h, sycl::read_only);
+    sycl::accessor out(d_out, h);
     sycl::id<2> dx1(sycl::range<2> {1,0});
     sycl::id<2> dy1(sycl::range<2> {0,1});
     sycl::id<2> dx2(sycl::range<2> {2,0});

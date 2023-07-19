@@ -58,7 +58,7 @@ OPENCLFLAG=-I${OPENCLDIR}/include/sycl -L${OPENCLDIR}/lib -lOpenCL
 #
 # Intel oneAPI
 #
-SYCLCXX=dpcpp
+SYCLCXX=icpx
 SYCLFLAG=-fsycl
 SYCLFLAG+=-std=c++17 -O3 -g3
 SYCLFLAG+=-DDPCPP
