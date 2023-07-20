@@ -60,13 +60,13 @@ ifdef OCCADIR
 endif
 OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
-.PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl \
+.PHONY: all clean vector valarray openmp target opencl taskloop stl \
 	ranges kokkos raja cuda cublas sycl dpcpp \
 	boost-compute thrust executor oneapi onemkl
 
 EXTRA=
 ifneq ($(findstring nvc++,$(CXX)),nvc++)
-  EXTRA += ranges stl pstl
+  EXTRA += ranges stl #pstl tbb # TBB keeps breaking due to API changes
 endif
 ifneq ($(OPENACCFLAG),)
   EXTRA += openacc
