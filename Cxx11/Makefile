@@ -135,7 +135,7 @@ cublas: transpose-cublas nstream-cublas dgemm-cublas dgemm-multigpu-cublas dgemm
 
 cblas: transpose-cblas dgemm-cblas sgemm-cblas xgemm-cblas
 
-onemkl: nstream-onemkl dgemm-onemkl dgemm-multigpu-onemkl
+onemkl: nstream-onemkl dgemm-onemkl dgemm-multigpu-onemkl xgemm-onemkl
 
 onedpl: nstream-onedpl
 
