@@ -248,6 +248,7 @@ int main(int argc, char * argv[])
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
+#if 0
   try {
     sycl::queue q{sycl::cpu_selector_v};
     prk::SYCL::print_device_platform(q);
@@ -266,7 +267,7 @@ int main(int argc, char * argv[])
   catch (const char * e) {
     std::cout << e << std::endl;
   }
-
+#endif
   try {
     sycl::queue q{sycl::gpu_selector_v};
     prk::SYCL::print_device_platform(q);
