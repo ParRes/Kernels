@@ -60,65 +60,104 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
-__global__ void init(int order, const int matrices, float * A, float * B, float * C)
+prk::CUDA::info info;
+
+template <typename T>
+__global__ void init(int order, T * C)
 {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
-    for (int b=0; b<matrices; ++b) {
-      if ((i<order) && (j<order)) {
-        A[b*order*order+i*order+j] = i;
-        B[b*order*order+i*order+j] = i;
-        C[b*order*order+i*order+j] = 0;
-      }
-    }
-}
-
-__global__ void init(int order, const int matrices, float * C)
-{
-    auto i = blockIdx.x * blockDim.x + threadIdx.x;
-    auto j = blockIdx.y * blockDim.y + threadIdx.y;
-
-    for (int b=0; b<matrices; ++b) {
-      if ((i<order) && (j<order)) {
-        C[b*order*order+i*order+j] = 0;
-      }
+    if ((i<order) && (j<order)) {
+      C[i*order+j] = T(0);
     }
 }
 
 template <typename T>
-void run(sycl::queue & q, int iterations, int order)
+__global__ void init(int order, T * A, T * B, T * C)
+{
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    auto j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if ((i<order) && (j<order)) {
+      A[i*order+j] = T(i);
+      B[i*order+j] = T(i);
+      C[i*order+j] = T(0);
+    }
+}
+
+template <typename TAB, typename TC>
+void prk_gemm(const cublasHandle_t & h,
+              const int order, const TC alpha, const TC beta,
+              const TAB * A, const TAB * B, TC * C)
+{
+    std::cerr << "No valid template match for type T" << std::endl;
+    std::abort();
+}
+
+template <>
+void prk_gemm(const cublasHandle_t & h,
+              const int order, const __half alpha, const __half beta,
+              const __half * A, const __half * B, __half * C)
+{
+    prk::CUDA::check( cublasHgemm(h,
+                                  CUBLAS_OP_N, CUBLAS_OP_N,
+                                  order, order, order,
+                                  &alpha,
+                                  A, order,
+                                  B, order,
+                                  &beta,
+                                  C, order) );
+}
+
+template <>
+void prk_gemm(const cublasHandle_t & h,
+              const int order, const float alpha, const float beta,
+              const float * A, const float * B, float * C)
+{
+    prk::CUDA::check( cublasSgemm(h,
+                                  CUBLAS_OP_N, CUBLAS_OP_N,
+                                  order, order, order,
+                                  &alpha,
+                                  A, order,
+                                  B, order,
+                                  &beta,
+                                  C, order) );
+}
+
+template <>
+void prk_gemm(const cublasHandle_t & h,
+              const int order, const double alpha, const double beta,
+              const double * A, const double * B, double * C)
+{
+    prk::CUDA::check( cublasDgemm(h,
+                                  CUBLAS_OP_N, CUBLAS_OP_N,
+                                  order, order, order,
+                                  &alpha,
+                                  A, order,
+                                  B, order,
+                                  &beta,
+                                  C, order) );
+}
+
+template <typename T>
+void run(const cublasHandle_t & h, int iterations, int order)
 {
   double gemm_time{0};
 
   const size_t nelems = (size_t)order * (size_t)order;
-  const size_t bytes = nelems * sizeof(T);
-  auto h_a = sycl::malloc_host<T>( nelems, q);
-  auto h_b = sycl::malloc_host<T>( nelems, q);
-  auto h_c = sycl::malloc_host<T>( nelems, q);
+  auto h_c = prk::CUDA::malloc_host<T>( nelems);
 
-  for (int i=0; i<order; ++i) {
-    for (int j=0; j<order; ++j) {
-       h_a[i*order+j] = i;
-       h_b[i*order+j] = i;
-       h_c[i*order+j] = 0;
-    }
-  }
+  const int tile_size = 32;
+  dim3 dimGrid(prk::divceil(order,tile_size),prk::divceil(order,tile_size),1);
+  dim3 dimBlock(tile_size, tile_size, 1);
+  info.checkDims(dimBlock, dimGrid);
 
-  // copy input from host to device
-  auto  A = sycl::malloc_device<T>( nelems, q);
-  auto  B = sycl::malloc_device<T>( nelems, q);
-  auto  C = sycl::malloc_device<T>( nelems, q);
-  q.wait();
-
-  q.memcpy(A, &(h_a[0]), bytes).wait();
-  q.memcpy(B, &(h_b[0]), bytes).wait();
-  q.memcpy(C, &(h_c[0]), bytes).wait();
-  q.wait();
-
-  sycl::free(h_a, q);
-  sycl::free(h_b, q);
-
+  auto d_a = prk::CUDA::malloc_device<T>(nelems);
+  auto d_b = prk::CUDA::malloc_device<T>(nelems);
+  auto d_c = prk::CUDA::malloc_device<T>(nelems);
+  init<<<dimGrid, dimBlock>>>(order, d_a, d_b, d_c);
+  prk::CUDA::sync();
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
@@ -127,24 +166,17 @@ void run(sycl::queue & q, int iterations, int order)
       const T alpha{1};
       const T beta{1};
 
-      mkl::blas::gemm(q, mkl::transpose::nontrans, // opA
-                         mkl::transpose::nontrans, // opB
-                         order, order, order,      // m, n, k
-                         alpha,                    // alpha
-                         A, order,                 // A, lda
-                         B, order,                 // B, ldb
-                         beta,                     // beta
-                         C, order);                // C, ldc
-      q.wait();
+      prk_gemm(h, order, alpha, beta, d_a, d_b, d_c);
+      prk::CUDA::sync();
     }
     gemm_time = prk::wtime() - gemm_time;
   }
   // copy output back to host
-  q.memcpy(&(h_c[0]), C, bytes).wait();
+  prk::CUDA::copyD2H(h_c, d_c, nelems);
 
-  sycl::free(C, q);
-  sycl::free(B, q);
-  sycl::free(A, q);
+  prk::CUDA::free(d_a);
+  prk::CUDA::free(d_b);
+  prk::CUDA::free(d_c);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -154,7 +186,7 @@ void run(sycl::queue & q, int iterations, int order)
   const double reference = 0.25 * prk::pow(forder,3) * prk::pow(forder-1.0,2) * (iterations+1);
   double checksum{0};
   for (int i=0; i<nelems; ++i) {
-      checksum += h_c[i];
+      checksum += double(h_c[i]);
   }
   const double residuum = std::abs(checksum - reference) / reference;
   const double epsilon{1.0e-8};
@@ -168,12 +200,10 @@ void run(sycl::queue & q, int iterations, int order)
     auto nflops = 2.0 * prk::pow(forder,3);
     auto is_fp64 = (typeid(T) == typeid(double));
     auto is_fp32 = (typeid(T) == typeid(float));
-    auto is_fp16 = (typeid(T) == typeid(sycl::half));
-    auto is_bf16 = (typeid(T) == typeid(oneapi::mkl::bfloat16));
+    auto is_fp16 = (typeid(T) == typeid(__half));
     auto pname = (is_fp64 ? "FP64" :
                   (is_fp32 ? "FP32" :
-                   (is_fp16 ? "FP16" :
-                    (is_bf16 ? "BF16" : "Unknown FP type"))));
+                   (is_fp16 ? "FP16" : "Unknown FP type")));
     std::cout << pname
               << " Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
@@ -182,13 +212,13 @@ void run(sycl::queue & q, int iterations, int order)
               << "Residuum           = " << residuum << std::endl;
   }
 
-  sycl::free(h_c, q);
+  prk::CUDA::free_host(h_c);
 }
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/oneMKL Dense matrix-matrix multiplication: C += A x B" << std::endl;
+  std::cout << "C++11/CUBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -218,41 +248,21 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+  //info.print();
+
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
 
   //////////////////////////////////////////////////////////////////////
-  /// Setup SYCL environment
+  /// Setup CUBLAS environment
   //////////////////////////////////////////////////////////////////////
 
-  sycl::queue qs[2] = { sycl::queue{sycl::cpu_selector_v},
-                        sycl::queue{sycl::gpu_selector_v} };
-  for (auto q : qs) {
-      try {
-        prk::SYCL::print_device_platform(q);
-        bool has_fp64 = prk::SYCL::has_fp64(q);
-        run<sycl::half>(q, iterations, order);
-        run<oneapi::mkl::bfloat16>(q, iterations, order);
-        run<float>(q, iterations, order);
-        if (has_fp64) {
-          run<double>(q, iterations, order);
-        } else {
-          std::cout << "SYCL device lacks FP64 support." << std::endl;
-        }
-      }
-      catch (sycl::exception & e) {
-        std::cout << e.what() << std::endl;
-        prk::SYCL::print_exception_details(e);
-      }
-      catch (std::exception & e) {
-        std::cout << e.what() << std::endl;
-      }
-      catch (const char * e) {
-        std::cout << e << std::endl;
-      }
-  }
+  cublasHandle_t h;
+  prk::CUDA::check( cublasCreate(&h) );
+  run<__half>(h, iterations, order);
+  run<float>(h, iterations, order);
+  run<double>(h, iterations, order);
+  prk::CUDA::check( cublasDestroy(h) );
 
   return 0;
 }
-
-
