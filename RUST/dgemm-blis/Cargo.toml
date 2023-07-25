@@ -1,0 +1,10 @@
+[package]
+name = "dgemm-blis"
+version = "0.5.0"
+authors = ["Jeff Hammond <jeff.r.hammond@intel.com>", "Sajid Ali <sasyed@fnal.gov>"]
+
+edition="2021"
+
+[dependencies]
+cblas = "0.4"
+blas-src = { version = "0.8", features = ["blis"] }

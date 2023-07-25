@@ -67,6 +67,15 @@ def codegen(src,pattern,stencil_size,radius,W,model):
         src.write('       }\n')
         src.write('     }\n')
         src.write('}\n\n')
+    elif (model=='openacc'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {\n')
+        src.write('    PRAGMA( acc parallel loop collapse(2) deviceptr(in,out) )\n')
+        src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
+        src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('       }\n')
+        src.write('     }\n')
+        src.write('}\n\n')
     elif (model=='target'):
         src.write('void '+pattern+str(radius)+'(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {\n')
         src.write('    OMP_TARGET( teams distribute parallel for simd collapse(2) )\n')
@@ -223,9 +232,9 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','vector','ranges','stl','pgnu','pstl','openmp','taskloop','target','tbb','raja','rajaview','kokkos','cuda']:
+    for model in ['seq','vector','ranges','stl','pgnu','pstl','openmp','taskloop','target','openacc','tbb','raja','rajaview','kokkos','cuda']:
       src = open('stencil_'+model+'.hpp','w')
-      if (model=='target'):
+      if (model=='target' or model=='openacc'):
           src.write('#define RESTRICT __restrict__\n\n')
       if (model=='rajaview'):
           src.write('using regular_policy = RAJA::KernelPolicy< RAJA::statement::For<0, thread_exec,\n')

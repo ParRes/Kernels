@@ -53,13 +53,11 @@ program main
   use, intrinsic :: iso_fortran_env
   use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
   integer(kind=INT32) ::  order                     ! order of a the matrix
+  integer(kind=INT32) ::  tile_size
   real(kind=REAL64), allocatable ::  A(:,:)         ! buffer to hold original matrix
   real(kind=REAL64), allocatable ::  B(:,:)         ! buffer to hold transposed matrix
   integer(kind=INT64) ::  bytes                     ! combined size of matrices
@@ -77,57 +75,37 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a40)') 'Fortran Pretty Matrix transpose: B = A^T'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
-    stop 1
-  endif
+  call prk_get_arguments('transpose',iterations=iterations,order=order,tile_size=tile_size)
 
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
+  write(*,'(a22,i8)') 'Number of iterations = ', iterations
+  write(*,'(a22,i8)') 'Matrix order         = ', order
+  if (tile_size.ne.order) then
+    write(*,'(a22,i8)') 'Tile size            = ', tile_size
+  else
+    write(*,'(a10)') 'Tiling off'
   endif
-
-  order = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') order
-  if (order .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
-    stop 1
-  endif
-
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix order         = ', order
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(order,order), stat=err)
+  allocate( A(order,order), B(order,order), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a,i3)') 'allocation  returned ',err
     stop 1
   endif
 
-  allocate( B(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
+  t0 = 0
 
   ! Fill the original matrix
   o2 = int(order,INT64)**2
   A = reshape((/ (j2, j2 = 0,o2) /),(/order, order/))
   B = 0
 
-  t0 = 0
-
   do k=0,iterations
-    ! start timer after a warmup iteration
+
     if (k.eq.1) t0 = prk_get_wtime()
+
     B = B + transpose(A)
     A = A + 1
   enddo ! iterations
@@ -155,8 +133,7 @@ program main
   abserr = norm2(A-B)
 #endif
 
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B )
 
   if (abserr .lt. epsilon) then
     write(*,'(a)') 'Solution validates'

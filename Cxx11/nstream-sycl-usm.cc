@@ -253,10 +253,12 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   try {
-    sycl::queue q{sycl::host_selector{}};
+    sycl::queue q{sycl::cpu_selector_v};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, length, block_size);
+#ifndef DPCPP_NO_DOUBLE
     run<double>(q, iterations, length, block_size);
+#endif
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -270,35 +272,20 @@ int main(int argc, char * argv[])
   }
 
   try {
-    sycl::queue q{sycl::cpu_selector{}};
+    sycl::queue q{sycl::gpu_selector_v};
     prk::SYCL::print_device_platform(q);
     run<float>(q, iterations, length, block_size);
-    run<double>(q, iterations, length, block_size);
-  }
-  catch (sycl::exception & e) {
-    std::cout << e.what() << std::endl;
-    prk::SYCL::print_exception_details(e);
-  }
-  catch (std::exception & e) {
-    std::cout << e.what() << std::endl;
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-  }
-
-  try {
-    sycl::queue q{sycl::gpu_selector{}};
-    prk::SYCL::print_device_platform(q);
+#ifndef DPCPP_NO_DOUBLE
     bool has_fp64 = prk::SYCL::has_fp64(q);
     if (has_fp64) {
       if (prk::SYCL::print_gen12lp_helper(q)) return 1;
     }
-    run<float>(q, iterations, length, block_size);
     if (has_fp64) {
       run<double>(q, iterations, length, block_size);
     } else {
       std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
     }
+#endif
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;

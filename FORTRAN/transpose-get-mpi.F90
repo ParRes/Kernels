@@ -53,35 +53,6 @@
 !          MPI by Jeff Hammond, November 2021
 ! *******************************************************************
 
-module prk_mpi
-  contains
-    subroutine mpi_print_matrix(mat,clabel)
-      use, intrinsic :: iso_fortran_env
-      use mpi_f08
-      use prk
-      implicit none
-      real(kind=REAL64), intent(in) :: mat(:,:)
-      character(*), intent(in), optional :: clabel
-      integer(kind=INT32) :: r, me, np
-      flush(6)
-      call MPI_Comm_rank(MPI_COMM_WORLD, me)
-      call MPI_Comm_size(MPI_COMM_WORLD, np)
-      call MPI_Barrier(MPI_COMM_WORLD)
-      flush(6)
-      if (me.eq.0) print*,clabel
-      flush(6)
-      call MPI_Barrier(MPI_COMM_WORLD)
-      flush(6)
-      do r=0,np-1
-        if (me.eq.r) then
-          call print_matrix(mat,me)
-        endif
-        call MPI_Barrier(MPI_COMM_WORLD)
-      enddo
-      flush(6)
-    end subroutine
-end module prk_mpi
-
 program main
   use, intrinsic :: iso_fortran_env
   use, intrinsic :: iso_c_binding
@@ -91,8 +62,6 @@ program main
   implicit none
   ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations
   integer(kind=INT32) ::  order, block_order
@@ -104,7 +73,7 @@ program main
   real(kind=REAL64), parameter :: one=1.0d0
   ! runtime variables
   integer(kind=INT64) :: bytes
-  integer(kind=INT32) :: i, j, k, q, r, lo, hi
+  integer(kind=INT32) :: i, j, k, q, r, lo, hi, tile_size
   !integer(kind=INT32) ::  it, jt, tile_size
   real(kind=REAL64) ::  abserr, addit, temp
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime
@@ -123,38 +92,16 @@ program main
   ! ********************************************************************
 
   if (me.eq.0) then
+    call prk_get_arguments('transpose',iterations=iterations,order=order,tile_size=tile_size)
     write(*,'(a25)') 'Parallel Research Kernels'
-    write(*,'(a36)') 'Fortran MPI Matrix transpose: B = A^T'
-
-    if (command_argument_count().lt.2) then
-      write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-      write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order>'
-      call MPI_Abort(MPI_COMM_WORLD, command_argument_count())
-    endif
- 
-    iterations = 1
-    call get_command_argument(1,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') iterations
-    if (iterations .lt. 1) then
-      write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-      call MPI_Abort(MPI_COMM_WORLD, 2)
-    endif
- 
-    order = 1
-    call get_command_argument(2,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') order
-    if (order .lt. 1) then
-      write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
-      call MPI_Abort(MPI_COMM_WORLD, 3)
-    endif
+    write(*,'(a37)') 'Fortran MPI Matrix transpose: B = A^T'
+    write(*,'(a22,i8)') 'Number of MPI procs    = ', np
+    write(*,'(a22,i8)') 'Number of iterations    = ', iterations
+    write(*,'(a22,i8)') 'Matrix order            = ', order
     if (mod(order,np).ne.0) then
       write(*,'(a,2i5)') 'ERROR: order must an integer multiple of np : ', order,np
       call MPI_Abort(MPI_COMM_WORLD, 4)
     endif
-
-    write(*,'(a23,i8)') 'Number of MPI procs  = ', np
-    write(*,'(a23,i8)') 'Number of iterations = ', iterations
-    write(*,'(a23,i8)') 'Matrix order         = ', order
   endif
   call MPI_Bcast(iterations, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
   call MPI_Bcast(order, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)

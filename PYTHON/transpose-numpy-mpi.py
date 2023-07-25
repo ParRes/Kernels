@@ -190,10 +190,7 @@ def main():
     else:
         if (me==0):
             print('error ',abserr, ' exceeds threshold ',epsilon)
-            print("ERROR: solution did not validate")
-            comm.Abort()
-        #sys.exit("ERROR: solution did not validate")
-
+            sys.exit("ERROR: solution did not validate")
 
 if __name__ == '__main__':
     main()

@@ -98,6 +98,8 @@ program main
     stop 1
   endif
 
+  t0 = 0
+
   if (tile_size.lt.order) then
     do jt=1,order,tile_size
       do it=1,order,tile_size
@@ -118,12 +120,9 @@ program main
     enddo
   endif
 
-  t0 = 0
-
   do k=0,iterations
-    if (k.eq.1) then
-      t0 = prk_get_wtime()
-    endif
+
+    if (k.eq.1) t0 = prk_get_wtime()
 
     ! Transpose the  matrix; only use tiling if the tile size is smaller than the matrix
     if (tile_size.lt.order) then
@@ -149,7 +148,6 @@ program main
   enddo ! iterations
 
   t1 = prk_get_wtime()
-
   trans_time = t1 - t0
 
   ! ********************************************************************

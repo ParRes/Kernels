@@ -19,7 +19,7 @@ CXX=icpx -std=c++20 -pthread #--gcc-toolchain=/opt/gcc/11.2.0
 # Compiler flags
 #
 # -xHOST is appropriate for most cases.
-DEFAULT_OPT_FLAGS=-g -O3 -xHOST
+DEFAULT_OPT_FLAGS=-g3 -O3 -xHOST
 #
 # If you are compiling for KNL on a Xeon login node, use the following:
 # DEFAULT_OPT_FLAGS=-g -O3 -xMIC-AVX512
@@ -32,6 +32,7 @@ OPENMPFLAG=-qopenmp
 OPENMPSIMDFLAG=-qopenmp-simd
 OFFLOADFLAG=-fopenmp-targets=spir64
 OFFLOADFLAG+=-DGPU_SCHEDULE=""
+STDPARFLAG=-parallel -qmkl
 #
 # OpenCL flags
 #
@@ -57,10 +58,14 @@ OPENCLFLAG=-I${OPENCLDIR}/include/sycl -L${OPENCLDIR}/lib -lOpenCL
 #
 # Intel oneAPI
 #
-SYCLCXX=dpcpp
+SYCLCXX=icpx
 SYCLFLAG=-fsycl
-SYCLFLAG+=-std=c++17 -O3
+SYCLFLAG+=-std=c++17 -O3 -g3
 SYCLFLAG+=-DDPCPP
+# this is because the DPC++ compiler will fail to compile run<double> on Tiger Lake
+# even though the code explicitly checks for FP64 support and only instantiates the
+# template when the device query says FP64 is supported.
+SYCLFLAG+=-DDPCPP_NO_DOUBLE
 #
 #
 # OCCA
@@ -107,6 +112,16 @@ CUDAFLAGS=-g -O3 -std=c++11
 CUDAFLAGS+=-arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# Halide
+#
+HALIDECXX=icpx
+HALIDEDIR=/opt/halide
+HALIDEFLAG=-I${HALIDEDIR}/include
+HALIDEFLAG+=-Wl,-rpath=${HALIDEDIR}/lib -L${HALIDEDIR}/lib -lHalide
+#HALIDEFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
+HALIDEFLAG+=-std=c++17
 #
 # ISPC
 #

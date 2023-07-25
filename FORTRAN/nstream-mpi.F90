@@ -136,7 +136,7 @@ program main
   scalar = 3
 
 #ifdef _OPENMP
-  !$omp parallel default(none)                   &
+  !$omp parallel                                 &
   !$omp&  shared(A,B,C,nstream_time)             &
   !$omp&  firstprivate(length,iterations,scalar) &
   !$omp&  private(i,k,t0,t1)
