@@ -6,7 +6,14 @@
 
 #include "CL/sycl.hpp"
 
-namespace sycl = cl::sycl;
+#if defined(__LIBSYCL_MAJOR_VERSION) && defined(__LIBSYCL_MINOR_VERSION) && defined(__LIBSYCL_PATCH_VERSION)
+#    define __LIBSYCL_VERSION                                                                                          \
+        (__LIBSYCL_MAJOR_VERSION * 10000 + __LIBSYCL_MINOR_VERSION * 100 + __LIBSYCL_PATCH_VERSION)
+#else
+#    define __LIBSYCL_VERSION 0
+#endif
+
+#define _PRK_SYCL2020_FEATURES (__LIBSYCL_VERSION >= 50300)
 
 //#ifdef __COMPUTECPP
 //#include <SYCL/experimental.hpp>
@@ -64,7 +71,11 @@ namespace prk {
             return true;
 #else
             auto device = q.get_device();
+#if _PRK_SYCL2020_FEATURES
+            return device.has(sycl::aspect::fp64);
+#else
             return device.has_extension(sycl::string_class("cl_khr_fp64"));
+#endif
 #endif
         }
 

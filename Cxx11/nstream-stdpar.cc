@@ -145,7 +145,8 @@ int main(int argc, char * argv[])
       auto nstream = [=] (thrust::tuple<double&,double,double> t) {
           return thrust::get<0>(t) +  thrust::get<1>(t) + scalar * thrust::get<2>(t);
       };
-      std::transform( thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
+      std::transform( std::execution::par_unseq,
+                      thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
                       thrust::make_zip_iterator(thrust::make_tuple(A.end()  , B.end()  , C.end())),
                       A.begin(),
                       nstream);

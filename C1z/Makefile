@@ -3,12 +3,13 @@ include ../common/PRKVERSION
 
 CPPFLAGS = -DPRKVERSION=$(PRKVERSION)
 
-CFLAGS = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
-
 # debugging
 ifdef VERBOSE
-  CFLAGS += -DVERBOSE
+    CPPFLAGS += -DVERBOSE
 endif
+
+CFLAGS = $(DEFAULT_OPT_FLAGS) $(CPPFLAGS)
+
 
 ifdef PRK_USE_MMAP
   CFLAGS += -DPRK_USE_MMAP
@@ -25,31 +26,19 @@ OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
 CILKFLAGS = $(CILKFLAG)
 ISPCFLAGS = $(ISPCFLAG)
+OPENACCFLAGS = $(OPENACCFLAG)
 
-.PHONY: all clean serial thread openmp target taskloop ispc # cilk
+.PHONY: all clean serial thread openmp tasks target taskloop ispc
 
 EXTRA=
-ifeq ($(shell uname -s),Darwin)
-  ifneq ($(findstring icc,$(CC)),icc)
-    EXTRA += target
-  endif
-else
-  ifneq ($(findstring icx,$(CC)),icx)
-    EXTRA += target
-  endif
-endif
 ifdef ($(ISPC))
   EXTRA += ispc
 endif
 ifneq ($(CILKFLAG),)
   EXTRA += cilk
 endif
-ifeq ($(findstring xlc,$(CC)),xlc)
-  EXTRA = target
-  CFLAGS += -DXLC
-endif
-ifneq ($(findstring icx,$(CC)),icx)
-  EXTRA += tasks
+ifneq ($(OPENACCFLAG),)
+  EXTRA += openacc
 endif
 
 all: serial thread openmp $(EXTRA)
@@ -83,6 +72,8 @@ target: nstream-target stencil-target transpose-target nstream-alloc-target nstr
 
 taskloop: nstream-taskloop stencil-taskloop transpose-taskloop
 
+openacc: nstream-openacc stencil-openacc transpose-openacc
+
 cilk: stencil-cilk transpose-cilk
 
 ispc: transpose-ispc
@@ -106,7 +97,7 @@ p2p-2d: p2p-2d.c prk_util.h
 	$(CC) $(CFLAGS) $< $(EXTRA_CLIBS) -o $@
 
 %-mpi: %-mpi.c prk_util.h
-	$(CC) $(CFLAGS) $(MPIINC) $< $(MPILIB) $(EXTRA_CLIBS) -o $@
+	$(MPICC) $(CFLAGS) $(MPIINC) $< $(MPILIB) $(EXTRA_CLIBS) -o $@
 
 %-petsc: %-petsc.c prk_util.h
 	$(CC) $(CFLAGS) $(MPIINC) $< $(PETSCFLAG) $(MPILIB) $(EXTRA_CLIBS) -o $@
@@ -131,6 +122,9 @@ p2p-2d: p2p-2d.c prk_util.h
 
 %-openmp: %-openmp.c prk_util.h prk_openmp.h
 	$(CC) $(CFLAGS) $< $(OMPFLAGS) $(EXTRA_CLIBS) -o $@
+
+%-openacc: %-openacc.c prk_util.h
+	$(CC) $(CFLAGS) $< $(OPENACCFLAGS) $(EXTRA_CLIBS) -o $@
 
 %-cilk: %-cilk.c prk_util.h
 	$(CC) $(CFLAGS) $< $(CILKFLAGS) $(EXTRA_CLIBS) -o $@
@@ -161,6 +155,7 @@ clean:
 	-rm -f p2p-sse p2p-avx p2p-avx3 p2p-avx-tasks-openmp
 	-rm -f *-2d
 	-rm -f *-openmp
+	-rm -f *-openacc
 	-rm -f *-mpi
 	-rm -f *-petsc
 	-rm -f *-target

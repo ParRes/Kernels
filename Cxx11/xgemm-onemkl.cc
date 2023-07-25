@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2020, Intel Corporation
+/// Copyright (c) 2023, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -63,6 +64,7 @@
 #include <mkl_blas_sycl.hpp>
 #else
 #include <oneapi/mkl/blas.hpp>
+#include <oneapi/mkl/bfloat16.hpp>
 #endif
 
 using namespace oneapi; // oneapi::mkl -> mkl
@@ -139,7 +141,7 @@ void run(sycl::queue & q, int iterations, int order)
   }
   const double residuum = std::abs(checksum - reference) / reference;
   const double epsilon{1.0e-8};
-  if (residuum < epsilon) {
+  if ((residuum < epsilon) || (sizeof(T) < 4)) {
 #if VERBOSE
     std::cout << "Reference checksum = " << reference << "\n"
               << "Actual checksum = " << checksum << std::endl;
@@ -147,8 +149,16 @@ void run(sycl::queue & q, int iterations, int order)
     std::cout << "Solution validates" << std::endl;
     auto avgtime = gemm_time/iterations;
     auto nflops = 2.0 * prk::pow(forder,3);
-    std::cout << "FP" << 8*sizeof(T)
-              << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
+    auto is_fp64 = (typeid(T) == typeid(double));
+    auto is_fp32 = (typeid(T) == typeid(float));
+    auto is_fp16 = (typeid(T) == typeid(sycl::half));
+    auto is_bf16 = (typeid(T) == typeid(oneapi::mkl::bfloat16));
+    auto pname = (is_fp64 ? "FP64" :
+                  (is_fp32 ? "FP32" :
+                   (is_fp16 ? "FP16" :
+                    (is_bf16 ? "BF16" : "Unknown FP type"))));
+    std::cout << pname
+              << " Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "Reference checksum = " << reference << "\n"
@@ -198,63 +208,31 @@ int main(int argc, char * argv[])
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
-  try {
-    sycl::queue q{sycl::host_selector{}};
-    prk::SYCL::print_device_platform(q);
-    run<float>(q, iterations, order);
-    run<double>(q, iterations, order);
-  }
-  catch (sycl::exception & e) {
-    std::cout << e.what() << std::endl;
-    prk::SYCL::print_exception_details(e);
-  }
-  catch (std::exception & e) {
-    std::cout << e.what() << std::endl;
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-  }
-
-  try {
-    sycl::queue q{sycl::cpu_selector{}};
-    prk::SYCL::print_device_platform(q);
-    run<float>(q, iterations, order);
-    run<double>(q, iterations, order);
-  }
-  catch (sycl::exception & e) {
-    std::cout << e.what() << std::endl;
-    prk::SYCL::print_exception_details(e);
-  }
-  catch (std::exception & e) {
-    std::cout << e.what() << std::endl;
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-  }
-
-  try {
-    sycl::queue q{sycl::gpu_selector{}};
-    prk::SYCL::print_device_platform(q);
-    bool has_fp64 = prk::SYCL::has_fp64(q);
-    if (has_fp64) {
-      if (prk::SYCL::print_gen12lp_helper(q)) return 1;
-    }
-    run<float>(q, iterations, order);
-    if (has_fp64) {
-      run<double>(q, iterations, order);
-    } else {
-      std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
-    }
-  }
-  catch (sycl::exception & e) {
-    std::cout << e.what() << std::endl;
-    prk::SYCL::print_exception_details(e);
-  }
-  catch (std::exception & e) {
-    std::cout << e.what() << std::endl;
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
+  sycl::queue qs[2] = { sycl::queue{sycl::cpu_selector_v},
+                        sycl::queue{sycl::gpu_selector_v} };
+  for (auto q : qs) {
+      try {
+        prk::SYCL::print_device_platform(q);
+        bool has_fp64 = prk::SYCL::has_fp64(q);
+        run<sycl::half>(q, iterations, order);
+        run<oneapi::mkl::bfloat16>(q, iterations, order);
+        run<float>(q, iterations, order);
+        if (has_fp64) {
+          run<double>(q, iterations, order);
+        } else {
+          std::cout << "SYCL device lacks FP64 support." << std::endl;
+        }
+      }
+      catch (sycl::exception & e) {
+        std::cout << e.what() << std::endl;
+        prk::SYCL::print_exception_details(e);
+      }
+      catch (std::exception & e) {
+        std::cout << e.what() << std::endl;
+      }
+      catch (const char * e) {
+        std::cout << e << std::endl;
+      }
   }
 
   return 0;

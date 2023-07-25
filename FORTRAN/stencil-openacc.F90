@@ -61,140 +61,55 @@
 !
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
-subroutine initialize_w(is_star,r,W)
-  use iso_fortran_env
+subroutine apply_stencil(is_star,r,n,W,A,B)
+  use, intrinsic :: iso_fortran_env
   implicit none
   logical, intent(in) :: is_star
-  integer(kind=INT32), intent(in) :: r
-  real(kind=REAL64), intent(inout) :: W(-r:r,-r:r)
-  integer(kind=INT32) :: ii, jj
-  ! fill the stencil weights to reflect a discrete divergence operator
-  W = 0.0d0
-  if (is_star) then
-    do ii=1,r
-      W(0, ii) =  1.0d0/real(2*ii*r,REAL64)
-      W(0,-ii) = -1.0d0/real(2*ii*r,REAL64)
-      W( ii,0) =  1.0d0/real(2*ii*r,REAL64)
-      W(-ii,0) = -1.0d0/real(2*ii*r,REAL64)
-    enddo
-  else
-    ! Jeff: check that this is correct with the new W indexing
-    do jj=1,r
-      do ii=-jj+1,jj-1
-        W( ii, jj) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-        W( ii,-jj) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-        W( jj, ii) =  1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-        W(-jj, ii) = -1.0d0/real(4*jj*(2*jj-1)*r,REAL64)
-      enddo
-      W( jj, jj)  =  1.0d0/real(4*jj*r,REAL64)
-      W(-jj,-jj)  = -1.0d0/real(4*jj*r,REAL64)
-    enddo
-  endif
-end subroutine initialize_w
-
-subroutine apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
-  use iso_fortran_env
-  implicit none
-  logical, intent(in) :: is_star, tiling
-  integer(kind=INT32), intent(in) :: tile_size, r, n
+  integer(kind=INT32), intent(in) :: r, n
   real(kind=REAL64), intent(in) :: W(-r:r,-r:r)
   real(kind=REAL64), intent(in) :: A(n,n)
   real(kind=REAL64), intent(inout) :: B(n,n)
-  integer(kind=INT32) :: i, j, ii, jj, it, jt
+  integer(kind=INT32) :: i, j, ii, jj
   !$acc data pcopyin(W,A) pcopy(B)
   if (is_star) then
-    if (.not.tiling) then
-      !$acc parallel loop collapse(2)
-      do j=r,n-r-1
-        do i=r,n-r-1
-          do jj=-r,r
-            B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
-          enddo
-          do ii=-r,-1
-            B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-          enddo
-          do ii=1,r
-            B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-          enddo
+    !$acc parallel loop tile(*,*)
+    do j=r,n-r-1
+      do i=r,n-r-1
+        do jj=-r,r
+          B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
+        enddo
+        do ii=-r,-1
+          B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
+        enddo
+        do ii=1,r
+          B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
         enddo
       enddo
-    else ! tiling
-      !$acc parallel loop gang collapse(2)
-      do jt=r,n-r-1,tile_size
-        do it=r,n-r-1,tile_size
-          !$acc loop vector collapse(2)
-          do j=jt,min(n-r-1,jt+tile_size-1)
-            do i=it,min(n-r-1,it+tile_size-1)
-              do jj=-r,r
-                B(i+1,j+1) = B(i+1,j+1) + W(0,jj) * A(i+1,j+jj+1)
-              enddo
-              do ii=-r,-1
-                B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-              enddo
-              do ii=1,r
-                B(i+1,j+1) = B(i+1,j+1) + W(ii,0) * A(i+ii+1,j+1)
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
-    endif ! tiling
+    enddo
   else ! grid
-    if (.not.tiling) then
-      !$acc parallel loop collapse(2)
-      do j=r,n-r-1
-        do i=r,n-r-1
-          do jj=-r,r
-            do ii=-r,r
-              B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
-            enddo
+    !$acc parallel loop tile(*,*)
+    do j=r,n-r-1
+      do i=r,n-r-1
+        do jj=-r,r
+          do ii=-r,r
+            B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
           enddo
         enddo
       enddo
-    else ! tiling
-      !$acc parallel loop gang collapse(2)
-      do jt=r,n-r-1,tile_size
-        do it=r,n-r-1,tile_size
-          !$acc loop vector collapse(2)
-          do j=jt,min(n-r-1,jt+tile_size-1)
-            do i=it,min(n-r-1,it+tile_size-1)
-              do jj=-r,r
-                do ii=-r,r
-                  B(i+1,j+1) = B(i+1,j+1) + W(ii,jj) * A(i+ii+1,j+jj+1)
-                enddo
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
-    endif ! tiling
+    enddo
   endif ! star
   !$acc end data
 end subroutine apply_stencil
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
+  use prk
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
   integer(kind=INT32) ::  n                             ! linear grid dimension
   integer(kind=INT32) ::  stencil_size                  ! number of points in stencil
-  integer(kind=INT32) ::  tile_size                     ! loop nest block factor
-  logical :: tiling                                     ! boolean indication loop nest blocking
   logical :: is_star                                    ! true = star, false = grid
   integer(kind=INT32), parameter :: r=RADIUS            ! radius of stencil
   real(kind=REAL64) :: W(-r:r,-r:r)                     ! weights of points in the stencil
@@ -215,41 +130,7 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a44)') 'Fortran OpenACC Stencil execution on 2D grid'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a32,a29)') 'Usage: ./stencil <# iterations> ', &
-                      '<array dimension> [tile_size]'
-    stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  n = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') n
-  if (n .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: array dimension must be >= 1 : ', n
-    stop 1
-  endif
-
-  tiling    = .false.
-  tile_size = 0
-  if (command_argument_count().gt.2) then
-    call get_command_argument(3,argtmp,arglen,err)
-    if (err.eq.0) read(argtmp,'(i32)') tile_size
-    if ((tile_size .lt. 1).or.(tile_size.gt.n)) then
-      write(*,'(a,i5,a,i5)') 'WARNING: tile_size ',tile_size,&
-                             ' must be >= 1 and <= ',n
-    else
-      tiling = .true.
-    endif
-  endif
+  call prk_get_arguments('stencil',iterations=iterations,order=n)
 
   ! TODO: parse runtime input for star/grid
 #ifdef STAR
@@ -258,48 +139,26 @@ program main
   is_star = .false.
 #endif
 
-  ! TODO: parse runtime input for radius
-
-  if (r .lt. 1) then
-    write(*,'(a,i5,a)') 'ERROR: Stencil radius ',r,' should be positive'
-    stop 1
-  else if ((2*r+1) .gt. n) then
-    write(*,'(a,i5,a,i5)') 'ERROR: Stencil radius ',r,&
-                           ' exceeds grid size ',n
-    stop 1
-  endif
-
-  allocate( A(n,n), stat=err)
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
-    stop 1
-  endif
-
-  allocate( B(n,n), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
-
-  norm = 0.d0
-  active_points = int(n-2*r,INT64)**2
-
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Grid size            = ', n
-  write(*,'(a,i8)') 'Radius of stencil    = ', r
+  write(*,'(a22,i8)') 'Number of iterations = ', iterations
+  write(*,'(a22,i8)') 'Grid size            = ', n
+  write(*,'(a22,i8)') 'Radius of stencil    = ', r
   if (is_star) then
-    write(*,'(a,a)')  'Type of stencil      = star'
+    write(*,'(a22,a8)')  'Type of stencil      = ', 'star'
     stencil_size = 4*r+1
   else
-    write(*,'(a,a)')  'Type of stencil      = grid'
+    write(*,'(a22,a8)')  'Type of stencil      = ','grid'
     stencil_size = (2*r+1)**2
   endif
-  write(*,'(a)') 'Data type            = double precision'
-  write(*,'(a)') 'Compact representation of stencil loop body'
-  if (tiling) then
-      write(*,'(a,i5)') 'Tile size            = ', tile_size
-  else
-      write(*,'(a)') 'Untiled'
+  write(*,'(a32)')    'Tile size            = automatic'
+
+  ! ********************************************************************
+  ! ** Allocate space for the input and perform the computation
+  ! ********************************************************************
+
+  allocate( A(n,n), B(n,n), stat=err)
+  if (err .ne. 0) then
+    write(*,'(a,i3)') 'allocation returned ',err
+    stop 1
   endif
 
   call initialize_w(is_star,r,W)
@@ -320,11 +179,9 @@ program main
 
     if (k.eq.1) t0 = prk_get_wtime()
 
-    ! DEVICE
     ! Apply the stencil operator
-    call apply_stencil(is_star,tiling,tile_size,r,n,W,A,B)
+    call apply_stencil(is_star,r,n,W,A,B)
 
-    ! DEVICE
     ! add constant to solution to force refresh of neighbor data, if any
     !$acc parallel loop collapse(2)
     do j=1,n
@@ -336,10 +193,9 @@ program main
   enddo ! iterations
 
   t1 = prk_get_wtime()
+  stencil_time = t1 - t0
 
   !$acc end data
-
-  stencil_time = t1 - t0
 
   !$acc parallel loop collapse(2) reduction(+:norm)
   do j=r,n-r
@@ -347,14 +203,15 @@ program main
       norm = norm + abs(B(i,j))
     enddo
   enddo
+
+  active_points = int(n-2*r,INT64)**2
   norm = norm / real(active_points,REAL64)
 
   !******************************************************************************
   !* Analyze and output results.
   !******************************************************************************
 
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B )
 
   ! verify correctness
   reference_norm = real(iterations+1,REAL64) * (cx + cy);

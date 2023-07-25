@@ -1,9 +1,6 @@
 [package]
 name = "dgemm"
 version = "0.1.0"
-authors = ["Jeff Hammond <jeff.r.hammond@intel.com>"]
+authors = ["Jeff Hammond <jeff.r.hammond@intel.com>", "Sajid Ali <sasyed@fnal.gov>"]
 
-[dependencies]
-blas = "0.20"
-cblas = "0.2"
-blas-src = { version = "0.7", features = ["blis"] }
+edition="2021"

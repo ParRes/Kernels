@@ -53,16 +53,14 @@
 ! *******************************************************************
 
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   use mpi_f08
+  use prk
   implicit none
 #include "global.fh"
 #include "mafdecls.fh"
 !#include 'ga-mpi.fh' ! unused
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! MPI - should always use 32-bit INTEGER
   integer(kind=INT32), parameter :: requested = MPI_THREAD_SERIALIZED
   integer(kind=INT32) :: provided
@@ -86,33 +84,7 @@ program main
   real(kind=REAL64) ::  t0, t1, trans_time, avgtime
   real(kind=REAL64), parameter ::  epsilon=1.d-8
 
-  ! ********************************************************************
-  ! read and test input parameters
-  ! ********************************************************************
-
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order>'
-    stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
-  endif
-
-  order = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') order
-  if (order .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
-    stop 1
-  endif
-
-  call mpi_init_thread(requested,provided)
+  call MPI_Init_thread(requested,provided)
 
   !call ga_initialize()
   ! ask GA to allocate enough memory for 4 matrices, just to be safe
@@ -123,6 +95,21 @@ program main
   np = ga_nnodes()
 
   !if (me.eq.0) print*,'max_mem=',max_mem
+
+  ! ********************************************************************
+  ! read and test input parameters
+  ! ********************************************************************
+
+  if (me.eq.0) then
+    call prk_get_arguments('transpose',iterations=iterations,order=order,tile_size=tile_size)
+    write(*,'(a25)') 'Parallel Research Kernels'
+    write(*,'(a47)') 'Fortran Global Arrays Matrix transpose: B = A^T'
+    write(*,'(a22,i8)') 'Number of GA procs     = ', np
+    write(*,'(a22,i8)') 'Number of iterations    = ', iterations
+    write(*,'(a22,i8)') 'Matrix order            = ', order
+  endif
+  call MPI_Bcast(iterations, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
+  call MPI_Bcast(order, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
 
 #if PRK_CHECK_GA_MPI
   ! We do use MPI anywhere, but if we did, we would need to avoid MPI collectives
@@ -139,14 +126,6 @@ program main
       call ga_error('MPI_COMM_WORLD is unsafe to use!!!',np)
   endif
 #endif
-
-  if (me.eq.0) then
-    write(*,'(a25)') 'Parallel Research Kernels'
-    write(*,'(a47)') 'Fortran Global Arrays Matrix transpose: B = A^T'
-    write(*,'(a22,i12)') 'Number of GA procs   = ', np
-    write(*,'(a,i8)') 'Number of iterations    = ', iterations
-    write(*,'(a,i8)') 'Matrix order            = ', order
-  endif
 
   call ga_sync()
 

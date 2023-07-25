@@ -57,30 +57,18 @@
 !          - Minor bug fixes by Izaak "Zaak" Beekman, March 2017
 ! ********************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 program main
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
+  use prk
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) :: iterations                     ! number of times to run the pipeline algorithm
   integer(kind=INT32) :: m, n, m_local, max_m_local
   real(kind=REAL64) :: corner_val                       ! verification value at top right corner of grid
   real(kind=REAL64), allocatable :: grid(:,:)[:]           ! array holding grid values
   ! runtime variables
-  integer(kind=INT32) ::  i, j, k
+  integer(kind=INT32) :: i, j, k
   integer ::  me, np, prev, next !, stat
   real(kind=REAL64) ::  t0, t1, pipeline_time, avgtime  ! timing parameters
   real(kind=REAL64), parameter ::  epsilon=1.D-8        ! error tolerance
@@ -94,41 +82,11 @@ program main
   np = num_images()
 
   ! co_broadcast is part of Fortran 2015, so we will not assume it yet.
-  if(me == 1) then
-     write(*,'(a25)') 'Parallel Research Kernels'
-     write(*,'(a45)') 'Fortran coarray pipeline execution on 2D grid'
+  if (me == 1) then
+    write(*,'(a25)') 'Parallel Research Kernels'
+    write(*,'(a45)') 'Fortran coarray pipeline execution on 2D grid'
   endif
-
-  if (command_argument_count().lt.3) then
-     if(me == 1) then
-       write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-       write(*,'(a34,a39)')  'Usage: ./synch_p2p <# iterations> ',  &
-                             '<array x-dimension> <array y-dimension>'
-     endif
-     stop 1
-  endif
-
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-
-  m = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') m
-
-  n = 1
-  call get_command_argument(3,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') n
-
-  if (iterations .lt. 1) then
-     write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-     stop 1
-  endif
-
-  if ((m .lt. 1).or.(n .lt. 1)) then
-     write(*,'(a,i5,i5)') 'ERROR: array dimensions must be >= 1 : ', m, n
-     stop 1
-  endif
+  call prk_get_arguments('p2p',iterations=iterations,dimx=m,dimy=n)
 
   ! co_max is part of Fortran 2015, so we will not assume it. This is present
   ! in OpenCoarrays and has been for a while, when used with GFortran >= 6.
@@ -141,14 +99,14 @@ program main
   allocate( grid(max_m_local,n)[*], stat=err)
 
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of grid returned ',err
+    write(*,'(a22,i3)') 'allocation of grid returned ',err
     stop 1
   endif
 
   if(me == 1) then
-     write(*,'(a,i8)')    'Number of threads        = ', num_images()
-     write(*,'(a,i8)')    'Number of iterations     = ', iterations
-     write(*,'(a,i8,i8)') 'Grid sizes               = ', m, n
+     write(*,'(a27,i8)')    'Number of threads        = ', num_images()
+     write(*,'(a27,i8)')    'Number of iterations     = ', iterations
+     write(*,'(a27,i8,i8)') 'Grid sizes               = ', m, n
   endif
 
   do j=1,n

@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -65,6 +66,12 @@
 #  define OMP_ORDERED(x)
 #  define OMP_TARGET(x)
 # endif
+# if (_OPENMP >= 201811)
+#  define OMP_REQUIRES(x) PRAGMA(omp requires x)
+# else
+#  warning No OpenMP 5+ features!
+#  define OMP_REQUIRES(x)
+# endif
 #else
 # define OMP(x)
 # define OMP_PARALLEL(x)
@@ -80,6 +87,7 @@
 # define OMP_TASKWAIT
 # define OMP_ORDERED(x)
 # define OMP_TARGET(x)
+# define OMP_REQUIRES(x)
 #endif
 
 #endif /* PRK_OPENMP_H */

@@ -11,7 +11,8 @@
 # C99 is required in some implementations.
 CC=${LLVM_PATH}clang${CLANG_VERSION} -std=c11 -pthread
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Mfreeform -L/opt/llvm/pgi-flang/lib -Wl,-rpath=/opt/llvm/pgi-flang/lib
+#FC=/opt/llvm/pgi-flang/bin/flang -Mpreprocess -Mfreeform -L/opt/llvm/pgi-flang/lib -Wl,-rpath=/opt/llvm/pgi-flang/lib
+FC=${LLVM_PATH}flang-new
 # C++11 may not be required but does no harm here.
 CXX=${LLVM_PATH}clang++${CLANG_VERSION} -std=c++2a -pthread
 #
@@ -20,7 +21,7 @@ CXX=${LLVM_PATH}clang++${CLANG_VERSION} -std=c++2a -pthread
 # -mtune=native is appropriate for most cases.
 # -march=native is appropriate if you want portable binaries.
 #
-DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
+DEFAULT_OPT_FLAGS=-g -O3 -ffast-math
 #DEFAULT_OPT_FLAGS+=-mllvm -polly -mllvm -polly-vectorizer=stripmine
 #
 # If you want to be specific, get the architecture options from:
@@ -33,7 +34,7 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
 #   DEFAULT_OPT_FLAGS+=-Rpass=loop-vectorize
 #DEFAULT_OPT_FLAGS+=-fopt-info-vec-missed
 DEFAULT_OPT_FLAGS+=-Wall #-Werror
-DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
+#DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #DEFAULT_OPT_FLAGS+=-mavx -mfma
 #
 # OpenMP flags
@@ -42,7 +43,7 @@ OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
 OFFLOADFLAG=-fopenmp
 OFFLOADFLAG+=-DGPU_SCHEDULE=""
-#OPENACCFLAG= # Flang does not support OpenACC
+OPENACCFLAG=-fopenacc
 # Klondike weirdness
 # OPENMPFLAG+=-L/opt/intel/compilers_and_libraries_2018.0.082/linux/compiler/lib/intel64_lin -liomp5
 # Mac weirdness
@@ -61,8 +62,9 @@ OPENCLFLAG=-framework OpenCL
 #OPENCLDIR=/etc/alternatives
 #OPENCLDIR=/etc/alternatives/opencl-intel-tools
 #OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL
-#OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
-#OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
+#OPENCLFLAG+=-Wno-ignored-attributes
+#OPENCLFLAG+=-Wno-deprecated-declarations
+#OPENCLFLAG+=-Wno-missing-braces
 # oneAPI
 #OPENCLDIR=/opt/intel/oneapi/compiler/latest/linux
 #OPENCLFLAG=-I${OPENCLDIR}/include/sycl -L${OPENCLDIR}/lib -lOpenCL
@@ -201,13 +203,15 @@ UPCXXFLAG+=-mtune=native -ffast-math
 #
 BLASFLAG=-DACCELERATE -framework Accelerate
 CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+#BLASFLAG=-lblas
+#CBLASFLAG=-lcblas
 #
 # CUDA flags
 #
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
-NVCC=/opt/llvm/cocl/bin/cocl
+#NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-#NVCC=nvcc -arch=sm_50
+NVCC=nvcc -arch=sm_50
 CUDAFLAGS=-g -O3 -std=c++11
 CUDAFLAGS+=-arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
@@ -216,12 +220,12 @@ CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 # Halide
 #
 HALIDECXX=c++
-HALIDEDIR=/opt/halide
+HALIDEDIR=/opt/halide/Halide-10.0.0-x86-64-linux
 HALIDEFLAG=-I${HALIDEDIR}/include
-HALIDEFLAG+=-L${HALIDEDIR}/lib -lhalide
+HALIDEFLAG+=-Wl,-rpath=${HALIDEDIR}/lib -L${HALIDEDIR}/lib -lHalide
 #HALIDEFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
 HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
-HALIDEFLAG+=-std=c++17 -g3
+HALIDEFLAG+=-std=c++17
 #
 # ISPC
 #
@@ -263,9 +267,10 @@ PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
 #
 # see https://github.com/ParRes/Kernels/blob/master/FORTRAN/README.md for details
 # single-node
-#COARRAYFLAG=-fcoarray=single -lcaf_single
+COARRAYFLAG=-fcoarray=single -lcaf_single
 # multi-node
-COARRAYFLAG=-fcoarray=lib -L/opt/homebrew/lib -lcaf_mpi
+#COARRAYFLAG=-fcoarray=lib -L/opt/homebrew/lib -lcaf_mpi
+#COARRAYFLAG=-fcoarray=lib -L/usr/lib/x86_64-linux-gnu/open-coarrays/mpich/lib -lcaf_mpi
 #
 # MEMKIND (used in C1z)
 #

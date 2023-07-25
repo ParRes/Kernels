@@ -1,5 +1,5 @@
 [package]
-name = "nstream"
+name = "nstream-iter"
 version = "0.1.0"
 authors = ["Jeff Hammond <jeff.r.hammond@intel.com>", "Thomas Hayward-Schneider <thomas.hayward@ipp.mpg.de>"]
 

@@ -1,0 +1,9 @@
+[package]
+name = "transpose-rayon"
+version = "0.1.0"
+authors = ["Jeff Hammond <jeff.r.hammond@intel.com>", "Sajid Ali <sasyed@fnal.gov>"]
+
+edition = "2021"
+
+[dependencies]
+rayon = "1.5"

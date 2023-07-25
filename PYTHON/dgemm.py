@@ -48,8 +48,10 @@
 #
 # HISTORY: Written by Rob Van der Wijngaart, February 2009.
 #          Converted to Python by Jeff Hammond, February 2016.
+#          Fixed timing err, Ave+std_dev, more pythonic, Tim Mattson May 2021
 # *******************************************************************
 
+import numpy as np
 import sys
 print('Python version = ', str(sys.version_info.major)+'.'+str(sys.version_info.minor))
 if sys.version_info >= (3, 3):
@@ -70,43 +72,47 @@ def main():
         print('argument count = ', len(sys.argv))
         sys.exit("Usage: ./dgemm <# iterations> <matrix order>")
 
-    iterations = int(sys.argv[1])
-    if iterations < 1:
+    iters = int(sys.argv[1])
+    if iters < 1:
         sys.exit("ERROR: iterations must be >= 1")
 
     order = int(sys.argv[2])
     if order < 1:
         sys.exit("ERROR: order must be >= 1")
 
-    print('Number of iterations = ', iterations)
+    print('Number of iterations = ', iters)
     print('Matrix order         = ', order)
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    # 0.0 is a float, which is 64b (53b of precision)
-    A = [[0.0 for x in range(order)] for x in range(order)]
-    B = [[0.0 for x in range(order)] for x in range(order)]
-    C = [[0.0 for x in range(order)] for x in range(order)]
-
-    # this is surely not the Pythonic way of doing this
+    A = np.zeros((order,order))
+    B = np.zeros((order,order))
+    C = np.zeros((order,order))
     for i in range(order):
-        for j in range(order):
-            A[i][j] = float(j)
-            B[i][j] = float(j)
+        A[:,i] = float(i)
+        B[:,i] = float(i)
 
-    for k in range(0,iterations+1):
 
-        if k<1: t0 = timer()
-
+    for kiter in range(0,iters+1):
+        if kiter==1: 
+             t0 = timer()
+             tSum=0.0
+             tsqSum=0.0
         for i in range(order):
-            for j in range(order):
-                for k in range(order):
+            for k in range(order):
+                for j in range(order):
                     C[i][j] += A[i][k] * B[k][j]
+        if kiter>0:
+             tkiter = timer()
+             t = tkiter - t0
+             tSum = tSum + t
+             tsqSum = tsqSum+t*t
+             t0 = tkiter
 
-    t1 = timer()
-    dgemm_time = t1 - t0
+    dgemmAve    = tSum/iters
+    dgemmStdDev = ((tsqSum-iters*dgemmAve*dgemmAve)/(iters-1))**0.5 
 
     # ********************************************************************
     # ** Analyze and output results.
@@ -118,14 +124,16 @@ def main():
             checksum += C[i][j];
 
     ref_checksum = 0.25*order*order*order*(order-1.0)*(order-1.0)
-    ref_checksum *= (iterations+1)
+    ref_checksum *= (iters+1)
 
     epsilon=1.e-8
     if abs((checksum - ref_checksum)/ref_checksum) < epsilon:
         print('Solution validates')
-        avgtime = dgemm_time/iterations
         nflops = 2.0*order*order*order
-        print('Rate (MF/s): ',1.e-6*nflops/avgtime, ' Avg time (s): ', avgtime)
+        recipDiff = (1.0/(dgemmAve-dgemmStdDev) - 1.0/(dgemmAve+dgemmStdDev))
+        GfStdDev = 1.e-6*nflops*recipDiff/2.0
+        print('nflops: ',nflops)
+        print('Rate: ',1.e-6*nflops/dgemmAve,' +/- (MF/s): ',GfStdDev)
     else:
         print('ERROR: Checksum = ', checksum,', Reference checksum = ', ref_checksum,'\n')
         sys.exit("ERROR: solution did not validate")
@@ -133,4 +141,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

@@ -52,17 +52,8 @@
 !
 ! *******************************************************************
 
-function prk_get_wtime() result(t)
-  use iso_fortran_env
-  implicit none
-  real(kind=REAL64) ::  t
-  integer(kind=INT64) :: c, r
-  call system_clock(count = c, count_rate = r)
-  t = real(c,REAL64) / real(r,REAL64)
-end function prk_get_wtime
-
 subroutine prk_dgemm(order, tile_size, A, B, C)
-  use iso_fortran_env
+  use, intrinsic :: iso_fortran_env
   implicit none
   integer(kind=INT32), intent(in) :: order, tile_size
   real(kind=REAL64), intent(in) ::  A(order,order)
@@ -71,71 +62,44 @@ subroutine prk_dgemm(order, tile_size, A, B, C)
   integer(kind=INT32) :: i,j,k,it,jt,kt
 
   if (tile_size.lt.order) then
-#if defined(_OPENMP)
     !$omp do collapse(3) private(i,j,k,it,jt,kt)
     do jt=1,order,tile_size
       do kt=1,order,tile_size
         do it=1,order,tile_size
-#else
-    do concurrent (jt=1:order:tile_size)
-      do concurrent (kt=1:order:tile_size)
-        do concurrent (it=1:order:tile_size)
-#endif
           do j=jt,min(order,jt+tile_size-1)
             do k=kt,min(order,kt+tile_size-1)
-#if defined(_OPENMP)
               !$omp simd
-#endif
               do i=it,min(order,it+tile_size-1)
                 C(i,j) = C(i,j) + A(i,k) * B(k,j)
               enddo
-#if defined(_OPENMP)
               !$omp end simd
-#endif
             enddo
           enddo
         enddo
       enddo
     enddo
-#ifdef _OPENMP
     !$omp end do
-#endif
   else
-#if defined(_OPENMP)
     !$omp do private(i,j,k,it,jt,kt)
     do j=1,order
       do k=1,order
         !$omp simd
         do i=1,order
-#else
-    do concurrent (j=1:order)
-      do concurrent (k=1:order)
-        do concurrent (i=1:order)
-#endif
           C(i,j) = C(i,j) + A(i,k) * B(k,j)
         enddo
-#if defined(_OPENMP)
         !$omp end simd
-#endif
       enddo
     enddo
-#ifdef _OPENMP
     !$omp end do
-#endif
   endif
 end subroutine prk_dgemm
 
 program main
-  use iso_fortran_env
-#ifdef _OPENMP
+  use, intrinsic :: iso_fortran_env
   use omp_lib
-#endif
+  use prk
   implicit none
-  real(kind=REAL64) :: prk_get_wtime
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the kernel
   integer(kind=INT32) ::  order                     ! order of the matrix
@@ -156,80 +120,33 @@ program main
   ! ********************************************************************
 
   write(*,'(a25)') 'Parallel Research Kernels'
-#ifdef _OPENMP
   write(*,'(a61)') 'Fortran OpenMP Dense matrix-matrix multiplication: C += A x B'
-#else
-  write(*,'(a61)') 'Fortran Serial Dense matrix-matrix multiplication: C += A x B'
-#endif
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a66)')    'Usage: ./dgemm-pretty <# iterations> <matrix order> [<tile_size>]'
-    stop 1
-  endif
+  call prk_get_arguments('dgemm',iterations=iterations,order=order,tile_size=tile_size)
 
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
+  write(*,'(a22,i8)') 'Number of threads    = ', omp_get_max_threads()
+  write(*,'(a22,i8)') 'Number of iterations = ', iterations
+  write(*,'(a22,i8)') 'Matrix order         = ', order
+  if (tile_size.ne.order) then
+    write(*,'(a22,i8)') 'Tile size            = ', tile_size
+  else
+    write(*,'(a10)') 'Tiling off'
   endif
-
-  order = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') order
-  if (order .lt. 1) then
-    write(*,'(a,i5)') 'ERROR: order must be >= 1 : ', order
-    stop 1
-  endif
-
-  tile_size = 32
-  if (command_argument_count().gt.2) then
-      call get_command_argument(3,argtmp,arglen,err)
-      if (err.eq.0) read(argtmp,'(i32)') tile_size
-  endif
-  if ((tile_size.lt.1).or.(tile_size.gt.order)) then
-    write(*,'(a20,i5,a22,i5)') 'WARNING: tile_size ',tile_size, &
-                               ' must be >= 1 and <= ',order
-    tile_size = order ! no tiling
-  endif
-
-#ifdef _OPENMP
-  write(*,'(a,i8)') 'Number of threads    = ', omp_get_max_threads()
-#endif
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix order         = ', order
-  write(*,'(a,i8)') 'Tile size            = ', tile_size
 
   ! ********************************************************************
   ! ** Allocate space for the input and output matrices
   ! ********************************************************************
 
-  allocate( A(order,order), stat=err)
+  allocate( A(order,order), B(order,order), C(order,order), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
+    write(*,'(a,i3)') 'allocation  returned ',err
     stop 1
   endif
 
-  allocate( B(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
-    stop 1
-  endif
-
-  allocate( C(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of C returned ',err
-    stop 1
-  endif
-
-#ifdef _OPENMP
   !$omp parallel default(none)                     &
   !$omp&  shared(A,B,C,t0,t1)                      &
   !$omp&  firstprivate(order,iterations,tile_size) &
   !$omp&  private(k)
-#endif
 
   !$omp do private(i)
   do i=1, order
@@ -243,39 +160,26 @@ program main
 
   do k=0,iterations
     if (k.eq.1) then
-#ifdef _OPENMP
       !$omp barrier
       !$omp master
-#endif
       t0 = prk_get_wtime()
-#ifdef _OPENMP
       !$omp end master
-#endif
     endif
     call prk_dgemm(order, tile_size, A, B, C)
   enddo
 
-#ifdef _OPENMP
   !$omp barrier
   !$omp master
-#endif
   t1 = prk_get_wtime()
-#ifdef _OPENMP
   !$omp end master
-#endif
 
-#ifdef _OPENMP
   !$omp end parallel
-#endif
 
   dgemm_time = t1 - t0
 
   ! ********************************************************************
   ! ** Analyze and output results.
   ! ********************************************************************
-
-  deallocate( A )
-  deallocate( B )
 
   forder = real(order,REAL64)
   reference = 0.25d0 * forder**3 * (forder-1)**2 * (iterations+1)
@@ -288,7 +192,7 @@ program main
   enddo
   !$omp end parallel do
 
-  deallocate( C )
+  deallocate( A,B,C )
 
   residuum = abs(checksum-reference)/reference
   if (residuum .lt. epsilon) then

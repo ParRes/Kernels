@@ -15,7 +15,7 @@ executed on many computing systems.
 These programs should not be used as benchmarks.  They are operations to 
 explore features of a hardware platform, but they do not define 
 fixed problems that can be used to rank systems.  Furthermore 
-they have not been optimimzed for the features of any particular system.
+they have not been optimized for the features of any particular system.
 
 # Build Instructions
 
@@ -38,20 +38,21 @@ If you are looking for the simplest option, try `make.defs.gcc`.
 
 | File (in `./common/`) | Environment |  
 |----------------------|-------------------------|  
-| `make.defs.cray`     | Cray compilers on Cray XC systems. |
+| `make.defs.cray`     | Cray toolchain (rarely tested). |
 | `make.defs.cuda`     | GCC with the CUDA compiler (only used in C++/CUDA implementation). |
-| `make.defs.gcc`      | GCC compiler tool chain, which supports essentially all implementations. |
+| `make.defs.gcc`      | GCC compiler toolchain, which supports essentially all implementations (tested often). |
 | `make.defs.freebsd`  | FreeBSD (rarely tested). |
 | `make.defs.ibmbg`    | IBM Blue Gene/Q compiler toolchain (deprecated). |
-| `make.defs.ibmp9nv`  | IBM compilers for POWER9 and NVIDIA Volta platforms. |
-| `make.defs.intel`    | Intel compiler tool chain, which supports most implementations. |
-| `make.defs.llvm`     | LLVM compiler tool chain, which supports most implementations. |
-| `make.defs.musl`     | GCC compiler toolchain with MUSL as the C standard library, which is required to use C11 threads. |
-| `make.defs.oneapi`   | Intel oneAPI (https://software.intel.com/oneapi/hpc-kit). |
+| `make.defs.ibmp9nv`  | IBM compilers for POWER9 and NVIDIA Volta platforms (rarely tested). |
+| `make.defs.intel`    | Intel Parallel Studio toolchain, which supports most implementations (tested often). |
+| `make.defs.llvm`     | LLVM compiler toolchain, which supports most implementations (tested often). |
+| `make.defs.musl`     | GCC compiler toolchain with MUSL as the C standard library, which was required to use C11 threads. |
+| `make.defs.nvhpc`    | [NVIDIA HPC SDK](https://developer.nvidia.com/nvidia-hpc-sdk-downloads), which supports most implementations (tested often). |
+| `make.defs.oneapi`   | Intel [oneAPI](https://software.intel.com/oneapi/hpc-kit). |
 | `make.defs.pgi`      | PGI compiler toolchain (infrequently tested). |
 | `make.defs.hip`      | HIP compiler toolchain (infrequently tested). |
 
-Some of the C++ implementations require you to install Boost, RAJA, KOKKOS, Parallel STL, respectively,
+Some of the C++ implementations require you to install Boost, RAJA, Kokkos, Parallel STL, respectively,
 and then modify `make.defs` appropriately.  Please see the documentation in the
 [documentation](https://github.com/ParRes/Kernels/tree/default/doc) (`doc`) subdirectory.
 
@@ -215,7 +216,7 @@ be used unless a `make veryclean` has been issued.
 
 ## Individual make
 
-Descend into the desired sub-tree and cd to the kernel(s) of interest. 
+Descend into the desired sub-tree and `cd` to the kernel(s) of interest. 
 Each kernel has its own Makefile. There are a number of parameters 
 that determine the behavior of the kernel that need to be known at 
 compile time. These are explained succinctly in the Makefile itself. Edit 

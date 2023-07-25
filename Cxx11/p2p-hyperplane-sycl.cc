@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
 
         q.submit([&](sycl::handler& h) {
 
-          auto grid = d_grid.get_access<sycl::access::mode::read_write>(h);
+          sycl::accessor grid(d_grid, h);
 
           unsigned begin = std::max(2,i-n+2);
           unsigned end   = std::min(i,n)+1;
@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
       }
       q.submit([&](sycl::handler& h) {
 
-        auto grid = d_grid.get_access<sycl::access::mode::read_write>(h);
+        sycl::accessor grid(d_grid, h);
 
         h.single_task<class corner>([=] {
             grid[0*n+0] = -grid[(n-1)*n+(n-1)];
