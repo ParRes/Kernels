@@ -126,7 +126,7 @@ hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 
 hipstl: nstream-hipstl
 
-hipblas: nstream-hipblas sgemm-hipblas dgemm-hipblas transpose-hipblas
+hipblas: nstream-hipblas sgemm-hipblas dgemm-hipblas xgemm-hipblas transpose-hipblas
 
 thrust: nstream-host-thrust nstream-device-thrust \
         transpose-host-thrust transpose-device-thrust
