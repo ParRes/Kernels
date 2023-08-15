@@ -10,6 +10,10 @@
 
 #include <hip/hip_runtime.h>
 #include <hip/hip_runtime_api.h>
+
+// half-precision for HIPBLAS
+#include <hip/hip_fp16.h>
+
 #include <hipblas/hipblas.h>
 
 #ifdef HIP_THRUST
