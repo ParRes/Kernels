@@ -1,13 +1,13 @@
 #
 # This file shows the HIP toolchain options for PRKs.
 #
-ROCM_PATH=/opt/rocm
+ROCM_PATH=/opt/rocm-5.6.0
 #
 # Base compilers and language options
 #
 VERSION=
 # C99 is required in some implementations.
-CC=${ROCM_PATH}/llvm/bin/clang -std=gnu11 -pthread
+CC=${ROCM_PATH}/llvm/bin/clang -std=gnu11 -pthread -lm
 #EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=${ROCM_PATH}/llvm/bin/flang -DAOMP #-std=f2008 -cpp
@@ -24,7 +24,7 @@ DEFAULT_OPT_FLAGS=-g -O3 -ffast-math -mtune=native
 OPENMPFLAG=-fopenmp
 OPENMPSIMDFLAG=-fopenmp-simd
 #GCC#OFFLOADFLAG=-foffload=amdgcn-amdhsa="-march=fiji"
-OFFLOADFLAG=-fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908
+OFFLOADFLAG=-fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a
 OFFLOADFLAG+=-DGPU_SCHEDULE="schedule(static,1)" # makes ~10x diff with AMD Flang 12 on MI-100
 OPENACCFLAG=-fopenacc $(OFFLOADFLAG)
 #
@@ -44,7 +44,7 @@ SYCLFLAG=-std=c++17 -O3
 SYCLFLAG+=-DHIPSYCL
 # CPU platform
 SYCLFLAG+=--hipsycl-platform=rocm
-SYCLFLAG+=--hipsycl-gpu-arch=gfx908
+SYCLFLAG+=--hipsycl-gpu-arch=gfx90a
 SYCLFLAG+=-Wl,-rpath=/opt/rocm/llvm/lib
 #
 #CELERITYDIR=${SYCLDIR}
