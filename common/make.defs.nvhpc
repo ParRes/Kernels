@@ -43,6 +43,16 @@ OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib -lOpenCL
 #OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
 #
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+SYCLDIR=${HOME}/DPCPP/build
+SYCLCXX=${SYCLDIR}/bin/clang++
+SYCLFLAG=-std=c++20 -O3
+SYCLFLAG+=-DDPCPP # important
+SYCLFLAG+=-fsycl #-fsycl-unnamed-lambda
+SYCLFLAG+=-fsycl-targets=nvptx64-nvidia-cuda
+SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#
 #
 # Parallel STL, Boost, etc.
 #
