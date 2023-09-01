@@ -84,12 +84,12 @@ CBLASFLAG=${BLASFLAG}
 NVCC=${NVHPC_CBIN}nvcc
 CUDAFLAGS=-g -O3 -std=c++17
 CUDAFLAGS+=--extended-lambda
-CUDAFLAGS+=--gpu-architecture=sm_80
+CUDAFLAGS+=--gpu-architecture=sm_89
 #CUDAFLAGS+=--compiler-bindir=/swtools/gcc/7.5.0/bin
 #CUDAFLAGS+=-forward-unknown-to-host-compiler -fopenmp
 CUDAFLAGS+=-rdc=true # FIXES ptxas fatal   : Unresolved extern function 'cudaCGGetIntrinsicHandle'
-CUDAFLAGS+=-I${NVHPC_PATH}/math_libs/11.5/targets/$$(uname -m)-linux/include
-CUDAFLAGS+=-L${NVHPC_PATH}/math_libs/11.5/targets/$$(uname -m)-linux/lib
+CUDAFLAGS+=-I${NVHPC_PATH}/math_libs/12.1/targets/$$(uname -m)-linux/include
+CUDAFLAGS+=-L${NVHPC_PATH}/math_libs/12.1/targets/$$(uname -m)-linux/lib
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 # heavy hammer:
 CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED

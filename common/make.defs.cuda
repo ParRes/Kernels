@@ -38,7 +38,7 @@ OPENACCFLAG=-fopenacc
 #
 # OpenCL flags
 #
-OPENCLDIR=/usr/local/cuda-11.2/targets/x86_64-linux
+OPENCLDIR=/usr/local/cuda-12.1/targets/x86_64-linux
 OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib64 -lOpenCL
 #OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
@@ -126,8 +126,8 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
-#BLASFLAG=
-#CBLASFLAG=
+BLASFLAG=-L/usr/lib/x86_64-linux-gnu/blis-openmp -lblis
+CBLASFLAG=${BLASFLAG}
 #
 # CUDA flags
 #
@@ -136,9 +136,9 @@ THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 # Linux w/ NVIDIA CUDA
 # NVCC never supports the latest GCC.
 # Use appropriate arch or code is compiled to ancient features.
-NVCC=/usr/local/cuda-11.2/bin/nvcc
+NVCC=/usr/local/cuda-12.1/bin/nvcc
 CUDAFLAGS=-g -O3 -std=c++11
-CUDAFLAGS+=--gpu-architecture=sm_70
+CUDAFLAGS+=--gpu-architecture=sm_89
 #CUDAFLAGS+=--compiler-bindir=/swtools/gcc/7.5.0/bin
 #CUDAFLAGS+=-forward-unknown-to-host-compiler -fopenmp
 CUDAFLAGS+=-rdc=true # FIXES ptxas fatal   : Unresolved extern function 'cudaCGGetIntrinsicHandle'
