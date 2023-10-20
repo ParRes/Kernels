@@ -204,9 +204,7 @@ void run(const cublasHandle_t & h, int iterations, int order)
     auto pname = (is_fp64 ? "FP64" :
                   (is_fp32 ? "FP32" :
                    (is_fp16 ? "FP16" : "Unknown FP type")));
-    std::cout << pname
-              << " Rate (MF/s): " << 1.0e-6 * nflops/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+    prk::print_flop_rate_time(pname, nflops/avgtime, avgtime);
   } else {
     std::cout << "Reference checksum = " << reference << "\n"
               << "Residuum           = " << residuum << std::endl;
