@@ -209,7 +209,7 @@ int main(int argc, char* argv[])
     double norm{0};
     auto inside = Kokkos::MDRangePolicy<Kokkos::Rank<2>>({radius,radius},{n-radius,n-radius},{tile_size,tile_size});
     Kokkos::parallel_reduce(inside, KOKKOS_LAMBDA(int i, int j, double & norm) {
-        using Kokkos::Experimental::fabs;
+        using Kokkos::fabs;
         norm += fabs(out(i,j));
     }, norm);
     Kokkos::fence();

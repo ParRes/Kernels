@@ -170,7 +170,7 @@ int main(int argc, char * argv[])
     Kokkos::parallel_reduce(policy, KOKKOS_LAMBDA(int i, int j, double & update) {
         size_t const ij = i*order+j;
         double const reference = static_cast<double>(ij)*(1.+iterations)+addit;
-        using Kokkos::Experimental::fabs;
+        using Kokkos::fabs;
         update += fabs(B(j,i) - reference);
     }, abserr);
 
