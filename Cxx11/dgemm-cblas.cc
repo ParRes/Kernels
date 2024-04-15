@@ -320,7 +320,6 @@ int main(int argc, char * argv[])
     auto nflops = 2.0 * prk::pow(forder,3);
     prk::print_flop_rate_time("FP64", nflops/avgtime, avgtime);
   } else {
-  } else {
     std::cout << "Reference checksum = " << reference << "\n"
               << "Residuum           = " << residuum << std::endl;
 #if VERBOSE
