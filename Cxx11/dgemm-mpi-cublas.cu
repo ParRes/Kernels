@@ -98,7 +98,7 @@ int main(int argc, char * argv[])
     if (me == 0) {
       std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
       std::cout << "MPI/C++11/CUBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
-      cuda.print();
+      //cuda.print();
     }
 
     int ngpu = cuda.num_gpus();
