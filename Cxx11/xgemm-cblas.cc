@@ -68,6 +68,10 @@
 #include <cblas.h>
 #endif
 
+#ifndef MKL_INT
+#define MKL_INT int
+#endif
+
 template <typename TAB, typename TC>
 void prk_gemm(const CBLAS_LAYOUT Layout,
               const CBLAS_TRANSPOSE TransA, const CBLAS_TRANSPOSE TransB,
@@ -82,6 +86,7 @@ void prk_gemm(const CBLAS_LAYOUT Layout,
     std::abort();
 }
 
+#ifdef MKL_F16
 template <>
 void prk_gemm(const CBLAS_LAYOUT Layout,
               const CBLAS_TRANSPOSE TransA, const CBLAS_TRANSPOSE TransB,
@@ -95,7 +100,9 @@ void prk_gemm(const CBLAS_LAYOUT Layout,
     cblas_hgemm(Layout, TransA, TransB,
                 M, N, K, alpha, A, lda, B, ldb, beta, C, ldc); 
 }
+#endif
 
+#ifdef MKL_BF16
 template <>
 void prk_gemm(const CBLAS_LAYOUT Layout,
               const CBLAS_TRANSPOSE TransA, const CBLAS_TRANSPOSE TransB,
@@ -115,6 +122,7 @@ void prk_gemm(const CBLAS_LAYOUT Layout,
     cblas_gemm_bf16bf16f32(Layout, TransA, TransB,
                 M, N, K, alpha, A, lda, B, ldb, beta, C, ldc); 
 }
+#endif
 
 template <>
 void prk_gemm(const CBLAS_LAYOUT Layout,
@@ -144,6 +152,7 @@ void prk_gemm(const CBLAS_LAYOUT Layout,
                 M, N, K, alpha, A, lda, B, ldb, beta, C, ldc); 
 }
 
+#ifdef MKL_BF16
 void run_BF16(int iterations, int order)
 {
   double gemm_time{0};
@@ -215,14 +224,25 @@ void run_BF16(int iterations, int order)
 
   delete[] C;
 }
+#endif
 
 template <typename T>
 void run(int iterations, int order)
 {
   auto is_fp64 = (typeid(T) == typeid(double));
   auto is_fp32 = (typeid(T) == typeid(float));
-  auto is_fp16 = (typeid(T) == typeid(MKL_F16));
-  auto is_bf16 = (typeid(T) == typeid(MKL_BF16));
+  auto is_fp16 =
+#ifdef MKL_F16
+          (typeid(T) == typeid(MKL_F16));
+#else
+          false;
+#endif
+  auto is_bf16 =
+#ifdef MKL_BF16
+          (typeid(T) == typeid(MKL_BF16));
+#else
+          false;
+#endif
 
   double gemm_time{0};
 
@@ -287,9 +307,7 @@ void run(int iterations, int order)
                   (is_fp32 ? "FP32" :
                    (is_fp16 ? "FP16" :
                     (is_bf16 ? "BF16" : "Unknown FP type"))));
-    std::cout << pname
-              << " Rate (MF/s): " << 1.0e-6 * nflops/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+    prk::print_flop_rate_time(pname, nflops/avgtime, avgtime);
   } else {
     std::cout << "Reference checksum = " << reference << "\n"
               << "Residuum           = " << residuum << std::endl;
@@ -334,8 +352,12 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
 
+#ifdef MKL_F16
   run<MKL_F16>(iterations, order);
+#endif
+#ifdef MKL_BF16
   run_BF16(iterations, order);
+#endif
   run<float>(iterations, order);
   run<double>(iterations, order);
 
