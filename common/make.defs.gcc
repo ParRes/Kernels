@@ -162,6 +162,7 @@ UPCXXFLAG+=-mtune=native -ffast-math
 #CBLASFLAG=-I${HOME}/BLIS/include
 #BLASFLAG=-DACCELERATE -framework Accelerate
 #CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+#CBLASFLAG+= -DACCELERATE_NEW_LAPACK
 BLASFLAG=-lblas
 CBLASFLAG=-lblas
 #
