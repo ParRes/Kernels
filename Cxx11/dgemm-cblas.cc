@@ -318,8 +318,8 @@ int main(int argc, char * argv[])
     std::cout << "Solution validates" << std::endl;
     auto avgtime = dgemm_time/iterations/matrices;
     auto nflops = 2.0 * prk::pow(forder,3);
-    std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+    prk::print_flop_rate_time("FP64", nflops/avgtime, avgtime);
+  } else {
   } else {
     std::cout << "Reference checksum = " << reference << "\n"
               << "Residuum           = " << residuum << std::endl;
