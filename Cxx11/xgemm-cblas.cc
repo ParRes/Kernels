@@ -69,6 +69,8 @@
 #elif defined(ACCELERATE)
     // The location of cblas.h is not in the system include path when -framework Accelerate is provided.
     #include <Accelerate/Accelerate.h>
+    #define PRK_INT int
+    #define CBLAS_LAYOUT CBLAS_ORDER
 #else
     // assume OpenBLAS for now
     #include <cblas.h>
