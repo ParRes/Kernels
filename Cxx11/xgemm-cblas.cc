@@ -237,9 +237,7 @@ void run_BF16(int iterations, int order)
     auto avgtime = gemm_time/iterations;
     auto nflops = 2.0 * prk::pow(forder,3);
     auto pname = "BF16";
-    std::cout << pname
-              << " Rate (MF/s): " << 1.0e-6 * nflops/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+    prk::print_flop_rate_time(pname, nflops/avgtime, avgtime);
   } else {
     std::cout << "Reference checksum = " << reference << "\n"
               << "Residuum           = " << residuum << std::endl;
