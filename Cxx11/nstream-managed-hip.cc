@@ -105,10 +105,10 @@ int main(int argc, char * argv[])
 
   int iterations;
   int length;
-  bool system_memory;
+  bool system_memory,  grid_stride, ordered_fault, prefetch;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<use_system_memory>]";
+        throw "Usage: <# iterations> <vector length> [<use_system_memory> <grid_stride> <ordered_fault> <prefetch>]";
       }
 
       iterations  = std::atoi(argv[1]);
