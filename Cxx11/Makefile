@@ -61,7 +61,7 @@ endif
 OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop stl \
-	ranges kokkos raja cuda cublas sycl dpcpp \
+	ranges kokkos raja cuda cudastf cublas sycl dpcpp \
 	boost-compute thrust executor oneapi onemkl
 
 EXTRA=
@@ -121,6 +121,8 @@ raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
       p2p-raja transpose-raja nstream-raja stencil-raja # transpose-vector-raja
 
 cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
+
+cudastf: stencil-cudastf
 
 hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 
@@ -305,6 +307,9 @@ endif
 
 %.s: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(ASMFLAGS) -S $< -o $@
+
+%-cudastf: %-cudastf.cu
+	$(NVCC) $(CPPFLAGS) $(CUDAFLAGS) $(CUDASTF_CFLAGS) $(CUDASTF_LDFLAGS) $< -o $@
 
 clean:
 	-rm -f *.o
