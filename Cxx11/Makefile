@@ -122,7 +122,7 @@ raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
 
 cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
 
-cudastf: dgemm-cudastf stencil-cudastf
+cudastf: dgemm-cudastf dgemm-cublas-cudastf stencil-cudastf
 
 hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 
@@ -310,6 +310,11 @@ endif
 
 %-cudastf: %-cudastf.cu
 	$(NVCC) $(CPPFLAGS) $(CUDAFLAGS) $(CUDASTF_CFLAGS) $(CUDASTF_LDFLAGS) $< -o $@
+
+%-cublas-cudastf: %-cublas-cudastf.cu prk_util.h prk_cuda.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(CUDASTF_CFLAGS) $(CUDASTF_LDFLAGS) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt -o $@
+
+
 
 clean:
 	-rm -f *.o
