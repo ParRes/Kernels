@@ -168,7 +168,8 @@ CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
 # CUDASTF
 #
 CUDASTF_DIR=../deps/stf/
-CUDASTF_CFLAGS=-I${CUDASTF_DIR}/cccl/cudax/include/
+CUDASTF_CFLAGS=-I${CUDASTF_DIR}/cccl/cudax/include/ -I${CUDASTF_DIR}/cccl/libcudacxx/include/ --expt-relaxed-constexpr --extended-lambda
+CUDASTF_LDFLAGS=-lcuda
 #
 # MPI-3
 #
