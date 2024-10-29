@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2024, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -55,10 +56,12 @@
 ///
 /// HISTORY: Written by Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, December, 2017.
+///          CUDA STF by Cedric Augonnet, October 2024.
 ///
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_cuda.h"
 #include <cuda/experimental/stf.cuh>
 
 using namespace cuda::experimental::stf;
@@ -68,11 +71,8 @@ void prk_dgemm(context &ctx, const int order,
                const prk::vector<double> & B,
                      prk::vector<double> & C)
 {
-    PRAGMA_SIMD
     for (int i=0; i<order; ++i) {
-      PRAGMA_SIMD
       for (int k=0; k<order; ++k) {
-        PRAGMA_SIMD
         for (int j=0; j<order; ++j) {
             C[i*order+j] += A[i*order+k] * B[k*order+j];
         }
@@ -92,11 +92,8 @@ void prk_dgemm(context &ctx, const int order, const int tile_size,
           auto iend = std::min(order,it+tile_size);
           auto jend = std::min(order,jt+tile_size);
           auto kend = std::min(order,kt+tile_size);
-          PRAGMA_SIMD
           for (int i=it; i<iend; ++i) {
-            PRAGMA_SIMD
             for (int k=kt; k<kend; ++k) {
-              PRAGMA_SIMD
               for (int j=jt; j<jend; ++j) {
                 C[i*order+j] += A[i*order+k] * B[k*order+j];
               }
@@ -114,7 +111,7 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 Dense matrix-matrix multiplication: C += A x B" << std::endl;
+  std::cout << "C++11 CUDA STF Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   int iterations;
   int order;
