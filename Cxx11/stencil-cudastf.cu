@@ -76,16 +76,6 @@ __global__ void nothing(const int n, const prk_float * in, prk_float * out)
     //abort();
 }
 
-__global__ void add(const int n, prk_float * in)
-{
-    auto i = blockIdx.x * blockDim.x + threadIdx.x;
-    auto j = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if ((i<n) && (j<n)) {
-        in[i*n+j] += (prk_float)1;
-    }
-}
-
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -212,9 +202,9 @@ int main(int argc, char* argv[])
     };
 
     // Add constant to solution to force refresh of neighbor data, if any
-    ctx.task(in.rw())->*[&](cudaStream_t stream, auto d_in)
+    ctx.parallel_for(in.shape(), in.rw())->*[] __device__ (size_t i, size_t j, auto d_in)
     {
-        add<<<dimGrid, dimBlock, 0, stream>>>(n, d_in.data_handle());
+        d_in(i, j) += (prk_float)1;
     };
   }
 
