@@ -1,6 +1,6 @@
-
 ///
 /// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2024, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -53,10 +53,8 @@
 ///          wtime()
 ///
 /// HISTORY: - Written by Rob Van der Wijngaart, February 2009.
-///          - RvdW: Removed unrolling pragmas for clarity;
-///            added constant to array "in" at end of each iteration to force
-///            refreshing of neighbor data in parallel versions; August 2013
 ///            C++11-ification by Jeff Hammond, May 2017.
+///            CUDA STF by Cedric Augonnet, October 2024.
 ///
 //////////////////////////////////////////////////////////////////////
 
@@ -79,7 +77,7 @@ __global__ void nothing(const int n, const prk_float * in, prk_float * out)
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/CUDA Stencil execution on 2D grid" << std::endl;
+  std::cout << "C++11/CUDA STF Stencil execution on 2D grid" << std::endl;
 
   prk::CUDA::info info;
   info.print();

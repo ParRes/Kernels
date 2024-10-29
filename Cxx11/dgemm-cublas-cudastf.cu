@@ -1,6 +1,6 @@
 ///
 /// Copyright (c) 2018, Intel Corporation
-/// Copyright (c) 2021, NVIDIA
+/// Copyright (c) 2024, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -57,6 +57,7 @@
 ///
 /// HISTORY: Written by Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, December, 2017.
+///          CUDA STF by Cedric Augonnet, October 2024.
 ///
 //////////////////////////////////////////////////////////////////////
 
@@ -70,7 +71,7 @@ using namespace cuda::experimental::stf;
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/CUBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
+  std::cout << "C++11/CUBLAS STF Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   prk::CUDA::info info;
   //info.print();
