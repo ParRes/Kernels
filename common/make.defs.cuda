@@ -203,3 +203,8 @@ COARRAYFLAG=-fcoarray=single -lcaf_single
 # multi-node
 # COARRAYFLAG=-fcoarray=lib -lcaf_mpi
 
+#
+# CUDASTF
+#
+CUDASTF_DIR=../deps/stf/
+CUDASTF_CFLAGS=-I$CUDASTF_DIR/cccl/cudax/include/cuda/experimental/
