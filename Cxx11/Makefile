@@ -123,7 +123,7 @@ raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
 cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
 
 stf: cudastf
-cudastf: dgemm-cudastf dgemm-cublas-cudastf stencil-cudastf p2p-cudastf
+cudastf: dgemm-cudastf dgemm-cublas-cudastf stencil-cudastf p2p-cudastf transpose-cudastf
 
 hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 
