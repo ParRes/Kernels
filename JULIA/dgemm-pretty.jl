@@ -68,15 +68,15 @@ function do_dgemm(A, B, C, order)
     C += A * B
 end
 
-function do_verify(B, order, iterations)
-    reference = 0.25 * order**3 * (order-1)**2 * (iterations+1)
+function do_verify(C, order, iterations)
+    reference = 0.25 * order^3 * (order-1)^2 * (iterations+1)
     checksum = 0.0
     for j in 1:order
         for i in 1:order
             @inbounds checksum = checksum + C[i,j]
         end
     end
-    return checksum
+    return (checksum-reference)
 end
 
 function main()
@@ -106,7 +106,7 @@ function main()
     end
 
     println("Number of iterations     = ", iterations)
-    println("Matrix order                    = ", order)
+    println("Matrix order             = ", order)
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
@@ -116,11 +116,11 @@ function main()
     B = zeros(Float64,order,order)
     C = zeros(Float64,order,order)
     # Fill the original matrix
-    precompile(do_initialize, (Array{Float64,2}, Int64))
-    do_initialize(A, order)
+    precompile(do_initialize, (Array{Float64,2}, Array{Float64,2}, Array{Float64,2}, Int64))
+    do_initialize(A, B, C, order)
 
     # precompile hot function to smooth performance measurement
-    precompile(do_dgemm, (Array{Float64,2}, Array{Float64,2}, Int64))
+    precompile(do_dgemm, (Array{Float64,2}, Array{Float64,2}, Array{Float64,2}, Int64))
 
     t0 = time_ns()
 
@@ -128,7 +128,7 @@ function main()
         if k==0
             t0 = time_ns()
         end
-        do_transpose(A, B, order)
+        do_dgemm(A, B, C, order)
     end
 
     t1 = time_ns()
