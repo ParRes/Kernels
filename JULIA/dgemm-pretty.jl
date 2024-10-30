@@ -88,7 +88,7 @@ function main()
 
     if length(ARGS) != 2
         println("argument count = ", length(ARGS))
-        println("Usage: ./transpose <# iterations> <matrix order>")
+        println("Usage: ./dgemm-pretty <# iterations> <matrix order>")
         exit(1)
     end
 
@@ -112,7 +112,7 @@ function main()
     println("Matrix order             = ", order)
 
     # ********************************************************************
-    # ** Allocate space for the input and transpose matrix
+    # ** Allocate space for the input and output matrices
     # ********************************************************************
 
     A = zeros(Float64,order,order)
@@ -135,7 +135,7 @@ function main()
     end
 
     t1 = time_ns()
-    trans_time = (t1 - t0) * 1.e-9
+    dgemm_time = (t1 - t0) * 1.e-9
 
     # ********************************************************************
     # ** Analyze and output results.
@@ -148,7 +148,7 @@ function main()
     nbytes = 2 * order^2 * sizeof(Float64)
     if abserr < epsilon
         println("Solution validates")
-        avgtime = trans_time/iterations
+        avgtime = dgemm_time/iterations
         println("Rate (MB/s): ",1.e-6*nbytes/avgtime, " Avg time (s): ", avgtime)
     else
         println("error ",abserr, " exceeds threshold ",epsilon)
