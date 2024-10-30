@@ -145,11 +145,11 @@ function main()
     abserr = do_verify(B, order, iterations)
 
     epsilon = 1.e-8
-    nbytes = 2 * order^2 * sizeof(Float64)
+    nflops = 2 * order^3
     if abserr < epsilon
         println("Solution validates")
         avgtime = dgemm_time/iterations
-        println("Rate (MB/s): ",1.e-6*nbytes/avgtime, " Avg time (s): ", avgtime)
+        println("Rate (MF/s): ",1.e-6*nflops/avgtime, " Avg time (s): ", avgtime)
     else
         println("error ",abserr, " exceeds threshold ",epsilon)
         println("ERROR: solution did not validate")
