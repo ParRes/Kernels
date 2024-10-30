@@ -59,6 +59,7 @@
 #   endif
 #   define OMP_TASKWAIT PRAGMA(omp taskwait)
 #  else
+#   warning No support for OpenMP tasks!
 #   define OMP_ORDERED(x)
 #   define OMP_TASK(x)
 #   define OMP_TASKLOOP(x)
@@ -69,16 +70,21 @@
 #  define OMP_DECLARE_TARGET PRAGMA(omp declare target)
 #  define OMP_END_DECLARE_TARGET PRAGMA(omp end declare target)
 # else
+#  warning No OpenMP 4+ features!
 #  define OMP_SIMD
-#  define OMP_FOR_SIMD PRAGMA(omp for)
-#  define OMP_ORDERED(x)
+#  define OMP_FOR_SIMD(x) PRAGMA(omp for x)
 #  define OMP_TASK(x)
 #  define OMP_TASKLOOP(x)
 #  define OMP_TASKLOOP_COLLAPSE(n,x)
 #  define OMP_TASKWAIT
+#  define OMP_ORDERED(x)
 #  define OMP_TARGET(x)
-#  define OMP_DECLARE_TARGET
-#  define OMP_END_DECLARE_TARGET
+# endif
+# if (_OPENMP >= 201811)
+#  define OMP_REQUIRES(x) PRAGMA(omp requires x)
+# else
+#  warning No OpenMP 5+ features!
+#  define OMP_REQUIRES(x)
 # endif
 #else
 # define OMP(x)
@@ -89,13 +95,14 @@
 # define OMP_FOR(x)
 # define OMP_FOR_REDUCE(x)
 # define OMP_SIMD
-# define OMP_FOR_SIMD
+# define OMP_FOR_SIMD(x)
 # define OMP_TASK(x)
 # define OMP_TASKLOOP(x)
 # define OMP_TASKLOOP_COLLAPSE(n,x)
 # define OMP_TASKWAIT
 # define OMP_ORDERED(x)
 # define OMP_TARGET(x)
+# define OMP_REQUIRES(x)
 # define OMP_DECLARE_TARGET
 # define OMP_END_DECLARE_TARGET
 #endif
