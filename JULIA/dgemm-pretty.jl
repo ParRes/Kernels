@@ -32,22 +32,25 @@
 
 #*******************************************************************
 #
-# NAME:    transpose
+#  NAME:    dgemm
 #
-# PURPOSE: This program measures the time for the transpose of a
-#          column-major stored matrix into a row-major stored matrix.
+#  PURPOSE: This program tests the efficiency with which a dense matrix
+#           dense multiplication is carried out
 #
-# USAGE:   Program input is the matrix order and the number of times to
-#          repeat the operation:
+#  USAGE:   The program takes as input the matrix order and
+#           the number of times the matrix-matrix multiplication
+#           is carried out.
 #
-#          transpose <# iterations> <matrix_size>
+#           <progname> <# iterations> <matrix order>
 #
-#          The output consists of diagnostics to make sure the
-#          transpose worked and timing statistics.
+#           The output consists of diagnostics to make sure the
+#           algorithm worked, and of timing statistics.
 #
-# HISTORY: Written by  Rob Van der Wijngaart, February 2009.
-#          Converted to Python by Jeff Hammond, February 2016.
-#          Converted to Julia by Jeff Hammond, June 2016.
+#  HISTORY: Written by Rob Van der Wijngaart, February 2009.
+#           Converted to C++11 by Jeff Hammond, December, 2017.
+#           Converted to Fortran by Jeff Hammond, December, 2017.
+#           Converted to Julia by Jeff Hammond, October, 2024.
+#
 # *******************************************************************
 
 # ********************************************************************
