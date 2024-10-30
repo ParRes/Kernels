@@ -146,7 +146,7 @@ int main(int argc, char * argv[])
         for (int i=0; i<order; i++) {
           const int ij = i*order+j;
           const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-          abserr += prk::abs(hB(static_cast<size_t>(j), static_cast<size_t>(i)) - reference);
+          abserr += prk::abs(hB(j, i) - reference);
         }
       }
   };
