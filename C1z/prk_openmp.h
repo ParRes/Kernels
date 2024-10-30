@@ -1,6 +1,6 @@
 ///
 /// Copyright (c) 2013, Intel Corporation
-/// Copyright (c) 2021, NVIDIA
+/// Copyright (c) 2024, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -51,7 +51,7 @@
 // OpenMP SIMD if supported, else not.
 # if (_OPENMP >= 201300) || (__ibmxl_version__ >= 16)
 #  define OMP_SIMD PRAGMA(omp simd)
-#  define OMP_FOR_SIMD PRAGMA(omp for simd)
+#  define OMP_FOR_SIMD(x) PRAGMA(omp for simd x)
 // PGI/NVHPC compilers do not support OpenMP tasking/ordered
 #  if !( defined(__PGIC__) || defined(__PGI) || defined(__NVCOMPILER) )
 #   define OMP_ORDERED(x) PRAGMA(omp ordered x)

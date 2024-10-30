@@ -119,7 +119,7 @@ int main(int argc, char * argv[])
 
   OMP_PARALLEL()
   {
-    OMP_FOR_SIMD
+    OMP_FOR_SIMD()
     for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
       B[i] = 2.0;
@@ -134,7 +134,7 @@ int main(int argc, char * argv[])
           nstream_time = prk::wtime();
       }
 
-      OMP_FOR_SIMD
+      OMP_FOR_SIMD()
       for (size_t i=0; i<length; i++) {
           A[i] += B[i] + scalar * C[i];
       }
