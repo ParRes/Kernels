@@ -107,10 +107,10 @@ function main()
     grid[1:m,1] = 0:m-1
 
     # optional: precompile hot functions to smooth performance measurement
-    precompile(iterate_over_grid!, (Array{Float64, 2}, Int64, Int64))
+    # precompile(iterate_over_grid!, (Array{Float64, 2}, Int64, Int64))
 
     pipeline_time = @elapsed begin
-        for k in 0:iterations
+        for _ in 0:iterations
             iterate_over_grid!(grid, m, n)
 
             # copy top right corner value to bottom left corner to create dependency
