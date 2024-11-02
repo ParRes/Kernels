@@ -53,6 +53,7 @@
 # HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 #          - Converted to Python by Jeff Hammond, February 2016.
 #          - Converted to Julia by Jeff Hammond, June 2016.
+#          - Improved/simplified by Carsten Bauer, November, 2024.
 #
 # *******************************************************************
 
@@ -74,55 +75,48 @@ function main()
 
     if length(ARGS) != 3
         println("argument count = ", length(ARGS))
-        println("Usage: ./synch_p2p <# iterations> <first array dimension> <second array dimension>")
+        println("Usage: julia p2p.jl <# iterations> <first array dimension> <second array dimension>")
         exit(1)
     end
 
-    argv = map(x->parse(Int64,x),ARGS)
+    argv = map(x->tryparse(Int64,x),ARGS)
 
     iterations = argv[1]
-    if iterations < 1
-        println("ERROR: iterations must be >= 1")
+    if isnothing(iterations) || iterations < 1
+        println("ERROR: iterations must be an integer >= 1")
         exit(2)
     end
 
     m = argv[2]
-    if m < 1
-        println("ERROR: array dimension must be >= 1")
+    if isnothing(m) || m < 1
+        println("ERROR: array dimension must be an integer >= 1")
         exit(3)
     end
 
     n = argv[3]
-    if n < 1
-        println("ERROR: array dimension must be >= 1")
+    if isnothing(n) || n < 1
+        println("ERROR: array dimension must be an integer >= 1")
         exit(4)
     end
 
     println("Grid sizes               = ", m, ",", n)
     println("Number of iterations     = ", iterations)
 
-    grid = zeros(Float64,m,n)
-    grid[1,1:n] = collect(Float64,0:n-1)
-    grid[1:m,1] = collect(Float64,0:m-1)
+    grid = zeros(m,n)
+    grid[1,1:n] = 0:n-1
+    grid[1:m,1] = 0:m-1
 
-    # precompile hot functions to smooth performance measurement
+    # optional: precompile hot functions to smooth performance measurement
     precompile(iterate_over_grid!, (Array{Float64, 2}, Int64, Int64))
 
-    t0 = time_ns()
+    pipeline_time = @elapsed begin
+        for k in 0:iterations
+            iterate_over_grid!(grid, m, n)
 
-    for k in 0:iterations
-        if k==0
-            t0 = time_ns()
+            # copy top right corner value to bottom left corner to create dependency
+            grid[1,1] = -grid[m,n]
         end
-        iterate_over_grid!(grid, m, n)
-
-        # copy top right corner value to bottom left corner to create dependency
-        grid[1,1] = -grid[m,n]
     end
-    t1 = time_ns()
-
-    # convert time from nanoseconds to seconds
-    pipeline_time = (t1 - t0) * 1.e-9
 
     # ********************************************************************
     # ** Analyze and output results.
@@ -131,7 +125,7 @@ function main()
     epsilon=1.e-8
 
     # verify correctness, using top right value
-    corner_val = Float64((iterations+1)*(n+m-2))
+    corner_val = (iterations+1)*(n+m-2)
     if (abs(grid[m,n] - corner_val)/corner_val) < epsilon
         println("Solution validates")
         avgtime = pipeline_time/iterations
@@ -143,4 +137,3 @@ function main()
 end
 
 main()
-
