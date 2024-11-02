@@ -65,7 +65,7 @@ function iterate_over_grid!(grid, m, n)
     end
 end
 
-function main()
+function (@main)(args)
     # ********************************************************************
     # read and test input parameters
     # ********************************************************************
@@ -73,13 +73,13 @@ function main()
     println("Parallel Research Kernels version ") #, PRKVERSION)
     println("Julia pipeline execution on 2D grid")
 
-    if length(ARGS) != 3
-        println("argument count = ", length(ARGS))
+    if length(args) != 3
+        println("argument count = ", length(args))
         println("Usage: julia p2p.jl <# iterations> <first array dimension> <second array dimension>")
         exit(1)
     end
 
-    argv = map(x->tryparse(Int64,x),ARGS)
+    argv = map(x->tryparse(Int64,x),args)
 
     iterations = argv[1]
     if isnothing(iterations) || iterations < 1
@@ -135,5 +135,3 @@ function main()
         exit(9)
     end
 end
-
-main()
