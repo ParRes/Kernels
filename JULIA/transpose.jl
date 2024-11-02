@@ -54,7 +54,7 @@
 # read and test input parameters
 # ********************************************************************
 
-function do_initialize(A, order)
+function do_initialize!(A, order)
     for j in axes(A, 2)
         for i in axes(A, 1)
             A[i,j] = order * (j-1) + (i-1)
@@ -62,7 +62,7 @@ function do_initialize(A, order)
     end
 end
 
-function do_transpose(A, B)
+function do_transpose!(A, B)
     for j in axes(A, 2)
         for i in axes(A, 1)
             B[i,j] += A[j,i]
@@ -119,11 +119,11 @@ function (@main)(args)
     A = zeros(order,order)
     B = zeros(order,order)
     # Fill the original matrix
-    do_initialize(A, order)
+    do_initialize!(A, order)
 
     trans_time = @elapsed begin
         for _ in 0:iterations
-            do_transpose(A, B)
+            do_transpose!(A, B)
         end
     end
 
