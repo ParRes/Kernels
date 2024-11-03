@@ -16,6 +16,8 @@ Afterwards, put '$HOME/.julia/bin' on `PATH`, e.g.
 export PATH=$HOME/.julia/bin:$PATH
 ```
 
+(If you don't want to modify `PATH` use `$HOME/.julia/bin/mpiexecjl` directly to run the MPI code.)
+
 ## Optional: System MPI
 
 If you want to use a system MPI run the following:
