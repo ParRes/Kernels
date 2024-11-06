@@ -128,7 +128,7 @@ function main()
     t0 = time_ns()
 
     for k in 0:iterations
-        if k==0
+        if k==1
             t0 = time_ns()
         end
         do_dgemm(A, B, C, order)
