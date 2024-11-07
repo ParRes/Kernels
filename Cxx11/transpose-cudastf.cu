@@ -39,16 +39,14 @@
 /// USAGE:   Program input is the matrix order and the number of times to
 ///          repeat the operation:
 ///
-///          transpose <matrix_size> <# iterations> [tile size]
-///
-///          An optional parameter specifies the tile size used to divide the
-///          individual matrix blocks for improved cache and TLB performance.
+///          transpose <matrix_size> <# iterations>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          transpose worked and timing statistics.
 ///
 /// HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 ///          Converted to C++11 by Jeff Hammond, February 2016 and May 2017.
+///          CUDASTF version by Cedric Augonnet, November 2024.
 ///
 //////////////////////////////////////////////////////////////////////
 
@@ -68,10 +66,9 @@ int main(int argc, char * argv[])
 
   int iterations;
   int order;
-  int tile_size;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [tile size]";
+        throw "Usage: <# iterations> <matrix order>";
       }
 
       // number of times to do the transpose
@@ -87,11 +84,6 @@ int main(int argc, char * argv[])
       } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
-
-      // default tile size for tiling of local transpose
-      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
-      // a negative tile size means no tiling of the local transpose
-      if (tile_size <= 0) tile_size = order;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -102,7 +94,6 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
-  std::cout << "Tile size            = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
