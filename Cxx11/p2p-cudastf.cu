@@ -162,7 +162,7 @@ __global__ void p2p(double * grid, const int n)
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/CUDA cooperative groups pipeline execution on 2D grid" << std::endl;
+  std::cout << "C++11/CUDASTF pipeline execution on 2D grid" << std::endl;
 
   prk::CUDA::info info;
   info.print();
@@ -172,10 +172,10 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int n, nc, nb;
+  int n;
   try {
       if (argc < 3) {
-        throw " <# iterations> <array dimension> [<chunk dimension>]";
+        throw " <# iterations> <array dimension>";
       }
 
       // number of times to run the pipeline algorithm
@@ -193,18 +193,6 @@ int main(int argc, char* argv[])
       } else if (n % BLOCK_SIZE) {
         throw "ERROR: grid dimension is not a multiple of BLOCK_SIZE";
       }
-
-      // grid chunk dimensions
-      nc = (argc > 3) ? std::atoi(argv[3]) : 1;
-      nc = std::max(1,nc);
-      nc = std::min(n,nc);
-
-      // number of grid blocks
-      nb = (n-1)/nc;
-      if ((n-1)%nc) nb++;
-      //std::cerr << "n="  << n << std::endl;
-      //std::cerr << "nb=" << nb << std::endl;
-      //std::cerr << "nc=" << nc << std::endl;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -213,7 +201,6 @@ int main(int argc, char* argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
-  std::cout << "Grid chunk sizes     = " << nc << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
