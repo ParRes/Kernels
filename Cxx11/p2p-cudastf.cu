@@ -46,16 +46,10 @@
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
 ///
-/// FUNCTIONS CALLED:
-///
-///          Other than standard C functions, the following
-///          functions are used in this program:
-///
-///          wtime()
-///
 /// HISTORY: - Written by Rob Van der Wijngaart, February 2009.
 ///            C99-ification by Jeff Hammond, February 2016.
 ///            C++11-ification by Jeff Hammond, May 2017.
+///            CUDASTF version by Cedric Augonnet, November 2024.
 ///
 //////////////////////////////////////////////////////////////////////
 
