@@ -48,10 +48,24 @@
 # HISTORY: Written by Rob Van der Wijngaart, February 2009.
 #          Converted to Python by Jeff Hammond, February 2016.
 #          Fixed timing err, Ave+std_dev, more pythonic, Tim Mattson May 2021
-#          Converted to Julia by Carsten Bauer, November 2024.
+#          Converted to Julia by Jeff Hammond, October, 2024.
+#          Improved by Carsten Bauer, November 2024.
+#
 # *******************************************************************
 
 using LinearAlgebra
+using MKL
+
+function do_dgemm!(C, A, B, order)
+    # `mul!(C, A, B, α, β)` computes `A B α + C β` and writes the result into `C`
+    mul!(C, A, B, 1.0, 1.0)
+end
+
+function do_verify(C, order, iterations)
+    reference = 0.25 * order^3 * (order-1)^2 * (iterations+1)
+    checksum = sum(C)
+    return checksum - reference
+end
 
 function (@main)(args)
 
@@ -60,7 +74,7 @@ function (@main)(args)
     # ********************************************************************
 
     println("Parallel Research Kernels version")
-    println("Julia Dense matrix-matrix multiplication: C = A x B")
+    println("Julia Dense matrix-matrix multiplication: C += A x B")
 
     if length(args) != 2
         println("argument count = ", length(args))
@@ -84,6 +98,7 @@ function (@main)(args)
         exit(3)
     end
 
+    println("BLAS/LAPACK              = ", BLAS.get_config())
     println("Number of iterations     = ", iterations)
     println("Matrix order             = ", order)
 
@@ -95,50 +110,31 @@ function (@main)(args)
     B = copy(A)
     C = zeros(order,order)
 
-    local t0
-    t_sum = 0.0
-    t_squared = 0.0
+    t0 = time_ns()
 
-    for iter in 0:iterations        # one more warmup iteration
-        iter == 1 && (t0 = time_ns()) # start timer in second iteration
-
-        C .+= A * B
-
-        # # Faster alternative:
-        # # `mul!(C, A, B, α, β)` computes `A B α + C β` and writes the result into `C`
-        # mul!(C, A, B, 1.0, 1.0)
-
-        if iter > 0
-             t_iter = time_ns()
-             t = t_iter - t0
-             t_sum += t
-             t_squared = t_squared + t^2
-             t0 = t_iter
-        end
+    for k in 0:iterations
+        k == 1 && (t0 = time_ns())
+        do_dgemm!(C, A, B, order)
     end
 
-    dgemm_av  = t_sum / iterations
-    dgemm_std = sqrt((t_squared - iterations * dgemm_av * dgemm_av) / (iterations - 1))
+    t1 = time_ns()
+    dgemm_time = (t1 - t0) * 1.e-9
 
     # ********************************************************************
     # ** Analyze and output results.
     # ********************************************************************
 
-    checksum = sum(C)
+    abserr = do_verify(B, order, iterations)
 
-    ref_checksum = 0.25 * order^3 * (order - 1.0) * (order - 1.0)
-    ref_checksum *= (iterations + 1)
-
-    # @show checksum ≈ ref_checksum
     epsilon = 1.e-8
-    if abs((checksum - ref_checksum) / ref_checksum) < epsilon
+    nflops = 2 * order^3
+    if abserr < epsilon
         println("Solution validates")
-        nflops = 2.0 * order^3
-        recip_diff = (1.0 / (dgemm_av - dgemm_std) - 1.0 / (dgemm_av + dgemm_std))
-        gf_std = 1.e-6 * nflops * recip_diff / 2.0
-        println("nflops: ", nflops)
-        print("Rate: ", 1.e-6 * nflops / dgemm_av, " +/- (MF/s): ", gf_std)
+        avgtime = dgemm_time/iterations
+        println("Rate (MF/s): ",1.e-6*nflops/avgtime, " Avg time (s): ", avgtime)
     else
-        error("ERROR: Solution did not validate. Checksum = ", checksum,", Reference checksum = ", ref_checksum)
+        println("error ",abserr, " exceeds threshold ",epsilon)
+        println("ERROR: solution did not validate")
+        exit(1)
     end
 end
