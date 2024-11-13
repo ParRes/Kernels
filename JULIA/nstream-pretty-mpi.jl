@@ -159,8 +159,6 @@ function (@main)(args)
     end
 
     ar *= vlength
-
-    precompile(do_norm, (Array{Float64,1}, Int64))
     asum = do_norm(A, vlength)
 
     epsilon = 1.e-8

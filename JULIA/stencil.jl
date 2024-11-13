@@ -192,12 +192,16 @@ function (@main)(args)
 
     do_comp! = pattern == "star" ? do_star! : do_stencil!
 
-    stencil_time = @elapsed begin
-        for _ in 0:iterations
-            do_comp!(A, W, B, r, n)
-            do_add!(A, n)
-        end
+    t0 = time_ns()
+
+    for k in 0:iterations
+        k == 1 && (t0 = time_ns())
+        do_comp!(A, W, B, r, n)
+        do_add!(A, n)
     end
+
+    t1 = time_ns()
+    stencil_time = (t1 - t0) * 1.e-9
 
     #******************************************************************************
     #* Analyze and output results.
