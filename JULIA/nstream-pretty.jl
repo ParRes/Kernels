@@ -121,11 +121,15 @@ function (@main)(args)
 
     scalar = 3.0
 
-    nstream_time = @elapsed begin
-        for _ in 0:iterations
-            do_nstream!(A, B, C, scalar, vlength)
-        end
+    t0 = time_ns()
+
+    for k in 0:iterations
+        k == 1 && (t0 = time_ns())
+        do_nstream!(A, B, C, scalar, vlength)
     end
+
+    t1 = time_ns()
+    nstream_time = (t1 - t0) * 1.e-9
 
     # ********************************************************************
     # ** Analyze and output results.

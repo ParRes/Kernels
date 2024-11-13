@@ -117,11 +117,15 @@ function (@main)(args)
     # Fill the original matrix
     do_initialize!(A, order)
 
-    trans_time = @elapsed begin
-        for _ in 0:iterations
-            do_transpose!(A, B)
-        end
+    t0 = time_ns()
+
+    for k in 0:iterations
+        k == 1 && (t0 = time_ns())
+        do_transpose!(A, B)
     end
+
+    t1 = time_ns()
+    trans_time = (t1 - t0) * 1.e-9
 
     # ********************************************************************
     # ** Analyze and output results.

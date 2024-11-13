@@ -106,17 +106,18 @@ function (@main)(args)
     grid[1,1:n] = 0:n-1
     grid[1:m,1] = 0:m-1
 
-    # optional: precompile hot functions to smooth performance measurement
-    # precompile(iterate_over_grid!, (Array{Float64, 2}, Int64, Int64))
+    t0 = time_ns()
 
-    pipeline_time = @elapsed begin
-        for _ in 0:iterations
-            iterate_over_grid!(grid, m, n)
+    for k in 0:iterations
+        k == 1 && (t0 = time_ns())
+        iterate_over_grid!(grid, m, n)
 
-            # copy top right corner value to bottom left corner to create dependency
-            grid[1,1] = -grid[m,n]
-        end
+        # copy top right corner value to bottom left corner to create dependency
+        grid[1,1] = -grid[m,n]
     end
+
+    t1 = time_ns()
+    pipeline_time = (t1 - t0) * 1.e-9
 
     # ********************************************************************
     # ** Analyze and output results.
