@@ -50,13 +50,13 @@
 #          Fixed timing err, Ave+std_dev, more pythonic, Tim Mattson May 2021
 #          Converted to Julia by Jeff Hammond, October, 2024.
 #          Improved by Carsten Bauer, November 2024.
-#          MKL support by Carsten Bauer, November 2024.
+#          BLIS support by Carsten Bauer, November 2024.
 #
 # *******************************************************************
 
 using LinearAlgebra
-using MKL
-BLAS.set_num_threads(1) # how many threads should Intel MKL use?
+using BLISBLAS
+BLAS.set_num_threads(1) # how many threads should BLIS use?
 
 function do_dgemm!(C, A, B, order)
     # `mul!(C, A, B, α, β)` computes `A B α + C β` and writes the result into `C`

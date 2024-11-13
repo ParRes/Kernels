@@ -54,6 +54,7 @@
 # *******************************************************************
 
 using LinearAlgebra
+BLAS.set_num_threads(1) # how many threads should OpenBLAS use?
 
 function do_dgemm!(C, A, B, order)
     # `mul!(C, A, B, α, β)` computes `A B α + C β` and writes the result into `C`
@@ -97,6 +98,8 @@ function (@main)(args)
         exit(3)
     end
 
+    println("BLAS/LAPACK              = ", BLAS.get_config())
+    println("Number of BLAS threads   = ", BLAS.get_num_threads())
     println("Number of iterations     = ", iterations)
     println("Matrix order             = ", order)
 
