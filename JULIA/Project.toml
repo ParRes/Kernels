@@ -1,5 +1,6 @@
 [deps]
 BLISBLAS = "6f275bd8-fec0-4d39-945b-7e95a765fa1e"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 MKL = "33e6dc65-8f57-5167-99aa-e5a354878fb2"
@@ -10,6 +11,7 @@ Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 
 [compat]
 BLISBLAS = "0.1"
+CUDA = "5.5"
 LinearAlgebra = "1.11"
 LoopVectorization = "0.12"
 MKL = "0.7"
