@@ -53,8 +53,11 @@
 #
 # *******************************************************************
 
+using LinearAlgebra
+
 function do_dgemm!(C, A, B, order)
-    C += A * B # or even better: C .+= A * B
+    # `mul!(C, A, B, α, β)` computes `A B α + C β` and writes the result into `C`
+    mul!(C, A, B, 1.0, 1.0)
 end
 
 function do_verify(C, order, iterations)
