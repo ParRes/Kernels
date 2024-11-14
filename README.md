@@ -164,7 +164,7 @@ x = externally supported (in the Chapel repo)
 | Python 3             |  y  |    y    |     y     |    y    |    y   |   y   |
 | Python 3 w/ Numpy    |  y  |    y    |     y     |    y    |    y   |   y   |
 | Python 3 w/ mpi4py   |     |    y    |     y     |    y    |        |       |
-| Julia                |  y  |    y    |     y     |         |        |       |
+| Julia                |  y  |    y    |     y     |    y    |        |   y   |
 | Octave (Matlab)      |  y  |    y    |     y     |         |        |       |
 | Rust                 |  y  |    y    |     y     |         |        |       |
 | Go                   |     |         |     y     |    y    |        |   y   |
