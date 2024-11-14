@@ -77,6 +77,7 @@ function do_initialize!(A, B, C, N)
          B[i] = 2.0
          C[i] = 2.0
     end
+    return nothing
 end
 
 function do_nstream!(A, B, C, s, N)
@@ -84,6 +85,7 @@ function do_nstream!(A, B, C, s, N)
     if i <= N
         @inbounds A[i] += B[i] + s * C[i]
     end
+    return nothing
 end
 
 function do_norm(A, N)
