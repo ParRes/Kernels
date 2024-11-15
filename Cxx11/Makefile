@@ -136,7 +136,7 @@ thrust: nstream-host-thrust nstream-device-thrust \
 
 cublas: transpose-cublas nstream-cublas \
 	dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas \
-	sgemm-cublas xgemm-cublas
+	sgemm-cublas xgemm-cublas dgemm-managed-cublas
 
 cblas: transpose-cblas dgemm-cblas sgemm-cblas xgemm-cblas
 
