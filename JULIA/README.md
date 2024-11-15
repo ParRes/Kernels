@@ -8,7 +8,7 @@ julia --project -e 'using Pkg; Pkg.instantiate()'
 
 To get the `mpiexecjl` driver run:
 ```
-julia --project 'using MPI; MPI.install_mpiexecjl()'
+julia --project -e 'using MPI; MPI.install_mpiexecjl()'
 ```
 
 Afterwards, put '$HOME/.julia/bin' on `PATH`, e.g.
