@@ -288,6 +288,7 @@ int main(int argc, char * argv[])
         } else {
           prk_dgemm(h, order, matrices, d_a, d_b, d_c);
         }
+        if (iter<2) prk::CUDA::sync();
         double t1 = prk::wtime();
         if (iter==0) xfer = (t1-t0);
         if (iter==1) comp = (t1-t0);

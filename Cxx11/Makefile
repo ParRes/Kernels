@@ -359,6 +359,7 @@ clean:
 	-rm -f *-halide
 	-rm -f *-boost-compute
 	-rm -f *-openacc
+	-rm -f *-cudastf
 	-rm -f transpose-async transpose-thread
 
 cleancl:
