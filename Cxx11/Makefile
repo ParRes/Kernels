@@ -350,6 +350,7 @@ clean:
 	-rm -f *-hpx
 	-rm -f *-thrust
 	-rm -f *-cuda
+	-rm -f *-cudastf
 	-rm -f *-cublas
 	-rm -f *-hip
 	-rm -f *-hipblas
