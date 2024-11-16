@@ -1,6 +1,7 @@
 [package]
 name = "stencil"
 version = "0.1.0"
+edition="2021"
 authors = ["Jeff Hammond <jeff.r.hammond@intel.com>"]
 
 [dependencies]
