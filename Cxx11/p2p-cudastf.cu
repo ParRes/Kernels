@@ -63,6 +63,8 @@
 
 using namespace cuda::experimental::stf;
 
+#define BLOCK_SIZE 32
+
 int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
