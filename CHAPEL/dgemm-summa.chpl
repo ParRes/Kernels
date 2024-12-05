@@ -121,12 +121,11 @@ if validate {
     halt("VALIDATION FAILED! Reference checksum = ", refChecksum,
                            " Checksum = ", checksum);
   else
-    writeln("Validation Successful");
+    writeln("Validation successful");
 }
 
 if !correctness {
   const nflops = 2.0*(order**3);
   const avgTime = t.elapsed()/iterations;
-  writeln("Rate(MFlop/s) = ", 1e-6*nflops/avgTime);
-  writeln("Time: ", avgTime);
+  writeln("Rate(MFlop/s) = ", 1e-6*nflops/avgTime, " Time : ", avgTime);
 }
