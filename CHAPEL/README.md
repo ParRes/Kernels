@@ -1,3 +1,18 @@
+## Disclaimer
+
+This directory’s contents were created as a copy of 
+https://github.com/chapel-lang/chapel/tree/08f3e9c8414d0aeedaa9ad8667edc556c0cb86e8/test/studies/prk 
+and the ongoing maintained versions of them as Chapel evolves can be found in 
+https://github.com/chapel-lang/chapel/tree/main/test/studies/prk.
+Note that these versions have not necessarily been studied in great depth
+w.r.t. performance nor considered in light of Chapel features that have been
+added since they were originally written circa 2016
+(e.g., foreach loops supporting vectorization; GPU support).
+As a result, please take any performance obtained from them
+with a grain of salt and consider contacting the Chapel team
+if you have any questions, find any surprises, or are planning
+to publish conclusions based on their results (https://chapel-lang.org/community/).
+
 ## Implementations:
 
 Each kernel is implemented in a variety of parallel flavors, such as "serial",
