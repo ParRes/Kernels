@@ -16,4 +16,4 @@ DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
 #
 OPENMPFLAG=-fopenmp
 OFFLOADFLAG=-foffload="-O3 -v"
-ORNLACCFLAG=-fopenacc
+OPENACCFLAG=-fopenacc

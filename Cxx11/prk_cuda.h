@@ -8,26 +8,13 @@
 #include <vector>
 #include <array>
 
-#ifndef __NVCC__
-#warning Please compile CUDA code with CC=nvcc.
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 #include <cuda_device_runtime_api.h>
-#endif
-
-#ifdef __NVCC__
 #include <cublas_v2.h>
-#else
-#error Sorry, no CUBLAS without NVCC.
-#endif
 
-#ifdef __CORIANDERCC__
-// Coriander does not support double
-typedef float prk_float;
-#else
 typedef double prk_float;
-#endif
 
 namespace prk
 {
@@ -43,9 +30,6 @@ namespace prk
             }
         }
 
-#ifndef __CORIANDERCC__
-        // It seems that Coriander defines cublasStatus_t to cudaError_t
-        // because the compiler complains that this is a redefinition.
         void check(cublasStatus_t rc)
         {
             if (rc==CUBLAS_STATUS_SUCCESS) {
@@ -55,7 +39,6 @@ namespace prk
                 std::abort();
             }
         }
-#endif
 
         class info {
 
@@ -71,11 +54,11 @@ namespace prk
                 info() {
                     prk::CUDA::check( cudaGetDeviceCount(&nDevices) );
                     vDevices.resize(nDevices);
-                    for (auto i=0; i<nDevices; ++i) {
+                    for (int i=0; i<nDevices; ++i) {
                         cudaGetDeviceProperties(&(vDevices[i]), i);
                         if (i==0) {
                             maxThreadsPerBlock = vDevices[i].maxThreadsPerBlock;
-                            for (auto j=0; j<3; ++j) {
+                            for (int j=0; j<3; ++j) {
                                 maxThreadsDim[j]   = vDevices[i].maxThreadsDim[j];
                                 maxGridSize[j]     = vDevices[i].maxGridSize[j];
                             }
@@ -101,9 +84,8 @@ namespace prk
                 }
 
                 void print() {
-                    for (auto i=0; i<nDevices; ++i) {
+                    for (int i=0; i<nDevices; ++i) {
                         std::cout << "device name: " << vDevices[i].name << "\n";
-#ifndef __CORIANDERCC__
                         std::cout << "total global memory:     " << vDevices[i].totalGlobalMem << "\n";
                         std::cout << "max threads per block:   " << vDevices[i].maxThreadsPerBlock << "\n";
                         std::cout << "max threads dim:         " << vDevices[i].maxThreadsDim[0] << ","
@@ -114,7 +96,6 @@ namespace prk
                                                                  << vDevices[i].maxGridSize[2] << "\n";
                         std::cout << "memory clock rate (KHz): " << vDevices[i].memoryClockRate << "\n";
                         std::cout << "memory bus width (bits): " << vDevices[i].memoryBusWidth << "\n";
-#endif
                     }
                 }
 
@@ -146,6 +127,79 @@ namespace prk
                     return true;
                 }
         };
+
+        template <typename T>
+        T * malloc_device(size_t n) {
+            T * ptr;
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMalloc((void**)&ptr, bytes) );
+            return ptr;
+        }
+
+        template <typename T>
+        T * malloc_host(size_t n) {
+            T * ptr;
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMallocHost((void**)&ptr, bytes) );
+            return ptr;
+        }
+
+        template <typename T>
+        T * malloc_managed(size_t n) {
+            T * ptr;
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMallocManaged((void**)&ptr, bytes) );
+            return ptr;
+        }
+
+        template <typename T>
+        void free(T * ptr) {
+            prk::CUDA::check( cudaFree((void*)ptr) );
+        }
+
+        template <typename T>
+        void free_host(T * ptr) {
+            prk::CUDA::check( cudaFreeHost((void*)ptr) );
+        }
+
+        template <typename T>
+        void copyD2H(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMemcpy(output, input, bytes, cudaMemcpyDeviceToHost) );
+        }
+
+        template <typename T>
+        void copyH2D(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMemcpy(output, input, bytes, cudaMemcpyHostToDevice) );
+        }
+
+        template <typename T>
+        void copyD2Hasync(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMemcpyAsync(output, input, bytes, cudaMemcpyDeviceToHost) );
+        }
+
+        template <typename T>
+        void copyH2Dasync(T * output, T * const input, size_t n) {
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMemcpyAsync(output, input, bytes, cudaMemcpyHostToDevice) );
+        }
+
+        template <typename T>
+        void prefetch(T * ptr, size_t n, int device = 0) {
+            size_t bytes = n * sizeof(T);
+            //std::cout << "device=" << device << "\n";
+            prk::CUDA::check( cudaMemPrefetchAsync(ptr, bytes, device) );
+        }
+
+        void sync(void) {
+            prk::CUDA::check( cudaDeviceSynchronize() );
+        }
+
+        void set_device(int i) {
+            prk::CUDA::check( cudaSetDevice(i) );
+        }
 
     } // CUDA namespace
 

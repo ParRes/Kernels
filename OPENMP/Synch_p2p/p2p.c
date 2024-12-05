@@ -1,5 +1,6 @@
 /*
 Copyright (c) 2013, Intel Corporation
+Copyright (c) 2023, NVIDIA
 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions 
@@ -233,13 +234,16 @@ int main(int argc, char ** argv) {
     }
 
     if (TID==0) { /* first thread waits for corner value to be copied            */
-      while (flag(0,0) == true) {
-        #pragma omp flush
+      while (1) {
+        int flg_tmp;
+        #pragma omp atomic read seq_cst
+        flg_tmp = flag(0,0);
+        if (flg_tmp == false) break;
       }
 #if SYNCHRONOUS
+      #pragma omp atomic write seq_cst
       flag(0,0)= true;
-      #pragma omp flush
-#endif      
+#endif
     }
 
     for (j=1; j<n; j+=grp) { /* apply grouping                                   */
@@ -248,13 +252,16 @@ int main(int argc, char ** argv) {
 
       /* if not on left boundary,  wait for left neighbor to produce data        */
       if (TID > 0) {
-	while (flag(TID-1,j) == false) {
-           #pragma omp flush
+        while (1) {
+          int flg_tmp;
+          #pragma omp atomic read seq_cst
+          flg_tmp = flag(TID-1,j);
+          if (flg_tmp == true) break;
         }
 #if SYNCHRONOUS
-        flag(TID-1,j)= false;
-        #pragma omp flush
-#endif      
+        #pragma omp atomic write seq_cst
+        flag(TID-1,j) = false;
+#endif
       }
 
       for (jj=j; jj<j+jjsize; jj++)
@@ -264,13 +271,16 @@ int main(int argc, char ** argv) {
 
       /* if not on right boundary, signal right neighbor it has new data         */
       if (TID < nthread-1) {
-#if SYNCHRONOUS 
-        while (flag(TID,j) == true) {
-          #pragma omp flush
+#if SYNCHRONOUS
+        while (1) {
+          int flg_tmp;
+          #pragma omp atomic read seq_cst
+          flg_tmp = flag(TID,j);
+          if (flg_tmp == false) break;
         }
-#endif 
+#endif
+        #pragma omp atomic write seq_cst
         flag(TID,j) = true;
-        #pragma omp flush
       }
     }
 
@@ -278,15 +288,18 @@ int main(int argc, char ** argv) {
                 to bottom left corner to create dependency and signal completion   */
         ARRAY(0,0) = -ARRAY(m-1,n-1);
 #if SYNCHRONOUS
-        while (flag(0,0) == false) {
-          #pragma omp flush
+        while (1) {
+            int flg_tmp;
+            #pragma omp atomic read seq_cst
+            flg_tmp = flag(0,0);
+            if (flg_tmp == true) break;
         }
+        #pragma omp atomic write seq_cst
         flag(0,0) = false;
 #else
-        #pragma omp flush
+        #pragma omp atomic write seq_cst
         flag(0,0) = true;
 #endif
-        #pragma omp flush
     }
 
   } /* end of iterations */

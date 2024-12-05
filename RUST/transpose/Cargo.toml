@@ -1,6 +1,6 @@
 [package]
 name = "transpose"
 version = "0.1.0"
-authors = ["Jeff Hammond <jeff.r.hammond@intel.com>"]
+authors = ["Jeff Hammond <jeff.r.hammond@intel.com>", "Sajid Ali <sasyed@fnal.gov>"]
 
-[dependencies]
+edition = "2021"

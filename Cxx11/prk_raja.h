@@ -32,10 +32,8 @@
 #ifndef PRK_RAJA_H
 #define PRK_RAJA_H
 
-#ifdef USE_RAJA
-# define RAJA_ENABLE_NESTED 1
-# include "RAJA/RAJA.hpp"
-#endif
+#define RAJA_ENABLE_NESTED 1
+#include "RAJA/RAJA.hpp"
 
 #ifdef RAJA_ENABLE_OPENMP
   typedef RAJA::omp_parallel_for_exec thread_exec;

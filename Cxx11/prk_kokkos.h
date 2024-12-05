@@ -32,10 +32,6 @@
 #ifndef PRK_KOKKOS_H
 #define PRK_KOKKOS_H
 
-#ifdef USE_KOKKOS
-# include <Kokkos_Core.hpp>
-# include <Kokkos_Concepts.hpp>
-# include <Kokkos_MemoryTraits.hpp>
-#endif
+#include <Kokkos_Core.hpp>
 
 #endif /* PRK_KOKKOS_H */

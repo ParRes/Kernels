@@ -32,24 +32,31 @@
 #ifndef PRK_TBB_H
 #define PRK_TBB_H
 
-#ifdef USE_TBB
-# include <tbb/tbb.h>
-# include <tbb/parallel_for.h>
-# include <tbb/blocked_range.h>
-# include <tbb/flow_graph.h>
-# if ( PRK_TBB_PARTITIONER == 1)
-//#  warning STATIC
+//#include <tbb/tbb.h>
+#include <tbb/version.h>
+#include <tbb/global_control.h>
+#include <tbb/parallel_for.h>
+#include <tbb/parallel_reduce.h>
+#include <tbb/blocked_range.h>
+#include <tbb/blocked_range2d.h>
+#include <tbb/flow_graph.h>
+#include <tbb/parallel_for_each.h>
+#if TBB_INTERFACE_VERSION <= 12000
+#   include <tbb/parallel_do.h>
+#endif
+
+#if ( PRK_TBB_PARTITIONER == 1)
    tbb::static_partitioner tbb_partitioner;
-# elif ( PRK_TBB_PARTITIONER == 2)
-//#  warning AFFINITY
+   const std::string tbb_partitioner_name("static_partitioner");
+#elif ( PRK_TBB_PARTITIONER == 2)
    tbb::affinity_partitioner tbb_partitioner;
-# elif ( PRK_TBB_PARTITIONER == 3)
-//#  warning SIMPLE
+   const std::string tbb_partitioner_name("affinity_partitioner");
+#elif ( PRK_TBB_PARTITIONER == 3)
    tbb::simple_partitioner tbb_partitioner;
-# else
-//#  warning AUTO
+   const std::string tbb_partitioner_name("simple_partitioner");
+#else
    tbb::auto_partitioner tbb_partitioner;
-# endif
+   const std::string tbb_partitioner_name("auto_partitioner");
 #endif
 
 #endif /* PRK_TBB_H */

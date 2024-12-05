@@ -1,5 +1,6 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +40,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -70,17 +71,17 @@ int main(int argc, char * argv[])
   std::cout << "C++11/CUBLAS STREAM triad: A = B + scalar * C" << std::endl;
 
   prk::CUDA::info info;
-  info.print();
+  //info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
-  int length;
+  int iterations;
+  size_t length;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<offset>]";
+        throw "Usage: <# iterations> <vector length>";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -88,14 +89,9 @@ int main(int argc, char * argv[])
         throw "ERROR: iterations must be >= 1";
       }
 
-      length = std::atoi(argv[2]);
+      length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
-      }
-
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
       }
   }
   catch (const char * e) {
@@ -105,7 +101,6 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
 
   cublasHandle_t h;
   //prk::CUDA::check( cublasInit() );
@@ -117,14 +112,9 @@ int main(int argc, char * argv[])
 
   double nstream_time(0);
 
-  const size_t bytes = length * sizeof(double);
-
-  double * h_A;
-  double * h_B;
-  double * h_C;
-  prk::CUDA::check( cudaMallocHost((void**)&h_A, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_B, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_C, bytes) );
+  double * h_A = prk::CUDA::malloc_host<double>(length);
+  double * h_B = prk::CUDA::malloc_host<double>(length);
+  double * h_C = prk::CUDA::malloc_host<double>(length);
 
   for (size_t i=0; i<length; ++i) {
     h_A[i] = 0;
@@ -132,22 +122,22 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  double * d_A;
-  double * d_B;
-  double * d_C;
-  prk::CUDA::check( cudaMalloc((void**)&d_A, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_B, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_C, bytes) );
+  double * d_A = prk::CUDA::malloc_device<double>(length);
+  double * d_B = prk::CUDA::malloc_device<double>(length);
+  double * d_C = prk::CUDA::malloc_device<double>(length);
 
-  prk::CUDA::check( cudaMemcpy(d_A, &(h_A[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_B, &(h_B[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_C, &(h_C[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::CUDA::copyH2D(d_A, h_A, length);
+  prk::CUDA::copyH2D(d_B, h_B, length);
+  prk::CUDA::copyH2D(d_C, h_C, length);
 
   double scalar(3);
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) nstream_time = prk::wtime();
+      if (iter==1) {
+          prk::CUDA::sync();
+          nstream_time = prk::wtime();
+      }
 
       double one(1);
       prk::CUDA::check( cublasDaxpy(h, length,
@@ -158,23 +148,16 @@ int main(int argc, char * argv[])
                                     &scalar,     // alpha
                                     d_C, 1,      // x, incx
                                     d_A, 1) );   // y, incy
-
-      prk::CUDA::check( cudaDeviceSynchronize() );
+      prk::CUDA::sync();
     }
     nstream_time = prk::wtime() - nstream_time;
   }
 
-  prk::CUDA::check( cudaMemcpy(&(h_A[0]), d_A, bytes, cudaMemcpyDeviceToHost) );
+  prk::CUDA::copyD2H(h_A, d_A, length);
 
-  prk::CUDA::check( cudaFree(d_C) );
-  prk::CUDA::check( cudaFree(d_B) );
-  prk::CUDA::check( cudaFree(d_A) );
-
-  prk::CUDA::check( cudaFreeHost(h_B) );
-  prk::CUDA::check( cudaFreeHost(h_C) );
-
-  prk::CUDA::check( cublasDestroy(h) );
-  //prk::CUDA::check( cublasShutdown() );
+  prk::CUDA::free(d_A);
+  prk::CUDA::free(d_B);
+  prk::CUDA::free(d_C);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -183,21 +166,22 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
-
   ar *= length;
 
   double asum(0);
-  for (size_t i=0; i<length; i++) {
-      asum += std::fabs(h_A[i]);
+  for (int i=0; i<length; i++) {
+      asum += prk::abs(h_A[i]);
   }
 
-  prk::CUDA::check( cudaFreeHost(h_A) );
+  prk::CUDA::free_host(h_A);
+  prk::CUDA::free_host(h_B);
+  prk::CUDA::free_host(h_C);
 
   double epsilon=1.e-8;
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"

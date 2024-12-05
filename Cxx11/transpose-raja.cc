@@ -78,7 +78,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
@@ -107,7 +107,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  double trans_time(0);
+  double trans_time{0};
 
   double * RESTRICT Amem = new double[order*order];
   double * RESTRICT Bmem = new double[order*order];
@@ -161,7 +161,7 @@ int main(int argc, char * argv[])
   RAJA::kernel<reduce_policy>(range2d, [=](int i, int j) {
       double const ij = static_cast<double>(i*order+j);
       double const reference = ij*(1.+iterations)+addit;
-      abserr += std::fabs(B(j,i) - reference);
+      abserr += prk::abs(B(j,i) - reference);
   });
 
 #ifdef VERBOSE

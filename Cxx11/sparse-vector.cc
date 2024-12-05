@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
   std::vector<double> vector(size2,0.0);
   std::vector<double> result(size2,0.0);
 
-  double sparse_time(0);
+  double sparse_time{0};
 
   {
     for (size_t row=0; row<size2; row++) {
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
       }
     }
 
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) sparse_time = prk::wtime();
 
@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
 
   const double epsilon(1.e-8);
 
-  if (std::fabs(vector_sum-reference_sum) > epsilon) {
+  if (prk::abs(vector_sum-reference_sum) > epsilon) {
     std::cout << "ERROR: Vector norm = " << vector_sum
               << " Reference vector norm = " << reference_sum << std::endl;
     return 1;

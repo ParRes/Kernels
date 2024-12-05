@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2013, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -55,64 +55,46 @@
 template <typename T> class transpose;
 
 template <typename T>
-void run(sycl::queue & q, int iterations, size_t order)
+void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
 {
+  size_t padded_order = block_size * prk::divceil(order,block_size);
+  sycl::range<2> global{padded_order,padded_order};
+  sycl::range<2> local{block_size,block_size};
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
-  double trans_time(0);
+  double trans_time{0};
 
-  auto ctx = q.get_context();
-  auto dev = q.get_device();
+  T * A = sycl::malloc_shared<T>(order*order, q);
+  T * B = sycl::malloc_shared<T>(order*order, q);
 
-  T * A = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), dev, ctx));
-  T * B = static_cast<T*>(sycl::malloc_shared(order*order * sizeof(T), dev, ctx));
-
-  for (auto i=0;i<order; i++) {
-    for (auto j=0;j<order;j++) {
+  for (size_t i=0;i<order; i++) {
+    for (size_t j=0;j<order;j++) {
       A[i*order+j] = static_cast<double>(i*order+j);
       B[i*order+j] = 0.0;
     }
   }
 
   try {
-
-#if PREBUILD_KERNEL
-    sycl::program kernel(ctx);
-    kernel.build_with_kernel_type<transpose<T>>();
-#endif
-
-
     for (int iter = 0; iter<=iterations; ++iter) {
-
       if (iter==1) trans_time = prk::wtime();
-
       q.submit([&](sycl::handler& h) {
-
         h.parallel_for<class transpose<T>>(
-#if PREBUILD_KERNEL
-                kernel.get_kernel<transpose<T>>(),
-#endif
-                sycl::range<2>{order,order}, [=] (sycl::id<2> it) {
-#if USE_2D_INDEXING
-          sycl::id<2> ij{it[0],it[1]};
-          sycl::id<2> ji{it[1],it[0]};
-          B[ij] += A[ji];
-          A[ji] += (T)1;
-#else
-          B[it[0] * order + it[1]] += A[it[1] * order + it[0]];
-          A[it[1] * order + it[0]] += (T)1;
-#endif
+            sycl::nd_range{global, local}, [=](sycl::nd_item<2> it) {
+                const size_t i = it.get_global_id(0);
+                const size_t j = it.get_global_id(1);
+                if ((i<order) && (j<order)) {
+                    B[i * order + j] += A[j * order + i];
+                    A[j * order + i] += 1.0;
+                }
         });
       });
       q.wait();
     }
-
-    // Stop timer before buffer+accessor destructors fire,
-    // since that will move data, and we do not time that
-    // for other device-oriented programming models.
     trans_time = prk::wtime() - trans_time;
+    sycl::free(A, q);
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
@@ -128,22 +110,18 @@ void run(sycl::queue & q, int iterations, size_t order)
     return;
   }
 
-  sycl::free(A, ctx);
-  sycl::free(B, ctx);
-
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
-  const T addit = (iterations+1.) * (iterations/2.);
+  const double addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
   for (size_t i=0; i<order; ++i) {
     for (size_t j=0; j<order; ++j) {
-      size_t const ij = i*order+j;
-      size_t const ji = j*order+i;
-      const T reference = static_cast<T>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      const size_t ij = i*order+j;
+      const size_t ji = j*order+i;
+      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+      abserr += prk::abs(B[ji] - reference);
     }
   }
 
@@ -163,6 +141,9 @@ void run(sycl::queue & q, int iterations, size_t order)
     std::cout << "ERROR: Aggregate squared error " << abserr
               << " exceeds threshold " << epsilon << std::endl;
   }
+
+  sycl::free(B, q);
+
 }
 
 int main(int argc, char * argv[])
@@ -175,10 +156,13 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t order;
+  size_t order, block_size;
+
+  block_size = 16;
+
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order>";
+        throw "Usage: <# iterations> <matrix order> [<block_size>]";
       }
 
       // number of times to do the transpose
@@ -191,8 +175,12 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
+      }
+
+      if (argc>3) {
+         block_size = std::atoi(argv[3]);
       }
   }
   catch (const char * e) {
@@ -202,72 +190,56 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations  = " << iterations << std::endl;
   std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Block size            = " << block_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
-#ifdef USE_OPENCL
-  prk::opencl::listPlatforms();
+  try {
+    sycl::queue q{sycl::cpu_selector_v};
+    prk::SYCL::print_device_platform(q);
+    run<float>(q, iterations, order, block_size);
+#ifndef DPCPP_NO_DOUBLE
+    run<double>(q, iterations, order, block_size);
 #endif
+  }
+  catch (sycl::exception & e) {
+    std::cout << e.what() << std::endl;
+    prk::SYCL::print_exception_details(e);
+  }
+  catch (std::exception & e) {
+    std::cout << e.what() << std::endl;
+  }
+  catch (const char * e) {
+    std::cout << e << std::endl;
+  }
 
   try {
-#if SYCL_TRY_CPU_QUEUE
-    if (order<10000) {
-        sycl::queue q(sycl::host_selector{});
-        prk::SYCL::print_device_platform(q);
-        run<float>(q, iterations, order);
-        run<double>(q, iterations, order);
+    sycl::queue q{sycl::gpu_selector_v};
+    prk::SYCL::print_device_platform(q);
+    run<float>(q, iterations, order, block_size);
+#ifndef DPCPP_NO_DOUBLE
+    bool has_fp64 = prk::SYCL::has_fp64(q);
+    if (has_fp64) {
+      if (prk::SYCL::print_gen12lp_helper(q)) return 1;
+    }
+    if (has_fp64) {
+      run<double>(q, iterations, order, block_size);
     } else {
-        std::cout << "Skipping host device since it is too slow for large problems" << std::endl;
-    }
-#endif
-
-    // CPU requires spir64 target
-#if SYCL_TRY_CPU_QUEUE
-    if (1) {
-        sycl::queue q(sycl::cpu_selector{});
-        prk::SYCL::print_device_platform(q);
-        bool has_spir = prk::SYCL::has_spir(q);
-        if (has_spir) {
-          run<float>(q, iterations, order);
-          run<double>(q, iterations, order);
-        }
-    }
-#endif
-
-    // NVIDIA GPU requires ptx64 target
-#if SYCL_TRY_GPU_QUEUE
-    if (1) {
-        sycl::queue q(sycl::gpu_selector{});
-        prk::SYCL::print_device_platform(q);
-        bool has_spir = prk::SYCL::has_spir(q);
-        bool has_fp64 = prk::SYCL::has_fp64(q);
-        bool has_ptx  = prk::SYCL::has_ptx(q);
-        if (!has_fp64) {
-          std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
-        }
-        if (has_spir || has_ptx) {
-          run<float>(q, iterations, order);
-          if (has_fp64) {
-            run<double>(q, iterations, order);
-          }
-        }
+      std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
     }
 #endif
   }
   catch (sycl::exception & e) {
     std::cout << e.what() << std::endl;
     prk::SYCL::print_exception_details(e);
-    return 1;
   }
   catch (std::exception & e) {
     std::cout << e.what() << std::endl;
-    return 1;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
-    return 1;
   }
 
   return 0;

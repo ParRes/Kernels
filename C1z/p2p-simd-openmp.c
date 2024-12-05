@@ -60,11 +60,12 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 #include "p2p-kernel.h"
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("Parallel Research Kernels version %d\n", PRKVERSION);
   printf("C11 pipeline execution on 2D grid\n");
 
   //////////////////////////////////////////////////////////////////////

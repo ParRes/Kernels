@@ -35,9 +35,9 @@
 #include <cstdio>
 #include <cstdlib> // atoi, getenv
 #include <cstdint>
+#include <cfloat>  // FLT_MIN
 #include <climits>
-#include <cmath>   // abs, fabs
-#include <cassert>
+#include <cmath>
 
 // Test standard library _after_ standard headers have been included...
 #if !defined(__NVCC__) && !defined(__PGI) && !defined(__ibmxl__) && (defined(__GLIBCXX__) || defined(_GLIBCXX_RELEASE) ) && !defined(_GLIBCXX_USE_CXX11_ABI)
@@ -48,30 +48,41 @@
 # error You need a C++11 compiler or a newer C++ standard library.
 #endif
 
+// weird issue with NVC++ 21.2 and GCC 10.2.1 (not officially supported)
+#ifndef __GCC_ATOMIC_CHAR8_T_LOCK_FREE
+#define __GCC_ATOMIC_CHAR8_T_LOCK_FREE __GCC_ATOMIC_CHAR_LOCK_FREE
+#endif
+
 #include <string>
 #include <iostream>
 #include <iomanip> // std::setprecision
 #include <exception>
 #include <list>
 #include <vector>
-//#include <valarray>
 
 #include <chrono>
-#include <random>
 #include <typeinfo>
 #include <array>
-#include <atomic>
 #include <numeric>
 #include <algorithm>
+#include <thread> // std::thread::hardware_concurrency
 
 #include "prk_simd.h"
 
-#ifdef USE_RANGES
-# include "prk_ranges.h"
+// used in OpenMP target and CUDA code because std::min etc are not declare target
+#ifndef MIN
+#define MIN(x,y) ((x)<(y)?(x):(y))
+#endif
+#ifndef MAX
+#define MAX(x,y) ((x)>(y)?(x):(y))
+#endif
+#ifndef ABS
+#define ABS(a) ((a) >= 0 ? (a) : -(a))
 #endif
 
-#ifdef USE_OPENMP
-# include "prk_openmp.h"
+// omp_get_wtime()
+#if defined(_OPENMP)
+#include <omp.h>
 #endif
 
 #define RESTRICT __restrict__
@@ -84,6 +95,32 @@
 
 namespace prk {
 
+
+    int get_num_cores(void)
+    {
+        return std::thread::hardware_concurrency();
+    }
+
+    // only used in PIC
+    namespace constants {
+        double pi(void) {
+#ifdef M_PI
+            return M_PI;
+#else
+            return 3.14159265358979323846264338327950288419716939937510;
+#endif
+        }
+    }
+
+    template <typename T>
+    bool is_power_of_2(T n) {
+#if defined(__GNUC__) || defined(__clang__)
+        return (1 == __builtin_popcount(n));
+#else
+        return ( (a & (~a+1)) == a );
+#endif
+    }
+
     int get_alignment(void)
     {
         /* a := alignment */
@@ -93,7 +130,10 @@ namespace prk {
         const char* temp = std::getenv("PRK_ALIGNMENT");
         int a = (temp!=nullptr) ? std::atoi(temp) : 64;
         if (a < 8) a = 8;
-        assert( (a & (~a+1)) == a ); /* is power of 2? */
+        if ( !prk::is_power_of_2(a) ) {
+            std::cout << "You requested alignment (" << a << ") that is not a power of two!" << std::endl;
+            std::abort();
+        }
 #endif
         return a;
     }
@@ -261,7 +301,7 @@ namespace prk {
 
     static inline double wtime(void)
     {
-#if defined(USE_OPENMP) && defined(_OPENMP)
+#if defined(_OPENMP)
         return omp_get_wtime();
 #else
         using t = std::chrono::high_resolution_clock;
@@ -276,6 +316,16 @@ namespace prk {
     template <class T1, class T2>
     static inline auto divceil(T1 numerator, T2 denominator) -> decltype(numerator / denominator) {
         return ( numerator / denominator + (numerator % denominator > 0) );
+    }
+
+    bool parse_boolean(const std::string & s)
+    {
+        if (s=="t" || s=="T" || s=="y" || s=="Y" || s=="1") {
+            return true;
+        } else {
+            return false;
+        }
+
     }
 
     template<typename T>
@@ -301,6 +351,79 @@ namespace prk {
 #else
         free((void*)p);
 #endif
+    }
+
+    int get_max_matrix_size(void)
+    {
+        // std::floor( std::sqrt(INT_MAX) )
+        return 46340;
+    }
+
+    template <typename T>
+    T abs(T x) {
+        return (x >= 0 ? x : -x);
+    }
+
+    template <>
+    float abs(float x) {
+        return __builtin_fabsf(x);
+    }
+
+    template <>
+    double abs(double x) {
+        return __builtin_fabs(x);
+    }
+
+    template <typename T>
+    T sqrt(T x) {
+        double y = static_cast<double>(x);
+        double z = __builtin_sqrt(y);
+        return static_cast<T>(z);
+    }
+
+    template <>
+    float sqrt(float x) {
+        return __builtin_sqrtf(x);
+    }
+
+    template <>
+    double sqrt(double x) {
+        return __builtin_sqrt(x);
+    }
+
+    template <typename T>
+    T pow(T x, int n) {
+        double y = static_cast<double>(x);
+        double z = __builtin_pow(y,n);
+        return static_cast<T>(z);
+    }
+
+    template <>
+    double pow(double x, int n) {
+        return __builtin_pow(x,n);
+    }
+
+    template <>
+    float pow(float x, int n) {
+        return __builtin_pow(x,n);
+    }
+
+    template <typename T>
+    void print_flop_rate_time(T name, double rate, double time)
+    {
+        const auto d = std::log10(rate);
+        const int  shifts[6] = { 15, 12, 9, 6, 3, 0 };
+        const double scales[6] = { 1.e-15, 1.e-12, 1.e-9, 1.e-6, 1.e-3, 1. };
+        const char prefix[6] = { 'P', 'T', 'G', 'M', 'K', ' ' };
+        for ( int r=0; r<6; r++ ) {
+            const auto shift = shifts[r];
+            if (d > shift) {
+                std::cout << name
+                          << " Rate (" << prefix[r] << "F/s): " << scales[r] * rate
+                          << " Avg time (s): " << time << std::endl;
+                break;
+            }
+        }
     }
 
 } // namespace prk

@@ -1,0 +1,9 @@
+UPCXXDIR=./upcxx
+UPCXX=${UPCXXDIR}/bin/upcxx
+UPCXXFLAG=-codemode={O3,debug}
+UPCXXFLAG+=-std=c++17
+UPCXXFLAG+=-mtune=native -ffast-math
+
+HPXDIR=./hpx
+HPXCXX=${HPXDIR}/bin/hpxcxx
+HPXFLAG=-Wno-unused-local-typedef ${HWLOCFLAG}

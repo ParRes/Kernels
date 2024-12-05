@@ -60,6 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 
 typedef void (*stencil_t)(const int, const int, const double * restrict, double * restrict);
 
@@ -80,7 +81,7 @@ void nothing(const int n, const int gs, const double * restrict in, double * res
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("Parallel Research Kernels version %d\n", PRKVERSION);
 #ifdef _OPENMP
   printf("C11/OpenMP TASKLOOP Stencil execution on 2D grid\n");
 #else

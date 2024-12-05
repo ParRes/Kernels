@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2020, Intel Corporation
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -39,10 +39,10 @@
 ///          a third vector.
 ///
 /// USAGE:   The program takes as input the number
-///          of iterations to loop over the triad vectors, the length of the
-///          vectors, and the offset between vectors
+///          of iterations to loop over the triad vectors and
+///          the length of the vectors.
 ///
-///          <progname> <# iterations> <vector length> <offset>
+///          <progname> <# iterations> <vector length>
 ///
 ///          The output consists of diagnostics to make sure the
 ///          algorithm worked, and of timing statistics.
@@ -51,7 +51,6 @@
 ///          number of words written, times the size of the words, divided
 ///          by the execution time. For a vector length of N, the total
 ///          number of words read and written is 4*N*sizeof(double).
-///
 ///
 /// HISTORY: This code is loosely based on the Stream benchmark by John
 ///          McCalpin, but does not follow all the Stream rules. Hence,
@@ -74,7 +73,7 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations, offset;
+  int iterations;
   size_t length;
   try {
       if (argc < 3) {
@@ -90,11 +89,6 @@ int main(int argc, char * argv[])
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
       }
-
-      offset = (argc>3) ? std::atoi(argv[3]) : 0;
-      if (length <= 0) {
-        throw "ERROR: offset must be nonnegative";
-      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -103,13 +97,12 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
-  std::cout << "Offset               = " << offset << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto nstream_time = 0.0;
+  double nstream_time{0};
 
   thrust::host_vector<double> A(length);
   thrust::host_vector<double> B(length);
@@ -121,18 +114,28 @@ int main(int argc, char * argv[])
     thrust::fill(thrust::host, B.begin(), B.end(), 2.0);
     thrust::fill(thrust::host, C.begin(), C.end(), 2.0);
 
-    auto nstream = [=] __host__ __device__ (thrust::tuple<double&,double,double> t) {
-        thrust::get<0>(t) +=  thrust::get<1>(t) + scalar * thrust::get<2>(t);
-    };
-
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) nstream_time = prk::wtime();
 
+#if 0
+      auto nstream = [=] __host__ __device__ (thrust::tuple<double&,double,double> t) {
+          thrust::get<0>(t) +=  thrust::get<1>(t) + scalar * thrust::get<2>(t);
+      };
       thrust::for_each( thrust::host,
                         thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
                         thrust::make_zip_iterator(thrust::make_tuple(A.end()  , B.end()  , C.end())),
                         nstream);
+#else
+      auto nstream = [=] __host__ __device__ (thrust::tuple<double&,double,double> t) {
+          return thrust::get<0>(t) +  thrust::get<1>(t) + scalar * thrust::get<2>(t);
+      };
+      thrust::transform( thrust::host,
+                         thrust::make_zip_iterator(thrust::make_tuple(A.begin(), B.begin(), C.begin())),
+                         thrust::make_zip_iterator(thrust::make_tuple(A.end()  , B.end()  , C.end())),
+                         A.begin(),
+                         nstream);
+#endif
     }
     nstream_time = prk::wtime() - nstream_time;
   }
@@ -144,7 +147,7 @@ int main(int argc, char * argv[])
   double ar(0);
   double br(2);
   double cr(2);
-  for (auto i=0; i<=iterations; i++) {
+  for (int i=0; i<=iterations; i++) {
       ar += br + scalar * cr;
   }
 
@@ -153,12 +156,12 @@ int main(int argc, char * argv[])
   //double asum = thrust::reduce(A.begin(), A.end(), 0.0, thrust::plus<double>());
   double asum = thrust::transform_reduce(A.begin(),
                                          A.end(),
-                                         [=] __host__ __device__ (double x) -> double { return std::fabs(x); },
+                                         [=] __host__ __device__ (double x) -> double { return prk::abs(x); },
                                          0.0,
                                          thrust::plus<double>());
 
   double epsilon(1.e-8);
-  if (std::fabs(ar-asum)/asum > epsilon) {
+  if (prk::abs(ar-asum)/asum > epsilon) {
       std::cout << "Failed Validation on output array\n"
                 << std::setprecision(16)
                 << "       Expected checksum: " << ar << "\n"

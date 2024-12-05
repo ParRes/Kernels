@@ -87,7 +87,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
   }
@@ -103,7 +103,7 @@ int main(int argc, char * argv[])
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto trans_time = 0.0;
+  double trans_time{0};
 
   prk::vector<double> A(order*order);
   prk::vector<double> B(order*order,0.0);
@@ -114,25 +114,37 @@ int main(int argc, char * argv[])
   std::iota(A.begin(), A.end(), 0.0);
 
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) trans_time = prk::wtime();
 
-      // T = transpose(A)
-#if defined(MKL)
-      mkl_domatcopy('R','T', order, order, 1.0, &(A[0]), order, &(T[0]), order);
-#elif defined(ACCELERATE)
-      vDSP_mtransD(&(A[0]), 1, &(T[0]), 1, order, order);
+#if defined(ACCELERATE) && defined(ACCELERATE_NEW_LAPACK)
+      // B += transpose(A)
+      appleblas_dgeadd(CblasRowMajor,
+                       CblasTrans, CblasNoTrans,   // opA, opB
+                       order, order,               // m, n
+                       1.0, &(A[0]), order,        // alpha, A, lda
+                       1.0, &(B[0]), order,        // beta, B, ldb
+                       &(B[0]), order);            // C, ldc (in-place for B)
 #else
-#warning No CBLAS transpose extension available!
-      for (auto i=0;i<order; i++) {
-        for (auto j=0;j<order;j++) {
-          T2[i*order+j] = A[j*order+i];
+      // T = transpose(A)
+   #if defined(MKL)
+      mkl_domatcopy('R','T', order, order, 1.0, &(A[0]), order, &(T[0]), order);
+   #elif defined(OPENBLAS_VERSION)
+      cblas_domatcopy(CblasRowMajor,CblasTrans, order, order, 1.0, &(A[0]), order, &(T[0]), order);
+   #elif defined(ACCELERATE)
+      vDSP_mtransD(&(A[0]), 1, &(T[0]), 1, order, order);
+   #else
+      #warning No CBLAS transpose extension available!
+      for (int i=0;i<order; i++) {
+        for (int j=0;j<order;j++) {
+          T[i*order+j] = A[j*order+i];
         }
       }
-#endif
+   #endif
       // B += T
       cblas_daxpy(order*order, 1.0, &(T[0]), 1, &(B[0]), 1);
+#endif
       // A += 1
       cblas_daxpy(order*order, 1.0, one, 0, &(A[0]), 1);
     }
@@ -146,12 +158,12 @@ int main(int argc, char * argv[])
   const auto addit = (iterations+1.) * (iterations/2.);
   double abserr(0);
   // TODO: replace with std::generate, std::accumulate, or similar
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      abserr += prk::abs(B[ji] - reference);
     }
   }
 

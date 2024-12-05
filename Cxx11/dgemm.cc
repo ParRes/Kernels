@@ -66,11 +66,11 @@ void prk_dgemm(const int order,
                      prk::vector<double> & C)
 {
     PRAGMA_SIMD
-    for (auto i=0; i<order; ++i) {
+    for (int i=0; i<order; ++i) {
       PRAGMA_SIMD
-      for (auto k=0; k<order; ++k) {
+      for (int k=0; k<order; ++k) {
         PRAGMA_SIMD
-        for (auto j=0; j<order; ++j) {
+        for (int j=0; j<order; ++j) {
             C[i*order+j] += A[i*order+k] * B[k*order+j];
         }
       }
@@ -82,19 +82,19 @@ void prk_dgemm(const int order, const int tile_size,
                const prk::vector<double> & B,
                      prk::vector<double> & C)
 {
-    for (auto it=0; it<order; it+=tile_size) {
-      for (auto jt=0; jt<order; jt+=tile_size) {
-        for (auto kt=0; kt<order; kt+=tile_size) {
+    for (int it=0; it<order; it+=tile_size) {
+      for (int kt=0; kt<order; kt+=tile_size) {
+        for (int jt=0; jt<order; jt+=tile_size) {
           // ICC will not hoist these on its own...
           auto iend = std::min(order,it+tile_size);
           auto jend = std::min(order,jt+tile_size);
           auto kend = std::min(order,kt+tile_size);
           PRAGMA_SIMD
-          for (auto i=it; i<iend; ++i) {
+          for (int i=it; i<iend; ++i) {
             PRAGMA_SIMD
-            for (auto k=kt; k<kend; ++k) {
+            for (int k=kt; k<kend; ++k) {
               PRAGMA_SIMD
-              for (auto j=jt; j<jend; ++j) {
+              for (int j=jt; j<jend; ++j) {
                 C[i*order+j] += A[i*order+k] * B[k*order+j];
               }
             }
@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
-      } else if (order > std::floor(std::sqrt(INT_MAX))) {
+      } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
 
@@ -154,20 +154,20 @@ int main(int argc, char * argv[])
   /// Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  double dgemm_time(0);
+  double dgemm_time{0};
 
   prk::vector<double> A(order*order);
   prk::vector<double> B(order*order);
   prk::vector<double> C(order*order,0.0);
-  for (auto i=0; i<order; ++i) {
-    for (auto j=0; j<order; ++j) {
+  for (int i=0; i<order; ++i) {
+    for (int j=0; j<order; ++j) {
        A[i*order+j] = i;
        B[i*order+j] = i;
     }
   }
 
   {
-    for (auto iter = 0; iter<=iterations; iter++) {
+    for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) dgemm_time = prk::wtime();
 
@@ -185,11 +185,11 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   const auto forder = static_cast<double>(order);
-  const auto reference = 0.25 * std::pow(forder,3) * std::pow(forder-1.0,2) * (iterations+1);
+  const auto reference = 0.25 * prk::pow(forder,3) * prk::pow(forder-1.0,2) * (iterations+1);
   const auto checksum = prk::reduce(C.begin(), C.end(), 0.0);
 
   const auto epsilon = 1.0e-8;
-  const auto residuum = std::abs(checksum-reference)/reference;
+  const auto residuum = prk::abs(checksum-reference)/reference;
   if (residuum < epsilon) {
 #if VERBOSE
     std::cout << "Reference checksum = " << reference << "\n"
@@ -197,21 +197,21 @@ int main(int argc, char * argv[])
 #endif
     std::cout << "Solution validates" << std::endl;
     auto avgtime = dgemm_time/iterations;
-    auto nflops = 2.0 * std::pow(forder,3);
+    auto nflops = 2.0 * prk::pow(forder,3);
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "Reference checksum = " << reference << "\n"
               << "Actual checksum = " << checksum << std::endl;
 #if VERBOSE
-    for (auto i=0; i<order; ++i)
-      for (auto j=0; j<order; ++j)
+    for (int i=0; i<order; ++i)
+      for (int j=0; j<order; ++j)
         std::cout << "A(" << i << "," << j << ") = " << A[i*order+j] << "\n";
-    for (auto i=0; i<order; ++i)
-      for (auto j=0; j<order; ++j)
+    for (int i=0; i<order; ++i)
+      for (int j=0; j<order; ++j)
         std::cout << "B(" << i << "," << j << ") = " << B[i*order+j] << "\n";
-    for (auto i=0; i<order; ++i)
-      for (auto j=0; j<order; ++j)
+    for (int i=0; i<order; ++i)
+      for (int j=0; j<order; ++j)
         std::cout << "C(" << i << "," << j << ") = " << C[i*order+j] << "\n";
     std::cout << std::endl;
 #endif

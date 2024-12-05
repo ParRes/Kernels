@@ -42,7 +42,7 @@ ifndef PRK_FLAGS
   PRK_FLAGS=-O3
 endif
 
-default: allserial allopenmp allmpi
+default: allserial allcxx allc1z allfortran allopenmp allmpi
 
 help:
 	@echo "Usage: \"make all\"          (re-)builds all targets"
@@ -77,8 +77,9 @@ help:
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
 all: alldarwin allfreaks allshared
-alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran allfenix
-allfreaks: allcharm++ allampi allgrappa alllegion
+alldarwin: allserial allopenmp allmpi1 allmpiopenmp allmpirma allshmem allmpishm allupc allfortran
+allweirdmpi: allfenix allfgmpi allampi
+allfreaks: allcharm++ allgrappa alllegion
 allshared: allserial allopenmp allfortran allcxx allc1z
 allnew: allfortran allcxx allc1z
 
