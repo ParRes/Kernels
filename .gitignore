@@ -103,6 +103,17 @@ C1z/transpose-petsc
 C1z/transpose-target
 C1z/transpose-taskloop
 C1z/transpose-thread
+CHAPEL/dgemm
+CHAPEL/dgemm-summa
+CHAPEL/nstream
+CHAPEL/p2p-serial-fast
+CHAPEL/pic
+CHAPEL/sparse
+CHAPEL/stencil
+CHAPEL/stencil-opt
+CHAPEL/stencil-serial
+CHAPEL/transpose
+CHAPEL/transpose-serial
 Csharp/hello.exe
 Csharp/dgemm.exe
 Csharp/nstream.exe
