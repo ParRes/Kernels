@@ -1,0 +1,14 @@
+==========================
+Chapel License Information
+==========================
+
+The Chapel implementation is composed of two categories of code:
+
+1) code that was specifically developed for, or contributed to, the
+   Chapel project.  This code comprises the core of the Chapel
+   implementation: the compiler, runtime, and standard/internal
+   modules.  Code in this category is made available under the
+   Apache v2.0 license, which can be found in 'LICENSE.chapel' in
+   this directory or at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+(comments about third-party code were removed, because they are not relevant here)
