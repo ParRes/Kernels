@@ -341,7 +341,7 @@ int main(int argc, char ** argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &my_ID);
   MPI_Comm_size(MPI_COMM_WORLD, &Num_procs);
 
-  /* if rank is recovered, set iter to a negative number, to be increased
+  /* if rank is recovered, set iter to a large number, to be reduced
      to the actual value corresponding to the current iter value among
      survivor ranks; handle number of Fenix_Init calls similarly               */
   switch (fenix_status){

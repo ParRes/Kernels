@@ -260,6 +260,10 @@ clean:
 	cd MPI1/PIC-static;         $(MAKE) clean
 	cd MPI1/AMR;                $(MAKE) clean
 	cd FENIX/Stencil;           $(MAKE) clean
+	cd FENIX/Transpose;         $(MAKE) clean
+	cd FENIX/Sparse;            $(MAKE) clean
+	cd FENIX/Synch_p2p;         $(MAKE) clean
+	cd FENIX/AMR;               $(MAKE) clean
 	cd FG_MPI/DGEMM;            $(MAKE) clean
 	cd FG_MPI/Nstream;          $(MAKE) clean
 	cd FG_MPI/Reduce;           $(MAKE) clean
@@ -342,6 +346,7 @@ veryclean: clean
 	cd MPI1/Stencil;            $(MAKE) veryclean
 	cd MPI1/AMR;                $(MAKE) veryclean
 	cd FENIX/Stencil;           $(MAKE) veryclean
+	cd FENIX/AMR;               $(MAKE) veryclean
 	cd OPENMP/Stencil;          $(MAKE) veryclean
 	cd SERIAL/Stencil;          $(MAKE) veryclean
 	cd SERIAL/AMR;              $(MAKE) veryclean

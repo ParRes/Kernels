@@ -54,7 +54,8 @@
 # *******************************************************************
 
 function do_dgemm!(C, A, B, order)
-    C += A * B # or even better: C .+= A * B
+    #C += A * B
+    C .+= A * B
 end
 
 function do_verify(C, order, iterations)

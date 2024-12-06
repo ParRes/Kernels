@@ -55,6 +55,9 @@ LEGIONTOP=
 
 #location where ULFM-enabled MPI is installed
 ULFMTOP=
+
+#flags to use when running applications with ULFM-enabled MPI
+ULFMRUNFLAG=
  
 #location where Fenix is installed
 FENIXTOP=
