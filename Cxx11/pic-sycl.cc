@@ -126,7 +126,7 @@ double * initializeGrid(uint64_t L)
 }
 
 /* Completes particle distribution */
-void finish_distribution(const uint64_t n, particle_t p[const n])
+void finish_distribution(const uint64_t n, particle_t p[])
 {
   for (uint64_t pi=0; pi<n; pi++) {
     double x_coord = p[pi].x;
@@ -523,14 +523,12 @@ int main(int argc, char ** argv) {
   std::string devname = (devchar==NULL ? "None" : devchar);
   sycl::device d;
   if (devname == "CPU") {
-      d = sycl::cpu_selector{}.select_device();
+      d = sycl::device{sycl::cpu_selector_v};
   } else if (devname == "GPU") {
-      d = sycl::gpu_selector{}.select_device();
-  } else if (devname == "HOST") {
-      d = sycl::host_selector{}.select_device();
+      d = sycl::device{sycl::gpu_selector_v};
   } else {
-      std::cout << "PRK_DEVICE should be CPU, GPU or HOST" << std::endl;
-      d = sycl::default_selector{}.select_device();
+      std::cout << "PRK_DEVICE should be CPU or GPU" << std::endl;
+      d = sycl::device{sycl::default_selector_v};
   }
   sycl::queue q(d);
   prk::SYCL::print_device_platform(q);
@@ -603,9 +601,8 @@ int main(int argc, char ** argv) {
 
           /* Calculate forces on particles and update positions */
           q.submit([&](sycl::handler& cgh) {
-
-              auto p = d_particles.get_access<sycl::access::mode::read_write>(cgh);
-              auto q = d_Qgrid.get_access<sycl::access::mode::read>(cgh);
+              sycl::accessor p(d_particles, cgh);
+              sycl::accessor q(d_Qgrid, cgh, sycl::read_only);
 
               cgh.parallel_for<class pic>(sycl::nd_range<1>(sycl::range<1>(global_work_size), sycl::range<1>(local_work_size)), [=] (sycl::nd_item<1> item) {
                   auto i = item.get_global_id(0);

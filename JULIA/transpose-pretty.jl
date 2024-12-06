@@ -47,21 +47,22 @@
 # HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 #          Converted to Python by Jeff Hammond, February 2016.
 #          Converted to Julia by Jeff Hammond, June 2016.
+#          Improved by Carsten Bauer, November 2024.
 # *******************************************************************
 
 # ********************************************************************
 # read and test input parameters
 # ********************************************************************
 
-function do_initialize(A, order)
-    for j in 1:order
-        for i in 1:order
+function do_initialize!(A, order)
+    for j in axes(A,2)
+        for i in axes(A,1)
             @inbounds A[i,j] = order * (j-1) + (i-1)
         end
     end
 end
 
-function do_transpose(A, B, order)
+function do_transpose!(A, B)
     B .+= A';
     A .+= 1.0;
 end
@@ -72,35 +73,35 @@ function do_verify(B, order, iterations)
     for j in 1:order
         for i in 1:order
             temp = (order * (i-1) + (j-1)) * (iterations+1)
-            @inbounds abserr = abserr + abs(B[i,j] - (temp+addit))
+            abserr = abserr + abs(B[i,j] - (temp+addit))
         end
     end
     return abserr
 end
 
-function main()
+function (@main)(args)
     println("Parallel Research Kernels version")
     println("Julia Matrix transpose: B = A^T")
 
-    if length(ARGS) != 2
-        println("argument count = ", length(ARGS))
-        println("Usage: ./transpose <# iterations> <matrix order>")
+    if length(args) != 2
+        println("argument count = ", length(args))
+        println("Usage: julia transpose.jl <# iterations> <matrix order>")
         exit(1)
     end
 
-    argv = map(x->parse(Int64,x),ARGS)
+    argv = map(x->tryparse(Int64,x),args)
 
     # iterations
     iterations = argv[1]
-    if iterations < 1
-        println("ERROR: iterations must be >= 1")
+    if isnothing(iterations) || iterations < 1
+        println("ERROR: iterations must be an integer >= 1")
         exit(2)
     end
 
     # matrix order
     order = argv[2]
-    if order < 1
-        println("ERROR: order must be >= 1")
+    if isnothing(order) || order < 1
+        println("ERROR: order must be an integer >= 1")
         exit(3)
     end
 
@@ -111,22 +112,16 @@ function main()
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    A = zeros(Float64,order,order)
-    B = zeros(Float64,order,order)
+    A = zeros(order,order)
+    B = zeros(order,order)
     # Fill the original matrix
-    precompile(do_initialize, (Array{Float64,2}, Int64))
-    do_initialize(A, order)
-
-    # precompile hot function to smooth performance measurement
-    precompile(do_transpose, (Array{Float64,2}, Array{Float64,2}, Int64))
+    do_initialize!(A, order)
 
     t0 = time_ns()
 
     for k in 0:iterations
-        if k==0
-            t0 = time_ns()
-        end
-        do_transpose(A, B, order)
+        k == 1 && (t0 = time_ns())
+        do_transpose!(A, B)
     end
 
     t1 = time_ns()
@@ -136,7 +131,6 @@ function main()
     # ** Analyze and output results.
     # ********************************************************************
 
-    precompile(do_verify, (Array{Float64,2}, Int64, Int64))
     abserr = do_verify(B, order, iterations)
 
     epsilon = 1.e-8
@@ -151,6 +145,3 @@ function main()
         exit(1)
     end
 end
-
-main()
-

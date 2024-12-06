@@ -252,7 +252,7 @@ int main(int argc, char * argv[])
   // Allocate space for matrices
   //////////////////////////////////////////////////////////////////////
 
-  double dgemm_time{0};
+  double gemm_time{0};
 
   const int matrices = (batches==0 ? 1 : abs(batches));
 
@@ -283,7 +283,7 @@ int main(int argc, char * argv[])
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) dgemm_time = prk::wtime();
+      if (iter==1) gemm_time = prk::wtime();
 
       if (batches == 0) {
           prk_dgemm(order, A[0], B[0], C[0]);
@@ -293,7 +293,7 @@ int main(int argc, char * argv[])
           prk_dgemm(order, matrices, pA, pB, pC);
       }
     }
-    dgemm_time = prk::wtime() - dgemm_time;
+    gemm_time = prk::wtime() - gemm_time;
   }
 
   //////////////////////////////////////////////////////////////////////
@@ -313,21 +313,20 @@ int main(int argc, char * argv[])
   if (residuum < epsilon) {
 #if VERBOSE
     std::cout << "Reference checksum = " << reference << "\n"
-              << "Actual checksum = " << checksum << std::endl;
+              << "Residuum           = " << residuum << std::endl;
 #endif
     std::cout << "Solution validates" << std::endl;
-    auto avgtime = dgemm_time/iterations/matrices;
+    auto avgtime = gemm_time/iterations/matrices;
     auto nflops = 2.0 * prk::pow(forder,3);
-    std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+    prk::print_flop_rate_time("FP64", nflops/avgtime, avgtime);
   } else {
     std::cout << "Reference checksum = " << reference << "\n"
               << "Residuum           = " << residuum << std::endl;
 #if VERBOSE
-    std::cout << "i, j, A, B, C, D" << std::endl;
+    std::cout << "i, j, A, B, C" << std::endl;
     for (int i=0; i<order; ++i)
       for (int j=0; j<order; ++j)
-        std::cout << i << "," << j << " = " << A[i*order+j] << ", " << B[i*order+j] << ", " << C[i*order+j] << ", " << D[i*order+j] << "\n";
+        std::cout << i << "," << j << " = " << A[0][i*order+j] << ", " << B[0][i*order+j] << ", " << C[0][i*order+j] << "\n";
     std::cout << std::endl;
 #endif
     return 1;

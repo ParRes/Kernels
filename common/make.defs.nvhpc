@@ -1,9 +1,9 @@
 #
 # This file shows the NVHPC toolchain options.
+NVHPC_PATH=/opt/nvidia/hpc_sdk/Linux_$$(uname -m)/22.2
 #NVHPC_PATH=/proj/nv/Linux_$$(uname -m)/21.11
 #NVHPC_PATH=${HOME}/NVIDIA/hpc_sdk/Linux_$$(uname -m)/2021
-NVHPC_PATH=/opt/nvidia/hpc_sdk/Linux_$$(uname -m)/21.11
-#NVHPC_CBIN=${NVHPC_PATH}/compilers/bin
+NVHPC_CBIN=${NVHPC_PATH}/compilers/bin/
 #
 # Base compilers and language options
 #
@@ -30,7 +30,7 @@ OFFLOADFLAG+=-DGPU_SCHEDULE="schedule(static,1)"
 OPENACCFLAG=-acc -target=gpu
 OPENACCFLAG+=-Mlarge_arrays
 OPENACCFLAG+=-Minfo=accel
-STDPARFLAG=-stdpar -gpu=managed
+STDPARFLAG=-stdpar=gpu -gpu=managed
 STDPARFLAG+=-Minfo=accel
 STDPARFLAG+=-cudalib=cublas,cutensor
 CUFORTFLAG=-cuda -gpu=managed -acc # ACC required for CUF+managed
@@ -38,10 +38,20 @@ CUFORTFLAG+=-Minfo=accel
 #
 # OpenCL flags
 #
-OPENCLDIR=/usr/local/cuda-11.4/targets/$$(uname -m)-linux
+OPENCLDIR=/usr/local/cuda/targets/$$(uname -m)-linux
 OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib -lOpenCL
 #OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
+#
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+SYCLDIR=${HOME}/DPCPP/build
+SYCLCXX=${SYCLDIR}/bin/clang++
+SYCLFLAG=-std=c++20 -O3
+SYCLFLAG+=-DDPCPP # important
+SYCLFLAG+=-fsycl #-fsycl-unnamed-lambda
+SYCLFLAG+=-fsycl-targets=nvptx64-nvidia-cuda
+SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
 #
 #
 # Parallel STL, Boost, etc.
@@ -74,12 +84,12 @@ CBLASFLAG=${BLASFLAG}
 NVCC=${NVHPC_CBIN}nvcc
 CUDAFLAGS=-g -O3 -std=c++17
 CUDAFLAGS+=--extended-lambda
-CUDAFLAGS+=--gpu-architecture=sm_75
+CUDAFLAGS+=--gpu-architecture=sm_89
 #CUDAFLAGS+=--compiler-bindir=/swtools/gcc/7.5.0/bin
 #CUDAFLAGS+=-forward-unknown-to-host-compiler -fopenmp
 CUDAFLAGS+=-rdc=true # FIXES ptxas fatal   : Unresolved extern function 'cudaCGGetIntrinsicHandle'
-CUDAFLAGS+=-I${NVHPC_PATH}/math_libs/11.4/targets/$$(uname -m)-linux/include
-CUDAFLAGS+=-L${NVHPC_PATH}/math_libs/11.4/targets/$$(uname -m)-linux/lib
+CUDAFLAGS+=-I${NVHPC_PATH}/math_libs/12.1/targets/$$(uname -m)-linux/include
+CUDAFLAGS+=-L${NVHPC_PATH}/math_libs/12.1/targets/$$(uname -m)-linux/lib
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 # heavy hammer:
 CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
@@ -106,8 +116,7 @@ CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
 # MPI-3
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPIDIR=${NVHPC_PATH}/comm_libs/openmpi/openmpi-3.1.5
-#MPIDIR=${NVHPC_PATH}/comm_libs/openmpi4/openmpi-4.0.5
+MPIDIR=${NVHPC_PATH}/comm_libs/hpcx/latest/ompi
 MPICC=${MPIDIR}/bin/mpicc
 MPICXX=${MPIDIR}/bin/mpicxx
 MPIFORT=${MPIDIR}/bin/mpifort

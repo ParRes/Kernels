@@ -10,7 +10,11 @@
 
 #include <hip/hip_runtime.h>
 #include <hip/hip_runtime_api.h>
-#include <hipblas.h>
+
+// half-precision for HIPBLAS
+#include <hip/hip_fp16.h>
+
+#include <hipblas/hipblas.h>
 
 #ifdef HIP_THRUST
 #include <thrust/device_vector.h>

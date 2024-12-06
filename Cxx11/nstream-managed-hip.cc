@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2017, Intel Corporation
+/// Copyright (c) 2024, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -104,10 +105,10 @@ int main(int argc, char * argv[])
 
   int iterations;
   int length;
-  bool system_memory;
+  bool system_memory,  grid_stride, ordered_fault, prefetch;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length> [<use_system_memory>]";
+        throw "Usage: <# iterations> <vector length> [<use_system_memory> <grid_stride> <ordered_fault> <prefetch>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -121,6 +122,9 @@ int main(int argc, char * argv[])
       }
 
       system_memory = (argc>3) ? prk::parse_boolean(std::string(argv[3])) : false;
+      grid_stride   = (argc>4) ? prk::parse_boolean(std::string(argv[4])) : false;
+      ordered_fault = (argc>5) ? prk::parse_boolean(std::string(argv[5])) : false;
+      prefetch      = (argc>6) ? prk::parse_boolean(std::string(argv[6])) : false;
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -130,6 +134,9 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Memory allocator     = " << (system_memory ? "system (malloc)" : "hipMallocManaged") << std::endl;
+  std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
+  std::cout << "Ordered fault        = " << (ordered_fault ? "yes" : "no") << std::endl;
+  std::cout << "Prefetch             = " << (prefetch ? "yes" : "no") << std::endl;
 
   const int blockSize = 256;
   dim3 dimBlock(blockSize, 1, 1);
@@ -147,20 +154,18 @@ int main(int argc, char * argv[])
   prk_float * B;
   prk_float * C;
 
-  const size_t bytes = length * sizeof(prk_float);
   if (system_memory) {
       A = new double[length];
       B = new double[length];
       C = new double[length];
   } else {
-
       int managed_memory = 0;
       prk::HIP::check( hipDeviceGetAttribute(&managed_memory, hipDeviceAttributeManagedMemory, 0) );
       std::cout << "hipDeviceGetAttribute(..hipDeviceAttributeManagedMemory..) => " << managed_memory << std::endl;
 
-      prk::HIP::check( hipMallocManaged((void**)&A, bytes) );
-      prk::HIP::check( hipMallocManaged((void**)&B, bytes) );
-      prk::HIP::check( hipMallocManaged((void**)&C, bytes) );
+      A = prk::HIP::malloc_managed<double>(length);
+      B = prk::HIP::malloc_managed<double>(length);
+      C = prk::HIP::malloc_managed<double>(length);
   }
 
   // initialize on CPU to ensure pages are faulted there
@@ -170,12 +175,31 @@ int main(int argc, char * argv[])
     C[i] = static_cast<prk_float>(2);
   }
 
+  if (ordered_fault) {
+      fault_pages<<<1,1>>>(static_cast<unsigned>(length), A, B, C);
+      prk::HIP::sync();
+  }
+
+  if (prefetch) {
+      prk::HIP::prefetch(A, length);
+      prk::HIP::prefetch(B, length);
+      prk::HIP::prefetch(C, length);
+  }
+
   prk_float scalar(3);
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) nstream_time = prk::wtime();
-      hipLaunchKernelGGL(nstream, dim3(dimGrid), dim3(dimBlock), 0, 0, static_cast<unsigned>(length), scalar, A, B, C);
+      if (iter==1) {
+          prk::HIP::sync();
+          nstream_time = prk::wtime();
+      }
+
+      if (grid_stride) {
+          hipLaunchKernelGGL(nstream2, dim3(dimGrid), dim3(dimBlock), 0, 0, static_cast<unsigned>(length), scalar, A, B, C);
+      } else {
+          hipLaunchKernelGGL(nstream, dim3(dimGrid), dim3(dimBlock), 0, 0, static_cast<unsigned>(length), scalar, A, B, C);
+      }
       prk::HIP::check( hipDeviceSynchronize() );
     }
     nstream_time = prk::wtime() - nstream_time;
@@ -203,9 +227,9 @@ int main(int argc, char * argv[])
       free(B);
       free(C);
   } else {
-      prk::HIP::check( hipFree(A) );
-      prk::HIP::check( hipFree(B) );
-      prk::HIP::check( hipFree(C) );
+      prk::HIP::free(A);
+      prk::HIP::free(B);
+      prk::HIP::free(C);
   }
 
   double epsilon=1.e-8;

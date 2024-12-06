@@ -1,5 +1,6 @@
 ///
 /// Copyright (c) 2020, Intel Corporation
+/// Copyright (c) 2023, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -63,6 +64,7 @@
 #include <mkl_blas_sycl.hpp>
 #else
 #include <oneapi/mkl/blas.hpp>
+#include <oneapi/mkl/bfloat16.hpp>
 #endif
 
 using namespace oneapi; // oneapi::mkl -> mkl
@@ -139,7 +141,7 @@ void run(sycl::queue & q, int iterations, int order)
   }
   const double residuum = std::abs(checksum - reference) / reference;
   const double epsilon{1.0e-8};
-  if (residuum < epsilon) {
+  if ((residuum < epsilon) || (sizeof(T) < 4)) {
 #if VERBOSE
     std::cout << "Reference checksum = " << reference << "\n"
               << "Actual checksum = " << checksum << std::endl;
@@ -147,8 +149,134 @@ void run(sycl::queue & q, int iterations, int order)
     std::cout << "Solution validates" << std::endl;
     auto avgtime = gemm_time/iterations;
     auto nflops = 2.0 * prk::pow(forder,3);
-    std::cout << "FP" << 8*sizeof(T)
-              << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
+    auto is_fp64 = (typeid(T) == typeid(double));
+    auto is_fp32 = (typeid(T) == typeid(float));
+    auto is_fp16 = (typeid(T) == typeid(sycl::half));
+    auto is_bf16 = (typeid(T) == typeid(oneapi::mkl::bfloat16));
+    auto pname = (is_fp64 ? "FP64" :
+                  (is_fp32 ? "FP32" :
+                   (is_fp16 ? "FP16" :
+                    (is_bf16 ? "BF16" : "Unknown FP type"))));
+    std::cout << pname
+              << " Rate (MF/s): " << 1.0e-6 * nflops/avgtime
+              << " Avg time (s): " << avgtime << std::endl;
+  } else {
+    std::cout << "Reference checksum = " << reference << "\n"
+              << "Residuum           = " << residuum << std::endl;
+  }
+
+  sycl::free(h_c, q);
+}
+
+template <typename TA, typename TB, typename TC>
+void run3(sycl::queue & q, int iterations, int order)
+{
+  double gemm_time{0};
+
+  const size_t nelems = (size_t)order * (size_t)order;
+  auto h_a = sycl::malloc_host<TA>( nelems, q);
+  auto h_b = sycl::malloc_host<TB>( nelems, q);
+  auto h_c = sycl::malloc_host<TC>( nelems, q);
+
+  for (int i=0; i<order; ++i) {
+    for (int j=0; j<order; ++j) {
+       h_a[i*order+j] = i;
+       h_b[i*order+j] = i;
+       h_c[i*order+j] = 0;
+    }
+  }
+
+  // copy input from host to device
+  auto  A = sycl::malloc_device<TA>( nelems, q);
+  auto  B = sycl::malloc_device<TB>( nelems, q);
+  auto  C = sycl::malloc_device<TC>( nelems, q);
+  q.wait();
+
+  q.memcpy(A, &(h_a[0]), nelems * sizeof(TA)).wait();
+  q.memcpy(B, &(h_b[0]), nelems * sizeof(TB)).wait();
+  q.memcpy(C, &(h_c[0]), nelems * sizeof(TC)).wait();
+  q.wait();
+
+  sycl::free(h_a, q);
+  sycl::free(h_b, q);
+
+  {
+    for (int iter = 0; iter<=iterations; iter++) {
+
+      if (iter==1) gemm_time = prk::wtime();
+
+      const TA alpha{1};
+      const TC beta{1};
+
+      mkl::blas::gemm(q, mkl::transpose::nontrans, // opA
+                         mkl::transpose::nontrans, // opB
+                         order, order, order,      // m, n, k
+                         alpha,                    // alpha
+                         A, order,                 // A, lda
+                         B, order,                 // B, ldb
+                         beta,                     // beta
+                         C, order);                // C, ldc
+      q.wait();
+    }
+    gemm_time = prk::wtime() - gemm_time;
+  }
+  // copy output back to host
+  q.memcpy(&(h_c[0]), C, nelems * sizeof(TC)).wait();
+
+  sycl::free(C, q);
+  sycl::free(B, q);
+  sycl::free(A, q);
+
+  //////////////////////////////////////////////////////////////////////
+  /// Analyze and output results
+  //////////////////////////////////////////////////////////////////////
+
+  const double forder = static_cast<double>(order);
+  const double reference = 0.25 * prk::pow(forder,3) * prk::pow(forder-1.0,2) * (iterations+1);
+  double checksum{0};
+  for (int i=0; i<nelems; ++i) {
+      checksum += h_c[i];
+  }
+  const double residuum = std::abs(checksum - reference) / reference;
+  const double epsilon{1.0e-8};
+  if ((residuum < epsilon) || (sizeof(TA) < 4)) {
+#if VERBOSE
+    std::cout << "Reference checksum = " << reference << "\n"
+              << "Actual checksum = " << checksum << std::endl;
+#endif
+    std::cout << "Solution validates" << std::endl;
+    auto avgtime = gemm_time/iterations;
+    auto nflops = 2.0 * prk::pow(forder,3);
+
+    auto isA_fp64 = (typeid(TA) == typeid(double));
+    auto isA_fp32 = (typeid(TA) == typeid(float));
+    auto isA_fp16 = (typeid(TA) == typeid(sycl::half));
+    auto isA_bf16 = (typeid(TA) == typeid(oneapi::mkl::bfloat16));
+    auto pnameA = (isA_fp64 ? "FP64" :
+                   (isA_fp32 ? "FP32" :
+                    (isA_fp16 ? "FP16" :
+                     (isA_bf16 ? "BF16" : "Unknown FP type"))));
+
+    auto isB_fp64 = (typeid(TB) == typeid(double));
+    auto isB_fp32 = (typeid(TB) == typeid(float));
+    auto isB_fp16 = (typeid(TB) == typeid(sycl::half));
+    auto isB_bf16 = (typeid(TB) == typeid(oneapi::mkl::bfloat16));
+    auto pnameB = (isB_fp64 ? "FP64" :
+                   (isB_fp32 ? "FP32" :
+                    (isB_fp16 ? "FP16" :
+                     (isB_bf16 ? "BF16" : "Unknown FP type"))));
+
+    auto isC_fp64 = (typeid(TC) == typeid(double));
+    auto isC_fp32 = (typeid(TC) == typeid(float));
+    auto isC_fp16 = (typeid(TC) == typeid(sycl::half));
+    auto isC_bf16 = (typeid(TC) == typeid(oneapi::mkl::bfloat16));
+    auto pnameC = (isC_fp64 ? "FP64" :
+                   (isC_fp32 ? "FP32" :
+                    (isC_fp16 ? "FP16" :
+                     (isC_bf16 ? "BF16" : "Unknown FP type"))));
+
+    std::cout << pnameA << "*" << pnameB << "=" << pnameC
+              << " Rate (MF/s): " << 1.0e-6 * nflops/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "Reference checksum = " << reference << "\n"
@@ -198,63 +326,33 @@ int main(int argc, char * argv[])
   /// Setup SYCL environment
   //////////////////////////////////////////////////////////////////////
 
-  try {
-    sycl::queue q{sycl::host_selector{}};
-    prk::SYCL::print_device_platform(q);
-    run<float>(q, iterations, order);
-    run<double>(q, iterations, order);
-  }
-  catch (sycl::exception & e) {
-    std::cout << e.what() << std::endl;
-    prk::SYCL::print_exception_details(e);
-  }
-  catch (std::exception & e) {
-    std::cout << e.what() << std::endl;
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-  }
-
-  try {
-    sycl::queue q{sycl::cpu_selector{}};
-    prk::SYCL::print_device_platform(q);
-    run<float>(q, iterations, order);
-    run<double>(q, iterations, order);
-  }
-  catch (sycl::exception & e) {
-    std::cout << e.what() << std::endl;
-    prk::SYCL::print_exception_details(e);
-  }
-  catch (std::exception & e) {
-    std::cout << e.what() << std::endl;
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
-  }
-
-  try {
-    sycl::queue q{sycl::gpu_selector{}};
-    prk::SYCL::print_device_platform(q);
-    bool has_fp64 = prk::SYCL::has_fp64(q);
-    if (has_fp64) {
-      if (prk::SYCL::print_gen12lp_helper(q)) return 1;
-    }
-    run<float>(q, iterations, order);
-    if (has_fp64) {
-      run<double>(q, iterations, order);
-    } else {
-      std::cout << "SYCL GPU device lacks FP64 support." << std::endl;
-    }
-  }
-  catch (sycl::exception & e) {
-    std::cout << e.what() << std::endl;
-    prk::SYCL::print_exception_details(e);
-  }
-  catch (std::exception & e) {
-    std::cout << e.what() << std::endl;
-  }
-  catch (const char * e) {
-    std::cout << e << std::endl;
+  sycl::queue qs[2] = { sycl::queue{sycl::cpu_selector_v},
+                        sycl::queue{sycl::gpu_selector_v} };
+  for (auto q : qs) {
+      try {
+        prk::SYCL::print_device_platform(q);
+        bool has_fp64 = prk::SYCL::has_fp64(q);
+        run<sycl::half>(q, iterations, order);
+        run<oneapi::mkl::bfloat16>(q, iterations, order);
+        run3<sycl::half,sycl::half,float>(q, iterations, order);
+        run3<oneapi::mkl::bfloat16,oneapi::mkl::bfloat16,float>(q, iterations, order);
+        run<float>(q, iterations, order);
+        if (has_fp64) {
+          run<double>(q, iterations, order);
+        } else {
+          std::cout << "SYCL device lacks FP64 support." << std::endl;
+        }
+      }
+      catch (sycl::exception & e) {
+        std::cout << e.what() << std::endl;
+        prk::SYCL::print_exception_details(e);
+      }
+      catch (std::exception & e) {
+        std::cout << e.what() << std::endl;
+      }
+      catch (const char * e) {
+        std::cout << e << std::endl;
+      }
   }
 
   return 0;

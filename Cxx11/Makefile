@@ -1,7 +1,7 @@
-include ../common/Cxx11.defs
+include ../common/make.defs
 include ../common/PRKVERSION
 
-CPPFLAGS  = -DPRKVERSION=$(PRKVERSION)
+CPPFLAGS = -DPRKVERSION=$(PRKVERSION)
 
 # debugging
 ifdef VERBOSE
@@ -31,9 +31,9 @@ endif
 #ASMFLAGS = -fsource-asm -fverbose-asm -fasm-blocks -fcode-asm
 ASMFLAGS = -fverbose-asm
 
-OMPFLAGS = $(OPENMPFLAG) -DUSE_OPENMP
+OMPFLAGS = $(OPENMPFLAG)
 TARGETFLAGS = $(OFFLOADFLAG)
-OPENCLFLAGS = $(OPENCLFLAG) -DCL_HPP_MINIMUM_OPENCL_VERSION=120 -DCL_HPP_TARGET_OPENCL_VERSION=120
+OPENCLFLAGS = $(OPENCLFLAG) -DCL_HPP_MINIMUM_OPENCL_VERSION=120 -DCL_HPP_TARGET_OPENCL_VERSION=120 -DCL_HPP_ENABLE_EXCEPTIONS
 # We do not yet handle all possible exceptions...
 #OPENCLFLAGS += -D__CL_ENABLE_EXCEPTIONS
 OPENACCFLAGS = $(OPENACCFLAG)
@@ -46,10 +46,13 @@ STLFLAGS = $(STLFLAG) $(RANGEFLAGS) $(BOOSTFLAGS)
 PSTLFLAGS = $(PSTLFLAG) $(RANGEFLAGS)
 EXECUTORSFLAGS = $(EXECUTORSFLAG) $(PSTLFLAGS) #$(RANGEFLAGS)
 RAJAFLAGS = $(RAJAFLAG)
+HPXFLAGS = -DUSE_HPX $(HPXFLAG) $(BOOSTFLAG) $(RANGEFLAGS)
+UPCXXFLAGS = $(CPPFLAGS) -DUSE_UPCXX $(UPCXXFLAG) $(BOOSTFLAG) $(RANGEFLAGS)
 THRUSTFLAGS = $(THRUSTFLAG) $(RANGEFLAGS)
 KOKKOSFLAGS = $(KOKKOSFLAG) $(KOKKOS_BACKEND_FLAG)
 SYCLFLAGS = $(SYCLFLAG)
 OPENACCFLAGS = $(OPENACCFLAG)
+HALIDEFLAGS = $(HALIDEFLAG)
 STDPARFLAGS = $(STDPARFLAG) $(RANGEFLAGS)
 
 ifdef OCCADIR
@@ -57,23 +60,22 @@ ifdef OCCADIR
 endif
 OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
-.PHONY: all clean vector valarray openmp target opencl taskloop tbb stl pstl \
-	ranges kokkos raja cuda cublas sycl dpcpp \
+.PHONY: all clean vector valarray openmp target opencl taskloop stl \
+	ranges kokkos raja cuda cudastf cublas sycl dpcpp \
 	boost-compute thrust executor oneapi onemkl
 
 EXTRA=
-ifeq ($(shell uname -s),Darwin)
-  ifneq ($(findstring icpc,$(CXX)),icpc)
-    EXTRA += target
-  endif
-else
-  EXTRA += target
+ifneq ($(findstring nvc++,$(CXX)),nvc++)
+  EXTRA += ranges stl #pstl tbb # TBB keeps breaking due to API changes
 endif
-ifneq ($(findstring pgc++,$(CXX)),pgc++)
-  EXTRA += pstl
+ifneq ($(OPENACCFLAG),)
+  EXTRA += openacc
+endif
+ifneq ($(SYCLCC),)
+  EXTRA += sycl
 endif
 
-all: sequential vector valarray openmp taskloop stl ranges opencl sycl $(EXTRA)
+all: sequential vector valarray openmp taskloop opencl $(EXTRA)
 
 sequential: p2p stencil transpose nstream dgemm sparse
 
@@ -111,25 +113,34 @@ executors: nstream-executors transpose-executors
 
 kokkos: stencil-kokkos transpose-kokkos nstream-kokkos
 
-raja: p2p-raja stencil-raja nstream-raja \
-      p2p-raja transpose-raja nstream-raja stencil-raja # transpose-raja
+hpx: nstream-hpx
+
+upcxx: nstream-upcxx
+
+raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
+      p2p-raja transpose-raja nstream-raja stencil-raja # transpose-vector-raja
 
 cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
+
+stf: cudastf
+cudastf: dgemm-cudastf dgemm-cublas-cudastf stencil-cudastf p2p-cudastf transpose-cudastf
 
 hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 
 hipstl: nstream-hipstl
 
-hipblas: nstream-hipblas sgemm-hipblas dgemm-hipblas transpose-hipblas
+hipblas: nstream-hipblas sgemm-hipblas dgemm-hipblas xgemm-hipblas transpose-hipblas
 
 thrust: nstream-host-thrust nstream-device-thrust \
         transpose-host-thrust transpose-device-thrust
 
-cublas: transpose-cublas nstream-cublas dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas sgemm-cublas
+cublas: transpose-cublas nstream-cublas \
+	dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas \
+	sgemm-cublas xgemm-cublas dgemm-managed-cublas
 
-cblas: transpose-cblas dgemm-cblas
+cblas: transpose-cblas dgemm-cblas sgemm-cblas xgemm-cblas
 
-onemkl: nstream-onemkl dgemm-onemkl dgemm-multigpu-onemkl
+onemkl: nstream-onemkl dgemm-onemkl dgemm-multigpu-onemkl xgemm-onemkl
 
 onedpl: nstream-onedpl
 
@@ -137,9 +148,11 @@ oneapi: onemkl dpcpp sycl onedpl
 
 occa: transpose-occa nstream-occa
 
-openacc: p2p-hyperplane-openacc
+openacc: nstream-openacc stencil-openacc transpose-openacc p2p-hyperplane-openacc
 
 stdpar: nstream-stdpar transpose-stdpar #stencil-stdpar p2p-stdpar
+
+halide: nstream-halide stencil-halide
 
 boost-compute: nstream-boost-compute
 # busted
@@ -230,6 +243,12 @@ pic-sycl: pic-sycl.cc prk_util.h prk_sycl.h random_draw.c
 %-raja: %-raja.cc prk_util.h prk_raja.h
 	$(CXX) $(CXXFLAGS) $< $(RAJAFLAGS) -o $@
 
+%-upcxx: %-upcxx.cc prk_util.h prk_upcxx.h
+	$(UPCXX) $(UPCXXFLAGS) $< -o $@
+
+%-hpx: %-hpx.cc prk_util.h prk_hpx.h
+	$(HPXCXX) --exe=$@ $(CXXFLAGS) $(HPXFLAGS) $<
+
 ifeq ($(PRK_KOKKOS_BACKEND),Cuda)
 %-kokkos: %-kokkos.cc prk_util.h prk_kokkos.h
 	$(NVCC) -x cu $(CPPFLAGS) $(CUDAFLAGS) $< $(KOKKOSFLAG) -DPRK_KOKKOS_BACKEND=Cuda -o $@
@@ -272,6 +291,9 @@ endif
 	$(info PRK help: Set OCCA_CXX=$(firstword $(CXX)) to use that compiler for OKL files.)
 	$(CXX) $(CXXFLAGS) $< $(OCCAFLAGS) -o $@
 
+%-halide: %-halide.cc prk_util.h
+	$(HALIDECXX) $(CXXFLAGS) $< $(HALIDEFLAGS) -o $@
+
 %-openacc: %-openacc.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $< $(OPENACCFLAGS) -o $@
 
@@ -286,6 +308,14 @@ endif
 
 %.s: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(ASMFLAGS) -S $< -o $@
+
+%-cudastf: %-cudastf.cu
+	$(NVCC) $(CPPFLAGS) $(CUDAFLAGS) $(CUDASTF_CFLAGS) $(CUDASTF_LDFLAGS) $< -o $@
+
+%-cublas-cudastf: %-cublas-cudastf.cu prk_util.h prk_cuda.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(CUDASTF_CFLAGS) $(CUDASTF_LDFLAGS) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt -o $@
+
+
 
 clean:
 	-rm -f *.o
@@ -317,6 +347,7 @@ clean:
 	-rm -f *-stdpar
 	-rm -f *-raja
 	-rm -f *-kokkos
+	-rm -f *-hpx
 	-rm -f *-thrust
 	-rm -f *-cuda
 	-rm -f *-cublas
@@ -325,8 +356,10 @@ clean:
 	-rm -f *-cblas
 	-rm -f *-onemkl
 	-rm -f *-occa
+	-rm -f *-halide
 	-rm -f *-boost-compute
 	-rm -f *-openacc
+	-rm -f *-cudastf
 	-rm -f transpose-async transpose-thread
 
 cleancl:

@@ -67,47 +67,43 @@
 # read and test input parameters
 # ********************************************************************
 
-function do_initialize(A, B, C, N)
+function do_initialize!(A, B, C, N)
     A .= 0.0
     B .= 2.0
     C .= 2.0
 end
 
-function do_nstream(A, B, C, s, N)
+function do_nstream!(A, B, C, s, N)
     A .+= B .+ s .* C
 end
 
 function do_norm(A, N)
-    asum = 0.0
-    for i in 1:N
-        @inbounds asum += abs(A[i])
-    end
-    return asum
+    sum(abs, A)
 end
 
-function main()
+function (@main)(args)
     println("Parallel Research Kernels version")
     println("Julia STREAM triad: A = B + scalar * C")
 
-    if length(ARGS) != 2
-        println("argument count = ", length(ARGS))
-        println("Usage: ./nstream <# iterations> <vector length>")
+    if length(args) != 2
+        println("argument count = ", length(args))
+        println("Usage: julia nstream.jl <# iterations> <vector length>")
         exit(1)
     end
 
-    argv = map(x->parse(Int64,x),ARGS)
+    argv = map(x->tryparse(Int64,x),args)
 
     # iterations
     iterations = argv[1]
-    if iterations < 1
-        println("ERROR: iterations must be >= 1")
+    if isnothing(iterations) || iterations < 1
+        println("ERROR: iterations must be an integer >= 1")
         exit(2)
     end
 
     # vector length
     vlength = argv[2]
-    if vlength < 1
-        println("ERROR: length must be >= 1")
+    if isnothing(vlength) || vlength < 1
+        println("ERROR: length must be an integer >= 1")
         exit(3)
     end
 
@@ -118,24 +114,18 @@ function main()
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    A = zeros(Float64,vlength)
-    B = zeros(Float64,vlength)
-    C = zeros(Float64,vlength)
-    precompile(do_initialize, (Array{Float64,1}, Int64))
-    do_initialize(A, B, C, vlength)
-
-    # precompile hot functions to smooth performance measurement
-    precompile(do_nstream, (Array{Float64,1}, Array{Float64,1}, Array{Float64,1}, Float64, Int64))
+    A = zeros(vlength)
+    B = zeros(vlength)
+    C = zeros(vlength)
+    do_initialize!(A, B, C, vlength)
 
     scalar = 3.0
 
     t0 = time_ns()
 
     for k in 0:iterations
-        if k==0
-            t0 = time_ns()
-        end
-        do_nstream(A, B, C, scalar, vlength)
+        k == 1 && (t0 = time_ns())
+        do_nstream!(A, B, C, scalar, vlength)
     end
 
     t1 = time_ns()
@@ -148,13 +138,12 @@ function main()
     ar = 0.0
     br = 2.0
     cr = 2.0
-    for k in 0:iterations
+    for _ in 0:iterations
         ar += br + scalar * cr
     end
 
     ar *= vlength
 
-    precompile(do_norm, (Array{Float64,1}, Int64))
     asum = do_norm(A, vlength)
 
     epsilon = 1.e-8
@@ -171,6 +160,3 @@ function main()
         exit(1)
     end
 end
-
-main()
-

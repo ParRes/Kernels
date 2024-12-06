@@ -65,7 +65,7 @@ def factor(r):
     for fac1 in range(fac1, 0, -1):
         if r%fac1 == 0:
             fac2 = r/fac1
-            break;
+            break
     return fac1, fac2
 
 def main():
@@ -99,9 +99,9 @@ def main():
         sys.exit("ERROR: iterations must be >= 1")
 
     n = int(sys.argv[2])
-    nsquare = n * n;
+    nsquare = n * n
     if nsquare < np:
-        sys.exit("ERROR: grid size ", nsquare, " must be at least # ranks: ", Num_procs);
+        sys.exit(f"ERROR: grid size {nsquare} must be at least # ranks: {np}")
 
 
     if len(sys.argv) > 3:
@@ -177,7 +177,7 @@ def main():
 
     width = iend - istart + 1
     if width == 0 :
-        sys.exit("ERROR: rank", me,"has no work to do")
+        sys.exit(f"ERROR: rank {me} has no work to do")
 
     height = n//y
     leftover = n%y
@@ -191,16 +191,16 @@ def main():
 
     height = jend - jstart + 1
     if height == 0:
-        sys.exit("ERROR: rank", me,"has no work to do")
+        sys.exit(f"ERROR: rank {me} has no work to do")
 
     if width < r or height < r:
-        sys.exit("ERROR: rank", me,"has work tile smaller then stencil radius")
+        sys.exit(f"ERROR: rank {me} has work tile smaller then stencil radius")
 
     A = numpy.zeros((height+2*r,width+2*r))
-    a = numpy.fromfunction(lambda i,j: i+istart+j+jstart,(height,width),dtype=float)
+    a = numpy.fromfunction(lambda i,j: i+istart+j+jstart,(height,width),dtype='d')
     A[r:-r,r:-r] = a
     B = numpy.zeros((height,width))
-    typ = MPI.FLOAT
+    typ = MPI.DOUBLE_PRECISION
 
     if Y < y-1:
         top_nbr   = comm.Get_cart_rank([X,Y+1])
@@ -234,7 +234,7 @@ def main():
             kk=0
             for a in range(jend-r+1, jend+1):
                 a = a - jstart
-                for b in range(istart, iend+1) :
+                for b in range(istart, iend+1):
                     b = b-istart
                     top_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
@@ -245,7 +245,7 @@ def main():
             kk=0
             for a in range(jstart, jstart+r):
                 a = a - jstart
-                for b in range(istart, iend+1) :
+                for b in range(istart, iend+1):
                     b = b-istart
                     bot_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
@@ -256,7 +256,7 @@ def main():
             kk=0
             for a in range(jstart, jend+1):
                 a = a - jstart
-                for b in range(iend-r+1, iend+1) :
+                for b in range(iend-r+1, iend+1):
                     b = b-istart
                     right_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
@@ -267,7 +267,7 @@ def main():
             kk=0
             for a in range(jstart, jend+1):
                 a = a - jstart
-                for b in range(istart, istart+r) :
+                for b in range(istart, istart+r):
                     b = b-istart
                     left_buf_out[kk] = A[a+r][b+r]
                     kk = kk+1
@@ -326,25 +326,26 @@ def main():
                 B[a][b] = B[a][b] + numpy.dot(W[r],A[a:a+2*r+1,b+r])
                 B[a][b] = B[a][b] + numpy.dot(W[:,r],A[a+r,b:b+2*r+1])
 
-        numpy.add(A[0:jend-r+1,0:iend-r+1],1)
+        A[r:jend-jstart+r+1,r:iend-istart+r+1] += 1.0
+        # numpy.add(A[r:jend-jstart+r+1,r:iend-istart+r+1],1.0,A[r:jend-jstart+r+1,r:iend-istart+r+1]]
 
-    local_time = numpy.array(MPI.Wtime() - t0 , dtype ='f')
-    total_time = numpy.array(0 , dtype ='f')
+    local_time = numpy.array(MPI.Wtime() - t0 , dtype ='d')
+    total_time = numpy.array(0 , dtype ='d')
 
-    comm.Reduce([local_time , 1 , typ],[total_time , 1 , typ], op=MPI.SUM , root =0)
+    comm.Reduce([local_time , 1 , typ],[total_time , 1 , typ], op=MPI.MAX , root =0)
 
     # ********************************************************************
     # ** Analyze and output results.
     # ********************************************************************
 
     # compute L1 norm in parallel
-    local_norm = 0.0;
+    local_norm = 0.0
     for a in range(max(jstart,r), min(n-r-1,jend)+1):
         for b in range(max(istart,r), min(n-r-1,iend)+1):
             local_norm = local_norm + abs(B[a-jstart][b-istart])
 
-    local_norm = numpy.array(local_norm, dtype ='f')
-    norm = numpy.array(0 , dtype ='f')
+    local_norm = numpy.array(local_norm, dtype ='d')
+    norm = numpy.array(0 , dtype ='d')
     comm.Reduce([local_norm, 1 , typ], [norm, 1, typ], op=MPI.SUM , root =0)
 
     if me == 0:

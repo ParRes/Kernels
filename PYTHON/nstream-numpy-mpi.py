@@ -69,6 +69,9 @@ import numpy
 
 def main():
 
+    # MPI4PY_RC_INITIALIZE=0 is required for this
+    #MPI.Init_thread(required=MPI.THREAD_SINGLE)
+
     comm = MPI.COMM_WORLD
     me = comm.Get_rank()
     np = comm.Get_size()
@@ -82,8 +85,10 @@ def main():
         print('Python MPI/Numpy STREAM triad: A = B + scalar * C')
 
     if len(sys.argv) != 3:
-        print('argument count = ', len(sys.argv))
-        sys.exit("Usage: python nstream.py <# iterations> <vector length>")
+        if (me==0):
+            print('argument count = ', len(sys.argv))
+            print("Usage: python nstream.py <# iterations> <vector length>")
+        sys.exit()
 
     iterations = int(sys.argv[1])
     if iterations < 1:
@@ -161,6 +166,8 @@ def main():
             nbytes = 4.0 * total_length * 8 # 8 is not sizeof(double) in bytes, but allows for comparison to C etc.
             print('Rate (MB/s): ',1.e-6*nbytes/avgtime, ' Avg time (s): ', avgtime)
 
+    # MPI4PY_RC_INITIALIZE=0 is required for this
+    #MPI.Finalize()
 
 if __name__ == '__main__':
     main()

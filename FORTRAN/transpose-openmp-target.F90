@@ -50,16 +50,15 @@
 !
 ! HISTORY: Written by  Rob Van der Wijngaart, February 2009.
 !          Converted to Fortran by Jeff Hammond, January 2015
+!
 ! *******************************************************************
 
 program main
   use, intrinsic :: iso_fortran_env
   use omp_lib
+  use prk
   implicit none
-  ! for argument parsing
   integer :: err
-  integer :: arglen
-  character(len=32) :: argtmp
   ! problem definition
   integer(kind=INT32) ::  iterations                ! number of times to do the transpose
   integer(kind=INT32) ::  order                     ! order of a the matrix
@@ -81,66 +80,23 @@ program main
   write(*,'(a25)') 'Parallel Research Kernels'
   write(*,'(a47)') 'Fortran OpenMP TARGET Matrix transpose: B = A^T'
 
-  if (command_argument_count().lt.2) then
-    write(*,'(a17,i1)') 'argument count = ', command_argument_count()
-    write(*,'(a62)')    'Usage: ./transpose <# iterations> <matrix order> [<tile_size>]'
-    stop 1
-  endif
+  call prk_get_arguments('transpose',iterations=iterations,order=order,tile_size=tile_size)
 
-  iterations = 1
-  call get_command_argument(1,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') iterations
-  if (iterations .lt. 1) then
-    write(*,'(a33,i5)') 'ERROR: iterations must be >= 1 : ', iterations
-    stop 1
+  write(*,'(a22,i8)') 'Number of iterations = ', iterations
+  write(*,'(a22,i8)') 'Matrix order         = ', order
+  if (tile_size.ne.order) then
+    write(*,'(a22,i8)') 'Tile size            = ', tile_size
+  else
+    write(*,'(a10)') 'Tiling off'
   endif
-
-  order = 1
-  call get_command_argument(2,argtmp,arglen,err)
-  if (err.eq.0) read(argtmp,'(i32)') order
-  if (order .lt. 1) then
-    write(*,'(a28,i5)') 'ERROR: order must be >= 1 : ', order
-    stop 1
-  endif
-
-  ! same default as the C implementation
-  tile_size = 32
-  if (command_argument_count().gt.2) then
-      call get_command_argument(3,argtmp,arglen,err)
-      if (err.eq.0) read(argtmp,'(i32)') tile_size
-  endif
-  if ((tile_size.gt.order).or.(tile_size.lt.1)) then
-    tile_size = order
-  endif
-
-  if (tile_size.lt.order) then
-    if (mod(order,tile_size).ne.0) then
-      write(*,'(a50)') 'ERROR: order must be evenly divisible by tile_size'
-      stop 1
-    endif
-    if (tile_size.gt.32) then
-      write(*,'(a50)') 'ERROR: tile_size must be less than 32 to use temp space'
-      stop 1
-    endif
-  endif
-
-  write(*,'(a,i8)') 'Number of iterations = ', iterations
-  write(*,'(a,i8)') 'Matrix order         = ', order
-  write(*,'(a,i8)') 'Tile size            = ', tile_size
 
   ! ********************************************************************
   ! ** Allocate space for the input and transpose matrix
   ! ********************************************************************
 
-  allocate( A(order,order), stat=err)
+  allocate( A(order,order), B(order,order), stat=err)
   if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of A returned ',err
-    stop 1
-  endif
-
-  allocate( B(order,order), stat=err )
-  if (err .ne. 0) then
-    write(*,'(a,i3)') 'allocation of B returned ',err
+    write(*,'(a,i3)') 'allocation  returned ',err
     stop 1
   endif
 
@@ -162,10 +118,10 @@ program main
     if (k.eq.1) t0 = omp_get_wtime()
 
     if (tile_size.lt.order) then
-      !$omp target teams distribute collapse(2) private(T)
+      !$omp target teams distribute collapse(2) private(T,it,jt,i,j)
       do jt=1,order,tile_size
         do it=1,order,tile_size
-          !$omp parallel do simd collapse(2) schedule(static,4)
+          !$omp parallel do simd collapse(2) schedule(static)
           do j=0,tile_size-1
             do i=0,tile_size-1
               T(i,j) = A(it+i,jt+j)
@@ -173,7 +129,7 @@ program main
             enddo
           enddo
           !$omp end parallel do simd
-          !$omp parallel do simd collapse(2) schedule(static,4)
+          !$omp parallel do simd collapse(2) schedule(static)
           do i=0,tile_size-1
             do j=0,tile_size-1
               B(jt+j,it+i) = B(jt+j,it+i) + T(i,j)
@@ -184,7 +140,7 @@ program main
       enddo
       !$omp end target teams distribute
     else
-      !$omp target teams distribute parallel do simd collapse(2) GPU_SCHEDULE
+      !$omp target teams distribute parallel do simd collapse(2) private(it,jt,i,j) GPU_SCHEDULE
       do j=1,order
         do i=1,order
           B(j,i) = B(j,i) + A(i,j)
@@ -208,7 +164,7 @@ program main
   abserr = 0.0
   ! this will overflow if iterations>>1000
   addit = (0.5*iterations) * (iterations+1)
-  !$omp parallel do collapse(2)                                       &
+  !$omp parallel do collapse(2)                                      &
   !$omp& default(none)                                               &
   !$omp& shared(B)                                                   &
   !$omp& firstprivate(order,iterations,addit)                        &
@@ -223,8 +179,7 @@ program main
   enddo
   !$omp end parallel do
 
-  deallocate( B )
-  deallocate( A )
+  deallocate( A,B )
 
   if (abserr .lt. epsilon) then
     write(*,'(a)') 'Solution validates'

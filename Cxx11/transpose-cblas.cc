@@ -118,21 +118,33 @@ int main(int argc, char * argv[])
 
       if (iter==1) trans_time = prk::wtime();
 
-      // T = transpose(A)
-#if defined(MKL)
-      mkl_domatcopy('R','T', order, order, 1.0, &(A[0]), order, &(T[0]), order);
-#elif defined(ACCELERATE)
-      vDSP_mtransD(&(A[0]), 1, &(T[0]), 1, order, order);
+#if defined(ACCELERATE) && defined(ACCELERATE_NEW_LAPACK)
+      // B += transpose(A)
+      appleblas_dgeadd(CblasRowMajor,
+                       CblasTrans, CblasNoTrans,   // opA, opB
+                       order, order,               // m, n
+                       1.0, &(A[0]), order,        // alpha, A, lda
+                       1.0, &(B[0]), order,        // beta, B, ldb
+                       &(B[0]), order);            // C, ldc (in-place for B)
 #else
-#warning No CBLAS transpose extension available!
+      // T = transpose(A)
+   #if defined(MKL)
+      mkl_domatcopy('R','T', order, order, 1.0, &(A[0]), order, &(T[0]), order);
+   #elif defined(OPENBLAS_VERSION)
+      cblas_domatcopy(CblasRowMajor,CblasTrans, order, order, 1.0, &(A[0]), order, &(T[0]), order);
+   #elif defined(ACCELERATE)
+      vDSP_mtransD(&(A[0]), 1, &(T[0]), 1, order, order);
+   #else
+      #warning No CBLAS transpose extension available!
       for (int i=0;i<order; i++) {
         for (int j=0;j<order;j++) {
           T[i*order+j] = A[j*order+i];
         }
       }
-#endif
+   #endif
       // B += T
       cblas_daxpy(order*order, 1.0, &(T[0]), 1, &(B[0]), 1);
+#endif
       // A += 1
       cblas_daxpy(order*order, 1.0, one, 0, &(A[0]), 1);
     }

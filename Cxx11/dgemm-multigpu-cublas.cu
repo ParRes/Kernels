@@ -153,7 +153,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11/CUBLAS Dense matrix-matrix multiplication: C += A x B" << std::endl;
 
   prk::CUDA::info info;
-  info.print();
+  //info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
@@ -306,23 +306,22 @@ int main(int argc, char * argv[])
   double residuum(0);
   for (int i=0; i<ngpus; ++i) {
       for (int b=0; b<matrices; ++b) {
-          const auto checksum = prk::reduce( &(h_c[i][b*order*order+0]), &(h_c[i][b*order*order+nelems]), 0.0);
+          const double checksum = prk::reduce( &(h_c[i][b*order*order+0]), &(h_c[i][b*order*order+nelems]), 0.0);
           residuum += std::abs(checksum-reference)/reference;
+#if VERBOSE
+    std::cout << "Reference checksum = " << reference << "\n"
+              << "Actual checksum = " << checksum << std::endl;
+#endif
       }
   }
   residuum/=matrices;
   residuum/=ngpus;
 
   if (residuum < epsilon) {
-#if VERBOSE
-    std::cout << "Reference checksum = " << reference << "\n"
-              << "Actual checksum = " << checksum << std::endl;
-#endif
     std::cout << "Solution validates" << std::endl;
     auto avgtime = dgemm_time/iterations/matrices;
     auto nflops = 2.0 * prk::pow(forder,3) * ngpus;
-    std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
-              << " Avg time (s): " << avgtime << std::endl;
+    prk::print_flop_rate_time("FP64", nflops/avgtime, avgtime);
   } else {
     std::cout << "Reference checksum = " << reference << "\n"
               << "Residuum           = " << residuum << std::endl;

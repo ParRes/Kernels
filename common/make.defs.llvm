@@ -203,15 +203,16 @@ UPCXXFLAG+=-mtune=native -ffast-math
 #
 BLASFLAG=-DACCELERATE -framework Accelerate
 CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+CBLASFLAG+= -DACCELERATE_NEW_LAPACK
 #BLASFLAG=-lblas
 #CBLASFLAG=-lcblas
 #
 # CUDA flags
 #
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
-NVCC=/opt/llvm/cocl/bin/cocl
+#NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-#NVCC=nvcc -arch=sm_50
+NVCC=nvcc -arch=sm_50
 CUDAFLAGS=-g -O3 -std=c++11
 CUDAFLAGS+=-arch=sm_50
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
@@ -220,12 +221,12 @@ CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 # Halide
 #
 HALIDECXX=c++
-HALIDEDIR=/opt/halide
+HALIDEDIR=/opt/halide/Halide-10.0.0-x86-64-linux
 HALIDEFLAG=-I${HALIDEDIR}/include
-HALIDEFLAG+=-L${HALIDEDIR}/lib -lhalide
+HALIDEFLAG+=-Wl,-rpath=${HALIDEDIR}/lib -L${HALIDEDIR}/lib -lHalide
 #HALIDEFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
 HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
-HALIDEFLAG+=-std=c++17 -g3
+HALIDEFLAG+=-std=c++17
 #
 # ISPC
 #

@@ -106,7 +106,7 @@ int main(int argc, char * argv[])
   std::cout << "Vector length        = " << length << std::endl;
   std::cout << "Block size           = " << block_size << std::endl;
 
-  sycl::queue q(sycl::default_selector{});
+  sycl::queue q(sycl::default_selector_v);
   prk::SYCL::print_device_platform(q);
 
   size_t padded_length = block_size * prk::divceil(length,block_size);

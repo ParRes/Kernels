@@ -38,7 +38,7 @@ ifeq ($(findstring ifx,$(FC)),ifx)
 endif
 # GCC (also matches pgfortran so PGI must come after)
 ifeq ($(findstring gfortran,$(FC)),gfortran)
-  EXTRA = target coarray taskloop openacc
+  EXTRA = target coarray taskloop openacc blas
 endif
 # PGI and LLVM Flang
 ifeq ($(findstring flang,$(FC)),flang)
@@ -50,7 +50,7 @@ ifeq ($(findstring pgf,$(FC)),pgf)
   FCFLAGS += -DPGI
 endif
 ifeq ($(findstring nvf,$(FC)),nvf)
-  EXTRA = target openacc cufortran
+  EXTRA = target openacc cufortran stdpar blas
   FCFLAGS += -DNVHPC
 endif
 ifeq ($(findstring xlf,$(FC)),xlf)
@@ -78,13 +78,15 @@ mpi-openmp: nstream-mpi-openmp
 
 ga: nstream-ga transpose-ga dgemm-ga
 
-target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target
+target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target \
+	transpose-openmp-target-loop
 
 openacc: p2p-openacc p2p-innerloop-openacc stencil-openacc transpose-openacc nstream-openacc
 
 
 stdpar: nstream-stdpar stencil-stdpar transpose-stdpar dgemm-stdpar
 
+cuda: cufortran
 cuf: cufortran
 cufortran: nstream-cufortran transpose-cufortran
 
@@ -95,6 +97,9 @@ blas: dgemm-blas
 
 prk.mod prk_mod.o: prk_mod.F90
 	$(FC) $(FCFLAGS) -c $< -o prk_mod.o
+
+prk_mpi.mod prk_mpi_mod.o: prk_mpi.F90
+	$(MPIFORT) $(FCFLAGS) -c $< -o prk_mpi_mod.o
 
 stencil: stencil.F90 prk.mod
 	$(FC) $(FCFLAGS) -c stencil_serial.F90
@@ -119,10 +124,10 @@ dgemm-blas: dgemm-blas.F90 prk.mod
 	$(MPIFORT) $(FCFLAGS) $< prk_mod.o $(GAFLAG) -o $@
 
 %-mpi-openmp: %-mpi.F90 prk.mod
-	$(MPIFORT) $(FCFLAGS) $(OPENMPFLAG) $< prk_mod.o -o $@
+	$(MPIFORT) $(FCFLAGS) $(OPENMPFLAG) $< prk_mod.o prk_mpi_mod.o -o $@
 
-%-mpi: %-mpi.F90 prk.mod
-	$(MPIFORT) $(FCFLAGS) $< prk_mod.o -o $@
+%-mpi: %-mpi.F90 prk.mod prk_mpi.mod
+	$(MPIFORT) $(FCFLAGS) $< prk_mod.o prk_mpi_mod.o -o $@
 
 %-coarray: %-coarray.F90 prk.mod
 	$(CAFC) $(FCFLAGS) $< prk_mod.o $(COARRAYFLAG) -o $@
@@ -130,10 +135,13 @@ dgemm-blas: dgemm-blas.F90 prk.mod
 %-target: %-target.F90 prk.mod
 	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< prk_mod.o -o $@
 
+%-target-loop: %-target-loop.F90 prk.mod
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< prk_mod.o -o $@
+
 %-openacc: %-openacc.F90 prk.mod
 	$(FC) $(FCFLAGS) $(OPENACCFLAG) $< prk_mod.o -o $@
 
-%-cufortran: %-cufortran.cuf prk.mod
+%-cufortran: %-cufortran.F90 prk.mod
 	$(FC) $(FCFLAGS) $(CUFORTFLAG) $< prk_mod.o -o $@
 
 %-stdpar: %-stdpar.F90 prk.mod
@@ -142,6 +150,8 @@ dgemm-blas: dgemm-blas.F90 prk.mod
 clean:
 	-rm -f prk.mod
 	-rm -f prk.f18.mod
+	-rm -f prk_mpi.mod
+	-rm -f prk_mpi.f18.mod
 	-rm -f *.o
 	-rm -f *.i90
 	-rm -f *.dbg
@@ -161,6 +171,7 @@ clean:
 	-rm -f *-ga
 	-rm -f *-openmp
 	-rm -f *-target
+	-rm -f *-target-loop
 	-rm -f *-openacc
 	-rm -f *-stdpar
 	-rm -f *-cufortran

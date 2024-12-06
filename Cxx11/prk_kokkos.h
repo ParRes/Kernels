@@ -33,8 +33,5 @@
 #define PRK_KOKKOS_H
 
 #include <Kokkos_Core.hpp>
-#include <Kokkos_Concepts.hpp>
-#include <Kokkos_MemoryTraits.hpp>
-#include <Kokkos_MathematicalFunctions.hpp>
 
 #endif /* PRK_KOKKOS_H */

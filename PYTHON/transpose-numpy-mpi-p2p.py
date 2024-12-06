@@ -127,7 +127,7 @@ def main():
         sys.exit("ERROR: order must be >= 1")
 
     if order % np != 0:
-        sys.exit("ERROR: matrix order ", order," should be divisible by # procs", np)
+        sys.exit(f"ERROR: matrix order {order} should be divisible by # procs {np}")
 
     block_order = int(order / np)
 
@@ -140,7 +140,7 @@ def main():
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    A = numpy.fromfunction(lambda i,j:  me * block_order + i*order + j, (order,block_order), dtype=float)
+    A = numpy.fromfunction(lambda i,j:  me * block_order + i*order + j, (order,block_order), dtype='d')
     B = numpy.zeros((order,block_order))
     T = numpy.zeros((block_order,block_order))
 
@@ -159,7 +159,7 @@ def main():
             lo = block_order * send_to
             hi = block_order * (send_to+1)
             comm.Sendrecv(sendbuf=A[lo:hi,:],dest=send_to,sendtag=phase,recvbuf=T,source=recv_from,recvtag=phase)
-            lo = block_order * recv_from 
+            lo = block_order * recv_from
             hi = block_order * (recv_from+1)
             B[lo:hi,:] += T.T
 
@@ -178,7 +178,7 @@ def main():
     G = numpy.concatenate(F,axis=1)
     #if (me==0):
     #    print(G)
-    H = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype=float)
+    H = numpy.fromfunction(lambda i,j: ((iterations/2.0)+(order*j+i))*(iterations+1.0), (order,order), dtype='d')
     abserr = numpy.linalg.norm(numpy.reshape(G-H,order*order),ord=1)
 
     epsilon=1.e-8
