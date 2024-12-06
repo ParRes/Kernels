@@ -370,6 +370,7 @@ MPI1/Stencil/stencil
 MPI1/Synch_global/global
 MPI1/Synch_p2p/p2p
 MPI1/Transpose/transpose
+MPI1/Transpose/transpose-a2a
 MPIOPENMP/Nstream/nstream
 MPIOPENMP/Stencil/stencil
 MPIOPENMP/Synch_p2p/p2p
