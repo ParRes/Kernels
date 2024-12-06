@@ -1,0 +1,9 @@
+@kernel void nstream(int N, double scalar, double * A, const double * B, const double * C) {
+  for (int group = 0; group < N; group += 64; outer) {
+    for (int i = group; i < (group + 64); ++i; inner) {
+      if (i<N) {
+        A[i] += B[i] + scalar * C[i];
+      }
+    }
+  }
+}

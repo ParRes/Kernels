@@ -36,20 +36,27 @@
 # error You need a C99+ compiler.
 #endif
 
-// All of this is to get posix_memalign defined...
-// #define _POSIX_C_SOURCE (200112L)
-#define _POSIX_C_SOURCE (200809L)
-#define _XOPEN_SOURCE 600
+#define PRAGMA(x) _Pragma(#x)
 
 #include <stdio.h>   // atoi
 #include <stdlib.h>  // getenv
+
+int posix_memalign(void **memptr, size_t alignment, size_t size);
+
 #include <stdint.h>
+#if defined(__PGIC__)
+typedef _Bool bool;
+const bool true=1;
+const bool false=0;
+#else
 #include <stdbool.h> // bool
+#endif
 #include <string.h>
 #include <limits.h>
 #include <math.h>    // fabs
 #include <time.h>    // clock_gettime, timespec_get
 #include <assert.h>
+#include <errno.h>
 
 #ifndef MIN
 #define MIN(x,y) ((x)<(y)?(x):(y))
@@ -61,25 +68,38 @@
 #define ABS(a) ((a) >= 0 ? (a) : -(a))
 #endif
 
-#ifdef _OPENMP
-# include <omp.h>
-# if (_OPENMP >= 201300)
-#  define PRAGMA_OMP_SIMD _Pragma("omp simd")
-#  define PRAGMA_OMP_FOR_SIMD _Pragma("omp for simd")
-# else
-#  define PRAGMA_OMP_SIMD
-#  define PRAGMA_OMP_FOR_SIMD _Pragma("omp for")
-# endif
-#endif
-
 #ifdef __cilk
 # include <cilk/cilk.h>
+// Not defined in the header but documented at https://www.cilkplus.org/.
+int __cilkrts_get_nworkers(void);
 #endif
 
-#if defined(__INTEL_COMPILER) && !defined(PRAGMA_OMP_SIMD)
-# define PRAGMA_SIMD _Pragma("simd")
+#if defined(__INTEL_COMPILER)
+# define PRAGMA_SIMD PRAGMA(vector)
+#elif defined(__GNUC__) && defined(__GNUC_MINOR__) && ( ( (__GNUC__ == 4) && (__GNUC_MINOR__ == 9) ) || (__GNUC__ >= 5) )
+# define PRAGMA_SIMD PRAGMA(GCC ivdep)
+#elif defined(__clang__)
+# define PRAGMA_SIMD PRAGMA(clang loop vectorize(enable))
 #else
 # define PRAGMA_SIMD
+#endif
+
+#ifdef __linux__
+#include <features.h>
+#endif
+
+// If we are on Linux and we are not using GLIBC, attempt to
+// use C11 threads, because this means we are using MUSL.
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
+   !defined(__STDC_NO_THREADS__) && \
+   ( defined(USE_C11_THREADS) || \
+     ( defined(__linux__) && !defined(__GNU_LIBRARY__) && !defined(__GLIBC__) ) \
+   )
+# define HAVE_C11_THREADS
+# include <threads.h>
+#else
+# define HAVE_PTHREADS
+# include <pthread.h>
 #endif
 
 #if defined(_OPENMP)
@@ -122,8 +142,12 @@ static inline double prk_wtime(void)
   return t;
 }
 
-// GCC claims to be C11 without knowing if glibc is compliant...
-#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+// GCC claims to be C11 without knowing if glibc is compliant.
+// glibc added support for timespec_get in version 2.16.
+// (https://gcc.gnu.org/wiki/C11Status)
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
+      defined(__GLIBC__) && defined(__GLIBC_MINOR__) && \
+      (((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 16)) || (__GLIBC__ > 2))
 
 static inline double prk_wtime(void)
 {
@@ -226,6 +250,54 @@ static inline void prk_free(void * p)
 #else
     free(p);
 #endif
+}
+
+static inline void prk_lookup_posix_error(int e, char * n, int l)
+{
+    switch (e) {
+        case EACCES:
+            strncpy(n,"EACCES",l);
+            break;
+        case EAGAIN:
+            strncpy(n,"EAGAIN",l);
+            break;
+        case EBADF:
+            strncpy(n,"EBADF",l);
+            break;
+        case EEXIST:
+            strncpy(n,"EEXIST",l);
+            break;
+        case EINVAL:
+            strncpy(n,"EINVAL",l);
+            break;
+        case ENFILE:
+            strncpy(n,"ENFILE",l);
+            break;
+        case ENODEV:
+            strncpy(n,"ENODEV",l);
+            break;
+        case ENOMEM:
+            strncpy(n,"ENOMEM",l);
+            break;
+        case EPERM:
+            strncpy(n,"EPERM",l);
+            break;
+        case ETXTBSY:
+            strncpy(n,"ETXTBSY",l);
+            break;
+        case EOPNOTSUPP:
+            strncpy(n,"EOPNOTSUPP",l);
+            break;
+        /*
+        case E:
+            strncpy(n,"E",l);
+            break;
+        */
+        default:
+            printf("error code %d unknown\n", e);
+            strncpy(n,"UNKNOWN",l);
+            break;
+    }
 }
 
 #endif /* PRK_UTIL_H */

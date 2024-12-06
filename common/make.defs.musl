@@ -1,0 +1,19 @@
+#
+# This file shows the MUSL toolchain options for PRKs,
+# which is only used for C11 testing.
+#
+# Base compilers and language options
+#
+CC=/opt/musl/1.1.16/gcc-7/bin/musl-gcc -std=c11 -static
+#
+# Compiler flags
+#
+# -mtune=native is appropriate for most cases.
+# -march=native is appropriate if you want portable binaries.
+DEFAULT_OPT_FLAGS=-g -O3 -mtune=native -ffast-math
+#
+# OpenMP flags
+#
+OPENMPFLAG=-fopenmp
+OFFLOADFLAG=-foffload="-O3 -v"
+OPENACCFLAG=-fopenacc

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Copyright (c) 2015, Intel Corporation
 #
@@ -49,8 +50,13 @@
 # *******************************************************************
 
 import sys
-from timeit import default_timer as timer
+print('Python version = ', str(sys.version_info.major)+'.'+str(sys.version_info.minor))
+if sys.version_info >= (3, 3):
+    from time import process_time as timer
+else:
+    from timeit import default_timer as timer
 import numpy
+print('Numpy version  = ', numpy.version.version)
 
 def main():
 
@@ -59,32 +65,33 @@ def main():
     # ********************************************************************
 
     print('Parallel Research Kernels version ') #, PRKVERSION
-    print('Python Matrix transpose: B = A^T')
+    print('Python Numpy Matrix transpose: B = A^T')
 
     if len(sys.argv) != 3:
         print('argument count = ', len(sys.argv))
         sys.exit("Usage: ./transpose <# iterations> <matrix order>")
 
-    # iterations
     iterations = int(sys.argv[1])
-    if iterations < 1: sys.exit("ERROR: iterations must be >= 1")
+    if iterations < 1:
+        sys.exit("ERROR: iterations must be >= 1")
 
-    # matrix order
     order = int(sys.argv[2])
-    if order < 1: sys.exit("ERROR: order must be >= 1")
+    if order < 1:
+        sys.exit("ERROR: order must be >= 1")
 
-    print('Matrix order         = ', order)
     print('Number of iterations = ', iterations)
+    print('Matrix order         = ', order)
 
     # ********************************************************************
     # ** Allocate space for the input and transpose matrix
     # ********************************************************************
 
-    A = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
+    #A = numpy.fromfunction(lambda i,j: i*order+j, (order,order), dtype=float)
+    A = numpy.arange(order*order,dtype=float).reshape(order,order)
     B = numpy.zeros((order,order))
 
     for k in range(0,iterations+1):
-        # start timer after a warmup iteration
+
         if k<1: t0 = timer()
 
         # this actually forms the transpose of A
@@ -92,7 +99,6 @@ def main():
         # this only uses the transpose _view_ of A
         B += A.T
         A += 1.0
-
 
     t1 = timer()
     trans_time = t1 - t0

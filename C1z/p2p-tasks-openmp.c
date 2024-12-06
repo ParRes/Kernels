@@ -60,23 +60,17 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
-static inline void sweep_tile(int startm, int endm,
-                              int startn, int endn,
-                              int n,
-                              double grid[])
-{
-  for (int i=startm; i<endm; i++) {
-    for (int j=startn; j<endn; j++) {
-      grid[i*n+j] = grid[(i-1)*n+j] + grid[i*n+(j-1)] - grid[(i-1)*n+(j-1)];
-    }
-  }
-}
+#include "prk_openmp.h"
+#include "p2p-kernel.h"
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
-  printf("C11/OpenMP pipeline execution on 2D grid\n");
+  printf("Parallel Research Kernels version %d\n", PRKVERSION);
+#ifdef _OPENMP
+  printf("C11/OpenMP TASKS pipeline execution on 2D grid\n");
+#else
+  printf("C11/Serial pipeline execution on 2D grid\n");
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
@@ -112,7 +106,9 @@ int main(int argc, char * argv[])
     nc = n;
   }
 
+#ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
   printf("Number of iterations      = %d\n", iterations);
   printf("Grid sizes                = %d,%d\n", m, n);
   printf("Grid chunk sizes          = %d,%d\n", mc, nc);
@@ -126,52 +122,37 @@ int main(int argc, char * argv[])
   size_t bytes = m*n*sizeof(double);
   double * restrict grid = prk_malloc(bytes);
 
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
+  OMP_MASTER
   {
-    int lic = (m/mc-1) * mc + 1;
-    int ljc = (n/nc-1) * nc + 1;
-
-    _Pragma("omp for")
+    OMP_TASKLOOP( firstprivate(n) shared(grid) )
     for (int i=0; i<m; i++) {
       for (int j=0; j<n; j++) {
         grid[i*n+j] = 0.0;
       }
     }
+    OMP_TASKWAIT
 
-    // set boundary values (bottom and left side of grid)
-    _Pragma("omp master")
-    {
-      for (int j=0; j<n; j++) {
-        grid[0*n+j] = (double)j;
-      }
-      for (int i=0; i<m; i++) {
-        grid[i*n+0] = (double)i;
-      }
+    for (int j=0; j<n; j++) {
+      grid[0*n+j] = (double)j;
     }
-    _Pragma("omp barrier")
+    for (int i=0; i<m; i++) {
+      grid[i*n+0] = (double)i;
+    }
 
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
-          pipeline_time = prk_wtime();
-      }
+      if (iter==1) pipeline_time = prk_wtime();
 
-      _Pragma("omp master")
-      {
-        for (int i=1; i<m; i+=mc) {
-          for (int j=1; j<n; j+=nc) {
-            _Pragma("omp task depend(in:grid[0],grid[(i-mc)*n+j],grid[i*n+(j-nc)],grid[(i-mc)*n+(j-nc)]) depend(out:grid[i*n+j])")
-            sweep_tile(i, MIN(m,i+mc), j, MIN(n,j+nc), n, grid);
-          }
+      for (int i=1; i<m; i+=mc) {
+        for (int j=1; j<n; j+=nc) {
+          OMP_TASK( firstprivate(m,n) shared(grid) depend(in:grid[(i-mc)*n+j:1],grid[i*n+(j-nc):1]) depend(out:grid[i*n+j:1]) )
+          sweep_tile(i, MIN(m,i+mc), j, MIN(n,j+nc), n, grid);
         }
-        _Pragma("omp task depend(in:grid[(lic-1)*n+(ljc)]) depend(out:grid[0])")
-        grid[0*n+0] = -grid[(m-1)*n+(n-1)];
       }
+      OMP_TASKWAIT
+      grid[0*n+0] = -grid[(m-1)*n+(n-1)];
     }
-    _Pragma("omp barrier")
-    _Pragma("omp master")
     pipeline_time = prk_wtime() - pipeline_time;
   }
 

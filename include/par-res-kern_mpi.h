@@ -35,13 +35,13 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <mpi.h>
 
-#ifdef AMPI
-#ifndef MPI_INT64_T
-#define MPI_INT64_T MPI_LONG_LONG
-#endif /* MPI_INT64_T */
-#ifndef MPI_UINT64_T
-#define MPI_UINT64_T MPI_UNSIGNED_LONG_LONG
-#endif /* MPI_UINT64_T */
+#if defined(ADAPTIVE_MPI)
+# ifndef MPI_INT64_T
+#  define MPI_INT64_T MPI_LONG_LONG
+# endif /* MPI_INT64_T */
+# ifndef MPI_UINT64_T
+#  define MPI_UINT64_T MPI_UNSIGNED_LONG_LONG
+# endif /* MPI_UINT64_T */
 #endif /* AMPI */
 
 /* This code appears in MADNESS, which is GPL, but it was
@@ -56,7 +56,7 @@ POSSIBILITY OF SUCH DAMAGE.
 /* We should set an attribute that indicates we need to free memory
  * when using this so that the MPI_Win_free does not create a
  * double-free situation when paired with a real MPI_Win_create call. */
-int PRK_Win_allocate(MPI_Aint size, int disp_unit, MPI_Info info,
+static int PRK_Win_allocate(MPI_Aint size, int disp_unit, MPI_Info info,
                      MPI_Comm comm, void * baseptr, MPI_Win * win)
 {
 #if MPI_VERSION < 3
@@ -75,7 +75,7 @@ int PRK_Win_allocate(MPI_Aint size, int disp_unit, MPI_Info info,
 #endif
 }
 
-int PRK_Win_free(MPI_Win * win)
+static int PRK_Win_free(MPI_Win * win)
 {
     int rc = MPI_SUCCESS;
 #if MPI_VERSION < 3

@@ -1,32 +1,33 @@
+#!/usr/bin/env python3
 #
-# Copyright (c) 2013, Intel Corporation
+# Copyright (c) 2015, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
 #
 # * Redistributions of source code must retain the above copyright
-#       notice, this list of conditions and the following disclaimer.
+#      notice, this list of conditions and the following disclaimer.
 # * Redistributions in binary form must reproduce the above
-#       copyright notice, this list of conditions and the following
-#       disclaimer in the documentation and/or other materials provided
-#       with the distribution.
+#      copyright notice, this list of conditions and the following
+#      disclaimer in the documentation and/or other materials provided
+#      with the distribution.
 # * Neither the name of Intel Corporation nor the names of its
-#       contributors may be used to endorse or promote products
-#       derived from this software without specific prior written
-#       permission.
+#      contributors may be used to endorse or promote products
+#      derived from this software without specific prior written
+#      permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, ACLUDAG, BUT NOT
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 # LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. A NO EVENT SHALL THE
-# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, ADIRECT,
-# ACIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (ACLUDAG,
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
 # BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSAESS ATERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER A CONTRACT, STRICT
-# LIABILITY, OR TORT (ACLUDAG NEGLIGENCE OR OTHERWISE) ARISAG A
-# ANY WAY B OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
 #
@@ -55,8 +56,13 @@
 # *******************************************************************
 
 import sys
-from timeit import default_timer as timer
+print('Python version = ', str(sys.version_info.major)+'.'+str(sys.version_info.minor))
+if sys.version_info >= (3, 3):
+    from time import process_time as timer
+else:
+    from timeit import default_timer as timer
 import numpy
+print('Numpy version  = ', numpy.version.version)
 
 def main():
 
@@ -64,7 +70,7 @@ def main():
     # read and test input parameters
     # ********************************************************************
 
-    print('Parallel Research Kernels version ') #, PRKVERSION
+    print('Parallel Research Kernels')
     print('Python stencil execution on 2D grid')
 
     if len(sys.argv) < 3:
@@ -91,18 +97,17 @@ def main():
         if (2*r+1) > n:
             sys.exit("ERROR: Stencil radius exceeds grid size")
     else:
-        r = 2 # radius=2 is what other impls use right now
+        r = 2
 
+    print('Number of iterations = ', iterations)
     print('Grid size            = ', n)
     print('Radius of stencil    = ', r)
     if pattern == 'star':
         print('Type of stencil      = ','star')
     else:
         print('Type of stencil      = ','stencil')
-
     print('Data type            = double precision')
     print('Compact representation of stencil loop body')
-    print('Number of iterations = ', iterations)
 
     # there is certainly a more Pythonic way to initialize W,
     # but it will have no impact on performance.
@@ -189,4 +194,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

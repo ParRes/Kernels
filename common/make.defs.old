@@ -1,0 +1,63 @@
+#name of MPI C compiler, e.g. mpiicc, mpicc
+MPICC=
+
+#name of C compiler, e.g. icc, xlc, gcc
+CC=
+
+#name of MPI Fortran compiler, e.g. mpifort, mpif90
+MPIF90=
+
+#name of Fortran compiler, e.g. ifort, xlf_r, gfortran
+FC=
+
+#name of compile line flag enabling OpenMP, e.g. -openmp, -qopenmp, -fopenmp
+OPENMPFLAG=
+OFFLOADFLAG=
+
+#default compiler optimization flags
+DEFAULT_OPT_FLAGS:=
+
+############################   OPTIONAL #########################
+
+# Fortran 2008 coarrays flag, *including any library*
+# ifort: -coarray=distributed, gfortran: -fcoarray(=single) or -fcoarray=lib -lcaf_mpi, crayftn: -h caf
+COARRAYFLAG=
+
+#name of C++ compiler (to be used in MPI context for Grappa), e.g. mpigxx, mpiicpc
+CXX=
+
+#name of UPC compiler, e.g. gupc, cc, upcc
+UPCC=
+
+#name of compile line flag enabling UPC if necessary, e.g. -h upc
+UPCFLAG=
+
+#name of MPI C compiler (to be used in Fine-Grain MPI context), e.g. mpicc
+FGMPICC=
+
+#name of C compiler (to be used in MPI context of OpenSHMEM), e.g. $(MPICC)
+SHMEMCC=
+
+#location where Charm++ is installed, e.g. $(HOME)/charm/mpi-linux-x86_64-ifort-smp-mpicxx
+CHARMTOP=
+
+#location where Grappa is installed, e.g. $(GRAPPA_PREFIX) if you've done "source <grappa install dir>/bin/settings.sh"
+GRAPPATOP=
+
+#location where Fine-Grain MPI is installed, e.g. $(HOME)/fgmpi-install
+FGMPITOP=
+
+#location where OpenCoarrays is installed, e.g. $(HOME)/opencoarrays
+OCAS=
+
+#location where Legion is installed, e.g. $(HOME)/legion
+LEGIONTOP=
+
+#location where ULFM-enabled MPI is installed
+ULFMTOP=
+
+#flags to use when running applications with ULFM-enabled MPI
+ULFMRUNFLAG=
+ 
+#location where Fenix is installed
+FENIXTOP=

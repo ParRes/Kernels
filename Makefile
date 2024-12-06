@@ -42,7 +42,7 @@ ifndef PRK_FLAGS
   PRK_FLAGS=-O3
 endif
 
-default: allserial allopenmp allmpi
+default: allserial allcxx allc1z allfortran allopenmp allmpi
 
 help:
 	@echo "Usage: \"make all\"          (re-)builds all targets"
@@ -72,14 +72,16 @@ help:
 	@echo "       \"make allfreaks\"    (re-)builds the above four targets"
 	@echo "       optionally, specify   \"matrix_rank=<n> number_of_functions=<m>\""
 	@echo "       optionally, specify   \"default_opt_flags=<list of optimization flags>\""
-	@echo "       \"make allshared\"    (re-)builds the shared-memory targets (C89, C1z, C++11, Fortran, RUST)"
+	@echo "       \"make allshared\"    (re-)builds the shared-memory targets (C89, C1z, C++11, Fortran)"
 	@echo "       \"make clean\"        removes all objects and executables"
 	@echo "       \"make veryclean\"    removes some generated source files as well"
 
 all: alldarwin allfreaks allshared
-alldarwin: allserial allopenmp allmpi1 allfgmpi allmpiopenmp allmpirma allshmem allmpishm allupc allfortran allfenix
-allfreaks: allcharm++ allampi allgrappa alllegion
-allshared: allserial allopenmp allfortran allcxx allc1z allrust
+alldarwin: allserial allopenmp allmpi1 allmpiopenmp allmpirma allshmem allmpishm allupc allfortran
+allweirdmpi: allfenix allfgmpi allampi
+allfreaks: allcharm++ allgrappa alllegion
+allshared: allserial allopenmp allfortran allcxx allc1z
+allnew: allfortran allcxx allc1z
 
 allmpi1:
 	cd MPI1/Synch_global;        $(MAKE) global    "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
@@ -258,6 +260,10 @@ clean:
 	cd MPI1/PIC-static;         $(MAKE) clean
 	cd MPI1/AMR;                $(MAKE) clean
 	cd FENIX/Stencil;           $(MAKE) clean
+	cd FENIX/Transpose;         $(MAKE) clean
+	cd FENIX/Sparse;            $(MAKE) clean
+	cd FENIX/Synch_p2p;         $(MAKE) clean
+	cd FENIX/AMR;               $(MAKE) clean
 	cd FG_MPI/DGEMM;            $(MAKE) clean
 	cd FG_MPI/Nstream;          $(MAKE) clean
 	cd FG_MPI/Reduce;           $(MAKE) clean
@@ -331,7 +337,6 @@ clean:
 	make -C FORTRAN clean
 	make -C Cxx11 clean
 	make -C C1z clean
-	make -C RUST clean
 	rm -f stats.json
 
 veryclean: clean
@@ -341,6 +346,7 @@ veryclean: clean
 	cd MPI1/Stencil;            $(MAKE) veryclean
 	cd MPI1/AMR;                $(MAKE) veryclean
 	cd FENIX/Stencil;           $(MAKE) veryclean
+	cd FENIX/AMR;               $(MAKE) veryclean
 	cd OPENMP/Stencil;          $(MAKE) veryclean
 	cd SERIAL/Stencil;          $(MAKE) veryclean
 	cd SERIAL/AMR;              $(MAKE) veryclean

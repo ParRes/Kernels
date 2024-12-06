@@ -45,9 +45,9 @@ endif
 #             dimension padding (12) of tiles used in non-MKL version
 
 ifndef MAXTHREADS
-  MAXTHREADS=256
+  MAXTHREADS=512
 endif
-#description: default thread limit is 256
+#description: default thread limit is 512
 
 PROGRAM     = dgemm
 MKLFLAG     = -DMKL=$(MKL)
@@ -63,7 +63,7 @@ MKL=0/1                disable/enable MKL library                              [
 RESTRICT_KEYWORD=0/1   disable/enable restrict keyword (aliasing)              [0]  \n\
 DEFAULTBLOCK=?         set tile size (non-MKL version)                         [32] \n\
 BOFFSET=?              override default first array dimension padding of tiles [12] \n\
-MAXTHREADS=?           set maximum number of OpenMP threads                    [256]\n\
+MAXTHREADS=?           set maximum number of OpenMP threads                    [512]\n\
 VERBOSE=0/1            omit/include verbose run information                    [0]"
 
 TUNEFLAGS   = $(BLOCKFLAG)   $(MKLFLAG)     $(OFFSETFLAG) $(RESTRICTFLAG) \

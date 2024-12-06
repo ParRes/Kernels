@@ -1,0 +1,132 @@
+#
+# This file shows the IBM POWER9 + NVIDIA V100 toolchain options for PRKs using
+# OpenMP, MPI and/or Fortran (sans coarrays) only.
+#
+# Base compilers and language options
+#
+# C99 is required in some implementations.
+CC=xlc_r -qlanglvl=stdc99
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+# You might need to modify the build system for the preprocessor options to work.
+FC=xlf2008_r
+XLFPP=-WF,
+# C++11 may not be required but does no harm here.
+CXX=xlc++_r -qlanglvl=extended1y
+#CXX=g++-9 -std=gnu++17
+#
+# Compiler flags
+#
+DEFAULT_OPT_FLAGS=-O3 #-qsuppress=1500-036
+#
+# OpenMP flags
+#
+# You can also use -qopenmp.  -openmp is deprecated.
+OPENMPFLAG=-qsmp=omp
+OPENMPSIMDFLAG=-qsmp=omp
+OFFLOADFLAG=-qoffload -qtgtarch=sm_70
+#
+# OpenCL flags
+#
+# POCL
+# http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
+#OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
+# Linux
+OPENCLDIR=/usr
+OPENCLFLAG=-I${OPENCLDIR} -L${OPENCLDIR}/lib64 -lOpenCL -Wno-deprecated-declarations -qsuppress=1500-029 -qstrict
+#
+# MPI C++
+#
+MPIINC=-I/usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-rolling-release/include
+MPILIB=-L/usr/tce/packages/spectrum-mpi/ibm/spectrum-mpi-rolling-release/lib -lmpiprofilesupport -lmpi_ibm
+#
+# OCCA
+#
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
+# TBB
+#
+TBBDIR=${HOME}/TBB
+TBBLIBDIR=${HOME}/TBB/build/linux_ppc64le_xl_cc4.8.5_libc2.17_kernel4.14.0_release
+TBBFLAG=-I${TBBDIR}/include -L${TBBLIBDIR} -ltbb
+#
+# Parallel STL, Boost, etc.
+#
+BOOSTROOT=${HOME}/boost/libs
+BOOSTFLAG=
+BOOSTFLAG+=-I${BOOSTROOT}/circular_buffer/include
+BOOSTFLAG+=-I${BOOSTROOT}/compute/include
+BOOSTFLAG+=-I${BOOSTROOT}/algorithm/include
+BOOSTFLAG+=-I${BOOSTROOT}/config/include
+BOOSTFLAG+=-I${BOOSTROOT}/core/include
+BOOSTFLAG+=-I${BOOSTROOT}/log/include
+BOOSTFLAG+=-I${BOOSTROOT}/array/include
+BOOSTFLAG+=-I${BOOSTROOT}/multi_array/include
+BOOSTFLAG+=-I${BOOSTROOT}/optional/include
+BOOSTFLAG+=-I${BOOSTROOT}/preprocessor/include
+BOOSTFLAG+=-I${BOOSTROOT}/type_index/include
+BOOSTFLAG+=-I${BOOSTROOT}/utility/include
+BOOSTFLAG+=-I${BOOSTROOT}/assert/include
+BOOSTFLAG+=-I${BOOSTROOT}/static_assert/include
+BOOSTFLAG+=-I${BOOSTROOT}/exception/include
+BOOSTFLAG+=-I${BOOSTROOT}/throw_exception/include
+BOOSTFLAG+=-I${BOOSTROOT}/concept_check/include
+BOOSTFLAG+=-I${BOOSTROOT}/type_traits/include
+BOOSTFLAG+=-I${BOOSTROOT}/iterator/include
+BOOSTFLAG+=-I${BOOSTROOT}/mpl/include
+BOOSTFLAG+=-I${BOOSTROOT}/detail/include
+BOOSTFLAG+=-I${BOOSTROOT}/functional/include
+BOOSTFLAG+=-I${BOOSTROOT}/move/include
+BOOSTFLAG+=-I${BOOSTROOT}/range/include
+BOOSTFLAG+=-I${BOOSTROOT}/function/include
+BOOSTFLAG+=-I${BOOSTROOT}/integer/include
+BOOSTFLAG+=-I${BOOSTROOT}/container_hash/include
+BOOSTFLAG+=-I${BOOSTROOT}/bind/include
+BOOSTFLAG+=-I${BOOSTROOT}/chrono/include
+BOOSTFLAG+=-I${BOOSTROOT}/predef/include
+BOOSTFLAG+=-I${BOOSTROOT}/ratio/include
+BOOSTFLAG+=-I${BOOSTROOT}/function_types/include
+BOOSTFLAG+=-I${BOOSTROOT}/tuple/include
+BOOSTFLAG+=-I${BOOSTROOT}/lexical_cast/include
+BOOSTFLAG+=-I${BOOSTROOT}/numeric/conversion/include
+BOOSTFLAG+=-I${BOOSTROOT}/container/include
+BOOSTFLAG+=-I${BOOSTROOT}/math/include
+BOOSTFLAG+=-I${BOOSTROOT}/fusion/include
+BOOSTFLAG+=-I${BOOSTROOT}/typeof/include
+BOOSTFLAG+=-I${BOOSTROOT}/uuid/include
+BOOSTFLAG+=-I${BOOSTROOT}/smart_ptr/include
+BOOSTFLAG+=-I${BOOSTROOT}/proto/include
+BOOSTFLAG+=-DBOOST_COMPUTE_USE_CPP11
+RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+#RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -I./pstl/include ${RANGEFLAG} -Wno-\#pragma-messages
+KOKKOSDIR=${HOME}/KOKKOS/install-cuda
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib64 -lkokkoscore
+RAJADIR=
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+THRUSTDIR=/usr/local/cuda-10.1/targets/ppc64le-linux/include
+THRUSTFLAG=-I${THRUSTDIR}
+#
+# SYCL flags
+#
+# triSYCL
+# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+SYCLDIR=./triSYCL
+#SYCLCXX=${CXX} ${OPENMPFLAG} $(DEFAULT_OPT_FLAGS)
+#SYCLCXX=${CXX} $(DEFAULT_OPT_FLAGS)
+SYCLCXX=g++ -O3 -std=gnu++11
+SYCLFLAG=-I$(SYCLDIR)/include -DTRISYCL
+SYCLFLAG+=$(BOOSTFLAG)
+#
+# CBLAS for C++ DGEMM
+#
+BLASFLAG=-DESSL
+CBLASFLAG=-DESSL
+#
+# CUDA flags
+#
+# Linux w/ NVIDIA CUDA
+NVCC=/usr/local/cuda-10.1/bin/nvcc
+CUDAFLAGS=-g -O3 -std=c++11
+CUDAFLAGS+=--expt-extended-lambda
+CUDAFLAGS+=-arch=sm_70
+CUDAFLAGS+=-Xcudafe --diag_suppress=esa_on_defaulted_function_ignored

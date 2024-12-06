@@ -1,0 +1,102 @@
+#
+# This file shows the LLVM toolchain options for PRKs using
+# OpenMP, MPI and/or Fortran coarrays only.
+#
+# Base compilers and language options
+#
+LLVM_ROOT=/usr/local/llvm60
+LLVM_PATH=${LLVM_ROOT}/bin/
+# C99 is required in some implementations.
+CC=${LLVM_PATH}clang -std=c11 -pthread
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+FC=/usr/local/bin/flang -Mpreprocess -Mfreeform -I/usr/local/flang/include -lexecinfo
+# C++11 may not be required but does no harm here.
+CXX=${LLVM_PATH}clang++ -std=c++14 -pthread
+#
+# Compiler flags
+#
+# -mtune=native is appropriate for most cases.
+# -march=native is appropriate if you want portable binaries.
+#
+DEFAULT_OPT_FLAGS=-g -O3
+#DEFAULT_OPT_FLAGS+=-mllvm -polly -mllvm -polly-vectorizer=stripmine
+#
+# If you want to be specific, get the architecture options from:
+#   ${LLVM_PATH}llc --version
+# and then get the CPU/ISA options from (e.g. for x86-64):
+#   ${LLVM_PATH}llc -march=x86-64 -mcpu=help
+#
+# These are useful to understand why the compiler does not vectorize loops:
+#   DEFAULT_OPT_FLAGS+=-Rpass-analysis=loop-vectorize
+#   DEFAULT_OPT_FLAGS+=-Rpass=loop-vectorize
+#
+# OpenMP flags
+#
+OPENMPFLAG=-fopenmp
+OPENMPSIMDFLAG=-fopenmp-simd
+OFFLOADFLAG=-fopenmp
+#OPENACCFLAG= # Flang does not support OpenACC
+# Mac weirdness
+OPENMPFLAG+=-L${LLVM_ROOT}/lib
+# BSD weirdness
+OPENMPFLAG+=-I${LLVM_ROOT}/lib/clang/6.0.1/include
+#
+# OpenCL flags
+#
+OPENCLDIR=/usr/local
+OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib -lOpenCL
+OPENCLFLAG+=-Wno-deprecated-declarations
+#
+# OCCA
+#
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
+# TBB
+#
+TBBDIR=/usr/local
+TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+#
+# Parallel STL, Boost, etc.
+#
+BOOSTFLAG=-I/usr/local/include
+RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+#RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -I./pstl/include ${RANGEFLAG}
+KOKKOSDIR=/opt/kokkos/clang
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
+RAJADIR=/opt/raja/clang
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+#THRUSTDIR=/opt/nvidia/thrust
+#THRUSTFLAG=-I${THRUSTDIR} -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_CPP
+#
+# SYCL flags
+#
+# triSYCL
+# https://github.com/triSYCL/triSYCL is header-only so just clone in Cxx11 directory...
+SYCLDIR=./triSYCL
+SYCLCXX=${CXX} ${DEFAULT_OPT_FLAGS} ${OPENMPFLAG}
+SYCLFLAG=-std=c++17 -I${SYCLDIR}/include ${BOOSTFLAG}
+#
+# CBLAS for C++ DGEMM
+#
+CBLASFLAG=
+#
+# CUDA flags
+#
+# Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
+NVCC=/opt/llvm/cocl/bin/cocl
+# Linux w/ NVIDIA CUDA
+#NVCC=nvcc -arch=sm_50
+CUDAFLAGS=-g -O3 -std=c++11
+# https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
+CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# ISPC
+#
+ISPC=ispc
+ISPCFLAG=-O3 --target=host --opt=fast-math
+#
+# MPI
+#
+# We assume you have installed an implementation of MPI-3 that is in your path.
+MPICC=mpicc

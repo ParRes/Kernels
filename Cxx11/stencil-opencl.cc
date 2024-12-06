@@ -71,10 +71,10 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   funcname1.reserve(255);
   funcname1 += ( star ? "star" : "grid" );
   funcname1 += std::to_string(radius);
-  filename1 = funcname1 + ( ".cl" );
   funcname1 += "_" + std::to_string(precision);
+  filename1 = funcname1 + ( ".cl" );
   auto funcname2 = (precision==64) ? "add64" : "add32";
-  auto filename2 = "add.cl";
+  auto filename2 = "add"+std::to_string(precision)+".cl";
 
   std::string source = prk::opencl::loadProgram(filename1);
   if ( source==std::string("FAIL") ) {
@@ -83,19 +83,22 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
       std::string command("./generate-opencl-stencil.py ");
       command += ( star ? "star " : "grid " );
       command += std::to_string(radius);
-      std::system( command.c_str() );
+      int rc = std::system( command.c_str() );
+      if (rc != 0) {
+          std::cerr << command.c_str() << " returned " << rc << std::endl;
+      }
   }
   source = prk::opencl::loadProgram(filename1);
   cl::Program program1(context, source, true);
   cl::Program program2(context, prk::opencl::loadProgram(filename2), true);
 
   cl_int err;
-  auto kernel1 = cl::make_kernel<int, cl::Buffer, cl::Buffer>(program1, funcname1, &err);
+  auto kernel1 = cl::KernelFunctor<int, cl::Buffer, cl::Buffer>(program1, funcname1, &err);
   if(err != CL_SUCCESS){
     std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
     std::cout << program1.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
   }
-  auto kernel2 = cl::make_kernel<int, cl::Buffer>(program2, funcname2, &err);
+  auto kernel2 = cl::KernelFunctor<int, cl::Buffer>(program2, funcname2, &err);
   if(err != CL_SUCCESS){
     std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
     std::cout << program2.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
@@ -107,25 +110,23 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  std::vector<T> h_in;
-  std::vector<T> h_out;
-  h_in.resize(n*n, (T)0);
-  h_out.resize(n*n, (T)0);
+  std::vector<T> h_in(n*n,  T(0));
+  std::vector<T> h_out(n*n, T(0));
 
-  auto stencil_time = 0.0;
+  double stencil_time{0};
 
   // initialize the input array
-  for (auto i=0; i<n; i++) {
-    for (auto j=0; j<n; j++) {
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
       h_in[i*n+j] = static_cast<T>(i+j);
     }
   }
 
   // copy input from host to device
   cl::Buffer d_in = cl::Buffer(context, begin(h_in), end(h_in), true);
-  cl::Buffer d_out = cl::Buffer(context, begin(h_out), end(h_out), true);
+  cl::Buffer d_out = cl::Buffer(context, begin(h_out), end(h_out), false);
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) stencil_time = prk::wtime();
 
@@ -154,9 +155,9 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
 
   // compute L1 norm in parallel
   double norm = 0.0;
-  for (auto i=radius; i<n-radius; i++) {
-    for (auto j=radius; j<n-radius; j++) {
-      norm += std::fabs(static_cast<double>(h_out[i*n+j]));
+  for (int i=radius; i<n-radius; i++) {
+    for (int j=radius; j<n-radius; j++) {
+      norm += prk::abs(static_cast<double>(h_out[i*n+j]));
     }
   }
   norm /= active_points;
@@ -164,7 +165,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   // verify correctness
   const double epsilon = (sizeof(T)==8) ? 1.0e-8 : 1.0e-4;
   double reference_norm = 2*(iterations+1);
-  if (std::fabs(norm-reference_norm) > epsilon) {
+  if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
   } else {
@@ -181,23 +182,22 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   }
 }
 
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/OpenCL stencil execution on 2D grid" << std::endl;
 
-  prk::opencl::listPlatforms();
+  //prk::opencl::listPlatforms();
 
   //////////////////////////////////////////////////////////////////////
-  // process and test input parameters
+  // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int n, radius=2;
+  int iterations, n, radius, tile_size;
   bool star = true;
   try {
-      if (argc < 3){
-        throw "Usage: <# iterations> <array dimension> [<star/grid> <radius>]";
+      if (argc < 3) {
+        throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
       }
 
       // number of times to run the algorithm
@@ -210,20 +210,29 @@ int main(int argc, char * argv[])
       n  = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimension must be positive";
-      } else if (n > std::floor(std::sqrt(INT_MAX))) {
+      } else if (n > prk::get_max_matrix_size()) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-      // stencil pattern
+      // default tile size for tiling of local transpose
+      tile_size = 32;
       if (argc > 3) {
-          auto stencil = std::string(argv[3]);
+          tile_size = std::atoi(argv[3]);
+          if (tile_size <= 0) tile_size = n;
+          if (tile_size > n) tile_size = n;
+      }
+
+      // stencil pattern
+      if (argc > 4) {
+          auto stencil = std::string(argv[4]);
           auto grid = std::string("grid");
           star = (stencil == grid) ? false : true;
       }
 
       // stencil radius
-      if (argc > 4) {
-          radius = std::atoi(argv[4]);
+      radius = 2;
+      if (argc > 5) {
+          radius = std::atoi(argv[5]);
       }
 
       if ( (radius < 1) || (2*radius+1 > n) ) {
@@ -237,6 +246,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
 
@@ -244,49 +254,24 @@ int main(int argc, char * argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
-  cl_int err = CL_SUCCESS;
-
-  cl::Context cpu(CL_DEVICE_TYPE_CPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(cpu) )
-  {
-    const int precision = prk::opencl::precision(cpu);
-
-    std::cout << "CPU Precision         = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(cpu, iterations, n, radius, star);
-    } else {
-        run<float>(cpu, iterations, n, radius, star);
-    }
-  }
-
-  cl::Context gpu(CL_DEVICE_TYPE_GPU, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(gpu) )
-  {
-    const int precision = prk::opencl::precision(gpu);
-
-    std::cout << "GPU Precision         = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(gpu, iterations, n, radius, star);
-    } else {
-        run<float>(gpu, iterations, n, radius, star);
-    }
-  }
-
-  cl::Context acc(CL_DEVICE_TYPE_ACCELERATOR, NULL, NULL, NULL, &err);
-  if ( err == CL_SUCCESS && prk::opencl::available(acc) )
-  {
-
-    const int precision = prk::opencl::precision(acc);
-
-    std::cout << "ACC Precision         = " << precision << "-bit" << std::endl;
-
-    if (precision==64) {
-        run<double>(acc, iterations, n, radius, star);
-    } else {
-        run<float>(acc, iterations, n, radius, star);
-    }
+  std::vector<cl::Platform> platforms;
+  cl::Platform::get(&platforms);
+  for (auto i : platforms) {
+      std::vector<cl::Device> devices;
+      i.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+      for (auto j : devices) {
+          auto t = j.getInfo<CL_DEVICE_TYPE>();
+          if (t == CL_DEVICE_TYPE_CPU || t == CL_DEVICE_TYPE_GPU) {
+              std::cout << "\n" << "CL_DEVICE_NAME=" << j.getInfo<CL_DEVICE_NAME>() << "\n";
+              auto e = j.getInfo<CL_DEVICE_EXTENSIONS>();
+              auto has64 = prk::stringContains(e,"cl_khr_fp64");
+              cl::Context ctx(j);
+              run<float>(ctx, iterations, n, radius, star);
+              if (has64) {
+                  run<double>(ctx, iterations, n, radius, star);
+              }
+          }
+      }
   }
 
   return 0;

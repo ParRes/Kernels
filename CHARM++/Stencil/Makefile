@@ -64,7 +64,7 @@ RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
 STAR=0/1                box/star shaped stencil                    [1]  \n\
 VERBOSE=0/1             omit/include verbose run information       [0]"
 
-TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG)$(USERFLAGS) $(LOOPGENFLAG)\
+TUNEFLAGS    = $(RESTRICTFLAG) $(VERBOSEFLAG) $(USERFLAGS) $(LOOPGENFLAG)\
                $(DOUBLEFLAG)   $(RADIUSFLAG) $(STARFLAG) 
 PROGRAM     = stencil
 OBJS        = $(PROGRAM).o $(COMOBJS)

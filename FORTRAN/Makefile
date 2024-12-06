@@ -8,83 +8,172 @@ ifndef RADIUS
   RADIUS=2
 endif
 
-STARFLAG   = -DSTAR
+STARFLAG = $(XLFPP)-DSTAR
 
 FCFLAGS  = $(DEFAULT_OPT_FLAGS)
-FCFLAGS += -DRADIUS=$(RADIUS) $(STARFLAG)
+FCFLAGS += $(XLFPP)-DRADIUS=$(RADIUS) $(STARFLAG)
 
-.PHONY: all clean serial pretty openmp coarray target ornlacc
+BLASFLAGS = $(BLASFLAG)
 
-ifeq ($(shell uname -s),Darwin)
-ifneq ($(findstring ifort,$(FC)),ifort)
-COARRAY = coarray
-TARGET = target
+ifeq ($(findstring ifort,$(FC)),ifort)
+  BLASFLAGS += -heap-arrays
 endif
-else
-COARRAY = coarray
-TARGET = target
+ifeq ($(findstring ifx,$(FC)),ifx)
+  BLASFLAGS += -heap-arrays
 endif
 
-all: serial pretty openmp $(COARRAY) $(TARGET)
+.PHONY: all clean serial pretty openmp coarray target stdpar blas ga
 
-serial: p2p stencil transpose
+# Intel
+ifeq ($(findstring ifort,$(FC)),ifort)
+  ifeq ($(shell uname -s),Darwin)
+    EXTRA = taskloop
+  else
+    EXTRA = taskloop coarray
+  endif
+endif
+# OpenMP target stuff is only in IFX now
+ifeq ($(findstring ifx,$(FC)),ifx)
+  EXTRA = target tasks taskloop
+endif
+# GCC (also matches pgfortran so PGI must come after)
+ifeq ($(findstring gfortran,$(FC)),gfortran)
+  EXTRA = target coarray taskloop openacc blas
+endif
+# PGI and LLVM Flang
+ifeq ($(findstring flang,$(FC)),flang)
+  EXTRA = openacc
+  #FCFLAGS += -DPGI
+endif
+ifeq ($(findstring pgf,$(FC)),pgf)
+  EXTRA = target openacc cufortran
+  FCFLAGS += -DPGI
+endif
+ifeq ($(findstring nvf,$(FC)),nvf)
+  EXTRA = target openacc cufortran stdpar blas
+  FCFLAGS += -DNVHPC
+endif
+ifeq ($(findstring xlf,$(FC)),xlf)
+  EXTRA = target
+  FCFLAGS += $(XLFPP)-DXLF
+endif
 
-pretty: stencil-pretty transpose-pretty
+all: serial pretty openmp tasks blas mpi mpi-openmp $(EXTRA)
 
-openmp: p2p-openmp-tasks p2p-openmp-doacross p2p-openmp-datapar stencil-openmp transpose-openmp
+serial: p2p stencil transpose nstream dgemm p2p-innerloop pic pic_soa
 
-tasks: p2p-openmp-tasks stencil-taskloop transpose-tasks transpose-taskloop
+pretty: stencil-pretty transpose-pretty nstream-pretty dgemm-pretty
 
-coarray: p2p-coarray stencil-coarray transpose-coarray
+openmp: p2p-tasks-openmp p2p-innerloop-openmp stencil-openmp transpose-openmp nstream-openmp dgemm-openmp pic-openmp pic_soa-openmp
 
-target: p2p-openmp-target stencil-openmp-target transpose-openmp-target
+tasks: p2p-tasks-openmp transpose-tasks-openmp
 
-ornlacc: p2p-ornlacc stencil-ornlacc transpose-ornlacc
+taskloop: stencil-taskloop-openmp transpose-taskloop-openmp nstream-taskloop-openmp dgemm-taskloop-openmp
 
-%: %.f90
-	$(FC) $(FCFLAGS) $< -o $@
+coarray: nstream-coarray p2p-coarray stencil-coarray transpose-coarray
 
-%-pretty: %-pretty.f90
-	$(FC) $(FCFLAGS) $< -o $@
+mpi: nstream-mpi transpose-a2a-mpi transpose-p2p-mpi transpose-get-mpi transpose-acc-mpi
 
-p2p-openmp-doacross: p2p-openmp-doacross.f90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+mpi-openmp: nstream-mpi-openmp
 
-p2p-openmp-datapar: p2p-openmp-datapar.f90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+ga: nstream-ga transpose-ga dgemm-ga
 
-%-openmp: %.f90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+target: stencil-openmp-target transpose-openmp-target nstream-openmp-target dgemm-openmp-target \
+	transpose-openmp-target-loop
 
-%-tasks: %-tasks.f90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
+openacc: p2p-openacc p2p-innerloop-openacc stencil-openacc transpose-openacc nstream-openacc
 
-%-taskloop: %-taskloop.f90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< -o $@
 
-%-coarray: %-coarray.f90
-	$(CAFC) $(FCFLAGS) $< $(COARRAYFLAG) -o $@
+stdpar: nstream-stdpar stencil-stdpar transpose-stdpar dgemm-stdpar
 
-%-target: %-target.f90
-	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< -o $@
+cuda: cufortran
+cuf: cufortran
+cufortran: nstream-cufortran transpose-cufortran
 
-%-ornlacc: %-ornlacc.f90
-	$(FC) $(FCFLAGS) $(ORNLACCFLAG) $< -o $@
+blas: dgemm-blas
+
+%: %.F90 prk.mod prk_mod.o
+	$(FC) $(FCFLAGS) $< prk_mod.o -o $@
+
+prk.mod prk_mod.o: prk_mod.F90
+	$(FC) $(FCFLAGS) -c $< -o prk_mod.o
+
+prk_mpi.mod prk_mpi_mod.o: prk_mpi.F90
+	$(MPIFORT) $(FCFLAGS) -c $< -o prk_mpi_mod.o
+
+stencil: stencil.F90 prk.mod
+	$(FC) $(FCFLAGS) -c stencil_serial.F90
+	$(FC) $(FCFLAGS) stencil.F90 stencil_serial.o prk_mod.o -o $@
+
+dgemm-pretty: dgemm-pretty.F90 prk.mod
+	$(FC) $(FCFLAGS) $< prk_mod.o $(BLASFLAGS) $(STDPARFLAG) -o $@
+
+dgemm-blas: dgemm-blas.F90 prk.mod
+	$(FC) $(FCFLAGS) $< prk_mod.o $(BLASFLAGS) -o $@
+
+%-pretty: %-pretty.F90 prk.mod
+	$(FC) $(FCFLAGS) $(STDPARFLAG) $< prk_mod.o -o $@
+
+#%-openmp: %.F90 prk.mod
+#	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< prk_mod.o -o $@
+
+%-openmp: %-openmp.F90 prk.mod
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $< prk_mod.o -o $@
+
+%-ga: %-ga.F90 prk.mod
+	$(MPIFORT) $(FCFLAGS) $< prk_mod.o $(GAFLAG) -o $@
+
+%-mpi-openmp: %-mpi.F90 prk.mod
+	$(MPIFORT) $(FCFLAGS) $(OPENMPFLAG) $< prk_mod.o prk_mpi_mod.o -o $@
+
+%-mpi: %-mpi.F90 prk.mod prk_mpi.mod
+	$(MPIFORT) $(FCFLAGS) $< prk_mod.o prk_mpi_mod.o -o $@
+
+%-coarray: %-coarray.F90 prk.mod
+	$(CAFC) $(FCFLAGS) $< prk_mod.o $(COARRAYFLAG) -o $@
+
+%-target: %-target.F90 prk.mod
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< prk_mod.o -o $@
+
+%-target-loop: %-target-loop.F90 prk.mod
+	$(FC) $(FCFLAGS) $(OPENMPFLAG) $(OFFLOADFLAG) $< prk_mod.o -o $@
+
+%-openacc: %-openacc.F90 prk.mod
+	$(FC) $(FCFLAGS) $(OPENACCFLAG) $< prk_mod.o -o $@
+
+%-cufortran: %-cufortran.F90 prk.mod
+	$(FC) $(FCFLAGS) $(CUFORTFLAG) $< prk_mod.o -o $@
+
+%-stdpar: %-stdpar.F90 prk.mod
+	$(FC) $(FCFLAGS) $(STDPARFLAG) $< prk_mod.o -o $@
 
 clean:
+	-rm -f prk.mod
+	-rm -f prk.f18.mod
+	-rm -f prk_mpi.mod
+	-rm -f prk_mpi.f18.mod
 	-rm -f *.o
 	-rm -f *.i90
+	-rm -f *.dbg
 	-rm -f *__genmod.f90 # Intel Fortran
 	-rm -f *__genmod.mod # Intel Fortran
+	-rm -f flang_unparsed_file*.f90 # F18 Flang
 	-rm -f *.optrpt
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
-	-rm -f p2p                   stencil                 transpose
-	-rm -f p2p-pretty            stencil-pretty          transpose-pretty
-	-rm -f p2p-coarray           stencil-coarray         transpose-coarray
-	-rm -f p2p-openmp-tasks      stencil-openmp          transpose-openmp
-	-rm -f p2p-openmp-doacross   p2p-openmp-datapar
-	-rm -f p2p-openmp-target     stencil-openmp-target   transpose-openmp-target
-	-rm -f p2p-ornlacc           stencil-ornlacc         transpose-ornlacc
-	-rm -f stencil-tasks         transpose-tasks
-	-rm -f stencil-taskloop      transpose-taskloop
+	-rm -f p2p stencil transpose nstream dgemm
+	-rm -f transpose-pointer
+	-rm -f p2p-innerloop
+	-rm -f *-pretty
+	-rm -f *-blas
+	-rm -f *-coarray
+	-rm -f *-mpi
+	-rm -f *-ga
+	-rm -f *-openmp
+	-rm -f *-target
+	-rm -f *-target-loop
+	-rm -f *-openacc
+	-rm -f *-stdpar
+	-rm -f *-cufortran
+	-rm -f pic pic_soa
+	-rm -f a.out

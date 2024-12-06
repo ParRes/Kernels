@@ -18,9 +18,9 @@ INCLUDEPATHS =
 ### End User configurable options ###
 
 ifndef MAXTHREADS
-  MAXTHREADS=256
+  MAXTHREADS=512
 endif
-#description: default thread limit is 256
+#description: default thread limit is 512
 
 ifndef VERBOSE
   VERBOSE=0
@@ -32,7 +32,7 @@ NTHREADFLAG = -DMAXTHREADS=$(MAXTHREADS)
 
 OPTIONSSTRING="Make options:\n\
 OPTION         MEANING                            DEFAULT\n\
-MAXTHREADS=?   set maximum number of OpenMP threads [256]\n\
+MAXTHREADS=?   set maximum number of OpenMP threads [512]\n\
 VERBOSE=0/1    omit/include verbose run information [0]"
 
 TUNEFLAGS   = $(VERBOSEFLAG) $(NTHREADFLAG) $(USERFLAGS) 

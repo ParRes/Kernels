@@ -49,9 +49,9 @@ endif
 #description: default is compact (non-expanded) form of loop body
 
 ifndef MAXTHREADS
-  MAXTHREADS=256
+  MAXTHREADS=512
 endif
-#description: default thread limit is 256
+#description: default thread limit is 512
 
 ifndef VERBOSE
   VERBOSE=0
@@ -74,7 +74,7 @@ LOOPGEN=0/1             compact/expanded stencil loop body         [0]  \n\
 DOUBLE=0/1              single/double precision                    [1]  \n\
 PARALLELFOR=0/1         fused/split parallel regions               [0]  \n\
 RESTRICT_KEYWORD=0/1    disable/enable restrict keyword (aliasing) [0]  \n\
-MAXTHREADS=?            set maximum number of OpenMP threads       [256]\n\
+MAXTHREADS=?            set maximum number of OpenMP threads       [512]\n\
 STAR=0/1                box/star shaped stencil                    [1]  \n\
 VERBOSE=0/1             omit/include verbose run information       [0]"
 

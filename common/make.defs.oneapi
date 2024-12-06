@@ -1,0 +1,177 @@
+#
+# This file shows the Intel toolchain options for PRKs using
+# OpenMP, MPI and/or Fortran coarrays only.
+#
+# Base compilers and language options
+#
+# We assume you have Intel MPI and have setup your environment with e.g.
+# .  /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+# in your .bashrc.
+#
+# C99 is required in some implementations.
+CC=icx -std=c11 -pthread
+#EXTRA_CLIBS=-lrt
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+FC=ifx -std18 -fpp
+# C++11 may not be required but does no harm here.
+CXX=icpx -std=c++20 -pthread #--gcc-toolchain=/opt/gcc/11.2.0
+#
+# Compiler flags
+#
+# -xHOST is appropriate for most cases.
+DEFAULT_OPT_FLAGS=-g3 -O3 -xHOST
+#
+# If you are compiling for KNL on a Xeon login node, use the following:
+# DEFAULT_OPT_FLAGS=-g -O3 -xMIC-AVX512
+#
+#DEFAULT_OPT_FLAGS+=-qopt-report=5
+#
+# OpenMP flags
+#
+OPENMPFLAG=-qopenmp
+OPENMPSIMDFLAG=-qopenmp-simd
+OFFLOADFLAG=-fopenmp-targets=spir64
+OFFLOADFLAG+=-DGPU_SCHEDULE=""
+STDPARFLAG=-parallel -qmkl
+#
+# OpenCL flags
+#
+# MacOS
+#OPENCLFLAG=-framework OpenCL
+# POCL
+# http://portablecl.org/docs/html/using.html#linking-your-program-directly-with-pocl is not correct...
+#OPENCLFLAG=-I/opt/pocl/latest/include -L/opt/pocl/latest/lib -lpoclu -I/opt/pocl/latest/share/pocl/include -lOpenCL
+# Linux
+OPENCLDIR=/opt/intel/oneapi/compiler/latest/linux
+OPENCLFLAG=-I${OPENCLDIR}/include/sycl -L${OPENCLDIR}/lib -lOpenCL
+#
+# SYCL flags
+#
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+#SYCLDIR=/opt/isycl
+#SYCLCXX=${SYCLDIR}/bin/clang++
+#SYCLFLAG=-std=c++17 -O3
+#SYCLFLAG+=-fsycl -fsycl-unnamed-lambda
+#SYCLFLAG+=-fsycl-targets=spir64_gen-unknown-linux-sycldevice -Xsycl-target-backend=spir64_gen-unknown-linux-sycldevice "-device skl"
+#SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#
+# Intel oneAPI
+#
+SYCLCXX=icpx
+SYCLFLAG=-fsycl
+SYCLFLAG+=-std=c++17 -O3 -g3
+SYCLFLAG+=-DDPCPP
+# this is because the DPC++ compiler will fail to compile run<double> on Tiger Lake
+# even though the code explicitly checks for FP64 support and only instantiates the
+# template when the device query says FP64 is supported.
+SYCLFLAG+=-DDPCPP_NO_DOUBLE
+#
+#
+# OCCA
+#
+#OCCADIR=${HOME}/prk-repo/Cxx11/occa
+#
+# TBB
+#
+TBBFLAG=-tbb
+#TBBFLAG=-tbb_preview -DTBB_PREVIEW_FLOW_GRAPH_TRACE
+#
+# Parallel STL, Boost, etc.
+#
+BOOSTFLAG=
+#RANGEFLAG=-DUSE_GCC_RANGES
+#RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+RANGEFLAG=-DUSE_RANGES_TS -I../deps/range-v3/include
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} ${RANGEFLAG} -I./pstl/stdlib -I./pstl/include
+KOKKOSDIR=/opt/kokkos/intel
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG} -ldl
+RAJADIR=/opt/raja/intel
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+THRUSTDIR=/opt/nvidia/thrust
+THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
+#
+# CBLAS for C++ DGEMM
+#
+#CBLASFLAG=-DACCELERATE -framework Accelerate -flax-vector-conversions
+BLASFLAG=-qmkl
+CBLASFLAG=-DMKL -qmkl
+#MKLROOT=/opt/intel/inteloneapi/mkl/latest
+#ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_tbb_thread ${TBBFLAG} -lmkl_core -lOpenCL -ldl
+#ONEMKLFLAG+=-I/opt/intel/oneapi/mkl/latest/include/
+#ONEMKLFLAG=-I$(MKLROOT)/include -DMKL_ILP64 ${MKLROOT}/lib/intel64/libmkl_sycl.a  -L${MKLROOT}/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lOpenCL -ldl
+ONEMKLFLAG=-qmkl
+#
+# CUDA flags
+#
+# Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
+#NVCC=/opt/llvm/cocl/bin/cocl
+# Linux w/ NVIDIA CUDA
+NVCC=nvcc
+CUDAFLAGS=-g -O3 -std=c++11
+CUDAFLAGS+=-arch=sm_50
+# https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
+CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#
+# Halide
+#
+HALIDECXX=icpx
+HALIDEDIR=/opt/halide
+HALIDEFLAG=-I${HALIDEDIR}/include
+HALIDEFLAG+=-Wl,-rpath=${HALIDEDIR}/lib -L${HALIDEDIR}/lib -lHalide
+#HALIDEFLAG+=-D_GLIBCXX_USE_CXX11_ABI=0
+HALIDEFLAG+=${DEFAULT_OPT_FLAGS}
+HALIDEFLAG+=-std=c++17
+#
+# ISPC
+#
+ISPC=ispc
+ISPCFLAG=-O3 --target=host --opt=fast-math
+#
+# MPI-3
+#
+# We assume you have Intel MPI and have setup your environment with e.g.
+# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
+# in your .bashrc.
+#
+# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
+MPIDIR=/opt/intel/oneapi/mpi/latest
+MPICC=${MPIDIR}/bin/mpiicc
+MPICXX=${MPIDIR}/bin/mpiicpc
+MPIFORT=${MPIDIR}/bin/mpiifort
+MPIINC=-I${MPIDIR}/include
+MPILIB=-L${MPIDIR}/lib -L${MPIDIR}/lib/release -lmpi
+#MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
+#MPIINC=-I/usr/include/mpich-3.2-x86_64
+#MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# Global Arrays
+#
+GADIR=../deps/ga
+GAFLAG=-I${GADIR}/include
+GAFLAG+=-L${GADIR}/lib -lga
+GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
+#GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
+GAFLAG+=${MPIINC} ${MPILIB}
+GAFLAG+=-lmpifort -lmpi
+GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+#
+# PETSc
+#
+PETSCDIR=../deps/petsc
+PETSCFLAG=-I${PETSCDIR}/include
+PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
+PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
+#
+# Fortran 2008 coarrays
+#
+# see https://github.com/ParRes/Kernels/blob/master/FORTRAN/README.md for details
+# single-node
+COARRAYFLAG=-coarray
+# multi-node
+# COARRAYFLAG=-coarray=distributed
+#
+# MEMKIND (used in C1z)
+#
+MEMKINDDIR=/home/parallels/PRK/deps
+MEMKINDFLAGS=-I${MEMKINDDIR}/include -L${MEMKINDDIR}/lib -lmemkind -Wl,-rpath=${MEMKINDDIR}/lib

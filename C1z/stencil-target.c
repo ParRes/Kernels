@@ -60,6 +60,8 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
+#include "stencil_target.h"
 
 typedef void (*stencil_t)(const int, const double * restrict, double * restrict);
 
@@ -72,11 +74,9 @@ void nothing(const int n, const double * restrict in, double * restrict out)
     abort();
 }
 
-#include "stencil_openmp.h"
-
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("Parallel Research Kernels version %d\n", PRKVERSION);
   printf("C11/OpenMP TARGET Stencil execution on 2D grid\n");
 
   //////////////////////////////////////////////////////////////////////
@@ -123,7 +123,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+#endif
   printf("Number of iterations      = %d\n", iterations);
   printf("Grid sizes                = %d\n", n);
   printf("Type of stencil           = %s\n", (star ? "star" : "grid") );
@@ -162,8 +164,6 @@ int main(int argc, char * argv[])
 
   double stencil_time = 0.0;
 
-  // interior of grid with respect to stencil
-  size_t active_points = (n-2*radius)*(n-2*radius);
   size_t bytes = n*n*sizeof(double);
 
   double * restrict in  = prk_malloc(bytes);
@@ -171,10 +171,11 @@ int main(int argc, char * argv[])
 
   // HOST
   // initialize the input and output arrays
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
   {
-    _Pragma("omp for")
+    OMP_FOR()
     for (int i=0; i<n; i++) {
+      OMP_SIMD
       for (int j=0; j<n; j++) {
         in[i*n+j]  = (double)(i+j);
         out[i*n+j] = 0.0;
@@ -183,40 +184,35 @@ int main(int argc, char * argv[])
   }
 
   // DEVICE
-  _Pragma("omp target map(tofrom: in[0:n*n], out[0:n*n]) map(from:stencil_time)")
-  _Pragma("omp parallel")
+  OMP_TARGET( data map(tofrom: in[0:n*n], out[0:n*n]) )
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
-          stencil_time = prk_wtime();
-      }
+      if (iter==1) stencil_time = omp_get_wtime();
 
       // Apply the stencil operator
       stencil(n, in, out);
 
       // Add constant to solution to force refresh of neighbor data, if any
-      _Pragma("omp for")
+      OMP_TARGET( teams distribute parallel for simd collapse(2) schedule(static,1) )
       for (int i=0; i<n; i++) {
         for (int j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
     }
-    _Pragma("omp barrier")
-    _Pragma("omp master")
-    stencil_time = prk_wtime() - stencil_time;
+    stencil_time = omp_get_wtime() - stencil_time;
   }
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
   //////////////////////////////////////////////////////////////////////
 
+  // interior of grid with respect to stencil
+  size_t active_points = (n-2*radius)*(n-2*radius);
   // compute L1 norm in parallel
   double norm = 0.0;
-  _Pragma("omp parallel for reduction(+:norm)")
+  OMP_PARALLEL_FOR_REDUCE( +:norm )
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
       norm += fabs(out[i*n+j]);

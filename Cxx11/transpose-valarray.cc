@@ -53,15 +53,16 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include <valarray>
 
 int main(int argc, char * argv[])
 {
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
+
   //////////////////////////////////////////////////////////////////////
   // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
-
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11 Matrix transpose: B = A^T" << std::endl;
 
   int iterations;
   int order;
@@ -81,10 +82,12 @@ int main(int argc, char * argv[])
       order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
+      } else if (order > prk::get_max_matrix_size()) {
+        throw "ERROR: matrix dimension too large - overflow risk";
       }
 
       // default tile size for tiling of local transpose
-      tile_size = (argc>4) ? std::atoi(argv[3]) : 32;
+      tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
       // a negative tile size means no tiling of the local transpose
       if (tile_size <= 0) tile_size = order;
 
@@ -94,13 +97,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Matrix order          = " << order << std::endl;
-  if (tile_size < order) {
-      std::cout << "Tile size             = " << tile_size << std::endl;
-  } else {
-      std::cout << "Untiled" << std::endl;
-  }
   std::cout << "Number of iterations  = " << iterations << std::endl;
+  std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Tile size             = " << tile_size << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
@@ -109,23 +108,23 @@ int main(int argc, char * argv[])
   std::valarray<double> A(0.0,order*order);
   std::valarray<double> B(0.0,order*order);
 
-  auto trans_time = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  double trans_time{0};
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       A[j*order+i] = order*j+i;
     }
   }
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) trans_time = prk::wtime();
 
     // transpose the  matrix
     if (tile_size < order) {
-      for (auto it=0; it<order; it+=tile_size) {
-        for (auto jt=0; jt<order; jt+=tile_size) {
-          for (auto i=it; i<std::min(order,it+tile_size); i++) {
-            for (auto j=jt; j<std::min(order,jt+tile_size); j++) {
+      for (int it=0; it<order; it+=tile_size) {
+        for (int jt=0; jt<order; jt+=tile_size) {
+          for (int i=it; i<std::min(order,it+tile_size); i++) {
+            for (int j=jt; j<std::min(order,jt+tile_size); j++) {
               B[i*order+j] += A[j*order+i];
               A[j*order+i] += 1.0;
             }
@@ -133,8 +132,8 @@ int main(int argc, char * argv[])
         }
       }
     } else {
-      for (auto i=0;i<order; i++) {
-        for (auto j=0;j<order;j++) {
+      for (int i=0;i<order; i++) {
+        for (int j=0;j<order;j++) {
           B[i*order+j] += A[j*order+i];
           A[j*order+i] += 1.0;
         }
@@ -150,12 +149,12 @@ int main(int argc, char * argv[])
   // TODO: replace with std::generate, std::accumulate, or similar
   const auto addit = (iterations+1.) * (iterations/2.);
   auto abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const int ij = i*order+j;
       const int ji = j*order+i;
       const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(B[ji] - reference);
+      abserr += prk::abs(B[ji] - reference);
     }
   }
 

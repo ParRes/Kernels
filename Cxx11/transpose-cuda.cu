@@ -1,6 +1,6 @@
 ///
 /// Copyright (c) 2013, Intel Corporation
-/// Copyright (c) 2015, NVIDIA CORPORATION.
+/// Copyright (c) 2021, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -12,7 +12,7 @@
 ///       copyright notice, this list of conditions and the following
 ///       disclaimer in the documentation and/or other materials provided
 ///       with the distribution.
-/// * Neither the name of <COPYRIGHT HOLDER> nor the names of its
+/// * Neither the name of Intel Corporation nor the names of its
 ///       contributors may be used to endorse or promote products
 ///       derived from this software without specific prior written
 ///       permission.
@@ -56,52 +56,107 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 
-// The kernel was derived from https://github.com/parallel-forall/code-samples/blob/master/series/cuda-cpp/transpose/transpose.cu,
-// which is the reason for the additional copyright noted above.
+// The kernel was derived from https://github.com/parallel-forall/code-samples/blob/master/series/cuda-cpp/transpose/transpose.cu
 
 const int tile_dim = 32;
 const int block_rows = 8;
 
-__global__ void transpose(int order, float * A, float * B)
+__global__ void transposeNoBankConflict(int order, double * A, double * B)
 {
-    int x = blockIdx.x * tile_dim + threadIdx.x;
-    int y = blockIdx.y * tile_dim + threadIdx.y;
-    int width = gridDim.x * tile_dim;
+    __shared__ double tile[tile_dim][tile_dim+1];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
+       A[(y+j)*order + x] += (double)1;
+    }
+
+    __syncthreads();
+
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
 
     for (int j = 0; j < tile_dim; j+= block_rows) {
-        B[x*width + (y+j)] += A[(y+j)*width + x];
-        A[(y+j)*width + x] += 1.0f;
+        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
     }
 }
+
+__global__ void transposeCoalesced(int order, double * A, double * B)
+{
+    __shared__ double tile[tile_dim][tile_dim];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
+       A[(y+j)*order + x] += (double)1;
+    }
+
+    __syncthreads();
+
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
+    }
+}
+
+__global__ void transposeNaive(int order, double * A, double * B)
+{
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[x*order + (y+j)] += A[(y+j)*order + x];
+        A[(y+j)*order + x] += (double)1;
+    }
+}
+
+const std::array<std::string,3> vnames = {"naive", "coalesced", "no bank conflicts"};
 
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/CUDA Matrix transpose: B = A^T" << std::endl;
 
-  //prk::CUDAinfo();
+  prk::CUDA::info info;
+  info.print();
 
   //////////////////////////////////////////////////////////////////////
-  /// Read and test input parameters
+  // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  int order;
+  int order, variant;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order>";
+        throw "Usage: <# iterations> <matrix order> [variant (0/1/2)]";
       }
 
-      // number of times to do the transpose
       iterations  = std::atoi(argv[1]);
       if (iterations < 1) {
         throw "ERROR: iterations must be >= 1";
       }
 
-      // order of a the matrix
-      order = std::atol(argv[2]);
+      order = std::atoi(argv[2]);
       if (order <= 0) {
         throw "ERROR: Matrix Order must be greater than 0";
+      } else if (order > prk::get_max_matrix_size()) {
+        throw "ERROR: matrix dimension too large - overflow risk";
+      } else if (order % tile_dim) {
+        throw "ERROR: matrix dimension not divisible by tile size";
+      }
+
+      variant = 2; // transposeNoBankConflicts
+      if (argc > 3) {
+          variant = std::atoi(argv[3]);
+      }
+      if (variant < 0 || variant > 2) {
+          throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts)";
       }
   }
   catch (const char * e) {
@@ -109,90 +164,80 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Matrix order          = " << order << std::endl;
   std::cout << "Number of iterations  = " << iterations << std::endl;
-
-  //////////////////////////////////////////////////////////////////////
-  /// Setup CUDA environment
-  //////////////////////////////////////////////////////////////////////
-
-  if (order % tile_dim != 0) {
-      std::cout << "Sorry, but order (" << order << ") must be evenly divible by " << tile_dim
-                << " or the results are going to be wrong.\n";
-  }
+  std::cout << "Matrix order          = " << order << std::endl;
+  std::cout << "Variant               = " << vnames[variant] << std::endl;
 
   dim3 dimGrid(order/tile_dim, order/tile_dim, 1);
   dim3 dimBlock(tile_dim, block_rows, 1);
 
+  info.checkDims(dimBlock, dimGrid);
+
   //////////////////////////////////////////////////////////////////////
-  /// Allocate space for the input and transpose matrix
+  // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
 
   const size_t nelems = (size_t)order * (size_t)order;
-  const size_t bytes = nelems * sizeof(float);
-  float * h_a;
-  float * h_b;
-#ifndef __CORIANDERCC__
-  prk::CUDAcheck( cudaMallocHost((float**)&h_a, bytes) );
-  prk::CUDAcheck( cudaMallocHost((float**)&h_b, bytes) );
-#else
-  h_a = new float[nelems];
-  h_b = new float[nelems];
-#endif
-  // fill A with the sequence 0 to order^2-1 as floats
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
-      h_a[j*order+i] = order*j+i;
-      h_b[j*order+i] = 0.0f;
+
+  double * h_a = prk::CUDA::malloc_host<double>(nelems);
+  double * h_b = prk::CUDA::malloc_host<double>(nelems);
+
+  // fill A with the sequence 0 to order^2-1
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
+      h_a[j*order+i] = static_cast<double>(order*j+i);
+      h_b[j*order+i] = static_cast<double>(0);
     }
   }
 
   // copy input from host to device
-  float * d_a;
-  float * d_b;
-  prk::CUDAcheck( cudaMalloc((float**)&d_a, bytes) );
-  prk::CUDAcheck( cudaMalloc((float**)&d_b, bytes) );
-  prk::CUDAcheck( cudaMemcpy(d_a, &(h_a[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDAcheck( cudaMemcpy(d_b, &(h_b[0]), bytes, cudaMemcpyHostToDevice) );
+  double * d_a = prk::CUDA::malloc_device<double>(nelems);
+  double * d_b = prk::CUDA::malloc_device<double>(nelems);
 
-  auto trans_time = 0.0;
+  prk::CUDA::copyH2D(d_a, h_a, nelems);
+  prk::CUDA::copyH2D(d_b, h_b, nelems);
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  double trans_time{0};
 
-    if (iter==1) trans_time = prk::wtime();
+  for (int iter = 0; iter<=iterations; iter++) {
 
-    transpose<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-    /// silence "ignoring cudaDeviceSynchronize for now" warning
-#ifndef __CORIANDERCC__
-    prk::CUDAcheck( cudaDeviceSynchronize() );
-#endif
+    if (iter==1) {
+        prk::CUDA::sync();
+        trans_time = prk::wtime();
+    }
+
+    if (variant==0) {
+        transposeNaive<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    } else if (variant==1) {
+        transposeCoalesced<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    } else if (variant==2) {
+        transposeNoBankConflict<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    }
+    prk::CUDA::sync();
   }
   trans_time = prk::wtime() - trans_time;
 
-  // copy output back to host
-  prk::CUDAcheck( cudaMemcpy(&(h_b[0]), d_b, bytes, cudaMemcpyDeviceToHost) );
+  prk::CUDA::copyD2H(h_b, d_b, nelems);
 
 #ifdef VERBOSE
-  // copy input back to host - debug only
-  prk::CUDAcheck( cudaMemcpy(&(h_a[0]), d_a, bytes, cudaMemcpyDeviceToHost) );
+  prk::CUDA::copyD2H(h_a, d_a, nelems);
 #endif
 
-  prk::CUDAcheck( cudaFree(d_b) );
-  prk::CUDAcheck( cudaFree(d_a) );
+  prk::CUDA::free(d_a);
+  prk::CUDA::free(d_b);
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
   //////////////////////////////////////////////////////////////////////
 
-  // TODO: replace with std::generate, std::accumulate, or similar
-  const auto addit = (iterations+1.) * (iterations/2.);
-  auto abserr = 0.0;
-  for (auto j=0; j<order; j++) {
-    for (auto i=0; i<order; i++) {
+  const double addit = (iterations+1.) * (iterations/2.);
+  double abserr(0);
+  for (int j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
       const size_t ij = (size_t)i*(size_t)order+(size_t)j;
       const size_t ji = (size_t)j*(size_t)order+(size_t)i;
-      const float reference = static_cast<float>(ij)*(1.+iterations)+addit;
-      abserr += std::fabs(h_b[ji] - reference);
+      const double reference = static_cast<double>(ij)*(1.+iterations)+addit;
+      abserr += prk::abs(h_b[ji] - reference);
     }
   }
 
@@ -200,22 +245,17 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
-#ifndef __CORIANDERCC__
-  prk::CUDAcheck( cudaFreeHost(h_b) );
-  prk::CUDAcheck( cudaFreeHost(h_a) );
-#endif
-
-  const auto epsilon = 1.0e-8;
+  const double epsilon = 1.0e-8;
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
-    auto bytes = (size_t)order * (size_t)order * sizeof(float);
+    auto bytes = (size_t)order * (size_t)order * sizeof(double);
     std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
 #ifdef VERBOSE
-    for (auto i=0; i<order; i++) {
-      for (auto j=0; j<order; j++) {
+    for (int i=0; i<order; i++) {
+      for (int j=0; j<order; j++) {
         std::cout << "(" << i << "," << j << ") = " << h_a[i*order+j] << ", " << h_b[i*order+j] << "\n";
       }
     }
@@ -224,6 +264,9 @@ int main(int argc, char * argv[])
               << " exceeds threshold " << epsilon << std::endl;
     return 1;
   }
+
+  prk::CUDA::free_host(h_a);
+  prk::CUDA::free_host(h_b);
 
   return 0;
 }

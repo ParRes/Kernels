@@ -1,27 +1,27 @@
-sudo: false
+sudo: true
 language: cpp
+python:
+  - "3.7"
 env:
   matrix:
   - PRK_TARGET=allserial
   - PRK_TARGET=allc1z
   - PRK_TARGET=allcxx
   - PRK_TARGET=allpython
-  - PRK_TARGET=alloctave
   - PRK_TARGET=alljulia
-  - PRK_TARGET=allrust
-  - PRK_TARGET=allopenmp
+  #- PRK_TARGET=allrust
+  #- PRK_TARGET=allopenmp
   - PRK_TARGET=allfortran
-  - PRK_TARGET=allmpi1
-  - PRK_TARGET=allmpirma
-  - PRK_TARGET=allmpishm
-  - PRK_TARGET=allmpiomp
-  - PRK_TARGET=allshmem
-  - PRK_TARGET=allampi
-  - PRK_TARGET=allfgmpi
-  - PRK_TARGET=allcharm++
-  - PRK_TARGET=allgrappa
-  - PRK_TARGET=allupc UPC_IMPL=gupc
-  - PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
+  #- PRK_TARGET=allmpi
+  #- PRK_TARGET=allshmem
+  #- PRK_TARGET=allampi
+  #- PRK_TARGET=allfgmpi
+  #- PRK_TARGET=allcharm++
+  #- PRK_TARGET=allgrappa
+  #- PRK_TARGET=allupc UPC_IMPL=gupc
+  #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
+  # Octave is working but it takes forever to brew (~20 minutes).
+  #- PRK_TARGET=alloctave
   # This works but we don't need to test it.
   #- PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
   # Optional: We do not need to test BUPC this thoroughly every time
@@ -34,9 +34,6 @@ env:
   #- PRK_TARGET=allhpx3
   # HPX-5 kernels are not merged yet.  Activate these when they are.
   #- PRK_TARGET=allhpx5
-  global:
-  - secure: "oLiTOLZlbVt0CbaPao3CaVoEGTtOPCQ6cfU98AOR616i6IuZCW13K8OIstD5GbvO6AHCVTH1jonJZ7bBCTF5C0gTWLTNbwMNMKAbsdedieSlLkTcAQkpJzYBuUfL8IXhm6VivguAewD8axzWMUXUbKJBUYEftOHtN6SFu/M7OnLrWWim5hgFnUakrq+hjVmIsMX9rKaARLCRsrN/M0GQ8/BhFHDl++1oLPc3loaieLsDC4riMZE8wxp/6U5peN5iosxwJhsDtYo/GGPv5oivvcSFErAkM9PrIhoNn7DiHfxrx331V0ukf8zDP93pxDx/9L2yERoTUdw5fk6NG6LX6r2WT2iR+JuR4ZdyCdbUaGyWY0VMwXLIholHQU0d2tI2S5rHue/btFRrHJbhOyujX9rJhPx407aZU7ZOZYfy9OPo3r8ekzlDJRfSceykFeIg97HdJ+sqguSs1ZYHbQAQGoPyxcVhw/+Fz//k+hndyGui1AaOLnihaY4KQwoMijJsa3+7X6RS9supSKzlk5JWzF9lLbNOoPO04VGGnLdfqhHNImQWZNsYoP0E4VnKcMXKulyF0bDsoCDookQzTJwYgi+F/drZjKDw9iyMvT1gWM+T0uAo7fHUnomTgEUIYeJppkETKuZEg3aZ+rUekcygYvrEVf5/2sgrRMBxXzE1U9I="
-  - secure: "j2SveaWkbcxRTK3c27qkdD7o0GvCrIMjx2GcVa4YOKtkKWiE5CdocPugDKdPzBhoehVKqD7u3w6ZFep1lm3+VSHwxuKC2I28fTFmGmxQUUEcXAlAc3HfcdOctqOjPL0w8oLRduGiN4fc1D7KEW7uqwT7kTYIm9qXCr2lDyigUjLrulnt5N/o64Xr8j9yKE1s3JNcuibvkTGYoMISJ8i271XjWEewzY8lJziWYqVSv2MsKr1Epl7TDNCLVhHbFq+DAJfCFilvNDngFXOzNfuYYoKCzxaDOk6dWtjCH70D0YZfOtJJJjFOzAG8Q14IklWQlcm69pFQCoveEUOaUULBDJ1B9O+wdmj56dm592+QdUI7onefqcrTFcQ/O3q18EgtKRjPt5Y52iaOBzW8gF+570G1MSX69KpazmEbeEzefPewIi9adwduBhnzdy27hFzPocA+1xrzjSSTFFfAPl0/boJlhOyUtY25VquqIUqUPLbkMWe2hX2FDr8G9O9mJ4jsvTYBNXhW95cELxepJ9zok7XUTB64e8ElTTOjcUk39cejIT2tF2/fur8Ld9HpXtFgUarq+RgDLG3QOOgeu93DiyYhKIgxfSntnAc4/4ACI2PPBju0wXYBpIEBIykCFNRTuoVMGt4r2FQcSztHQs6rj7SCXHFzAxmBcEbLd4GvTJE="
 # this is for Python, per http://danielnouri.org/notes/2012/11/23/use-apt-get-to-install-python-dependencies-for-travis-ci/
 virtualenv:
   system_site_packages: true
@@ -46,38 +43,37 @@ os:
 compiler:
 - gcc
 - clang
-#- touch ~/use-intel-compilers ; gcc
 matrix:
   exclude:
-  # Intel for Mac not setup yet
+  # There is nothing inherently wrong with GCC@OSX but Travis CI MacOS throughput is low, so focus on Clang@OSX.
   - os: osx
-    compiler: touch ~/use-intel-compilers ; gcc
+    compiler: gcc
+    env: PRK_TARGET=allserial
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allc1z
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allshmem
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allampi
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allcharm++
+  - os: osx
+    compiler: gcc
+    env: PRK_TARGET=allmpi
   # Clang does not support OpenMP yet and not willing to build from source.  Save this for Mac where we can Brew it.
   - os: linux
     compiler: clang
     env: PRK_TARGET=allopenmp
-  - os: linux
-    compiler: clang
-    env: PRK_TARGET=allmpiomp
-  # Mac/Clang OpenMP broken because Brew no longer supports "clang-omp"
-  - os: osx
-    compiler: clang
-    env: PRK_TARGET=allopenmp
-  - os: osx
-    compiler: clang
-    env: PRK_TARGET=allmpiomp
   # dealing with broken GCC on Mac not worth it here
   - os: osx
     compiler: gcc
     env: PRK_TARGET=allopenmp
-  - os: osx
-    compiler: gcc
-    env: PRK_TARGET=allmpiomp
   # Clang UPC requires source build, which probably takes too long
   - compiler: clang
-    env: PRK_TARGET=allupc UPC_IMPL=gupc
-  # Intel does not make sense with Intrepid GCC/Clang UPC
-  - compiler: touch ~/use-intel-compilers ; gcc
     env: PRK_TARGET=allupc UPC_IMPL=gupc
   # Source build impossible (too much time+stdout)
   - os: osx
@@ -117,22 +113,6 @@ matrix:
     env: PRK_TARGET=alljulia
   - compiler: gcc
     env: PRK_TARGET=allrust
-  # ICC
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allpython
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=alloctave
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=alljulia
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allrust
-  # MPI implementations of Transpose hang with Intel compilers (why?!?!)
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpi1
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpiomp
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allmpishm
   # UPC over MPICH on Mac hangs - may be async progress issue
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
@@ -141,114 +121,51 @@ matrix:
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
   - os: osx
     env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
-  # Grappa with Intel unlikely to succeed, especially if Clang doesn't.
-  - compiler: touch ~/use-intel-compilers ; gcc
-    env: PRK_TARGET=allgrappa
-  allow_failures:
-  ## will fail if numpy package cannot be acquired via apt
-  #- env: PRK_TARGET=allpython
-  #- os: linux
-  #  env: PRK_TARGET=alljulia
-  ## GUPC will fail when libnuma cannot be acquired via apt
-  #- env: PRK_TARGET=allupc UPC_IMPL=gupc
-  # we have lots of Grappa issues...
+  # Charm++ on Mac is not working for us.
+  - os: osx
+    env: PRK_TARGET=allcharm++
+  # We have lots of Grappa issues.  Need to resolve outside of Travis.
   - env: PRK_TARGET=allgrappa
   # Mac issue with thread_t (see https://github.com/humairakamal/fgmpi/pull/1)
   - os: osx
     env: PRK_TARGET=allfgmpi
+  # SOS@OFI has not worked on MacOS in a while :-(
+  - os: osx
+    compiler: clang
+    env: PRK_TARGET=allshmem
+  allow_failures:
+  # Travis trusty breaks this
+  - os: linux
+    env: PRK_TARGET=allupc UPC_IMPL=gupc
+  # Travis tests failing due to runtime problems
+  - os: linux
+    env: PRK_TARGET=allampi
   - os: linux
     env: PRK_TARGET=allfgmpi
-  # BUPC has trouble with flags
-  #- os: linux
-  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
-  #- os: linux
-  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
-  #- os: linux
-  #  env: PRK_TARGET=allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
-  # Travis tests failing due to runtime problems
-  - os: osx
-    env: PRK_TARGET=allampi
   - os: linux
-    env: PRK_TARGET=allampi
-  - os: osx
+    compiler: clang
+    env: PRK_TARGET=allmpi
+  - os: linux
     env: PRK_TARGET=allcharm++
-  - os: linux
-    compiler: clang
-    env: PRK_TARGET=allampi
-  # These started failing in June 2017.  Need to debug.
-  - os: linux
-    compiler: clang
-    env: PRK_TARGET=allmpi1
-  - os: linux
-    compiler: clang
-    env: PRK_TARGET=allmpirma
-  - os: linux
-    compiler: clang
-    env: PRK_TARGET=allmpishm
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    # works on Precise and Trusty
-    # see https://docs.travis-ci.com/user/languages/c/ for details
-    - llvm-toolchain-precise-3.8
-    #  Boost is for Grappa, HPX, C++ rangefor, pstl
-    - boost-latest
-    packages:
-    - python-numpy
-    - gcc-5
-    - g++-5
-    - gfortran-5
-    - gcc-6
-    - g++-6
-    - gfortran-6
-    # Required by GUPC
-    - libnuma-dev
-    # This should provide OpenMP
-    - clang-3.8
-    # Grappa and HPX use CMake
-    - cmake
-    # C++ code needs range headers
-    - libboost-all-dev
-    # Boost is for Grappa and HPX-3 - reactivate with them
-    # Grappa needs these (according to their .travis.yml)
-    #- libboost-date-time1.55-dev
-    #- libboost-exception1.55-dev
-    #- libboost-filesystem1.55-dev
-    #- libboost-iostreams1.55-dev
-    #- libboost-math1.55-dev
-    #- libboost-random1.55-dev
-    #- libboost-regex1.55-dev
-    #- libboost-serialization1.55-dev
-    #- libboost-signals1.55-dev
-    #- libboost-system1.55-dev
-    #- libboost-test1.55-dev
-    #- libboost-timer1.55-dev
-    # HPX-3 needs these - not whitelisted yet
-    #- libboost_chrono1.55-dev
-    #- libboost_program_options1.55-dev
-    #- libboost_thread1.55-dev
 before_install:
-- pwd
-- export TRAVIS_HOME=$PWD
-- export TRAVIS_ROOT=$TRAVIS_HOME/PRK-deps
-- mkdir -p $TRAVIS_ROOT
-- sh ./travis/install-intel.sh $TRAVIS_ROOT $PRK_TARGET
-- source ~/.bashrc
+  - pwd
+  - export CI_HOME=$PWD
+  - export CI_ROOT=$CI_HOME/PRK-deps
+  - mkdir -p $CI_ROOT
 install:
-- export PATH=$TRAVIS_ROOT/bin:$PATH
-- export PATH=$TRAVIS_ROOT/gcc/bin:$PATH
-- export PATH=$TRAVIS_ROOT/cmake/bin:$PATH
-- sh ./travis/install-deps.sh $TRAVIS_ROOT $PRK_TARGET
+  - export PATH=$CI_ROOT/bin:$PATH
+  - export PATH=$CI_ROOT/gcc/bin:$PATH
+  - export PATH=$CI_ROOT/cmake/bin:$PATH
+  - sh ./ci/install-deps.sh $CI_ROOT $PRK_TARGET
 before_script:
-- pwd
+  - pwd
 script:
-- sh ./travis/build-run-prk.sh $TRAVIS_ROOT $PRK_TARGET
+  - sh ./ci/build-run-prk.sh $CI_ROOT $PRK_TARGET
 after_failure:
-- echo "Sad panda"
-- find . -name config.log -exec grep -L "configure: exit 0" {} ";" | xargs cat
-#- find . -name CMakeOutput.log -exec cat {} ";"
-#- find . -name CMakeError.log -exec cat {} ";"
+  - echo "Sad panda"
+  - find . -name config.log -exec grep -L "configure: exit 0" {} ";" | xargs cat
+  #- find . -name CMakeOutput.log -exec cat {} ";"
+  #- find . -name CMakeError.log -exec cat {} ";"
 notifications:
   email:
     recipients:

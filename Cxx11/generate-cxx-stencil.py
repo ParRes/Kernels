@@ -5,114 +5,205 @@ import fileinput
 import string
 import os
 
-def codegen(src,pattern,stencil_size,radius,W,model):
-    if (model=='openmp'):
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    _Pragma("omp for")\n')
-        src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      PRAGMA_OMP_SIMD\n')
-        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
-    elif (model=='taskloop'):
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    _Pragma("omp taskloop")\n')
-        src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      PRAGMA_OMP_SIMD\n')
-        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
-    elif (model=='target'):
-        src.write('void '+pattern+str(radius)+'(const int n, const double * RESTRICT in, double * RESTRICT out) {\n')
-        src.write('    _Pragma("omp for")\n')
-        src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      PRAGMA_OMP_SIMD\n')
-        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
-    elif (model=='rangefor'):
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
-        src.write('    for (auto i : inside) {\n')
-        src.write('      PRAGMA_SIMD\n')
-        src.write('      for (auto j : inside) {\n')
-    elif (model=='stl'):
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
-        src.write('    std::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
-        src.write('      PRAGMA_SIMD\n')
-        src.write('      std::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
-    elif (model=='pgnu'):
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
-        src.write('    __gnu_parallel::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
-        src.write('      for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
-    elif (model=='pstl'):
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    auto inside = boost::irange('+str(radius)+',n-'+str(radius)+');\n')
-        src.write('    std::for_each( std::execution::par, std::begin(inside), std::end(inside), [&] (int i) {\n')
-        src.write('      std::for_each( std::execution::unseq, std::begin(inside), std::end(inside), [&] (int j) {\n')
-    elif (model=='cilk'):
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    _Cilk_for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      PRAGMA_SIMD\n')
-        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
-    elif (model=='tbb'):
-        src.write('template <>\n')
-        if pattern=='star':
-            name='Star'
-        elif pattern=='grid':
-            name='Grid'
-        src.write('struct '+name+'<'+str(radius)+'> {\n')
-        src.write('  void operator()( const tbb::blocked_range2d<int>& r ) const {\n')
-        src.write('    for (tbb::blocked_range<int>::const_iterator i=r.rows().begin(); i!=r.rows().end(); ++i ) {\n')
-        src.write('      for (tbb::blocked_range<int>::const_iterator j=r.cols().begin(); j!=r.cols().end(); ++j ) {\n')
-    elif (model=='raja'):
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>\n')
-        src.write('            ( RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),'
-                                'RAJA::RangeSegment('+str(radius)+',n-'+str(radius)+'),\n')
-        src.write('              [&](RAJA::Index_type i, RAJA::Index_type j) {\n')
-    elif (model=='kokkos'):
-        src.write('void '+pattern+str(radius)+'(const int n, matrix & in, matrix & out) {\n')
-        src.write('    Kokkos::parallel_for ( Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>('+str(radius)+',n-'+str(radius)+'), KOKKOS_LAMBDA(const int i) {\n')
-        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
+def bodygen(src,pattern,stencil_size,radius,W,model):
+    if (model=='kokkos' or model=='rajaview'):
+        src.write('              out(i,j) += ')
     else:
-        src.write('void '+pattern+str(radius)+'(const int n, std::vector<double> & in, std::vector<double> & out) {\n')
-        src.write('    for (auto i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
-        src.write('      PRAGMA_SIMD\n')
-        src.write('      for (auto j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
-    if (model=='kokkos'):
-        src.write('        out(i,j) += ')
-    else:
-        src.write('        out[i*n+j] += ')
+        src.write('            out[i*n+j] += ')
     k = 0
     kmax = stencil_size-1;
     for j in range(0,2*radius+1):
+        if (j-radius)<0:
+            jr=str(j-radius)
+        elif (j-radius)==0:
+            jr=''
+        else:
+            jr='+'+str(j-radius)
+
         for i in range(0,2*radius+1):
+            if (i-radius)<0:
+                ir=str(i-radius)
+            elif (i-radius)==0:
+                ir=''
+            else:
+                ir='+'+str(i-radius)
+
             if ( W[j][i] != 0.0):
                 k+=1
-                if (model=='kokkos'):
-                    src.write('+in(i+'+str(j-radius)+',j+'+str(i-radius)+') * '+str(W[j][i]))
+                if (model=='kokkos' or model=='rajaview'):
+                    src.write('+in(i'+ir+',j'+jr+') * '+str(W[j][i]))
                 else:
-                    src.write('+in[(i+'+str(j-radius)+')*n+(j+'+str(i-radius)+')] * '+str(W[j][i]))
+                    src.write('+in[(i'+ir+')*n+(j'+jr+')] * '+str(W[j][i]))
                 if (k<kmax): src.write('\n')
-                if (k>0 and k<kmax): src.write('                      ')
+                if (k>0 and k<kmax): src.write('                          ')
     src.write(';\n')
-    if (model=='stl' or model=='pgnu' or model=='pstl'):
-        src.write('       });\n')
-        src.write('     });\n')
-    elif (model=='kokkos'):
-        src.write('       }\n')
-        src.write('     });\n')
-    elif (model=='raja'):
-        src.write('     });\n')
-    else:
+
+def codegen(src,pattern,stencil_size,radius,W,model):
+    if (model=='openmp'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {\n')
+        src.write('    OMP_FOR(collapse(2))\n')
+        src.write('    for (int it='+str(radius)+'; it<n-'+str(radius)+'; it+=t) {\n')
+        src.write('      for (int jt='+str(radius)+'; jt<n-'+str(radius)+'; jt+=t) {\n')
+        src.write('        for (int i=it; i<std::min(n-'+str(radius)+',it+t); ++i) {\n')
+        src.write('          OMP_SIMD\n')
+        src.write('          for (int j=jt; j<std::min(n-'+str(radius)+',jt+t); ++j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('           }\n')
+        src.write('         }\n')
         src.write('       }\n')
         src.write('     }\n')
-    if (model=='tbb'):
-        src.write('  }\n\n')
-        src.write('    '+name+'(int n, std::vector<double> & in, std::vector<double> & out)\n')
-        src.write('        : n(n), in(in), out(out) { }\n\n')
-        src.write('    int n;\n')
-        src.write('    std::vector<double> & in;\n')
-        src.write('    std::vector<double> & out;\n')
-        src.write('};\n\n')
+        src.write('}\n\n')
+    elif (model=='taskloop'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out, const int gs) {\n')
+        src.write('    OMP_TASKLOOP_COLLAPSE(2, firstprivate(n) shared(in,out) grainsize(gs) )\n')
+        src.write('    for (int it='+str(radius)+'; it<n-'+str(radius)+'; it+=t) {\n')
+        src.write('      for (int jt='+str(radius)+'; jt<n-'+str(radius)+'; jt+=t) {\n')
+        src.write('        for (int i=it; i<std::min(n-'+str(radius)+',it+t); ++i) {\n')
+        src.write('          OMP_SIMD\n')
+        src.write('          for (int j=jt; j<std::min(n-'+str(radius)+',jt+t); ++j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('           }\n')
+        src.write('         }\n')
+        src.write('       }\n')
+        src.write('     }\n')
+        src.write('}\n\n')
+    elif (model=='openacc'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {\n')
+        src.write('    PRAGMA( acc parallel loop collapse(2) deviceptr(in,out) )\n')
+        src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
+        src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('       }\n')
+        src.write('     }\n')
+        src.write('}\n\n')
+    elif (model=='target'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, const double * RESTRICT in, double * RESTRICT out) {\n')
+        src.write('    OMP_TARGET( teams distribute parallel for simd collapse(2) )\n')
+        src.write('    for (int i='+str(radius)+'; i<n-'+str(radius)+'; ++i) {\n')
+        src.write('      for (int j='+str(radius)+'; j<n-'+str(radius)+'; ++j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('       }\n')
+        src.write('     }\n')
+        src.write('}\n\n')
+    elif (model=='ranges'):
+        src.write('void '+pattern+str(radius)+'(const int n, prk::vector<double> & in, prk::vector<double> & out) {\n')
+        src.write('    auto dim = ranges::views::iota('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    auto inside = ranges::views::cartesian_product(dim,dim);\n')
+        src.write('    for (auto ij : inside) {\n')
+        src.write('        auto [i, j] = ij;\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('    }\n')
+        src.write('}\n\n')
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {\n')
+        src.write('    auto s2 = ranges::views::cartesian_product(ranges::stride_view(ranges::views::iota(0, n), t),ranges::stride_view(ranges::views::iota(0, n), t));\n')
+        src.write('    auto t2 = ranges::views::cartesian_product(ranges::views::iota(0, t),ranges::views::iota(0, t));\n')
+        src.write('    const auto r = '+str(radius)+';\n')
+        src.write('    for (auto itjt : s2) {\n')
+        src.write('        auto [it, jt] = itjt;\n')
+        src.write('        for (auto iijj : t2) {\n')
+        src.write('            auto [ii, jj] = iijj;\n')
+        src.write('            auto i = ii + it;\n')
+        src.write('            auto j = jj + jt;\n')
+        src.write('            if (r <= i && i < n-r && r <= j && j < n-r) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('            }\n')
+        src.write('        }\n')
+        src.write('    }\n')
+        src.write('}\n\n')
+    elif (model=='stl'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    std::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
+        src.write('      std::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('      });\n')
+        src.write('    });\n')
+        src.write('}\n\n')
+    elif (model=='pgnu'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    __gnu_parallel::for_each( std::begin(inside), std::end(inside), [&] (int i) {\n')
+        src.write('      std::for_each( std::begin(inside), std::end(inside), [&] (int j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('      });\n')
+        src.write('    });\n')
+        src.write('}\n\n')
+    elif (model=='pstl'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('    auto inside = prk::range('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    std::for_each( exec::par, std::begin(inside), std::end(inside), [&] (int i) {\n')
+        src.write('      std::for_each( exec::unseq, std::begin(inside), std::end(inside), [&] (int j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('      });\n')
+        src.write('    });\n')
+        src.write('}\n\n')
+    elif (model=='raja'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('    RAJA::RangeSegment inside('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    RAJA::forall<thread_exec>(inside, [&](RAJA::Index_type i) {\n')
+        src.write('      RAJA::forall<RAJA::simd_exec>(inside, [&](RAJA::Index_type j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('      });\n')
+        src.write('    });\n')
+        src.write('}\n\n')
+    elif (model=='rajaview'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, matrix & in, matrix & out) {\n')
+        src.write('    RAJA::RangeSegment inner1('+str(radius)+',n-'+str(radius)+');\n')
+        src.write('    auto inner2 = RAJA::make_tuple(inner1, inner1);\n')
+        src.write('    RAJA::kernel<regular_policy>(inner2, [=](int i, int j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('    });\n')
+        src.write('}\n\n')
+    elif (model=='tbb'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {\n')
+        src.write('  tbb::blocked_range2d<int> range('+str(radius)+', n-'+str(radius)+', t, '+str(radius)+', n-'+str(radius)+', t);\n')
+        src.write('  tbb::parallel_for( range, [&](decltype(range)& r ) {\n')
+        src.write('    for (int i=r.rows().begin(); i!=r.rows().end(); ++i ) {\n')
+        src.write('      PRAGMA_SIMD\n')
+        src.write('      for (int j=r.cols().begin(); j!=r.cols().end(); ++j ) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('      }\n')
+        src.write('    }\n')
+        src.write('  }, tbb_partitioner );\n')
+        src.write('}\n\n')
+    elif (model=='kokkos'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, matrix & in, matrix & out) {\n')
+        src.write('    auto inside = Kokkos::MDRangePolicy<Kokkos::Rank<2>>({'+str(radius)+','+str(radius)+'},{n-'+str(radius)+',n-'+str(radius)+'},{t,t});\n')
+        src.write('    Kokkos::parallel_for(inside, KOKKOS_LAMBDA(int i, int j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('    });\n')
+        src.write('}\n\n')
+    elif (model=='cuda'):
+        src.write('__global__ void '+pattern+str(radius)+'(const int n, const prk_float * in, prk_float * out) {\n')
+        src.write('    const int i = blockIdx.x * blockDim.x + threadIdx.x;\n')
+        src.write('    const int j = blockIdx.y * blockDim.y + threadIdx.y;\n')
+        src.write('    if ( ('+str(radius)+' <= i) && (i < n-'+str(radius)+') && ('+str(radius)+' <= j) && (j < n-'+str(radius)+') ) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('     }\n')
+        src.write('}\n\n')
+    elif (model=='vector'):
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, std::vector<double> & in, std::vector<double> & out) {\n')
+        src.write('    for (int it='+str(radius)+'; it<n-'+str(radius)+'; it+=t) {\n')
+        src.write('      for (int jt='+str(radius)+'; jt<n-'+str(radius)+'; jt+=t) {\n')
+        src.write('        for (int i=it; i<std::min(n-'+str(radius)+',it+t); ++i) {\n')
+        src.write('          for (int j=jt; j<std::min(n-'+str(radius)+',jt+t); ++j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('           }\n')
+        src.write('         }\n')
+        src.write('       }\n')
+        src.write('     }\n')
+        src.write('}\n\n')
     else:
+        src.write('void '+pattern+str(radius)+'(const int n, const int t, prk::vector<double> & in, prk::vector<double> & out) {\n')
+        src.write('    for (int it='+str(radius)+'; it<n-'+str(radius)+'; it+=t) {\n')
+        src.write('      for (int jt='+str(radius)+'; jt<n-'+str(radius)+'; jt+=t) {\n')
+        src.write('        for (int i=it; i<std::min(n-'+str(radius)+',it+t); ++i) {\n')
+        src.write('          for (int j=jt; j<std::min(n-'+str(radius)+',jt+t); ++j) {\n')
+        bodygen(src,pattern,stencil_size,radius,W,model)
+        src.write('           }\n')
+        src.write('         }\n')
+        src.write('       }\n')
+        src.write('     }\n')
         src.write('}\n\n')
 
 def instance(src,model,pattern,r):
@@ -141,22 +232,20 @@ def instance(src,model,pattern,r):
     codegen(src,pattern,stencil_size,r,W,model)
 
 def main():
-    for model in ['seq','rangefor','stl','pgnu','pstl','openmp','taskloop','target','tbb','cilk','raja','kokkos']:
+    for model in ['seq','vector','ranges','stl','pgnu','pstl','openmp','taskloop','target','openacc','tbb','raja','rajaview','kokkos','cuda']:
       src = open('stencil_'+model+'.hpp','w')
-      src.write('#define RESTRICT __restrict__\n\n')
-      if (model=='target'):
-          src.write('_Pragma("omp declare target")\n')
-      if (model=='raja'):
-          src.write('#ifdef RAJA_ENABLE_OPENMP\n')
-          src.write('  typedef RAJA::omp_parallel_for_exec thread_exec;\n')
-          src.write('#else\n')
-          src.write('  typedef RAJA::seq_exec thread_exec;\n')
-          src.write('#endif\n')
+      if (model=='target' or model=='openacc'):
+          src.write('#define RESTRICT __restrict__\n\n')
+      if (model=='rajaview'):
+          src.write('using regular_policy = RAJA::KernelPolicy< RAJA::statement::For<0, thread_exec,\n')
+          src.write('                                           RAJA::statement::For<1, RAJA::simd_exec,\n')
+          src.write('                                           RAJA::statement::Lambda<0> > > >;\n\n')
+      #  src.write('OMP( declare target )\n\n')
       for pattern in ['star','grid']:
-        for r in range(1,10):
+        for r in range(1,6):
           instance(src,model,pattern,r)
-      if (model=='target'):
-          src.write('_Pragma("omp end declare target")\n')
+      #if (model=='target'):
+      #  src.write('OMP( end declare target )\n')
       src.close()
 
 if __name__ == '__main__':

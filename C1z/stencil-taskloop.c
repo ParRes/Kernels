@@ -60,31 +60,40 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 
-typedef void (*stencil_t)(const int, const double * restrict, double * restrict);
+typedef void (*stencil_t)(const int, const int, const double * restrict, double * restrict);
 
-void nothing(const int n, const double * restrict in, double * restrict out)
+void nothing(const int n, const int gs, const double * restrict in, double * restrict out)
 {
     printf("You are trying to use a stencil that does not exist.\n");
     printf("Please generate the new stencil using the code generator.\n");
     // n will never be zero - this is to silence compiler warnings.
-    if (n==0) printf("%p %p\n", in, out);
+    if (n==0 || gs==0) printf("%p %p\n", in, out);
     abort();
 }
 
+#ifdef _OPENMP
 #include "stencil_taskloop.h"
+#else
+#include "stencil_seq.h"
+#endif
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("Parallel Research Kernels version %d\n", PRKVERSION);
+#ifdef _OPENMP
   printf("C11/OpenMP TASKLOOP Stencil execution on 2D grid\n");
+#else
+  printf("C11/Serial Stencil execution on 2D grid\n");
+#endif
 
   //////////////////////////////////////////////////////////////////////
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   if (argc < 3){
-    printf("Usage: <# iterations> <array dimension> [<star/grid> <radius>]\n");
+    printf("Usage: <# iterations> <array dimension> [<taskloop grainsize> <star/grid> <radius>]\n");
     return 1;
   }
 
@@ -105,17 +114,20 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+  // taskloop grainsize
+  int gs = (argc > 3) ? atoi(argv[3]) : 100;
+
   // stencil pattern
   bool star = true;
-  if (argc > 3) {
-      char* pattern = argv[3];
+  if (argc > 4) {
+      char* pattern = argv[4];
       star = (0==strncmp(pattern,"star",4)) ? true : false;
   }
 
   // stencil radius
   int radius = 2;
-  if (argc > 4) {
-      radius = atoi(argv[4]);
+  if (argc > 5) {
+      radius = atoi(argv[5]);
   }
 
   if ( (radius < 1) || (2*radius+1 > n) ) {
@@ -123,7 +135,10 @@ int main(int argc, char * argv[])
     return 1;
   }
 
+#ifdef _OPENMP
   printf("Number of threads (max)   = %d\n", omp_get_max_threads());
+  printf("Taskloop grainsize        = %d\n", gs);
+#endif
   printf("Number of iterations      = %d\n", iterations);
   printf("Grid sizes                = %d\n", n);
   printf("Type of stencil           = %s\n", (star ? "star" : "grid") );
@@ -169,39 +184,37 @@ int main(int argc, char * argv[])
   double * restrict in  = prk_malloc(bytes);
   double * restrict out = prk_malloc(bytes);
 
-  _Pragma("omp parallel")
+  OMP_PARALLEL()
+  OMP_MASTER
   {
-    _Pragma("omp for")
+    OMP_TASKLOOP( firstprivate(n) shared(in,out) grainsize(gs) )
     for (int i=0; i<n; i++) {
-      PRAGMA_OMP_SIMD
+      OMP_SIMD
       for (int j=0; j<n; j++) {
         in[i*n+j]  = (double)(i+j);
         out[i*n+j] = 0.0;
       }
     }
+    OMP_TASKWAIT
 
     for (int iter = 0; iter<=iterations; iter++) {
 
-      if (iter==1) {
-          _Pragma("omp barrier")
-          _Pragma("omp master")
-          stencil_time = prk_wtime();
-      }
+      if (iter==1) stencil_time = prk_wtime();
 
       // Apply the stencil operator
-      stencil(n, in, out);
+      stencil(n, gs, in, out);
+      OMP_TASKWAIT
 
       // Add constant to solution to force refresh of neighbor data, if any
-      _Pragma("omp for")
+      OMP_TASKLOOP( firstprivate(n) shared(in,out) grainsize(gs) )
       for (int i=0; i<n; i++) {
-        PRAGMA_OMP_SIMD
+        OMP_SIMD
         for (int j=0; j<n; j++) {
           in[i*n+j] += 1.0;
         }
       }
+      OMP_TASKWAIT
     }
-    _Pragma("omp barrier")
-    _Pragma("omp master")
     stencil_time = prk_wtime() - stencil_time;
   }
 
@@ -211,7 +224,7 @@ int main(int argc, char * argv[])
 
   // compute L1 norm in parallel
   double norm = 0.0;
-  _Pragma("omp parallel for reduction(+:norm)")
+  OMP_PARALLEL_FOR_REDUCE( +:norm )
   for (int i=radius; i<n-radius; i++) {
     for (int j=radius; j<n-radius; j++) {
       norm += fabs(out[i*n+j]);

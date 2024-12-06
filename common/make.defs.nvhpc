@@ -1,0 +1,154 @@
+#
+# This file shows the NVHPC toolchain options.
+NVHPC_PATH=/opt/nvidia/hpc_sdk/Linux_$$(uname -m)/22.2
+#NVHPC_PATH=/proj/nv/Linux_$$(uname -m)/21.11
+#NVHPC_PATH=${HOME}/NVIDIA/hpc_sdk/Linux_$$(uname -m)/2021
+NVHPC_CBIN=${NVHPC_PATH}/compilers/bin/
+#
+# Base compilers and language options
+#
+# C99 is required in some implementations.
+CC=${NVHPC_CBIN}nvc -c11
+# All of the Fortran code is written for the 2008 standard and requires preprocessing.
+FC=${NVHPC_CBIN}nvfortran -DNVHPC
+# C++11 may not be required but does no harm here.
+CXX=${NVHPC_CBIN}nvc++ -std=gnu++20
+#
+# Compiler flags
+#
+DEFAULT_OPT_FLAGS=-O2
+DEFAULT_OPT_FLAGS+=-Wall #-Werror
+#
+# OpenMP flags
+#
+OPENMPFLAG=-mp
+#OPENMPFLAG+=-Minfo=mp,vect
+OPENMPSIMDFLAG=
+OFFLOADFLAG=-mp -target=gpu -gpu=managed
+OFFLOADFLAG+=-Minfo=accel
+OFFLOADFLAG+=-DGPU_SCHEDULE="schedule(static,1)"
+OPENACCFLAG=-acc -target=gpu
+OPENACCFLAG+=-Mlarge_arrays
+OPENACCFLAG+=-Minfo=accel
+STDPARFLAG=-stdpar=gpu -gpu=managed
+STDPARFLAG+=-Minfo=accel
+STDPARFLAG+=-cudalib=cublas,cutensor
+CUFORTFLAG=-cuda -gpu=managed -acc # ACC required for CUF+managed
+CUFORTFLAG+=-Minfo=accel
+#
+# OpenCL flags
+#
+OPENCLDIR=/usr/local/cuda/targets/$$(uname -m)-linux
+OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib -lOpenCL
+#OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
+#OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
+#
+# Intel SYCL - https://github.com/intel/llvm/blob/sycl/sycl/doc/GetStartedWithSYCLCompiler.md
+#
+SYCLDIR=${HOME}/DPCPP/build
+SYCLCXX=${SYCLDIR}/bin/clang++
+SYCLFLAG=-std=c++20 -O3
+SYCLFLAG+=-DDPCPP # important
+SYCLFLAG+=-fsycl #-fsycl-unnamed-lambda
+SYCLFLAG+=-fsycl-targets=nvptx64-nvidia-cuda
+SYCLFLAG+=-L${SYCLDIR}/lib -lsycl -Wl,-rpath=${SYCLDIR}/lib
+#
+#
+# Parallel STL, Boost, etc.
+#
+TBBFLAG=-L/usr/lib/$$(uname -m)-linux-gnu -ltbb
+BOOSTFLAG=
+#RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
+RANGEFLAG=-DUSE_RANGES_TS -I../deps/range-v3/include
+#RANGEFLAG=-DUSE_GCC_RANGES
+PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -I./pstl/include ${RANGEFLAG}
+KOKKOSDIR=../deps/kokkos-cuda
+PRK_KOKKOS_BACKEND=Cuda
+KOKKOSCXX=${KOKKOSDIR}/bin/nvcc_wrapper
+KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkoscore
+RAJADIR=
+RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
+THRUSTDIR=/opt/nvidia/hpc_sdk/Linux_$$(uname -m)/21.11/compilers/include-stdpar
+THRUSTFLAG=-I${THRUSTDIR}
+#
+# CBLAS for C++ DGEMM
+#
+BLASFLAG=-L${NVHPC_PATH}/REDIST/compilers/lib -lblas
+CBLASFLAG=${BLASFLAG}
+#
+# CUDA flags
+#
+# Linux w/ NVIDIA CUDA
+# Use appropriate arch or code is compiled to ancient features.
+#NVCC=${NVHPC_CBIN}nvc++
+NVCC=${NVHPC_CBIN}nvcc
+CUDAFLAGS=-g -O3 -std=c++17
+CUDAFLAGS+=--extended-lambda
+CUDAFLAGS+=--gpu-architecture=sm_89
+#CUDAFLAGS+=--compiler-bindir=/swtools/gcc/7.5.0/bin
+#CUDAFLAGS+=-forward-unknown-to-host-compiler -fopenmp
+CUDAFLAGS+=-rdc=true # FIXES ptxas fatal   : Unresolved extern function 'cudaCGGetIntrinsicHandle'
+CUDAFLAGS+=-I${NVHPC_PATH}/math_libs/12.1/targets/$$(uname -m)-linux/include
+CUDAFLAGS+=-L${NVHPC_PATH}/math_libs/12.1/targets/$$(uname -m)-linux/lib
+# https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
+# heavy hammer:
+CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
+# big hammers:
+#CUDAFLAGS+=-D_IMMINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_FMA4INTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_XOPMMINTRIN_H_INCLUDED
+# many tiny hammers:
+#CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512FINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512VLINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512BWINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512DQINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512VLBWINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512VBMIVLINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512VBMIINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512VLDQINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512CDINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512PFINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512IFMAINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512IFMAVLINTRIN_H_INCLUDED
+#CUDAFLAGS+=-D_AVX512ERINTRIN_H_INCLUDED
+#
+# MPI-3
+#
+# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
+MPIDIR=${NVHPC_PATH}/comm_libs/hpcx/latest/ompi
+MPICC=${MPIDIR}/bin/mpicc
+MPICXX=${MPIDIR}/bin/mpicxx
+MPIFORT=${MPIDIR}/bin/mpifort
+MPIINC=-I${MPIDIR}/include
+MPILIB=-L${MPIDIR}/lib -lmpi
+#MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
+#MPIINC=-I/usr/include/mpich-3.2-$$(uname -m)
+#MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+#
+# Global Arrays
+#
+GADIR=../deps/ga
+GAFLAG=-I${GADIR}/include
+GAFLAG+=-L${GADIR}/lib -lga
+GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
+#GAFLAG+=-L${GADIR}/lib -larmci -lcomex     # ARMCI/ComEx
+GAFLAG+=${MPIINC} ${MPILIB}
+GAFLAG+=-lmpifort -lmpi
+GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+#
+# PETSc
+#
+PETSCDIR=../deps/petsc
+PETSCFLAG=-I${PETSCDIR}/include
+PETSCFLAG+=-L${PETSCDIR}/lib -lpetsc
+PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
+#
+# Fortran 2008 coarrays
+#
+# see https://github.com/ParRes/Kernels/blob/master/FORTRAN/README.md for details
+# single-node
+#COARRAYFLAG=-fcoarray=single -lcaf_single
+# multi-node
+# COARRAYFLAG=-fcoarray=lib -lcaf_mpi
+

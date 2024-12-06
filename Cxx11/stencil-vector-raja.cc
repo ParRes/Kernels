@@ -61,10 +61,20 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-
+#include "prk_raja.h"
 #include "stencil_raja.hpp"
 
-int main(int argc, char * argv[])
+void nothing(const int n, const int t, std::vector<double> & in, std::vector<double> & out)
+{
+    std::cout << "You are trying to use a stencil that does not exist.\n";
+    std::cout << "Please generate the new stencil using the code generator\n";
+    std::cout << "and add it to the case-switch in the driver." << std::endl;
+    // n will never be zero - this is to silence compiler warnings.
+    if (n==0 || t==0) std::cout << in.size() << out.size() << std::endl;
+    std::abort();
+}
+
+int main(int argc, char* argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
   std::cout << "C++11/RAJA Stencil execution on 2D grid" << std::endl;
@@ -73,12 +83,11 @@ int main(int argc, char * argv[])
   // Process and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int n, radius;
+  int iterations, n, radius, tile_size;
   bool star = true;
   try {
-      if (argc < 3){
-        throw "Usage: <# iterations> <array dimension> [<star/grid> <radius>]";
+      if (argc < 3) {
+        throw "Usage: <# iterations> <array dimension> [<tile_size> <star/grid> <radius>]";
       }
 
       // number of times to run the algorithm
@@ -91,21 +100,29 @@ int main(int argc, char * argv[])
       n  = std::atoi(argv[2]);
       if (n < 1) {
         throw "ERROR: grid dimension must be positive";
-      } else if (n > std::floor(std::sqrt(INT_MAX))) {
+      } else if (n > prk::get_max_matrix_size()) {
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-      // stencil pattern
+      // default tile size for tiling of local transpose
+      tile_size = 32;
       if (argc > 3) {
-          auto stencil = std::string(argv[3]);
+          tile_size = std::atoi(argv[3]);
+          if (tile_size <= 0) tile_size = n;
+          if (tile_size > n) tile_size = n;
+      }
+
+      // stencil pattern
+      if (argc > 4) {
+          auto stencil = std::string(argv[4]);
           auto grid = std::string("grid");
           star = (stencil == grid) ? false : true;
       }
 
       // stencil radius
       radius = 2;
-      if (argc > 4) {
-          radius = std::atoi(argv[4]);
+      if (argc > 5) {
+          radius = std::atoi(argv[5]);
       }
 
       if ( (radius < 1) || (2*radius+1 > n) ) {
@@ -119,70 +136,57 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid size            = " << n << std::endl;
+  std::cout << "Tile size            = " << tile_size << std::endl;
   std::cout << "Type of stencil      = " << (star ? "star" : "grid") << std::endl;
   std::cout << "Radius of stencil    = " << radius << std::endl;
+
+  auto stencil = nothing;
+  if (star) {
+      switch (radius) {
+          case 1: stencil = star1; break;
+          case 2: stencil = star2; break;
+          case 3: stencil = star3; break;
+          case 4: stencil = star4; break;
+          case 5: stencil = star5; break;
+      }
+  } else {
+      switch (radius) {
+          case 1: stencil = grid1; break;
+          case 2: stencil = grid2; break;
+          case 3: stencil = grid3; break;
+          case 4: stencil = grid4; break;
+          case 5: stencil = grid5; break;
+      }
+  }
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
   //////////////////////////////////////////////////////////////////////
 
-  auto stencil_time = 0.0;
+  double stencil_time{0};
 
-  std::vector<double> in;
-  std::vector<double> out;
-  in.resize(n*n);
-  out.resize(n*n);
+  std::vector<double> in(n*n);
+  std::vector<double> out(n*n);
 
-#ifdef RAJA_ENABLE_OPENMP
-  typedef RAJA::omp_parallel_for_exec thread_exec;
-#else
-  typedef RAJA::seq_exec thread_exec;
-#endif
-  // initialize the input and output arrays
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-          ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
-            [&](RAJA::Index_type i, RAJA::Index_type j) {
+  RAJA::RangeSegment range(0, n);
+
+  RAJA::forall<thread_exec>(range, [&](RAJA::Index_type i) {
+    RAJA::forall<RAJA::simd_exec>(range, [&](RAJA::Index_type j) {
       in[i*n+j] = static_cast<double>(i+j);
       out[i*n+j] = 0.0;
+    });
   });
 
-  for (auto iter = 0; iter<=iterations; iter++) {
+  for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) stencil_time = prk::wtime();
-
     // Apply the stencil operator
-    if (star) {
-        switch (radius) {
-            case 1: star1(n, in, out); break;
-            case 2: star2(n, in, out); break;
-            case 3: star3(n, in, out); break;
-            case 4: star4(n, in, out); break;
-            case 5: star5(n, in, out); break;
-            case 6: star6(n, in, out); break;
-            case 7: star7(n, in, out); break;
-            case 8: star8(n, in, out); break;
-            case 9: star9(n, in, out); break;
-            default: { std::cerr << "star template not instantiated for radius " << radius << "\n"; break; }
-        }
-    } else {
-        switch (radius) {
-            case 1: grid1(n, in, out); break;
-            case 2: grid2(n, in, out); break;
-            case 3: grid3(n, in, out); break;
-            case 4: grid4(n, in, out); break;
-            case 5: grid5(n, in, out); break;
-            case 6: grid6(n, in, out); break;
-            case 7: grid7(n, in, out); break;
-            case 8: grid8(n, in, out); break;
-            case 9: grid9(n, in, out); break;
-            default: { std::cerr << "grid template not instantiated for radius " << radius << "\n"; break; }
-        }
-    }
-    // add constant to solution to force refresh of neighbor data, if any
-    RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-            ( RAJA::RangeSegment(0, n), RAJA::RangeSegment(0, n),
-              [&](RAJA::Index_type i, RAJA::Index_type j) {
+    stencil(n, tile_size, in, out);
+    // Add constant to solution to force refresh of neighbor data, if any
+    RAJA::forall<thread_exec>(range, [&](RAJA::Index_type i) {
+      RAJA::forall<RAJA::simd_exec>(range, [&](RAJA::Index_type j) {
         in[i*n+j] += 1.0;
+      });
     });
   }
 
@@ -196,24 +200,19 @@ int main(int argc, char * argv[])
   size_t active_points = static_cast<size_t>(n-2*radius)*static_cast<size_t>(n-2*radius);
 
   // compute L1 norm in parallel
-#if 0
-  // This leads to incorrect computation of the norm.
-  RAJA::ReduceSum<RAJA::omp_reduce, double> reduced_norm(0.0);
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<thread_exec, RAJA::simd_exec>>>
-#else
+  RAJA::RangeSegment inside(radius,n-radius);
   RAJA::ReduceSum<RAJA::seq_reduce, double> reduced_norm(0.0);
-  RAJA::forallN<RAJA::NestedPolicy<RAJA::ExecList<RAJA::seq_exec, RAJA::seq_exec>>>
-#endif
-          ( RAJA::RangeSegment(radius,n-radius), RAJA::RangeSegment(radius,n-radius),
-            [&](RAJA::Index_type i, RAJA::Index_type j) {
-      reduced_norm += std::fabs(out[i*n+j]);
+  RAJA::forall<RAJA::seq_exec>(inside, [&](RAJA::Index_type i) {
+    RAJA::forall<RAJA::seq_exec>(inside, [&](RAJA::Index_type j) {
+      reduced_norm += prk::abs(out[i*n+j]);
+    });
   });
   double norm = reduced_norm / active_points;
 
   // verify correctness
   const double epsilon = 1.0e-8;
   double reference_norm = 2.*(iterations+1.);
-  if (std::fabs(norm-reference_norm) > epsilon) {
+  if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
     return 1;
