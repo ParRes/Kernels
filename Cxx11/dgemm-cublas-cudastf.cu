@@ -144,7 +144,6 @@ int main(int argc, char * argv[])
   double gemm_time(0);
 
   const int matrices = (batches==0 ? 1 : abs(batches));
-  const size_t nelems = (size_t)order * (size_t)order;
 
   const auto epsilon = 1.0e-8;
   const auto forder = static_cast<double>(order);
@@ -194,22 +193,13 @@ int main(int argc, char * argv[])
       cudaStreamSynchronize(ctx.task_fence());
       gemm_time = prk::wtime() - gemm_time;
 
-      ctx.host_launch(c.read())->*[&](auto hc)
-      {
-          for (size_t k = 0; k < hc.extent(2); k++)
-          {
-              double checksum = 0.0;
-
-              for (size_t j = 0; j < hc.extent(1); j++)
-              for (size_t i = 0; i < hc.extent(0); i++)
-              {
-                  checksum += hc(i, j, k);
-              }
-
-              residuum += std::abs(checksum-reference)/reference;
-          }
-          residuum /= matrices;
+      auto lsum = ctx.logical_data(shape_of<scalar<double>>());
+      ctx.parallel_for(c.shape(), c.read(), lsum.reduce(reducer::sum<double>{}))
+      ->*[]__device__(size_t i, size_t j, size_t k, auto dc, double &sum) {
+          sum += dc(i, j, k);
       };
+      double checksum = ctx.wait(lsum)/matrices;
+      residuum = std::abs(checksum-reference)/reference/matrices;
   }
   else {
       ::std::vector<logical_data<slice<double, 2>>> vector_a;
@@ -264,22 +254,15 @@ int main(int argc, char * argv[])
 
       for (size_t k = 0; k < matrices; k++)
       {
-          double checksum = 0.0;
-          ctx.host_launch(vector_c[k].read())->*[&](auto hck)
-          {
-             for (size_t j = 0; j < hck.extent(1); j++)
-             for (size_t i = 0; i < hck.extent(0); i++)
-             {
-                 checksum += hck(i, j);
-             }
+          auto lsum = ctx.logical_data(shape_of<scalar<double>>());
+          ctx.parallel_for(vector_c[k].shape(), vector_c[k].read(), lsum.reduce(reducer::sum<double>{}))
+          ->*[]__device__(size_t i, size_t j, auto dck, double &sum) {
+              sum += dck(i, j);
           };
-
-          cudaStreamSynchronize(ctx.task_fence());
+          double checksum = ctx.wait(lsum);
           residuum += std::abs(checksum-reference)/reference;
-
       }
       residuum /= matrices;
-
   }
 
   //////////////////////////////////////////////////////////////////////
