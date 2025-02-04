@@ -14,6 +14,10 @@
 #include <cuda_device_runtime_api.h>
 #include <cublas_v2.h>
 
+#ifdef USE_NCCL
+#include <nccl.h>
+#endif
+
 typedef double prk_float;
 
 namespace prk
@@ -22,23 +26,34 @@ namespace prk
     {
         void check(cudaError_t rc)
         {
-            if (rc==cudaSuccess) {
-                return;
-            } else {
-                std::cerr << "PRK CUDA error: " << cudaGetErrorString(rc) << std::endl;
+            if (rc!=cudaSuccess) {
+                std::cerr << "PRK CUDA error: " << cudaGetErrorName(rc) << "=" << cudaGetErrorString(rc) << std::endl;
                 std::abort();
             }
         }
 
         void check(cublasStatus_t rc)
         {
-            if (rc==CUBLAS_STATUS_SUCCESS) {
-                return;
-            } else {
+            if (rc!=CUBLAS_STATUS_SUCCESS) {
+#if defined(CUBLAS_VERSION) && (CUBLAS_VERSION >= (11*10000+4*100+2))
+                std::cerr << "PRK CUBLAS error: " << cublasGetStatusName(rc) << "=" << cublasGetStatusString(rc) << std::endl;
+#else
+#error CUBLAS error names missing
                 std::cerr << "PRK CUBLAS error: " << rc << std::endl;
+#endif
                 std::abort();
             }
         }
+
+#ifdef USE_NCCL
+        void check(ncclResult_t rc)
+        {
+            if (rc!=ncclSuccess) {
+                std::cerr << "PRK NCCL error: " << ncclGetErrorString(rc) << std::endl;
+                std::abort();
+            }
+        }
+#endif
 
         class info {
 
