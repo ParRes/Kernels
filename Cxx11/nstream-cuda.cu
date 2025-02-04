@@ -108,6 +108,8 @@ int main(int argc, char * argv[])
       length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
+      } else if (length >= UINT_MAX) {
+        throw "ERROR: vector length must be less than UINT_MAX";
       }
 
       if (argc>3) {
