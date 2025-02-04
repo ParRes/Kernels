@@ -12,9 +12,12 @@
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 #include <cuda_device_runtime_api.h>
-#include <cublas_v2.h>
 
-#ifdef USE_NCCL
+#ifdef PRK_USE_CUBLAS
+#include <cublas_v2.h>
+#endif
+
+#ifdef PRK_USE_NCCL
 #include <nccl.h>
 #endif
 
@@ -32,6 +35,7 @@ namespace prk
             }
         }
 
+#ifdef PRK_USE_CUBLAS
         void check(cublasStatus_t rc)
         {
             if (rc!=CUBLAS_STATUS_SUCCESS) {
@@ -44,8 +48,9 @@ namespace prk
                 std::abort();
             }
         }
+#endif
 
-#ifdef USE_NCCL
+#ifdef PRK_USE_NCCL
         void check(ncclResult_t rc)
         {
             if (rc!=ncclSuccess) {
@@ -148,6 +153,14 @@ namespace prk
             T * ptr;
             size_t bytes = n * sizeof(T);
             prk::CUDA::check( cudaMalloc((void**)&ptr, bytes) );
+            return ptr;
+        }
+
+        template <typename T>
+        T * malloc_async(size_t n) {
+            T * ptr;
+            size_t bytes = n * sizeof(T);
+            prk::CUDA::check( cudaMallocAsync((void**)&ptr, bytes, (cudaStream_t)0) );
             return ptr;
         }
 
