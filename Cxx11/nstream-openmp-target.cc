@@ -114,7 +114,7 @@ int main(int argc, char * argv[])
   // HOST
   OMP_PARALLEL()
   {
-    OMP_FOR_SIMD
+    OMP_FOR()
     for (size_t i=0; i<length; i++) {
       A[i] = 0.0;
       B[i] = 2.0;
