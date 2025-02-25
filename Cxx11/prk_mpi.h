@@ -60,11 +60,11 @@ namespace prk
         }
 
         template <>
-        MPI_Datatype get_MPI_Datatype(double d) { return MPI_DOUBLE; }
+        constexpr MPI_Datatype get_MPI_Datatype(double d) { return MPI_DOUBLE; }
         template <>
-        MPI_Datatype get_MPI_Datatype(int i) { return MPI_INT; }
+        constexpr MPI_Datatype get_MPI_Datatype(int i) { return MPI_INT; }
         template <>
-        MPI_Datatype get_MPI_Datatype(size_t s) {
+        constexpr MPI_Datatype get_MPI_Datatype(size_t s) {
             static_assert( sizeof(size_t) == sizeof(int64_t) && sizeof(size_t) == sizeof(uint64_t) );
             return ( std::is_signed<size_t>() ? MPI_INT64_T : MPI_UINT64_T );
         }
