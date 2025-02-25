@@ -59,10 +59,16 @@ namespace prk
             return MPI_DATATYPE_NULL; 
         }
 
+        template <double>
+        constexpr MPI_Datatype get_MPI_Datatype() { return MPI_DOUBLE; }
+        template <int>
+        constexpr MPI_Datatype get_MPI_Datatype() { return MPI_INT; }
+
         template <>
         constexpr MPI_Datatype get_MPI_Datatype(double d) { return MPI_DOUBLE; }
         template <>
         constexpr MPI_Datatype get_MPI_Datatype(int i) { return MPI_INT; }
+
         template <>
         constexpr MPI_Datatype get_MPI_Datatype(size_t s) {
             static_assert( sizeof(size_t) == sizeof(int64_t) && sizeof(size_t) == sizeof(uint64_t) );
@@ -146,10 +152,56 @@ namespace prk
         void alltoall(const std::vector<T> & sbuffer, std::vector<T> & rbuffer, MPI_Comm comm = MPI_COMM_WORLD) {
             int scount = sbuffer.size();
             int rcount = rbuffer.size();
-            MPI_Datatype stype = prk::MPI::get_MPI_Datatype(sbuffer);
-            MPI_Datatype rtype = prk::MPI::get_MPI_Datatype(rbuffer);
-            prk::MPI::check( MPI_Alltoall(sbuffer, scount, stype,
-                                          rbuffer, rcount, rtype, comm) );
+            MPI_Datatype stype = prk::MPI::get_MPI_Datatype(*sbuffer.data());
+            MPI_Datatype rtype = prk::MPI::get_MPI_Datatype(*rbuffer.data());
+            prk::MPI::check( MPI_Alltoall(sbuffer.data(), scount, stype,
+                                          rbuffer.data(), rcount, rtype, comm) );
+        }
+
+        template <typename T>
+        void send(const T * buf, int dest, int count = 1, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buf);
+            prk::MPI::check( MPI_Send(buf, count, dt, dest, tag, comm) );
+        }
+
+        template <typename T>
+        void recv(T * buf, int source, int count = 1, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buf);
+            prk::MPI::check( MPI_Recv(buf, count, dt, source, tag, comm, MPI_STATUS_IGNORE) );
+        }
+
+        template <typename T>
+        void sendrecv(const T * sendbuf, int dest, T * recvbuf, int source, int count = 1, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*sendbuf);
+            prk::MPI::check( MPI_Sendrecv(sendbuf, count, dt, dest, tag, recvbuf, count, dt, source, tag, comm, MPI_STATUS_IGNORE) );
+        }
+
+        template <typename T>
+        MPI_Request isend(const T * buf, int dest, int count = 1, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buf);
+            MPI_Request req;
+            prk::MPI::check( MPI_Isend(buf, count, dt, dest, tag, comm, &req) );
+            return req;
+        }
+
+        template <typename T>
+        MPI_Request irecv(T * buf, int source, int count = 1, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buf);
+            MPI_Request req;
+            prk::MPI::check( MPI_Irecv(buf, count, dt, source, tag, comm, &req) );
+            return req;
+        }
+
+        void wait(MPI_Request req) {
+            prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
+        }
+
+        void waitall(MPI_Request * reqs, int count) {
+            prk::MPI::check( MPI_Waitall(count, reqs, MPI_STATUS_IGNORE) );
+        }
+
+        void waitall(std::vector<MPI_Request> & reqs) {
+            prk::MPI::check( MPI_Waitall(reqs.size(), reqs.data(), MPI_STATUS_IGNORE) );
         }
 
         template <typename T>
@@ -461,20 +513,20 @@ namespace prk
 
             //std::cout << "@" << me << " rows=" << rows << " cols=" << cols << std::endl;
 
-            std::cout << std::endl;
+            //std::cerr << std::endl;
             prk::MPI::barrier();
 
             for (int r = 0; r < np; ++r) {
                 if (me == r) {
-                    std::cout << label << std::endl;
+                    std::cerr << label << "\n";
                     for (int i = 0; i < rows; ++i) {
                         for (int j = 0; j < cols; ++j) {
-                            std::cout << matrix[i * cols + j] << " ";
+                            std::cerr << matrix[i * cols + j] << " ";
                         }
-                        std::cout << "\n";
+                        std::cerr << "\n";
                     }
-                    std::cout << std::endl;
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                    std::cerr << std::endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 }
                 prk::MPI::barrier();
             }
