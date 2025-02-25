@@ -56,6 +56,15 @@
 #include "prk_util.h"
 #include "prk_mpi.h"
 
+static inline void transpose_block(double * B, const double * A, size_t block_order)
+{
+  for (size_t i=0; i<block_order; i++) {
+    for (size_t j=0; j<block_order; j++) {
+      B[i*block_order+j] += A[j*block_order+i];
+    }
+  }
+} 
+
 int main(int argc, char * argv[])
 {
   {
@@ -69,8 +78,7 @@ int main(int argc, char * argv[])
     //////////////////////////////////////////////////////////////////////
 
     int iterations;
-    int order, block_order;
-    int tile_size;
+    size_t order, block_order, tile_size;
 
     if (me == 0) {
       std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -86,11 +94,11 @@ int main(int argc, char * argv[])
           throw "ERROR: iterations must be >= 1";
         }
      
-        order = std::atoi(argv[2]);
+        order = std::atol(argv[2]);
         if (order <= 0) {
           throw "ERROR: Matrix Order must be greater than 0";
-        } else if (order > prk::get_max_matrix_size()) {
-          throw "ERROR: matrix dimension too large - overflow risk";
+        // } else if (order > prk::get_max_matrix_size()) {
+        //   throw "ERROR: matrix dimension too large - overflow risk";
         }
 
         if (order % np != 0) {
@@ -133,8 +141,8 @@ int main(int argc, char * argv[])
     prk::vector<double> T(order * block_order, 0.0);
 
     // fill A with the sequence 0 to order^2-1 as doubles
-    for (int i=0; i<order; i++) {
-        for (int j=0; j<block_order; j++) {
+    for (size_t i=0; i<order; i++) {
+        for (size_t j=0; j<block_order; j++) {
             A[i*block_order + j] = me * block_order + i * order + j;
         }
     }
@@ -153,14 +161,9 @@ int main(int argc, char * argv[])
         prk::MPI::alltoall(A.data(), block_order*block_order, T.data(), block_order*block_order);
 
         // transpose the  matrix  
-        for (int r=0; r<np; r++) {
-          const int lo = block_order * block_order * r;
-          //const int hi = block_order * (r+1);
-          for (int i=0; i<block_order; i++) {
-            for (int j=0; j<block_order; j++) {
-              B[lo + i*block_order+j] += T[lo + j*block_order+i];
-            }
-          }
+        for (size_t r=0; r<np; r++) {
+          const size_t offset = block_order * block_order * r;
+          transpose_block(B.data() + offset, T.data() + offset, block_order); 
         }
         // increment A
         std::transform(A.begin(), A.end(), A.begin(), [](auto a) { return a + 1; });
@@ -177,8 +180,8 @@ int main(int argc, char * argv[])
 
     const double addit = (iterations+1.0) * (iterations*0.5);
     double abserr(0);
-    for (int i=0; i<order; i++) {
-      for (int j=0; j<block_order; j++) {
+    for (size_t i=0; i<order; i++) {
+      for (size_t j=0; j<block_order; j++) {
         const double temp = (order*(me*block_order+j)+(i)) * (1+iterations) + addit;
         abserr += prk::abs(B[i*block_order+j] - temp);
       }
