@@ -192,6 +192,25 @@ namespace prk
             return req;
         }
 
+        template <typename T>
+        MPI_Request rget(MPI_Win win, T * buf, int target_rank, size_t target_offset, int count = 1) {
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buf);
+            MPI_Request req;
+            prk::MPI::check( MPI_Rget(buf, count, dt, target_rank, target_offset, count, dt, win, &req) );
+            return req;
+        }
+
+        template <typename T>
+        MPI_Win win_allocate(size_t count, T * buffer, int disp_unit = sizeof(T), MPI_Info info = MPI_INFO_NULL, MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Win win;
+            prk::MPI::check( MPI_Win_allocate(count * sizeof(T), disp_unit, info, comm, &buffer, &win) );
+            return win;
+        }
+
+        void win_free(MPI_Win win) {
+            prk::MPI::check( MPI_Win_free(&win) );
+        }
+
         void wait(MPI_Request req) {
             prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
         }
