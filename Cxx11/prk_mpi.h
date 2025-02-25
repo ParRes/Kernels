@@ -54,7 +54,10 @@ namespace prk
         }
 
         template <typename T>
-        MPI_Datatype get_MPI_Datatype(T t) { return MPI_DATATYPE_NULL; }
+        MPI_Datatype get_MPI_Datatype(T t) { 
+            std::cerr << "get_MPI_Datatype resolution failed for type " << typeid(T).name() << std::endl;
+            return MPI_DATATYPE_NULL; 
+        }
 
         template <>
         MPI_Datatype get_MPI_Datatype(double d) { return MPI_DOUBLE; }
@@ -68,9 +71,10 @@ namespace prk
 
         class state {
 
+#if ENABLE_SHM
           private:
             MPI_Comm node_comm_;
-
+#endif
           public:
             state(int * argc = NULL, char*** argv = NULL) {
                 int is_init, is_final;
@@ -82,7 +86,9 @@ namespace prk
                         prk::MPI::abort();
                     }
                     MPI_Init(argc,argv);
-                    prk::MPI::check( MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &this->node_comm_) );
+#if ENABLE_SHM
+                    prk::MPI::check( MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &node_comm_) );
+#endif
                 }
             }
 
@@ -91,15 +97,19 @@ namespace prk
                 MPI_Initialized(&is_init);
                 MPI_Finalized(&is_final);
                 if (is_init && !is_final) {
-                    prk::MPI::check( MPI_Comm_free(&this->node_comm_) );
+#if ENABLE_SHM
+                    prk::MPI::check( MPI_Comm_free(&node_comm_) );
+#endif
                     MPI_Finalize();
                 }
             }
 
+#if ENABLE_SHM
             MPI_Comm node_comm(void) {
                 // this is a handle so we can always return a copy of the private instance
-                return this->node_comm_;
+                return node_comm_;
             }
+#endif
         };
 
         int rank(MPI_Comm comm = MPI_COMM_WORLD) {
@@ -119,6 +129,30 @@ namespace prk
         }
 
         template <typename T>
+        void bcast(T * buffer, int count = 1, int root = 0, MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buffer);
+            prk::MPI::check( MPI_Bcast(buffer, count, dt, root, comm) );
+        }
+
+        template <typename T>
+        void alltoall(const T * sbuffer, int scount, T * rbuffer, int rcount, MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Datatype stype = prk::MPI::get_MPI_Datatype(*sbuffer);
+            MPI_Datatype rtype = prk::MPI::get_MPI_Datatype(*rbuffer);
+            prk::MPI::check( MPI_Alltoall(sbuffer, scount, stype,
+                                          rbuffer, rcount, rtype, comm) );
+        }
+
+        template <typename T>
+        void alltoall(const std::vector<T> & sbuffer, std::vector<T> & rbuffer, MPI_Comm comm = MPI_COMM_WORLD) {
+            int scount = sbuffer.size();
+            int rcount = rbuffer.size();
+            MPI_Datatype stype = prk::MPI::get_MPI_Datatype(sbuffer);
+            MPI_Datatype rtype = prk::MPI::get_MPI_Datatype(rbuffer);
+            prk::MPI::check( MPI_Alltoall(sbuffer, scount, stype,
+                                          rbuffer, rcount, rtype, comm) );
+        }
+
+        template <typename T>
         T min(T in, MPI_Comm comm = MPI_COMM_WORLD) {
             T out;
             MPI_Datatype dt = prk::MPI::get_MPI_Datatype(in);
@@ -127,7 +161,7 @@ namespace prk
         }
 
         template <typename T>
-        T max(T in, MPI_Comm comm = MPI_COMM_WORLD) {
+        T max(T in,  MPI_Comm comm = MPI_COMM_WORLD) {
             T out;
             MPI_Datatype dt = prk::MPI::get_MPI_Datatype(in);
             prk::MPI::check( MPI_Allreduce(&in, &out, 1, dt, MPI_MAX, comm) );
@@ -145,7 +179,7 @@ namespace prk
         template <typename T>
         T avg(T in, MPI_Comm comm = MPI_COMM_WORLD) {
             T out;
-            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(in);
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(1);
             prk::MPI::check( MPI_Allreduce(&in, &out, 1, dt, MPI_SUM, comm) );
             out /= prk::MPI::size(comm);
             return out;
@@ -419,6 +453,33 @@ namespace prk
             }
 
         };
+
+        template <typename T>
+        void print_matrix(const prk::vector<T> & matrix, int rows, int cols, const std::string label = "") {
+            int me = prk::MPI::rank();
+            int np = prk::MPI::size();
+
+            //std::cout << "@" << me << " rows=" << rows << " cols=" << cols << std::endl;
+
+            std::cout << std::endl;
+            prk::MPI::barrier();
+
+            for (int r = 0; r < np; ++r) {
+                if (me == r) {
+                    std::cout << label << std::endl;
+                    for (int i = 0; i < rows; ++i) {
+                        for (int j = 0; j < cols; ++j) {
+                            std::cout << matrix[i * cols + j] << " ";
+                        }
+                        std::cout << "\n";
+                    }
+                    std::cout << std::endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                }
+                prk::MPI::barrier();
+            }
+            //prk::MPI::barrier();
+        }
 
     } // MPI namespace
 
