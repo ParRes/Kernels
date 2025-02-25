@@ -135,8 +135,10 @@ int main(int argc, char * argv[])
 
     double trans_time{0};
 
+    double * LA = nullptr;
+    MPI_Win WA = prk::MPI::win_allocate(order * block_order, &LA);
     //A[order][block_order]
-    prk::vector<double> A(order * block_order, 0.0);
+    prk::vector<double> A(LA, order * block_order, 0.0);
     prk::vector<double> B(order * block_order, 0.0);
     prk::vector<double> T(block_order * block_order, 0.0);
 
@@ -163,9 +165,9 @@ int main(int argc, char * argv[])
         // transpose the  matrix  
         for (size_t r=0; r<np; r++) {
             const int recv_from = (me + r) % np;
-            const int send_to   = (me - r + np) % np;
-            size_t offset = block_order * block_order * send_to;
-            prk::MPI::sendrecv(A.data() + offset, send_to, T.data(), recv_from, block_order*block_order);
+            //const int send_to   = (me - r + np) % np;
+            size_t offset = block_order * block_order * recv_from;
+            prk::MPI::rget(WA, T.data(), recv_from, offset, block_order * block_order);
             offset = block_order * block_order * recv_from;
             transpose_block(B.data() + offset, T.data(), block_order); 
         }
@@ -175,6 +177,8 @@ int main(int argc, char * argv[])
       }
       trans_time = prk::wtime() - trans_time;
     }
+
+    prk::MPI::win_free(WA);
 
     //prk::MPI::print_matrix(A, order, block_order, "A@" + std::to_string(me));
     //prk::MPI::print_matrix(B, order, block_order, "B@" + std::to_string(me));
