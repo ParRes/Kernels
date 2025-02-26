@@ -1,6 +1,6 @@
 #define RESTRICT __restrict__
 
-static inline void transpose_block(double * B, const double * A, size_t block_order)
+static inline void transpose_block(double * RESTRICT B, const double * RESTRICT A, size_t block_order)
 {
   for (size_t i=0; i<block_order; i++) {
     for (size_t j=0; j<block_order; j++) {
@@ -9,7 +9,7 @@ static inline void transpose_block(double * B, const double * A, size_t block_or
   }
 } 
 
-static inline void transpose_block(double * B, const double * A, size_t block_order, size_t tile_size)
+static inline void transpose_block(double * RESTRICT B, const double * RESTRICT A, size_t block_order, size_t tile_size)
 {
   if (tile_size < block_order) {
     for (size_t it=0; it<block_order; it+=tile_size) {
@@ -25,3 +25,6 @@ static inline void transpose_block(double * B, const double * A, size_t block_or
     transpose_block(B, A, block_order);
   }
 }
+
+#ifdef __NVCC__
+#endif
