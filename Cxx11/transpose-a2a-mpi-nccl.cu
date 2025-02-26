@@ -61,7 +61,8 @@
 
 //#define DEBUG 1
 
-const std::array<std::string,4> vnames = {"naive", "coalesced", "no bank conflicts", "bulk naive"};
+const std::array<std::string,6> vnames = {"naive", "coalesced", "no bank conflicts",
+                                          "bulk naive", "bulk coalesced", "bulk no bank conflicts"};
 
 int main(int argc, char * argv[])
 {
@@ -87,7 +88,7 @@ int main(int argc, char * argv[])
 
       try {
         if (argc < 3) {
-          throw "Usage: <# iterations> <matrix order> [variant (0/1/2)]";
+          throw "Usage: <# iterations> <matrix order> [variant (0-5)]";
         }
      
         iterations  = std::atoi(argv[1]);
@@ -112,8 +113,8 @@ int main(int argc, char * argv[])
         if (argc > 3) {
             variant = std::atoi(argv[3]);
         }
-        if (variant < 0 || variant > 3) {
-            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3: bulk naive)";
+        if (variant < 0 || variant > 5) {
+            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk...)";
         }
       }
       catch (const char * e) {
@@ -210,6 +211,10 @@ int main(int argc, char * argv[])
         // transpose the  matrix  
         if (variant==3) {
             transposeNaiveBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
+        } else if (variant==4) {
+            transposeCoalescedBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
+        } else if (variant==5) {
+            transposeNoBankConflictBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
         } else {
             for (int r=0; r<np; r++) {
               const size_t offset = block_order * block_order * r;
