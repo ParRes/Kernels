@@ -141,6 +141,9 @@ int main(int argc, char * argv[])
     }
     prk::MPI::bcast(&uniqueId);
 
+    const int num_gpus = info.num_gpus();
+    info.set_gpu(me % num_gpus);
+
     prk::MPI::barrier();
     ncclComm_t nccl_comm_world;
     prk::check( ncclGroupStart() );
