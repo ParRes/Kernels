@@ -4,6 +4,8 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <string>
+#include <typeinfo>
 
 #include <nccl.h>
 
@@ -24,7 +26,6 @@ namespace prk
 
         template <typename T>
         ncclDataType_t get_NCCL_Datatype(T t) { 
-            static_assert(false, "get_NCCL_Datatype resolution failed for type" + std::string(typeid(T).name()));
             std::cerr << "get_NCCL_Datatype resolution failed for type " << typeid(T).name() << std::endl;
             std::abort();
         }
