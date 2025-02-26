@@ -90,7 +90,8 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 
 taskloop: stencil-taskloop transpose-taskloop nstream-taskloop
 
-mpi: nstream-mpi stencil-mpi dgemm-mpi-cblas
+mpi: nstream-mpi stencil-mpi dgemm-mpi-cblas \
+     transpose-a2a-mpi transpose-p2p-mpi transpose-get-mpi
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
@@ -125,7 +126,7 @@ cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
 stf: cudastf
 cudastf: dgemm-cudastf dgemm-cublas-cudastf stencil-cudastf p2p-cudastf transpose-cudastf
 
-nccl: nstream-nccl
+nccl: nstream-nccl transpose-a2a-mpi-nccl
 
 hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 
@@ -169,7 +170,7 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 #nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 #	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
-%-mpi: %-mpi.cc prk_util.h prk_mpi.h
+%-mpi: %-mpi.cc prk_util.h prk_mpi.h transpose-kernel.h
 	$(MPICXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) -o $@
 
 %-mpi-cblas: %-mpi-cblas.cc prk_util.h prk_mpi.h
@@ -277,8 +278,8 @@ endif
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt -o $@
 
-%-nccl: %-nccl.cu prk_util.h prk_cuda.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) -DPRK_USE_NCCL $< -lnccl -o $@
+%-nccl: %-nccl.cu prk_util.h prk_cuda.h prk_nccl.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) -DPRK_USE_NCCL $< $(MPILIB) -lnccl -o $@
 
 %-hip: %-hip.cc prk_util.h prk_hip.h
 	$(HIPCC) $(HIPFLAGS) $(CPPFLAGS) $< -o $@
@@ -337,6 +338,7 @@ clean:
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-mpi
+	-rm -f 
 	-rm -f *-opencl
 	-rm -f *-sycl
 	-rm -f *-sycl-usm
@@ -355,6 +357,7 @@ clean:
 	-rm -f *-hpx
 	-rm -f *-thrust
 	-rm -f *-cuda
+	-rm -f *-cudastf
 	-rm -f *-cublas
 	-rm -f *-hip
 	-rm -f *-hipblas

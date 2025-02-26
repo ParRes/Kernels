@@ -1,0 +1,94 @@
+#define RESTRICT __restrict__
+
+static inline void transpose_block(double * RESTRICT B, const double * RESTRICT A, size_t block_order)
+{
+  for (size_t i=0; i<block_order; i++) {
+    for (size_t j=0; j<block_order; j++) {
+      B[i*block_order+j] += A[j*block_order+i];
+    }
+  }
+} 
+
+static inline void transpose_block(double * RESTRICT B, const double * RESTRICT A, size_t block_order, size_t tile_size)
+{
+  if (tile_size < block_order) {
+    for (size_t it=0; it<block_order; it+=tile_size) {
+      for (size_t jt=0; jt<block_order; jt+=tile_size) {
+        for (size_t i=it; i<std::min(block_order,it+tile_size); i++) {
+          for (size_t j=jt; j<std::min(block_order,jt+tile_size); j++) {
+            B[i*block_order+j] += A[j*block_order+i];
+          }
+        }
+      }
+    }
+  } else {
+    transpose_block(B, A, block_order);
+  }
+}
+
+#ifdef __NVCC__
+
+__global__ void cuda_increment(const unsigned n, double * RESTRICT A)
+{
+    const unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        A[i] += 1.0;
+    }
+}
+
+const int tile_dim = 32;
+const int block_rows = 8;
+
+__global__ void transposeNoBankConflict(unsigned order, const double * RESTRICT T, double * RESTRICT B)
+{
+    __shared__ double tile[tile_dim][tile_dim+1];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       tile[threadIdx.y+j][threadIdx.x] = T[(y+j)*order + x];
+    }
+
+    __syncthreads();
+
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
+    }
+}
+
+__global__ void transposeCoalesced(unsigned order, const double * RESTRICT T, double * RESTRICT B)
+{
+    __shared__ double tile[tile_dim][tile_dim];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       tile[threadIdx.y+j][threadIdx.x] = T[(y+j)*order + x];
+    }
+
+    __syncthreads();
+
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
+    }
+}
+
+__global__ void transposeNaive(unsigned order, const double * RESTRICT T, double * RESTRICT B)
+{
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[x*order + (y+j)] += T[(y+j)*order + x];
+    }
+}
+
+#endif

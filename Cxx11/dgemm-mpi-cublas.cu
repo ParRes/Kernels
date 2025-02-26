@@ -145,7 +145,7 @@ int main(int argc, char * argv[])
     }
 
     cublasHandle_t h;
-    prk::CUDA::check( cublasCreate(&h) );
+    prk::check( cublasCreate(&h) );
 
     const int tile_size = 32;
     dim3 dimGrid(prk::divceil(order,tile_size),prk::divceil(order,tile_size),1);
@@ -164,7 +164,7 @@ int main(int argc, char * argv[])
 
     // host buffers
     double * h_c;
-    prk::CUDA::check( cudaMallocHost((void**)&h_c, bytes) );
+    prk::check( cudaMallocHost((void**)&h_c, bytes) );
 
     // device buffers
     double * d_a;
@@ -172,7 +172,7 @@ int main(int argc, char * argv[])
     double * d_c;
     d_a = prk::CUDA::malloc_device<double>(order*order);
     d_b = prk::CUDA::malloc_device<double>(order*order);
-    prk::CUDA::check( cudaMalloc((void**)&d_c, bytes) );
+    prk::check( cudaMalloc((void**)&d_c, bytes) );
 
     init<<<dimGrid, dimBlock>>>(order, d_a, d_b, d_c);
 
@@ -186,7 +186,7 @@ int main(int argc, char * argv[])
 
         double alpha = 1.0;
         double beta  = 1.0;
-        prk::CUDA::check( cublasDgemm(h,
+        prk::check( cublasDgemm(h,
                                       CUBLAS_OP_N, CUBLAS_OP_N, // opA, opB
                                       order, order, order,      // m, n, k
                                       &alpha,                   // alpha
@@ -195,22 +195,22 @@ int main(int argc, char * argv[])
                                       &beta,                    // beta
                                       d_c, order) );            // C, ldc
 
-        prk::CUDA::check( cudaDeviceSynchronize() );
+        prk::check( cudaDeviceSynchronize() );
       }
       prk::MPI::barrier();
       dgemm_time = prk::wtime() - dgemm_time;
     }
 
     // copy output back to host
-    prk::CUDA::check( cudaMemcpyAsync(&(h_c[0]), d_c, bytes, cudaMemcpyDeviceToHost) );
+    prk::check( cudaMemcpyAsync(&(h_c[0]), d_c, bytes, cudaMemcpyDeviceToHost) );
 
-    prk::CUDA::check( cudaFree(d_c) );
-    prk::CUDA::check( cudaFree(d_b) );
-    prk::CUDA::check( cudaFree(d_a) );
+    prk::check( cudaFree(d_c) );
+    prk::check( cudaFree(d_b) );
+    prk::check( cudaFree(d_a) );
 
-    prk::CUDA::check( cublasDestroy(h) );
+    prk::check( cublasDestroy(h) );
 
-    prk::CUDA::check( cudaDeviceSynchronize() );
+    prk::check( cudaDeviceSynchronize() );
 
     //////////////////////////////////////////////////////////////////////
     /// Analyze and output results
@@ -263,7 +263,7 @@ int main(int argc, char * argv[])
       }
     }
 
-    prk::CUDA::check( cudaFreeHost(h_c) );
+    prk::check( cudaFreeHost(h_c) );
 
   } // prk::MPI:state goes out of scope here
 

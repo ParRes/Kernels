@@ -121,7 +121,7 @@ const std::array<std::string,3> vnames = {"naive", "coalesced", "no bank conflic
 int main(int argc, char * argv[])
 {
   std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-  std::cout << "C++11/CUDA Matrix transpose: B = A^T" << std::endl;
+  std::cout << "C++11/NCCL Matrix transpose: B = A^T" << std::endl;
 
   prk::CUDA::info info;
   info.print();
@@ -173,6 +173,12 @@ int main(int argc, char * argv[])
 
   info.checkDims(dimBlock, dimGrid);
 
+  int num_gpus = info.num_gpus();
+  std::vector<ncclComm_t> nccl_comm_world(num_gpus);
+  std::cerr << "before ncclCommInitAll: " << num_gpus << " GPUs" << std::endl;
+  prk::CUDA::check( ncclCommInitAll(nccl_comm_world.data(), num_gpus, nullptr) );
+  std::cerr << "after ncclCommInitAll" << std::endl;
+
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
@@ -191,8 +197,19 @@ int main(int argc, char * argv[])
   }
 
   // copy input from host to device
-  double * d_a = prk::CUDA::malloc_device<double>(nelems);
-  double * d_b = prk::CUDA::malloc_device<double>(nelems);
+  //double * d_a = prk::CUDA::malloc_device<double>(nelems);
+  //double * d_b = prk::CUDA::malloc_device<double>(nelems);
+  std::vector<double*> d_a(num_gpus,nullptr);
+  std::vector<double*> d_b(num_gpus,nullptr);
+
+  for (int i=0; i<num_gpus; i++) {
+      info.set_gpu(i);
+      d_a[i] = prk::CUDA::malloc_async<double>(length);
+      d_b[i] = prk::CUDA::malloc_async<double>(length);
+      prk::CUDA::copyH2Dasync(d_a[i], h_a, length);
+      prk::CUDA::copyH2Dasync(d_b[i], h_b, length);
+      prk::CUDA::sync();
+  }
 
   prk::CUDA::copyH2D(d_a, h_a, nelems);
   prk::CUDA::copyH2D(d_b, h_b, nelems);

@@ -103,7 +103,7 @@ void prk_dgemm(const cublasHandle_t & h,
         double * pA = &(A[b*order*order]);
         double * pB = &(B[b*order*order]);
         double * pC = &(C[b*order*order]);
-        prk::CUDA::check( cublasDgemm(h,
+        prk::check( cublasDgemm(h,
                                       CUBLAS_OP_N, CUBLAS_OP_N, // opA, opB
                                       order, order, order,      // m, n, k
                                       &alpha,                   // alpha
@@ -124,7 +124,7 @@ void prk_bgemm(const cublasHandle_t & h,
     const double alpha = 1.0;
     const double beta  = 1.0;
 
-    prk::CUDA::check( cublasDgemmStridedBatched(h,
+    prk::check( cublasDgemmStridedBatched(h,
                                                 CUBLAS_OP_N, CUBLAS_OP_N,
                                                 order, order, order,
                                                 &alpha,
@@ -216,7 +216,7 @@ int main(int argc, char * argv[])
   std::vector<cublasHandle_t> contexts(ngpus);
   for (int i=0; i<ngpus; ++i) {
       prk::CUDA::set_device(i);
-      prk::CUDA::check( cublasCreate(&contexts[i]) );
+      prk::check( cublasCreate(&contexts[i]) );
   }
 
   const int tile_size = 32;
@@ -292,7 +292,7 @@ int main(int argc, char * argv[])
       prk::CUDA::free(d_a[i]);
       prk::CUDA::free(d_b[i]);
       prk::CUDA::free(d_c[i]);
-      prk::CUDA::check( cublasDestroy(contexts[i]) );
+      prk::check( cublasDestroy(contexts[i]) );
   }
 
   //////////////////////////////////////////////////////////////////////
