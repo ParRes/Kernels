@@ -28,18 +28,10 @@ static inline void transpose_block(double * RESTRICT B, const double * RESTRICT 
 
 #ifdef __NVCC__
 
-__global__ void cuda_increment(const unsigned n, double * RESTRICT A)
-{
-    const unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) {
-        A[i] += 1.0;
-    }
-}
-
 const int tile_dim = 32;
 const int block_rows = 8;
 
-__global__ void transposeNoBankConflict(unsigned order, const double * RESTRICT T, double * RESTRICT B)
+__global__ void transposeNoBankConflict(unsigned order, const double * RESTRICT A, double * RESTRICT B)
 {
     __shared__ double tile[tile_dim][tile_dim+1];
 
@@ -47,7 +39,7 @@ __global__ void transposeNoBankConflict(unsigned order, const double * RESTRICT 
     auto y = blockIdx.y * tile_dim + threadIdx.y;
 
     for (int j = 0; j < tile_dim; j += block_rows) {
-       tile[threadIdx.y+j][threadIdx.x] = T[(y+j)*order + x];
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
     }
 
     __syncthreads();
@@ -60,7 +52,7 @@ __global__ void transposeNoBankConflict(unsigned order, const double * RESTRICT 
     }
 }
 
-__global__ void transposeCoalesced(unsigned order, const double * RESTRICT T, double * RESTRICT B)
+__global__ void transposeCoalesced(unsigned order, const double * RESTRICT A, double * RESTRICT B)
 {
     __shared__ double tile[tile_dim][tile_dim];
 
@@ -68,7 +60,7 @@ __global__ void transposeCoalesced(unsigned order, const double * RESTRICT T, do
     auto y = blockIdx.y * tile_dim + threadIdx.y;
 
     for (int j = 0; j < tile_dim; j += block_rows) {
-       tile[threadIdx.y+j][threadIdx.x] = T[(y+j)*order + x];
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
     }
 
     __syncthreads();
@@ -81,13 +73,30 @@ __global__ void transposeCoalesced(unsigned order, const double * RESTRICT T, do
     }
 }
 
-__global__ void transposeNaive(unsigned order, const double * RESTRICT T, double * RESTRICT B)
+__global__ void transposeNaive(unsigned order, const double * RESTRICT A, double * RESTRICT B)
 {
     auto x = blockIdx.x * tile_dim + threadIdx.x;
     auto y = blockIdx.y * tile_dim + threadIdx.y;
 
     for (int j = 0; j < tile_dim; j+= block_rows) {
-        B[x*order + (y+j)] += T[(y+j)*order + x];
+        B[x*order + (y+j)] += A[(y+j)*order + x];
+    }
+}
+
+__global__ void transposeSimple(unsigned order, const double * RESTRICT A, double * RESTRICT B)
+{
+    auto x = blockIdx.x * blockDim.x + threadIdx.x;
+    auto y = blockIdx.y * blockDim.y + threadIdx.y;
+    if ((x < order) && (y < order)) {
+        B[x*order + y] += A[y*order + x];
+    }
+}
+
+__global__ void cuda_increment(const unsigned n, double * RESTRICT A)
+{
+    const unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        A[i] += 1.0;
     }
 }
 

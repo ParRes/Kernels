@@ -44,8 +44,8 @@ namespace prk
 
             prk::check( ncclGroupStart() );
             for (int r=0; r<np; r++) {
-                prk::check( ncclSend(sbuffer, count, type, r, comm, stream) );
-                prk::check( ncclRecv(rbuffer, count, type, r, comm, stream) );
+                prk::check( ncclSend(sbuffer + r*count, count, type, r, comm, stream) );
+                prk::check( ncclRecv(rbuffer + r*count, count, type, r, comm, stream) );
             }
             prk::check( ncclGroupEnd() );
         }

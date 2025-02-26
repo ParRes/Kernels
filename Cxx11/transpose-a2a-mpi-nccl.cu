@@ -59,6 +59,8 @@
 #include "prk_cuda.h"
 #include "transpose-kernel.h"
 
+//#define DEBUG 1
+
 int main(int argc, char * argv[])
 {
   {
@@ -68,7 +70,7 @@ int main(int argc, char * argv[])
     int me = prk::MPI::rank();
 
     prk::CUDA::info info;
-    if (me == 0) info.print();
+    //if (me == 0) info.print();
 
     //////////////////////////////////////////////////////////////////////
     /// Read and test input parameters
@@ -94,9 +96,12 @@ int main(int argc, char * argv[])
         order = std::atol(argv[2]);
         if (order <= 0) {
           throw "ERROR: Matrix Order must be greater than 0";
-        } else if (order % tile_dim) {
-          throw "ERROR: matrix dimension not divisible by tile size";
+        } 
+#ifndef DEBUG
+        if (order % tile_dim) {
+          throw "ERROR: matrix dimension not divisible by 32";
         }
+#endif
 
         if (order % np != 0) {
           throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
@@ -118,9 +123,11 @@ int main(int argc, char * argv[])
     block_order = order / np;
 
     // for B += T.T
+#ifndef DEBUG
     dim3 dimGrid(block_order/tile_dim, block_order/tile_dim, 1);
     dim3 dimBlock(tile_dim, block_rows, 1);
     info.checkDims(dimBlock, dimGrid);
+#endif
 
     // for A += 1
     const int threads_per_block = 256;
@@ -180,26 +187,44 @@ int main(int argc, char * argv[])
         }
 
         prk::NCCL::alltoall(A, T, block_order*block_order, nccl_comm_world);
+#ifdef DEBUG
+        prk::CUDA::sync();
+        prk::MPI::barrier();
+#endif
 
         // transpose the  matrix  
         for (int r=0; r<np; r++) {
           const size_t offset = block_order * block_order * r;
+#ifdef DEBUG
+          const int threads_per_block = 16;
+          const int blocks_per_grid = (block_order + threads_per_block - 1) / threads_per_block;
+          dim3 dimBlock(threads_per_block, threads_per_block, 1);
+          dim3 dimGrid(blocks_per_grid, blocks_per_grid, 1);
+          transposeSimple<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+          prk::CUDA::sync();
+#else
           transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+#endif
         }
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
+#ifdef DEBUG
         prk::CUDA::sync();
+        prk::MPI::barrier();
+#endif
       }
       trans_time = prk::wtime() - trans_time;
     }
 
     prk::MPI::barrier();
 
-    prk::CUDA::copyD2H(h_A, A, order * block_order);
     prk::CUDA::copyD2H(h_B, B, order * block_order);
 
+#ifdef DEBUG
+    prk::CUDA::copyD2H(h_A, A, order * block_order);
     prk::MPI::print_matrix(h_A, order, block_order, "A@" + std::to_string(me));
     prk::MPI::print_matrix(h_B, order, block_order, "B@" + std::to_string(me));
+#endif
 
     prk::check( ncclCommFinalize(nccl_comm_world) );
 
