@@ -59,11 +59,6 @@ namespace prk
             return MPI_DATATYPE_NULL; 
         }
 
-        template <double>
-        constexpr MPI_Datatype get_MPI_Datatype() { return MPI_DOUBLE; }
-        template <int>
-        constexpr MPI_Datatype get_MPI_Datatype() { return MPI_INT; }
-
         template <>
         constexpr MPI_Datatype get_MPI_Datatype(double d) { return MPI_DOUBLE; }
         template <>
