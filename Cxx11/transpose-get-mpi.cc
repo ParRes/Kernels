@@ -135,10 +135,8 @@ int main(int argc, char * argv[])
 
     double trans_time{0};
 
-    //MPI_Win WA = MPI_WIN_NULL;
-    //double * LA = nullptr;
+    // WA = window, LA = local address
     auto [WA,LA] = prk::MPI::win_allocate<double>(order * block_order);
-    std::cerr << "LA=" << LA << std::endl;
 
     //A[order][block_order]
     prk::vector<double> A(LA, order * block_order, 0.0);
@@ -169,14 +167,16 @@ int main(int argc, char * argv[])
         for (int r=0; r<np; r++) {
             const int recv_from = (me + r) % np;
             //const int send_to   = (me - r + np) % np;
-            size_t offset = block_order * block_order * recv_from;
-            prk::MPI::rget(WA, T.data(), recv_from, offset, block_order * block_order);
+            size_t offset = block_order * block_order * me;
+            prk::MPI::bget(WA, T.data(), recv_from, offset, block_order * block_order);
             offset = block_order * block_order * recv_from;
             transpose_block(B.data() + offset, T.data(), block_order); 
         }
         prk::MPI::barrier();
         // increment A
         std::transform(A.begin(), A.end(), A.begin(), [](auto a) { return a + 1; });
+        prk::MPI::win_sync(WA);
+        prk::MPI::barrier();
       }
       trans_time = prk::wtime() - trans_time;
     }

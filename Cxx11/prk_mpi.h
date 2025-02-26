@@ -126,6 +126,18 @@ namespace prk
             return size;
         }
 
+        void wait(MPI_Request req) {
+            prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
+        }
+
+        void waitall(MPI_Request * reqs, int count) {
+            prk::MPI::check( MPI_Waitall(count, reqs, MPI_STATUS_IGNORE) );
+        }
+
+        void waitall(std::vector<MPI_Request> & reqs) {
+            prk::MPI::check( MPI_Waitall(reqs.size(), reqs.data(), MPI_STATUS_IGNORE) );
+        }
+
         void barrier(MPI_Comm comm = MPI_COMM_WORLD) {
             prk::MPI::check( MPI_Barrier(comm) );
         }
@@ -197,6 +209,14 @@ namespace prk
         }
 
         template <typename T>
+        void bget(MPI_Win win, T * buf, int target_rank, size_t target_offset, int count = 1) {
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buf);
+            MPI_Request req = MPI_REQUEST_NULL;
+            prk::MPI::check( MPI_Rget(buf, count, dt, target_rank, target_offset, count, dt, win, &req) );
+            prk::MPI::wait(req);
+        }
+
+        template <typename T>
         std::pair<MPI_Win, T*> win_allocate(size_t count, int disp_unit = sizeof(T), MPI_Info info = MPI_INFO_NULL, MPI_Comm comm = MPI_COMM_WORLD) {
             MPI_Win win = MPI_WIN_NULL;
             T * buffer = nullptr;
@@ -211,16 +231,8 @@ namespace prk
             prk::MPI::check( MPI_Win_free(&win) );
         }
 
-        void wait(MPI_Request req) {
-            prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
-        }
-
-        void waitall(MPI_Request * reqs, int count) {
-            prk::MPI::check( MPI_Waitall(count, reqs, MPI_STATUS_IGNORE) );
-        }
-
-        void waitall(std::vector<MPI_Request> & reqs) {
-            prk::MPI::check( MPI_Waitall(reqs.size(), reqs.data(), MPI_STATUS_IGNORE) );
+        void win_sync(MPI_Win win) {
+            prk::MPI::check( MPI_Win_sync(win) );
         }
 
         template <typename T>
