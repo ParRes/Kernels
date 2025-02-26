@@ -36,11 +36,12 @@ namespace prk
         constexpr ncclDataType_t get_NCCL_Datatype(int i) { return ncclInt32; }
 
         template <typename T>
-        void alltoall(const T * sbuffer, T * rbuffer, int count, ncclComm_t comm, cudaStream_t stream) {
+        void alltoall(const T * sbuffer, T * rbuffer, int count, ncclComm_t comm, cudaStream_t stream = 0) {
             ncclDataType_t type = get_NCCL_Datatype(*sbuffer);
-            //prk::MPI::check( MPI_Alltoall(sbuffer, count, type, rbuffer, count, type, comm) );
+
             int np;
             prk::check( ncclCommCount(comm, &np) );
+
             prk::check( ncclGroupStart() );
             for (int r=0; r<np; r++) {
                 prk::check( ncclSend(sbuffer, count, type, r, comm, stream) );
