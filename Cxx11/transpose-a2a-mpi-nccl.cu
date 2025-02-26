@@ -208,10 +208,8 @@ int main(int argc, char * argv[])
         }
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
-#ifdef DEBUG
         prk::CUDA::sync();
         prk::MPI::barrier();
-#endif
       }
       trans_time = prk::wtime() - trans_time;
     }
