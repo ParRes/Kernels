@@ -155,7 +155,7 @@ int main(int argc, char * argv[])
         // transpose the  matrix  
         for (int r=0; r<np; r++) {
           const size_t offset = block_order * block_order * r;
-          transpose_block(B.data() + offset, T.data() + offset, block_order); 
+          transpose_block(B.data() + offset, T.data() + offset, block_order, tile_size); 
         }
         // increment A
         std::transform(A.begin(), A.end(), A.begin(), [](auto a) { return a + 1; });
