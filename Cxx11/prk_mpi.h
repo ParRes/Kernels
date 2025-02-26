@@ -144,8 +144,8 @@ namespace prk
 
         template <typename T>
         void bcast(T * buffer, int count = 1, int root = 0, MPI_Comm comm = MPI_COMM_WORLD) {
-            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buffer);
-            prk::MPI::check( MPI_Bcast(buffer, count, dt, root, comm) );
+            //MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buffer);
+            prk::MPI::check( MPI_Bcast(buffer, count * sizeof(T), MPI_BYTE, root, comm) );
         }
 
         template <typename T>
