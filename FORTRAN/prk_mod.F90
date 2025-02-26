@@ -361,11 +361,9 @@ module prk
         dims(1) = size(mat,1)
         dims(2) = size(mat,2)
         do i=1,dims(1)
-          write(6,'(i5,a1)', advance='no') label,':'
+          if (present(label)) write(6,'(i5,a1)', advance='no') label,':'
           do j=1,dims(2)
-            if (present(label)) then
-              write(6,'(f10.1)', advance='no') mat(i,j)
-            end if
+            write(6,'(f10.1)', advance='no') mat(i,j)
           end do
           write(6,'(a1)',advance='yes') ''
         end do
