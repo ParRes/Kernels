@@ -1,7 +1,7 @@
 #
 # This file shows the HIP toolchain options for PRKs.
 #
-ROCM_PATH=/opt/rocm-5.6.0
+ROCM_PATH=/opt/rocm-6.0.3
 #
 # Base compilers and language options
 #
@@ -89,8 +89,8 @@ CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
 #
 # HIP flags
 #
-HIPCC=${ROCM_PATH}/hip/bin/hipcc
-HIPFLAGS=-g -O3 -std=c++14
+HIPCC=${ROCM_PATH}/bin/hipcc
+HIPFLAGS=-g -O3 -std=c++14 --offload-arch=gfx90a:xnack+
 # hipBLAS
 HIPFLAGS+=-L${ROCM_PATH}/lib -lrocblas
 HIPFLAGS+=-L${ROCM_PATH}/lib -lhipblas

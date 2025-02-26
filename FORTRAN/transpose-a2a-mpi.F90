@@ -155,8 +155,8 @@ program main
 
   abserr = 0.0;
   addit = (0.5*iterations) * (iterations+1.0)
-  do j=1,block_order
-    do i=1,order
+  do i=1,order
+    do j=1,block_order
       temp =  (order*(me*block_order+j-1)+(i-1)) * (iterations+1)+addit
       abserr = abserr + abs(B(j,i) - temp)
     enddo
