@@ -136,28 +136,22 @@ int main(int argc, char * argv[])
   info.checkDims(dimBlock, dimGrid);
 
   int num_gpus = info.num_gpus();
-#if 1
-  int * gpu_list = nullptr;
-#else
-  std::vector<int> gpu_list(num_gpus);
-  std::iota(gpu_list.begin(), gpu_list.end(), 0);
-#endif
   std::vector<ncclComm_t> nccl_comm_world(num_gpus);
-  std::cerr << "before ncclCommInitAll" << std::endl;
+  std::cerr << "before ncclCommInitAll: " << num_gpus << " GPUs" << std::endl;
 #if 1
-  prk::CUDA::check( ncclCommInitAll(nccl_comm_world.data(), num_gpus, gpu_list) );
+  prk::CUDA::check( ncclCommInitAll(nccl_comm_world.data(), num_gpus, nullptr) );
 #else
   {
       ncclUniqueId Id;
-      ncclGetUniqueId(&Id);
-      ncclGroupStart();
+      prk::CUDA::check( ncclGetUniqueId(&Id) );
+      prk::CUDA::check( ncclGroupStart() );
       for (int i=0; i<num_gpus; i++) {
         info.set_gpu(i);
         std::cerr << "before ncclCommInitRank: " << i << std::endl;
-        ncclCommInitRank(&nccl_comm_world[i], num_gpus, Id, i);
+        prk::CUDA::check( ncclCommInitRank(&nccl_comm_world[i], num_gpus, Id, i) );
         std::cerr << "after ncclCommInitRank: " << i << std::endl;
       }
-      ncclGroupEnd();
+      prk::CUDA::check( ncclGroupEnd() );
   }
 #endif
   std::cerr << "after ncclCommInitAll" << std::endl;
