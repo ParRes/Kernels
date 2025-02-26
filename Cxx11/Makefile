@@ -167,7 +167,7 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 #nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 #	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
-%-mpi: %-mpi.cc prk_util.h prk_mpi.h
+%-mpi: %-mpi.cc prk_util.h prk_mpi.h transpose-kernel.h
 	$(MPICXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) -o $@
 
 %-mpi-cblas: %-mpi-cblas.cc prk_util.h prk_mpi.h
