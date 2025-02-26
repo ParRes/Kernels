@@ -198,8 +198,8 @@ int main(int argc, char * argv[])
     prk::CUDA::copyD2H(h_A, A, order * block_order);
     prk::CUDA::copyD2H(h_B, B, order * block_order);
 
-    //prk::MPI::print_matrix(h_A, order, block_order, "A@" + std::to_string(me));
-    //prk::MPI::print_matrix(h_B, order, block_order, "B@" + std::to_string(me));
+    prk::MPI::print_matrix(h_A, order, block_order, "A@" + std::to_string(me));
+    prk::MPI::print_matrix(h_B, order, block_order, "B@" + std::to_string(me));
 
     prk::check( ncclCommFinalize(nccl_comm_world) );
 
