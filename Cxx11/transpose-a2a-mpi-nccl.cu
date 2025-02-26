@@ -61,7 +61,7 @@
 
 //#define DEBUG 1
 
-const std::array<std::string,3> vnames = {"naive", "coalesced", "no bank conflicts"};
+const std::array<std::string,4> vnames = {"naive", "coalesced", "no bank conflicts", "bulk naive"};
 
 int main(int argc, char * argv[])
 {
@@ -78,8 +78,8 @@ int main(int argc, char * argv[])
     /// Read and test input parameters
     //////////////////////////////////////////////////////////////////////
 
-    int iterations, variant;
-    size_t order, block_order;
+    int iterations = -1, variant = -1;
+    size_t order = 0, block_order = 0;
 
     if (me == 0) {
       std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -112,8 +112,8 @@ int main(int argc, char * argv[])
         if (argc > 3) {
             variant = std::atoi(argv[3]);
         }
-        if (variant < 0 || variant > 2) {
-            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts)";
+        if (variant < 0 || variant > 3) {
+            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3: bulk naive)";
         }
       }
       catch (const char * e) {
@@ -129,6 +129,7 @@ int main(int argc, char * argv[])
 
     prk::MPI::bcast(&iterations);
     prk::MPI::bcast(&order);
+    prk::MPI::bcast(&variant);
     
     block_order = order / np;
 
@@ -207,34 +208,28 @@ int main(int argc, char * argv[])
 #endif
 
         // transpose the  matrix  
-#if 1
-        if (variant==0) {
-            transposeNaiveBulk<<<dimGrid, dimBlock>>>(np, block_order, T + offset, B + offset);
-        } else if (variant==1) {
-            transposeCoalescedBulk<<<dimGrid, dimBlock>>>(np, block_order, T + offset, B + offset);
-        } else if (variant==2) {
-            transposeNoBankConflictBulk<<<dimGrid, dimBlock>>>(np, block_order, T + offset, B + offset);
-        }
-#else
-        for (int r=0; r<np; r++) {
-          const size_t offset = block_order * block_order * r;
-#ifdef DEBUG
-          const int threads_per_block = 16;
-          const int blocks_per_grid = (block_order + threads_per_block - 1) / threads_per_block;
-          dim3 dimBlock(threads_per_block, threads_per_block, 1);
-          dim3 dimGrid(blocks_per_grid, blocks_per_grid, 1);
-          transposeSimple<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
-          prk::CUDA::sync();
-#else
-          if (variant==0) {
-              transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
-          } else if (variant==1) {
-              transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
-          } else if (variant==2) {
-              transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
-          }
-#endif
-#endif
+        if (variant==3) {
+            transposeNaiveBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
+        } else {
+            for (int r=0; r<np; r++) {
+              const size_t offset = block_order * block_order * r;
+    #ifdef DEBUG
+              const int threads_per_block = 16;
+              const int blocks_per_grid = (block_order + threads_per_block - 1) / threads_per_block;
+              dim3 dimBlock(threads_per_block, threads_per_block, 1);
+              dim3 dimGrid(blocks_per_grid, blocks_per_grid, 1);
+              transposeSimple<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+              prk::CUDA::sync();
+    #else
+              if (variant==0) {
+                  transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+              } else if (variant==1) {
+                  transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+              } else if (variant==2) {
+                  transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+              }
+    #endif
+            }
         }
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
