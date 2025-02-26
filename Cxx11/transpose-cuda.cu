@@ -164,9 +164,9 @@ int main(int argc, char * argv[])
     return 1;
   }
 
-  std::cout << "Number of iterations  = " << iterations << std::endl;
-  std::cout << "Matrix order          = " << order << std::endl;
-  std::cout << "Variant               = " << vnames[variant] << std::endl;
+  std::cout << "Number of iterations = " << iterations << std::endl;
+  std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Variant              = " << vnames[variant] << std::endl;
 
   dim3 dimGrid(order/tile_dim, order/tile_dim, 1);
   dim3 dimBlock(tile_dim, block_rows, 1);
@@ -176,6 +176,8 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
+
+  double trans_time{0};
 
   const size_t nelems = (size_t)order * (size_t)order;
 
@@ -196,8 +198,6 @@ int main(int argc, char * argv[])
 
   prk::CUDA::copyH2D(d_a, h_a, nelems);
   prk::CUDA::copyH2D(d_b, h_b, nelems);
-
-  double trans_time{0};
 
   for (int iter = 0; iter<=iterations; iter++) {
 
