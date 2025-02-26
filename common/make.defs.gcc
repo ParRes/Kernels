@@ -4,14 +4,14 @@
 #
 # Base compilers and language options
 #
-VERSION=-12
+VERSION=-14
 # C99 is required in some implementations.
 CC=gcc${VERSION} -std=c11 -pthread
 #EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=gfortran${VERSION} -std=f2018 -cpp -fexternal-blas -fblas-matmul-limit=0
 # C++11 may not be required but does no harm here.
-CXX=g++${VERSION} -std=gnu++20 -pthread -fmax-errors=1
+CXX=g++${VERSION} -std=c++20 -pthread -fmax-errors=1
 #
 # Compiler flags
 #
@@ -171,9 +171,10 @@ CBLASFLAG=-lblas
 # Mac w/ CUDA emulation via https://github.com/hughperkins/coriander
 #NVCC=/opt/llvm/cocl/bin/cocl
 # Linux w/ NVIDIA CUDA
-NVCC=/usr/local/cuda-11.4/bin/nvcc
-CUDAFLAGS=-g -O3 -std=c++11
-CUDAFLAGS+=-arch=sm_87
+NVCC=/usr/local/cuda-12.8/bin/nvcc
+CUDAFLAGS=-g -O3 -std=c++20
+CUDAFLAGS+=-arch=native
+CUDAFLAGS+=--forward-unknown-to-host-compiler # MPI rpath
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 #CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #
@@ -199,7 +200,7 @@ MPICC=${MPIDIR}/bin/mpicc
 MPICXX=${MPIDIR}/bin/mpicxx
 MPIFORT=${MPIDIR}/bin/mpifort
 MPIINC=-I${MPIDIR}/include
-MPILIB=-L${MPIDIR}/lib -lmpi_usempif08 -lmpi
+MPILIB=-L${MPIDIR}/lib -Wl,-rpath -Wl,${MPIDIR}/lib -lmpi_usempif08 -lmpi
 #MPILIB=-L${MPIDIR}/lib -lmpifort -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
 #MPIINC=-I/usr/include/mpich-3.2-x86_64
