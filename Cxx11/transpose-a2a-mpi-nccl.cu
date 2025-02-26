@@ -241,7 +241,7 @@ int main(int argc, char * argv[])
     prk::MPI::print_matrix(h_B, order, block_order, "B@" + std::to_string(me));
 #endif
 
-    prk::check( ncclCommFinalize(nccl_comm_world) );
+    prk::check( ncclCommDestroy(nccl_comm_world) );
 
     prk::CUDA::free(A);
     prk::CUDA::free(B);
