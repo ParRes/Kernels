@@ -100,4 +100,70 @@ __global__ void cuda_increment(const unsigned n, double * RESTRICT A)
     }
 }
 
+// BULK
+
+__global__ void transposeNoBankConflictBulk(int np, unsigned order, const double * RESTRICT A, double * RESTRICT B)
+{
+    __shared__ double tile[tile_dim][tile_dim+1];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
+    }
+
+    __syncthreads();
+
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
+    }
+}
+
+__global__ void transposeCoalescedBulk(int np, unsigned order, const double * RESTRICT A, double * RESTRICT B)
+{
+    __shared__ double tile[tile_dim][tile_dim];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
+    }
+
+    __syncthreads();
+
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
+    }
+}
+
+__global__ void transposeNaiveBulk(int np, unsigned order, const double * RESTRICT A, double * RESTRICT B)
+{
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[x*order + (y+j)] += A[(y+j)*order + x];
+    }
+}
+
+__global__ void transposeSimpleBulk(int np, unsigned order, const double * RESTRICT A, double * RESTRICT B)
+{
+    auto x = blockIdx.x * blockDim.x + threadIdx.x;
+    auto y = blockIdx.y * blockDim.y + threadIdx.y;
+    for (int r=0; r<np; r++) {
+      const size_t offset = order * order * r;
+      if ((x < order) && (y < order)) {
+          B[offset + x*order + y] += A[offset + y*order + x];
+      }
+    }
+}
+
 #endif

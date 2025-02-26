@@ -207,6 +207,15 @@ int main(int argc, char * argv[])
 #endif
 
         // transpose the  matrix  
+#if 1
+        if (variant==0) {
+            transposeNaiveBulk<<<dimGrid, dimBlock>>>(np, block_order, T + offset, B + offset);
+        } else if (variant==1) {
+            transposeCoalescedBulk<<<dimGrid, dimBlock>>>(np, block_order, T + offset, B + offset);
+        } else if (variant==2) {
+            transposeNoBankConflictBulk<<<dimGrid, dimBlock>>>(np, block_order, T + offset, B + offset);
+        }
+#else
         for (int r=0; r<np; r++) {
           const size_t offset = block_order * block_order * r;
 #ifdef DEBUG
@@ -224,6 +233,7 @@ int main(int argc, char * argv[])
           } else if (variant==2) {
               transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
           }
+#endif
 #endif
         }
         // increment A
