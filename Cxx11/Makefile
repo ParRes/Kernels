@@ -278,7 +278,7 @@ endif
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt -o $@
 
-%-nccl: %-nccl.cu prk_util.h prk_cuda.h
+%-nccl: %-nccl.cu prk_util.h prk_cuda.h prk_nccl.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) -DPRK_USE_NCCL $< $(MPILIB) -lnccl -o $@
 
 %-hip: %-hip.cc prk_util.h prk_hip.h
