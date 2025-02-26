@@ -67,6 +67,9 @@ int main(int argc, char * argv[])
     int np = prk::MPI::size();
     int me = prk::MPI::rank();
 
+    prk::CUDA::info info;
+    if (me == 0) info.print();
+
     //////////////////////////////////////////////////////////////////////
     /// Read and test input parameters
     //////////////////////////////////////////////////////////////////////
