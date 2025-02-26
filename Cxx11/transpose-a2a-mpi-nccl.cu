@@ -75,15 +75,15 @@ int main(int argc, char * argv[])
     //////////////////////////////////////////////////////////////////////
 
     int iterations;
-    size_t order, block_order, tile_size;
+    size_t order, block_order;
 
     if (me == 0) {
       std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
-      std::cout << "C++11/MPI Matrix transpose: B = A^T" << std::endl;
+      std::cout << "C++11/NCCL Matrix transpose: B = A^T" << std::endl;
 
       try {
         if (argc < 3) {
-          throw "Usage: <# iterations> <matrix order> [tile size]";
+          throw "Usage: <# iterations> <matrix order>";
         }
      
         iterations  = std::atoi(argv[1]);
@@ -94,18 +94,13 @@ int main(int argc, char * argv[])
         order = std::atol(argv[2]);
         if (order <= 0) {
           throw "ERROR: Matrix Order must be greater than 0";
-        // } else if (order > prk::get_max_matrix_size()) {
-        //   throw "ERROR: matrix dimension too large - overflow risk";
+        } else if (order % tile_dim) {
+          throw "ERROR: matrix dimension not divisible by tile size";
         }
 
         if (order % np != 0) {
           throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
         }
-
-        // default tile size for tiling of local transpose
-        tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
-        // a negative tile size means no tiling of the local transpose
-        if (tile_size <= 0) tile_size = order;
       }
       catch (const char * e) {
         std::cout << e << std::endl;
@@ -115,12 +110,10 @@ int main(int argc, char * argv[])
      
       std::cout << "Number of iterations = " << iterations << std::endl;
       std::cout << "Matrix order         = " << order << std::endl;
-      std::cout << "Tile size            = " << tile_size << std::endl;
     }
 
     prk::MPI::bcast(&iterations);
     prk::MPI::bcast(&order);
-    prk::MPI::bcast(&tile_size);
     
     block_order = order / np;
 
