@@ -159,7 +159,7 @@ int main(int argc, char * argv[])
             size_t offset = block_order * block_order * send_to;
             prk::MPI::sendrecv(A.data() + offset, send_to, T.data(), recv_from, block_order*block_order);
             offset = block_order * block_order * recv_from;
-            transpose_block(B.data() + offset, T.data(), block_order); 
+            transpose_block(B.data() + offset, T.data(), block_order, tile_size); 
         }
         prk::MPI::barrier();
         // increment A
