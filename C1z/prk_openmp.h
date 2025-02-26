@@ -1,6 +1,6 @@
 ///
 /// Copyright (c) 2013, Intel Corporation
-/// Copyright (c) 2021, NVIDIA
+/// Copyright (c) 2024, NVIDIA
 ///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions
@@ -48,20 +48,39 @@
 # define OMP_BARRIER PRAGMA(omp barrier)
 # define OMP_FOR(x) PRAGMA(omp for x)
 # define OMP_FOR_REDUCE(x) PRAGMA(omp for reduction (x) )
+// OpenMP SIMD if supported, else not.
 # if (_OPENMP >= 201300) || (__ibmxl_version__ >= 16)
 #  define OMP_SIMD PRAGMA(omp simd)
 #  define OMP_FOR_SIMD(x) PRAGMA(omp for simd x)
-#  define OMP_TASK(x) PRAGMA(omp task x)
-#  define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
-#  define OMP_TASKWAIT PRAGMA(omp taskwait)
-#  define OMP_ORDERED(x) PRAGMA(omp ordered x)
+// PGI/NVHPC compilers do not support OpenMP tasking/ordered
+#  if !( defined(__PGIC__) || defined(__PGI) || defined(__NVCOMPILER) )
+#   define OMP_ORDERED(x) PRAGMA(omp ordered x)
+#   define OMP_TASK(x) PRAGMA(omp task x)
+#   define OMP_TASKLOOP(x) PRAGMA(omp taskloop x )
+#   if defined(__INTEL_COMPILER)
+#    define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop x )
+#   else
+#    define OMP_TASKLOOP_COLLAPSE(n,x) PRAGMA(omp taskloop collapse(n) x )
+#   endif
+#   define OMP_TASKWAIT PRAGMA(omp taskwait)
+#  else
+#   warning No support for OpenMP tasks!
+#   define OMP_ORDERED(x)
+#   define OMP_TASK(x)
+#   define OMP_TASKLOOP(x)
+#   define OMP_TASKLOOP_COLLAPSE(n,x)
+#   define OMP_TASKWAIT
+#  endif
 #  define OMP_TARGET(x) PRAGMA(omp target x)
+#  define OMP_DECLARE_TARGET PRAGMA(omp declare target)
+#  define OMP_END_DECLARE_TARGET PRAGMA(omp end declare target)
 # else
 #  warning No OpenMP 4+ features!
 #  define OMP_SIMD
 #  define OMP_FOR_SIMD(x) PRAGMA(omp for x)
 #  define OMP_TASK(x)
 #  define OMP_TASKLOOP(x)
+#  define OMP_TASKLOOP_COLLAPSE(n,x)
 #  define OMP_TASKWAIT
 #  define OMP_ORDERED(x)
 #  define OMP_TARGET(x)
@@ -84,10 +103,13 @@
 # define OMP_FOR_SIMD(x)
 # define OMP_TASK(x)
 # define OMP_TASKLOOP(x)
+# define OMP_TASKLOOP_COLLAPSE(n,x)
 # define OMP_TASKWAIT
 # define OMP_ORDERED(x)
 # define OMP_TARGET(x)
 # define OMP_REQUIRES(x)
+# define OMP_DECLARE_TARGET
+# define OMP_END_DECLARE_TARGET
 #endif
 
 #endif /* PRK_OPENMP_H */

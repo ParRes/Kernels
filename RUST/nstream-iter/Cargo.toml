@@ -1,6 +1,7 @@
 [package]
 name = "nstream-iter"
 version = "0.1.0"
+edition="2021"
 authors = ["Jeff Hammond <jeff.r.hammond@intel.com>", "Thomas Hayward-Schneider <thomas.hayward@ipp.mpg.de>"]
 
 [dependencies]

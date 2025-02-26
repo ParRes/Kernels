@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
         n  = std::atoi(argv[2]);
         if (n < 1) {
           throw "ERROR: grid dimension must be positive";
-        } else if (n > prk::get_max_matrix_size()) {
+        } else if (n > (size_t)prk::get_max_matrix_size()) {
           throw "ERROR: grid dimension too large - overflow risk";
         }
 

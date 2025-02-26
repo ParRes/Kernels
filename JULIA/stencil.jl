@@ -58,46 +58,47 @@
 #            refreshing of neighbor data in parallel versions; August 2013
 #          - Converted to Python by Jeff Hammond, February 2016.
 #          - Converted to Julia by Jeff Hammond, June 2016.
+#          - Improved by Carsten Bauer, November 2024.
 #
 # *******************************************************************
 
 function do_add!(A, n)
-	for j = axes(A, 2)
-		for i = axes(A, 1)
+	for j in axes(A, 2)
+		for i in axes(A, 1)
 			@inbounds A[i,j] += one(eltype(A))
         end
     end
 end
 
-function do_init(A, n)
-    for i=1:n
-        for j=1:n
+function do_init!(A, n)
+    for j in 1:n
+        for i in 1:n
             A[i,j] = i+j-2
         end
     end
 end
 
-function do_star(A, W, B, r, n)
-    for j=r:n-r-1
-        for i=r:n-r-1
-            for jj=-r:r
+function do_star!(A, W, B, r, n)
+    for j in r:n-r-1
+        for i in r:n-r-1
+            for jj in -r:r
                 @inbounds B[i+1,j+1] += W[r+1,r+jj+1] * A[i+1,j+jj+1]
             end
-            for ii=-r:-1
+            for ii in -r:-1
                 @inbounds B[i+1,j+1] += W[r+ii+1,r+1] * A[i+ii+1,j+1]
             end
-            for ii=1:r
+            for ii in 1:r
                 @inbounds B[i+1,j+1] += W[r+ii+1,r+1] * A[i+ii+1,j+1]
             end
         end
     end
 end
 
-function do_stencil(A, W, B, r, n)
-    for j=r:n-r-1
-        for i=r:n-r-1
-            for jj=-r:r
-                for ii=-r:r
+function do_stencil!(A, W, B, r, n)
+    for j in r:n-r-1
+        for i in r:n-r-1
+            for jj in -r:r
+                for ii in -r:r
                     @inbounds B[i+1,j+1] += W[r+ii+1,r+jj+1] * A[i+ii+1,j+jj+1]
                 end
             end
@@ -105,7 +106,7 @@ function do_stencil(A, W, B, r, n)
     end
 end
 
-function main()
+function (@main)(args)
     # ********************************************************************
     # read and test input parameters
     # ********************************************************************
@@ -113,32 +114,32 @@ function main()
     println("Parallel Research Kernels version ") #, PRKVERSION
     println("Julia stencil execution on 2D grid")
 
-    argc = length(ARGS)
+    argc = length(args)
     if argc < 2
-        println("argument count = ", length(ARGS))
-        println("Usage: ./stencil <# iterations> <array dimension> [<star/stencil> <radius>]")
+        println("argument count = ", length(args))
+        println("Usage: julia stencil.jl <# iterations> <array dimension> [<star/stencil> <radius>]")
         exit(1)
     end
 
-    iterations = parse(Int,ARGS[1])
-    if iterations < 1
-        println("ERROR: iterations must be >= 1")
+    iterations = tryparse(Int,args[1])
+    if isnothing(iterations) || iterations < 1
+        println("ERROR: iterations must be an integer >= 1")
         exit(2)
     end
 
-    n = parse(Int,ARGS[2])
-    if n < 1
-        println("ERROR: array dimension must be >= 1")
+    n = tryparse(Int,args[2])
+    if isnothing(n) || n < 1
+        println("ERROR: array dimension must be an integer >= 1")
         exit(3)
     end
 
     pattern = "star"
     if argc > 2
-        pattern = ARGS[3]
+        pattern = args[3]
     end
 
     if argc > 3
-        r = parse(Int,ARGS[4])
+        r = parse(Int,args[4])
         if r < 1
             println("ERROR: Stencil radius should be positive")
             exit(4)
@@ -162,10 +163,10 @@ function main()
     println("Compact representation of stencil loop body")
     println("Number of iterations = ", iterations)
 
-    W = zeros(Float64,2*r+1,2*r+1)
+    W = zeros(2*r+1,2*r+1)
     if pattern == "star"
         stencil_size = 4*r+1
-        for i=1:r
+        for i in 1:r
             W[r+1,r+i+1] =  1.0/(2*i*r)
             W[r+i+1,r+1] =  1.0/(2*i*r)
             W[r+1,r-i+1] = -1.0/(2*i*r)
@@ -173,8 +174,8 @@ function main()
         end
     else
         stencil_size = (2*r+1)^2
-        for j=1:r
-            for i=-j+1:j-1
+        for j in 1:r
+            for i in -j+1:j-1
                 W[r+i+1,r+j+1] =  1.0/(4*j*(2*j-1)*r)
                 W[r+i+1,r-j+1] = -1.0/(4*j*(2*j-1)*r)
                 W[r+j+1,r+i+1] =  1.0/(4*j*(2*j-1)*r)
@@ -185,30 +186,17 @@ function main()
         end
     end
 
-    precompile(do_init, (Array{Float64,2}, Int64))
-    if pattern == "star"
-        precompile(do_star, (Array{Float64,2}, Array{Float64,2}, Array{Float64,2}, Int64, Int64))
-    else
-        precompile(do_stencil, (Array{Float64,2}, Array{Float64,2}, Array{Float64,2}, Int64, Int64))
-    end
-    precompile(do_add!, (Array{Float64,2}, Int64))
+    A = zeros(n,n)
+    B = zeros(n,n)
+    do_init!(A, n)
 
-    A = zeros(Float64,n,n)
-    B = zeros(Float64,n,n)
-
-    do_init(A, n)
+    do_comp! = pattern == "star" ? do_star! : do_stencil!
 
     t0 = time_ns()
 
     for k in 0:iterations
-        if k==0
-            t0 = time_ns()
-        end
-        if pattern == "star"
-            do_star(A, W, B, r, n)
-        else
-            do_stencil(A, W, B, r, n)
-        end
+        k == 1 && (t0 = time_ns())
+        do_comp!(A, W, B, r, n)
         do_add!(A, n)
     end
 
@@ -220,13 +208,7 @@ function main()
     #******************************************************************************
 
     active_points = (n-2*r)^2
-    actual_norm = 0.0
-    for j=1:n
-        for i=1:n
-            actual_norm += abs(B[i,j])
-        end
-    end
-    actual_norm /= active_points
+    actual_norm = sum(abs, B) / active_points
 
     epsilon = 1.e-8
 
@@ -242,6 +224,3 @@ function main()
         exit(9)
     end
 end
-
-main()
-

@@ -61,7 +61,7 @@ endif
 OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib -locca
 
 .PHONY: all clean vector valarray openmp target opencl taskloop stl \
-	ranges kokkos raja cuda cublas sycl dpcpp \
+	ranges kokkos raja cuda cudastf cublas sycl dpcpp \
 	boost-compute thrust executor oneapi onemkl
 
 EXTRA=
@@ -90,7 +90,7 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 
 taskloop: stencil-taskloop transpose-taskloop nstream-taskloop
 
-mpi: nstream-mpi stencil-mpi dgemm-mpi-cblas
+mpi: nstream-mpi stencil-mpi dgemm-mpi-cblas transpose-a2a-mpi transpose-p2p-mpi transpose-get-mpi
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
@@ -122,6 +122,9 @@ raja: p2p-vector-raja stencil-vector-raja nstream-vector-raja \
 
 cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
 
+stf: cudastf
+cudastf: dgemm-cudastf dgemm-cublas-cudastf stencil-cudastf p2p-cudastf transpose-cudastf
+
 hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 
 hipstl: nstream-hipstl
@@ -133,7 +136,7 @@ thrust: nstream-host-thrust nstream-device-thrust \
 
 cublas: transpose-cublas nstream-cublas \
 	dgemm-cublas dgemm-multigpu-cublas dgemm-mpi-cublas \
-	sgemm-cublas xgemm-cublas
+	sgemm-cublas xgemm-cublas dgemm-managed-cublas
 
 cblas: transpose-cblas dgemm-cblas sgemm-cblas xgemm-cblas
 
@@ -164,7 +167,7 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 #nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 #	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
-%-mpi: %-mpi.cc prk_util.h prk_mpi.h
+%-mpi: %-mpi.cc prk_util.h prk_mpi.h transpose-kernel.h
 	$(MPICXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) -o $@
 
 %-mpi-cblas: %-mpi-cblas.cc prk_util.h prk_mpi.h
@@ -306,6 +309,14 @@ endif
 %.s: %.cc prk_util.h
 	$(CXX) $(CXXFLAGS) $(ASMFLAGS) -S $< -o $@
 
+%-cudastf: %-cudastf.cu
+	$(NVCC) $(CPPFLAGS) $(CUDAFLAGS) $(CUDASTF_CFLAGS) $(CUDASTF_LDFLAGS) $< -o $@
+
+%-cublas-cudastf: %-cublas-cudastf.cu prk_util.h prk_cuda.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(CUDASTF_CFLAGS) $(CUDASTF_LDFLAGS) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt -o $@
+
+
+
 clean:
 	-rm -f *.o
 	-rm -f *.s
@@ -321,6 +332,7 @@ clean:
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-mpi
+	-rm -f 
 	-rm -f *-opencl
 	-rm -f *-sycl
 	-rm -f *-sycl-usm
@@ -339,6 +351,7 @@ clean:
 	-rm -f *-hpx
 	-rm -f *-thrust
 	-rm -f *-cuda
+	-rm -f *-cudastf
 	-rm -f *-cublas
 	-rm -f *-hip
 	-rm -f *-hipblas
@@ -348,6 +361,7 @@ clean:
 	-rm -f *-halide
 	-rm -f *-boost-compute
 	-rm -f *-openacc
+	-rm -f *-cudastf
 	-rm -f transpose-async transpose-thread
 
 cleancl:

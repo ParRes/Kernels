@@ -229,13 +229,14 @@ namespace prk {
         private:
             T * data_;
             size_t size_;
+            bool own_data_;
 
         public:
 
             vector(size_t n) {
-                //this->data_ = new T[n];
                 this->data_ = prk::malloc<T>(n);
                 this->size_ = n;
+                this->own_data_ = true;
             }
 
             vector(size_t n, T v) {
@@ -243,11 +244,27 @@ namespace prk {
                 this->data_ = prk::malloc<T>(n);
                 for (size_t i=0; i<n; ++i) this->data_[i] = v;
                 this->size_ = n;
+                this->own_data_ = true;
             }
 
+            vector(T * data, size_t n) {
+                this->data_ = data;
+                this->size_ = n;
+                this->own_data_ = false;
+            }
+
+            vector(T * data, size_t n, T v) {
+                this->data_ = data;
+                for (size_t i=0; i<n; ++i) this->data_[i] = v;
+                this->size_ = n;
+                this->own_data_ = false;
+            }
+
+
             ~vector() {
-                //delete[] this->data_;
-                prk::free<T>(this->data_);
+                if (this->own_data_) {
+                    prk::free<T>(this->data_);
+                }
             }
 
             void operator~() {

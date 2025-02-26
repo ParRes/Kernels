@@ -1,16 +1,24 @@
 #
-# This file shows the CUDA+GCC toolchain options.
+# This file shows the CUDA toolchain options
+# for both NVHPC and GCC.
+NVHPC_PATH=/opt/nvidia/hpc_sdk/Linux_$$(uname -m)/24.9
+#NVHPC_PATH=/proj/nv/Linux_$$(uname -m)/21.11
+#NVHPC_PATH=${HOME}/NVIDIA/hpc_sdk/Linux_$$(uname -m)/2021
+NVHPC_CBIN=${NVHPC_PATH}/compilers/bin/
 #
 # Base compilers and language options
 #
 VERSION=
 # C99 is required in some implementations.
-CC=gcc${VERSION} -std=gnu11
+#CC=gcc${VERSION} -std=gnu11
+CC=${NVHPC_CBIN}nvc -c11 -march=zen4
 #EXTRA_CLIBS=-lrt
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
-FC=gfortran${VERSION} -std=f2008 -cpp
+#FC=gfortran${VERSION} -std=f2008 -cpp
+FC=${NVHPC_CBIN}nvfortran -DNVHPC -march=zen4
 # C++11 may not be required but does no harm here.
-CXX=g++${VERSION} -std=gnu++17
+#CXX=g++${VERSION} -std=gnu++17
+CXX=${NVHPC_CBIN}nvc++ -std=gnu++20 -march=zen4
 #
 # Compiler flags
 #
@@ -30,16 +38,30 @@ DEFAULT_OPT_FLAGS+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #
 # OpenMP flags
 #
-OPENMPFLAG=-fopenmp
-OPENMPSIMDFLAG=-fopenmp-simd
-OFFLOADFLAG=-foffload="-O3 -v"
+#OPENMPFLAG=-fopenmp
+#OPENMPSIMDFLAG=-fopenmp-simd
+#OFFLOADFLAG=-foffload="-O3 -v"
+#OPENACCFLAG=-fopenacc
+OPENMPFLAG=-mp
+#OPENMPFLAG+=-Minfo=mp,vect
+OPENMPSIMDFLAG=
+OFFLOADFLAG=-mp -target=gpu -gpu=managed
+OFFLOADFLAG+=-Minfo=accel
 OFFLOADFLAG+=-DGPU_SCHEDULE="schedule(static,1)"
-OPENACCFLAG=-fopenacc
+OPENACCFLAG=-acc -target=gpu
+OPENACCFLAG+=-Mlarge_arrays
+OPENACCFLAG+=-Minfo=accel
+STDPARFLAG=-stdpar=gpu -gpu=managed
+STDPARFLAG+=-Minfo=accel
+STDPARFLAG+=-cudalib=cublas,cutensor
+CUFORTFLAG=-cuda -gpu=managed -acc # ACC required for CUF+managed
+CUFORTFLAG+=-Minfo=accel
 #
 # OpenCL flags
 #
-OPENCLDIR=/usr/local/cuda-12.1/targets/x86_64-linux
-OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib64 -lOpenCL
+#OPENCLDIR=/usr/local/cuda-12.6/targets/x86_64-linux
+OPENCLDIR=/usr/local/cuda/targets/$$(uname -m)-linux
+OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib64 -L${OPENCLDIR}/lib -lOpenCL
 #OPENCLFLAG+=-Wno-ignored-attributes -Wno-deprecated-declarations
 #OPENCLFLAG+=-Wno-deprecated-declarations -Wno-missing-braces
 #
@@ -110,6 +132,7 @@ OPENCLFLAG=-I${OPENCLDIR}/include -L${OPENCLDIR}/lib64 -lOpenCL
 #
 TBBDIR=/usr/local/Cellar/tbb/2019_U5_1
 TBBFLAG=-I${TBBDIR}/include -L${TBBDIR}/lib -ltbb
+#TBBFLAG=-L/usr/lib/$$(uname -m)-linux-gnu -ltbb
 #
 # Parallel STL, Boost, etc.
 #
@@ -118,15 +141,17 @@ RANGEFLAG=-DUSE_BOOST_IRANGE ${BOOSTFLAG}
 #RANGEFLAG=-DUSE_RANGES_TS -I./range-v3/include
 PSTLFLAG=${OPENMPSIMDFLAG} ${TBBFLAG} -I./pstl/include ${RANGEFLAG}
 KOKKOSDIR=/opt/kokkos/gcc
+PRK_KOKKOS_BACKEND=Cuda
+KOKKOSCXX=${KOKKOSDIR}/bin/nvcc_wrapper
 KOKKOSFLAG=-I${KOKKOSDIR}/include -L${KOKKOSDIR}/lib -lkokkos ${OPENMPFLAG}
 RAJADIR=/opt/raja/gcc
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
-THRUSTDIR=/opt/nvidia/thrust
+THRUSTDIR=/opt/nvidia/hpc_sdk/Linux_$$(uname -m)/21.11/compilers/include-stdpar
 THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
 #
 # CBLAS for C++ DGEMM
 #
-BLASFLAG=-L/usr/lib/x86_64-linux-gnu/blis-openmp -lblis
+BLASFLAG=-L${NVHPC_PATH}/REDIST/compilers/lib -lblas
 CBLASFLAG=${BLASFLAG}
 #
 # CUDA flags
@@ -136,12 +161,19 @@ CBLASFLAG=${BLASFLAG}
 # Linux w/ NVIDIA CUDA
 # NVCC never supports the latest GCC.
 # Use appropriate arch or code is compiled to ancient features.
-NVCC=/usr/local/cuda-12.1/bin/nvcc
-CUDAFLAGS=-g -O3 -std=c++11
+#NVCC=${NVHPC_CBIN}nvc++
+#NVCC=${NVHPC_CBIN}nvcc
+NVCC=/usr/local/cuda-12.6/bin/nvcc
+CUDAFLAGS=-g -O3 -std=c++20
+CUDAFLAGS+=--extended-lambda
 CUDAFLAGS+=--gpu-architecture=sm_89
-#CUDAFLAGS+=--compiler-bindir=/swtools/gcc/7.5.0/bin
+#CUDAFLAGS+=-allow-unsupported-compiler
+#CUDAFLAGS+=-ccbin=g++-13 -lm #-lstdc++
+#CUDAFLAGS+=--compiler-bindir=/opt/gcc/12.3.0/bin/
 #CUDAFLAGS+=-forward-unknown-to-host-compiler -fopenmp
 CUDAFLAGS+=-rdc=true # FIXES ptxas fatal   : Unresolved extern function 'cudaCGGetIntrinsicHandle'
+#CUDAFLAGS+=-I${NVHPC_PATH}/math_libs/12.6/targets/$$(uname -m)-linux/include
+#CUDAFLAGS+=-L${NVHPC_PATH}/math_libs/12.6/targets/$$(uname -m)-linux/lib
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 # heavy hammer:
 CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
@@ -165,16 +197,28 @@ CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
 #CUDAFLAGS+=-D_AVX512IFMAVLINTRIN_H_INCLUDED
 #CUDAFLAGS+=-D_AVX512ERINTRIN_H_INCLUDED
 #
+# CUDASTF
+#
+CUDASTF_DIR=../deps/stf/
+CUDASTF_CFLAGS=--expt-relaxed-constexpr
+CUDASTF_CFLAGS+=-I${CUDASTF_DIR}/cccl/cudax/include/
+CUDASTF_CFLAGS+=-I${CUDASTF_DIR}/cccl/libcudacxx/include
+CUDASTF_CFLAGS+=-lcuda
+#
 # MPI-3
 #
-MPIDIR=/usr/lib/aarch64-linux-gnu/openmpi
-MPICC=mpicc
-MPICXX=mpicxx
-MPIFC=mpifort
+# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
+#MPIDIR=${NVHPC_PATH}/comm_libs/hpcx
+MPIDIR=${NVHPC_PATH}/comm_libs/12.6/openmpi4/latest
+MPICC=${MPIDIR}/bin/mpicc
+MPICXX=${MPIDIR}/bin/mpicxx
+MPIFORT=${MPIDIR}/bin/mpifort
 MPIINC=-I${MPIDIR}/include
 MPILIB=-L${MPIDIR}/lib -lmpi
+#MPILIB+=-Wl,-rpath -Wl,${MPIDIR}/lib -Wl,--enable-new-dtags # NVCC chokes on -Wl
+MPILIB+=-lopen-pal -lopen-rte
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
-#MPIINC=-I/usr/include/mpich-3.2-x86_64
+#MPIINC=-I/usr/include/mpich-3.2-$$(uname -m)
 #MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
 #
 # Global Arrays
@@ -202,4 +246,3 @@ PETSCFLAG+=-Wl,-rpath=${PETSCDIR}/lib
 COARRAYFLAG=-fcoarray=single -lcaf_single
 # multi-node
 # COARRAYFLAG=-fcoarray=lib -lcaf_mpi
-
