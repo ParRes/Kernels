@@ -141,8 +141,12 @@ int main(int argc, char * argv[])
     }
     prk::MPI::bcast(&uniqueId);
 
+    prk::MPI::barrier();
     ncclComm_t nccl_comm_world;
+    prk::check( ncclGroupStart() );
     prk::check( ncclCommInitRank(&nccl_comm_world, np, uniqueId, me) );
+    prk::check( ncclGroupEnd() );
+    prk::MPI::barrier();
 
     //////////////////////////////////////////////////////////////////////
     // Allocate space for the input and transpose matrix
