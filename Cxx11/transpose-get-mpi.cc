@@ -163,7 +163,7 @@ int main(int argc, char * argv[])
         //prk::MPI::alltoall(A.data(), block_order*block_order, T.data(), block_order*block_order);
 
         // transpose the  matrix  
-        for (size_t r=0; r<np; r++) {
+        for (int r=0; r<np; r++) {
             const int recv_from = (me + r) % np;
             //const int send_to   = (me - r + np) % np;
             size_t offset = block_order * block_order * recv_from;
