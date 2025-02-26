@@ -368,6 +368,7 @@ clean:
 	-rm -f *-boost-compute
 	-rm -f *-openacc
 	-rm -f *-cudastf
+	-rm -f *-nccl
 	-rm -f transpose-async transpose-thread
 
 cleancl:
