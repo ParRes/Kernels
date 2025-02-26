@@ -17,49 +17,35 @@
 #include <cublas_v2.h>
 #endif
 
-#ifdef PRK_USE_NCCL
-#include <nccl.h>
-#endif
-
 typedef double prk_float;
 
 namespace prk
 {
-    namespace CUDA
+    void check(cudaError_t rc)
     {
-        void check(cudaError_t rc)
-        {
-            if (rc!=cudaSuccess) {
-                std::cerr << "PRK CUDA error: " << cudaGetErrorName(rc) << "=" << cudaGetErrorString(rc) << std::endl;
-                std::abort();
-            }
+        if (rc!=cudaSuccess) {
+            std::cerr << "PRK CUDA error: " << cudaGetErrorName(rc) << "=" << cudaGetErrorString(rc) << std::endl;
+            std::abort();
         }
+    }
 
 #ifdef PRK_USE_CUBLAS
-        void check(cublasStatus_t rc)
-        {
-            if (rc!=CUBLAS_STATUS_SUCCESS) {
+    void check(cublasStatus_t rc)
+    {
+        if (rc!=CUBLAS_STATUS_SUCCESS) {
 #if defined(CUBLAS_VERSION) && (CUBLAS_VERSION >= (11*10000+4*100+2))
-                std::cerr << "PRK CUBLAS error: " << cublasGetStatusName(rc) << "=" << cublasGetStatusString(rc) << std::endl;
+            std::cerr << "PRK CUBLAS error: " << cublasGetStatusName(rc) << "=" << cublasGetStatusString(rc) << std::endl;
 #else
 #error CUBLAS error names missing
-                std::cerr << "PRK CUBLAS error: " << rc << std::endl;
+            std::cerr << "PRK CUBLAS error: " << rc << std::endl;
 #endif
-                std::abort();
-            }
+            std::abort();
         }
+    }
 #endif
 
-#ifdef PRK_USE_NCCL
-        void check(ncclResult_t rc)
-        {
-            if (rc!=ncclSuccess) {
-                std::cerr << "PRK NCCL error: " << ncclGetErrorString(rc) << std::endl;
-                std::abort();
-            }
-        }
-#endif
-
+    namespace CUDA
+    {
         class info {
 
             private:
@@ -72,7 +58,7 @@ namespace prk
                 std::array<unsigned,3> maxGridSize;
 
                 info() {
-                    prk::CUDA::check( cudaGetDeviceCount(&nDevices) );
+                    prk::check( cudaGetDeviceCount(&nDevices) );
                     vDevices.resize(nDevices);
                     for (int i=0; i<nDevices; ++i) {
                         cudaGetDeviceProperties(&(vDevices[i]), i);
@@ -89,18 +75,18 @@ namespace prk
                 // do not use cached value as a hedge against weird stuff happening
                 int num_gpus() {
                     int g;
-                    prk::CUDA::check( cudaGetDeviceCount(&g) );
+                    prk::check( cudaGetDeviceCount(&g) );
                     return g;
                 }
 
                 int get_gpu() {
                     int g;
-                    prk::CUDA::check( cudaGetDevice(&g) );
+                    prk::check( cudaGetDevice(&g) );
                     return g;
                 }
 
                 void set_gpu(int g) {
-                    prk::CUDA::check( cudaSetDevice(g) );
+                    prk::check( cudaSetDevice(g) );
                 }
 
                 void print() {
@@ -152,7 +138,7 @@ namespace prk
         T * malloc_device(size_t n) {
             T * ptr;
             size_t bytes = n * sizeof(T);
-            prk::CUDA::check( cudaMalloc((void**)&ptr, bytes) );
+            prk::check( cudaMalloc((void**)&ptr, bytes) );
             return ptr;
         }
 
@@ -160,7 +146,7 @@ namespace prk
         T * malloc_async(size_t n) {
             T * ptr;
             size_t bytes = n * sizeof(T);
-            prk::CUDA::check( cudaMallocAsync((void**)&ptr, bytes, (cudaStream_t)0) );
+            prk::check( cudaMallocAsync((void**)&ptr, bytes, (cudaStream_t)0) );
             return ptr;
         }
 
@@ -168,7 +154,7 @@ namespace prk
         T * malloc_host(size_t n) {
             T * ptr;
             size_t bytes = n * sizeof(T);
-            prk::CUDA::check( cudaMallocHost((void**)&ptr, bytes) );
+            prk::check( cudaMallocHost((void**)&ptr, bytes) );
             return ptr;
         }
 
@@ -176,57 +162,57 @@ namespace prk
         T * malloc_managed(size_t n) {
             T * ptr;
             size_t bytes = n * sizeof(T);
-            prk::CUDA::check( cudaMallocManaged((void**)&ptr, bytes) );
+            prk::check( cudaMallocManaged((void**)&ptr, bytes) );
             return ptr;
         }
 
         template <typename T>
         void free(T * ptr) {
-            prk::CUDA::check( cudaFree((void*)ptr) );
+            prk::check( cudaFree((void*)ptr) );
         }
 
         template <typename T>
         void free_host(T * ptr) {
-            prk::CUDA::check( cudaFreeHost((void*)ptr) );
+            prk::check( cudaFreeHost((void*)ptr) );
         }
 
         template <typename T>
         void copyD2H(T * output, T * const input, size_t n) {
             size_t bytes = n * sizeof(T);
-            prk::CUDA::check( cudaMemcpy(output, input, bytes, cudaMemcpyDeviceToHost) );
+            prk::check( cudaMemcpy(output, input, bytes, cudaMemcpyDeviceToHost) );
         }
 
         template <typename T>
         void copyH2D(T * output, T * const input, size_t n) {
             size_t bytes = n * sizeof(T);
-            prk::CUDA::check( cudaMemcpy(output, input, bytes, cudaMemcpyHostToDevice) );
+            prk::check( cudaMemcpy(output, input, bytes, cudaMemcpyHostToDevice) );
         }
 
         template <typename T>
         void copyD2Hasync(T * output, T * const input, size_t n) {
             size_t bytes = n * sizeof(T);
-            prk::CUDA::check( cudaMemcpyAsync(output, input, bytes, cudaMemcpyDeviceToHost) );
+            prk::check( cudaMemcpyAsync(output, input, bytes, cudaMemcpyDeviceToHost) );
         }
 
         template <typename T>
         void copyH2Dasync(T * output, T * const input, size_t n) {
             size_t bytes = n * sizeof(T);
-            prk::CUDA::check( cudaMemcpyAsync(output, input, bytes, cudaMemcpyHostToDevice) );
+            prk::check( cudaMemcpyAsync(output, input, bytes, cudaMemcpyHostToDevice) );
         }
 
         template <typename T>
         void prefetch(T * ptr, size_t n, int device = 0) {
             size_t bytes = n * sizeof(T);
             //std::cout << "device=" << device << "\n";
-            prk::CUDA::check( cudaMemPrefetchAsync(ptr, bytes, device) );
+            prk::check( cudaMemPrefetchAsync(ptr, bytes, device) );
         }
 
         void sync(void) {
-            prk::CUDA::check( cudaDeviceSynchronize() );
+            prk::check( cudaDeviceSynchronize() );
         }
 
         void set_device(int i) {
-            prk::CUDA::check( cudaSetDevice(i) );
+            prk::check( cudaSetDevice(i) );
         }
 
     } // CUDA namespace

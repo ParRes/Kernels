@@ -64,6 +64,7 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
+#include "prk_nccl.h"
 
 __global__ void nstream(const unsigned n, const double scalar, double * A, const double * B, const double * C)
 {
@@ -145,7 +146,7 @@ int main(int argc, char * argv[])
   std::vector<ncclComm_t> nccl_comm_world(num_gpus);
   std::cerr << "before ncclCommInitAll" << std::endl;
 #if 1
-  prk::CUDA::check( ncclCommInitAll(nccl_comm_world.data(), num_gpus, gpu_list) );
+  prk::check( ncclCommInitAll(nccl_comm_world.data(), num_gpus, gpu_list) );
 #else
   {
       ncclUniqueId Id;
@@ -227,7 +228,7 @@ int main(int argc, char * argv[])
       prk::CUDA::free(d_A[i]);
       prk::CUDA::free(d_B[i]);
       prk::CUDA::free(d_C[i]);
-      prk::CUDA::check( ncclCommFinalize(nccl_comm_world[i]) );
+      prk::check( ncclCommFinalize(nccl_comm_world[i]) );
   }
 
   //////////////////////////////////////////////////////////////////////

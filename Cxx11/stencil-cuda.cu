@@ -190,8 +190,8 @@ int main(int argc, char* argv[])
   prk_float * h_in;
   prk_float * h_out;
 
-  prk::CUDA::check( cudaMallocHost((void**)&h_in, bytes) );
-  prk::CUDA::check( cudaMallocHost((void**)&h_out, bytes) );
+  prk::check( cudaMallocHost((void**)&h_in, bytes) );
+  prk::check( cudaMallocHost((void**)&h_out, bytes) );
 
   for (int i=0; i<n; i++) {
     for (int j=0; j<n; j++) {
@@ -203,10 +203,10 @@ int main(int argc, char* argv[])
   // copy input from host to device
   prk_float * d_in;
   prk_float * d_out;
-  prk::CUDA::check( cudaMalloc((void**)&d_in, bytes) );
-  prk::CUDA::check( cudaMalloc((void**)&d_out, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_in, &(h_in[0]), bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaMemcpy(d_out, &(h_out[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::check( cudaMalloc((void**)&d_in, bytes) );
+  prk::check( cudaMalloc((void**)&d_out, bytes) );
+  prk::check( cudaMemcpy(d_in, &(h_in[0]), bytes, cudaMemcpyHostToDevice) );
+  prk::check( cudaMemcpy(d_out, &(h_out[0]), bytes, cudaMemcpyHostToDevice) );
 
   for (int iter = 0; iter<=iterations; iter++) {
 
@@ -218,20 +218,20 @@ int main(int argc, char* argv[])
     // Add constant to solution to force refresh of neighbor data, if any
     add<<<dimGrid, dimBlock>>>(n, d_in);
 
-    prk::CUDA::check( cudaDeviceSynchronize() );
+    prk::check( cudaDeviceSynchronize() );
   }
   stencil_time = prk::wtime() - stencil_time;
 
   // copy output back to host
-  prk::CUDA::check( cudaMemcpy(&(h_out[0]), d_out, bytes, cudaMemcpyDeviceToHost) );
+  prk::check( cudaMemcpy(&(h_out[0]), d_out, bytes, cudaMemcpyDeviceToHost) );
 
 #ifdef VERBOSE
   // copy input back to host - debug only
-  prk::CUDA::check( cudaMemcpy(&(h_in[0]), d_in, bytes, cudaMemcpyDeviceToHost) );
+  prk::check( cudaMemcpy(&(h_in[0]), d_in, bytes, cudaMemcpyDeviceToHost) );
 #endif
 
-  prk::CUDA::check( cudaFree(d_out) );
-  prk::CUDA::check( cudaFree(d_in) );
+  prk::check( cudaFree(d_out) );
+  prk::check( cudaFree(d_in) );
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.

@@ -55,6 +55,7 @@
 
 #include "prk_util.h"
 #include "prk_mpi.h"
+#include "prk_nccl.h"
 #include "prk_cuda.h"
 #include "transpose-kernel.h"
 
@@ -122,6 +123,15 @@ int main(int argc, char * argv[])
 
     //std::cout << "@" << me << " order=" << order << " block_order=" << block_order << std::endl;
 
+    ncclUniqueId uniqueId;
+    if (me == 0) {
+        prk::check( ncclGetUniqueId(&uniqueId) );
+    }
+    prk::MPI::bcast(&uniqueId);
+
+    ncclComm_t nccl_comm_world;
+    prk::check( ncclCommInitRank(&nccl_comm_world, np, uniqueId, me) );
+
     //////////////////////////////////////////////////////////////////////
     // Allocate space for the input and transpose matrix
     //////////////////////////////////////////////////////////////////////
@@ -166,6 +176,8 @@ int main(int argc, char * argv[])
 
     //prk::MPI::print_matrix(A, order, block_order, "A@" + std::to_string(me));
     //prk::MPI::print_matrix(B, order, block_order, "B@" + std::to_string(me));
+
+    prk::check( ncclCommFinalize(nccl_comm_world) );
 
     //////////////////////////////////////////////////////////////////////
     /// Analyze and output results

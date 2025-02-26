@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
   const size_t nelems = (size_t)n * (size_t)n;
   const size_t bytes = nelems * sizeof(double);
   double * h_grid;
-  prk::CUDA::check( cudaMallocHost((void**)&h_grid, bytes) );
+  prk::check( cudaMallocHost((void**)&h_grid, bytes) );
 
   // initialize boundary conditions
   for (int i=0; i<n; i++) {
@@ -248,9 +248,9 @@ int main(int argc, char* argv[])
 #endif
 
   double * d_grid;
-  prk::CUDA::check( cudaMalloc((void**)&d_grid, bytes) );
-  prk::CUDA::check( cudaMemcpy(d_grid, h_grid, bytes, cudaMemcpyHostToDevice) );
-  prk::CUDA::check( cudaDeviceSynchronize() );
+  prk::check( cudaMalloc((void**)&d_grid, bytes) );
+  prk::check( cudaMemcpy(d_grid, h_grid, bytes, cudaMemcpyHostToDevice) );
+  prk::check( cudaDeviceSynchronize() );
 
   for (int i=0; i<n; i++) {
     for (int j=0; j<n; j++) {
@@ -266,13 +266,13 @@ int main(int argc, char* argv[])
     dim3 cuda_grid(n / BLOCK_SIZE);
 #if 0
     void * kernel_args[2] = { (void*)&n, (void*)&d_grid };
-    prk::CUDA::check( cudaLaunchCooperativeKernel((void*)p2p, cuda_grid, cuda_threads, (void**)kernel_args) );
+    prk::check( cudaLaunchCooperativeKernel((void*)p2p, cuda_grid, cuda_threads, (void**)kernel_args) );
 #else
     void * kernel_args[2] = { (void*)&d_grid, (void*)&n };
-    prk::CUDA::check( cudaLaunchCooperativeKernel((void*)p2p, cuda_grid, cuda_threads, (void**)kernel_args) );
+    prk::check( cudaLaunchCooperativeKernel((void*)p2p, cuda_grid, cuda_threads, (void**)kernel_args) );
 #endif
-    prk::CUDA::check( cudaDeviceSynchronize() );
-    prk::CUDA::check( cudaMemcpy(h_grid, d_grid, bytes, cudaMemcpyDeviceToHost) );
+    prk::check( cudaDeviceSynchronize() );
+    prk::check( cudaMemcpy(h_grid, d_grid, bytes, cudaMemcpyDeviceToHost) );
 
 #ifdef DEBUG
     std::cout << "h_grid=\n";
@@ -284,12 +284,12 @@ int main(int argc, char* argv[])
     }
 #endif
   }
-  prk::CUDA::check( cudaDeviceSynchronize() );
+  prk::check( cudaDeviceSynchronize() );
   pipeline_time = prk::wtime() - pipeline_time;
 
   // copy output back to host
-  prk::CUDA::check( cudaMemcpy(h_grid, d_grid, bytes, cudaMemcpyDeviceToHost) );
-  prk::CUDA::check( cudaFree(d_grid) );
+  prk::check( cudaMemcpy(h_grid, d_grid, bytes, cudaMemcpyDeviceToHost) );
+  prk::check( cudaFree(d_grid) );
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.

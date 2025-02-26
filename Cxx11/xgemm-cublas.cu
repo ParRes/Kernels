@@ -100,7 +100,7 @@ void prk_gemm(const cublasHandle_t & h,
               const int order, const __half alpha, const __half beta,
               const __half * A, const __half * B, __half * C)
 {
-    prk::CUDA::check( cublasHgemm(h,
+    prk::check( cublasHgemm(h,
                                   CUBLAS_OP_N, CUBLAS_OP_N,
                                   order, order, order,
                                   &alpha,
@@ -115,7 +115,7 @@ void prk_gemm(const cublasHandle_t & h,
               const int order, const float alpha, const float beta,
               const float * A, const float * B, float * C)
 {
-    prk::CUDA::check( cublasSgemm(h,
+    prk::check( cublasSgemm(h,
                                   CUBLAS_OP_N, CUBLAS_OP_N,
                                   order, order, order,
                                   &alpha,
@@ -130,7 +130,7 @@ void prk_gemm(const cublasHandle_t & h,
               const int order, const double alpha, const double beta,
               const double * A, const double * B, double * C)
 {
-    prk::CUDA::check( cublasDgemm(h,
+    prk::check( cublasDgemm(h,
                                   CUBLAS_OP_N, CUBLAS_OP_N,
                                   order, order, order,
                                   &alpha,
@@ -256,11 +256,11 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
 
   cublasHandle_t h;
-  prk::CUDA::check( cublasCreate(&h) );
+  prk::check( cublasCreate(&h) );
   run<__half>(h, iterations, order);
   run<float>(h, iterations, order);
   run<double>(h, iterations, order);
-  prk::CUDA::check( cublasDestroy(h) );
+  prk::check( cublasDestroy(h) );
 
   return 0;
 }

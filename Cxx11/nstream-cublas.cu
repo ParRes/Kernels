@@ -103,8 +103,8 @@ int main(int argc, char * argv[])
   std::cout << "Vector length        = " << length << std::endl;
 
   cublasHandle_t h;
-  //prk::CUDA::check( cublasInit() );
-  prk::CUDA::check( cublasCreate(&h) );
+  //prk::check( cublasInit() );
+  prk::check( cublasCreate(&h) );
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -140,11 +140,11 @@ int main(int argc, char * argv[])
       }
 
       double one(1);
-      prk::CUDA::check( cublasDaxpy(h, length,
+      prk::check( cublasDaxpy(h, length,
                                     &one,        // alpha
                                     d_B, 1,      // x, incx
                                     d_A, 1) );   // y, incy
-      prk::CUDA::check( cublasDaxpy(h, length,
+      prk::check( cublasDaxpy(h, length,
                                     &scalar,     // alpha
                                     d_C, 1,      // x, incx
                                     d_A, 1) );   // y, incy

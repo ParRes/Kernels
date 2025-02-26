@@ -98,8 +98,8 @@ int main(int argc, char * argv[])
   std::cout << "Matrix order         = " << order << std::endl;
 
   cublasHandle_t h;
-  //prk::CUDA::check( cublasInit() );
-  prk::CUDA::check( cublasCreate(&h) );
+  //prk::check( cublasInit() );
+  prk::check( cublasCreate(&h) );
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
@@ -140,7 +140,7 @@ int main(int argc, char * argv[])
 
     double one(1);
     // B += trans(A) i.e. B = trans(A) + B
-    prk::CUDA::check( cublasDgeam(h,
+    prk::check( cublasDgeam(h,
                                   CUBLAS_OP_T, CUBLAS_OP_N,   // opA, opB
                                   order, order,               // m, n
                                   &one, d_a, order,           // alpha, A, lda
@@ -148,7 +148,7 @@ int main(int argc, char * argv[])
                                   d_b, order) );              // C, ldc (in-place for B)
 
     // A += 1.0 i.e. A = 1.0 * 1.0 + A
-    prk::CUDA::check( cublasDaxpy(h,
+    prk::check( cublasDaxpy(h,
                       order*order,                // n
                       &one,                       // alpha
                       d_o, 0,                     // x, incx
@@ -164,8 +164,8 @@ int main(int argc, char * argv[])
   prk::CUDA::free(d_o);
   prk::CUDA::free_host(h_o);
 
-  prk::CUDA::check( cublasDestroy(h) );
-  //prk::CUDA::check( cublasShutdown() );
+  prk::check( cublasDestroy(h) );
+  //prk::check( cublasShutdown() );
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
