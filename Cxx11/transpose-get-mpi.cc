@@ -135,8 +135,11 @@ int main(int argc, char * argv[])
 
     double trans_time{0};
 
-    double * LA = nullptr;
-    MPI_Win WA = prk::MPI::win_allocate(order * block_order, &LA);
+    //MPI_Win WA = MPI_WIN_NULL;
+    //double * LA = nullptr;
+    auto [WA,LA] = prk::MPI::win_allocate<double>(order * block_order);
+    std::cerr << "LA=" << LA << std::endl;
+
     //A[order][block_order]
     prk::vector<double> A(LA, order * block_order, 0.0);
     prk::vector<double> B(order * block_order, 0.0);

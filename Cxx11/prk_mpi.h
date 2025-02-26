@@ -11,6 +11,7 @@
 #include <numeric> // exclusive_scan
 #include <limits>
 #include <type_traits>
+#include <utility>
 
 #include <mpi.h>
 
@@ -174,7 +175,7 @@ namespace prk
         template <typename T>
         MPI_Request isend(const T * buf, int dest, int count = 1, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD) {
             MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buf);
-            MPI_Request req;
+            MPI_Request req = MPI_REQUEST_NULL;
             prk::MPI::check( MPI_Isend(buf, count, dt, dest, tag, comm, &req) );
             return req;
         }
@@ -182,7 +183,7 @@ namespace prk
         template <typename T>
         MPI_Request irecv(T * buf, int source, int count = 1, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD) {
             MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buf);
-            MPI_Request req;
+            MPI_Request req = MPI_REQUEST_NULL;
             prk::MPI::check( MPI_Irecv(buf, count, dt, source, tag, comm, &req) );
             return req;
         }
@@ -190,19 +191,23 @@ namespace prk
         template <typename T>
         MPI_Request rget(MPI_Win win, T * buf, int target_rank, size_t target_offset, int count = 1) {
             MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buf);
-            MPI_Request req;
+            MPI_Request req = MPI_REQUEST_NULL;
             prk::MPI::check( MPI_Rget(buf, count, dt, target_rank, target_offset, count, dt, win, &req) );
             return req;
         }
 
         template <typename T>
-        MPI_Win win_allocate(size_t count, T * buffer, int disp_unit = sizeof(T), MPI_Info info = MPI_INFO_NULL, MPI_Comm comm = MPI_COMM_WORLD) {
-            MPI_Win win;
+        std::pair<MPI_Win, T*> win_allocate(size_t count, int disp_unit = sizeof(T), MPI_Info info = MPI_INFO_NULL, MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Win win = MPI_WIN_NULL;
+            T * buffer = nullptr;
             prk::MPI::check( MPI_Win_allocate(count * sizeof(T), disp_unit, info, comm, &buffer, &win) );
-            return win;
+            //std::cerr << "MPI_Win_allocate buffer = " << buffer << std::endl;
+            prk::MPI::check( MPI_Win_lock_all(MPI_MODE_NOCHECK, win) );
+            return {win,buffer};
         }
 
         void win_free(MPI_Win win) {
+            prk::MPI::check( MPI_Win_unlock_all(win) );
             prk::MPI::check( MPI_Win_free(&win) );
         }
 
@@ -446,7 +451,7 @@ namespace prk
                         ) {
                         //std::cout << "global_offset " << global_offset << " found at rank " << i << "\n";
                         T data;
-                        MPI_Request req;
+                        MPI_Request req = MPI_REQUEST_NULL;
                         MPI_Aint win_offset = global_offset - global_offsets_[i];
                         prk::MPI::check( MPI_Rget(&data, 1, dt_, i /* rank */, win_offset * sizeof(T), 1, dt_, distributed_win_, &req) );
                         prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
@@ -466,7 +471,7 @@ namespace prk
                             ( (i+1)<np_ ? global_offset < global_offsets_[(i+1)] : global_offset < global_size_)
                         ) {
                         //std::cout << "global_offset " << global_offset << " found at rank " << i << "\n";
-                        MPI_Request req;
+                        MPI_Request req = MPI_REQUEST_NULL;
                         MPI_Aint win_offset = global_offset - global_offsets_[i];
                         prk::MPI::check( MPI_Rput(&data, 1, dt_, i /* rank */, win_offset * sizeof(T), 1, dt_, distributed_win_, &req) );
                         prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
@@ -486,7 +491,7 @@ namespace prk
                             ( (i+1)<np_ ? global_offset < global_offsets_[(i+1)] : global_offset < global_size_)
                         ) {
                         //std::cout << "global_offset " << global_offset << " found at rank " << i << "\n";
-                        MPI_Request req;
+                        MPI_Request req = MPI_REQUEST_NULL;
                         MPI_Aint win_offset = global_offset - global_offsets_[i];
                         prk::MPI::check( MPI_Raccumulate(&data, 1, dt_, i /* rank */, win_offset * sizeof(T), 1, dt_, MPI_SUM, distributed_win_, &req) );
                         prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
