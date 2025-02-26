@@ -121,6 +121,15 @@ int main(int argc, char * argv[])
     
     block_order = order / np;
 
+    // for B += T.T
+    dim3 dimGrid(block_order/tile_dim, block_order/tile_dim, 1);
+    dim3 dimBlock(tile_dim, block_rows, 1);
+    info.checkDims(dimBlock, dimGrid);
+
+    // for A += 1
+    const int threads_per_block = 256;
+    const int blocks_per_grid = (order * block_order + threads_per_block - 1) / threads_per_block;
+
     //std::cout << "@" << me << " order=" << order << " block_order=" << block_order << std::endl;
 
     ncclUniqueId uniqueId;
@@ -138,17 +147,23 @@ int main(int argc, char * argv[])
 
     double trans_time{0};
 
+    double * h_A = prk::CUDA::malloc_host<double>(order * block_order);
+    double * h_B = prk::CUDA::malloc_host<double>(order * block_order);
+
     //A[order][block_order]
-    prk::vector<double> A(order * block_order, 0.0);
-    prk::vector<double> B(order * block_order, 0.0);
-    prk::vector<double> T(order * block_order, 0.0);
+    double * A = prk::CUDA::malloc_device<double>(order * block_order);
+    double * B = prk::CUDA::malloc_device<double>(order * block_order);
+    double * T = prk::CUDA::malloc_device<double>(order * block_order);
 
     // fill A with the sequence 0 to order^2-1 as doubles
     for (size_t i=0; i<order; i++) {
         for (size_t j=0; j<block_order; j++) {
-            A[i*block_order + j] = me * block_order + i * order + j;
+            h_A[i*block_order + j] = me * block_order + i * order + j;
+            h_B[i*block_order + j] = 0;
         }
     }
+    prk::CUDA::copyH2D(A, h_A, order * block_order);
+    prk::CUDA::copyH2D(B, h_B, order * block_order);
     prk::MPI::barrier();
 
     //prk::MPI::print_matrix(A, order, block_order, "A@" + std::to_string(me));
@@ -161,21 +176,27 @@ int main(int argc, char * argv[])
             prk::MPI::barrier();
         }
 
-        prk::MPI::alltoall(A.data(), block_order*block_order, T.data(), block_order*block_order);
+        prk::NCCL::alltoall(A, T, block_order*block_order, nccl_comm_world);
 
         // transpose the  matrix  
         for (int r=0; r<np; r++) {
           const size_t offset = block_order * block_order * r;
-          transpose_block(B.data() + offset, T.data() + offset, block_order, tile_size); 
+          transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
         }
         // increment A
-        std::transform(A.begin(), A.end(), A.begin(), [](auto a) { return a + 1; });
+        cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
+        prk::CUDA::sync();
       }
       trans_time = prk::wtime() - trans_time;
     }
 
-    //prk::MPI::print_matrix(A, order, block_order, "A@" + std::to_string(me));
-    //prk::MPI::print_matrix(B, order, block_order, "B@" + std::to_string(me));
+    prk::MPI::barrier();
+
+    prk::CUDA::copyD2H(h_A, A, order * block_order);
+    prk::CUDA::copyD2H(h_B, B, order * block_order);
+
+    //prk::MPI::print_matrix(h_A, order, block_order, "A@" + std::to_string(me));
+    //prk::MPI::print_matrix(h_B, order, block_order, "B@" + std::to_string(me));
 
     prk::check( ncclCommFinalize(nccl_comm_world) );
 
@@ -188,7 +209,7 @@ int main(int argc, char * argv[])
     for (size_t i=0; i<order; i++) {
       for (size_t j=0; j<block_order; j++) {
         const double temp = (order*(me*block_order+j)+(i)) * (1+iterations) + addit;
-        abserr += prk::abs(B[i*block_order+j] - temp);
+        abserr += prk::abs(h_B[i*block_order+j] - temp);
       }
     }
     abserr = prk::MPI::sum(abserr);
