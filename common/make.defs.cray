@@ -5,11 +5,11 @@
 # Base compilers and language options
 #
 # C99 is required in some implementations.
-CC=cc -h std=c11
+CC=cc -std=c11
 # All of the Fortran code is written for the 2008 standard and requires preprocessing.
 FC=ftn -e F
 # C++11 may not be required but does no harm here.
-CXX=CC -h std=c++14
+CXX=CC -std=c++17
 #
 # Compiler flags
 #
@@ -17,7 +17,7 @@ DEFAULT_OPT_FLAGS=-O2
 #
 # OpenMP flags
 #
-OPENMPFLAG=-h omp
+OPENMPFLAG=-h omp -fopenmp
 # Cray requires 'module load craype-accel-host' or similar
 OFFLOADFLAG=-h omp
 OFFLOADFLAG+=-DGPU_SCHEDULE=""
@@ -48,25 +48,32 @@ CBLASFLAG= # LibSci likely included by default
 # Linux w/ NVIDIA CUDA
 NVCC=nvcc
 CUDAFLAGS=-g -O3 -std=c++11
-CUDAFLAGS+=-arch=sm_50
+CUDAFLAGS+=-arch=sm_70
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #
+# HIP flags
+#
+ROCM_PATH=/opt/rocm-6.0.3
+HIPCC=${ROCM_PATH}/bin/hipcc
+HIPFLAGS=-g -O3 -std=c++14 --offload-arch=gfx90a:xnack+
+# hipBLAS
+HIPFLAGS+=-L${ROCM_PATH}/lib -lrocblas
+HIPFLAGS+=-L${ROCM_PATH}/lib -lhipblas
+# hipThrust
+HIPFLAGS+=-I${ROCM_PATH}/include
+HIPFLAGS+=-I${ROCM_PATH}/rocthrust/include
+HIPFLAGS+=-I${ROCM_PATH}/rocprim/include
+HIPFLAGS+=${RANGEFLAG}
+#
 # MPI-3
 #
-# We assume you have Intel MPI and have setup your environment with e.g.
-# . /opt/intel/compilers_and_libraries/linux/mpi/intel64/bin/mpivars.sh
-# in your .bashrc.
-#
-# mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
-MPIDIR=/opt/intel/inteloneapi/mpi/2021.1-beta06
-MPICC=${MPIDIR}/bin/mpiicc
-MPICXX=${MPIDIR}/bin/mpiicpc
-MPIINC=-I${MPIDIR}/include
-MPILIB=-L${MPIDIR}/lib -lmpi
-#MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
-#MPIINC=-I/usr/include/mpich-3.2-x86_64
-#MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
+MPIDIR=
+MPICC=cc
+MPICXX=CC
+MPIFORT=ftn
+#MPIINC=-I${MPIDIR}/include
+#MPILIB=-L${MPIDIR}/lib -lmpi
 #
 # Global Arrays
 #
