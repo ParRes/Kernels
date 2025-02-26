@@ -161,7 +161,7 @@ int main(int argc, char * argv[])
         prk::MPI::alltoall(A.data(), block_order*block_order, T.data(), block_order*block_order);
 
         // transpose the  matrix  
-        for (size_t r=0; r<np; r++) {
+        for (int r=0; r<np; r++) {
           const size_t offset = block_order * block_order * r;
           transpose_block(B.data() + offset, T.data() + offset, block_order); 
         }
