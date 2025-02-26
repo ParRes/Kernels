@@ -90,7 +90,7 @@ target: stencil-openmp-target transpose-openmp-target nstream-openmp-target
 
 taskloop: stencil-taskloop transpose-taskloop nstream-taskloop
 
-mpi: nstream-mpi stencil-mpi dgemm-mpi-cblas
+mpi: nstream-mpi stencil-mpi dgemm-mpi-cblas transpose-a2a-mpi transpose-p2p-mpi transpose-get-mpi
 
 opencl: p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl
 
@@ -167,7 +167,7 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 #nstream-opencl: nstream-opencl.cc nstream.cl prk_util.h prk_opencl.h
 #	$(CXX) $(CXXFLAGS) $< $(OPENCLFLAGS) -o $@
 
-%-mpi: %-mpi.cc prk_util.h prk_mpi.h
+%-mpi: %-mpi.cc prk_util.h prk_mpi.h transpose-kernel.h
 	$(MPICXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) -o $@
 
 %-mpi-cblas: %-mpi-cblas.cc prk_util.h prk_mpi.h
@@ -332,6 +332,7 @@ clean:
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-mpi
+	-rm -f 
 	-rm -f *-opencl
 	-rm -f *-sycl
 	-rm -f *-sycl-usm
@@ -350,6 +351,7 @@ clean:
 	-rm -f *-hpx
 	-rm -f *-thrust
 	-rm -f *-cuda
+	-rm -f *-cudastf
 	-rm -f *-cublas
 	-rm -f *-hip
 	-rm -f *-hipblas
