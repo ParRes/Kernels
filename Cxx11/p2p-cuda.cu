@@ -156,7 +156,7 @@ __global__ void p2p(double * grid, const int n)
 
 int main(int argc, char* argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++11/CUDA cooperative groups pipeline execution on 2D grid" << std::endl;
 
   prk::CUDA::info info;

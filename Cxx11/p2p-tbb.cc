@@ -121,7 +121,7 @@ void ParallelSweep( const char* x, int xlen, const char* y, int ylen ) {
 
 int main(int argc, char* argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++11/TBB pipeline execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////

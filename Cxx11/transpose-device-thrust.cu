@@ -84,7 +84,7 @@ void transpose(const int order, thrust::device_vector<double> & A, thrust::devic
 
 int main(int argc, char * argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++11/Thrust Matrix transpose: B = A^T" << std::endl;
 
   //////////////////////////////////////////////////////////////////////

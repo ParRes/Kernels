@@ -73,7 +73,7 @@ int main(int argc, char * argv[])
   const int np = upcxx::rank_n();
 
   if (me==0) {
-      std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+      std::cout << "Parallel Research Kernels" << std::endl;
       std::cout << "UPC++ STREAM triad: A = B + scalar * C" << std::endl;
   }
 

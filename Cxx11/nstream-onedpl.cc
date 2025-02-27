@@ -70,7 +70,7 @@
 using namespace oneapi;
 
 int main(int argc, char *argv[]) {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++17/oneDPL STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////

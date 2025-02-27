@@ -1,8 +1,6 @@
 include ../common/make.defs
 include ../common/PRKVERSION
 
-CPPFLAGS = -DPRKVERSION=$(PRKVERSION)
-
 # debugging
 ifdef VERBOSE
     CPPFLAGS += -DVERBOSE
