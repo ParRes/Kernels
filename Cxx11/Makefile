@@ -128,6 +128,10 @@ cudastf: dgemm-cudastf dgemm-cublas-cudastf stencil-cudastf p2p-cudastf transpos
 
 nccl: nstream-nccl transpose-a2a-mpi-nccl
 
+oshmem: transpose-get-oshmem
+
+nvshmem: transpose-get-mpi-nvshmem
+
 hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 
 hipstl: nstream-hipstl
@@ -172,6 +176,9 @@ p2p-hyperplane-vector: p2p-hyperplane-openmp.cc prk_util.h
 
 %-mpi: %-mpi.cc prk_util.h prk_mpi.h transpose-kernel.h
 	$(MPICXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) -o $@
+
+%-oshmem: %-oshmem.cc prk_util.h prk_oshmem.h transpose-kernel.h
+	$(OSHCXX) $(CXXFLAGS) $(OSHINC) $< $(OSHLIB) -o $@
 
 %-mpi-cblas: %-mpi-cblas.cc prk_util.h prk_mpi.h
 	$(CXX) $(CXXFLAGS) $(MPIINC) $< $(MPILIB) $(CBLASFLAGS) -o $@
@@ -279,7 +286,10 @@ endif
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt -o $@
 
 %-nccl: %-nccl.cu prk_util.h prk_cuda.h prk_nccl.h transpose-kernel.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) -DPRK_USE_NCCL $< $(MPILIB) -lnccl -o $@
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) $< $(MPILIB) -lnccl -o $@
+
+%-nvshmem: %-nvshmem.cu prk_util.h prk_cuda.h prk_nvshmem.h transpose-kernel.h
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) $< $(MPILIB) -lnvshmem -o $@
 
 %-hip: %-hip.cc prk_util.h prk_hip.h
 	$(HIPCC) $(HIPFLAGS) $(CPPFLAGS) $< -o $@
@@ -332,13 +342,13 @@ clean:
 	-rm -f *.dwarf
 	-rm -rf *.dSYM # Mac
 	-rm -f nstream transpose stencil p2p sparse dgemm
+	-rm -f transpose-async transpose-thread
 	-rm -f *-vector
 	-rm -f *-valarray
 	-rm -f *-openmp
 	-rm -f *-target
 	-rm -f *-taskloop
 	-rm -f *-mpi
-	-rm -f 
 	-rm -f *-opencl
 	-rm -f *-sycl
 	-rm -f *-sycl-usm
@@ -369,7 +379,8 @@ clean:
 	-rm -f *-openacc
 	-rm -f *-cudastf
 	-rm -f *-nccl
-	-rm -f transpose-async transpose-thread
+	-rm -f *-nvshmem
+	-rm -f *-oshmem
 
 cleancl:
 	-rm -f star[123456789].cl
