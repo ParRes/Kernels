@@ -123,6 +123,7 @@ int main(int argc, char * argv[])
         return 1;
       }
      
+      std::cout << "Number of processes  = " << np << std::endl;
       std::cout << "Number of iterations = " << iterations << std::endl;
       std::cout << "Matrix order         = " << order << std::endl;
       std::cout << "Variant              = " << vnames[variant] << std::endl;

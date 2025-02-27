@@ -120,6 +120,7 @@ int main(int argc, char * argv[])
     }
      
     if (me == 0) {
+      std::cout << "Number of PEs        = " << np << std::endl;
       std::cout << "Number of iterations = " << iterations << std::endl;
       std::cout << "Matrix order         = " << order << std::endl;
       std::cout << "Variant              = " << vnames[variant] << std::endl;
