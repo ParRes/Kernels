@@ -130,7 +130,7 @@ nccl: nstream-nccl transpose-a2a-mpi-nccl
 
 oshmem: transpose-get-oshmem
 
-nvshmem: transpose-get-mpi-nvshmem
+nvshmem: transpose-get-nvshmem
 
 hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 
@@ -289,7 +289,7 @@ endif
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) $< $(MPILIB) -lnccl -o $@
 
 %-nvshmem: %-nvshmem.cu prk_util.h prk_cuda.h prk_nvshmem.h transpose-kernel.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) $< $(MPILIB) -lnvshmem -o $@
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $< -lnvshmem -o $@
 
 %-hip: %-hip.cc prk_util.h prk_hip.h
 	$(HIPCC) $(HIPFLAGS) $(CPPFLAGS) $< -o $@

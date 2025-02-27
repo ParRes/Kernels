@@ -266,6 +266,8 @@ Cxx11/transpose-cudastf
 Cxx11/transpose-device-thrust
 Cxx11/transpose-dpcpp
 Cxx11/transpose-get-mpi
+Cxx11/transpose-get-nvshmem
+Cxx11/transpose-get-oshmem
 Cxx11/transpose-halide
 Cxx11/transpose-hip
 Cxx11/transpose-hipblas
