@@ -184,7 +184,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
 
 int main(int argc, char* argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++11/OpenCL stencil execution on 2D grid" << std::endl;
 
   //prk::opencl::listPlatforms();

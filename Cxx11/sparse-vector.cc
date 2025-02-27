@@ -98,7 +98,7 @@ static inline uint64_t reverse(uint64_t x, int shift_in_bits)
 
 int main(int argc, char* argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++11 Sparse matrix-vector multiplication" << std::endl;
 
   //////////////////////////////////////////////////////////////////////

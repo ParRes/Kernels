@@ -84,7 +84,7 @@ __global__ void add(const int n, prk_float * in)
 
 int main(int argc, char* argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++11/HIP Stencil execution on 2D grid" << std::endl;
 
   prk::HIP::info info;

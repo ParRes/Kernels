@@ -57,7 +57,7 @@
 
 int main(int argc, char * argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
 #ifdef _OPENMP
   std::cout << "C++11/OpenMP Matrix transpose: B = A^T" << std::endl;
 #else

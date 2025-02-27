@@ -74,7 +74,7 @@ int main(int argc, char * argv[])
     int me = prk::MPI::rank();
 
     if (me == 0) {
-      std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+      std::cout << "Parallel Research Kernels" << std::endl;
       std::cout << "MPI/C++11 STREAM triad: A = B + scalar * C" << std::endl;
     }
 

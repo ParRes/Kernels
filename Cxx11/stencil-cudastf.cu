@@ -76,7 +76,7 @@ __global__ void nothing(const int n, const prk_float * in, prk_float * out)
 
 int main(int argc, char* argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++11/CUDA STF Stencil execution on 2D grid" << std::endl;
 
   prk::CUDA::info info;

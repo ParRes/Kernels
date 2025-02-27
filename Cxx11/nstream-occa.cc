@@ -67,7 +67,7 @@
 
 int main(int argc, char * argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++11/OCCA STREAM triad: A = B + scalar * C" << std::endl;
 
   char* dc = std::getenv("OCCA_DEVICE");

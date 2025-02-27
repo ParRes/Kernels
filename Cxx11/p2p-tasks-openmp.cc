@@ -65,7 +65,7 @@
 
 int main(int argc, char* argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
 #ifdef _OPENMP
   std::cout << "C++11/OpenMP TASKS pipeline execution on 2D grid" << std::endl;
 #else

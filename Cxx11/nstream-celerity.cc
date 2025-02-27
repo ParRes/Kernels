@@ -74,7 +74,7 @@ int main(int argc, char * argv[])
   celerity::runtime::init(&argc, &argv, sycl_device);
 #endif
 
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++14/SYCL/Celerity STREAM triad: A = B + scalar * C" << std::endl;
 
   //////////////////////////////////////////////////////////////////////

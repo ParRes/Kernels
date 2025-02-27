@@ -410,7 +410,7 @@ int bad_patch(bbox_t *patch, bbox_t *patch_contain) {
 
 int main(int argc, char ** argv) {
 
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++11 Particle-in-Cell execution on 2D grid" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
