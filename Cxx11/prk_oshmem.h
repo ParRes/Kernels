@@ -47,15 +47,15 @@ namespace prk {
         }
 
         template <typename T>
-        void broadcast(T * buffer, int root = 0, size_t bytes = sizeof(T)) {
-            if (shmem_broadcastmem(SHMEM_TEAM_WORLD, buffer, buffer, bytes, root)) {
+        void broadcast(T * buffer, int root = 0, size_t count = 1) {
+            if (shmem_broadcastmem(SHMEM_TEAM_WORLD, buffer, buffer, count * sizeof(T), root)) {
                 throw std::runtime_error("shmem_broadcastmem failed");
             }
         }
 
         template <typename T>
-        void alltoall(T * rbuffer,const T * sbuffer,  size_t bytes = sizeof(T)) {
-            if (shmem_alltoallmem(SHMEM_TEAM_WORLD, rbuffer, sbuffer, bytes)) {
+        void alltoall(T * rbuffer,const T * sbuffer,  size_t count = 1) {
+            if (shmem_alltoallmem(SHMEM_TEAM_WORLD, rbuffer, sbuffer, count * sizeof(T))) {
                 throw std::runtime_error("shmem_alltoallmem failed");
             }
         }
