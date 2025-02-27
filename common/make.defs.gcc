@@ -206,6 +206,13 @@ MPILIB=-L${MPIDIR}/lib -Wl,-rpath -Wl,${MPIDIR}/lib -lmpi_usempif08 -lmpi
 #MPIINC=-I/usr/include/mpich-3.2-x86_64
 #MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
 #
+# OpenSHMEM
+#
+OSHDIR=/opt/mpich/oshmpi2-mpich
+OSHCC=${OSHDIR}/bin/oshcc
+OSHCXX=${OSHDIR}/bin/oshc++ -std=c++20
+OSHINC=-I${OSHDIR}/include
+#
 # Global Arrays
 #
 GADIR=../deps
