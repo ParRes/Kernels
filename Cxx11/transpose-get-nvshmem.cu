@@ -58,6 +58,11 @@
 #include "prk_cuda.h"
 #include "transpose-kernel.h"
 
+//#define DEBUG 1
+
+const std::array<std::string,6> vnames = {"naive", "coalesced", "no bank conflicts",
+                                          "bulk naive", "bulk coalesced", "bulk no bank conflicts"};
+
 int main(int argc, char * argv[])
 {
   {
@@ -73,8 +78,8 @@ int main(int argc, char * argv[])
     /// Read and test input parameters
     //////////////////////////////////////////////////////////////////////
 
-    int iterations;
-    size_t order, block_order;
+    int iterations = -1, variant = -1;
+    size_t order = 0, block_order = 0;
 
     if (me == 0) {
       std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
@@ -82,7 +87,7 @@ int main(int argc, char * argv[])
 
       try {
         if (argc < 3) {
-          throw "Usage: <# iterations> <matrix order>";
+          throw "Usage: <# iterations> <matrix order> [variant (0-5)]";
         }
      
         iterations  = std::atoi(argv[1]);
@@ -94,9 +99,16 @@ int main(int argc, char * argv[])
         if (order <= 0) {
           throw "ERROR: Matrix Order must be greater than 0";
         }
+        else if (order % np != 0) {
+          throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
+        }
 
-        if (order % np != 0) {
-          throw "ERROR: Matrix order must be an integer multiple of the number of NVSHMEM PEs";
+        variant = 2; // transposeNoBankConflicts
+        if (argc > 3) {
+            variant = std::atoi(argv[3]);
+        }
+        if (variant < 0 || variant > 5) {
+            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk...)";
         }
       }
       catch (const char * e) {
@@ -107,12 +119,27 @@ int main(int argc, char * argv[])
      
       std::cout << "Number of iterations = " << iterations << std::endl;
       std::cout << "Matrix order         = " << order << std::endl;
+      std::cout << "Variant              = " << vnames[variant] << std::endl;
     }
 
     prk::NVSHMEM::broadcast(&iterations);
     prk::NVSHMEM::broadcast(&order);
+    prk::NVSHMEM::broadcast(&variant);
     
     block_order = order / np;
+
+    // for B += T.T
+#ifndef DEBUG
+    dim3 dimGrid(block_order/tile_dim, block_order/tile_dim, 1);
+    dim3 dimBlock(tile_dim, block_rows, 1);
+    info.checkDims(dimBlock, dimGrid);
+#endif
+
+    // for A += 1
+    const int threads_per_block = 256;
+    const int blocks_per_grid = (order * block_order + threads_per_block - 1) / threads_per_block;
+
+    //std::cout << "@" << me << " order=" << order << " block_order=" << block_order << std::endl;
 
     const int num_gpus = info.num_gpus();
     info.set_gpu(me % num_gpus);
@@ -136,6 +163,7 @@ int main(int argc, char * argv[])
         }
     }
 
+    //A[order][block_order]
     double * A = prk::NVSHMEM::allocate<double>(nelems);
     double * B = prk::CUDA::malloc_device<double>(nelems);
     double * T = prk::CUDA::malloc_device<double>(block_order * block_order);
@@ -159,9 +187,16 @@ int main(int argc, char * argv[])
             size_t offset = block_order * block_order * me;
             prk::NVSHMEM::get(T, A + offset, block_order * block_order, recv_from);
             offset = block_order * block_order * recv_from;
-            transpose_block<<<dimGrid, dimBlock>>>(B + offset, T, block_order);
+            //transpose_block<<<dimGrid, dimBlock>>>(B + offset, T, block_order);
+            if (variant==0) {
+                transposeNaive<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
+            } else if (variant==1) {
+                transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
+            } else if (variant==2) {
+                transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
+            }
+            prk::CUDA::sync();
         }
-        prk::CUDA::sync();
         prk::NVSHMEM::barrier();
 
         // increment A
@@ -177,6 +212,7 @@ int main(int argc, char * argv[])
     prk::NVSHMEM::free(A);
     prk::CUDA::free(B);
     prk::CUDA::free(T);
+
     prk::CUDA::free_host(h_A);
 
     //////////////////////////////////////////////////////////////////////

@@ -14,6 +14,7 @@
 #include <utility>
 
 #include <nvshmem.h>
+#include <nvshmemx.h>
 
 namespace prk {
     namespace NVSHMEM {

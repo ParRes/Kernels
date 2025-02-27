@@ -169,7 +169,7 @@ int main(int argc, char * argv[])
 
     double trans_time{0};
 
-    const size_t nelems = (size_t)order * (size_t)order;
+    const size_t nelems = order * block_order;
 
     double * h_A = prk::CUDA::malloc_host<double>(nelems);
     double * h_B = prk::CUDA::malloc_host<double>(nelems);
@@ -244,7 +244,7 @@ int main(int argc, char * argv[])
       trans_time = prk::wtime() - trans_time;
     }
 
-    prk::CUDA::copyD2H(h_B, B, order * block_order);
+    prk::CUDA::copyD2H(h_B, B, nelems);
 #ifdef DEBUG
     prk::CUDA::copyD2H(h_A, A, order * block_order);
     prk::MPI::print_matrix(h_A, order, block_order, "A@" + std::to_string(me));
@@ -276,7 +276,7 @@ int main(int argc, char * argv[])
     prk::CUDA::free_host(h_B);
 
 #ifdef VERBOSE
-    std::cout << "Sum of absolute differences: " << abserr << std::endl;
+    if (me == 0) std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
     if (me == 0) {
