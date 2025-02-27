@@ -178,6 +178,15 @@ CUDAFLAGS+=--forward-unknown-to-host-compiler # MPI rpath
 # https://github.com/tensorflow/tensorflow/issues/1066#issuecomment-200574233
 #CUDAFLAGS+=-D_MWAITXINTRIN_H_INCLUDED
 #
+# NVSHMEM (Apt packages not reliable...)
+#
+NVSHMEMFLAGS=-rdc=true -diag-suppress 3012,3013
+#NVSHMEMFLAGS+=-I/usr/include/nvshmem_12
+NVSHMEMFLAGS+=-I/opt/nvidia/hpc_sdk/Linux_x86_64/24.11/comm_libs/12.6/nvshmem/include
+NVSHMEMFLAGS+=-L/opt/nvidia/hpc_sdk/Linux_x86_64/24.11/comm_libs/12.6/nvshmem/lib
+NVSHMEMFLAGS+=-Wl,-rpath=/opt/nvidia/hpc_sdk/Linux_x86_64/24.11/comm_libs/12.6/nvshmem/lib
+NVSHMEMFLAGS+=-lnvshmem_device -lnvshmem_host
+#
 # Halide
 #
 HALIDECXX=c++
