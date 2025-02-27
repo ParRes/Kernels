@@ -16,6 +16,8 @@
 #include <nvshmem.h>
 #include <nvshmemx.h>
 
+#include "prk_cuda.h"
+
 namespace prk {
     namespace NVSHMEM {
 
@@ -28,6 +30,9 @@ namespace prk {
           public:
             state(int * argc = NULL, char*** argv = NULL) {
                 nvshmem_init();
+                const int num_gpus = prk::CUDA::num_gpus();
+                const int me = nvshmem_my_pe();
+                prk::CUDA::set_gpu(me % num_gpus);
             }
 
             ~state(void) {
@@ -73,6 +78,7 @@ namespace prk {
 
         template <typename T>
         T * allocate(size_t count) {
+            //std::cerr << "nvshmem_malloc(" << count * sizeof(T) << ")" << std::endl;
             T * ptr = (T*)nvshmem_malloc(count * sizeof(T));
             if (!ptr) {
                 throw std::runtime_error("nvshmem_malloc failed");

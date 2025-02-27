@@ -84,48 +84,47 @@ int main(int argc, char * argv[])
     if (me == 0) {
       std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
       std::cout << "C++11/NVSHMEM Matrix transpose: B = A^T" << std::endl;
+    }
 
-      try {
-        if (argc < 3) {
-          throw "Usage: <# iterations> <matrix order> [variant (0-5)]";
-        }
-     
-        iterations  = std::atoi(argv[1]);
-        if (iterations < 1) {
-          throw "ERROR: iterations must be >= 1";
-        }
-     
-        order = std::atol(argv[2]);
-        if (order <= 0) {
-          throw "ERROR: Matrix Order must be greater than 0";
-        }
-        else if (order % np != 0) {
-          throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
-        }
+    // do this on every PE to avoid needing a host broadcast
+    try {
+      if (argc < 3) {
+        throw "Usage: <# iterations> <matrix order> [variant (0-5)]";
+      }
+    
+      iterations  = std::atoi(argv[1]);
+      if (iterations < 1) {
+        throw "ERROR: iterations must be >= 1";
+      }
+    
+      order = std::atol(argv[2]);
+      if (order <= 0) {
+        throw "ERROR: Matrix Order must be greater than 0";
+      }
+      else if (order % np != 0) {
+        throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
+      }
 
-        variant = 2; // transposeNoBankConflicts
-        if (argc > 3) {
-            variant = std::atoi(argv[3]);
-        }
-        if (variant < 0 || variant > 5) {
-            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk...)";
-        }
+      variant = 2; // transposeNoBankConflicts
+      if (argc > 3) {
+          variant = std::atoi(argv[3]);
       }
-      catch (const char * e) {
-        std::cout << e << std::endl;
-        prk::NVSHMEM::abort(1);
-        return 1;
+      if (variant < 0 || variant > 5) {
+          throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk...)";
       }
+    }
+    catch (const char * e) {
+      std::cout << e << std::endl;
+      prk::NVSHMEM::abort(1);
+      return 1;
+    }
      
+    if (me == 0) {
       std::cout << "Number of iterations = " << iterations << std::endl;
       std::cout << "Matrix order         = " << order << std::endl;
       std::cout << "Variant              = " << vnames[variant] << std::endl;
     }
 
-    prk::NVSHMEM::broadcast(&iterations);
-    prk::NVSHMEM::broadcast(&order);
-    prk::NVSHMEM::broadcast(&variant);
-    
     block_order = order / np;
 
     // for B += T.T
@@ -227,7 +226,13 @@ int main(int argc, char * argv[])
         abserr += prk::abs(h_B[i*block_order+j] - temp);
       }
     }
-    abserr = prk::NVSHMEM::sum(abserr);
+    //abserr = prk::NVSHMEM::sum(abserr);
+
+    const auto epsilon = 1.0e-8;
+    if (abserr > epsilon) {
+        throw std::runtime_error("validation failed at PE " + std::to_string(me) );
+    }
+    prk::NVSHMEM::barrier();
 
     prk::CUDA::free_host(h_B);
 
@@ -236,7 +241,6 @@ int main(int argc, char * argv[])
 #endif
 
     if (me == 0) {
-      const auto epsilon = 1.0e-8;
       if (abserr < epsilon) {
         std::cout << "Solution validates" << std::endl;
         auto avgtime = trans_time/iterations;

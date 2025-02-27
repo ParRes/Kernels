@@ -46,6 +46,22 @@ namespace prk
 
     namespace CUDA
     {
+        int num_gpus() {
+            int g;
+            prk::check( cudaGetDeviceCount(&g) );
+            return g;
+        }
+
+        int get_gpu() {
+            int g;
+            prk::check( cudaGetDevice(&g) );
+            return g;
+        }
+
+        void set_gpu(int g) {
+            prk::check( cudaSetDevice(g) );
+        }
+
         class info {
 
             private:

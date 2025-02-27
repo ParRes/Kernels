@@ -289,7 +289,7 @@ endif
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) $< $(MPILIB) -lnccl -o $@
 
 %-nvshmem: %-nvshmem.cu prk_util.h prk_cuda.h prk_nvshmem.h transpose-kernel.h
-	$(NVCC) $(NVSHMEMFLAGS) $(CUDAFLAGS) $(CPPFLAGS) $< -lnvshmem_device -lnvshmem_host -o $@
+	$(NVCC) $(NVSHMEMFLAGS) $(MPIINC) $(CUDAFLAGS) $(CPPFLAGS) $< $(MPILIB) -o $@
 
 %-hip: %-hip.cc prk_util.h prk_hip.h
 	$(HIPCC) $(HIPFLAGS) $(CPPFLAGS) $< -o $@
