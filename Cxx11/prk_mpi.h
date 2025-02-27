@@ -144,8 +144,8 @@ namespace prk
 
         template <typename T>
         void bcast(T * buffer, int count = 1, int root = 0, MPI_Comm comm = MPI_COMM_WORLD) {
-            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buffer);
-            prk::MPI::check( MPI_Bcast(buffer, count, dt, root, comm) );
+            //MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buffer);
+            prk::MPI::check( MPI_Bcast(buffer, count * sizeof(T), MPI_BYTE, root, comm) );
         }
 
         template <typename T>
@@ -537,8 +537,8 @@ namespace prk
 
         };
 
-        template <typename T>
-        void print_matrix(const prk::vector<T> & matrix, int rows, int cols, const std::string label = "") {
+        template <typename TF, typename TI>
+        void print_matrix(const TF * matrix, TI rows, TI cols, const std::string label = "") {
             int me = prk::MPI::rank();
             int np = prk::MPI::size();
 
@@ -550,8 +550,35 @@ namespace prk
             for (int r = 0; r < np; ++r) {
                 if (me == r) {
                     std::cerr << label << "\n";
-                    for (int i = 0; i < rows; ++i) {
-                        for (int j = 0; j < cols; ++j) {
+                    for (TI i = 0; i < rows; ++i) {
+                        for (TI j = 0; j < cols; ++j) {
+                            std::cerr << matrix[i * cols + j] << " ";
+                        }
+                        std::cerr << "\n";
+                    }
+                    std::cerr << std::endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                }
+                prk::MPI::barrier();
+            }
+            //prk::MPI::barrier();
+        }
+
+        template <typename TF, typename TI>
+        void print_matrix(const prk::vector<TF> & matrix, TI rows, TI cols, const std::string label = "") {
+            int me = prk::MPI::rank();
+            int np = prk::MPI::size();
+
+            //std::cout << "@" << me << " rows=" << rows << " cols=" << cols << std::endl;
+
+            //std::cerr << std::endl;
+            prk::MPI::barrier();
+
+            for (int r = 0; r < np; ++r) {
+                if (me == r) {
+                    std::cerr << label << "\n";
+                    for (TI i = 0; i < rows; ++i) {
+                        for (TI j = 0; j < cols; ++j) {
                             std::cerr << matrix[i * cols + j] << " ";
                         }
                         std::cerr << "\n";

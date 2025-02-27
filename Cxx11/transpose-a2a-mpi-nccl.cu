@@ -55,7 +55,14 @@
 
 #include "prk_util.h"
 #include "prk_mpi.h"
+#include "prk_nccl.h"
+#include "prk_cuda.h"
 #include "transpose-kernel.h"
+
+//#define DEBUG 1
+
+const std::array<std::string,6> vnames = {"naive", "coalesced", "no bank conflicts",
+                                          "bulk naive", "bulk coalesced", "bulk no bank conflicts"};
 
 int main(int argc, char * argv[])
 {
@@ -65,20 +72,23 @@ int main(int argc, char * argv[])
     int np = prk::MPI::size();
     int me = prk::MPI::rank();
 
+    prk::CUDA::info info;
+    //if (me == 0) info.print();
+
     //////////////////////////////////////////////////////////////////////
     /// Read and test input parameters
     //////////////////////////////////////////////////////////////////////
 
-    int iterations;
-    size_t order, block_order, tile_size;
+    int iterations = -1, variant = -1;
+    size_t order = 0, block_order = 0;
 
     if (me == 0) {
-      std::cout << "Parallel Research Kernels" << std::endl;
-      std::cout << "C++11/MPI Matrix transpose: B = A^T" << std::endl;
+      std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+      std::cout << "C++11/NCCL Matrix transpose: B = A^T" << std::endl;
 
       try {
         if (argc < 3) {
-          throw "Usage: <# iterations> <matrix order> [tile size]";
+          throw "Usage: <# iterations> <matrix order> [variant (0-5)]";
         }
      
         iterations  = std::atoi(argv[1]);
@@ -89,18 +99,23 @@ int main(int argc, char * argv[])
         order = std::atol(argv[2]);
         if (order <= 0) {
           throw "ERROR: Matrix Order must be greater than 0";
-        // } else if (order > prk::get_max_matrix_size()) {
-        //   throw "ERROR: matrix dimension too large - overflow risk";
+        } 
+#ifndef DEBUG
+        else if (order % tile_dim) {
+          throw "ERROR: matrix dimension not divisible by 32";
         }
-
-        if (order % np != 0) {
+#endif
+        else if (order % np != 0) {
           throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
         }
 
-        // default tile size for tiling of local transpose
-        tile_size = (argc>3) ? std::atoi(argv[3]) : 32;
-        // a negative tile size means no tiling of the local transpose
-        if (tile_size <= 0) tile_size = order;
+        variant = 2; // transposeNoBankConflicts
+        if (argc > 3) {
+            variant = std::atoi(argv[3]);
+        }
+        if (variant < 0 || variant > 5) {
+            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk...)";
+        }
       }
       catch (const char * e) {
         std::cout << e << std::endl;
@@ -111,16 +126,43 @@ int main(int argc, char * argv[])
       std::cout << "Number of processes  = " << np << std::endl;
       std::cout << "Number of iterations = " << iterations << std::endl;
       std::cout << "Matrix order         = " << order << std::endl;
-      std::cout << "Tile size            = " << tile_size << std::endl;
+      std::cout << "Variant              = " << vnames[variant] << std::endl;
     }
 
     prk::MPI::bcast(&iterations);
     prk::MPI::bcast(&order);
-    prk::MPI::bcast(&tile_size);
+    prk::MPI::bcast(&variant);
     
     block_order = order / np;
 
+    // for B += T.T
+#ifndef DEBUG
+    dim3 dimGrid(block_order/tile_dim, block_order/tile_dim, 1);
+    dim3 dimBlock(tile_dim, block_rows, 1);
+    info.checkDims(dimBlock, dimGrid);
+#endif
+
+    // for A += 1
+    const int threads_per_block = 256;
+    const int blocks_per_grid = (order * block_order + threads_per_block - 1) / threads_per_block;
+
     //std::cout << "@" << me << " order=" << order << " block_order=" << block_order << std::endl;
+
+    ncclUniqueId uniqueId;
+    if (me == 0) {
+        prk::check( ncclGetUniqueId(&uniqueId) );
+    }
+    prk::MPI::bcast(&uniqueId);
+
+    const int num_gpus = info.num_gpus();
+    info.set_gpu(me % num_gpus);
+
+    prk::MPI::barrier();
+    ncclComm_t nccl_comm_world;
+    prk::check( ncclGroupStart() );
+    prk::check( ncclCommInitRank(&nccl_comm_world, np, uniqueId, me) );
+    prk::check( ncclGroupEnd() );
+    prk::MPI::barrier();
 
     //////////////////////////////////////////////////////////////////////
     // Allocate space for the input and transpose matrix
@@ -128,17 +170,26 @@ int main(int argc, char * argv[])
 
     double trans_time{0};
 
-    //A[order][block_order]
-    prk::vector<double> A(order * block_order, 0.0);
-    prk::vector<double> B(order * block_order, 0.0);
-    prk::vector<double> T(order * block_order, 0.0);
+    const size_t nelems = order * block_order;
+
+    double * h_A = prk::CUDA::malloc_host<double>(nelems);
+    double * h_B = prk::CUDA::malloc_host<double>(nelems);
 
     // fill A with the sequence 0 to order^2-1 as doubles
     for (size_t i=0; i<order; i++) {
         for (size_t j=0; j<block_order; j++) {
-            A[i*block_order + j] = me * block_order + i * order + j;
+            h_A[i*block_order + j] = me * block_order + i * order + j;
+            h_B[i*block_order + j] = 0;
         }
     }
+
+    //A[order][block_order]
+    double * A = prk::CUDA::malloc_device<double>(nelems);
+    double * B = prk::CUDA::malloc_device<double>(nelems);
+    double * T = prk::CUDA::malloc_device<double>(nelems);
+
+    prk::CUDA::copyH2D(A, h_A, nelems);
+    prk::CUDA::copyH2D(B, h_B, nelems);
     prk::MPI::barrier();
 
     //prk::MPI::print_matrix(A, order, block_order, "A@" + std::to_string(me));
@@ -147,25 +198,67 @@ int main(int argc, char * argv[])
       for (int iter = 0; iter<=iterations; iter++) {
 
         if (iter==1) {
-            trans_time = prk::wtime();
+            prk::CUDA::sync();
             prk::MPI::barrier();
+            trans_time = prk::wtime();
         }
 
-        prk::MPI::alltoall(A.data(), block_order*block_order, T.data(), block_order*block_order);
+        prk::NCCL::alltoall(A, T, block_order*block_order, nccl_comm_world);
+#ifdef DEBUG
+        prk::CUDA::sync();
+        prk::MPI::barrier();
+#endif
 
         // transpose the  matrix  
-        for (int r=0; r<np; r++) {
-          const size_t offset = block_order * block_order * r;
-          transpose_block(B.data() + offset, T.data() + offset, block_order, tile_size); 
+        if (variant==3) {
+            transposeNaiveBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
+        } else if (variant==4) {
+            transposeCoalescedBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
+        } else if (variant==5) {
+            transposeNoBankConflictBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
+        } else {
+            for (int r=0; r<np; r++) {
+              const size_t offset = block_order * block_order * r;
+    #ifdef DEBUG
+              const int threads_per_block = 16;
+              const int blocks_per_grid = (block_order + threads_per_block - 1) / threads_per_block;
+              dim3 dimBlock(threads_per_block, threads_per_block, 1);
+              dim3 dimGrid(blocks_per_grid, blocks_per_grid, 1);
+              transposeSimple<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+              prk::CUDA::sync();
+    #else
+              if (variant==0) {
+                  transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+              } else if (variant==1) {
+                  transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+              } else if (variant==2) {
+                  transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+              }
+    #endif
+            }
         }
         // increment A
-        std::transform(A.begin(), A.end(), A.begin(), [](auto a) { return a + 1; });
+        cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
       }
+      prk::CUDA::sync();
+      prk::MPI::barrier();
       trans_time = prk::wtime() - trans_time;
     }
 
-    //prk::MPI::print_matrix(A, order, block_order, "A@" + std::to_string(me));
-    //prk::MPI::print_matrix(B, order, block_order, "B@" + std::to_string(me));
+    prk::CUDA::copyD2H(h_B, B, nelems);
+#ifdef DEBUG
+    prk::CUDA::copyD2H(h_A, A, order * block_order);
+    prk::MPI::print_matrix(h_A, order, block_order, "A@" + std::to_string(me));
+    prk::MPI::print_matrix(h_B, order, block_order, "B@" + std::to_string(me));
+#endif
+
+    prk::check( ncclCommDestroy(nccl_comm_world) );
+
+    prk::CUDA::free(A);
+    prk::CUDA::free(B);
+    prk::CUDA::free(T);
+
+    prk::CUDA::free_host(h_A);
 
     //////////////////////////////////////////////////////////////////////
     /// Analyze and output results
@@ -176,13 +269,15 @@ int main(int argc, char * argv[])
     for (size_t i=0; i<order; i++) {
       for (size_t j=0; j<block_order; j++) {
         const double temp = (order*(me*block_order+j)+(i)) * (1+iterations) + addit;
-        abserr += prk::abs(B[i*block_order+j] - temp);
+        abserr += prk::abs(h_B[i*block_order+j] - temp);
       }
     }
     abserr = prk::MPI::sum(abserr);
 
+    prk::CUDA::free_host(h_B);
+
 #ifdef VERBOSE
-    std::cout << "Sum of absolute differences: " << abserr << std::endl;
+    if (me == 0) std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
     if (me == 0) {

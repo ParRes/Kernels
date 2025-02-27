@@ -133,6 +133,7 @@ Cxx11/dgemm-kernels-kokkos
 Cxx11/dgemm-kokkos
 Cxx11/dgemm-mkl-sycl
 Cxx11/dgemm-mpi
+Cxx11/dgemm-mpi-cblas
 Cxx11/dgemm-mpi-cublas
 Cxx11/dgemm-multigpu-cublas
 Cxx11/dgemm-multigpu-onemkl
@@ -169,6 +170,7 @@ Cxx11/nstream-managed-hip
 Cxx11/nstream-mpi
 Cxx11/nstream-multigpu-cuda
 Cxx11/nstream-multigpu-dpcpp
+Cxx11/nstream-nccl
 Cxx11/nstream-onemkl
 Cxx11/nstream-opencl
 Cxx11/nstream-openmp
@@ -254,6 +256,8 @@ Cxx11/stencil-vector-raja
 Cxx11/test_cuda_collectives
 Cxx11/test_dpcpp_collectives
 Cxx11/transpose
+Cxx11/transpose-a2a-mpi
+Cxx11/transpose-a2a-mpi-nccl
 Cxx11/transpose-async
 Cxx11/transpose-cilk
 Cxx11/transpose-cublas
@@ -261,6 +265,9 @@ Cxx11/transpose-cuda
 Cxx11/transpose-cudastf
 Cxx11/transpose-device-thrust
 Cxx11/transpose-dpcpp
+Cxx11/transpose-get-mpi
+Cxx11/transpose-get-nvshmem
+Cxx11/transpose-get-oshmem
 Cxx11/transpose-halide
 Cxx11/transpose-hip
 Cxx11/transpose-hipblas
@@ -271,6 +278,7 @@ Cxx11/transpose-opencl
 Cxx11/transpose-openmp
 Cxx11/transpose-openacc
 Cxx11/transpose-openmp-target
+Cxx11/transpose-p2p-mpi
 Cxx11/transpose-pstl
 Cxx11/transpose-raja
 Cxx11/transpose-ranges

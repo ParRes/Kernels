@@ -64,24 +64,41 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
+#include "prk_nccl.h"
+
+__global__ void nstream(const unsigned n, const double scalar, double * A, const double * B, const double * C)
+{
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        A[i] += B[i] + scalar * C[i];
+    }
+}
+
+__global__ void nstream2(const unsigned n, const double scalar, double * A, const double * B, const double * C)
+{
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
+        A[i] += B[i] + scalar * C[i];
+    }
+}
 
 int main(int argc, char * argv[])
 {
-  std::cout << "Parallel Research Kernels" << std::endl;
-  std::cout << "C++11/CUBLAS STREAM triad: A = B + scalar * C" << std::endl;
+  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "C++11/CUDA STREAM triad: A = B + scalar * C" << std::endl;
 
   prk::CUDA::info info;
-  //info.print();
+  info.print();
 
   //////////////////////////////////////////////////////////////////////
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
   int iterations;
-  size_t length;
+  size_t length, block_size=256;
+  bool grid_stride = false;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <vector length>";
+        throw "Usage: <# iterations> <vector length> [<block_size>] [<grid_stride>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -92,6 +109,16 @@ int main(int argc, char * argv[])
       length = std::atol(argv[2]);
       if (length <= 0) {
         throw "ERROR: vector length must be positive";
+      } else if (length >= UINT_MAX) {
+        throw "ERROR: vector length must be less than UINT_MAX";
+      }
+
+      if (argc>3) {
+         block_size = std::atoi(argv[3]);
+      }
+
+      if (argc>4) {
+        grid_stride = prk::parse_boolean(std::string(argv[4]));
       }
   }
   catch (const char * e) {
@@ -101,10 +128,34 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Vector length        = " << length << std::endl;
+  std::cout << "Block size           = " << block_size << std::endl;
+  std::cout << "Grid stride          = " << (grid_stride   ? "yes" : "no") << std::endl;
 
-  cublasHandle_t h;
-  //prk::check( cublasInit() );
-  prk::check( cublasCreate(&h) );
+  dim3 dimBlock(block_size, 1, 1);
+  dim3 dimGrid(prk::divceil(length,block_size), 1, 1);
+
+  info.checkDims(dimBlock, dimGrid);
+
+  int num_gpus = info.num_gpus();
+  std::vector<ncclComm_t> nccl_comm_world(num_gpus);
+  std::cerr << "before ncclCommInitAll: " << num_gpus << " GPUs" << std::endl;
+#if 1
+  prk::check( ncclCommInitAll(nccl_comm_world.data(), num_gpus, nullptr) );
+#else
+  {
+      ncclUniqueId Id;
+      prk::CUDA::check( ncclGetUniqueId(&Id) );
+      prk::CUDA::check( ncclGroupStart() );
+      for (int i=0; i<num_gpus; i++) {
+        info.set_gpu(i);
+        std::cerr << "before ncclCommInitRank: " << i << std::endl;
+        prk::CUDA::check( ncclCommInitRank(&nccl_comm_world[i], num_gpus, Id, i) );
+        std::cerr << "after ncclCommInitRank: " << i << std::endl;
+      }
+      prk::CUDA::check( ncclGroupEnd() );
+  }
+#endif
+  std::cerr << "after ncclCommInitAll" << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -112,7 +163,7 @@ int main(int argc, char * argv[])
 
   double nstream_time(0);
 
-  double * h_A = prk::CUDA::malloc_host<double>(length);
+  double * h_A = prk::CUDA::malloc_host<double>(length*num_gpus);
   double * h_B = prk::CUDA::malloc_host<double>(length);
   double * h_C = prk::CUDA::malloc_host<double>(length);
 
@@ -122,42 +173,57 @@ int main(int argc, char * argv[])
     h_C[i] = 2;
   }
 
-  double * d_A = prk::CUDA::malloc_device<double>(length);
-  double * d_B = prk::CUDA::malloc_device<double>(length);
-  double * d_C = prk::CUDA::malloc_device<double>(length);
+  std::vector<double*> d_A(num_gpus,nullptr);
+  std::vector<double*> d_B(num_gpus,nullptr);
+  std::vector<double*> d_C(num_gpus,nullptr);
 
-  prk::CUDA::copyH2D(d_A, h_A, length);
-  prk::CUDA::copyH2D(d_B, h_B, length);
-  prk::CUDA::copyH2D(d_C, h_C, length);
+  for (int i=0; i<num_gpus; i++) {
+      info.set_gpu(i);
+      d_A[i] = prk::CUDA::malloc_async<double>(length);
+      d_B[i] = prk::CUDA::malloc_async<double>(length);
+      d_C[i] = prk::CUDA::malloc_async<double>(length);
+      prk::CUDA::copyH2Dasync(d_A[i], h_A, length);
+      prk::CUDA::copyH2Dasync(d_B[i], h_B, length);
+      prk::CUDA::copyH2Dasync(d_C[i], h_C, length);
+      prk::CUDA::sync();
+  }
 
   double scalar(3);
   {
     for (int iter = 0; iter<=iterations; iter++) {
 
       if (iter==1) {
-          prk::CUDA::sync();
+          for (int i=0; i<num_gpus; i++) {
+              info.set_gpu(i);
+              prk::CUDA::sync();
+          }
           nstream_time = prk::wtime();
       }
 
-      double one(1);
-      prk::check( cublasDaxpy(h, length,
-                                    &one,        // alpha
-                                    d_B, 1,      // x, incx
-                                    d_A, 1) );   // y, incy
-      prk::check( cublasDaxpy(h, length,
-                                    &scalar,     // alpha
-                                    d_C, 1,      // x, incx
-                                    d_A, 1) );   // y, incy
-      prk::CUDA::sync();
+      for (int i=0; i<num_gpus; i++) {
+          info.set_gpu(i);
+          if (grid_stride) {
+              nstream2<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A[i], d_B[i], d_C[i]);
+          } else {
+              nstream<<<dimGrid, dimBlock>>>(static_cast<unsigned>(length), scalar, d_A[i], d_B[i], d_C[i]);
+          }
+      }
+      for (int i=0; i<num_gpus; i++) {
+          info.set_gpu(i);
+          prk::CUDA::sync();
+      }
     }
     nstream_time = prk::wtime() - nstream_time;
   }
 
-  prk::CUDA::copyD2H(h_A, d_A, length);
-
-  prk::CUDA::free(d_A);
-  prk::CUDA::free(d_B);
-  prk::CUDA::free(d_C);
+  for (int i=0; i<num_gpus; i++) {
+      info.set_gpu(i);
+      prk::CUDA::copyD2H(&h_A[i*length], d_A[i], length);
+      prk::CUDA::free(d_A[i]);
+      prk::CUDA::free(d_B[i]);
+      prk::CUDA::free(d_C[i]);
+      prk::check( ncclCommFinalize(nccl_comm_world[i]) );
+  }
 
   //////////////////////////////////////////////////////////////////////
   /// Analyze and output results
@@ -170,9 +236,10 @@ int main(int argc, char * argv[])
       ar += br + scalar * cr;
   }
   ar *= length;
+  ar *= num_gpus;
 
   double asum(0);
-  for (int i=0; i<length; i++) {
+  for (int i=0; i<length*num_gpus; i++) {
       asum += prk::abs(h_A[i]);
   }
 
@@ -191,7 +258,7 @@ int main(int argc, char * argv[])
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
-      double nbytes = 4.0 * length * sizeof(double);
+      double nbytes = 4.0 * length * sizeof(double) * num_gpus;
       std::cout << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }

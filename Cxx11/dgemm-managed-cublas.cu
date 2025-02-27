@@ -127,7 +127,7 @@ void prk_dgemm(const cublasHandle_t & h,
         double * pA = &(A[b*order*order]);
         double * pB = &(B[b*order*order]);
         double * pC = &(C[b*order*order]);
-        prk::CUDA::check( cublasDgemm(h,
+        prk::check( cublasDgemm(h,
                                       CUBLAS_OP_N, CUBLAS_OP_N, // opA, opB
                                       order, order, order,      // m, n, k
                                       &alpha,                   // alpha
@@ -148,7 +148,7 @@ void prk_bgemm(const cublasHandle_t & h,
     const double alpha = 1.0;
     const double beta  = 1.0;
 
-    prk::CUDA::check( cublasDgemmStridedBatched(h,
+    prk::check( cublasDgemmStridedBatched(h,
                                                 CUBLAS_OP_N, CUBLAS_OP_N,
                                                 order, order, order,
                                                 &alpha,
@@ -231,7 +231,7 @@ int main(int argc, char * argv[])
   std::cout << "Input copy           = " << (input_copy ? "yes" : "no") << std::endl;
 
   cublasHandle_t h;
-  prk::CUDA::check( cublasCreate(&h) );
+  prk::check( cublasCreate(&h) );
 
   const int tile_size = 32;
   dim3 dimGrid(prk::divceil(order,tile_size),prk::divceil(order,tile_size),1);
@@ -303,7 +303,7 @@ int main(int argc, char * argv[])
   prk::CUDA::free(d_a);
   prk::CUDA::free(d_b);
 
-  prk::CUDA::check( cublasDestroy(h) );
+  prk::check( cublasDestroy(h) );
 
   prk::CUDA::sync();
 

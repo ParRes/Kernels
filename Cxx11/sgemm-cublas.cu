@@ -127,7 +127,7 @@ void prk_sgemm(const cublasHandle_t & h,
         float * pA = &(A[b*order*order]);
         float * pB = &(B[b*order*order]);
         float * pC = &(C[b*order*order]);
-        prk::CUDA::check( cublasSgemm(h,
+        prk::check( cublasSgemm(h,
                                       CUBLAS_OP_N, CUBLAS_OP_N, // opA, opB
                                       order, order, order,      // m, n, k
                                       &alpha,                   // alpha
@@ -148,7 +148,7 @@ void prk_bgemm(const cublasHandle_t & h,
     const float alpha = 1.0;
     const float beta  = 1.0;
 
-    prk::CUDA::check( cublasSgemmStridedBatched(h,
+    prk::check( cublasSgemmStridedBatched(h,
                                                 CUBLAS_OP_N, CUBLAS_OP_N,
                                                 order, order, order,
                                                 &alpha,
@@ -234,7 +234,7 @@ int main(int argc, char * argv[])
   std::cout << "TF32                 = " << (tf32 ? "yes" : "no") << std::endl;
 
   cublasHandle_t h;
-  prk::CUDA::check( cublasCreate(&h) );
+  prk::check( cublasCreate(&h) );
 
   if (tf32) {
     cublasSetMathMode(h, CUBLAS_TF32_TENSOR_OP_MATH);
@@ -335,7 +335,7 @@ int main(int argc, char * argv[])
   prk::CUDA::free_host(h_a);
   prk::CUDA::free_host(h_b);
 
-  prk::CUDA::check( cublasDestroy(h) );
+  prk::check( cublasDestroy(h) );
 
   prk::CUDA::sync();
 

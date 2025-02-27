@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
   std::cout << "Input copy           = " << (input_copy ? "yes" : "no") << std::endl;
 
   cublasHandle_t h;
-  prk::CUDA::check( cublasCreate(&h) );
+  prk::check( cublasCreate(&h) );
 
   const int tile_size = 32;
   dim3 dimGrid(prk::divceil(order,tile_size),prk::divceil(order,tile_size),1);
@@ -179,7 +179,7 @@ int main(int argc, char * argv[])
           const double beta  = 1.0;
           ctx.task(a.read(), b.read(), c.rw())->*[&](cudaStream_t stream, auto da, auto db, auto dc) {
               cublasSetStream(h, stream);
-              prk::CUDA::check( cublasDgemmStridedBatched(h,
+              prk::check( cublasDgemmStridedBatched(h,
                                                           CUBLAS_OP_N, CUBLAS_OP_N,
                                                           order, order, order,
                                                           &alpha,
@@ -247,7 +247,7 @@ int main(int argc, char * argv[])
           {
              ctx.task(vector_a[k].read(), vector_b[k].read(), vector_c[k].rw())->*[&](cudaStream_t stream, auto dA, auto dB, auto dC) {
                  cublasSetStream(h, stream);
-                 prk::CUDA::check( cublasDgemm(h,
+                 prk::check( cublasDgemm(h,
                                                CUBLAS_OP_N, CUBLAS_OP_N, // opA, opB
                                                order, order, order,      // m, n, k
                                                &alpha,                   // alpha

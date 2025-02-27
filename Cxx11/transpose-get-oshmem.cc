@@ -54,16 +54,16 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
-#include "prk_mpi.h"
+#include "prk_oshmem.h"
 #include "transpose-kernel.h"
 
 int main(int argc, char * argv[])
 {
   {
-    prk::MPI::state mpi(&argc,&argv);
+    prk::SHMEM::state shmem(&argc,&argv);
 
-    int np = prk::MPI::size();
-    int me = prk::MPI::rank();
+    int np = prk::SHMEM::size();
+    int me = prk::SHMEM::rank();
 
     //////////////////////////////////////////////////////////////////////
     /// Read and test input parameters
@@ -73,8 +73,8 @@ int main(int argc, char * argv[])
     size_t order, block_order, tile_size;
 
     if (me == 0) {
-      std::cout << "Parallel Research Kernels" << std::endl;
-      std::cout << "C++11/MPI Matrix transpose: B = A^T" << std::endl;
+      std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+      std::cout << "C++11/SHMEM Matrix transpose: B = A^T" << std::endl;
 
       try {
         if (argc < 3) {
@@ -89,12 +89,10 @@ int main(int argc, char * argv[])
         order = std::atol(argv[2]);
         if (order <= 0) {
           throw "ERROR: Matrix Order must be greater than 0";
-        // } else if (order > prk::get_max_matrix_size()) {
-        //   throw "ERROR: matrix dimension too large - overflow risk";
         }
 
         if (order % np != 0) {
-          throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
+          throw "ERROR: Matrix order must be an integer multiple of the number of SHMEM PEs";
         }
 
         // default tile size for tiling of local transpose
@@ -104,23 +102,20 @@ int main(int argc, char * argv[])
       }
       catch (const char * e) {
         std::cout << e << std::endl;
-        prk::MPI::abort(1);
+        prk::SHMEM::abort(1);
         return 1;
       }
      
-      std::cout << "Number of processes  = " << np << std::endl;
       std::cout << "Number of iterations = " << iterations << std::endl;
       std::cout << "Matrix order         = " << order << std::endl;
       std::cout << "Tile size            = " << tile_size << std::endl;
     }
 
-    prk::MPI::bcast(&iterations);
-    prk::MPI::bcast(&order);
-    prk::MPI::bcast(&tile_size);
+    prk::SHMEM::broadcast(&iterations);
+    prk::SHMEM::broadcast(&order);
+    prk::SHMEM::broadcast(&tile_size);
     
     block_order = order / np;
-
-    //std::cout << "@" << me << " order=" << order << " block_order=" << block_order << std::endl;
 
     //////////////////////////////////////////////////////////////////////
     // Allocate space for the input and transpose matrix
@@ -128,10 +123,11 @@ int main(int argc, char * argv[])
 
     double trans_time{0};
 
-    //A[order][block_order]
-    prk::vector<double> A(order * block_order, 0.0);
+    // A[order][block_order]
+    auto LA = prk::SHMEM::allocate<double>(order * block_order);
+    prk::vector<double> A(LA, order * block_order, 0.0);
     prk::vector<double> B(order * block_order, 0.0);
-    prk::vector<double> T(order * block_order, 0.0);
+    prk::vector<double> T(block_order * block_order, 0.0);
 
     // fill A with the sequence 0 to order^2-1 as doubles
     for (size_t i=0; i<order; i++) {
@@ -139,33 +135,34 @@ int main(int argc, char * argv[])
             A[i*block_order + j] = me * block_order + i * order + j;
         }
     }
-    prk::MPI::barrier();
-
-    //prk::MPI::print_matrix(A, order, block_order, "A@" + std::to_string(me));
+    prk::SHMEM::barrier();
 
     {
       for (int iter = 0; iter<=iterations; iter++) {
 
         if (iter==1) {
             trans_time = prk::wtime();
-            prk::MPI::barrier();
+            prk::SHMEM::barrier();
         }
 
-        prk::MPI::alltoall(A.data(), block_order*block_order, T.data(), block_order*block_order);
-
-        // transpose the  matrix  
+        // transpose the matrix
         for (int r=0; r<np; r++) {
-          const size_t offset = block_order * block_order * r;
-          transpose_block(B.data() + offset, T.data() + offset, block_order, tile_size); 
+            const int recv_from = (me + r) % np;
+            size_t offset = block_order * block_order * me;
+            prk::SHMEM::get(T.data(), A.data() + offset, block_order * block_order, recv_from);
+            offset = block_order * block_order * recv_from;
+            transpose_block(B.data() + offset, T.data(), block_order, tile_size);
         }
+        prk::SHMEM::barrier();
+
         // increment A
         std::transform(A.begin(), A.end(), A.begin(), [](auto a) { return a + 1; });
+        prk::SHMEM::barrier();
       }
       trans_time = prk::wtime() - trans_time;
     }
 
-    //prk::MPI::print_matrix(A, order, block_order, "A@" + std::to_string(me));
-    //prk::MPI::print_matrix(B, order, block_order, "B@" + std::to_string(me));
+    prk::SHMEM::free(LA);
 
     //////////////////////////////////////////////////////////////////////
     /// Analyze and output results
@@ -179,10 +176,10 @@ int main(int argc, char * argv[])
         abserr += prk::abs(B[i*block_order+j] - temp);
       }
     }
-    abserr = prk::MPI::sum(abserr);
+    abserr = prk::SHMEM::sum(abserr);
 
 #ifdef VERBOSE
-    std::cout << "Sum of absolute differences: " << abserr << std::endl;
+    if (me == 0) std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
     if (me == 0) {
