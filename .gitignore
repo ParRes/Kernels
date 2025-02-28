@@ -258,6 +258,7 @@ Cxx11/test_dpcpp_collectives
 Cxx11/transpose
 Cxx11/transpose-a2a-mpi
 Cxx11/transpose-a2a-mpi-nccl
+Cxx11/transpose-a2a-nvshmem
 Cxx11/transpose-async
 Cxx11/transpose-cilk
 Cxx11/transpose-cublas
