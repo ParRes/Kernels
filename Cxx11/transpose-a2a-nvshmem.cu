@@ -226,8 +226,6 @@ int main(int argc, char * argv[])
         }
 
         prk::NVSHMEM::alltoall(T, A, block_order*block_order);
-        prk::CUDA::sync();
-        prk::NVSHMEM::barrier();
 
         // transpose the  matrix  
         if (variant==3) {
@@ -256,13 +254,11 @@ int main(int argc, char * argv[])
               }
             }
         }
-        prk::CUDA::sync();
-        prk::NVSHMEM::barrier();
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
         prk::CUDA::sync();
-        prk::NVSHMEM::barrier();
       }
+      prk::NVSHMEM::barrier();
       trans_time = prk::wtime() - trans_time;
     }
 
