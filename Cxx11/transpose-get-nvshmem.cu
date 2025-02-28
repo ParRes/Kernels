@@ -105,6 +105,11 @@ int main(int argc, char * argv[])
         throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
       }
 
+      block_order = order / np;
+      if (block_order % tile_dim) {
+        throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
+      }
+
       variant = 2; // transposeNoBankConflicts
       if (argc > 3) {
           variant = std::atoi(argv[3]);
@@ -125,8 +130,6 @@ int main(int argc, char * argv[])
       std::cout << "Matrix order         = " << order << std::endl;
       std::cout << "Variant              = " << vnames[variant] << std::endl;
     }
-
-    block_order = order / np;
 
     // for B += T.T
 #ifndef DEBUG
