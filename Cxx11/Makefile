@@ -1,5 +1,4 @@
 include ../common/make.defs
-include ../common/PRKVERSION
 
 # debugging
 ifdef VERBOSE

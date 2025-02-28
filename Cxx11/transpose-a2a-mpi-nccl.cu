@@ -83,7 +83,7 @@ int main(int argc, char * argv[])
     size_t order = 0, block_order = 0;
 
     if (me == 0) {
-      std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+      std::cout << "Parallel Research Kernels" << std::endl;
       std::cout << "C++11/NCCL Matrix transpose: B = A^T" << std::endl;
 
       try {

@@ -120,7 +120,7 @@ const std::array<std::string,3> vnames = {"naive", "coalesced", "no bank conflic
 
 int main(int argc, char * argv[])
 {
-  std::cout << "Parallel Research Kernels version " << PRKVERSION << std::endl;
+  std::cout << "Parallel Research Kernels" << std::endl;
   std::cout << "C++11/NCCL Matrix transpose: B = A^T" << std::endl;
 
   prk::CUDA::info info;
