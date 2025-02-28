@@ -58,8 +58,11 @@
 #include "prk_cuda.h"
 #include "transpose-kernel.h"
 
-const std::array<std::string,6> vnames = {"naive", "coalesced", "no bank conflicts",
-                                          "bulk naive", "bulk coalesced", "bulk no bank conflicts"};
+//#define DEBUG 1
+
+const std::array<std::string,7> vnames = {"naive", "coalesced", "no bank conflicts",
+                                          "bulk naive", "bulk coalesced", "bulk no bank conflicts",
+                                          "debug"};
 
 int main(int argc, char * argv[])
 {
@@ -87,7 +90,7 @@ int main(int argc, char * argv[])
     // do this on every PE to avoid needing a host broadcast
     try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [variant (0-5)]";
+        throw "Usage: <# iterations> <matrix order> [variant (0-6)]";
       }
     
       iterations  = std::atoi(argv[1]);
@@ -104,16 +107,23 @@ int main(int argc, char * argv[])
       }
 
       block_order = order / np;
-      if (block_order % tile_dim) {
-        throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
-      }
 
       variant = 2; // transposeNoBankConflicts
       if (argc > 3) {
           variant = std::atoi(argv[3]);
       }
-      if (variant < 0 || variant > 5) {
-          throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk...)";
+      if (variant < 0 || variant > 6) {
+          throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk..., 6: debug)";
+      }
+
+      // debug variant doesn't care
+      if (variant != 6) {
+        if (order % tile_dim) {
+          throw "ERROR: matrix dimension not divisible by 32";
+        }
+        if (block_order % tile_dim) {
+          throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
+        }
       }
     }
     catch (const char * e) {
@@ -143,6 +153,7 @@ int main(int argc, char * argv[])
     const int num_gpus = info.num_gpus();
     info.set_gpu(me % num_gpus);
 
+#if 0
     if (me == 0)
     {
         void** args = nullptr; // unused by implementation
@@ -175,6 +186,7 @@ int main(int argc, char * argv[])
                                                                            threads_per_block, args, 0, &gridsize) );
         std::cout << "cuda_increment: NVSHMEM gridsize = " << gridsize << std::endl;
     }
+#endif
 
     //////////////////////////////////////////////////////////////////////
     // Allocate space for the input and transpose matrix
@@ -197,8 +209,8 @@ int main(int argc, char * argv[])
 
     //A[order][block_order]
     double * A = prk::NVSHMEM::allocate<double>(nelems);
+    double * T = prk::NVSHMEM::allocate<double>(nelems);
     double * B = prk::CUDA::malloc_device<double>(nelems);
-    double * T = prk::CUDA::malloc_device<double>(block_order * block_order);
 
     prk::CUDA::copyH2D(A, h_A, nelems);
     prk::CUDA::copyH2D(B, h_B, nelems);
@@ -213,24 +225,39 @@ int main(int argc, char * argv[])
             trans_time = prk::wtime();
         }
 
-        // transpose the matrix
-        for (int r=0; r<np; r++) {
-            const int recv_from = (me + r) % np;
-            size_t offset = block_order * block_order * me;
-            prk::NVSHMEM::get(T, A + offset, block_order * block_order, recv_from);
-            offset = block_order * block_order * recv_from;
-            //transpose_block<<<dimGrid, dimBlock>>>(B + offset, T, block_order);
-            if (variant==0) {
-                transposeNaive<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
-            } else if (variant==1) {
-                transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
-            } else if (variant==2) {
-                transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
+        prk::NVSHMEM::alltoall(T, A, block_order*block_order);
+        prk::CUDA::sync();
+        prk::NVSHMEM::barrier();
+
+        // transpose the  matrix  
+        if (variant==3) {
+            transposeNaiveBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
+        } else if (variant==4) {
+            transposeCoalescedBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
+        } else if (variant==5) {
+            transposeNoBankConflictBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
+        } else {
+            for (int r=0; r<np; r++) {
+              const size_t offset = block_order * block_order * r;
+              if (variant==6) {
+                  // debug
+                  const int threads_per_block = 16;
+                  const int blocks_per_grid = (block_order + threads_per_block - 1) / threads_per_block;
+                  dim3 dimBlock(threads_per_block, threads_per_block, 1);
+                  dim3 dimGrid(blocks_per_grid, blocks_per_grid, 1);
+                  transposeSimple<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+                  prk::CUDA::sync();
+              } else if (variant==0) {
+                  transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+              } else if (variant==1) {
+                  transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+              } else if (variant==2) {
+                  transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+              }
             }
         }
         prk::CUDA::sync();
         prk::NVSHMEM::barrier();
-
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
         prk::CUDA::sync();
@@ -240,10 +267,15 @@ int main(int argc, char * argv[])
     }
 
     prk::CUDA::copyD2H(h_B, B, nelems);
+#ifdef DEBUG
+    prk::CUDA::copyD2H(h_A, A, order * block_order);
+    prk::NVSHMEM::print_matrix(h_A, order, block_order, "A@" + std::to_string(me));
+    prk::NVSHMEM::print_matrix(h_B, order, block_order, "B@" + std::to_string(me));
+#endif
 
     prk::NVSHMEM::free(A);
+    prk::NVSHMEM::free(T);
     prk::CUDA::free(B);
-    prk::CUDA::free(T);
 
     prk::CUDA::free_host(h_A);
 
