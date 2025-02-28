@@ -96,6 +96,7 @@ C1z/stencil-taskloop
 C1z/transpose
 C1z/transpose-2d
 C1z/transpose-2d-openmp
+C1z/transpose-2d-openacc
 C1z/transpose-cilk
 C1z/transpose-ispc
 C1z/transpose-openmp
