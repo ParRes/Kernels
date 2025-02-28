@@ -58,8 +58,6 @@
 #include "prk_cuda.h"
 #include "transpose-kernel.h"
 
-//#define DEBUG 1
-
 const std::array<std::string,6> vnames = {"naive", "coalesced", "no bank conflicts",
                                           "bulk naive", "bulk coalesced", "bulk no bank conflicts"};
 
@@ -132,11 +130,9 @@ int main(int argc, char * argv[])
     }
 
     // for B += T.T
-#ifndef DEBUG
     dim3 dimGrid(block_order/tile_dim, block_order/tile_dim, 1);
     dim3 dimBlock(tile_dim, block_rows, 1);
     info.checkDims(dimBlock, dimGrid);
-#endif
 
     // for A += 1
     const int threads_per_block = 256;
@@ -146,6 +142,39 @@ int main(int argc, char * argv[])
 
     const int num_gpus = info.num_gpus();
     info.set_gpu(me % num_gpus);
+
+    if (me == 0)
+    {
+        void** args = nullptr; // unused by implementation
+        int gridsize = -911;
+        size_t sm_size = 0;
+
+        const int blockSize = dimBlock.x * dimBlock.y * dimBlock.z;
+        prk::check( cudaOccupancyMaxActiveBlocksPerMultiprocessor(&gridsize, (const void*)transposeNaive, blockSize, sm_size) );
+        std::cout << "transposeNaive: CUDA gridsize = " << gridsize << std::endl;
+
+        int sm_count = -911;
+        prk::check( cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, info.get_gpu()) );
+        std::cout << "SM count = " << sm_count << std::endl;
+
+        prk::check( (cudaError_t)nvshmemx_collective_launch_query_gridsize((const void*)transposeNaive,
+                                                                           dimBlock, args, sm_size, &gridsize) );
+        std::cout << "transposeNaive: NVSHMEM gridsize = " << gridsize << std::endl;
+
+        sm_size = tile_dim * tile_dim * sizeof(double);
+        prk::check( (cudaError_t)nvshmemx_collective_launch_query_gridsize((const void*)transposeCoalesced,
+                                                                           dimBlock, args, sm_size, &gridsize) );
+        std::cout << "transposeCoalesced: NVSHMEM gridsize = " << gridsize << std::endl;
+
+        sm_size = tile_dim * (tile_dim+1) * sizeof(double);
+        prk::check( (cudaError_t)nvshmemx_collective_launch_query_gridsize((const void*)transposeNoBankConflict,
+                                                                           dimBlock, args, sm_size, &gridsize) );
+        std::cout << "transposeNoBankConflict: NVSHMEM gridsize = " << gridsize << std::endl;
+
+        prk::check( (cudaError_t)nvshmemx_collective_launch_query_gridsize((const void*)cuda_increment,
+                                                                           threads_per_block, args, 0, &gridsize) );
+        std::cout << "cuda_increment: NVSHMEM gridsize = " << gridsize << std::endl;
+    }
 
     //////////////////////////////////////////////////////////////////////
     // Allocate space for the input and transpose matrix
