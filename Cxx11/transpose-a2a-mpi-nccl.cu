@@ -110,9 +110,11 @@ int main(int argc, char * argv[])
         }
 
         block_order = order / np;
+#ifndef DEBUG
         if (block_order % tile_dim) {
           throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
         }
+#endif
 
         variant = 2; // transposeNoBankConflicts
         if (argc > 3) {
@@ -197,8 +199,6 @@ int main(int argc, char * argv[])
     prk::CUDA::copyH2D(B, h_B, nelems);
     prk::MPI::barrier();
 
-    //prk::MPI::print_matrix(A, order, block_order, "A@" + std::to_string(me));
-
     {
       for (int iter = 0; iter<=iterations; iter++) {
 
@@ -215,23 +215,26 @@ int main(int argc, char * argv[])
 #endif
 
         // transpose the  matrix  
+#ifndef DEBUG
         if (variant==3) {
             transposeNaiveBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
         } else if (variant==4) {
             transposeCoalescedBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
         } else if (variant==5) {
             transposeNoBankConflictBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
-        } else {
+        } else
+#endif
+        {
             for (int r=0; r<np; r++) {
               const size_t offset = block_order * block_order * r;
-    #ifdef DEBUG
+#ifdef DEBUG
               const int threads_per_block = 16;
               const int blocks_per_grid = (block_order + threads_per_block - 1) / threads_per_block;
               dim3 dimBlock(threads_per_block, threads_per_block, 1);
               dim3 dimGrid(blocks_per_grid, blocks_per_grid, 1);
               transposeSimple<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
               prk::CUDA::sync();
-    #else
+#else
               if (variant==0) {
                   transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
               } else if (variant==1) {
@@ -239,7 +242,7 @@ int main(int argc, char * argv[])
               } else if (variant==2) {
                   transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
               }
-    #endif
+#endif
             }
         }
         // increment A
