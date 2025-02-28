@@ -198,8 +198,8 @@ int main(int argc, char * argv[])
             } else if (variant==2) {
                 transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
             }
-            prk::CUDA::sync();
         }
+        prk::CUDA::sync();
         prk::NVSHMEM::barrier();
 
         // increment A
