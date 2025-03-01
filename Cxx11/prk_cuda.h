@@ -227,6 +227,10 @@ namespace prk
             prk::check( cudaDeviceSynchronize() );
         }
 
+        void sync(cudaStream_t stream) {
+            prk::check( cudaStreamSynchronize(stream) );
+        }
+
         void set_device(int i) {
             prk::check( cudaSetDevice(i) );
         }
