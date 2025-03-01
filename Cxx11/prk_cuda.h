@@ -134,6 +134,10 @@ namespace prk
                         std::cout << "dimBlock.z too large" << std::endl;
                         return false;
                     }
+                    if (dimBlock.x * dimBlock.y * dimBlock.z > maxThreadsPerBlock) {
+                        std::cout << "dimBlock too large" << std::endl;
+                        return false;
+                    }
                     if (dimGrid.x  > maxGridSize[0])   {
                         std::cout << "dimGrid.x  too large" << std::endl;
                         return false;
