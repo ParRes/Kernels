@@ -230,7 +230,7 @@ int main(int argc, char * argv[])
                 transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
             }
         }
-        prk::NVSHMEM::barrier(true);
+        prk::NVSHMEM::barrier(false);
         //prk::CUDA::sync();
 
         // increment A
