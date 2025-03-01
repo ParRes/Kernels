@@ -123,7 +123,13 @@ __device__ void transposeNoBankConflictDevice(unsigned order, const double * RES
 
 __global__ void transposeNoBankConflictBulk(int np, unsigned order, const double * RESTRICT A, double * RESTRICT B)
 {
-    for (int r=0; r<np; r++) {
+#if 0
+    for (int r=0; r<np; r++)
+#else
+    auto r = blockIdx.z * blockDim.z + threadIdx.z;
+    if (r < np)
+#endif
+    {
       const size_t offset = order * order * r;
       transposeNoBankConflictDevice(order, A + offset, B + offset);
       __syncthreads();
@@ -153,7 +159,13 @@ __device__ void transposeCoalescedDevice(unsigned order, const double * RESTRICT
 
 __global__ void transposeCoalescedBulk(int np, unsigned order, const double * RESTRICT A, double * RESTRICT B)
 {
-    for (int r=0; r<np; r++) {
+#if 0
+    for (int r=0; r<np; r++)
+#else
+    auto r = blockIdx.z * blockDim.z + threadIdx.z;
+    if (r < np)
+#endif
+    {
       const size_t offset = order * order * r;
       transposeCoalescedDevice(order, A + offset, B + offset);
       __syncthreads();
@@ -164,8 +176,13 @@ __global__ void transposeNaiveBulk(int np, unsigned order, const double * RESTRI
 {
     auto x = blockIdx.x * tile_dim + threadIdx.x;
     auto y = blockIdx.y * tile_dim + threadIdx.y;
-
-    for (int r=0; r<np; r++) {
+#if 0
+    for (int r=0; r<np; r++)
+#else
+    auto r = blockIdx.z * blockDim.z + threadIdx.z;
+    if (r < np)
+#endif
+    {
       const size_t offset = order * order * r;
 
       for (int j = 0; j < tile_dim; j+= block_rows) {
