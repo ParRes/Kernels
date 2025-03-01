@@ -142,7 +142,12 @@ int main(int argc, char * argv[])
     }
 
     // for B += T.T
-    dim3 dimGrid(block_order/tile_dim, block_order/tile_dim, 1);
+    int dimz = 1;
+    // parallelize over z in bulk version
+    if (3 <= variant && variant <= 5) {
+        dimz = np;
+    }
+    dim3 dimGrid(block_order/tile_dim, block_order/tile_dim, dimz);
     dim3 dimBlock(tile_dim, block_rows, 1);
     info.checkDims(dimBlock, dimGrid);
 
@@ -258,8 +263,8 @@ int main(int argc, char * argv[])
         }
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
-        //prk::CUDA::sync(); // needed w/ NVSHMEM if on_stream version not used
       }
+      prk::CUDA::sync();
       prk::NVSHMEM::barrier();
       trans_time = prk::wtime() - trans_time;
     }
