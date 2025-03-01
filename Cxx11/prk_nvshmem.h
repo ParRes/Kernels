@@ -60,9 +60,9 @@ namespace prk {
         }
 
         template <typename T>
-        void alltoall(T * rbuffer,const T * sbuffer,  size_t count = 1) {
-            if (nvshmem_alltoallmem(NVSHMEM_TEAM_WORLD, rbuffer, sbuffer, count * sizeof(T))) {
-                throw std::runtime_error("nvshmem_alltoallmem failed");
+        void alltoall(T * rbuffer,const T * sbuffer,  size_t count = 1, cudaStream_t stream = 0) {
+            if (nvshmemx_alltoallmem_on_stream(NVSHMEM_TEAM_WORLD, rbuffer, sbuffer, count * sizeof(T), stream)) {
+                throw std::runtime_error("nvshmemx_alltoallmem_on_stream failed");
             }
         }
 

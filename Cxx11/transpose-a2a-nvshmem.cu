@@ -88,48 +88,50 @@ int main(int argc, char * argv[])
     }
 
     // do this on every PE to avoid needing a host broadcast
-    try {
-      if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [variant (0-6)]";
-      }
-    
-      iterations  = std::atoi(argv[1]);
-      if (iterations < 1) {
-        throw "ERROR: iterations must be >= 1";
-      }
-    
-      order = std::atol(argv[2]);
-      if (order <= 0) {
-        throw "ERROR: Matrix Order must be greater than 0";
-      }
-      else if (order % np != 0) {
-        throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
-      }
-
-      block_order = order / np;
-
-      variant = 2; // transposeNoBankConflicts
-      if (argc > 3) {
-          variant = std::atoi(argv[3]);
-      }
-      if (variant < 0 || variant > 6) {
-          throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk..., 6: debug)";
-      }
-
-      // debug variant doesn't care
-      if (variant != 6) {
-        if (order % tile_dim) {
-          throw "ERROR: matrix dimension not divisible by 32";
+    {
+      try {
+        if (argc < 3) {
+          throw "Usage: <# iterations> <matrix order> [variant (0-6)]";
         }
-        if (block_order % tile_dim) {
-          throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
+
+        iterations  = std::atoi(argv[1]);
+        if (iterations < 1) {
+          throw "ERROR: iterations must be >= 1";
+        }
+
+        order = std::atol(argv[2]);
+        if (order <= 0) {
+          throw "ERROR: Matrix Order must be greater than 0";
+        }
+        else if (order % np != 0) {
+          throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
+        }
+
+        variant = 2; // transposeNoBankConflicts
+        if (argc > 3) {
+            variant = std::atoi(argv[3]);
+        }
+        if (variant < 0 || variant > 6) {
+            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk..., 6: debug)";
+        }
+
+        block_order = order / np;
+
+        // debug variant doesn't care
+        if (variant != 6) {
+          if (order % tile_dim) {
+            throw "ERROR: matrix dimension not divisible by 32";
+          }
+          if (block_order % tile_dim) {
+            throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
+          }
         }
       }
-    }
-    catch (const char * e) {
-      std::cout << e << std::endl;
-      prk::NVSHMEM::abort(1);
-      return 1;
+      catch (const char * e) {
+        std::cout << e << std::endl;
+        prk::NVSHMEM::abort(1);
+        return 1;
+      }
     }
      
     if (me == 0) {
@@ -256,7 +258,7 @@ int main(int argc, char * argv[])
         }
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
-        prk::CUDA::sync();
+        //prk::CUDA::sync(); // needed w/ NVSHMEM if on_stream version not used
       }
       prk::NVSHMEM::barrier();
       trans_time = prk::wtime() - trans_time;
