@@ -61,8 +61,9 @@
 
 //#define DEBUG 1
 
-const std::array<std::string,6> vnames = {"naive", "coalesced", "no bank conflicts",
-                                          "bulk naive", "bulk coalesced", "bulk no bank conflicts"};
+const std::array<std::string,7> vnames = {"naive", "coalesced", "no bank conflicts",
+                                          "bulk naive", "bulk coalesced", "bulk no bank conflicts",
+                                          "debug"};
 
 int main(int argc, char * argv[])
 {
@@ -88,40 +89,41 @@ int main(int argc, char * argv[])
 
       try {
         if (argc < 3) {
-          throw "Usage: <# iterations> <matrix order> [variant (0-5)]";
+          throw "Usage: <# iterations> <matrix order> [variant (0-6)]";
         }
-     
+
         iterations  = std::atoi(argv[1]);
         if (iterations < 1) {
           throw "ERROR: iterations must be >= 1";
         }
-     
+
         order = std::atol(argv[2]);
         if (order <= 0) {
           throw "ERROR: Matrix Order must be greater than 0";
-        } 
-#ifndef DEBUG
-        else if (order % tile_dim) {
-          throw "ERROR: matrix dimension not divisible by 32";
         }
-#endif
         else if (order % np != 0) {
           throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
         }
-
-        block_order = order / np;
-#ifndef DEBUG
-        if (block_order % tile_dim) {
-          throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
-        }
-#endif
 
         variant = 2; // transposeNoBankConflicts
         if (argc > 3) {
             variant = std::atoi(argv[3]);
         }
-        if (variant < 0 || variant > 5) {
-            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk...)";
+        if (variant < 0 || variant > 6) {
+            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk..., 6: debug)";
+        }
+
+        block_order = order / np;
+
+        // debug variant doesn't care
+        if (variant != 6) {
+          if (order % tile_dim) {
+            throw "ERROR: matrix dimension not divisible by 32";
+          }
+          block_order = order / np;
+          if (block_order % tile_dim) {
+            throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
+          }
         }
       }
       catch (const char * e) {
@@ -143,11 +145,9 @@ int main(int argc, char * argv[])
     block_order = order / np;
 
     // for B += T.T
-#ifndef DEBUG
     dim3 dimGrid(block_order/tile_dim, block_order/tile_dim, 1);
     dim3 dimBlock(tile_dim, block_rows, 1);
     info.checkDims(dimBlock, dimGrid);
-#endif
 
     // for A += 1
     const int threads_per_block = 256;
@@ -215,34 +215,30 @@ int main(int argc, char * argv[])
 #endif
 
         // transpose the  matrix  
-#ifndef DEBUG
         if (variant==3) {
             transposeNaiveBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
         } else if (variant==4) {
             transposeCoalescedBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
         } else if (variant==5) {
             transposeNoBankConflictBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
-        } else
-#endif
-        {
+        } else {
             for (int r=0; r<np; r++) {
               const size_t offset = block_order * block_order * r;
-#ifdef DEBUG
-              const int threads_per_block = 16;
-              const int blocks_per_grid = (block_order + threads_per_block - 1) / threads_per_block;
-              dim3 dimBlock(threads_per_block, threads_per_block, 1);
-              dim3 dimGrid(blocks_per_grid, blocks_per_grid, 1);
-              transposeSimple<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
-              prk::CUDA::sync();
-#else
-              if (variant==0) {
+              if (variant==6) {
+                  // debug
+                  const int threads_per_block = 16;
+                  const int blocks_per_grid = (block_order + threads_per_block - 1) / threads_per_block;
+                  dim3 dimBlock(threads_per_block, threads_per_block, 1);
+                  dim3 dimGrid(blocks_per_grid, blocks_per_grid, 1);
+                  transposeSimple<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+                  prk::CUDA::sync();
+              } else if (variant==0) {
                   transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
               } else if (variant==1) {
                   transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
               } else if (variant==2) {
                   transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
               }
-#endif
             }
         }
         // increment A
