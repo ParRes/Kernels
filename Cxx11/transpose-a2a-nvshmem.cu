@@ -107,7 +107,7 @@ int main(int argc, char * argv[])
           throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
         }
 
-        variant = 2; // transposeNoBankConflicts
+        variant = 5; // transposeNoBankConflicts
         if (argc > 3) {
             variant = std::atoi(argv[3]);
         }
@@ -119,9 +119,6 @@ int main(int argc, char * argv[])
 
         // debug variant doesn't care
         if (variant != 6) {
-          if (order % tile_dim) {
-            throw "ERROR: matrix dimension not divisible by 32";
-          }
           if (block_order % tile_dim) {
             throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
           }
@@ -221,14 +218,14 @@ int main(int argc, char * argv[])
 
     prk::CUDA::copyH2D(A, h_A, nelems);
     prk::CUDA::copyH2D(B, h_B, nelems);
-    prk::NVSHMEM::barrier();
+    prk::NVSHMEM::barrier(true);
 
     {
       for (int iter = 0; iter<=iterations; iter++) {
 
         if (iter==1) {
+            prk::NVSHMEM::barrier(false); // sync PEs not memory
             prk::CUDA::sync();
-            prk::NVSHMEM::barrier();
             trans_time = prk::wtime();
         }
 
@@ -264,8 +261,8 @@ int main(int argc, char * argv[])
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
       }
+      prk::NVSHMEM::barrier(true);
       prk::CUDA::sync();
-      prk::NVSHMEM::barrier();
       trans_time = prk::wtime() - trans_time;
     }
 
