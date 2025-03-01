@@ -144,7 +144,12 @@ int main(int argc, char * argv[])
     block_order = order / np;
 
     // for B += T.T
-    dim3 dimGrid(block_order/tile_dim, block_order/tile_dim, 1);
+    int dimz = 1;
+    // parallelize over z in bulk version
+    if (3 <= variant && variant <= 5) {
+        dimz = np;
+    }
+    dim3 dimGrid(block_order/tile_dim, block_order/tile_dim, dimz);
     dim3 dimBlock(tile_dim, block_rows, 1);
     info.checkDims(dimBlock, dimGrid);
 
