@@ -120,7 +120,6 @@ int main(int argc, char * argv[])
           if (order % tile_dim) {
             throw "ERROR: matrix dimension not divisible by 32";
           }
-          block_order = order / np;
           if (block_order % tile_dim) {
             throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
           }
