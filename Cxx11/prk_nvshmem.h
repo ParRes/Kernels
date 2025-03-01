@@ -48,8 +48,14 @@ namespace prk {
             return nvshmem_n_pes();
         }
 
-        void barrier(void) {
-            nvshmem_barrier_all();
+        void barrier(bool memory = true, cudaStream_t stream = 0) {
+            if (memory) {
+                nvshmemx_barrier_on_stream(NVSHMEM_TEAM_WORLD, stream);
+            } else {
+                if (nvshmemx_team_sync_on_stream(NVSHMEM_TEAM_WORLD, stream)) {
+                    throw std::runtime_error("nvshmems_sync_on_stream failed");
+                }
+            }
         }
 
         template <typename T>
@@ -67,13 +73,13 @@ namespace prk {
         }
 
         template <typename T>
-        void put(T * dest, const T * source, size_t count, int pe) {
-            nvshmem_putmem(dest, source, count * sizeof(T), pe);
+        void put(T * dest, const T * source, size_t count, int pe, cudaStream_t stream = 0) {
+            nvshmem_putmem_on_stream(dest, source, count * sizeof(T), pe, stream);
         }
 
         template <typename T>
-        void get(T * dest, const T * source, size_t count, int pe) {
-            nvshmem_getmem(dest, source, count * sizeof(T), pe);
+        void get(T * dest, const T * source, size_t count, int pe, cudaStream_t stream = 0) {
+            nvshmemx_getmem_on_stream(dest, source, count * sizeof(T), pe, stream);
         }
 
         template <typename T>
