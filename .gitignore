@@ -281,6 +281,7 @@ Cxx11/transpose-openmp
 Cxx11/transpose-openacc
 Cxx11/transpose-openmp-target
 Cxx11/transpose-p2p-mpi
+Cxx11/transpose-ptr-nvshmem
 Cxx11/transpose-pstl
 Cxx11/transpose-raja
 Cxx11/transpose-ranges
