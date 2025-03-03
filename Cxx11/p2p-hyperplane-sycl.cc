@@ -168,7 +168,6 @@ int main(int argc, char* argv[])
             grid[index0] = grid[index1] + grid[index2] - grid[index3];
           });
         });
-        q.wait();
       }
       q.submit([&](sycl::handler& h) {
 
@@ -178,7 +177,6 @@ int main(int argc, char* argv[])
             grid[0*n+0] = -grid[(n-1)*n+(n-1)];
         });
       });
-      q.wait();
     }
     q.wait();
     pipeline_time = prk::wtime() - pipeline_time;
