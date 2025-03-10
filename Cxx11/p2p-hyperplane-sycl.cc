@@ -154,8 +154,8 @@ int main(int argc, char* argv[])
           unsigned end   = std::min(i,n)+1;
           unsigned range = end-begin;
 
-          h.parallel_for<class sweep>(sycl::range<1>{range}, sycl::id<1>{begin}, [=] (sycl::item<1> j) {
-            auto J = j.get_id();
+          h.parallel_for<class sweep>(sycl::range<1>{range}, [=] (sycl::item<1> j) {
+            auto J = begin + j.get_id();
             sycl::id<1> N{unsigned(n)};
             sycl::id<1> X{I-J+One};
             sycl::id<1> Y{J-One};
