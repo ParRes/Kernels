@@ -77,9 +77,6 @@ int main(int argc, char* argv[])
 
   int iterations;
   int n;
-#if 0
-  int nc, nb;
-#endif
   try {
       if (argc < 3) {
         throw " <# iterations> <array dimension> [<chunk dimension>]";
@@ -99,16 +96,6 @@ int main(int argc, char* argv[])
         throw "ERROR: grid dimension too large - overflow risk";
       }
 
-#if 0
-      // grid chunk dimensions
-      nc = (argc > 3) ? std::atoi(argv[3]) : 1;
-      nc = std::max(1,nc);
-      nc = std::min(n,nc);
-
-      // number of grid blocks
-      nb = (n-1)/nc;
-      if ((n-1)%nc) nb++;
-#endif
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -117,9 +104,6 @@ int main(int argc, char* argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Grid sizes           = " << n << ", " << n << std::endl;
-#if 0
-  std::cout << "Grid chunk sizes     = " << nc << std::endl;
-#endif
 
   //////////////////////////////////////////////////////////////////////
   // Allocate space and perform the computation
@@ -181,14 +165,6 @@ int main(int argc, char* argv[])
     q.wait();
     pipeline_time = prk::wtime() - pipeline_time;
   }
-
-#if 0
-  for (int i=0; i<n; ++i) {
-      for (int j=0; j<n; ++j) {
-          std::cout << i << "," << j << "=" << h_grid[i*n+j] << "\n";
-      }
-  }
-#endif
 
   //////////////////////////////////////////////////////////////////////
   // Analyze and output results.
