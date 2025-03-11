@@ -136,9 +136,9 @@ ISPCFLAG=-O3 --target=host --opt=fast-math
 #
 # mpiicc wraps icc.  mpicc and mpigcc wrap gcc.
 MPIDIR=/opt/intel/oneapi/mpi/latest
-MPICC=${MPIDIR}/bin/mpiicc
-MPICXX=${MPIDIR}/bin/mpiicpc
-MPIFORT=${MPIDIR}/bin/mpiifort
+MPICC=${MPIDIR}/bin/mpiicx
+MPICXX=${MPIDIR}/bin/mpiicpx
+MPIFORT=${MPIDIR}/bin/mpiifx
 MPIINC=-I${MPIDIR}/include
 MPILIB=-L${MPIDIR}/lib -L${MPIDIR}/lib/release -lmpi
 #MPILIB=-L/usr/local/opt/libevent/lib -L${MPIDIR}/lib -lmpi
