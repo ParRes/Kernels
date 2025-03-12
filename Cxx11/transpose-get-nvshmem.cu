@@ -201,6 +201,7 @@ int main(int argc, char * argv[])
 
     //A[order][block_order]
     double * A = prk::NVSHMEM::allocate<double>(nelems);
+    // this only works for NVL.  if running over UCX/IB, need to use prk::NVSHMEM::allocate (or register_buffer)
     double * T = prk::CUDA::malloc_device<double>(block_order * block_order);
     double * B = prk::CUDA::malloc_device<double>(nelems);
 
