@@ -161,7 +161,6 @@ int main(int argc, char * argv[])
             offset = block_order * block_order * recv_from;
             transpose_block(B.data() + offset, T.data(), block_order, tile_size); 
         }
-        //prk::MPI::barrier();
         // increment A
         std::transform(A.begin(), A.end(), A.begin(), [](auto a) { return a + 1; });
       }
