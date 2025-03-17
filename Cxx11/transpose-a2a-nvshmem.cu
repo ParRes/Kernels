@@ -107,7 +107,7 @@ int main(int argc, char * argv[])
           throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
         }
 
-        variant = 5; // transposeNoBankConflicts
+        variant = 5; // bulk transposeNoBankConflicts
         if (argc > 3) {
             variant = std::atoi(argv[3]);
         }
@@ -157,7 +157,7 @@ int main(int argc, char * argv[])
     const int num_gpus = info.num_gpus();
     info.set_gpu(me % num_gpus);
 
-#if 0
+#if 1
     if (me == 0)
     {
         void** args = nullptr; // unused by implementation
@@ -248,7 +248,7 @@ int main(int argc, char * argv[])
                   dim3 dimBlock(threads_per_block, threads_per_block, 1);
                   dim3 dimGrid(blocks_per_grid, blocks_per_grid, 1);
                   transposeSimple<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
-                  prk::CUDA::sync();
+                  //prk::CUDA::sync();
               } else if (variant==0) {
                   transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
               } else if (variant==1) {
@@ -260,6 +260,7 @@ int main(int argc, char * argv[])
         }
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
+        prk::NVSHMEM::barrier(false);
       }
       prk::NVSHMEM::barrier(true);
       prk::CUDA::sync();
