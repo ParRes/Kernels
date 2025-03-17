@@ -20,6 +20,10 @@ octave-workspace                # Octave crashes
 *.patch                         # patch files
 *.dbg                           # Flang
 
+# NVIDIA profiler
+*.nsys-rep
+*.sqlite
+
 # Cray GPU compiler
 *.lst
 *.cub
