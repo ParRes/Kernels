@@ -260,7 +260,7 @@ int main(int argc, char * argv[])
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
         prk::NVSHMEM::barrier(false);
       }
-      prk::NVSHMEM::barrier(true);
+      //prk::NVSHMEM::barrier(false);
       prk::CUDA::sync();
       trans_time = prk::wtime() - trans_time;
     }
