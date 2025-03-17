@@ -202,7 +202,8 @@ int main(int argc, char * argv[])
     //A[order][block_order]
     double * A = prk::NVSHMEM::allocate<double>(nelems);
     // this only works for NVL.  if running over UCX/IB, need to use prk::NVSHMEM::allocate (or register_buffer)
-    double * T = prk::CUDA::malloc_device<double>(block_order * block_order);
+    //double * T = prk::CUDA::malloc_device<double>(block_order * block_order);
+    double * T = prk::NVSHMEM::allocate<double>(block_order * block_order);
     double * B = prk::CUDA::malloc_device<double>(nelems);
 
     prk::CUDA::copyH2D(A, h_A, nelems);
@@ -248,7 +249,8 @@ int main(int argc, char * argv[])
     prk::CUDA::copyD2H(h_B, B, nelems);
 
     prk::NVSHMEM::free(A);
-    prk::CUDA::free(T);
+    prk::NVSHMEM::free(T);
+    //prk::CUDA::free(T);
     prk::CUDA::free(B);
 
     prk::CUDA::free_host(h_A);
