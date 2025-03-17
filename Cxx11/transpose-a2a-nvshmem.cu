@@ -58,8 +58,6 @@
 #include "prk_cuda.h"
 #include "transpose-kernel.h"
 
-//#define DEBUG 1
-
 const std::array<std::string,7> vnames = {"naive", "coalesced", "no bank conflicts",
                                           "bulk naive", "bulk coalesced", "bulk no bank conflicts",
                                           "debug"};
