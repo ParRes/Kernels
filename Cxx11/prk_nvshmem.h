@@ -16,6 +16,8 @@
 #include <nvshmem.h>
 #include <nvshmemx.h>
 
+#define USE_NVSHMEM // consumed by transpose-kernel.h
+
 #include "prk_cuda.h"
 
 namespace prk {
