@@ -237,7 +237,7 @@ int main(int argc, char * argv[])
 
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
-        prk::NVSHMEM::barrier(true);
+        prk::NVSHMEM::barrier(false);
         //prk::CUDA::sync();
       }
       //prk::NVSHMEM::barrier(false);
