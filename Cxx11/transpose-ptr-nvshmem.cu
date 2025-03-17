@@ -58,8 +58,7 @@
 #include "prk_cuda.h"
 #include "transpose-kernel.h"
 
-const std::array<std::string,6> vnames = {"naive", "coalesced", "no bank conflicts",
-                                          "bulk naive", "bulk coalesced", "bulk no bank conflicts"};
+const std::array<std::string,3> vnames = {"naive", "coalesced", "no bank conflicts"};
 
 int main(int argc, char * argv[])
 {
@@ -78,6 +77,7 @@ int main(int argc, char * argv[])
 
     int iterations = -1, variant = -1;
     size_t order = 0, block_order = 0;
+    bool on_device = true;
 
     if (me == 0) {
       std::cout << "Parallel Research Kernels" << std::endl;
@@ -88,7 +88,7 @@ int main(int argc, char * argv[])
     {
       try {
         if (argc < 3) {
-          throw "Usage: <# iterations> <matrix order> [variant (0-5)]";
+          throw "Usage: <# iterations> <matrix order> [variant (0-2)] [on_device]";
         }
 
         iterations  = std::atoi(argv[1]);
@@ -116,6 +116,10 @@ int main(int argc, char * argv[])
         if (block_order % tile_dim) {
           throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
         }
+
+        if (argc > 4) {
+            on_device = (0 != std::atoi(argv[4]));
+        }
       }
       catch (const char * e) {
         std::cout << e << std::endl;
@@ -129,6 +133,7 @@ int main(int argc, char * argv[])
       std::cout << "Number of iterations = " << iterations << std::endl;
       std::cout << "Matrix order         = " << order << std::endl;
       std::cout << "Variant              = " << vnames[variant] << std::endl;
+      std::cout << "Device-initiated     = " << (on_device ? "true" : "false") << std::endl;
     }
 
     // for B += T.T
@@ -216,18 +221,23 @@ int main(int argc, char * argv[])
             trans_time = prk::wtime();
         }
 
-        // transpose the matrix
-        for (int r=0; r<np; r++) {
-            const int recv_from = (me + r) % np;
-            size_t offset = block_order * block_order * me;
-            const double * T = (double*)nvshmem_ptr(A + offset, recv_from);
-            offset = block_order * block_order * recv_from;
-            if (variant==0) {
-                transposeNaive<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
-            } else if (variant==1) {
-                transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
-            } else if (variant==2) {
-                transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
+        if (on_device) {
+            transpose_nvshmem_ptr<<<dimGrid, dimBlock>>>(variant, block_order*block_order, me, np,
+                                                         block_order, A, B);
+        } else {
+            // transpose the matrix
+            for (int r=0; r<np; r++) {
+                const int recv_from = (me + r) % np;
+                size_t offset = block_order * block_order * me;
+                const double * T = (double*)nvshmem_ptr(A + offset, recv_from);
+                offset = block_order * block_order * recv_from;
+                if (variant==0) {
+                    transposeNaive<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
+                } else if (variant==1) {
+                    transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
+                } else if (variant==2) {
+                    transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T, B + offset);
+                }
             }
         }
         prk::NVSHMEM::barrier(false);
@@ -235,7 +245,7 @@ int main(int argc, char * argv[])
 
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
-        prk::NVSHMEM::barrier(true);
+        prk::NVSHMEM::barrier(false);
         //prk::CUDA::sync();
       }
       //prk::NVSHMEM::barrier(false);
