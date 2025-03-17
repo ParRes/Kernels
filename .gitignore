@@ -257,8 +257,8 @@ Cxx11/stencil-vector-raja
 Cxx11/test_cuda_collectives
 Cxx11/test_dpcpp_collectives
 Cxx11/transpose
-Cxx11/transpose-a2a-mpi
 Cxx11/transpose-a2a-mpi-nccl
+Cxx11/transpose-a2a-mpi
 Cxx11/transpose-a2a-nvshmem
 Cxx11/transpose-async
 Cxx11/transpose-cilk
@@ -280,6 +280,7 @@ Cxx11/transpose-opencl
 Cxx11/transpose-openmp
 Cxx11/transpose-openacc
 Cxx11/transpose-openmp-target
+Cxx11/transpose-p2p-mpi-nccl
 Cxx11/transpose-p2p-mpi
 Cxx11/transpose-ptr-nvshmem
 Cxx11/transpose-pstl
