@@ -197,7 +197,7 @@ int main(int argc, char * argv[])
     //A[order][block_order]
     double * A = prk::CUDA::malloc_device<double>(nelems);
     double * B = prk::CUDA::malloc_device<double>(nelems);
-    double * T = prk::CUDA::malloc_device<double>(nelems);
+    double * T = prk::CUDA::malloc_device<double>(block_order * block_order);
 
     prk::CUDA::copyH2D(A, h_A, nelems);
     prk::CUDA::copyH2D(B, h_B, nelems);
@@ -212,39 +212,42 @@ int main(int argc, char * argv[])
             trans_time = prk::wtime();
         }
 
-        prk::NCCL::alltoall(A, T, block_order*block_order, nccl_comm_world);
-#ifdef DEBUG
-        prk::CUDA::sync();
-        prk::MPI::barrier();
-#endif
-
         // transpose the  matrix  
-        if (variant==3) {
-            transposeNaiveBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
-        } else if (variant==4) {
-            transposeCoalescedBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
-        } else if (variant==5) {
-            transposeNoBankConflictBulk<<<dimGrid, dimBlock>>>(np, block_order, T, B);
-        } else {
-            for (int r=0; r<np; r++) {
-              const size_t offset = block_order * block_order * r;
-              if (variant==6) {
-                  // debug
-                  const int threads_per_block = 16;
-                  const int blocks_per_grid = (block_order + threads_per_block - 1) / threads_per_block;
-                  dim3 dimBlock(threads_per_block, threads_per_block, 1);
-                  dim3 dimGrid(blocks_per_grid, blocks_per_grid, 1);
-                  transposeSimple<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
-                  prk::CUDA::sync();
-              } else if (variant==0) {
-                  transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
-              } else if (variant==1) {
-                  transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
-              } else if (variant==2) {
-                  transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
-              }
+        for (int r=0; r<np; r++) {
+            const int recv_from = (me + r) % np;
+            const int send_to   = (me - r + np) % np;
+            size_t offset = block_order * block_order * send_to;
+            prk::NCCL::sendrecv(A.data() + offset, send_to, T.data(), recv_from, block_order*block_order);
+            offset = block_order * block_order * recv_from;
+            //transpose_block(B.data() + offset, T.data(), block_order, tile_size); 
+            if (variant==0) {
+              transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+            } else if (variant==1) {
+                transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+            } else if (variant==2) {
+                transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
             }
         }
+
+        // for (int r=0; r<np; r++) {
+        //   const size_t offset = block_order * block_order * r;
+        //   if (variant==6) {
+        //       // debug
+        //       const int threads_per_block = 16;
+        //       const int blocks_per_grid = (block_order + threads_per_block - 1) / threads_per_block;
+        //       dim3 dimBlock(threads_per_block, threads_per_block, 1);
+        //       dim3 dimGrid(blocks_per_grid, blocks_per_grid, 1);
+        //       transposeSimple<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+        //       prk::CUDA::sync();
+        //   } else if (variant==0) {
+        //       transposeNaive<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+        //   } else if (variant==1) {
+        //       transposeCoalesced<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+        //   } else if (variant==2) {
+        //       transposeNoBankConflict<<<dimGrid, dimBlock>>>(block_order, T + offset, B + offset);
+        //   }
+        // }
+
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
       }
