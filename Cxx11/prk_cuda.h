@@ -17,6 +17,8 @@
 #include <cublas_v2.h>
 #endif
 
+//#include <nvtx3.hpp>
+
 typedef double prk_float;
 
 namespace prk
