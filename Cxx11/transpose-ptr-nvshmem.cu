@@ -150,7 +150,7 @@ int main(int argc, char * argv[])
     const int num_gpus = info.num_gpus();
     info.set_gpu(me % num_gpus);
 
-#if 0
+#if 1
     if (me == 0)
     {
         void** args = nullptr; // unused by implementation
@@ -222,8 +222,27 @@ int main(int argc, char * argv[])
         }
 
         if (on_device) {
+#if 1
+            // we do this and barrier outside of the kernel because this kernel supports gridsize <= 792 (at least on H100)
+            // and that is too small for the transpose algorithm we are doing, which requires e.g. a 32x32x1 grid for a
+            // 4096x4096 matrix
             transpose_nvshmem_ptr<<<dimGrid, dimBlock>>>(variant, block_order*block_order, me, np,
                                                          block_order, A, B);
+#else
+            size_t block_size = block_order*block_order;
+            void* args[] = {&variant, &block_size, &me, &np, &block_order, &A, &B};
+            size_t sm_size = 32*33*sizeof(double);
+
+            int gridsize = -1;
+            prk::check( (cudaError_t)nvshmemx_collective_launch_query_gridsize((const void*)transpose_nvshmem_ptr,
+                                                                               dimBlock, args, sm_size, &gridsize) );
+            std::cout << "transpose_nvshmem_ptr: NVSHMEM gridsize = " << gridsize << std::endl;
+            std::cout << "dimGrid = " << dimGrid.x << "," << dimGrid.y << "," << dimGrid.z << std::endl;
+
+            prk::check( (cudaError_t)nvshmemx_collective_launch((const void*)transpose_nvshmem_ptr, 
+                                                                dimGrid, dimBlock,
+                                                                args, sm_size, (cudaStream_t)0) );
+#endif
         } else {
             // transpose the matrix
             for (int r=0; r<np; r++) {
