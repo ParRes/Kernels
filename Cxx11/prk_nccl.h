@@ -50,6 +50,17 @@ namespace prk
             prk::check( ncclGroupEnd() );
         }
 
+        template <typename T>
+        void sendrecv(const T * sbuffer,  int dst, T * rbuffer, int src, int count, ncclComm_t comm, cudaStream_t stream = 0) {
+            ncclDataType_t type = get_NCCL_Datatype(*sbuffer);
+            prk::check( ncclGroupStart() );
+            {
+                prk::check( ncclSend(sbuffer, count, type, dst, comm, stream) );
+                prk::check( ncclRecv(rbuffer, count, type, src, comm, stream) );
+            }
+            prk::check( ncclGroupEnd() );
+        }
+
     } // NCCL namespace
 
 } // prk namespace
