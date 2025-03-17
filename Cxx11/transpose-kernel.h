@@ -162,6 +162,16 @@ __global__ void transposeCoalescedBulk(int np, unsigned order, const double * RE
     }
 }
 
+__device__ void transposeNaiveDevice(unsigned order, const double * RESTRICT A, double * RESTRICT B)
+{
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[x*order + (y+j)] += A[(y+j)*order + x];
+    }
+}
+
 __global__ void transposeNaiveBulk(int np, unsigned order, const double * RESTRICT A, double * RESTRICT B)
 {
     auto x = blockIdx.x * tile_dim + threadIdx.x;
@@ -191,5 +201,29 @@ __global__ void transposeSimpleBulk(int np, unsigned order, const double * RESTR
       }
     }
 }
+
+#ifdef USE_NVSHMEM
+
+__global__ void transpose_nvshmem_ptr(int variant, size_t block_size, int me, int np,
+                                      unsigned block_order, const double * RESTRICT A, double * RESTRICT B)
+{
+    // block_size = block_order * block_order
+    for (int r=0; r<np; r++) {
+        const int recv_from = (me + r) % np;
+        const size_t soffset = block_size * me;
+        const size_t roffset = block_size * recv_from;
+        const double * T = (double*)nvshmem_ptr(A + soffset, recv_from);
+        if (variant==0) {
+            transposeNaiveDevice(block_order, T, B + roffset);
+        } else if (variant==1) {
+            transposeCoalescedDevice(block_order, T, B + roffset);
+        } else if (variant==2) {
+            transposeNoBankConflictDevice(block_order, T, B + roffset);
+        }
+        __syncthreads();
+    }
+}
+
+#endif // NVSHMEM
 
 #endif // NVCC
