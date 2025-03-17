@@ -217,7 +217,7 @@ int main(int argc, char * argv[])
             const int recv_from = (me + r) % np;
             const int send_to   = (me - r + np) % np;
             size_t offset = block_order * block_order * send_to;
-            prk::NCCL::sendrecv(A.data() + offset, send_to, T.data(), recv_from, block_order*block_order);
+            prk::NCCL::sendrecv(A + offset, send_to, T, recv_from, block_order*block_order, nccl_comm_world);
             offset = block_order * block_order * recv_from;
             //transpose_block(B.data() + offset, T.data(), block_order, tile_size); 
             if (variant==0) {
