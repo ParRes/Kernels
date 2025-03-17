@@ -123,7 +123,7 @@ cuda: stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda
 stf: cudastf
 cudastf: dgemm-cudastf dgemm-cublas-cudastf stencil-cudastf p2p-cudastf transpose-cudastf
 
-nccl: nstream-nccl transpose-a2a-mpi-nccl
+nccl: nstream-nccl transpose-a2a-mpi-nccl transpose-p2p-mpi-nccl
 
 oshmem: transpose-get-oshmem
 
