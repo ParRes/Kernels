@@ -36,7 +36,7 @@ namespace prk
         constexpr ncclDataType_t get_NCCL_Datatype(int i) { return ncclInt32; }
 
         template <typename T>
-        void alltoall(const T * sbuffer, T * rbuffer, int count, ncclComm_t comm, cudaStream_t stream = 0) {
+        void alltoall(const T * sbuffer, T * rbuffer, size_t count, ncclComm_t comm, cudaStream_t stream = 0) {
             ncclDataType_t type = get_NCCL_Datatype(*sbuffer);
 
             int np;
@@ -51,7 +51,7 @@ namespace prk
         }
 
         template <typename T>
-        void sendrecv(const T * sbuffer,  int dst, T * rbuffer, int src, int count, ncclComm_t comm, cudaStream_t stream = 0) {
+        void sendrecv(const T * sbuffer,  int dst, T * rbuffer, int src, size_t count, ncclComm_t comm, cudaStream_t stream = 0) {
             ncclDataType_t type = get_NCCL_Datatype(*sbuffer);
             prk::check( ncclGroupStart() );
             {
