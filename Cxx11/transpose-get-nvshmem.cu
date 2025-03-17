@@ -58,8 +58,7 @@
 #include "prk_cuda.h"
 #include "transpose-kernel.h"
 
-const std::array<std::string,6> vnames = {"naive", "coalesced", "no bank conflicts",
-                                          "bulk naive", "bulk coalesced", "bulk no bank conflicts"};
+const std::array<std::string,3> vnames = {"naive", "coalesced", "no bank conflicts"};
 
 int main(int argc, char * argv[])
 {
@@ -88,7 +87,7 @@ int main(int argc, char * argv[])
     {
       try {
         if (argc < 3) {
-          throw "Usage: <# iterations> <matrix order> [variant (0-5)]";
+          throw "Usage: <# iterations> <matrix order> [variant (0-2)]";
         }
 
         iterations  = std::atoi(argv[1]);
