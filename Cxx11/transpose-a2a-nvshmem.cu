@@ -155,7 +155,7 @@ int main(int argc, char * argv[])
     const int num_gpus = info.num_gpus();
     info.set_gpu(me % num_gpus);
 
-#if 1
+#if 0
     if (me == 0)
     {
         void** args = nullptr; // unused by implementation
