@@ -26,6 +26,7 @@ all:
 	cd dgemm-blis      && cargo build $(RCFLAGS)
 	cd dgemm-iter      && cargo build $(RCFLAGS)
 	cd dgemm-rayon     && cargo build $(RCFLAGS)
+	cd pic             && cargo build $(RCFLAGS)
 clean:
 	cd nstream 	   && cargo clean
 	cd nstream-unsafe  && cargo clean
@@ -40,3 +41,4 @@ clean:
 	cd dgemm-blis      && cargo clean
 	cd dgemm-iter      && cargo clean
 	cd dgemm-rayon     && cargo clean
+	cd pic             && cargo clean
