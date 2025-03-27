@@ -1,0 +1,9 @@
+[package]
+name = "pic"
+version = "0.1.0"
+edition = "2021"
+authors = ["Christian Asch <caschb@cenat.ac.cr>"]
+
+[dependencies]
+clap = { version = "4.5.32", features = ["derive"] }
+common = { version = "0.1.0", path = "../common" }
