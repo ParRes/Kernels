@@ -227,6 +227,9 @@ int main(int argc, char * argv[])
             trans_time = prk::wtime();
         }
 
+        // Before any PE calls a nvshmem_alltoall routine, the following conditions must be ensured:
+        // The dest data object on all PEs in the active set is ready to accept the nvshmem_alltoall data.
+        // i.e. only T needs to be ready, not A.
         prk::NVSHMEM::alltoall(T, A, block_order*block_order);
 
         // transpose the  matrix  
@@ -256,9 +259,10 @@ int main(int argc, char * argv[])
               }
             }
         }
+        // this is before A+=1 because we only need to synchronize T before the all-to-all happens
+        prk::NVSHMEM::barrier(false);
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
-        prk::NVSHMEM::barrier(false);
       }
       //prk::NVSHMEM::barrier(false);
       prk::CUDA::sync();
