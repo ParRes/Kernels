@@ -196,6 +196,24 @@ CUDAFLAGS+=-D_X86INTRIN_H_INCLUDED
 #CUDAFLAGS+=-D_AVX512IFMAINTRIN_H_INCLUDED
 #CUDAFLAGS+=-D_AVX512IFMAVLINTRIN_H_INCLUDED
 #CUDAFLAGS+=-D_AVX512ERINTRIN_H_INCLUDED
+CUDAFLAGS += -I/usr/local/cuda-12.6/targets/x86_64-linux/include/cub/detail
+#
+# NCCL
+#
+NCCLDIR=../deps/nccl
+NCCLINC=-I${NCCLDIR}/include
+NCCLLIB=-L${NCCLDIR}/lib -lnccl
+#
+# NVSHMEM (Apt packages not reliable...)
+#
+NVSHMEMFLAGS=-rdc=true -diag-suppress 3012,3013
+#NVSHMEMFLAGS+=-I/usr/include/nvshmem_12
+NVSHMEM_DIR=${HOME}/NVSHMEM/nvshmem/build/src
+#NVSHMEM_DIR=/opt/nvidia/hpc_sdk/Linux_x86_64/24.11/comm_libs/12.6/nvshmem
+NVSHMEMFLAGS+=-I${NVSHMEM_DIR}/include
+NVSHMEMFLAGS+=-L${NVSHMEM_DIR}/lib
+NVSHMEMFLAGS+=-Wl,-rpath=${NVSHMEM_DIR}/lib
+NVSHMEMFLAGS+=-lnvshmem_device -lnvshmem_host
 #
 # CUDASTF
 #
@@ -221,6 +239,13 @@ MPILIB+=-lopen-pal -lopen-rte
 #MPIINC=-I/usr/include/mpich-3.2-$$(uname -m)
 #MPILIB=-L/usr/lib64/mpich-3.2/lib -lmpi
 #
+# OpenSHMEM
+#
+OSHDIR=/opt/mpich/oshmpi2-mpich
+OSHCC=${OSHDIR}/bin/oshcc
+OSHCXX=${OSHDIR}/bin/oshc++ -std=c++20
+OSHINC=-I${OSHDIR}/include
+#
 # Global Arrays
 #
 GADIR=../deps/ga
@@ -231,6 +256,7 @@ GAFLAG+=-L${GADIR}/../armci-mpi/lib -larmci # ARMCI-MPI
 GAFLAG+=${MPIINC} ${MPILIB}
 GAFLAG+=-lmpifort -lmpi
 GAFLAG+=-i8 # GA is compiled with -i8 on 64-bit systems
+#GAFLAG+=-fdefault-integer-8 # GA is compiled with 64b integers on 64-bit systems
 #
 # PETSc
 #
