@@ -55,15 +55,13 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
-#include "transpose-kernel.h"
 
 // The kernel was derived from https://github.com/parallel-forall/code-samples/blob/master/series/cuda-cpp/transpose/transpose.cu
 
-#if 0
 const int tile_dim = 32;
 const int block_rows = 8;
 
-__global__ void transposeNoBankConflict(int order, double * A, double * B)
+__global__ void transposeNoBankConflict(int order, double * RESTRICT A, double * RESTRICT B)
 {
     __shared__ double tile[tile_dim][tile_dim+1];
 
@@ -85,7 +83,7 @@ __global__ void transposeNoBankConflict(int order, double * A, double * B)
     }
 }
 
-__global__ void transposeCoalesced(int order, double * A, double * B)
+__global__ void transposeCoalesced(int order, double * RESTRICT A, double * RESTRICT B)
 {
     __shared__ double tile[tile_dim][tile_dim];
 
@@ -107,7 +105,7 @@ __global__ void transposeCoalesced(int order, double * A, double * B)
     }
 }
 
-__global__ void transposeNaive(int order, double * A, double * B)
+__global__ void transposeNaive(int order, double * RESTRICT A, double * RESTRICT B)
 {
     auto x = blockIdx.x * tile_dim + threadIdx.x;
     auto y = blockIdx.y * tile_dim + threadIdx.y;
@@ -117,9 +115,18 @@ __global__ void transposeNaive(int order, double * A, double * B)
         A[(y+j)*order + x] += (double)1;
     }
 }
-#endif
 
-const std::array<std::string,5> vnames = {"naive", "coalesced", "no bank conflicts", "simple block strided", "simple"};
+__global__ void transposeBlockStrided(unsigned order, double * RESTRICT A, double * RESTRICT B)
+{
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < order; i += blockDim.x * gridDim.x) {
+      for (unsigned int j = blockIdx.y * blockDim.y + threadIdx.y; j < order; j += blockDim.y * gridDim.y) {
+        B[i*order + j] += A[j*order + i];
+        A[j*order + i] += (double)1;
+      }
+    }
+}
+
+const std::array<std::string,4> vnames = {"naive", "coalesced", "no bank conflicts", "block strided"};
 
 int main(int argc, char * argv[])
 {
@@ -158,8 +165,8 @@ int main(int argc, char * argv[])
       if (argc > 3) {
           variant = std::atoi(argv[3]);
       }
-      if (variant < 0 || variant > 4) {
-          throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3: simple block strided, 4: simple)";
+      if (variant < 0 || variant > 3) {
+          throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3: simple block strided";
       }
   }
   catch (const char * e) {
@@ -216,9 +223,7 @@ int main(int argc, char * argv[])
     } else if (variant==2) {
         transposeNoBankConflict<<<dimGrid, dimBlock>>>(order, d_a, d_b);
     } else if (variant==3) {
-        transposeSimple2<<<dimGrid, dimBlock>>>(order, d_a, d_b);
-    } else if (variant==4) {
-        transposeSimple<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+        transposeBlockStrided<<<dimGrid, dimBlock>>>(order, d_a, d_b);
     }
     prk::CUDA::sync();
   }
