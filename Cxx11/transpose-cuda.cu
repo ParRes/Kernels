@@ -55,9 +55,11 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
+#include "transpose-kernel.h"
 
 // The kernel was derived from https://github.com/parallel-forall/code-samples/blob/master/series/cuda-cpp/transpose/transpose.cu
 
+#if 0
 const int tile_dim = 32;
 const int block_rows = 8;
 
@@ -115,6 +117,7 @@ __global__ void transposeNaive(int order, double * A, double * B)
         A[(y+j)*order + x] += (double)1;
     }
 }
+#endif
 
 const std::array<std::string,5> vnames = {"naive", "coalesced", "no bank conflicts", "simple block strided", "simple"};
 
@@ -134,7 +137,7 @@ int main(int argc, char * argv[])
   int order, variant;
   try {
       if (argc < 3) {
-        throw "Usage: <# iterations> <matrix order> [variant (0/1/2)]";
+        throw "Usage: <# iterations> <matrix order> [variant (0-4)]";
       }
 
       iterations  = std::atoi(argv[1]);
