@@ -116,7 +116,7 @@ __global__ void transposeNaive(int order, double * A, double * B)
     }
 }
 
-const std::array<std::string,3> vnames = {"naive", "coalesced", "no bank conflicts"};
+const std::array<std::string,5> vnames = {"naive", "coalesced", "no bank conflicts", "simple block strided", "simple"};
 
 int main(int argc, char * argv[])
 {
@@ -155,8 +155,8 @@ int main(int argc, char * argv[])
       if (argc > 3) {
           variant = std::atoi(argv[3]);
       }
-      if (variant < 0 || variant > 2) {
-          throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts)";
+      if (variant < 0 || variant > 4) {
+          throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3: simple block strided, 4: simple)";
       }
   }
   catch (const char * e) {
@@ -212,6 +212,10 @@ int main(int argc, char * argv[])
         transposeCoalesced<<<dimGrid, dimBlock>>>(order, d_a, d_b);
     } else if (variant==2) {
         transposeNoBankConflict<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    } else if (variant==3) {
+        transposeSimple2<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+    } else if (variant==4) {
+        transposeSimple<<<dimGrid, dimBlock>>>(order, d_a, d_b);
     }
     prk::CUDA::sync();
   }

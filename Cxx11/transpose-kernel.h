@@ -92,6 +92,15 @@ __global__ void transposeSimple(unsigned order, const double * RESTRICT A, doubl
     }
 }
 
+__global__ void transposeSimple2(unsigned order, const double * RESTRICT A, double * RESTRICT B)
+{
+    for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < order; i += blockDim.x * gridDim.x) {
+      for (unsigned int j = blockIdx.y * blockDim.y + threadIdx.y; j < order; j += blockDim.y * gridDim.y) {
+        B[i*order + j] += A[j*order + i];
+      }
+    }
+}
+
 __global__ void cuda_increment(const unsigned n, double * RESTRICT A)
 {
     const unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
