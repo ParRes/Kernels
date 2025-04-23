@@ -223,6 +223,9 @@ int main(int argc, char * argv[])
     } else if (variant==2) {
         transposeNoBankConflict<<<dimGrid, dimBlock>>>(order, d_a, d_b);
     } else if (variant==3) {
+        const int grids = order/16; // works well on H100
+        dim3 dimGrid(grids, grids, 1);
+        dim3 dimBlock(16, 16, 1);   // works well on H100 and 256 is often good
         transposeBlockStrided<<<dimGrid, dimBlock>>>(order, d_a, d_b);
     }
     prk::CUDA::sync();
