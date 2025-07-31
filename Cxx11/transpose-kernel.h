@@ -233,6 +233,44 @@ __global__ void transpose_nvshmem_ptr(int variant, size_t block_size, int me, in
     }
 }
 
+__device__ void transposeNaiveDevice_get(unsigned order, /* double * RESTRICT T, */ const double * RESTRICT A, double * RESTRICT B, int recv_from)
+{
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    //T = (double*)nvshmem_ptr(A, recv_from); // this works but is not the goal
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        //nvshmem_getmem(&T[(y+j)*order + x], &A[(y+j)*order + x], sizeof(double), recv_from); // this works but why use a big buffer?
+        //B[x*order + (y+j)] += T[(y+j)*order + x];
+        double T;
+        nvshmem_getmem(&T, &A[(y+j)*order + x], sizeof(double), recv_from);
+        B[x*order + (y+j)] += T;
+    }
+}
+
+__global__ void transpose_nvshmem_get(int variant, size_t block_size, int me, int np,
+                                      unsigned block_order, const double * RESTRICT A, double * RESTRICT B, double * RESTRICT T)
+{
+    // block_size = block_order * block_order
+    for (int r=0; r<np; r++) {
+        const int recv_from = (me + r) % np;
+        const size_t soffset = block_size * me;
+        const size_t roffset = block_size * recv_from;
+        //const double * T = (double*)nvshmem_ptr(A + soffset, recv_from);
+        //nvshmemx_getmem(T, A + soffset, block_order * block_order * sizeof(double), recv_from);
+
+        //if (variant==0) {
+            transposeNaiveDevice_get(block_order, /* T, */ A + soffset, B + roffset, recv_from);
+        /*} else if (variant==1) {
+            transposeCoalescedDevice(block_order, T, B + roffset);
+        } else if (variant==2) {
+            transposeNoBankConflictDevice(block_order, T, B + roffset);
+        }*/
+        __syncthreads();
+    }
+}
+
 #endif // NVSHMEM
 
 #endif // NVCC

@@ -84,6 +84,14 @@ namespace prk {
             nvshmemx_getmem_on_stream(dest, source, count * sizeof(T), pe, stream);
         }
 
+#if 0
+        __device__
+        template <typename T>
+        void get(T * dest, const T * source, size_t count, int pe) {
+            nvshmemx_getmem(dest, source, count * sizeof(T), pe);
+        }
+#endif
+
         template <typename T>
         T * allocate(size_t count) {
             //std::cerr << "nvshmem_malloc(" << count * sizeof(T) << ")" << std::endl;
