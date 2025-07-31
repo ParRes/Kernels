@@ -249,6 +249,52 @@ __device__ void transposeNaiveDevice_get(unsigned order, /* double * RESTRICT T,
     }
 }
 
+__device__ void transposeCoalescedDevice_get(unsigned order, const double * RESTRICT A, double * RESTRICT B, int recv_from)
+{
+    __shared__ double tile[tile_dim][tile_dim];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       double T;
+       nvshmem_getmem(&T, &A[(y+j)*order + x], sizeof(double), recv_from);
+       tile[threadIdx.y+j][threadIdx.x] = T;
+    }
+
+    __syncthreads();
+
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
+    }
+}
+
+__device__ void transposeNoBankConflictDevice_get(unsigned order, const double * RESTRICT A, double * RESTRICT B, int recv_from)
+{
+    __shared__ double tile[tile_dim][tile_dim+1];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       double T;
+       nvshmem_getmem(&T, &A[(y+j)*order + x], sizeof(double), recv_from);
+       tile[threadIdx.y+j][threadIdx.x] = T;
+    }
+
+    __syncthreads();
+
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        B[(y+j)*order + x] += tile[threadIdx.x][threadIdx.y + j];
+    }
+}
+
 __global__ void transpose_nvshmem_get(int variant, size_t block_size, int me, int np,
                                       unsigned block_order, const double * RESTRICT A, double * RESTRICT B, double * RESTRICT T)
 {
@@ -260,13 +306,13 @@ __global__ void transpose_nvshmem_get(int variant, size_t block_size, int me, in
         //const double * T = (double*)nvshmem_ptr(A + soffset, recv_from);
         //nvshmemx_getmem(T, A + soffset, block_order * block_order * sizeof(double), recv_from);
 
-        //if (variant==0) {
+        if (variant==0) {
             transposeNaiveDevice_get(block_order, /* T, */ A + soffset, B + roffset, recv_from);
-        /*} else if (variant==1) {
-            transposeCoalescedDevice(block_order, T, B + roffset);
+        } else if (variant==1) {
+            transposeCoalescedDevice_get(block_order, A + soffset, B + roffset, recv_from);
         } else if (variant==2) {
-            transposeNoBankConflictDevice(block_order, T, B + roffset);
-        }*/
+            transposeNoBankConflictDevice_get(block_order, A + soffset, B + roffset, recv_from);
+        }
         __syncthreads();
     }
 }
