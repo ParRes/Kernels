@@ -80,20 +80,19 @@ int main(int argc, char * argv[])
         if (argc < 3) {
           throw "Usage: <# iterations> <matrix order> [tile size]";
         }
-     
+
         iterations  = std::atoi(argv[1]);
         if (iterations < 1) {
           throw "ERROR: iterations must be >= 1";
         }
-     
+
         order = std::atol(argv[2]);
         if (order <= 0) {
           throw "ERROR: Matrix Order must be greater than 0";
         // } else if (order > prk::get_max_matrix_size()) {
         //   throw "ERROR: matrix dimension too large - overflow risk";
         }
-
-        if (order % np != 0) {
+        else if (order % np != 0) {
           throw "ERROR: Matrix order must be an integer multiple of the number of MPI processes";
         }
 
@@ -108,6 +107,7 @@ int main(int argc, char * argv[])
         return 1;
       }
      
+      std::cout << "Number of processes  = " << np << std::endl;
       std::cout << "Number of iterations = " << iterations << std::endl;
       std::cout << "Matrix order         = " << order << std::endl;
       std::cout << "Tile size            = " << tile_size << std::endl;
@@ -146,8 +146,8 @@ int main(int argc, char * argv[])
       for (int iter = 0; iter<=iterations; iter++) {
 
         if (iter==1) {
-            trans_time = prk::wtime();
             prk::MPI::barrier();
+            trans_time = prk::wtime();
         }
 
         //prk::MPI::alltoall(A.data(), block_order*block_order, T.data(), block_order*block_order);
