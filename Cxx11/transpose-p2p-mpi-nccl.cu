@@ -61,9 +61,7 @@
 
 //#define DEBUG 1
 
-const std::array<std::string,7> vnames = {"naive", "coalesced", "no bank conflicts",
-                                          "bulk naive", "bulk coalesced", "bulk no bank conflicts",
-                                          "debug"};
+const std::array<std::string,3> vnames = {"naive", "coalesced", "no bank conflicts"};
 
 int main(int argc, char * argv[])
 {
@@ -109,20 +107,17 @@ int main(int argc, char * argv[])
         if (argc > 3) {
             variant = std::atoi(argv[3]);
         }
-        if (variant < 0 || variant > 6) {
-            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3-5: bulk..., 6: debug)";
+        if (variant < 0 || variant > 2) {
+            throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts)";
         }
 
         block_order = order / np;
 
-        // debug variant doesn't care
-        if (variant != 6) {
-          if (order % tile_dim) {
-            throw "ERROR: matrix dimension not divisible by 32";
-          }
-          if (block_order % tile_dim) {
-            throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
-          }
+        if (order % tile_dim) {
+          throw "ERROR: matrix dimension not divisible by 32";
+        }
+        if (block_order % tile_dim) {
+          throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
         }
       }
       catch (const char * e) {
@@ -145,10 +140,6 @@ int main(int argc, char * argv[])
 
     // for B += T.T
     int dimz = 1;
-    // parallelize over z in bulk version
-    if (3 <= variant && variant <= 5) {
-        dimz = np;
-    }
     dim3 dimGrid(block_order/tile_dim, block_order/tile_dim, dimz);
     dim3 dimBlock(tile_dim, block_rows, 1);
     info.checkDims(dimBlock, dimGrid);
