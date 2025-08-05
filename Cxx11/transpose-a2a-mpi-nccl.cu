@@ -82,6 +82,7 @@ int main(int argc, char * argv[])
 
     int iterations = -1, variant = -1;
     size_t order = 0, block_order = 0;
+    bool perftest = false;
 
     if (me == 0) {
       std::cout << "Parallel Research Kernels" << std::endl;
@@ -124,6 +125,10 @@ int main(int argc, char * argv[])
             throw "ERROR: Block Order must be an integer multiple of the tile dimension (32)";
           }
         }
+
+        if (argc > 4) {
+            perftest = (bool)std::atoi(argv[4]);
+        }
       }
       catch (const char * e) {
         std::cout << e << std::endl;
@@ -135,11 +140,13 @@ int main(int argc, char * argv[])
       std::cout << "Number of iterations = " << iterations << std::endl;
       std::cout << "Matrix order         = " << order << std::endl;
       std::cout << "Variant              = " << vnames[variant] << std::endl;
+      std::cout << "Performance test     = " << (perftest ? "yes" : "no") << std::endl;
     }
 
     prk::MPI::bcast(&iterations);
     prk::MPI::bcast(&order);
     prk::MPI::bcast(&variant);
+    prk::MPI::bcast(&perftest);
     
     block_order = order / np;
 
@@ -246,7 +253,7 @@ int main(int argc, char * argv[])
             }
         }
         // increment A
-        cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
+        if (!perftest) cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
       }
       prk::CUDA::sync();
       prk::MPI::barrier();
@@ -290,11 +297,12 @@ int main(int argc, char * argv[])
 
     if (me == 0) {
       const auto epsilon = 1.0e-8;
-      if (abserr < epsilon) {
-        std::cout << "Solution validates" << std::endl;
+      if (abserr < epsilon || perftest) {
+        std::cout << (perftest ? "Validation skipped" : "Solution validates") << std::endl;
         auto avgtime = trans_time/iterations;
         auto bytes = (size_t)order * (size_t)order * sizeof(double);
-        std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
+        auto scaling = (perftest ? 1.5 : 2.0);
+        std::cout << "Rate (MB/s): " << 1.0e-6 * (scaling*bytes)/avgtime
                   << " Avg time (s): " << avgtime << std::endl;
       } else {
         std::cout << "ERROR: Aggregate squared error " << abserr
