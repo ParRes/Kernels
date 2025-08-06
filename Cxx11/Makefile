@@ -63,7 +63,7 @@ OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib 
 
 EXTRA=
 ifneq ($(findstring nvc++,$(CXX)),nvc++)
-  EXTRA += ranges stl #pstl tbb # TBB keeps breaking due to API changes
+  EXTRA += stl #pstl ranges tbb # TBB keeps breaking due to API changes
 endif
 ifneq ($(OPENACCFLAG),)
   EXTRA += openacc
