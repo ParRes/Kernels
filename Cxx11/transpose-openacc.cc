@@ -167,7 +167,7 @@ int main(int argc, char * argv[])
   if (abserr < epsilon) {
     std::cout << "Solution validates" << std::endl;
     auto avgtime = trans_time/iterations;
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (2L*bytes)/avgtime
+    std::cout << "Rate (MB/s): " << 1.0e-6 * (4.0*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "ERROR: Aggregate squared error " << abserr

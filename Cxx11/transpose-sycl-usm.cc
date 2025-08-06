@@ -135,7 +135,7 @@ void run(sycl::queue & q, int iterations, size_t order, size_t block_size)
     double avgtime = trans_time/iterations;
     double bytes = (size_t)order * (size_t)order * sizeof(T);
     std::cout << 8*sizeof(T) << "B "
-              << "Rate (MB/s): " << 1.0e-6 * (2.*bytes)/avgtime
+              << "Rate (MB/s): " << 1.0e-6 * (4.0*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
     std::cout << "ERROR: Aggregate squared error " << abserr
