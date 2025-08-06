@@ -70,8 +70,9 @@ int main(int argc, char * argv[])
   // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int order;
+  int iterations = -1;
+  int order = 0;
+  bool perftest = false;
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order>";
@@ -88,6 +89,10 @@ int main(int argc, char * argv[])
       } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
+
+      if (argc > 3) {
+          perftest = (bool)std::atoi(argv[3]);
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -96,6 +101,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Performance test     = " << (perftest ? "yes" : "no") << std::endl;
 
   cublasHandle_t h;
   //prk::check( cublasInit() );
@@ -104,6 +110,8 @@ int main(int argc, char * argv[])
   //////////////////////////////////////////////////////////////////////
   // Allocate space for the input and transpose matrix
   //////////////////////////////////////////////////////////////////////
+
+  double trans_time{0};
 
   const size_t nelems = (size_t)order * (size_t)order;
 
@@ -129,8 +137,6 @@ int main(int argc, char * argv[])
   prk::CUDA::copyH2D(d_b, h_b, nelems);
   prk::CUDA::copyH2D(d_o, h_o, 1);
 
-  double trans_time{0};
-
   for (int iter = 0; iter<=iterations; iter++) {
 
     if (iter==1) {
@@ -138,21 +144,23 @@ int main(int argc, char * argv[])
         trans_time = prk::wtime();
     }
 
-    double one(1);
+    const double one{1};
     // B += trans(A) i.e. B = trans(A) + B
     prk::check( cublasDgeam(h,
-                                  CUBLAS_OP_T, CUBLAS_OP_N,   // opA, opB
-                                  order, order,               // m, n
-                                  &one, d_a, order,           // alpha, A, lda
-                                  &one, d_b, order,           // beta, B, ldb
-                                  d_b, order) );              // C, ldc (in-place for B)
+                            CUBLAS_OP_T, CUBLAS_OP_N,   // opA, opB
+                            order, order,               // m, n
+                            &one, d_a, order,           // alpha, A, lda
+                            &one, d_b, order,           // beta, B, ldb
+                            d_b, order) );              // C, ldc (in-place for B)
 
     // A += 1.0 i.e. A = 1.0 * 1.0 + A
-    prk::check( cublasDaxpy(h,
-                      order*order,                // n
-                      &one,                       // alpha
-                      d_o, 0,                     // x, incx
-                      d_a, 1) );                  // y, incy
+    if (!perftest) {
+        prk::check( cublasDaxpy(h,
+                                order*order,                // n
+                                &one,                       // alpha
+                                d_o, 0,                     // x, incx
+                                d_a, 1) );                  // y, incy
+    }
     prk::CUDA::sync();
   }
   trans_time = prk::wtime() - trans_time;
@@ -190,11 +198,12 @@ int main(int argc, char * argv[])
   prk::CUDA::free_host(h_b);
 
   const double epsilon = 1.0e-8;
-  if (abserr < epsilon) {
-    std::cout << "Solution validates" << std::endl;
+  if (abserr < epsilon || perftest) {
+    std::cout << (perftest ? "Validation skipped" : "Solution validates") << std::endl;
     auto avgtime = trans_time/iterations;
     auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (4.0*bytes)/avgtime
+    auto scaling = (perftest ? 3.0 : 4.0);
+    std::cout << "Rate (MB/s): " << 1.0e-6 * (scaling*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
 #ifdef VERBOSE
