@@ -61,6 +61,7 @@
 const int tile_dim = 32;
 const int block_rows = 8;
 
+template <bool accumulate>
 __global__ void transposeNoBankConflict(int order, double * RESTRICT A, double * RESTRICT B)
 {
     __shared__ double tile[tile_dim][tile_dim+1];
@@ -70,7 +71,7 @@ __global__ void transposeNoBankConflict(int order, double * RESTRICT A, double *
 
     for (int j = 0; j < tile_dim; j += block_rows) {
        tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
-       A[(y+j)*order + x] += (double)1;
+       if constexpr (accumulate) A[(y+j)*order + x] += (double)1;
     }
 
     __syncthreads();
@@ -83,6 +84,7 @@ __global__ void transposeNoBankConflict(int order, double * RESTRICT A, double *
     }
 }
 
+template <bool accumulate>
 __global__ void transposeCoalesced(int order, double * RESTRICT A, double * RESTRICT B)
 {
     __shared__ double tile[tile_dim][tile_dim];
@@ -92,7 +94,7 @@ __global__ void transposeCoalesced(int order, double * RESTRICT A, double * REST
 
     for (int j = 0; j < tile_dim; j += block_rows) {
        tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
-       A[(y+j)*order + x] += (double)1;
+       if constexpr (accumulate) A[(y+j)*order + x] += (double)1;
     }
 
     __syncthreads();
@@ -105,6 +107,7 @@ __global__ void transposeCoalesced(int order, double * RESTRICT A, double * REST
     }
 }
 
+template <bool accumulate>
 __global__ void transposeNaive(int order, double * RESTRICT A, double * RESTRICT B)
 {
     auto x = blockIdx.x * tile_dim + threadIdx.x;
@@ -112,16 +115,17 @@ __global__ void transposeNaive(int order, double * RESTRICT A, double * RESTRICT
 
     for (int j = 0; j < tile_dim; j+= block_rows) {
         B[x*order + (y+j)] += A[(y+j)*order + x];
-        A[(y+j)*order + x] += (double)1;
+        if constexpr (accumulate) A[(y+j)*order + x] += (double)1;
     }
 }
 
+template <bool accumulate>
 __global__ void transposeBlockStrided(unsigned order, double * RESTRICT A, double * RESTRICT B)
 {
     for (unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < order; i += blockDim.x * gridDim.x) {
       for (unsigned int j = blockIdx.y * blockDim.y + threadIdx.y; j < order; j += blockDim.y * gridDim.y) {
         B[i*order + j] += A[j*order + i];
-        A[j*order + i] += (double)1;
+        if constexpr (accumulate) A[j*order + i] += (double)1;
       }
     }
 }
@@ -140,8 +144,10 @@ int main(int argc, char * argv[])
   // Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int order, variant;
+  int iterations = -1;
+  int order = 0, variant = -1;
+  bool perftest = false;
+
   try {
       if (argc < 3) {
         throw "Usage: <# iterations> <matrix order> [variant (0-4)]";
@@ -168,6 +174,10 @@ int main(int argc, char * argv[])
       if (variant < 0 || variant > 3) {
           throw "Please select a valid variant (0: naive 1: coalesced, 2: no bank conflicts, 3: simple block strided";
       }
+
+      if (argc > 4) {
+          perftest = (bool)std::atoi(argv[4]);
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -177,6 +187,7 @@ int main(int argc, char * argv[])
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
   std::cout << "Variant              = " << vnames[variant] << std::endl;
+  std::cout << "Performance test     = " << (perftest ? "yes" : "no") << std::endl;
 
   dim3 dimGrid(order/tile_dim, order/tile_dim, 1);
   dim3 dimBlock(tile_dim, block_rows, 1);
@@ -217,16 +228,20 @@ int main(int argc, char * argv[])
     }
 
     if (variant==0) {
-        transposeNaive<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+        if (perftest) transposeNaive<false><<<dimGrid, dimBlock>>>(order, d_a, d_b);
+        else          transposeNaive<true ><<<dimGrid, dimBlock>>>(order, d_a, d_b);
     } else if (variant==1) {
-        transposeCoalesced<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+        if (perftest) transposeCoalesced<false><<<dimGrid, dimBlock>>>(order, d_a, d_b);
+        else          transposeCoalesced<true ><<<dimGrid, dimBlock>>>(order, d_a, d_b);
     } else if (variant==2) {
-        transposeNoBankConflict<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+        if (perftest) transposeNoBankConflict<false><<<dimGrid, dimBlock>>>(order, d_a, d_b);
+        else          transposeNoBankConflict<true ><<<dimGrid, dimBlock>>>(order, d_a, d_b);
     } else if (variant==3) {
         const int grids = order/16; // works well on H100
         dim3 dimGrid(grids, grids, 1);
         dim3 dimBlock(16, 16, 1);   // works well on H100 and 256 is often good
-        transposeBlockStrided<<<dimGrid, dimBlock>>>(order, d_a, d_b);
+        if (perftest) transposeBlockStrided<false><<<dimGrid, dimBlock>>>(order, d_a, d_b);
+        else          transposeBlockStrided<true ><<<dimGrid, dimBlock>>>(order, d_a, d_b);
     }
     prk::CUDA::sync();
   }
@@ -260,12 +275,16 @@ int main(int argc, char * argv[])
   std::cout << "Sum of absolute differences: " << abserr << std::endl;
 #endif
 
+  prk::CUDA::free_host(h_a);
+  prk::CUDA::free_host(h_b);
+
   const double epsilon = 1.0e-8;
-  if (abserr < epsilon) {
-    std::cout << "Solution validates" << std::endl;
+  if (abserr < epsilon || perftest) {
+    std::cout << (perftest ? "Validation skipped" : "Solution validates") << std::endl;
     auto avgtime = trans_time/iterations;
     auto bytes = (size_t)order * (size_t)order * sizeof(double);
-    std::cout << "Rate (MB/s): " << 1.0e-6 * (4.0*bytes)/avgtime
+    auto scaling = (perftest ? 3.0 : 4.0);
+    std::cout << "Rate (MB/s): " << 1.0e-6 * (scaling*bytes)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   } else {
 #ifdef VERBOSE
@@ -279,9 +298,6 @@ int main(int argc, char * argv[])
               << " exceeds threshold " << epsilon << std::endl;
     return 1;
   }
-
-  prk::CUDA::free_host(h_a);
-  prk::CUDA::free_host(h_b);
 
   return 0;
 }

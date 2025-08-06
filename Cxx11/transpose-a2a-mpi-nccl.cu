@@ -301,7 +301,7 @@ int main(int argc, char * argv[])
         std::cout << (perftest ? "Validation skipped" : "Solution validates") << std::endl;
         auto avgtime = trans_time/iterations;
         auto bytes = (size_t)order * (size_t)order * sizeof(double);
-        auto scaling = (perftest ? 1.5 : 2.0);
+        auto scaling = (perftest ? 3.0 : 4.0);
         std::cout << "Rate (MB/s): " << 1.0e-6 * (scaling*bytes)/avgtime
                   << " Avg time (s): " << avgtime << std::endl;
       } else {
