@@ -189,6 +189,7 @@ int main(int argc, char * argv[])
     double trans_time{0};
     double increment_time{0};
     double transpose_kernel_time{0};
+    double alltoall_time{0};
 
     const size_t nelems = order * block_order;
 
@@ -214,9 +215,11 @@ int main(int argc, char * argv[])
     // Create CUDA events for profiling kernels
     cudaEvent_t increment_stop;
     cudaEvent_t transpose_start, transpose_stop;
+    cudaEvent_t alltoall_start;
     prk::check( cudaEventCreate(&increment_stop) );
     prk::check( cudaEventCreate(&transpose_start) );
     prk::check( cudaEventCreate(&transpose_stop) );
+    prk::check( cudaEventCreate(&alltoall_start) );
 
     prk::MPI::barrier();
 
@@ -229,6 +232,7 @@ int main(int argc, char * argv[])
             trans_time = prk::wtime();
         }
 
+        prk::check( cudaEventRecord(alltoall_start) );
         prk::NCCL::alltoall(A, T, block_order*block_order, nccl_comm_world);
 #ifdef DEBUG
         prk::CUDA::sync();
@@ -275,6 +279,11 @@ int main(int argc, char * argv[])
       trans_time = prk::wtime() - trans_time;
 
       // Calculate kernel times
+      prk::check( cudaEventSynchronize(transpose_start) );
+      float alltoall_milliseconds = 0;
+      prk::check( cudaEventElapsedTime(&alltoall_milliseconds, alltoall_start, transpose_start) );
+      alltoall_time = alltoall_milliseconds / 1000.0; // Convert to seconds
+
       prk::check( cudaEventSynchronize(transpose_stop) );
       float transpose_milliseconds = 0;
       prk::check( cudaEventElapsedTime(&transpose_milliseconds, transpose_start, transpose_stop) );
@@ -301,6 +310,7 @@ int main(int argc, char * argv[])
     prk::check( cudaEventDestroy(increment_stop) );
     prk::check( cudaEventDestroy(transpose_start) );
     prk::check( cudaEventDestroy(transpose_stop) );
+    prk::check( cudaEventDestroy(alltoall_start) );
 
     prk::CUDA::free(A);
     prk::CUDA::free(B);
@@ -337,6 +347,7 @@ int main(int argc, char * argv[])
         auto scaling = (perftest ? 3.0 : 4.0);
         std::cout << "Rate (MB/s): " << 1.0e-6 * (scaling*bytes)/avgtime
                   << " Avg time (s): " << avgtime << std::endl;
+        std::cout << "Alltoall total time (s): " << alltoall_time << std::endl;
         std::cout << "Transpose kernel total time (s): " << transpose_kernel_time << std::endl;
         if (!perftest) {
             std::cout << "Increment kernel total time (s): " << increment_time << std::endl;
