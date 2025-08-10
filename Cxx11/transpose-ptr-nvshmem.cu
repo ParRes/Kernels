@@ -155,6 +155,8 @@ int main(int argc, char * argv[])
     //////////////////////////////////////////////////////////////////////
 
     double trans_time{0};
+    double increment_time{0};
+    double transpose_kernel_time{0};
 
     const size_t nelems = order * block_order;
 
@@ -175,6 +177,15 @@ int main(int argc, char * argv[])
 
     prk::CUDA::copyH2D(A, h_A, nelems);
     prk::CUDA::copyH2D(B, h_B, nelems);
+
+    // Create CUDA events for profiling kernels
+    cudaEvent_t increment_start, increment_stop;
+    cudaEvent_t transpose_start, transpose_stop;
+    prk::check( cudaEventCreate(&increment_start) );
+    prk::check( cudaEventCreate(&increment_stop) );
+    prk::check( cudaEventCreate(&transpose_start) );
+    prk::check( cudaEventCreate(&transpose_stop) );
+
     prk::NVSHMEM::barrier(true);
 
     {
@@ -186,6 +197,7 @@ int main(int argc, char * argv[])
             trans_time = prk::wtime();
         }
 
+        prk::check( cudaEventRecord(transpose_start) );
         if (on_device) {
 #if 1
             // we do this and barrier outside of the kernel because this kernel supports gridsize <= 792 (at least on H100)
@@ -224,20 +236,42 @@ int main(int argc, char * argv[])
                 }
             }
         }
+        prk::check( cudaEventRecord(transpose_stop) );
         prk::NVSHMEM::barrier(false);
         //prk::CUDA::sync();
 
         // increment A
+        prk::check( cudaEventRecord(increment_start) );
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
+        prk::check( cudaEventRecord(increment_stop) );
         prk::NVSHMEM::barrier(false);
         //prk::CUDA::sync();
       }
       //prk::NVSHMEM::barrier(false);
       prk::CUDA::sync();
       trans_time = prk::wtime() - trans_time;
+
+      // Calculate kernel times
+      if (!on_device) {
+          prk::check( cudaEventSynchronize(transpose_stop) );
+          float transpose_milliseconds = 0;
+          prk::check( cudaEventElapsedTime(&transpose_milliseconds, transpose_start, transpose_stop) );
+          transpose_kernel_time = transpose_milliseconds / 1000.0; // Convert to seconds
+
+          prk::check( cudaEventSynchronize(increment_stop) );
+          float increment_milliseconds = 0;
+          prk::check( cudaEventElapsedTime(&increment_milliseconds, increment_start, increment_stop) );
+          increment_time = increment_milliseconds / 1000.0; // Convert to seconds
+      }
     }
 
     prk::CUDA::copyD2H(h_B, B, nelems);
+
+    // Clean up CUDA events
+    prk::check( cudaEventDestroy(increment_start) );
+    prk::check( cudaEventDestroy(increment_stop) );
+    prk::check( cudaEventDestroy(transpose_start) );
+    prk::check( cudaEventDestroy(transpose_stop) );
 
     prk::NVSHMEM::free(A);
     prk::CUDA::free(B);
@@ -277,6 +311,10 @@ int main(int argc, char * argv[])
         auto bytes = (size_t)order * (size_t)order * sizeof(double);
         std::cout << "Rate (MB/s): " << 1.0e-6 * (4.0*bytes)/avgtime
                   << " Avg time (s): " << avgtime << std::endl;
+        if (!on_device) {
+            std::cout << "Transpose kernel total time (s): " << transpose_kernel_time << std::endl;
+            std::cout << "Increment kernel total time (s): " << increment_time << std::endl;
+        }
       } else {
         std::cout << "ERROR: Aggregate squared error " << abserr
                   << " exceeds threshold " << epsilon << std::endl;
