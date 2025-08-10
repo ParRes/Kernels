@@ -311,10 +311,8 @@ int main(int argc, char * argv[])
         auto bytes = (size_t)order * (size_t)order * sizeof(double);
         std::cout << "Rate (MB/s): " << 1.0e-6 * (4.0*bytes)/avgtime
                   << " Avg time (s): " << avgtime << std::endl;
-        if (!on_device) {
-            std::cout << "Transpose kernel total time (s): " << transpose_kernel_time << std::endl;
-            std::cout << "Increment kernel total time (s): " << increment_time << std::endl;
-        }
+        std::cout << "Transpose kernel total time (s): " << transpose_kernel_time << std::endl;
+        std::cout << "Increment kernel total time (s): " << increment_time << std::endl;
       } else {
         std::cout << "ERROR: Aggregate squared error " << abserr
                   << " exceeds threshold " << epsilon << std::endl;
