@@ -190,6 +190,7 @@ int main(int argc, char * argv[])
     double increment_time{0};
     double transpose_kernel_time{0};
     double alltoall_time{0};
+    double total_time{0};
 
     const size_t nelems = order * block_order;
 
@@ -216,10 +217,13 @@ int main(int argc, char * argv[])
     cudaEvent_t increment_stop;
     cudaEvent_t transpose_start, transpose_stop;
     cudaEvent_t alltoall_start;
+    cudaEvent_t total_start, total_stop;
     prk::check( cudaEventCreate(&increment_stop) );
     prk::check( cudaEventCreate(&transpose_start) );
     prk::check( cudaEventCreate(&transpose_stop) );
     prk::check( cudaEventCreate(&alltoall_start) );
+    prk::check( cudaEventCreate(&total_start) );
+    prk::check( cudaEventCreate(&total_stop) );
 
     prk::MPI::barrier();
 
@@ -232,6 +236,7 @@ int main(int argc, char * argv[])
             trans_time = prk::wtime();
         }
 
+        prk::check( cudaEventRecord(total_start) );
         prk::check( cudaEventRecord(alltoall_start) );
         prk::NCCL::alltoall(A, T, block_order*block_order, nccl_comm_world);
 #ifdef DEBUG
@@ -273,6 +278,7 @@ int main(int argc, char * argv[])
             cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
             prk::check( cudaEventRecord(increment_stop) );
         }
+        prk::check( cudaEventRecord(total_stop) );
       }
       prk::CUDA::sync();
       prk::MPI::barrier();
@@ -295,6 +301,11 @@ int main(int argc, char * argv[])
           prk::check( cudaEventElapsedTime(&increment_milliseconds, transpose_stop, increment_stop) );
           increment_time = increment_milliseconds / 1000.0; // Convert to seconds
       }
+
+      prk::check( cudaEventSynchronize(total_stop) );
+      float total_milliseconds = 0;
+      prk::check( cudaEventElapsedTime(&total_milliseconds, total_start, total_stop) );
+      total_time = total_milliseconds / 1000.0; // Convert to seconds
     }
 
     prk::CUDA::copyD2H(h_B, B, nelems);
@@ -311,6 +322,8 @@ int main(int argc, char * argv[])
     prk::check( cudaEventDestroy(transpose_start) );
     prk::check( cudaEventDestroy(transpose_stop) );
     prk::check( cudaEventDestroy(alltoall_start) );
+    prk::check( cudaEventDestroy(total_start) );
+    prk::check( cudaEventDestroy(total_stop) );
 
     prk::CUDA::free(A);
     prk::CUDA::free(B);
@@ -352,6 +365,7 @@ int main(int argc, char * argv[])
         if (!perftest) {
             std::cout << "Increment kernel total time (s): " << increment_time << std::endl;
         }
+        std::cout << "Total kernel total time (s): " << total_time << std::endl;
       } else {
         std::cout << "ERROR: Aggregate squared error " << abserr
                   << " exceeds threshold " << epsilon << std::endl;
