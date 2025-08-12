@@ -248,6 +248,8 @@ int main(int argc, char * argv[])
         // The dest data object on all PEs in the active set is ready to accept the nvshmem_alltoall data.
         // i.e. only T needs to be ready, not A.
         prk::check( cudaEventRecord(total_start) );
+        // we need to synchronize T before the all-to-all happens
+        prk::NVSHMEM::barrier(false);
         prk::check( cudaEventRecord(alltoall_start) );
         prk::NVSHMEM::alltoall(T, A, block_order*block_order);
 
@@ -280,8 +282,6 @@ int main(int argc, char * argv[])
             }
         }
         prk::check( cudaEventRecord(transpose_stop) );
-        // this is before A+=1 because we only need to synchronize T before the all-to-all happens
-        prk::NVSHMEM::barrier(false);
         // increment A
         cuda_increment<<<blocks_per_grid, threads_per_block>>>(order * block_order, A);
         prk::check( cudaEventRecord(increment_stop) );
