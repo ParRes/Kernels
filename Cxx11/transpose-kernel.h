@@ -317,6 +317,108 @@ __global__ void transpose_nvshmem_get(int variant, size_t block_size, int me, in
     }
 }
 
+// PUT-based transpose kernels for NVSHMEM
+__device__ void transposeNaiveDevice_put(unsigned order, const double * RESTRICT A, double * RESTRICT B, int send_to)
+{
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        // Transpose and put directly to remote PE
+        double T = A[(y+j)*order + x];
+        nvshmem_putmem(&B[x*order + (y+j)], &T, sizeof(double), send_to);
+    }
+}
+
+__device__ void transposeCoalescedDevice_put(unsigned order, const double * RESTRICT A, double * RESTRICT B, int send_to)
+{
+    __shared__ double tile[tile_dim][tile_dim];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    // Load data into shared memory
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
+    }
+
+    __syncthreads();
+
+    // Transpose indices for output
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
+
+    // Write transposed data to remote PE
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        double T = tile[threadIdx.x][threadIdx.y + j];
+        nvshmem_putmem(&B[(y+j)*order + x], &T, sizeof(double), send_to);
+    }
+}
+
+__device__ void transposeNoBankConflictDevice_put(unsigned order, const double * RESTRICT A, double * RESTRICT B, int send_to)
+{
+    __shared__ double tile[tile_dim][tile_dim+1];
+
+    auto x = blockIdx.x * tile_dim + threadIdx.x;
+    auto y = blockIdx.y * tile_dim + threadIdx.y;
+
+    // Load data into shared memory
+    for (int j = 0; j < tile_dim; j += block_rows) {
+       tile[threadIdx.y+j][threadIdx.x] = A[(y+j)*order + x];
+    }
+
+    __syncthreads();
+
+    // Transpose indices for output
+    x = blockIdx.y * tile_dim + threadIdx.x;
+    y = blockIdx.x * tile_dim + threadIdx.y;
+
+    // Write transposed data to remote PE
+    for (int j = 0; j < tile_dim; j+= block_rows) {
+        double T = tile[threadIdx.x][threadIdx.y + j];
+        nvshmem_putmem(&B[(y+j)*order + x], &T, sizeof(double), send_to);
+    }
+}
+
+__global__ void transpose_nvshmem_put(int variant, size_t block_size, int me, int np,
+                                      unsigned block_order, const double * RESTRICT A, double * RESTRICT B)
+{
+    // Staged communication approach inspired by SHMEM implementation
+    // Phase 0: local transpose (done on diagonal block)
+    if (blockIdx.z == 0) {
+        const size_t offset = block_size * me;
+        if (variant==0) {
+            transposeNaiveDevice(block_order, A + offset, B + offset);
+        } else if (variant==1) {
+            transposeCoalescedDevice(block_order, A + offset, B + offset);
+        } else if (variant==2) {
+            transposeNoBankConflictDevice(block_order, A + offset, B + offset);
+        }
+    }
+    
+    __syncthreads();
+    
+    // Phases 1 to np-1: remote communication using PUT
+    for (int phase = 1; phase < np; phase++) {
+        const int send_to = (me - phase + np) % np;
+        const int recv_from = (me + phase) % np;
+        
+        const size_t soffset = block_size * send_to;    // source offset in A
+        const size_t roffset = block_size * recv_from;  // destination offset in B
+        
+        if (variant==0) {
+            transposeNaiveDevice_put(block_order, A + soffset, B + roffset, recv_from);
+        } else if (variant==1) {
+            transposeCoalescedDevice_put(block_order, A + soffset, B + roffset, recv_from);
+        } else if (variant==2) {
+            transposeNoBankConflictDevice_put(block_order, A + soffset, B + roffset, recv_from);
+        }
+        
+        // Synchronize between phases
+        __syncthreads();
+    }
+}
+
 #endif // NVSHMEM
 
 #endif // NVCC
