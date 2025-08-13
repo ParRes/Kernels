@@ -127,7 +127,7 @@ nccl: nstream-nccl transpose-a2a-mpi-nccl transpose-p2p-mpi-nccl
 
 oshmem: transpose-get-oshmem
 
-nvshmem: transpose-get-nvshmem transpose-a2a-nvshmem transpose-ptr-nvshmem
+nvshmem: transpose-get-nvshmem transpose-a2a-nvshmem transpose-ptr-nvshmem transpose-put-nvshmem
 
 hip: nstream-hip transpose-hip stencil-hip nstream-managed-hip
 

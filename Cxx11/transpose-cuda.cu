@@ -138,7 +138,7 @@ int main(int argc, char * argv[])
   std::cout << "C++11/CUDA Matrix transpose: B = A^T" << std::endl;
 
   prk::CUDA::info info;
-  info.print();
+  //info.print();
 
   //////////////////////////////////////////////////////////////////////
   // Read and test input parameters

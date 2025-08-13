@@ -27,13 +27,13 @@ namespace prk
         template <typename T>
         T * allocate(size_t count) { 
             T * ptr;
-            prk::check( ncclMemAlloc(&ptr, count * sizeof(T)) );
+            prk::check( ncclMemAlloc((void**)&ptr, count * sizeof(T)) );
             return ptr;
         }
 
         template <typename T>
         void free(T * ptr) { 
-            prk::check( ncclMemFree(ptr) );
+            prk::check( ncclMemFree((void*)ptr) );
         }
 
         template <typename T>
