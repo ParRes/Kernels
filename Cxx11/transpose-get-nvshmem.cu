@@ -172,8 +172,6 @@ int main(int argc, char * argv[])
 
     //A[order][block_order]
     double * A = prk::NVSHMEM::allocate<double>(nelems);
-    // this only works for NVL.  if running over UCX/IB, need to use prk::NVSHMEM::allocate (or register_buffer)
-    //double * T = prk::CUDA::malloc_device<double>(block_order * block_order);
     double * T = prk::NVSHMEM::allocate<double>(block_order * block_order);
     double * B = prk::CUDA::malloc_device<double>(nelems);
 
@@ -216,7 +214,6 @@ int main(int argc, char * argv[])
                 const int recv_from = (me + r) % np;
                 size_t offset = block_order * block_order * me;
                 prk::NVSHMEM::get(T, A + offset, block_order * block_order, recv_from);
-                //nvshmemx_getmem_on_stream(T, A + offset, block_order * block_order * sizeof(double), recv_from, 0 /* default stream */);
                 offset = block_order * block_order * recv_from;
                 if (variant==0) {
                     transposeNaive<<<dimGrid, dimBlock>>>(block_order, T, B + offset);

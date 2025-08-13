@@ -217,6 +217,14 @@ namespace prk
         }
 
         template <typename T>
+        void bput(MPI_Win win, T * buf, int target_rank, size_t target_offset, int count = 1) {
+            MPI_Datatype dt = prk::MPI::get_MPI_Datatype(*buf);
+            MPI_Request req = MPI_REQUEST_NULL;
+            prk::MPI::check( MPI_Rput(buf, count, dt, target_rank, target_offset, count, dt, win, &req) );
+            prk::MPI::check( MPI_Wait(&req, MPI_STATUS_IGNORE) );
+        }
+
+        template <typename T>
         std::pair<MPI_Win, T*> win_allocate(size_t count, int disp_unit = sizeof(T), MPI_Info info = MPI_INFO_NULL, MPI_Comm comm = MPI_COMM_WORLD) {
             MPI_Win win = MPI_WIN_NULL;
             T * buffer = nullptr;
