@@ -189,9 +189,9 @@ int main(int argc, char * argv[])
     }
 
     //A[order][block_order]
-    double * A = prk::CUDA::malloc_device<double>(nelems);
-    double * B = prk::CUDA::malloc_device<double>(nelems);
-    double * T = prk::CUDA::malloc_device<double>(block_order * block_order);
+    double * A = prk::NCCL::allocate<double>(nelems);
+    double * T = prk::NCCL::allocate<double>(block_order * block_order);
+    double * B = prk::CUDA::malloc_device<double>(nelems); // not used in comms
 
     prk::CUDA::copyH2D(A, h_A, nelems);
     prk::CUDA::copyH2D(B, h_B, nelems);
@@ -278,9 +278,9 @@ int main(int argc, char * argv[])
     prk::check( cudaEventDestroy(total_start) );
     prk::check( cudaEventDestroy(total_stop) );
 
-    prk::CUDA::free(A);
+    prk::NCCL::free(A);
+    prk::NCCL::free(T);
     prk::CUDA::free(B);
-    prk::CUDA::free(T);
 
     prk::CUDA::free_host(h_A);
 
