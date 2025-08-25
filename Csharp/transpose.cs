@@ -95,6 +95,11 @@ namespace PRK {
       double[] A = new double[order*order];
       double[] B = new double[order*order];
 
+      // Initialize matrix A with sequence 0,1,2,3,...
+      for (int i = 0; i < order*order; i++) {
+          A[i] = (double)i;
+      }
+
       Stopwatch timer = new Stopwatch();
 
       for (int k = 0 ; k <= iterations ; k++) {
@@ -119,7 +124,7 @@ namespace PRK {
       // Analyze and output results
       //////////////////////////////////////////////////////////////////////
 
-      double addit = (iterations+1) * iterations / 2;
+      double addit = (iterations+1.0) * iterations / 2.0;
       double abserr = 0.0;
       for (int j=0; j<order; j++) {
         for (int i=0; i<order; i++) {
