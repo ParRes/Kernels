@@ -59,7 +59,7 @@ OCCAFLAGS = -I${OCCADIR}/include -Wl,-rpath -Wl,${OCCADIR}/lib -L${OCCADIR}/lib 
 
 .PHONY: all clean vector valarray openmp target opencl taskloop stl \
 	ranges kokkos raja cuda cudastf cublas sycl dpcpp \
-	boost-compute thrust executor oneapi onemkl
+	boost-compute thrust executor oneapi onemkl nvidia
 
 EXTRA=
 ifneq ($(findstring nvc++,$(CXX)),nvc++)
@@ -157,6 +157,8 @@ openacc: nstream-openacc stencil-openacc transpose-openacc p2p-hyperplane-openac
 stdpar: nstream-stdpar transpose-stdpar #stencil-stdpar p2p-stdpar
 
 halide: nstream-halide stencil-halide
+
+nvidia: cuda cublas nccl nvshmem
 
 boost-compute: nstream-boost-compute
 # busted
