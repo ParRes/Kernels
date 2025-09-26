@@ -148,6 +148,7 @@ RAJADIR=/opt/raja/gcc
 RAJAFLAG=-I${RAJADIR}/include -L${RAJADIR}/lib -lRAJA ${OPENMPFLAG} ${TBBFLAG}
 THRUSTDIR=/opt/nvidia/hpc_sdk/Linux_$$(uname -m)/21.11/compilers/include-stdpar
 THRUSTFLAG=-I${THRUSTDIR} ${RANGEFLAG}
+THRUSTFLAG+=--extended-lambda
 #
 # CBLAS for C++ DGEMM
 #
