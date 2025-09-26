@@ -15,6 +15,7 @@
 
 #ifdef PRK_USE_CUBLAS
 #include <cublas_v2.h>
+#include <curand.h>
 #endif
 
 //#include <nvtx3.hpp>
@@ -55,6 +56,14 @@ namespace prk
 #error CUBLAS error names missing
             std::cerr << "PRK CUBLAS error: " << rc << std::endl;
 #endif
+            std::abort();
+        }
+    }
+
+    void check(curandStatus_t rc)
+    {
+        if (rc!=CURAND_STATUS_SUCCESS) {
+            std::cerr << "PRK CURAND error: " << curandGetErrorName(rc) << "=" << curandGetErrorString(rc) << std::endl;
             std::abort();
         }
     }
