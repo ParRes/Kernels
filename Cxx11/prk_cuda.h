@@ -63,7 +63,7 @@ namespace prk
     void check(curandStatus_t rc)
     {
         if (rc!=CURAND_STATUS_SUCCESS) {
-            std::cerr << "PRK CURAND error: " << curandGetErrorName(rc) << "=" << curandGetErrorString(rc) << std::endl;
+            std::cerr << "PRK CURAND error: " << curandGetErrorString(rc) << std::endl;
             std::abort();
         }
     }
