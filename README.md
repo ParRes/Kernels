@@ -20,17 +20,8 @@ they have not been optimized for the features of any particular system.
 # Build Instructions
 
 To build the codes the user needs to make certain changes by editing text
-files. Assuming the source tree is untarred in directory `$PRK`, the
+files. Assuming the source tree is untarred in directory `$PRK`, on of the
 following file needs to be copied to `$PRK/common/make.defs` and edited.
-
-`$PRK/common/make.defs.in` -- This file specifies the names of the C
-compiler (`CC`), and of the MPI (Message Passing Interface) compiler `MPICC`
-or compile script. If MPI is not going to be used, the user can ignore
-the value of `MPICC`. The compilers should already be in your path. That
-is, if you define `CC=icc`, then typing `which icc` should show a
-valid path where that compiler is installed.
-Special instructions for building and running codes using Charm++, Grappa, 
-OpenSHMEM, or Fine-Grain MPI are in `README.special`.
 
 We provide examples of working examples for a number of programming environments.
 Some of these are tested more than others.
@@ -56,7 +47,16 @@ Some of the C++ implementations require you to install Boost, RAJA, Kokkos, Para
 and then modify `make.defs` appropriately.  Please see the documentation in the
 [documentation](https://github.com/ParRes/Kernels/tree/default/doc) (`doc`) subdirectory.
 
-You can refer to the `travis` subdirectory for install scripts that can be readily modified
+example `$PRK/common/make.defs.old` -- This file specifies the names of the C
+compiler (`CC`), and of the MPI (Message Passing Interface) compiler `MPICC`
+or compile script. If MPI is not going to be used, the user can ignore
+the value of `MPICC`. The compilers should already be in your path. That
+is, if you define `CC=icx`, then typing `which icx` should show a
+valid path where that compiler is installed.
+Special instructions for building and running codes using Charm++, Grappa, 
+OpenSHMEM, or Fine-Grain MPI are in `README.special`.
+
+You can refer to the `.github/workflows/makefile.yml` subdirectory for install scripts that can be readily modified
 to install any of the dependencies in your local environment.
 
 # Supported Programming Models
@@ -262,12 +262,7 @@ To exercise all kernels, type
 
 # Quality Control
 
-We have a rather massive test matrix running in Travis CI.
-Unfortunately, the Travis CI environment may vary with time and occasionally differs
-from what we are running locally, which makes debugging tricky.
-If the status of the project is not passing, please inspect the [details](https://travis-ci.org/ParRes/Kernels),
-because this may not be an indication of an issue with our project, but rather
-something in Travis CI.
+CI moved from Travis to GitHub Actions.
 
 # License
 
