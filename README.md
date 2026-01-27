@@ -20,7 +20,7 @@ they have not been optimized for the features of any particular system.
 # Build Instructions
 
 To build the codes the user needs to make certain changes by editing text
-files. Assuming the source tree is untarred in directory `$PRK`, on of the
+files. Assuming the source tree is untarred in directory `$PRK`, one of the
 following file needs to be copied to `$PRK/common/make.defs` and edited.
 
 We provide examples of working examples for a number of programming environments.
