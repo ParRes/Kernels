@@ -282,7 +282,7 @@ endif
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt $(MPILIB) -o $@
 
 %-cublas: %-cublas.cu prk_util.h prk_cuda.h
-	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) -DPRK_USE_CUBLAS $< -lcublas -lcublasLt -o $@
+	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) -DPRK_USE_CUBLAS $< $(THRUSTFLAGS) -lcurand -lcublas -lcublasLt -o $@
 
 %-nccl: %-nccl.cu prk_util.h prk_cuda.h prk_nccl.h transpose-kernel.h
 	$(NVCC) $(CUDAFLAGS) $(CPPFLAGS) $(MPIINC) $(NCCLINC) $< $(MPILIB) $(NCCLLIB) -o $@
