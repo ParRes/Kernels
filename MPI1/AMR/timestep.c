@@ -83,7 +83,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
 
   long send_vec[8], *recv_vec, offset, i, j, p, acc_send, acc_recv;
   int *recv_offset, *recv_count, *send_offset, *send_count;
-  DTYPE *recv_buf, *send_buf;
+  DTYPE *recv_buf = NULL, *send_buf = NULL;
 
   if (load_balance == no_talk) {
     /* in case of no_talk we just copy the in-rank data from BG to refinement     */
