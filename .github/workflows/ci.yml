@@ -1,0 +1,99 @@
+name: CI
+
+# Port of the Travis CI matrix (.travis.yml) to GitHub Actions.
+# Reuses the same ci/install-deps.sh and ci/build-run-prk.sh scripts Travis called,
+# so behavior per PRK_TARGET/os/compiler combination is unchanged.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: ${{ matrix.target }} (${{ matrix.os }}, ${{ matrix.compiler }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        compiler: [gcc, clang]
+        target:
+          - allserial
+          - allc1z
+          - allcxx
+          - allpython
+          - alljulia
+          - allfortran
+          # Disabled in the original Travis matrix; kept here as a record for future
+          # re-enabling rather than being ported to a working GitHub Actions job.
+          # - allrust
+          # - allopenmp
+          # - allmpi
+          # - allshmem
+          # - allampi
+          # - allfgmpi
+          # - allcharm++
+          # - allgrappa
+          # - allupc UPC_IMPL=gupc
+          # - allupc UPC_IMPL=bupc GASNET_CONDUIT=smp PRK_FLAGS="-Wc,-O3"
+          # - allupc UPC_IMPL=bupc GASNET_CONDUIT=udp PRK_FLAGS="-Wc,-O3"
+          # - allupc UPC_IMPL=bupc GASNET_CONDUIT=mpi PRK_FLAGS="-Wc,-O3"
+          # - allupc UPC_IMPL=bupc GASNET_CONDUIT=ofi PRK_FLAGS="-Wc,-O3"
+          # - alloctave
+          # - allchapel CHPL_COMM=none
+          # - allchapel CHPL_COMM=gasnet
+          # - allhpx3
+          # - allhpx5
+        exclude:
+          # There is nothing inherently wrong with GCC@macOS but macOS runner throughput
+          # is low, so focus on Clang@macOS (mirrors the Travis os/compiler exclusions).
+          - os: macos-latest
+            compiler: gcc
+            target: allserial
+          - os: macos-latest
+            compiler: gcc
+            target: allc1z
+          # LLVM Fortran is not ready.
+          - compiler: clang
+            target: allfortran
+          # Python/Julia do not use a compiler, so only test one toolchain per OS (clang).
+          - compiler: gcc
+            target: allpython
+          - compiler: gcc
+            target: alljulia
+
+    env:
+      CI_ROOT: ${{ github.workspace }}/PRK-deps
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up compiler environment
+        run: |
+          mkdir -p "${CI_ROOT}"
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            echo "CC=gcc" >> "$GITHUB_ENV"
+            echo "CXX=g++" >> "$GITHUB_ENV"
+          else
+            echo "CC=clang" >> "$GITHUB_ENV"
+            echo "CXX=clang++" >> "$GITHUB_ENV"
+          fi
+          echo "FC=gfortran" >> "$GITHUB_ENV"
+          echo "${CI_ROOT}/bin" >> "$GITHUB_PATH"
+          echo "${CI_ROOT}/gcc/bin" >> "$GITHUB_PATH"
+          echo "${CI_ROOT}/cmake/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: sh ./ci/install-deps.sh "${CI_ROOT}" ${{ matrix.target }}
+
+      - name: Build and run
+        run: sh ./ci/build-run-prk.sh "${CI_ROOT}" ${{ matrix.target }}
+
+      - name: Dump config.log on failure
+        if: failure()
+        run: |
+          echo "Sad panda"
+          find . -name config.log -exec grep -L "configure: exit 0" {} \; | xargs -r cat
