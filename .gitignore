@@ -452,6 +452,10 @@ SERIAL/Sparse/sparse
 SERIAL/Stencil/stencil
 SERIAL/Synch_p2p/p2p
 SERIAL/Transpose/transpose
+COBOL/nstream
+COBOL/transpose
+COBOL/p2p
+COBOL/dgemm
 dgemm-vector.dSYM
 dgemm.dSYM
 nstream-opencl.dSYM

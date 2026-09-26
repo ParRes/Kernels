@@ -62,6 +62,7 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
+#include <curand.h>
 
 #if 0
 __global__ void init(unsigned order, float * A, float * B, float * C)
@@ -182,14 +183,12 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int order;
-  int batches = 0;
-  bool input_copy{false};
+  int iterations, order, batches = 0;
+  bool input_copy = false, random_initialization = false;
   bool tf32{false};
   try {
       if (argc < 2) {
-        throw "Usage: <# iterations> <matrix order> [<batches>] [<copy input every iteration [0/1]>] [<use TF32 [0/1]>]";
+        throw "Usage: <# iterations> <matrix order> [<batches>] [<copy input every iteration [0/1]>] [<use TF32 [0/1]>] [<random initialization [0/1]>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -215,6 +214,10 @@ int main(int argc, char * argv[])
       if (argc > 5) {
         tf32 = prk::parse_boolean(std::string(argv[5]));
       }
+
+      if (argc > 6) {
+        random_initialization = prk::parse_boolean(std::string(argv[6]));
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -232,6 +235,7 @@ int main(int argc, char * argv[])
   }
   std::cout << "Input copy           = " << (input_copy ? "yes" : "no") << std::endl;
   std::cout << "TF32                 = " << (tf32 ? "yes" : "no") << std::endl;
+  std::cout << "Randomized data      = " << (random_initialization ? "yes" : "no") << std::endl;
 
   cublasHandle_t h;
   prk::check( cublasCreate(&h) );
@@ -281,6 +285,21 @@ int main(int argc, char * argv[])
 
     init<<<dimGrid, dimBlock>>>(order, matrices, d_c);
 
+  } else if (random_initialization) {
+    // Initialize matrices with CURAND uniform distribution [0,1]
+    curandGenerator_t gen;
+    prk::check( curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT) );
+    prk::check( curandSetPseudoRandomGeneratorSeed(gen, 1234ULL) );
+    
+    // Generate uniform random numbers in [0,1] for matrices A and B
+    prk::check( curandGenerateUniform(gen, d_a, matrices * nelems) );
+    prk::check( curandGenerateUniform(gen, d_b, matrices * nelems) );
+    
+    prk::check( curandDestroyGenerator(gen) );
+
+    // Initialize matrix C to zero
+    init<<<dimGrid, dimBlock>>>(order, matrices, d_c);
+    
   } else {
 
     init<<<dimGrid, dimBlock>>>(order, matrices, d_a, d_b, d_c);
@@ -358,12 +377,14 @@ int main(int argc, char * argv[])
   }
   residuum /= matrices;
 
-  if (residuum < epsilon) {
+  if (residuum < epsilon || random_initialization) {
 #if VERBOSE
     std::cout << "Reference checksum = " << reference << "\n"
               << "Actual checksum = " << checksum << std::endl;
 #endif
-    std::cout << "Solution validates" << std::endl;
+    if (!random_initialization) {
+      std::cout << "Solution validates" << std::endl;
+    }
     auto avgtime = gemm_time/iterations/matrices;
     auto nflops = 2.0 * prk::pow(forder,3);
     std::cout << "Rate (MF/s): " << 1.0e-6 * nflops/avgtime
