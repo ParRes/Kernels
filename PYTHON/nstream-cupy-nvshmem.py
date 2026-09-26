@@ -66,10 +66,12 @@
 # *******************************************************************
 
 import sys
-if sys.version_info >= (3, 3):
-    from time import process_time as timer
-else:
-    from timeit import default_timer as timer
+# A wall-clock timer, not time.process_time(): unlike the other PRK Python
+# scripts (CPU-bound, where process time and wall time track closely), the
+# STREAM triad below runs asynchronously on the GPU, and process time barely
+# advances while the host blocks waiting on the device -- it would badly
+# undercount the real elapsed time.
+from timeit import default_timer as timer
 
 from mpi4py import MPI
 
@@ -187,17 +189,22 @@ def main():
     scalar = 3.0
 
     # Timing loop
-    for k in range(0, iterations+1):
+    # CuPy operations issued with no explicit stream run on CuPy's own
+    # default stream, a different stream than the cuda.core `stream` used
+    # for NVSHMEM barrier/sync above -- so stream.sync() alone was never
+    # actually waiting for the triad kernels below to finish, and the
+    # timing was measuring almost nothing. Bind CuPy's current stream to
+    # the same one NVSHMEM uses so the two are properly ordered.
+    with cupy.cuda.Stream.from_external(stream):
+        for k in range(0, iterations+1):
 
-        if k < 1:
-            nvshmem.barrier(nvshmem.Teams.TEAM_WORLD,stream=stream)
-            stream.sync()
-            t0 = timer()
+            if k < 1:
+                nvshmem.barrier(nvshmem.Teams.TEAM_WORLD,stream=stream)
+                stream.sync()
+                t0 = timer()
 
-        # STREAM triad operation on GPU using CuPy operations
-        A += B + scalar * C
-        # it seems like this is required to get proper timings - maybe some weird JiT thing happening
-        nvshmem.barrier(nvshmem.Teams.TEAM_WORLD,stream=stream)
+            # STREAM triad operation on GPU using CuPy operations
+            A += B + scalar * C
 
     # Final synchronization
     nvshmem.barrier(nvshmem.Teams.TEAM_WORLD,stream=stream)
