@@ -570,6 +570,13 @@ MPISHM/p2p
 MPISHM/stencil
 MPISHM/transpose
 
+SHMEM/Synch_p2p/p2p
+SHMEM/Stencil/stencil
+SHMEM/Transpose/transpose
+SHMEM/p2p
+SHMEM/stencil
+SHMEM/transpose
+
 dgemm-vector.dSYM
 dgemm.dSYM
 nstream-opencl.dSYM
