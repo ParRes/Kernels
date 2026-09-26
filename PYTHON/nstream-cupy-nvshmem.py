@@ -104,16 +104,16 @@ if False:
         print(f'Error: {e}')
     print('This usually indicates CUDA driver/runtime compatibility issues.')
 
-from cuda.core.experimental import Device
-from cuda.core.experimental import system
+from cuda.core import Device
+from cuda.core import system
 
 import nvshmem.core as nvshmem
 
 def main():
-    
+
     # Initialize MPI and CUDA device
     comm = MPI.COMM_WORLD
-    local_rank = comm.Get_rank() % system.num_devices
+    local_rank = comm.Get_rank() % system.get_num_devices()
     device = Device(local_rank)
     device.set_current()
     stream = device.create_stream()

@@ -1,3 +1,8 @@
+# Python venvs / caches (nvshmem4py work uses a local .venv)
+.venv/
+__pycache__/
+PYTHON/cuda_version_check
+
 *.i                             # Preprocessed source
 *.s                             # Assembly output
 *.ll                            # LLVM intermediate

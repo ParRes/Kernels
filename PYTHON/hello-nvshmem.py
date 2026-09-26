@@ -1,7 +1,7 @@
 import numpy
 from mpi4py import MPI
-from cuda.core.experimental import Device
-from cuda.core.experimental import system
+from cuda.core import Device
+from cuda.core import system
 import nvshmem.core as nvshmem
 
 # Initialize MPI
@@ -10,7 +10,7 @@ me = comm.Get_rank()
 np = comm.Get_size()
 
 # Initialize NVSHMEM with MPI
-dev = Device(me % system.num_devices)
+dev = Device(me % system.get_num_devices())
 dev.set_current()
 nvshmem.init(device=dev, mpi_comm=comm, initializer_method="mpi")
 
@@ -20,7 +20,7 @@ nvshmem.init(device=dev, mpi_comm=comm, initializer_method="mpi")
 #dev.set_current()
 #nvshmem.init(device=dev, uid=uid, rank=me, nranks=np, initializer_method="uid")
 
-#dev = Device(me % system.num_devices)
+#dev = Device(me % system.get_num_devices())
 #dev.set_current()
 #nvshmem.init(device=dev, mpi_comm=comm, initializer_method="emulated_mpi")
 
