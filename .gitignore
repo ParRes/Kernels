@@ -577,6 +577,11 @@ SHMEM/p2p
 SHMEM/stencil
 SHMEM/transpose
 
+COBOL/nstream
+COBOL/transpose
+COBOL/p2p
+COBOL/dgemm
+
 dgemm-vector.dSYM
 dgemm.dSYM
 nstream-opencl.dSYM
