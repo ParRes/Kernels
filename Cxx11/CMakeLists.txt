@@ -427,10 +427,13 @@ if(PRK_WITH_CUDA)
 
   prk_cxx_executable(transpose-cublas       SOURCES transpose-cublas.cu       LIBS CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
   prk_cxx_executable(nstream-cublas         SOURCES nstream-cublas.cu         LIBS CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
-  prk_cxx_executable(dgemm-cublas           SOURCES dgemm-cublas.cu           LIBS CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
+  # dgemm/sgemm/xgemm-cublas.cu seed their input matrices with
+  # curandGenerateUniform(), so they need CUDA::curand linked too, unlike
+  # the other cublas kernels here.
+  prk_cxx_executable(dgemm-cublas           SOURCES dgemm-cublas.cu           LIBS CUDA::cublas CUDA::cublasLt CUDA::curand DEFS PRK_USE_CUBLAS)
   prk_cxx_executable(dgemm-multigpu-cublas  SOURCES dgemm-multigpu-cublas.cu  LIBS CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
-  prk_cxx_executable(sgemm-cublas           SOURCES sgemm-cublas.cu           LIBS CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
-  prk_cxx_executable(xgemm-cublas           SOURCES xgemm-cublas.cu           LIBS CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
+  prk_cxx_executable(sgemm-cublas           SOURCES sgemm-cublas.cu           LIBS CUDA::cublas CUDA::cublasLt CUDA::curand DEFS PRK_USE_CUBLAS)
+  prk_cxx_executable(xgemm-cublas           SOURCES xgemm-cublas.cu           LIBS CUDA::cublas CUDA::cublasLt CUDA::curand DEFS PRK_USE_CUBLAS)
   prk_cxx_executable(dgemm-managed-cublas   SOURCES dgemm-managed-cublas.cu   LIBS CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
   add_custom_target(cxx11_cublas DEPENDS
     cxx11_transpose-cublas cxx11_nstream-cublas cxx11_dgemm-cublas cxx11_dgemm-multigpu-cublas
