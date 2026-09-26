@@ -86,21 +86,27 @@ message(STATUS "C1z: OpenMP ${OpenMP_C_FOUND}, MPI ${MPI_C_FOUND}, OpenACC ${PRK
 
 # --- helper -----------------------------------------------------------
 
+# The CMake target is named c1z_<name>, not <name>: target names must be
+# unique across the whole combined root project (every PRK language
+# directory has its own p2p/stencil/etc.), so OUTPUT_NAME puts the actual
+# produced binary back to the bare <name>.
 function(prk_c_executable name)
   set(multiValueArgs SOURCES LIBS FLAGS DEFS)
   cmake_parse_arguments(PCE "" "" "${multiValueArgs}" ${ARGN})
-  add_executable(${name} ${PCE_SOURCES})
+  set(_target c1z_${name})
+  add_executable(${_target} ${PCE_SOURCES})
+  set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${name})
   # Explicit libm: some link combinations (e.g. MPI::MPI_C pulling in
   # -Wl,--as-needed indirectly) otherwise fail with "libm.so.6: error
   # adding symbols: DSO missing from command line" despite every kernel
   # using fabs()/sqrt().
-  target_link_libraries(${name} PRIVATE Threads::Threads m ${PCE_LIBS})
+  target_link_libraries(${_target} PRIVATE Threads::Threads m ${PCE_LIBS})
   if(PCE_FLAGS)
-    target_compile_options(${name} PRIVATE ${PCE_FLAGS})
-    target_link_options(${name} PRIVATE ${PCE_FLAGS})
+    target_compile_options(${_target} PRIVATE ${PCE_FLAGS})
+    target_link_options(${_target} PRIVATE ${PCE_FLAGS})
   endif()
   if(PCE_DEFS)
-    target_compile_definitions(${name} PRIVATE ${PCE_DEFS})
+    target_compile_definitions(${_target} PRIVATE ${PCE_DEFS})
   endif()
 endfunction()
 
@@ -120,13 +126,13 @@ prk_c_executable(stencil-2d        SOURCES stencil-2d-openmp.c)
 prk_c_executable(transpose         SOURCES transpose-openmp.c)
 prk_c_executable(transpose-2d      SOURCES transpose-2d-openmp.c)
 add_custom_target(c1z_serial DEPENDS
-  p2p p2p-2d p2p-tasks-2d p2p-hyperplane p2p-hyperplane-2d
-  nstream stencil stencil-2d transpose transpose-2d)
+  c1z_p2p c1z_p2p-2d c1z_p2p-tasks-2d c1z_p2p-hyperplane c1z_p2p-hyperplane-2d
+  c1z_nstream c1z_stencil c1z_stencil-2d c1z_transpose c1z_transpose-2d)
 
 # --- thread ---------------------------------------------------------------
 
 prk_c_executable(transpose-thread SOURCES transpose-thread.c)
-add_custom_target(c1z_thread DEPENDS transpose-thread)
+add_custom_target(c1z_thread DEPENDS c1z_transpose-thread)
 
 # --- openmp / tasks -------------------------------------------------------
 
@@ -139,24 +145,24 @@ if(OpenMP_C_FOUND)
   prk_c_executable(transpose-openmp         SOURCES transpose-openmp.c         LIBS OpenMP::OpenMP_C)
   prk_c_executable(transpose-2d-openmp      SOURCES transpose-2d-openmp.c      LIBS OpenMP::OpenMP_C)
   add_custom_target(c1z_openmp DEPENDS
-    nstream-openmp p2p-hyperplane-openmp p2p-hyperplane-2d-openmp
-    stencil-openmp stencil-2d-openmp transpose-openmp transpose-2d-openmp)
+    c1z_nstream-openmp c1z_p2p-hyperplane-openmp c1z_p2p-hyperplane-2d-openmp
+    c1z_stencil-openmp c1z_stencil-2d-openmp c1z_transpose-openmp c1z_transpose-2d-openmp)
 
   prk_c_executable(p2p-tasks-openmp    SOURCES p2p-tasks-openmp.c    LIBS OpenMP::OpenMP_C)
   prk_c_executable(p2p-tasks-2d-openmp SOURCES p2p-tasks-2d-openmp.c LIBS OpenMP::OpenMP_C)
-  add_custom_target(c1z_tasks DEPENDS p2p-tasks-openmp p2p-tasks-2d-openmp)
+  add_custom_target(c1z_tasks DEPENDS c1z_p2p-tasks-openmp c1z_p2p-tasks-2d-openmp)
 
   prk_c_executable(nstream-taskloop  SOURCES nstream-taskloop.c  LIBS OpenMP::OpenMP_C)
   prk_c_executable(stencil-taskloop  SOURCES stencil-taskloop.c  LIBS OpenMP::OpenMP_C)
   prk_c_executable(transpose-taskloop SOURCES transpose-taskloop.c LIBS OpenMP::OpenMP_C)
-  add_custom_target(c1z_taskloop DEPENDS nstream-taskloop stencil-taskloop transpose-taskloop)
+  add_custom_target(c1z_taskloop DEPENDS c1z_nstream-taskloop c1z_stencil-taskloop c1z_transpose-taskloop)
 
   prk_c_executable(nstream-memkind-openmp SOURCES nstream-memkind.c LIBS OpenMP::OpenMP_C)
   if(PRK_MEMKIND_FOUND)
-    target_include_directories(nstream-memkind-openmp PRIVATE ${PRK_MEMKIND_INCLUDE_DIR})
-    target_link_libraries(nstream-memkind-openmp PRIVATE ${PRK_MEMKIND_LIBRARY})
+    target_include_directories(c1z_nstream-memkind-openmp PRIVATE ${PRK_MEMKIND_INCLUDE_DIR})
+    target_link_libraries(c1z_nstream-memkind-openmp PRIVATE ${PRK_MEMKIND_LIBRARY})
   else()
-    set_target_properties(nstream-memkind-openmp PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    set_target_properties(c1z_nstream-memkind-openmp PROPERTIES EXCLUDE_FROM_ALL TRUE)
   endif()
 
   prk_c_executable(nstream-mmap-openmp SOURCES nstream-mmap.c LIBS OpenMP::OpenMP_C)
@@ -170,8 +176,8 @@ if(OpenMP_C_FOUND)
     prk_c_executable(nstream-memcpy-target SOURCES nstream-memcpy-target.c FLAGS ${PRK_C_OPENMP_OFFLOAD_FLAG})
     prk_c_executable(nstream-ua-target     SOURCES nstream-ua-target.c     FLAGS ${PRK_C_OPENMP_OFFLOAD_FLAG})
     add_custom_target(c1z_target DEPENDS
-      nstream-target stencil-target transpose-target nstream-alloc-target
-      nstream-usm-target nstream-memcpy-target nstream-ua-target)
+      c1z_nstream-target c1z_stencil-target c1z_transpose-target c1z_nstream-alloc-target
+      c1z_nstream-usm-target c1z_nstream-memcpy-target c1z_nstream-ua-target)
   else()
     message(STATUS "C1z target (OpenMP offload): skipped, no working target-offload flags found")
   endif()
@@ -185,27 +191,27 @@ if(MPI_C_FOUND)
   prk_c_executable(nstream-mpi       SOURCES nstream-mpi.c       LIBS MPI::MPI_C)
   prk_c_executable(transpose-a2a-mpi SOURCES transpose-a2a-mpi.c LIBS MPI::MPI_C)
   prk_c_executable(transpose-p2p-mpi SOURCES transpose-p2p-mpi.c LIBS MPI::MPI_C)
-  add_custom_target(c1z_mpi DEPENDS nstream-mpi transpose-a2a-mpi transpose-p2p-mpi)
+  add_custom_target(c1z_mpi DEPENDS c1z_nstream-mpi c1z_transpose-a2a-mpi c1z_transpose-p2p-mpi)
 
   if(PRK_PETSC_FOUND)
     prk_c_executable(nstream-petsc   SOURCES nstream-petsc.c   LIBS MPI::MPI_C)
     prk_c_executable(transpose-petsc SOURCES transpose-petsc.c LIBS MPI::MPI_C)
-    target_include_directories(nstream-petsc   PRIVATE ${PRK_PETSC_INCLUDE_DIR})
-    target_include_directories(transpose-petsc PRIVATE ${PRK_PETSC_INCLUDE_DIR})
-    target_link_libraries(nstream-petsc   PRIVATE ${PRK_PETSC_LIBRARY})
-    target_link_libraries(transpose-petsc PRIVATE ${PRK_PETSC_LIBRARY})
+    target_include_directories(c1z_nstream-petsc   PRIVATE ${PRK_PETSC_INCLUDE_DIR})
+    target_include_directories(c1z_transpose-petsc PRIVATE ${PRK_PETSC_INCLUDE_DIR})
+    target_link_libraries(c1z_nstream-petsc   PRIVATE ${PRK_PETSC_LIBRARY})
+    target_link_libraries(c1z_transpose-petsc PRIVATE ${PRK_PETSC_LIBRARY})
     if(PRK_PETSC_AUTOBUILT)
-      add_dependencies(nstream-petsc   ${PRK_PETSC_EXTERNAL_TARGET})
-      add_dependencies(transpose-petsc ${PRK_PETSC_EXTERNAL_TARGET})
+      add_dependencies(c1z_nstream-petsc   ${PRK_PETSC_EXTERNAL_TARGET})
+      add_dependencies(c1z_transpose-petsc ${PRK_PETSC_EXTERNAL_TARGET})
       # libpetsc.so lives outside any system loader path when autobuilt;
       # rpath it so the binaries run standalone, not just under CTest with
       # LD_LIBRARY_PATH set.
       get_filename_component(_prk_petsc_libdir "${PRK_PETSC_LIBRARY}" DIRECTORY)
-      set_target_properties(nstream-petsc transpose-petsc PROPERTIES
+      set_target_properties(c1z_nstream-petsc c1z_transpose-petsc PROPERTIES
         BUILD_RPATH "${_prk_petsc_libdir}"
         INSTALL_RPATH "${_prk_petsc_libdir}")
     endif()
-    add_custom_target(c1z_petsc DEPENDS nstream-petsc transpose-petsc)
+    add_custom_target(c1z_petsc DEPENDS c1z_nstream-petsc c1z_transpose-petsc)
   else()
     message(STATUS "C1z petsc: skipped, PETSc not found")
   endif()
@@ -217,15 +223,15 @@ endif()
 
 if(PRK_MEMKIND_FOUND)
   prk_c_executable(nstream-memkind SOURCES nstream-memkind.c)
-  target_include_directories(nstream-memkind PRIVATE ${PRK_MEMKIND_INCLUDE_DIR})
-  target_link_libraries(nstream-memkind PRIVATE ${PRK_MEMKIND_LIBRARY})
-  add_custom_target(c1z_memkind DEPENDS nstream-memkind nstream-memkind-openmp)
+  target_include_directories(c1z_nstream-memkind PRIVATE ${PRK_MEMKIND_INCLUDE_DIR})
+  target_link_libraries(c1z_nstream-memkind PRIVATE ${PRK_MEMKIND_LIBRARY})
+  add_custom_target(c1z_memkind DEPENDS c1z_nstream-memkind c1z_nstream-memkind-openmp)
 else()
   message(STATUS "C1z memkind: skipped, memkind not found")
 endif()
 
 prk_c_executable(nstream-mmap SOURCES nstream-mmap.c)
-add_custom_target(c1z_mmap DEPENDS nstream-mmap nstream-mmap-openmp)
+add_custom_target(c1z_mmap DEPENDS c1z_nstream-mmap c1z_nstream-mmap-openmp)
 
 # --- openacc ----------------------------------------------------------
 
@@ -234,7 +240,7 @@ if(PRK_WITH_OPENACC)
   prk_c_executable(stencil-openacc      SOURCES stencil-openacc.c      LIBS OpenACC::OpenACC_C)
   prk_c_executable(transpose-openacc    SOURCES transpose-openacc.c    LIBS OpenACC::OpenACC_C)
   prk_c_executable(transpose-2d-openacc SOURCES transpose-2d-openacc.c LIBS OpenACC::OpenACC_C)
-  add_custom_target(c1z_openacc DEPENDS nstream-openacc stencil-openacc transpose-openacc transpose-2d-openacc)
+  add_custom_target(c1z_openacc DEPENDS c1z_nstream-openacc c1z_stencil-openacc c1z_transpose-openacc c1z_transpose-2d-openacc)
 else()
   message(STATUS "C1z openacc: skipped, no working OpenACC C support found")
 endif()
@@ -244,7 +250,7 @@ endif()
 if(PRK_WITH_CILK)
   prk_c_executable(stencil-cilk   SOURCES stencil-cilk.c   FLAGS ${PRK_C_CILK_FLAG})
   prk_c_executable(transpose-cilk SOURCES transpose-cilk.c FLAGS ${PRK_C_CILK_FLAG})
-  add_custom_target(c1z_cilk DEPENDS stencil-cilk transpose-cilk)
+  add_custom_target(c1z_cilk DEPENDS c1z_stencil-cilk c1z_transpose-cilk)
 else()
   message(STATUS "C1z cilk: skipped, compiler has no working Cilk Plus support")
 endif()
@@ -257,7 +263,7 @@ if(PRK_WITH_AVX)
   if(OpenMP_C_FOUND)
     prk_c_executable(p2p-avx-tasks-openmp SOURCES p2p-avx-tasks-openmp.c LIBS OpenMP::OpenMP_C FLAGS -mavx2)
   endif()
-  add_custom_target(c1z_vector DEPENDS p2p-sse p2p-avx)
+  add_custom_target(c1z_vector DEPENDS c1z_p2p-sse c1z_p2p-avx)
 else()
   message(STATUS "C1z vector (sse/avx): skipped, no AVX2 support found")
 endif()
@@ -272,12 +278,13 @@ if(PRK_ISPC_EXECUTABLE)
             "${CMAKE_CURRENT_LIST_DIR}/transpose.ispc" --pic -o "${_ispc_obj}"
     DEPENDS "${CMAKE_CURRENT_LIST_DIR}/transpose.ispc"
     COMMENT "Compiling transpose.ispc with ispc")
-  add_executable(transpose-ispc transpose-ispc.c "${_ispc_obj}")
-  target_link_libraries(transpose-ispc PRIVATE Threads::Threads)
+  add_executable(c1z_transpose-ispc transpose-ispc.c "${_ispc_obj}")
+  set_target_properties(c1z_transpose-ispc PROPERTIES OUTPUT_NAME transpose-ispc)
+  target_link_libraries(c1z_transpose-ispc PRIVATE Threads::Threads)
   if(OpenMP_C_FOUND)
-    target_link_libraries(transpose-ispc PRIVATE OpenMP::OpenMP_C)
+    target_link_libraries(c1z_transpose-ispc PRIVATE OpenMP::OpenMP_C)
   endif()
-  add_custom_target(c1z_ispc DEPENDS transpose-ispc)
+  add_custom_target(c1z_ispc DEPENDS c1z_transpose-ispc)
 else()
   message(STATUS "C1z ispc: skipped, ispc compiler not found")
 endif()
@@ -347,9 +354,9 @@ if(OpenMP_C_FOUND)
 endif()
 
 if(MPI_C_FOUND)
-  prk_c_test(c1z_mpi_nstream       COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:nstream-mpi> 10 16777216)
-  prk_c_test(c1z_mpi_transpose_a2a COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:transpose-a2a-mpi> 10 1024 32)
-  prk_c_test(c1z_mpi_transpose_p2p COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:transpose-p2p-mpi> 10 1024 32)
+  prk_c_test(c1z_mpi_nstream       COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:c1z_nstream-mpi> 10 16777216)
+  prk_c_test(c1z_mpi_transpose_a2a COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:c1z_transpose-a2a-mpi> 10 1024 32)
+  prk_c_test(c1z_mpi_transpose_p2p COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:c1z_transpose-p2p-mpi> 10 1024 32)
 endif()
 
 prk_c_test(c1z_mmap_nstream COMMAND nstream-mmap 10 16777216 32)
@@ -366,6 +373,6 @@ if(PRK_PETSC_FOUND)
   # PETSc kernels parse PETSc-style -i/-n options, not positional argv like
   # every other C1z kernel (see PetscOptionsGetInt() in nstream-petsc.c/
   # transpose-petsc.c).
-  prk_c_test(c1z_petsc_nstream   COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:nstream-petsc> -i 10 -n 16777216)
-  prk_c_test(c1z_petsc_transpose COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:transpose-petsc> -i 10 -n 1024)
+  prk_c_test(c1z_petsc_nstream   COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:c1z_nstream-petsc> -i 10 -n 16777216)
+  prk_c_test(c1z_petsc_transpose COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:c1z_transpose-petsc> -i 10 -n 1024)
 endif()

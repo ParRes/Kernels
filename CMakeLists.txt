@@ -18,6 +18,11 @@ option(PRK_ENABLE_FORTRAN "Build FORTRAN/ kernels" ON)
 option(PRK_ENABLE_C1Z "Build C1z/ kernels" ON)
 option(PRK_ENABLE_CXX11 "Build Cxx11/ kernels" ON)
 option(PRK_ENABLE_SERIAL "Build SERIAL/ kernels" ON)
+option(PRK_ENABLE_MPI1 "Build MPI1/ kernels" ON)
+option(PRK_ENABLE_OPENMP "Build OPENMP/ kernels" ON)
+option(PRK_ENABLE_MPIOPENMP "Build MPIOPENMP/ kernels" ON)
+option(PRK_ENABLE_MPIRMA "Build MPIRMA/ kernels" ON)
+option(PRK_ENABLE_MPISHM "Build MPISHM/ kernels" ON)
 
 if(PRK_ENABLE_FORTRAN)
   add_subdirectory(FORTRAN)
@@ -33,6 +38,26 @@ endif()
 
 if(PRK_ENABLE_SERIAL)
   add_subdirectory(SERIAL)
+endif()
+
+if(PRK_ENABLE_MPI1)
+  add_subdirectory(MPI1)
+endif()
+
+if(PRK_ENABLE_OPENMP)
+  add_subdirectory(OPENMP)
+endif()
+
+if(PRK_ENABLE_MPIOPENMP)
+  add_subdirectory(MPIOPENMP)
+endif()
+
+if(PRK_ENABLE_MPIRMA)
+  add_subdirectory(MPIRMA)
+endif()
+
+if(PRK_ENABLE_MPISHM)
+  add_subdirectory(MPISHM)
 endif()
 
 # Future languages follow the same pattern: add an option

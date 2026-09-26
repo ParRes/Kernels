@@ -42,6 +42,17 @@ target_compile_definitions(prk_serial_random_draw PRIVATE PRK_SERIAL)
 # COMOBJS (wtime.o), include path covers both this repo's include/ and the
 # kernel's own subdirectory (for its own headers and any generated .incl
 # files placed in the matching build subdirectory).
+#
+# The CMake *target* is named serial_<name> (e.g. serial_p2p), not <name>:
+# every one of PRK's language directories has its own p2p/stencil/
+# transpose/etc., and when this file is add_subdirectory()'d from the root
+# alongside them, CMake target names must be unique across the *entire*
+# combined project, not just within this file (add_executable(p2p ...) in
+# two different subdirectories is a hard configure error: "another target
+# with the same name already exists"). OUTPUT_NAME is set back to the bare
+# <name> so the actual produced binary and every prk_serial_test() COMMAND
+# below (which refer to the binary by its on-disk name, not the CMake
+# target name) are unaffected.
 function(prk_serial_executable name)
   set(oneValueArgs DIR)
   set(multiValueArgs SOURCES DEFS LIBS)
@@ -50,10 +61,12 @@ function(prk_serial_executable name)
   foreach(_src IN LISTS PSE_SOURCES)
     list(APPEND _srcs "${PSE_DIR}/${_src}")
   endforeach()
-  add_executable(${name} ${_srcs} $<TARGET_OBJECTS:prk_serial_wtime>)
-  target_include_directories(${name} PRIVATE ${PRK_INCLUDE_DIR} "${CMAKE_CURRENT_LIST_DIR}/${PSE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/${PSE_DIR}")
-  target_compile_definitions(${name} PRIVATE PRK_SERIAL ${PSE_DEFS})
-  target_link_libraries(${name} PRIVATE Threads::Threads ${PSE_LIBS})
+  set(_target serial_${name})
+  add_executable(${_target} ${_srcs} $<TARGET_OBJECTS:prk_serial_wtime>)
+  set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${name})
+  target_include_directories(${_target} PRIVATE ${PRK_INCLUDE_DIR} "${CMAKE_CURRENT_LIST_DIR}/${PSE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/${PSE_DIR}")
+  target_compile_definitions(${_target} PRIVATE PRK_SERIAL ${PSE_DEFS})
+  target_link_libraries(${_target} PRIVATE Threads::Threads ${PSE_LIBS})
 endfunction()
 
 function(prk_serial_test test_name)
@@ -88,7 +101,7 @@ add_custom_command(
   COMMENT "Generating Stencil/loop_body_compact.incl (RADIUS=2)")
 prk_serial_executable(stencil DIR Stencil SOURCES stencil.c
   DEFS DOUBLE=1 STAR=1 RESTRICT_KEYWORD=0 RADIUS=2 LOOPGEN=0 VERBOSE=0)
-target_sources(stencil PRIVATE "${_stencil_gen_dir}/loop_body_star.incl" "${_stencil_gen_dir}/loop_body_compact.incl")
+target_sources(serial_stencil PRIVATE "${_stencil_gen_dir}/loop_body_star.incl" "${_stencil_gen_dir}/loop_body_compact.incl")
 set_source_files_properties("${_stencil_gen_dir}/loop_body_star.incl" "${_stencil_gen_dir}/loop_body_compact.incl" PROPERTIES HEADER_FILE_ONLY TRUE)
 
 # --- Transpose ------------------------------------------------------------
@@ -122,10 +135,11 @@ prk_serial_executable(dgemm DIR DGEMM SOURCES dgemm.c
 
 # --- PIC ------------------------------------------------------------------
 # PIC also links common/random_draw.c (COMOBJS += random_draw.o).
-add_executable(pic PIC/pic.c $<TARGET_OBJECTS:prk_serial_wtime> $<TARGET_OBJECTS:prk_serial_random_draw>)
-target_include_directories(pic PRIVATE ${PRK_INCLUDE_DIR} "${CMAKE_CURRENT_LIST_DIR}/PIC")
-target_compile_definitions(pic PRIVATE PRK_SERIAL VERBOSE=0 RESTRICT_KEYWORD=0)
-target_link_libraries(pic PRIVATE Threads::Threads m)
+add_executable(serial_pic PIC/pic.c $<TARGET_OBJECTS:prk_serial_wtime> $<TARGET_OBJECTS:prk_serial_random_draw>)
+set_target_properties(serial_pic PROPERTIES OUTPUT_NAME pic)
+target_include_directories(serial_pic PRIVATE ${PRK_INCLUDE_DIR} "${CMAKE_CURRENT_LIST_DIR}/PIC")
+target_compile_definitions(serial_pic PRIVATE PRK_SERIAL VERBOSE=0 RESTRICT_KEYWORD=0)
+target_link_libraries(serial_pic PRIVATE Threads::Threads m)
 
 # --- AMR --------------------------------------------------------------
 # DOUBLE=1, STAR=1, RESTRICT_KEYWORD=0, RADIUS=2, LOOPGEN=0, VERBOSE=0.
@@ -156,7 +170,7 @@ add_custom_command(
 prk_serial_executable(amr DIR AMR SOURCES amr.c
   DEFS DOUBLE=1 STAR=1 RESTRICT_KEYWORD=0 RADIUS=2 LOOPGEN=0 VERBOSE=0
   LIBS m)
-target_sources(amr PRIVATE
+target_sources(serial_amr PRIVATE
   "${_amr_gen_dir}/loop_body_star.incl" "${_amr_gen_dir}/loop_body_compact.incl"
   "${_amr_gen_dir}/loop_body_star_amr.incl" "${_amr_gen_dir}/loop_body_compact_amr.incl")
 set_source_files_properties(
@@ -177,10 +191,11 @@ add_custom_command(
   COMMAND "${CMAKE_CURRENT_LIST_DIR}/Branch/func_gen" 10 40
   WORKING_DIRECTORY ${_branch_gen_dir}
   COMMENT "Generating Branch/func.c (MATRIX_RANK=10, NUMBER_OF_FUNCTIONS=40)")
-add_executable(branch Branch/branch.c "${_branch_gen_dir}/func.c" $<TARGET_OBJECTS:prk_serial_wtime>)
-target_include_directories(branch PRIVATE ${PRK_INCLUDE_DIR} "${CMAKE_CURRENT_LIST_DIR}/Branch")
-target_compile_definitions(branch PRIVATE PRK_SERIAL VERBOSE=0 RESTRICT_KEYWORD=0)
-target_link_libraries(branch PRIVATE Threads::Threads)
+add_executable(serial_branch Branch/branch.c "${_branch_gen_dir}/func.c" $<TARGET_OBJECTS:prk_serial_wtime>)
+set_target_properties(serial_branch PROPERTIES OUTPUT_NAME branch)
+target_include_directories(serial_branch PRIVATE ${PRK_INCLUDE_DIR} "${CMAKE_CURRENT_LIST_DIR}/Branch")
+target_compile_definitions(serial_branch PRIVATE PRK_SERIAL VERBOSE=0 RESTRICT_KEYWORD=0)
+target_link_libraries(serial_branch PRIVATE Threads::Threads)
 
 # --- CTest: reproduces ci/build-run-prk.sh's allserial) run commands ------
 

@@ -229,6 +229,26 @@ if(PRK_BOOST_COMPUTE_INCLUDE_DIR AND OpenCL_FOUND)
   set(PRK_BOOST_COMPUTE_FOUND TRUE)
 endif()
 
+# RAJA's BLT build system does `set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ...
+# CACHE PATH ...)` (no FORCE) inside its own subdirectory; on a fresh
+# configure (this cache variable not yet defined), that silently becomes
+# the project-wide default output directory for every add_executable()
+# called afterward -- including every one of THIS file's own kernels --
+# redirecting them all into _deps/raja-build/bin/ and breaking every
+# bare-name CTest COMMAND that expects the binary next to the build dir
+# root. Pre-populate the cache entry ourselves (before the autobuild
+# subdirectories run) so BLT's own un-forced set() is a no-op -- but leave
+# it EMPTY rather than pointing it at this directory: CMAKE_RUNTIME_
+# OUTPUT_DIRECTORY is a global CACHE variable, not directory-scoped, so
+# forcing it to Cxx11's own binary dir would also redirect every sibling
+# language directory's targets here when this is add_subdirectory()'d
+# from the repo root alongside SERIAL/OPENMP/etc. An empty value falls
+# back to CMake's normal per-target default (CMAKE_CURRENT_BINARY_DIR of
+# wherever add_executable() was called), which is what every language
+# directory's own bare-name CTest COMMAND already relies on.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "" CACHE PATH
+  "Directory where executables will go in the build tree" FORCE)
+
 include("${CMAKE_CURRENT_LIST_DIR}/../cmake/AutobuildDeps.cmake")
 prk_autobuild_kokkos()
 prk_autobuild_raja()
@@ -263,17 +283,19 @@ message(STATUS "Cxx11: OpenMP ${OpenMP_CXX_FOUND}, MPI ${MPI_CXX_FOUND}, BLAS ${
 function(prk_cxx_executable name)
   set(multiValueArgs SOURCES LIBS FLAGS DEFS INCLUDES)
   cmake_parse_arguments(PXE "" "" "${multiValueArgs}" ${ARGN})
-  add_executable(${name} ${PXE_SOURCES})
-  target_link_libraries(${name} PRIVATE Threads::Threads ${PXE_LIBS})
+  set(_target cxx11_${name})
+  add_executable(${_target} ${PXE_SOURCES})
+  set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${name})
+  target_link_libraries(${_target} PRIVATE Threads::Threads ${PXE_LIBS})
   if(PXE_FLAGS)
-    target_compile_options(${name} PRIVATE ${PXE_FLAGS})
-    target_link_options(${name} PRIVATE ${PXE_FLAGS})
+    target_compile_options(${_target} PRIVATE ${PXE_FLAGS})
+    target_link_options(${_target} PRIVATE ${PXE_FLAGS})
   endif()
   if(PXE_DEFS)
-    target_compile_definitions(${name} PRIVATE ${PXE_DEFS})
+    target_compile_definitions(${_target} PRIVATE ${PXE_DEFS})
   endif()
   if(PXE_INCLUDES)
-    target_include_directories(${name} PRIVATE ${PXE_INCLUDES})
+    target_include_directories(${_target} PRIVATE ${PXE_INCLUDES})
   endif()
 endfunction()
 
@@ -292,7 +314,7 @@ prk_cxx_executable(transpose SOURCES transpose.cc)
 prk_cxx_executable(nstream   SOURCES nstream.cc)
 prk_cxx_executable(dgemm     SOURCES dgemm.cc)
 prk_cxx_executable(sparse    SOURCES sparse.cc)
-add_custom_target(cxx11_sequential DEPENDS p2p stencil transpose nstream dgemm sparse)
+add_custom_target(cxx11_sequential DEPENDS cxx11_p2p cxx11_stencil cxx11_transpose cxx11_nstream cxx11_dgemm cxx11_sparse)
 
 # --- vector -------------------------------------------------------------
 
@@ -306,14 +328,14 @@ prk_cxx_executable(dgemm-vector          SOURCES dgemm-vector.cc)
 prk_cxx_executable(transpose-async       SOURCES transpose-async.cc)
 prk_cxx_executable(transpose-thread      SOURCES transpose-thread.cc)
 add_custom_target(cxx11_vector DEPENDS
-  p2p-vector p2p-hyperplane-vector stencil-vector transpose-vector nstream-vector
-  sparse-vector dgemm-vector transpose-async transpose-thread)
+  cxx11_p2p-vector cxx11_p2p-hyperplane-vector cxx11_stencil-vector cxx11_transpose-vector cxx11_nstream-vector
+  cxx11_sparse-vector cxx11_dgemm-vector cxx11_transpose-async cxx11_transpose-thread)
 
 # --- valarray -----------------------------------------------------------
 
 prk_cxx_executable(transpose-valarray SOURCES transpose-valarray.cc)
 prk_cxx_executable(nstream-valarray   SOURCES nstream-valarray.cc)
-add_custom_target(cxx11_valarray DEPENDS transpose-valarray nstream-valarray)
+add_custom_target(cxx11_valarray DEPENDS cxx11_transpose-valarray cxx11_nstream-valarray)
 
 # --- openmp / target / taskloop -------------------------------------------
 
@@ -324,18 +346,18 @@ if(OpenMP_CXX_FOUND)
   prk_cxx_executable(nstream-openmp        SOURCES nstream-openmp.cc        LIBS OpenMP::OpenMP_CXX)
   prk_cxx_executable(p2p-tasks-openmp      SOURCES p2p-tasks-openmp.cc      LIBS OpenMP::OpenMP_CXX)
   add_custom_target(cxx11_openmp DEPENDS
-    p2p-hyperplane-openmp stencil-openmp transpose-openmp nstream-openmp p2p-tasks-openmp)
+    cxx11_p2p-hyperplane-openmp cxx11_stencil-openmp cxx11_transpose-openmp cxx11_nstream-openmp cxx11_p2p-tasks-openmp)
 
   prk_cxx_executable(stencil-taskloop   SOURCES stencil-taskloop.cc   LIBS OpenMP::OpenMP_CXX)
   prk_cxx_executable(transpose-taskloop SOURCES transpose-taskloop.cc LIBS OpenMP::OpenMP_CXX)
   prk_cxx_executable(nstream-taskloop   SOURCES nstream-taskloop.cc   LIBS OpenMP::OpenMP_CXX)
-  add_custom_target(cxx11_taskloop DEPENDS stencil-taskloop transpose-taskloop nstream-taskloop)
+  add_custom_target(cxx11_taskloop DEPENDS cxx11_stencil-taskloop cxx11_transpose-taskloop cxx11_nstream-taskloop)
 
   if(PRK_WITH_TARGET)
     prk_cxx_executable(stencil-openmp-target   SOURCES stencil-openmp-target.cc   FLAGS ${PRK_CXX_OPENMP_OFFLOAD_FLAG})
     prk_cxx_executable(transpose-openmp-target SOURCES transpose-openmp-target.cc FLAGS ${PRK_CXX_OPENMP_OFFLOAD_FLAG})
     prk_cxx_executable(nstream-openmp-target   SOURCES nstream-openmp-target.cc   FLAGS ${PRK_CXX_OPENMP_OFFLOAD_FLAG})
-    add_custom_target(cxx11_target DEPENDS stencil-openmp-target transpose-openmp-target nstream-openmp-target)
+    add_custom_target(cxx11_target DEPENDS cxx11_stencil-openmp-target cxx11_transpose-openmp-target cxx11_nstream-openmp-target)
   else()
     message(STATUS "Cxx11 target (OpenMP offload): skipped, no working target-offload flags found")
   endif()
@@ -352,7 +374,7 @@ if(MPI_CXX_FOUND)
   prk_cxx_executable(transpose-p2p-mpi SOURCES transpose-p2p-mpi.cc LIBS MPI::MPI_CXX)
   prk_cxx_executable(transpose-get-mpi SOURCES transpose-get-mpi.cc LIBS MPI::MPI_CXX)
   add_custom_target(cxx11_mpi DEPENDS
-    nstream-mpi stencil-mpi transpose-a2a-mpi transpose-p2p-mpi transpose-get-mpi)
+    cxx11_nstream-mpi cxx11_stencil-mpi cxx11_transpose-a2a-mpi cxx11_transpose-p2p-mpi cxx11_transpose-get-mpi)
 else()
   message(STATUS "Cxx11 mpi: skipped, no MPI C support found")
 endif()
@@ -382,12 +404,12 @@ if(BLAS_FOUND)
   prk_cxx_executable(dgemm-cblas     SOURCES dgemm-cblas.cc     LIBS BLAS::BLAS DEFS ${_cblas_defs} INCLUDES ${_cblas_includes})
   prk_cxx_executable(sgemm-cblas     SOURCES sgemm-cblas.cc     LIBS BLAS::BLAS DEFS ${_cblas_defs} INCLUDES ${_cblas_includes})
   prk_cxx_executable(xgemm-cblas     SOURCES xgemm-cblas.cc     LIBS BLAS::BLAS DEFS ${_cblas_defs} INCLUDES ${_cblas_includes})
-  add_custom_target(cxx11_cblas DEPENDS transpose-cblas dgemm-cblas sgemm-cblas xgemm-cblas)
+  add_custom_target(cxx11_cblas DEPENDS cxx11_transpose-cblas cxx11_dgemm-cblas cxx11_sgemm-cblas cxx11_xgemm-cblas)
 
   if(MPI_CXX_FOUND)
     prk_cxx_executable(dgemm-mpi-cblas SOURCES dgemm-mpi-cblas.cc LIBS MPI::MPI_CXX BLAS::BLAS DEFS ${_cblas_defs} INCLUDES ${_cblas_includes})
     if(TARGET cxx11_mpi)
-      add_dependencies(cxx11_mpi dgemm-mpi-cblas)
+      add_dependencies(cxx11_mpi cxx11_dgemm-mpi-cblas)
     endif()
   endif()
 else()
@@ -401,7 +423,7 @@ if(PRK_WITH_CUDA)
   prk_cxx_executable(transpose-cuda       SOURCES transpose-cuda.cu)
   prk_cxx_executable(nstream-cuda         SOURCES nstream-cuda.cu)
   prk_cxx_executable(nstream-managed-cuda SOURCES nstream-managed-cuda.cu)
-  add_custom_target(cxx11_cuda DEPENDS stencil-cuda transpose-cuda nstream-cuda nstream-managed-cuda)
+  add_custom_target(cxx11_cuda DEPENDS cxx11_stencil-cuda cxx11_transpose-cuda cxx11_nstream-cuda cxx11_nstream-managed-cuda)
 
   prk_cxx_executable(transpose-cublas       SOURCES transpose-cublas.cu       LIBS CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
   prk_cxx_executable(nstream-cublas         SOURCES nstream-cublas.cu         LIBS CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
@@ -411,12 +433,12 @@ if(PRK_WITH_CUDA)
   prk_cxx_executable(xgemm-cublas           SOURCES xgemm-cublas.cu           LIBS CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
   prk_cxx_executable(dgemm-managed-cublas   SOURCES dgemm-managed-cublas.cu   LIBS CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
   add_custom_target(cxx11_cublas DEPENDS
-    transpose-cublas nstream-cublas dgemm-cublas dgemm-multigpu-cublas
-    sgemm-cublas xgemm-cublas dgemm-managed-cublas)
+    cxx11_transpose-cublas cxx11_nstream-cublas cxx11_dgemm-cublas cxx11_dgemm-multigpu-cublas
+    cxx11_sgemm-cublas cxx11_xgemm-cublas cxx11_dgemm-managed-cublas)
 
   if(MPI_CXX_FOUND)
     prk_cxx_executable(dgemm-mpi-cublas SOURCES dgemm-mpi-cublas.cu LIBS MPI::MPI_CXX CUDA::cublas CUDA::cublasLt DEFS PRK_USE_CUBLAS)
-    add_dependencies(cxx11_cublas dgemm-mpi-cublas)
+    add_dependencies(cxx11_cublas cxx11_dgemm-mpi-cublas)
   endif()
 
   # Host Thrust: .cc compiled with the host C++ compiler, using headers
@@ -427,13 +449,13 @@ if(PRK_WITH_CUDA)
     prk_cxx_executable(nstream-host-thrust   SOURCES nstream-host-thrust.cc   INCLUDES ${PRK_THRUST_INCLUDE_DIR})
     prk_cxx_executable(transpose-host-thrust SOURCES transpose-host-thrust.cc INCLUDES ${PRK_THRUST_INCLUDE_DIR})
     if(PRK_RANGES_BASIC_DEFS)
-      target_include_directories(transpose-host-thrust PRIVATE ${PRK_RANGES_BASIC_INCLUDES})
-      target_compile_definitions(transpose-host-thrust PRIVATE ${PRK_RANGES_BASIC_DEFS})
+      target_include_directories(cxx11_transpose-host-thrust PRIVATE ${PRK_RANGES_BASIC_INCLUDES})
+      target_compile_definitions(cxx11_transpose-host-thrust PRIVATE ${PRK_RANGES_BASIC_DEFS})
       if(PRK_RANGES_BASIC_CXX_STANDARD)
-        set_target_properties(transpose-host-thrust PROPERTIES CXX_STANDARD ${PRK_RANGES_BASIC_CXX_STANDARD})
+        set_target_properties(cxx11_transpose-host-thrust PROPERTIES CXX_STANDARD ${PRK_RANGES_BASIC_CXX_STANDARD})
       endif()
     endif()
-    list(APPEND _thrust_targets nstream-host-thrust transpose-host-thrust)
+    list(APPEND _thrust_targets cxx11_nstream-host-thrust cxx11_transpose-host-thrust)
   else()
     message(STATUS "Cxx11 thrust(host): skipped, host compiler doesn't support nvcc's extended-lambda syntax")
   endif()
@@ -444,14 +466,14 @@ if(PRK_WITH_CUDA)
   # below); use native C++20 std::ranges here instead, which nvcc handles.
   if(PRK_CXX20_SUPPORTED)
     prk_cxx_executable(transpose-device-thrust SOURCES transpose-device-thrust.cu DEFS USE_GCC_RANGES)
-    set_target_properties(transpose-device-thrust PROPERTIES CUDA_STANDARD 20)
+    set_target_properties(cxx11_transpose-device-thrust PROPERTIES CUDA_STANDARD 20)
   elseif(PRK_RANGE_V3_FOUND)
     prk_cxx_executable(transpose-device-thrust SOURCES transpose-device-thrust.cu
       INCLUDES ${PRK_RANGE_V3_INCLUDE_DIR} DEFS USE_RANGES_TS)
   else()
     prk_cxx_executable(transpose-device-thrust SOURCES transpose-device-thrust.cu)
   endif()
-  list(APPEND _thrust_targets nstream-device-thrust transpose-device-thrust)
+  list(APPEND _thrust_targets cxx11_nstream-device-thrust cxx11_transpose-device-thrust)
   add_custom_target(cxx11_thrust DEPENDS ${_thrust_targets})
 
   if(PRK_CUDASTF_FOUND AND PRK_CUDASTF_WORKS)
@@ -464,7 +486,7 @@ if(PRK_WITH_CUDA)
       LIBS CUDA::cuda_driver CUDA::cublas CUDA::cublasLt INCLUDES ${_cudastf_includes}
       FLAGS --expt-relaxed-constexpr DEFS PRK_USE_CUBLAS)
     add_custom_target(cxx11_cudastf DEPENDS
-      dgemm-cudastf stencil-cudastf p2p-cudastf transpose-cudastf dgemm-cublas-cudastf)
+      cxx11_dgemm-cudastf cxx11_stencil-cudastf cxx11_p2p-cudastf cxx11_transpose-cudastf cxx11_dgemm-cublas-cudastf)
   else()
     message(STATUS "Cxx11 cudastf: skipped, CCCL cudax/libcudacxx headers not found")
   endif()
@@ -483,11 +505,11 @@ if(PRK_WITH_CUDA)
     # not a raw compile/link FLAGS string: that made CMake pick g++ instead
     # of nvcc as the link driver for these targets ("g++: error:
     # unrecognized command-line option '-rdc=true'").
-    set_target_properties(transpose-get-nvshmem transpose-a2a-nvshmem
-      transpose-ptr-nvshmem transpose-put-nvshmem PROPERTIES
+    set_target_properties(cxx11_transpose-get-nvshmem cxx11_transpose-a2a-nvshmem
+      cxx11_transpose-ptr-nvshmem cxx11_transpose-put-nvshmem PROPERTIES
       CUDA_SEPARABLE_COMPILATION ON)
     add_custom_target(cxx11_nvshmem DEPENDS
-      transpose-get-nvshmem transpose-a2a-nvshmem transpose-ptr-nvshmem transpose-put-nvshmem)
+      cxx11_transpose-get-nvshmem cxx11_transpose-a2a-nvshmem cxx11_transpose-ptr-nvshmem cxx11_transpose-put-nvshmem)
   else()
     message(STATUS "Cxx11 nvshmem: skipped, NVSHMEM not found")
   endif()
@@ -508,7 +530,7 @@ if(PRK_WITH_CUDA AND PRK_NCCL_INCLUDE_DIR AND PRK_NCCL_LIBRARY AND MPI_CXX_FOUND
   # GPUs) without MPI -- to be fixed later to use MPI properly, so keep
   # the MPI dependency/gating here rather than dropping it.
   prk_cxx_executable(nstream-nccl SOURCES nstream-nccl.cu LIBS ${PRK_NCCL_LIBRARY} MPI::MPI_CXX INCLUDES ${PRK_NCCL_INCLUDE_DIR})
-  add_custom_target(cxx11_nccl DEPENDS nstream-nccl)
+  add_custom_target(cxx11_nccl DEPENDS cxx11_nstream-nccl)
 else()
   message(STATUS "Cxx11 nccl: skipped, NCCL not found (deps/nccl here is unbuilt source, not installed)")
 endif()
@@ -520,12 +542,12 @@ if(OpenCL_FOUND)
   prk_cxx_executable(stencil-opencl       SOURCES stencil-opencl.cc       LIBS OpenCL::OpenCL)
   prk_cxx_executable(transpose-opencl     SOURCES transpose-opencl.cc     LIBS OpenCL::OpenCL)
   prk_cxx_executable(nstream-opencl       SOURCES nstream-opencl.cc       LIBS OpenCL::OpenCL)
-  add_custom_target(cxx11_opencl DEPENDS p2p-innerloop-opencl stencil-opencl transpose-opencl nstream-opencl)
+  add_custom_target(cxx11_opencl DEPENDS cxx11_p2p-innerloop-opencl cxx11_stencil-opencl cxx11_transpose-opencl cxx11_nstream-opencl)
 
   if(PRK_BOOST_COMPUTE_FOUND)
     prk_cxx_executable(nstream-boost-compute SOURCES nstream-boost-compute.cc
       LIBS OpenCL::OpenCL INCLUDES ${PRK_BOOST_COMPUTE_INCLUDE_DIR})
-    add_custom_target(cxx11_boost_compute DEPENDS nstream-boost-compute)
+    add_custom_target(cxx11_boost_compute DEPENDS cxx11_nstream-boost-compute)
   else()
     message(STATUS "Cxx11 boost-compute: skipped, Boost.Compute headers not found")
   endif()
@@ -544,7 +566,7 @@ if(TBB_FOUND)
   prk_cxx_executable(p2p-hyperplane-tbb   SOURCES p2p-hyperplane-tbb.cc   LIBS TBB::tbb)
   prk_cxx_executable(p2p-tasks-tbb        SOURCES p2p-tasks-tbb.cc        LIBS TBB::tbb)
   add_custom_target(cxx11_tbb DEPENDS
-    p2p-innerloop-tbb p2p-tbb stencil-tbb transpose-tbb nstream-tbb p2p-hyperplane-tbb p2p-tasks-tbb)
+    cxx11_p2p-innerloop-tbb cxx11_p2p-tbb cxx11_stencil-tbb cxx11_transpose-tbb cxx11_nstream-tbb cxx11_p2p-hyperplane-tbb cxx11_p2p-tasks-tbb)
 
   # NVHPC's own <execution> header predefines a global `namespace exec =
   # std::experimental::execution;` alias (its pre-standardization PSTL,
@@ -575,16 +597,16 @@ if(TBB_FOUND)
     prk_cxx_executable(stencil-pstl   SOURCES stencil-pstl.cc   LIBS TBB::tbb INCLUDES ${_pstl_includes} DEFS ${_pstl_defs})
     prk_cxx_executable(transpose-pstl SOURCES transpose-pstl.cc LIBS TBB::tbb INCLUDES ${_pstl_includes} DEFS ${_pstl_defs})
     if(PRK_RANGES_BASIC_CXX_STANDARD)
-      set_target_properties(stencil-pstl transpose-pstl PROPERTIES CXX_STANDARD ${PRK_RANGES_BASIC_CXX_STANDARD})
+      set_target_properties(cxx11_stencil-pstl cxx11_transpose-pstl PROPERTIES CXX_STANDARD ${PRK_RANGES_BASIC_CXX_STANDARD})
     endif()
-    add_custom_target(cxx11_pstl DEPENDS stencil-pstl transpose-pstl)
+    add_custom_target(cxx11_pstl DEPENDS cxx11_stencil-pstl cxx11_transpose-pstl)
     # nstream-pstl.cc unconditionally `#include <ranges>` and uses
     # std::ranges directly (nothing to do with prk_ranges.h/range-v3),
     # same as nstream-stl.cc/nstream-ranges.cc -- needs C++20.
     if(PRK_CXX20_SUPPORTED)
       prk_cxx_executable(nstream-pstl SOURCES nstream-pstl.cc LIBS TBB::tbb INCLUDES ${_pstl_includes} DEFS ${_pstl_defs})
-      set_target_properties(nstream-pstl PROPERTIES CXX_STANDARD 20)
-      add_dependencies(cxx11_pstl nstream-pstl)
+      set_target_properties(cxx11_nstream-pstl PROPERTIES CXX_STANDARD 20)
+      add_dependencies(cxx11_pstl cxx11_nstream-pstl)
     else()
       message(STATUS "Cxx11 nstream-pstl: skipped, compiler has no C++20 <ranges> support")
     endif()
@@ -603,9 +625,9 @@ if(PRK_RANGES_BASIC_DEFS)
   # preferred, then Boost, then range-v3 last).
   prk_cxx_executable(stencil-stl   SOURCES stencil-stl.cc   INCLUDES ${PRK_RANGES_BASIC_INCLUDES} DEFS ${PRK_RANGES_BASIC_DEFS})
   prk_cxx_executable(transpose-stl SOURCES transpose-stl.cc INCLUDES ${PRK_RANGES_BASIC_INCLUDES} DEFS ${PRK_RANGES_BASIC_DEFS})
-  add_custom_target(cxx11_stl DEPENDS stencil-stl transpose-stl)
+  add_custom_target(cxx11_stl DEPENDS cxx11_stencil-stl cxx11_transpose-stl)
   if(PRK_RANGES_BASIC_CXX_STANDARD)
-    set_target_properties(stencil-stl transpose-stl PROPERTIES CXX_STANDARD ${PRK_RANGES_BASIC_CXX_STANDARD})
+    set_target_properties(cxx11_stencil-stl cxx11_transpose-stl PROPERTIES CXX_STANDARD ${PRK_RANGES_BASIC_CXX_STANDARD})
   endif()
 
   add_custom_target(cxx11_ranges)
@@ -619,7 +641,7 @@ if(PRK_RANGES_BASIC_DEFS)
   prk_check_range_v3_cxx()
   if(PRK_RANGE_V3_FOUND)
     prk_cxx_executable(stencil-ranges SOURCES stencil-ranges.cc INCLUDES ${PRK_RANGE_V3_INCLUDE_DIR} DEFS USE_RANGES_TS)
-    add_dependencies(cxx11_ranges stencil-ranges)
+    add_dependencies(cxx11_ranges cxx11_stencil-ranges)
   else()
     message(STATUS "Cxx11 stencil-ranges: skipped, range-v3 not available (hardcodes its own ranges::... API)")
   endif()
@@ -632,9 +654,9 @@ if(PRK_RANGES_BASIC_DEFS)
   if(PRK_RANGES_FULL_DEFS)
     prk_cxx_executable(transpose-ranges SOURCES transpose-ranges.cc INCLUDES ${PRK_RANGES_FULL_INCLUDES} DEFS ${PRK_RANGES_FULL_DEFS})
     if(PRK_RANGES_FULL_CXX_STANDARD)
-      set_target_properties(transpose-ranges PROPERTIES CXX_STANDARD ${PRK_RANGES_FULL_CXX_STANDARD})
+      set_target_properties(cxx11_transpose-ranges PROPERTIES CXX_STANDARD ${PRK_RANGES_FULL_CXX_STANDARD})
     endif()
-    add_dependencies(cxx11_ranges transpose-ranges)
+    add_dependencies(cxx11_ranges cxx11_transpose-ranges)
   else()
     message(STATUS "Cxx11 transpose-ranges: skipped, no ranges backend supports cartesian_product/tiling here")
   endif()
@@ -645,9 +667,9 @@ if(PRK_RANGES_BASIC_DEFS)
   if(PRK_CXX20_SUPPORTED)
     prk_cxx_executable(nstream-stl    SOURCES nstream-stl.cc)
     prk_cxx_executable(nstream-ranges SOURCES nstream-ranges.cc)
-    set_target_properties(nstream-stl nstream-ranges PROPERTIES CXX_STANDARD 20)
-    add_dependencies(cxx11_stl nstream-stl)
-    add_dependencies(cxx11_ranges nstream-ranges)
+    set_target_properties(cxx11_nstream-stl cxx11_nstream-ranges PROPERTIES CXX_STANDARD 20)
+    add_dependencies(cxx11_stl cxx11_nstream-stl)
+    add_dependencies(cxx11_ranges cxx11_nstream-ranges)
   else()
     message(STATUS "Cxx11 nstream-stl/nstream-ranges: skipped, compiler has no C++20 <ranges> support")
   endif()
@@ -661,9 +683,9 @@ if(Kokkos_FOUND)
   prk_cxx_executable(stencil-kokkos   SOURCES stencil-kokkos.cc   LIBS Kokkos::kokkos)
   prk_cxx_executable(transpose-kokkos SOURCES transpose-kokkos.cc LIBS Kokkos::kokkos)
   prk_cxx_executable(nstream-kokkos   SOURCES nstream-kokkos.cc   LIBS Kokkos::kokkos)
-  add_custom_target(cxx11_kokkos DEPENDS stencil-kokkos transpose-kokkos nstream-kokkos)
+  add_custom_target(cxx11_kokkos DEPENDS cxx11_stencil-kokkos cxx11_transpose-kokkos cxx11_nstream-kokkos)
   if(Kokkos_AUTOBUILT)
-    add_dependencies(stencil-kokkos transpose-kokkos nstream-kokkos ${Kokkos_EXTERNAL_TARGET})
+    add_dependencies(cxx11_stencil-kokkos cxx11_transpose-kokkos cxx11_nstream-kokkos ${Kokkos_EXTERNAL_TARGET})
   endif()
 else()
   message(STATUS "Cxx11 kokkos: skipped, Kokkos not available")
@@ -678,11 +700,11 @@ if(RAJA_FOUND)
   prk_cxx_executable(nstream-raja         SOURCES nstream-raja.cc         LIBS RAJA)
   prk_cxx_executable(stencil-raja         SOURCES stencil-raja.cc         LIBS RAJA)
   add_custom_target(cxx11_raja DEPENDS
-    p2p-vector-raja stencil-vector-raja nstream-vector-raja
-    p2p-raja transpose-raja nstream-raja stencil-raja)
+    cxx11_p2p-vector-raja cxx11_stencil-vector-raja cxx11_nstream-vector-raja
+    cxx11_p2p-raja cxx11_transpose-raja cxx11_nstream-raja cxx11_stencil-raja)
   if(RAJA_AUTOBUILT)
     add_dependencies(cxx11_raja ${RAJA_EXTERNAL_TARGET})
-    foreach(_t p2p-vector-raja stencil-vector-raja nstream-vector-raja p2p-raja transpose-raja nstream-raja stencil-raja)
+    foreach(_t cxx11_p2p-vector-raja cxx11_stencil-vector-raja cxx11_nstream-vector-raja cxx11_p2p-raja cxx11_transpose-raja cxx11_nstream-raja cxx11_stencil-raja)
       add_dependencies(${_t} ${RAJA_EXTERNAL_TARGET})
     endforeach()
   endif()
@@ -698,7 +720,7 @@ if(PRK_OPENACC_FLAGS)
   prk_cxx_executable(transpose-openacc       SOURCES transpose-openacc.cc       FLAGS ${PRK_OPENACC_FLAGS})
   prk_cxx_executable(p2p-hyperplane-openacc  SOURCES p2p-hyperplane-openacc.cc  FLAGS ${PRK_OPENACC_FLAGS})
   add_custom_target(cxx11_openacc DEPENDS
-    nstream-openacc stencil-openacc transpose-openacc p2p-hyperplane-openacc)
+    cxx11_nstream-openacc cxx11_stencil-openacc cxx11_transpose-openacc cxx11_p2p-hyperplane-openacc)
 else()
   message(STATUS "Cxx11 openacc: skipped, no working OpenACC found")
 endif()
@@ -728,13 +750,13 @@ if(PRK_STDPAR_WORKS)
     list(APPEND _stdpar_includes ${CUDAToolkit_INCLUDE_DIRS})
   endif()
   prk_cxx_executable(nstream-stdpar SOURCES nstream-stdpar.cc LIBS ${_stdpar_libs} FLAGS ${PRK_STDPAR_FLAGS} INCLUDES ${_stdpar_includes})
-  set(_cxx11_stdpar_targets nstream-stdpar)
+  set(_cxx11_stdpar_targets cxx11_nstream-stdpar)
   # transpose-stdpar.cc uses a raw `__device__`-annotated lambda, which only
   # nvcc/nvc++ understand (nvc++'s -stdpar=gpu recognizes CUDA C++ device
   # annotations; plain g++/icpx's TBB-backed PSTL fallback does not).
   if(CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
     prk_cxx_executable(transpose-stdpar SOURCES transpose-stdpar.cc LIBS ${_stdpar_libs} FLAGS ${PRK_STDPAR_FLAGS} INCLUDES ${_stdpar_includes})
-    list(APPEND _cxx11_stdpar_targets transpose-stdpar)
+    list(APPEND _cxx11_stdpar_targets cxx11_transpose-stdpar)
   else()
     message(STATUS "Cxx11 transpose-stdpar: skipped, needs nvc++'s -stdpar=gpu (raw __device__ lambda)")
   endif()
@@ -784,25 +806,25 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 if(MPI_CXX_FOUND)
-  prk_cxx_test(cxx11_mpi_nstream         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:nstream-mpi> 10 16777216)
-  prk_cxx_test(cxx11_mpi_stencil         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:stencil-mpi> 10 1000)
-  prk_cxx_test(cxx11_mpi_transpose_a2a   COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:transpose-a2a-mpi> 10 1024 32)
-  prk_cxx_test(cxx11_mpi_transpose_p2p   COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:transpose-p2p-mpi> 10 1024 32)
-  prk_cxx_test(cxx11_mpi_transpose_get   COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:transpose-get-mpi> 10 1024 32)
+  prk_cxx_test(cxx11_mpi_nstream         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:cxx11_nstream-mpi> 10 16777216)
+  prk_cxx_test(cxx11_mpi_stencil         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:cxx11_stencil-mpi> 10 1000)
+  prk_cxx_test(cxx11_mpi_transpose_a2a   COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:cxx11_transpose-a2a-mpi> 10 1024 32)
+  prk_cxx_test(cxx11_mpi_transpose_p2p   COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:cxx11_transpose-p2p-mpi> 10 1024 32)
+  prk_cxx_test(cxx11_mpi_transpose_get   COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:cxx11_transpose-get-mpi> 10 1024 32)
 
-  if(TARGET dgemm-mpi-cblas)
-    prk_cxx_test(cxx11_mpi_cblas_dgemm COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:dgemm-mpi-cblas> 10 400)
+  if(TARGET cxx11_dgemm-mpi-cblas)
+    prk_cxx_test(cxx11_mpi_cblas_dgemm COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4 $<TARGET_FILE:cxx11_dgemm-mpi-cblas> 10 400)
     # Same pre-existing OpenBLAS CPU-kernel-detection bug as cxx11_cblas_dgemm.
     set_tests_properties(cxx11_mpi_cblas_dgemm PROPERTIES ENVIRONMENT "OPENBLAS_CORETYPE=SkylakeX")
   endif()
 
-  if(TARGET dgemm-mpi-cublas)
+  if(TARGET cxx11_dgemm-mpi-cublas)
     # dgemm-mpi-cublas.cu already detects its own GPU count (cudaGetDeviceCount)
     # and rank count (MPI_Comm_size) at runtime and aborts with a clear
     # message if they don't match -- that's correct, expected behavior, not
     # something to work around. Just give it a correct invocation, using the
     # GPU count already detected above (PRK_NUM_GPUS).
-    prk_cxx_test(cxx11_mpi_cublas_dgemm COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${PRK_NUM_GPUS} $<TARGET_FILE:dgemm-mpi-cublas> 10 400)
+    prk_cxx_test(cxx11_mpi_cublas_dgemm COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${PRK_NUM_GPUS} $<TARGET_FILE:cxx11_dgemm-mpi-cublas> 10 400)
   endif()
 endif()
 
@@ -844,14 +866,14 @@ if(PRK_WITH_CUDA)
     prk_cxx_test(cxx11_cudastf_transpose COMMAND transpose-cudastf 10 1024)
   endif()
 
-  if(TARGET nstream-nccl)
+  if(TARGET cxx11_nstream-nccl)
     prk_cxx_test(cxx11_nccl_nstream COMMAND nstream-nccl 10 16777216)
   endif()
 
   if(PRK_NVSHMEM_FOUND AND PRK_NVSHRUN_EXECUTABLE)
-    prk_cxx_test(cxx11_nvshmem_transpose_get COMMAND ${PRK_NVSHRUN_EXECUTABLE} -n 2 $<TARGET_FILE:transpose-get-nvshmem> 10 1024)
-    prk_cxx_test(cxx11_nvshmem_transpose_a2a COMMAND ${PRK_NVSHRUN_EXECUTABLE} -n 2 $<TARGET_FILE:transpose-a2a-nvshmem> 10 1024)
-    prk_cxx_test(cxx11_nvshmem_transpose_ptr COMMAND ${PRK_NVSHRUN_EXECUTABLE} -n 2 $<TARGET_FILE:transpose-ptr-nvshmem> 10 1024)
+    prk_cxx_test(cxx11_nvshmem_transpose_get COMMAND ${PRK_NVSHRUN_EXECUTABLE} -n 2 $<TARGET_FILE:cxx11_transpose-get-nvshmem> 10 1024)
+    prk_cxx_test(cxx11_nvshmem_transpose_a2a COMMAND ${PRK_NVSHRUN_EXECUTABLE} -n 2 $<TARGET_FILE:cxx11_transpose-a2a-nvshmem> 10 1024)
+    prk_cxx_test(cxx11_nvshmem_transpose_ptr COMMAND ${PRK_NVSHRUN_EXECUTABLE} -n 2 $<TARGET_FILE:cxx11_transpose-ptr-nvshmem> 10 1024)
     # transpose-put-nvshmem.cu's device-initiated kernel (transpose_nvshmem_put
     # in transpose-kernel.h) has a known, pre-existing cross-PE correctness
     # bug -- consistently throws "validation failed" under nvshmrun -n 2,
@@ -863,17 +885,22 @@ if(PRK_WITH_CUDA)
     # source/destination offsets and the working GET variant's. Wired into
     # CTest anyway (expected-fail, tracked, not silently skipped) pending a
     # proper fix.
-    prk_cxx_test(cxx11_nvshmem_transpose_put COMMAND ${PRK_NVSHRUN_EXECUTABLE} -n 2 $<TARGET_FILE:transpose-put-nvshmem> 10 1024)
+    prk_cxx_test(cxx11_nvshmem_transpose_put COMMAND ${PRK_NVSHRUN_EXECUTABLE} -n 2 $<TARGET_FILE:cxx11_transpose-put-nvshmem> 10 1024)
   else()
     message(STATUS "Cxx11 nvshmem tests: skipped, nvshmrun launcher not found")
   endif()
 endif()
 
 if(OpenCL_FOUND)
-  prk_cxx_test(cxx11_opencl_stencil        COMMAND stencil-opencl 10 1000)
-  prk_cxx_test(cxx11_opencl_transpose      COMMAND transpose-opencl 10 1024)
-  prk_cxx_test(cxx11_opencl_nstream        COMMAND nstream-opencl 10 16777216)
-  prk_cxx_test(cxx11_opencl_p2p_innerloop  COMMAND p2p-innerloop-opencl 10 1024)
+  # These use $<TARGET_FILE:...> (an absolute path), not a bare name: the
+  # WORKING_DIRECTORY override below (needed so loadProgram() finds the
+  # .cl kernel source files) means a bare relative command name would
+  # resolve against the source directory, not the build directory where
+  # the binary actually is.
+  prk_cxx_test(cxx11_opencl_stencil        COMMAND $<TARGET_FILE:cxx11_stencil-opencl> 10 1000)
+  prk_cxx_test(cxx11_opencl_transpose      COMMAND $<TARGET_FILE:cxx11_transpose-opencl> 10 1024)
+  prk_cxx_test(cxx11_opencl_nstream        COMMAND $<TARGET_FILE:cxx11_nstream-opencl> 10 16777216)
+  prk_cxx_test(cxx11_opencl_p2p_innerloop  COMMAND $<TARGET_FILE:cxx11_p2p-innerloop-opencl> 10 1024)
   # p2p-innerloop-opencl.cc is a known, pre-existing bug: p2p.cl's kernel
   # loops over all 2n-2 anti-diagonals internally and uses barrier() to
   # synchronize between them, but OpenCL's barrier() only synchronizes
@@ -896,34 +923,34 @@ if(OpenCL_FOUND)
   set_tests_properties(
     cxx11_opencl_stencil cxx11_opencl_transpose cxx11_opencl_nstream cxx11_opencl_p2p_innerloop
     PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
-  if(TARGET nstream-boost-compute)
+  if(TARGET cxx11_nstream-boost-compute)
     prk_cxx_test(cxx11_boost_compute_nstream COMMAND nstream-boost-compute 10 16777216)
   endif()
 endif()
 
-if(TARGET stencil-stl)
+if(TARGET cxx11_stencil-stl)
   prk_cxx_test(cxx11_stl_stencil   COMMAND stencil-stl 10 1000)
   prk_cxx_test(cxx11_stl_transpose COMMAND transpose-stl 10 1024)
 endif()
-if(TARGET nstream-stl)
+if(TARGET cxx11_nstream-stl)
   prk_cxx_test(cxx11_stl_nstream COMMAND nstream-stl 10 16777216)
 endif()
 
-if(TARGET stencil-ranges)
+if(TARGET cxx11_stencil-ranges)
   prk_cxx_test(cxx11_ranges_stencil COMMAND stencil-ranges 10 1000)
 endif()
-if(TARGET transpose-ranges)
+if(TARGET cxx11_transpose-ranges)
   prk_cxx_test(cxx11_ranges_transpose COMMAND transpose-ranges 10 1024)
 endif()
-if(TARGET nstream-ranges)
+if(TARGET cxx11_nstream-ranges)
   prk_cxx_test(cxx11_ranges_nstream COMMAND nstream-ranges 10 16777216)
 endif()
 
-if(TARGET stencil-pstl)
+if(TARGET cxx11_stencil-pstl)
   prk_cxx_test(cxx11_pstl_stencil   COMMAND stencil-pstl 10 1000)
   prk_cxx_test(cxx11_pstl_transpose COMMAND transpose-pstl 10 1024)
 endif()
-if(TARGET nstream-pstl)
+if(TARGET cxx11_nstream-pstl)
   prk_cxx_test(cxx11_pstl_nstream COMMAND nstream-pstl 10 16777216)
 endif()
 
@@ -952,7 +979,7 @@ endif()
 
 if(PRK_STDPAR_WORKS)
   prk_cxx_test(cxx11_stdpar_nstream   COMMAND nstream-stdpar 10 16777216)
-  if(TARGET transpose-stdpar)
+  if(TARGET cxx11_transpose-stdpar)
     prk_cxx_test(cxx11_stdpar_transpose COMMAND transpose-stdpar 10 1024)
   endif()
 endif()
