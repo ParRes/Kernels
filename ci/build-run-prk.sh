@@ -192,7 +192,12 @@ case "$PRK_TARGET" in
             export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
             export DYLD_LIBRARY_PATH=${LLVMPATH}/lib:$DYLD_LIBRARY_PATH
         elif [ "$os" = "Linux" ] && [ "${CC}" = "clang" ] ; then
-            LLVMPATH=/usr/lib/llvm-8 # dirty hack FIXME
+            # Derive LLVMPATH from whichever clang is actually on PATH,
+            # instead of a hardcoded version (previously /usr/lib/llvm-8,
+            # which predates the current CI runner image and no longer
+            # exists -- this must keep working as Ubuntu's default clang
+            # version changes over time).
+            LLVMPATH=$(dirname $(dirname $(dirname $(clang -print-resource-dir))))
             echo "LLVMPATH=${LLVMPATH}"
             echo "CC=${LLVMPATH}/bin/clang -std=c99" >> common/make.defs
             echo "OPENMPFLAG=-fopenmp" \
@@ -409,7 +414,12 @@ case "$PRK_TARGET" in
                     export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
                     export DYLD_LIBRARY_PATH=${LLVMPATH}/lib:$DYLD_LIBRARY_PATH
                 elif [ "$os" = "Linux" ] && [ "${CC}" = "clang" ] ; then
-                    LLVMPATH=/usr/lib/llvm-8 # dirty hack FIXME
+                    # Derive LLVMPATH from whichever clang is actually on PATH,
+                    # instead of a hardcoded version (previously /usr/lib/llvm-8,
+                    # which predates the current CI runner image and no longer
+                    # exists -- this must keep working as Ubuntu's default clang
+                    # version changes over time).
+                    LLVMPATH=$(dirname $(dirname $(dirname $(clang -print-resource-dir))))
                     echo "LLVMPATH=${LLVMPATH}"
                     echo "CC=${LLVMPATH}/bin/clang -std=c99" >> common/make.defs
                     echo "OPENMPFLAG=-fopenmp" \
@@ -790,7 +800,12 @@ case "$PRK_TARGET" in
             export LD_LIBRARY_PATH=${LLVMPATH}/lib:$LD_LIBRARY_PATH
             export DYLD_LIBRARY_PATH=${LLVMPATH}/lib:$DYLD_LIBRARY_PATH
         elif [ "$os" = "Linux" ] && [ "${CC}" = "clang" ] ; then
-            LLVMPATH=/usr/lib/llvm-8 # dirty hack FIXME
+            # Derive LLVMPATH from whichever clang is actually on PATH,
+            # instead of a hardcoded version (previously /usr/lib/llvm-8,
+            # which predates the current CI runner image and no longer
+            # exists -- this must keep working as Ubuntu's default clang
+            # version changes over time).
+            LLVMPATH=$(dirname $(dirname $(dirname $(clang -print-resource-dir))))
             echo "LLVMPATH=${LLVMPATH}"
             echo "CC=${LLVMPATH}/bin/clang -std=c99" >> common/make.defs
             echo "OPENMPFLAG=-fopenmp" \

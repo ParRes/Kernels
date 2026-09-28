@@ -14,16 +14,17 @@ if [ "${CC}" = "clang" ] || [ "${CXX}" = "clang++" ] ; then
             #brew install libomp || brew upgrade libomp || true
             ;;
         Linux)
-            echo "Linux Clang/LLVM builds not supported!"
-            set +e
-            for v in "-11" "-10" "-9" "-8" "-7" ; do
-                sudo apt-get install clang$v && sudo apt-get install libomp$v-dev
-                if [ -f /usr/lib/llvm$v/bin/clang-$v ] && [ -f /usr/lib/llvm$v/lib/libomp.so ] ; then
-                    /usr/lib/llvm$v/bin/clang-$ -v
-                    break
-                fi
-            done
-            set -e
+            echo "Linux"
+            # Install whatever clang/libomp-dev versions the distro's apt
+            # repos currently default to, rather than looping over a fixed
+            # list of old numbered packages (clang-11 down to clang-7):
+            # those aged out of Ubuntu's repos as the CI runner image was
+            # upgraded over time, so the loop always failed silently and
+            # left no clang/libomp installed at all. Unversioned package
+            # names track whatever Ubuntu ships by default, so this keeps
+            # working across future runner image upgrades too.
+            sudo apt-get install -y clang libomp-dev
+            clang -v
         ;;
     esac
 fi
