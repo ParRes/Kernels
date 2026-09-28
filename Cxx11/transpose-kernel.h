@@ -413,8 +413,15 @@ __global__ void transpose_nvshmem_put(int variant, size_t block_size, int me, in
         } else if (variant==2) {
             transposeNoBankConflictDevice_put(block_order, A + soffset, B + roffset, recv_from);
         }
-        
-        // Synchronize between phases
+
+        // __syncthreads() only orders threads within this block; it says
+        // nothing about when the PUTs just issued become visible to the
+        // remote PE. nvshmem_fence() orders this PE's PUTs to each remote
+        // PE (so the transpose data lands before anything issued after
+        // it), which is what actually makes the cross-GPU data dependency
+        // in the next phase (and the host-side barrier after this kernel)
+        // correct.
+        nvshmem_fence();
         __syncthreads();
     }
 }

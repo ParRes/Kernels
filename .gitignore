@@ -1,24 +1,41 @@
-*.i                             # Preprocessed source
-*.s                             # Assembly output
-*.ll                            # LLVM intermediate
-*.o                             # Object files
+# Note: git does not support inline trailing "# comment" text after a
+# pattern on the same line -- it becomes part of the literal pattern,
+# silently breaking the match. Keep comments on their own line.
+# Preprocessed source
+*.i
+# Assembly output
+*.s
+# LLVM intermediate
+*.ll
+# Object files
+*.o
 */*.o
 */*/*.o
-core.*                          # core files
-octave-workspace                # Octave crashes
-*.swp                           # Vim
-.vscode                         # VSCode
+# core files
+core.*
+# Python bytecode cache
+__pycache__/
+# Octave crashes
+octave-workspace
+# Vim
+*.swp
 */*.swp
 */*/*.swp
 */*/*/*.swp
-*.swo                           # Vim
-*.dSYM                          # Mac
-*/*.dSYM                        # Mac
-*/*/*.dSYM                      # Mac
-*.optrpt                        # Intel compiler
-*__genmod.*                     # Intel Fortran compiler
-*.patch                         # patch files
-*.dbg                           # Flang
+*.swo
+.vscode
+# Mac
+*.dSYM
+*/*.dSYM
+*/*/*.dSYM
+# Intel compiler
+*.optrpt
+# Intel Fortran compiler
+*__genmod.*
+# patch files
+*.patch
+# Flang
+*.dbg
 
 # NVIDIA profiler
 *.nsys-rep
@@ -46,20 +63,29 @@ scripts/small/runfenix
 
 deps/
 
-*.incl                          # PRK C89 stencil generated code
+# PRK C89 stencil generated code
+*.incl
 */*.incl
 */*/*.incl
-func.c                          # PRK C89 stencil generated code
+func.c
 */func.c
 */*/func.c
 
-*.cobaltlog                     # ALCF Cobalt scheduler
-*.output                        # ALCF Cobalt scheduler
-*.error                         # ALCF Cobalt scheduler
+# ALCF Cobalt scheduler
+*.cobaltlog
+*.output
+*.error
 
 *.log
 *.log2
 *.log3
+
+ADA/*.ali
+ADA/args
+ADA/hello
+ADA/nstream
+ADA/nstream_array
+ADA/transpose
 
 C1z/nstream
 C1z/nstream-alloc-target
@@ -150,8 +176,10 @@ Cxx11/dgemm-stdpar
 Cxx11/dgemm-sycl
 Cxx11/dgemm-vector
 Cxx11/dgemm-vector-raja
+Cxx11/sgemm-cblas
 Cxx11/sgemm-cublas
 Cxx11/sgemm-hipblas
+Cxx11/xgemm-cblas
 Cxx11/xgemm-cublas
 Cxx11/grid*.cl
 Cxx11/nstream
@@ -165,6 +193,7 @@ Cxx11/nstream-onedpl
 Cxx11/nstream-executors
 Cxx11/nstream-halide
 Cxx11/nstream-hip
+Cxx11/nstream-device-thrust
 Cxx11/nstream-hipblas
 Cxx11/nstream-hipstl
 Cxx11/nstream-host-thrust
@@ -265,6 +294,7 @@ Cxx11/transpose-a2a-mpi-nccl
 Cxx11/transpose-a2a-mpi
 Cxx11/transpose-a2a-nvshmem
 Cxx11/transpose-async
+Cxx11/transpose-cblas
 Cxx11/transpose-cilk
 Cxx11/transpose-cublas
 Cxx11/transpose-cuda
@@ -464,6 +494,107 @@ SWIFT/p2p-metal
 SWIFT/xgemm
 SWIFT/xgemm-accelerate
 SWIFT/xgemm-metal
+
+# Top-level equivalents: CMake's in-source build (SERIAL/CMakeLists.txt)
+# places binaries directly in SERIAL/, not the per-kernel subdirectories
+# above.
+SERIAL/amr
+SERIAL/branch
+SERIAL/dgemm
+SERIAL/nstream
+SERIAL/p2p
+SERIAL/pic
+SERIAL/random
+SERIAL/reduce
+SERIAL/sparse
+SERIAL/stencil
+SERIAL/transpose
+
+OPENMP/Synch_p2p/p2p
+OPENMP/Stencil/stencil
+OPENMP/Transpose/transpose
+OPENMP/Reduce/reduce
+OPENMP/Nstream/nstream
+OPENMP/Sparse/sparse
+OPENMP/DGEMM/dgemm
+OPENMP/Synch_global/global
+OPENMP/Refcount/refcount
+OPENMP/PIC/pic
+OPENMP/Random/random
+OPENMP/Branch/branch
+OPENMP/p2p
+OPENMP/stencil
+OPENMP/transpose
+OPENMP/reduce
+OPENMP/nstream
+OPENMP/sparse
+OPENMP/dgemm
+OPENMP/global
+OPENMP/refcount
+OPENMP/pic
+OPENMP/random
+OPENMP/branch
+
+MPI1/AMR/amr
+MPI1/Branch/branch
+MPI1/DGEMM/dgemm
+MPI1/Nstream/nstream
+MPI1/PIC-static/pic
+MPI1/Random/random
+MPI1/Reduce/reduce
+MPI1/Sparse/sparse
+MPI1/Stencil/stencil
+MPI1/Synch_global/global
+MPI1/Synch_p2p/p2p
+MPI1/Transpose/transpose
+MPI1/amr
+MPI1/branch
+MPI1/dgemm
+MPI1/nstream
+MPI1/pic
+MPI1/random
+MPI1/reduce
+MPI1/sparse
+MPI1/stencil
+MPI1/global
+MPI1/p2p
+MPI1/transpose
+
+MPIOPENMP/Nstream/nstream
+MPIOPENMP/Stencil/stencil
+MPIOPENMP/Synch_p2p/p2p
+MPIOPENMP/Transpose/transpose
+MPIOPENMP/nstream
+MPIOPENMP/stencil
+MPIOPENMP/p2p
+MPIOPENMP/transpose
+
+MPIRMA/Stencil/stencil
+MPIRMA/Synch_p2p/p2p
+MPIRMA/Transpose/transpose
+MPIRMA/stencil
+MPIRMA/p2p
+MPIRMA/transpose
+
+MPISHM/Synch_p2p/p2p
+MPISHM/Stencil/stencil
+MPISHM/Transpose/transpose
+MPISHM/p2p
+MPISHM/stencil
+MPISHM/transpose
+
+SHMEM/Synch_p2p/p2p
+SHMEM/Stencil/stencil
+SHMEM/Transpose/transpose
+SHMEM/p2p
+SHMEM/stencil
+SHMEM/transpose
+
+COBOL/nstream
+COBOL/transpose
+COBOL/p2p
+COBOL/dgemm
+
 dgemm-vector.dSYM
 dgemm.dSYM
 nstream-opencl.dSYM
@@ -502,3 +633,11 @@ transpose-thread.dSYM
 transpose-valarray.dSYM
 transpose-vector.dSYM
 transpose.dSYM
+
+# CMake
+/build/
+/build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake

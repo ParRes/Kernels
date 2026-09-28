@@ -246,12 +246,17 @@ int main(int argc, char * argv[])
                 
                 prk::NVSHMEM::free(T);
                 
-                // Synchronize between phases
-                prk::NVSHMEM::barrier(false);
+                // Synchronize between phases -- must include memory (quiet),
+                // not just PE arrival, since the next phase's PE reads what
+                // was just PUT to it.
+                prk::NVSHMEM::barrier(true);
             }
         }
         prk::check( cudaEventRecord(transpose_stop) );
-        prk::NVSHMEM::barrier(false);
+        // Must include memory here too: the on_device kernel path issues
+        // its own PUTs (ordered by nvshmem_fence() in transpose_nvshmem_put),
+        // and this is the first host-side synchronization after it.
+        prk::NVSHMEM::barrier(true);
 
         // increment A
         prk::check( cudaEventRecord(increment_start) );

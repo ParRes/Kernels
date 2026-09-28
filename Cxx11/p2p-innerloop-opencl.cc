@@ -63,7 +63,7 @@
 #include "prk_opencl.h"
 
 template <typename T>
-void run(cl::Context context, int iterations, int n)
+bool run(cl::Context context, int iterations, int n)
 {
   auto precision = (sizeof(T)==8) ? 64 : 32;
 
@@ -123,6 +123,7 @@ void run(cl::Context context, int iterations, int n)
   if ( (prk::abs(h_grid[(n-1)*n+(n-1)] - corner_val)/corner_val) > epsilon) {
     std::cout << "ERROR: checksum " << h_grid[(n-1)*n+(n-1)]
               << " does not match verification value " << corner_val << std::endl;
+    return false;
   }
 
 #ifdef VERBOSE
@@ -134,6 +135,7 @@ void run(cl::Context context, int iterations, int n)
   std::cout << "Rate (MFlops/s): "
             << 2.0e-6 * ( (n-1.)*(n-1.) )/avgtime
             << " Avg time (s): " << avgtime << std::endl;
+  return true;
 }
 
 int main(int argc, char* argv[])
@@ -181,6 +183,7 @@ int main(int argc, char* argv[])
   //////////////////////////////////////////////////////////////////////
 
   cl_int err = CL_SUCCESS;
+  bool success = true;
 
   cl::Context cpu(CL_DEVICE_TYPE_CPU, NULL, NULL, NULL, &err);
   if ( err == CL_SUCCESS && prk::opencl::available(cpu) )
@@ -190,9 +193,9 @@ int main(int argc, char* argv[])
     std::cout << "CPU Precision         = " << precision << "-bit" << std::endl;
 
     if (precision==64) {
-        run<double>(cpu, iterations, n);
+        success = run<double>(cpu, iterations, n) && success;
     } else {
-        run<float>(cpu, iterations, n);
+        success = run<float>(cpu, iterations, n) && success;
     }
   }
 
@@ -204,9 +207,9 @@ int main(int argc, char* argv[])
     std::cout << "GPU Precision         = " << precision << "-bit" << std::endl;
 
     if (precision==64) {
-        run<double>(gpu, iterations, n);
+        success = run<double>(gpu, iterations, n) && success;
     } else {
-        run<float>(gpu, iterations, n);
+        success = run<float>(gpu, iterations, n) && success;
     }
   }
 
@@ -219,11 +222,11 @@ int main(int argc, char* argv[])
     std::cout << "ACC Precision         = " << precision << "-bit" << std::endl;
 
     if (precision==64) {
-        run<double>(acc, iterations, n);
+        success = run<double>(acc, iterations, n) && success;
     } else {
-        run<float>(acc, iterations, n);
+        success = run<float>(acc, iterations, n) && success;
     }
   }
 
-  return 0;
+  return success ? 0 : 1;
 }

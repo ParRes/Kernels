@@ -60,6 +60,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 
 #include "immintrin.h"
 
@@ -151,7 +152,7 @@ static inline void sweep_tile(int startm, int endm,
 
 int main(int argc, char * argv[])
 {
-  printf("Parallel Research Kernels version %.2f\n", PRKVERSION);
+  printf("Parallel Research Kernels version %s\n", PRKVERSION);
 #ifdef _OPENMP
   printf("C11/OpenMP TASKS pipeline execution on 2D grid\n");
 #else

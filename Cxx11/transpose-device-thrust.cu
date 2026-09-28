@@ -52,33 +52,23 @@
 #include "prk_util.h"
 #include "prk_cuda.h"
 #include "prk_thrust.h"
+#include "prk_ranges.h"
 
-struct x : public thrust::unary_function<void,int>
-{
-    int i;
-    int order;
-    thrust::device_vector<double> & A;
-    thrust::device_vector<double> & B;
-
-    x(int i, int order, thrust::device_vector<double> & A, thrust::device_vector<double> & B) :
-        i(i), order(order), A(A), B(B) {}
-
-    __host__ __device__
-    void operator()(int j)
-    {
-        B[i*order+j] += A[j*order+i];
-        A[j*order+i] += 1.0;
-        return;
-    }
-};
-
-//__device__
+// Capturing thrust::device_vector by reference inside a lambda passed to
+// thrust::for_each(thrust::device, ...) doesn't produce a clean diagnostic
+// -- it silently breaks CUB's for_each template instantiation ("template
+// argument 2 is invalid"). Capture raw device pointers by value instead.
 void transpose(const int order, thrust::device_vector<double> & A, thrust::device_vector<double> & B)
 {
     thrust::counting_iterator<int> start(0);
     thrust::counting_iterator<int> end = start + order;
-    thrust::for_each( thrust::device, start, end, [=,&A,&B] (int i) {
-      thrust::for_each( thrust::device, start, end, x(i,order,A,B) );
+    double * Ap = thrust::raw_pointer_cast(A.data());
+    double * Bp = thrust::raw_pointer_cast(B.data());
+    thrust::for_each( thrust::device, start, end, [=] __device__ (int i) {
+      for (int j = 0; j < order; j++) {
+        Bp[i*order+j] += Ap[j*order+i];
+        Ap[j*order+i] += 1.0;
+      }
     });
 }
 

@@ -74,6 +74,7 @@ int main(int argc, char* argv[])
   int iterations;
   int n;
   int nc;
+  int nb;
   try {
       if (argc < 3) {
         throw " <# iterations> <array dimension> [<chunk dimension>]";

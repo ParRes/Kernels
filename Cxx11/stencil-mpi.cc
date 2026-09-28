@@ -233,8 +233,12 @@ int main(int argc, char* argv[])
         norm += prk::abs(out[i*n+j]);
       }
     }
+    // Every rank redundantly computes the identical full n*n grid (there is
+    // no domain decomposition/halo exchange in this file), so summing norm
+    // across ranks over-counts by a factor of np; divide it back out.
     norm = prk::MPI::sum(norm);
     norm /= active_points;
+    norm /= np;
 
     // verify correctness
     const double epsilon = 1.0e-8;

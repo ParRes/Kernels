@@ -15,9 +15,24 @@
 
 #ifdef PRK_USE_CUBLAS
 #include <cublas_v2.h>
+#include <curand.h>
 #endif
 
 //#include <nvtx3.hpp>
+
+// CUDA_VERSION format: MAJOR * 1000 + MINOR * 10
+#ifdef CUDA_VERSION
+    #define CUDA_MAJOR_VERSION (CUDA_VERSION / 1000)
+    #define CUDA_MINOR_VERSION ((CUDA_VERSION % 1000) / 10)
+
+    #if CUDA_VERSION >= 12000
+        // CUDA 12.0+
+    #elif CUDA_VERSION >= 11000
+        // CUDA 11.x
+    #elif CUDA_VERSION >= 10000
+        // CUDA 10.x
+    #endif
+#endif
 
 typedef double prk_float;
 
@@ -41,6 +56,14 @@ namespace prk
 #error CUBLAS error names missing
             std::cerr << "PRK CUBLAS error: " << rc << std::endl;
 #endif
+            std::abort();
+        }
+    }
+
+    void check(curandStatus_t rc)
+    {
+        if (rc!=CURAND_STATUS_SUCCESS) {
+            std::cerr << "PRK CURAND error: " << rc << std::endl;
             std::abort();
         }
     }
@@ -118,7 +141,9 @@ namespace prk
                         std::cout << "max grid size:           " << vDevices[i].maxGridSize[0] << ","
                                                                  << vDevices[i].maxGridSize[1] << ","
                                                                  << vDevices[i].maxGridSize[2] << "\n";
+#if CUDA_MAJOR_VERSION < 13
                         std::cout << "memory clock rate (KHz): " << vDevices[i].memoryClockRate << "\n";
+#endif
                         std::cout << "memory bus width (bits): " << vDevices[i].memoryBusWidth << "\n";
                     }
                 }
@@ -226,7 +251,13 @@ namespace prk
         void prefetch(T * ptr, size_t n, int device = 0) {
             size_t bytes = n * sizeof(T);
             //std::cout << "device=" << device << "\n";
+#if CUDA_MAJOR_VERSION >= 13
+            cudaMemLocation location = { .type = cudaMemLocationTypeDevice , .id = device };
+            int flags = 0;
+            prk::check( cudaMemPrefetchAsync(ptr, bytes, location, flags) );
+#else
             prk::check( cudaMemPrefetchAsync(ptr, bytes, device) );
+#endif
         }
 
         void sync(void) {

@@ -51,6 +51,7 @@
 
 #include "prk_util.h"
 #include "prk_thrust.h"
+#include "prk_ranges.h"
 
 int main(int argc, char * argv[])
 {

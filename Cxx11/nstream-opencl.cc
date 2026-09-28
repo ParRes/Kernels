@@ -65,7 +65,7 @@
 #include "prk_opencl.h"
 
 template <typename T>
-void run(cl::Context context, int iterations, size_t length)
+bool run(cl::Context context, int iterations, size_t length)
 {
   auto precision = (sizeof(T)==8) ? 64 : 32;
 
@@ -142,6 +142,7 @@ void run(cl::Context context, int iterations, size_t length)
                 << "       Expected checksum: " << ar << "\n"
                 << "       Observed checksum: " << asum << std::endl;
       std::cout << "ERROR: solution did not validate" << std::endl;
+      return false;
   } else {
       std::cout << "Solution validates" << std::endl;
       double avgtime = nstream_time/iterations;
@@ -150,6 +151,7 @@ void run(cl::Context context, int iterations, size_t length)
                 << "Rate (MB/s): " << 1.e-6*nbytes/avgtime
                 << " Avg time (s): " << avgtime << std::endl;
   }
+  return true;
 }
 
 int main(int argc, char* argv[])
@@ -192,6 +194,8 @@ int main(int argc, char* argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
+  bool success = true;
+
   std::vector<cl::Platform> platforms;
   cl::Platform::get(&platforms);
   if ( platforms.size() == 0 ) {
@@ -214,12 +218,12 @@ int main(int argc, char* argv[])
       const int precision = prk::opencl::precision(ctx);
       //std::cout << "Device Precision        = " << precision << "-bit" << std::endl;
       if (precision==64) {
-          run<double>(dev, iterations, length);
+          success = run<double>(dev, iterations, length) && success;
       }
-      run<float>(dev, iterations, length);
+      success = run<float>(dev, iterations, length) && success;
     }
   }
   std::cout << "====================================================" << std::endl;
 
-  return 0;
+  return success ? 0 : 1;
 }

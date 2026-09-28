@@ -63,8 +63,13 @@ namespace prk {
     template <class S, class E, class B>
     auto range(S start, E end, B blocking) {
 #if defined(USE_GCC_RANGES)
-#warning This implementation does not support tiling!
+# if defined(__cpp_lib_ranges_stride)
+        return std::views::iota(static_cast<decltype(end)>(start), end) |
+               std::views::stride(static_cast<decltype(end)>(blocking));
+# else
+#warning This implementation does not support tiling! (needs C++23 std::views::stride)
         return std::ranges::views::iota(static_cast<decltype(end)>(start), end);
+# endif
 #elif defined(USE_BOOST_IRANGE)
         return boost::irange(static_cast<decltype(end)>(start), end, static_cast<decltype(end)>(blocking) );
 #elif defined(USE_RANGES_TS)
@@ -81,9 +86,19 @@ namespace prk {
     auto range2(S start, E end) {
         auto range1 = prk::range(start,end);
 #if defined(USE_GCC_RANGES)
+# if defined(__cpp_lib_ranges_cartesian_product)
+        return std::views::cartesian_product(range1,range1);
+# else
+#warning This implementation does not support cartesian products! (needs C++23 std::views::cartesian_product)
         return std::ranges::views::iota(static_cast<decltype(end)>(start), end);
+# endif
 #elif defined(USE_BOOST_IRANGE)
-        return boost::hana::cartesian_product(range1,range1);
+        // boost::irange is not Hana-Foldable, so hana::cartesian_product
+        // can't be applied to it directly (would need converting into a
+        // hana::tuple/hana::range first); not implemented -- CMake never
+        // selects USE_BOOST_IRANGE for targets that call range2().
+#warning prk::range2() is not implemented for USE_BOOST_IRANGE
+        return range1;
 #elif defined(USE_RANGES_TS)
         return ranges::views::cartesian_product(range1,range1);
 #endif
@@ -93,9 +108,15 @@ namespace prk {
     auto range2(S start, E end, B blocking) {
         auto range1 = prk::range(start,end,blocking);
 #if defined(USE_GCC_RANGES)
+# if defined(__cpp_lib_ranges_cartesian_product)
+        return std::views::cartesian_product(range1,range1);
+# else
+#warning This implementation does not support cartesian products! (needs C++23 std::views::cartesian_product)
         return std::ranges::views::iota(static_cast<decltype(end)>(start), end);
+# endif
 #elif defined(USE_BOOST_IRANGE)
-        return boost::hana::cartesian_product(range1,range1);
+#warning prk::range2() is not implemented for USE_BOOST_IRANGE
+        return range1;
 #elif defined(USE_RANGES_TS)
         return ranges::views::cartesian_product(range1,range1);
 #endif

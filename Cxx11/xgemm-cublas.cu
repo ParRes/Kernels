@@ -59,6 +59,7 @@
 
 #include "prk_util.h"
 #include "prk_cuda.h"
+#include "prk_thrust.h"
 
 prk::CUDA::info info;
 
@@ -84,6 +85,64 @@ __global__ void init(int order, T * A, T * B, T * C)
       B[i*order+j] = T(i);
       C[i*order+j] = T(0);
     }
+}
+
+// CURAND initialization templates
+template <typename T>
+void curand_init_matrices(T* d_a, T* d_b, size_t nelems) {
+    std::cerr << "No valid CURAND template match for type T" << std::endl;
+    std::abort();
+}
+
+template <>
+void curand_init_matrices<float>(float* d_a, float* d_b, size_t nelems) {
+    curandGenerator_t gen;
+    prk::check( curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT) );
+    prk::check( curandSetPseudoRandomGeneratorSeed(gen, 1234ULL) );
+    prk::check( curandGenerateUniform(gen, d_a, nelems) );
+    prk::check( curandGenerateUniform(gen, d_b, nelems) );
+    prk::check( curandDestroyGenerator(gen) );
+}
+
+template <>
+void curand_init_matrices<double>(double* d_a, double* d_b, size_t nelems) {
+    curandGenerator_t gen;
+    prk::check( curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT) );
+    prk::check( curandSetPseudoRandomGeneratorSeed(gen, 1234ULL) );
+    prk::check( curandGenerateUniformDouble(gen, d_a, nelems) );
+    prk::check( curandGenerateUniformDouble(gen, d_b, nelems) );
+    prk::check( curandDestroyGenerator(gen) );
+}
+
+template <>
+void curand_init_matrices<__half>(__half* d_a, __half* d_b, size_t nelems) {
+    // CURAND doesn't directly support __half, so generate float and convert
+    auto temp_a = prk::CUDA::malloc_device<float>(nelems);
+    auto temp_b = prk::CUDA::malloc_device<float>(nelems);
+    
+    curandGenerator_t gen;
+    prk::check( curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT) );
+    prk::check( curandSetPseudoRandomGeneratorSeed(gen, 1234ULL) );
+    prk::check( curandGenerateUniform(gen, temp_a, nelems) );
+    prk::check( curandGenerateUniform(gen, temp_b, nelems) );
+    prk::check( curandDestroyGenerator(gen) );
+    
+    // Convert float to __half
+    const int block_size = 256;
+    const int grid_size = (nelems + block_size - 1) / block_size;
+    
+    auto convert_kernel = [] __device__ (int idx, float* src, __half* dst, size_t n) {
+        if (idx < n) dst[idx] = __float2half(src[idx]);
+    };
+    
+    // Launch conversion kernels
+    thrust::for_each_n(thrust::device, thrust::counting_iterator<int>(0), nelems,
+        [=] __device__ (int idx) { if (idx < nelems) d_a[idx] = __float2half(temp_a[idx]); });
+    thrust::for_each_n(thrust::device, thrust::counting_iterator<int>(0), nelems,
+        [=] __device__ (int idx) { if (idx < nelems) d_b[idx] = __float2half(temp_b[idx]); });
+    
+    prk::CUDA::free(temp_a);
+    prk::CUDA::free(temp_b);
 }
 
 template <typename TAB, typename TC>
@@ -141,7 +200,7 @@ void prk_gemm(const cublasHandle_t & h,
 }
 
 template <typename T>
-void run(const cublasHandle_t & h, int iterations, int order)
+void run(const cublasHandle_t & h, int iterations, int order, bool random_initialization)
 {
   double gemm_time{0};
 
@@ -156,7 +215,15 @@ void run(const cublasHandle_t & h, int iterations, int order)
   auto d_a = prk::CUDA::malloc_device<T>(nelems);
   auto d_b = prk::CUDA::malloc_device<T>(nelems);
   auto d_c = prk::CUDA::malloc_device<T>(nelems);
-  init<<<dimGrid, dimBlock>>>(order, d_a, d_b, d_c);
+  
+  if (random_initialization) {
+    // Initialize matrices with CURAND uniform distribution [0,1]
+    curand_init_matrices(d_a, d_b, nelems);
+    // Initialize matrix C to zero
+    init<<<dimGrid, dimBlock>>>(order, d_c);
+  } else {
+    init<<<dimGrid, dimBlock>>>(order, d_a, d_b, d_c);
+  }
   prk::CUDA::sync();
   {
     for (int iter = 0; iter<=iterations; iter++) {
@@ -190,12 +257,14 @@ void run(const cublasHandle_t & h, int iterations, int order)
   }
   const double residuum = std::abs(checksum - reference) / reference;
   const double epsilon{1.0e-8};
-  if ((residuum < epsilon) || (sizeof(T) < 4)) {
+  if ((residuum < epsilon) || (sizeof(T) < 4) || random_initialization) {
 #if VERBOSE
     std::cout << "Reference checksum = " << reference << "\n"
               << "Actual checksum = " << checksum << std::endl;
 #endif
-    std::cout << "Solution validates" << std::endl;
+    if (residuum < epsilon) {
+      std::cout << "Solution validates" << std::endl;
+    }
     auto avgtime = gemm_time/iterations;
     auto nflops = 2.0 * prk::pow(forder,3);
     auto is_fp64 = (typeid(T) == typeid(double));
@@ -222,11 +291,11 @@ int main(int argc, char * argv[])
   /// Read and test input parameters
   //////////////////////////////////////////////////////////////////////
 
-  int iterations;
-  int order;
+  int iterations, order;
+  bool random_initialization = false;
   try {
       if (argc < 2) {
-        throw "Usage: <# iterations> <matrix order>";
+        throw "Usage: <# iterations> <matrix order> [<random initialization [0/1]>]";
       }
 
       iterations  = std::atoi(argv[1]);
@@ -240,6 +309,10 @@ int main(int argc, char * argv[])
       } else if (order > prk::get_max_matrix_size()) {
         throw "ERROR: matrix dimension too large - overflow risk";
       }
+      
+      if (argc > 3) {
+        random_initialization = prk::parse_boolean(std::string(argv[3]));
+      }
   }
   catch (const char * e) {
     std::cout << e << std::endl;
@@ -250,6 +323,7 @@ int main(int argc, char * argv[])
 
   std::cout << "Number of iterations = " << iterations << std::endl;
   std::cout << "Matrix order         = " << order << std::endl;
+  std::cout << "Randomized data      = " << (random_initialization ? "yes" : "no") << std::endl;
 
   //////////////////////////////////////////////////////////////////////
   /// Setup CUBLAS environment
@@ -257,9 +331,9 @@ int main(int argc, char * argv[])
 
   cublasHandle_t h;
   prk::check( cublasCreate(&h) );
-  run<__half>(h, iterations, order);
-  run<float>(h, iterations, order);
-  run<double>(h, iterations, order);
+  run<__half>(h, iterations, order, random_initialization);
+  run<float>(h, iterations, order, random_initialization);
+  run<double>(h, iterations, order, random_initialization);
   prk::check( cublasDestroy(h) );
 
   return 0;

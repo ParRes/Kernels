@@ -83,7 +83,7 @@ void get_BG_data(int load_balance, DTYPE *in_bg, DTYPE *ing_r, int my_ID, long e
 
   long send_vec[8], *recv_vec, offset, i, j, p, acc_send, acc_recv;
   int *recv_offset, *recv_count, *send_offset, *send_count;
-  DTYPE *recv_buf, *send_buf;
+  DTYPE *recv_buf = NULL, *send_buf = NULL;
 
   if (load_balance == no_talk) {
     /* in case of no_talk we just copy the in-rank data from BG to refinement     */
@@ -318,8 +318,7 @@ void time_step(int    Num_procs,
 	       MPI_Request request_bg[8],
 	       MPI_Request request_r[4][8],
 	       MPI_Comm comm_r[4],
-	       MPI_Comm comm_bg,
-               int    first_through) {
+	       MPI_Comm comm_bg) {
 
   int g, i, j, ii, jj, kk, sub_iter;
 
@@ -405,9 +404,9 @@ void time_step(int    Num_procs,
     }
   }
 
-  if (!(iter%period) || first_through) {
+  if (!(iter%period)) {
     /* a specific refinement has come to life                                */
-    g=(iter/period)%4; first_through=0;
+    g=(iter/period)%4;
 
     get_BG_data(load_balance, in_bg, in_r[g], my_ID, expand, Num_procs,
                 L_width_bg, L_istart_bg, L_iend_bg, L_jstart_bg, L_jend_bg,

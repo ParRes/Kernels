@@ -220,28 +220,28 @@ allserial:
 	cd SERIAL/AMR;              $(MAKE) amr       "DEFAULT_OPT_FLAGS   = $(PRK_FLAGS)"
 
 allfortran:
-	$(MAKE) -C FORTRAN
+	$(MAKE) -C FORTRAN -f Makefile.legacy
 
 allfortranserial:
-	$(MAKE) -C FORTRAN serial
+	$(MAKE) -C FORTRAN -f Makefile.legacy serial
 
 allfortranpretty:
-	$(MAKE) -C FORTRAN pretty
+	$(MAKE) -C FORTRAN -f Makefile.legacy pretty
 
 allfortranopenmp:
-	$(MAKE) -C FORTRAN openmp
+	$(MAKE) -C FORTRAN -f Makefile.legacy openmp
 
 allfortrantarget:
-	$(MAKE) -C FORTRAN target
+	$(MAKE) -C FORTRAN -f Makefile.legacy target
 
 allfortrancoarray:
-	$(MAKE) -C FORTRAN coarray
+	$(MAKE) -C FORTRAN -f Makefile.legacy coarray
 
 allcxx:
-	$(MAKE) -C Cxx11
+	$(MAKE) -C Cxx11 -f Makefile.legacy
 
 allc1z:
-	$(MAKE) -C C1z
+	$(MAKE) -C C1z -f Makefile.legacy
 
 allrust:
 	$(MAKE) -C RUST
@@ -334,9 +334,9 @@ clean:
 	cd SERIAL/Branch;           $(MAKE) clean
 	cd SERIAL/PIC;              $(MAKE) clean
 	cd SERIAL/AMR;              $(MAKE) clean
-	make -C FORTRAN clean
-	make -C Cxx11 clean
-	make -C C1z clean
+	make -C FORTRAN -f Makefile.legacy clean
+	make -C Cxx11 -f Makefile.legacy clean
+	make -C C1z -f Makefile.legacy clean
 	rm -f stats.json
 
 veryclean: clean

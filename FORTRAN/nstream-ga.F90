@@ -71,7 +71,7 @@ program main
   use prk
   implicit none
 #include "global.fh"
-#include 'ga-mpi.fh' ! unused
+#include "ga-mpi.fh"
 #include "mafdecls.fh"
   ! for argument parsing
   integer :: err
@@ -81,13 +81,15 @@ program main
   integer(kind=INT32) :: world_size, world_rank
   integer(kind=INT32) :: ierr
   type(MPI_Comm), parameter :: world = MPI_COMM_WORLD
-  ! GA - compiled with 64-bit INTEGER
-  logical :: ok
-  integer :: me, np
-  integer, parameter :: ndim = 1
-  integer :: dims(ndim)
-  integer :: chunk(ndim)
-  integer :: A, B, C
+  ! GA - compiled with 64-bit INTEGER. -fdefault-integer-8 alone does not
+  ! reliably widen these to match GA's Integer (8-byte); use explicit
+  ! kind=INT64 instead of plain "integer".
+  logical(kind=8) :: ok
+  integer(kind=INT64) :: me, np
+  integer(kind=INT64), parameter :: ndim = 1
+  integer(kind=INT64) :: dims(ndim)
+  integer(kind=INT64) :: chunk(ndim)
+  integer(kind=INT64) :: A, B, C
   real(kind=REAL64), parameter :: zero = 0.d0
   real(kind=REAL64), parameter :: one  = 1.d0
   real(kind=REAL64), parameter :: two  = 2.d0
@@ -113,6 +115,32 @@ program main
 
   call MPI_Init_thread(requested,provided)
 
+  ! Determine rank via MPI, not GA: GA isn't initialized yet (ga_initialize_ltd
+  ! needs max_mem, which needs length, which is only known after this rank-0
+  ! read + broadcast). Previously max_mem was computed from `length` here,
+  ! before `length` was ever assigned -- a use-before-init bug that fed GA a
+  ! garbage memory budget and made nga_create() fail unpredictably below.
+  call MPI_Comm_rank(MPI_COMM_WORLD, world_rank)
+
+  if (world_rank.eq.0) then
+    write(*,'(a25)') 'Parallel Research Kernels'
+    write(*,'(a54)') 'Fortran Global Arrays STREAM triad: A = B + scalar * C'
+
+    call prk_get_arguments('nstream',iterations=iterations,length=length,offset=offset)
+
+    write(*,'(a22,i12)') 'Number of iterations = ', iterations
+    write(*,'(a22,i12)') 'Vector length        = ', length
+    write(*,'(a22,i12)') 'Offset               = ', offset
+  endif
+
+  ! count/root must stay INT32: mpi_f08 was compiled with a fixed 4-byte
+  ! default INTEGER, but under -fdefault-integer-8 an untyped literal like
+  ! "1" or "0" becomes 8-byte, and MPI_Bcast's generic interface then has no
+  ! matching specific binding for the (now 8-byte) count/root arguments.
+  call MPI_Bcast(iterations, 1_INT32, MPI_INTEGER4, 0_INT32, MPI_COMM_WORLD)
+  call MPI_Bcast(length,     1_INT32, MPI_INTEGER8, 0_INT32, MPI_COMM_WORLD)
+  call MPI_Bcast(offset,     1_INT32, MPI_INTEGER8, 0_INT32, MPI_COMM_WORLD)
+
   ! ask GA to allocate enough memory for 4 vectors, just to be safe
   max_mem = length * 4 * ( storage_size(scalar) / 8 )
   call ga_initialize_ltd(max_mem)
@@ -120,13 +148,16 @@ program main
   me = ga_nodeid()
   np = ga_nnodes()
 
+  if (me.eq.0) then
+    write(*,'(a22,i12)') 'Number of GA procs   = ', np
+  endif
+
 #if PRK_CHECK_GA_MPI
   ! We do use MPI anywhere, but if we did, we would need to avoid MPI collectives
   ! on the world communicator, because it is possible for that to be larger than
   ! the GA world process group.  In this case, we need to get the MPI communicator
   ! associated with GA world, but those routines assume MPI communicators are integers.
 
-  call MPI_Comm_rank(world, world_rank)
   call MPI_Comm_size(world, world_size)
 
   if ((me.ne.world_rank).or.(np.ne.world_size)) then
@@ -134,32 +165,6 @@ program main
       write(*,'(a12,i8,i8)') 'size=',me,world_size
       call ga_error('MPI_COMM_WORLD is unsafe to use!!!',np)
   endif
-#endif
-
-  if (me.eq.0) then
-    write(*,'(a25)') 'Parallel Research Kernels'
-    write(*,'(a54)') 'Fortran Global Arrays STREAM triad: A = B + scalar * C'
-
-    call prk_get_arguments('nstream',iterations=iterations,length=length,offset=offset)
-
-    write(*,'(a22,i12)') 'Number of GA procs   = ', np
-    write(*,'(a22,i12)') 'Number of iterations = ', iterations
-    write(*,'(a22,i12)') 'Vector length        = ', length
-    write(*,'(a22,i12)') 'Offset               = ', offset
-  endif
-
-#if 1
-  call ga_brdcst(0,iterations,4,0)
-  call ga_brdcst(0,length,8,0)
-  call ga_brdcst(0,offset,8,0)
-#else
-  block
-    integer :: comm
-    call ga_mpi_comm_pgroup_default(comm)
-    call MPI_Bcast(iterations, 1, MPI_INTEGER4, 0, comm)
-    call MPI_Bcast(length,     1, MPI_INTEGER8, 0, comm)
-    call MPI_Bcast(offset,     1, MPI_INTEGER8, 0, comm)
-  end block
 #endif
 
   call ga_sync()
@@ -175,19 +180,19 @@ program main
   dims(1)  = length
   chunk(1) = -1
 
-  ok = nga_create(MT_DBL, ndim, dims,'A', chunk, A)
+  ok = nga_create(int(MT_DBL,INT64), ndim, dims,'A', chunk, A)
   if (.not.ok) then
-    call ga_error('allocation of A failed',100)
+    call ga_error('allocation of A failed',100_INT64)
   endif
 
   ok = ga_duplicate(A,B,'B')
   if (.not.ok) then
-    call ga_error('duplication of A as B failed ',101)
+    call ga_error('duplication of A as B failed ',101_INT64)
   endif
 
   ok = ga_duplicate(B,C,'C')
   if (.not.ok) then
-    call ga_error('duplication of B as C failed ',101)
+    call ga_error('duplication of B as C failed ',101_INT64)
   endif
 
   call ga_sync()
@@ -234,17 +239,17 @@ program main
 
   ok = ga_destroy(A)
   if (.not.ok) then
-      call ga_error('ga_destroy failed',201)
+      call ga_error('ga_destroy failed',201_INT64)
   endif
 
   ok = ga_destroy(B)
   if (.not.ok) then
-      call ga_error('ga_destroy failed',202)
+      call ga_error('ga_destroy failed',202_INT64)
   endif
 
   ok = ga_destroy(C)
   if (.not.ok) then
-      call ga_error('ga_destroy failed',203)
+      call ga_error('ga_destroy failed',203_INT64)
   endif
 
   call ga_sync()
@@ -256,7 +261,7 @@ program main
       !write(*,'(a30,f30.15)') '       Observed value: ', A(1)
       write(*,'(a35)')  'ERROR: solution did not validate'
       stop 1
-      call ga_error('Answer wrong',911)
+      call ga_error('Answer wrong',911_INT64)
     else
       write(*,'(a17)') 'Solution validates'
       avgtime = nstream_time/iterations;

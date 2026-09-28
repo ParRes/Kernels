@@ -67,16 +67,19 @@ program main
   integer(kind=INT32) :: world_size, world_rank
   integer(kind=INT32) :: ierr
   type(MPI_Comm), parameter :: world = MPI_COMM_WORLD
-  ! GA - compiled with 64-bit INTEGER
-  logical :: ok
-  integer :: me, np
-  integer :: A, B, AT
-  integer :: mylo(2),myhi(2)
+  ! GA - compiled with 64-bit INTEGER. -fdefault-integer-8 alone does not
+  ! reliably widen these to match GA's Integer (8-byte); use explicit
+  ! kind=INT64 instead of plain "integer".
+  logical(kind=8) :: ok
+  integer(kind=INT64) :: me, np
+  integer(kind=INT64) :: A, B, AT
+  integer(kind=INT64) :: mylo(2),myhi(2)
   real(kind=REAL64), parameter :: one  = 1.d0
   real(kind=REAL64), allocatable ::  T(:,:)
   ! problem definition
   integer(kind=INT32) ::  iterations
   integer(kind=INT32) ::  order
+  integer(kind=INT32) ::  tile_size
   integer(kind=INT64) ::  bytes, max_mem
   ! runtime variables
   integer(kind=INT32) ::  i, j, k, ii, jj
@@ -86,7 +89,31 @@ program main
 
   call MPI_Init_thread(requested,provided)
 
-  !call ga_initialize()
+  ! Determine rank via MPI, not GA: GA isn't initialized yet (ga_initialize_ltd
+  ! needs max_mem, which needs order, which is only known after this rank-0
+  ! read + broadcast). Previously max_mem was computed from `order` here,
+  ! before `order` was ever assigned -- a use-before-init bug that fed GA a
+  ! garbage memory budget and made nga_create() fail unpredictably below.
+  call MPI_Comm_rank(MPI_COMM_WORLD, world_rank)
+
+  ! ********************************************************************
+  ! read and test input parameters
+  ! ********************************************************************
+
+  if (world_rank.eq.0) then
+    call prk_get_arguments('transpose',iterations=iterations,order=order,tile_size=tile_size)
+    write(*,'(a25)') 'Parallel Research Kernels'
+    write(*,'(a47)') 'Fortran Global Arrays Matrix transpose: B = A^T'
+    write(*,'(a22,i8)') 'Number of iterations    = ', iterations
+    write(*,'(a22,i8)') 'Matrix order            = ', order
+  endif
+  ! count/root must stay INT32: mpi_f08 was compiled with a fixed 4-byte
+  ! default INTEGER, but under -fdefault-integer-8 an untyped literal like
+  ! "1" or "0" becomes 8-byte, and MPI_Bcast's generic interface then has no
+  ! matching specific binding for the (now 8-byte) count/root arguments.
+  call MPI_Bcast(iterations, 1_INT32, MPI_INTEGER4, 0_INT32, MPI_COMM_WORLD)
+  call MPI_Bcast(order, 1_INT32, MPI_INTEGER4, 0_INT32, MPI_COMM_WORLD)
+
   ! ask GA to allocate enough memory for 4 matrices, just to be safe
   max_mem = order * order * 4 * ( storage_size(one) / 8 )
   call ga_initialize_ltd(max_mem)
@@ -94,22 +121,9 @@ program main
   me = ga_nodeid()
   np = ga_nnodes()
 
-  !if (me.eq.0) print*,'max_mem=',max_mem
-
-  ! ********************************************************************
-  ! read and test input parameters
-  ! ********************************************************************
-
   if (me.eq.0) then
-    call prk_get_arguments('transpose',iterations=iterations,order=order,tile_size=tile_size)
-    write(*,'(a25)') 'Parallel Research Kernels'
-    write(*,'(a47)') 'Fortran Global Arrays Matrix transpose: B = A^T'
     write(*,'(a22,i8)') 'Number of GA procs     = ', np
-    write(*,'(a22,i8)') 'Number of iterations    = ', iterations
-    write(*,'(a22,i8)') 'Matrix order            = ', order
   endif
-  call MPI_Bcast(iterations, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
-  call MPI_Bcast(order, 1, MPI_INTEGER4, 0, MPI_COMM_WORLD)
 
 #if PRK_CHECK_GA_MPI
   ! We do use MPI anywhere, but if we did, we would need to avoid MPI collectives
@@ -137,20 +151,20 @@ program main
 
   !print*,'order=',order
   ! must cast int32 order to integer...
-  ok = ga_create(MT_DBL, int(order), int(order),'A',-1,-1, A)
+  ok = ga_create(int(MT_DBL,INT64), int(order,INT64), int(order,INT64),'A',-1_INT64,-1_INT64, A)
   if (.not.ok) then
-    call ga_error('allocation of A failed',100)
+    call ga_error('allocation of A failed',100_INT64)
   endif
 
   ok = ga_duplicate(A,B,'B')
   if (.not.ok) then
-    call ga_error('duplication of A as B failed ',101)
+    call ga_error('duplication of A as B failed ',101_INT64)
   endif
   call ga_zero(B)
 
   ok = ga_duplicate(A,AT,'A^T')
   if (.not.ok) then
-    call ga_error('duplication of A as A^T failed ',102)
+    call ga_error('duplication of A as A^T failed ',102_INT64)
   endif
   call ga_zero(AT)
 
@@ -160,7 +174,7 @@ program main
   !write(*,'(a7,5i6)') 'local:',me,mylo(1), myhi(1), mylo(2), myhi(2)
   allocate( T(myhi(1)-mylo(1)+1,myhi(2)-mylo(2)+1), stat=err)
   if (err .ne. 0) then
-    call ga_error('allocation of T failed',err)
+    call ga_error('allocation of T failed',int(err,INT64))
   endif
   do j=mylo(2),myhi(2)
     jj = j-mylo(2)+1
@@ -173,9 +187,9 @@ program main
   call ga_put( A, mylo(1), myhi(1), mylo(2), myhi(2), T, myhi(1)-mylo(1)+1 )
   call ga_sync()
 
-  ok = ma_init(MT_DBL, order*order, 0)
+  ok = ma_init(int(MT_DBL,INT64), int(order,INT64)*int(order,INT64), 0_INT64)
   if (.not.ok) then
-    call ga_error('ma_init failed', 1)
+    call ga_error('ma_init failed', 1_INT64)
   endif
 
   if (order.lt.10) then
@@ -230,23 +244,23 @@ program main
       abserr = abserr + abs(T(ii,jj) - (temp+addit))
     enddo
   enddo
-  call ga_dgop(MT_DBL, abserr, 1, '+')
+  call ga_dgop(int(MT_DBL,INT64), abserr, 1_INT64, '+')
 
   deallocate( T )
 
   ok = ga_destroy(AT)
   if (.not.ok) then
-      call ga_error('ga_destroy failed',201)
+      call ga_error('ga_destroy failed',201_INT64)
   endif
 
   ok = ga_destroy(A)
   if (.not.ok) then
-      call ga_error('ga_destroy failed',202)
+      call ga_error('ga_destroy failed',202_INT64)
   endif
 
   ok = ga_destroy(B)
   if (.not.ok) then
-      call ga_error('ga_destroy failed',203)
+      call ga_error('ga_destroy failed',203_INT64)
   endif
 
   call ga_sync()
@@ -261,7 +275,7 @@ program main
     else
       write(*,'(a,f30.15,a,f30.15)') 'ERROR: Aggregate squared error ',abserr, &
              'exceeds threshold ',epsilon
-      call ga_error('Answer wrong',911)
+      call ga_error('Answer wrong',911_INT64)
     endif
   endif
 

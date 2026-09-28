@@ -64,6 +64,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "prk_util.h"
+#include "prk_openmp.h"
 
 #include <unistd.h>
 #include <fcntl.h>

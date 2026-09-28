@@ -42,7 +42,7 @@
 
 #else
 #  define THRUST_DEVICE_SYSTEM THRUST_DEVICE_SYSTEM_CPP
-#  include <thrust/system/omp/execution_policy.h>
+#  include <thrust/system/cpp/execution_policy.h>
 //#  include <thrust/system/cpp/vector.h>
 
 #endif

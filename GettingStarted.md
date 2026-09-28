@@ -84,7 +84,7 @@ you should fork the project and do something like this:
 git clone https://github.com/ParRes/Kernels.git PRK
 cd PRK
 git remote rename origin upstream
-git remote add <address of your fork>
+git remote add origin <address of your fork>
 git fetch --all
 ```
 

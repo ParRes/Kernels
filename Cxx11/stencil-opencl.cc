@@ -63,7 +63,7 @@
 #include "prk_opencl.h"
 
 template <typename T>
-void run(cl::Context context, int iterations, int n, int radius, bool star)
+bool run(cl::Context context, int iterations, int n, int radius, bool star)
 {
   auto precision = (sizeof(T)==8) ? 64 : 32;
 
@@ -168,6 +168,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
   if (prk::abs(norm-reference_norm) > epsilon) {
     std::cout << "ERROR: L1 norm = " << norm
               << " Reference L1 norm = " << reference_norm << std::endl;
+    return false;
   } else {
     std::cout << "Solution validates" << std::endl;
 #ifdef VERBOSE
@@ -180,6 +181,7 @@ void run(cl::Context context, int iterations, int n, int radius, bool star)
     std::cout << "Rate (MFlops/s): " << 1.0e-6 * static_cast<double>(flops)/avgtime
               << " Avg time (s): " << avgtime << std::endl;
   }
+  return true;
 }
 
 int main(int argc, char* argv[])
@@ -254,6 +256,8 @@ int main(int argc, char* argv[])
   /// Setup OpenCL environment
   //////////////////////////////////////////////////////////////////////
 
+  bool success = true;
+
   std::vector<cl::Platform> platforms;
   cl::Platform::get(&platforms);
   for (auto i : platforms) {
@@ -266,13 +270,13 @@ int main(int argc, char* argv[])
               auto e = j.getInfo<CL_DEVICE_EXTENSIONS>();
               auto has64 = prk::stringContains(e,"cl_khr_fp64");
               cl::Context ctx(j);
-              run<float>(ctx, iterations, n, radius, star);
+              success = run<float>(ctx, iterations, n, radius, star) && success;
               if (has64) {
-                  run<double>(ctx, iterations, n, radius, star);
+                  success = run<double>(ctx, iterations, n, radius, star) && success;
               }
           }
       }
   }
 
-  return 0;
+  return success ? 0 : 1;
 }
