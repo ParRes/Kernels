@@ -482,6 +482,19 @@ SERIAL/Sparse/sparse
 SERIAL/Stencil/stencil
 SERIAL/Synch_p2p/p2p
 SERIAL/Transpose/transpose
+SWIFT/nstream
+SWIFT/transpose
+SWIFT/dgemm
+SWIFT/dgemm-accelerate
+SWIFT/p2p
+SWIFT/nstream-metal
+SWIFT/transpose-metal
+SWIFT/dgemm-metal
+SWIFT/p2p-metal
+SWIFT/xgemm
+SWIFT/xgemm-accelerate
+SWIFT/xgemm-metal
+
 # Top-level equivalents: CMake's in-source build (SERIAL/CMakeLists.txt)
 # places binaries directly in SERIAL/, not the per-kernel subdirectories
 # above.
