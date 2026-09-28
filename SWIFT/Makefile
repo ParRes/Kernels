@@ -10,7 +10,7 @@ SWIFTC := swiftc
 SWIFTFLAGS := -O -whole-module-optimization
 
 # Default target
-all: nstream transpose dgemm dgemm-accelerate p2p nstream-metal transpose-metal dgemm-metal p2p-metal xgemm xgemm-accelerate xgemm-metal
+all: nstream transpose stencil dgemm dgemm-accelerate p2p nstream-metal transpose-metal dgemm-metal p2p-metal xgemm xgemm-accelerate xgemm-metal
 
 # Build nstream benchmark
 nstream: nstream.swift
@@ -19,6 +19,10 @@ nstream: nstream.swift
 # Build transpose benchmark  
 transpose: transpose.swift
 	$(SWIFTC) $(SWIFTFLAGS) -o transpose transpose.swift
+
+# Build stencil benchmark
+stencil: stencil.swift
+	$(SWIFTC) $(SWIFTFLAGS) -o stencil stencil.swift
 
 # Build dgemm benchmark
 dgemm: dgemm.swift
@@ -56,7 +60,7 @@ xgemm-metal: xgemm-metal.swift
 	$(SWIFTC) $(SWIFTFLAGS) -o xgemm-metal xgemm-metal.swift
 
 # Run tests with default parameters
-test: test-nstream test-transpose test-dgemm test-dgemm-accelerate test-p2p test-xgemm test-xgemm-accelerate
+test: test-nstream test-transpose test-stencil test-dgemm test-dgemm-accelerate test-p2p test-xgemm test-xgemm-accelerate
 
 # Run xgemm tests
 test-xgemm: xgemm
@@ -81,6 +85,10 @@ test-nstream: nstream
 test-transpose: transpose
 	@echo "Testing transpose..."
 	./transpose 10 500
+
+test-stencil: stencil
+	@echo "Testing stencil..."
+	./stencil 10 500
 
 test-dgemm: dgemm
 	@echo "Testing dgemm..."
@@ -111,7 +119,7 @@ test-p2p-metal: p2p-metal
 	./p2p-metal 10 100 100
 
 # Run benchmarks with larger parameters
-benchmark: benchmark-nstream benchmark-transpose benchmark-dgemm benchmark-dgemm-accelerate benchmark-p2p
+benchmark: benchmark-nstream benchmark-transpose benchmark-stencil benchmark-dgemm benchmark-dgemm-accelerate benchmark-p2p
 
 benchmark-nstream: nstream
 	@echo "Benchmarking nstream..."
@@ -120,6 +128,10 @@ benchmark-nstream: nstream
 benchmark-transpose: transpose
 	@echo "Benchmarking transpose..."
 	./transpose 10 2000
+
+benchmark-stencil: stencil
+	@echo "Benchmarking stencil..."
+	./stencil 10 2000
 
 benchmark-dgemm: dgemm
 	@echo "Benchmarking dgemm..."
@@ -135,7 +147,7 @@ benchmark-p2p: p2p
 
 # Clean build artifacts
 clean:
-	rm -f nstream transpose dgemm dgemm-accelerate p2p nstream-metal transpose-metal dgemm-metal p2p-metal xgemm xgemm-accelerate xgemm-metal
+	rm -f nstream transpose stencil dgemm dgemm-accelerate p2p nstream-metal transpose-metal dgemm-metal p2p-metal xgemm xgemm-accelerate xgemm-metal
 
 # Install Swift (requires Homebrew)
 install-swift:
@@ -169,4 +181,4 @@ help:
 	@echo "  ./nstream 10 1000000"
 	@echo "  ./transpose 10 1000"
 
-.PHONY: all test benchmark clean install-swift check-swift help test-nstream test-transpose test-dgemm test-dgemm-accelerate test-p2p test-xgemm test-xgemm-accelerate test-xgemm-metal benchmark-nstream benchmark-transpose benchmark-dgemm benchmark-dgemm-accelerate benchmark-p2p test-metal
+.PHONY: all test benchmark clean install-swift check-swift help test-nstream test-transpose test-stencil test-dgemm test-dgemm-accelerate test-p2p test-xgemm test-xgemm-accelerate test-xgemm-metal benchmark-nstream benchmark-transpose benchmark-stencil benchmark-dgemm benchmark-dgemm-accelerate benchmark-p2p test-metal

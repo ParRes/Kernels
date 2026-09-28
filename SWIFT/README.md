@@ -1,6 +1,6 @@
 # Swift Parallel Research Kernels (PRK)
 
-This directory contains Swift implementations of the Parallel Research Kernels benchmarks, specifically the `nstream` and `transpose` kernels.
+This directory contains Swift implementations of the Parallel Research Kernels benchmarks: `nstream`, `transpose`, `stencil`, `p2p`, `dgemm` (plus an Accelerate-framework variant), and `xgemm` (multi-precision GEMM, plus an Accelerate-framework variant). Metal GPU variants of `nstream`, `transpose`, `p2p`, `dgemm`, and `xgemm` are also provided.
 
 ## What is Swift?
 
@@ -77,6 +77,10 @@ make all
 # Or build individual benchmarks
 make nstream
 make transpose
+make stencil
+make p2p
+make dgemm
+make xgemm
 ```
 
 ### Manual Compilation
@@ -139,6 +143,34 @@ Number of iterations = 10
 Matrix order         = 1000
 Solution validates
 Rate (MB/s): 2456.789123 Avg time (s): 0.006543
+```
+
+### Stencil
+
+The stencil benchmark measures the time to apply a space-invariant, linear filter (a `star` or `grid`-shaped stencil) to a 2D grid.
+
+```bash
+# Syntax: ./stencil <iterations> <grid_dimension> [<star/grid> <radius> <tile_size>]
+
+# Quick test
+./stencil 10 1000
+
+# Longer benchmark
+./stencil 100 2000 star 2
+```
+
+**Example Output:**
+```
+Parallel Research Kernels
+Swift stencil execution on 2D grid
+Number of iterations = 10
+Grid size             = 1000
+Type of stencil       = star
+Untiled
+radius of stencil     = 2
+Data type             = double precision
+Solution validates
+Rate (MFlops/s): 4567.891234 Avg time (s): 0.002345
 ```
 
 ## Using the Makefile
@@ -256,5 +288,10 @@ make help
 
 - `nstream.swift`: Swift implementation of the STREAM triad benchmark
 - `transpose.swift`: Swift implementation of the matrix transpose benchmark
+- `stencil.swift`: Swift implementation of the 2D stencil benchmark
+- `p2p.swift`: Swift implementation of the pipeline (wavefront) benchmark
+- `dgemm.swift` / `dgemm-accelerate.swift`: Swift implementations of double-precision matrix multiplication (naive and Accelerate-framework)
+- `xgemm.swift` / `xgemm-accelerate.swift`: Swift implementations of multi-precision matrix multiplication (naive and Accelerate-framework)
+- `*-metal.swift`: Metal GPU variants of the above benchmarks
 - `Makefile`: Build system for compiling and testing
 - `README.md`: This documentation file
