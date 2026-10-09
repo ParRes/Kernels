@@ -77,7 +77,11 @@ prk_openmp_executable(p2p DIR Synch_p2p SOURCES p2p.c
 # DOUBLE=1, PARALLELFOR=0, STAR=1, RESTRICT_KEYWORD=0, RADIUS=2, LOOPGEN=0,
 # MAXTHREADS=512, VERBOSE=0. stencil.c #includes the generated .incl files
 # unconditionally, same as SERIAL/Stencil.
-set(_stencil_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Stencil")
+# Generated dir is "Stencil_gen", not "Stencil": the executable's
+# OUTPUT_NAME is "stencil", and on macOS's default case-insensitive APFS
+# that collides with a sibling directory literally named "Stencil" in the
+# same build root, making the linker fail with "Is a directory".
+set(_stencil_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Stencil_gen")
 file(MAKE_DIRECTORY ${_stencil_gen_dir})
 add_custom_command(
   OUTPUT "${_stencil_gen_dir}/loop_body_star.incl"
@@ -157,7 +161,9 @@ prk_openmp_executable(random DIR Random SOURCES random.c
 # func.c is not checked into the repo -- like SERIAL/Branch, it's generated
 # by the checked-in ./func_gen script (MATRIX_RANK=10, NUMBER_OF_FUNCTIONS=40
 # defaults, matching the Makefile's own ifndef defaults).
-set(_branch_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Branch")
+# Generated dir is "Branch_gen", not "Branch": same case-insensitive-APFS
+# collision with OUTPUT_NAME "branch" as Stencil_gen above.
+set(_branch_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Branch_gen")
 file(MAKE_DIRECTORY ${_branch_gen_dir})
 add_custom_command(
   OUTPUT "${_branch_gen_dir}/func.c"
