@@ -119,7 +119,11 @@ prk_shmem_executable(p2p DIR Synch_p2p SOURCES p2p.c
 # VERBOSE=0. stencil.c #includes "loop_body_star.incl"/
 # "loop_body_compact.incl" unconditionally, same generated-.incl-file
 # pattern as SERIAL/MPIRMA's Stencil targets (common/Stencil/loop_gen).
-set(_stencil_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Stencil")
+# Generated dir is "Stencil_gen", not "Stencil": the executable's
+# OUTPUT_NAME is "stencil", and on macOS's default case-insensitive APFS
+# that collides with a sibling directory literally named "Stencil" in the
+# same build root, making the linker fail with "Is a directory".
+set(_stencil_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Stencil_gen")
 file(MAKE_DIRECTORY ${_stencil_gen_dir})
 add_custom_command(
   OUTPUT "${_stencil_gen_dir}/loop_body_star.incl"

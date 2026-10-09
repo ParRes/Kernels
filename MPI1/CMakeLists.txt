@@ -78,7 +78,11 @@ prk_mpi1_executable(p2p DIR Synch_p2p SOURCES p2p.c
 # --- Stencil ------------------------------------------------------------
 # stencil.c #includes "loop_body_star.incl"/"loop_body_compact.incl"
 # unconditionally, same as SERIAL's -- generated at build time.
-set(_stencil_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Stencil")
+# Generated dir is "Stencil_gen", not "Stencil": the executable's
+# OUTPUT_NAME is "stencil", and on macOS's default case-insensitive APFS
+# that collides with a sibling directory literally named "Stencil" in the
+# same build root, making the linker fail with "Is a directory".
+set(_stencil_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Stencil_gen")
 file(MAKE_DIRECTORY ${_stencil_gen_dir})
 add_custom_command(
   OUTPUT "${_stencil_gen_dir}/loop_body_star.incl"
@@ -140,7 +144,9 @@ target_link_libraries(mpi1_pic PRIVATE Threads::Threads MPI::MPI_C m)
 # --- AMR --------------------------------------------------------------
 # AMR also compiles timestep.c (COMOBJS += timestep.o) and needs all four
 # loop_gen/loop_gen_amr variants.
-set(_amr_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/AMR")
+# Generated dir is "AMR_gen", not "AMR": same case-insensitive-APFS
+# collision with OUTPUT_NAME "amr" as Stencil_gen above.
+set(_amr_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/AMR_gen")
 file(MAKE_DIRECTORY ${_amr_gen_dir})
 add_custom_command(
   OUTPUT "${_amr_gen_dir}/loop_body_star.incl"
@@ -175,7 +181,9 @@ set_source_files_properties(
 
 # --- Branch (not part of ci/build-run-prk.sh's allmpi) coverage, but a
 # normal kernel with its own subdirectory like the rest) -------------------
-set(_branch_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Branch")
+# Generated dir is "Branch_gen", not "Branch": same case-insensitive-APFS
+# collision with OUTPUT_NAME "branch" as Stencil_gen above.
+set(_branch_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Branch_gen")
 file(MAKE_DIRECTORY ${_branch_gen_dir})
 add_custom_command(
   OUTPUT "${_branch_gen_dir}/func.c"

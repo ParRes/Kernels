@@ -85,7 +85,11 @@ prk_mpiopenmp_executable(p2p DIR Synch_p2p SOURCES p2p.c
 # DOUBLE=1, STAR=1, RESTRICT_KEYWORD=0, RADIUS=2, LOOPGEN=0, VERBOSE=0.
 # stencil.c #includes the generated loop_body_star.incl/loop_body_compact.incl
 # unconditionally, same as SERIAL/Stencil -- generate via common/Stencil/loop_gen.
-set(_stencil_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Stencil")
+# Generated dir is "Stencil_gen", not "Stencil": the executable's
+# OUTPUT_NAME is "stencil", and on macOS's default case-insensitive APFS
+# that collides with a sibling directory literally named "Stencil" in the
+# same build root, making the linker fail with "Is a directory".
+set(_stencil_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Stencil_gen")
 file(MAKE_DIRECTORY ${_stencil_gen_dir})
 add_custom_command(
   OUTPUT "${_stencil_gen_dir}/loop_body_star.incl"
