@@ -154,10 +154,21 @@ prk_openmp_executable(random DIR Random SOURCES random.c
   DEFS RESTRICT_KEYWORD=0 MAXTHREADS=512 VERBOSE=0 HPCC=1 ATOMIC=0 ERRORPERCENT=1 LONG_IS_64BITS=0)
 
 # --- Branch -------------------------------------------------------------
-# func.c is checked into the repo here already (unlike SERIAL/Branch,
-# where it's generated) -- just compile it directly.
-prk_openmp_executable(branch DIR Branch SOURCES branch.c func.c
-  DEFS RESTRICT_KEYWORD=0 MAXTHREADS=512 VERBOSE=0)
+# func.c is not checked into the repo -- like SERIAL/Branch, it's generated
+# by the checked-in ./func_gen script (MATRIX_RANK=10, NUMBER_OF_FUNCTIONS=40
+# defaults, matching the Makefile's own ifndef defaults).
+set(_branch_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/Branch")
+file(MAKE_DIRECTORY ${_branch_gen_dir})
+add_custom_command(
+  OUTPUT "${_branch_gen_dir}/func.c"
+  COMMAND "${CMAKE_CURRENT_LIST_DIR}/Branch/func_gen" 10 40
+  WORKING_DIRECTORY ${_branch_gen_dir}
+  COMMENT "Generating Branch/func.c (MATRIX_RANK=10, NUMBER_OF_FUNCTIONS=40)")
+add_executable(openmp_branch Branch/branch.c "${_branch_gen_dir}/func.c" $<TARGET_OBJECTS:prk_openmp_wtime> $<TARGET_OBJECTS:prk_openmp_bail_out>)
+set_target_properties(openmp_branch PROPERTIES OUTPUT_NAME branch)
+target_include_directories(openmp_branch PRIVATE ${PRK_INCLUDE_DIR} "${CMAKE_CURRENT_LIST_DIR}/Branch")
+target_compile_definitions(openmp_branch PRIVATE RESTRICT_KEYWORD=0 MAXTHREADS=512 VERBOSE=0)
+target_link_libraries(openmp_branch PRIVATE Threads::Threads OpenMP::OpenMP_C)
 
 # --- CTest: reproduces ci/build-run-prk.sh's allopenmp) run commands -----
 # OMP_NUM_THREADS=4, passed both as the env var (matching what a real user
