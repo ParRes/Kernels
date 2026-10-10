@@ -6,27 +6,16 @@ set -x
 CI_ROOT="$1"
 os=`uname`
 
-case $os in
-    Darwin)
-        brew install gnu-sed || brew upgrade gnu-sed || true
-        SED="gsed"
-        ;;
-    Linux)
-        SED="sed"
-        ;;
-esac
-
-# --with-openmp:                        Enable OpenMP backend.
-# --with-pthread:                       Enable Pthreads backend.
-# --with-serial:                        Enable Serial backend.
+# Kokkos_ENABLE_OPENMP:  Enable OpenMP backend.
+# Kokkos_ENABLE_THREADS: Enable C++ threads backend.
 case "${CXX}" in
     g*)
         # All relevant versions of GCC support OpenMP...
-        KOKKOS_BACKEND="--with-openmp"
+        KOKKOS_BACKEND="-DKokkos_ENABLE_OPENMP=ON"
         ;;
     clang*)
         # Clang support for OpenMP is recent...
-        KOKKOS_BACKEND="--with-pthread"
+        KOKKOS_BACKEND="-DKokkos_ENABLE_THREADS=ON"
         ;;
 esac
 
@@ -59,15 +48,22 @@ esac
 ${PRK_CXX} -v
 
 if [ ! -d "$CI_ROOT/kokkos" ]; then
-    git clone -b develop --depth 1 https://github.com/kokkos/kokkos.git
-    cd kokkos
-    mkdir build
-    cd build
-    ${SED} -i "s/DKokkos_ENABLE_TESTS=ON/DKokkos_ENABLE_TESTS=OFF/g" ../generate_makefile.bash
-    ../generate_makefile.bash --prefix=${CI_ROOT}/kokkos \
-                              --compiler=${PRK_CXX} ${KOKKOS_BACKEND}
-    make -j2
-    make -j2 install
+    # Kokkos dropped the generate_makefile.bash bootstrap script; current
+    # Kokkos is configured directly via CMake (>= 3.22 required). Pin a
+    # specific release instead of tracking develop: Kokkos 4.4+ requires
+    # C++20, but ci/build-run-prk.sh builds the whole Cxx11 matrix (this
+    # included) at -std=c++17, so floating HEAD eventually breaks this
+    # build regardless of CMake/compiler fixes. 4.3.01 is the last release
+    # before that bump; verified to configure, build (OpenMP and Serial
+    # backends), and link/run PRK's stencil-kokkos correctly.
+    git clone -b 4.3.01 --depth 1 https://github.com/kokkos/kokkos.git
+    cmake -S kokkos -B kokkos/build \
+          -DCMAKE_INSTALL_PREFIX=${CI_ROOT}/kokkos \
+          -DCMAKE_CXX_COMPILER=${PRK_CXX} \
+          -DKokkos_ENABLE_TESTS=OFF \
+          ${KOKKOS_BACKEND}
+    cmake --build kokkos/build -j2
+    cmake --build kokkos/build -j2 --target install
 else
     echo "KOKKOS installed..."
     find $CI_ROOT/kokkos -name Kokkos_Core.hpp

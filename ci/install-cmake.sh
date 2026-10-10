@@ -26,8 +26,10 @@ case "$os" in
             #make -j4 && make install
             # from binary
             cd $CI_ROOT
-            wget --no-check-certificate -q https://github.com/Kitware/CMake/releases/download/v3.13.2/cmake-3.13.2-Linux-x86_64.sh
-            sh ./cmake-3.13.2-Linux-x86_64.sh --prefix=$CI_ROOT/cmake --skip-license --exclude-subdir
+            # 3.22+ is required by current Kokkos; 3.13.2 (the old pin) is no
+            # longer sufficient.
+            wget --no-check-certificate -q https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-linux-x86_64.sh
+            sh ./cmake-3.31.6-linux-x86_64.sh --prefix=$CI_ROOT/cmake --skip-license --exclude-subdir
         else
             echo "CMake installed..."
             find $CI_ROOT/cmake -name cmake
