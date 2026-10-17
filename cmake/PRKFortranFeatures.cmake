@@ -135,3 +135,17 @@ function(prk_check_openmp_offload)
     message(STATUS "Fortran OpenMP target offload: compiled but failed to run correctly (broken offload runtime)")
   endif()
 endfunction()
+
+# Some compilers (e.g. gfortran) accept `!$omp target` but not the OpenMP 5.0
+# `loop` construct used by transpose-openmp-target-loop.F90. Probe it
+# separately (compile-only) so that one source can be skipped on its own.
+function(prk_check_openmp_target_loop)
+  if(DEFINED PRK_OPENMP_TARGET_LOOP_COMPILES)
+    return()
+  endif()
+  set(_src "program main\n  integer :: i, j\n  real :: a(4,4)\n  !$omp target teams loop collapse(2)\n  do j=1,4\n    do i=1,4\n      a(i,j) = 0\n    enddo\n  enddo\n  !$omp end target teams loop\nend program main\n")
+  string(REPLACE ";" " " _flags "${PRK_OPENMP_OFFLOAD_FLAG}")
+  set(CMAKE_REQUIRED_FLAGS "${_flags}")
+  check_fortran_source_compiles("${_src}" PRK_OPENMP_TARGET_LOOP_COMPILES SRC_EXT F90)
+  unset(CMAKE_REQUIRED_FLAGS)
+endfunction()
