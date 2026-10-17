@@ -119,7 +119,7 @@ function(prk_autobuild_global_arrays)
     PREFIX            "${_ga_prefix}"
     BUILD_IN_SOURCE   TRUE
     CONFIGURE_COMMAND ${_prk_autoreconf} -vif
-              COMMAND <SOURCE_DIR>/configure --with-armci=${_armci_install_dir}
+              COMMAND <SOURCE_DIR>/configure --with-armci=${_armci_install_dir} --without-scalapack
                         MPICC=${_prk_mpicc} MPIFC=${_prk_mpif90} MPIF77=${_prk_mpif90}
                         --prefix=<INSTALL_DIR>
     BUILD_COMMAND     make
