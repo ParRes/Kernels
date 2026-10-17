@@ -81,10 +81,9 @@ func.c
 *.log3
 
 ADA/*.ali
-ADA/args
-ADA/hello
 ADA/nstream
-ADA/nstream_array
+ADA/p2p
+ADA/stencil
 ADA/transpose
 
 C1z/nstream

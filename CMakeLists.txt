@@ -24,6 +24,7 @@ option(PRK_ENABLE_MPIOPENMP "Build MPIOPENMP/ kernels" ON)
 option(PRK_ENABLE_MPIRMA "Build MPIRMA/ kernels" ON)
 option(PRK_ENABLE_MPISHM "Build MPISHM/ kernels" ON)
 option(PRK_ENABLE_SHMEM "Build SHMEM/ kernels" ON)
+option(PRK_ENABLE_ADA "Build ADA/ kernels" ON)
 
 if(PRK_ENABLE_FORTRAN)
   add_subdirectory(FORTRAN)
@@ -63,6 +64,10 @@ endif()
 
 if(PRK_ENABLE_SHMEM)
   add_subdirectory(SHMEM)
+endif()
+
+if(PRK_ENABLE_ADA)
+  add_subdirectory(ADA)
 endif()
 
 # Future languages follow the same pattern: add an option
