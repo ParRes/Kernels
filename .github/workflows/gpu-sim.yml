@@ -1,0 +1,99 @@
+name: CUDA on simulated H100
+
+# Optional, non-required check. The hosted runners have no GPU, so this builds
+# the C++11 CUDA kernels and runs them on a simulated NVIDIA H100
+# (https://github.com/pantheongpu/pantheonsim). Each program checks its own
+# result ("Solution validates") and exits nonzero on failure. A simulator
+# cannot reproduce hardware-specific behavior or timing, so it complements
+# real-GPU testing and does not replace it.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "Cxx11/*cuda*"
+      - "Cxx11/*cublas*"
+      - "Cxx11/*thrust*"
+      - "Cxx11/prk_*.h"
+      - "Cxx11/Makefile.legacy"
+      - "common/make.defs.cuda"
+      - ".github/workflows/gpu-sim.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: CUDA 13.0, simulated H100
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+    - name: Set up the simulated GPU and CUDA toolkit
+      uses: pantheongpu/setup-pantheonsim@ca87fe3143b29166822b923d6050945c5179408c # v0.1.5
+      with:
+        gpu: nvidia/h100
+        cuda-toolkit: "13.0"
+
+    # The thrust and cuBLAS programs include Boost.Range (RANGEFLAG in make.defs)
+    - name: Install Boost headers
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends libboost-dev
+
+    # The simulator JIT-compiles PTX and does not run SASS, and it needs a
+    # shared CUDA runtime. common/make.defs.cuda targets sm_89 with the
+    # system CUDA 12.6, so point it at the toolkit installed above, ask for
+    # PTX only (compute_90) and link the shared runtime. The nvcc is called
+    # by its absolute path, not through the PATH drop-in of the action.
+    - name: Configure make.defs
+      run: |
+        cp common/make.defs.cuda common/make.defs
+        sed -i \
+          -e 's#^NVCC=.*#NVCC=/usr/local/cuda-13.0/bin/nvcc#' \
+          -e 's#--gpu-architecture=sm_89#--gpu-architecture=compute_90 -cudart shared#' \
+          -e 's#/usr/local/cuda-12.6/targets#/usr/local/cuda-13.0/targets#' \
+          common/make.defs
+        grep -E '^(NVCC|CUDAFLAGS)' common/make.defs
+
+    # Not built: the *-cudastf programs (need CUDA STF headers fetched by
+    # ci/install-cudastf.sh), and the MPI, NCCL, NVSHMEM and multi-GPU
+    # programs (no MPI or several GPUs here).
+    - name: Build CUDA kernels
+      working-directory: Cxx11
+      run: |
+        make -f Makefile.legacy -j3 \
+          nstream-cuda nstream-managed-cuda transpose-cuda stencil-cuda p2p-cuda \
+          nstream-device-thrust transpose-device-thrust \
+          nstream-cublas transpose-cublas dgemm-cublas sgemm-cublas
+
+    # Small sizes; the run arguments follow the usage message of each program.
+    - name: Run on the simulated H100
+      working-directory: Cxx11
+      run: |
+        set -e
+        run() { echo "::group::$*"; vgpu run "./$@"; echo "::endgroup::"; }
+        run nstream-cuda 10 2000000
+        run nstream-cuda 10 2000000 256 1
+        run nstream-managed-cuda 10 200000
+        run nstream-managed-cuda 10 200000 0 1 0 1
+        for v in 0 1 2 3; do run transpose-cuda 10 256 $v; done
+        run stencil-cuda 10 1000
+        run stencil-cuda 10 1000 32 grid 2
+        run p2p-cuda 10 1024
+        run p2p-cuda 10 1024 4
+        run nstream-device-thrust 10 2000000
+        run transpose-device-thrust 10 256
+        run nstream-cublas 10 2000000
+        run transpose-cublas 10 256
+        run dgemm-cublas 10 256
+        run dgemm-cublas 10 256 4
+        run sgemm-cublas 10 256
